@@ -201,7 +201,7 @@ aggregate pressure on the ball carrier.
 - `p[d, a] = logistic(π / (√3 σ) · (T − TTI[d, a]))` with T = 1.5 s, σ = 0.45 s (*tunable*).
 - The carrier's column is the max of pressure on his body and on the ball.
 - Aggregate on a player: `1 − Π_d (1 − p[d, a])`. No pressure while the ball is free.
-- Not yet: the paper's heading penalty and active-presser speed filter.
+- Also from the paper: targets 1 s ahead (`r + v`), heading penalty `|v|·β/π`; active filter off.
 
 ### 4.4 Vision map and observed-space metrics
 Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
