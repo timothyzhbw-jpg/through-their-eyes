@@ -1,0 +1,610 @@
+<title>Through Their Eyes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: a broadcast replay desk. First-person view and tactical board side by side,
+   transport strip under them, then the story beats and the decision the player made. */
+:root {
+  --bg: #0b1210;
+  --surface: #111a17;
+  --surface-2: #17221e;
+  --line: #26362f;
+  --fg: #e6eee9;
+  --muted: #8ea39a;
+  --home: #ff7a5c;
+  --away: #5b86ff;
+  --sight: #a6ecff;
+  --gold: #ffd36b;
+  --font-display: "Saira Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+.app { max-width: 1320px; margin: 0 auto; display: grid; gap: 16px; }
+
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.brand h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1;
+  letter-spacing: 0.01em; margin: 0; text-wrap: balance;
+}
+.brand p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.brand .tag {
+  font-family: var(--font-data); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--sight); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; margin-left: 8px;
+  vertical-align: middle;
+}
+
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.segmented button {
+  font: 600 14px/1 var(--font-body); color: var(--muted); background: var(--surface);
+  border: 0; padding: 10px 14px; cursor: pointer; display: flex; gap: 8px; align-items: center;
+}
+.segmented button + button { border-left: 1px solid var(--line); }
+.segmented button[aria-pressed="true"] { color: var(--bg); background: var(--sight); }
+.segmented button[data-mode="counterfactual"][aria-pressed="true"] { background: var(--gold); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--sight); outline-offset: 2px; }
+
+.stage { display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px; }
+@media (max-width: 880px) { .stage { grid-template-columns: 1fr; } }
+.view { position: relative; margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+.view canvas { display: block; width: 100%; height: 100%; }
+.view.pov { aspect-ratio: 16 / 10; }
+.view.tac { aspect-ratio: 111 / 74; }
+.label {
+  position: absolute; left: 10px; top: 8px; font: 600 12px/1 var(--font-display); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); background: rgba(11, 18, 16, 0.72); padding: 5px 7px; border-radius: 3px;
+}
+.hud {
+  position: absolute; left: 10px; bottom: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  font: 500 12px/1.2 var(--font-data); color: var(--fg); pointer-events: none;
+}
+.hud span { background: rgba(11, 18, 16, 0.72); padding: 4px 7px; border-radius: 3px; font-variant-numeric: tabular-nums; }
+.hud .badge { color: var(--bg); background: var(--sight); font-weight: 600; letter-spacing: 0.06em; }
+.hud .badge.key { background: var(--gold); }
+.toggles { position: absolute; right: 8px; top: 6px; display: flex; gap: 6px; }
+.chip {
+  font: 500 12px/1 var(--font-body); color: var(--muted); background: rgba(11, 18, 16, 0.72);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 9px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--sight); }
+
+.transport {
+  display: grid; grid-template-columns: auto auto 1fr auto; gap: 10px 14px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+@media (max-width: 700px) { .transport { grid-template-columns: auto 1fr; } .timeline { grid-column: 1 / -1; order: 5; } }
+.play {
+  font: 700 15px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--bg);
+  background: var(--fg); border: 0; border-radius: 6px; padding: 10px 16px; cursor: pointer; min-width: 92px;
+}
+.clock { font: 500 13px/1.2 var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clock b { color: var(--fg); font-weight: 500; }
+.timeline { position: relative; height: 40px; min-width: 0; }
+.timeline canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.timeline input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer;
+}
+.jumps { display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; }
+.jumps button, .jumps select {
+  font: 500 13px/1 var(--font-body); color: var(--fg); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; cursor: pointer;
+}
+
+.below { display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px; }
+@media (max-width: 880px) { .below { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.panel h2 {
+  font: 600 13px/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  margin: 0 0 12px;
+}
+.beats { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.beats li {
+  display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 8px 10px; border-radius: 5px;
+  color: var(--muted); cursor: pointer; border-left: 3px solid transparent;
+}
+.beats li .t { font: 500 12px/1.6 var(--font-data); font-variant-numeric: tabular-nums; }
+.beats li.now { background: var(--surface-2); color: var(--fg); border-left-color: var(--sight); }
+.mode-cf .beats li.now { border-left-color: var(--gold); }
+.verdict {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap;
+  gap: 8px 20px; font-size: 14px;
+}
+.verdict b { font: 600 18px/1 var(--font-display); letter-spacing: 0.02em; }
+.verdict .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.options { display: grid; gap: 6px; }
+.opt { display: grid; grid-template-columns: 112px 1fr 64px; gap: 10px; align-items: center; font-size: 14px; }
+.opt .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt.chosen .name { color: var(--fg); font-weight: 600; }
+.opt:not(.chosen) .name { color: var(--muted); }
+.bar { height: 10px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--muted); border-radius: 2px; }
+.opt.chosen .bar i { background: var(--sight); }
+.mode-cf .opt.chosen .bar i { background: var(--gold); }
+.opt .p { font: 500 12px/1 var(--font-data); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.fact { background: var(--surface-2); border-radius: 5px; padding: 8px 10px; }
+.fact span { display: block; font-size: 12px; color: var(--muted); }
+.fact b { font: 500 18px/1.3 var(--font-data); font-variant-numeric: tabular-nums; }
+.note { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 13px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="app" id="app">
+  <header>
+    <div class="brand">
+      <h1>Through Their Eyes <span class="tag">synthetic match</span></h1>
+      <p>Hero moment: the blind-side run. See what the midfielder saw, and what he would have done without one look over his shoulder.</p>
+    </div>
+    <div class="segmented" role="group" aria-label="Run">
+      <button type="button" id="mode-f" data-mode="factual" aria-pressed="true">With the look</button>
+      <button type="button" id="mode-c" data-mode="counterfactual" aria-pressed="false">Without the look</button>
+    </div>
+  </header>
+
+  <section class="stage">
+    <figure class="view pov">
+      <canvas id="pov" aria-label="First-person view of the hero"></canvas>
+      <div class="label" id="pov-label">First person</div>
+      <div class="toggles"><button type="button" class="chip" id="t-ghost-pov" aria-pressed="true">Belief ghosts</button></div>
+      <div class="hud" id="hud"></div>
+    </figure>
+    <figure class="view tac">
+      <canvas id="tac" aria-label="Tactical view from above"></canvas>
+      <div class="label">Tactical</div>
+      <div class="toggles">
+        <button type="button" class="chip" id="t-cone" aria-pressed="true">Vision cone</button>
+        <button type="button" class="chip" id="t-ghost" aria-pressed="true">Belief ghosts</button>
+      </div>
+    </figure>
+  </section>
+
+  <section class="transport" aria-label="Playback">
+    <button type="button" class="play" id="play">Play</button>
+    <div class="clock" id="clock"></div>
+    <div class="timeline">
+      <canvas id="tl"></canvas>
+      <input type="range" id="scrub" min="0" max="100" step="0.01" value="0" aria-label="Timeline">
+    </div>
+    <div class="jumps">
+      <button type="button" id="j-scan">Key scan</button>
+      <button type="button" id="j-dec">Decision</button>
+      <select id="speed" aria-label="Playback speed">
+        <option value="0.25">0.25×</option>
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="below">
+    <div class="panel">
+      <h2>What happened</h2>
+      <ol class="beats" id="beats"></ol>
+      <div class="verdict" id="verdict"></div>
+    </div>
+    <div class="panel">
+      <h2 id="dec-title">The decision, on his belief</h2>
+      <div class="options" id="options"></div>
+      <div class="facts" id="facts"></div>
+      <p class="note">Options are scored on what he believes, never on the truth. Probabilities come from the softmax of each option's expected threat.</p>
+    </div>
+  </section>
+
+  <div class="legend">
+    <span><i style="background: var(--home)"></i>Home (attacking right)</span>
+    <span><i style="background: var(--away)"></i>Away</span>
+    <span><i style="background: var(--sight)"></i>In his sight right now</span>
+    <span><i style="border: 1px dashed var(--fg)"></i>Where he believes a player is</span>
+    <span>All players and clubs are fictional; the match is generated by our simulator.</span>
+  </div>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+const D = JSON.parse(document.getElementById("data").textContent);
+const css = getComputedStyle(document.documentElement);
+const C = name => css.getPropertyValue(name).trim();
+const COL = { home: C("--home"), away: C("--away"), sight: C("--sight"), gold: C("--gold"), fg: C("--fg"), muted: C("--muted"), bg: C("--bg") };
+
+const ids = D.players.map(p => p.id);
+const N = ids.length;
+const HERO = ids.indexOf(D.hero);
+const RUNNER = ids.indexOf(D.runner);
+const DT = D.dt;
+const KEY = D.key_scan;
+const teamColor = j => (D.players[j].team === 0 ? COL.home : COL.away);
+
+// ---------- run helpers ----------
+function prep(run) {
+  const scans = run.events.filter(e => e.type === "scan" && e.player === D.hero)
+    .map(e => ({ start: e.frame, end: e.attrs.end, key: !!e.attrs.key }));
+  const kick = run.events.find(e => e.type === "pass" && e.player !== D.hero);
+  return { ...run, scans, firstKick: kick ? kick.frame : 0, passer: kick ? kick.player : "" };
+}
+const RUNS = { factual: prep(D.runs.factual), counterfactual: prep(D.runs.counterfactual) };
+
+const lerp = (a, b, t) => a + (b - a) * t;
+function lerpAngle(a, b, t) {
+  let d = b - a;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return a + d * t;
+}
+function sample(run, f) {
+  const i0 = Math.max(0, Math.min(run.frames - 1, Math.floor(f)));
+  const i1 = Math.min(run.frames - 1, i0 + 1);
+  const t = Math.max(0, Math.min(1, f - i0));
+  const P = run.pos, G = run.ghost;
+  const pos = [], ghost = [], head = [], body = [];
+  for (let j = 0; j < N; j++) {
+    pos.push([lerp(P[i0][2 * j], P[i1][2 * j], t) / 1000, lerp(P[i0][2 * j + 1], P[i1][2 * j + 1], t) / 1000]);
+    ghost.push([lerp(G[i0][2 * j], G[i1][2 * j], t) / 1000, lerp(G[i0][2 * j + 1], G[i1][2 * j + 1], t) / 1000]);
+    head.push(lerpAngle(run.head[i0][j] / 1e4, run.head[i1][j] / 1e4, t));
+    body.push(lerpAngle(run.body[i0][j] / 1e4, run.body[i1][j] / 1e4, t));
+  }
+  const b0 = run.ball[i0], b1 = run.ball[i1];
+  const ball = [lerp(b0[0], b1[0], t) / 1000, lerp(b0[1], b1[1], t) / 1000];
+  return { pos, ghost, head, body, ball, seen: run.seen[i0], owner: run.owner[i0], frame: i0 };
+}
+const actionLabel = a => (a.startsWith("pass:") ? `Pass to ${a.slice(5)}` : a === "carry" ? "Carry forward" : a === "shot" ? "Shoot" : a);
+const fmt = (x, d = 2) => Number(x).toFixed(d);
+const sec = f => fmt(f * DT, 2);
+
+// ---------- state ----------
+const state = { mode: "factual", frame: KEY.start + 6, playing: false, speed: 1, cone: true, ghost: true, ghostPov: true, started: false };
+const run = () => RUNS[state.mode];
+
+// ---------- tactical canvas ----------
+const tac = document.getElementById("tac");
+const tctx = tac.getContext("2d");
+const EXT = { x: 55.5, y: 37 };
+let tScale = 1;
+function sizeCanvas(cv, ctx) {
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return r;
+}
+const tx = x => (x + EXT.x) * tScale;
+const ty = y => (EXT.y - y) * tScale;
+function drawPitch(ctx) {
+  for (let k = 0; k < 14; k++) {
+    ctx.fillStyle = k % 2 ? "#1d4630" : "#215036";
+    ctx.fillRect(tx(-52.5 + k * 7.5), ty(34), 7.5 * tScale + 0.5, 68 * tScale);
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.62)"; ctx.lineWidth = Math.max(1, 0.12 * tScale);
+  ctx.strokeRect(tx(-52.5), ty(34), 105 * tScale, 68 * tScale);
+  ctx.beginPath(); ctx.moveTo(tx(0), ty(34)); ctx.lineTo(tx(0), ty(-34)); ctx.stroke();
+  ctx.beginPath(); ctx.arc(tx(0), ty(0), 9.15 * tScale, 0, 2 * Math.PI); ctx.stroke();
+  for (const s of [-1, 1]) {
+    const gx = s * 52.5;
+    ctx.strokeRect(Math.min(tx(gx), tx(gx - s * 16.5)), ty(20.16), 16.5 * tScale, 40.32 * tScale);
+    ctx.strokeRect(Math.min(tx(gx), tx(gx - s * 5.5)), ty(9.16), 5.5 * tScale, 18.32 * tScale);
+    ctx.beginPath(); ctx.arc(tx(gx - s * 11), ty(0), 0.25 * tScale, 0, 2 * Math.PI); ctx.fillStyle = "rgba(255,255,255,0.62)"; ctx.fill();
+    ctx.strokeRect(Math.min(tx(gx), tx(gx + s * 1.8)), ty(3.66), 1.8 * tScale, 7.32 * tScale);
+  }
+}
+function drawTac() {
+  const r = sizeCanvas(tac, tctx);
+  tScale = r.width / (2 * EXT.x);
+  const ctx = tctx, R = run(), S = sample(R, state.frame);
+  ctx.fillStyle = "#14271d"; ctx.fillRect(0, 0, r.width, r.height);
+  drawPitch(ctx);
+  const [hx, hy] = S.pos[HERO];
+  const scanning = R.scans.some(s => S.frame >= s.start && S.frame <= s.end);
+  if (state.cone) {
+    const yaw = S.head[HERO], half = Math.PI / 3, rad = 42 * tScale;
+    const g = ctx.createRadialGradient(tx(hx), ty(hy), 0, tx(hx), ty(hy), rad);
+    g.addColorStop(0, scanning ? "rgba(166,236,255,0.42)" : "rgba(166,236,255,0.26)");
+    g.addColorStop(1, "rgba(166,236,255,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(tx(hx), ty(hy));
+    ctx.arc(tx(hx), ty(hy), rad, -yaw - half, -yaw + half); ctx.closePath(); ctx.fill();
+  }
+  const dec = R.decision, act = R.action;
+  if (act && S.frame >= act.frame) {
+    ctx.setLineDash([6, 5]); ctx.lineWidth = 2;
+    ctx.strokeStyle = state.mode === "factual" ? COL.sight : COL.gold;
+    ctx.beginPath(); ctx.moveTo(tx(act.start[0]), ty(act.start[1])); ctx.lineTo(tx(act.target[0]), ty(act.target[1])); ctx.stroke();
+    ctx.setLineDash([]);
+    const [ax, ay] = [tx(act.target[0]), ty(act.target[1])];
+    ctx.beginPath(); ctx.moveTo(ax - 5, ay - 5); ctx.lineTo(ax + 5, ay + 5); ctx.moveTo(ax + 5, ay - 5); ctx.lineTo(ax - 5, ay + 5); ctx.stroke();
+  }
+  const pr = Math.max(6, 0.95 * tScale);
+  if (state.ghost) {
+    for (let j = 0; j < N; j++) {
+      if (j === HERO) continue;
+      const [gx, gy] = S.ghost[j], [px, py] = S.pos[j];
+      const err = Math.hypot(gx - px, gy - py);
+      if (err < 1.2) continue;
+      ctx.strokeStyle = "rgba(230,238,233,0.32)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(tx(gx), ty(gy)); ctx.lineTo(tx(px), ty(py)); ctx.stroke();
+      ctx.setLineDash([3, 3]); ctx.strokeStyle = j === RUNNER ? COL.gold : "rgba(230,238,233,0.75)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(tx(gx), ty(gy), pr, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let j = 0; j < N; j++) {
+    const [px, py] = S.pos[j];
+    const seen = j !== HERO && (S.seen >> j) & 1;
+    if (seen) { ctx.beginPath(); ctx.arc(tx(px), ty(py), pr + 3, 0, 2 * Math.PI); ctx.fillStyle = "rgba(166,236,255,0.55)"; ctx.fill(); }
+    ctx.beginPath(); ctx.arc(tx(px), ty(py), pr, 0, 2 * Math.PI); ctx.fillStyle = teamColor(j); ctx.fill();
+    if (j === HERO) { ctx.lineWidth = 2.5; ctx.strokeStyle = "#ffffff"; ctx.stroke(); }
+    if (j === RUNNER) { ctx.lineWidth = 2.5; ctx.strokeStyle = COL.gold; ctx.stroke(); }
+    ctx.fillStyle = "#0b1210"; ctx.font = `600 ${Math.round(pr * 1.05)}px "IBM Plex Mono", monospace`;
+    ctx.fillText(String(D.players[j].number), tx(px), ty(py) + 0.5);
+  }
+  ctx.font = '600 12px "Saira Condensed", sans-serif'; ctx.fillStyle = "#ffffff";
+  ctx.fillText(D.hero, tx(hx), ty(hy) - pr - 9);
+  const [rx, ry] = S.pos[RUNNER]; ctx.fillStyle = COL.gold; ctx.fillText(D.runner, tx(rx), ty(ry) - pr - 9);
+  ctx.beginPath(); ctx.arc(tx(S.ball[0]), ty(S.ball[1]), Math.max(3.5, 0.45 * tScale), 0, 2 * Math.PI);
+  ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = "#0b1210"; ctx.stroke();
+}
+
+// ---------- first-person view (three.js) ----------
+const povCanvas = document.getElementById("pov");
+let renderer = null;
+try { renderer = new THREE.WebGLRenderer({ canvas: povCanvas, antialias: true }); }
+catch (e) { document.getElementById("pov-label").textContent = "First person (WebGL unavailable)"; }
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#0c1a16");
+scene.fog = new THREE.Fog("#0c1a16", 45, 120);
+const camera = new THREE.PerspectiveCamera(60, 16 / 10, 0.05, 300);
+scene.add(new THREE.HemisphereLight("#dfeee6", "#1b3326", 1.6));
+const sun = new THREE.DirectionalLight("#ffffff", 1.4); sun.position.set(-30, 60, 20); scene.add(sun);
+const W = (x, y, h = 0) => new THREE.Vector3(x, h, -y);
+
+function pitchTexture() {
+  const s = 20, cv = document.createElement("canvas"); cv.width = 105 * s; cv.height = 68 * s;
+  const c = cv.getContext("2d");
+  for (let k = 0; k < 14; k++) { c.fillStyle = k % 2 ? "#1f4a32" : "#245638"; c.fillRect(k * 7.5 * s, 0, 7.5 * s + 1, 68 * s); }
+  c.strokeStyle = "rgba(255,255,255,0.85)"; c.lineWidth = 0.12 * s;
+  const X = x => (x + 52.5) * s, Y = y => (34 - y) * s;
+  c.strokeRect(X(-52.5) + 2, Y(34) + 2, 105 * s - 4, 68 * s - 4);
+  c.beginPath(); c.moveTo(X(0), Y(34)); c.lineTo(X(0), Y(-34)); c.stroke();
+  c.beginPath(); c.arc(X(0), Y(0), 9.15 * s, 0, 2 * Math.PI); c.stroke();
+  for (const g of [-1, 1]) {
+    const gx = g * 52.5;
+    c.strokeRect(Math.min(X(gx), X(gx - g * 16.5)), Y(20.16), 16.5 * s, 40.32 * s);
+    c.strokeRect(Math.min(X(gx), X(gx - g * 5.5)), Y(9.16), 5.5 * s, 18.32 * s);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (renderer) tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+const apron = new THREE.Mesh(new THREE.PlaneGeometry(130, 92), new THREE.MeshStandardMaterial({ color: "#173826" }));
+apron.rotation.x = -Math.PI / 2; apron.position.y = -0.01; scene.add(apron);
+const pitch = new THREE.Mesh(new THREE.PlaneGeometry(105, 68), new THREE.MeshStandardMaterial({ map: pitchTexture() }));
+pitch.rotation.x = -Math.PI / 2; scene.add(pitch);
+const postMat = new THREE.MeshStandardMaterial({ color: "#f4f6f5" });
+for (const g of [-1, 1]) {
+  for (const y of [-3.66, 3.66]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.44, 10), postMat);
+    post.position.copy(W(g * 52.5, y, 1.22)); scene.add(post);
+  }
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 7.32, 10), postMat);
+  bar.rotation.x = Math.PI / 2; bar.position.copy(W(g * 52.5, 0, 2.44)); scene.add(bar);
+}
+function numberSprite(n, color) {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+  const c = cv.getContext("2d");
+  c.font = '700 84px "IBM Plex Mono", monospace'; c.textAlign = "center"; c.textBaseline = "middle";
+  c.lineWidth = 10; c.strokeStyle = "rgba(11,18,16,0.85)"; c.strokeText(String(n), 64, 68);
+  c.fillStyle = color; c.fillText(String(n), 64, 68);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
+  sp.scale.set(0.75, 0.75, 1); return sp;
+}
+const capsule = new THREE.CapsuleGeometry(0.3, 1.15, 6, 14);
+const bodies = [], ghosts = [];
+for (let j = 0; j < N; j++) {
+  const mesh = new THREE.Mesh(capsule, new THREE.MeshStandardMaterial({ color: teamColor(j), roughness: 0.6 }));
+  const label = numberSprite(D.players[j].number, j === RUNNER ? COL.gold : "#ffffff");
+  label.position.y = 1.35; mesh.add(label);
+  scene.add(mesh); bodies.push(mesh);
+  const g = new THREE.Mesh(capsule, new THREE.MeshBasicMaterial({ color: j === RUNNER ? COL.gold : "#e6eee9", transparent: true, opacity: 0.18, depthWrite: false }));
+  scene.add(g); ghosts.push(g);
+}
+bodies[HERO].visible = false; ghosts[HERO].visible = false;
+const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 20, 14), new THREE.MeshStandardMaterial({ color: "#ffffff" }));
+scene.add(ballMesh);
+
+function sizePov() {
+  if (!renderer) return;
+  const r = povCanvas.getBoundingClientRect();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  const hfov = 95 * Math.PI / 180;
+  camera.fov = 2 * Math.atan(Math.tan(hfov / 2) / camera.aspect) * 180 / Math.PI;
+  camera.updateProjectionMatrix();
+}
+function drawPov() {
+  if (!renderer) return;
+  const R = run(), S = sample(R, state.frame);
+  for (let j = 0; j < N; j++) {
+    const [x, y] = S.pos[j];
+    bodies[j].position.copy(W(x, y, 0.88));
+    const [gx, gy] = S.ghost[j];
+    ghosts[j].visible = state.ghostPov && j !== HERO && Math.hypot(gx - x, gy - y) > 1.2;
+    ghosts[j].position.copy(W(gx, gy, 0.88));
+  }
+  ballMesh.position.copy(W(S.ball[0], S.ball[1], 0.11));
+  const [hx, hy] = S.pos[HERO], yaw = S.head[HERO];
+  camera.position.copy(W(hx, hy, 1.72));
+  camera.lookAt(W(hx + 10 * Math.cos(yaw), hy + 10 * Math.sin(yaw), 1.3));
+  renderer.render(scene, camera);
+  const toBall = Math.atan2(S.ball[1] - hy, S.ball[0] - hx);
+  let off = Math.abs(((yaw - toBall + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) * 180 / Math.PI;
+  const scan = R.scans.find(s => S.frame >= s.start && S.frame <= s.end);
+  let seenCount = 0; for (let j = 0; j < N; j++) if (j !== HERO && (S.seen >> j) & 1) seenCount++;
+  const hud = document.getElementById("hud");
+  hud.innerHTML = "";
+  const add = (text, cls) => { const s = document.createElement("span"); s.textContent = text; if (cls) s.className = cls; hud.appendChild(s); };
+  add(`${D.hero} · head ${fmt(off, 0)}° from the ball`);
+  add(`${seenCount} players in sight`);
+  if (scan) add(scan.key ? "KEY SCAN" : "SCAN", scan.key ? "badge key" : "badge");
+  if (state.mode === "counterfactual" && S.frame >= KEY.start && S.frame <= KEY.end) add("no look in this run", "badge key");
+}
+
+// ---------- timeline ----------
+const tl = document.getElementById("tl"), tlctx = tl.getContext("2d");
+const scrub = document.getElementById("scrub");
+function drawTimeline() {
+  const r = sizeCanvas(tl, tlctx), ctx = tlctx, R = run();
+  const n = R.frames - 1, X = f => 6 + (r.width - 12) * f / n;
+  ctx.clearRect(0, 0, r.width, r.height);
+  ctx.fillStyle = "#26362f"; ctx.fillRect(6, r.height / 2 - 1, r.width - 12, 2);
+  for (const s of R.scans) {
+    ctx.fillStyle = s.key ? COL.sight : "rgba(142,163,154,0.7)";
+    ctx.fillRect(X(s.start), 8, Math.max(3, X(s.end) - X(s.start)), r.height - 16);
+  }
+  if (state.mode === "counterfactual") {
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = COL.gold; ctx.lineWidth = 1.5;
+    ctx.strokeRect(X(KEY.start), 8, X(KEY.end) - X(KEY.start), r.height - 16); ctx.setLineDash([]);
+  }
+  if (R.decision) {
+    const x = X(R.decision.frame), y = r.height / 2;
+    ctx.fillStyle = COL.fg; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
+  }
+  if (R.action && R.action.end) { ctx.fillStyle = COL.muted; ctx.fillRect(X(R.action.end) - 1, 6, 2, r.height - 12); }
+  const px = X(Math.min(state.frame, n));
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(px - 1, 2, 2, r.height - 4);
+}
+
+// ---------- story and decision panels ----------
+function beats(R) {
+  const f = state.mode === "factual";
+  const dec = R.decision, act = R.action;
+  const err = dec ? dec.belief_error[D.runner] : 0;
+  const age = dec ? dec.belief_age[D.runner] : 0;
+  const chosen = dec ? actionLabel(dec.chosen) : "";
+  const p = dec ? dec.options.find(o => o.action === dec.chosen).prob : 0;
+  const outcome = act ? (act.outcome === "complete" ? `Completed to ${act.receiver}.` : `Lost: ${act.outcome} by ${act.receiver || "nobody"}.`) : "";
+  return [
+    { from: 0, text: `${R.passer} has the ball at the back. ${D.hero} drops in to receive with his back to goal.` },
+    { from: R.firstKick, text: `The pass is on its way. ${D.runner} starts a run behind ${D.hero}, outside his field of view.` },
+    f ? { from: KEY.start, text: `${D.hero} checks over his shoulder: a ${sec(KEY.end - KEY.start)} s look away from the ball.` }
+      : { from: KEY.start, text: `Same moment, but ${D.hero} keeps his eyes on the ball. No look over the shoulder.` },
+    f ? { from: KEY.end, text: `He has seen ${D.runner} running in behind. His picture of ${D.runner} is ${fmt(err, 1)} m off.` }
+      : { from: KEY.end, text: `He still pictures ${D.runner} where he last saw him, ${fmt(age, 1)} s ago: ${fmt(err, 1)} m from where he really is.` },
+    { from: dec ? dec.frame : R.frames - 1, text: `Decision: ${chosen.charAt(0).toLowerCase() + chosen.slice(1)} (chosen with probability ${fmt(p, 2)}).` },
+    { from: act && act.end ? act.end : R.frames - 1, text: outcome },
+  ];
+}
+let beatEls = [];
+function renderStory() {
+  const R = run(), list = document.getElementById("beats");
+  list.innerHTML = "";
+  beatEls = beats(R).map(b => {
+    const li = document.createElement("li");
+    const t = document.createElement("span"); t.className = "t"; t.textContent = `${sec(b.from)} s`;
+    const s = document.createElement("span"); s.textContent = b.text;
+    li.append(t, s); li.dataset.from = b.from;
+    li.addEventListener("click", () => { state.frame = b.from; state.playing = false; syncPlay(); dirty = true; });
+    list.appendChild(li); return li;
+  });
+  const v = document.getElementById("verdict");
+  const fa = RUNS.factual.decision.chosen, ca = RUNS.counterfactual.decision.chosen;
+  v.innerHTML = "";
+  const item = (label, value, cls) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = value; if (cls) b.className = cls; d.append(label + " ", b); v.appendChild(d); };
+  item("With the look:", actionLabel(fa));
+  item("Without:", actionLabel(ca));
+  item("Expected threat gained by looking:", `${D.delta_xt >= 0 ? "+" : ""}${fmt(D.delta_xt, 3)} xT`, "num");
+}
+function renderDecision() {
+  const R = run(), dec = R.decision, box = document.getElementById("options");
+  document.getElementById("dec-title").textContent = `${D.hero}'s options at ${sec(dec.frame)} s, on his belief`;
+  box.innerHTML = "";
+  for (const o of dec.options.slice(0, 6)) {
+    const row = document.createElement("div"); row.className = "opt" + (o.action === dec.chosen ? " chosen" : "");
+    const name = document.createElement("span"); name.className = "name"; name.textContent = actionLabel(o.action);
+    const bar = document.createElement("span"); bar.className = "bar"; const i = document.createElement("i"); i.style.width = `${Math.max(1, o.prob * 100)}%`; bar.appendChild(i);
+    const p = document.createElement("span"); p.className = "p"; p.textContent = fmt(o.prob, 2);
+    row.title = `P(success) ${fmt(o.p_success, 2)} · value ${fmt(o.value, 4)} xT`;
+    row.append(name, bar, p); box.appendChild(row);
+  }
+  const runnerOpt = dec.options.find(o => o.action === `pass:${D.runner}`);
+  const facts = document.getElementById("facts"); facts.innerHTML = "";
+  const fact = (label, value) => { const d = document.createElement("div"); d.className = "fact"; const s = document.createElement("span"); s.textContent = label; const b = document.createElement("b"); b.textContent = value; d.append(s, b); facts.appendChild(d); };
+  fact(`Belief error on ${D.runner}`, `${fmt(dec.belief_error[D.runner], 1)} m`);
+  fact(`Last saw ${D.runner}`, `${fmt(dec.belief_age[D.runner], 2)} s ago`);
+  fact(`P(pass to ${D.runner} arrives), as he sees it`, runnerOpt ? fmt(runnerOpt.p_success, 2) : "not on");
+}
+function updateStoryHighlight() {
+  let k = 0;
+  beatEls.forEach((li, i) => { if (state.frame + 1e-6 >= Number(li.dataset.from)) k = i; });
+  beatEls.forEach((li, i) => li.classList.toggle("now", i === k));
+}
+
+// ---------- controls ----------
+const playBtn = document.getElementById("play");
+function syncPlay() { playBtn.textContent = state.playing ? "Pause" : (state.started ? "Play" : "Play moment"); }
+playBtn.addEventListener("click", () => {
+  if (!state.started) { state.started = true; state.frame = 0; }
+  else if (state.frame >= run().frames - 1) state.frame = 0;
+  state.playing = !state.playing; syncPlay(); dirty = true;
+});
+function setMode(m) {
+  state.mode = m;
+  document.getElementById("mode-f").setAttribute("aria-pressed", m === "factual");
+  document.getElementById("mode-c").setAttribute("aria-pressed", m === "counterfactual");
+  document.getElementById("app").classList.toggle("mode-cf", m === "counterfactual");
+  state.frame = Math.min(state.frame, run().frames - 1);
+  renderStory(); renderDecision(); dirty = true;
+}
+document.getElementById("mode-f").addEventListener("click", () => setMode("factual"));
+document.getElementById("mode-c").addEventListener("click", () => setMode("counterfactual"));
+const toggle = (id, key) => document.getElementById(id).addEventListener("click", e => {
+  state[key] = !state[key]; e.currentTarget.setAttribute("aria-pressed", state[key]); dirty = true;
+});
+toggle("t-cone", "cone"); toggle("t-ghost", "ghost"); toggle("t-ghost-pov", "ghostPov");
+scrub.addEventListener("input", () => { state.frame = Number(scrub.value) / 100 * (run().frames - 1); state.started = true; dirty = true; });
+document.getElementById("j-scan").addEventListener("click", () => { state.frame = Math.max(0, KEY.start - 8); state.started = true; dirty = true; });
+document.getElementById("j-dec").addEventListener("click", () => { state.frame = run().decision.frame; state.started = true; dirty = true; });
+document.getElementById("speed").addEventListener("change", e => { state.speed = Number(e.target.value); });
+window.addEventListener("keydown", e => { if (e.code === "Space" && e.target === document.body) { e.preventDefault(); playBtn.click(); } });
+
+// ---------- loop ----------
+let dirty = true, last = performance.now();
+const ro = new ResizeObserver(() => { sizePov(); dirty = true; });
+ro.observe(povCanvas); ro.observe(tac); ro.observe(tl);
+function tick(now) {
+  const dtReal = Math.min(0.1, (now - last) / 1000); last = now;
+  const R = run();
+  if (state.playing) {
+    const nearKey = state.frame >= KEY.start - 4 && state.frame <= KEY.end + 4;
+    state.frame += dtReal / DT * state.speed * (nearKey ? 0.4 : 1);
+    if (state.frame >= R.frames - 1) { state.frame = R.frames - 1; state.playing = false; syncPlay(); }
+    dirty = true;
+  }
+  if (dirty) {
+    drawTac(); drawPov(); drawTimeline(); updateStoryHighlight();
+    scrub.value = String(state.frame / (R.frames - 1) * 100);
+    document.getElementById("clock").innerHTML = `<b>${sec(state.frame)} s</b> · frame ${Math.floor(state.frame)}`;
+    dirty = false;
+  }
+  requestAnimationFrame(tick);
+}
+sizePov(); renderStory(); renderDecision(); syncPlay();
+document.fonts && document.fonts.ready.then(() => { dirty = true; });
+requestAnimationFrame(tick);
+</script>
