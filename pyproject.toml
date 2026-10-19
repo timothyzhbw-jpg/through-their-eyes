@@ -1,0 +1,37 @@
+[project]
+name = "through-their-eyes"
+version = "0.1.0"
+description = "See what they saw: perception-first, verified match breakdowns over synthetic football."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    # Sim and analytics kernels.
+    "numpy>=2.1",
+    # Schemas that cross process boundaries.
+    "pydantic>=2.9",
+    # Multi-agent workflow; pinned exactly because it ships weekly (docs/REFERENCES.md).
+    "agent-framework-core==1.22.0",
+    # Microsoft Foundry chat clients for Agent Framework.
+    "agent-framework-foundry==1.15.0",
+    # Keyless (Entra ID) auth to Foundry via the az CLI login.
+    "azure-identity>=1.19",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

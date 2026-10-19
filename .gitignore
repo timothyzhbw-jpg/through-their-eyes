@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+
+# Generated output (smoke-test audio, sim runs, eval scratch)
+out/
+
+# Web
+node_modules/
+web/dist/
+
+# OS
+.DS_Store
