@@ -3,12 +3,16 @@
 Each term maps to one predicate with a fixed threshold (all *tunable*):
 - `unmarked` ⇒ nearest opponent > 5 m;
 - `blind side` ⇒ the target was outside the observer's vision cone when his last scan began;
-- `under heavy pressure` ⇒ pressing intensity on the carrier ≥ 0.7 — TODO(SPEC 4.3): the pressing
-  kernel is not in analytics/ yet, so this term verifies as `inconclusive` and never renders.
+- `under heavy pressure` ⇒ pressing intensity on the player ≥ 0.7 (`analytics.pressing`).
 
 A claim backs a term only if its predicate (or one conjunct of an `all`) is that definition with
 the lexicon's own threshold — a claim cannot weaken "unmarked" to "nearest opponent > 1 m". The
 render check allows a term only in a line that references a supported claim backing it.
+
+Two more vocabulary rules for the render check:
+- banned evaluative terms: judgements no predicate can back ("mistake", "should have", 失误, 本该)
+  never appear, in any persona or language;
+- a line that references no claim must be a connective phrase from `CONNECTIVES`.
 """
 
 from __future__ import annotations
@@ -99,3 +103,45 @@ def backs(key: str, pred: Predicate) -> bool:
         ):
             return True
     return False
+
+
+# Judgements that cannot be written as a predicate (SPEC 5.3), with close variants.
+BANNED = _p(
+    r"\bmistakes?\b",
+    r"\berrors?\b",
+    r"\bblunders?\b",
+    r"\bdominat(?:e|es|ed|ing|ion)\b",
+    r"\b(?:controll?(?:ed|ing|s)?|in control of) the (?:game|match)\b",
+    r"\b(?:certain|sure) goal\b",
+    r"\bshould(?: have|'ve|n't have| not have)\b",
+    r"\blaz(?:y|iness|ily)\b",
+    r"\bworld[- ]class\b",
+    r"失误|统治(?:了)?比赛|主宰(?:了)?比赛|必进|本该|本应|偷懒|世界级",
+)
+
+
+def find_banned(text: str) -> list[TermMatch]:
+    found = [TermMatch(m[0].lower(), m.start(), m.end(), m[0]) for p in BANNED
+             for m in p.finditer(text)]  # fmt: skip
+    return sorted(found, key=lambda m: m.start)
+
+
+# Lines without a claim are limited to these (SPEC 5.3), compared without case or punctuation.
+CONNECTIVES = frozenset(
+    {
+        # en
+        "and", "and then", "but", "so", "then", "now", "now watch", "watch", "watch this",
+        "watch again", "look", "look at this", "look again", "here it is", "here's why",
+        "here is why", "why", "how", "what did he see", "what did she see", "this is the moment",
+        "rewind", "let's go back", "back to the moment", "freeze it", "see it again",
+        # zh
+        "然后", "但是", "所以", "现在", "看这里", "注意看", "再看看", "回放", "倒回去看看",
+        "暂停", "为什么", "他看到了什么", "她看到了什么", "就是这个瞬间", "关键在这里",
+    }
+)  # fmt: skip
+_EDGE = re.compile(r"^[\s.,!?;:…—–\-\"'“”‘’，。！？；：、]+|[\s.,!?;:…—–\-\"'“”‘’，。！？；：、]+$")
+
+
+def is_connective(text: str) -> bool:
+    core = _EDGE.sub("", text).replace("’", "'").lower()
+    return " ".join(core.split()) in CONNECTIVES

@@ -3,10 +3,16 @@
 The Narrator writes script lines with placeholders and claim references; it never writes a
 number. `render_line` fills the placeholders from the referenced claims, and only if every one
 of them is `supported` and unchanged since it was verified. The result is then checked as a
-final payload (`check_caption`):
+final caption (`check_caption`):
 - every number (digits or number words, any language) lies inside a slot span;
 - every lexicon term is backed by a supported claim referenced on the line;
-- every player name lies inside a slot span (names come from refs, not free text).
+- no banned evaluative term appears ("mistake", "should have", 失误, ...);
+- every player name lies inside a slot span (names come from refs, not free text);
+and a line that references no claim must be a connective phrase.
+
+`build_payload` turns a script into what a viewer receives for one breakdown (SPEC 5.3): the
+lines that passed, and for each claim its kind, verdict, filled values, evidence and seek frame.
+`check_payload` re-runs every check on that final payload.
 
 Placeholders: `{name}` (a slot of the line's only claim that has it) or `{claim.name}`, with an
 optional format — `{n:times}` (once / twice / 3 times; 3次), `{n:words}` (three; 三) — and an
@@ -16,13 +22,14 @@ optional plural noun, `{n|second|seconds}` → "1 second", "6 seconds".
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from explain import lexicon
-from explain.claims import PLACEHOLDER, Claim, Slot
+from explain.claims import PLACEHOLDER, Claim, ClaimKind, Slot
 from explain.functions import EVENT_ID, is_number
 from explain.numbers import ONES, TENS, number_tokens
 from explain.verifier import Verdict
@@ -46,10 +53,12 @@ class SlotSpan:
 
 @dataclass(frozen=True)
 class Violation:
-    kind: str  # unsupported_claim | stale_claim | placeholder | number | lexicon | entity
+    kind: str  # unsupported_claim | stale_claim | placeholder | number | lexicon | banned |
+    #            entity | unbacked_line
     detail: str
     start: int | None = None
     end: int | None = None
+    line: str | None = None
 
 
 @dataclass
@@ -201,11 +210,18 @@ def render_line(
 
     text = "".join(out)
     backed = {t for cid in line.claims for t in verdicts[cid].terms}
-    violations = check_caption(text, spans, backed, names)
+    violations = _unbacked(line.claims, text) + check_caption(text, spans, backed, names)
     return RenderResult(
         not violations, None if violations else text, lang, line.id, list(line.claims), spans,
         violations,
     )  # fmt: skip
+
+
+def _unbacked(claims: list[str], text: str) -> list[Violation]:
+    """SPEC 5.3: a line references a supported claim or is a connective phrase."""
+    if claims or lexicon.is_connective(text):
+        return []
+    return [Violation("unbacked_line", "no claim and not a connective phrase")]
 
 
 def check_caption(
@@ -229,6 +245,7 @@ def check_caption(
         for m in lexicon.find_terms(text)
         if m.key not in backed_terms
     ]
+    violations += [Violation("banned", m.text, m.start, m.end) for m in lexicon.find_banned(text)]
     for name in sorted(set((names or {}).values())):
         pattern = rf"\b{re.escape(name)}\b" if name.isascii() else re.escape(name)
         violations += [
@@ -236,4 +253,124 @@ def check_caption(
             for m in re.finditer(pattern, text)
             if not in_slot(m.start(), m.end())
         ]
+    return violations
+
+
+# --- render payload (SPEC 5.3) ------------------------------------------------------------
+
+
+class PayloadSpan(BaseModel):
+    start: int
+    end: int
+    claim: str
+    slot: str
+
+
+class PayloadLine(BaseModel):
+    id: str
+    text: str
+    claims: list[str]
+    spans: list[PayloadSpan] = Field(default_factory=list)  # where each slot value sits
+
+
+class PayloadClaim(BaseModel):
+    id: str
+    kind: ClaimKind
+    verdict: Literal["supported"]  # nothing else reaches a viewer
+    values: dict[str, bool | int | float | str]  # filled slot values (refs as ids)
+    terms: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)  # event ids
+    seek_frame: int | None = None  # where the replay jumps to show the evidence
+
+
+class RenderPayload(BaseModel):
+    moment: str
+    persona: str
+    language: str
+    lines: list[PayloadLine]
+    claims: list[PayloadClaim]
+
+
+@dataclass
+class PayloadBuild:
+    payload: RenderPayload
+    rejected: list[RenderResult]  # lines dropped, with why (for the Narrator rewrite loop)
+
+
+def _event_ids(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value] if EVENT_ID.match(value) else []
+    if isinstance(value, dict):
+        return [e for v in value.values() for e in _event_ids(v)]
+    if isinstance(value, list):
+        return [e for v in value for e in _event_ids(v)]
+    return []
+
+
+def seek_frame(claim: Claim) -> int | None:
+    """The earliest evidence event, else the earliest event the claim refers to."""
+    ids = claim.evidence or _event_ids(claim.predicate.model_dump()) + _event_ids(
+        {k: s.ref for k, s in claim.slots.items()}
+    )
+    frames = [int(e.rsplit(":", 1)[1]) for e in ids if EVENT_ID.match(e)]
+    return min(frames) if frames else None
+
+
+def build_payload(
+    moment: str,
+    persona: str,
+    language: str,
+    lines: Iterable[ScriptLine],
+    claims: Mapping[str, Claim],
+    verdicts: Mapping[str, Verdict],
+    names: Mapping[str, str] | None = None,
+) -> PayloadBuild:
+    kept: list[PayloadLine] = []
+    rejected: list[RenderResult] = []
+    used: list[str] = []
+    for line in lines:
+        out = render_line(line, claims, verdicts, language, names)
+        if not out.ok:
+            rejected.append(out)
+            continue
+        spans = [PayloadSpan(start=s.start, end=s.end, claim=s.claim, slot=s.slot)
+                 for s in out.spans]  # fmt: skip
+        kept.append(PayloadLine(id=line.id, text=out.text, claims=line.claims, spans=spans))
+        used += [c for c in line.claims if c not in used]
+    entries = [
+        PayloadClaim(
+            id=cid,
+            kind=claims[cid].kind,
+            verdict="supported",
+            values={k: s.raw for k, s in claims[cid].slots.items()},
+            terms=verdicts[cid].terms,
+            evidence=claims[cid].evidence,
+            seek_frame=seek_frame(claims[cid]),
+        )
+        for cid in used
+    ]
+    payload = RenderPayload(
+        moment=moment, persona=persona, language=language, lines=kept, claims=entries
+    )
+    return PayloadBuild(payload, rejected)
+
+
+def check_payload(
+    payload: RenderPayload, names: Mapping[str, str] | None = None
+) -> list[Violation]:
+    """Every render check, re-run on the final payload a viewer receives."""
+    claims = {c.id: c for c in payload.claims}
+    violations: list[Violation] = []
+    for line in payload.lines:
+        found = _unbacked(line.claims, line.text)
+        missing = [c for c in line.claims if c not in claims]
+        found += [Violation("unsupported_claim", f"{c}: not in the payload") for c in missing]
+        for s in line.spans:
+            slot_value = claims[s.claim].values.get(s.slot) if s.claim in claims else None
+            if s.claim not in line.claims or slot_value is None:
+                found.append(Violation("placeholder", f"span for {s.claim}.{s.slot}"))
+        spans = [SlotSpan(s.start, s.end, s.claim, s.slot) for s in line.spans]
+        backed = {t for c in line.claims if c in claims for t in claims[c].terms}
+        found += check_caption(line.text, spans, backed, names)
+        violations += [Violation(v.kind, v.detail, v.start, v.end, line.id) for v in found]
     return violations
