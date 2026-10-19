@@ -191,8 +191,14 @@ class Simulation:
             base[self.owner] = self.body_yaw[self.owner]
         trigger = self.rng.uniform("scan_trigger", f, n, entities=self.ids)
         draws = self.rng.uniform("scan_params", f, n, (3,), entities=self.ids)
+        # Head nuisance draws are made every frame, whether or not the nuisance is switched on.
+        partial_draws = self.rng.uniform("partial_scan", f, n, entities=self.ids)
+        drift_noise = self.rng.normal("head_drift", f, n, entities=self.ids)
         allowed = ~self.scenario.scan_suppressed(self, f)
-        spontaneous = allowed & (trigger < self.scan_rate * DT)
+        p_scan = self.scan_rate * DT
+        spontaneous = allowed & (trigger < p_scan)
+        # The same trigger draw: just above the scan probability, a scan starts and is aborted.
+        partial = allowed & ~spontaneous & (trigger < p_scan * (1 + p.partial_scan_ratio))
         self.head_yaw, finished = self.head.step(
             f,
             self.head_yaw,
@@ -204,6 +210,9 @@ class Simulation:
             self.ids,
             p,
             DT,
+            partial=partial,
+            partial_draws=partial_draws,
+            drift_noise=drift_noise,
         )
         for scan in finished:
             self._emit_scan(scan)
@@ -471,6 +480,7 @@ class Simulation:
                     "direction": scan.target,
                     "amplitude": scan.amplitude,
                     "key": scan.key,
+                    "partial": scan.partial,  # aborted: not a scan (sim.perception)
                 },
             )
         )
