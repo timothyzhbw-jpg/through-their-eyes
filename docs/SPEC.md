@@ -258,6 +258,7 @@ Every factual sentence on screen comes from a `Claim`:
 ```json
 {
   "id": "c17",
+  "kind": "observed",
   "template": "{player} scanned {n_scans} times in the {window_s} seconds before receiving.",
   "slots": {"player": {"ref": "H8"}, "n_scans": {"value": 3}, "window_s": {"value": 6}},
   "predicate": {
@@ -288,6 +289,27 @@ Every factual sentence on screen comes from a `Claim`:
 - Functions: `count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
   observed_share, cf_delta`.
 - Every verdict is written to the claims audit log (Cosmos DB) with inputs and timestamps.
+- **Claim kinds, shown on screen.** Every claim is one of:
+  - `observed`: an event or tracking fact (a scan count, a pass outcome);
+  - `computed`: an analytics metric (pitch control, xT, belief error, pressing);
+  - `counterfactual`: from re-simulating the moment with an intervention (dropping a scan). It is
+    causal inside the sim only (§3.5), and the label makes that visible.
+  The viewer labels each line's evidence with its kind, so facts, metrics and what-ifs never blur.
+- **Banned evaluative terms.** Judgements that cannot be written as a predicate never appear in
+  narration, in any persona or language — e.g. `mistake`, `error`, `dominated`, `controlled the
+  game`, `certain goal`, `should have`, `lazy`, `world-class`; in `zh` 失误, 统治比赛, 必进, 本该,
+  偷懒. A goal on the counter is not by itself a defensive mistake, possession is not control, and
+  xG is not a certain goal. The render check rejects these like an unslotted number.
+- **Render payload.** What a viewer receives for one breakdown. Each line lists its claim ids;
+  each claim carries its kind, verdict, filled values, evidence event ids and a seek frame, so any
+  line's evidence can be opened and the replay jumped there (§7):
+
+```json
+{"moment": "m12", "persona": "analyst", "language": "en",
+ "lines": [{"id": "L2", "text": "H8 checked his shoulder once before the ball arrived.", "claims": ["c17"]}],
+ "claims": [{"id": "c17", "kind": "observed", "verdict": "supported", "values": {"n_scans": 1},
+             "evidence": ["scan:H8:0050"], "seek_frame": 50}]}
+```
 
 ### Acceptance checks — explain
 - [ ] Corruption test: perturb 100 supported claims (numbers ±1 / ±20%, swapped players, wrong
@@ -298,6 +320,9 @@ Every factual sentence on screen comes from a `Claim`:
 - [ ] No rendered caption, in any language, contains a number (digits or number words) that did
       not come from a slot (check on the final render payload).
 - [ ] Every lexicon term in a rendered line is backed by a supported claim on that line.
+- [ ] No rendered caption contains a banned evaluative term (`en`, `zh`).
+- [ ] Every claim has a kind; claims built on `cf_delta` are `counterfactual`; every rendered line
+      references at least one supported claim or is a connective phrase.
 - [ ] Lens selection is deterministic for a given seed.
 
 ## 6. Agents (`agents/`)
@@ -357,12 +382,17 @@ original visual identity.
   (POV | tactical).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
+- **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
+  shows its claims with their kind label (observed / computed / counterfactual), verdict and
+  evidence events, and seeks the replay to the evidence frame.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
 - [ ] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
       a template plan.
+- [ ] Every caption line in the breakdown player opens its claims and seeks the replay to their
+      evidence.
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -398,13 +428,18 @@ by layer risks reaching Oct 26 with every layer 70% done and nothing to film.
 | Oct 26 (Mon) | M5 freeze | feature freeze; eval report; README; first video cut; repo public |
 | Oct 27 (Tue) | M6 submit | buffer; final ≤ 2:00 video; submission complete by mid-afternoon CT |
 
+Optional, Oct 25–26: a **viewer pilot** with about 5 people. Show the same moment with and
+without the POV breakdown and ask each one question: "why did he play that pass?". Reported as a
+pilot only, never generalised.
+
 **Cut order when behind:**
-1. end-of-match recap reel
-2. `coach` persona
-3. `es` language
-4. Cosmos DB → file store
-5. occlusion model → FOV only
-6. pitch-control shader → precomputed textures
+1. viewer pilot
+2. end-of-match recap reel
+3. `coach` persona
+4. `es` language
+5. Cosmos DB → file store
+6. occlusion model → FOV only
+7. pitch-control shader → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
