@@ -6,8 +6,12 @@ spot, home attacks +x.
 
 Schema changes are additive and bump VERSION; `demo/` reads version 1 fields only.
 
+`render_payload_fixture` derives a SPEC 5.3 render payload for the hero moment from the export,
+so the viewer can be built before the verifier's payloads exist. It is marked as a fixture.
+
     uv run python -m sim.export --scenario blind_side_run --seed 3 \
-        --out web/public/data/hero_seed3.json
+        --out web/public/data/hero_seed3.json \
+        --payload-fixture web/public/data/fixture_payload_seed3.json
 """
 
 from __future__ import annotations
@@ -166,16 +170,126 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
     }
 
 
+FIXTURE_NOTE = (
+    "Fixture, not verifier output: claim values are computed from the sim export by "
+    "sim.export.render_payload_fixture and no verifier has checked them."
+)
+
+
+def _times(n: int) -> str:
+    return {1: "once", 2: "twice"}.get(n, f"{n} times")
+
+
+def _amount(x: float, one: str, many: str) -> str:
+    return f"{x} {one if x == 1 else many}"
+
+
+def _frame_of(event_id: str) -> int:
+    return int(event_id.rsplit(":", 1)[1])
+
+
+def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
+    """A render payload (SPEC 5.3) for the hero moment, computed from `export_hero` output.
+
+    It follows `explain.builders` (claim ids, value slots, evidence, rounding) and
+    `explain.render` (verdicts, seek_frame = earliest evidence frame), so the real payload can
+    replace it. Claims of each kind: observed (scans before reception, the completed pass),
+    computed (belief error on the runner at the decision), counterfactual (belief error, pass
+    and value without the key scan: re-simulated, so causal only inside the sim).
+    """
+    f, c = data["runs"]["factual"], data["runs"]["counterfactual"]
+    hero, runner, key = data["hero"], data["runner"], data["key_scan"]["id"]
+    decision, cf_decision = f["decision"], c["decision"]
+
+    reception = next(e for e in f["events"] if e["type"] == "reception" and e["player"] == hero)
+    window_s = 2
+    lo = reception["frame"] - round(window_s / data["dt"])
+    scans = [
+        e["id"] for e in f["events"]
+        if e["type"] == "scan" and e["player"] == hero and lo <= e["frame"] <= reception["frame"]
+    ]  # fmt: skip
+    action = next(
+        e for e in f["events"]
+        if e["type"] == "pass" and e["player"] == hero and e["frame"] == decision["frame"]
+    )  # fmt: skip
+    receiver = action["attrs"]["receiver"]
+    received = next(
+        e for e in f["events"]
+        if e["type"] == "reception" and e["player"] == receiver and e["frame"] >= action["frame"]
+    )  # fmt: skip
+    cf_receiver = cf_decision["chosen"].removeprefix("pass:")
+    err = round(decision["belief_error"][runner], 1)
+    cf_err = round(cf_decision["belief_error"][runner], 1)
+    dxt = round(data["delta_xt"], 2)
+
+    def claim(cid: str, kind: str, values: dict, evidence: list[str]) -> dict[str, Any]:
+        return {
+            "id": cid,
+            "kind": kind,
+            "verdict": "supported",
+            "values": values,
+            "evidence": evidence,
+            "seek_frame": min(_frame_of(e) for e in evidence),
+        }
+
+    claims = [
+        claim("scans_before_reception", "observed", {"n": len(scans), "window_s": window_s},
+              scans or [reception["id"]]),
+        claim("belief_error", "computed", {"err": err}, [action["id"]]),
+        claim("cf_belief_error", "counterfactual", {"err": cf_err}, [key]),
+        claim("runner_received", "observed", {}, [action["id"], received["id"]]),
+        claim("cf_pass", "counterfactual", {}, [key]),
+        claim("cf_value", "counterfactual", {"dxt": dxt}, [key]),
+    ]  # fmt: skip
+    lines = [
+        ("L1", "What did he see?", []),
+        (
+            "L2",
+            f"{hero} scanned {_times(len(scans))} in the "
+            f"{_amount(window_s, 'second', 'seconds')} before receiving.",
+            ["scans_before_reception"],
+        ),
+        (
+            "L3",
+            f"When he played the pass, {hero}'s picture of {runner} was off by "
+            f"{_amount(err, 'metre', 'metres')}. Without that look, it would have been off by "
+            f"{_amount(cf_err, 'metre', 'metres')}.",
+            ["belief_error", "cf_belief_error"],
+        ),
+        ("L4", f"{receiver} took the pass from {hero}.", ["runner_received"]),
+        (
+            "L5",
+            f"Without that look, {hero} would have passed to {cf_receiver}. "
+            f"That look was worth {dxt} in expected threat.",
+            ["cf_pass", "cf_value"],
+        ),
+    ]
+    return {
+        "fixture": True,
+        "note": FIXTURE_NOTE,
+        "moment": f"m:decision_after_scan:{hero}:{decision['frame']:04d}",
+        "persona": "casual",
+        "language": "en",
+        "lines": [{"id": i, "text": t, "claims": cl} for i, t, cl in lines],
+        "claims": claims,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export a hero moment for viewers.")
     parser.add_argument("--scenario", default="blind_side_run")
     parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--payload-fixture", type=Path, help="also write a render-payload fixture")
     args = parser.parse_args()
     data = export_hero(args.scenario, args.seed)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(data, separators=(",", ":")))
     print(f"wrote {args.out} ({args.out.stat().st_size / 1024:.0f} KB)")
+    if args.payload_fixture:
+        payload = render_payload_fixture(data)
+        args.payload_fixture.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+        print(f"wrote {args.payload_fixture} (fixture)")
 
 
 if __name__ == "__main__":
