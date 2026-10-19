@@ -198,6 +198,10 @@ integration later if time allows.
 ### 4.3 Pressing intensity (after Bekkers)
 Defender→attacker and defender→ball TTI, mapped to a probability with a logistic. Per-frame matrix;
 aggregate pressure on the ball carrier.
+- `p[d, a] = logistic(π / (√3 σ) · (T − TTI[d, a]))` with T = 1.5 s, σ = 0.45 s (*tunable*).
+- The carrier's column is the max of pressure on his body and on the ball.
+- Aggregate on a player: `1 − Π_d (1 − p[d, a])`. No pressure while the ball is free.
+- Not yet: the paper's heading penalty and active-presser speed filter.
 
 ### 4.4 Vision map and observed-space metrics
 Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
@@ -242,15 +246,38 @@ of §3.4.
 Rule-based detectors over events + analytics: goal, big chance, line-breaking pass, successful
 counter-press, sprint tag (live overlay only). Each moment yields a `MomentCard` — the shared state
 for the agents: ids, time window, involved players, key metrics, candidate lenses.
+- *Implemented (M2):*
+  - line-breaking pass: completed, past ≥ 2 outfield opponents;
+  - decision after a scan: a reception, then the receiver's decision, with a scan ending ≤ 2 s
+    before the reception;
+  - sprint: > 7.0 m/s for ≥ 0.4 s, live overlay only.
+  Goal, big chance and counter-press need shot outcomes and turnovers (M4).
+- Detections about the same action merge into one card with several tags. Card ids look like
+  `m:decision_after_scan:H8:0075`.
+- A card names its anchor events (`reception`, `last_scan`, `action`, `completion`), so claims
+  anchor on `<card>.<anchor>` (§5.3).
+- `content_hash()` keys the breakdown cache (§2).
 
 ### 5.2 Lens selection by counterfactual impact
-For each moment, compute candidate explanations:
-- `scan`: drop the most informative scan (largest belief update about the eventual target) and
-  re-simulate → counterfactual delta.
-- `space`: pitch-control / xT gain of the chosen option vs the best alternative.
-- `pressure`: pressing intensity on the carrier and how the action escaped it.
+For each moment, compute candidate explanations. All three deltas are in xT of the acting team.
+`scan` and `space` share one value function, evaluated on the true state at the decision:
+`V(option) = PC·xT(target) − (1 − PC)·xT_opp(target)` (shots keep xG).
+- `scan`: drop the most informative scan — the one whose sightings move the decision-time belief
+  about the eventual target most — and re-simulate (§3.7).
+  Δ = V(factual choice) − V(counterfactual choice). The realised outcome difference is recorded as
+  `realized_delta_xt`, but not used for selection: it is an outcome, not an expectation.
+- `space`: Δ = V(chosen) − V(best alternative).
+- `pressure`: expected turnover cost = pressing intensity × (xT_own + xT_opp at the ball).
+  Δ = cost on the actor at the decision − cost after the action.
 
-Pick the lens with the largest absolute delta. Record all three in the MomentCard.
+Pick the lens with the largest absolute delta; exact ties go `scan > space > pressure`. Record all
+three in the MomentCard.
+
+Without the scan, the player chooses one of the alternatives, so Δscan ≥ Δspace whenever the scan
+changed the decision. The scan lens therefore wins exactly when the scan was decisive. An
+uninformative scan scores 0, and then `space` wins (tested). On `blind_side_run`, 80 seeds
+(0–39 and 100–139): `scan` is selected every time, the key scan is the most informative scan every
+time, and the median margin over `space` is about 0.003 xT.
 
 ### 5.3 Claims and verifier
 Every factual sentence on screen comes from a `Claim`:
@@ -258,6 +285,7 @@ Every factual sentence on screen comes from a `Claim`:
 ```json
 {
   "id": "c17",
+  "kind": "observed",
   "template": "{player} scanned {n_scans} times in the {window_s} seconds before receiving.",
   "slots": {"player": {"ref": "H8"}, "n_scans": {"value": 3}, "window_s": {"value": 6}},
   "predicate": {
@@ -288,6 +316,27 @@ Every factual sentence on screen comes from a `Claim`:
 - Functions: `count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
   observed_share, cf_delta`.
 - Every verdict is written to the claims audit log (Cosmos DB) with inputs and timestamps.
+- **Claim kinds, shown on screen.** Every claim is one of:
+  - `observed`: an event or tracking fact (a scan count, a pass outcome);
+  - `computed`: an analytics metric (pitch control, xT, belief error, pressing);
+  - `counterfactual`: from re-simulating the moment with an intervention (dropping a scan). It is
+    causal inside the sim only (§3.5), and the label makes that visible.
+  The viewer labels each line's evidence with its kind, so facts, metrics and what-ifs never blur.
+- **Banned evaluative terms.** Judgements that cannot be written as a predicate never appear in
+  narration, in any persona or language — e.g. `mistake`, `error`, `dominated`, `controlled the
+  game`, `certain goal`, `should have`, `lazy`, `world-class`; in `zh` 失误, 统治比赛, 必进, 本该,
+  偷懒. A goal on the counter is not by itself a defensive mistake, possession is not control, and
+  xG is not a certain goal. The render check rejects these like an unslotted number.
+- **Render payload.** What a viewer receives for one breakdown. Each line lists its claim ids;
+  each claim carries its kind, verdict, filled values, evidence event ids and a seek frame, so any
+  line's evidence can be opened and the replay jumped there (§7):
+
+```json
+{"moment": "m12", "persona": "analyst", "language": "en",
+ "lines": [{"id": "L2", "text": "H8 checked his shoulder once before the ball arrived.", "claims": ["c17"]}],
+ "claims": [{"id": "c17", "kind": "observed", "verdict": "supported", "values": {"n_scans": 1},
+             "evidence": ["scan:H8:0050"], "seek_frame": 50}]}
+```
 
 ### Acceptance checks — explain
 - [ ] Corruption test: perturb 100 supported claims (numbers ±1 / ±20%, swapped players, wrong
@@ -298,6 +347,9 @@ Every factual sentence on screen comes from a `Claim`:
 - [ ] No rendered caption, in any language, contains a number (digits or number words) that did
       not come from a slot (check on the final render payload).
 - [ ] Every lexicon term in a rendered line is backed by a supported claim on that line.
+- [ ] No rendered caption contains a banned evaluative term (`en`, `zh`).
+- [ ] Every claim has a kind; claims built on `cf_delta` are `counterfactual`; every rendered line
+      references at least one supported claim or is a connective phrase.
 - [ ] Lens selection is deterministic for a given seed.
 
 ## 6. Agents (`agents/`)
@@ -357,12 +409,17 @@ original visual identity.
   (POV | tactical).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
+- **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
+  shows its claims with their kind label (observed / computed / counterfactual), verdict and
+  evidence events, and seeks the replay to the evidence frame.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
 - [ ] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
       a template plan.
+- [ ] Every caption line in the breakdown player opens its claims and seeks the replay to their
+      evidence.
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -398,13 +455,18 @@ by layer risks reaching Oct 26 with every layer 70% done and nothing to film.
 | Oct 26 (Mon) | M5 freeze | feature freeze; eval report; README; first video cut; repo public |
 | Oct 27 (Tue) | M6 submit | buffer; final ≤ 2:00 video; submission complete by mid-afternoon CT |
 
+Optional, Oct 25–26: a **viewer pilot** with about 5 people. Show the same moment with and
+without the POV breakdown and ask each one question: "why did he play that pass?". Reported as a
+pilot only, never generalised.
+
 **Cut order when behind:**
-1. end-of-match recap reel
-2. `coach` persona
-3. `es` language
-4. Cosmos DB → file store
-5. occlusion model → FOV only
-6. pitch-control shader → precomputed textures
+1. viewer pilot
+2. end-of-match recap reel
+3. `coach` persona
+4. `es` language
+5. Cosmos DB → file store
+6. occlusion model → FOV only
+7. pitch-control shader → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
