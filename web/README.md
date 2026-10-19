@@ -51,7 +51,7 @@ src/
   clip, POV clips are at most 3 s). An invalid plan never plays: `resolvePlan` swaps in
   `templatePlan(moment)`, built from the moment alone, and keeps the reasons for the console.
   Plan times: `t` is seconds since the plan started; `from` / `to` are match seconds relative to
-  the hero's reception. One step beyond the SPEC sketch: `play` (play on to a time), needed to
+  the moment's anchor (`MomentCard.anchor_frame`, the decision); `moment` is the card id. One step beyond the SPEC sketch: `play` (play on to a time), needed to
   show the outcome after a freeze.
 - **Comfort mode** (SPEC 7: eased POV yaw). Between frames the head yaw follows a monotone cubic
   (as in PCHIP) instead of a straight line, so turns ease in and out but the peak of every look

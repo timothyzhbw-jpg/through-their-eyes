@@ -3,7 +3,8 @@
 // one declaration gives both the TypeScript type and the runtime check.
 //
 // Times: `t` is seconds since the plan started (wall clock). `from` / `to` are seconds of match
-// time relative to the moment's anchor, the hero's reception (negative = before it).
+// time relative to the moment's anchor, MomentCard.anchor_frame (the decision; negative =
+// before it).
 
 import { z } from "zod";
 

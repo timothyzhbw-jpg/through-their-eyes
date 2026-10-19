@@ -1,11 +1,13 @@
 // What a plan is checked against: the moment's clip, its anchor and the ids it may refer to.
-// Later this comes from the MomentCard (SPEC 5.1); for now it is derived from the hero export.
+// The id and anchor follow the MomentCard of explain/moments.py (SPEC 5.1): a decision after a
+// scan is "m:decision_after_scan:<actor>:<decision frame>", anchored at the decision. For now the
+// context is derived from the hero export; later the api serves the card itself.
 
 import type { Hero, Scan } from "../data/hero";
 
 export interface MomentContext {
   id: string;
-  anchorFrame: number; // the hero's reception; plan times are relative to it
+  anchorFrame: number; // MomentCard.anchor_frame (the decision); plan times are relative to it
   dt: number;
   frames: number; // length of the factual clip
   players: string[];
@@ -17,14 +19,12 @@ export interface MomentContext {
   endFrame: number; // the hero's action is resolved: where a breakdown starts
 }
 
-export const HERO_MOMENT_ID = "m1";
-
 export function heroMoment(hero: Hero): MomentContext {
   const run = hero.runs.factual;
   const decisionFrame = run.decision?.frame ?? hero.reception;
   return {
-    id: HERO_MOMENT_ID,
-    anchorFrame: hero.reception,
+    id: `m:decision_after_scan:${hero.heroId}:${String(decisionFrame).padStart(4, "0")}`,
+    anchorFrame: decisionFrame,
     dt: hero.dt,
     frames: run.frames,
     players: hero.ids,

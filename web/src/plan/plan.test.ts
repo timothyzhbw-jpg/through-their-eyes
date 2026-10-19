@@ -43,10 +43,10 @@ describe("plan validation", () => {
   });
 
   it(`rejects POV clips longer than ${MAX_POV_CLIP_S} s and empty ones`, () => {
-    expect(errorsOf(withStep(EXAMPLE_PLAN, povIndex, { from: -1.6, to: 1.6 }))).toEqual([
+    expect(errorsOf(withStep(EXAMPLE_PLAN, povIndex, { from: -1.8, to: 1.4 }))).toEqual([
       expect.stringMatching(/POV clip .* longer than/),
     ]);
-    expect(errorsOf(withStep(EXAMPLE_PLAN, povIndex, { from: 0.2, to: 0.2 }))).not.toEqual([]);
+    expect(errorsOf(withStep(EXAMPLE_PLAN, povIndex, { from: 0, to: 0 }))).not.toEqual([]);
   });
 
   it("rejects references to things that do not exist", () => {
@@ -67,7 +67,8 @@ describe("plan validation", () => {
   });
 
   it("rejects a plan for another moment", () => {
-    expect(errorsOf({ ...EXAMPLE_PLAN, moment: "m7" })).not.toEqual([]);
+    expect(moment.id).toBe("m:decision_after_scan:H8:0075");
+    expect(errorsOf({ ...EXAMPLE_PLAN, moment: "m:decision_after_scan:H8:0099" })).not.toEqual([]);
   });
 
   it("plays a valid plan as given", () => {
@@ -126,7 +127,8 @@ describe("plan executor", () => {
     const late = until(9.1);
     expect(late.cfGhost).toBe(true);
     expect(late.caption).toBe(EXAMPLE_SCRIPT.L5);
-    expect(late.frame).toBeCloseTo(relToFrame(moment, 2.8), 6);
+    const play = EXAMPLE_PLAN.steps.find((s) => s.do === "play") as { to: number };
+    expect(late.frame).toBeCloseTo(relToFrame(moment, play.to), 6);
     until(EXAMPLE_PLAN.duration_s + 1);
     expect(runner.status.get().status).toBe("done");
     expect(runner.status.get().applied).toBe(EXAMPLE_PLAN.steps.length);
