@@ -244,13 +244,32 @@ counter-press, sprint tag (live overlay only). Each moment yields a `MomentCard`
 for the agents: ids, time window, involved players, key metrics, candidate lenses.
 
 ### 5.2 Lens selection by counterfactual impact
-For each moment, compute candidate explanations:
+For each moment with a decision, compute candidate explanations. All three deltas use one
+currency: the decision model's expected possession value of an action (§3.5),
+`V = P(success)·xT(target) − (1 − P)·xT_opp(target)`, evaluated on the **true** state at the
+decision frame (true positions and velocities, belief age zero). Values come from the true state,
+not the belief, because the scan lens changes the belief, so belief-based values would not
+compare.
 - `scan`: drop the most informative scan (largest belief update about the eventual target) and
-  re-simulate → counterfactual delta.
-- `space`: pitch-control / xT gain of the chosen option vs the best alternative.
-- `pressure`: pressing intensity on the carrier and how the action escaped it.
+  re-simulate. Δ = V(factual action) − V(action taken without the scan).
+- `space`: Δ = V(chosen) − max V(other options): the margin over the best alternative.
+  Pitch control and xT at both targets are recorded as supporting metrics.
+- `pressure`: Δ = PI × (V(chosen) − V(turnover)). PI is the pressing intensity on the carrier
+  (§4.3). V(turnover) = −xT_opp(ball) is the value of losing the ball where he stands. Δ is the
+  value the action kept away from the press, if a press that arrives in time wins the ball.
 
-Pick the lens with the largest absolute delta. Record all three in the MomentCard.
+Pick the lens with the largest |Δ|. **Tie rule:** lenses within 0.001 xT (*tunable*) of the
+largest are tied, and the tie goes to the precedence `scan > space > pressure`. The precedence
+follows the causal order of a decision: perception, then the option it reveals, then executing
+under pressure. Ties are structural, not noise. When the player without the scan would have
+played the best alternative, the scan's whole effect is to reveal the option whose margin `space`
+measures, so the two deltas are equal. On `blind_side_run` (seeds 100–139):
+- `scan` wins 40/40;
+- scan Δ ≥ space Δ in all 40 seeds, but they are tied within 0.001 in 20/40, so the precedence
+  decides those.
+
+Record all three lenses in the MomentCard, with the selected one. Moments without a decision
+(sprints, scripted passes) get no lenses.
 
 ### 5.3 Claims and verifier
 Every factual sentence on screen comes from a `Claim`:
