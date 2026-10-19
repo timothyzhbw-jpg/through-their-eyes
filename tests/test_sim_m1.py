@@ -106,7 +106,12 @@ def test_belief_is_the_last_sighting_extrapolated_up_to_a_horizon():
     store = BeliefStore(n=3, frame=0, pos=np.zeros((3, 2)), vel=np.zeros((3, 2)))
     seen = np.zeros((3, 3), dtype=bool)
     seen[0, 1] = True
-    store.update(seen, frame=10, pos=np.array([[0, 0], [5, 0], [9, 9]]), vel=np.array([[0, 0], [2, 0], [0, 0]]))
+    store.update(
+        seen,
+        frame=10,
+        pos=np.array([[0, 0], [5, 0], [9, 9]]),
+        vel=np.array([[0, 0], [2, 0], [0, 0]]),
+    )
     pos, vel, age = store.estimate(observer=0, frame=35, dt=0.04, horizon_s=0.5)
     np.testing.assert_allclose(pos[1], [5 + 2 * 0.5, 0])  # 1 s old, extrapolated for 0.5 s
     np.testing.assert_allclose(pos[2], [0, 0])  # never seen since the start
