@@ -35,10 +35,11 @@ uv run ruff check .
 ```
 
 ### Azure smoke test (M0)
-Needs the Azure CLI, logged in to the subscription you want to use (`az login`).
+Needs the Azure CLI (`az login`) and an Azure for Students (or personal pay-as-you-go)
+subscription; the script refuses Microsoft-internal and Enterprise Agreement subscriptions.
 
 ```bash
-infra/m0_provision.sh
+AZURE_SUBSCRIPTION_ID=<subscription id> infra/m0_provision.sh
 uv run --env-file .env python -m infra.smoke
 ```
 

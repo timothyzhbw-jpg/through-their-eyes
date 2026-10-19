@@ -108,7 +108,8 @@ async def check_foundry() -> tuple[Result, Lines | None]:
     model = require_env("FOUNDRY_MODEL")
     start = time.perf_counter()
     try:
-        async with AzureCliCredential() as credential:
+        tenant_id = os.environ.get("AZURE_TENANT_ID") or None
+        async with AzureCliCredential(tenant_id=tenant_id) as credential:
             client = FoundryChatClient(
                 project_endpoint=endpoint, model=model, credential=credential
             )

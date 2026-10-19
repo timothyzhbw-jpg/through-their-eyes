@@ -47,13 +47,35 @@ if ! az account show -o none 2>/dev/null; then
   echo "Not logged in. Run: az login" >&2
   exit 1
 fi
-SUB_ID=$(az account show --query id -o tsv)
-az account show --query "{subscription:name, user:user.name}" -o table
+# Never fall back to the CLI's default subscription: name the one to bill explicitly.
+SUB_ID=${AZURE_SUBSCRIPTION_ID:-}
+if [[ -z $SUB_ID ]]; then
+  echo "Set AZURE_SUBSCRIPTION_ID to the subscription to use. Yours:" >&2
+  az account list --query "[].{name:name, id:id, tenant:tenantDisplayName}" -o table >&2
+  exit 1
+fi
+SUB_NAME=$(az account show --subscription "$SUB_ID" --query name -o tsv)
+TENANT_ID=$(az account show --subscription "$SUB_ID" --query tenantId -o tsv)
 QUOTA_ID=$(az rest --method get \
   --url "https://management.azure.com/subscriptions/$SUB_ID?api-version=2022-12-01" \
   --query subscriptionPolicies.quotaId -o tsv 2>/dev/null || echo unknown)
-echo "Offer (quotaId): $QUOTA_ID"
-[[ $QUOTA_ID == AzureForStudents* ]] || echo "Note: this is not an Azure for Students subscription."
+echo "$SUB_NAME ($SUB_ID), offer $QUOTA_ID"
+# Only offers billed to you personally. Internal (Microsoft-paid) and Enterprise Agreement
+# (organisation-paid) subscriptions are refused: the rules exclude projects developed with
+# financial support from the Sponsor, and an organisation's budget is not ours to spend.
+case $QUOTA_ID in
+  AzureForStudents* | PayAsYouGo* | FreeTrial*) ;;
+  *)
+    if [[ ${TTE_ALLOW_ANY_OFFER:-} != 1 ]]; then
+      echo "Refusing offer '$QUOTA_ID'. Use an Azure for Students (or personal pay-as-you-go)" >&2
+      echo "subscription; set TTE_ALLOW_ANY_OFFER=1 only if its owner approved this use." >&2
+      exit 1
+    fi
+    echo "TTE_ALLOW_ANY_OFFER=1: continuing on offer '$QUOTA_ID'."
+    ;;
+esac
+az account set --subscription "$SUB_ID"
+echo "az default subscription is now $SUB_NAME."
 
 step "Region policy"
 ALLOWED=$(az policy assignment list --disable-scope-strict-match \
@@ -146,6 +168,8 @@ awk -v s="$BLOCK_START" -v e="$BLOCK_END" '$0==s{skip=1} !skip{print} $0==e{skip
 {
   cat "$TMP/env"
   echo "$BLOCK_START"
+  echo "AZURE_SUBSCRIPTION_ID=$SUB_ID"
+  echo "AZURE_TENANT_ID=$TENANT_ID"
   echo "AZURE_LOCATION=$LOCATION"
   echo "AZURE_RESOURCE_GROUP=$RG"
   echo "TTE_SUFFIX=$SUFFIX"

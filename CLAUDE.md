@@ -78,7 +78,8 @@ _Fill in as they come to exist._
 - `uv sync` — install Python deps (dev group included)
 - `uv run pytest` — tests
 - `uv run ruff check . && uv run ruff format --check .` — lint (same as CI)
-- `infra/m0_provision.sh` — create the M0 Azure resources (needs `az login`); writes `.env`
+- `AZURE_SUBSCRIPTION_ID=<id> infra/m0_provision.sh` — create the M0 Azure resources (needs
+  `az login`; refuses non-personal subscriptions); writes `.env`
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - Not yet: `uv run python -m eval.run_all`, `uv run uvicorn api.main:app --reload`,
