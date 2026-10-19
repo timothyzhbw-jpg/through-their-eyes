@@ -4,7 +4,7 @@ import numpy as np
 
 from analytics.pitch_control import pitch_control, pitch_grid
 from analytics.tti import time_to_intercept
-from analytics.vision import visibility
+from analytics.vision import player_visibility, visibility
 from analytics.xt import xt_prior
 
 NO_OCCLUDERS = np.empty((0, 2))
@@ -28,7 +28,9 @@ def test_tti_of_a_standing_player_is_reaction_plus_run():
 
 def test_tti_keeps_current_velocity_during_reaction():
     # Moving at 5 m/s toward the target: at 3.5 m after 0.7 s, then 6.5 m at 5 m/s.
-    t = time_to_intercept(np.zeros((1, 2)), np.array([[5.0, 0.0]]), np.array([[10.0, 0.0]]), 0.7, 5.0)
+    t = time_to_intercept(
+        np.zeros((1, 2)), np.array([[5.0, 0.0]]), np.array([[10.0, 0.0]]), 0.7, 5.0
+    )
     assert np.isclose(t[0, 0], 0.7 + 6.5 / 5.0)
 
 
@@ -103,4 +105,21 @@ def test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis():
     values = xt_prior(xs, np.zeros_like(xs))
     assert np.all(np.diff(values) > 0)
     ys = np.linspace(-30, 30, 13)
-    np.testing.assert_allclose(xt_prior(np.full_like(ys, 30.0), ys), xt_prior(np.full_like(ys, 30.0), -ys))
+    np.testing.assert_allclose(
+        xt_prior(np.full_like(ys, 30.0), ys), xt_prior(np.full_like(ys, 30.0), -ys)
+    )
+
+
+def test_player_visibility_matches_the_single_observer_kernel():
+    rng = np.random.default_rng(4)
+    pos = rng.uniform([-40, -30], [40, 30], size=(22, 2))
+    head = rng.uniform(-np.pi, np.pi, 22)
+    speed = rng.uniform(0, 8, 22)
+    v = player_visibility(pos, head, speed)
+    for i in range(22):
+        others = np.delete(np.arange(22), i)
+        for j in others:
+            occluders = pos[np.setdiff1d(others, [j])]
+            ref = visibility(pos[i], head[i], speed[i], pos[[j]], occluders)[0]
+            assert abs(v[i, j] - ref) < 1e-12
+    np.testing.assert_array_equal(np.diag(v), 1.0)
