@@ -13,7 +13,10 @@
    ≥ 98%. Perturbations that stay true, or that the recording cannot decide (e.g. a swapped player
    who never scanned), are excluded and listed.
 4. Render every supported claim in `en` and `zh` through the render check, and confirm that no
-   perturbed claim the verifier did not support renders.
+   perturbed claim the verifier did not support renders. Per seed and language, build the render
+   payload a viewer would receive (SPEC 5.3) and re-run every check on it.
+
+Claims anchor on the hero's MomentCard (`<card>.<anchor>`, SPEC 5.1) from `explain.moments`.
 
 Writes eval/reports/corruption.md.
 """
@@ -30,12 +33,14 @@ from pathlib import Path
 import numpy as np
 
 from analytics.pitch_control import pitch_control, pitch_grid
+from analytics.pressing import aggregate, frame_pressing
 from analytics.vision import VisionParams, visibility, wrap_angle
 from explain.audit import JsonlAuditSink, MemoryAuditSink
 from explain.builders import HeroRefs, hero_claims
 from explain.claims import Claim, Slot
 from explain.functions import EvalContext
-from explain.render import Violation, render_claim
+from explain.moments import detect_moments
+from explain.render import ScriptLine, Violation, build_payload, check_payload, render_claim
 from explain.verifier import Verdict, Verifier
 from sim.counterfactual import CounterfactualResult, drop_scan_counterfactual
 
@@ -58,6 +63,7 @@ MEASURED = {
     "observed_share": "share",
     "gap_to_marker": "gap",
     "gap_opened": "gain",
+    "pressure_at_pass": "pressure",
 }
 # Player slots that may be swapped. Not the observer of belief_error: other players' beliefs
 # are not recorded, so a swap there could never be judged.
@@ -77,6 +83,7 @@ SWAPPABLE = {
     "gap_to_marker": ("runner", "marker"),
     "gap_opened": ("player", "runner", "marker"),
     "runner_received": ("runner", "passer"),
+    "pressure_at_pass": ("player",),
 }
 # Two references whose order the sentence depends on (gap_* are symmetric: they stay true).
 ORDER = {
@@ -140,6 +147,10 @@ class Result:
     rendered: int = 0
     render_failures: list[tuple[str, str, list[Violation]]] = field(default_factory=list)
     samples: dict[str, dict[str, str]] = field(default_factory=dict)
+    payloads: int = 0
+    payload_lines: int = 0
+    payload_violations: list[Violation] = field(default_factory=list)
+    card_anchored: int = 0
     audited: int = 0
     seconds: float = 0.0
 
@@ -267,6 +278,15 @@ def ground_truth(kind: str, c: Claim, w: World) -> bool | None:
         runner = _ref(c, "runner")
         return (hp.player == _ref(c, "passer") and hp.attrs.get("receiver") == runner
                 and rec is not None and rec.player == runner)  # fmt: skip
+    if kind == "pressure_at_pass":
+        f, i = hp.frame, run.index(_ref(c, "player"))
+        carrier = int(run.owner[f])
+        team = np.array([p.team for p in run.players])
+        if carrier < 0 or team[i] != team[carrier]:
+            return None  # only the team in possession is pressed (SPEC 4.3)
+        pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], carrier)
+        value = pf.on_carrier if i == carrier else float(aggregate(pf.column(i)))
+        return _close(100.0 * value, _val(c, "pressure"), 0)
     raise KeyError(kind)
 
 
@@ -315,12 +335,31 @@ def run_eval(seeds: list[int], n: int = 100, rng_seed: int = 0, audit_path: Path
     generated: list[Generated] = []
     for seed in seeds:
         cf = drop_scan_counterfactual(SCENARIO, seed)
-        ctx = EvalContext(cf.factual, counterfactuals={cf.scan_id: cf})
+        cards = {c.id: c for c in detect_moments(cf.factual)}
+        ctx = EvalContext(cf.factual, counterfactuals={cf.scan_id: cf}, cards=cards)
         world = World(seed, cf, HeroRefs.of(cf.factual), Verifier(ctx, sink=sink))
         for kind, claim in hero_claims(ctx, cf).items():
             claim = claim.model_copy(update={"id": f"s{seed}.{kind}"})
             generated.append(Generated(world, kind, claim, world.verifier.verify(claim)))
     result = Result(seeds=seeds, generated=generated, perturbed=[])
+    result.card_anchored = sum(".action" in s or ".reception" in s for s in (
+        g.claim.predicate.model_dump_json() for g in generated))  # fmt: skip
+
+    for seed in seeds:
+        mine = [g for g in generated if g.world.seed == seed]
+        claims = {g.claim.id: g.claim for g in mine}
+        verdicts = {g.claim.id: g.verdict for g in mine}
+        for lang in LANGS:
+            script = [
+                ScriptLine(id="L0", text="他看到了什么？" if lang == "zh" else "What did he see?")
+            ]
+            script += [ScriptLine(id=f"L{i + 1}", text=g.claim.template_for(lang),
+                                  claims=[g.claim.id]) for i, g in enumerate(mine)]  # fmt: skip
+            built = build_payload(f"s{seed}", "analyst", lang, script, claims, verdicts)
+            result.payloads += 1
+            result.payload_lines += len(built.payload.lines)
+            result.payload_violations += [v for r in built.rejected for v in r.violations]
+            result.payload_violations += check_payload(built.payload)
 
     for g in generated:
         for lang in LANGS:
@@ -364,13 +403,15 @@ def report(r: Result) -> str:
     undecidable = [p for p in r.perturbed if p.truth is None]
     leaked = sum(p.rendered and p.verdict.status != "supported" for p in r.perturbed)
     rate = refuted / len(false) if false else 0.0
+    clean = rate >= TARGET and leaked == 0 and not r.payload_violations and not r.render_failures
     kinds = sorted({g.kind for g in r.generated})
+    labels = Counter(g.claim.kind for g in r.generated)
     lines = [
         "# Corruption eval — claims verifier",
         "",
         f"Scenario `{SCENARIO}`, seeds {r.seeds[0]}–{r.seeds[-1]} ({len(r.seeds)}): the factual "
         "run and the drop-key-scan counterfactual per seed. Claims come from `explain/builders.py` "
-        f"({len(kinds)} kinds); {len(r.perturbed)} perturbations, an equal share per type. Each "
+        f"({len(kinds)} facts); {len(r.perturbed)} perturbations, an equal share per type. Each "
         "perturbed sentence is judged by the verifier and by an independent ground-truth oracle "
         "(`eval/corruption.py`, plain numpy over the run, never through `explain/`). Numbers are "
         "true when the truth rounds to the shown value (half a display unit).",
@@ -388,9 +429,16 @@ def report(r: Result) -> str:
         f"| Unsupported perturbed claims that rendered | {leaked} | 0 |",
         f"| Supported claims rendered in en + zh, render check clean | "
         f"{_pct(r.rendered, len(LANGS) * gen)} | all |",
+        f"| Render payloads (seed × language) re-checked clean | "
+        f"{r.payloads - len({v.line for v in r.payload_violations})}/{r.payloads}, "
+        f"{r.payload_lines} lines, {len(r.payload_violations)} violations | all |",
+        f"| Claims labelled observed / computed / counterfactual | "
+        f"{' / '.join(str(labels[k]) for k in ('observed', 'computed', 'counterfactual'))} | "
+        "every claim |",
+        f"| Claims anchored on the moment card | {_pct(r.card_anchored, gen)} | — |",
         f"| Verdicts written to the audit log | {r.audited}/{gen + len(r.perturbed)} | all |",
         "",
-        f"Result: {'PASS' if rate >= TARGET and leaked == 0 else 'FAIL'} (refutation {rate:.1%}).",
+        f"Result: {'PASS' if clean else 'FAIL'} (refutation {rate:.1%}).",
         "",
         "## By perturbation",
         "",
@@ -407,17 +455,18 @@ def report(r: Result) -> str:
         )
     lines += [
         "",
-        "## By claim kind",
+        "## By fact",
         "",
-        "| Kind | Generated | Supported | Perturbed | False | Refuted |",
-        "|---|---|---|---|---|---|",
+        "| Fact | Kind | Generated | Supported | Perturbed | False | Refuted |",
+        "|---|---|---|---|---|---|---|",
     ]
     for kind in kinds:
         gs = [g for g in r.generated if g.kind == kind]
         ps = [p for p in r.perturbed if p.kind == kind]
         f = [p for p in ps if p.truth is False]
         lines.append(
-            f"| `{kind}` | {len(gs)} | {sum(g.verdict.status == 'supported' for g in gs)} | "
+            f"| `{kind}` | {gs[0].claim.kind} | {len(gs)} | "
+            f"{sum(g.verdict.status == 'supported' for g in gs)} | "
             f"{len(ps)} | {len(f)} | {sum(p.verdict.status == 'refuted' for p in f)} |"
         )
     missed = [p for p in false if p.verdict.status != "refuted"]
@@ -430,7 +479,7 @@ def report(r: Result) -> str:
         if not rows:
             lines.append("None.")
             continue
-        lines += ["| Seed | Kind | Perturbation | Change | Verifier | Reason |",
+        lines += ["| Seed | Fact | Perturbation | Change | Verifier | Reason |",
                   "|---|---|---|---|---|---|"]  # fmt: skip
         for p in rows:
             reason = p.verdict.reason.replace("|", "\\|")
@@ -441,13 +490,16 @@ def report(r: Result) -> str:
     if r.render_failures:
         lines += ["", "## Render failures", ""]
         lines += [f"- `{cid}` ({lang}): {v}" for cid, lang, v in r.render_failures]
+    if r.payload_violations:
+        lines += ["", "## Payload violations", ""]
+        lines += [f"- {v}" for v in r.payload_violations]
     lines += [
         "",
         f"## Rendered claims, seed {r.seeds[0]}",
         "",
         "Player ids stand in for display names.",
         "",
-        "| Kind | en | zh |",
+        "| Fact | en | zh |",
         "|---|---|---|",
     ]
     for kind in kinds:
