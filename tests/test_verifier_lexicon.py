@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from analytics.pressing import frame_pressing
 from analytics.vision import VisionParams, wrap_angle
 from explain import lexicon
 from explain.builders import HeroRefs
@@ -64,12 +65,16 @@ def test_blind_side_means_outside_the_cone_when_the_last_scan_began(ctx, run):
     assert v.status == "refuted"
 
 
-def test_under_heavy_pressure_waits_for_the_pressing_kernel(ctx, run):
+def test_under_heavy_pressure_means_pressing_intensity_of_at_least_point_seven(ctx, run):
     p = HeroRefs.of(run).hero_pass
+    team = np.array([q.team for q in run.players])
+    f = p.frame
+    pressure = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], int(run.owner[f]))
+    expected = pressure.on_carrier >= 0.7
     v = verdict(ctx, lexicon.under_heavy_pressure("H8", anchor=p.id), ["under heavy pressure"])
-    assert v.status == "inconclusive"
-    assert "TODO" in v.reason and "4.3" in v.reason
-    assert v.terms == []
+    assert v.status == ("supported" if expected else "refuted")
+    assert v.terms == (["under heavy pressure"] if expected else [])
+    assert lexicon.backs("under heavy pressure", lexicon.under_heavy_pressure("H8", anchor=p.id))
 
 
 def test_a_term_is_backed_only_by_its_own_definition(ctx, run):
@@ -102,3 +107,39 @@ def test_a_term_is_backed_only_by_its_own_definition(ctx, run):
 )
 def test_find_terms_in_english_and_chinese(text, terms):
     assert [t.key for t in lexicon.find_terms(text)] == terms
+
+
+@pytest.mark.parametrize(
+    ("text", "banned"),
+    [
+        ("A mistake by the back line.", ["mistake"]),
+        ("He should have passed; he should've shot.", ["should have", "should've"]),
+        ("They dominated and controlled the game.", ["dominated", "controlled the game"]),
+        ("A world-class ball, a certain goal.", ["world-class", "certain goal"]),
+        ("Lazy defending, an error.", ["lazy", "error"]),
+        ("后卫失误，他本该传球。", ["失误", "本该"]),
+        ("他们统治比赛，这球必进。", ["统治比赛", "必进"]),
+        ("他偷懒了。", ["偷懒"]),
+        ("He played it early; the run was well timed.", []),
+    ],
+)
+def test_banned_evaluative_terms_in_english_and_chinese(text, banned):
+    assert [m.key for m in lexicon.find_banned(text)] == banned
+
+
+@pytest.mark.parametrize(
+    ("text", "connective"),
+    [
+        ("Watch this.", True),
+        ("What did he see?", True),
+        ("— And then —", True),
+        ("Here’s why:", True),
+        ("他看到了什么？", True),
+        ("看这里。", True),
+        ("He scored.", False),
+        ("Watch this pass.", False),
+        ("他进球了。", False),
+    ],
+)
+def test_connective_phrases(text, connective):
+    assert lexicon.is_connective(text) is connective

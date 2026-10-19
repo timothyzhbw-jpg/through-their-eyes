@@ -8,10 +8,12 @@ import numpy as np
 import pytest
 
 from analytics.pitch_control import pitch_control, pitch_grid
+from analytics.pressing import aggregate, frame_pressing
 from analytics.vision import visibility
 from explain.builders import HeroRefs
 from explain.claims import Claim, Predicate, Slot, event, fn, slot
 from explain.functions import EvalContext
+from explain.moments import detect_moments
 from explain.verifier import Verifier
 from sim.counterfactual import drop_scan_counterfactual
 
@@ -260,7 +262,7 @@ def test_all_is_a_conjunction_with_inconclusive_dominating_supported(ctx, refs):
     p = refs.hero_pass.id
     true = eq(fn("event_attr", event=p, attr="to"), "H9")
     false = eq(fn("event_attr", event=p, attr="to"), "H4")
-    unknown = eq(fn("metric_at", metric="pressing_intensity", player="H8", anchor=p), 0.5)
+    unknown = eq(fn("expected_goals", player="H8", anchor=p), 0.5)
     assert check(ctx, Predicate(op="all", args=[true, true])).status == "supported"
     assert check(ctx, Predicate(op="all", args=[true, false])).status == "refuted"
     assert check(ctx, Predicate(op="all", args=[true, unknown])).status == "inconclusive"
@@ -275,15 +277,11 @@ def test_functions_that_cannot_be_computed_are_inconclusive_never_faked(ctx, ref
     for lhs in (
         fn("expected_goals", player="H8", anchor=p),
         fn("metric_at", metric="heart_rate", player="H8", anchor=p),
-        fn("metric_at", metric="pressing_intensity", player="H8", anchor=p),
         fn("count_events", type="scan", player="H8", from_=-1.0, to=0.0, anchor="m12.reception"),
+        fn("metric_at", metric="pressing_intensity", player="H8", anchor=refs.kick.id, at=0.4),
     ):
         verdict = check(ctx, Predicate(op="ge", lhs=lhs, rhs=0.0))
         assert verdict.status == "inconclusive", lhs
-    pressing = check(
-        ctx, eq(fn("metric_at", metric="pressing_intensity", player="H8", anchor=p), 0.0)
-    )
-    assert "TODO" in pressing.reason
 
 
 def test_references_to_things_that_did_not_happen_are_refuted(ctx, refs):
@@ -346,3 +344,45 @@ def test_verdicts_are_deterministic_and_fingerprint_the_claim(ctx, refs):
     assert a.model_dump() == b.model_dump()
     assert a.fingerprint == claim.fingerprint()
     assert a.trace and a.trace[0]["lhs"] == "H9"
+
+
+def test_pressing_intensity_reads_the_pressing_kernel(ctx, run, refs):
+    f = refs.hero_pass.frame
+    assert run.owner[f] == run.index("H8")
+    team = np.array([p.team for p in run.players])
+    pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], int(run.owner[f]))
+    at = lambda player: fn("metric_at", metric="pressing_intensity", player=player,  # noqa: E731
+                           anchor=refs.hero_pass.id)  # fmt: skip
+    on_h8 = Predicate(op="approx", lhs=at("H8"), rhs=pf.on_carrier, abs_tol=1e-9)
+    assert check(ctx, on_h8).status == "supported"
+    on_h9 = float(aggregate(pf.column(run.index("H9"))))
+    assert check(ctx, Predicate(op="approx", lhs=at("H9"), rhs=on_h9, abs_tol=1e-9)).status == (
+        "supported"
+    )
+    assert check(ctx, Predicate(op="ge", lhs=at("A5"), rhs=0.0)).status == "inconclusive"
+
+
+# --- moment anchors (SPEC 5.1): "<card>.<anchor>" ------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def card(run):
+    return next(c for c in detect_moments(run) if c.kind == "decision_after_scan")
+
+
+def test_claims_anchor_on_moment_cards(hero, run, refs, card):
+    ctx = EvalContext(run, counterfactuals={hero.scan_id: hero}, cards={card.id: card})
+    assert card.anchors["reception"] == refs.reception.id
+    n = scans(run, "H8", refs.reception.frame - 50, refs.reception.frame)
+    by_card = fn("scans_in_window", player="H8", anchor=f"{card.id}.reception", window_s=2.0)
+    assert check(ctx, eq(by_card, n)).status == "supported"
+    to = fn("event_attr", event=f"{card.id}.action", attr="to")
+    assert check(ctx, eq(to, "H9")).status == "supported"
+    missing = fn("event_attr", event=f"{card.id}.shot", attr="to")
+    assert check(ctx, eq(missing, "H9")).status == "refuted"
+    unknown = fn("event_attr", event="m:decision_after_scan:H8:0001.action", attr="to")
+    assert check(ctx, eq(unknown, "H9")).status == "inconclusive"
+    value = fn("cf_delta", of="possession_value", scan=f"{card.id}.last_scan")
+    v = check(ctx, Predicate(op="approx", lhs=value, rhs=hero.delta_xt, abs_tol=1e-9))
+    assert v.status == "supported"
+    assert v.counterfactuals == [hero.scan_id]

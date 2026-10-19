@@ -53,3 +53,14 @@ def test_claims_the_verifier_did_not_support_never_render(result):
 def test_every_supported_claim_renders_cleanly_in_both_languages(result):
     assert result.render_failures == []
     assert result.rendered == 2 * len(result.generated)
+
+
+def test_payloads_pass_the_final_check_and_every_claim_is_labelled(result):
+    assert result.payloads == 4  # two seeds, en and zh
+    assert result.payload_violations == []
+    assert result.payload_lines == 2 * (len(result.generated) + 2)
+    assert {g.claim.kind for g in result.generated} == {"observed", "computed", "counterfactual"}
+    for g in result.generated:
+        uses_cf = "cf_delta" in g.claim.predicate.model_dump_json() or g.kind.startswith("cf_")
+        assert (g.claim.kind == "counterfactual") == uses_cf, g.kind
+    assert result.card_anchored > len(result.generated) // 2

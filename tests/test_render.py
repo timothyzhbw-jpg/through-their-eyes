@@ -12,8 +12,17 @@ from explain.builders import HeroRefs
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.functions import EvalContext
 from explain.numbers import number_tokens
-from explain.render import ScriptLine, SlotSpan, check_caption, render_claim, render_line
+from explain.render import (
+    ScriptLine,
+    SlotSpan,
+    build_payload,
+    check_caption,
+    check_payload,
+    render_claim,
+    render_line,
+)
 from explain.verifier import Verifier
+from sim.counterfactual import drop_scan_counterfactual
 from sim.engine import Simulation
 
 SCENARIO = "blind_side_run"
@@ -107,14 +116,24 @@ def test_refuted_and_inconclusive_claims_never_render(verifier, refs):
     out = render_claim(wrong, v, "en", NAMES)
     assert not out.ok and out.text is None
     assert out.violations[0].kind == "unsupported_claim"
-    todo = Claim(id="c9", template="{player} was under heavy pressure.",
-                 slots={"player": Slot(ref="H8")},
-                 predicate=lexicon.under_heavy_pressure(slot("player"),
-                                                        anchor=refs.hero_pass.id),
-                 terms=["under heavy pressure"])  # fmt: skip
-    v = verifier.verify(todo)
-    assert v.status == "inconclusive"
-    assert not render_claim(todo, v, "en", NAMES).ok
+    pressed = Claim(id="c9", template="{player} was under heavy pressure.",
+                    slots={"player": Slot(ref="H8")},
+                    predicate=lexicon.under_heavy_pressure(slot("player"),
+                                                           anchor=refs.hero_pass.id),
+                    terms=["under heavy pressure"])  # fmt: skip
+    v = verifier.verify(pressed)
+    assert v.status == "refuted"  # nobody was close to him
+    assert not render_claim(pressed, v, "en", NAMES).ok
+    unknowable = Claim(
+        id="c10", template="{player} misjudged {runner} by {err} metres.",
+        slots={"player": Slot(ref="H8"), "runner": Slot(ref="H9"), "err": Slot(value=1)},
+        predicate=Predicate(op="approx", rhs=slot("err"), abs_tol=0.5, lhs=fn(
+            "metric_at", metric="belief_error", observer=slot("player"), target=slot("runner"),
+            anchor=refs.reception.id)),
+    )  # fmt: skip
+    v = verifier.verify(unknowable)
+    assert v.status == "inconclusive"  # beliefs are recorded at decisions only
+    assert not render_claim(unknowable, v, "en", NAMES).ok
 
 
 def test_a_claim_edited_after_verification_does_not_render(verifier, refs):
@@ -286,7 +305,9 @@ def test_a_lexicon_term_needs_a_supported_claim_on_the_same_line(verifier, refs)
     ]
     assert render_claim(claims["c3"], verdicts["c3"], "zh", NAMES_ZH).text == "林德奎斯特无人盯防。"
     connective = ScriptLine(id="L", text="And then, the blind side.", claims=[])
-    assert [v.kind for v in render_line(connective, claims, verdicts).violations] == ["lexicon"]
+    assert [v.kind for v in render_line(connective, claims, verdicts).violations] == [
+        "unbacked_line", "lexicon"
+    ]  # fmt: skip
 
 
 def test_player_names_must_come_from_slots(verifier, refs):
@@ -295,3 +316,93 @@ def test_player_names_must_come_from_slots(verifier, refs):
     line = ScriptLine(id="L", text="Okafor again: {c1.passer} to {c1.receiver}.", claims=["c1"])
     out = render_line(line, claims, verdicts, "en", NAMES)
     assert [v.kind for v in out.violations] == ["entity"]
+
+
+# --- banned terms and claimless lines (SPEC 5.3) ------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("lang", "text"),
+    [
+        ("en", "A mistake let {c1.receiver} in: {c1.passer} found him."),
+        ("en", "{c1.receiver} should have been tracked; {c1.passer} found him."),
+        ("zh", "后卫失误，{c1.passer}找到了{c1.receiver}。"),
+        ("zh", "{c1.passer}本该回传，却找到了{c1.receiver}。"),
+    ],
+)
+def test_banned_evaluative_terms_never_render(verifier, refs, lang, text):
+    claims = {"c1": pass_claim(refs)}
+    verdicts = {"c1": verifier.verify(claims["c1"])}
+    out = render_line(ScriptLine(id="L", text=text, claims=["c1"]), claims, verdicts, lang)
+    assert [v.kind for v in out.violations] == ["banned"]
+
+
+def test_a_line_without_claims_must_be_a_connective_phrase():
+    assert render_line(ScriptLine(id="L", text="Watch this.", claims=[]), {}, {}).ok
+    assert render_line(ScriptLine(id="L", text="他看到了什么？", claims=[]), {}, {}, "zh").ok
+    out = render_line(ScriptLine(id="L", text="He beat the offside trap.", claims=[]), {}, {})
+    assert [v.kind for v in out.violations] == ["unbacked_line"]
+
+
+# --- render payload (SPEC 5.3): what a viewer receives ------------------------------------
+
+
+@pytest.fixture(scope="module")
+def payload_parts(run, refs):
+    cf = drop_scan_counterfactual(SCENARIO, seed=3)
+    ctx = EvalContext(run, counterfactuals={cf.scan_id: cf})
+    claims = {"c1": pass_claim(refs), "c2": scans_claim(refs, 1), "c3": unmarked_claim(refs),
+              "c4": pass_claim(refs, receiver="H4", cid="c4"),
+              "c5": Claim(id="c5", template="That look was worth {dxt} in expected threat.",
+                          slots={"dxt": Slot(value=round(cf.delta_xt, 2), decimals=2)},
+                          predicate=Predicate(op="approx", rhs=slot("dxt"), abs_tol=0.005,
+                                              lhs=fn("cf_delta", of="possession_value",
+                                                     scan=cf.scan_id)),
+                          evidence=[cf.scan_id])}  # fmt: skip
+    verdicts = Verifier(ctx).verify_all(claims.values())
+    lines = [
+        ScriptLine(id="L1", text="What did he see?"),
+        ScriptLine(id="L2", text="{player} checked his shoulder {n:times}.", claims=["c2"]),
+        ScriptLine(id="L3", text="{runner} was unmarked; {passer} found him from {dist} metres.",
+                   claims=["c3", "c1"]),
+        ScriptLine(id="L4", text="{passer} found {receiver}.", claims=["c4"]),  # refuted
+        ScriptLine(id="L5", text="He beat the offside trap."),  # no claim
+        ScriptLine(id="L6", text="Without it: {dxt} xT less.", claims=["c5"]),
+    ]  # fmt: skip
+    return claims, verdicts, lines
+
+
+def test_the_payload_carries_only_lines_that_passed_and_their_claims(payload_parts, refs):
+    claims, verdicts, lines = payload_parts
+    built = build_payload("m12", "analyst", "en", lines, claims, verdicts, NAMES)
+    p = built.payload
+    assert [line.id for line in p.lines] == ["L1", "L2", "L3", "L6"]
+    assert sorted(r.line_id for r in built.rejected) == ["L4", "L5"]
+    assert [line.text for line in p.lines][:2] == [
+        "What did he see?", "Okafor checked his shoulder once."
+    ]  # fmt: skip
+    by_id = {c.id: c for c in p.claims}
+    assert sorted(by_id) == ["c1", "c2", "c3", "c5"]
+    assert {c.verdict for c in p.claims} == {"supported"}
+    assert by_id["c2"].kind == "observed" and by_id["c2"].values == {"player": "H8", "n": 1}
+    assert by_id["c3"].kind == "observed" and by_id["c3"].terms == ["unmarked"]
+    assert by_id["c5"].kind == "counterfactual"
+    assert by_id["c5"].seek_frame == refs.key_scan.frame
+    assert by_id["c1"].evidence == [refs.hero_pass.id]
+    assert by_id["c1"].seek_frame == refs.hero_pass.frame
+    assert set(p.model_dump()) == {"moment", "persona", "language", "lines", "claims"}
+    assert check_payload(p, NAMES) == []
+
+
+def test_check_payload_catches_tampering_after_render(payload_parts):
+    claims, verdicts, lines = payload_parts
+    p = build_payload("m12", "analyst", "zh", lines, claims, verdicts, NAMES_ZH).payload
+    assert check_payload(p, NAMES_ZH) == []
+    tampered = p.model_copy(deep=True)
+    tampered.lines[1].text += "三次"
+    tampered.lines[2].text += "这是失误。"
+    tampered.lines[0].text = "他进球了。"
+    tampered.claims = [c for c in tampered.claims if c.id != "c5"]
+    found = {(v.line, v.kind) for v in check_payload(tampered, NAMES_ZH)}
+    assert found == {("L1", "unbacked_line"), ("L2", "number"), ("L3", "banned"),
+                     ("L6", "unsupported_claim"), ("L6", "placeholder")}  # fmt: skip

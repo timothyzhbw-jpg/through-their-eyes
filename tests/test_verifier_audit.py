@@ -28,9 +28,9 @@ def _claims(run):
               predicate=Predicate(op="eq", lhs=to, rhs=slot("to"))),
         Claim(id="bad", template="{to}", slots={"to": Slot(ref="H4")},
               predicate=Predicate(op="eq", lhs=to, rhs=slot("to"))),
-        Claim(id="todo", template="",
+        Claim(id="unknown", template="",
               predicate=Predicate(op="ge", rhs=0.7, lhs=fn(
-                  "metric_at", metric="pressing_intensity", player="H8", anchor=p.id))),
+                  "metric_at", metric="heart_rate", player="H8", anchor=p.id))),
     ]  # fmt: skip
 
 
@@ -44,7 +44,7 @@ def test_every_verdict_is_audited_with_inputs_and_timestamps(run):
     verifier = Verifier(EvalContext(run), sink=sink, clock=_clock())
     verdicts = verifier.verify_all(_claims(run))
     assert [v.status for v in verdicts.values()] == ["supported", "refuted", "inconclusive"]
-    assert [r.claim["id"] for r in sink.records] == ["ok", "bad", "todo"]
+    assert [r.claim["id"] for r in sink.records] == ["ok", "bad", "unknown"]
     first = sink.records[0]
     assert first.match == f"{SCENARIO}:3"
     assert first.run_hash == run.output_hash()
@@ -55,7 +55,7 @@ def test_every_verdict_is_audited_with_inputs_and_timestamps(run):
     assert first.claim["predicate"]["lhs"]["fn"] == "event_attr"
     assert first.claim_fingerprint == _claims(run)[0].fingerprint()
     assert len({r.id for r in sink.records}) == 3
-    assert "TODO" in sink.records[2].verdict["reason"]
+    assert "unknown metric" in sink.records[2].verdict["reason"]
 
 
 def test_the_jsonl_sink_appends_one_parseable_line_per_verdict(run, tmp_path):
