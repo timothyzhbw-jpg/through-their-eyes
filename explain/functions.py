@@ -4,7 +4,8 @@ Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in
 observed_share, cf_delta. Every function accepts `cf: <scan id>` to evaluate on the
 counterfactual run without that scan instead of the factual run.
 
-Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") and offsets
+Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
+anchor "<card id>.<name>" (SPEC 5.1, e.g. "m:decision_after_scan:H8:0075.reception"), and offsets
 (`at`, `from`, `to`, `window_s`) are seconds relative to it, converted to whole frames.
 
 Two ways to fail, never a guessed value:
@@ -27,8 +28,10 @@ from typing import Any
 import numpy as np
 
 from analytics.pitch_control import pitch_control, pitch_grid
+from analytics.pressing import aggregate, frame_pressing
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from analytics.xt import xt_for
+from explain.cards import MomentCard
 from sim.counterfactual import CounterfactualResult, drop_scan_counterfactual
 from sim.model import Decision, Event
 from sim.run import MatchRun
@@ -56,11 +59,12 @@ class EvalContext:
     """What claims are checked against: one factual run, plus counterfactuals by dropped scan.
 
     Counterfactuals not supplied are re-simulated on demand from the run's scenario and seed
-    (deterministic, SPEC 3.7) unless `resimulate` is False.
+    (deterministic, SPEC 3.7) unless `resimulate` is False. `cards` resolve moment anchors.
     """
 
     run: MatchRun
     counterfactuals: dict[str, CounterfactualResult] = field(default_factory=dict)
+    cards: dict[str, MomentCard] = field(default_factory=dict)
     resimulate: bool = True
     vision: VisionParams = VisionParams()
     _events: dict[int, dict[str, Event]] = field(default_factory=dict, repr=False)
@@ -97,9 +101,14 @@ class EvalContext:
             return index[event_id]
         if EVENT_ID.match(event_id):
             raise Refuted(f"no event {event_id} in this run")
+        card_id, _, name = event_id.rpartition(".")
+        if card_id in self.cards:
+            anchor = self.cards[card_id].anchors.get(name)
+            if anchor is None:
+                raise Refuted(f"moment {card_id} has no {name!r} anchor")
+            return self.event(run, anchor)
         raise Inconclusive(
-            f"cannot resolve {event_id!r}: anchors are event ids (moment anchors need a "
-            "MomentCard, not wired in yet)"
+            f"cannot resolve {event_id!r}: not an event id, nor an anchor of a supplied card"
         )
 
     def player(self, run: MatchRun, player_id: Any) -> int:
@@ -119,17 +128,17 @@ class EvalContext:
             raise Inconclusive(f"{anchor}{offset_s:+} s is after the recorded run")
         return f
 
-    def counterfactual(self, scan_id: Any) -> CounterfactualResult:
-        if scan_id in self.counterfactuals:
-            return self.counterfactuals[scan_id]
-        scan = self.event(self.run, scan_id)
+    def counterfactual(self, scan_ref: Any) -> CounterfactualResult:
+        """The run without one scan (an event id or a moment anchor such as `<card>.last_scan`)."""
+        scan = self.event(self.run, scan_ref)
         if scan.type != "scan":
-            raise Refuted(f"{scan_id} is not a scan; counterfactuals drop scans")
-        if not self.resimulate:
-            raise Inconclusive(f"no counterfactual without {scan_id} was supplied")
-        result = drop_scan_counterfactual(self.run.scenario, self.run.seed, scan_id)
-        self.counterfactuals[scan_id] = result
-        return result
+            raise Refuted(f"{scan.id} is not a scan; counterfactuals drop scans")
+        if scan.id not in self.counterfactuals:
+            if not self.resimulate:
+                raise Inconclusive(f"no counterfactual without {scan.id} was supplied")
+            result = drop_scan_counterfactual(self.run.scenario, self.run.seed, scan.id)
+            self.counterfactuals[scan.id] = result
+        return self.counterfactuals[scan.id]
 
     def visibility_matrix(self, run: MatchRun, f: int) -> np.ndarray:
         key = ("players", id(run), f)
@@ -182,10 +191,10 @@ class Evaluator:
             value = value * scale
         return value
 
-    def counterfactual(self, scan_id: Any) -> CounterfactualResult:
-        result = self.ctx.counterfactual(scan_id)
-        if scan_id not in self.used_counterfactuals:
-            self.used_counterfactuals.append(scan_id)
+    def counterfactual(self, scan_ref: Any) -> CounterfactualResult:
+        result = self.ctx.counterfactual(scan_ref)
+        if result.scan_id not in self.used_counterfactuals:
+            self.used_counterfactuals.append(result.scan_id)
         return result
 
     def call(self, name: Any, raw_args: dict[str, Any], run: MatchRun) -> Any:
@@ -481,9 +490,20 @@ def _xt(ctx: EvalContext, run: MatchRun, f: int, player: str) -> float:
 
 
 def _pressing_intensity(ctx: EvalContext, run: MatchRun, f: int, player: str) -> float:
-    # TODO(SPEC 4.3): wire in the pressing-intensity kernel once analytics/ has it (another
-    # session is writing it). Until then `under heavy pressure` cannot be verified.
-    raise Inconclusive("TODO(SPEC 4.3): pressing intensity kernel not available yet")
+    """Aggregate pressing intensity on a player of the team in possession (SPEC 4.3).
+
+    For the carrier it includes pressure on the ball. Nothing is pressed while the ball is free,
+    and the defending team is not pressed: both are inconclusive rather than zero.
+    """
+    i = ctx.player(run, player)
+    carrier = int(run.owner[f])
+    team = np.array([p.team for p in run.players])
+    if carrier < 0:
+        raise Inconclusive(f"no pressing intensity at frame {f}: the ball is free")
+    if team[i] != team[carrier]:
+        raise Inconclusive(f"{player} is not on the team in possession at frame {f}")
+    pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], carrier)
+    return pf.on_carrier if i == carrier else float(aggregate(pf.column(i)))
 
 
 def _observed_share(
