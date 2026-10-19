@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { startClock, useSession } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
+import { EvidenceCard, NarrationPanel } from "./ui/Narration";
 import { DecisionPanel, StoryPanel } from "./ui/Panels";
 import { Transport } from "./ui/Transport";
 import { PovView } from "./views/PovView";
@@ -56,12 +57,15 @@ export function App({ autoplay }: { autoplay: boolean }) {
         <TacticalView />
       </section>
 
+      <EvidenceCard />
+
       <Transport />
 
       <section className="below">
+        <NarrationPanel />
+        <BreakdownPanel />
         <StoryPanel />
         <DecisionPanel />
-        <BreakdownPanel />
       </section>
 
       <footer className="legend">

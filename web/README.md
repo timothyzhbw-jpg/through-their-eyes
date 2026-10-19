@@ -20,25 +20,37 @@ deliberately broken plan to show the template fallback.
 
 ## Data
 
-`public/data/hero_seed3.json` is the output of
+Both files in `public/data/` are written by
 
 ```bash
-uv run python -m sim.export --scenario blind_side_run --seed 3 --out web/public/data/hero_seed3.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 \
+  --out web/public/data/hero_seed3.json \
+  --payload-fixture web/public/data/fixture_payload_seed3.json
 ```
 
-(schema version 2: integer mm and 1e-4 rad, origin at the centre spot, home attacks +x). Regenerate
-it whenever `sim/` changes; `tests/test_export.py` fails if the committed file falls behind the
-schema. `src/data/hero.ts` converts it once into flat typed arrays in metres and radians.
+- `hero_seed3.json`: the replay (schema version 2: integer mm and 1e-4 rad, origin at the centre
+  spot, home attacks +x). `src/data/hero.ts` converts it once into typed arrays in metres and
+  radians.
+- `fixture_payload_seed3.json`: a **fixture** render payload (SPEC 5.3) for the same moment,
+  marked `"fixture": true`. Its claim values are computed from the replay by
+  `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
+  evidence) and `explain.render` (seek frame = earliest evidence event), but no verifier has
+  checked them. The UI labels it "Fixture · not checked by the verifier". It goes away once the
+  api serves payloads from `explain.render.build_payload`.
+
+Regenerate both whenever `sim/` changes; `tests/test_export.py` fails if a committed file falls
+behind the generator.
 
 ## How it fits together
 
 ```
 src/
   data/       load the export, sample any player at a fractional frame, eased head yaw
-  store/      the playback store: mode, frame, speed, toggles, POV player, focus, caption
+  store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
+  narration/  render payload schema (zod), checks against the moment, kind labels
   views/      PovView and TacticalView (React Three Fiber), their toolbars and HUD
-  ui/         transport + timeline, story and decision panels, breakdown console
+  ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + store + plan runner + user controls
 ```
 
@@ -62,6 +74,14 @@ src/
   with depth testing off, like a 2D canvas, so GLSL overlays such as pitch control can be added
   as further layers. The vision cone is already a fragment shader of the sim's FOV model
   (angular term and distance decay of `analytics/vision.py`; occlusion not yet).
+- **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
+  voice steps name its line ids. Click a caption (or any line in the Narration panel) and the
+  evidence card under the views lists each claim with its kind (observed / computed /
+  counterfactual), verdict, values and evidence events, and the replay seeks to the claim's
+  `seek_frame`. Counterfactual claims are shown in the re-simulated run and always carry the
+  label "Counterfactual · inside the sim": they are causal only inside the simulation. The payload
+  is checked like a plan (references resolve, evidence events exist, seek frames are in the clip);
+  a line with an unsupported claim is withheld.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 

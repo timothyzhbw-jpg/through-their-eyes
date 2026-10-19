@@ -1,10 +1,11 @@
 // DOM around the first-person canvas: the toolbar (label, player picker, comfort and ghost
-// toggles), and over the canvas the HUD and the caption of the current voice line.
+// toggles), and over the canvas the HUD and the caption of the current narration line.
 
 import { useMemo } from "react";
 import { Sample, isSeen, sampleInto, wrapAngle } from "../data/hero";
 import { useSession } from "../session";
 import { useStore } from "../store/store";
+import { Caption } from "../ui/Narration";
 
 export function PovToolbar() {
   const { hero, playback, controls } = useSession();
@@ -74,15 +75,10 @@ export function PovToolbar() {
 export function PovOverlay() {
   const { playback } = useSession();
   const comfort = useStore(playback, (s) => s.comfort);
-  const caption = useStore(playback, (s) => s.caption);
   return (
     <>
       {comfort && <div className="vignette" aria-hidden="true" />}
-      {caption && (
-        <p className="caption" role="status">
-          {caption}
-        </p>
-      )}
+      <Caption />
       <Hud />
     </>
   );

@@ -1,9 +1,17 @@
-// One Session per loaded moment: the data, the playback store, the plan and its runner, and the
-// user controls. Components get it from React context with `useSession()`.
+// One Session per loaded moment: the data, the verified narration, the playback store, the plan
+// and its runner, and the user controls. Components get it from React context with `useSession()`.
 
 import { createContext, useContext } from "react";
 import { clampFrame, type Hero } from "./data/hero";
 import type { RunName } from "./data/types";
+import {
+  claimRun,
+  lineOf,
+  primaryClaim,
+  scriptOf,
+  validatePayload,
+  type Narration,
+} from "./narration/payload";
 import { heroMoment, type MomentContext } from "./plan/moment";
 import { BreakdownRunner } from "./plan/runner";
 import type { Script } from "./plan/schema";
@@ -18,14 +26,25 @@ export interface Session {
   playback: PlaybackStore;
   runner: BreakdownRunner;
   resolved: ResolvedPlan;
-  script: Script;
+  narration: Narration | null; // null when the render payload failed its checks
+  payloadErrors: string[];
+  script: Script; // caption text per line id, from the narration
   controls: ReturnType<typeof makeControls>;
 }
 
-export function createSession(hero: Hero, planCandidate: unknown, script: Script): Session {
+/** `payloadCandidate` is a render payload (SPEC 5.3); without a valid one there are no captions
+ * and a plan with voice steps falls back to the template plan. */
+export function createSession(
+  hero: Hero,
+  planCandidate: unknown,
+  payloadCandidate: unknown,
+): Session {
   const moment = heroMoment(hero);
   const playback = createPlayback(hero);
-  const runner = new BreakdownRunner(playback, hero, moment, script);
+  const runner = new BreakdownRunner(playback, hero, moment);
+  const checked = validatePayload(payloadCandidate, moment, hero);
+  const narration = checked.ok ? checked.narration : null;
+  const script = scriptOf(narration);
   const resolved = resolvePlan(planCandidate, moment, script);
   return {
     hero,
@@ -33,8 +52,10 @@ export function createSession(hero: Hero, planCandidate: unknown, script: Script
     playback,
     runner,
     resolved,
+    narration,
+    payloadErrors: checked.ok ? [] : checked.errors,
     script,
-    controls: makeControls(hero, playback, runner, resolved),
+    controls: makeControls(hero, playback, runner, resolved, narration),
   };
 }
 
@@ -44,6 +65,7 @@ function makeControls(
   playback: PlaybackStore,
   runner: BreakdownRunner,
   resolved: ResolvedPlan,
+  narration: Narration | null,
 ) {
   const takeOver = () => runner.stop();
   const run = () => hero.runs[playback.get().mode];
@@ -53,7 +75,12 @@ function makeControls(
       const s = playback.get();
       if (s.playing) return playback.set({ playing: false });
       const atEnd = s.frame >= run().frames - 1;
-      playback.set({ playing: true, frame: atEnd ? 0 : s.frame, playUntil: null, caption: null });
+      playback.set({
+        playing: true,
+        frame: atEnd ? 0 : s.frame,
+        playUntil: null,
+        captionLine: null,
+      });
     },
     seek(frame: number) {
       takeOver();
@@ -82,6 +109,45 @@ function makeControls(
       runner.start(resolved.plan);
     },
     stopBreakdown: takeOver,
+
+    /**
+     * Open a narration line's evidence (SPEC 7) and seek the replay there: to the seek frame of
+     * `claimId`, or of the line's first claim that has one. Counterfactual evidence is shown in
+     * the re-simulated run, with the other run's ghost path for comparison.
+     */
+    openLine(lineId: string, claimId?: string) {
+      const line = lineOf(narration, lineId);
+      if (!narration || !line) return;
+      takeOver();
+      const claim = claimId ? narration.claims.get(claimId) : primaryClaim(narration, line);
+      playback.set({ evidenceLine: lineId, captionLine: lineId });
+      if (claim?.seek_frame == null) return;
+      const mode = claimRun(claim);
+      const scan = claim.evidence.find((e) => hero.runs.factual.scans.some((s) => s.id === e));
+      playback.set({
+        mode,
+        frame: clampFrame(hero.runs[mode], claim.seek_frame),
+        playing: false,
+        playUntil: null,
+        cfGhost: mode === "counterfactual" || playback.get().cfGhost,
+        // Mark the scan behind a factual claim; in the re-simulated run that look never happened.
+        scanMarker: mode === "factual" ? (scan ?? null) : null,
+      });
+    },
+    /** Seek to one evidence event of a claim, in the run that claim is about. */
+    seekEvidence(claimId: string, eventId: string) {
+      const claim = narration?.claims.get(claimId);
+      if (!claim) return;
+      takeOver();
+      const mode = claimRun(claim);
+      const event = [...hero.runs[mode].events, ...hero.runs.factual.events].find(
+        (e) => e.id === eventId,
+      );
+      if (event) playback.set({ mode, frame: event.frame, playing: false, playUntil: null });
+    },
+    closeEvidence() {
+      playback.set({ evidenceLine: null });
+    },
   };
 }
 

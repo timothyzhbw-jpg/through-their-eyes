@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import { parseHero } from "../data/hero";
 import { advance, createPlayback } from "../store/playback";
-import { EXAMPLE_PLAN, EXAMPLE_SCRIPT, INVALID_PLAN } from "./example";
+import payloadJson from "../../public/data/fixture_payload_seed3.json";
+import { scriptOf, validatePayload } from "../narration/payload";
+import { EXAMPLE_PLAN, INVALID_PLAN } from "./example";
 import { heroMoment, relToFrame } from "./moment";
 import { BreakdownRunner } from "./runner";
 import { templatePlan } from "./template";
@@ -13,6 +15,8 @@ import { MAX_POV_CLIP_S, resolvePlan, validatePlan } from "./validate";
 
 const hero = parseHero(raw);
 const moment = heroMoment(hero);
+const checked = validatePayload(payloadJson, moment, hero);
+const SCRIPT = scriptOf(checked.ok ? checked.narration : null);
 
 type Plan = typeof EXAMPLE_PLAN;
 const withStep = (plan: Plan, index: number, patch: object): unknown => ({
@@ -21,12 +25,13 @@ const withStep = (plan: Plan, index: number, patch: object): unknown => ({
 });
 const povIndex = EXAMPLE_PLAN.steps.findIndex((s) => s.do === "pov");
 const errorsOf = (plan: unknown) => {
-  const v = validatePlan(plan, moment, EXAMPLE_SCRIPT);
+  const v = validatePlan(plan, moment, SCRIPT);
   return v.ok ? [] : v.errors;
 };
 
 describe("plan validation", () => {
-  it("accepts the example plan", () => {
+  it("accepts the example plan, whose voice lines are in the render payload", () => {
+    expect(Object.keys(SCRIPT)).toEqual(["L1", "L2", "L3", "L4", "L5"]);
     expect(errorsOf(EXAMPLE_PLAN)).toEqual([]);
   });
 
@@ -72,13 +77,13 @@ describe("plan validation", () => {
   });
 
   it("plays a valid plan as given", () => {
-    const resolved = resolvePlan(EXAMPLE_PLAN, moment, EXAMPLE_SCRIPT);
+    const resolved = resolvePlan(EXAMPLE_PLAN, moment, SCRIPT);
     expect(resolved.source).toBe("given");
     expect(resolved.plan).toEqual(EXAMPLE_PLAN);
   });
 
   it("falls back to the template plan, with the reasons", () => {
-    const resolved = resolvePlan(INVALID_PLAN, moment, EXAMPLE_SCRIPT);
+    const resolved = resolvePlan(INVALID_PLAN, moment, SCRIPT);
     expect(resolved.source).toBe("template");
     expect(resolved.plan).toEqual(templatePlan(moment));
     expect(resolved.errors.length).toBeGreaterThan(0);
@@ -90,8 +95,8 @@ describe("plan executor", () => {
 
   function start(plan: unknown) {
     const playback = createPlayback(hero);
-    const runner = new BreakdownRunner(playback, hero, moment, EXAMPLE_SCRIPT);
-    const resolved = resolvePlan(plan, moment, EXAMPLE_SCRIPT);
+    const runner = new BreakdownRunner(playback, hero, moment);
+    const resolved = resolvePlan(plan, moment, SCRIPT);
     runner.start(resolved.plan);
     const until = (t: number) => {
       while (runner.time < t - 1e-9 && runner.status.get().status === "running") {
@@ -124,9 +129,14 @@ describe("plan executor", () => {
     expect(mid.cone).toBe(true);
     expect(mid.beliefGhosts).toBe(true);
     expect(mid.cfGhost).toBe(false);
-    const late = until(9.1);
+    const cf = EXAMPLE_PLAN.steps.find((s) => "kind" in s && s.kind === "counterfactual")!;
+    const last = EXAMPLE_PLAN.steps.findLast((s) => s.do === "voice") as {
+      t: number;
+      line: string;
+    };
+    const late = until(Math.max(cf.t, last.t) + 0.1);
     expect(late.cfGhost).toBe(true);
-    expect(late.caption).toBe(EXAMPLE_SCRIPT.L5);
+    expect(late.captionLine).toBe(last.line);
     const play = EXAMPLE_PLAN.steps.find((s) => s.do === "play") as { to: number };
     expect(late.frame).toBeCloseTo(relToFrame(moment, play.to), 6);
     until(EXAMPLE_PLAN.duration_s + 1);

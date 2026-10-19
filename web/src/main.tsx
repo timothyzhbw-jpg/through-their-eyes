@@ -8,11 +8,23 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { loadHero } from "./data/hero";
-import { EXAMPLE_PLAN, EXAMPLE_SCRIPT, INVALID_PLAN } from "./plan/example";
+import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession } from "./session";
 import "./styles.css";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/hero_seed3.json`;
+// A fixture until the verifier serves real payloads (sim.export.render_payload_fixture).
+const PAYLOAD_URL = `${import.meta.env.BASE_URL}data/fixture_payload_seed3.json`;
+
+/** The payload, or null if it cannot be fetched: the app then runs without captions. */
+async function loadPayload(url: string): Promise<unknown> {
+  try {
+    const res = await fetch(url);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
@@ -20,9 +32,9 @@ async function main() {
   try {
     // Canvas textures draw shirt numbers with the web fonts, so wait for them (briefly).
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
-    const hero = await loadHero(DATA_URL);
+    const [hero, payload] = await Promise.all([loadHero(DATA_URL), loadPayload(PAYLOAD_URL)]);
     const plan = params.get("plan") === "invalid" ? INVALID_PLAN : EXAMPLE_PLAN;
-    const session = createSession(hero, plan, EXAMPLE_SCRIPT);
+    const session = createSession(hero, plan, payload);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const autoplay = params.get("autoplay") !== "0" && !reducedMotion;
     root.render(

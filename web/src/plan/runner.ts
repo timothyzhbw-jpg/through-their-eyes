@@ -8,7 +8,7 @@ import type { Hero } from "../data/hero";
 import { frameStep, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { relToFrame, type MomentContext } from "./moment";
-import type { PlanStep, Script, TelestrationPlan } from "./schema";
+import type { PlanStep, TelestrationPlan } from "./schema";
 
 export type BreakdownStatus = "idle" | "running" | "done" | "stopped";
 
@@ -32,7 +32,6 @@ export class BreakdownRunner {
     private readonly playback: PlaybackStore,
     private readonly hero: Hero,
     private readonly moment: MomentContext,
-    private readonly script: Script,
   ) {}
 
   get time(): number {
@@ -57,7 +56,8 @@ export class BreakdownRunner {
       cfGhost: false,
       focus: "split",
       scanMarker: null,
-      caption: null,
+      captionLine: null,
+      evidenceLine: null,
     });
     this.status.set({ status: "running", t: 0, applied: 0 });
     this.tick(0);
@@ -85,7 +85,7 @@ export class BreakdownRunner {
   }
 
   private finish(status: BreakdownStatus): void {
-    this.playback.set({ autoSlow: true, playUntil: null, speed: 1, caption: null });
+    this.playback.set({ autoSlow: true, playUntil: null, speed: 1, captionLine: null });
     this.status.set({ status, t: this.t, applied: this.next });
   }
 
@@ -128,7 +128,7 @@ export class BreakdownRunner {
         set(step.kind === "belief" ? { beliefGhosts: true } : { cfGhost: true });
         break;
       case "voice":
-        set({ caption: this.script[step.line] ?? null });
+        set({ captionLine: step.line }); // validation made sure the line exists
         break;
     }
   }

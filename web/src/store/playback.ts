@@ -21,7 +21,8 @@ export interface PlaybackState {
   cfGhost: boolean; // ghost path of the other run
   focus: Focus; // which view gets the space
   scanMarker: string | null; // scan id highlighted by a plan
-  caption: string | null; // current voice line
+  captionLine: string | null; // id of the narration line on screen (a plan voice step)
+  evidenceLine: string | null; // narration line whose claims and evidence are open
 }
 
 export type PlaybackStore = Store<PlaybackState>;
@@ -44,7 +45,8 @@ export function createPlayback(hero: Hero): PlaybackStore {
     cfGhost: false,
     focus: "split",
     scanMarker: null,
-    caption: null,
+    captionLine: null,
+    evidenceLine: null,
   });
 }
 
