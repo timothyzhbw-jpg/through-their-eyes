@@ -5,6 +5,8 @@
 - Every lexicon term in a rendered line is backed by a supported claim on that line.
 """
 
+import json
+
 import pytest
 
 from explain import lexicon
@@ -384,14 +386,22 @@ def test_the_payload_carries_only_lines_that_passed_and_their_claims(payload_par
     by_id = {c.id: c for c in p.claims}
     assert sorted(by_id) == ["c1", "c2", "c3", "c5"]
     assert {c.verdict for c in p.claims} == {"supported"}
-    assert by_id["c2"].kind == "observed" and by_id["c2"].values == {"player": "H8", "n": 1}
+    assert by_id["c2"].kind == "observed" and by_id["c2"].values == {"n": 1}
     assert by_id["c3"].kind == "observed" and by_id["c3"].terms == ["unmarked"]
     assert by_id["c5"].kind == "counterfactual"
     assert by_id["c5"].seek_frame == refs.key_scan.frame
     assert by_id["c1"].evidence == [refs.hero_pass.id]
     assert by_id["c1"].seek_frame == refs.hero_pass.frame
-    assert set(p.model_dump()) == {"moment", "persona", "language", "lines", "claims"}
     assert check_payload(p, NAMES) == []
+    wire = json.loads(p.model_dump_json())  # exactly the SPEC 5.3 shape the web app reads
+    assert set(wire) == {"moment", "persona", "language", "lines", "claims"}
+    assert {tuple(sorted(line)) for line in wire["lines"]} == {("claims", "id", "text")}
+    assert {tuple(sorted(c)) for c in wire["claims"]} == {
+        ("evidence", "id", "kind", "seek_frame", "values", "verdict")
+    }
+    assert wire["lines"][1] == {
+        "id": "L2", "text": "Okafor checked his shoulder once.", "claims": ["c2"]
+    }  # fmt: skip
 
 
 def test_check_payload_catches_tampering_after_render(payload_parts):

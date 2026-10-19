@@ -12,7 +12,7 @@ and a line that references no claim must be a connective phrase.
 
 `build_payload` turns a script into what a viewer receives for one breakdown (SPEC 5.3): the
 lines that passed, and for each claim its kind, verdict, filled values, evidence and seek frame.
-`check_payload` re-runs every check on that final payload.
+`check_payload` re-runs every check on that final payload before it is sent.
 
 Placeholders: `{name}` (a slot of the line's only claim that has it) or `{claim.name}`, with an
 optional format — `{n:times}` (once / twice / 3 times; 3次), `{n:words}` (three; 三) — and an
@@ -266,21 +266,25 @@ class PayloadSpan(BaseModel):
     slot: str
 
 
+# The serialised payload is exactly the SPEC 5.3 shape. `spans` and `terms` stay server-side
+# (excluded from dumps): `check_payload` needs them, the viewer does not.
+
+
 class PayloadLine(BaseModel):
     id: str
     text: str
     claims: list[str]
-    spans: list[PayloadSpan] = Field(default_factory=list)  # where each slot value sits
+    spans: list[PayloadSpan] = Field(default_factory=list, exclude=True)  # slot value positions
 
 
 class PayloadClaim(BaseModel):
     id: str
     kind: ClaimKind
     verdict: Literal["supported"]  # nothing else reaches a viewer
-    values: dict[str, bool | int | float | str]  # filled slot values (refs as ids)
-    terms: list[str] = Field(default_factory=list)
+    values: dict[str, bool | int | float | str]  # filled values of the value slots
     evidence: list[str] = Field(default_factory=list)  # event ids
     seek_frame: int | None = None  # where the replay jumps to show the evidence
+    terms: list[str] = Field(default_factory=list, exclude=True)  # lexicon terms it backs
 
 
 class RenderPayload(BaseModel):
@@ -342,7 +346,7 @@ def build_payload(
             id=cid,
             kind=claims[cid].kind,
             verdict="supported",
-            values={k: s.raw for k, s in claims[cid].slots.items()},
+            values={k: s.value for k, s in claims[cid].slots.items() if s.value is not None},
             terms=verdicts[cid].terms,
             evidence=claims[cid].evidence,
             seek_frame=seek_frame(claims[cid]),
@@ -366,8 +370,7 @@ def check_payload(
         missing = [c for c in line.claims if c not in claims]
         found += [Violation("unsupported_claim", f"{c}: not in the payload") for c in missing]
         for s in line.spans:
-            slot_value = claims[s.claim].values.get(s.slot) if s.claim in claims else None
-            if s.claim not in line.claims or slot_value is None:
+            if s.claim not in line.claims or s.claim not in claims:
                 found.append(Violation("placeholder", f"span for {s.claim}.{s.slot}"))
         spans = [SlotSpan(s.start, s.end, s.claim, s.slot) for s in line.spans]
         backed = {t for c in line.claims if c in claims for t in claims[c].terms}
