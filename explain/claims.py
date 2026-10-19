@@ -11,6 +11,12 @@ Operands inside a predicate (`lhs`, `rhs` and function arguments) are JSON:
 - `{"slot": name, "scale": k}`: a slot value, optionally multiplied by `k` (e.g. -1, 1 / 3.6);
 - `{"event": id}`: the time of an event in seconds (for `before` and `exists`);
 - any other object: its values are operands (e.g. a `where` filter).
+
+Every claim has a kind, shown to viewers next to its evidence (SPEC 5.3). It is derived from the
+predicate, never taken on trust: a claim that declares a different kind fails validation.
+- `observed`: events and tracking only (counts, event attributes, distances, speeds);
+- `computed`: reads an analytics model (vision, pitch control, xT, beliefs, pressing);
+- `counterfactual`: reads a re-simulation (`cf_delta`, or any function with `cf`).
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Op = Literal["eq", "ne", "lt", "le", "gt", "ge", "approx", "exists", "before", "all"]
+ClaimKind = Literal["observed", "computed", "counterfactual"]
 BINARY_OPS = {"eq", "ne", "lt", "le", "gt", "ge", "approx", "before"}
 MAX_TOL = 0.2  # SPEC 5.3: approx tolerances are < 20%, so ±20% perturbations are refutable
 
@@ -30,6 +37,18 @@ PLACEHOLDER = re.compile(
     r"\{(?P<claim>[A-Za-z_]\w*\.)?(?P<name>[A-Za-z_]\w*)(?::(?P<fmt>\w+))?"
     r"(?:\|(?P<one>[^{}|]*)\|(?P<many>[^{}|]*))?\}"
 )
+
+
+OBSERVED_FUNCTIONS = {"count_events", "event_attr", "distance", "scans_in_window"}
+OBSERVED_METRICS = {
+    "distance",
+    "speed",
+    "ball_speed",
+    "nearest_opponent_distance",
+    "nearest_opponent",
+    "time_since_last_scan",
+}
+_KIND_ORDER: tuple[ClaimKind, ...] = ("observed", "computed", "counterfactual")
 
 
 def fn(name: str, **args: Any) -> dict[str, Any]:
@@ -72,6 +91,24 @@ def _slot_refs(value: Any, out: set[str]) -> None:
         for k, v in value.items():
             if k != "slot":
                 _slot_refs(v, out)
+
+
+def _operand_kind(value: Any) -> int:
+    """Index into _KIND_ORDER of the strongest kind an operand reads."""
+    if isinstance(value, list):
+        return max((_operand_kind(v) for v in value), default=0)
+    if not isinstance(value, dict):
+        return 0
+    if "fn" not in value:
+        return max((_operand_kind(v) for k, v in value.items() if k != "slot"), default=0)
+    args = value.get("args", {})
+    if value["fn"] == "cf_delta" or "cf" in args:
+        return 2
+    if value["fn"] in ("metric_at", "metric_delta"):
+        own = 0 if args.get("metric") in OBSERVED_METRICS else 1
+    else:
+        own = 0 if value["fn"] in OBSERVED_FUNCTIONS else 1
+    return max(own, _operand_kind(args))
 
 
 class Slot(BaseModel):
@@ -131,6 +168,11 @@ class Predicate(BaseModel):
             out |= p.slot_refs()
         return out
 
+    def kind(self) -> ClaimKind:
+        parts = [_operand_kind(self.lhs), _operand_kind(self.rhs)]
+        parts += [_KIND_ORDER.index(p.kind()) for p in self.args or ()]
+        return _KIND_ORDER[max(parts)]
+
     def conjuncts(self) -> list[Predicate]:
         """This predicate, or the leaves of nested `all`s."""
         if self.op != "all":
@@ -142,6 +184,7 @@ class Claim(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
+    kind: ClaimKind | None = None  # derived from the predicate when omitted
     template: str  # English; slot placeholders like "{player}" or "{n:times}"
     templates: dict[str, str] = Field(default_factory=dict)  # per-language, e.g. {"zh": ...}
     slots: dict[str, Slot] = Field(default_factory=dict)
@@ -155,6 +198,11 @@ class Claim(BaseModel):
             for m in PLACEHOLDER.finditer(text):
                 if m["claim"] or m["name"] not in self.slots:
                     raise ValueError(f"placeholder {m[0]!r} ({lang}) does not name a slot")
+        derived = self.predicate.kind()
+        if self.kind is None:
+            self.kind = derived
+        elif self.kind != derived:
+            raise ValueError(f"kind {self.kind!r}, but the predicate is {derived!r}")
         return self
 
     def template_for(self, lang: str) -> str:
