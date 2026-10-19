@@ -35,3 +35,12 @@ extend-exclude = ["web"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Frozen parameter dataclasses are immutable, so they are safe as argument defaults.
+extend-immutable-calls = [
+    "analytics.vision.VisionParams",
+    "sim.ball.BallParams",
+    "sim.config.SimParams",
+    "sim.decision.DecisionParams",
+]
