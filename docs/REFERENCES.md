@@ -68,6 +68,12 @@
 - **Rao et al. (2026). *GenTac: Generative Modeling and Forecasting of Soccer Tactics.***
   arXiv:2604.11786 — code, data and weights not released yet (as of 2026-10-19).
 
+### Counterfactual sampling
+- **Oberst & Sontag (2019). *Counterfactual Off-Policy Evaluation with Gumbel-Max Structural
+  Causal Models.*** ICML 2019 — https://arxiv.org/abs/1905.05824
+  → Decisions are sampled with Gumbel-max over keyed per-option noise, so factual and
+  counterfactual decisions share noise (SPEC 3.5).
+
 ### Video understanding (production path)
 - **Yang et al. (2026). *SoccerMaster: A Vision Foundation Model for Soccer Understanding.*** CVPR
   2026 Oral — https://haolinyang-hlyang.github.io/SoccerMaster/

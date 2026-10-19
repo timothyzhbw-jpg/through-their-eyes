@@ -63,6 +63,7 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
   with `uv`; ruff + pytest; type hints; pydantic for schemas that cross process boundaries.
 - Randomness is keyed per `(match_seed, entity_id, purpose)` — never one shared sequential stream
   (SPEC §3.7), so counterfactuals differ only through the intervention.
+  Decisions are sampled with Gumbel-max over keyed per-option noise (SPEC §3.5).
 - SI units. Pitch 105 × 68 m, origin at the centre spot. 25 Hz frames. Angles in radians
   internally, degrees only in the UI.
 - Every analytics kernel has a numpy reference + unit tests; GLSL versions must match the
@@ -82,6 +83,8 @@ _Fill in as they come to exist._
   `az login`; refuses non-personal subscriptions); writes `.env`
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
+- `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
+  the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
 - Not yet: `uv run python -m eval.run_all`, `uv run uvicorn api.main:app --reload`,
   `cd web && npm run dev`
 

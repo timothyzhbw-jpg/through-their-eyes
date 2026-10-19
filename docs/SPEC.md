@@ -71,8 +71,9 @@ on an LLM.
 - Pitch 105 × 68 m, origin at the centre spot; the home team attacks +x in the first half. 25 Hz.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
-- Events: `pass, carry, shot, tackle, interception, pressure, possession_change, out, goal, scan`
-  with `t, frame, player, team, attrs` (e.g. pass start/end, speed, outcome, difficulty).
+- Events: `pass, reception, carry, shot, tackle, interception, pressure, possession_change, out,
+  goal, scan` with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed, outcome,
+  difficulty). Ids are `<type>:<player>:<frame>`, stable across factual and counterfactual runs.
 - `scan` events are **ground truth** from the sim. The analytics scan detector must recover them
   from tracking data only — `head_yaw` plus player and ball positions — with no access to sim
   scan events or other sim-internal state (§4.7).
@@ -92,6 +93,10 @@ on an LLM.
 - Ground: rolling friction; bounce with restitution ≈ 0.5 (*tunable*).
 - Passes and shots solve launch speed/angle to reach the target (ground vs lofted). Shot speeds
   roughly 80–130 km/h by context.
+- *M1:* ground passes only, in closed form (rolling resistance 0.6 m/s² + quadratic drag), used
+  both for frame stepping and for the decision model's predictions. Longer passes are played to
+  arrive faster (arrival speed 0.35 × distance, clipped to 6–12 m/s). Lofted passes, bounce, Magnus
+  and shot outcomes are M4.
 
 ### 3.4 Perception (the hero feature)
 - **Head yaw dynamics.** Baseline gaze tracks the ball. A **scan** is a rapid turn away from the
@@ -112,14 +117,25 @@ on an LLM.
 - **Belief state (mental map).** For every other player: last-seen position, velocity and time.
   Belief = extrapolation from last sighting; uncertainty grows with time since seen. Updated
   whenever that player falls inside the probabilistic visible region.
+  *M1 values:* a player counts as seen when V ≥ 0.5; beliefs are extrapolated at most 1 s;
+  position uncertainty = 0.3 m + 1.0 m per second of age (all *tunable*).
 
 ### 3.5 Decision model
 - The ball carrier evaluates candidate actions (pass to each teammate, carry, shot) **on its
   belief state**, never on ground truth.
 - Pass value = P(completion | belief) × ΔxT(target). P comes from interception risk along the ball
   path (defender time-to-intercept vs ball arrival time) and receiver pitch control at the target.
+  Implemented as expected threat after the action, P·xT(target) − (1 − P)·xT_opp(target): the
+  current xT is the same for every option and drops out of the softmax. P also includes the chance
+  that the receiver gets there before the ball has rolled on (0.5 s slack).
+- Each teammate is evaluated at several targets along his believed run (lead 0–2 s); the best one
+  is his option. Until the fitted xT grid exists (§4.5), decisions use a smooth xT prior.
 - Softmax with a per-player temperature. Receiver body orientation affects completion (facing play
-  vs back to goal).
+  vs back to goal) — not yet in M1.
+- **Sampling is Gumbel-max** with keyed noise per (player, frame, option): argmax(value/T + g) is
+  exactly a softmax draw, and in a counterfactual an option whose value did not change keeps its
+  noise (a Gumbel-max structural causal model, Oberst & Sontag 2019). A single uniform over a
+  cumulative distribution would make the flip depend on option order.
 - Consequence: scanning changes information, which changes decisions. This is what makes the
   explanation causal *inside the sim*. Outside the sim (real data) we only claim association.
 
