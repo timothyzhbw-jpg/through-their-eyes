@@ -198,6 +198,10 @@ integration later if time allows.
 ### 4.3 Pressing intensity (after Bekkers)
 Defender→attacker and defender→ball TTI, mapped to a probability with a logistic. Per-frame matrix;
 aggregate pressure on the ball carrier.
+- `p[d, a] = logistic(π / (√3 σ) · (T − TTI[d, a]))` with T = 1.5 s, σ = 0.45 s (*tunable*).
+- The carrier's column is the max of pressure on his body and on the ball.
+- Aggregate on a player: `1 − Π_d (1 − p[d, a])`. No pressure while the ball is free.
+- Not yet: the paper's heading penalty and active-presser speed filter.
 
 ### 4.4 Vision map and observed-space metrics
 Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
@@ -242,15 +246,38 @@ of §3.4.
 Rule-based detectors over events + analytics: goal, big chance, line-breaking pass, successful
 counter-press, sprint tag (live overlay only). Each moment yields a `MomentCard` — the shared state
 for the agents: ids, time window, involved players, key metrics, candidate lenses.
+- *Implemented (M2):*
+  - line-breaking pass: completed, past ≥ 2 outfield opponents;
+  - decision after a scan: a reception, then the receiver's decision, with a scan ending ≤ 2 s
+    before the reception;
+  - sprint: > 7.0 m/s for ≥ 0.4 s, live overlay only.
+  Goal, big chance and counter-press need shot outcomes and turnovers (M4).
+- Detections about the same action merge into one card with several tags. Card ids look like
+  `m:decision_after_scan:H8:0075`.
+- A card names its anchor events (`reception`, `last_scan`, `action`, `completion`), so claims
+  anchor on `<card>.<anchor>` (§5.3).
+- `content_hash()` keys the breakdown cache (§2).
 
 ### 5.2 Lens selection by counterfactual impact
-For each moment, compute candidate explanations:
-- `scan`: drop the most informative scan (largest belief update about the eventual target) and
-  re-simulate → counterfactual delta.
-- `space`: pitch-control / xT gain of the chosen option vs the best alternative.
-- `pressure`: pressing intensity on the carrier and how the action escaped it.
+For each moment, compute candidate explanations. All three deltas are in xT of the acting team.
+`scan` and `space` share one value function, evaluated on the true state at the decision:
+`V(option) = PC·xT(target) − (1 − PC)·xT_opp(target)` (shots keep xG).
+- `scan`: drop the most informative scan — the one whose sightings move the decision-time belief
+  about the eventual target most — and re-simulate (§3.7).
+  Δ = V(factual choice) − V(counterfactual choice). The realised outcome difference is recorded as
+  `realized_delta_xt`, but not used for selection: it is an outcome, not an expectation.
+- `space`: Δ = V(chosen) − V(best alternative).
+- `pressure`: expected turnover cost = pressing intensity × (xT_own + xT_opp at the ball).
+  Δ = cost on the actor at the decision − cost after the action.
 
-Pick the lens with the largest absolute delta. Record all three in the MomentCard.
+Pick the lens with the largest absolute delta; exact ties go `scan > space > pressure`. Record all
+three in the MomentCard.
+
+Without the scan, the player chooses one of the alternatives, so Δscan ≥ Δspace whenever the scan
+changed the decision. The scan lens therefore wins exactly when the scan was decisive. An
+uninformative scan scores 0, and then `space` wins (tested). On `blind_side_run`, 80 seeds
+(0–39 and 100–139): `scan` is selected every time, the key scan is the most informative scan every
+time, and the median margin over `space` is about 0.003 xT.
 
 ### 5.3 Claims and verifier
 Every factual sentence on screen comes from a `Claim`:
