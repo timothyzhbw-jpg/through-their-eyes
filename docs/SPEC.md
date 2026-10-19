@@ -1,4 +1,4 @@
-# Through Their Eyes — Specification (v0.1, 2026-10-19)
+# Through Their Eyes — Specification (v0.2, 2026-10-19)
 
 > Working title. Microsoft × Premier League "Inside the Game" Developer Hackathon.
 > Submission deadline **2026-10-27 23:59 PT** (= 2026-10-28 01:59 CT). Judging until 2026-11-10.
@@ -50,16 +50,32 @@ server-side). AI breakdowns run asynchronously once a moment is detected and are
 replay window (target p95 < 12 s), the way broadcast replays follow a goal. Live play never waits
 on an LLM.
 
+**Data flow.**
+- The sim runs offline and writes match files. `api/` replays a match at 1× wall-clock as the live
+  ingest stream (frames + events over WebSocket), so Ingest really happens "as events happen"
+  (rules: *Ingest synthetic match events as they happen*) while the sim stays deterministic and cheap.
+- Moment detection runs on the live stream. Counterfactuals are re-simulated from snapshots on
+  demand, and precomputed for the demo match.
+- **Breakdown cache.** Every agent output is cached under a content hash of
+  (MomentCard, persona, language, prompt version, model deployment). The public demo serves cached
+  breakdowns by default; live regeneration is rate-limited per IP. The demo has no login and must
+  stay up until 2026-11-10, so it must survive exhausted model quota or credit.
+
 ## 3. Synthetic match engine (`sim/`)
 
 ### 3.1 State and schema
+- **A match is 15–25 scenario-driven possessions (§3.6) stitched together with restarts**
+  (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
+  Making 22 free agents look like football is the biggest time sink, and hero moments must be
+  controllable anyway. Rates in the realism report are normalised per 90 min.
 - Pitch 105 × 68 m, origin at the centre spot; the home team attacks +x in the first half. 25 Hz.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
 - Events: `pass, carry, shot, tackle, interception, pressure, possession_change, out, goal, scan`
   with `t, frame, player, team, attrs` (e.g. pass start/end, speed, outcome, difficulty).
 - `scan` events are **ground truth** from the sim. The analytics scan detector must recover them
-  from `head_yaw` alone (§4.7).
+  from tracking data only — `head_yaw` plus player and ball positions — with no access to sim
+  scan events or other sim-internal state (§4.7).
 - Output: JSONL frames + JSON events. Optional kloppy-compatible export (stretch).
 
 ### 3.2 Movement
@@ -86,6 +102,9 @@ on an LLM.
   - > 0.5 scans/s counts as very high (elite central midfielders);
   - central midfielders and centre-backs scan most, forwards least;
   - scanning drops under tight pressure.
+- **Non-scan head motion (nuisance).** So the scan detector is not graded on a signal we made
+  clean ourselves, the sim also produces head motion that is not a scan: fast ball tracking during
+  passes, sensor noise (σ ≈ 2°, *tunable*), partial/aborted scans and slow drift.
 - **Field of view** (after Bekkers 2026, *Wide Open Gazes*): base 120° binocular cone around
   `head_yaw`; visibility decays with angular offset and distance (Gaussian); the cone narrows as
   running speed rises.
@@ -110,14 +129,31 @@ after a turnover, third-man run, switch of play, high-press trap, through-ball b
 Randomised parameters; the same physics and decision code. Documented in the README as
 scenario-driven generation.
 
+**Hero design rule.** In a scan-lens hero scenario, the free option (e.g. the runner) is visible to
+the decision-maker only during the key scan, and the last sighting before it shows him marked or in
+a low-value position. `drop_scan` then flips the decision because of how the scene is built, not by
+chance.
+
 ### 3.7 Determinism and counterfactuals
-- One seeded RNG stream per match; same seed ⇒ byte-identical output.
+- One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
+  by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
+  happens in the sim (or, equivalently, a generator keyed by frame as well). A single shared
+  stream is not allowed: an intervention such as `drop_scan` would change how many values are
+  drawn, shift every later draw, and mix noise into the counterfactual delta. Keyed draws give
+  common random numbers — factual and counterfactual runs differ only through the intervention.
+- **Byte-identical within one environment.** Same seed + same platform + same numpy version ⇒
+  byte-identical output. Serialised output is quantised (positions and velocities to 1 mm and
+  1 mm/s, angles to 1e-4 rad). Cross-platform identity is not promised: numpy's SIMD
+  transcendental functions can differ in the last bits between ARM and x86, and a multi-agent sim
+  amplifies that. CI compares runs inside CI, never against hashes made on a laptop.
 - `snapshot(t)` / `resume(snapshot, overrides)` re-simulate from t with overrides such as
   `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
 
 ### Acceptance checks — sim
-- [ ] Same seed twice ⇒ identical output hashes.
+- [ ] Same seed twice in the same environment ⇒ identical output hashes.
+- [ ] `resume(snapshot(t), overrides={})` reproduces the factual run from t exactly.
+- [ ] An override that only touches player A leaves every random draw of player B unchanged.
 - [ ] No player exceeds role max speed/accel; ball mechanical energy never increases between contacts.
 - [ ] Realism report on 20 seeds: passes, shots, possession changes per match fall inside configured
       target ranges (table written to `eval/`).
@@ -155,8 +191,9 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
 - `belief_error`: mean distance between believed and true positions of the relevant players.
 
 ### 4.5 Expected threat (xT)
-16 × 12 grid fitted on synthetic event data (socceraction, MIT, or a small own Markov
-implementation). Cache the grid per sim version.
+16 × 12 grid fitted on synthetic event data with our own Markov implementation (value iteration,
+about 100 lines). socceraction is not used: it is no longer maintained and would be a dependency
+for a few lines of maths. Cache the grid per sim version.
 
 ### 4.6 Pass metrics and speeds
 - Pass distance, completion, and difficulty ∈ [0, 1] from: distance, interception risk along the
@@ -166,10 +203,12 @@ implementation). Cache the grid per sim version.
 - Ball speed and shot speed from the ball trajectory.
 
 ### 4.7 Scan detector
-Input: the `head_yaw` time series only. Detect scans as excursions away from the ball direction
+Input: the `head_yaw` time series plus the player's and the ball's positions (needed for the ball
+direction); no sim-internal state. Detect scans as excursions away from the ball direction
 whose head angular velocity exceeds a threshold. The traditional 125°/s threshold is known to
 over-count versus video annotation, so sweep 125–300°/s and choose by F1 against sim ground truth.
-Report a precision / recall / F1 table in `eval/`.
+Report a precision / recall / F1 table in `eval/`, with and without the nuisance head motion
+of §3.4.
 
 ### Acceptance checks — analytics
 - [ ] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
@@ -177,7 +216,8 @@ Report a precision / recall / F1 table in `eval/`.
 - [ ] Shader vs numpy: max abs diff < 0.02 on 10 fixed snapshots.
 - [ ] Vision: cells directly behind the player (outside the cone) have V < 0.05; occluded cells
       score lower than unoccluded cells at the same angle and distance.
-- [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold; table for all thresholds.
+- [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
+      motion on**; table for all thresholds.
 - [ ] xT grid increases toward goal (sanity plot saved).
 
 ## 5. Explain layer (`explain/`)
@@ -218,6 +258,16 @@ Every factual sentence on screen comes from a `Claim`:
   Only `supported` claims render.
 - Narration text uses slot placeholders; the renderer fills numbers from verified values. LLMs
   never emit digits.
+- **Number words count as digits.** The render check rejects any number that did not come from a
+  slot: ASCII digits; English number words (`one`…`twenty`, tens, `hundred`, `twice`, `thrice`,
+  `dozen`, `half`, …); in `zh`, a Chinese numeral followed by a measure word (三次, 两名, 五米, …).
+  Idiomatic 一 (一个, 一脚, 一眼, 一下) is allowlisted — banning 一 outright is impossible in Chinese.
+- **Qualitative claims are claims too.** "Unmarked" or "under heavy pressure" carry no digit but
+  are still factual. A small lexicon maps such terms to predicates, e.g. `unmarked` ⇒ nearest
+  opponent > 5 m; `under heavy pressure` ⇒ pressing intensity on the carrier ≥ 0.7; `blind side`
+  ⇒ outside the vision cone at the last scan (all *tunable*). A lexicon term may appear only in a
+  line that references a claim verifying it. Lines without a claim reference are limited to
+  connective phrases.
 - Predicate ops: `eq, ne, lt, le, gt, ge, approx(tol), exists, before`.
 - Functions: `count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
   observed_share, cf_delta`.
@@ -225,9 +275,13 @@ Every factual sentence on screen comes from a `Claim`:
 
 ### Acceptance checks — explain
 - [ ] Corruption test: perturb 100 supported claims (numbers ±1 / ±20%, swapped players, wrong
-      order) → the verifier refutes ≥ 98%.
-- [ ] No rendered caption contains a digit that did not come from a slot (regex check on the
-      final render payload).
+      order). Among perturbations that are **false under ground truth**, the verifier refutes
+      ≥ 98%. Perturbations that happen to stay true (e.g. swapping two players who both scanned
+      3 times) are excluded and reported separately. `approx` tolerances are < 20%, so ±20%
+      perturbations are refutable.
+- [ ] No rendered caption, in any language, contains a number (digits or number words) that did
+      not come from a slot (check on the final render payload).
+- [ ] Every lexicon term in a rendered line is backed by a supported claim on that line.
 - [ ] Lens selection is deterministic for a given seed.
 
 ## 6. Agents (`agents/`)
@@ -295,8 +349,14 @@ original visual identity.
       a template plan.
 
 ## 8. Platform and deploy
+- **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
+  on the Azure for Students credit until 2026-11-10. Free tiers where they exist: Speech F0,
+  Static Web Apps Free, the Application Insights free allowance, the Container Apps consumption
+  grant. Container images go to GHCR (free for a public repo) instead of Azure Container Registry.
+  LLM spend is bounded by the breakdown cache (§2).
 - **Microsoft Foundry:** one project + one model deployment with structured outputs. Verify model
-  quota on the Azure for Students subscription first (M0 smoke test).
+  quota on the Azure for Students subscription first (M0 smoke test: `infra/m0_provision.sh`, then
+  `python -m infra.smoke`). Agent Framework is pinned to an exact version (weekly releases).
 - **Azure Container Apps:** `api` (+ MCP server). Keep min replicas = 1 during judging.
 - **Azure Static Web Apps:** `web`.
 - **Azure Cosmos DB (serverless):** containers `matches`, `events`, `claims_audit`.
@@ -308,14 +368,19 @@ original visual identity.
 
 ## 9. Milestones and cut list
 
+**Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
+verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
+by layer risks reaching Oct 26 with every layer 70% done and nothing to film.
+
 | Date | Milestone | Exit criteria |
 |---|---|---|
-| Oct 19–20 | M0 setup | registered; Azure for Students active; Foundry model + Speech resource pass a smoke test; repo + CI skeleton |
-| Oct 20–21 | M1 kernels + sim | TTI / pitch control / vision / scan detector (numpy + tests); sim acceptance checks |
-| Oct 22–23 | M2 render + explain | broadcast/tactical/POV cameras, live overlays, pitch-control shader parity; moments, lenses, counterfactuals, claims + verifier |
-| Oct 24–25 | M3 agents + voice | Agent Framework workflow end-to-end on 3 hero moments; `en` + `zh` narration; TTS |
-| Oct 26 | M4 deploy + eval | live Azure deployment; eval report; README draft |
-| Oct 27 | M5 video + submit | ≤ 2:00 video; submission complete before evening CT |
+| Oct 19 (Mon) | M0 setup | registered (by Oct 20 12:00 PT); az/azd logged in; Foundry model + Speech pass the smoke test; repo + CI green |
+| Oct 20 (Tue) | M1 hero slice — sim | one scripted hero scenario; FOV + belief; decisions on belief; `drop_scan` flips the decision; determinism tests |
+| Oct 21 (Wed) | M2 hero slice — explain + render | MomentCard, claims + verifier on the hero moment; web: tactical + POV playback of the clip |
+| Oct 22 (Thu) | M3 walking skeleton | 5-agent workflow end-to-end (`en`) + TTS; **first deploy to ACA + SWA** |
+| Oct 23–25 | M4 widen | stitched match (15–25 possessions); more scenarios; TTI/pitch control/pressing kernels + shader parity; overlays; broadcast camera; personas + `zh`; scan-detector sweep; eval suite; 3 hero moments |
+| Oct 26 (Mon) | M5 freeze | feature freeze; eval report; README; first video cut; repo public |
+| Oct 27 (Tue) | M6 submit | buffer; final ≤ 2:00 video; submission complete by mid-afternoon CT |
 
 **Cut order when behind:**
 1. end-of-match recap reel
@@ -339,7 +404,7 @@ Framework, live deployment, the video.
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
 - [ ] Project on Innovation Studio: pitch, Microsoft technologies used, problem solved
-- [ ] Public GitHub repo created after 2026-09-29
+- [ ] Public GitHub repo created after 2026-09-29 (private during development; made public by Oct 26)
 - [ ] Video < 2:00 at a public URL (YouTube / Vimeo / Facebook Video / Youku); no third-party
       trademarks or copyrighted music
 - [ ] Test link live and free until 2026-11-10, with testing instructions

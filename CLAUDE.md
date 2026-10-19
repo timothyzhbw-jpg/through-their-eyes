@@ -59,8 +59,10 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
 ```
 
 ## Conventions
-- Python **3.11** (socceraction supports ≤ 3.11), managed with `uv`; ruff + pytest; type hints;
-  pydantic for schemas that cross process boundaries.
+- Python **3.11** (keeps the optional unravelsports usable; Agent Framework needs ≥ 3.10), managed
+  with `uv`; ruff + pytest; type hints; pydantic for schemas that cross process boundaries.
+- Randomness is keyed per `(match_seed, entity_id, purpose)` — never one shared sequential stream
+  (SPEC §3.7), so counterfactuals differ only through the intervention.
 - SI units. Pitch 105 × 68 m, origin at the centre spot. 25 Hz frames. Angles in radians
   internally, degrees only in the UI.
 - Every analytics kernel has a numpy reference + unit tests; GLSL versions must match the
@@ -73,10 +75,14 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
 
 ## Commands
 _Fill in as they come to exist._
-- `uv run pytest`
-- `uv run python -m eval.run_all`
-- `uv run uvicorn api.main:app --reload`
-- `cd web && npm run dev`
+- `uv sync` — install Python deps (dev group included)
+- `uv run pytest` — tests
+- `uv run ruff check . && uv run ruff format --check .` — lint (same as CI)
+- `infra/m0_provision.sh` — create the M0 Azure resources (needs `az login`); writes `.env`
+- `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
+  Framework (structured output) + Azure Speech TTS (`en`, `zh`)
+- Not yet: `uv run python -m eval.run_all`, `uv run uvicorn api.main:app --reload`,
+  `cd web && npm run dev`
 
 ## Decisions already made (don't relitigate without a reason)
 - The hero lens is **perception** (scans / vision / belief). `space` (pitch control, xT) and
@@ -86,3 +92,9 @@ _Fill in as they come to exist._
 - No Microsoft Fabric (setup cost, uncertain student access). No real datasets, not even for
   calibration — parameters come from published papers.
 - Category target: Grand Prize + Best Multi-Agent System.
+- **Vertical slice first** (SPEC §9): one hero moment end-to-end and deployed by Oct 22, then widen.
+- A match = 15–25 stitched scenario possessions, 10–15 min of play (SPEC §3.1) — not 90 min.
+- The sim runs offline; `api/` replays it at 1× as the live ingest stream. Breakdowns are cached by
+  content hash so the public demo survives quota or credit running out (SPEC §2).
+- xT is our own implementation; socceraction is not used.
+- The repo stays private during development and goes public by Oct 26.

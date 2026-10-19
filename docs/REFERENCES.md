@@ -1,9 +1,24 @@
 # References and dependency decisions
 
 ## Hackathon
-- Official rules: https://aka.ms/insidethegame/rules. The plan was built from a participant-hosted
-  mirror (https://github.com/faizalkhan24/Microsoft-Premier-League-Hackathon-Official-Rules/blob/main/OFFICIAL%20RULES.md)
-  — re-check against the official version on Innovation Studio.
+- Official rules: https://aka.ms/insidethegame/rules, which redirects to
+  https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md.
+  **Checked 2026-10-19:** matches the participant-hosted mirror the plan was built from
+  (https://github.com/faizalkhan24/Microsoft-Premier-League-Hackathon-Official-Rules/blob/main/OFFICIAL%20RULES.md);
+  the rules file last changed 2026-09-28. Amendments are posted on the hackathon website (§11.5).
+  Facts that shape the plan:
+  - registration closes 2026-10-20 12:00 PT; submissions close 2026-10-27 23:59 PT; judging until
+    2026-11-10, and the project must stay testable free of charge until then;
+  - teams of up to 4; the repo must be public and the project newly created after 2026-09-29;
+  - video < 2 min on YouTube / Vimeo / Facebook Video / Youku, showing the project running; no
+    third-party trademarks or unlicensed music; all materials in English;
+  - "Projects must use synthetic, football-realistic data"; the organisers provide no data and no
+    Azure credit;
+  - the "hero technologies" (Foundry, Agent Framework, Azure MCP, GitHub Copilot Agent Mode,
+    Fabric, …) are judging guidance; none is named as mandatory;
+  - the multi-agent prize is called "Best Multi-Agent System" in §4.2 and "Best Multi-Agent
+    Orchestration" in §8 of the rules.
+- Learning resources: `RESOURCE PLAYLISTS.md` in the same repo.
 - Registration / landing: https://events.microsoft.com/flow/microsoft/plmshackathon/registration/page/landing
 
 ## Papers and how we use them
@@ -67,10 +82,13 @@
 
 | Package | License | Decision |
 |---|---|---|
-| microsoft/agent-framework | MIT | **use** (multi-agent workflow, MCP tools) |
+| microsoft/agent-framework | MIT | **use** (multi-agent workflow, MCP tools); GA, weekly releases (1.22.0 on 2026-10-15) → pin the exact version |
 | Azure / Foundry SDKs | Microsoft | **use** |
+| numpy | BSD-3 | **use** (sim and analytics kernels) |
+| pydantic | MIT | **use** (schemas that cross process boundaries) |
+| pytest, ruff | MIT | **use** (dev only) |
 | three.js, @react-three/fiber, @react-three/drei | MIT | **use** |
-| socceraction | MIT | **use** for xT (Python ≤ 3.11; no longer actively developed) |
+| socceraction | MIT | **not used** — xT is our own value iteration (~100 lines); socceraction is no longer developed (1.5.3 supports Python < 3.13) |
 | kloppy | BSD-3 | optional: kloppy-compatible export of synthetic data |
 | floodlight | MIT | optional: extra analyst metrics |
 | unravelsports | MPL | optional, unmodified only; Python 3.11 only |
