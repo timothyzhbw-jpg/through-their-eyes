@@ -49,11 +49,14 @@ def test_homography_round_trip_error_is_negligible():
     for yaw in (-0.6, 0.0, 0.5):
         h = _camera_homography(yaw, 0.35, 1400.0)
         img = apply_h(h, world)
+        seen = (img >= 0).all(axis=1) & (img[:, 0] < 1920) & (img[:, 1] < 1080)
+        world_seen, img = world[seen], img[seen]
+        assert len(world_seen) > 30
         back = apply_h(np.linalg.inv(h), img)
-        assert np.abs(back - world).max() < 1e-9
+        assert np.abs(back - world_seen).max() < 1e-9
         # A DLT fit from the projected points recovers the same mapping.
-        h_fit = fit_homography(world, img)
-        assert np.abs(apply_h(h_fit, world) - img).max() < 1e-6
+        h_fit = fit_homography(world_seen, img)
+        assert np.abs(apply_h(h_fit, world_seen) - img).max() < 1e-6
 
 
 def _observations_from(h: np.ndarray, pitch: FutsalPitch, frame: str, rng, noise_px: float):
@@ -80,15 +83,16 @@ def test_calibration_fit_recovers_pitch_size_and_projection():
     rough_world = np.array([[0.0, 9.6], [0.0, -3.0], [19.2, 1.5], [13.2, 0.0]])
     rough_img = apply_h(h_ref, rough_world) + rng.normal(0, 15, (4, 2))
     guess = fit_homography(np.array([[0, 10.0], [0, -3.0], [20.0, 1.5], [14.0, 0.0]]), rough_img)
-    cal = fit_calibration(
-        obs, {"ref": np.eye(3), "centre": ref_from_centre}, FutsalPitch(), guess
-    )
+    cal = fit_calibration(obs, {"ref": np.eye(3), "centre": ref_from_centre}, FutsalPitch(), guess)
     assert abs(cal.pitch.length - truth.length) < 0.4
     assert abs(cal.pitch.width - truth.width) < 0.3
     assert cal.rms_px < 1.0
-    corners = truth.polygon()
-    err = np.linalg.norm(apply_h(cal.h_img_from_world, corners) - apply_h(h_ref, corners), axis=1)
-    assert err.max() < 3.0
+    # Held-out ground points over the visible part of the pitch.
+    grid, _ = truth.grid(1.0)
+    img = apply_h(h_ref, grid)
+    seen = (img >= 0).all(axis=1) & (img[:, 0] < 1920) & (img[:, 1] < 1080)
+    err = np.linalg.norm(apply_h(cal.h_img_from_world, grid[seen]) - img[seen], axis=1)
+    assert err.max() < 2.0
 
 
 def test_committed_calibration_points_fit_within_a_few_pixels():
