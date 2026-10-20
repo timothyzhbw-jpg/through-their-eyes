@@ -3,6 +3,7 @@
 Routes each request by the `ROLE: <name>` line at the top of the agent's instructions and answers
 with the reply configured for that role: a value (returned as JSON), a list of values (one per
 call, the last one repeating), an exception (raised), or `SLOW` (never answers in time).
+`delays` adds a fixed latency in seconds to every call of a role, like a model's response time.
 """
 
 from __future__ import annotations
@@ -22,9 +23,10 @@ _ROLE = re.compile(r"ROLE:\s*(\w+)")
 class FakeChatClient(BaseChatClient):
     SLOW = object()
 
-    def __init__(self, replies: dict[str, Any]) -> None:
+    def __init__(self, replies: dict[str, Any], delays: dict[str, float] | None = None) -> None:
         super().__init__()
         self.replies = replies
+        self.delays = delays or {}
         self.calls: dict[str, int] = defaultdict(int)
         self.prompts: dict[str, list[str]] = defaultdict(list)
         self.tools: dict[str, list[str]] = defaultdict(list)  # tool names each role was given
@@ -49,6 +51,7 @@ class FakeChatClient(BaseChatClient):
             reply = reply[min(k, len(reply) - 1)]
 
         async def answer() -> ChatResponse:
+            await asyncio.sleep(self.delays.get(role, 0.0))
             if reply is FakeChatClient.SLOW:
                 await asyncio.sleep(3600)
             if isinstance(reply, BaseException):

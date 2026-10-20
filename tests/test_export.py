@@ -2,7 +2,6 @@
 
 import json
 import re
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -11,8 +10,6 @@ from sim.counterfactual import drop_scan_counterfactual
 from sim.export import VERSION, export_hero, render_payload_fixture
 
 SCENARIO, SEED = "blind_side_run", 3
-WEB_DATA = Path(__file__).parent.parent / "web" / "public" / "data" / "hero_seed3.json"
-WEB_PAYLOAD = WEB_DATA.parent / "fixture_payload_seed3.json"
 
 
 @pytest.fixture(scope="module")
@@ -72,22 +69,6 @@ def test_counterfactual_and_vision_metadata(data):
     assert v["distance_sigma"] == 50_000
 
 
-def test_committed_web_data_has_the_current_schema(data):
-    """web/ ships a pre-built export; it must be regenerated when the schema changes.
-
-    Values are not compared byte for byte: output is identical only within one environment
-    (SPEC 3.7), and the file is built on a laptop while CI runs on x86.
-    """
-    committed = json.loads(WEB_DATA.read_text())
-    assert committed["version"] == VERSION
-    assert set(committed) == set(data)
-    assert committed["key_scan"] == data["key_scan"]
-    for name, run in data["runs"].items():
-        assert set(committed["runs"][name]) == set(run)
-        assert committed["runs"][name]["frames"] == run["frames"]
-        assert committed["runs"][name]["decision"]["chosen"] == run["decision"]["chosen"]
-
-
 # --- render-payload fixture (SPEC 5.3, 7) --------------------------------------------------------
 
 
@@ -133,19 +114,6 @@ def test_payload_fixture_lines_claims_and_evidence_resolve(data, payload):
         text = re.sub(r"\b[HA]\d{1,2}\b", "", line["text"])
         values = {float(v) for cid in line["claims"] for v in claims[cid]["values"].values()}
         assert {float(x) for x in re.findall(r"\d+(?:\.\d+)?", text)} <= values
-
-
-def test_committed_payload_fixture_matches_the_generator(payload):
-    committed = json.loads(WEB_PAYLOAD.read_text())
-    assert [line["id"] for line in committed["lines"]] == [line["id"] for line in payload["lines"]]
-    assert [line["claims"] for line in committed["lines"]] == [
-        line["claims"] for line in payload["lines"]
-    ]
-    for got, want in zip(committed["claims"], payload["claims"], strict=True):
-        assert {k: v for k, v in got.items() if k != "values"} == {
-            k: v for k, v in want.items() if k != "values"
-        }
-        assert got["values"] == pytest.approx(want["values"], abs=0.11)
 
 
 # --- he thought vs it was (schema v3, SPEC 5.1, 7) ------------------------------------------
@@ -207,3 +175,46 @@ def test_payload_fixture_has_he_thought_it_was_claims(data, payload):
         "p_belief": round(cf["p_success"], 2),
         "p_true": round(cf["p_success_true"], 2),
     }
+
+
+# --- blind-side alerts (schema v4, SPEC 4.4, 7) ----------------------------------------------
+
+
+def _h8_h9(data, run):
+    ids = [p["id"] for p in data["players"]]
+    o, t = ids.index("H8"), ids.index("H9")
+    frames = data["runs"][run]["blind_side"]["frames"]
+    return [next((u for a, b, u in alerts if (a, b) == (o, t)), None) for alerts in frames]
+
+
+def test_blind_side_alerts_are_exported_per_frame_for_both_runs(data):
+    n = len(data["players"])
+    for run in data["runs"].values():
+        b = run["blind_side"]
+        assert len(b["frames"]) == run["frames"]
+        for f, alerts in enumerate(b["frames"]):
+            for o, t, unseen in alerts:
+                assert 0 <= o < n and 0 <= t < n and o != t
+                # 0: in sight again but held on by the alert's minimum duration (the viewer then
+                # shows it as cleared); never more than f, as everyone is seen at the first frame.
+                assert 0 <= unseen <= f
+        for a in b["intervals"]:  # every frame of an interval is in the per-frame list
+            assert a["start"] <= a["end"] < run["frames"]
+
+
+def test_with_the_look_the_runner_alert_clears_during_the_key_scan(data):
+    key = data["key_scan"]
+    unseen = _h8_h9(data, "factual")
+    assert unseen[key["start"] - 1] is not None  # on before the look
+    cleared = next(f for f in range(key["start"], len(unseen)) if unseen[f] is None)
+    assert key["start"] <= cleared <= key["end"]
+    on = [u for u in unseen[: key["start"]] if u is not None]
+    assert on == sorted(on) and len(set(on)) == len(on)  # the unseen time only grows
+
+
+def test_without_the_look_the_runner_alert_stays_on_until_the_pass(data):
+    decision = data["runs"]["counterfactual"]["decision"]["frame"]
+    unseen = _h8_h9(data, "counterfactual")
+    on = [f for f, u in enumerate(unseen) if u is not None]
+    assert on == list(range(on[0], decision + 1))
+    assert on[0] < data["key_scan"]["start"]

@@ -5,7 +5,9 @@
 Live play never waits on a model: the stream and the moments are deterministic. Breakdowns and
 what-if answers are computed once and cached by a content hash of everything that shapes them
 (moment card, personas, languages, prompt version, model deployment). With a model configured,
-regeneration is rate-limited per client; the cached answer is served instead.
+regeneration is rate-limited per client and capped per UTC day across all clients
+(`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
+flagged `rate_limited` or `capped`.
 """
 
 from __future__ import annotations
@@ -20,14 +22,15 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from agents import whatif
-from agents.llm import client_from_env
+from agents.llm import client_from_env, sync_credential_from_env
 from agents.prompts import PROMPT_VERSION
 from agents.schemas import Language, Persona
+from agents.telemetry import configure_tracing
 from agents.workflow import run_breakdown
 from api import tts
 from api.live import stream
 from api.settings import Settings
-from api.store import Match, MatchStore, RateLimiter, ResultCache, content_key
+from api.store import DailyCap, Match, MatchStore, RateLimiter, content_key, open_storage
 
 VERSION = "0.4.0"
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
@@ -60,21 +63,30 @@ def _client_ip(request: Request) -> str:
 
 
 def create_app(
-    settings: Settings | None = None, client: Any | None = None, model_id: str | None = None
+    settings: Settings | None = None,
+    client: Any | None = None,
+    model_id: str | None = None,
+    credential: Any | None = None,
+    cosmos_client: Any | None = None,
 ) -> FastAPI:
+    """`credential` (a sync TokenCredential) is needed when TTE_COSMOS_ENDPOINT is set."""
     settings = settings or Settings.from_env()
     close = None
     if client is None and model_id is None:
         client, close = client_from_env()
     model = model_id or ("foundry" if client is not None else "offline")
-    store = MatchStore(settings)
-    breakdowns = ResultCache(settings.cache_dir, "breakdowns")
-    answers = ResultCache(settings.cache_dir, "whatif")
+    if settings.cosmos_endpoint and credential is None and cosmos_client is None:
+        credential = sync_credential_from_env()  # keyless: managed identity in Azure, az locally
+    storage = open_storage(settings, credential, cosmos_client)
+    store = MatchStore(settings, audit=storage.audit)
+    breakdowns, answers = storage.breakdowns, storage.answers
     limiter = RateLimiter(*settings.rate_limit)
+    cap = DailyCap(settings.daily_model_cap)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         yield
+        storage.close()
         if close is not None:
             await close()
 
@@ -91,6 +103,18 @@ def create_app(
         if match is None:
             raise HTTPException(404, f"unknown match {mid}")
         return match
+
+    def regeneration(request: Request) -> str:
+        """Whether a model-backed regeneration may run now: "model", "capped" or "rate_limited".
+
+        The daily cap is checked first, so a capped request does not use up the client's quota.
+        """
+        if cap.left() <= 0:
+            return "capped"
+        if not limiter.allow(_client_ip(request)):
+            return "rate_limited"
+        cap.take()
+        return "model"
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -120,8 +144,10 @@ def create_app(
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:
-        records = getattr((await match_or_404(mid)).ctx.audit, "records", [])
-        return [r.model_dump(mode="json") for r in records[-max(1, min(limit, 500)) :]]
+        ctx = (await match_or_404(mid)).ctx
+        recent = getattr(ctx.audit, "recent", None)
+        records = recent(ctx.evaluator.match, max(1, min(limit, 500))) if recent else []
+        return [r.model_dump(mode="json") for r in records]
 
     @app.websocket("/ws/matches/{mid}/live")
     async def live(ws: WebSocket, mid: str, speed: float = 1.0, start: int = 0) -> None:
@@ -150,42 +176,46 @@ def create_app(
         if not body.regenerate:
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, "rate_limited": False, **hit}
-        rate_limited = False
+                    return {"key": k, "cached": True, "rate_limited": False, "capped": False,
+                            **hit}  # fmt: skip
+        limits = {"rate_limited": False, "capped": False}
         if client is not None:
-            if limiter.allow(_client_ip(request)):
+            verdict = regeneration(request)
+            if verdict == "model":
                 return await _compute(m, body, client, "model", model_key)
-            rate_limited = True
+            limits[verdict] = True
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, "rate_limited": True, **hit}
+                    return {"key": k, "cached": True, **limits, **hit}
         out = await _compute(m, body, None, "offline", offline_key)
-        return {**out, "rate_limited": rate_limited}
+        return {**out, **limits}
 
     async def _compute(m: Match, body: BreakdownBody, llm, source: str, k: str) -> dict[str, Any]:
         result = await run_breakdown(m.ctx, client=llm, personas=tuple(body.personas),
                                      languages=tuple(body.languages))  # fmt: skip
         value = {"source": source, "result": result.model_dump(mode="json", by_alias=True)}
         breakdowns.put(k, value)
-        return {"key": k, "cached": False, "rate_limited": False, **value}
+        return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
 
     @app.post("/api/whatif")
     async def what_if(body: WhatIfBody, request: Request) -> dict[str, Any]:
         m = await match_or_404(body.match)
-        use_model = client is not None and limiter.allow(_client_ip(request))
+        verdict = regeneration(request) if client is not None else "offline"
+        use_model, capped = verdict == "model", verdict == "capped"
         action, _ = await whatif.map_question(m.ctx, body.question, client if use_model else None)
         if action is not None:
             k = content_key(match=m.id, action=action, language=body.language,
                             persona=body.persona, version=WHATIF_VERSION)  # fmt: skip
             if (hit := answers.get(k)) is not None:
-                return {"key": k, "cached": True, "answer": {**hit, "question": body.question}}
+                return {"key": k, "cached": True, "capped": capped,
+                        "answer": {**hit, "question": body.question}}  # fmt: skip
         answer = await whatif.answer_question(m.ctx, body.question, body.language, body.persona,
                                               client if use_model else None)  # fmt: skip
         data = answer.model_dump(mode="json")
         if action is None or answer.action is None:
-            return {"key": None, "cached": False, "answer": data}
+            return {"key": None, "cached": False, "capped": capped, "answer": data}
         answers.put(k, data)
-        return {"key": k, "cached": False, "answer": data}
+        return {"key": k, "cached": False, "capped": capped, "answer": data}
 
     @app.post("/api/tts")
     async def speech(body: TtsBody) -> Response:
@@ -202,4 +232,5 @@ def create_app(
     return app
 
 
+configure_tracing()  # Application Insights when its connection string is set (SPEC 8)
 app = create_app()

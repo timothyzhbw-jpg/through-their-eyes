@@ -96,6 +96,25 @@ def test_agent_outputs_are_used_through_verified_claims(ctx):
     assert [line.speaker for line in script.lines] == ["pbp", "color"]
 
 
+@pytest.mark.parametrize("telestrator_s, voice_s", [(1.2, 0.4), (0.4, 0.6)])
+def test_telestrator_and_narration_run_concurrently(ctx, telestrator_s, voice_s):
+    """Both read only the Analyst's findings, so the crew waits for the slower lane, not both.
+
+    A narration lane is two calls in a row (the co-commentator replies to the play-by-play), so it
+    takes `2 * voice_s`. The trace keeps its documented order whichever lane finishes first.
+    """
+    delays = {"telestrator": telestrator_s, "pbp": voice_s, "color": voice_s}
+    fake = FakeChatClient(_good_replies(ctx), delays=delays)
+    r = breakdown(ctx, client=fake, personas=("casual", "analyst"), languages=("en",))
+    assert all(s.source == "llm" for s in r.trace if s.step not in ("verifier", "voice"))
+    assert r.plan_source == "agent" and len(r.scripts) == 2
+    assert all(len(script.voice) == len(script.payload.lines) for script in r.scripts)
+    assert [s.step for s in r.trace] == STEPS
+    slower, serial = max(telestrator_s, 2 * voice_s), telestrator_s + 2 * voice_s
+    total_s = r.total_ms / 1000
+    assert slower <= total_s < (slower + serial) / 2, (total_s, slower, serial)
+
+
 def test_a_model_cannot_add_its_own_words_or_unknown_claims(ctx):
     replies = _good_replies(ctx)
     replies["analyst"] = {**replies["analyst"], "headline": ["made_up_claim"]}
@@ -126,6 +145,7 @@ def test_a_line_the_verifier_rejects_is_rewritten_or_dropped(ctx):
         {"lines": [{"claim": "cf_pass", "connective": None}]},
     ]
     r = breakdown(stale, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    assert r.plan_source == "agent"  # the plan waits at the join while narration is rewritten
     (script,) = r.scripts
     assert script.rewrites == 1 and script.dropped == []
     assert "Without that look, H8 would have passed to H4." in [

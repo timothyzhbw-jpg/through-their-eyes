@@ -25,7 +25,7 @@ knew existed.
 
 | Judging criterion (20% each) | How we score |
 |---|---|
-| Technological implementation | Physics-based synthetic tracking with a research-calibrated perception layer; numpy↔GLSL parity-tested kernels; deterministic counterfactual re-simulation; CI eval suite; Foundry + Agent Framework + MCP + Azure Speech + ACA/SWA + Cosmos DB + App Insights |
+| Technological implementation | Physics-based synthetic tracking with a research-calibrated perception layer; numpy↔GLSL parity-tested kernels; deterministic counterfactual re-simulation; CI eval suite; Foundry + Agent Framework + MCP + Azure Speech + Container Apps + Storage static website + Cosmos DB + App Insights |
 | Agentic design & innovation | AI production crew (Director, Analyst, Telestrator, Narrator, Verifier) with typed handoffs, shared moment state, MCP tools, deterministic verification, graceful fallbacks |
 | Real-world impact | Production path: the same schema can be fed by stadium skeletal tracking or broadcast-video models; machine-readable, timecoded overlay cues; audit log of every verified claim |
 | UX & presentation | First-person replay + tactical camera + live overlays; persona and language switching; a 2-minute video built around one hero moment |
@@ -432,10 +432,10 @@ tools exposed by our own MCP server.
 | Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
-| Commentator | Findings + plan + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
+| Commentator | Findings + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
 | Co-commentator | Findings + Commentator's lines + persona + language | anchored lines, become `Script` lines with `speaker: "color"` | analysis voice: why it happened, the perception story; replies to the play-by-play |
 | Verifier | Script + Claims | verdicts; approve or request a rewrite | deterministic code wrapped as a workflow step |
-| Voice | approved Script | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
+| Voice | approved Script + TelestrationPlan | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
 
 **Two voices.** The two narration agents write one interleaved `Script`, each line tagged with its
 `speaker`. If either fails, a single-narrator template takes over (failure policy below).
@@ -452,6 +452,11 @@ Application Insights.
 *Implemented (M3, `agents/`):*
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
   outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
+- The Telestrator and narration read only the Analyst's findings, so a fan-out edge runs them
+  concurrently; Voice places lines on the plan's clock, so a fan-in edge makes it wait for both the
+  validated plan and the approved scripts. The framework runs in supersteps, so a rewrite round
+  starts after the Telestrator has finished. `trace` keeps the order Director, Analyst,
+  Telestrator, narration, Verifier, Voice whichever lane finishes first.
 - Models get claims as templates with slot names, never raw text to copy numbers from. The Analyst
   returns claim ids only, constrained to the supported ids by an enum in its JSON schema; a reply
   outside the enum fails validation and the Analyst's template takes over.
@@ -466,10 +471,19 @@ Application Insights.
   with no rewrites, no drops, no invented names, and every headline claim spoken.
 - Telestrator: Azure structured outputs reject the `oneOf` a discriminated union produces, so the
   model fills `PlanDraft` (a plain `anyOf` union) and `to_plan()` applies the full checks.
-- *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus):* 10.5 s and 13.3 s for the whole
-  crew (Director ≈ 2.4 s, Analyst 2.1–3.3 s, Telestrator 3.0–4.4 s, narration ≈ 1.7 s for eight
-  calls, the four scripts in parallel). The p95 < 12 s target (§2) needs the Telestrator and narration to run in
-  parallel: both depend only on the Analyst's findings.
+- *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus; seed 3, `--mcp`, casual and
+  analyst × en and zh):* with every step in sequence, 10.5 s and 13.3 s for the whole crew
+  (Director ≈ 2.4 s, Analyst 2.1–3.3 s, Telestrator 3.0–4.4 s, narration ≈ 1.7 s for eight calls,
+  the four scripts in parallel). With the Telestrator and narration in parallel (2026-10-19):
+  8.2, 8.6, 8.6, 8.3 and 8.5 s, each with the agent plan and 23–24 lines aired, no rewrites and no
+  drops (Director 2.0–3.1 s, Analyst 1.8–3.4 s, Telestrator 2.5–2.9 s, longest narration call
+  1.4–2.3 s); the critical path is now Director → Analyst → the slower lane. A third run started
+  right after two others hit the deployment's rate limit (capacity 20: 20 requests and 20K tokens
+  per minute; one breakdown makes at least 11 requests) and took 25.5 s, with the template plan
+  and one of eight narration calls on its template; runs a minute apart stayed under the limit.
+  With tracing spans on every step and the capacity raised to 200, three runs back to back
+  (2026-10-20): 10.9, 8.2 and 9.0 s, no 429, plan from the agent, 23–25 lines aired, no rewrites
+  or drops.
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid.
@@ -484,6 +498,15 @@ Application Insights.
   answered with a fixed "not something he could do here" line. Latency as a breakdown (§2).
 - Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
   every tier is rendered as prosody.
+- *After deployment:* **Foundry evaluation as an ablation** (`eval/narration_ablation.py`).
+  Anchored lines are verified templates, so a groundedness score on them alone proves little.
+  Instead, compare two narration modes on the same moments and seeds:
+  - free text: the pre-anchoring prompt, kept as an eval-only mode;
+  - anchored: what ships.
+  Score both with `azure-ai-evaluation` (MIT) groundedness against the claims, and report the
+  deterministic Verifier's violations (number, entity, placeholder, banned) next to it.
+  The output, `eval/reports/narration_ablation.md`, is the evidence for the anchored design. It is
+  in the cut list.
 
 `TelestrationPlan` sketch:
 
@@ -507,6 +530,16 @@ Vite + React + TypeScript + three.js via React Three Fiber (+ drei). Fictional t
 original visual identity.
 
 - **Players:** stylised capsule/pawn tokens with team colour and number; no limb animation.
+  - *Stretch, trial after deployment:* rigged players from the Gameplay Football assets that ship
+    with Google Research Football. The engine directory is under the Unlicense; we use only
+    `objects/players` (segment models, `player.object` skeleton, kit template) and the
+    animations, never the ad-board or stadium textures.
+  - The trial is time-boxed to one day: one player with idle, walk, sprint and one pass, shown in
+    the POV view. It converts to GLB with the root motion removed, the sim sets the position, the
+    gait follows the sim's speed so the feet don't slide, the body follows `body_yaw`, and the
+    neck joint takes `head_yaw − body_yaw`. Kits are recoloured to the fictional clubs.
+  - Bowen decides by eye. If it is clearly better, POV and broadcast switch to rigged players and
+    the tactical board keeps tokens; the CLAUDE.md decision on tokens changes only then.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -607,19 +640,111 @@ to a real broadcast.
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
   on the Azure for Students credit until 2026-11-10. Free tiers where they exist: Speech F0,
-  Static Web Apps Free, the Application Insights free allowance, the Container Apps consumption
-  grant. Container images go to GHCR (free for a public repo) instead of Azure Container Registry.
-  LLM spend is bounded by the breakdown cache (§2).
+  the Application Insights free allowance, the Container Apps consumption
+  grant. Images go to Azure Container Registry Basic (about $0.17/day): while the repo is private,
+  a GHCR image would need a personal access token, but ACR is pulled with the app's managed
+  identity, so no secret is involved.
+  - LLM spend is bounded by the breakdown cache (§2), the per-client rate limit, and a global daily
+    cap on model-backed regenerations (`TTE_DAILY_MODEL_CAP`). Past the cap, the service serves the
+    cache or the template.
+  - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
+    at $40 if the offer supports budgets.
+- **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
+  from 2026-10-20 to 2026-11-10):
+
+  | Item | Setting | Expected | Worst case |
+  |---|---|---|---|
+  | Container Apps (`api`) | Consumption, 0.5 vCPU / 1 GiB, 1 replica always on | ≈ $6: idle most of the time ($3e-6 per vCPU-s and per GiB-s), less the monthly free grant | $28.5: active the whole time, no grant |
+  | Container Registry | Basic | $3.7 | $3.7 |
+  | Cosmos DB | serverless, `cache` + `claims_audit` | < $0.5 | < $1 |
+  | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
+  | Storage static website (`web`) | StorageV2, LRS, hot | ≈ $0.1 | < $1 |
+  | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
+  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $9: cap of 40 per day, every day |
+  | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
+  | **Total** | | **≈ $15** | **≈ $50** |
+- **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as
+  `infra/m0_provision.sh`:
+  - an explicit `AZURE_SUBSCRIPTION_ID`, and only Azure for Students, pay-as-you-go or free-trial
+    offers;
+  - never the CLI's default subscription, and never a Microsoft Internal or Enterprise Agreement
+    subscription.
+  GitHub Actions logs in with OIDC through a user-assigned managed identity. Its federated
+  credential trusts only this repo's `main` branch, and its roles are scoped to
+  `rg-through-their-eyes`. There is no app registration (the university tenant may forbid
+  student-created ones) and no stored Azure secret.
 - **Microsoft Foundry:** one project + one model deployment with structured outputs. Verify model
   quota on the Azure for Students subscription first (M0 smoke test: `infra/m0_provision.sh`, then
   `python -m infra.smoke`). Agent Framework is pinned to an exact version (weekly releases).
-- **Azure Container Apps:** `api` (+ MCP server). Keep min replicas = 1 during judging.
-- **Azure Static Web Apps:** `web`.
-- **Azure Cosmos DB (serverless):** containers `matches`, `events`, `claims_audit`.
+  - *Capacity:* the `gpt-4.1-mini` GlobalStandard deployment runs at 200 (raised from 20 on
+    2026-10-19), the subscription's whole northcentralus quota for that model;
+    `infra/m0_provision.sh` asks for 200 and caps it at the quota left. One unit is 1K tokens and 1
+    request per minute. GlobalStandard is billed per token only (the Retail Prices API lists no
+    hourly meter for the base model), so capacity has no fixed cost; spend stays bounded by the
+    cache, the per-client limit and the daily cap.
+  - *Why:* one breakdown (seed 3, `--mcp`, four scripts) makes 12 requests and ≈ 23K tokens (22.4K
+    in, 0.7K out, Azure Monitor over six runs; the cost estimate's 65K stays as an upper bound). At
+    20, three breakdowns back to back gave 26 × 429 in one minute and the third fell back to
+    template narration after 12 attempts, 28.6 s in total.
+  - *Measured at 200:* three runs back to back with no gap, each with every agent step answered by
+    the model, plan from the agent and no 429: 10.4, 9.8 and 11.8 s with the sequential crew; 8.4,
+    9.8 and 8.8 s with the Telestrator and narration in parallel (§6). Tokens are now the binding
+    limit, at about 8 breakdowns per minute.
+- **Azure Container Apps:** `api` (+ MCP server, a subprocess of the Analyst). Keep min replicas =
+  1 during judging. A system-assigned identity holds Cognitive Services User on Foundry, AcrPull
+  on the registry, and Cosmos DB data contributor on the account.
+- **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
+  Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
+  so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
+  keys; the API allows the site's origin only.
+  - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
+    2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
+    none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
+- **Azure Cosmos DB (serverless):** containers `cache` (breakdowns, what-if answers, audio keys)
+  and `claims_audit`, behind the existing file-store and audit-sink interfaces. Matches and events
+  are not stored: they are regenerated from their seeds at start-up, byte-identically, so storing
+  them would be a service added for its own sake.
 - **Azure AI Speech:** neural TTS with SSML; one voice per language.
-- **Application Insights:** OpenTelemetry traces from Agent Framework and FastAPI.
+- **Application Insights:** OpenTelemetry traces from Agent Framework and FastAPI, through
+  `azure-monitor-opentelemetry` (MIT).
+  - Spans: one per breakdown, one child per workflow step (Director, Analyst with its MCP tool
+    calls, Telestrator, each narration voice, Verifier rounds, Voice).
+  - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
+    reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
+    ingestion.
+  - The end-to-end transaction view of one breakdown, with a fallback in it, is a video shot and a
+    README figure: evidence for the multi-agent prize.
+  - Acceptance: one breakdown yields one trace with a span per step, and a forced timeout shows up
+    as a `template` span with its reason.
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
+- *Provisioned 2026-10-20 (`infra/deploy.sh provision`):*
+  - Log Analytics (0.1 GB/day cap), Application Insights, Container Registry Basic, a Container
+    Apps environment and `tte-api` (0.5 vCPU / 1 GiB, 1 replica), the GitHub Actions identity, and
+    a $40/month budget alert to the subscription owners.
+  - Cosmos DB is in West US: North Central US refused new accounts ("high demand"), and West US is
+    the nearest region the Azure for Students policy allows.
+  - Container Apps: the CLI now creates *express* environments by default, and there the app
+    could not pull from ACR with a managed identity (`BuildFailed`). The script therefore creates
+    the environment through ARM with `environmentMode: WorkloadProfiles` (Consumption profile).
+    `tte-api` uses one user-assigned identity, `tte-api-id-<suffix>`, for Foundry, Cosmos and image
+    pulls.
+  - ACR Tasks (`az acr build`) is not allowed on Azure for Students. Images are built with docker
+    (linux/amd64), locally by `infra/deploy.sh api` or on the GitHub runner.
+  - Static Web Apps could not be created: its regions (West US 2, Central US, East US 2, West
+    Europe, East Asia) are all outside the subscription's allowed regions. The web app is
+    therefore a Storage static website (above).
+- *Deployed 2026-10-20, measured from Nashville:*
+  - API: `https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io`. `/health`
+    reports `model: foundry`, `speech: true`. The first moments request after a start takes 6 s
+    (sim + claims).
+  - A model-backed breakdown (casual and analyst × en and zh) took 9.2 s end to end, every step
+    from the model (Director 2.2 s, Analyst 1.3 s with MCP tools, Telestrator 3.0 s, narration
+    1.3 s). The same request from the cache took 0.15 s.
+  - What-if: verified, cached. TTS: 200 with WAV. Cosmos: cache and audit items written.
+  - Live WebSocket: 25.3 fps at the client, p95 frame gap 101 ms over the internet.
+  - Web: `https://ttesite1ff906.z14.web.core.windows.net`.
+  - `.github/workflows/deploy.yml` redeploys both after CI passes on main.
 - Every environment variable documented in `.env.example`; no secrets in the repo.
 
 ## 9. Milestones and cut list
@@ -633,7 +758,7 @@ by layer risks reaching Oct 26 with every layer 70% done and nothing to film.
 | Oct 19 (Mon) | M0 setup | registered (by Oct 20 12:00 PT); az/azd logged in; Foundry model + Speech pass the smoke test; repo + CI green |
 | Oct 20 (Tue) | M1 hero slice — sim | one scripted hero scenario; FOV + belief; decisions on belief; `drop_scan` flips the decision; determinism tests |
 | Oct 21 (Wed) | M2 hero slice — explain + render | MomentCard, claims + verifier on the hero moment; web: tactical + POV playback of the clip |
-| Oct 22 (Thu) | M3 walking skeleton | 5-agent workflow end-to-end (`en`) + TTS; **first deploy to ACA + SWA** |
+| Oct 22 (Thu) | M3 walking skeleton | 5-agent workflow end-to-end (`en`) + TTS; **first deploy to Container Apps + the Storage static website** |
 | Oct 23–25 | M4 widen | **blind-side alerts first, then "What if…?" with `force_action`**; stitched match (15–25 possessions); more scenarios; TTI/pitch control/pressing kernels + shader parity; overlays; broadcast camera; personas + `zh`; scan-detector sweep; eval suite; 3 hero moments |
 | Oct 26 (Mon) | M5 freeze | feature freeze; eval report; README; first video cut; repo public |
 | Oct 27 (Tue) | M6 submit | buffer; final ≤ 2:00 video; submission complete by mid-afternoon CT |
@@ -645,16 +770,18 @@ pilot only, never generalised.
 **Cut order when behind:**
 0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
-1. shareable clip export (stretch)
-2. viewer pilot
-3. end-of-match recap reel
-4. "What if…?" free text → suggested questions only
-5. two voices → one narrator
-6. `coach` persona
-7. `es` language
-8. Cosmos DB → file store
-9. occlusion model → FOV only
-10. pitch-control shader and pass value surface → precomputed textures
+1. rigged GRF players in POV and broadcast (stretch; §7, one-day trial after deployment)
+2. Foundry evaluation ablation, free text vs anchored narration (§6)
+3. shareable clip export (stretch)
+4. viewer pilot
+5. end-of-match recap reel
+6. "What if…?" free text → suggested questions only
+7. two voices → one narrator
+8. `coach` persona
+9. `es` language
+10. Cosmos DB → file store
+11. occlusion model → FOV only
+12. pitch-control shader and pass value surface → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
@@ -682,3 +809,10 @@ Framework, live deployment, the video.
 - [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
       and its attribution), architecture, how to run, eval results, related work
 - [ ] All materials in English
+- [ ] **Claim only what we use.** README, video and submission list a technology only if the running
+      system or our development actually used it, each with evidence (file, screenshot, PR):
+      a "technology → where → evidence" table, which the closing architecture slide follows.
+      - We develop with Claude Code and say so.
+      - GitHub Copilot and the Azure MCP Server are listed only if we really used them, with the
+        PRs or commands that show it.
+      - Fabric is not used.

@@ -58,6 +58,26 @@ def _drain(ws):
             return messages
 
 
+def test_live_frames_carry_the_blind_side_alerts(client):
+    """The H9 alert behind H8 is on before the key scan and gone once H8 has looked (SPEC 4.4)."""
+    export = client.get(f"/api/matches/{MATCH}/export").json()
+    ids = [p["id"] for p in export["players"]]
+    h8, h9 = ids.index("H8"), ids.index("H9")
+    key = export["key_scan"]
+    with client.websocket_connect(f"/ws/matches/{MATCH}/live?speed=1000") as ws:
+        frames = {m["f"]: m for m in _drain(ws) if m["type"] == "frame"}
+    run = export["runs"]["factual"]
+    assert all(frames[f]["blind_side"] == run["blind_side"]["frames"][f] for f in frames)
+
+    def on(f):
+        return any((o, t) == (h8, h9) for o, t, _ in frames[f]["blind_side"])
+
+    assert on(key["start"] - 1)
+    assert not on(key["end"])
+    unseen = next(u for o, t, u in frames[key["start"] - 1]["blind_side"] if (o, t) == (h8, h9))
+    assert unseen * export["dt"] >= 1.0
+
+
 def test_live_stream_replays_frames_events_and_moments_in_order(client):
     export = client.get(f"/api/matches/{MATCH}/export").json()
     n = export["runs"]["factual"]["frames"]
@@ -131,6 +151,89 @@ def test_regeneration_with_a_model_is_rate_limited_per_client(settings, tmp_path
     assert r1.json()["source"] == "model"
     assert r3.status_code == 200
     assert r3.json()["rate_limited"] is True and r3.json()["cached"] is True
+
+
+# --- the global daily cap on model-backed regenerations (SPEC 8) ----------------------------------
+
+
+@pytest.fixture(scope="module")
+def replies():
+    from agents.context import MomentContext
+
+    ctx = MomentContext.load("blind_side_run", 3)
+    return {**_good_replies(ctx), "whatif": {"action": "pass:H4"}}
+
+
+def _capped(settings, cache_dir, replies, cap):
+    """An app with a model, a per-client limit that never binds, and a daily cap of `cap`."""
+    from agents.testing import FakeChatClient
+
+    fresh = Settings(matches=settings.matches, cache_dir=cache_dir, rate_limit=(100, 600.0),
+                     web_origin="*", daily_model_cap=cap)  # fmt: skip
+    fake = FakeChatClient(replies)
+    return create_app(fresh, client=fake, model_id="fake-model"), fake
+
+
+def test_daily_model_cap_comes_from_the_environment(monkeypatch):
+    monkeypatch.delenv("TTE_DAILY_MODEL_CAP", raising=False)
+    assert Settings.from_env().daily_model_cap == 40
+    monkeypatch.setenv("TTE_DAILY_MODEL_CAP", "5")
+    assert Settings.from_env().daily_model_cap == 5
+
+
+def test_past_the_daily_cap_breakdowns_serve_the_cache_or_the_template(settings, tmp_path, replies):
+    app, fake = _capped(settings, tmp_path, replies, cap=1)
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"], "regenerate": True}
+    with TestClient(app) as c:
+        first = c.post("/api/breakdowns", json=body).json()
+        again = c.post("/api/breakdowns", json=body).json()
+        uncached = c.post("/api/breakdowns", json={**body, "languages": ["zh"]}).json()
+    assert first["source"] == "model" and first["capped"] is False
+    assert again["capped"] is True and again["rate_limited"] is False
+    assert again["cached"] is True and again["key"] == first["key"] and again["source"] == "model"
+    assert uncached["capped"] is True and uncached["cached"] is False
+    assert uncached["source"] == "offline" and uncached["result"]["scripts"]
+    assert fake.calls["director"] == 1  # one model-backed regeneration in all
+
+
+def test_the_daily_cap_is_shared_by_breakdowns_and_whatif_across_clients(
+    settings, tmp_path, replies
+):
+    app, fake = _capped(settings, tmp_path, replies, cap=2)
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"], "regenerate": True}
+    question = {"match": MATCH, "question": "What if he passed to H4?", "language": "en"}
+
+    def ip(n):
+        return {"x-forwarded-for": f"203.0.113.{n}"}
+
+    with TestClient(app) as c:
+        b = c.post("/api/breakdowns", json=body, headers=ip(1)).json()
+        w1 = c.post("/api/whatif", json=question, headers=ip(2)).json()
+        calls = dict(fake.calls)
+        w2 = c.post("/api/whatif", json=question, headers=ip(3)).json()
+        w3 = c.post("/api/whatif", json={**question, "language": "zh"}, headers=ip(4)).json()
+    assert b["source"] == "model" and b["capped"] is False
+    assert w1["answer"]["source"] == "llm" and w1["capped"] is False
+    assert w2["capped"] is True and w2["cached"] is True  # the cached answer
+    assert w2["answer"]["action"] == "pass:H4"
+    assert w3["capped"] is True and w3["cached"] is False  # no cache: the rule mapper
+    assert w3["answer"]["source"] == "template" and w3["answer"]["action"] == "pass:H4"
+    assert fake.calls == calls and calls["director"] == 1  # no model call once capped
+
+
+def test_the_daily_cap_resets_at_utc_midnight():
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from api.store import DailyCap
+
+    now = [datetime(2026, 10, 27, 23, 59, tzinfo=UTC)]
+    cap = DailyCap(2, clock=lambda: now[0])
+    assert cap.take() and cap.take() and not cap.take()
+    now[0] = datetime(2026, 10, 28, 1, 0, tzinfo=timezone(timedelta(hours=2)))  # still the 27th UTC
+    assert not cap.take()
+    now[0] = datetime(2026, 10, 28, 0, 0, tzinfo=UTC)
+    assert cap.left() == 2 and cap.take() and cap.left() == 1
+    assert not DailyCap(0).take()
 
 
 def test_unknown_moment_is_404(client):

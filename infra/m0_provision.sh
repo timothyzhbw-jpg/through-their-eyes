@@ -34,7 +34,10 @@ AI_PROJECT=${AZURE_AI_PROJECT:-through-their-eyes}
 SPEECH_ACCOUNT=${AZURE_SPEECH_ACCOUNT:-tte-speech-$SUFFIX}
 CANDIDATES=${MODEL_CANDIDATES:-gpt-4.1-mini gpt-5-mini gpt-5-nano gpt-4o-mini}
 SKU=${DEPLOYMENT_SKU:-GlobalStandard}
-CAPACITY=${DEPLOYMENT_CAPACITY:-20}
+# One GlobalStandard unit of gpt-4.1-mini = 1K tokens + 1 request per minute; billing is per token,
+# so capacity costs nothing by itself. One breakdown is ~12 requests and ~22K tokens: at 20 the
+# third breakdown in a minute hit 429 (SPEC §8).
+CAPACITY=${DEPLOYMENT_CAPACITY:-200}
 DEPLOYMENT=${FOUNDRY_MODEL:-}
 
 step() { printf '\n==> %s\n' "$*"; }
@@ -121,7 +124,13 @@ echo "Endpoint: $PROJECT_ENDPOINT"
 step "Model deployment ($SKU)"
 if [[ -n $DEPLOYMENT ]] && exists az cognitiveservices account deployment show -g "$RG" \
   -n "$AI_ACCOUNT" --deployment-name "$DEPLOYMENT"; then
-  echo "Reusing deployment $DEPLOYMENT"
+  HAVE=$(az cognitiveservices account deployment show -g "$RG" -n "$AI_ACCOUNT" \
+    --deployment-name "$DEPLOYMENT" --query sku.capacity -o tsv)
+  echo "Reusing deployment $DEPLOYMENT (capacity $HAVE)"
+  if [[ -n $HAVE ]] && ((HAVE < CAPACITY)); then
+    echo "Capacity $HAVE is below DEPLOYMENT_CAPACITY=$CAPACITY; raise it with" \
+      "'az cognitiveservices account deployment create' (same name and model, new --sku-capacity)."
+  fi
 else
   az cognitiveservices model list -l "$LOCATION" -o json >"$TMP/models.json"
   az cognitiveservices usage list -l "$LOCATION" -o json >"$TMP/usage.json"

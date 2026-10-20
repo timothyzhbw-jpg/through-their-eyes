@@ -38,9 +38,12 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
-   (multi-agent), MCP (our tool server), Azure AI Speech (TTS), Azure Container Apps + Static Web
-   Apps (hosting), Azure Cosmos DB (store), Application Insights (traces), GitHub Actions (CI).
-   Don't add Azure services just to tick boxes.
+   (multi-agent), MCP (our tool server), Azure AI Speech (TTS), Azure Container Apps (API) + an
+   Azure Storage static website (web), Azure Cosmos DB (store), Application Insights (traces),
+   GitHub Actions (CI and deploy). Don't add Azure services just to tick boxes.
+   - Bowen decided on 2026-10-20 to host the web app as a Storage static website instead of Static
+     Web Apps. Static Web Apps only runs in West US 2, Central US, East US 2, West Europe and East
+     Asia, and the Azure for Students policy allows none of them; creating one was refused.
 5. **Licenses:** dependencies must be MIT / BSD / Apache-2.0. No GPL/AGPL (e.g. PitchAura,
    Ultralytics YOLO). MPL only as an unmodified dependency. Never copy code from repos without a
    license (e.g. LaurieOnTracking) — reimplement from the papers.
@@ -98,6 +101,10 @@ _Fill in as they come to exist._
 - `uv run ruff check . && uv run ruff format --check .` — lint (same as CI)
 - `AZURE_SUBSCRIPTION_ID=<id> infra/m0_provision.sh` — create the M0 Azure resources (needs
   `az login`; refuses non-personal subscriptions); writes `.env`
+- `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
+  build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
+  subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
+  CI run on main.
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
@@ -121,6 +128,8 @@ _Fill in as they come to exist._
   question by re-simulating with `force_action` (SPEC 3.7, 6)
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached), `POST /api/whatif`, `POST /api/tts`
+- `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
+  main dependencies only, non-root, `GET /health`
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)

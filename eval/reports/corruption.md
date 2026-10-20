@@ -85,7 +85,7 @@ Player ids stand in for display names.
 
 | Fact | en | zh |
 |---|---|---|
-| `belief_error` | When he played the pass, H8's picture of H9 was off by 0.3 metres. | 出球时，H8对H9位置的判断只差0.3米。 |
+| `belief_error` | When he played the pass, H8's picture of H9 was off by 0.5 metres. | 出球时，H8对H9位置的判断只差0.5米。 |
 | `blind_side` | H9's run was on H8's blind side. | H9的跑位在H8的盲区。 |
 | `cf_pass` | Without that look, H8 would have passed to H1. | 如果没有那一眼，H8会把球传给H1。 |
 | `cf_pass_success` | Without that look, H8 thought the pass to H9 had a 0.07 chance of arriving; it was 0.90. | 如果没有那一眼，H8以为传给H9的球到达的概率是0.07，实际是0.90。 |
@@ -93,11 +93,11 @@ Player ids stand in for display names.
 | `gap_opened` | While the ball travelled to H8, H9 opened up 6.9 metres on A5. | 球传向H8的途中，H9把与A5的距离拉开了6.9米。 |
 | `gap_to_marker` | H9 was 10.5 metres clear of A5 when the pass was played. | 出球时，H9与A5相距10.5米。 |
 | `gap_to_nearest_opponent` | H9 had 10.5 metres to the nearest opponent when the pass was played. | 出球时，H9离最近的对手有10.5米。 |
-| `key_scan_duration` | H8's look over his shoulder lasted 0.56 seconds. | H8这一眼回头持续了0.56秒。 |
-| `observed_share` | In the 1 second before receiving, H8 saw 64% of the space the opponents controlled. | 接球前1秒内，H8看到了对手控制区域的64%。 |
-| `pass_speed` | H8's pass left his foot at 81 km/h. | H8这脚传球的出球时速为81公里。 |
-| `pass_success` | H8 thought the pass to H9 had a 0.79 chance of arriving; it was 0.90. | H8以为传给H9的球到达的概率是0.79，实际是0.90。 |
-| `pass_to_runner` | H8 found H9 with a 40-metre pass. | H8一脚40米的传球找到了H9。 |
+| `key_scan_duration` | H8's look over his shoulder lasted 0.80 seconds. | H8这一眼回头持续了0.80秒。 |
+| `observed_share` | In the 1 second before receiving, H8 saw 65% of the space the opponents controlled. | 接球前1秒内，H8看到了对手控制区域的65%。 |
+| `pass_speed` | H8's pass left his foot at 82 km/h. | H8这脚传球的出球时速为82公里。 |
+| `pass_success` | H8 thought the pass to H9 had a 0.83 chance of arriving; it was 0.90. | H8以为传给H9的球到达的概率是0.83，实际是0.90。 |
+| `pass_to_runner` | H8 found H9 with a 41-metre pass. | H8一脚41米的传球找到了H9。 |
 | `pressure_at_pass` | Pressing intensity on H8 was 0% when he released the ball. | 出球时，H8承受的逼抢强度为0%。 |
 | `runner_received` | H9 took the pass from H8. | H9接到了H8的传球。 |
 | `scan_before_reception` | H8 checked his shoulder before the ball reached him. | 球到之前，H8先回头看了一眼。 |
