@@ -1,4 +1,5 @@
-// Shape of the JSON written by `python -m sim.export` (schema version 4).
+// Shape of the JSON written by `python -m sim.export` (schema version 4): a hero moment
+// (`export_hero`) or a stitched match (`export_match`, SPEC 3.1).
 // Positions are integer mm, angles integer 1e-4 rad; pitch origin at the centre spot, home
 // attacks +x. `hero.ts` converts everything to metres and radians once, at load time.
 
@@ -18,6 +19,7 @@ export interface ExportEvent {
   frame: number;
   player: string;
   attrs: Record<string, unknown>;
+  possession?: number; // in a stitched match: the possession it belongs to
 }
 
 export interface ExportOption {
@@ -97,9 +99,72 @@ export interface HeroExport {
   hero: string;
   runner: string | null;
   players: ExportPlayer[];
-  key_scan: { id: string; start: number; end: number };
-  counterfactual: { id: string; intervention: string; scan: string };
+  // The look the counterfactual drops; null for a hero whose lens is not the scan (press_escape).
+  key_scan: { id: string; start: number; end: number } | null;
+  counterfactual: ExportCounterfactual;
   vision: ExportVision;
   delta_xt: number;
   runs: Record<RunName, ExportRun>;
+}
+
+/** The hero's counterfactual run: the key scan dropped, or one action forced (SPEC 3.7). */
+export type ExportCounterfactual =
+  | { id: string; intervention: "drop_scan"; scan: string }
+  | { id: string; intervention: "force_action"; action: string };
+
+// ---------- a stitched match (sim.export.export_match, SPEC 3.1) ----------
+
+export interface ExportScore {
+  home: number;
+  away: number;
+}
+
+/** One possession of a stitched match: a scenario run with its own seed, on the match clock. */
+export interface ExportPossession {
+  index: number;
+  scenario: string; // "possession_play", "blind_side_run", "press_escape"
+  seed: number;
+  start: number; // match frame of its first frame
+  frames: number;
+  restart: string; // kick_off | throw_in | goal_kick | corner | cut
+  score_before: ExportScore;
+  hero: string | null; // the scenario's hero
+  hero_moment: string | null; // id of its hero moment, in match time
+}
+
+/** A MomentCard (explain/cards.py) lifted to match time by explain/match.py. */
+export interface ExportMatchMoment {
+  id: string; // in match time
+  kind: string;
+  actor: string | null;
+  receiver: string | null;
+  frame_start: number;
+  frame_end: number;
+  anchor_frame: number;
+  anchor_t: number;
+  live_only: boolean;
+  selected_lens: string | null;
+  possession: number;
+  local_id: string; // the card id inside its possession (local frames)
+  hero: boolean; // the possession's hero decision: it has a breakdown
+  start: number; // the possession's first match frame
+}
+
+/** The factual run of a stitched match: no beliefs, sight, decision or counterfactual. */
+export type ExportMatchRun = Pick<
+  ExportRun,
+  "frames" | "pos" | "head" | "body" | "ball" | "owner" | "events" | "blind_side"
+>;
+
+export interface MatchExport {
+  version: number;
+  kind: "match";
+  scenario: "match";
+  seed: number;
+  dt: number;
+  hero: null;
+  players: ExportPlayer[];
+  match: { duration_s: number; score: ExportScore; possessions: ExportPossession[] };
+  runs: { factual: ExportMatchRun };
+  moments: ExportMatchMoment[];
 }

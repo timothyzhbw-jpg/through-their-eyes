@@ -8,7 +8,21 @@ import whatIfJson from "../../public/data/whatif_seed3.json";
 import { HERO_FILE, loadData, PAYLOAD_FILE, WHAT_IF_FILE } from "../data/load";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession } from "../session";
-import { API, exportJson, fakeFetch, health, json, render, type Route } from "../testing";
+import {
+  API,
+  exportJson,
+  fakeFetch,
+  health,
+  json,
+  MATCH,
+  MATCH_HERO,
+  matchBreakdown,
+  matchInfo,
+  pressureExport,
+  PRESS_MOMENT,
+  render,
+  type Route,
+} from "../testing";
 import { LiveBar } from "../ui/Live";
 import { apiBase, createApi } from "./client";
 
@@ -89,7 +103,11 @@ describe("fallback to the bundled data", () => {
     const data = await loaded;
     expect(data.api?.base).toBe(API);
     expect(data.offline).toBeNull();
-    expect(apiCalls(fetch.calls)).toEqual(["/health", "/api/matches/blind_side_run-3/export"]);
+    expect(apiCalls(fetch.calls).sort()).toEqual([
+      "/api/matches/blind_side_run-3", // its hero moment's id (404 here: the default id is kept)
+      "/api/matches/blind_side_run-3/export",
+      "/health",
+    ]);
     expect(fetch.calls.map((c) => c.path)).not.toContain(`/data/${HERO_FILE}`);
     // The bundled fixture and what-ifs still come along: fallback narration, forced runs.
     expect(data.whatIfs).toEqual(whatIfJson);
@@ -113,5 +131,71 @@ describe("fallback to the bundled data", () => {
     const live = render(online, <LiveBar />);
     expect(live).toContain("live-chip");
     expect(live).not.toContain("Offline data");
+  });
+});
+
+describe("matches and their hero moments", () => {
+  it("lists the matches the service plays and reads a match's hero moments", async () => {
+    const fetch = fakeFetch({
+      "GET /api/matches": () =>
+        json([
+          { id: "blind_side_run-3", scenario: "blind_side_run", seed: 3 },
+          { id: MATCH, scenario: "match", seed: 1 },
+        ]),
+      [`GET /api/matches/${MATCH}`]: () => json(matchInfo()),
+    });
+    const api = createApi(API, MATCH, fetch);
+    expect((await api.matches()).map((m) => m.id)).toEqual(["blind_side_run-3", MATCH]);
+    const info = await api.info();
+    expect(info.kind).toBe("match");
+    expect(info.hero_moments).toHaveLength(2);
+    expect(api.withMatch("press_escape-0").match).toBe("press_escape-0");
+  });
+
+  it("asks for a breakdown and a what-if by the moment's id in match time", async () => {
+    const fetch = fakeFetch({
+      "POST /api/breakdowns": (body) => json(matchBreakdown(body)),
+      "POST /api/whatif": () => json({ detail: "not here" }, 404),
+    });
+    const api = createApi(API, MATCH, fetch);
+    const res = await api.breakdown({ moment: MATCH_HERO, persona: "casual", language: "en" });
+    expect(fetch.calls[0].body).toMatchObject({ match: MATCH, moment: MATCH_HERO });
+    expect(res.possession).toEqual({
+      index: 1,
+      start: 60,
+      local_moment: "m:decision_after_scan:H8:0075",
+    });
+    await api
+      .whatIf({
+        question: "What if he carried it?",
+        language: "en",
+        persona: "casual",
+        moment: MATCH_HERO,
+      })
+      .catch(() => null);
+    expect(fetch.calls[1].body).toMatchObject({ match: MATCH, moment: MATCH_HERO });
+  });
+
+  it("takes a standalone hero's moment id from the service", async () => {
+    const fetch = fakeFetch({
+      ...bundled,
+      "GET /health": health,
+      "GET /api/matches/press_escape-0": () =>
+        json({
+          id: "press_escape-0",
+          kind: "hero",
+          hero_moment: PRESS_MOMENT,
+          hero_moments: [PRESS_MOMENT],
+        }),
+      "GET /api/matches/press_escape-0/export": () => json(pressureExport()),
+    });
+    const data = await loadData({
+      apiBase: API,
+      dataUrl: "/data/",
+      fetch,
+      match: "press_escape-0",
+    });
+    expect(data.momentId).toBe(PRESS_MOMENT);
+    expect(data.hero.keyScan).toBeNull();
   });
 });

@@ -1,14 +1,15 @@
 // Test stand-ins for the live service: a routed fetch, a scripted WebSocket, stream messages built
 // from the bundled export, responses in the shapes api/main.py returns (copied from the deployed
-// service for blind_side_run seed 3), and server-side rendering of components with a session.
+// service for blind_side_run seed 3), a pressure hero and a stitched match built from the bundled
+// export, and server-side rendering of components with a session.
 
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import raw from "../public/data/hero_seed3.json";
 import type { Fetch } from "./api/client";
-import type { HeroExport } from "./data/types";
+import type { ExportEvent, ExportMatchMoment, HeroExport, MatchExport } from "./data/types";
 import type { SocketFactory, SocketLike } from "./live/feed";
-import { SessionContext, type Session } from "./session";
+import { SessionContext, type ViewSession } from "./session";
 
 export const API = "https://api.test";
 export const exportJson = raw as unknown as HeroExport;
@@ -330,8 +331,290 @@ export function refusalResponse(question: string) {
 
 // ---------- rendering ----------
 
+// ---------- a pressure hero and a stitched match ----------
+//
+// Stand-ins with the shapes the API serves for press_escape seed 0 and match 1 (sim.export), built
+// from the bundled export so the tests stay small: the pressure hero is the bundled moment without
+// a key scan, its counterfactual forcing a carry; the match stitches three possessions.
+
+export const PRESS_MOMENT = "m:pressed_decision:H8:0075";
+
+/** Like press_escape-0: `key_scan` null, the counterfactual forces a carry (no pass, no runner). */
+export function pressureExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  for (const run of Object.values(e.runs)) {
+    for (const ev of run.events) if (ev.type === "scan") ev.attrs = { ...ev.attrs, key: false };
+  }
+  const cf = e.runs.counterfactual;
+  if (cf.decision) cf.decision = { ...cf.decision, chosen: "carry" };
+  cf.action = null; // a carry is not a pass: the ghost runs to the end of the re-simulated run
+  return {
+    ...e,
+    scenario: "press_escape",
+    seed: 0,
+    runner: null,
+    key_scan: null,
+    counterfactual: { id: "cf1", intervention: "force_action", action: "carry" },
+  };
+}
+
+export const MATCH = "match-1";
+export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled run's first 60 frames
+export const BLIND_START = OPEN_FRAMES; // possession 1: blind_side_run 3
+export const PRESS_START = OPEN_FRAMES + exportJson.runs.factual.frames; // possession 2: press_escape 0
+export const MATCH_HERO = "m:decision_after_scan:H8:0135"; // HERO_MOMENT in match time
+export const MATCH_PRESS = "m:pressed_decision:H8:0300"; // PRESS_MOMENT in match time
+export const GOAL_FRAME = BLIND_START + 150; // a home goal late in possession 1
+
+/** sim.match.global_id: "<...>:<frame>" moved to match time. */
+const globalId = (id: string, start: number) => {
+  const k = id.lastIndexOf(":");
+  return `${id.slice(0, k)}:${String(Number(id.slice(k + 1)) + start).padStart(4, "0")}`;
+};
+
+/** A stitched match of three possessions (open play, the scan hero, the pressure hero). */
+export function matchExport(): MatchExport {
+  const press = pressureExport();
+  const parts = [
+    {
+      scenario: "possession_play",
+      seed: 1000007,
+      run: exportJson.runs.factual,
+      frames: OPEN_FRAMES,
+    },
+    { scenario: "blind_side_run", seed: 3, run: exportJson.runs.factual, frames: 0 },
+    { scenario: "press_escape", seed: 0, run: press.runs.factual, frames: 0 },
+  ];
+  const restarts = ["kick_off", "throw_in", "cut"];
+  const heroes = [null, "H8", "H8"];
+  const local = [null, HERO_MOMENT, PRESS_MOMENT];
+  const run: MatchExport["runs"]["factual"] = {
+    frames: 0,
+    pos: [],
+    head: [],
+    body: [],
+    ball: [],
+    owner: [],
+    events: [],
+    blind_side: { intervals: [], frames: [] },
+  };
+  const possessions: MatchExport["match"]["possessions"] = [];
+  let start = 0;
+  parts.forEach((p, index) => {
+    const n = p.frames || p.run.frames;
+    run.pos.push(...p.run.pos.slice(0, n));
+    run.head.push(...p.run.head.slice(0, n));
+    run.body.push(...p.run.body.slice(0, n));
+    run.ball.push(...p.run.ball.slice(0, n));
+    run.owner.push(...p.run.owner.slice(0, n));
+    run.blind_side.frames.push(...p.run.blind_side.frames.slice(0, n));
+    const events: ExportEvent[] = p.run.events
+      .filter((e) => e.frame < n)
+      .map((e) => ({ ...e, id: globalId(e.id, start), frame: e.frame + start, possession: index }));
+    if (index === 1) {
+      events.push({
+        id: `goal:H9:${GOAL_FRAME}`,
+        type: "goal",
+        frame: GOAL_FRAME,
+        player: "H9",
+        attrs: {},
+        possession: 1,
+      });
+    }
+    run.events.push(...events);
+    possessions.push({
+      index,
+      scenario: p.scenario,
+      seed: p.seed,
+      start,
+      frames: n,
+      restart: restarts[index],
+      score_before: index === 2 ? { home: 1, away: 0 } : { home: 0, away: 0 },
+      hero: heroes[index],
+      hero_moment: local[index] && globalId(local[index]!, start),
+    });
+    start += n;
+  });
+  run.frames = start;
+  const lifted = (
+    localId: string,
+    possession: number,
+    lens: string | null,
+    hero = false,
+  ): ExportMatchMoment => {
+    const at = possessions[possession].start;
+    const anchor = Number(localId.slice(localId.lastIndexOf(":") + 1));
+    return {
+      id: globalId(localId, at),
+      kind: localId.split(":")[1],
+      actor: localId.split(":")[2],
+      receiver: null,
+      frame_start: at + Math.max(0, anchor - 20),
+      frame_end: at + Math.min(possessions[possession].frames - 1, anchor + 40),
+      anchor_frame: at + anchor,
+      anchor_t: Math.round((at + anchor) * exportJson.dt * 1e4) / 1e4,
+      live_only: lens === null,
+      selected_lens: lens,
+      possession,
+      local_id: localId,
+      hero,
+      start: at,
+    };
+  };
+  return {
+    version: exportJson.version,
+    kind: "match",
+    scenario: "match",
+    seed: 1,
+    dt: exportJson.dt,
+    hero: null,
+    players: exportJson.players,
+    match: {
+      duration_s: Math.round(start * exportJson.dt * 100) / 100,
+      score: { home: 1, away: 0 },
+      possessions,
+    },
+    runs: { factual: run },
+    moments: [
+      lifted("m:sprint:A3:0030", 0, null),
+      lifted(HERO_MOMENT, 1, "scan", true),
+      lifted("m:line_breaking_pass:H8:0090", 1, "pressure"),
+      lifted(PRESS_MOMENT, 2, "pressure", true),
+    ],
+  };
+}
+
+/** GET /api/matches/match-1 (api/main.py match_info). */
+export function matchInfo(m: MatchExport = matchExport()) {
+  return {
+    id: MATCH,
+    scenario: "match",
+    seed: m.seed,
+    dt: m.dt,
+    frames: m.runs.factual.frames,
+    players: m.players,
+    hero: null,
+    key_scan: null,
+    hero_moment: MATCH_HERO,
+    hero_moments: [MATCH_HERO, MATCH_PRESS],
+    kind: "match",
+    possessions: m.match.possessions,
+    score: m.match.score,
+  };
+}
+
+export const matchHello = (m: MatchExport = matchExport()) => ({
+  type: "hello",
+  match: MATCH,
+  dt: m.dt,
+  frames: m.runs.factual.frames,
+  players: m.players,
+  hero: null,
+  kind: "match",
+});
+
+export function matchFrameMsg(m: MatchExport, f: number) {
+  const run = m.runs.factual;
+  return {
+    type: "frame",
+    f,
+    t: Math.round(f * m.dt * 1000) / 1000,
+    pos: run.pos[f],
+    body: run.body[f],
+    head: run.head[f],
+    ball: run.ball[f],
+    owner: run.owner[f],
+    sprint: [],
+    blind_side: run.blind_side.frames[f],
+  };
+}
+
+/** The pressure hero's breakdown: the server's template plan (no scan marker) and two lines. */
+export function pressureBreakdown(persona = "casual", language = "en") {
+  const base = breakdownResponse({ cached: false }, { persona, language });
+  const lines = [
+    {
+      id: "L1",
+      text: "H8 was under heavy pressure when he released the ball.",
+      claims: ["heavy_pressure"],
+    },
+    { id: "L2", text: "Had H8 kept the ball, he would have lost it.", claims: ["cf_carry_lost"] },
+  ];
+  const script = base.result.scripts[0];
+  return {
+    ...base,
+    source: "offline",
+    result: {
+      ...base.result,
+      request: { moment: PRESS_MOMENT, personas: [persona], languages: [language] },
+      plan: {
+        moment: PRESS_MOMENT,
+        duration_s: 11.6,
+        steps: [
+          { t: 0.0, do: "freeze" },
+          { t: 0.4, do: "rewind", to: -2.4 },
+          { t: 0.6, do: "zone", layer: "vision", player: "H8" },
+          { t: 0.8, do: "camera", mode: "pov" },
+          { t: 1.2, do: "pov", player: "H8", from: -2.4, to: 0.0, speed: 0.5 },
+          { t: 1.6, do: "ghost", kind: "belief", cf: null },
+          { t: 6.4, do: "camera", mode: "split" },
+          { t: 6.6, do: "play", to: 2.0, speed: 1.0 },
+          { t: 9.0, do: "ghost", kind: "counterfactual", cf: "cf1" },
+        ],
+      },
+      plan_source: "template",
+      scripts: [
+        {
+          ...script,
+          payload: {
+            moment: PRESS_MOMENT,
+            persona,
+            language,
+            lines,
+            claims: [
+              {
+                id: "heavy_pressure",
+                kind: "computed",
+                verdict: "supported",
+                values: {},
+                evidence: ["pass:H8:0075"],
+                seek_frame: 75,
+              },
+              {
+                id: "cf_carry_lost",
+                kind: "counterfactual",
+                verdict: "supported",
+                values: {},
+                evidence: ["pass:H8:0075"],
+                seek_frame: 75,
+              },
+            ],
+          },
+          voice: lines.map((l, k) => ({ ...script.voice[k], line: l.id, ssml: ssml(l.text) })),
+        },
+      ],
+    },
+  };
+}
+
+/** POST /api/breakdowns for a hero moment of match-1: the hero's breakdown plus where it is. */
+export function matchBreakdown(body: unknown, startPatch: Partial<Record<1 | 2, number>> = {}) {
+  const { moment, personas, languages } = body as {
+    moment: string;
+    personas: string[];
+    languages: string[];
+  };
+  const press = moment === MATCH_PRESS;
+  const res = press
+    ? pressureBreakdown(personas[0], languages[0])
+    : breakdownResponse({}, { persona: personas[0], language: languages[0] });
+  const index = press ? 2 : 1;
+  const start = startPatch[index] ?? (press ? PRESS_START : BLIND_START);
+  return { ...res, possession: { index, start, local_moment: press ? PRESS_MOMENT : HERO_MOMENT } };
+}
+
 /** Server-render `node` inside the session's context: the HTML a viewer would get. */
-export function render(session: Session, node: ReactNode): string {
+export function render(session: ViewSession, node: ReactNode): string {
   return renderToStaticMarkup(
     <SessionContext.Provider value={session}>{node}</SessionContext.Provider>,
   );
