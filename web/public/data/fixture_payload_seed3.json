@@ -19,7 +19,7 @@
     },
     {
       "id": "L3",
-      "text": "When he played the pass, H8's picture of H9 was off by 0.5 metres. Without that look, it would have been off by 12.3 metres.",
+      "text": "When he played the pass, H8's picture of H9 was off by 0.3 metres. Without that look, it would have been off by 12.3 metres.",
       "claims": [
         "belief_error",
         "cf_belief_error"
@@ -34,7 +34,7 @@
     },
     {
       "id": "L5",
-      "text": "Without that look, H8 would have passed to H4. That look was worth 0.11 in expected threat.",
+      "text": "Without that look, H8 would have passed to H4. That look was worth 0.1 in expected threat.",
       "claims": [
         "cf_pass",
         "cf_value"
@@ -42,7 +42,7 @@
     },
     {
       "id": "L6",
-      "text": "H8 thought the pass to H9 had a 0.72 chance of arriving; it was 0.90.",
+      "text": "H8 thought the pass to H9 had a 0.80 chance of arriving; it was 0.90.",
       "claims": [
         "pass_success"
       ]
@@ -74,7 +74,7 @@
       "kind": "computed",
       "verdict": "supported",
       "values": {
-        "err": 0.5
+        "err": 0.3
       },
       "evidence": [
         "pass:H8:0075"
@@ -100,7 +100,7 @@
       "values": {},
       "evidence": [
         "pass:H8:0075",
-        "reception:H9:0140"
+        "reception:H9:0139"
       ],
       "seek_frame": 75
     },
@@ -119,7 +119,7 @@
       "kind": "counterfactual",
       "verdict": "supported",
       "values": {
-        "dxt": 0.11
+        "dxt": 0.1
       },
       "evidence": [
         "scan:H8:0050"
@@ -131,7 +131,7 @@
       "kind": "computed",
       "verdict": "supported",
       "values": {
-        "p_belief": 0.72,
+        "p_belief": 0.8,
         "p_true": 0.9
       },
       "evidence": [

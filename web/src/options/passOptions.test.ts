@@ -82,7 +82,7 @@ describe("encodings", () => {
 describe("he thought / it was", () => {
   it("takes the numbers from the claims, per run", () => {
     const f = thoughtVsWas(narration, hero, hero.runs.factual)!;
-    expect(f).toMatchObject({ action: "pass:H9", pBelief: "0.72", pTrue: "0.90" });
+    expect(f).toMatchObject({ action: "pass:H9", pBelief: "0.80", pTrue: "0.90" });
     expect(f.claim.kind).toBe("computed");
     const c = thoughtVsWas(narration, hero, hero.runs.counterfactual)!;
     expect(c).toMatchObject({ action: "pass:H9", pBelief: "0.05", pTrue: "0.90" });
