@@ -17,6 +17,9 @@ dependencies = [
     # Keyless (Entra ID) auth to Foundry via the az CLI login.
     "azure-identity>=1.19",
     "mcp>=1.24,<2",
+    "fastapi>=0.150,<1",
+    "uvicorn>=0.54",
+    "websockets>=17",
 ]
 
 [dependency-groups]
