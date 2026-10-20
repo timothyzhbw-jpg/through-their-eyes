@@ -495,6 +495,35 @@ Application Insights.
   The output, `eval/reports/narration_ablation.md`, is the evidence for the anchored design. It is
   in the cut list.
 
+  *Implemented (2026-10-20):* the free-text mode is `eval/free_text.py`, the pre-anchoring prompts
+  and `NarrationDraft` schema recovered from git `d975277^`, plugged into the shipped workflow by
+  `build_workflow(crew, narration=...)`; `run_breakdown` and the API never take it, and eval/ is
+  not in the API image. Only the two voices call the model (template findings, so both modes
+  narrate the same facts); tidy, the Verifier, rewrites and drops are the shipped code.
+  *Measured (`gpt-4.1-mini`, seeds 3 and 100–103, casual and analyst × en and zh, 20 scripts
+  per mode, 150 model calls):*
+
+  | | free text | anchored |
+  |---|---:|---:|
+  | first-draft lines failing the Verifier | 58 of 66 (88%) | 0 of 111 |
+  | ids and numbers made up (no cited claim holds them) | 47 | 0 |
+  | first-draft lines restating an earlier line (dropped by tidy) | 54 of 120 | 0 |
+  | scripts rewritten · rewrite rounds | 18 · 24 | 0 · 0 |
+  | lines aired · dropped | 60 · 6 | 111 · 0 |
+  | aired lines in the model's own words · with broken count words | 15 · 4 | 0 · 0 |
+  | headline claims spoken | 77% | 97% |
+  | groundedness (1–5), mean | 4.90 | 5.00 |
+
+  Not shown any values, the free-text voices guessed them ("would have passed to A5": H4 in
+  truth). The Verifier rejected every guess, and rewrites then mostly copied the claim
+  templates. But what airs in the model's own words passes both the Verifier and the
+  groundedness judge even when the grammar is broken ("H8 scanned 1 times in the 2 before
+  receiving", "1次次"): neither checks grammar, and the judge gave those scripts 5.
+  The comparison is prompt plus schema: the anchored prompt also tells the co-commentator not to
+  repeat claims. Found on the way, not fixed here: the Verifier's entity check (`\b`) misses a
+  player id next to a Chinese character (the digit is still rejected as a number), and rewritten
+  lines are not tidied again, so a rewrite can air a line twice.
+
 `TelestrationPlan` sketch:
 
 ```json
