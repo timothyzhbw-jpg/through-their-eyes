@@ -205,7 +205,9 @@ def evaluate() -> str:
         f"scans/s lower at 0–1 m than at 10+ m, {PRESSURE_D * FREQUENCY_SD / FREQUENCY_MEAN:.0%} "
         f"of the mean, so the rate at 1 m is {factor:.2f} of the rate at 10 m. This assumes the "
         "10+ m bin sits near the overall mean and the SD within a bin near the overall SD; the "
-        "paper prints neither.",
+        "paper prints neither. It also assumes the bins differ only in pressure: in "
+        "`possession_play` they differ by role as well (eval/reports/realism.md, the pressure "
+        "row's ablation).",
         "",
         "## Dwell grid",
         "",

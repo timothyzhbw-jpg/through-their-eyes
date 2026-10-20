@@ -19,7 +19,7 @@ D_MAX = 5.0  # m/s^2
 class Role:
     v_max: float  # m/s
     # Spontaneous scans per second while the head is free (no scan, partial scan or refractory
-    # under way) and no opponent is within 10 m. Measured rates are about half of it.
+    # under way) and no opponent is within 10 m. Measured rates are 40-60% of it.
     scan_rate: float
     temperature: float  # softmax temperature of the decision model
 
@@ -31,13 +31,13 @@ class Role:
 # one central-midfielder group, so DM, CM and AM share a rate. Goalkeepers are not in its sample.
 ROLES = {
     "GK": Role(7.0, 0.15, 0.010),
-    "CB": Role(8.0, 0.71, 0.010),
+    "CB": Role(8.0, 0.74, 0.010),
     "FB": Role(9.0, 0.56, 0.010),
-    "DM": Role(8.3, 1.00, 0.009),
-    "CM": Role(8.5, 1.00, 0.008),
-    "AM": Role(8.7, 1.00, 0.009),
-    "W": Role(9.5, 0.68, 0.010),
-    "ST": Role(9.3, 0.62, 0.010),
+    "DM": Role(8.3, 1.19, 0.009),
+    "CM": Role(8.5, 1.19, 0.008),
+    "AM": Role(8.7, 1.19, 0.009),
+    "W": Role(9.5, 0.74, 0.010),
+    "ST": Role(9.3, 0.66, 0.010),
 }
 
 
