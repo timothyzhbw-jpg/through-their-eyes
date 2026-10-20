@@ -943,6 +943,13 @@ to a real broadcast.
   - *Subprocess start:* 0.6–1.5 s on a laptop and 2.9 s in the image capped at 0.5 vCPU and
     1 GiB; peak memory about 90 MB. With the daily cap of 40 that is at most about 230K more
     input tokens a day. Cached breakdowns cost nothing extra; the cache key includes the tools.
+  - *Live on Container Apps (2026-10-20, after PR #41):* `/health` reports `analyst_mcp: true`.
+    Starting the server took 4.5 s (the MCP `initialize` span). An uncached breakdown on a warm
+    replica took 12.9 s end to end: 4.5 s for the server and 7.6 s for the crew, with the Analyst
+    at 3.1 s for two tool calls. The first request after a new revision took 25.9 s: 6.5 s to
+    load the match, 4.6 s for the server, and 14.0 s for the crew, whose Analyst needed a
+    second attempt. `execute_tool` → `tools/call` spans sit under `analyst` in Application
+    Insights ([RUBRIC_MAP](RUBRIC_MAP.md#the-live-trace)).
 - **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account

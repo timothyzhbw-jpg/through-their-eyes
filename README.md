@@ -182,7 +182,7 @@ Every variable is documented in [.env.example](.env.example).
 |---|---|---|
 | Microsoft Foundry (gpt-4.1-mini, structured outputs) | every agent step, [agents/llm.py](agents/llm.py) | `/health` reports `model: foundry`; spans `chat gpt-4.1-mini` in Application Insights |
 | Microsoft Agent Framework | the crew as a workflow graph: Director → Analyst → (Telestrator ∥ narration ⇄ Verifier) → Voice, [agents/workflow.py](agents/workflow.py) | typed edges, fan-out/fan-in, rewrite loop; tests in [tests/test_agents.py](tests/test_agents.py) |
-| MCP (our own server) | the Analyst's tools: moments, vision, pitch control, xT, counterfactual re-simulation, what-if, [agents/mcp_server.py](agents/mcp_server.py); used by `python -m agents.run --mcp`, not yet by the deployed API | tests: `test_the_analyst_gets_the_mcp_tools_over_stdio`, `test_mcp_server_exposes_the_analyst_tools` in [tests/test_agents.py](tests/test_agents.py) |
+| MCP (our own server) | the Analyst's tools: moments, vision, pitch control, xT, counterfactual re-simulation, what-if, [agents/mcp_server.py](agents/mcp_server.py); a subprocess of the deployed API for every uncached model breakdown (`TTE_ANALYST_MCP`, on by default) | `/health` reports `analyst_mcp: true`; spans `execute_tool get_moment` → `tools/call get_moment` under `analyst` in Application Insights ([live trace](docs/RUBRIC_MAP.md#the-live-trace)); each breakdown's `analyst` step lists the tools it called |
 | Azure AI Speech | narration audio (SSML, two voices), [api/tts.py](api/tts.py) | `POST /api/tts` |
 | Azure Container Apps | the API, [Dockerfile](Dockerfile) | live URL above |
 | Azure Storage static website | the web app (Static Web Apps has no region the student subscription allows) | live URL above |
