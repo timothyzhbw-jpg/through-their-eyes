@@ -301,6 +301,10 @@ involved players, key metrics, candidate lenses.
 - **He thought vs it was.** For a decision moment, the card records P(success) of the chosen
   option on the player's belief and on the true state, at the action frame — also for the
   counterfactual run's choice. The freeze at the pass shows both ("he thought 0.05, it was 0.80").
+  "It was" is the same option (same receiver) re-scored by the decision model on the true state
+  (true positions and velocities, belief age 0), so its target follows the receiver's true run.
+  Holding his believed target fixed would score 0 whenever he misplaced the receiver, however open
+  the receiver was; the export keeps that value as `p_success_true_same_target`.
   Belief-side values are `computed` claims, counterfactual-run values are `counterfactual` claims.
 - A card names its anchor events (`reception`, `last_scan`, `action`, `completion`), so claims
   anchor on `<card>.<anchor>` (§5.3).
