@@ -11,7 +11,8 @@ from analytics import blind_side
 from analytics.blind_side import BlindSideParams, detect_alerts
 
 DT = 0.04
-SPEC = BlindSideParams(min_unseen_s=1.0, min_moved_m=3.0)  # SPEC 4.4 values, not the tuned ones
+# SPEC 4.4 as written: move measured from the last sighting, no expectation; not the tuned values.
+SPEC = BlindSideParams(min_unseen_s=1.0, min_moved_m=3.0, expect_s=0.0)
 
 
 def _scene(frames: int, start: list, vel: list, head: list, owner: int, team: list):
@@ -55,6 +56,27 @@ def test_a_teammate_running_behind_the_carrier_raises_an_alert_after_a_second_un
 def test_no_alert_when_a_condition_fails(frames, start, vel, params):
     scene = _scene(frames, start, vel, [0.0, 0.0], owner=0, team=[0, 0])
     assert detect_alerts(*scene, DT, params).intervals == []
+
+
+def test_with_an_expectation_a_runner_who_carries_on_is_flagged_later():
+    # 1 runs past the carrier's shoulder into his blind side at a steady 6 m/s.
+    scene = _scene(80, [[0, 0], [3, 6]], [[0, 0], [-6, 0]], [0.0, 0.0], owner=0, team=[0, 0])
+    plain = detect_alerts(*scene, DT, SPEC).intervals[0].start
+    expecting = detect_alerts(*scene, DT, replace(SPEC, expect_s=1.0)).intervals[0].start
+    assert expecting - plain >= round(0.5 / DT)  # 3 m off the expected spot only 0.5 s later
+
+
+def test_with_an_expectation_a_runner_who_turns_is_flagged_as_early_as_without():
+    yaw, pos, vel, ball, ball_vel, owner, team = _scene(
+        80, [[0, 0], [3, 6]], [[0, 0], [-6, 0]], [0.0, 0.0], owner=0, team=[0, 0]
+    )
+    turn = 15  # out of his view by now; he turns and runs down behind the carrier's back
+    pos[turn:, 1] = pos[turn, 1] + np.arange(80 - turn)[:, None] * DT * np.array([0.0, -6.0])
+    vel[turn:, 1] = [0.0, -6.0]
+    scene = (yaw, pos, vel, ball, ball_vel, owner, team)
+    plain = detect_alerts(*scene, DT, SPEC).intervals[0].start
+    expecting = detect_alerts(*scene, DT, replace(SPEC, expect_s=1.0)).intervals[0].start
+    assert expecting == plain
 
 
 def test_the_alert_stays_on_at_least_0_4_s_and_clears_when_the_target_is_seen():
