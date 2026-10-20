@@ -77,7 +77,7 @@ def test_a_model_plan_must_not_invent_a_scan_marker(ctx):
     plan = template_plan(ctx).model_dump(by_alias=True)
     plan["steps"].insert(3, {"t": 1.0, "do": "scan_marker", "scan": "scan:H4:0001",
                              "label_claim": None})  # fmt: skip
-    assert any("unknown scan" in e for e in validate_plan(plan, ctx))
+    assert any(e.code == "unknown_scan" for e in validate_plan(plan, ctx))
 
 
 def test_the_lexicon_term_is_backed_only_by_its_claim(ctx):
