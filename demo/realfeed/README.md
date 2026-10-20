@@ -28,7 +28,10 @@ about the synthetic match and nothing here is verified.
 
 ## Run
 
-Needs the `ffmpeg` command line tool (decode VP9, encode H.264) and the default `uv sync`.
+Needs the `ffmpeg` command line tool (decode VP9, encode H.264) and the default `uv sync`, which
+includes the `realfeed` dependency group. The app's container must not carry OpenCV: build it with
+`uv sync --locked --no-default-groups` (main dependencies only; `uv export --no-default-groups`
+lists no OpenCV), and a test keeps OpenCV out of the main dependencies.
 Before the segment goes into the video, Bowen reviews the export frame by frame (faces, kit logos,
 boards), as SPEC §7 requires; the automated checks below do not replace that.
 
@@ -101,8 +104,9 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 
 - **No head orientation** can be read from this footage, so this segment shows no scans, vision
   cones or belief: only space and passing graphics. The perception features stay synthetic.
-- **The ball is not detected.** The ball carrier (first touch at 15:54.0) is annotated by hand as
-  his foot position in one frame, and the tracker supplies his track.
+- **The ball is not detected.** The moment of the first touch (15:54.0) is read off the footage
+  by eye; the carrier is then picked by rule (the blue player nearest the centre spot at that
+  moment), so no player position is committed.
 - **Pitch control only counts players in view.** Players outside the shot are not in the model.
 - The goalkeeper's team is set by hand: blue attacks the goal he defends, so he plays for red.
 - Pitch size is estimated from the markings. Along the near touchline, positions are

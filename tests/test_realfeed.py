@@ -313,3 +313,12 @@ def test_no_video_or_image_frames_are_tracked_under_demo():
         pytest.skip("not a git checkout")
     frames = [p for p in tracked if Path(p).suffix.lower() in FRAME_SUFFIXES]
     assert frames == []
+
+
+def test_opencv_stays_out_of_the_app_dependencies():
+    import tomllib
+
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    main = " ".join(project["project"]["dependencies"]).lower()
+    assert "opencv" not in main  # the API container syncs with --no-default-groups
+    assert any("opencv" in d for d in project["dependency-groups"]["realfeed"])

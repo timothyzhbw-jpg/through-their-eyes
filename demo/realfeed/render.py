@@ -22,7 +22,6 @@ import cv2
 import numpy as np
 
 from demo.realfeed.clip import FPS, OUT, SIZE
-from demo.realfeed.geometry import apply_h
 from demo.realfeed.overlay import (
     BLUE,
     RED,
@@ -35,7 +34,7 @@ from demo.realfeed.overlay import (
     pass_safety,
     safety_colour,
 )
-from demo.realfeed.pipeline import Camera, assign_teams, camera, frames, tracks
+from demo.realfeed.pipeline import assign_teams, camera, frames, tracks
 from demo.realfeed.players import Detection, Track
 from demo.realfeed.privacy import blur_boxes, blur_outside, polygon_mask
 from demo.realfeed.video import Writer
@@ -44,10 +43,11 @@ VIDEO = OUT / "realfeed_overlay.mp4"
 KEYFRAME = OUT / "realfeed_keyframe.png"
 
 START = 60  # first clip frame in the output; keeps the segment under 10 s
-# The ball reaches the blue player on the left; first touch at frame 400 (15:54.0 in the
-# source), shot at 410. Hand annotation: his feet in frame 400, in pixels.
+# The ball reaches a blue player at the centre circle: first touch at frame 400 (15:54.0 in the
+# source), shot at 410, read off the footage by eye. No ball detector and no committed player
+# positions: the carrier is chosen by rule, the blue player nearest the centre spot then.
 CARRIER_FRAME = 400
-CARRIER_FEET_PX = (418.0, 690.0)
+CARRIER_TEAM = 1
 OPTIONS = (360, 412)  # frames showing his pass options
 FREEZE_FRAMES = 60  # 1.2 s hold on CARRIER_FRAME
 GOALKEEPER_TEAM = 0  # the orange keeper defends the goal blue attacks: he plays for red
@@ -82,13 +82,9 @@ def states(trs: list[Track], n: int) -> list[list[PlayerState]]:
     return out
 
 
-def carrier_track(cam: Camera, st: list[list[PlayerState]]) -> int:
-    h = cam.h_img_from_world[CARRIER_FRAME]
-    best = min(
-        st[CARRIER_FRAME],
-        key=lambda s: np.linalg.norm(apply_h(h, s.pos)[0] - np.array(CARRIER_FEET_PX)),
-    )
-    return best.track
+def carrier_track(st: list[list[PlayerState]]) -> int:
+    blue = [s for s in st[CARRIER_FRAME] if s.team == CARRIER_TEAM]
+    return min(blue, key=lambda s: float(np.linalg.norm(s.pos))).track
 
 
 def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None, fade: float):
@@ -225,7 +221,7 @@ def render(preview: set[int] | None = None) -> dict:
     trs = tracks(dets)
     n = len(cam.h_img_from_world)
     st = states(trs, n)
-    carrier = carrier_track(cam, st)
+    carrier = carrier_track(st)
     pitch = cam.calibration.pitch
     canvas = Canvas(pitch, ppm=40.0, margin=1.0)
     writer = None if preview else Writer(VIDEO, FPS, SIZE)
