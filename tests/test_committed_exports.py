@@ -27,7 +27,8 @@ from sim.export import (
 SCENARIO, SEED = "blind_side_run", 3
 DATA = Path(__file__).parent.parent / "web" / "public" / "data"
 GENERATED_ON = ("Darwin", "arm64")
-TRACKING = {"pos", "ghost", "head", "body", "ball"}  # integer mm / 1e-4 rad arrays
+# Quantised measurements: integer mm, 1e-4 rad and 1e-4 rad/s.
+TRACKING = {"pos", "ghost", "head", "body", "ball", "omega", "amplitude"}
 FLOAT_TOL = 2e-4
 
 
