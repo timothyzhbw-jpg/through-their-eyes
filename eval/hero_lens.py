@@ -1,7 +1,7 @@
 """Hero lens eval (SPEC 3.6, 5.2): is the scenario's moment explained by the lens it was built for,
 and does the scenario's intervention change the outcome?
 
-    uv run python -m eval.hero_lens --scenario press_escape --seeds 100-139
+    uv run python -m eval.hero_lens --scenario press_escape --seeds 200-239
 
 Every hero scenario names the lens it is built to show (`Scenario.lens`) and the intervention that
 tests it (`Scenario.intervention`, re-simulated with keyed randomness, SPEC 3.7):
@@ -15,7 +15,7 @@ For every seed the hero's decision moment is detected (`explain.moments`), all t
 computed (`explain.lenses`), and the selected one is compared with the scenario's. Targets: the
 intended lens in at least 60% of held-out seeds, and the intervention changes the outcome in at
 least 60% (SPEC 3.6: otherwise the moment is not that lens's story). Writes
-eval/reports/hero_lens_<scenario>.md.
+eval/reports/hero_lens_<scenario>.md, or the file `--out` names.
 """
 
 from __future__ import annotations
@@ -168,10 +168,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scenario", default="press_escape", choices=sorted(SCENARIOS))
     parser.add_argument("--seeds", default="100-139")
+    parser.add_argument("--out", type=Path, help="report path (default: by scenario)")
     args = parser.parse_args()
     _, text = evaluate(args.scenario, _parse_seeds(args.seeds))
-    REPORTS.mkdir(exist_ok=True)
-    path = REPORTS / f"hero_lens_{args.scenario}.md"
+    path = args.out or REPORTS / f"hero_lens_{args.scenario}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     print(text.split("\n\nΔ per lens")[0])
     print(f"\nwrote {path}")

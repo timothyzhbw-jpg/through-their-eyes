@@ -11,7 +11,7 @@ Seeds 100–139 (40). Counterfactual: drop the key scan of `H8` and re-simulate 
 
 | Seed | Factual | P(pass:H9) | Outcome | Counterfactual | P(pass:H9) | Belief error H9 F (m) | CF (m) | ΔxT |
 |---|---|---|---|---|---|---|---|---|
-| 100 | `pass:H9` | 0.98 | complete | `pass:H7` | 0.00 | 0.1 | 12.8 | +0.076 |
+| 100 | `pass:H9` | 0.96 | complete | `pass:H7` | 0.00 | 0.1 | 12.8 | +0.076 |
 | 101 | `pass:H9` | 1.00 | complete | `pass:H4` | 0.00 | 0.5 | 13.4 | +0.086 |
 | 102 | `pass:H9` | 1.00 | complete | `pass:H4` | 0.00 | 0.5 | 13.4 | +0.078 |
 | 103 | `pass:H9` | 0.98 | complete | `pass:H4` | 0.00 | 0.7 | 12.6 | +0.071 |
