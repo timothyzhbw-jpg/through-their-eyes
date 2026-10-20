@@ -549,8 +549,9 @@ Application Insights.
     (`agents/llm.py` `Outage`) raises `AgentDown` on every call, so no model is called for that
     step. The step then takes the normal path above: the call, one retry, its template.
     - The run has its own key, never a normal cache key, and every drill runs the crew afresh.
-    - A drill counts against the per-client rate limit and, with a model, the daily cap. Past
-      either: 429.
+    - A drill counts against the per-client rate limit and a daily cap: with a model, the daily
+      model cap; offline, its own cap of 200 drills and bring-backs per UTC day. Past any of
+      them: 429.
   - *Waiting.* A step that fell back after an error (a drill or a real outage) sends a workflow
     request (`AgentDown`, `request_info`): the run ends with its output aired and the request
     pending.
@@ -562,15 +563,21 @@ Application Insights.
     - the Analyst or the Director: everything downstream.
     Voice joins the two lanes in code (by Briefing revision) instead of a fan-in edge, so a
     revised plan or script is voiced again. The new breakdown replaces the drill's under the same
-    key.
+    key. A drill can be brought back at most 5 times, so a step that keeps failing for real
+    cannot be retried forever. One crew run per key at a time: a second bring-back of the same
+    step waits, then answers 409 because the step no longer waits.
   - *Interrupted runs.* Every crew run in the API checkpoints at each superstep
     (`FileCheckpointStorage` under `TTE_CACHE_DIR/checkpoints/`). Each executor checkpoints its last
     input and its trace entry. A breakdown interrupted mid-workflow, by a restart too, resumes
     from its last completed superstep on the next identical request. Its checkpoints are deleted
-    once the result is cached.
-  - *Limits.* The checkpoints live on the replica's disk while the drill records live in Cosmos
-    DB, so a new replica answers 410 and the drill has to be run again. Only the 50 most recent
-    drills keep their checkpoints.
+    once the result is cached. A checkpoint that no longer resumes, for example one left by older
+    code, is deleted and the run starts over, so it cannot fail its key on every request.
+  - *Where drills live.* A drill is one directory on the replica's disk: its record (the latest
+    result, the agents still down, the bring-backs so far) and its checkpoints. Nothing is kept
+    in memory or written to Cosmos DB, and only the 50 most recently used drills are kept.
+  - *Limits.* Every restart drops the drills, and so does every redeploy: each green run of CI
+    on `main` rolls a new revision onto a fresh disk. Bring-back then answers 404, and the drill
+    has to be run again. A drill whose checkpoints are missing answers 410.
   - *Web.* The breakdown panel's Producer desk lists the six steps with their source (model,
     template or code, from `StepTrace.source`), the error class and the attempts. It has "Take
     down" toggles per agent, "Bring back" on each waiting step, and the breakdown's trace id

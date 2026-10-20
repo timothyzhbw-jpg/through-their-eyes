@@ -41,7 +41,8 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    crew. It fails as in an outage: the call and one retry raise, it airs its template plan, and
    the breakdown still plays. **Bring back** resumes the Agent Framework workflow from its
    checkpoint and re-runs only the Telestrator; its plan replaces the template. The trace id is
-   the run's operation_Id in Application Insights. Each run counts against the rate limit.
+   the run's operation_Id in Application Insights. Each run counts against the rate limit;
+   a drill lasts until the API's next restart or deploy.
 7. **The evidence.** The [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
    tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
    tests, reports and pull requests, and marks what is missing.
