@@ -141,6 +141,7 @@ code is copied (CLAUDE.md rule 1).
 | Azure / Foundry SDKs | Microsoft | **use** |
 | numpy | BSD-3 | **use** (sim and analytics kernels) |
 | pydantic | MIT | **use** (schemas that cross process boundaries) |
+| azure-cosmos | MIT | **use** (Cosmos DB store for the result cache and the claims audit, SPEC §8) |
 | pytest, ruff | MIT | **use** (dev only) |
 | three.js, @react-three/fiber, @react-three/drei | MIT | **use** |
 | socceraction | MIT | **not used** — xT is our own value iteration (~100 lines); socceraction is no longer developed (1.5.3 supports Python < 3.13) |
