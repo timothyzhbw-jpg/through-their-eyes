@@ -86,6 +86,7 @@ class Simulation:
         self.head = HeadModel(n)
         self.dropped_scans: set[str] = set()
         self.frozen_belief: dict[int, int] = {}
+        self.forced_actions: dict[tuple[int, int], str] = {}  # (player, frame) -> action
         self.events: list[Event] = []
         self.decisions: list[Decision] = []
         self.pending_decision: tuple[int, int] | None = None
@@ -382,6 +383,11 @@ class Simulation:
             for o in options
         }
         chosen = choose(options, noise, ctx.temperature)
+        forced = self.forced_actions.get((i, f))
+        if forced is not None:  # a what-if override (SPEC 3.7): the noise is still drawn
+            chosen = next((o for o in options if o.action == forced), None)
+            if chosen is None:
+                raise ValueError(f"{forced} is not an option of {self.ids[i]} at frame {f}")
         error = np.linalg.norm(pos - self.pos, axis=-1)
         self.decisions.append(
             Decision(

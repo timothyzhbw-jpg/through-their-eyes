@@ -28,3 +28,15 @@ class FreezeBelief:
 
     def apply(self, sim: Simulation) -> None:
         sim.frozen_belief[sim.index(self.player)] = self.at_frame
+
+
+@dataclass(frozen=True)
+class ForceAction:
+    """At this decision the player takes `action` (an option id such as "pass:H4")."""
+
+    player: str
+    frame: int
+    action: str
+
+    def apply(self, sim: Simulation) -> None:
+        sim.forced_actions[(sim.index(self.player), self.frame)] = self.action
