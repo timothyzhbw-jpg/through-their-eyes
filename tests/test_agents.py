@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -214,6 +215,52 @@ def test_the_analyst_gets_the_mcp_tools_over_stdio(ctx):
     assert r.plan_source == "agent"
 
 
+def test_the_analyst_calls_tools_over_mcp_and_its_trace_names_them(ctx):
+    """A real round trip over stdio. Seen live on Foundry: the Analyst passed an id that is not a
+    scan to run_counterfactual, and the tool raised; now it answers with the valid ids."""
+    from agents.testing import Call, ToolCallingFakeChatClient
+
+    replies = _good_replies(ctx)
+    replies["analyst"] = [Call("get_moment"), Call("run_counterfactual", scan_id="cf1"),
+                          replies["analyst"]]  # fmt: skip
+    fake = ToolCallingFakeChatClient(replies=replies)
+    r = breakdown(ctx, client=fake, personas=("analyst",), languages=("en",), use_mcp=True)
+    analyst = next(s for s in r.trace if s.step == "analyst")
+    assert analyst.source == "llm" and analyst.attempts == 1
+    assert analyst.notes == ["MCP tools called: get_moment, run_counterfactual"]
+    results = fake.tool_results["analyst"].values()
+    card, refused = (json.loads(json.loads(text)["result"]) for text in results)
+    assert card["id"] == ctx.card.id
+    assert refused["key_scan"] == ctx.cf.scan_id and "not a scan" in refused["error"]
+
+
+def test_after_a_timeout_in_the_tool_loop_the_retry_still_reaches_the_mcp_server(ctx):
+    """The first attempt calls a tool, then the model stalls past the timeout; the retry calls
+    another tool on the same server and answers."""
+    from agents.testing import Call, ToolCallingFakeChatClient
+
+    replies = _good_replies(ctx)
+    replies["analyst"] = [Call("get_moment"), FakeChatClient.SLOW, Call("list_claims"),
+                          replies["analyst"]]  # fmt: skip
+    fake = ToolCallingFakeChatClient(replies=replies)
+    r = breakdown(ctx, client=fake, personas=("analyst",), languages=("en",), use_mcp=True,
+                  step_timeout_s=1.0)  # fmt: skip
+    analyst = next(s for s in r.trace if s.step == "analyst")
+    assert analyst.source == "llm" and analyst.attempts == 2
+    assert analyst.notes == ["MCP tools called: list_claims"]
+    assert len(fake.tool_results["analyst"]) == 2
+
+
+def test_the_analyst_answers_without_tools_when_the_mcp_server_cannot_start(ctx, monkeypatch):
+    monkeypatch.setattr(sys, "executable", "/nonexistent/python")
+    fake = FakeChatClient(_good_replies(ctx))
+    r = breakdown(ctx, client=fake, personas=("analyst",), languages=("en",), use_mcp=True)
+    analyst = next(s for s in r.trace if s.step == "analyst")
+    assert fake.tools["analyst"] == [] and analyst.source == "llm"
+    assert analyst.notes and analyst.notes[0].startswith("MCP tools unavailable")
+    assert r.scripts and r.plan_source == "agent"
+
+
 def test_tidy_restores_placeholder_forms_and_drops_repeated_claims(ctx):
     from agents.workflow import tidy
 
@@ -282,6 +329,10 @@ def test_plan_validation_matches_the_web_rules(ctx):
     bad["steps"][-1]["t"] = 0.1  # goes back in time
     assert validate_plan(bad, ctx)
     assert validate_plan({"moment": data["moment"], "steps": []}, ctx)  # shape
+    for mode in ("split", "pov", "tactical", "broadcast"):  # the cameras of SPEC 7 that exist
+        assert errors_with({"t": end, "do": "camera", "mode": mode}) == []
+    assert errors_with({"t": end, "do": "camera", "mode": "drone"})
+    assert errors_with({"t": end, "do": "camera", "mode": "player_lock"})  # not built yet
 
 
 # --- delivery: tiers from rules, SSML only with supported styles ----------------------------------

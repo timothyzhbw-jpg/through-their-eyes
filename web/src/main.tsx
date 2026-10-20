@@ -4,24 +4,24 @@
 // Build-time setting: VITE_API_URL, the API service's base URL (see README). Unset, or when the
 // service does not answer within a few seconds, the app plays the bundled data ("offline data").
 //
-// URL parameters (for testing and filming):
-//   ?plan=invalid   load a deliberately broken plan to show the template fallback
-//   ?autoplay=0     do not start the live stream (or the breakdown) on load
-//   ?offline=1      ignore the live service and play the bundled data
+// URL parameters (deep links for judges, testing and filming): see deeplink.ts and the README.
+// ?camera=broadcast starts on the broadcast camera, focused (for filming).
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { apiBase } from "./api/client";
 import { loadData } from "./data/load";
+import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession } from "./session";
 import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
-  const params = new URLSearchParams(window.location.search);
-  const forcedOffline = params.get("offline") === "1";
+  const link = parseDeepLink(window.location.search);
+  if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
+  const forcedOffline = link.offline;
   root.render(<p className="loading">Loading the match…</p>);
   try {
     // Canvas textures draw shirt numbers with the web fonts, so wait for them (briefly).
@@ -33,17 +33,24 @@ async function main() {
       }),
       fonts,
     ]);
-    const plan = params.get("plan") === "invalid" ? INVALID_PLAN : EXAMPLE_PLAN;
+    const plan = link.invalidPlan ? INVALID_PLAN : EXAMPLE_PLAN;
     const session = createSession(loaded.hero, plan, loaded.payload, loaded.whatIfs, {
       api: loaded.api,
       offline: forcedOffline ? "offline=1 in the address" : loaded.offline,
     });
+    applyDeepLink(session, link);
+    if (new URLSearchParams(window.location.search).get("camera") === "broadcast") {
+      session.controls.setFocus("broadcast");
+      session.controls.setCamera("broadcast");
+    }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const autoplay = params.get("autoplay") !== "0" && !reducedMotion;
+    const autoplay = link.autoplay && !reducedMotion;
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>
-          <App autoplay={autoplay} />
+          <DeepLinkContext.Provider value={link}>
+            <App autoplay={autoplay} />
+          </DeepLinkContext.Provider>
         </SessionContext.Provider>
       </StrictMode>,
     );

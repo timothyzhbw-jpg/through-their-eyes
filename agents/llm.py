@@ -11,7 +11,7 @@ import asyncio
 import os
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from agent_framework import Agent
@@ -27,6 +27,7 @@ class Attempt:
     attempts: int
     error: str | None
     ms: float
+    tools_called: list[str] = field(default_factory=list)  # tool names, in call order
 
 
 async def ask(
@@ -54,10 +55,21 @@ async def ask(
             value = response.value
             if value is None:
                 raise ValueError("no structured output")
-            return Attempt(value, attempts, None, (time.perf_counter() - start) * 1000)
+            return Attempt(value, attempts, None, (time.perf_counter() - start) * 1000,
+                           tools_called(response))  # fmt: skip
         except Exception as e:  # any failure counts against the step; the caller falls back
             error = describe(e)
     return Attempt(None, attempts, error, (time.perf_counter() - start) * 1000)
+
+
+def tools_called(response: Any) -> list[str]:
+    """The names of the tools a run called, in order (its function-call contents)."""
+    return [
+        c.name
+        for m in getattr(response, "messages", None) or []
+        for c in m.contents
+        if getattr(c, "type", None) == "function_call" and c.name
+    ]
 
 
 def describe(e: Exception) -> str:

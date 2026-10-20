@@ -200,3 +200,15 @@ def test_mcp_server_offers_options_and_what_if(ctx):
     data = json.loads(answer.content[0].text)
     assert data["counterfactual_action"] == "pass:H4" and data["delta_xt"] > 0
     assert json.loads(refused.content[0].text)["error"]
+
+
+def test_run_counterfactual_answers_an_unknown_scan_id_with_the_valid_ones(ctx):
+    """Seen live on Foundry: the Analyst passed an id that is not a scan, and the tool raised."""
+    from agents import tools
+
+    for bad in ("cf1", "H8", "scan:H8"):
+        data = json.loads(tools.run_counterfactual(ctx, bad))
+        assert data["error"] and data["key_scan"] == ctx.cf.scan_id
+        assert ctx.cf.scan_id in data["hero_scans"]
+    good = json.loads(tools.run_counterfactual(ctx, ctx.cf.scan_id))
+    assert good["dropped_scan"] == ctx.cf.scan_id

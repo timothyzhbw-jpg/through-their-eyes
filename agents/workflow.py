@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import time
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,7 +32,7 @@ from pydantic import BaseModel, ValidationError
 from agents import fallbacks, prompts, telemetry
 from agents.context import MomentContext
 from agents.delivery import VOICES, cache_key, delivery_tier, pick_style, ssml_for_line
-from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
+from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask, describe
 from agents.plan import template_plan, validate_plan, voice_times
 from agents.schemas import (
     CONNECTIVES,
@@ -128,6 +129,7 @@ class Crew:
     client: Any | None
     step_timeout_s: float = DEFAULT_TIMEOUT_S
     analyst_tools: list[Any] | None = None
+    mcp_error: str | None = None  # why the MCP tool server could not start, if it could not
     voice_styles: dict[str, set[str]] = field(default_factory=dict)  # voice -> speaking styles
     trace: list[StepTrace] = field(default_factory=list)
     span: Any | None = None  # the breakdown's span; every step span is its child
@@ -206,11 +208,16 @@ class Analyst(Executor):
         with crew.step("analyst") as span:
             findings = fallbacks.analyst(mc)
             attempt, notes, used = None, [], False
+            if crew.mcp_error:
+                notes.append(f"MCP tools unavailable ({telemetry.error_class(crew.mcp_error)})")
             if crew.client is not None:
                 attempt = await crew.ask(
                     "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request),
                     analyst_model(list(mc.supported)), tools=crew.analyst_tools,
                 )  # fmt: skip
+                if attempt.tools_called:
+                    notes.append(f"MCP tools called: {', '.join(attempt.tools_called)}")
+                    telemetry.annotate(span, tools_called=attempt.tools_called)
                 if attempt.value is not None:
                     choice = AnalystChoice.model_validate(attempt.value.model_dump())
                     supported = mc.supported
@@ -647,22 +654,36 @@ async def run_breakdown(
              "model": crew.model}  # fmt: skip
     with telemetry.span("breakdown", **attrs) as span:
         crew.span = span
-        if use_mcp and client is not None:
-            from agent_framework import MCPStdioTool
-
-            tool = MCPStdioTool(
-                name="moment", command=sys.executable,
-                args=["-m", "agents.mcp_server", "--scenario", ctx.scenario, "--seed",
-                      str(ctx.seed)],
-            )  # fmt: skip
-            async with tool:
-                crew.analyst_tools = [tool]
-                out = await _run(crew, personas, languages)
-        else:
+        async with AsyncExitStack() as stack:
+            if use_mcp and client is not None:
+                crew.analyst_tools = await _connect_mcp(crew, stack)
             out = await _run(crew, personas, languages)
         telemetry.annotate(span, ms=out.total_ms, rewrites=sum(s.rewrites for s in out.scripts),
                            dropped=sum(len(s.dropped) for s in out.scripts))  # fmt: skip
     return out
+
+
+async def _connect_mcp(crew: Crew, stack: AsyncExitStack) -> list[Any] | None:
+    """Start our MCP tool server for this moment as a subprocess; it stops with `stack`.
+
+    If it cannot start, the Analyst answers without tools: a failure never fails the breakdown."""
+    from agent_framework import MCPStdioTool
+
+    ctx = crew.ctx
+    tool = MCPStdioTool(
+        name="moment", command=sys.executable,
+        args=["-m", "agents.mcp_server", "--scenario", ctx.scenario, "--seed", str(ctx.seed)],
+    )  # fmt: skip
+    with crew.step("mcp", llm=False) as span:
+        started = time.perf_counter()
+        try:
+            await stack.enter_async_context(tool)
+        except Exception as e:
+            crew.mcp_error = describe(e)
+        ms = round((time.perf_counter() - started) * 1000, 1)
+        telemetry.annotate(span, source="code", ms=ms, tools=[f.name for f in tool.functions],
+                           error=crew.mcp_error)  # fmt: skip
+    return None if crew.mcp_error else [tool]
 
 
 async def _run(crew: Crew, personas, languages) -> BreakdownResult:

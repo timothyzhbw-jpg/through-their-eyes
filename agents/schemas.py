@@ -109,7 +109,7 @@ class Play(_Step):
 
 class Camera(_Step):
     do: Literal["camera"]
-    mode: Literal["split", "pov", "tactical"]
+    mode: Literal["split", "pov", "tactical", "broadcast"]
 
 
 class Pov(_Step):

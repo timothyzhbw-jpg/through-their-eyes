@@ -1,7 +1,8 @@
 # web/ — the breakdown player (SPEC 7)
 
-Replays a hero moment in two views — first person through the player's eyes, and a tactical board
-from above — and plays a `TelestrationPlan` (SPEC 6) over them. Everything is synthetic: the
+Replays a hero moment in two views — a 3D view filmed in first person through the player's eyes
+or from a broadcast camera, and a tactical board from above — and plays a `TelestrationPlan`
+(SPEC 6) over them. Everything is synthetic: the
 match comes from `sim/`, the clubs and players are fictional.
 
 ```bash
@@ -15,10 +16,30 @@ npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 ```
 
-URL parameters: `?autoplay=0` starts neither the live stream nor the breakdown on load;
-`?offline=1` ignores the live service and plays the bundled data; `?plan=invalid` loads a
-deliberately broken plan to show the template fallback; `?rigged=0` starts with the tokens
-instead of the animated players.
+## URL parameters
+
+Deep links for the README's tour for judges, and for testing and filming
+(`src/deeplink.ts`, tests in `src/deeplink.test.tsx`). Parameters combine, e.g.
+`?run=counterfactual&at=decision&view=tactical`.
+
+| Parameter  | Values                                          | Effect                                                                                                     |
+| ---------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `persona`  | `casual`, `analyst`, `player_fan`, `coach`      | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one) |
+| `lang`     | `en`, `zh`                                      | the breakdown's language (live service only) and the What if box's answer language                         |
+| `run`      | `factual`, `counterfactual`                     | with the look / without it                                                                                 |
+| `view`     | `pov`, `tactical`, `split`                      | which view gets the space; a breakdown resets it to `split` when it starts                                 |
+| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision` | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan               |
+| `ask`      | a question                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask      |
+| `autoplay` | `0`                                             | start neither the live stream nor the breakdown on load                                                    |
+| `offline`  | `1`                                             | ignore the live service and play the bundled data                                                          |
+| `plan`     | `invalid`                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                          |
+| `rigged`   | `0`                                             | start with the tokens instead of the animated players                                                      |
+| `camera`   | `broadcast`                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person               |
+
+A link that points at a spot (`at`, `run` or `ask`) opens paused: no live stream and no
+breakdown on load. Without them, the app watches live and then plays the breakdown, in the
+linked `persona` and `lang` if given. Values the app does not know are ignored and listed in
+the console.
 
 ## The live service (`VITE_API_URL`)
 
@@ -72,9 +93,9 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --what-if web/public/data/whatif_seed3.json
 ```
 
-- `hero_seed3.json`: the replay (schema version 4, with blind-side alerts: integer mm and 1e-4
-  rad, origin at the centre spot, home attacks +x). `src/data/hero.ts` converts it once into typed
-  arrays in metres and radians.
+- `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
+  output: integer mm, 1e-4 rad and 1e-4 rad/s, origin at the centre spot, home attacks +x).
+  `src/data/hero.ts` converts it once into typed arrays in metres and radians.
 - `fixture_payload_seed3.json`: a **fixture** render payload (SPEC 5.3) for the same moment,
   marked `"fixture": true`. Its claim values are computed from the replay by
   `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
@@ -107,9 +128,12 @@ src/
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
   narration/  render payload schema (zod), checks against the moment, kind labels
-  views/      PovView and TacticalView (React Three Fiber), their toolbars and HUD
+  telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
+  views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
+              toolbars and HUD, the broadcast camera and the stadium
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls
+  deeplink.ts URL parameters: parsed once, applied to the session before the first render
   testing.tsx test stand-ins: routed fetch, scripted WebSocket, API responses, server rendering
 ```
 
@@ -130,6 +154,24 @@ src/
   is kept — what the player saw stays on screen. Playback also slows while the head turns faster
   than 120°/s on screen; during a plan the plan clock slows with it, so captions stay in sync.
   Plan POV clips always use comfort mode.
+- **Broadcast camera** (SPEC 7: high side angle, follows the ball, smoothed). The **Broadcast**
+  switch in the 3D view's toolbar, or a plan's `camera` step with mode `broadcast`, films the same
+  scene from a fixed camera 21 m up, 26 m behind the near touchline at the halfway line, which
+  pans, tilts and zooms (`views/broadcast.ts`). Critically damped springs follow the ball and
+  widen the frame with its speed; while a pass is in flight the aim follows an S-curve from where
+  it starts to where it ends, so the receiver comes into frame and the camera arrives at rest; the
+  ball always stays inside a 16:9 safe frame. The path is computed once per run in match time, so
+  a seek or a plan rewind is a hard cut with no lag and slow motion slows the camera move with it.
+  On screen: rings under the hero (white) and the runner (gold), tags for sprints above 7 m/s
+  (the live stream's threshold), the POV player's scans and blind-side alerts (all marked `sim`),
+  and on the grass the blind-side lines and, at the decision, the pass options. `pov` and
+  `broadcast` camera steps pick the 3D view's camera; a `pov` step always films in first person.
+- **Stadium** (`views/Stadium.tsx`), generated, around both 3D cameras: a two-tier bowl under a
+  roof, about 15,000 instanced spectators in one draw call, four floodlight masts with a glow
+  sprite, boards with our own words only ("Through Their Eyes", "Synthetic match", "All players
+  fictional"), a night-sky gradient, and four faint floodlight shadows per player. It is dark and
+  hazed on purpose; glow and shadows are faked (sprites and decals, no bloom pass or shadow maps)
+  and the 3D view uses ACES tone mapping.
 - **Tactical board.** An orthographic camera straight down. Layers are drawn in a fixed order
   with depth testing off, like a 2D canvas, so GLSL overlays such as pitch control can be added
   as further layers. The vision cone is already a fragment shader of the sim's FOV model
@@ -170,6 +212,22 @@ src/
   `public/models/README.md`, SPEC 7): gait blended by sim speed with the playback rate
   matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
   turned so the head points along `head_yaw`, kits in the fictional clubs' colours.
+- **Perception telemetry** (SPEC 4.7, 7). Under the timeline, curves for the player in the
+  first-person view ("Whose eyes"), with a cursor on the playhead: head angle to the ball with
+  his scans from the sim (the key scan highlighted; without the look, a dashed box where it
+  was), head angular speed with the scan detector at work (its threshold, candidate onsets, the
+  onsets its excursion gate rejected, and the scans it accepted), players in his sight, and, for
+  the hero only, belief error on the runner (his ghost to the true position; "n/a" for anyone
+  else, as beliefs are recorded for the hero only). As in motorsport telemetry, the other run is
+  overlaid dashed on the head-angle and belief rows (with the look cyan, without it gold, as
+  elsewhere), both runs on one time axis so the curves coincide until the key scan and split
+  there; a key-points row marks the key scan, the ball reaching the hero, and his decision and
+  pass, with guides through every row. The speed row and the detector's marks are
+  `analytics/scan_detector.py` run by `sim.export` on the tracked head yaw (with sensor noise),
+  as `eval/scan_detector.py` runs it; the head-angle row uses the true head yaw the views draw,
+  so its readout matches the HUD. Live, the curves and key points stop at the last frame the
+  stream sent, a scan appears once it has ended, and there is no overlay (the stream is one run). Every value is marked `sim`: a computed metric, not a verified
+  claim. `telemetry/telemetry.ts` holds the logic and its tests.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 - **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
