@@ -4,9 +4,11 @@
 // the evidence. Counterfactual claims always carry their label: they are causal only in the sim.
 // With the live service the panel also picks the persona and language (SPEC 1), says where the
 // breakdown came from (cached or generated, model or template, rate limit and daily cap) and
-// turns the voice on.
+// turns the voice on, and each claim with a number in the evidence card offers "Try a wrong
+// number": the service's verifier checks the claim again with the viewer's value (SPEC 7).
 
-import { PERSONAS } from "../api/client";
+import { useState, type ReactNode } from "react";
+import { PERSONAS, type VerifyResponse } from "../api/client";
 import { runLabels, type Hero } from "../data/hero";
 import {
   claimRun,
@@ -20,6 +22,7 @@ import {
 } from "../narration/payload";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
 import { LANGUAGES } from "../whatif/whatif";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
 import "./live.css";
@@ -133,7 +136,9 @@ export function EvidenceCard() {
                   return f === undefined ? undefined : at(f);
                 }}
                 onEvent={(e) => controls.seekEvidence(c.id, e)}
-              />
+              >
+                <TamperControl claim={c} />
+              </ClaimCard>
             );
           })}
         </ul>
@@ -149,6 +154,7 @@ interface ClaimCardProps {
   onShow: () => void;
   eventTime: (eventId: string) => string | undefined;
   onEvent: (eventId: string) => void;
+  children?: ReactNode; // under the evidence events
 }
 
 /** One claim behind a line: kind label, verdict, values and evidence events (SPEC 5.3, 7). */
@@ -159,6 +165,7 @@ export function ClaimCard({
   onShow,
   eventTime,
   onEvent,
+  children,
 }: ClaimCardProps) {
   return (
     <li className={`claim kind-${c.kind}${here ? " here" : ""}`}>
@@ -195,7 +202,168 @@ export function ClaimCard({
           );
         })}
       </div>
+      {children}
     </li>
+  );
+}
+
+const OFFLINE_TAMPER = "Checking a changed number needs the live service";
+
+/**
+ * "Try a wrong number" (SPEC 7 producer console): change one value of the claim and the live
+ * service's verifier checks the claim again against the match data (POST /api/verify). Only for
+ * claims with numbers; offline it shows, disabled, why it cannot check.
+ */
+export function TamperControl({ claim }: { claim: PayloadClaim }) {
+  const { api, controls, tamper } = useSession();
+  const state = useStore(tamper, (s) => s);
+  const slots = numericValues(claim);
+  if (!slots.length) return null;
+  const open = state.open === claim.id;
+  return (
+    <div className="tamper">
+      <button
+        type="button"
+        className="tamper-toggle"
+        aria-expanded={open}
+        onClick={() => controls.openTamper(open ? null : claim.id)}
+      >
+        Try a wrong number
+      </button>
+      {open && (
+        <>
+          <p className="tamper-note">
+            Change a number and the verifier checks this claim again against the match data. Nothing
+            you try is saved or aired.
+          </p>
+          {!api && <p className="tamper-note offline">{OFFLINE_TAMPER}.</p>}
+          {slots.map(([slot, value]) => (
+            <TamperForm
+              key={`${claim.id}.${slot}`}
+              claim={claim.id}
+              slot={slot}
+              value={value}
+              disabled={!api}
+              checking={state.status === "checking"}
+            />
+          ))}
+          {state.claim === claim.id && <TamperResult state={state} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TamperForm({
+  claim,
+  slot,
+  value,
+  disabled,
+  checking,
+}: {
+  claim: string;
+  slot: string;
+  value: number;
+  disabled: boolean;
+  checking: boolean;
+}) {
+  const { controls } = useSession();
+  const [text, setText] = useState(String(wrongNumber(value)));
+  const n = Number(text);
+  const valid = text.trim() !== "" && Number.isFinite(n);
+  const why = disabled ? OFFLINE_TAMPER : undefined;
+  return (
+    <form
+      className="tamper-form"
+      title={why}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) void controls.tryValue(claim, slot, n);
+      }}
+    >
+      <label>
+        <span>{slot}</span>
+        <input
+          name={slot}
+          type="number"
+          step="any"
+          inputMode="decimal"
+          value={text}
+          disabled={disabled}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </label>
+      <button type="submit" disabled={disabled || checking || !valid}>
+        Check
+      </button>
+      <button
+        type="button"
+        className="link"
+        disabled={disabled || checking}
+        onClick={() => {
+          setText(String(value));
+          void controls.tryValue(claim, slot, value);
+        }}
+      >
+        Check the true value ({String(value)})
+      </button>
+    </form>
+  );
+}
+
+const VERDICT_HEAD: Record<VerifyResponse["status"], string> = {
+  supported: "Supported — this line would air",
+  refuted: "Refuted — this line would not air",
+  inconclusive: "Inconclusive — this line would not air",
+};
+
+/** The verifier's answer: verdict, the line as it would read, and the verifier's own reason. */
+function TamperResult({ state }: { state: TamperState }) {
+  if (state.status === "checking") {
+    return (
+      <p className="tamper-note waiting" role="status">
+        Checking {state.slot} = {String(state.value)} …
+      </p>
+    );
+  }
+  if (state.status === "failed") {
+    return (
+      <p className="plan-errors" role="status">
+        No check: {state.error}
+      </p>
+    );
+  }
+  const r = state.result;
+  if (state.status !== "done" || !r) return null;
+  const head =
+    r.status === "supported" && !r.airs
+      ? "Supported, but the line would not air"
+      : VERDICT_HEAD[r.status];
+  const changed = r.value !== r.verified_value;
+  return (
+    <div className={`tamper-result ${r.airs ? "airs" : "held"}`} role="status">
+      <p className="tamper-verdict">
+        <strong>{head}</strong>
+      </p>
+      {r.line && <p className="tamper-line">{r.airs ? r.line : <s>{r.line}</s>}</p>}
+      <p className="tamper-why">
+        {!changed
+          ? `${r.slot} = ${r.value}, the verified value.`
+          : r.status === "supported"
+            ? `This number is true as well: the claim still holds with ${r.slot} = ${r.value}.`
+            : `You set ${r.slot} to ${r.value}; the match data says ${r.verified_value}.`}
+      </p>
+      <p className="tamper-reason">
+        Verifier: <code>{r.reason}</code>
+      </p>
+      {r.status === "supported" && !r.airs && (
+        <ul className="tamper-violations">
+          {r.violations.map((v) => (
+            <li key={v}>{v}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

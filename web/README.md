@@ -31,16 +31,18 @@ Deep links for the README's tour for judges, and for testing and filming
 | `view`     | `pov`, `tactical`, `split`                                      | which view gets the space; a breakdown resets it to `split` when it starts                                                                                     |
 | `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                   |
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                          |
+| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                        |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                              |
 | `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                              |
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                          |
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                   |
 
-A link that points at a spot (`at`, `run` or `ask`) opens paused: no live stream and no
-breakdown on load. Without them, the app watches live and then plays the breakdown, in the
-linked `persona` and `lang` if given. Values the app does not know are ignored and listed in
-the console.
+A link that points at a spot (`at`, `run`, `ask` or `tamper`) opens paused: no live stream, and
+no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
+claim, the first claim with a number opens instead (`analyst` narrations carry the most).
+Without them, the app watches live and then plays the breakdown, in the linked `persona` and
+`lang` if given. Values the app does not know are ignored and listed in the console.
 
 ## The live service (`VITE_API_URL`)
 
@@ -156,6 +158,7 @@ src/
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
   narration/  render payload schema (zod), checks against the moment, kind labels
   match/      a stitched match: possessions, score, moments; its session (live, opens breakdowns)
+  tamper/     "Try a wrong number": a claim re-checked by the service's verifier, POST /api/verify
   telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
   views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
               toolbars and HUD, the broadcast camera and the stadium

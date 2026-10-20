@@ -191,3 +191,18 @@ def test_the_api_caches_and_audits_in_cosmos_when_configured(tmp_path):
     audit = db.containers["claims_audit"].items
     assert audit and {pk for pk, _ in audit} == {"blind_side_run:3"}
     assert len(records) == 3 and {"claim", "verdict", "decided_at"} <= set(records[0])
+
+
+def test_tamper_checks_never_reach_cosmos(tmp_path):
+    """POST /api/verify runs the verifier without the audit sink: anyone can call it (SPEC 8)."""
+    settings = Settings(matches=[("blind_side_run", 3)], cache_dir=tmp_path,
+                        cosmos_endpoint="https://tte-test.documents.azure.com:443/")  # fmt: skip
+    fake = FakeCosmos()
+    body = {"match": "blind_side_run-3", "claim": "cf_value", "slot": "dxt", "value": 0.5}
+    with TestClient(create_app(settings, cosmos_client=fake)) as c:
+        c.get("/api/matches/blind_side_run-3/moments")  # loads the match: its claims are audited
+        db = fake.databases["tte"]
+        before = {n: copy.deepcopy(k.items) for n, k in db.containers.items()}
+        out = c.post("/api/verify", json=body).json()
+    assert out["status"] == "refuted"
+    assert {n: k.items for n, k in db.containers.items()} == before

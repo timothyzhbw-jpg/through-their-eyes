@@ -65,7 +65,9 @@ on an LLM.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
   `moment` and `end` messages; clients can pause, resume, seek, change speed or stop.
 - REST: `/api/matches`, `/api/matches/<id>` (+ `/export`, `/moments`, `/audit`),
-  `POST /api/breakdowns`, `POST /api/whatif`, `POST /api/tts` (503 until Speech is configured).
+  `POST /api/breakdowns`, `POST /api/whatif`, `POST /api/tts` (503 until Speech is configured),
+  `POST /api/verify` (one claim re-checked with one numeric slot changed; not audited, rate-limited
+  per client, no model call).
 - Measured locally: 25.0 fps with a p95 frame gap of 41 ms; a cached breakdown is served in about
   1 ms.
 - The cache is one JSON file per key under `TTE_CACHE_DIR`; Cosmos DB can replace it (§8).
@@ -735,7 +737,10 @@ original visual identity.
   answer plays as a ghost path with its verified lines (§6).
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
-  evidence events, and seeks the replay to the evidence frame.
+  evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
+  number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
+  Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
+  through when it would not air (deep link `?tamper=<claim id>`).
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.

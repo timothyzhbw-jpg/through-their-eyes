@@ -31,7 +31,7 @@ def _flag(text: str | None, default: bool) -> bool:
 
 
 def _rate(text: str) -> tuple[int, float]:
-    """Parse "3/600": 3 model regenerations per client per 600 s."""
+    """Parse "3/600": 3 requests per client per 600 s."""
     count, _, window = text.partition("/")
     return int(count), float(window or 600)
 
@@ -41,6 +41,7 @@ class Settings:
     matches: list[tuple[str, int]] = field(default_factory=lambda: list(DEFAULT_MATCHES))
     cache_dir: Path = Path("out/cache")
     rate_limit: tuple[int, float] = (3, 600.0)
+    verify_rate_limit: tuple[int, float] = (20, 60.0)  # tamper checks per client (no model)
     web_origin: str = "*"
     daily_model_cap: int = 40  # model-backed regenerations per UTC day, all clients (SPEC 8)
     cosmos_endpoint: str = ""  # set: Cosmos DB instead of the file store (SPEC 8)
@@ -53,6 +54,7 @@ class Settings:
             matches=_matches(os.environ.get("TTE_MATCHES", "")) or list(DEFAULT_MATCHES),
             cache_dir=Path(os.environ.get("TTE_CACHE_DIR", "out/cache")),
             rate_limit=_rate(os.environ.get("TTE_RATE_LIMIT", "3/600")),
+            verify_rate_limit=_rate(os.environ.get("TTE_VERIFY_RATE_LIMIT", "20/60")),
             web_origin=os.environ.get("TTE_WEB_ORIGIN", "*"),
             daily_model_cap=int(os.environ.get("TTE_DAILY_MODEL_CAP") or 40),
             cosmos_endpoint=os.environ.get("TTE_COSMOS_ENDPOINT", "").strip(),
