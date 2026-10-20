@@ -26,12 +26,13 @@ from analytics.vision import wrap_angle
 
 @dataclass(frozen=True)
 class ScanDetectorParams:
-    # Chosen on tuning seeds by eval/scan_detector.py (F1 is flat across 125-300 deg/s there).
-    omega_threshold: float = np.deg2rad(300.0)  # rad/s, head angular velocity at the onset
-    min_excursion: float = np.deg2rad(60.0)  # rad, peak turn away from the pre-onset offset
+    # Chosen on tuning seeds by eval/scan_detector.py (F1 is flat across 125-275 deg/s there).
+    omega_threshold: float = np.deg2rad(200.0)  # rad/s, head angular velocity at the onset
+    min_excursion: float = np.deg2rad(55.0)  # rad, peak turn away from the pre-onset offset
     return_tolerance: float = np.deg2rad(15.0)  # rad
     onset_frames: int = 2  # the excursion must pass return_tolerance this soon after the onset
-    max_duration_s: float = 1.5
+    # Aksum et al. (2021) time scans with the ball out of frame for up to 3.28 s; add the turns.
+    max_duration_s: float = 4.0
 
 
 DEFAULT_PARAMS = ScanDetectorParams()
