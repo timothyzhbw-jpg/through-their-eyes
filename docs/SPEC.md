@@ -220,13 +220,14 @@ chance.
       target ranges (table written to `eval/`).
       — *Open:* [eval/reports/realism.md](../eval/reports/realism.md) covers scans, head turns and
       speeds, not passes, shots or possession changes per match; shots and stitched matches are M4.
-- [ ] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
+- [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
-      — *Open:* the mean (2.95 on 100 seeds, [realism.md](../eval/reports/realism.md)) and
-      CMs > forwards hold, on 20 seeds too ([tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`),
-      but the pressure part is tested within midfielders on 4 seeds only
-      (`test_spec_scan_rate_under_pressure_is_lower_than_without`), and pooled at the reception
-      it goes the other way (realism.md, d = −0.12).
+      — [tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`
+      (the mean and CMs > forwards on seeds 100–119; the mean is 2.95 on 100 seeds in
+      [realism.md](../eval/reports/realism.md)),
+      `test_spec_scan_rate_under_pressure_is_lower_than_without` (midfielders on seeds 100–119:
+      0.395 scan onsets/s with an opponent within 4 m vs 0.485 beyond 8 m). Pooled at the
+      reception the roles mix, and there it goes the other way (realism.md, d = −0.12).
 - [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
       — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
@@ -854,14 +855,14 @@ or a live check. Ticked only when verified that day: `uv run pytest` 464 passed,
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 6 | 2 | passes, shots and possession changes per match vs targets; scan rate under pressure on 20 seeds |
+| §3 sim | 7 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 4 | 2 | pitch-control shader vs numpy parity; fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
 | §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 0 | 8 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; README architecture and related work; video and submission in English; technology table in the video and submission |
-| **Total** | **21** | **15** | |
+| **Total** | **22** | **14** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
