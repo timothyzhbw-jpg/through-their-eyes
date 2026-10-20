@@ -75,9 +75,9 @@ export function PovToolbar() {
           className="chip"
           aria-pressed={rigged}
           onClick={() => trial.set({ rigged: !rigged })}
-          title="Animated players from Gameplay Football instead of tokens: a one-day trial"
+          title="Animated players (Gameplay Football models) instead of tokens"
         >
-          Rigged players (trial)
+          Animated players
         </button>
       </div>
     </div>

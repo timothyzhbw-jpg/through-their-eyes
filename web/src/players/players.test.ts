@@ -18,9 +18,20 @@ import {
   smoothedSpeeds,
 } from "./gait";
 import { NECK_MAX, TRUNK_MAX, aimLook, splitLook } from "./look";
+import { riggedFromSearch } from "./trial";
 
 const CLIPS: GaitClips = { walkSpeed: 5.25, sprintSpeed: 7.0, cycle: 0.48 };
 const DEG = Math.PI / 180;
+
+describe("animated players switch", () => {
+  it("is on by default; only ?rigged=0 starts with the tokens", () => {
+    expect(riggedFromSearch("")).toBe(true);
+    expect(riggedFromSearch("?rigged=1")).toBe(true);
+    expect(riggedFromSearch("?seed=3")).toBe(true);
+    expect(riggedFromSearch("?rigged=0")).toBe(false);
+    expect(riggedFromSearch("?seed=3&rigged=0")).toBe(false);
+  });
+});
 
 describe("gait blend", () => {
   it("weights are a partition of one, idle at rest, walk and sprint at their stride speeds", () => {

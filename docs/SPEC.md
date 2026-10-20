@@ -558,8 +558,10 @@ The same plan format doubles as a machine-readable overlay cue list for a produc
 Vite + React + TypeScript + three.js via React Three Fiber (+ drei). Fictional teams and an
 original visual identity.
 
-- **Players:** stylised capsule/pawn tokens with team colour and number; no limb animation.
-  - *Stretch, trial after deployment:* rigged players from the Gameplay Football assets that ship
+- **Players:** rigged footballers in POV and broadcast, stylised capsule/pawn tokens with team
+  colour and number on the tactical board. The tokens stay as the fallback (`?rigged=0`, and
+  automatically if the model fails to load).
+  - *Source:* rigged players from the Gameplay Football assets that ship
     with Google Research Football. The engine directory is under the Unlicense; we use only
     `objects/players` (segment models, `player.object` skeleton, kit template) and the
     animations, never the ad-board or stadium textures.
@@ -567,8 +569,10 @@ original visual identity.
     the POV view. It converts to GLB with the root motion removed, the sim sets the position, the
     gait follows the sim's speed so the feet don't slide, the body follows `body_yaw`, and the
     neck joint takes `head_yaw − body_yaw`. Kits are recoloured to the fictional clubs.
-  - Bowen decides by eye. If it is clearly better, POV and broadcast switch to rigged players and
-    the tactical board keeps tokens; the CLAUDE.md decision on tokens changes only then.
+  - Decided 2026-10-20: Bowen chose the rigged players by eye, so POV shows them by default and
+    the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
+    render-side choices stand: the hips open once the head is more than 130° off the body, the
+    passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -799,7 +803,7 @@ pilot only, never generalised.
 **Cut order when behind:**
 0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
-1. rigged GRF players in POV and broadcast (stretch; §7, one-day trial after deployment)
+1. rigged GRF players: back to tokens in POV and broadcast (§7)
 2. Foundry evaluation ablation, free text vs anchored narration (§6)
 3. shareable clip export (stretch)
 4. viewer pilot
