@@ -14,7 +14,10 @@ so the viewer can be built before the verifier's payloads exist. It is marked as
 
     uv run python -m sim.export --scenario blind_side_run --seed 3 \
         --out web/public/data/hero_seed3.json \
-        --payload-fixture web/public/data/fixture_payload_seed3.json
+        --payload-fixture web/public/data/fixture_payload_seed3.json \
+        --what-if web/public/data/whatif_seed3.json
+
+`export_what_ifs` precomputes every option's "What if…?" answer (SPEC 6, 7) for the viewer.
 """
 
 from __future__ import annotations
@@ -331,12 +334,93 @@ def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+WHAT_IF_VERSION = 1
+WHAT_IF_LANGUAGES = ("en", "zh")
+
+
+def what_if_question(action: str, language: str) -> str:
+    """The suggested question for an option, in words the what-if parser maps back to it."""
+    if action.startswith("pass:"):
+        target = action.removeprefix("pass:")
+        return f"What if he passed to {target}?" if language == "en" else f"如果他传给{target}呢？"
+    if action == "carry":
+        return "What if he carried it?" if language == "en" else "如果他带球呢？"
+    if action == "shot":
+        return "What if he shot?" if language == "en" else "如果他射门呢？"
+    raise ValueError(f"no question for {action!r}")
+
+
+def export_what_ifs(scenario: str, seed: int) -> dict[str, Any]:
+    """Every option of the hero's decision forced and re-simulated (SPEC 3.7, 6, 7 "What if…?").
+
+    For each option he did not choose: the suggested question in en and zh, the verified answer
+    from `agents.whatif.answer_question` (a SPEC 5.3 render payload), and the forced run from the
+    decision on (players and ball in integer mm, events) for the ghost path. A static stand-in for
+    the api's live what-if, so the demo works without the service.
+    """
+    import asyncio
+
+    from agents.context import MomentContext  # the crew's evidence; heavy, so imported here
+    from agents.whatif import REFUSAL, answer_question
+
+    ctx = MomentContext.load(scenario, seed)
+    decision = ctx.run.hero_decision()
+    start = decision.frame
+    options = []
+    for o in sorted(decision.options, key=lambda o: -o.prob):
+        entry: dict[str, Any] = {"action": o.action, "factual": o.action == decision.chosen}
+        entry["question"] = {lang: what_if_question(o.action, lang) for lang in WHAT_IF_LANGUAGES}
+        if not entry["factual"]:
+            answers = {}
+            for lang in WHAT_IF_LANGUAGES:
+                a = asyncio.run(answer_question(ctx, entry["question"][lang], lang))
+                if a.action != o.action or a.payload is None:
+                    raise RuntimeError(f"{entry['question'][lang]!r} did not map to {o.action}")
+                answers[lang] = a.payload.model_dump(mode="json")
+            forced = ctx.evaluator.counterfactual(a.counterfactual).counterfactual
+            entry |= {
+                "id": a.counterfactual,
+                "frames": len(forced.owner) - start,
+                "pos": _mm(forced.pos[start:]),
+                "ball": _mm(forced.ball_pos[start:, :2]),
+                "events": [
+                    _plain(
+                        {
+                            "id": e.id,
+                            "type": e.type,
+                            "frame": e.frame,
+                            "player": e.player,
+                            "attrs": e.attrs,
+                        }
+                    )
+                    for e in sorted(forced.events, key=lambda e: (e.frame, e.id))
+                    if e.frame >= start
+                ],  # fmt: skip
+                "answers": answers,
+            }
+        options.append(entry)
+    return {
+        "version": WHAT_IF_VERSION,
+        "scenario": scenario,
+        "seed": seed,
+        "units": {"position": "mm"},
+        "moment": ctx.card.id,
+        "hero": decision.player,
+        "decision_frame": start,
+        "start": start,
+        "factual_action": decision.chosen,
+        "refusal": REFUSAL,
+        "options": options,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export a hero moment for viewers.")
     parser.add_argument("--scenario", default="blind_side_run")
     parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--payload-fixture", type=Path, help="also write a render-payload fixture")
+    parser.add_argument("--what-if", type=Path, help="also write every option's what-if answer")
     args = parser.parse_args()
     data = export_hero(args.scenario, args.seed)
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -346,6 +430,10 @@ def main() -> None:
         payload = render_payload_fixture(data)
         args.payload_fixture.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
         print(f"wrote {args.payload_fixture} (fixture)")
+    if args.what_if:
+        what_ifs = export_what_ifs(args.scenario, args.seed)
+        args.what_if.write_text(json.dumps(what_ifs, separators=(",", ":"), ensure_ascii=False))
+        print(f"wrote {args.what_if} ({args.what_if.stat().st_size / 1024:.0f} KB)")
 
 
 if __name__ == "__main__":

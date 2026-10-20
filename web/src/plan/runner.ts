@@ -59,6 +59,7 @@ export class BreakdownRunner {
       scanMarker: null,
       captionLine: null,
       evidenceLine: null,
+      whatIf: null,
     });
     this.status.set({ status: "running", t: 0, applied: 0 });
     this.tick(0);

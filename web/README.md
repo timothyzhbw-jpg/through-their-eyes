@@ -20,12 +20,13 @@ deliberately broken plan to show the template fallback.
 
 ## Data
 
-Both files in `public/data/` are written by
+The files in `public/data/` are written by
 
 ```bash
 uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --out web/public/data/hero_seed3.json \
-  --payload-fixture web/public/data/fixture_payload_seed3.json
+  --payload-fixture web/public/data/fixture_payload_seed3.json \
+  --what-if web/public/data/whatif_seed3.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 3: integer mm and 1e-4 rad, origin at the centre
@@ -38,7 +39,13 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   checked them. The UI labels it "Fixture · not checked by the verifier". It goes away once the
   api serves payloads from `explain.render.build_payload`.
 
-Regenerate both whenever `sim/` changes; `tests/test_export.py` fails if a committed file falls
+- `whatif_seed3.json`: every option of the hero's decision forced and re-simulated
+  (`sim.export.export_what_ifs`): the suggested question in en and zh, the verified answer from
+  `agents.whatif.answer_question` (a real SPEC 5.3 payload, not a fixture), and the forced run from
+  the decision on (players and ball, mm) for the ghost path. A static stand-in for the api's live
+  what-if.
+
+Regenerate them whenever `sim/` changes; `tests/test_export.py` fails if a committed file falls
 behind the generator.
 
 ## How it fits together
@@ -100,6 +107,12 @@ src/
   The skinned humanoid model is a separate, later card; this is its fallback.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
+- **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
+  "What if he carried it?"); what he actually did is marked. Picking one replays the moment from
+  the decision with the forced run as a gold ghost on the tactical board (its ball path, growing
+  with the playhead, and ghosts of the players on the ball) and shows the verified answer lines
+  with their counterfactual labels; each line opens its claims and seeks to the evidence, as in
+  the narration. Free questions need the live service: the text box is disabled until then.
 
 ### Frontend choices, briefly (for Python / C++ readers)
 
