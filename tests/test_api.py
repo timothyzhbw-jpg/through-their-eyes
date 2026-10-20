@@ -715,6 +715,24 @@ def test_tts_speaks_the_cues_of_a_failure_drill(settings, tmp_path, speech):
     assert spoken.status_code == 200 and speech == [cue["ssml"]]
 
 
+def test_drill_cues_are_kept_in_memory_and_bounded(monkeypatch):
+    from api import tts
+
+    monkeypatch.setattr(tts, "DRILL_CUES_KEPT", 2)
+    stored: dict = {}
+    cues = tts.Cues(type("S", (), {"get": stored.get, "put": stored.__setitem__})())
+
+    def drill(*keys):
+        return {
+            "result": {"scripts": [{"voice": [{"cache_key": k, "ssml": f"<{k}/>"} for k in keys]}]}
+        }
+
+    cues.add_drill(drill("a", "b"))
+    cues.add_drill(drill("c"))
+    assert stored == {}  # nothing reaches the store (Cosmos DB in Azure)
+    assert [cues.ssml(k) for k in "abc"] == [None, "<b/>", "<c/>"]
+
+
 def test_tts_audio_is_cached_by_key_across_restarts(settings, tmp_path, speech):
     with TestClient(_app(settings, tmp_path)) as c:
         key = _cues(c)[0]["cache_key"]

@@ -339,7 +339,7 @@ def create_app(
 
     def _drill_response(k: str, record: dict[str, Any]) -> dict[str, Any]:
         public = {name: record[name] for name in ("source", "result", "drill")}
-        breakdowns.record(k, public)  # its voice cues may be spoken, like any served breakdown
+        cues.add_drill(public)  # its voice cues may be spoken, like any served breakdown
         where = {"possession": record["possession"]} if "possession" in record else {}
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **public,
                 **where}  # fmt: skip

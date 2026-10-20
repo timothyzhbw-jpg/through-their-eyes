@@ -15,11 +15,13 @@ import re
 import tempfile
 import urllib.error
 import urllib.request
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
 KEY = re.compile(r"[0-9a-f]{16}")  # agents.delivery.cache_key
+DRILL_CUES_KEPT = 2000  # voice cues of failure drills, in memory (about 50 drills of 40 lines)
 
 
 class SpeechUnavailable(RuntimeError):
@@ -34,29 +36,45 @@ class Cues:
     """Voice cue key -> SSML, for every breakdown the service has computed or served.
 
     `store` is a result cache (api/store.py), so the cues outlive a restart like the breakdowns.
+    A failure drill's cues stay in memory only, the most recent `DRILL_CUES_KEPT`: drills write
+    nothing to Cosmos DB and do not outlive a restart either (SPEC 6).
     """
 
     def __init__(self, store: Any) -> None:
         self.store = store
         self._stored: set[str] = set()  # known to be in the store; a key fixes its SSML
+        self._drills: OrderedDict[str, str] = OrderedDict()  # least recently added first
 
     def add(self, breakdown: dict[str, Any]) -> None:
         """Record the cues of `breakdown`. A key already in the store keeps its SSML (its audio
         may be cached already), even when written by an earlier process."""
-        for script in (breakdown.get("result") or {}).get("scripts") or ():
-            for cue in script.get("voice") or ():
-                if (key := cue["cache_key"]) in self._stored:
-                    continue
-                if self.store.get(key) is None:
-                    self.store.put(key, {"ssml": cue["ssml"]})
-                self._stored.add(key)
+        for cue in _cues(breakdown):
+            if (key := cue["cache_key"]) in self._stored:
+                continue
+            if self.store.get(key) is None:
+                self.store.put(key, {"ssml": cue["ssml"]})
+            self._stored.add(key)
+
+    def add_drill(self, breakdown: dict[str, Any]) -> None:
+        """Record the cues of a failure drill's breakdown, in memory only."""
+        for cue in _cues(breakdown):
+            key = cue["cache_key"]
+            self._drills.setdefault(key, cue["ssml"])  # a key fixes its SSML
+            self._drills.move_to_end(key)
+        while len(self._drills) > DRILL_CUES_KEPT:
+            self._drills.popitem(last=False)
 
     def ssml(self, key: str) -> str | None:
         hit = self.store.get(key)
-        return hit["ssml"] if hit else None
+        return hit["ssml"] if hit else self._drills.get(key)
 
     def recording(self, cache: Any) -> Recording:
         return Recording(cache, self)
+
+
+def _cues(breakdown: dict[str, Any]) -> list[dict[str, Any]]:
+    scripts = (breakdown.get("result") or {}).get("scripts") or ()
+    return [cue for script in scripts for cue in script.get("voice") or ()]
 
 
 class Recording:
@@ -72,15 +90,14 @@ class Recording:
     def get(self, key: str) -> dict[str, Any] | None:
         value = self.cache.get(key)
         if value is not None:
-            self.record(key, value)
+            self._record(key, value)
         return value
 
     def put(self, key: str, value: dict[str, Any]) -> None:
         self.cache.put(key, value)
-        self.record(key, value)
+        self._record(key, value)
 
-    def record(self, key: str, value: dict[str, Any]) -> None:
-        """Record the cues of `value`, a breakdown served without this cache (a failure drill)."""
+    def _record(self, key: str, value: dict[str, Any]) -> None:
         try:
             self.cues.add(value)
         except Exception:
