@@ -173,11 +173,11 @@ def create_app(
 
         model_key, offline_key = key(model), key("offline")
         candidates = ([model_key] if client is not None else []) + [offline_key]
-        if not body.regenerate:
-            for k in candidates:
-                if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, "rate_limited": False, "capped": False,
-                            **hit}  # fmt: skip
+        # With a model, only a model result is a cache hit up front: a template served while a
+        # client was limited must not stand in for the model on later requests.
+        if not body.regenerate and (hit := breakdowns.get(candidates[0])) is not None:
+            return {"key": candidates[0], "cached": True, "rate_limited": False, "capped": False,
+                    **hit}  # fmt: skip
         limits = {"rate_limited": False, "capped": False}
         if client is not None:
             verdict = regeneration(request)

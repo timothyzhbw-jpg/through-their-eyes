@@ -153,6 +153,27 @@ def test_regeneration_with_a_model_is_rate_limited_per_client(settings, tmp_path
     assert r3.json()["rate_limited"] is True and r3.json()["cached"] is True
 
 
+def test_a_template_served_while_limited_does_not_pin_the_cache(settings, tmp_path, replies):
+    """A viewer limited once gets the template; the next request (limit over) asks the model.
+
+    Found by the web client: the template was cached under the offline key and then served as a
+    cache hit forever, so the model was never tried again for that persona and language.
+    """
+    from agents.testing import FakeChatClient
+
+    fresh = Settings(matches=settings.matches, cache_dir=tmp_path, rate_limit=(1, 600.0),
+                     web_origin="*")  # fmt: skip
+    analyst = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    casual = {"match": MATCH, "personas": ["casual"], "languages": ["en"]}
+    with TestClient(create_app(fresh, client=FakeChatClient(replies), model_id="m")) as c:
+        assert c.post("/api/breakdowns", json=analyst).json()["source"] == "model"
+        limited = c.post("/api/breakdowns", json=casual).json()
+        assert limited["rate_limited"] is True and limited["source"] == "offline"
+        other = {"x-forwarded-for": "203.0.113.9"}  # a client with quota left
+        again = c.post("/api/breakdowns", json=casual, headers=other).json()
+    assert again["source"] == "model" and again["cached"] is False
+
+
 # --- the global daily cap on model-backed regenerations (SPEC 8) ----------------------------------
 
 
