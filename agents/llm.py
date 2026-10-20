@@ -72,13 +72,46 @@ def tools_called(response: Any) -> list[str]:
     ]
 
 
-def describe(e: Exception) -> str:
-    """The error for the trace, which is public: a ValidationError is reduced to field and error
-    type, so the model's own text (which may hold a number) never reaches a viewer through it."""
-    if isinstance(e, ValidationError):
-        parts = [".".join(map(str, err["loc"])) + ": " + err["type"] for err in e.errors()]
-        return f"ValidationError: {'; '.join(parts)}"[:300]
-    return f"{type(e).__name__}: {e}"[:300]
+def describe(e: BaseException) -> str:
+    """The error for the trace, which is public, so the model's own text (which may hold a number)
+    never reaches a viewer through it (SPEC 5.3, 6).
+
+    A ValidationError anywhere in the chain is reduced to field and error type, under the outer
+    class: Foundry raises a failed structured output as `ChatClientException: ValidationError:
+    angle: value_error`, and its own message, which quotes the model's text, is dropped. Any
+    other message that quotes a pydantic error (its `input_value`) is withheld.
+    """
+    inner = _validation_error(e)
+    if inner is not None:
+        parts = [_field(err) + err["type"] for err in inner.errors()]
+        reduced = f"ValidationError: {'; '.join(parts)}"
+        return (reduced if inner is e else f"{type(e).__name__}: {reduced}")[:300]
+    message = str(e)
+    if "input_value" in message:
+        message = "message withheld: it quotes a validation error"
+    return f"{type(e).__name__}: {message}"[:300]
+
+
+def _validation_error(e: BaseException) -> ValidationError | None:
+    """The first ValidationError in the chain: `e` itself, a cause or context, an exception among
+    the args (Agent Framework passes the inner exception there) or in an exception group."""
+    queue, seen = [e], set()
+    while queue:
+        x = queue.pop(0)
+        if id(x) in seen:
+            continue
+        seen.add(id(x))
+        if isinstance(x, ValidationError):
+            return x
+        linked = (x.__cause__, x.__context__, *x.args, *getattr(x, "exceptions", ()))
+        queue += [y for y in linked if isinstance(y, BaseException)]
+    return None
+
+
+def _field(err: Any) -> str:
+    """'angle: '; a key the model added (extra_forbidden) is its own text, so it is not named."""
+    loc = err["loc"][:-1] if err["type"] == "extra_forbidden" else err["loc"]
+    return ".".join(map(str, loc)) + ": " if loc else ""
 
 
 def client_from_env() -> tuple[Any | None, Callable[[], Awaitable[None]]]:
