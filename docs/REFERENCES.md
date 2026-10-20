@@ -148,7 +148,7 @@ code is copied (CLAUDE.md rule 1).
 | floodlight | MIT | optional: extra analyst metrics |
 | unravelsports | MPL | optional, unmodified only; Python 3.11 only |
 | Python-RVO2 | Apache-2.0 | optional collision avoidance; only tested on old Python versions |
-| google-research/football | Apache-2.0 | not used (C++ engine build risk in the time budget) |
+| google-research/football | Apache-2.0; `third_party/gfootball_engine` (Gameplay Football, Bastiaan Konings Schuiling) is under the Unlicense, with no separate notice on its assets (checked 2026-10-19) | engine not used (C++ build risk). *Stretch trial (SPEC §7):* player models, skeleton, kit template and animations from `gfootball_engine/data/media`; not the ad-board or stadium textures; credit the original author anyway |
 | PitchAura | GPL-3.0 | **do not use** (copyleft) — ideas only |
 | LaurieOnTracking | no license found | **do not copy** — reimplement from papers |
 | SoccerMaster | weights Apache-2.0; code repo has no LICENSE file; bundles YOLOv8 (AGPL) | **not in submission** |

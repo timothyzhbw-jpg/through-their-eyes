@@ -494,6 +494,16 @@ Vite + React + TypeScript + three.js via React Three Fiber (+ drei). Fictional t
 original visual identity.
 
 - **Players:** stylised capsule/pawn tokens with team colour and number; no limb animation.
+  - *Stretch, trial after deployment:* rigged players from the Gameplay Football assets that ship
+    with Google Research Football. The engine directory is under the Unlicense; we use only
+    `objects/players` (segment models, `player.object` skeleton, kit template) and the
+    animations, never the ad-board or stadium textures.
+  - The trial is time-boxed to one day: one player with idle, walk, sprint and one pass, shown in
+    the POV view. It converts to GLB with the root motion removed, the sim sets the position, the
+    gait follows the sim's speed so the feet don't slide, the body follows `body_yaw`, and the
+    neck joint takes `head_yaw − body_yaw`. Kits are recoloured to the fictional clubs.
+  - Bowen decides by eye. If it is clearly better, POV and broadcast switch to rigged players and
+    the tactical board keeps tokens; the CLAUDE.md decision on tokens changes only then.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -632,16 +642,17 @@ pilot only, never generalised.
 **Cut order when behind:**
 0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
-1. shareable clip export (stretch)
-2. viewer pilot
-3. end-of-match recap reel
-4. "What if…?" free text → suggested questions only
-5. two voices → one narrator
-6. `coach` persona
-7. `es` language
-8. Cosmos DB → file store
-9. occlusion model → FOV only
-10. pitch-control shader and pass value surface → precomputed textures
+1. rigged GRF players in POV and broadcast (stretch; §7, one-day trial after deployment)
+2. shareable clip export (stretch)
+3. viewer pilot
+4. end-of-match recap reel
+5. "What if…?" free text → suggested questions only
+6. two voices → one narrator
+7. `coach` persona
+8. `es` language
+9. Cosmos DB → file store
+10. occlusion model → FOV only
+11. pitch-control shader and pass value surface → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
