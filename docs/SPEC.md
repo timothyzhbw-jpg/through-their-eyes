@@ -242,10 +242,12 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
   tracking. For an observer `o` and a target `t`, the alert is on when:
   - `t` has been outside `o`'s visible region (V < 0.5, §4.4) for ≥ 1.0 s;
   - `t` has moved ≥ 3 m since `o` last saw him, at ≥ 4 m/s;
-  - `t` is within 25 m of `o`.
+  - `t` is within 35 m of `o` (25 m missed H9, who runs 22–30 m from H8 in `blind_side_run`).
   Observers are the ball carrier and the intended receiver (targets: teammates making runs) and
   the four defenders nearest the ball (targets: opponents). Hysteresis: on for at least 0.4 s; it
-  clears when `o` sees `t` again. All thresholds are *tunable*. Deterministic, no LLM, within the
+  clears when `o` sees `t` again. All thresholds are *tunable*; the values above are the starting
+  point, and the tuned defaults and their tables are in `eval/reports/blind_side.md`
+  (`analytics/blind_side.py`, M4). Deterministic, no LLM, within the
   live overlay budget (§2). An alert that ends in a pass to its target within 3 s is a moment
   trigger (§5.1).
 
@@ -278,8 +280,9 @@ of §3.4.
 - [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
 - [ ] xT grid increases toward goal (sanity plot saved).
-- [ ] Blind-side alerts vs the sim's ground truth (a belief that is stale by > 3 m for a moving
-      target within 25 m): precision ≥ 0.8 and recall ≥ 0.7 on held-out seeds (*tunable*);
+- [ ] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
+      watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
+      ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
 
