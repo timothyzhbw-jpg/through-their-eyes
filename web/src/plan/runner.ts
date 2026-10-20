@@ -54,6 +54,7 @@ export class BreakdownRunner {
       cone: false,
       beliefGhosts: false,
       cfGhost: false,
+      options: true,
       focus: "split",
       scanMarker: null,
       captionLine: null,

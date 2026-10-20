@@ -284,6 +284,63 @@ def belief_error_at_pass(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     )
 
 
+def _thought_vs_was(receiver: str, at: str, cf: str | None = None) -> tuple[dict, dict]:
+    """P(success) of the hero's pass to `receiver`: on his belief, and on the true state."""
+    extra = {} if cf is None else {"cf": cf}
+    belief, truth = (
+        fn("metric_at", metric="pass_success", player=slot("player"), receiver=slot("receiver"),
+           state=state, anchor=at, **extra)
+        for state in ("belief", "true")
+    )  # fmt: skip
+    return belief, truth
+
+
+def pass_success(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """He thought vs it was (SPEC 5.1): the chosen pass, on his belief and on the truth."""
+    if r.hero_pass is None or r.hero_pass.type != "pass":
+        return None
+    receiver = r.hero_pass.attrs["to"]
+    belief, truth = _thought_vs_was(receiver, r.at_action)
+    values = {"player": r.hero, "receiver": receiver}
+    return Claim(
+        id="pass_success",
+        template="{player} thought the pass to {receiver} had a {p_belief} chance of arriving; "
+        "it was {p_true}.",
+        templates={"zh": "{player}以为传给{receiver}的球到达的概率是{p_belief}，实际是{p_true}。"},
+        slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=receiver),
+               "p_belief": _num(ctx.value(belief, values), 2),
+               "p_true": _num(ctx.value(truth, values), 2)},
+        predicate=Predicate(op="all", args=[
+            _approx(belief, slot("p_belief"), 2), _approx(truth, slot("p_true"), 2),
+        ]),
+        evidence=[r.hero_pass.id],
+    )  # fmt: skip
+
+
+def counterfactual_pass_success(
+    ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult
+) -> Claim | None:
+    """The same he-thought-vs-it-was for the runner's option in the run without the look."""
+    if r.runner is None or r.hero_pass is None:
+        return None
+    belief, truth = _thought_vs_was(r.runner, r.at_action, cf=cf.scan_id)
+    values = {"player": r.hero, "receiver": r.runner}
+    return Claim(
+        id="cf_pass_success",
+        template="Without that look, {player} thought the pass to {receiver} had a {p_belief} "
+        "chance of arriving; it was {p_true}.",
+        templates={"zh": "如果没有那一眼，{player}以为传给{receiver}的球到达的概率是{p_belief}，"
+                         "实际是{p_true}。"},
+        slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=r.runner),
+               "p_belief": _num(ctx.value(belief, values), 2),
+               "p_true": _num(ctx.value(truth, values), 2)},
+        predicate=Predicate(op="all", args=[
+            _approx(belief, slot("p_belief"), 2), _approx(truth, slot("p_true"), 2),
+        ]),
+        evidence=[r.hero_pass.id],
+    )  # fmt: skip
+
+
 def counterfactual_pass(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim | None:
     d = cf.counterfactual_decision
     if d is None or not d.chosen.startswith("pass:"):
@@ -428,10 +485,12 @@ BUILDERS: dict[str, Builder] = {
     "runner_received": runner_received,
     "observed_share": observed_share,
     "pressure_at_pass": pressure_at_pass,
+    "pass_success": pass_success,
 }
 CF_BUILDERS: dict[str, Builder] = {
     "cf_pass": counterfactual_pass,
     "cf_value": counterfactual_value,
+    "cf_pass_success": counterfactual_pass_success,
 }
 
 

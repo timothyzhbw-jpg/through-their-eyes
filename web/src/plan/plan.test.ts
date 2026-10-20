@@ -31,7 +31,7 @@ const errorsOf = (plan: unknown) => {
 
 describe("plan validation", () => {
   it("accepts the example plan, whose voice lines are in the render payload", () => {
-    expect(Object.keys(SCRIPT)).toEqual(["L1", "L2", "L3", "L4", "L5"]);
+    expect(Object.keys(SCRIPT)).toEqual(["L1", "L2", "L3", "L4", "L5", "L6", "L7"]);
     expect(errorsOf(EXAMPLE_PLAN)).toEqual([]);
   });
 

@@ -10,10 +10,19 @@ import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } f
 import * as THREE from "three";
 import { halfCone, isSeen, Sample, sampleInto, speedAt, type Hero, type Run } from "../data/hero";
 import type { RunName } from "../data/types";
+import {
+  colorFor,
+  optionsVisible,
+  passOptions,
+  valueRange,
+  widthFor,
+} from "../options/passOptions";
 import { useSession } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
 import {
+  BOARD_EXTENT,
+  boardZoom,
   COLORS,
   LABEL,
   PITCH,
@@ -22,10 +31,10 @@ import {
   teamColor,
   useRedrawOn,
 } from "./scene";
+import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { TacticalToolbar } from "./TacticalToolbar";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 
-const EXTENT = { x: 111, y: 74 }; // m shown: the pitch plus a 3 m apron
 const TOKEN_R = 0.95; // m
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
@@ -75,6 +84,7 @@ export function TacticalView() {
         >
           <TacticalScene />
         </Canvas>
+        <OptionsOverlay />
       </div>
     </figure>
   );
@@ -86,7 +96,7 @@ function TacticalScene() {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
-  const zoom = Math.max(1e-3, Math.min(size.width / EXTENT.x, size.height / EXTENT.y)); // px/m
+  const zoom = boardZoom(size.width, size.height); // px/m
   const px = 1 / zoom; // metres per CSS pixel: labels are sized in pixels
   const scale = Math.max(1, MIN_TOKEN_PX / (TOKEN_R * zoom));
 
@@ -123,6 +133,7 @@ function TacticalScene() {
       <VisionCone hero={hero} shared={shared} />
       <PassLine run={hero.runs[mode]} mode={mode} shared={shared} />
       <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />
+      <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
@@ -151,7 +162,7 @@ function Field() {
   return (
     <>
       <mesh rotation-x={lie} renderOrder={LAYER.field}>
-        <planeGeometry args={[EXTENT.x + 40, EXTENT.y + 40]} />
+        <planeGeometry args={[BOARD_EXTENT.x + 40, BOARD_EXTENT.y + 40]} />
         <meshBasicMaterial color="#14271d" {...flat} />
       </mesh>
       <mesh rotation-x={lie} renderOrder={LAYER.pitch}>
@@ -349,6 +360,94 @@ function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
         <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
+    </group>
+  );
+}
+
+// ---------- pass options at the decision (SPEC 7) ----------
+
+interface OptionsProps {
+  hero: Hero;
+  mode: RunName;
+  shared: SharedRef;
+  scale: number;
+}
+
+const w3 = ([x, y]: [number, number]): [number, number, number] => [x, 0, -y];
+
+/** One line per option from the carrier to its believed target: width = chance he chose it,
+ * colour = value, the chosen one haloed; dashed: the same option on the true state. */
+function PassOptionsLayer({ hero, mode, shared, scale }: OptionsProps) {
+  const run = hero.runs[mode];
+  const options = useMemo(() => passOptions(hero, run), [hero, run]);
+  const range = useMemo(() => valueRange(hero), [hero]);
+  const ring = useMemo(() => circlePoints(1.0), []);
+  const group = useRef<THREE.Group>(null);
+  const decision = run.decision?.frame;
+  useFrame(() => {
+    const { state } = shared.current;
+    if (group.current) {
+      group.current.visible =
+        state.options && decision !== undefined && optionsVisible(state.frame, decision);
+    }
+  });
+  return (
+    <group ref={group} visible={false}>
+      {options.map((o) => {
+        const color = colorFor(o.value, range);
+        const width = widthFor(o.prob);
+        if (o.kind !== "pass") {
+          return (
+            <group key={o.action} position={w3(o.target)} scale={scale}>
+              <Line
+                points={ring}
+                color={color}
+                lineWidth={width}
+                renderOrder={LAYER.path + 0.3}
+                {...flat}
+              />
+            </group>
+          );
+        }
+        const line = [w3(o.from), w3(o.target)];
+        const moved =
+          o.targetTrue &&
+          Math.hypot(o.targetTrue[0] - o.target[0], o.targetTrue[1] - o.target[1]) > 1.5;
+        return (
+          <group key={o.action}>
+            {o.chosen && (
+              <Line
+                points={line}
+                color="#ffffff"
+                opacity={0.35}
+                lineWidth={width + 6}
+                renderOrder={LAYER.path + 0.1}
+                {...flat}
+              />
+            )}
+            {moved && o.targetTrue && (
+              <Line
+                points={[w3(o.from), w3(o.targetTrue)]}
+                color={colorFor(o.valueTrue ?? o.value, range)}
+                opacity={0.9}
+                lineWidth={1.6}
+                dashed
+                dashSize={1.2}
+                gapSize={0.9}
+                renderOrder={LAYER.path + 0.2}
+                {...flat}
+              />
+            )}
+            <Line
+              points={line}
+              color={color}
+              lineWidth={width}
+              renderOrder={LAYER.path + 0.3}
+              {...flat}
+            />
+          </group>
+        );
+      })}
     </group>
   );
 }

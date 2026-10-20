@@ -39,6 +39,20 @@
         "cf_pass",
         "cf_value"
       ]
+    },
+    {
+      "id": "L6",
+      "text": "H8 thought the pass to H9 had a 0.72 chance of arriving; it was 0.90.",
+      "claims": [
+        "pass_success"
+      ]
+    },
+    {
+      "id": "L7",
+      "text": "Without that look, H8 thought the pass to H9 had a 0.05 chance of arriving; it was 0.90.",
+      "claims": [
+        "cf_pass_success"
+      ]
     }
   ],
   "claims": [
@@ -111,6 +125,32 @@
         "scan:H8:0050"
       ],
       "seek_frame": 50
+    },
+    {
+      "id": "pass_success",
+      "kind": "computed",
+      "verdict": "supported",
+      "values": {
+        "p_belief": 0.72,
+        "p_true": 0.9
+      },
+      "evidence": [
+        "pass:H8:0075"
+      ],
+      "seek_frame": 75
+    },
+    {
+      "id": "cf_pass_success",
+      "kind": "counterfactual",
+      "verdict": "supported",
+      "values": {
+        "p_belief": 0.05,
+        "p_true": 0.9
+      },
+      "evidence": [
+        "pass:H8:0075"
+      ],
+      "seek_frame": 75
     }
   ]
 }
