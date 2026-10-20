@@ -2,9 +2,11 @@
 
 import dataclasses
 import hashlib
+import time
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from api.main import create_app
 from api.settings import Settings
@@ -121,6 +123,103 @@ def test_live_stream_can_seek_and_stop(client):
         ws.send_json({"type": "stop"})
         while (m := ws.receive_json())["type"] != "end":
             pass
+
+
+# --- the live stream is public: bounded per client, in time and in what it accepts (SPEC 2, 8) ---
+
+
+def _live(c, query="speed=1000", ip=None):
+    headers = {"x-forwarded-for": ip} if ip else {}
+    return c.websocket_connect(f"/ws/matches/{MATCH}/live?{query}", headers=headers)
+
+
+def _refusal(ws):
+    """(detail, close code) of the error a stream ends with; it must not reach its end first."""
+    while (m := ws.receive_json())["type"] != "error":
+        assert m["type"] != "end"
+    with pytest.raises(WebSocketDisconnect) as closed:
+        ws.receive_json()
+    return m["detail"], closed.value.code
+
+
+def test_live_streams_are_limited_per_client(settings, tmp_path):
+    with TestClient(_app(settings, tmp_path, live_per_client=2)) as c:
+        with _live(c, "speed=0.1") as a, _live(c, "speed=0.1") as b:
+            assert a.receive_json()["type"] == b.receive_json()["type"] == "hello"
+            with _live(c, "speed=0.1") as third:
+                detail, code = _refusal(third)
+            with _live(c, "speed=0.1", ip="203.0.113.8") as elsewhere:  # another client
+                assert elsewhere.receive_json()["type"] == "hello"
+        with _live(c) as again:  # both streams closed: their slots are free again
+            assert _drain(again)[-1]["type"] == "end"
+    assert code == 4429 and "too many live streams" in detail
+
+
+def test_a_live_session_has_a_time_limit_paused_or_not(settings, tmp_path):
+    with TestClient(_app(settings, tmp_path, live_max_s=0.3)) as c, _live(c, "speed=0.1") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        ws.send_json({"type": "pause"})
+        started = time.monotonic()
+        detail, code = _refusal(ws)
+    assert code == 4408 and "limit" in detail
+    assert time.monotonic() - started < 5
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "{not json",
+        "[1, 2]",
+        '"pause"',
+        "x" * 2000,
+        b'{"type": "pause"}',  # binary frames are not control messages
+        '{"type": "warp"}',
+        '{"type": "seek", "f": 165}',  # one past the last frame
+        '{"type": "seek", "f": -1}',
+        '{"type": "seek", "f": "12"}',
+        '{"type": "seek", "f": 1.5}',
+        '{"type": "seek"}',
+        '{"type": "speed", "x": NaN}',
+        '{"type": "speed", "x": "fast"}',
+        '{"type": "speed", "x": true}',
+    ],
+    ids=lambda m: repr(m)[:28],
+)
+def test_a_malformed_control_message_closes_the_stream_cleanly(client, message):
+    with _live(client, "speed=1") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        if isinstance(message, bytes):
+            ws.send_bytes(message)
+        else:
+            ws.send_text(message)
+        detail, code = _refusal(ws)
+    assert code == 4400 and detail
+
+
+def test_live_speed_is_clamped_and_a_nan_speed_plays_at_1x(client):
+    with _live(client, "speed=nan&start=155") as ws:
+        started = time.monotonic()
+        frames = [m for m in _drain(ws) if m["type"] == "frame"]
+        elapsed = time.monotonic() - started
+    assert [m["f"] for m in frames] == list(range(155, 165))
+    assert elapsed >= 0.9 * 9 * 0.04  # throttled at 1x: unthrottled takes milliseconds
+    with _live(client, "speed=1") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        ws.send_json({"type": "speed", "x": 1e12})  # clamped to 1000x, not refused
+        started = time.monotonic()
+        assert _drain(ws)[-1]["type"] == "end"
+    assert time.monotonic() - started < 3  # 165 frames at 1x would take 6.6 s
+
+
+def test_live_limits_come_from_the_environment(monkeypatch):
+    monkeypatch.delenv("TTE_LIVE_PER_CLIENT", raising=False)
+    monkeypatch.delenv("TTE_LIVE_MAX_S", raising=False)
+    s = Settings.from_env()
+    assert (s.live_per_client, s.live_max_s) == (4, 600.0)
+    monkeypatch.setenv("TTE_LIVE_PER_CLIENT", "2")
+    monkeypatch.setenv("TTE_LIVE_MAX_S", "90")
+    s = Settings.from_env()
+    assert (s.live_per_client, s.live_max_s) == (2, 90.0)
 
 
 # --- breakdowns: cached by content hash, regeneration rate-limited (SPEC 2) ----------------------

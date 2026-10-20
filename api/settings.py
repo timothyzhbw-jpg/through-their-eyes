@@ -39,6 +39,8 @@ class Settings:
     cosmos_database: str = "tte"
     tts_rate_limit: tuple[int, float] = (60, 600.0)  # speech requests per client per window
     daily_tts_cap: int = 200  # speech syntheses (audio cache misses) per UTC day, all clients
+    live_per_client: int = 4  # live streams open at once per client address
+    live_max_s: float = 600.0  # longest live stream, paused time included
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -52,4 +54,6 @@ class Settings:
             cosmos_database=os.environ.get("TTE_COSMOS_DATABASE", "").strip() or "tte",
             tts_rate_limit=_rate(os.environ.get("TTE_TTS_RATE_LIMIT", "60/600")),
             daily_tts_cap=int(os.environ.get("TTE_DAILY_TTS_CAP") or 200),
+            live_per_client=int(os.environ.get("TTE_LIVE_PER_CLIENT") or 4),
+            live_max_s=float(os.environ.get("TTE_LIVE_MAX_S") or 600),
         )

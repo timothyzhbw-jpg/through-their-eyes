@@ -9,7 +9,8 @@ regeneration is rate-limited per client and capped per UTC day across all client
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
 flagged `rate_limited` or `capped`.
 
-Speech speaks only voice cues the crew wrote, by key (api/tts.py).
+Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream is bounded
+per client, in time and in what it accepts (api/live.py).
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.requests import HTTPConnection
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -31,7 +33,7 @@ from agents.schemas import Language, Persona
 from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, run_breakdown
 from api import tts
-from api.live import stream
+from api.live import Slots, stream
 from api.settings import Settings
 from api.store import DailyCap, Match, MatchStore, RateLimiter, content_key, open_storage
 
@@ -61,7 +63,7 @@ class TtsBody(BaseModel):
     key: str = Field(pattern=f"^{tts.KEY.pattern}$")
 
 
-def _client_ip(request: Request) -> str:
+def _client_ip(request: HTTPConnection) -> str:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:  # first hop, as set by the Container Apps ingress
         return forwarded.split(",")[0].strip()
@@ -91,6 +93,7 @@ def create_app(
     cap = DailyCap(settings.daily_model_cap)
     speech_limiter = RateLimiter(*settings.tts_rate_limit)  # POST /api/tts per client
     speech_cap = DailyCap(settings.daily_tts_cap)  # Azure Speech syntheses per UTC day
+    slots = Slots(settings.live_per_client)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -166,8 +169,17 @@ def create_app(
             await ws.send_json({"type": "error", "detail": f"unknown match {mid}"})
             await ws.close(code=4404)
             return
-        await stream(ws, match, speed, start)
-        await ws.close()
+        ip = _client_ip(ws)
+        if not slots.take(ip):
+            await ws.send_json(
+                {"type": "error", "detail": "too many live streams from this address"}
+            )
+            await ws.close(code=4429)
+            return
+        try:
+            await stream(ws, match, speed, start, settings.live_max_s)
+        finally:
+            slots.give(ip)
 
     @app.post("/api/breakdowns")
     async def breakdown(body: BreakdownBody, request: Request) -> dict[str, Any]:

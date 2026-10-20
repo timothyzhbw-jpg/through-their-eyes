@@ -118,6 +118,17 @@ describe("live stream", () => {
     expect(b.feed.state.get()).toMatchObject({ status: "lost", error: "the live stream closed" });
   });
 
+  it("is lost with the service's reason when it refuses the stream", () => {
+    // api/live.py: too many streams from one address, the session time limit, a bad control message.
+    const { feed, ws } = connected();
+    ws.push(frameMsg(0), { type: "error", detail: "too many live streams from this address" });
+    ws.drop(); // the close that follows does not hide the reason
+    expect(feed.state.get()).toMatchObject({
+      status: "lost",
+      error: "the live stream refused: too many live streams from this address",
+    });
+  });
+
   it("refuses a stream for another match", () => {
     const hero = parseHero(raw);
     const sockets = fakeSockets();

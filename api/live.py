@@ -5,13 +5,21 @@ the `moment`s whose window ends on it; finally `end`. Live overlays (sprint tags
 alerts) are computed ahead of time, so a frame costs no analytics at send time. A frame's
 `blind_side` lists the alerts on as [observer, target, frames unseen] (player indices,
 SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
-`{"type": "seek", "f": 120}` or `{"type": "speed", "x": 2.0}`.
+`{"type": "seek", "f": 120}` (a frame of the match) or `{"type": "speed", "x": 2.0}` (clamped to
+0.1–1000).
+
+The stream is public, so it is bounded: a few open at once per client (`Slots`), a session
+length with paused time included, and control messages that are exactly one of the forms above.
+Anything else gets an `error` with the reason, then the stream closes: 4400 for a malformed
+control message, 4408 past the session length, 4429 for too many streams (4404: unknown match).
 """
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
+import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
@@ -20,38 +28,97 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from api.store import Match
 
+MIN_SPEED, MAX_SPEED = 0.1, 1000.0
+MAX_CONTROL_CHARS = 256  # the longest valid control message is about 30
+
 
 @dataclass
 class Control:
     speed: float
+    frames: int
     seek: int | None = None
     paused: bool = False
     stopped: bool = False
+    refused: str | None = None  # why a control message was refused; the stream then closes
     changed: asyncio.Event = field(default_factory=asyncio.Event)
+
+
+class Slots:
+    """Live streams open at once, at most `per_client` per client address."""
+
+    def __init__(self, per_client: int) -> None:
+        self.per_client = per_client
+        self._open: dict[str, int] = defaultdict(int)
+
+    def take(self, client: str) -> bool:
+        if self._open[client] >= self.per_client:
+            return False
+        self._open[client] += 1
+        return True
+
+    def give(self, client: str) -> None:
+        self._open[client] -= 1
+        if self._open[client] <= 0:
+            del self._open[client]
+
+
+def _speed(x: Any) -> float | None:
+    """A finite number clamped to the speed range; None for anything else."""
+    if isinstance(x, bool) or not isinstance(x, int | float) or not math.isfinite(x):
+        return None
+    return min(max(float(x), MIN_SPEED), MAX_SPEED)
+
+
+def _apply(control: Control, text: str | None) -> str | None:
+    """Apply one control message; return why it is refused, or None."""
+    if text is None or len(text) > MAX_CONTROL_CHARS:
+        return "control messages are short JSON text"
+    try:
+        msg = json.loads(text)
+    except ValueError:
+        return "a control message is not JSON"
+    kind = msg.get("type") if isinstance(msg, dict) else None
+    if kind == "pause":
+        control.paused = True
+    elif kind == "resume":
+        control.paused = False
+    elif kind == "stop":
+        control.stopped = True
+    elif kind == "seek":
+        f = msg.get("f")
+        if isinstance(f, bool) or not isinstance(f, int) or not 0 <= f < control.frames:
+            return f"seek needs a frame from 0 to {control.frames - 1}"
+        control.seek = f
+    elif kind == "speed":
+        if (x := _speed(msg.get("x"))) is None:
+            return "speed needs a finite number"
+        control.speed = x
+    else:
+        return "unknown control message"
+    return None
 
 
 async def _listen(ws: WebSocket, control: Control) -> None:
     try:
-        while True:
-            msg = await ws.receive_json()
-            kind = msg.get("type")
-            if kind == "pause":
-                control.paused = True
-            elif kind == "resume":
-                control.paused = False
-            elif kind == "stop":
-                control.stopped = True
-            elif kind == "seek":
-                control.seek = int(msg.get("f", 0))
-            elif kind == "speed":
-                control.speed = min(max(float(msg.get("x", 1.0)), 0.1), 1000.0)
+        while not control.stopped:
+            msg = await ws.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            control.refused = _apply(control, msg.get("text"))
             control.changed.set()
+            if control.refused:
+                break
     except (WebSocketDisconnect, RuntimeError):
+        pass
+    finally:
         control.stopped = True
         control.changed.set()
 
 
-async def stream(ws: WebSocket, match: Match, speed: float = 1.0, start: int = 0) -> None:
+async def stream(
+    ws: WebSocket, match: Match, speed: float = 1.0, start: int = 0, max_s: float = 600.0
+) -> None:
+    """Replay `match` on the accepted socket `ws`, then close it."""
     run = match.export["runs"]["factual"]
     dt, frames = match.export["dt"], run["frames"]
     events: dict[int, list[dict]] = defaultdict(list)
@@ -61,41 +128,51 @@ async def stream(ws: WebSocket, match: Match, speed: float = 1.0, start: int = 0
     for card in match.cards:
         moments[card["frame_end"]].append(card)
 
-    await ws.send_json({
-        "type": "hello", "match": match.id, "dt": dt, "frames": frames,
-        "players": match.export["players"], "hero": match.export["hero"],
-    })  # fmt: skip
-    control = Control(speed=min(max(speed, 0.1), 1000.0))
+    control = Control(speed=_speed(speed) or 1.0, frames=frames)  # NaN in the query: 1x
     listener = asyncio.create_task(_listen(ws, control))
     loop = asyncio.get_running_loop()
     f, next_at = min(max(start, 0), frames - 1), loop.time()
     try:
-        while f < frames and not control.stopped:
-            if control.seek is not None:
-                f, control.seek = min(max(control.seek, 0), frames - 1), None
-                next_at = loop.time()
-            if control.paused:
-                control.changed.clear()
-                await control.changed.wait()
-                next_at = loop.time()
-                continue
-            await ws.send_json(_frame(match, run, f, dt))
-            for e in events.get(f, ()):
-                await ws.send_json({"type": "event", "event": e})
-            for card in moments.get(f, ()):
-                await ws.send_json({"type": "moment", "card": card})
-            f += 1
-            next_at += dt / control.speed
-            delay = next_at - loop.time()
-            if delay > 0:
-                control.changed.clear()
-                with contextlib.suppress(TimeoutError):  # wake early on a control message
-                    await asyncio.wait_for(control.changed.wait(), delay)
-            else:
-                await asyncio.sleep(0)
-        await ws.send_json({"type": "end", "f": f})
-    except WebSocketDisconnect:
-        pass
+        await ws.send_json({
+            "type": "hello", "match": match.id, "dt": dt, "frames": frames,
+            "players": match.export["players"], "hero": match.export["hero"],
+        })  # fmt: skip
+        try:
+            async with asyncio.timeout(max_s):
+                while f < frames and not control.stopped:
+                    if control.seek is not None:
+                        f, control.seek = control.seek, None
+                        next_at = loop.time()
+                    if control.paused:
+                        control.changed.clear()
+                        await control.changed.wait()
+                        next_at = loop.time()
+                        continue
+                    await ws.send_json(_frame(match, run, f, dt))
+                    for e in events.get(f, ()):
+                        await ws.send_json({"type": "event", "event": e})
+                    for card in moments.get(f, ()):
+                        await ws.send_json({"type": "moment", "card": card})
+                    f += 1
+                    next_at += dt / control.speed
+                    delay = next_at - loop.time()
+                    if delay > 0:
+                        control.changed.clear()
+                        with contextlib.suppress(TimeoutError):  # wake early on a control message
+                            await asyncio.wait_for(control.changed.wait(), delay)
+                    else:
+                        await asyncio.sleep(0)
+        except TimeoutError:
+            control.refused, code = f"the live stream reached its time limit of {max_s:g} s", 4408
+        else:
+            code = 4400 if control.refused else 1000
+        if control.refused:
+            await ws.send_json({"type": "error", "detail": control.refused})
+        else:
+            await ws.send_json({"type": "end", "f": f})
+        await ws.close(code)
+    except (WebSocketDisconnect, RuntimeError):
+        pass  # the client is gone
     finally:
         listener.cancel()
 
