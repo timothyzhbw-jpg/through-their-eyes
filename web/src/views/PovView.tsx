@@ -1,12 +1,16 @@
 // First-person view: the camera sits in the chosen player's head (1.72 m) and turns with his head
 // yaw; 95 degrees of horizontal field of view (SPEC 7). Players are capsule bodies turned to their
 // body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
+// The "Rigged players (trial)" switch swaps the token bodies for animated players (players/).
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useSession } from "../session";
+import { useStore } from "../store/store";
+import { trial } from "../players/trial";
+import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import {
   COLORS,
   LABEL,
@@ -65,6 +69,8 @@ const visorGeometry = new THREE.CylinderGeometry(
 function PovScene() {
   const { hero, playback } = useSession();
   useRedrawOn(playback);
+  useRedrawOn(trial);
+  const rigged = useStore(trial, (s) => s.rigged);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
@@ -167,7 +173,12 @@ function PovScene() {
             bodies.current[j] = g;
           }}
         >
-          <mesh position-y={BODY_CENTRE} geometry={capsule} material={materials.teams[p.team]} />
+          <mesh
+            position-y={BODY_CENTRE}
+            geometry={capsule}
+            material={materials.teams[p.team]}
+            visible={!rigged}
+          />
           <mesh
             ref={(m) => {
               alertRings.current[j] = m;
@@ -184,6 +195,7 @@ function PovScene() {
             ref={(g) => {
               heads.current[j] = g;
             }}
+            visible={!rigged}
           >
             <mesh geometry={headGeometry} material={materials.teams[p.team]} />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
@@ -210,6 +222,13 @@ function PovScene() {
           visible={false}
         />
       ))}
+      {rigged && (
+        <RiggedFallback>
+          <Suspense fallback={null}>
+            <RiggedPlayers />
+          </Suspense>
+        </RiggedFallback>
+      )}
       <mesh ref={ball}>
         <sphereGeometry args={[0.11, 20, 14]} />
         <meshStandardMaterial color="#ffffff" />
