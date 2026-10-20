@@ -34,10 +34,13 @@ export type PlaybackStore = Store<PlaybackState>;
 export const KEY_SCAN_SLOW = 0.4; // free-play slow motion around the key scan, as in demo/
 export const COMFORT_MAX_YAW = (120 * Math.PI) / 180; // rad per wall-clock second, on screen
 
+/** A frame inside the key scan, with the head already turned: where the app opens. */
+export const keyScanFrame = (hero: Hero): number => hero.keyScan.start + 6;
+
 export function createPlayback(hero: Hero): PlaybackStore {
   return createStore<PlaybackState>({
     mode: "factual",
-    frame: hero.keyScan.start + 6,
+    frame: keyScanFrame(hero),
     playing: false,
     speed: 1,
     autoSlow: true,
