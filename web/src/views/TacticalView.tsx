@@ -1,8 +1,8 @@
 // Tactical board: an orthographic camera straight down on the pitch. Shows the POV player's vision
 // cone (a shader of the sim's FOV model), who is in his sight, the hero's belief ghosts, the pass
-// he played, and the ghost path of the other run. Everything is drawn flat, in layer order
-// (renderOrder) with depth testing off, like a 2D canvas, so later GLSL overlays such as pitch
-// control can slot in as extra layers.
+// he played, the ghost path of the other run, and on request both teams' pitch control (a shader
+// of analytics/pitch_control.py, ../pitchControl/). Everything is drawn flat, in layer order
+// (renderOrder) with depth testing off, like a 2D canvas.
 
 import { Line } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -43,6 +43,7 @@ import {
   teamColor,
   useRedrawOn,
 } from "./scene";
+import { PitchControlLayer } from "../pitchControl/PitchControlLayer";
 import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { TacticalToolbar } from "./TacticalToolbar";
 import { aimYaw, VISOR_COLOR } from "./tokens";
@@ -143,6 +144,7 @@ function TacticalScene() {
     <>
       <color attach="background" args={["#14271d"]} />
       <Field />
+      <PitchControlLayer hero={hero} renderOrder={LAYER.pitch + 0.5} />
       <VisionCone hero={hero} shared={shared} />
       <PassLine run={hero.runs[mode]} mode={mode} shared={shared} />
       <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />

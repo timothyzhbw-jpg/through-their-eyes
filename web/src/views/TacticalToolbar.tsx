@@ -38,6 +38,11 @@ export function TacticalToolbar() {
           title="Live: who has lost sight of a player on the move, from tracking only"
         />
         <Chip
+          name="pitchControl"
+          label="Pitch control"
+          title="Which team gets to each point of the pitch first (home: coral, away: blue)"
+        />
+        <Chip
           name="cfGhost"
           label={mode === "factual" ? "Ghost: no look" : "Ghost: with look"}
           title="Ball path of the other run, from the decision on"
