@@ -419,10 +419,10 @@ tools exposed by our own MCP server.
 | Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
-| Commentator | Findings + plan + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
+| Commentator | Findings + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
 | Co-commentator | Findings + Commentator's lines + persona + language | anchored lines, become `Script` lines with `speaker: "color"` | analysis voice: why it happened, the perception story; replies to the play-by-play |
 | Verifier | Script + Claims | verdicts; approve or request a rewrite | deterministic code wrapped as a workflow step |
-| Voice | approved Script | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
+| Voice | approved Script + TelestrationPlan | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
 
 **Two voices.** The two narration agents write one interleaved `Script`, each line tagged with its
 `speaker`. If either fails, a single-narrator template takes over (failure policy below).
@@ -439,6 +439,11 @@ Application Insights.
 *Implemented (M3, `agents/`):*
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
   outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
+- The Telestrator and narration read only the Analyst's findings, so a fan-out edge runs them
+  concurrently; Voice places lines on the plan's clock, so a fan-in edge makes it wait for both the
+  validated plan and the approved scripts. The framework runs in supersteps, so a rewrite round
+  starts after the Telestrator has finished. `trace` keeps the order Director, Analyst,
+  Telestrator, narration, Verifier, Voice whichever lane finishes first.
 - Models get claims as templates with slot names, never raw text to copy numbers from. The Analyst
   returns claim ids only, constrained to the supported ids by an enum in its JSON schema; a reply
   outside the enum fails validation and the Analyst's template takes over.
@@ -453,10 +458,19 @@ Application Insights.
   with no rewrites, no drops, no invented names, and every headline claim spoken.
 - Telestrator: Azure structured outputs reject the `oneOf` a discriminated union produces, so the
   model fills `PlanDraft` (a plain `anyOf` union) and `to_plan()` applies the full checks.
-- *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus):* 10.5 s and 13.3 s for the whole
-  crew (Director ≈ 2.4 s, Analyst 2.1–3.3 s, Telestrator 3.0–4.4 s, narration ≈ 1.7 s for eight
-  calls, the four scripts in parallel). The p95 < 12 s target (§2) needs the Telestrator and narration to run in
-  parallel: both depend only on the Analyst's findings.
+- *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus; seed 3, `--mcp`, casual and
+  analyst × en and zh):* with every step in sequence, 10.5 s and 13.3 s for the whole crew
+  (Director ≈ 2.4 s, Analyst 2.1–3.3 s, Telestrator 3.0–4.4 s, narration ≈ 1.7 s for eight calls,
+  the four scripts in parallel). With the Telestrator and narration in parallel (2026-10-19):
+  8.2, 8.6, 8.6, 8.3 and 8.5 s, each with the agent plan and 23–24 lines aired, no rewrites and no
+  drops (Director 2.0–3.1 s, Analyst 1.8–3.4 s, Telestrator 2.5–2.9 s, longest narration call
+  1.4–2.3 s); the critical path is now Director → Analyst → the slower lane. A third run started
+  right after two others hit the deployment's rate limit (capacity 20: 20 requests and 20K tokens
+  per minute; one breakdown makes at least 11 requests) and took 25.5 s, with the template plan
+  and one of eight narration calls on its template; runs a minute apart stayed under the limit.
+  With tracing spans on every step and the capacity raised to 200, three runs back to back
+  (2026-10-20): 10.9, 8.2 and 9.0 s, no 429, plan from the agent, 23–25 lines aired, no rewrites
+  or drops.
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid.
