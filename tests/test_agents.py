@@ -204,7 +204,70 @@ def test_an_invalid_agent_plan_is_replaced_by_the_template(ctx):
     replies["telestrator"] = bad
     r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
     assert r.plan_source == "template"
-    assert any("H99" in e for e in r.plan_errors) and any("longer than" in e for e in r.plan_errors)
+    k = len(bad["steps"]) - 1
+    assert {f"steps.{k} (pov): unknown_player", f"steps.{k} (pov): pov_too_long"} <= set(
+        r.plan_errors
+    )
+
+
+def test_plan_errors_in_the_trace_never_repeat_the_models_text(ctx):
+    """The trace and `plan_errors` are public (SPEC 5.3, 6): an invalid plan is reported as a
+    location and a fixed reason, never with a value the model wrote, words, digits or times."""
+    replies = _good_replies(ctx)
+    plan = template_plan(ctx).model_dump(by_alias=True)
+    end = plan["duration_s"]
+    plan["moment"] = "m:quokka marmalade 4242"
+    plan["steps"] += [
+        {"t": end, "do": "scan_marker", "scan": "zebra 31337 eleven", "label_claim": "okapi 2718"},
+        {"t": end, "do": "ghost", "kind": "counterfactual", "cf": "narwhal 16180"},
+        {"t": end, "do": "voice", "line": "L8675309 tangerine"},
+        {"t": end, "do": "rewind", "to": 58.7654321},
+        {"t": end, "do": "pov", "player": "H8", "from": -41.2718281, "to": -37.1414213,
+         "speed": 0.5},
+        {"t": 0.0314159, "do": "freeze"},
+    ]  # fmt: skip
+    replies["telestrator"] = plan
+    r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    assert r.plan_source == "template"
+    (telestrator,) = [s for s in r.trace if s.step == "telestrator"]
+    assert telestrator.source == "llm" and telestrator.error is None
+    k = len(plan["steps"]) - 6
+    assert set(r.plan_errors) == {
+        "moment: wrong_moment",
+        f"steps.{k} (scan_marker): unknown_scan",
+        f"steps.{k} (scan_marker): unsupported_claim",
+        f"steps.{k + 1} (ghost): unknown_counterfactual",
+        f"steps.{k + 2} (voice): unknown_line",
+        f"steps.{k + 3} (rewind).to: outside_clip",
+        f"steps.{k + 4} (pov).from: outside_clip",
+        f"steps.{k + 4} (pov).to: outside_clip",
+        f"steps.{k + 4} (pov): pov_too_long",
+        f"steps.{k + 5} (freeze): goes_back_in_time",
+    }
+    assert telestrator.notes == [f"invalid plan, template used: {e}" for e in r.plan_errors]
+    public = json.dumps(
+        [s.model_dump(exclude={"ms"}) for s in r.trace] + r.plan_errors, ensure_ascii=False
+    )
+    model_text = ["quokka", "marmalade", "4242", "zebra", "31337", "eleven", "okapi", "2718",
+                  "narwhal", "16180", "8675309", "tangerine", "7654321", "2718281", "1414213",
+                  "4.13", "314159"]  # fmt: skip
+    assert [w for w in model_text if w in public] == []
+
+
+def test_plan_shape_errors_name_the_field_and_type_only(ctx):
+    from pydantic import ValidationError
+
+    from agents.plan import shape_errors
+    from agents.schemas import TelestrationPlan
+
+    data = template_plan(ctx).model_dump(by_alias=True)
+    data["duration_s"] = 4242.0
+    data["steps"][0]["quokka 31337"] = "marmalade"
+    with pytest.raises(ValidationError) as e:
+        TelestrationPlan.model_validate(data)
+    public = [p.public for p in shape_errors(e.value)]
+    assert public == ["duration_s: less_than_equal", "steps.0.freeze: extra_forbidden"]
+    assert [p.public for p in validate_plan(data, ctx)] == public
 
 
 def test_the_analyst_gets_the_mcp_tools_over_stdio(ctx):

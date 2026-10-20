@@ -613,7 +613,9 @@ Application Insights.
   Telestrator 11.0 s with one retry, narration 9.4 s with two retries).
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
-  template plan when invalid.
+  template plan when invalid. The reasons are public (`trace[].notes`, `plan_errors`), so each is a
+  location and a fixed code (`steps.3 (scan_marker): unknown_scan`, `duration_s:
+  less_than_equal`), never a value or time the model wrote (§5.3).
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
