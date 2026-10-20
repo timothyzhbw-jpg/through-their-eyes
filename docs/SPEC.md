@@ -440,7 +440,15 @@ original visual identity.
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
   - counterfactual ghost path;
-  - "he thought / it was" probability tag at the action freeze (§5.1).
+  - "he thought / it was" probability tag at the action freeze (§5.1);
+  - **pass options** on the tactical board: a line from the carrier to every option's target,
+    width = choice probability, colour = value, the chosen one highlighted; values on hover come
+    from claims. Lines go to the believed positions, with the true positions dashed; both runs
+    side by side show why the decision flips. Needs the export to evaluate P(success) on the true
+    state with the same function (§3.5, §5.1);
+  - *M4:* **pass value surface** (xT-based, §4.2 + §4.5) as a heatmap, computed on the belief and
+    on the truth; their difference is the opportunity he did not see. Not called EPV: EPV names the
+    Fernández, Bornn and Cervone model trained on real tracking data (REFERENCES).
 - **Breakdown player:** executes a `TelestrationPlan`; timeline with scan ticks; split view
   (POV | tactical).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
@@ -506,7 +514,7 @@ pilot only, never generalised.
 6. `es` language
 7. Cosmos DB → file store
 8. occlusion model → FOV only
-9. pitch-control shader → precomputed textures
+9. pitch-control shader and pass value surface → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.

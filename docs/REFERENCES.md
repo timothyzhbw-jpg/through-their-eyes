@@ -70,6 +70,11 @@ code is copied (CLAUDE.md rule 1).
 - **Shaw, Friends of Tracking (LaurieOnTracking)** — simplified TTI and default parameters
   (reaction 0.7 s, v_max 5 m/s, σ 0.45 s). Reference only; no license found → reimplemented.
   https://github.com/Friends-of-Tracking-Data-FoTD/LaurieOnTracking
+- **Fernández, Bornn, Cervone (2021). *A framework for the fine-grained evaluation of the
+  instantaneous expected value of soccer possessions.*** Machine Learning —
+  https://arxiv.org/abs/2011.09426
+  → What "EPV" means: several sub-models trained on real tracking data. Our pass value surface is
+  a simpler xT-based value (§7), named so to avoid the comparison.
 - **Bekkers. *Pressing Intensity: An Intuitive Measure for Pressing in Soccer.*** arXiv:2501.04712 —
   https://arxiv.org/abs/2501.04712
 - **Singh (2019). *Expected Threat (xT)*** (blog) — implemented in socceraction.
