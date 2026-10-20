@@ -872,8 +872,8 @@ to a real broadcast.
 ## 9. Milestones and cut list
 
 **Acceptance status** (2026-10-20). Each check carries its evidence inline: a test, an eval report
-or a live check. Ticked only when verified that day: `uv run pytest` 477 passed, `npm test` in
-`web/` 122 passed, the live checks run against the deployed API and site.
+or a live check. Ticked only when verified that day: `uv run pytest` 482 passed, `npm test` in
+`web/` 184 passed, the live checks run against the deployed API and site.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
@@ -953,8 +953,9 @@ Framework, live deployment, the video.
       2026-11-10 can only be checked then.
 - [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
       and its attribution), architecture, how to run, eval results, related work
-      — *Open:* [README.md](../README.md) has the statement, the attribution, how to run and the
-      eval results; no architecture diagram and no related work yet.
+      — *Open:* [README.md](../README.md) has the statement, the attribution, how to run, the
+      eval results and related work (first-person replay exists: ReSpo.Vision); no architecture
+      diagram yet.
 - [ ] All materials in English
       — *Open:* the video and the submission text don't exist yet.
 - [ ] **Claim only what we use.** README, video and submission list a technology only if the running
@@ -964,5 +965,6 @@ Framework, live deployment, the video.
       exist yet.
       - We develop with Claude Code and say so.
       - GitHub Copilot and the Azure MCP Server are listed only if we really used them, with the
-        PRs or commands that show it.
+        PRs or commands that show it. Checked 2026-10-20: neither appears in the git history or
+        in any of the 30 PRs, so neither is listed ([RUBRIC_MAP](RUBRIC_MAP.md#development-tools)).
       - Fabric is not used.

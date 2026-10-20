@@ -48,6 +48,15 @@ class DetectedScan:
     side: int  # +1 counter-clockwise (to the player's left of the ball), -1 clockwise
 
 
+@dataclass(frozen=True)
+class DetectorTrace:
+    """What the detector computed for one player, for viewers that show it at work."""
+
+    omega: np.ndarray  # (F - 1,) rad/s, head angular velocity from frame t to t + 1
+    onsets: np.ndarray  # frames t where |omega[t]| >= omega_threshold, turning away from the ball
+    scans: list[DetectedScan]  # the onsets that passed the excursion gate and came back
+
+
 def ball_offset(head_yaw: np.ndarray, player_pos: np.ndarray, ball_pos: np.ndarray) -> np.ndarray:
     """Signed angle from the ball direction to the head direction, in [-pi, pi)."""
     to_ball = np.asarray(ball_pos, dtype=float)[..., :2] - np.asarray(player_pos, dtype=float)
@@ -62,6 +71,17 @@ def detect_scans(
     params: ScanDetectorParams = DEFAULT_PARAMS,
 ) -> list[DetectedScan]:
     """Scans of one player. head_yaw (F,) rad, player_pos (F, 2) m, ball_pos (F, 2 or 3) m."""
+    return trace_scans(head_yaw, player_pos, ball_pos, dt, params).scans
+
+
+def trace_scans(
+    head_yaw: np.ndarray,
+    player_pos: np.ndarray,
+    ball_pos: np.ndarray,
+    dt: float,
+    params: ScanDetectorParams = DEFAULT_PARAMS,
+) -> DetectorTrace:
+    """`detect_scans` with its intermediate signals: angular velocity and candidate onsets."""
     yaw = np.asarray(head_yaw, dtype=float)
     offset = ball_offset(yaw, player_pos, ball_pos)
     omega = wrap_angle(np.diff(yaw)) / dt  # [t]: from frame t to t + 1
@@ -97,7 +117,7 @@ def detect_scans(
             )
         )
         free_from = end
-    return scans
+    return DetectorTrace(omega=omega, onsets=onsets, scans=scans)
 
 
 def detect_all(

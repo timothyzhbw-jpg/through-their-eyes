@@ -1,5 +1,6 @@
-// DOM around the first-person canvas: the toolbar (label, player picker, comfort and ghost
-// toggles), and over the canvas the HUD and the caption of the current narration line.
+// DOM around the 3D canvas: the toolbar (camera switch, label, player picker, comfort and ghost
+// toggles), and over the canvas the first-person HUD and the caption of the current narration
+// line.
 
 import { useMemo } from "react";
 import { Sample, headOffBall, isSeen, sampleInto } from "../data/hero";
@@ -8,6 +9,7 @@ import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
 import { Caption } from "../ui/Narration";
 import { trial } from "../players/trial";
+import type { Camera3D } from "../store/playback";
 
 export function PovToolbar() {
   const { hero, playback, controls } = useSession();
@@ -15,15 +17,21 @@ export function PovToolbar() {
   const comfort = useStore(playback, (s) => s.comfort);
   const ghosts = useStore(playback, (s) => s.beliefGhosts);
   const focus = useStore(playback, (s) => s.focus);
+  const camera = useStore(playback, (s) => s.camera);
   const rigged = useStore(trial, (s) => s.rigged);
   const player = hero.players[hero.ids.indexOf(povPlayer)];
   const ghostsAvailable = povPlayer === hero.heroId;
 
   return (
     <div className="viewbar">
-      <div className="label">
-        First person · {player.id} <span className="role">{player.role}</span>
-        {focus === "pov" && <span className="live-dot" aria-hidden="true" />}
+      <div className="viewbar-start">
+        <CameraSwitch camera={camera} />
+        {camera === "pov" && (
+          <div className="label">
+            {player.id} <span className="role">{player.role}</span>
+          </div>
+        )}
+        {focus === camera && <span className="live-dot" aria-hidden="true" />}
       </div>
       <div className="toggles">
         <label className="picker">
@@ -84,14 +92,39 @@ export function PovToolbar() {
   );
 }
 
+/** First person or the broadcast camera (SPEC 7); plans switch it with their camera steps. */
+function CameraSwitch({ camera }: { camera: Camera3D }) {
+  const { controls } = useSession();
+  const options: [Camera3D, string, string][] = [
+    ["pov", "First person", "Through the eyes of the chosen player"],
+    ["broadcast", "Broadcast", "High on the near side, following the ball"],
+  ];
+  return (
+    <div className="segmented cam" role="group" aria-label="Camera">
+      {options.map(([value, label, title]) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={camera === value}
+          title={title}
+          onClick={() => controls.setCamera(value)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function PovOverlay() {
   const { playback } = useSession();
   const comfort = useStore(playback, (s) => s.comfort);
+  const pov = useStore(playback, (s) => s.camera === "pov");
   return (
     <>
-      {comfort && <div className="vignette" aria-hidden="true" />}
+      {pov && comfort && <div className="vignette" aria-hidden="true" />}
       <Caption />
-      <Hud />
+      {pov && <Hud />}
     </>
   );
 }
