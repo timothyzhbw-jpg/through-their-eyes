@@ -317,22 +317,31 @@ def test_the_verified_number_is_supported_and_its_line_airs(client):
     assert zh["line"] == "那一眼带来了0.10的预期威胁（xT）。" and zh["airs"] is True
 
 
-def test_every_numeric_slot_of_every_claim_can_be_tampered(client):
-    """Each true value is supported; the same slot doubled (or 1 for a zero) is not."""
+def test_every_numeric_slot_of_every_claim_can_be_tampered(settings, tmp_path):
+    """Each true value is supported and airs; the same slot doubled (or 1 for a zero) is not,
+    and its line reads differently. Its own app: two requests per slot, no rate limit in play."""
     from agents.context import MomentContext
 
+    fresh = Settings(matches=settings.matches, cache_dir=tmp_path,
+                     verify_rate_limit=(10**6, 60.0), web_origin="*")  # fmt: skip
     ctx = MomentContext.load("blind_side_run", 3)
     tried = 0
-    for cid, claim in ctx.claims.items():
-        for name, s in claim.slots.items():
-            if isinstance(s.value, bool) or not isinstance(s.value, int | float):
-                continue
-            assert _verify(client, cid, name, s.value).json()["status"] == "supported", cid
-            wrong = (s.value * 2 or 1) if name != "window_s" else s.value * 5
-            out = _verify(client, cid, name, wrong).json()
-            assert out["status"] != "supported" and out["airs"] is False, (cid, name, out)
-            assert out["line"] is None or out["line"] != claim.template, cid
-            tried += 1
+    with TestClient(create_app(fresh)) as c:
+        for cid, claim in ctx.claims.items():
+            for name, s in claim.slots.items():
+                if isinstance(s.value, bool) or not isinstance(s.value, int | float):
+                    continue
+                r_true = _verify(c, cid, name, s.value)
+                assert r_true.status_code == 200, (cid, name, r_true.text)
+                true = r_true.json()
+                assert true["status"] == "supported" and true["airs"] is True, (cid, name, true)
+                wrong = (s.value * 2 or 1) if name != "window_s" else s.value * 5
+                r_wrong = _verify(c, cid, name, wrong)
+                assert r_wrong.status_code == 200, (cid, name, r_wrong.text)
+                out = r_wrong.json()
+                assert out["status"] != "supported" and out["airs"] is False, (cid, name, out)
+                assert out["line"] is not None and out["line"] != true["line"], (cid, name, out)
+                tried += 1
     assert tried >= 10
 
 
