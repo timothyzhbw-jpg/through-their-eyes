@@ -9,10 +9,11 @@
 // the stream sends it (api/live.py replays the recorded match); the outcome is never used.
 //
 // The rules, highest priority first:
+//   breakdown  the hero moment was detected: watch its breakdown, for MOMENT_HOLD_S. First, so a
+//              routine pass does not push it off in a match (the auto director never takes it).
 //   incoming   a pass is played toward a player: his eyes, raised when he looks over his
 //              shoulder before the ball arrives, or has lost sight of someone on his blind side.
 //              Shown only while the ball is at least LEAD_S away (pick.ts).
-//   breakdown  the hero moment was detected: watch its breakdown (never taken by the auto director).
 //   carrier    a player has just received the ball: his eyes, for CARRY_S.
 //   blind_side a defender has lost sight of an attacker on his blind side: the tactical board.
 //   turnover   the ball was won: the broadcast camera, for TURNOVER_S.
@@ -70,10 +71,10 @@ const LOOKBACK_S = 8; // the latest pass or ball event is looked for this far ba
 const OVER_SHOULDER = Math.PI / 2; // a scan this far from the ball looks over the shoulder
 
 export const PRIORITY: Record<Rule | "incoming_blind" | "incoming_scan", number> = {
+  breakdown: 70,
   incoming_scan: 60,
   incoming_blind: 55,
   incoming: 50,
-  breakdown: 45,
   carrier: 40,
   blind_side: 30,
   turnover: 25,

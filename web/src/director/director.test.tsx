@@ -10,6 +10,7 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
+import type { ExportEvent } from "../data/types";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session, type ViewSession } from "../session";
@@ -124,6 +125,46 @@ describe("the chip", () => {
     act(() => page.querySelector<HTMLButtonElement>(".director-dismiss")!.click());
     expect(chip(page)).toBeNull();
     at(session, 30);
+    expect(chip(page)).toBeNull();
+  });
+});
+
+describe("between suggestions", () => {
+  /** The bundled hero with its events replaced: two passes with a gap between them. */
+  function withEvents(events: ExportEvent[]): Session {
+    const data = structuredClone(raw) as typeof raw;
+    data.runs.factual.events = events as typeof data.runs.factual.events;
+    data.runs.factual.blind_side.frames = data.runs.factual.blind_side.frames.map(() => []);
+    (data as { key_scan: unknown }).key_scan = null;
+    return createSession(parseHero(data), null, null);
+  }
+  const pass = (frame: number, to: string, end: number): ExportEvent => ({
+    id: `pass:H4:${String(frame).padStart(4, "0")}`,
+    type: "pass",
+    frame,
+    player: "H4",
+    attrs: { to, end },
+  });
+
+  it("the chip stays a moment after it ends, then the strip goes idle", () => {
+    const session = withEvents([pass(10, "H8", 30), pass(60, "H9", 100)]);
+    const page = mount(session);
+    onBroadcast(session);
+    for (let f = 10; f <= 45; f++) at(session, f);
+    expect(chip(page)).toBeNull();
+    at(session, 10);
+    for (let f = 11; f <= 34; f++) at(session, f);
+    expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him."); // 0.16 s on
+    for (let f = 35; f <= 45; f++) at(session, f);
+    expect(text(page.querySelector(".director-idle"))).toMatch(/^Pick any camera/);
+  });
+
+  it("a dismissed chip does not linger", () => {
+    const session = withEvents([pass(10, "H8", 30)]);
+    const page = mount(session);
+    onBroadcast(session);
+    for (let f = 10; f <= 12; f++) at(session, f);
+    act(() => page.querySelector<HTMLButtonElement>(".director-dismiss")!.click());
     expect(chip(page)).toBeNull();
   });
 });

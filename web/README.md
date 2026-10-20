@@ -38,6 +38,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                          |
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                      |
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                               |
+| `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                    |
 
 A link that points at a spot (`at`, `run`, `ask` or `tamper`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
@@ -168,6 +169,7 @@ src/
   views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
               toolbars and HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
+  director/   camera director: rules over stream events, the chip and the Auto director switch
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
               the transport and live controls a match shares; useView() for the shared views
@@ -176,7 +178,8 @@ src/
 ```
 
 - **One store, many readers.** `store/playback.ts` holds what is on screen now. Views only read
-  it. Two things write it: user controls (`session.ts`) and the plan executor (`plan/runner.ts`).
+  it. Three things write it: user controls (`session.ts`), the plan executor (`plan/runner.ts`)
+  and the camera director (`director/`, the camera only).
   A `requestAnimationFrame` clock calls `runner.tick(dt)` then `advance(dt)` once per screen
   frame; in live mode it moves the playhead towards the last frame the stream sent instead. Any
   transport control stops a running breakdown and hands control back to the viewer.
@@ -204,6 +207,20 @@ src/
   (the live stream's threshold), the POV player's scans and blind-side alerts (all marked `sim`),
   and on the grass the blind-side lines and, at the decision, the pass options. `pov` and
   `broadcast` camera steps pick the 3D view's camera; a `pov` step always films in first person.
+- **Camera director** (`director/`). The viewer picks the camera; a chip above the views suggests
+  which one to switch to and why, and one tap switches. Deterministic rules over what the live
+  stream has sent (its events, moments and blind-side alerts; in a replay, the run's own up to the
+  playhead), highest first: a detected hero moment (watch its breakdown); a pass toward a player
+  (his eyes, only while the ball is at least 0.5 s away at 1×; raised when he looks over his
+  shoulder before it arrives, or has lost sight of someone on his blind side); a reception (his
+  eyes, briefly); a defender's blind-side alert (the tactical board); a turnover (broadcast);
+  another moment with a lens (replay it: scan lens in the actor's eyes, pressure and space on the
+  board). Reasons are templates over player ids with no numbers. A suggestion on screen stays
+  until it ends or a higher one comes, and is hidden while the viewer is already on its camera.
+  **Auto director** (off by default) cuts by itself: at least 2 s of wall clock per shot, never
+  while the player on screen is mid-scan, and never a breakdown or replay. While a breakdown runs
+  its plan chooses the cameras and the director stays out. Camera cuts write the playback store
+  directly, like the camera switch, so they never stop a breakdown or its autoplay.
 - **Stadium** (`views/Stadium.tsx`), generated, around both 3D cameras: a two-tier bowl under a
   roof, about 15,000 instanced spectators in one draw call, four floodlight masts with a glow
   sprite, boards with our own words only ("Through Their Eyes", "Synthetic match", "All players

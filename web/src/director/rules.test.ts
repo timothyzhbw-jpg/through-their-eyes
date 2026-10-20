@@ -8,7 +8,16 @@ import raw from "../../public/data/hero_seed3.json";
 import { parseHero } from "../data/hero";
 import type { ExportEvent } from "../data/types";
 import { matchExport } from "../testing";
-import { AutoCutter, autoTarget, pick, satisfied, shotPatch, type ViewShot } from "./pick";
+import {
+  AutoCutter,
+  autoTarget,
+  linger,
+  LINGER_S,
+  pick,
+  satisfied,
+  shotPatch,
+  type ViewShot,
+} from "./pick";
 import {
   candidates,
   CARRY_S,
@@ -220,6 +229,15 @@ describe("detected moments", () => {
     });
   });
 
+  it("the breakdown comes first: a routine pass does not push it off", () => {
+    const k = knowledge([pass(110, "H4", "H8", 160)], {}, [
+      { card: card("m:decision_after_scan:H8:0075", "scan", 100), breakdown: true },
+    ]);
+    expect(changes(play(k, 100, 130))).toEqual([
+      [100, "Watch the breakdown: a moment was detected, H8's decision after a scan."],
+    ]);
+  });
+
   it("a live-only moment (a sprint) suggests nothing", () => {
     const k = knowledge([], {}, [
       { card: card("m:sprint:H9:0085", null, 96, true), breakdown: false },
@@ -242,6 +260,20 @@ describe("what is on screen", () => {
     const first = pick(candidates(k, 20), 20, BROADCAST, null, new Set(), DT).show!;
     const next = pick(candidates(k, 20), 20, BROADCAST, first.id, new Set([first.id]), DT);
     expect(next.show?.rule).toBe("blind_side");
+  });
+
+  it("lets a chip that just ended linger briefly, so the strip does not blink", () => {
+    const k = knowledge([pass(10, "H4", "H8", 40), pass(60, "H4", "H9", 100)]);
+    const prev = pick(candidates(k, 30), 30, NEUTRAL, null, new Set(), DT).show!;
+    const at = (f: number, ended: number | null) =>
+      linger(pick(candidates(k, f), f, NEUTRAL, null, new Set(), DT), prev, ended, f, DT);
+    expect(at(40, 40)).toBe(prev); // the ball arrived: nothing yet in its place
+    expect(at(40 + frames(LINGER_S) - 1, 40)).toBe(prev);
+    expect(at(40 + frames(LINGER_S), 40)).toBeNull();
+    expect(at(60, 40)?.id).toBe("incoming:pass:H4:0060"); // the next one takes over at once
+    // Nothing lingers while the viewer is on the best camera already (held, not shown).
+    const held = pick(candidates(k, 20), 20, onEyes("H8"), null, new Set(), DT);
+    expect(linger(held, prev, 20, 20, DT)).toBeNull();
   });
 
   it("knows when a shot is the suggested one, and how to cut to it", () => {

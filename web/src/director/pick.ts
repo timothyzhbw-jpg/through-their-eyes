@@ -50,6 +50,25 @@ function ranked(cands: Suggestion[], current: string | null, dismissed: Readonly
     );
 }
 
+export const LINGER_S = 0.4; // a chip that just ended stays this long when nothing follows
+
+/**
+ * The chip, with a short linger: when the suggestion on screen ends and nothing takes its place
+ * (none at all, not one held because the viewer is on its camera), it stays until `LINGER_S`
+ * after it ended, so the strip does not blink between suggestions that follow each other.
+ * `ended` is the frame the previous chip ended at (null while it holds).
+ */
+export function linger(
+  p: Picked,
+  previous: Suggestion | null,
+  ended: number | null,
+  f: number,
+  dt: number,
+): Suggestion | null {
+  if (p.show || p.top || !previous || ended === null) return p.show;
+  return f >= ended && f < ended + Math.round(LINGER_S / dt) ? previous : null;
+}
+
 export interface Picked {
   top: Suggestion | null; // the best suggestion, shown or held
   show: Suggestion | null; // the chip; null while the viewer is on the best camera already

@@ -805,6 +805,12 @@ original visual identity.
     Fernández, Bornn and Cervone model trained on real tracking data (REFERENCES).
 - **Breakdown player:** executes a `TelestrationPlan`; timeline with scan ticks; split view
   (POV | tactical).
+- **Camera director:** the viewer picks the camera; a chip suggests which one to switch to and
+  why, from deterministic rules over the live stream's events (a pass toward a player: his eyes,
+  raised when he scans before the ball arrives; a defender's blind-side alert: the tactical board;
+  a turnover: broadcast; a detected moment: its breakdown, or a replay with its lens's camera).
+  Template reasons, no numbers, no model. An optional *Auto director* cuts by itself with a
+  minimum shot length and never mid-scan ([web/src/director/](../web/src/director/)).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
@@ -895,6 +901,12 @@ to a real broadcast.
       plan, with the reasons"); bundled and API plans both go through `resolvePlan`
       ([web/src/breakdown/breakdown.ts](../web/src/breakdown/breakdown.ts));
       [tests/test_agents.py](../tests/test_agents.py)::`test_an_invalid_agent_plan_is_replaced_by_the_template`
+- [x] Camera director: a pass suggestion shows at least 0.5 s before the reception at 1×,
+      reasons carry no number but player ids, and the auto director never cuts inside its
+      minimum shot length, mid-scan, or into a breakdown.
+      — [web/src/director/rules.test.ts](../web/src/director/rules.test.ts) ("every pass
+      suggestion shows at least half a second before its reception", "are plain words", "the
+      auto director"); [web/src/director/director.test.tsx](../web/src/director/director.test.tsx)
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every

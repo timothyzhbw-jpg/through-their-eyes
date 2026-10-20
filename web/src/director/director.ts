@@ -14,7 +14,7 @@ import type { MomentContext } from "../plan/moment";
 import type { ViewSession } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { createStore, type Store } from "../store/store";
-import { AutoCutter, autoTarget, pick, shotPatch } from "./pick";
+import { AutoCutter, autoTarget, linger, pick, shotPatch } from "./pick";
 import {
   candidates,
   eventKnowledge,
@@ -51,6 +51,7 @@ export interface DirectorState {
 
 const REPLAY_LEAD_S = 1; // a replay starts this long before the moment's anchor
 const SCAN_LOOKBACK_S = 4; // scans are shorter than this
+const SEEK_FRAMES = 12; // a playhead jump further than this forward is a seek, not play
 
 /** The live stream's events as they arrive, once each, in frame order (seeks resend some). */
 export class StreamLog {
@@ -113,6 +114,7 @@ export class Director {
   private readonly cutter = new AutoCutter();
   private readonly dismissed = new Set<string>(); // dismissed, or a breakdown or replay taken
   private current: string | null = null; // the top suggestion at the last update
+  private ended: number | null = null; // frame the chip on screen ended, while it lingers
   private frame = -1;
   private mode = "";
   private view = "";
@@ -174,7 +176,12 @@ export class Director {
       this.view = view;
     }
     const f = Math.floor(s.frame);
-    if (s.mode !== this.mode || f < this.frame) this.current = null; // a new run, or a seek back
+    // A new run, or a seek: start afresh, and let nothing from before linger.
+    const jumped = s.mode !== this.mode || f < this.frame || f > this.frame + SEEK_FRAMES;
+    if (jumped) {
+      this.current = null;
+      this.ended = null;
+    }
     this.mode = s.mode;
     this.frame = f;
     if (this.directing()) {
@@ -190,7 +197,13 @@ export class Director {
       const shot = this.cutter.decide(target, f, k.dt, now, s, (p) => inScan(k, p, f));
       if (shot) return this.cut(shot); // the cut updates again, with the new camera
     }
-    this.show(picked.show, false);
+    const shown = this.state.get().show;
+    const previous = !jumped && shown && !this.dismissed.has(shown.id) ? shown : null;
+    if (picked.show || picked.top) this.ended = null;
+    else if (previous && this.ended === null) this.ended = f;
+    const next = linger(picked, previous, this.ended, f, k.dt);
+    if (!next) this.ended = null;
+    this.show(next, false);
   }
 
   /** Take the suggestion on screen: cut to its camera, open the breakdown, or replay it. */
