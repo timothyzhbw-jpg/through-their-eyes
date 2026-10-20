@@ -56,6 +56,7 @@ export class BreakdownRunner {
       cfGhost: false,
       options: true,
       focus: "split",
+      camera: "pov",
       scanMarker: null,
       captionLine: null,
       evidenceLine: null,
@@ -108,10 +109,15 @@ export class BreakdownRunner {
         set({ playing: true, playUntil: this.frame(step.to), speed: step.speed });
         break;
       case "camera":
-        set({ focus: step.mode });
+        set(
+          step.mode === "pov" || step.mode === "broadcast"
+            ? { focus: step.mode, camera: step.mode }
+            : { focus: step.mode },
+        );
         break;
       case "pov":
         set({
+          camera: "pov", // a first-person clip is filmed in first person, whatever the focus
           povPlayer: step.player,
           comfort: true, // eased yaw in every plan POV clip (SPEC 7)
           frame: this.frame(step.from),

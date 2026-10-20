@@ -13,7 +13,7 @@ const Rel = z.number().min(-60).max(60);
 const Speed = z.number().min(0.1).max(2);
 const PlayerId = z.string().regex(/^[HA]\d{1,2}$/);
 
-export const CAMERA_MODES = ["split", "pov", "tactical"] as const;
+export const CAMERA_MODES = ["split", "pov", "tactical", "broadcast"] as const;
 
 /** Hold the current frame. */
 const Freeze = z.strictObject({ t: At, do: z.literal("freeze") });
@@ -21,7 +21,8 @@ const Freeze = z.strictObject({ t: At, do: z.literal("freeze") });
 const Rewind = z.strictObject({ t: At, do: z.literal("rewind"), to: Rel });
 /** Play from the current frame to `to` (not in the SPEC sketch: needed to show the outcome). */
 const Play = z.strictObject({ t: At, do: z.literal("play"), to: Rel, speed: Speed });
-/** Which view gets the space. `broadcast` and `player_lock` arrive with those cameras. */
+/** Which view gets the space. `pov` and `broadcast` also pick the 3D view's camera; `split` and
+ * `tactical` keep it. `player_lock` arrives with that camera. */
 const Camera = z.strictObject({ t: At, do: z.literal("camera"), mode: z.enum(CAMERA_MODES) });
 /** First-person segment through `player`'s eyes, eased yaw, at most MAX_POV_CLIP_S. */
 const Pov = z.strictObject({

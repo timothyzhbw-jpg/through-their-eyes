@@ -8,6 +8,8 @@
 //   ?plan=invalid   load a deliberately broken plan to show the template fallback
 //   ?autoplay=0     do not start the live stream (or the breakdown) on load
 //   ?offline=1      ignore the live service and play the bundled data
+//   ?camera=broadcast  start with the broadcast camera in the 3D view, focused (a breakdown
+//                   still cuts to first person when it starts)
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -38,6 +40,10 @@ async function main() {
       api: loaded.api,
       offline: forcedOffline ? "offline=1 in the address" : loaded.offline,
     });
+    if (params.get("camera") === "broadcast") {
+      session.controls.setFocus("broadcast");
+      session.controls.setCamera("broadcast");
+    }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const autoplay = params.get("autoplay") !== "0" && !reducedMotion;
     root.render(
