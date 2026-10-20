@@ -66,6 +66,11 @@ on an LLM.
   `moment` and `end` messages; clients can pause, resume, seek, change speed or stop.
 - REST: `/api/matches`, `/api/matches/<id>` (+ `/export`, `/moments`, `/audit`),
   `POST /api/breakdowns`, `POST /api/whatif`, `POST /api/tts` (503 until Speech is configured).
+- The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
+  key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
+  allows a few streams per client and a session length, and closes on a malformed control
+  message; request bodies are capped at 16 KiB; personas and languages are deduplicated; responses
+  carry security headers, and a 500 carries no traceback.
 - Measured locally: 25.0 fps with a p95 frame gap of 41 ms; a cached breakdown is served in about
   1 ms.
 - The cache is one JSON file per key under `TTE_CACHE_DIR`; Cosmos DB can replace it (§8).

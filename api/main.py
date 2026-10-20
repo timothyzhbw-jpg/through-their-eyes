@@ -9,8 +9,8 @@ regeneration is rate-limited per client and capped per UTC day across all client
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
 flagged `rate_limited` or `capped`.
 
-Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream is bounded
-per client, in time and in what it accepts (api/live.py).
+Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream, request
+bodies and response headers are bounded for a public service (api/live.py, api/guard.py).
 """
 
 from __future__ import annotations
@@ -18,13 +18,13 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import HTTPConnection
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
 
 from agents import whatif
 from agents.llm import client_from_env, sync_credential_from_env
@@ -32,20 +32,33 @@ from agents.prompts import PROMPT_VERSION
 from agents.schemas import Language, Persona
 from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, run_breakdown
-from api import tts
+from api import guard, tts
 from api.live import Slots, stream
 from api.settings import Settings
 from api.store import DailyCap, Match, MatchStore, RateLimiter, content_key, open_storage
 
 VERSION = "0.4.0"
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
+MAX_LIST = 8  # personas or languages in one request, before duplicates are dropped
+
+
+def _unique(items: list) -> list:
+    return list(dict.fromkeys(items))
+
+
+Personas = Annotated[
+    list[Persona], Field(min_length=1, max_length=MAX_LIST), AfterValidator(_unique)
+]
+Languages = Annotated[
+    list[Language], Field(min_length=1, max_length=MAX_LIST), AfterValidator(_unique)
+]
 
 
 class BreakdownBody(BaseModel):
     match: str
     moment: str | None = None
-    personas: list[Persona] = Field(default_factory=lambda: ["casual", "analyst"])
-    languages: list[Language] = Field(default_factory=lambda: ["en", "zh"])
+    personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
+    languages: Languages = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
 
 
@@ -103,6 +116,7 @@ def create_app(
             await close()
 
     app = FastAPI(title="Through Their Eyes", version=VERSION, lifespan=lifespan)
+    guard.install(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[o.strip() for o in settings.web_origin.split(",")],

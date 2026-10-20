@@ -485,3 +485,63 @@ def test_speech_limits_come_from_the_environment(monkeypatch):
     monkeypatch.setenv("TTE_DAILY_TTS_CAP", "7")
     s = Settings.from_env()
     assert (s.tts_rate_limit, s.daily_tts_cap) == ((5, 60.0), 7)
+
+
+# --- input bounds, headers and errors: the API is public with no login (CLAUDE.md rule 6) --------
+
+
+def test_request_bodies_are_capped(client):
+    origin = {"origin": "https://example.org"}
+    padded = {"match": MATCH, "question": "What if he passed to H4?", "pad": "y" * 20_000}
+    r = client.post("/api/whatif", json=padded, headers=origin)
+    assert r.status_code == 413 and r.headers["access-control-allow-origin"] == "*"
+    chunks = iter([b'{"match": "' + b"x" * 10_000, b"x" * 10_000 + b'"}'])  # no content-length
+    r = client.post("/api/breakdowns", content=chunks, headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    assert client.post("/api/tts", content=b"x" * 20_000).status_code == 413
+
+
+def test_personas_and_languages_are_deduplicated_and_capped(client):
+    once = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    twice = {"match": MATCH, "personas": ["analyst", "analyst"], "languages": ["en", "en"]}
+    a = client.post("/api/breakdowns", json=once).json()
+    b = client.post("/api/breakdowns", json=twice).json()
+    assert b["key"] == a["key"] and b["cached"] is True  # duplicates do not bust the cache
+    assert b["result"]["request"]["personas"] == ["analyst"] and len(b["result"]["scripts"]) == 1
+    for bad in ({"personas": []}, {"languages": []}, {"personas": ["analyst"] * 9},
+                {"languages": ["en"] * 9}, {"personas": ["pundit"]}):  # fmt: skip
+        r = client.post("/api/breakdowns", json={"match": MATCH, **bad})
+        assert r.status_code == 422, bad
+
+
+def test_what_if_questions_are_capped(client):
+    body = {"match": MATCH, "question": "x" * 301}
+    assert client.post("/api/whatif", json=body).status_code == 422
+    assert client.post("/api/whatif", json={**body, "question": ""}).status_code == 422
+
+
+def test_responses_carry_security_headers_and_cors_is_unchanged(client):
+    r = client.get("/health", headers={"origin": "https://example.org"})
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["x-frame-options"] == "DENY"
+    assert r.headers["referrer-policy"] == "no-referrer"
+    assert r.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert r.headers["access-control-allow-origin"] == "*"
+    docs = client.get("/docs")  # HTML that loads Swagger UI: no CSP, the rest applies
+    assert docs.status_code == 200 and "content-security-policy" not in docs.headers
+    assert docs.headers["x-content-type-options"] == "nosniff"
+    assert client.post("/api/tts", json={}).headers["x-frame-options"] == "DENY"
+
+
+def test_a_500_carries_no_stack_trace(settings):
+    app = create_app(settings)
+
+    @app.get("/boom")
+    async def boom():
+        raise RuntimeError("internals: /app/api/main.py, key=abc")
+
+    with TestClient(app, raise_server_exceptions=False) as c:
+        r = c.get("/boom")
+    assert r.status_code == 500 and r.json() == {"detail": "internal error"}
+    assert "internals" not in r.text and "Traceback" not in r.text
+    assert r.headers["x-content-type-options"] == "nosniff"
