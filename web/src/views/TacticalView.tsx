@@ -30,6 +30,8 @@ import { useSession } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
 import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
+import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
+import { BlindSideOverlay } from "../ui/BlindSideOverlay";
 import {
   BOARD_EXTENT,
   boardZoom,
@@ -95,6 +97,7 @@ export function TacticalView() {
           <TacticalScene />
         </Canvas>
         <OptionsOverlay />
+        <BlindSideOverlay />
       </div>
     </figure>
   );
@@ -149,6 +152,7 @@ function TacticalScene() {
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />
       <WhatIfGhost hero={hero} shared={shared} scale={scale} px={px} />
+      <BlindSideLayer hero={hero} shared={shared} scale={scale} />
     </>
   );
 }
@@ -801,6 +805,84 @@ function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
         <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
+    </group>
+  );
+}
+
+// ---------- blind-side alerts (SPEC 4.4, 7) ----------
+
+interface BlindSideProps {
+  hero: Hero;
+  shared: SharedRef;
+  scale: number;
+}
+
+/** A thin line from each observer to the player he has lost sight of, and a pulsing ring on that
+ * player. Lines of the POV player's own alerts are brighter. Redraws continuously while on. */
+function BlindSideLayer({ hero, shared, scale }: BlindSideProps) {
+  const invalidate = useThree((s) => s.invalidate);
+  const rings = useRef<(THREE.Group | null)[]>([]);
+  const lines = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(hero.n * hero.n * 6), 3),
+    );
+    geometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(new Float32Array(hero.n * hero.n * 6), 3),
+    );
+    return geometry;
+  }, [hero]);
+  const bright = useMemo(() => new THREE.Color(ALERT_COLOR), []);
+  const dim = useMemo(() => new THREE.Color(ALERT_COLOR).multiplyScalar(0.55), []);
+
+  useFrame(() => {
+    const { sample, state, run, me } = shared.current;
+    const alerts = state.blindSide ? alertsAt(hero, run, state.frame) : [];
+    const xyz = lines.attributes.position.array as Float32Array;
+    const rgb = lines.attributes.color.array as Float32Array;
+    alerts.forEach((a, k) => {
+      const [ox, oy] = [sample.pos[2 * a.observer], sample.pos[2 * a.observer + 1]];
+      const [tx, ty] = [sample.pos[2 * a.target], sample.pos[2 * a.target + 1]];
+      xyz.set([ox, 0, -oy, tx, 0, -ty], k * 6);
+      const c = a.observer === me ? bright : dim;
+      rgb.set([c.r, c.g, c.b, c.r, c.g, c.b], k * 6);
+    });
+    lines.setDrawRange(0, alerts.length * 2);
+    lines.attributes.position.needsUpdate = true;
+    lines.attributes.color.needsUpdate = true;
+    const targets = new Set(alerts.map((a) => a.target));
+    const beat = pulse(performance.now() / 1000);
+    for (let j = 0; j < hero.n; j++) {
+      const ring = rings.current[j];
+      if (!ring) continue;
+      ring.visible = targets.has(j);
+      ring.position.set(sample.pos[2 * j], 0, -sample.pos[2 * j + 1]);
+      ring.scale.setScalar(scale * beat);
+    }
+    if (alerts.length) invalidate(); // keep the pulse going
+  });
+
+  return (
+    <group>
+      <lineSegments geometry={lines} renderOrder={LAYER.connector}>
+        <lineBasicMaterial vertexColors opacity={0.9} {...flat} />
+      </lineSegments>
+      {hero.players.map((p, j) => (
+        <group
+          key={p.id}
+          ref={(g) => {
+            rings.current[j] = g;
+          }}
+          visible={false}
+        >
+          <mesh rotation-x={lie} renderOrder={LAYER.halo}>
+            <ringGeometry args={[TOKEN_R + 0.35, TOKEN_R + 0.75, 40]} />
+            <meshBasicMaterial color={ALERT_COLOR} opacity={0.85} {...flat} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }

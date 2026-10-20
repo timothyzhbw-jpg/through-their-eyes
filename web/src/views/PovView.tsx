@@ -18,6 +18,7 @@ import {
 } from "./scene";
 import { PovOverlay, PovToolbar } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
+import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -70,6 +71,7 @@ function PovScene() {
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
+  const alertRings = useRef<(THREE.Mesh | null)[]>([]);
   const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
 
@@ -109,7 +111,14 @@ function PovScene() {
     sampleInto(sample, hero, run, s.frame, s.comfort);
     const me = hero.ids.indexOf(s.povPlayer);
     const showGhosts = s.beliefGhosts && me === hero.hero;
+    const alerted = new Set(s.blindSide ? alertsAt(hero, run, s.frame).map((a) => a.target) : []);
+    const beat = pulse(performance.now() / 1000);
     for (let j = 0; j < hero.n; j++) {
+      const ring = alertRings.current[j];
+      if (ring) {
+        ring.visible = alerted.has(j);
+        ring.scale.setScalar(beat);
+      }
       const x = sample.pos[2 * j];
       const y = sample.pos[2 * j + 1];
       const body = bodies.current[j];
@@ -133,6 +142,7 @@ function PovScene() {
     const yaw = sample.head[me];
     camera.position.set(hx, EYE_HEIGHT, -hy);
     camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
+    if (alerted.size) invalidate(); // keep the blind-side pulse going
   });
 
   return (
@@ -158,6 +168,17 @@ function PovScene() {
           }}
         >
           <mesh position-y={BODY_CENTRE} geometry={capsule} material={materials.teams[p.team]} />
+          <mesh
+            ref={(m) => {
+              alertRings.current[j] = m;
+            }}
+            rotation-x={-Math.PI / 2}
+            position-y={0.03}
+            visible={false}
+          >
+            <ringGeometry args={[0.45, 0.62, 40]} />
+            <meshBasicMaterial color={ALERT_COLOR} transparent opacity={0.9} depthWrite={false} />
+          </mesh>
           <group
             position-y={HEAD_CENTRE}
             ref={(g) => {

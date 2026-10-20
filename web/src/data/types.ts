@@ -1,4 +1,4 @@
-// Shape of the JSON written by `python -m sim.export` (schema version 3).
+// Shape of the JSON written by `python -m sim.export` (schema version 4).
 // Positions are integer mm, angles integer 1e-4 rad; pitch origin at the centre spot, home
 // attacks +x. `hero.ts` converts everything to metres and radians once, at load time.
 
@@ -72,6 +72,13 @@ export interface ExportRun {
   decision: ExportDecision | null;
   action: ExportAction | null;
   possession_value: number;
+  blind_side: ExportBlindSide;
+}
+
+/** Blind-side alerts (SPEC 4.4), computed from tracking only by analytics/blind_side.py. */
+export interface ExportBlindSide {
+  intervals: { observer: string; target: string; start: number; end: number }[];
+  frames: [number, number, number][][]; // [frame] -> [observer, target, frames unseen] (indices)
 }
 
 export interface ExportVision {
