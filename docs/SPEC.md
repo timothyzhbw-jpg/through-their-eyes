@@ -257,6 +257,43 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 
   ([hero_lens_press_escape_100-139.md](../eval/reports/hero_lens_press_escape_100-139.md)).
   `blind_side_run` is unchanged where it matters: 39/40 flips, its seed 3 byte for byte.
 
+**Set-piece hero (`corner_blind_side`, 2026-10-20).** The first moment of the hero expansion pack
+([drafts/hero_expansion.md](drafts/hero_expansion.md), C4). It is the same perception story from
+the defending side.
+- **The routine.** The away team takes a corner at the home goal and plays it short (A7 → A11).
+  The centre-back H5 marks the striker A9 man to man, his head on the ball. A9 drifts round him
+  into the middle of the box, darts out to the edge of it, and A11 cuts the ball back to him
+  along the ground.
+- **The mechanism: marking on belief** (`sim.scenarios.base.marking_target_on_belief`).
+  - Every marker in this scenario steers goal-side of where he *believes* his man is (§3.4),
+    not of where the man is. A man out of sight is marked at his extrapolated last sighting,
+    which freezes after `belief_horizon_s`.
+  - It lives in the scenario's movement targets: no engine change and no new random draw. The
+    other scenarios mark the true position, as before.
+- **Key action and intervention.** H5's one look over his shoulder as A9 darts is the key scan,
+  and the intervention is `drop_scan`.
+- **Hero design rule.** A9 is visible to H5 only during the key scan once he darts. His previous
+  sighting shows him drifting slowly beside H5.
+- **Nothing decides here.** The passes are scripted (as the passers' are in both other heroes),
+  and the moment is where H5 runs.
+- **The one engine change.** The moment's pass is now a scenario hook,
+  `Scenario.ends_on_pass`. By default it is any pass by the hero, exactly the old rule, so every
+  other run is unchanged byte for byte.
+- **Acceptance** (`eval/hero_marking.py`; designed on seeds 0–39, held-out 100–139):
+  - without the look, A9 receives the cutback unmarked, and with it H5 is within 5 m of him as it
+    arrives: 37/40 (target ≥ 60%: met);
+  - the median separation as the ball arrives is 3.3 m with the look and 8.5 m without it;
+  - without the look, H5's belief error about A9 half a second after the cutback is played is
+    ≥ 3 m in 37/40 (target ≥ 90%: met; the other three are 2.6–2.8 m);
+  - the design rule holds in 40/40.
+  - The three misses are near the thresholds. In two (107, 109) H5 is 5.3 and 5.6 m away with the
+    look. In one (103) another defender is 4.9 m from A9 without the look, while H5 is 7.5 m away.
+  - With the look, A9 is under heavy pressure (pressing ≥ 0.7) in 23/40; H5 never wins the ball.
+  - The live blind-side alert for H5 → A9 fires before the ball arrives in 40/40 runs without the
+    look. With the look it never comes on first: the look comes before A9 has been unseen for the
+    alert's 1 s.
+  - Report: [hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md).
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -307,6 +344,14 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 
       is tested by its own intervention, `force:carry`, in
       [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md), §3.6);
       [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_dropping_the_key_scan_changes_the_chosen_action_in_most_held_out_seeds`
+- [x] Set-piece hero: without the marker's key scan, the runner receives the cutback `unmarked`
+      (the lexicon's nearest opponent > 5 m), and with it the marker is within 5 m of him as it
+      arrives, or wins the ball, in ≥ 60% of held-out seeds. Without the look, the marker's
+      belief error about the runner half a second after the cutback is ≥ 3 m in ≥ 90%.
+      — [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md)
+      (37/40 and 37/40 on seeds 100–139, §3.6);
+      [tests/test_corner_blind_side.py](../tests/test_corner_blind_side.py) (design seeds, and
+      `test_a_marker_marks_where_he_believes_his_man_is`)
 - [x] `force_action` with the action actually chosen reproduces the factual run byte for byte;
       with an action that was not an option, it is refused (not silently mapped).
       — [tests/test_whatif.py](../tests/test_whatif.py)::`test_forcing_the_action_actually_chosen_reproduces_the_factual_run`,
@@ -1064,14 +1109,14 @@ shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 7 | 1 | passes, shots and possession changes per match vs targets |
+| §3 sim | 8 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 5 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
 | §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **24** | **12** | |
+| **Total** | **25** | **12** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer

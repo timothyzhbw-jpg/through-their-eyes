@@ -1,10 +1,15 @@
 # Hero moment expansion pack — design draft (2026-10-20)
 
-> **Status: draft for Bowen's decision.** Nothing here is implemented, nothing is in `docs/SPEC.md`,
-> and no PR is open. Once Bowen picks the candidates, the chosen sections move into SPEC §3.6, §5 and
-> §6, and implementation goes one sim change at a time.
-> Facts about the code were checked on main at `7b0ee3f` (2026-10-20). Every citation below was
-> read on 2026-10-20; its status column says how far (full text, abstract, or a secondary source).
+> **Decided 2026-10-20 (Bowen): build all of it, in the order of §0.** That is C4, Module A, C1,
+> C2, then C5, C3 and C4's lofted delivery, aerial duel and header finish, one sim change at a
+> time.
+> - Every gate and the freeze (Mon 10/26 12:00 CT) still apply. A moment whose gate fails, or
+>   that is not merged by the freeze, is cut and reported, never shipped weaker.
+> - Each moment's text moves into `docs/SPEC.md` (§3.6, §5, §6) in the PR that lands it. C4 is
+>   there now.
+> - Facts about the code were checked on main at `7b0ee3f` (2026-10-20). Every citation below was
+>   read on 2026-10-20; its status column says how far (full text, abstract, or a secondary
+>   source).
 
 ## 0. Pitch, recommendation and what it costs
 
@@ -431,6 +436,17 @@ The amplitude is about 125°, inside the calibrated 70–150°. This is the same
   `cf_through_ball`.
 
 ## 5. C4 — the set piece: the marker and the runner on his blind side (`corner_blind_side`)
+
+> **As built (2026-10-20): SPEC §3.6 and `eval/reports/hero_marking_corner_blind_side.md` are
+> authoritative.** Three things differ from the design below, all settled on design seeds 0–39
+> before the held-out run:
+> - **Where A9 runs.** He drifts into the middle of the box and darts out to its edge, not to the
+>   penalty spot. A cutback lane through the box was cut out by the zonal defenders.
+> - **The press.** H11 closes A11 from the byline side, off the lane.
+> - **The gate.** "Unmarked without the look, H5 within 5 m with it". With the look, H5 closes to
+>   about 3 m, not 1.5 m.
+>
+> Held out (100–139): 37/40.
 
 ### 5.1 Can one build carry both the set piece and the shot module?
 Only partly.
