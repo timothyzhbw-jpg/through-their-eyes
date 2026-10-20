@@ -87,6 +87,9 @@ _Fill in as they come to exist._
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
+  speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
+  of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
