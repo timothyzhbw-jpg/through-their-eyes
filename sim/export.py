@@ -449,6 +449,21 @@ def export_what_ifs(scenario: str, seed: int) -> dict[str, Any]:
     }
 
 
+# How each file is written, byte for byte: the tests compare the committed files with these.
+
+
+def hero_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, separators=(",", ":"))
+
+
+def payload_fixture_json(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+
+
+def what_ifs_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export a hero moment for viewers.")
     parser.add_argument("--scenario", default="blind_side_run")
@@ -459,15 +474,15 @@ def main() -> None:
     args = parser.parse_args()
     data = export_hero(args.scenario, args.seed)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(data, separators=(",", ":")))
+    args.out.write_text(hero_json(data))
     print(f"wrote {args.out} ({args.out.stat().st_size / 1024:.0f} KB)")
     if args.payload_fixture:
         payload = render_payload_fixture(data)
-        args.payload_fixture.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+        args.payload_fixture.write_text(payload_fixture_json(payload))
         print(f"wrote {args.payload_fixture} (fixture)")
     if args.what_if:
         what_ifs = export_what_ifs(args.scenario, args.seed)
-        args.what_if.write_text(json.dumps(what_ifs, separators=(",", ":"), ensure_ascii=False))
+        args.what_if.write_text(what_ifs_json(what_ifs))
         print(f"wrote {args.what_if} ({args.what_if.stat().st_size / 1024:.0f} KB)")
 
 

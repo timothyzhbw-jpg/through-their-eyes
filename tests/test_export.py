@@ -2,7 +2,6 @@
 
 import json
 import re
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -11,8 +10,6 @@ from sim.counterfactual import drop_scan_counterfactual
 from sim.export import VERSION, export_hero, render_payload_fixture
 
 SCENARIO, SEED = "blind_side_run", 3
-WEB_DATA = Path(__file__).parent.parent / "web" / "public" / "data" / "hero_seed3.json"
-WEB_PAYLOAD = WEB_DATA.parent / "fixture_payload_seed3.json"
 
 
 @pytest.fixture(scope="module")
@@ -72,22 +69,6 @@ def test_counterfactual_and_vision_metadata(data):
     assert v["distance_sigma"] == 50_000
 
 
-def test_committed_web_data_has_the_current_schema(data):
-    """web/ ships a pre-built export; it must be regenerated when the schema changes.
-
-    Values are not compared byte for byte: output is identical only within one environment
-    (SPEC 3.7), and the file is built on a laptop while CI runs on x86.
-    """
-    committed = json.loads(WEB_DATA.read_text())
-    assert committed["version"] == VERSION
-    assert set(committed) == set(data)
-    assert committed["key_scan"] == data["key_scan"]
-    for name, run in data["runs"].items():
-        assert set(committed["runs"][name]) == set(run)
-        assert committed["runs"][name]["frames"] == run["frames"]
-        assert committed["runs"][name]["decision"]["chosen"] == run["decision"]["chosen"]
-
-
 # --- render-payload fixture (SPEC 5.3, 7) --------------------------------------------------------
 
 
@@ -133,19 +114,6 @@ def test_payload_fixture_lines_claims_and_evidence_resolve(data, payload):
         text = re.sub(r"\b[HA]\d{1,2}\b", "", line["text"])
         values = {float(v) for cid in line["claims"] for v in claims[cid]["values"].values()}
         assert {float(x) for x in re.findall(r"\d+(?:\.\d+)?", text)} <= values
-
-
-def test_committed_payload_fixture_matches_the_generator(payload):
-    committed = json.loads(WEB_PAYLOAD.read_text())
-    assert [line["id"] for line in committed["lines"]] == [line["id"] for line in payload["lines"]]
-    assert [line["claims"] for line in committed["lines"]] == [
-        line["claims"] for line in payload["lines"]
-    ]
-    for got, want in zip(committed["claims"], payload["claims"], strict=True):
-        assert {k: v for k, v in got.items() if k != "values"} == {
-            k: v for k, v in want.items() if k != "values"
-        }
-        assert got["values"] == pytest.approx(want["values"], abs=0.11)
 
 
 # --- he thought vs it was (schema v3, SPEC 5.1, 7) ------------------------------------------

@@ -45,8 +45,10 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   the decision on (players and ball, mm) for the ghost path. A static stand-in for the api's live
   what-if.
 
-Regenerate them whenever `sim/` changes; `tests/test_export.py` fails if a committed file falls
-behind the generator.
+Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
+`tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
+files are generated, on macOS arm64; structurally elsewhere, as SPEC 3.7 promises no
+cross-platform identity).
 
 ## How it fits together
 
