@@ -1009,12 +1009,18 @@ to a real broadcast.
   - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
     reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
     ingestion.
+  - Sampling: every span is kept (`sampling_ratio=1.0`). The distro's default, 5 spans/s decided
+    span by span, dropped steps out of a breakdown's bursts: on 2026-10-20 two live traces lacked
+    `voice`, one also `mcp`. The daily cap of the Log Analytics workspace bounds ingestion
+    instead. Requests carry FastAPI's own spans, three per WebSocket connection; OpenTelemetry's
+    FastAPI instrumentation, a span per WebSocket message, is off.
   - The end-to-end transaction view of one breakdown, with a fallback in it, is a video shot and a
     README figure: evidence for the multi-agent prize.
   - [x] Acceptance: one breakdown yields one trace with a span per step, and a forced timeout
     shows up as a `template` span with its reason.
     — [tests/test_telemetry.py](../tests/test_telemetry.py)::`test_an_offline_breakdown_is_one_trace_with_a_span_per_step`,
-    `test_a_telestrator_timeout_is_a_template_span_with_the_error_class`; live, Application
+    `test_a_telestrator_timeout_is_a_template_span_with_the_error_class`,
+    `test_the_azure_monitor_distro_keeps_every_step_span_of_a_breakdown`; live, Application
     Insights holds one trace per deployed breakdown with a span for each step from Director to
     Voice (queried 2026-10-20).
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.

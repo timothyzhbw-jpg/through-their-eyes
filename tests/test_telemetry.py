@@ -226,3 +226,74 @@ def test_azure_monitor_is_configured_only_with_a_connection_string(monkeypatch):
     assert telemetry.configure_tracing() is True and len(calls) == 1
     assert calls[0]["connection_string"] == "InstrumentationKey=00000000-0"
     assert telemetry.configure_tracing() is True and len(calls) == 1  # once per process
+
+
+def test_tracing_keeps_every_span_and_no_span_per_websocket_message(monkeypatch):
+    """Without a sampling argument the distro samples at 5 spans/s, span by span, and live
+    traces lost their `voice` and `mcp` steps (2026-10-20)."""
+    import azure.monitor.opentelemetry as azmon
+
+    calls = []
+    monkeypatch.setattr(azmon, "configure_azure_monitor", lambda **kw: calls.append(kw))
+    monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=00000000-0")
+    assert telemetry.configure_tracing() is True
+    assert calls[0]["sampling_ratio"] == 1.0
+    assert calls[0]["instrumentation_options"]["fastapi"] == {"enabled": False}
+
+
+_DISTRO_RUN = """
+import json
+import azure.monitor.opentelemetry as azmon
+from opentelemetry import trace
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from agents import telemetry
+from agents.context import MomentContext
+from agents.workflow import breakdown
+
+memory = InMemorySpanExporter()
+real = azmon.configure_azure_monitor
+azmon.configure_azure_monitor = lambda **kw: real(
+    **kw, span_processors=[SimpleSpanProcessor(memory)], disable_logging=True,
+    disable_metrics=True, enable_live_metrics=False, disable_offline_storage=True)
+assert telemetry.configure_tracing()
+ctx = MomentContext.load("blind_side_run", seed=3)
+runs = []
+for _ in range(3):
+    memory.clear()
+    breakdown(ctx, client=None, personas=("analyst",), languages=("en",))
+    runs.append([s.name for s in memory.get_finished_spans()])
+print(json.dumps({"sampler": trace.get_tracer_provider().sampler.get_description(), "runs": runs}))
+"""
+
+
+def test_the_azure_monitor_distro_keeps_every_step_span_of_a_breakdown():
+    """The real distro, in a fresh process (the global tracer provider can be set only once).
+    Its exporter points at a closed local port, so nothing leaves the machine; a span processor
+    sees exactly the spans the sampler kept. An offline breakdown makes its spans in a few
+    milliseconds, the kind of burst the rate-limited sampler thinned."""
+    import json
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    env |= {
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=00000000-0000-0000-0000-"
+        "000000000000;IngestionEndpoint=http://127.0.0.1:9/",
+        "APPLICATIONINSIGHTS_STATSBEAT_DISABLED_ALL": "true",
+        "PYTHONPATH": str(root),
+    }
+    done = subprocess.run([sys.executable, "-c", _DISTRO_RUN], cwd=root, env=env, timeout=300,
+                          capture_output=True, text=True)  # fmt: skip
+    assert done.returncode == 0, done.stderr[-2000:]
+    out = json.loads(done.stdout.strip().splitlines()[-1])
+    assert "RateLimited" not in out["sampler"], out["sampler"]
+    for names in out["runs"]:
+        counts = Counter(n for n in names if n in STEPS + ["breakdown"])
+        assert counts == {"breakdown": 1, "director": 1, "analyst": 1, "telestrator": 1,
+                          "narration": 2, "verifier": 1, "voice": 1}, counts  # fmt: skip
+        assert Counter(names)["executor.process voice"] == 1
