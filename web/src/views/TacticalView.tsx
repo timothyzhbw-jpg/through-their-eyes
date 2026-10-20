@@ -23,6 +23,7 @@ import {
   useRedrawOn,
 } from "./scene";
 import { TacticalToolbar } from "./TacticalToolbar";
+import { aimYaw, VISOR_COLOR } from "./tokens";
 
 const EXTENT = { x: 111, y: 74 }; // m shown: the pitch plus a 3 m apron
 const TOKEN_R = 0.95; // m
@@ -435,11 +436,14 @@ interface TokensProps {
 function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
   const groups = useRef<(THREE.Group | null)[]>([]);
   const halos = useRef<(THREE.Mesh | null)[]>([]);
+  const ticks = useRef<(THREE.Group | null)[]>([]);
 
   useFrame(() => {
     const { sample, state, run, me } = shared.current;
     for (let j = 0; j < hero.n; j++) {
       groups.current[j]?.position.set(sample.pos[2 * j], 0, -sample.pos[2 * j + 1]);
+      const tick = ticks.current[j];
+      if (tick) aimYaw(tick, sample.head[j]);
       const halo = halos.current[j];
       if (halo) halo.visible = j !== me && isSeen(hero, run, state.frame, me, j);
     }
@@ -470,6 +474,17 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
                 <circleGeometry args={[TOKEN_R + 0.45, 32]} />
                 <meshBasicMaterial color={COLORS.sight} opacity={0.55} {...flat} />
               </mesh>
+              {/* Head direction: a short tick from the edge of the token. */}
+              <group
+                ref={(g) => {
+                  ticks.current[j] = g;
+                }}
+              >
+                <mesh position-x={TOKEN_R + 0.6} rotation-x={lie} renderOrder={LAYER.halo + 0.5}>
+                  <planeGeometry args={[1.1, 0.3]} />
+                  <meshBasicMaterial color={VISOR_COLOR} opacity={0.95} {...flat} />
+                </mesh>
+              </group>
               <mesh rotation-x={lie} renderOrder={LAYER.token}>
                 <circleGeometry args={[TOKEN_R, 32]} />
                 <meshBasicMaterial color={teamColor(p.team)} {...flat} />
