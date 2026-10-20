@@ -1032,9 +1032,11 @@ to a real broadcast.
     shows up as a `template` span with its reason.
     — [tests/test_telemetry.py](../tests/test_telemetry.py)::`test_an_offline_breakdown_is_one_trace_with_a_span_per_step`,
     `test_a_telestrator_timeout_is_a_template_span_with_the_error_class`,
-    `test_the_azure_monitor_distro_keeps_every_step_span_of_a_breakdown`; live, Application
-    Insights holds one trace per deployed breakdown with a span for each step from Director to
-    Voice (queried 2026-10-20).
+    `test_the_azure_monitor_distro_keeps_every_step_span_of_a_breakdown`; live, after PR #50: two
+    uncached model breakdowns (2026-10-20 21:34 and 21:35 UTC, revision `tte-api--0000017`) are
+    one trace each, with `mcp`, Director, Analyst (and its `execute_tool` spans), Telestrator, both
+    narration voices, Verifier and Voice, every span at `itemCount` 1
+    ([RUBRIC_MAP](RUBRIC_MAP.md#the-live-trace)).
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
 - *Provisioned 2026-10-20 (`infra/deploy.sh provision`):*
