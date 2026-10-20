@@ -153,6 +153,9 @@ provision() {
       --image mcr.microsoft.com/k8se/quickstart:latest --target-port 80 --ingress external \
       --min-replicas 1 --max-replicas 1 --cpu 0.5 --memory 1.0Gi -o none
   fi
+  # Single revision mode: a rollout deactivates the previous revision instead of leaving it
+  # running (and billed) at zero traffic.
+  az containerapp revision set-mode -g "$RG" -n "$APP" --mode single -o none
   # One user-assigned identity for Foundry, Cosmos and image pulls.
   exists az identity show -g "$RG" -n "$APP_ID" ||
     az identity create -g "$RG" -n "$APP_ID" -l "$LOCATION" -o none
