@@ -513,7 +513,9 @@ def scan_side(ctx: EvalContext, r: HeroRefs) -> Claim:
 
 
 def seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
-    """The runner came into his view during the key scan (the sim's own definition of seen)."""
+    """The runner came into his view during the key scan (the sim's own definition of seen).
+
+    The sentence names the look itself: it can air before, or without, the line that tells it."""
     if r.runner is None:
         return None
     seen = fn("max_visibility", observer=slot("player"), target=slot("runner"), event=slot("scan"))
@@ -522,15 +524,17 @@ def seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         return None
     return Claim(
         id="seen_in_scan",
-        template="During that look, {player} saw {runner}.",
-        templates={"zh": "回头那一眼，{player}看到了{runner}。"},
+        template="When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+        templates={"zh": "球到之前回头的那一眼，{player}看到了{runner}。"},
         slots={"player": Slot(ref=r.hero), "runner": Slot(ref=r.runner),
                "scan": Slot(ref=r.key_scan.id)},
         predicate=Predicate(op="all", args=[
+            Predicate(op="before", lhs=event(slot("scan")), rhs=event(r.at_reception)),
             _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+            _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
             Predicate(op="ge", lhs=seen, rhs=SEEN),
         ]),
-        evidence=[r.key_scan.id],
+        evidence=[r.key_scan.id, r.reception.id],
     )  # fmt: skip
 
 

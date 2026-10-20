@@ -63,8 +63,18 @@ def test_the_hero_moment_has_the_describing_claims(claims, verifier):
         "reception_zone": "observed", "scan_side": "observed", "seen_in_scan": "computed",
     }  # fmt: skip
     assert {verifier.verify(claims[k]).status for k in DESCRIBING} == {"supported"}
-    for k in ("reception_zone", "scan_side"):  # anchored on the moment card (SPEC 5.1)
+    for k in DESCRIBING:  # anchored on the moment card (SPEC 5.1)
         assert ".reception" in claims[k].predicate.model_dump_json()
+
+
+def test_whom_he_saw_says_when_he_looked_so_the_line_stands_alone(claims):
+    """seen_in_scan may air before any line has told the look (two voices, or no scan line), so
+    its sentence names the look itself, and its predicate checks the look came before the ball."""
+    c = claims["seen_in_scan"]
+    for text in (c.template, c.templates["zh"]):
+        assert "that look" not in text and not text.startswith("回头那一眼")
+    before = [p for p in c.predicate.args if p.op == "before"]
+    assert len(before) == 1 and ".reception" in before[0].model_dump_json()
 
 
 def test_where_he_received_the_ball_matches_the_tracking(claims, refs):
@@ -138,7 +148,8 @@ def test_describing_claims_render_their_words_from_verified_slots(claims, verifi
                            "H8在对方半场中路偏右接球。"),
         "scan_side": ("Before the ball reached him, H8 looked over his right shoulder.",
                       "球到之前，H8扭头看向了右后方。"),
-        "seen_in_scan": ("During that look, H8 saw H9.", "回头那一眼，H8看到了H9。"),
+        "seen_in_scan": ("When H8 looked over his shoulder before the ball arrived, he saw H9.",
+                         "球到之前回头的那一眼，H8看到了H9。"),
     }  # fmt: skip
     for kind, texts in expected.items():
         v = verifier.verify(claims[kind])

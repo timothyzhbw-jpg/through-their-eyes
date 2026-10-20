@@ -40,6 +40,18 @@ PROSODY: dict[Tier, tuple[str, str]] = {  # (rate, pitch) when no style fits
 # the voice has one, never an excited one, and always a slower rate, so every name and place lands.
 DESCRIBED: frozenset[Persona] = frozenset({"audio_description"})
 DESCRIBED_PROSODY = ("-10%", "+0%")  # (rate, pitch)
+# Claims whose numbers are model outputs, xT, probabilities or shares, that a listener cannot
+# picture. They never air for a DESCRIBED persona: the workflow drops them in code (tidy() and the
+# Verifier), whatever the model picks.
+ANALYST_NUMBERS: frozenset[str] = frozenset(
+    {"cf_value", "pass_success", "cf_pass_success", "observed_share", "pressure_at_pass"}
+)
+
+
+def withheld(persona: str, claims: list[str]) -> list[str]:
+    """The claims of a line that `persona` must not hear."""
+    return [c for c in claims if c in ANALYST_NUMBERS] if persona in DESCRIBED else []
+
 
 # Tier rules on the selected lens's |delta| in xT, and the moment's tags.
 CLUTCH_DELTA = 0.15

@@ -327,7 +327,7 @@ def ground_truth(kind: str, c: Claim, w: World) -> bool | None:
                 and scan.t < recv.t and _turned(run, player, scan) == _val(c, "side"))  # fmt: skip
     if kind == "seen_in_scan":
         scan, player = _events(run).get(_ref(c, "scan")), _ref(c, "player")
-        return (scan is not None and scan.player == player
+        return (scan is not None and scan.player == player == recv.player and scan.t < recv.t
                 and _saw(run, player, _ref(c, "runner"), scan))  # fmt: skip
     raise KeyError(kind)
 

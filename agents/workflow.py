@@ -38,6 +38,7 @@ from agents.delivery import (
     persona_tier,
     pick_style,
     ssml_for_line,
+    withheld,
 )
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
 from agents.plan import template_plan, validate_plan, voice_times
@@ -63,8 +64,8 @@ from agents.schemas import (
     anchored_draft_model,
 )
 from explain.claims import PLACEHOLDER
+from explain.render import RenderResult, Violation, build_payload, render_line
 from explain.render import ScriptLine as RenderLine
-from explain.render import build_payload, render_line
 
 MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # Bump when code that shapes a breakdown changes without a prompt change: it is part of the
@@ -371,7 +372,7 @@ class Narration(Executor):
             summary = Attempt(None, total, error, max(a.ms for a in attempts))
         scripts = {}
         for key, (lines, _) in zip(keys, results, strict=True):
-            scripts[key], dropped = tidy(self.crew.ctx, lines, key[1])
+            scripts[key], dropped = tidy(self.crew.ctx, lines, key[1], key[0])
             notes += [f"{key[0]}/{key[1]} {d}" for d in dropped]
         self.crew.record("narration", summary, notes, bool(attempts) and not fell_back)
         await ctx.send_message(Drafts(base, scripts))
@@ -413,10 +414,12 @@ class Narration(Executor):
 
 
 def tidy(
-    ctx: MomentContext, lines: list[ScriptLine], language: Language
+    ctx: MomentContext, lines: list[ScriptLine], language: Language, persona: str | None = None
 ) -> tuple[list[ScriptLine], list[str]]:
     """Deterministic clean-up of model lines before the Verifier.
 
+    - A line with a claim the persona must not hear (xT or probabilities for audio description,
+      agents/delivery.py) is dropped, whatever the model picked.
     - A bare placeholder ({n}) is given the full form its claim's template uses ({n:times}): same
       slot, so the value is unchanged, only its wording.
     - A line that only restates claims an earlier line already stated is dropped, and so is a
@@ -425,6 +428,9 @@ def tidy(
     """
     out, notes, stated, texts, opened = [], [], set(), set(), set()
     for line in lines:
+        if persona is not None and (held := withheld(persona, line.claims)):
+            notes.append(f"{line.id} dropped: {', '.join(held)} not for {persona}")
+            continue
         if line.claims:
             for c in CONNECTIVES[language]:
                 if line.text.startswith(c) and len(line.text) > len(c):
@@ -493,8 +499,13 @@ class Verifier(Executor):
         super().__init__("verifier")
         self.crew = crew
 
-    def _check(self, line: ScriptLine, language: Language):
+    def _check(self, line: ScriptLine, key: Key) -> RenderResult:
         mc = self.crew.ctx
+        persona, language = key
+        if held := withheld(persona, line.claims):  # a rewrite may bring one back past tidy()
+            violation = Violation("persona", f"{', '.join(held)}: no xT or probabilities")
+            return RenderResult(ok=False, text=None, lang=language, line_id=line.id,
+                                claims=line.claims, violations=[violation])  # fmt: skip
         render = RenderLine(id=line.id, text=line.text, claims=line.claims)
         return render_line(render, mc.claims, mc.verdicts, language, mc.names)
 
@@ -517,7 +528,7 @@ class Verifier(Executor):
         mc = self.crew.ctx
         failed: dict[Key, list[tuple[ScriptLine, list[str]]]] = {}
         for key, lines in drafts.scripts.items():
-            bad = [(line, res) for line in lines if not (res := self._check(line, key[1])).ok]
+            bad = [(line, res) for line in lines if not (res := self._check(line, key)).ok]
             if bad:
                 failed[key] = [
                     (line, [f"{v.kind}: {v.detail}" for v in res.violations]) for line, res in bad
@@ -532,7 +543,7 @@ class Verifier(Executor):
         for (persona, language), lines in drafts.scripts.items():
             kept, dropped = [], []
             for line in lines:
-                res = self._check(line, language)
+                res = self._check(line, (persona, language))
                 if res.ok:
                     kept.append(line)
                 else:

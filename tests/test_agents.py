@@ -442,7 +442,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "H8 received the ball in the opponents' half, right of centre.",
         "H9's run was on H8's blind side.",
         "Before the ball reached him, H8 looked over his right shoulder.",
-        "During that look, H8 saw H9.",
+        "When H8 looked over his shoulder before the ball arrived, he saw H9.",
         "H8 found H9 with a 42-metre pass.",
         "Without that look, H8 would have passed to H4.",
     ]
@@ -450,7 +450,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "H8在对方半场中路偏右接球。",
         "H9的跑位在H8的盲区。",
         "球到之前，H8扭头看向了右后方。",
-        "回头那一眼，H8看到了H9。",
+        "球到之前回头的那一眼，H8看到了H9。",
         "H8一脚42米的传球找到了H9。",
         "如果没有那一眼，H8会把球传给H4。",
     ]
@@ -474,16 +474,76 @@ def test_the_model_is_asked_for_describing_claims_first(ctx):
 
 
 def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx):
+    """The two voices interleave, so whom he saw can air before the line that tells the look: its
+    sentence names the look itself, in both languages, and never leans on an earlier line."""
     replies = _good_replies(ctx)
     replies["pbp"] = {"lines": [{"claim": "reception_zone", "connective": None},
                                 {"claim": "scan_side", "connective": None}]}  # fmt: skip
     replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None}]}
-    r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD,), languages=("zh",))
-    (script,) = r.scripts
-    assert [line.text for line in script.payload.lines] == [
-        "H8在对方半场中路偏右接球。", "回头那一眼，H8看到了H9。", "球到之前，H8扭头看向了右后方。",
+    for language, texts in {
+        "zh": ["H8在对方半场中路偏右接球。", "球到之前回头的那一眼，H8看到了H9。",
+               "球到之前，H8扭头看向了右后方。"],
+        "en": ["H8 received the ball in the opponents' half, right of centre.",
+               "When H8 looked over his shoulder before the ball arrived, he saw H9.",
+               "Before the ball reached him, H8 looked over his right shoulder."],
+    }.items():  # fmt: skip
+        r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD,), languages=(language,))
+        (script,) = r.scripts
+        assert [line.claims for line in script.lines] == [
+            ["reception_zone"],
+            ["seen_in_scan"],
+            ["scan_side"],
+        ]
+        assert [line.text for line in script.payload.lines] == texts
+        assert check_payload(script.payload) == []
+
+
+def test_audio_description_never_airs_xt_or_probabilities_even_when_the_model_picks_them(ctx):
+    """Enforced in code, not only in the prompt: a line with an xT or probability claim is dropped
+    for audio description, while the analyst still hears it from the same model reply."""
+    from agents.delivery import ANALYST_NUMBERS
+
+    assert ANALYST_NUMBERS >= NUMBERS_FOR_ANALYSTS
+    picked = ["pass_success", "cf_value", "observed_share"]
+    assert set(picked) <= set(ctx.supported)  # else the test proves nothing
+    replies = _good_replies(ctx)
+    replies["pbp"] = {"lines": [{"claim": "reception_zone", "connective": None},
+                                {"claim": "pass_success", "connective": None}]}  # fmt: skip
+    replies["color"] = {"lines": [{"claim": "cf_value", "connective": None},
+                                  {"claim": "blind_side", "connective": None},
+                                  {"claim": "observed_share", "connective": None}]}  # fmt: skip
+    r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD, "analyst"), languages=("en",))
+    ad, analyst = _script(r, AD, "en"), _script(r, "analyst", "en")
+    aired = [cid for line in ad.lines for cid in line.claims]
+    assert aired == ["reception_zone", "blind_side"]
+    assert not {c.id for c in ad.payload.claims} & ANALYST_NUMBERS
+    assert not any("chance" in t or "expected threat" in t or "%" in t
+                   for t in (line.text for line in ad.payload.lines))  # fmt: skip
+    assert check_payload(ad.payload) == []
+    notes = next(s for s in r.trace if s.step == "narration").notes
+    assert any(f"{AD}/en" in n and "pass_success" in n for n in notes)
+    # The analyst is not filtered: the same reply airs its numbers there.
+    assert set(picked) <= {cid for line in analyst.lines for cid in line.claims}
+
+
+def test_the_verifier_refuses_xt_or_probabilities_for_audio_description_after_a_rewrite(ctx):
+    """A rewrite can bring a withheld claim back past tidy(): the Verifier is the last gate."""
+    from agents.workflow import Approved, Briefing, Crew, Drafts, Verifier
+
+    crew = Crew(ctx=ctx, client=None)
+    lines = [
+        ScriptLine(id="L1", speaker="pbp", text=ctx.claims["reception_zone"].template_for("en"),
+                   claims=["reception_zone"]),
+        ScriptLine(id="L2", speaker="color", text=ctx.claims["cf_value"].template_for("en"),
+                   claims=["cf_value"]),
     ]  # fmt: skip
-    assert check_payload(script.payload) == []
+    drafts = Drafts(Briefing(None, None), {(AD, "en"): list(lines), ("analyst", "en"): list(lines)})
+    msg, _ = Verifier(crew)._round(drafts)
+    assert isinstance(msg, Approved)
+    by = {(s.persona, s.language): s for s in msg.scripts}
+    assert [line.id for line in by[(AD, "en")].lines] == ["L1"]
+    assert [(d.id, d.reason) for d in by[(AD, "en")].dropped] == [("L2", "persona")]
+    assert [line.id for line in by[("analyst", "en")].lines] == ["L1", "L2"]
 
 
 @pytest.mark.parametrize("tier", ["calm", "excited", "clutch"])

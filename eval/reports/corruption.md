@@ -15,7 +15,7 @@ Scenario `blind_side_run`, seeds 0–19 (20): the factual run and the drop-key-s
 | Supported claims rendered in en + zh, render check clean | 856/856 (100%) | all |
 | Render payloads (seed × language) re-checked clean | 40/40, 896 lines, 0 violations | all |
 | Claims labelled observed / computed / counterfactual | 260 / 120 / 48 | every claim |
-| Claims anchored on the moment card | 334/428 (78%) | — |
+| Claims anchored on the moment card | 354/428 (83%) | — |
 | Verdicts written to the audit log | 528/528 | all |
 
 Result: PASS (refutation 100.0%).
@@ -64,15 +64,15 @@ None.
 
 | Seed | Fact | Perturbation | Change | Verifier | Reason |
 |---|---|---|---|---|---|
-| 16 | `pressure_at_pass` | `swap_player` | player: H8 → H4 | supported | approx(4.155848221110148e-09, 0.0) holds |
+| 16 | `pressure_at_pass` | `swap_player` | player: H8 → H4 | supported | approx(4.156891275641783e-09, 0.0) holds |
 | 17 | `unmarked` | `swap_player` | runner: H9 → H11 | supported | all 2 conditions hold |
 | 9 | `scans_before_reception` | `swap_player` | player: H8 → H2 | supported | eq(1, 1) holds |
-| 4 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(9.924422772912049, 9.9) holds |
+| 4 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(9.924422772912056, 9.9) holds |
 | 4 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
-| 15 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.726468688150169, 10.7) holds |
+| 15 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.726468688150181, 10.7) holds |
 | 17 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
 | 13 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
-| 16 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.97651184237012, 13.0) holds |
+| 16 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.976511842370128, 13.0) holds |
 | 9 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
 
 ## Excluded: not decidable from the recording
@@ -106,7 +106,7 @@ Player ids stand in for display names.
 | `scan_before_reception` | H8 checked his shoulder before the ball reached him. | 球到之前，H8先回头看了一眼。 |
 | `scan_side` | Before the ball reached him, H8 looked over his right shoulder. | 球到之前，H8扭头看向了右后方。 |
 | `scans_before_reception` | H8 scanned once in the 2 seconds before receiving. | 接球前2秒内，H8扫视了1次。 |
-| `seen_in_scan` | During that look, H8 saw H9. | 回头那一眼，H8看到了H9。 |
+| `seen_in_scan` | When H8 looked over his shoulder before the ball arrived, he saw H9. | 球到之前回头的那一眼，H8看到了H9。 |
 | `time_since_last_scan` | H8 had last checked his shoulder 0.8 seconds before the ball arrived. | 球到脚下时，H8距上次回头观察已过去0.8秒。 |
 | `unmarked` | H9 was unmarked when H8 released the ball. | H8出球时，H9无人盯防。 |
 

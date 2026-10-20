@@ -52,14 +52,15 @@ const hasCounterfactual = (narration: Narration, line: PayloadLine) =>
 /**
  * The current voice line over the first-person view. Click to open its evidence. Large print for
  * audio description (SPEC 1). A screen reader hears each line from a live region that is always
- * present, except while the voice speaks the lines itself.
+ * present, except while a voice clip is actually playing.
  */
 export function Caption() {
   const { playback, controls, voice } = useSession();
   const { narration, persona } = useBreakdown();
   const lineId = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
-  const speaking = useStore(voice.state, (s) => s.on);
+  // Only a clip that is playing speaks: sound on with a blocked, failed or capped clip is silent.
+  const speaking = useStore(voice.state, (s) => s.on && s.status === "playing");
   const line = lineOf(narration, lineId);
   const large = DESCRIBED.has(persona) ? " large" : "";
   return (

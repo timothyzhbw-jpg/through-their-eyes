@@ -25,15 +25,16 @@ import { Transport } from "./Transport";
 const hero = parseHero(raw);
 const AD = "audio_description";
 
-function online() {
+function online(opts: { play?: () => Promise<void>; tts?: () => Response } = {}) {
   const fetch = fakeFetch({
     "POST /api/breakdowns": (body) => {
       const { personas, languages } = body as { personas: string[]; languages: string[] };
       return json(breakdownResponse({}, { persona: personas[0], language: languages[0] }));
     },
-    "POST /api/tts": () => new Response(new Blob(["RIFF"], { type: "audio/wav" })),
+    "POST /api/tts": opts.tts ?? (() => new Response(new Blob(["RIFF"], { type: "audio/wav" }))),
   });
-  const audio = (): AudioLike => ({ play: async () => {}, pause: () => {}, onended: null });
+  const play = opts.play ?? (async () => {});
+  const audio = (): AudioLike => ({ play, pause: () => {}, onended: null });
   const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null, {
     api: createApi(API, "blind_side_run-3", fetch),
     makeAudio: audio,
@@ -243,7 +244,37 @@ describe("keyboard and screen reader access", () => {
     act(() => session.controls.openLine("L3"));
     expect(textOf(region())).toBe("Without that look, H8 would have passed to H4.");
     act(() => session.controls.setSound(true));
+    // Sound on alone is not speech: the region stays polite until a clip actually plays.
+    expect(region().getAttribute("aria-live")).toBe("polite");
+    act(() => session.controls.openLine("L1"));
+    await act(settle);
+    expect(session.voice.state.get().status).toBe("playing");
     expect(region().getAttribute("aria-live")).toBe("off"); // the voice reads it instead
+  });
+
+  const announcedWhenSilent = async (session: Session) => {
+    session.controls.requestBreakdown();
+    await settle();
+    act(() => session.controls.setSound(true));
+    const page = mount(session, <Caption />);
+    const region = () => page.querySelector<HTMLElement>("[aria-live]")!;
+    act(() => session.controls.openLine("L3"));
+    await act(settle);
+    expect(sound(session)).toBe(true);
+    expect(session.voice.state.get().status).toBe("failed");
+    expect(region().getAttribute("aria-live")).toBe("polite");
+    expect(textOf(region())).toBe("Without that look, H8 would have passed to H4.");
+  };
+
+  it("still announces captions when the browser blocks the clip from playing", async () => {
+    const blocked = async () => {
+      throw new DOMException("play() needs a user gesture", "NotAllowedError");
+    };
+    await announcedWhenSilent(online({ play: blocked }).session);
+  });
+
+  it("still announces captions when speech fails or is capped", async () => {
+    await announcedWhenSilent(online({ tts: () => json({ detail: "daily cap" }, 429) }).session);
   });
 });
 
