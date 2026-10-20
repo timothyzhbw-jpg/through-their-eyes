@@ -663,6 +663,20 @@ to a real broadcast.
 - **Microsoft Foundry:** one project + one model deployment with structured outputs. Verify model
   quota on the Azure for Students subscription first (M0 smoke test: `infra/m0_provision.sh`, then
   `python -m infra.smoke`). Agent Framework is pinned to an exact version (weekly releases).
+  - *Capacity:* the `gpt-4.1-mini` GlobalStandard deployment runs at 200 (raised from 20 on
+    2026-10-19), the subscription's whole northcentralus quota for that model;
+    `infra/m0_provision.sh` asks for 200 and caps it at the quota left. One unit is 1K tokens and 1
+    request per minute. GlobalStandard is billed per token only (the Retail Prices API lists no
+    hourly meter for the base model), so capacity has no fixed cost; spend stays bounded by the
+    cache, the per-client limit and the daily cap.
+  - *Why:* one breakdown (seed 3, `--mcp`, four scripts) makes 12 requests and ≈ 23K tokens (22.4K
+    in, 0.7K out, Azure Monitor over six runs; the cost estimate's 65K stays as an upper bound). At
+    20, three breakdowns back to back gave 26 × 429 in one minute and the third fell back to
+    template narration after 12 attempts, 28.6 s in total.
+  - *Measured at 200:* three runs back to back with no gap, each with every agent step answered by
+    the model, plan from the agent and no 429: 10.4, 9.8 and 11.8 s with the sequential crew; 8.4,
+    9.8 and 8.8 s with the Telestrator and narration in parallel (§6). Tokens are now the binding
+    limit, at about 8 breakdowns per minute.
 - **Azure Container Apps:** `api` (+ MCP server, a subprocess of the Analyst). Keep min replicas =
   1 during judging. A system-assigned identity holds Cognitive Services User on Foundry, AcrPull
   on the registry, and Cosmos DB data contributor on the account.
