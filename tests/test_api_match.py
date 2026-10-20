@@ -1,5 +1,8 @@
 """The API serves a stitched match and the pressure hero (SPEC 2, 3.1, 5.2, 6)."""
 
+import re
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -39,6 +42,30 @@ def test_tte_matches_names_a_stitched_match():
         ("blind_side_run", 3), ("match", 1), ("press_escape", 0)
     ]  # fmt: skip
     assert ("match", 1) in DEFAULT_MATCHES and ("blind_side_run", 3) in DEFAULT_MATCHES
+
+
+def test_the_defaults_serve_the_match_and_each_hero_possession(tmp_path, monkeypatch):
+    # The web app opens a hero moment of the match from its possession's own export (SPEC 2, 3.1).
+    monkeypatch.delenv("TTE_MATCHES", raising=False)
+    settings = Settings.from_env()
+    settings.cache_dir = tmp_path
+    with TestClient(create_app(settings)) as c:
+        ids = [m["id"] for m in c.get("/api/matches").json()]
+        assert ids == ["blind_side_run-3", MATCH, PRESS]
+        possessions = c.get(f"/api/matches/{MATCH}").json()["possessions"]
+        heroes = [f"{p['scenario']}-{p['seed']}" for p in possessions if p["hero_moment"]]
+        assert heroes == ["blind_side_run-3", PRESS]
+        assert c.get(f"/api/matches/{PRESS}/export").status_code == 200
+
+
+def test_deploy_and_env_example_default_to_the_same_matches():
+    root = Path(__file__).resolve().parents[1]
+    deploy = re.search(
+        r"TTE_MATCHES=\$\{TTE_MATCHES:-([^}]*)\}", (root / "infra/deploy.sh").read_text()
+    )
+    example = re.search(r"^TTE_MATCHES=(.*)$", (root / ".env.example").read_text(), re.MULTILINE)
+    assert deploy and example
+    assert _matches(deploy.group(1)) == _matches(example.group(1)) == DEFAULT_MATCHES
 
 
 def test_the_match_is_listed_with_its_possessions_and_both_hero_moments(client, info):
