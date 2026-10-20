@@ -7,7 +7,8 @@ spot, home attacks +x.
 Schema changes are additive and bump VERSION; `demo/` reads version 1 fields only.
 Version 3 adds, for every option of the hero's decision, P(success) on the true state ("it was"
 against "he thought", SPEC 5.1) and the believed and true positions of the receiver. The decision
-block is in metres, like the decision model.
+block is in metres, like the decision model. Version 4 adds each run's blind-side alerts
+(SPEC 4.4) with how long each target has gone unseen.
 
 `render_payload_fixture` derives a SPEC 5.3 render payload for the hero moment from the export,
 so the viewer can be built before the verifier's payloads exist. It is marked as a fixture.
@@ -29,8 +30,10 @@ from typing import Any
 
 import numpy as np
 
+from analytics.blind_side import visible_mask
 from analytics.vision import VisionParams, player_visibility
 from explain.functions import same_target_on_truth, true_options
+from explain.moments import blind_side_alerts
 from sim.config import DT
 from sim.counterfactual import possession_value
 from sim.engine import Simulation
@@ -38,7 +41,7 @@ from sim.model import Decision
 from sim.overrides import DropScan
 from sim.run import MatchRun, _plain
 
-VERSION = 3
+VERSION = 4
 
 
 def _bitmask(row: np.ndarray) -> int:
@@ -117,6 +120,37 @@ def _options(run: MatchRun, decision: Decision, believed: np.ndarray) -> list[di
     return out
 
 
+def _blind_side(run: MatchRun) -> dict[str, Any]:
+    """Blind-side alerts (SPEC 4.4) from `explain.moments.blind_side_alerts`, and how long each
+    alert's target has gone unseen. The module does not expose the last sighting, so it is
+    recomputed here from the same inputs (`visible_mask`: observed head yaw, V < 0.5 is unseen;
+    everyone counts as seen at the first frame, as in the module).
+
+    `frames[f]` lists the alerts on at frame f as [observer, target, frames unseen] (indices).
+    Frames unseen is 0 when the target is in sight but the module still holds the alert on for
+    its minimum duration.
+    """
+    alerts = blind_side_alerts(run)
+    seen = visible_mask(run.head_yaw_observed, run.pos, run.vel)
+    last = np.zeros(seen.shape[1:], dtype=np.int64)
+    frames = []
+    for f, active in enumerate(alerts.per_frame):
+        last[seen[f]] = f
+        frames.append([[o, t, f - int(last[o, t])] for o, t in active])
+    return {
+        "intervals": [
+            {
+                "observer": run.ids[a.observer],
+                "target": run.ids[a.target],
+                "start": a.start,
+                "end": a.end,
+            }
+            for a in alerts.intervals
+        ],  # fmt: skip
+        "frames": frames,
+    }
+
+
 def _encode(run: MatchRun, trace: _Trace) -> dict[str, Any]:
     decision = run.hero_decision()
     hero_action = None
@@ -158,6 +192,7 @@ def _encode(run: MatchRun, trace: _Trace) -> dict[str, Any]:
         if hero_action is None
         else _plain(hero_action.attrs | {"frame": hero_action.frame}),
         "possession_value": possession_value(run),
+        "blind_side": _blind_side(run),
     }
 
 
