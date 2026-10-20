@@ -26,7 +26,7 @@ from agents.llm import client_from_env, sync_credential_from_env
 from agents.prompts import PROMPT_VERSION
 from agents.schemas import Language, Persona
 from agents.telemetry import configure_tracing
-from agents.workflow import run_breakdown
+from agents.workflow import PIPELINE_VERSION, run_breakdown
 from api import tts
 from api.live import stream
 from api.settings import Settings
@@ -169,6 +169,7 @@ def create_app(
         def key(model_name: str) -> str:
             return content_key(card=m.ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
+                               pipeline=PIPELINE_VERSION,
                                model=model_name)  # fmt: skip
 
         model_key, offline_key = key(model), key("offline")

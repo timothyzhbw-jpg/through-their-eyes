@@ -232,6 +232,32 @@ def test_tidy_restores_placeholder_forms_and_drops_repeated_claims(ctx):
     assert len(notes) == 2
 
 
+def test_tidy_keeps_each_connective_once_across_both_voices(ctx):
+    """Seen live: both voices opened with "Watch this." — the second keeps only its claim."""
+    from agents.workflow import tidy
+
+    lines = [
+        ScriptLine(id="L1", speaker="pbp", text="Watch this. {player} checked his shoulder.",
+                   claims=["scan_before_reception"]),
+        ScriptLine(id="L2", speaker="color", text="Watch this. That look was worth {dxt}.",
+                   claims=["cf_value"]),
+        ScriptLine(id="L3", speaker="pbp", text="注意看。", claims=[]),
+    ]  # fmt: skip
+    kept, notes = tidy(ctx, lines, "en")
+    assert [line.text for line in kept] == [
+        "Watch this. {player} checked his shoulder.", "That look was worth {dxt}.", "注意看。",
+    ]  # fmt: skip
+    assert notes == ["L2: repeated connective removed"]
+    zh = [
+        ScriptLine(id="L1", speaker="pbp", text="注意看。球到之前，{player}先回头看了一眼。",
+                   claims=["scan_before_reception"]),
+        ScriptLine(id="L2", speaker="color", text="注意看。那一眼带来了{dxt}的预期威胁（xT）。",
+                   claims=["cf_value"]),
+    ]  # fmt: skip
+    kept, _ = tidy(ctx, zh, "zh")
+    assert kept[1].text == "那一眼带来了{dxt}的预期威胁（xT）。"
+
+
 # --- plan validation mirrors web/src/plan/validate.ts ---------------------------------------------
 
 

@@ -34,6 +34,7 @@ from agents.delivery import VOICES, cache_key, delivery_tier, pick_style, ssml_f
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
 from agents.plan import template_plan, validate_plan, voice_times
 from agents.schemas import (
+    CONNECTIVES,
     AnalystChoice,
     BreakdownRequest,
     BreakdownResult,
@@ -58,6 +59,9 @@ from explain.render import ScriptLine as RenderLine
 from explain.render import build_payload, render_line
 
 MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
+# Bump when code that shapes a breakdown changes without a prompt change: it is part of the
+# API's cache key, so cached breakdowns from the older code are not served again.
+PIPELINE_VERSION = 2  # 2: tidy() keeps each connective once across both voices
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
 # lanes finish in either order, so the trace is sorted into this order before it is returned.
@@ -408,10 +412,19 @@ def tidy(
     - A bare placeholder ({n}) is given the full form its claim's template uses ({n:times}): same
       slot, so the value is unchanged, only its wording.
     - A line that only restates claims an earlier line already stated is dropped, and so is a
-      repeated connective.
+      repeated connective. A claim line that opens with a connective an earlier line already
+      used keeps only its claim: the two voices pick connectives without seeing each other's.
     """
-    out, notes, stated, texts = [], [], set(), set()
+    out, notes, stated, texts, opened = [], [], set(), set(), set()
     for line in lines:
+        if line.claims:
+            for c in CONNECTIVES[language]:
+                if line.text.startswith(c) and len(line.text) > len(c):
+                    if c in opened:
+                        line = line.model_copy(update={"text": line.text[len(c) :].lstrip()})
+                        notes.append(f"{line.id}: repeated connective removed")
+                    opened.add(c)
+                    break
         forms: dict[str, str] = {}
         for cid in line.claims:
             claim = ctx.claims.get(cid)
@@ -432,6 +445,8 @@ def tidy(
             continue
         stated |= claims
         texts.add(text)
+        if not claims:
+            opened.add(text)
         out.append(line.model_copy(update={"text": text}) if text != line.text else line)
     return out, notes
 
