@@ -1,8 +1,8 @@
 # Real-footage overlay demo (`demo/realfeed`)
 
 A separate, clearly labelled segment of under 10 s for the demo video (the one exception to the
-synthetic-data rule, approved by Bowen on 2026-10-19; conditions in `docs/SPEC.md` §7): the same kind of broadcast graphics
-as the main product (pitch control, pass options, distance rings), computed by our own pipeline and
+synthetic-data rule, approved by Bowen on 2026-10-19; conditions in `docs/SPEC.md` §7). It shows
+the same kind of broadcast graphics as the main product (pitch control, pass options, distance rings), computed by our own pipeline and
 drawn onto **real amateur futsal footage** instead of our synthetic matches. It shows that the
 graphics are not tied to the simulator.
 
@@ -32,8 +32,8 @@ Needs the `ffmpeg` command line tool (decode VP9, encode H.264) and the default 
 includes the `realfeed` dependency group. The app's container must not carry OpenCV: build it with
 `uv sync --locked --no-default-groups` (main dependencies only; `uv export --no-default-groups`
 lists no OpenCV), and a test keeps OpenCV out of the main dependencies.
-Before the segment goes into the video, Bowen reviews the export frame by frame (faces, kit logos,
-boards), as SPEC §7 requires; the automated checks below do not replace that.
+Before the segment goes into the video, Bowen reviews the export frame by frame (kit logos, boards,
+the crest), as SPEC §7 requires; the automated checks below do not replace that.
 
 ```bash
 uv run python -m demo.realfeed.download            # 650 MB original, SHA-256 checked
@@ -45,7 +45,7 @@ uv run python -m demo.realfeed.render              # out/realfeed/realfeed_overl
 The render writes `realfeed_overlay.mp4` (1920 × 1080, H.264, 50 fps, 9.98 s including a 1.2 s
 freeze on the carrier's first touch, marked by a pause sign), `realfeed_keyframe.png` and
 `report.json` (all numbers below) to `out/realfeed/`. `--preview 60,400` renders stills only.
-`uv run python -m demo.realfeed.check` then checks every exported frame (faces, label).
+`uv run python -m demo.realfeed.check` then checks the label and attribution in every frame.
 
 ## Method
 
@@ -82,10 +82,20 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
    the ball carrier. Everything is rasterised in pitch coordinates and warped into the frame,
    then keyed onto turf-coloured pixels, so players, the ball and the painted lines stay on top.
 5. **Masking** (`privacy.py`). The pitch outline (plus 0.35 m) is projected into each frame and
-   everything outside it is downsampled, blurred and darkened. This covers the banners, the club
-   crest, sponsor boards, spectators and buildings in one pass. Players standing on the pitch rise
-   above the far touchline in the image, so their foreground silhouettes stay sharp. Their heads
-   and the white prints on their shirts (the red kit carries a company logo) are pixelated.
+   everything outside it is blurred (downsampled ×10, slightly desaturated and darkened), like a
+   shallow depth of field. This covers the banners, the club crest, sponsor boards, spectators and
+   buildings in one pass while the ground still reads as a football pitch. Three things stay
+   sharp:
+   - the players standing on the pitch, who rise above the far touchline in the image (their
+     foreground silhouettes, feathered by 4 px);
+   - the goal frame: a camera recovered from the homography places the goal volume in the frame,
+     and inside it only long straight white runs are kept (posts, crossbar, the frame of the net,
+     found with a Hough transform), so the crest painted on the wall behind the net stays blurred;
+   - faces, which are not blurred (Bowen's decision on 2026-10-19).
+
+   The red kit carries a company logo. Light patches that are mostly bordered by red shirt are
+   inpainted from the shirt around them, which also removes the shirt numbers. The ball and white
+   socks are bordered by turf, so they are left alone.
 
 ## Measured (from `out/realfeed/report.json`)
 
@@ -95,8 +105,7 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 | Tracking drift, synthetic | under 1 px over 150 frames of known pan + zoom + keystone with moving distractors (`tests/test_realfeed.py`) |
 | Tracking drift, real clip | estimated against the painted lines every second: 1.7–3.2 px for the first 7 s; 3.8–6.9 px during the final zoom (8–10 s), about 5 cm on the ground at the end |
 | Players | about 80 % of visible players detected on spot-checked frames (28 of 34). Misses are mostly two players overlapping in the image and the goalkeeper diving. False positives are rare: a substitute standing on the far line, a goalpost in the final zoom. |
-| Masking | high-frequency (Laplacian) energy outside the pitch and player silhouettes is at most **1.3 %** of the source's in any frame |
-| Faces (`check.py`) | OpenCV's Haar cascades find 1,226 face candidates in the segment's source frames and 259 in the export. At all but 3, the export keeps none of the source's fine detail (Laplacian correlation below 0.5). The 3 were reviewed: a player's legs and a boot, not faces. |
+| Masking | high-frequency (Laplacian) energy outside the pitch and player silhouettes is at most **2.2 %** of the source's in any frame |
 | Label and attribution | visible in **499 of 499** exported frames |
 | Graphics on non-turf pixels | **0** pixels in every frame |
 
@@ -120,7 +129,7 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 
 ## Licences
 
-`opencv-python-headless` (4.x) is Apache-2.0 (its wheel bundles unmodified, dynamically linked
-LGPL FFmpeg libraries, which we do not use for I/O). It stays below 5 because 5.x dropped the Haar
-cascades the face check uses; the cascades only verify the export, the pipeline never uses them. Decoding and H.264 encoding go through the
+`opencv-python-headless` (4.x) is Apache-2.0. Its wheel bundles unmodified, dynamically linked LGPL
+FFmpeg libraries, which we do not use for I/O. It is pinned below 5 because the segment was rendered
+and checked with 4.14, and 5.x changes text rendering. Decoding and H.264 encoding go through the
 `ffmpeg` command-line tool, run as a separate program. The footage is CC BY 3.0 (above).

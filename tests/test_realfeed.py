@@ -174,6 +174,37 @@ def test_pixels_outside_the_pitch_polygon_are_blurred_and_darkened():
     np.testing.assert_array_equal(out[keep], frame[keep])
 
 
+def test_the_rendered_background_setting_also_blurs_everything_off_the_pitch():
+    from demo.realfeed.render import BACKGROUND
+
+    rng = np.random.default_rng(8)
+    frame = rng.integers(0, 256, size=(1080, 1920, 3), dtype=np.uint8)
+    h = _camera_homography(0.5, 0.3, 1500.0)
+    keep = polygon_mask(h, FutsalPitch(40.0, 20.0).polygon(margin=0.3), frame.shape[:2])
+    out = blur_outside(frame, keep, **BACKGROUND)
+    grow = 2 * BACKGROUND["feather_px"] + 5  # the feathered rim reaches this far outward
+    outside = cv2.erode((~keep).astype(np.uint8), np.ones((grow, grow), np.uint8)).astype(bool)
+    assert _hf_energy(out, outside) < 0.01 * _hf_energy(frame, outside)
+    np.testing.assert_array_equal(out[keep], frame[keep])
+
+
+def test_prints_on_the_red_kit_are_found_but_not_the_ball():
+    from demo.realfeed.privacy import erase_prints, kit_print_mask
+
+    frame = np.empty((200, 300, 3), np.uint8)
+    frame[:] = TURF[0]
+    cv2.rectangle(frame, (40, 30), (120, 150), (60, 60, 225), -1)  # red shirt
+    cv2.rectangle(frame, (60, 60), (100, 82), (235, 235, 240), -1)  # white sponsor patch
+    cv2.putText(frame, "AB", (64, 78), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (40, 40, 160), 1)
+    cv2.circle(frame, (128, 160), 8, (235, 235, 235), -1)  # ball at the player's feet
+    mask = kit_print_mask(frame, np.ones(frame.shape[:2], bool))
+    assert mask[62:80, 62:98].mean() > 0.95
+    assert not mask[152:168, 120:136].any()
+    erased = erase_prints(frame, mask)
+    patch = cv2.cvtColor(erased[62:80, 62:98], cv2.COLOR_BGR2HSV)
+    assert patch[..., 1].mean() > 120  # now shirt-coloured, not white
+
+
 # --- (d) ground graphics appear on grass pixels only ----------------------------------------
 
 # Turf, line, kit and surround colours sampled from the footage (BGR, frames at 16:05 and 16:12).
@@ -322,3 +353,30 @@ def test_opencv_stays_out_of_the_app_dependencies():
     main = " ".join(project["project"]["dependencies"]).lower()
     assert "opencv" not in main  # the API container syncs with --no-default-groups
     assert any("opencv" in d for d in project["dependency-groups"]["realfeed"])
+
+
+def test_goal_frame_stays_sharp_but_a_pale_crest_behind_it_does_not():
+    from demo.realfeed.privacy import camera_matrix, goal_frame_mask
+
+    h = _camera_homography(0.55, 0.30, 1500.0)
+    frame = np.empty((1080, 1920, 3), np.uint8)
+    frame[:] = (200, 170, 190)  # pale lavender wall
+    p = camera_matrix(h, (1920, 1080))
+
+    def proj(x, y, z):
+        q = p @ np.array([x, y, z, 1.0])
+        return int(round(q[0] / q[2])), int(round(q[1] / q[2]))
+
+    gx = 20.0
+    a, b, c, d = proj(gx, 1.5, 0), proj(gx, 1.5, 2), proj(gx, -1.5, 2), proj(gx, -1.5, 0)
+    posts = np.zeros(frame.shape[:2], np.uint8)
+    for p0, p1 in ((a, b), (b, c), (c, d)):
+        cv2.line(frame, p0, p1, (245, 245, 245), 6)
+        cv2.line(posts, p0, p1, 1, 6)
+    arc = np.zeros(frame.shape[:2], np.uint8)
+    centre = proj(gx + 1.0, 0.0, 1.0)
+    cv2.ellipse(frame, centre, (25, 25), 0, 20, 160, (225, 235, 240), 3)  # a pale crest stripe
+    cv2.ellipse(arc, centre, (25, 25), 0, 20, 160, 1, 3)
+    mask = goal_frame_mask(frame, h, gx)
+    assert mask[posts.astype(bool)].mean() > 0.6
+    assert mask[arc.astype(bool)].mean() < 0.1
