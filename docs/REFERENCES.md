@@ -70,20 +70,38 @@ code is copied (CLAUDE.md rule 1).
   → Our vision layer: probabilistic field of view (120° base, Gaussian decay, speed-dependent) +
   occlusion; observed-space metrics combined with pitch control.
 - **Jordet et al. (2020). *Scanning, contextual factors, and association with performance in
-  English Premier League footballers.*** Frontiers in Psychology —
-  https://nih.brage.unit.no/nih-xmlui/handle/11250/2734590
+  English Premier League footballers.*** Frontiers in Psychology 11:553813 —
+  https://nih.brage.unit.no/nih-xmlui/handle/11250/2734590 (full text:
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC7573254/)
   → Scan-rate calibration by role and pressure. The effect on pass completion is small but
-  positive: don't overclaim causality outside the sim.
+  positive: don't overclaim causality outside the sim. Printed values used by the realism report
+  (`eval/reports/realism.md`): 3.0 ± 2.1 scans and 0.44 ± 0.30 scans/s in the 10 s before
+  receiving; role and pressure effect sizes with 95% CIs (Figures 2 and 3). Figure 2 plots the
+  role means without printing them.
 - **Jordet et al. (2013), MIT Sloan Sports Analytics Conference** — visual exploratory frequency
   of EPL midfielders/forwards; > 0.5 scans/s is very high.
   Summaries: https://mojo.sport/coachs-corner/what-is-scanning ,
   https://www.skysports.com/football/news/11096/11119387/what-gave-xavi-hernandez-and-andrea-pirlo-an-edge-on-the-rest-the-secret-to-his-vision
-- ***Visual Perception in Elite Football*** (NIH doctoral thesis) —
+  Paper: https://www.sloansportsconference.com/research-papers/the-hidden-foundation-of-field-vision-in-english-premier-league-epl-soccer-players
+  — prints 0.27 (SD 0.22) and 0.33 (SD 0.25) searches/s for players without and with a major
+  award; "> 0.5 is very high" is the summaries' wording, not the paper's.
+- ***Visual Perception in Elite Football*** (NIH doctoral thesis, Aksum 2021) —
   https://nih.brage.unit.no/nih-xmlui/handle/11250/2828246
   → > 90% of scans last ≤ 0.66 s and very few include a fixation → peripheral-vision model.
-- ***Correspondence between motion sensor kinematics and notational analysis of scanning in
-  field-based football gameplay*** — https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13441872/
+  The duration figures come from **Aksum et al. (2021). *Scanning activity of elite football
+  players in 11 vs. 11 match play.*** PLoS ONE 16(8):e0244118 (by the thesis author; not checked
+  against the thesis's paper list, whose repository was unreachable on 2026-10-19) —
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC8378692/ : 869 scans, mean 0.3965 s (SD 0.2842),
+  90.3% ≤ 0.66 s, timed by the ball leaving the eye-tracker's ≥ 82° scene camera.
+- **Kokubu et al. (2026). *Correspondence between motion sensor kinematics and notational analysis
+  of scanning in field-based football gameplay.*** Frontiers in Psychology 17:1785026 —
+  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13441872/
   → The 125°/s angular-velocity threshold over-counts scans → threshold sweep in the scan detector.
+  Peak head yaw rate of detected scans: 404.2 ± 50.7°/s (Results 3.1).
+- Movement and ball speeds: none of the papers here prints a measured sprint speed, acceleration
+  or pass speed. Spearman (2018) sets v = 5 m/s and a = 7 m/s² in its time-to-intercept model as
+  model parameters, not measurements; the realism report marks these rows "no published
+  reference".
 - **Arbués-Sangüesa et al. (CVPRW 2020; J. Sports Sciences 2021)** — body orientation → pass
   feasibility. https://arxiv.org/abs/2004.07209 , https://repositori.upf.edu/handle/10230/57891
   → Receiver orientation in the decision model; production path for orientation from video.

@@ -647,9 +647,9 @@ to a real broadcast.
   | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
   | Storage static website (`web`) | StorageV2, LRS, hot | ≈ $0.1 | < $1 |
   | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
-  | Foundry `gpt-4.1-mini` | ≈ $0.03 per four-script breakdown (≈ 60K input + 5K output tokens at $0.40 / $1.60 per M) | ≈ $3 (100 regenerations) | $26: cap of 40 per day, every day |
+  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $9: cap of 40 per day, every day |
   | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
-  | **Total** | | **≈ $16** | **≈ $67** |
+  | **Total** | | **≈ $15** | **≈ $50** |
 - **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as
   `infra/m0_provision.sh`:
   - an explicit `AZURE_SUBSCRIPTION_ID`, and only Azure for Students, pay-as-you-go or free-trial
