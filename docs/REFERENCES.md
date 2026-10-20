@@ -141,6 +141,8 @@ code is copied (CLAUDE.md rule 1).
 | Azure / Foundry SDKs | Microsoft | **use** |
 | numpy | BSD-3 | **use** (sim and analytics kernels) |
 | pydantic | MIT | **use** (schemas that cross process boundaries) |
+| opentelemetry-api | Apache-2.0 | **use** (tracing spans for the agent crew, SPEC §8); `opentelemetry-sdk` (Apache-2.0) comes with azure-monitor-opentelemetry and backs the in-memory exporter in tests |
+| azure-monitor-opentelemetry | MIT | **use** (exports the spans to Application Insights, SPEC §8); pulls OpenTelemetry instrumentations (Apache-2.0) and asgiref, oauthlib, psutil (BSD-3), wrapt (BSD-2), msrest (MIT), requests-oauthlib (ISC) |
 | pytest, ruff | MIT | **use** (dev only) |
 | three.js, @react-three/fiber, @react-three/drei | MIT | **use** |
 | socceraction | MIT | **not used** — xT is our own value iteration (~100 lines); socceraction is no longer developed (1.5.3 supports Python < 3.13) |
