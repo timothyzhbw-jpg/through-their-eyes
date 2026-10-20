@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from sim.counterfactual import drop_scan_counterfactual
-from sim.export import VERSION, export_hero, render_payload_fixture
+from sim.export import VERSION, export_hero, hero_json, render_payload_fixture
 
 SCENARIO, SEED = "blind_side_run", 3
 
@@ -218,3 +218,79 @@ def test_without_the_look_the_runner_alert_stays_on_until_the_pass(data):
     on = [f for f, u in enumerate(unseen) if u is not None]
     assert on == list(range(on[0], decision + 1))
     assert on[0] < data["key_scan"]["start"]
+
+
+# --- the scan detector at work (schema v5, SPEC 4.7, 7) --------------------------------------
+
+
+@pytest.fixture(scope="module")
+def runs():
+    result = drop_scan_counterfactual(SCENARIO, SEED)
+    return {"factual": result.factual, "counterfactual": result.counterfactual}
+
+
+def test_the_detector_parameters_are_the_defaults(data):
+    from analytics.scan_detector import DEFAULT_PARAMS as P
+
+    assert data["units"]["angular_velocity"] == "1e-4 rad/s"
+    assert data["scan_detector"] == {
+        "omega_threshold": round(P.omega_threshold * 1e4),
+        "min_excursion": round(P.min_excursion * 1e4),
+        "return_tolerance": round(P.return_tolerance * 1e4),
+        "onset_frames": P.onset_frames,
+        "max_duration_s": P.max_duration_s,
+    }
+
+
+def test_exported_detector_output_is_the_detector_run_directly(data, runs):
+    """On the tracked head yaw, as eval/scan_detector.py runs it; survives the JSON round trip."""
+    from analytics.scan_detector import DEFAULT_PARAMS, detect_all, trace_scans
+
+    decoded = json.loads(hero_json(data))
+    for name, run in runs.items():
+        exported = decoded["runs"][name]["scan_detector"]
+        n = len(run.players)
+        assert len(exported["omega"]) == len(run.owner) - 1
+        assert all(len(row) == n for row in exported["omega"])
+        assert len(exported["onsets"]) == len(exported["scans"]) == n
+        ball = run.ball_pos[:, :2]
+        direct = detect_all(run.head_yaw_observed, run.pos, ball, run.dt, DEFAULT_PARAMS)
+        omega = np.array(exported["omega"]) * 1e-4
+        for i in range(n):
+            t = trace_scans(run.head_yaw_observed[:, i], run.pos[:, i], ball, run.dt)
+            assert exported["onsets"][i] == t.onsets.tolist()
+            assert np.abs(omega[:, i] - t.omega).max() <= 0.5e-4 + 1e-9
+            scans = exported["scans"][i]
+            assert [(s["start"], s["end"], s["peak"], s["side"]) for s in scans] == [
+                (d.start, d.end, d.peak, d.side) for d in direct[i]
+            ]
+            for s, d in zip(scans, direct[i], strict=True):
+                assert abs(s["amplitude"] * 1e-4 - d.amplitude) <= 0.5e-4 + 1e-9
+                assert s["start"] in exported["onsets"][i]
+
+
+def test_the_exported_detector_matches_the_eval_on_the_straight_run(data):
+    """The factual run resumed from the snapshot is the run eval/scan_detector.py simulates."""
+    from analytics.scan_detector import ScanDetectorParams, detect_all
+    from eval.scan_detector import scenario_params, simulate
+
+    s = simulate(SCENARIO, SEED, scenario_params(SCENARIO))
+    found = detect_all(s.head_yaw, s.pos, s.ball, s.dt, ScanDetectorParams())
+    exported = data["runs"]["factual"]["scan_detector"]["scans"]
+    assert [[d["start"] for d in p] for p in exported] == [[d.start for d in p] for p in found]
+
+
+def test_the_detector_finds_the_key_scan_only_with_the_look(data):
+    ids = [p["id"] for p in data["players"]]
+    hero, key = ids.index(data["hero"]), data["key_scan"]
+    f = data["runs"]["factual"]["scan_detector"]
+    c = data["runs"]["counterfactual"]["scan_detector"]
+
+    def near_key(scans):
+        return [s for s in scans if abs(s["start"] - key["start"]) <= 3]
+
+    assert len(near_key(f["scans"][hero])) == 1
+    assert near_key(c["scans"][hero]) == []
+    # A turn the gate rejected: an onset outside every accepted scan (the panel shows these).
+    scans = f["scans"][hero]
+    assert any(not any(s["start"] <= o <= s["end"] for s in scans) for o in f["onsets"][hero])
