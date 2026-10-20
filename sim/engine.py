@@ -197,7 +197,7 @@ class Simulation:
         drift_noise = self.rng.normal("head_drift", f, n, entities=self.ids)
         speed_noise = self.rng.normal("scan_speed", f, n, entities=self.ids)
         allowed = ~self.scenario.scan_suppressed(self, f)
-        p_scan = self.scan_rate * DT
+        p_scan = self.scan_rate * self._pressure_factor() * DT
         spontaneous = allowed & (trigger < p_scan)
         # The same trigger draw: just above the scan probability, a scan starts and is aborted.
         partial = allowed & ~spontaneous & (trigger < p_scan * (1 + p.partial_scan_ratio))
@@ -259,6 +259,15 @@ class Simulation:
         h["ball_pos"].append(self.ball_pos.copy())
         h["ball_vel"].append(self.ball_vel.copy())
         h["owner"].append(np.array(self.owner))
+
+    def _pressure_factor(self) -> np.ndarray:
+        """Scan-rate factor per player from the closest opponent's distance (SPEC 3.4)."""
+        p = self.params
+        gap = np.linalg.norm(self.pos[:, None, :] - self.pos[None, :, :], axis=-1)
+        closest = np.where(self.team[:, None] != self.team[None, :], gap, np.inf).min(axis=1)
+        near, far = p.pressure_scan_range
+        ramp = np.clip((closest - near) / (far - near), 0.0, 1.0)
+        return p.pressure_scan_factor + (1.0 - p.pressure_scan_factor) * ramp
 
     def _attach_ball(self) -> None:
         i = self.owner

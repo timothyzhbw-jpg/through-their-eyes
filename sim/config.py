@@ -59,6 +59,13 @@ class SimParams:
     scan_return_tolerance: float = np.deg2rad(10.0)
     scan_max_out_s: float = 0.8  # a 150 deg turn at 250 deg/s takes 0.6 s
     scan_refractory_s: float = 0.3
+    # Scanning drops under tight pressure (Jordet et al. 2020, Figure 3): the spontaneous scan rate
+    # is scaled by the closest opponent's distance, from pressure_scan_factor at the near end of
+    # pressure_scan_range (the paper's 0-1 m bin) linearly up to 1 at the far end (its 10+ m bin).
+    # Factor: the printed d = 0.57 between those bins times the printed SD of 0.30 scans/s is a
+    # drop of 0.17 scans/s, 39% of the printed mean of 0.44 scans/s.
+    pressure_scan_range: tuple[float, float] = (1.0, 10.0)  # m
+    pressure_scan_factor: float = 0.61
     sensor_noise: float = np.deg2rad(2.0)  # on the head yaw written to tracking output
     # Non-scan head motion (SPEC 3.4 nuisance), switched as a whole by head_nuisance. Sensor noise
     # is a property of the tracking, not of the head, and has its own knob above.
