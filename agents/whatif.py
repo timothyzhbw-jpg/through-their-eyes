@@ -15,7 +15,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import re
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import create_model
 
 from agents.context import MomentContext
 from agents.llm import DEFAULT_TIMEOUT_S, ask
@@ -87,8 +89,10 @@ async def map_question(
     available = options(ctx)
     if client is not None:
         prompt = f"Question: {question}\nOptions: {available}"
+        schema = create_model("WhatIfChoice", __base__=Strict,
+                              action=(Literal[tuple(available)] | None, ...))  # fmt: skip
         attempt = await ask(client, name="whatif", instructions=WHATIF, prompt=prompt,
-                            schema=WhatIfChoice, timeout_s=timeout_s)  # fmt: skip
+                            schema=schema, timeout_s=timeout_s)  # fmt: skip
         if attempt.value is not None and attempt.value.action in available:
             return attempt.value.action, "llm"
     return _rule_map(question, available), "template"

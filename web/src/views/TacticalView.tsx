@@ -8,12 +8,31 @@ import { Line } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
 import * as THREE from "three";
-import { halfCone, isSeen, Sample, sampleInto, speedAt, type Hero, type Run } from "../data/hero";
+import {
+  actionLabel,
+  halfCone,
+  isSeen,
+  Sample,
+  sampleInto,
+  speedAt,
+  type Hero,
+  type Run,
+} from "../data/hero";
 import type { RunName } from "../data/types";
+import {
+  colorFor,
+  optionsVisible,
+  passOptions,
+  valueRange,
+  widthFor,
+} from "../options/passOptions";
 import { useSession } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
+import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
 import {
+  BOARD_EXTENT,
+  boardZoom,
   COLORS,
   LABEL,
   PITCH,
@@ -22,10 +41,10 @@ import {
   teamColor,
   useRedrawOn,
 } from "./scene";
+import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { TacticalToolbar } from "./TacticalToolbar";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 
-const EXTENT = { x: 111, y: 74 }; // m shown: the pitch plus a 3 m apron
 const TOKEN_R = 0.95; // m
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
@@ -75,6 +94,7 @@ export function TacticalView() {
         >
           <TacticalScene />
         </Canvas>
+        <OptionsOverlay />
       </div>
     </figure>
   );
@@ -86,7 +106,7 @@ function TacticalScene() {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
-  const zoom = Math.max(1e-3, Math.min(size.width / EXTENT.x, size.height / EXTENT.y)); // px/m
+  const zoom = boardZoom(size.width, size.height); // px/m
   const px = 1 / zoom; // metres per CSS pixel: labels are sized in pixels
   const scale = Math.max(1, MIN_TOKEN_PX / (TOKEN_R * zoom));
 
@@ -123,10 +143,12 @@ function TacticalScene() {
       <VisionCone hero={hero} shared={shared} />
       <PassLine run={hero.runs[mode]} mode={mode} shared={shared} />
       <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />
+      <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />
+      <WhatIfGhost hero={hero} shared={shared} scale={scale} px={px} />
     </>
   );
 }
@@ -151,7 +173,7 @@ function Field() {
   return (
     <>
       <mesh rotation-x={lie} renderOrder={LAYER.field}>
-        <planeGeometry args={[EXTENT.x + 40, EXTENT.y + 40]} />
+        <planeGeometry args={[BOARD_EXTENT.x + 40, BOARD_EXTENT.y + 40]} />
         <meshBasicMaterial color="#14271d" {...flat} />
       </mesh>
       <mesh rotation-x={lie} renderOrder={LAYER.pitch}>
@@ -349,6 +371,94 @@ function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
         <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
+    </group>
+  );
+}
+
+// ---------- pass options at the decision (SPEC 7) ----------
+
+interface OptionsProps {
+  hero: Hero;
+  mode: RunName;
+  shared: SharedRef;
+  scale: number;
+}
+
+const w3 = ([x, y]: [number, number]): [number, number, number] => [x, 0, -y];
+
+/** One line per option from the carrier to its believed target: width = chance he chose it,
+ * colour = value, the chosen one haloed; dashed: the same option on the true state. */
+function PassOptionsLayer({ hero, mode, shared, scale }: OptionsProps) {
+  const run = hero.runs[mode];
+  const options = useMemo(() => passOptions(hero, run), [hero, run]);
+  const range = useMemo(() => valueRange(hero), [hero]);
+  const ring = useMemo(() => circlePoints(1.0), []);
+  const group = useRef<THREE.Group>(null);
+  const decision = run.decision?.frame;
+  useFrame(() => {
+    const { state } = shared.current;
+    if (group.current) {
+      group.current.visible =
+        state.options && decision !== undefined && optionsVisible(state.frame, decision);
+    }
+  });
+  return (
+    <group ref={group} visible={false}>
+      {options.map((o) => {
+        const color = colorFor(o.value, range);
+        const width = widthFor(o.prob);
+        if (o.kind !== "pass") {
+          return (
+            <group key={o.action} position={w3(o.target)} scale={scale}>
+              <Line
+                points={ring}
+                color={color}
+                lineWidth={width}
+                renderOrder={LAYER.path + 0.3}
+                {...flat}
+              />
+            </group>
+          );
+        }
+        const line = [w3(o.from), w3(o.target)];
+        const moved =
+          o.targetTrue &&
+          Math.hypot(o.targetTrue[0] - o.target[0], o.targetTrue[1] - o.target[1]) > 1.5;
+        return (
+          <group key={o.action}>
+            {o.chosen && (
+              <Line
+                points={line}
+                color="#ffffff"
+                opacity={0.35}
+                lineWidth={width + 6}
+                renderOrder={LAYER.path + 0.1}
+                {...flat}
+              />
+            )}
+            {moved && o.targetTrue && (
+              <Line
+                points={[w3(o.from), w3(o.targetTrue)]}
+                color={colorFor(o.valueTrue ?? o.value, range)}
+                opacity={0.9}
+                lineWidth={1.6}
+                dashed
+                dashSize={1.2}
+                gapSize={0.9}
+                renderOrder={LAYER.path + 0.2}
+                {...flat}
+              />
+            )}
+            <Line
+              points={line}
+              color={color}
+              lineWidth={width}
+              renderOrder={LAYER.path + 0.3}
+              {...flat}
+            />
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -583,6 +693,113 @@ function Ball({ shared, scale }: { shared: SharedRef; scale: number }) {
       <mesh rotation-x={lie} renderOrder={LAYER.ball + 0.5}>
         <circleGeometry args={[0.42, 24]} />
         <meshBasicMaterial color="#ffffff" {...flat} />
+      </mesh>
+    </group>
+  );
+}
+
+// ---------- "What if…?" ghost (SPEC 6, 7) ----------
+
+interface WhatIfGhostProps {
+  hero: Hero;
+  shared: SharedRef;
+  scale: number;
+  px: number;
+}
+
+/** The forced run over the actual one, from the decision on: its ball path, growing with the
+ * playhead, and ghosts of the players on the ball in it (passer, target, receiver) where they
+ * would have been. Gold: it never happened. */
+function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
+  const { whatIfs, playback } = useSession();
+  const selected = useStore(playback, (s) => s.whatIf);
+  const option = optionOf(whatIfs, selected);
+  const run = option?.run ?? null;
+  const path = useMemo(
+    () => (run ? ballPath(run).map(([x, y]) => [x, 0, -y] as [number, number, number]) : null),
+    [run],
+  );
+  const ghost = useMemo(
+    () => ({ pos: new Float32Array(2 * hero.n), ball: new Float32Array(2) }),
+    [hero],
+  );
+  const involved = useMemo(() => (run ? involvedPlayers(run) : new Set<string>()), [run]);
+  const group = useRef<THREE.Group>(null);
+  const line = useRef<ComponentRef<typeof Line>>(null);
+  const tokens = useRef<(THREE.Group | null)[]>([]);
+  const ball = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    const { sample, state } = shared.current;
+    const g = group.current;
+    if (!g) return;
+    const show = !!run && state.mode === "factual" && ghostAt(run, hero.n, state.frame, ghost);
+    g.visible = show;
+    if (!show || !run) return;
+    const done = Math.max(1, Math.min(run.frames - 1, Math.floor(state.frame - run.start)));
+    if (line.current) line.current.geometry.instanceCount = done;
+    for (let j = 0; j < hero.n; j++) {
+      const t = tokens.current[j];
+      if (!t) continue;
+      const moved = Math.hypot(
+        ghost.pos[2 * j] - sample.pos[2 * j],
+        ghost.pos[2 * j + 1] - sample.pos[2 * j + 1],
+      );
+      t.visible = involved.has(hero.ids[j]) && moved > 1.0;
+      t.position.set(ghost.pos[2 * j], 0, -ghost.pos[2 * j + 1]);
+    }
+    ball.current?.position.set(ghost.ball[0], 0, -ghost.ball[1]);
+  });
+
+  if (!run || !path || !option) return null;
+  const tagH = Math.max(2.4, TAG_PX * px);
+  const [ex, , ez] = path[path.length - 1];
+  const what = actionLabel(option.action);
+  const label = getLabelTexture(`what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
+    ...LABEL.tag,
+    color: COLORS.gold,
+  });
+  return (
+    <group ref={group} visible={false}>
+      <Line
+        ref={line}
+        points={path}
+        color={COLORS.gold}
+        lineWidth={2.5}
+        dashed
+        dashSize={1.0}
+        gapSize={0.8}
+        renderOrder={LAYER.path}
+        {...flat}
+      />
+      {hero.players.map((p, j) => (
+        <group
+          key={p.id}
+          ref={(g) => {
+            tokens.current[j] = g;
+          }}
+          scale={scale}
+          visible={false}
+        >
+          <mesh rotation-x={lie} renderOrder={LAYER.halo}>
+            <circleGeometry args={[TOKEN_R, 32]} />
+            <meshBasicMaterial color={COLORS.gold} opacity={0.35} {...flat} />
+          </mesh>
+          <mesh rotation-x={lie} renderOrder={LAYER.halo}>
+            <ringGeometry args={[TOKEN_R - 0.12, TOKEN_R + 0.08, 32]} />
+            <meshBasicMaterial color={COLORS.gold} opacity={0.9} {...flat} />
+          </mesh>
+        </group>
+      ))}
+      <group ref={ball} scale={Math.max(1, scale * 0.8)}>
+        <mesh rotation-x={lie} renderOrder={LAYER.ball}>
+          <ringGeometry args={[0.35, 0.6, 24]} />
+          <meshBasicMaterial color={COLORS.gold} {...flat} />
+        </mesh>
+      </group>
+      <mesh position={[ex, 0, ez - 1.5 - tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
+        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+        <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
   );

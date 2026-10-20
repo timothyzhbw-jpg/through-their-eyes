@@ -4,7 +4,8 @@
 # Creates, in one resource group:
 #   - a Microsoft Foundry resource (kind AIServices) with one project and one model deployment;
 #   - an Azure AI Speech resource (free F0 tier if the subscription still has one);
-#   - an "Azure AI User" role assignment for you, so Agent Framework can call Foundry without keys.
+#   - a Foundry data-plane role for you ("Azure AI User" or "Cognitive Services User"), so Agent
+#     Framework can call Foundry without keys.
 # Safe to re-run: existing resources are reused and their names are kept in .env.
 # Variables already set in the shell take precedence over .env (see .env.example).
 #
@@ -134,12 +135,23 @@ else
   echo "Deployed $MODEL $MODEL_VERSION (${MODEL_CAPACITY}K tokens/min)"
 fi
 
-step "Role assignment: Azure AI User on $AI_ACCOUNT"
+# The data-plane role for Foundry projects: all of Microsoft.CognitiveServices/* data actions.
+# "Azure AI User" is the current name; tenants without it have "Cognitive Services User", which
+# grants the same. ("Azure AI Developer" is not enough: its data actions stop at OpenAI/*.)
+ROLE=""
+for candidate in "Azure AI User" "Cognitive Services User"; do
+  if [[ -n $(az role definition list --name "$candidate" --query "[].name" -o tsv 2>/dev/null) ]]; then
+    ROLE=$candidate
+    break
+  fi
+done
+[[ -n $ROLE ]] || { echo "No Foundry data-plane role found in this tenant." >&2; exit 1; }
+step "Role assignment: $ROLE on $AI_ACCOUNT"
 USER_ID=$(az ad signed-in-user show --query id -o tsv)
-if [[ -z $(az role assignment list --assignee "$USER_ID" --role "Azure AI User" --scope "$AI_ID" \
+if [[ -z $(az role assignment list --assignee "$USER_ID" --role "$ROLE" --scope "$AI_ID" \
   --query "[].id" -o tsv) ]]; then
   az role assignment create --assignee-object-id "$USER_ID" --assignee-principal-type User \
-    --role "Azure AI User" --scope "$AI_ID" -o none
+    --role "$ROLE" --scope "$AI_ID" -o none
   echo "Assigned. It can take a few minutes before Foundry accepts your token."
 else
   echo "Already assigned."

@@ -31,15 +31,12 @@ def _good_replies(ctx):
     """Valid structured outputs for every role, as a model would return them."""
     plan = template_plan(ctx).model_dump(by_alias=True)
     return {
-        "director": {"personas": ["casual", "analyst"], "languages": ["en", "zh"],
-                     "priority": "high", "reason": "The look over the shoulder decides the pass."},
-        "analyst": {"lens": "scan", "headline": ["scan_before_reception", "made_up_claim"],
-                    "supporting": ["belief_error", "cf_pass"], "angle": "He saw the runner."},
+        "director": {"priority": "high", "reason": "The look over the shoulder decides the pass."},
+        "analyst": {"lens": "scan", "headline": ["scan_before_reception", "belief_error"],
+                    "supporting": ["cf_pass", "blind_side"], "angle": "He saw the runner."},
         "telestrator": plan,
-        "pbp": {"lines": [{"text": "{player} checked his shoulder before the ball reached him.",
-                           "claims": ["scan_before_reception"]}]},
-        "color": {"lines": [{"text": "Without that look, {player} would have passed to "
-                                     "{cf_receiver}.", "claims": ["cf_pass"]}]},
+        "pbp": {"lines": [{"claim": "scan_before_reception", "connective": "Watch this."}]},
+        "color": {"lines": [{"claim": "cf_pass", "connective": None}]},
     }  # fmt: skip
 
 
@@ -73,7 +70,7 @@ def test_offline_breakdown_of_the_hero_moment(ctx, offline):
 
 def test_offline_breakdown_is_deterministic(ctx, offline):
     again = breakdown(ctx, client=None, personas=("casual", "analyst"), languages=("en", "zh"))
-    strip = {"trace"}
+    strip = {"trace", "total_ms"}
     assert again.model_dump(exclude=strip) == offline.model_dump(exclude=strip)
 
 
@@ -85,46 +82,83 @@ def test_breakdown_result_is_json(offline):
 # --- with a model: agent outputs are used, but only through verified claims ----------------------
 
 
-def test_agent_outputs_are_used_but_unknown_claims_are_dropped(ctx):
+def test_agent_outputs_are_used_through_verified_claims(ctx):
     fake = FakeChatClient(_good_replies(ctx))
     r = breakdown(ctx, client=fake, personas=("analyst",), languages=("en",))
     assert all(s.source == "llm" for s in r.trace if s.step not in ("verifier", "voice"))
     assert r.plan_source == "agent"
-    assert "made_up_claim" not in r.findings.headline
-    assert any("made_up_claim" in note for s in r.trace for note in s.notes)
+    assert r.findings.headline == ["scan_before_reception", "belief_error"]
     (script,) = r.scripts
-    texts = [line.text for line in script.payload.lines]
-    assert "H8 checked his shoulder before the ball reached him." in texts
-    assert "Without that look, H8 would have passed to H4." in texts
+    assert [line.text for line in script.payload.lines] == [
+        "Watch this. H8 checked his shoulder before the ball reached him.",
+        "Without that look, H8 would have passed to H4.",
+    ]
+    assert [line.speaker for line in script.lines] == ["pbp", "color"]
 
 
-def test_a_line_with_a_literal_number_is_rewritten_then_kept(ctx):
+def test_a_model_cannot_add_its_own_words_or_unknown_claims(ctx):
     replies = _good_replies(ctx)
-    replies["pbp"] = [
-        {"lines": [{"text": "{player} scanned 1 time.", "claims": ["scans_before_reception"]}]},
-        {"lines": [{"text": "{player} scanned {n:times} in the {window_s|second|seconds} before "
-                            "receiving.", "claims": ["scans_before_reception"]}]},
-    ]  # fmt: skip
+    replies["analyst"] = {**replies["analyst"], "headline": ["made_up_claim"]}
+    replies["pbp"] = {"lines": [{"claim": None, "connective": "It was a mistake by A5."}]}
+    replies["color"] = {"lines": [{"claim": "made_up_claim", "connective": None}]}
     r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    steps = {s.step: s for s in r.trace}
+    assert steps["analyst"].source == "template" and "ValidationError" in steps["analyst"].error
+    assert steps["narration"].source == "template"
     (script,) = r.scripts
-    assert script.rewrites == 1
-    assert "H8 scanned once in the 2 seconds before receiving." in [
+    texts = " ".join(line.text for line in script.payload.lines)
+    assert "mistake" not in texts and texts  # the template script airs instead
+    assert check_payload(script.payload) == []
+
+
+def test_a_line_the_verifier_rejects_is_rewritten_or_dropped(ctx):
+    """A stale claim (changed after verification) fails the render check: rewrite, then drop."""
+    import copy
+
+    stale = copy.copy(ctx)
+    stale.claims = dict(ctx.claims)
+    stale.claims["blind_side"] = ctx.claims["blind_side"].model_copy(
+        update={"template": "{runner} ran on the blind side of {player} today."}
+    )
+    replies = _good_replies(ctx)
+    replies["color"] = [
+        {"lines": [{"claim": "blind_side", "connective": None}]},
+        {"lines": [{"claim": "cf_pass", "connective": None}]},
+    ]
+    r = breakdown(stale, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    (script,) = r.scripts
+    assert script.rewrites == 1 and script.dropped == []
+    assert "Without that look, H8 would have passed to H4." in [
         line.text for line in script.payload.lines
     ]
-    assert script.dropped == []
-
-
-def test_a_line_that_stays_wrong_is_dropped_after_two_rewrites(ctx):
-    replies = _good_replies(ctx)
-    replies["color"] = {
-        "lines": [{"text": "It was a mistake by {marker}.", "claims": ["gap_to_marker"]}]
-    }
-    r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    replies["color"] = {"lines": [{"claim": "blind_side", "connective": None}]}
+    r = breakdown(stale, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
     (script,) = r.scripts
-    assert script.rewrites == 2
-    assert [d.reason for d in script.dropped] == ["banned"]
-    assert all("mistake" not in line.text for line in script.payload.lines)
-    assert script.payload.lines  # the play-by-play line survives
+    assert script.rewrites == 2 and [d.reason for d in script.dropped] == ["stale_claim"]
+
+
+def test_a_voice_keeps_at_most_two_connectives(ctx):
+    from agents.schemas import anchored_draft_model
+    from agents.workflow import MAX_CONNECTIVES, compose
+
+    draft = anchored_draft_model(list(ctx.supported), "en").model_validate({"lines": [
+        {"claim": "scan_before_reception", "connective": "Watch this."},
+        {"claim": "cf_pass", "connective": "Here's why."},
+        {"claim": "blind_side", "connective": "Look again."},
+        {"claim": None, "connective": "Now watch."},
+    ]})  # fmt: skip
+    lines = compose(ctx, draft, "en")
+    assert [d.claims for d in lines] == [["scan_before_reception"], ["cf_pass"], ["blind_side"]]
+    assert (
+        sum(d.text.startswith(("Watch", "Here", "Look", "Now")) for d in lines) == MAX_CONNECTIVES
+    )
+
+
+def test_connectives_pass_the_lexicon():
+    from agents.schemas import CONNECTIVES
+    from explain.lexicon import is_connective
+
+    assert all(is_connective(c) for lang in CONNECTIVES for c in CONNECTIVES[lang])
 
 
 def test_a_failing_or_slow_agent_falls_back_to_its_template(ctx):
@@ -158,6 +192,24 @@ def test_the_analyst_gets_the_mcp_tools_over_stdio(ctx):
     assert set(fake.tools["analyst"]) >= {"get_moment", "list_claims", "run_counterfactual"}
     assert fake.tools["director"] == []
     assert r.plan_source == "agent"
+
+
+def test_tidy_restores_placeholder_forms_and_drops_repeated_claims(ctx):
+    from agents.workflow import tidy
+
+    lines = [
+        ScriptLine(id="L1", speaker="pbp", text="{player} scanned {n} in the {window_s} before "
+                   "receiving.", claims=["scans_before_reception"]),
+        ScriptLine(id="L2", speaker="color", text="{player} scanned {n:times} again.",
+                   claims=["scans_before_reception"]),
+        ScriptLine(id="L3", speaker="color", text="What did he see?", claims=[]),
+        ScriptLine(id="L4", speaker="pbp", text="What did he see?", claims=[]),
+    ]  # fmt: skip
+    kept, notes = tidy(ctx, lines, "en")
+    assert [line.id for line in kept] == ["L1", "L3"]
+    assert kept[0].text == ("{player} scanned {n:times} in the {window_s|second|seconds} before "
+                            "receiving.")  # fmt: skip
+    assert len(notes) == 2
 
 
 # --- plan validation mirrors web/src/plan/validate.ts ---------------------------------------------

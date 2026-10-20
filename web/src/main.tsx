@@ -10,11 +10,14 @@ import { App } from "./App";
 import { loadHero } from "./data/hero";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession } from "./session";
+import { loadWhatIfs } from "./whatif/whatif";
 import "./styles.css";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/hero_seed3.json`;
 // A fixture until the verifier serves real payloads (sim.export.render_payload_fixture).
 const PAYLOAD_URL = `${import.meta.env.BASE_URL}data/fixture_payload_seed3.json`;
+// Every option's "What if…?" answer, precomputed by sim.export.export_what_ifs.
+const WHAT_IF_URL = `${import.meta.env.BASE_URL}data/whatif_seed3.json`;
 
 /** The payload, or null if it cannot be fetched: the app then runs without captions. */
 async function loadPayload(url: string): Promise<unknown> {
@@ -32,9 +35,13 @@ async function main() {
   try {
     // Canvas textures draw shirt numbers with the web fonts, so wait for them (briefly).
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
-    const [hero, payload] = await Promise.all([loadHero(DATA_URL), loadPayload(PAYLOAD_URL)]);
+    const [hero, payload, whatIfs] = await Promise.all([
+      loadHero(DATA_URL),
+      loadPayload(PAYLOAD_URL),
+      loadWhatIfs(WHAT_IF_URL),
+    ]);
     const plan = params.get("plan") === "invalid" ? INVALID_PLAN : EXAMPLE_PLAN;
-    const session = createSession(hero, plan, payload);
+    const session = createSession(hero, plan, payload, whatIfs);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const autoplay = params.get("autoplay") !== "0" && !reducedMotion;
     root.render(

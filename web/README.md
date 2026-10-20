@@ -20,15 +20,16 @@ deliberately broken plan to show the template fallback.
 
 ## Data
 
-Both files in `public/data/` are written by
+The files in `public/data/` are written by
 
 ```bash
 uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --out web/public/data/hero_seed3.json \
-  --payload-fixture web/public/data/fixture_payload_seed3.json
+  --payload-fixture web/public/data/fixture_payload_seed3.json \
+  --what-if web/public/data/whatif_seed3.json
 ```
 
-- `hero_seed3.json`: the replay (schema version 2: integer mm and 1e-4 rad, origin at the centre
+- `hero_seed3.json`: the replay (schema version 3: integer mm and 1e-4 rad, origin at the centre
   spot, home attacks +x). `src/data/hero.ts` converts it once into typed arrays in metres and
   radians.
 - `fixture_payload_seed3.json`: a **fixture** render payload (SPEC 5.3) for the same moment,
@@ -38,7 +39,13 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   checked them. The UI labels it "Fixture · not checked by the verifier". It goes away once the
   api serves payloads from `explain.render.build_payload`.
 
-Regenerate both whenever `sim/` changes; `tests/test_export.py` fails if a committed file falls
+- `whatif_seed3.json`: every option of the hero's decision forced and re-simulated
+  (`sim.export.export_what_ifs`): the suggested question in en and zh, the verified answer from
+  `agents.whatif.answer_question` (a real SPEC 5.3 payload, not a fixture), and the forced run from
+  the decision on (players and ball, mm) for the ghost path. A static stand-in for the api's live
+  what-if.
+
+Regenerate them whenever `sim/` changes; `tests/test_export.py` fails if a committed file falls
 behind the generator.
 
 ## How it fits together
@@ -82,6 +89,16 @@ src/
   label "Counterfactual · inside the sim": they are causal only inside the simulation. The payload
   is checked like a plan (references resolve, evidence events exist, seek frames are in the clip);
   a line with an unsupported claim is withheld.
+- **Pass options at the decision** (SPEC 5.1, 7). From two frames before the hero's decision
+  until the pass is on its way, the tactical board draws a line from him to the believed target
+  of each of his top six options (plus the chosen one and the runner's): width = the chance he
+  picked it, colour = its value (one scale for both runs), the chosen one haloed, carry and shot
+  as rings. A dashed line goes to where the same option was on the true state. Hover (or tap)
+  shows the option with "he thought" and "it was"; at a freeze the chosen pass (with the look)
+  or the runner's option (without it) gets a "he thought / it was" tag. Those numbers come from
+  the `pass_success` / `cf_pass_success` claims; other options' numbers are marked `sim`
+  (from the export, not verified). The layer has a toggle and needs no plan step.
+  `options/passOptions.ts` holds the logic and its tests.
 - **Body and head yaw on every player.** In first person a token is a capsule body turned to
   `body_yaw` with a head on top turned to `head_yaw` (relative to the body, never clamped); a white
   visor marks the front of the head, so a look over the shoulder is visible on anyone in view. On
@@ -90,6 +107,12 @@ src/
   The skinned humanoid model is a separate, later card; this is its fallback.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
+- **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
+  "What if he carried it?"); what he actually did is marked. Picking one replays the moment from
+  the decision with the forced run as a gold ghost on the tactical board (its ball path, growing
+  with the playhead, and ghosts of the players on the ball) and shows the verified answer lines
+  with their counterfactual labels; each line opens its claims and seeks to the evidence, as in
+  the narration. Free questions need the live service: the text box is disabled until then.
 
 ### Frontend choices, briefly (for Python / C++ readers)
 

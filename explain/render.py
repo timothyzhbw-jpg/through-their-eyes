@@ -246,6 +246,10 @@ def check_caption(
         if m.key not in backed_terms
     ]
     violations += [Violation("banned", m.text, m.start, m.end) for m in lexicon.find_banned(text)]
+    violations += [  # a placeholder that did not render (malformed or unknown) never airs
+        Violation("placeholder", "unrendered brace", m.start(), m.end())
+        for m in re.finditer(r"[{}]", text)
+    ]
     for name in sorted(set((names or {}).values())):
         pattern = rf"\b{re.escape(name)}\b" if name.isascii() else re.escape(name)
         violations += [

@@ -131,8 +131,8 @@ def test_payload_fixture_lines_claims_and_evidence_resolve(data, payload):
             assert line["text"] == "What did he see?"  # a connective phrase
         # Every number in a caption is a filled value of one of the line's claims.
         text = re.sub(r"\b[HA]\d{1,2}\b", "", line["text"])
-        values = {str(v) for cid in line["claims"] for v in claims[cid]["values"].values()}
-        assert set(re.findall(r"\d+(?:\.\d+)?", text)) <= values
+        values = {float(v) for cid in line["claims"] for v in claims[cid]["values"].values()}
+        assert {float(x) for x in re.findall(r"\d+(?:\.\d+)?", text)} <= values
 
 
 def test_committed_payload_fixture_matches_the_generator(payload):
@@ -146,3 +146,64 @@ def test_committed_payload_fixture_matches_the_generator(payload):
             k: v for k, v in want.items() if k != "values"
         }
         assert got["values"] == pytest.approx(want["values"], abs=0.11)
+
+
+# --- he thought vs it was (schema v3, SPEC 5.1, 7) ------------------------------------------
+
+
+def test_every_option_is_scored_on_the_belief_and_on_the_truth(data):
+    for run in data["runs"].values():
+        for o in run["decision"]["options"]:
+            for key in ("p_success", "p_success_true", "value_true", "target_true"):
+                assert o[key] is not None, (o["action"], key)
+            assert 0.0 <= o["p_success_true"] <= 1.0
+            assert o["p_success_true_same_target"] is not None
+            if o["action"].startswith("pass:"):
+                assert o["receiver"] == o["action"][5:]
+                assert len(o["receiver_believed"]) == len(o["receiver_true"]) == 2
+            else:
+                assert o["receiver"] is o["receiver_believed"] is o["receiver_true"] is None
+
+
+def test_believed_receiver_positions_are_the_ones_the_decision_used(data):
+    for run in data["runs"].values():
+        d = run["decision"]
+        for o in d["options"]:
+            if o["receiver"]:
+                gap = np.hypot(*np.subtract(o["receiver_believed"], o["receiver_true"]))
+                assert gap == pytest.approx(d["belief_error"][o["receiver"]], abs=1e-3)
+
+
+def _h9(data, run):
+    return next(o for o in data["runs"][run]["decision"]["options"] if o["action"] == "pass:H9")
+
+
+def test_without_the_look_the_runner_was_on_but_he_did_not_know(data):
+    cf = _h9(data, "counterfactual")
+    assert cf["p_success"] < 0.1
+    assert cf["p_success_true"] - cf["p_success"] > 0.5
+    assert cf["prob"] < 0.01
+    # His target for H9 was where he last saw him: held fixed, the truth says nothing arrives.
+    assert cf["p_success_true_same_target"] < 0.01
+
+
+def test_with_the_look_belief_and_truth_agree_on_the_chosen_pass(data):
+    f = _h9(data, "factual")
+    assert data["runs"]["factual"]["decision"]["chosen"] == "pass:H9"
+    assert f["p_success_true"] >= f["p_success"] > 0.5
+    assert f["p_success_true_same_target"] == pytest.approx(f["p_success_true"], abs=0.02)
+
+
+def test_payload_fixture_has_he_thought_it_was_claims(data, payload):
+    claims = {c["id"]: c for c in payload["claims"]}
+    assert claims["pass_success"]["kind"] == "computed"
+    assert claims["cf_pass_success"]["kind"] == "counterfactual"
+    f, cf = _h9(data, "factual"), _h9(data, "counterfactual")
+    assert claims["pass_success"]["values"] == {
+        "p_belief": round(f["p_success"], 2),
+        "p_true": round(f["p_success_true"], 2),
+    }
+    assert claims["cf_pass_success"]["values"] == {
+        "p_belief": round(cf["p_success"], 2),
+        "p_true": round(cf["p_success_true"], 2),
+    }

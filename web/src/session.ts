@@ -17,8 +17,9 @@ import { BreakdownRunner } from "./plan/runner";
 import type { Script } from "./plan/schema";
 import { resolvePlan, type ResolvedPlan } from "./plan/validate";
 import { advance, createPlayback, type Focus, type PlaybackStore } from "./store/playback";
+import { optionOf, parseWhatIfs, seekFrame, type WhatIfs } from "./whatif/whatif";
 
-export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort";
+export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options";
 
 export interface Session {
   hero: Hero;
@@ -29,6 +30,8 @@ export interface Session {
   narration: Narration | null; // null when the render payload failed its checks
   payloadErrors: string[];
   script: Script; // caption text per line id, from the narration
+  whatIfs: WhatIfs | null; // precomputed "What if…?" answers; null hides the box
+  whatIfError: string | null;
   controls: ReturnType<typeof makeControls>;
 }
 
@@ -38,6 +41,7 @@ export function createSession(
   hero: Hero,
   planCandidate: unknown,
   payloadCandidate: unknown,
+  whatIfCandidate: unknown = null,
 ): Session {
   const moment = heroMoment(hero);
   const playback = createPlayback(hero);
@@ -46,6 +50,13 @@ export function createSession(
   const narration = checked.ok ? checked.narration : null;
   const script = scriptOf(narration);
   const resolved = resolvePlan(planCandidate, moment, script);
+  let whatIfs: WhatIfs | null = null;
+  let whatIfError: string | null = null;
+  try {
+    whatIfs = whatIfCandidate ? parseWhatIfs(whatIfCandidate, hero, moment) : null;
+  } catch (err) {
+    whatIfError = err instanceof Error ? err.message : String(err);
+  }
   return {
     hero,
     moment,
@@ -55,7 +66,9 @@ export function createSession(
     narration,
     payloadErrors: checked.ok ? [] : checked.errors,
     script,
-    controls: makeControls(hero, playback, runner, resolved, narration),
+    whatIfs,
+    whatIfError,
+    controls: makeControls(hero, playback, runner, resolved, narration, whatIfs),
   };
 }
 
@@ -66,6 +79,7 @@ function makeControls(
   runner: BreakdownRunner,
   resolved: ResolvedPlan,
   narration: Narration | null,
+  whatIfs: WhatIfs | null = null,
 ) {
   const takeOver = () => runner.stop();
   const run = () => hero.runs[playback.get().mode];
@@ -147,6 +161,39 @@ function makeControls(
     },
     closeEvidence() {
       playback.set({ evidenceLine: null });
+    },
+
+    /**
+     * Ask one of the suggested "What if…?" questions: replay the actual run from the decision with
+     * the forced run drawn over it as a ghost. Picking what he actually did clears the ghost.
+     */
+    askWhatIf(action: string) {
+      const option = optionOf(whatIfs, action);
+      if (!whatIfs || !option) return;
+      takeOver();
+      playback.set({
+        whatIf: option.factual ? null : action,
+        mode: "factual",
+        frame: whatIfs.start,
+        playing: true,
+        playUntil: null,
+        speed: 1,
+        captionLine: null,
+        evidenceLine: null,
+      });
+    },
+    clearWhatIf() {
+      playback.set({ whatIf: null });
+    },
+    /** Seek to a what-if claim's evidence: the actual run at that frame, the ghost on top. */
+    seekWhatIf(frame: number) {
+      takeOver();
+      playback.set({
+        mode: "factual",
+        frame: seekFrame(hero, frame),
+        playing: false,
+        playUntil: null,
+      });
     },
   };
 }

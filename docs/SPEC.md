@@ -242,10 +242,12 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
   tracking. For an observer `o` and a target `t`, the alert is on when:
   - `t` has been outside `o`'s visible region (V < 0.5, §4.4) for ≥ 1.0 s;
   - `t` has moved ≥ 3 m since `o` last saw him, at ≥ 4 m/s;
-  - `t` is within 25 m of `o`.
+  - `t` is within 35 m of `o` (25 m missed H9, who runs 22–30 m from H8 in `blind_side_run`).
   Observers are the ball carrier and the intended receiver (targets: teammates making runs) and
   the four defenders nearest the ball (targets: opponents). Hysteresis: on for at least 0.4 s; it
-  clears when `o` sees `t` again. All thresholds are *tunable*. Deterministic, no LLM, within the
+  clears when `o` sees `t` again. All thresholds are *tunable*; the values above are the starting
+  point, and the tuned defaults and their tables are in `eval/reports/blind_side.md`
+  (`analytics/blind_side.py`, M4). Deterministic, no LLM, within the
   live overlay budget (§2). An alert that ends in a pass to its target within 3 s is a moment
   trigger (§5.1).
 
@@ -278,8 +280,9 @@ of §3.4.
 - [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
 - [ ] xT grid increases toward goal (sanity plot saved).
-- [ ] Blind-side alerts vs the sim's ground truth (a belief that is stale by > 3 m for a moving
-      target within 25 m): precision ≥ 0.8 and recall ≥ 0.7 on held-out seeds (*tunable*);
+- [ ] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
+      watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
+      ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
 
@@ -301,6 +304,10 @@ involved players, key metrics, candidate lenses.
 - **He thought vs it was.** For a decision moment, the card records P(success) of the chosen
   option on the player's belief and on the true state, at the action frame — also for the
   counterfactual run's choice. The freeze at the pass shows both ("he thought 0.05, it was 0.80").
+  "It was" is the same option (same receiver) re-scored by the decision model on the true state
+  (true positions and velocities, belief age 0), so its target follows the receiver's true run.
+  Holding his believed target fixed would score 0 whenever he misplaced the receiver, however open
+  the receiver was; the export keeps that value as `p_success_true_same_target`.
   Belief-side values are `computed` claims, counterfactual-run values are `counterfactual` claims.
 - A card names its anchor events (`reception`, `last_scan`, `action`, `completion`), so claims
   anchor on `<card>.<anchor>` (§5.3).
@@ -349,7 +356,10 @@ Every factual sentence on screen comes from a `Claim`:
 - The verifier evaluates predicates against the event store → `supported | refuted | inconclusive`.
   Only `supported` claims render.
 - Narration text uses slot placeholders; the renderer fills numbers from verified values. LLMs
-  never emit digits.
+  never emit digits; with a model, they do not write narration text at all (§6, anchored
+  narration).
+- **No placeholder survives.** A `{` or `}` left in a rendered line (a malformed or unknown
+  placeholder) is a `placeholder` violation, so it never airs as literal braces.
 - **Number words count as digits.** The render check rejects any number that did not come from a
   slot: ASCII digits; English number words (`one`…`twenty`, tens, `hundred`, `twice`, `thrice`,
   `dozen`, `half`, …); in `zh`, a Chinese numeral followed by a measure word (三次, 两名, 五米, …).
@@ -406,11 +416,11 @@ tools exposed by our own MCP server.
 
 | Agent | Input | Output (JSON schema) | Notes |
 |---|---|---|---|
-| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots |
+| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
-| Commentator | Findings + plan + persona + language | `Script` lines with `speaker: "pbp"` (claim refs + slot placeholders) | play-by-play voice: what happened, short and paced |
-| Co-commentator | Findings + Commentator's lines + persona + language | `Script` lines with `speaker: "color"` | analysis voice: why it happened, the perception story; replies to the play-by-play |
+| Commentator | Findings + plan + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
+| Co-commentator | Findings + Commentator's lines + persona + language | anchored lines, become `Script` lines with `speaker: "color"` | analysis voice: why it happened, the perception story; replies to the play-by-play |
 | Verifier | Script + Claims | verdicts; approve or request a rewrite | deterministic code wrapped as a workflow step |
 | Voice | approved Script | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
 
@@ -430,7 +440,23 @@ Application Insights.
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
   outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
 - Models get claims as templates with slot names, never raw text to copy numbers from. The Analyst
-  returns claim ids only; unknown or unsupported ids are dropped and noted in the trace.
+  returns claim ids only, constrained to the supported ids by an enum in its JSON schema; a reply
+  outside the enum fails validation and the Analyst's template takes over.
+- **Anchored narration: the model directs, the verified templates speak.** Each narration line the
+  model returns is a supported claim id, an allowed connective ("Watch this.", "注意看。"), or both;
+  both are enums in the schema, so structured outputs cannot carry free text. A claim speaks its
+  verified template, a connective itself (at most two per voice), and the Verifier still checks
+  every line. *Why:* the first run against `gpt-4.1-mini` (M0, seed 3) produced free-text lines
+  with broken grammar ("1 times"), repeated claims, invented player names, and a malformed
+  placeholder (`{window_s|second}`) that rendered as literal braces. With anchored lines and the
+  enum Analyst, two reruns aired 22 and 24 lines in four scripts (casual and analyst × en and zh)
+  with no rewrites, no drops, no invented names, and every headline claim spoken.
+- Telestrator: Azure structured outputs reject the `oneOf` a discriminated union produces, so the
+  model fills `PlanDraft` (a plain `anyOf` union) and `to_plan()` applies the full checks.
+- *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus):* 10.5 s and 13.3 s for the whole
+  crew (Director ≈ 2.4 s, Analyst 2.1–3.3 s, Telestrator 3.0–4.4 s, narration ≈ 1.7 s for eight
+  calls, the four scripts in parallel). The p95 < 12 s target (§2) needs the Telestrator and narration to run in
+  parallel: both depend only on the Analyst's findings.
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid.
@@ -506,6 +532,58 @@ original visual identity.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 
+### Real-footage overlay (demo video only; the one exception to synthetic data)
+Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
+segment of **≤ 10 s in the demo video**, showing the ground graphics drawn on a real camera, the
+way the app draws them on the synthetic pitch: it backs the claim that the overlays would transfer
+to a real broadcast.
+- **Source:** the Wikimedia Commons file "Битва Корпораций - 2019-10-06 - Нова Пошта. - Мини-футбол.
+  Финал." by savinkins, licensed CC BY 3.0. Checked on Commons on 2026-10-19: the license was
+  reviewed by YouTubeReviewBot, and the SHA-1 matches `demo/realfeed/download.py`. It is a
+  corporate-league futsal final (Атлант vs Нова Пошта).
+- **Code:** `demo/realfeed/`, with OpenCV in its own dependency group.
+  - It does classical computer vision only: pitch calibration, camera tracking, background
+    subtraction for the players' foot points, and the turf key for the graphics.
+  - It is never imported by `sim/`, `analytics/`, `explain/`, `agents/`, `api/` or `web/`, and the
+    public app never shows or loads it.
+  - The footage is downloaded into `out/` and never committed. Only camera calibration (pixel ↔
+    pitch correspondences) is committed: no frames, no player positions.
+- **Masking:** everything outside the pitch outline is blurred and darkened; every face is blurred;
+  any legible logo, sponsor or club text on kit is blurred too. Kit matters because the teams are
+  companies and the video rules ban third-party trademarks.
+- **Graphics only:** no numbers, captions or narration on the real footage. Every on-screen number
+  in the app is a verified claim about the synthetic match, and nothing in this segment is
+  verified.
+- **On screen:** a label saying "real footage, overlay demo only; the app uses synthetic data",
+  plus the attribution "savinkins, Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". The
+  same attribution goes in `demo/realfeed/README.md` and the repo README. CC BY requires author,
+  source, license and a note of changes.
+- **Never used** to train, tune or calibrate anything in the app.
+
+**Risks:**
+1. *Rules.* The official rules say "Projects must use synthetic, football-realistic data". The
+   app and all its data stay synthetic, but a judge or the Stage One viability check may still
+   read real footage in the video as using real data, and that could cost the entry.
+   - Mitigation: keep the segment short, clearly labelled and cuttable.
+   - Bowen may ask the organisers first; if they object, cut it.
+2. *Privacy.* The players are private individuals in an amateur corporate league. Faces are
+   blurred, and no names or identities are shown or tracked beyond the 10 s.
+3. *Trademarks.* Kit, boards and banners may carry company logos. Before upload, review every
+   frame of the exported segment for logos and faces, not only the automated masks.
+4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
+   endorsement. Keep the attribution on screen for the whole segment.
+5. *Time.* It is the first item in the cut order (§9); it never takes time from the "never cut"
+   list.
+
+**Acceptance checks:**
+- [ ] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
+      imports `demo.realfeed`, and that `web/` has no reference to it.
+- [ ] No video or image frames are tracked under `demo/` (test on `git ls-files`).
+- [ ] Every exported frame: off-pitch pixels are masked; a face detector finds no unblurred face;
+      the label and the attribution are visible.
+- [ ] Bowen has reviewed the exported segment frame by frame (faces, kit logos, boards) before it
+      goes into the video.
+
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
 - [ ] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
@@ -552,6 +630,8 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
+0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
+   or the organisers object)
 1. shareable clip export (stretch)
 2. viewer pilot
 3. end-of-match recap reel
@@ -576,7 +656,8 @@ Framework, live deployment, the video.
 - **0:55–1:25** The same moment for casual / analyst / player-fan; `en` ↔ `zh`; open one caption's
   evidence.
 - **1:25–1:40** The verifier blocks a wrong number and a banned judgement word.
-- **1:40–2:00** Architecture (Microsoft stack) + eval numbers.
+- **1:40–2:00** Architecture (Microsoft stack) + eval numbers. *If kept:* the ≤ 10 s real-footage
+  overlay segment (§7) sits here, labelled and attributed on screen, before the architecture.
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
@@ -585,5 +666,6 @@ Framework, live deployment, the video.
 - [ ] Video < 2:00 at a public URL (YouTube / Vimeo / Facebook Video / Youku); no third-party
       trademarks or copyrighted music
 - [ ] Test link live and free until 2026-11-10, with testing instructions
-- [ ] README: synthetic-data statement, architecture, how to run, eval results, related work
+- [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
+      and its attribution), architecture, how to run, eval results, related work
 - [ ] All materials in English

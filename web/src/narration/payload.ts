@@ -66,11 +66,28 @@ export const KIND_LABEL: Record<ClaimKind, { name: string; detail: string }> = {
   computed: { name: "Computed", detail: "an analytics metric" },
   counterfactual: {
     name: "Counterfactual",
-    detail: "re-simulated without the look: causal only inside the sim",
+    detail: "re-simulated with one thing changed: causal only inside the sim",
   },
 };
 
+/** What a payload may refer to: its moment, the events evidence may cite, the clip length. */
+export interface PayloadScope {
+  moment: string;
+  events: ReadonlySet<string>;
+  frames: (claim: PayloadClaim) => number;
+}
+
+/** A moment's narration: evidence from either replayed run. */
 export function validatePayload(raw: unknown, m: MomentContext, hero: Hero): PayloadCheck {
+  const runs = [hero.runs.factual, hero.runs.counterfactual];
+  return checkPayload(raw, {
+    moment: m.id,
+    events: new Set(runs.flatMap((r) => r.events.map((e) => e.id))),
+    frames: (c) => hero.runs[claimRun(c)].frames,
+  });
+}
+
+export function checkPayload(raw: unknown, scope: PayloadScope): PayloadCheck {
   const parsed = RenderPayload.safeParse(raw);
   if (!parsed.success) {
     return {
@@ -80,21 +97,20 @@ export function validatePayload(raw: unknown, m: MomentContext, hero: Hero): Pay
   }
   const payload = parsed.data;
   const errors: string[] = [];
-  if (payload.moment !== m.id) errors.push(`moment: payload is for ${payload.moment}, not ${m.id}`);
+  if (payload.moment !== scope.moment) {
+    errors.push(`moment: payload is for ${payload.moment}, not ${scope.moment}`);
+  }
 
   const claims = new Map<string, PayloadClaim>();
   for (const c of payload.claims) {
     if (claims.has(c.id)) errors.push(`claims: duplicate id ${c.id}`);
     claims.set(c.id, c);
   }
-  const known = new Set(
-    [...hero.runs.factual.events, ...hero.runs.counterfactual.events].map((e) => e.id),
-  );
   for (const c of claims.values()) {
     for (const e of c.evidence) {
-      if (!known.has(e)) errors.push(`claim ${c.id}: evidence ${e} is not in the replay`);
+      if (!scope.events.has(e)) errors.push(`claim ${c.id}: evidence ${e} is not in the replay`);
     }
-    const frames = hero.runs[claimRun(c)].frames;
+    const frames = scope.frames(c);
     if (c.seek_frame != null && (c.seek_frame < 0 || c.seek_frame >= frames)) {
       errors.push(`claim ${c.id}: seek_frame ${c.seek_frame} is outside the clip`);
     }

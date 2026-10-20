@@ -19,10 +19,12 @@ export interface PlaybackState {
   cone: boolean;
   beliefGhosts: boolean;
   cfGhost: boolean; // ghost path of the other run
+  options: boolean; // pass options at the decision (shown around the decision frame only)
   focus: Focus; // which view gets the space
   scanMarker: string | null; // scan id highlighted by a plan
   captionLine: string | null; // id of the narration line on screen (a plan voice step)
   evidenceLine: string | null; // narration line whose claims and evidence are open
+  whatIf: string | null; // option whose "What if…?" answer and ghost path are shown
 }
 
 export type PlaybackStore = Store<PlaybackState>;
@@ -43,10 +45,12 @@ export function createPlayback(hero: Hero): PlaybackStore {
     cone: true,
     beliefGhosts: true,
     cfGhost: false,
+    options: true,
     focus: "split",
     scanMarker: null,
     captionLine: null,
     evidenceLine: null,
+    whatIf: null,
   });
 }
 
