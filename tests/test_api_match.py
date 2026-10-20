@@ -58,6 +58,28 @@ def test_the_defaults_serve_the_match_and_each_hero_possession(tmp_path, monkeyp
         assert c.get(f"/api/matches/{PRESS}/export").status_code == 200
 
 
+def test_a_service_from_the_environment_loads_its_matches_before_the_first_request(
+    tmp_path, monkeypatch
+):
+    # The stitched match takes longer to simulate on 0.5 vCPU than the web app waits for its
+    # export (15 s): a new revision that loaded it on the first request served offline data
+    # (found live on 2026-10-20). Warm, the lifespan loads every match before uvicorn opens its
+    # port.
+    monkeypatch.delenv("TTE_WARM", raising=False)
+    assert Settings.from_env().warm and not Settings().warm
+    settings = Settings(matches=[("blind_side_run", 3), ("press_escape", 0)], cache_dir=tmp_path)
+    for warm, loaded in ((True, {"blind_side_run-3", PRESS}), (False, set())):
+        settings.warm = warm
+        app = create_app(settings)
+        with TestClient(app):
+            assert set(app.state.store._loaded) == loaded
+
+
+def test_tte_warm_0_loads_each_match_on_its_first_request(monkeypatch):
+    monkeypatch.setenv("TTE_WARM", "0")
+    assert not Settings.from_env().warm
+
+
 def test_deploy_and_env_example_default_to_the_same_matches():
     root = Path(__file__).resolve().parents[1]
     deploy = re.search(
