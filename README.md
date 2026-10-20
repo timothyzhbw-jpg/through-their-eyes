@@ -26,6 +26,8 @@ claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.
 | Claim | Number | Report |
 |---|---|---|
 | Without one look, the hero decides differently | 39/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
+| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero; pressure hero | 40/40; 31/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
+| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%) | 40/40 lost; 22/40 changed — **target missed**: in 18 seeds his own action lost the ball too | [pressure](eval/reports/hero_lens_press_escape.md) |
 | Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | False claims refuted by the verifier | 100% of perturbations | [corruption](eval/reports/corruption.md) |
@@ -74,7 +76,9 @@ uv run ruff check .
 uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
-"What if…?" answers. Without Microsoft Foundry configured, every agent step runs on its
+"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): six possessions on
+one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), open play —
+with moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
 The container image for Azure Container Apps (main dependencies only, runs as a non-root user):

@@ -88,6 +88,17 @@ on an LLM.
   (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
+  *Implemented (2026-10-20, `sim/match.py`), 5–8 possessions for now:* `match-1` has six — open
+  play, `blind_side_run` seed 3, open play, `press_escape` seed 0, open play twice — 132.6 s on one
+  clock. Hero possessions keep their demo seeds; open-play seeds are keyed off the match seed and
+  start at 1,000,000, so they are never design or eval seeds. A restart follows how the previous
+  possession stopped (throw-in, goal kick, corner), or is a `cut` when it ended in play: in
+  `match-1` all five are cuts, as no open-play possession put the ball out within its 30 s (with
+  60 s, 7 of 30 ended in a throw-in). The score counts `goal` events; with no shot outcomes yet
+  (M4) it stays 0–0. Each possession stays its own `MatchRun`: moments, lenses, counterfactuals
+  and breakdowns run per possession and are lifted to match time (`explain/match.py`). The API
+  serves it as `match-1` (`TTE_MATCHES=…,match:1`); the export is the hero export's run schema
+  over the whole clock plus a `match` block.
 - Pitch 105 × 68 m, origin at the centre spot; the home team attacks +x in the first half. 25 Hz.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
@@ -184,6 +195,24 @@ scenario-driven generation.
 the decision-maker only during the key scan, and the last sighting before it shows him marked or in
 a low-value position. `drop_scan` then flips the decision because of how the scene is built, not by
 chance.
+
+**Pressure hero (`press_escape`, 2026-10-20).** A man-oriented high press: the defensive
+midfielder H6 lays the ball back to the centre-back H4 at the corner of his box, which sends A11 at
+him; every nearby option is marked tightly except one (H5 or H8, a keyed draw). Design rule: the
+presser comes from where H4 is looking, so he needs no scan to see him, and nothing forces,
+suppresses or times a scan. Tackles are on in this scenario only (`Scenario.tackles`: an opponent
+within the control radius of a carried ball wins it), so the other scenarios keep their runs byte
+for byte. Its intervention is `force:carry`: had he kept the ball, would the press have won it?
+Acceptance (`eval/hero_lens.py`; designed on seeds 0–99, held out 100–139):
+- the pressure lens is selected in 31/40 (target ≥ 60%: met; median margin 0.097 xT);
+- forcing the carry loses the ball in 40/40, but the possession outcome changes in 22/40 (target
+  ≥ 60%: **missed**). In the other 18 seeds H4's own action lost the ball as well: he carried into
+  the press (7) or passed through the presser (11).
+- Cause: the decision model's TTI keeps a sprinting presser's velocity for the 0.7 s reaction
+  time, so it rates a carry, or a pass along the presser's line, as getting past him; the sim's
+  tackle and control rules do not. One redesign, tried on design seeds only (pressing him 6 m
+  deeper; the presser off the passing lanes), did not help (39/80 kept; or no press at all), so
+  the scenario was not tuned further. The fix is a decision-model change that touches every hero.
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
@@ -311,6 +340,10 @@ involved players, key metrics, candidate lenses.
   - decision after a scan: a reception, then the receiver's decision, with a scan ending ≤ 2 s
     before the reception;
   - sprint: > 7.0 m/s for ≥ 0.4 s, live overlay only.
+  - decision under pressure (`pressed_decision`, 2026-10-20): a decision on the ball with
+    pressing intensity on the carrier ≥ 0.7, the lexicon's own threshold for "under heavy
+    pressure"; first in merge priority, so a pressed decision after a scan is one card with both
+    tags.
   Goal, big chance and counter-press need shot outcomes and turnovers (M4).
 - Detections about the same action merge into one card with several tags. Card ids look like
   `m:decision_after_scan:H8:0075`.
@@ -346,6 +379,10 @@ changed the decision. The scan lens therefore wins exactly when the scan was dec
 uninformative scan scores 0, and then `space` wins (tested). On `blind_side_run`, 80 seeds
 (0–39 and 100–139): `scan` is selected every time, the key scan is the most informative scan every
 time, and the median margin over `space` is about 0.003 xT.
+On `press_escape`, held-out seeds 100–139: `pressure` is selected in 31/40 and `space` in 9/40 —
+the seeds where H4 carried the ball and the space lens measures what the best pass was worth
+instead; `scan` never (H4's own scans change nothing, Δscan ≈ 0). Report:
+`eval/reports/hero_lens_press_escape.md`.
 
 ### 5.3 Claims and verifier
 Every factual sentence on screen comes from a `Claim`:
@@ -484,6 +521,14 @@ Application Insights.
   With tracing spans on every step and the capacity raised to 200, three runs back to back
   (2026-10-20): 10.9, 8.2 and 9.0 s, no 429, plan from the agent, 23–25 lines aired, no rewrites
   or drops.
+- *Any lens (2026-10-20).* The counterfactual (`cf1`) is the scenario's own intervention: the run
+  without the key scan, or for a pressure moment the hero forced to keep the ball. Pressure
+  moments get their own claims (`heavy_pressure`, `presser_distance`, `receiver_pressure`,
+  `cf_carry_lost`, `cf_value`) and template lines; without a key scan the template plan's POV runs
+  up to the decision and has no scan marker. *Measured once against `gpt-4.1-mini`* (`press_escape`
+  seed 0, `--mcp`, casual and analyst × en and zh): every step from the model, plan from the agent,
+  24 lines aired, no rewrites or drops, lens `pressure`; 19.8 s (Director 5.1 s, Analyst 3.7 s,
+  Telestrator 11.0 s with one retry, narration 9.4 s with two retries).
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid.

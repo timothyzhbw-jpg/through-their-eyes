@@ -109,6 +109,12 @@ _Fill in as they come to exist._
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
+- `uv run python -m eval.hero_lens --scenario press_escape --seeds 100-139` — hero lens eval
+  (SPEC 3.6, 5.2): does lens selection pick the lens the scenario is built for, and does its
+  intervention (`Scenario.intervention`) change the outcome? Design seeds are 0–99; writes
+  `eval/reports/hero_lens_<scenario>.md`
+- `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
+  `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,

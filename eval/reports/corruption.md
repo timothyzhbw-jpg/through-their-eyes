@@ -1,22 +1,22 @@
 # Corruption eval — claims verifier
 
-Scenario `blind_side_run`, seeds 0–19 (20): the factual run and the drop-key-scan counterfactual per seed. Claims come from `explain/builders.py` (19 facts); 100 perturbations, an equal share per type. Each perturbed sentence is judged by the verifier and by an independent ground-truth oracle (`eval/corruption.py`, plain numpy over the run, never through `explain/`). Numbers are true when the truth rounds to the shown value (half a display unit).
+Scenario `blind_side_run`, seeds 0–19 (20): the factual run and the drop-key-scan counterfactual per seed. Claims come from `explain/builders.py` (21 facts); 100 perturbations, an equal share per type. Each perturbed sentence is judged by the verifier and by an independent ground-truth oracle (`eval/corruption.py`, plain numpy over the run, never through `explain/`). Numbers are true when the truth rounds to the shown value (half a display unit).
 
 | Metric | Value | Target (SPEC 5.3) |
 |---|---|---|
-| Generated claims verified `supported` | 368/368 (100%) | all |
-| Perturbations false under ground truth | 88 | — |
-| … refuted by the verifier | **88/88 (100%)** | ≥ 98% |
-| … blocked (refuted or inconclusive) | 88/88 (100%) | — |
+| Generated claims verified `supported` | 408/408 (100%) | all |
+| Perturbations false under ground truth | 86 | — |
+| … refuted by the verifier | **86/86 (100%)** | ≥ 98% |
+| … blocked (refuted or inconclusive) | 86/86 (100%) | — |
 | Perturbations still true (excluded) | 10 | reported |
-| Perturbations the recording cannot decide (excluded) | 2 | reported |
+| Perturbations the recording cannot decide (excluded) | 4 | reported |
 | Still-true perturbations verified `supported` | 10/10 (100%) | — |
 | Unsupported perturbed claims that rendered | 0 | 0 |
-| Supported claims rendered in en + zh, render check clean | 736/736 (100%) | all |
-| Render payloads (seed × language) re-checked clean | 40/40, 776 lines, 0 violations | all |
-| Claims labelled observed / computed / counterfactual | 220 / 100 / 48 | every claim |
-| Claims anchored on the moment card | 294/368 (80%) | — |
-| Verdicts written to the audit log | 468/468 | all |
+| Supported claims rendered in en + zh, render check clean | 816/816 (100%) | all |
+| Render payloads (seed × language) re-checked clean | 40/40, 856 lines, 0 violations | all |
+| Claims labelled observed / computed / counterfactual | 240 / 120 / 48 | every claim |
+| Claims anchored on the moment card | 314/408 (77%) | — |
+| Verdicts written to the audit log | 508/508 | all |
 
 Result: PASS (refutation 100.0%).
 
@@ -26,32 +26,34 @@ Result: PASS (refutation 100.0%).
 |---|---|---|---|---|---|
 | `number_pm1` | 25 | 25 | 25 | 0 | 0 |
 | `number_pm20` | 25 | 25 | 25 | 0 | 0 |
-| `swap_player` | 25 | 22 | 22 | 3 | 0 |
-| `wrong_order` | 25 | 16 | 16 | 7 | 2 |
+| `swap_player` | 25 | 20 | 20 | 4 | 1 |
+| `wrong_order` | 25 | 16 | 16 | 6 | 3 |
 
 ## By fact
 
 | Fact | Kind | Generated | Supported | Perturbed | False | Refuted |
 |---|---|---|---|---|---|---|
-| `belief_error` | computed | 20 | 20 | 4 | 4 | 4 |
-| `blind_side` | computed | 20 | 20 | 6 | 2 | 2 |
-| `cf_pass` | counterfactual | 14 | 14 | 4 | 4 | 4 |
+| `belief_error` | computed | 20 | 20 | 9 | 9 | 9 |
+| `blind_side` | computed | 20 | 20 | 8 | 2 | 2 |
+| `cf_pass` | counterfactual | 14 | 14 | 1 | 1 | 1 |
 | `cf_pass_success` | counterfactual | 14 | 14 | 0 | 0 | 0 |
-| `cf_value` | counterfactual | 20 | 20 | 4 | 4 | 4 |
-| `gap_opened` | observed | 20 | 20 | 10 | 9 | 9 |
-| `gap_to_marker` | observed | 20 | 20 | 13 | 7 | 7 |
+| `cf_value` | counterfactual | 20 | 20 | 3 | 3 | 3 |
+| `gap_opened` | observed | 20 | 20 | 6 | 5 | 5 |
+| `gap_to_marker` | observed | 20 | 20 | 14 | 9 | 9 |
 | `gap_to_nearest_opponent` | observed | 20 | 20 | 5 | 5 | 5 |
-| `key_scan_duration` | observed | 20 | 20 | 7 | 7 | 7 |
+| `key_scan_duration` | observed | 20 | 20 | 4 | 4 | 4 |
 | `observed_share` | computed | 20 | 20 | 6 | 6 | 6 |
-| `pass_speed` | observed | 20 | 20 | 2 | 2 | 2 |
+| `pass_speed` | observed | 20 | 20 | 3 | 3 | 3 |
 | `pass_success` | computed | 20 | 20 | 0 | 0 | 0 |
-| `pass_to_runner` | observed | 20 | 20 | 7 | 7 | 7 |
-| `pressure_at_pass` | computed | 20 | 20 | 5 | 4 | 4 |
-| `runner_received` | observed | 20 | 20 | 6 | 6 | 6 |
-| `scan_before_reception` | observed | 20 | 20 | 5 | 5 | 5 |
-| `scans_before_reception` | observed | 20 | 20 | 7 | 7 | 7 |
-| `time_since_last_scan` | observed | 20 | 20 | 7 | 7 | 7 |
-| `unmarked` | observed | 20 | 20 | 2 | 2 | 2 |
+| `pass_to_runner` | observed | 20 | 20 | 8 | 8 | 8 |
+| `presser_distance` | observed | 20 | 20 | 4 | 4 | 4 |
+| `pressure_at_pass` | computed | 20 | 20 | 4 | 4 | 4 |
+| `receiver_pressure` | computed | 20 | 20 | 1 | 1 | 1 |
+| `runner_received` | observed | 20 | 20 | 4 | 4 | 4 |
+| `scan_before_reception` | observed | 20 | 20 | 3 | 3 | 3 |
+| `scans_before_reception` | observed | 20 | 20 | 2 | 2 | 2 |
+| `time_since_last_scan` | observed | 20 | 20 | 7 | 6 | 6 |
+| `unmarked` | observed | 20 | 20 | 8 | 7 | 7 |
 
 ## False perturbations not refuted
 
@@ -61,23 +63,25 @@ None.
 
 | Seed | Fact | Perturbation | Change | Verifier | Reason |
 |---|---|---|---|---|---|
-| 18 | `pressure_at_pass` | `swap_player` | player: H8 → H1 | supported | approx(6.661338147750939e-16, 0.0) holds |
-| 11 | `blind_side` | `swap_player` | runner: H9 → A3 | supported | eq(True, True) holds |
-| 10 | `blind_side` | `swap_player` | runner: H9 → H10 | supported | eq(True, True) holds |
-| 14 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.969774147898603, 12.0) holds |
-| 5 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
-| 15 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.726468688150181, 10.7) holds |
+| 1 | `unmarked` | `swap_player` | runner: H9 → H11 | supported | all 2 conditions hold |
+| 15 | `blind_side` | `swap_player` | player: H8 → A3 | supported | eq(True, True) holds |
+| 18 | `blind_side` | `swap_player` | player: H8 → A8 | supported | eq(True, True) holds |
+| 5 | `blind_side` | `swap_player` | runner: H9 → H10 | supported | eq(True, True) holds |
+| 2 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.74324669501875, 10.7) holds |
 | 11 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.882016819024095, 12.9) holds |
 | 12 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(13.5026439845338, 13.5) holds |
+| 13 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.61565001767597, 10.6) holds |
+| 14 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
 | 19 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.882355153926314, 11.9) holds |
-| 2 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.74324669501875, 10.7) holds |
 
 ## Excluded: not decidable from the recording
 
 | Seed | Fact | Perturbation | Change | Verifier | Reason |
 |---|---|---|---|---|---|
+| 2 | `time_since_last_scan` | `swap_player` | player: H8 → H2 | inconclusive | no scan by H2 recorded up to frame 70 |
 | 4 | `blind_side` | `wrong_order` | runner ↔ player | inconclusive | no scan by H9 recorded up to frame 66 |
 | 9 | `blind_side` | `wrong_order` | runner ↔ player | inconclusive | no scan by H9 recorded up to frame 68 |
+| 7 | `blind_side` | `wrong_order` | runner ↔ player | inconclusive | no scan by H9 recorded up to frame 67 |
 
 ## Rendered claims, seed 0
 
@@ -98,11 +102,13 @@ Player ids stand in for display names.
 | `pass_speed` | H8's pass left his foot at 82 km/h. | H8这脚传球的出球时速为82公里。 |
 | `pass_success` | H8 thought the pass to H9 had a 0.83 chance of arriving; it was 0.90. | H8以为传给H9的球到达的概率是0.83，实际是0.90。 |
 | `pass_to_runner` | H8 found H9 with a 41-metre pass. | H8一脚41米的传球找到了H9。 |
+| `presser_distance` | The nearest opponent, A8, was 9.8 metres from H8 when he released the ball. | H8出球时，离他最近的对手是A8，相距9.8米。 |
 | `pressure_at_pass` | Pressing intensity on H8 was 0% when he released the ball. | 出球时，H8承受的逼抢强度为0%。 |
+| `receiver_pressure` | When the pass reached H9, pressing intensity on him was 0%. | 球到H9脚下时，他承受的逼抢强度为0%。 |
 | `runner_received` | H9 took the pass from H8. | H9接到了H8的传球。 |
 | `scan_before_reception` | H8 checked his shoulder before the ball reached him. | 球到之前，H8先回头看了一眼。 |
 | `scans_before_reception` | H8 scanned once in the 2 seconds before receiving. | 接球前2秒内，H8扫视了1次。 |
 | `time_since_last_scan` | H8 had last checked his shoulder 0.8 seconds before the ball arrived. | 球到脚下时，H8距上次回头观察已过去0.8秒。 |
 | `unmarked` | H9 was unmarked when H8 released the ball. | H8出球时，H9无人盯防。 |
 
-Verdicts on all perturbations: {'inconclusive': 2, 'refuted': 88, 'supported': 10}.
+Verdicts on all perturbations: {'inconclusive': 4, 'refuted': 86, 'supported': 10}.
