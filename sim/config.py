@@ -42,14 +42,22 @@ class SimParams:
     kick_lockout_s: float = 0.25  # the kicker cannot regain the ball this soon
     # Head dynamics: proportional gain with an angular-velocity cap.
     head_gain: float = 25.0  # 1/s
-    head_omega_max: float = 12.0  # rad/s (about 690 deg/s)
+    head_omega_max: float = 12.0  # rad/s (about 690 deg/s), the cap on any head motion
     body_turn_rate: float = 6.0  # rad/s
-    # Spontaneous scans: a rapid turn away from the ball and back.
+    # Each scan (and each partial scan) turns at its own peak speed, drawn per scan: Kokubu et al.
+    # (2026, Results 3.1) print 404.2 +- 50.7 deg/s for scans they detect at 250 deg/s.
+    scan_omega: tuple[float, float] = (np.deg2rad(404.2), np.deg2rad(50.7))  # mean, SD
+    scan_omega_min: float = np.deg2rad(250.0)
+    # Spontaneous scans: a rapid turn away from the ball, a dwell, and a turn back.
     scan_amplitude: tuple[float, float] = (np.deg2rad(70.0), np.deg2rad(150.0))
-    scan_dwell_s: tuple[float, float] = (0.06, 0.18)
+    # Dwell: lognormal (median, log SD), capped. Most scans barely pause; a few hold the look.
+    # Fitted by eval/scan_calibration.py so that the time the ball is out of an 82 deg head-fixed
+    # frame matches Aksum et al. (2021): 90.3% <= 0.66 s, SD 0.28 s, longest 3.28 s.
+    scan_dwell_s: tuple[float, float] = (0.019, 1.86)
+    scan_dwell_max_s: float = 2.6  # with the turns, at most about the longest scan they timed
     scan_out_tolerance: float = np.deg2rad(5.0)
     scan_return_tolerance: float = np.deg2rad(10.0)
-    scan_max_out_s: float = 0.5
+    scan_max_out_s: float = 0.8  # a 150 deg turn at 250 deg/s takes 0.6 s
     scan_refractory_s: float = 0.3
     sensor_noise: float = np.deg2rad(2.0)  # on the head yaw written to tracking output
     # Non-scan head motion (SPEC 3.4 nuisance), switched as a whole by head_nuisance. Sensor noise

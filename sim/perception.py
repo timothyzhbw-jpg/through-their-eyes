@@ -1,7 +1,8 @@
 """Perception (SPEC 3.4): head dynamics, scans, and each player's belief state.
 
-- Baseline gaze tracks the ball. A scan is a rapid turn away from it, a short dwell, and a turn
-  back; scans are ground-truth `scan` events.
+- Baseline gaze tracks the ball. A scan is a rapid turn away from it, a dwell, and a turn back;
+  scans are ground-truth `scan` events. Each scan turns at its own peak speed (a keyed draw per
+  scan); most dwells are a frame or less, a few hold the look for seconds (`SimParams`).
 - Non-scan head motion (SPEC 3.4 nuisance, `SimParams.head_nuisance`): slow drift of the resting
   gaze around the ball, and partial scans — a turn away that comes straight back, without a dwell,
   before the ball leaves the binocular cone. They are not scans — the player never took his eyes
@@ -15,6 +16,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from statistics import NormalDist
 
 import numpy as np
 
@@ -61,6 +63,7 @@ class ActiveScan:
     dwell_frames: int
     out_deadline: int
     key: bool
+    omega: float  # rad/s, this scan's peak head speed (out and back)
     phase: str = "out"
     dwell_until: int = 0
     partial: bool = False
@@ -105,6 +108,7 @@ class HeadModel:
         partial: np.ndarray | None = None,
         partial_draws: np.ndarray | None = None,
         drift_noise: np.ndarray | None = None,
+        speed_noise: np.ndarray | None = None,
     ) -> tuple[np.ndarray, list[FinishedScan]]:
         """Advance every head by one frame.
 
@@ -112,23 +116,27 @@ class HeadModel:
         may start now; draws: (N, 3) uniforms for side, amplitude and dwell. Head nuisance, used
         only when params.head_nuisance is on: partial[i]: a partial scan may start now (it takes
         its side from draws), partial_draws: (N,) uniforms for its amplitude, drift_noise: (N,)
-        standard normals that drive the drift.
+        standard normals that drive the drift. speed_noise: (N,) standard normals for the peak
+        head speed of a scan that starts now (None: every scan turns at the mean speed).
         """
         if params.head_nuisance and drift_noise is not None:
             base = np.asarray(base, dtype=float) + self._advance_drift(drift_noise, params, dt)
         nuisance = params.head_nuisance and partial is not None and partial_draws is not None
         target = np.array(base, dtype=float)
+        cap = np.full(len(head), params.head_omega_max)
         finished: list[FinishedScan] = []
         lo_amp, hi_amp = params.scan_amplitude
-        lo_dwell, hi_dwell = params.scan_dwell_s
         lo_partial, hi_partial = params.partial_scan_amplitude
+        (mean_omega, sd_omega), lo_omega = params.scan_omega, params.scan_omega_min
         for i in range(len(head)):
             sid = scan_id(ids[i], frame)
+            z = 0.0 if speed_noise is None else float(speed_noise[i])
+            omega = float(np.clip(mean_omega + sd_omega * z, lo_omega, params.head_omega_max))
             if i in forced and sid not in dropped and self._free_for_forced(i, frame):
                 if self.active[i] is not None:  # a partial scan gives way to a forced one
                     finished.append(FinishedScan(i, self.active[i], frame))
                 f = forced[i]
-                self._start(i, frame, f.target_yaw, base[i], f.dwell_s, f.key, params, dt)
+                self._start(i, frame, f.target_yaw, base[i], f.dwell_s, f.key, omega, params, dt)
             elif (
                 self.active[i] is None
                 and frame >= self.refractory_until[i]
@@ -138,16 +146,17 @@ class HeadModel:
                 side = 1.0 if draws[i, 0] < 0.5 else -1.0
                 if spontaneous[i]:
                     amplitude = lo_amp + (hi_amp - lo_amp) * draws[i, 1]
-                    dwell = lo_dwell + (hi_dwell - lo_dwell) * draws[i, 2]
                     yaw = base[i] + side * amplitude
-                    self._start(i, frame, yaw, base[i], dwell, False, params, dt)
+                    dwell = scan_dwell(draws[i, 2], params)
+                    self._start(i, frame, yaw, base[i], dwell, False, omega, params, dt)
                 elif nuisance and partial[i]:
                     amplitude = lo_partial + (hi_partial - lo_partial) * partial_draws[i]
                     yaw = base[i] + side * amplitude
-                    self._start(i, frame, yaw, base[i], 0.0, False, params, dt, partial=True)
+                    self._start(i, frame, yaw, base[i], 0.0, False, omega, params, dt, partial=True)
             scan = self.active[i]
             if scan is None:
                 continue
+            cap[i] = scan.omega
             if scan.phase == "out":
                 reached = abs(wrap_angle(head[i] - scan.target)) < params.scan_out_tolerance
                 if scan.partial and frame == scan.start:
@@ -166,7 +175,7 @@ class HeadModel:
             else:
                 target[i] = scan.target
         error = wrap_angle(target - head)
-        omega = np.clip(params.head_gain * error, -params.head_omega_max, params.head_omega_max)
+        omega = np.clip(params.head_gain * error, -cap, cap)
         return wrap_angle(head + omega * dt), finished
 
     def _free_for_forced(self, i: int, frame: int) -> bool:
@@ -193,6 +202,7 @@ class HeadModel:
         base: float,
         dwell_s: float,
         key: bool,
+        omega: float,
         params: SimParams,
         dt: float,
         partial: bool = False,
@@ -201,8 +211,23 @@ class HeadModel:
             start=frame,
             target=float(wrap_angle(yaw)),
             amplitude=float(abs(wrap_angle(yaw - base))),
-            dwell_frames=0 if partial else max(1, round(dwell_s / dt)),
+            dwell_frames=round(dwell_s / dt),
             out_deadline=frame + round(params.scan_max_out_s / dt),
             key=key,
+            omega=omega,
             partial=partial,
         )
+
+
+def longest_scan_s(params: SimParams) -> float:
+    """About the longest a spontaneous scan lasts: the out deadline, the longest dwell, the turn
+    back across the widest amplitude at the slowest speed, and the last degrees under the gain."""
+    back = params.scan_amplitude[1] / params.scan_omega_min
+    return params.scan_max_out_s + params.scan_dwell_max_s + back + 0.2
+
+
+def scan_dwell(u: float, params: SimParams) -> float:
+    """Dwell (s) of a spontaneous scan from a U[0, 1) draw: lognormal quantile, capped."""
+    median, log_sd = params.scan_dwell_s
+    z = NormalDist().inv_cdf(min(max(float(u), 1e-12), 1.0 - 1e-12))
+    return min(median * float(np.exp(log_sd * z)), params.scan_dwell_max_s)

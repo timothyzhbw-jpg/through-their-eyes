@@ -195,6 +195,7 @@ class Simulation:
         # Head nuisance draws are made every frame, whether or not the nuisance is switched on.
         partial_draws = self.rng.uniform("partial_scan", f, n, entities=self.ids)
         drift_noise = self.rng.normal("head_drift", f, n, entities=self.ids)
+        speed_noise = self.rng.normal("scan_speed", f, n, entities=self.ids)
         allowed = ~self.scenario.scan_suppressed(self, f)
         p_scan = self.scan_rate * DT
         spontaneous = allowed & (trigger < p_scan)
@@ -214,6 +215,7 @@ class Simulation:
             partial=partial,
             partial_draws=partial_draws,
             drift_noise=drift_noise,
+            speed_noise=speed_noise,
         )
         for scan in finished:
             self._emit_scan(scan)
