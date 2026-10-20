@@ -175,3 +175,15 @@ def rewrite_prompt(base: str, failed: list[tuple[ScriptLine, list[str]]]) -> str
         + "\n\nThe Verifier rejected these lines. Rewrite each of them, in the same order, so it "
         "follows the rules; return exactly one line per rejected line.\n" + _dump(rejected)
     )
+
+
+def _prompt_version() -> str:
+    """Changes whenever any instruction changes; part of the breakdown cache key (SPEC 2)."""
+    import hashlib
+
+    texts = [CREW, DIRECTOR, ANALYST, TELESTRATOR, NARRATION_RULES, *PERSONAS.values(),
+             *SPEAKERS.values()]  # fmt: skip
+    return hashlib.sha256("\n".join(texts).encode()).hexdigest()[:12]
+
+
+PROMPT_VERSION = _prompt_version()
