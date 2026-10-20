@@ -493,21 +493,37 @@ def evaluate(seeds: list[int]) -> list[Row]:
 
     # Opponent pressure: closest opponent at the reception, in the paper's metre bins.
     close, free = rec["pressure"] < 1.5, rec["pressure"] >= 9.5
-    close_mid = int(np.sum(close & (group == "central midfielders")))
     near_m, far_m = (
         float(np.mean(rec["pressure_window"][m])) if m.any() else math.nan for m in (close, free)
     )
+    marked_close, marked_free = (
+        float(np.median(rec["marked"][m])) if m.any() else math.nan for m in (close, free)
+    )
+    mid_close, mid_free = (int(np.sum(m & (group == "central midfielders"))) for m in (close, free))
+    back_free = int(np.sum(free & np.isin(group, ["central defenders", "side defenders"])))
+    # Ablation: the same seeds without the pressure term. Nothing in possession_play depends on
+    # perception, so the players move the same and the bins hold the same receptions.
+    off = [simulate(s, replace(PARAMS, pressure_scan_factor=1.0))["receptions"] for s in seeds]
+    off_rate = np.concatenate([t["scans"] / t["window"] for t in off])
+    d_on, d_off = cohens_d(rate[free], rate[close]), cohens_d(off_rate[free], off_rate[close])
     d_row(
         "Cohen's d of scan frequency, closest opponent 10+ m vs 0–1 m at the reception",
         free, close, "d = 0.57 (lower under tight pressure)", 0.49, 0.65,
         _cite("jordet2020", "Results › Opponent Pressure; Figure 3"),
         "The paper's bins are whole metres, so 0–1 m is read as < 1.5 m and 10+ m as ≥ 9.5 m. "
         "The sim slows scanning as the closest opponent nears (sim/config.py, "
-        "pressure_scan_factor, set from this d), but that does not reach this comparison: "
-        f"{close_mid} of the {int(close.sum())} receptions at 0–1 m are central midfielders, who "
-        f"scan most, and their closest opponent averaged {_num(near_m, '.1f')} m over the window, "
-        f"against {_num(far_m, '.1f')} m at 10+ m. possession_play has no tight marking: "
-        "pressure at a reception is mostly a defender arriving with the ball.",
+        "pressure_scan_factor, set from this d in closed form), and possession_play marks, so "
+        "a receiver at 0–1 m has usually been marked: an opponent within "
+        f"{MARKED_M:.0f} m for a median {_num(100 * marked_close, '.0f')}% of his window "
+        f"({_num(100 * marked_free, '.0f')}% at 10+ m), {_num(near_m, '.1f')} m away on average "
+        f"against {_num(far_m, '.1f')} m. The bins also differ by role: {mid_close} of the "
+        f"{int(close.sum())} receptions at 0–1 m are central midfielders, who scan most, against "
+        f"{mid_free} of the {int(free.sum())} at 10+ m, where {back_free} are central or side "
+        "defenders. With the pressure term off (factor 1) the same receptions give "
+        f"d = {_num(d_off, '.2f')}: that is the role mix. The pressure term moves d by "
+        f"{_num(d_on - d_off, '+.2f')}, less than the paper's whole d. The closed-form factor "
+        "assumed the bins differ only in pressure, and that a change in the configured rate shows "
+        "in full in the measured one; scan dead time compresses it (eval/scan_calibration.py).",
     )  # fmt: skip
 
     # Head turns.
