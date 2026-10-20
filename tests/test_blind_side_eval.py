@@ -31,13 +31,13 @@ def test_truth_is_read_from_the_sims_beliefs_and_the_hero_runner_is_in_it():
     assert any((g.observer, g.target) == (h8, h9) for g in truth(s, DEFAULT_PARAMS))
 
 
-def test_held_out_recall_meets_the_spec_and_precision_does_not_regress():
-    # SPEC 4.4 asks precision >= 0.8 and recall >= 0.7. On the full held-out set the eval gives
-    # precision 0.796, recall 0.984 (eval/reports/blind_side.md): recall is met, precision just
-    # misses. This subset guards against regressions; it does not claim the precision target.
-    samples = [simulate("possession_play", seed) for seed in (100, 101, 102)]
-    samples += [simulate("blind_side_run", seed) for seed in range(100, 115)]
+def test_fresh_held_out_precision_and_recall_meet_the_spec():
+    # SPEC 4.4: precision >= 0.8, recall >= 0.7. A subset of the fresh held-out seeds (200+),
+    # which no eval looked at before the defaults were chosen on the tuning seeds; the full set
+    # gives precision 0.947, recall 0.967 (eval/reports/blind_side.md).
+    samples = [simulate("possession_play", seed) for seed in (200, 201, 202)]
+    samples += [simulate("blind_side_run", seed) for seed in range(200, 215)]
     counts = score(samples, DEFAULT_PARAMS)
     assert counts.truths >= 100
+    assert counts.precision >= 0.8
     assert counts.recall >= 0.7
-    assert counts.precision >= 0.75
