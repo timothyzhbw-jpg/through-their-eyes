@@ -19,7 +19,7 @@ import { resolvePlan, type ResolvedPlan } from "./plan/validate";
 import { advance, createPlayback, type Focus, type PlaybackStore } from "./store/playback";
 import { optionOf, parseWhatIfs, seekFrame, type WhatIfs } from "./whatif/whatif";
 
-export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options";
+export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options" | "blindSide";
 
 export interface Session {
   hero: Hero;

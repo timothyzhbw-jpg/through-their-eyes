@@ -1,10 +1,11 @@
 """The live ingest stream (SPEC 2): a recorded synthetic match replayed at wall-clock speed.
 
 Messages, in order: `hello`; then per frame a `frame`, followed by the `event`s of that frame and
-the `moment`s whose window ends on it; finally `end`. Live overlays (sprint tags) are computed
-ahead of time, so a frame costs no analytics at send time. The client may send
-`{"type": "pause" | "resume" | "stop"}`, `{"type": "seek", "f": 120}` or
-`{"type": "speed", "x": 2.0}`.
+the `moment`s whose window ends on it; finally `end`. Live overlays (sprint tags, blind-side
+alerts) are computed ahead of time, so a frame costs no analytics at send time. A frame's
+`blind_side` lists the alerts on as [observer, target, frames unseen] (player indices,
+SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
+`{"type": "seek", "f": 120}` or `{"type": "speed", "x": 2.0}`.
 """
 
 from __future__ import annotations
@@ -104,4 +105,5 @@ def _frame(match: Match, run: dict[str, Any], f: int, dt: float) -> dict[str, An
         "type": "frame", "f": f, "t": round(f * dt, 3),
         "pos": run["pos"][f], "body": run["body"][f], "head": run["head"][f],
         "ball": run["ball"][f], "owner": run["owner"][f], "sprint": match.sprint[f],
+        "blind_side": run["blind_side"]["frames"][f],
     }  # fmt: skip

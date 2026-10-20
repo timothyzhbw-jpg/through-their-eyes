@@ -242,10 +242,12 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
   tracking. For an observer `o` and a target `t`, the alert is on when:
   - `t` has been outside `o`'s visible region (V < 0.5, §4.4) for ≥ 1.0 s;
   - `t` has moved ≥ 3 m since `o` last saw him, at ≥ 4 m/s;
-  - `t` is within 25 m of `o`.
+  - `t` is within 35 m of `o` (25 m missed H9, who runs 22–30 m from H8 in `blind_side_run`).
   Observers are the ball carrier and the intended receiver (targets: teammates making runs) and
   the four defenders nearest the ball (targets: opponents). Hysteresis: on for at least 0.4 s; it
-  clears when `o` sees `t` again. All thresholds are *tunable*. Deterministic, no LLM, within the
+  clears when `o` sees `t` again. All thresholds are *tunable*; the values above are the starting
+  point, and the tuned defaults and their tables are in `eval/reports/blind_side.md`
+  (`analytics/blind_side.py`, M4). Deterministic, no LLM, within the
   live overlay budget (§2). An alert that ends in a pass to its target within 3 s is a moment
   trigger (§5.1).
 
@@ -278,8 +280,9 @@ of §3.4.
 - [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
 - [ ] xT grid increases toward goal (sanity plot saved).
-- [ ] Blind-side alerts vs the sim's ground truth (a belief that is stale by > 3 m for a moving
-      target within 25 m): precision ≥ 0.8 and recall ≥ 0.7 on held-out seeds (*tunable*);
+- [ ] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
+      watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
+      ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
 
@@ -468,6 +471,15 @@ Application Insights.
   answered with a fixed "not something he could do here" line. Latency as a breakdown (§2).
 - Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
   every tier is rendered as prosody.
+- *After deployment:* **Foundry evaluation as an ablation** (`eval/narration_ablation.py`).
+  Anchored lines are verified templates, so a groundedness score on them alone proves little.
+  Instead, compare two narration modes on the same moments and seeds:
+  - free text: the pre-anchoring prompt, kept as an eval-only mode;
+  - anchored: what ships.
+  Score both with `azure-ai-evaluation` (MIT) groundedness against the claims, and report the
+  deterministic Verifier's violations (number, entity, placeholder, banned) next to it.
+  The output, `eval/reports/narration_ablation.md`, is the evidence for the anchored design. It is
+  in the cut list.
 
 `TelestrationPlan` sketch:
 
@@ -491,6 +503,16 @@ Vite + React + TypeScript + three.js via React Three Fiber (+ drei). Fictional t
 original visual identity.
 
 - **Players:** stylised capsule/pawn tokens with team colour and number; no limb animation.
+  - *Stretch, trial after deployment:* rigged players from the Gameplay Football assets that ship
+    with Google Research Football. The engine directory is under the Unlicense; we use only
+    `objects/players` (segment models, `player.object` skeleton, kit template) and the
+    animations, never the ad-board or stadium textures.
+  - The trial is time-boxed to one day: one player with idle, walk, sprint and one pass, shown in
+    the POV view. It converts to GLB with the root motion removed, the sim sets the position, the
+    gait follows the sim's speed so the feet don't slide, the body follows `body_yaw`, and the
+    neck joint takes `head_yaw − body_yaw`. Kits are recoloured to the fictional clubs.
+  - Bowen decides by eye. If it is clearly better, POV and broadcast switch to rigged players and
+    the tactical board keeps tokens; the CLAUDE.md decision on tokens changes only then.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -529,6 +551,58 @@ original visual identity.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 
+### Real-footage overlay (demo video only; the one exception to synthetic data)
+Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
+segment of **≤ 10 s in the demo video**, showing the ground graphics drawn on a real camera, the
+way the app draws them on the synthetic pitch: it backs the claim that the overlays would transfer
+to a real broadcast.
+- **Source:** the Wikimedia Commons file "Битва Корпораций - 2019-10-06 - Нова Пошта. - Мини-футбол.
+  Финал." by savinkins, licensed CC BY 3.0. Checked on Commons on 2026-10-19: the license was
+  reviewed by YouTubeReviewBot, and the SHA-1 matches `demo/realfeed/download.py`. It is a
+  corporate-league futsal final (Атлант vs Нова Пошта).
+- **Code:** `demo/realfeed/`, with OpenCV in its own dependency group.
+  - It does classical computer vision only: pitch calibration, camera tracking, background
+    subtraction for the players' foot points, and the turf key for the graphics.
+  - It is never imported by `sim/`, `analytics/`, `explain/`, `agents/`, `api/` or `web/`, and the
+    public app never shows or loads it.
+  - The footage is downloaded into `out/` and never committed. Only camera calibration (pixel ↔
+    pitch correspondences) is committed: no frames, no player positions.
+- **Masking:** everything outside the pitch outline is blurred and darkened; every face is blurred;
+  any legible logo, sponsor or club text on kit is blurred too. Kit matters because the teams are
+  companies and the video rules ban third-party trademarks.
+- **Graphics only:** no numbers, captions or narration on the real footage. Every on-screen number
+  in the app is a verified claim about the synthetic match, and nothing in this segment is
+  verified.
+- **On screen:** a label saying "real footage, overlay demo only; the app uses synthetic data",
+  plus the attribution "savinkins, Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". The
+  same attribution goes in `demo/realfeed/README.md` and the repo README. CC BY requires author,
+  source, license and a note of changes.
+- **Never used** to train, tune or calibrate anything in the app.
+
+**Risks:**
+1. *Rules.* The official rules say "Projects must use synthetic, football-realistic data". The
+   app and all its data stay synthetic, but a judge or the Stage One viability check may still
+   read real footage in the video as using real data, and that could cost the entry.
+   - Mitigation: keep the segment short, clearly labelled and cuttable.
+   - Bowen may ask the organisers first; if they object, cut it.
+2. *Privacy.* The players are private individuals in an amateur corporate league. Faces are
+   blurred, and no names or identities are shown or tracked beyond the 10 s.
+3. *Trademarks.* Kit, boards and banners may carry company logos. Before upload, review every
+   frame of the exported segment for logos and faces, not only the automated masks.
+4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
+   endorsement. Keep the attribution on screen for the whole segment.
+5. *Time.* It is the first item in the cut order (§9); it never takes time from the "never cut"
+   list.
+
+**Acceptance checks:**
+- [ ] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
+      imports `demo.realfeed`, and that `web/` has no reference to it.
+- [ ] No video or image frames are tracked under `demo/` (test on `git ls-files`).
+- [ ] Every exported frame: off-pitch pixels are masked; a face detector finds no unblurred face;
+      the label and the attribution are visible.
+- [ ] Bowen has reviewed the exported segment frame by frame (faces, kit logos, boards) before it
+      goes into the video.
+
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
 - [ ] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
@@ -540,16 +614,61 @@ original visual identity.
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
   on the Azure for Students credit until 2026-11-10. Free tiers where they exist: Speech F0,
   Static Web Apps Free, the Application Insights free allowance, the Container Apps consumption
-  grant. Container images go to GHCR (free for a public repo) instead of Azure Container Registry.
-  LLM spend is bounded by the breakdown cache (§2).
+  grant. Images go to Azure Container Registry Basic (about $0.17/day): while the repo is private,
+  a GHCR image would need a personal access token, but ACR is pulled with the app's managed
+  identity, so no secret is involved.
+  - LLM spend is bounded by the breakdown cache (§2), the per-client rate limit, and a global daily
+    cap on model-backed regenerations (`TTE_DAILY_MODEL_CAP`). Past the cap, the service serves the
+    cache or the template.
+  - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
+    at $40 if the offer supports budgets.
+- **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
+  from 2026-10-20 to 2026-11-10):
+
+  | Item | Setting | Expected | Worst case |
+  |---|---|---|---|
+  | Container Apps (`api`) | Consumption, 0.5 vCPU / 1 GiB, 1 replica always on | ≈ $6: idle most of the time ($3e-6 per vCPU-s and per GiB-s), less the monthly free grant | $28.5: active the whole time, no grant |
+  | Container Registry | Basic | $3.7 | $3.7 |
+  | Cosmos DB | serverless, `cache` + `claims_audit` | < $0.5 | < $1 |
+  | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
+  | Static Web Apps | Free | $0 | $0 |
+  | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
+  | Foundry `gpt-4.1-mini` | ≈ $0.03 per four-script breakdown (≈ 60K input + 5K output tokens at $0.40 / $1.60 per M) | ≈ $3 (100 regenerations) | $26: cap of 40 per day, every day |
+  | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
+  | **Total** | | **≈ $16** | **≈ $67** |
+- **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as
+  `infra/m0_provision.sh`:
+  - an explicit `AZURE_SUBSCRIPTION_ID`, and only Azure for Students, pay-as-you-go or free-trial
+    offers;
+  - never the CLI's default subscription, and never a Microsoft Internal or Enterprise Agreement
+    subscription.
+  GitHub Actions logs in with OIDC through a user-assigned managed identity. Its federated
+  credential trusts only this repo's `main` branch, and its roles are scoped to
+  `rg-through-their-eyes`. There is no app registration (the university tenant may forbid
+  student-created ones) and no stored Azure secret.
 - **Microsoft Foundry:** one project + one model deployment with structured outputs. Verify model
   quota on the Azure for Students subscription first (M0 smoke test: `infra/m0_provision.sh`, then
   `python -m infra.smoke`). Agent Framework is pinned to an exact version (weekly releases).
-- **Azure Container Apps:** `api` (+ MCP server). Keep min replicas = 1 during judging.
+- **Azure Container Apps:** `api` (+ MCP server, a subprocess of the Analyst). Keep min replicas =
+  1 during judging. A system-assigned identity holds Cognitive Services User on Foundry, AcrPull
+  on the registry, and Cosmos DB data contributor on the account.
 - **Azure Static Web Apps:** `web`.
-- **Azure Cosmos DB (serverless):** containers `matches`, `events`, `claims_audit`.
+- **Azure Cosmos DB (serverless):** containers `cache` (breakdowns, what-if answers, audio keys)
+  and `claims_audit`, behind the existing file-store and audit-sink interfaces. Matches and events
+  are not stored: they are regenerated from their seeds at start-up, byte-identically, so storing
+  them would be a service added for its own sake.
 - **Azure AI Speech:** neural TTS with SSML; one voice per language.
-- **Application Insights:** OpenTelemetry traces from Agent Framework and FastAPI.
+- **Application Insights:** OpenTelemetry traces from Agent Framework and FastAPI, through
+  `azure-monitor-opentelemetry` (MIT).
+  - Spans: one per breakdown, one child per workflow step (Director, Analyst with its MCP tool
+    calls, Telestrator, each narration voice, Verifier rounds, Voice).
+  - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
+    reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
+    ingestion.
+  - The end-to-end transaction view of one breakdown, with a fallback in it, is a video shot and a
+    README figure: evidence for the multi-agent prize.
+  - Acceptance: one breakdown yields one trace with a span per step, and a forced timeout shows up
+    as a `template` span with its reason.
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
 - Every environment variable documented in `.env.example`; no secrets in the repo.
@@ -575,16 +694,20 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
-1. shareable clip export (stretch)
-2. viewer pilot
-3. end-of-match recap reel
-4. "What if…?" free text → suggested questions only
-5. two voices → one narrator
-6. `coach` persona
-7. `es` language
-8. Cosmos DB → file store
-9. occlusion model → FOV only
-10. pitch-control shader and pass value surface → precomputed textures
+0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
+   or the organisers object)
+1. rigged GRF players in POV and broadcast (stretch; §7, one-day trial after deployment)
+2. Foundry evaluation ablation, free text vs anchored narration (§6)
+3. shareable clip export (stretch)
+4. viewer pilot
+5. end-of-match recap reel
+6. "What if…?" free text → suggested questions only
+7. two voices → one narrator
+8. `coach` persona
+9. `es` language
+10. Cosmos DB → file store
+11. occlusion model → FOV only
+12. pitch-control shader and pass value surface → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
@@ -599,7 +722,8 @@ Framework, live deployment, the video.
 - **0:55–1:25** The same moment for casual / analyst / player-fan; `en` ↔ `zh`; open one caption's
   evidence.
 - **1:25–1:40** The verifier blocks a wrong number and a banned judgement word.
-- **1:40–2:00** Architecture (Microsoft stack) + eval numbers.
+- **1:40–2:00** Architecture (Microsoft stack) + eval numbers. *If kept:* the ≤ 10 s real-footage
+  overlay segment (§7) sits here, labelled and attributed on screen, before the architecture.
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
@@ -608,5 +732,13 @@ Framework, live deployment, the video.
 - [ ] Video < 2:00 at a public URL (YouTube / Vimeo / Facebook Video / Youku); no third-party
       trademarks or copyrighted music
 - [ ] Test link live and free until 2026-11-10, with testing instructions
-- [ ] README: synthetic-data statement, architecture, how to run, eval results, related work
+- [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
+      and its attribution), architecture, how to run, eval results, related work
 - [ ] All materials in English
+- [ ] **Claim only what we use.** README, video and submission list a technology only if the running
+      system or our development actually used it, each with evidence (file, screenshot, PR):
+      a "technology → where → evidence" table, which the closing architecture slide follows.
+      - We develop with Claude Code and say so.
+      - GitHub Copilot and the Azure MCP Server are listed only if we really used them, with the
+        PRs or commands that show it.
+      - Fabric is not used.

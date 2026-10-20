@@ -5,6 +5,9 @@
 - `decision_after_scan`: a reception followed by a decision of the receiver, with a scan of his
   ending at most `SCAN_JUST_BEFORE_S` before the reception (or during the first touch).
 - `sprint`: speed above 7.0 m/s (SPEC 4.6) for at least `MIN_SPRINT_S`; a live overlay tag only.
+- `blind_side_pass` (M4): a pass to the target of a blind-side alert (SPEC 4.4), played while the
+  alert is on or at most `BLIND_SIDE_PASS_S` after it cleared. Run on its own with
+  `detect_blind_side_passes`; not part of `detect_moments` yet, so existing cards are unchanged.
 
 Cards that describe the same action (anchor "action", e.g. the hero's pass) are merged into one
 card: the primary kind is the first in `PRIORITY`, `tags` lists every detector that fired. Goal,
@@ -15,6 +18,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from analytics.blind_side import DEFAULT_PARAMS, BlindSideAlerts, BlindSideParams, detect_alerts
 from analytics.xt import xt_for
 from explain.cards import LensName, MomentCard, MomentKind, Scalar
 from sim.model import Decision, Event
@@ -28,6 +32,7 @@ SCAN_JUST_BEFORE_S = 2.0
 MAX_TOUCH_S = 1.0  # longest reception-to-decision gap that still counts as one moment
 PRE_ROLL_S = 6.0  # replay window before the anchor
 POST_ROLL_S = 1.0  # and after the action is resolved
+BLIND_SIDE_PASS_S = 3.0  # a pass this soon after a blind-side alert cleared is its moment
 PRIORITY: tuple[MomentKind, ...] = ("decision_after_scan", "line_breaking_pass", "sprint")
 ALL_LENSES: list[LensName] = ["scan", "space", "pressure"]
 
@@ -257,6 +262,55 @@ def detect_decisions_after_scan(run: MatchRun) -> list[MomentCard]:
                 (start, end + _frames(run, POST_ROLL_S)),
                 receiver=receiver, anchors=anchors, events=events,
                 metrics=_decision_metrics(run, d, reception, scans),
+            )
+        )  # fmt: skip
+    return cards
+
+
+# --- pass to the target of a blind-side alert (M4) -------------------------------------------
+
+
+def blind_side_alerts(run: MatchRun, params: BlindSideParams = DEFAULT_PARAMS) -> BlindSideAlerts:
+    """Blind-side alerts (SPEC 4.4) from the run's tracking: observed head yaw and positions."""
+    team = np.array([p.team for p in run.players])
+    return detect_alerts(
+        run.head_yaw_observed, run.pos, run.vel, run.ball_pos, run.ball_vel, run.owner, team,
+        run.dt, params,
+    )  # fmt: skip
+
+
+def detect_blind_side_passes(
+    run: MatchRun, alerts: BlindSideAlerts | None = None
+) -> list[MomentCard]:
+    alerts = alerts if alerts is not None else blind_side_alerts(run)
+    within = _frames(run, BLIND_SIDE_PASS_S)
+    cards = []
+    for action in _sorted_events(run, "pass"):
+        o, t = run.index(action.player), run.index(action.attrs["to"])
+        hits = [
+            a for a in alerts.intervals
+            if (a.observer, a.target) == (o, t) and a.start <= action.frame <= a.end + within
+        ]  # fmt: skip
+        if not hits:
+            continue
+        alert = max(hits, key=lambda a: a.start)
+        cleared = alert.end + 1  # the first frame without the alert
+        anchors, events, end = {"action": action.id}, [action], action.frame
+        resolved = _resolution(run, action)
+        if resolved:
+            anchors[resolved[0]] = resolved[1].id
+            events.append(resolved[1])
+            end = resolved[1].frame
+        cards.append(
+            _card(
+                run, "blind_side_pass", action.player, action.frame,
+                (alert.start, end + _frames(run, POST_ROLL_S)),
+                receiver=action.attrs["to"], anchors=anchors, events=events,
+                metrics={
+                    "alert_start_t": _r(alert.start * run.dt),
+                    "alert_end_t": _r(cleared * run.dt),
+                    "alert_to_pass_s": _r(max(0, action.frame - cleared) * run.dt),
+                },
             )
         )  # fmt: skip
     return cards

@@ -58,6 +58,26 @@ def _drain(ws):
             return messages
 
 
+def test_live_frames_carry_the_blind_side_alerts(client):
+    """The H9 alert behind H8 is on before the key scan and gone once H8 has looked (SPEC 4.4)."""
+    export = client.get(f"/api/matches/{MATCH}/export").json()
+    ids = [p["id"] for p in export["players"]]
+    h8, h9 = ids.index("H8"), ids.index("H9")
+    key = export["key_scan"]
+    with client.websocket_connect(f"/ws/matches/{MATCH}/live?speed=1000") as ws:
+        frames = {m["f"]: m for m in _drain(ws) if m["type"] == "frame"}
+    run = export["runs"]["factual"]
+    assert all(frames[f]["blind_side"] == run["blind_side"]["frames"][f] for f in frames)
+
+    def on(f):
+        return any((o, t) == (h8, h9) for o, t, _ in frames[f]["blind_side"])
+
+    assert on(key["start"] - 1)
+    assert not on(key["end"])
+    unseen = next(u for o, t, u in frames[key["start"] - 1]["blind_side"] if (o, t) == (h8, h9))
+    assert unseen * export["dt"] >= 1.0
+
+
 def test_live_stream_replays_frames_events_and_moments_in_order(client):
     export = client.get(f"/api/matches/{MATCH}/export").json()
     n = export["runs"]["factual"]["frames"]

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Sample, headOffBall, isSeen, sampleInto } from "../data/hero";
 import { useSession } from "../session";
 import { useStore } from "../store/store";
+import { alertsAt, unseenLabel } from "../alerts/blindSide";
 import { Caption } from "../ui/Narration";
 
 export function PovToolbar() {
@@ -102,6 +103,8 @@ function Hud() {
     (s) => s.player === povPlayer && sample.frame >= s.start && sample.frame <= s.end,
   );
   const key = hero.keyScan;
+  const showBlind = useStore(playback, (s) => s.blindSide);
+  const blind = showBlind ? alertsAt(hero, run, frame).filter((a) => a.observer === me) : [];
   const droppedLook =
     mode === "counterfactual" &&
     povPlayer === hero.heroId &&
@@ -118,6 +121,15 @@ function Hud() {
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
       )}
       {droppedLook && <span className="badge key">no look in this run</span>}
+      {blind.map((a) => (
+        <span key={a.target} className="blind-hud">
+          <span className="badge blind">BLIND SIDE</span> {hero.ids[a.target]}{" "}
+          {unseenLabel(a.unseen)}{" "}
+          <span className="source" title="Live overlay from tracking, not a verified claim">
+            sim
+          </span>
+        </span>
+      ))}
     </div>
   );
 }
