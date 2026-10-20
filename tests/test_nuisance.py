@@ -1,8 +1,8 @@
 """Non-scan head motion in the sim (SPEC 3.4 "Non-scan head motion", 3.7 keyed draws).
 
 Partial (aborted) scans and slow gaze drift are real head motion, switchable through
-`SimParams.head_nuisance`. Partial scans are labelled in the ground-truth scan events and do not
-count as scans; the scenario's forced key scan is never touched.
+`SimParams.head_nuisance`. Partial scans are `head_turn` events, never `scan` events: they do not
+count as scans. The scenario's forced key scan is never touched.
 """
 
 from dataclasses import replace
@@ -22,9 +22,12 @@ LONG = replace(SimParams(), max_duration_s=30.0)
 NO_HEAD_NUISANCE = replace(LONG, head_nuisance=False)
 
 
-def _scans(run, partial=None):
-    scans = [e for e in run.events if e.type == "scan"]
-    return scans if partial is None else [e for e in scans if e.attrs["partial"] is partial]
+def _scans(run):
+    return [e for e in run.events if e.type == "scan"]
+
+
+def _head_turns(run):
+    return [e for e in run.events if e.type == "head_turn"]
 
 
 @pytest.fixture(scope="module")
@@ -37,29 +40,40 @@ def test_possession_play_runs_long_with_passes_and_scans(possession):
         assert len(run.owner) >= round(25.0 / DT)  # rarely ends early on a ball out of play
         passes = [e for e in run.events if e.type == "pass"]
         assert len(passes) >= 8
-        assert len(_scans(run, partial=False)) >= 100
+        assert len(_scans(run)) >= 100
 
 
-def test_partial_scans_are_labelled_and_turn_back_before_the_ball_leaves_the_central_cone(
+def test_partial_scans_are_head_turn_events_and_turn_back_before_the_ball_leaves_the_cone(
     possession,
 ):
     p = SimParams()
     lo, hi = p.partial_scan_amplitude
-    full = [e for run in possession for e in _scans(run, partial=False)]
-    partial = [e for run in possession for e in _scans(run, partial=True)]
-    assert full and partial
-    assert 0.25 <= len(partial) / len(full) <= 1.0  # configured ratio 0.5, minus blocked starts
-    for e in partial:
-        assert e.attrs["key"] is False
+    full = [e for run in possession for e in _scans(run)]
+    turns = [e for run in possession for e in _head_turns(run)]
+    assert full and turns
+    assert 0.25 <= len(turns) / len(full) <= 1.0  # configured ratio 0.5, minus blocked starts
+    for e in turns:
+        assert e.id == f"head_turn:{e.player}:{e.frame:04d}"
+        assert set(e.attrs) == {"end", "direction", "amplitude", "partial"}
+        assert e.attrs["partial"] is True
         assert lo - 1e-9 <= e.attrs["amplitude"] <= hi + 1e-9
         assert 0 < e.attrs["end"] - e.frame <= round(0.4 / DT)  # out and straight back
     assert min(e.attrs["amplitude"] for e in full) >= p.scan_amplitude[0] - 1e-9
 
 
+def test_no_scan_event_is_ever_partial(possession):
+    hero_runs = [Simulation.from_scenario(HERO_SCENARIO, seed).run() for seed in range(10)]
+    for run in possession + hero_runs:
+        for e in _scans(run):
+            assert e.id.startswith("scan:")
+            assert "partial" not in e.attrs
+    assert sum(len(_head_turns(run)) for run in hero_runs) > 0
+
+
 def test_partial_scans_move_the_true_head_away_from_the_ball_and_back(possession):
     run = possession[0]
     hi = SimParams().partial_scan_amplitude[1]
-    for e in _scans(run, partial=True)[:40]:
+    for e in _head_turns(run)[:40]:
         i = run.index(e.player)
         frames = np.arange(e.frame, e.attrs["end"] + 1)
         to_ball = run.ball_pos[frames, :2] - run.pos[frames, i]
@@ -68,12 +82,12 @@ def test_partial_scans_move_the_true_head_away_from_the_ball_and_back(possession
         assert np.deg2rad(5.0) < excursion < hi + np.deg2rad(20.0)
 
 
-def test_head_nuisance_off_has_no_partial_scans_and_no_drift():
+def test_head_nuisance_off_has_no_head_turns_and_no_drift():
     sim = Simulation.from_scenario(POSSESSION, seed=1, params=NO_HEAD_NUISANCE)
     sim.run_until(round(15.0 / DT))
     assert np.all(sim.head.drift == 0.0)
     run = sim.result()
-    assert _scans(run) and not _scans(run, partial=True)
+    assert _scans(run) and not _head_turns(run)
 
 
 def test_head_nuisance_only_changes_head_motion_where_nothing_depends_on_perception():
@@ -134,12 +148,14 @@ def test_the_forced_key_scan_is_untouched_by_nuisance():
         k_on, k_off = on.key_scan(), off.key_scan()
         assert k_on.id == k_off.id and k_on.player == "H8"
         assert k_on.attrs["direction"] == k_off.attrs["direction"]
-        assert k_on.attrs["partial"] is False and k_on.attrs["key"] is True
-        # While the ball travels to him the hero makes no other scan, full or partial.
+        assert k_on.attrs == k_off.attrs | {"amplitude": k_on.attrs["amplitude"],
+                                            "end": k_on.attrs["end"]}  # fmt: skip
+        assert k_on.attrs["key"] is True and "partial" not in k_on.attrs
+        # While the ball travels to him the hero makes no other scan, and no partial turn.
         kick = next(e.frame for e in on.events if e.type == "pass")
         decision = on.hero_decision().frame
         others = [
-            e for e in _scans(on)
+            e for e in _scans(on) + _head_turns(on)
             if e.player == "H8" and kick <= e.frame < decision and e.id != k_on.id
         ]  # fmt: skip
         assert not others
