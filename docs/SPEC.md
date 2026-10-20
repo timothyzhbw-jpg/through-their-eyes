@@ -468,6 +468,9 @@ Application Insights.
   right after two others hit the deployment's rate limit (capacity 20: 20 requests and 20K tokens
   per minute; one breakdown makes at least 11 requests) and took 25.5 s, with the template plan
   and one of eight narration calls on its template; runs a minute apart stayed under the limit.
+  With tracing spans on every step and the capacity raised to 200, three runs back to back
+  (2026-10-20): 10.9, 8.2 and 9.0 s, no 429, plan from the agent, 23–25 lines aired, no rewrites
+  or drops.
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid.
