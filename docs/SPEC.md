@@ -128,6 +128,14 @@ on an LLM.
   - > 0.5 scans/s counts as very high (elite central midfielders);
   - central midfielders and centre-backs scan most, forwards least;
   - scanning drops under tight pressure.
+
+  *Calibrated values* (`eval/scan_calibration.py`, tuning seeds 0–99; held-out check in
+  `eval/reports/realism.md`): each scan turns at a peak speed drawn from 404 ± 51°/s (Kokubu et
+  al. 2026); the dwell is lognormal, so 90% of scans keep the ball out of an 82° frame ≤ 0.66 s
+  and a few hold the look for up to ~3 s (Aksum et al. 2021); the rate scales with the closest
+  opponent's distance, from 0.61 at ≤ 1 m to 1 at ≥ 10 m (Jordet et al. 2020); role rates are
+  fitted to ≈ 3 scans in the 10 s before receiving and to Jordet et al.'s role effect sizes. The
+  per-player trait multiplier is not in yet.
 - **Non-scan head motion (nuisance).** So the scan detector is not graded on a signal we made
   clean ourselves, the sim also produces head motion that is not a scan: fast ball tracking during
   passes, sensor noise (σ ≈ 2°, *tunable*), partial/aborted scans and slow drift. Partial turns

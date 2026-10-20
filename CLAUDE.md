@@ -107,6 +107,12 @@ _Fill in as they come to exist._
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
+- `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
+  (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
+  `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
+  it, copy the values into `sim/config.py`, then re-run every scan eval and `sim.export`
+- `uv run python -m eval.scan_detector` — scan-detector threshold sweep (SPEC 4.7), a few
+  minutes; writes `eval/reports/scan_detector.md`
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
