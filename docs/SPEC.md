@@ -800,6 +800,10 @@ to a real broadcast.
     with tools and 1.7K without, made 2–3 tool calls (`get_moment`, `list_claims`, sometimes
     `run_counterfactual`) and chose the same lens. Its headline claims matched in two runs of
     three: the prompt already lists the claims, so the tools add inspection, not better picks.
+  - *Twenty single attempts each, no retry:* with tools 19 answered (median 3.3 s, slowest
+    5.2 s, inside the 8 s step timeout) and one `angle` with a digit was rejected, which the
+    retry covers; without tools 20 answered (median 1.4 s). Through the API with Foundry, eight
+    breakdowns in a row all had the Analyst answer from the model with tools.
   - *Subprocess start:* 0.6–1.5 s on a laptop and 2.9 s in the image capped at 0.5 vCPU and
     1 GiB; peak memory about 90 MB. With the daily cap of 40 that is at most about 230K more
     input tokens a day. Cached breakdowns cost nothing extra; the cache key includes the tools.
