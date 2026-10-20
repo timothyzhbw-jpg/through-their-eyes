@@ -4,7 +4,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP_DIRS = {".venv", "node_modules", ".git", "out"}
+# .claude holds other sessions' git worktrees: not this checkout's code.
+SKIP_DIRS = {".venv", "node_modules", ".git", "out", ".claude"}
 
 PY_PATTERNS = [
     re.compile(r"os\.environ\[\s*['\"]([A-Z][A-Z0-9_]*)['\"]"),
