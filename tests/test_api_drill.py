@@ -301,3 +301,27 @@ def test_breakdowns_name_their_trace(tmp_path, replies):
         out = c.post("/api/breakdowns", json=BODY).json()
     trace_id = out["result"]["trace_id"]
     assert trace_id is None or (len(trace_id) == 32 and int(trace_id, 16) > 0)
+
+
+def test_a_drill_on_a_hero_of_the_stitched_match_comes_back_on_that_hero(tmp_path, replies):
+    # The second hero of match-1 (SPEC 3.1): the drill and its bring-back run on its possession.
+    # The fake's Analyst and narration replies are the scan hero's, so on the pressure hero those
+    # steps fall back too; the Telestrator's plan is the one that changes.
+    fake = FakeChatClient(_good_replies(MomentContext.load("press_escape", 0)))
+    settings = Settings(matches=[("match", 1)], cache_dir=tmp_path, rate_limit=(100, 600.0),
+                        web_origin="*")  # fmt: skip
+    app = create_app(settings, client=fake, model_id="fake-model")
+    with TestClient(app) as c:
+        moment = c.get("/api/matches/match-1").json()["hero_moments"][1]
+        body = {"match": "match-1", "moment": moment, "personas": ["analyst"], "languages": ["en"]}
+        drill = c.post("/api/breakdowns", json={**body, "fail": ["telestrator"]}).json()
+        back = c.post(f"/api/breakdowns/{drill['key']}/bring-back", json={"step": "telestrator"})
+    assert drill["possession"]["local_moment"].startswith("m:pressed_decision:H4")
+    assert drill["result"]["plan_source"] == "template"
+    assert "telestrator" in drill["drill"]["pending"]
+    assert back.status_code == 200
+    out = back.json()
+    assert out["possession"] == drill["possession"]
+    assert "telestrator" not in out["drill"]["pending"]
+    assert out["result"]["plan_source"] == "agent"
+    assert out["result"]["request"]["moment"] == drill["result"]["request"]["moment"]
