@@ -33,6 +33,7 @@ from analytics.vision import VisionParams, player_visibility, visibility, wrap_a
 from analytics.xt import xt_for
 from explain.cards import MomentCard
 from sim.counterfactual import CounterfactualResult, drop_scan_counterfactual
+from sim.decision import DecisionContext, OptionEval, evaluate_options, option_success
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
@@ -473,6 +474,59 @@ def _option_prob(ctx: EvalContext, run: MatchRun, f: int, player: str, action: s
     return float(option.prob)
 
 
+def true_decision_context(run: MatchRun, player: int, frame: int) -> DecisionContext:
+    """The decision context of `player` at `frame` built from the truth: true positions and
+    velocities, belief age 0. The recorded frame is the state the decision was made on."""
+    team = np.array([p.team for p in run.players])
+    return DecisionContext(
+        carrier=player,
+        team=team,
+        pos=run.pos[frame].copy(),
+        vel=run.vel[frame].copy(),
+        age_s=np.zeros(len(team)),
+        ids=run.ids,
+        attack_sign=1 if team[player] == 0 else -1,
+        ball=run.ball_pos[frame, :2].copy(),
+    )
+
+
+def true_options(run: MatchRun, decision: Decision) -> dict[str, OptionEval]:
+    """Every option of a decision re-scored on the true state, by action: the same decision model
+    (`evaluate_options`) with true positions and velocities and belief age 0. Pass targets are
+    re-chosen along the receiver's true run, as he would have chosen them had he seen it. This is
+    "it was" against "he thought" (SPEC 5.1). Passes not playable on the truth are missing."""
+    ctx = true_decision_context(run, run.index(decision.player), decision.frame)
+    return {o.action: o for o in evaluate_options(ctx)}
+
+
+def same_target_on_truth(run: MatchRun, decision: Decision, option: OptionEval) -> float | None:
+    """P(success) of an option at the target he picked on his belief, on the true state. When he
+    misplaced the receiver this is near 0 however open the receiver really was."""
+    ctx = true_decision_context(run, run.index(decision.player), decision.frame)
+    return option_success(ctx, option.action, option.target)
+
+
+def _pass_success(
+    ctx: EvalContext, run: MatchRun, f: int, player: str, receiver: str, state: str = "belief"
+) -> float:
+    """P(success) of his pass to `receiver` at decision frame f, as he thought (`belief`: the
+    option he scored) or as it was (`true`: the same option re-scored on the true state)."""
+    ctx.player(run, receiver)
+    d = _decision(ctx, run, f, player)
+    action = f"pass:{receiver}"
+    option = next((o for o in d.options if o.action == action), None)
+    if option is None:
+        raise Refuted(f"{player} did not consider a pass to {receiver} at frame {f}")
+    if state == "belief":
+        return float(option.p_success)
+    if state == "true":
+        truth = true_options(run, d).get(action)
+        if truth is None:
+            raise Inconclusive(f"the pass to {receiver} is not playable on the true state")
+        return float(truth.p_success)
+    raise Inconclusive(f"state must be 'belief' or 'true', got {state!r}")
+
+
 def _pitch_control(ctx: EvalContext, run: MatchRun, f: int, player: str) -> float:
     """His team's pitch control at his position (SPEC 4.2)."""
     i = ctx.player(run, player)
@@ -539,6 +593,7 @@ METRICS: dict[str, Callable[..., Any]] = {
     "belief_age": _belief_age,
     "chosen": _chosen,
     "option_prob": _option_prob,
+    "pass_success": _pass_success,
     "pitch_control": _pitch_control,
     "xt": _xt,
     "pressing_intensity": _pressing_intensity,
