@@ -5,7 +5,9 @@
 Live play never waits on a model: the stream and the moments are deterministic. Breakdowns and
 what-if answers are computed once and cached by a content hash of everything that shapes them
 (moment card, personas, languages, prompt version, model deployment). With a model configured,
-regeneration is rate-limited per client; the cached answer is served instead.
+regeneration is rate-limited per client and capped per UTC day across all clients
+(`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
+flagged `rate_limited` or `capped`.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from agents.workflow import run_breakdown
 from api import tts
 from api.live import stream
 from api.settings import Settings
-from api.store import Match, MatchStore, RateLimiter, ResultCache, content_key
+from api.store import DailyCap, Match, MatchStore, RateLimiter, ResultCache, content_key
 
 VERSION = "0.4.0"
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
@@ -71,6 +73,7 @@ def create_app(
     breakdowns = ResultCache(settings.cache_dir, "breakdowns")
     answers = ResultCache(settings.cache_dir, "whatif")
     limiter = RateLimiter(*settings.rate_limit)
+    cap = DailyCap(settings.daily_model_cap)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -91,6 +94,18 @@ def create_app(
         if match is None:
             raise HTTPException(404, f"unknown match {mid}")
         return match
+
+    def regeneration(request: Request) -> str:
+        """Whether a model-backed regeneration may run now: "model", "capped" or "rate_limited".
+
+        The daily cap is checked first, so a capped request does not use up the client's quota.
+        """
+        if cap.left() <= 0:
+            return "capped"
+        if not limiter.allow(_client_ip(request)):
+            return "rate_limited"
+        cap.take()
+        return "model"
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -150,42 +165,46 @@ def create_app(
         if not body.regenerate:
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, "rate_limited": False, **hit}
-        rate_limited = False
+                    return {"key": k, "cached": True, "rate_limited": False, "capped": False,
+                            **hit}  # fmt: skip
+        limits = {"rate_limited": False, "capped": False}
         if client is not None:
-            if limiter.allow(_client_ip(request)):
+            verdict = regeneration(request)
+            if verdict == "model":
                 return await _compute(m, body, client, "model", model_key)
-            rate_limited = True
+            limits[verdict] = True
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, "rate_limited": True, **hit}
+                    return {"key": k, "cached": True, **limits, **hit}
         out = await _compute(m, body, None, "offline", offline_key)
-        return {**out, "rate_limited": rate_limited}
+        return {**out, **limits}
 
     async def _compute(m: Match, body: BreakdownBody, llm, source: str, k: str) -> dict[str, Any]:
         result = await run_breakdown(m.ctx, client=llm, personas=tuple(body.personas),
                                      languages=tuple(body.languages))  # fmt: skip
         value = {"source": source, "result": result.model_dump(mode="json", by_alias=True)}
         breakdowns.put(k, value)
-        return {"key": k, "cached": False, "rate_limited": False, **value}
+        return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
 
     @app.post("/api/whatif")
     async def what_if(body: WhatIfBody, request: Request) -> dict[str, Any]:
         m = await match_or_404(body.match)
-        use_model = client is not None and limiter.allow(_client_ip(request))
+        verdict = regeneration(request) if client is not None else "offline"
+        use_model, capped = verdict == "model", verdict == "capped"
         action, _ = await whatif.map_question(m.ctx, body.question, client if use_model else None)
         if action is not None:
             k = content_key(match=m.id, action=action, language=body.language,
                             persona=body.persona, version=WHATIF_VERSION)  # fmt: skip
             if (hit := answers.get(k)) is not None:
-                return {"key": k, "cached": True, "answer": {**hit, "question": body.question}}
+                return {"key": k, "cached": True, "capped": capped,
+                        "answer": {**hit, "question": body.question}}  # fmt: skip
         answer = await whatif.answer_question(m.ctx, body.question, body.language, body.persona,
                                               client if use_model else None)  # fmt: skip
         data = answer.model_dump(mode="json")
         if action is None or answer.action is None:
-            return {"key": None, "cached": False, "answer": data}
+            return {"key": None, "cached": False, "capped": capped, "answer": data}
         answers.put(k, data)
-        return {"key": k, "cached": False, "answer": data}
+        return {"key": k, "cached": False, "capped": capped, "answer": data}
 
     @app.post("/api/tts")
     async def speech(body: TtsBody) -> Response:
