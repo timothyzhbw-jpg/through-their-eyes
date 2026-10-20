@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
+from pydantic import ValidationError
 
 from agents import fallbacks, prompts
 from agents.context import MomentContext
@@ -32,15 +33,18 @@ from agents.schemas import (
     DroppedLine,
     Findings,
     Language,
-    NarrationDraft,
     Persona,
+    PlanDraft,
     ScriptLine,
     ScriptResult,
     Speaker,
     StepTrace,
     TelestrationPlan,
     VoiceCue,
+    analyst_model,
+    anchored_draft_model,
 )
+from explain.claims import PLACEHOLDER
 from explain.render import ScriptLine as RenderLine
 from explain.render import build_payload, render_line
 
@@ -150,16 +154,9 @@ class Director(Executor):
             )  # fmt: skip
             if attempt.value is not None:
                 choice: DirectorChoice = attempt.value
-                personas = [p for p in choice.personas if p in job.personas] or list(job.personas)
-                languages = [lg for lg in choice.languages if lg in job.languages] or list(
-                    job.languages
+                request = request.model_copy(
+                    update={"priority": choice.priority, "reason": choice.reason}
                 )
-                if personas != list(choice.personas) or languages != list(choice.languages):
-                    notes.append("kept to the requested personas and languages")
-                request = BreakdownRequest(
-                    moment=mc.card.id, personas=personas, languages=languages,
-                    priority=choice.priority, reason=choice.reason,
-                )  # fmt: skip
         crew.record("director", attempt, notes, attempt is not None and attempt.value is not None)
         await ctx.send_message(Analyze(request))
 
@@ -176,11 +173,11 @@ class Analyst(Executor):
         attempt, notes, used = None, [], False
         if crew.client is not None:
             attempt = await crew.ask(
-                "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request), AnalystChoice,
-                tools=crew.analyst_tools,
+                "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request),
+                analyst_model(list(mc.supported)), tools=crew.analyst_tools,
             )  # fmt: skip
             if attempt.value is not None:
-                choice: AnalystChoice = attempt.value
+                choice = AnalystChoice.model_validate(attempt.value.model_dump())
                 supported = mc.supported
                 unknown = [c for c in choice.headline + choice.supporting if c not in supported]
                 if unknown:
@@ -213,13 +210,17 @@ class Telestrator(Executor):
         if crew.client is not None:
             attempt = await crew.ask(
                 "telestrator", prompts.TELESTRATOR,
-                prompts.telestrator_prompt(mc, msg.findings, template.to_web()), TelestrationPlan,
+                prompts.telestrator_prompt(mc, msg.findings, template.to_web()), PlanDraft,
             )  # fmt: skip
             if attempt.value is not None:
                 used = True
-                errors = validate_plan(attempt.value, mc)
+                try:
+                    candidate = attempt.value.to_plan()
+                    errors = validate_plan(candidate, mc)
+                except ValidationError as e:
+                    candidate, errors = None, [f"plan shape: {err['msg']}" for err in e.errors()]
                 if not errors:
-                    plan, source = attempt.value, "agent"
+                    plan, source = candidate, "agent"
         notes = [f"invalid plan, template used: {e}" for e in errors]
         crew.record("telestrator", attempt, notes, used)
         await ctx.send_message(Narrate(msg.request, msg.findings, plan, source, errors))
@@ -241,11 +242,12 @@ class Narration(Executor):
         if crew.client is None:
             return template, None
         prompt = prompts.narration_prompt(mc, base.findings, persona, language, speaker, pbp)
-        attempt = await crew.ask(
-            speaker, prompts.narration_instructions(speaker), prompt, NarrationDraft
-        )
-        lines = attempt.value.lines if attempt.value is not None and attempt.value.lines else None
-        return (lines if lines is not None else template), attempt
+        schema = anchored_draft_model(list(mc.supported), language)
+        attempt = await crew.ask(speaker, prompts.narration_instructions(speaker), prompt, schema)
+        lines = compose(mc, attempt.value, language) if attempt.value is not None else []
+        if not lines:
+            attempt.value = None  # nothing usable: counts as a fallback
+        return (lines or template), attempt
 
     async def _script(
         self, base: Narrate, key: Key
@@ -285,10 +287,12 @@ class Narration(Executor):
             error = fell_back[0].error if fell_back else None
             total = sum(a.attempts for a in attempts)
             summary = Attempt(None, total, error, max(a.ms for a in attempts))
+        scripts = {}
+        for key, (lines, _) in zip(keys, results, strict=True):
+            scripts[key], dropped = tidy(self.crew.ctx, lines, key[1])
+            notes += [f"{key[0]}/{key[1]} {d}" for d in dropped]
         self.crew.record("narration", summary, notes, bool(attempts) and not fell_back)
-        await ctx.send_message(
-            Drafts(base, {k: lines for k, (lines, _) in zip(keys, results, strict=True)})
-        )
+        await ctx.send_message(Drafts(base, scripts))
 
     @handler
     async def rewrite(self, msg: Rewrite, ctx: WorkflowContext[Drafts]) -> None:
@@ -307,9 +311,10 @@ class Narration(Executor):
             )
             attempt = await self.crew.ask(
                 speaker, prompts.narration_instructions(speaker),
-                prompts.rewrite_prompt(base, mine), NarrationDraft,
+                prompts.rewrite_prompt(base, mine),
+                anchored_draft_model(list(self.crew.ctx.supported), language),
             )  # fmt: skip
-            new = attempt.value.lines if attempt.value is not None else []
+            new = compose(self.crew.ctx, attempt.value, language) if attempt.value else []
             return key, {line.id: d for (line, _), d in zip(mine, new, strict=False)}
 
         for key, replaced in await asyncio.gather(*(redo(*job) for job in jobs)):
@@ -319,6 +324,65 @@ class Narration(Executor):
             ]
         drafts.round += 1
         await ctx.send_message(drafts)
+
+
+def tidy(
+    ctx: MomentContext, lines: list[ScriptLine], language: Language
+) -> tuple[list[ScriptLine], list[str]]:
+    """Deterministic clean-up of model lines before the Verifier.
+
+    - A bare placeholder ({n}) is given the full form its claim's template uses ({n:times}): same
+      slot, so the value is unchanged, only its wording.
+    - A line that only restates claims an earlier line already stated is dropped, and so is a
+      repeated connective.
+    """
+    out, notes, stated, texts = [], [], set(), set()
+    for line in lines:
+        forms: dict[str, str] = {}
+        for cid in line.claims:
+            claim = ctx.claims.get(cid)
+            if claim is None:
+                continue
+            for m in PLACEHOLDER.finditer(claim.template_for(language)):
+                if m["fmt"] or m["one"] is not None:
+                    forms.setdefault(m["name"], m[0])
+
+        def full_form(m, forms=forms) -> str:
+            bare = not (m["claim"] or m["fmt"] or m["one"] is not None)
+            return forms.get(m["name"], m[0]) if bare else m[0]
+
+        text = PLACEHOLDER.sub(full_form, line.text)
+        claims = set(line.claims)
+        if (claims and claims <= stated) or (not claims and text in texts):
+            notes.append(f"{line.id} dropped: repeats an earlier line")
+            continue
+        stated |= claims
+        texts.add(text)
+        out.append(line.model_copy(update={"text": text}) if text != line.text else line)
+    return out, notes
+
+
+MAX_CONNECTIVES = 2  # per voice
+
+
+def compose(ctx: MomentContext, draft: Any, language: Language) -> list[DraftLine]:
+    """Anchored model lines → text: a claim speaks its verified template, a connective itself.
+
+    A model line with both is one spoken line, the connective first. Connectives after the first
+    `MAX_CONNECTIVES` are left out, so the voice does not open every line with one.
+    """
+    out, used = [], 0
+    for line in draft.lines:
+        claim = line.claim if line.claim in ctx.supported else None
+        parts = []
+        if line.connective and used < MAX_CONNECTIVES:
+            parts, used = [line.connective], used + 1
+        if claim:
+            parts.append(ctx.claims[claim].template_for(language))
+        if parts:
+            text = ("" if language == "zh" else " ").join(parts)
+            out.append(DraftLine(text=text, claims=[claim] if claim else []))
+    return out
 
 
 def _replace(line: ScriptLine, draft: DraftLine) -> ScriptLine:
@@ -396,6 +460,7 @@ class Voice(Executor):
 
     @handler
     async def speak(self, msg: Approved, ctx: WorkflowContext[None, BreakdownResult]) -> None:
+        started = time.perf_counter()
         crew, mc = self.crew, self.crew.ctx
         tier = delivery_tier(mc.card)
         scripts = []
@@ -419,14 +484,15 @@ class Voice(Executor):
         notes = [f"tier {tier}"] + (
             [] if crew.voice_styles else ["voice styles unknown: prosody only"]
         )
-        crew.trace.append(StepTrace(step="voice", source="code", attempts=1, ms=0.0, error=None,
+        crew.trace.append(StepTrace(step="voice", source="code", attempts=1,
+                                    ms=round((time.perf_counter() - started) * 1000, 1), error=None,
                                     notes=notes))  # fmt: skip
         base = msg.base
         await ctx.yield_output(
             BreakdownResult(
                 request=base.request, findings=base.findings, plan=base.plan,
                 plan_source=base.plan_source, plan_errors=base.plan_errors, tier=tier,
-                scripts=scripts, trace=list(crew.trace),
+                scripts=scripts, trace=list(crew.trace), total_ms=0.0,
             )
         )  # fmt: skip
 
@@ -479,7 +545,7 @@ async def _run(crew: Crew, personas, languages) -> BreakdownResult:
     if not outputs:
         raise RuntimeError("the breakdown workflow produced no output")
     out: BreakdownResult = outputs[0]
-    out.trace[-1].ms = round((time.perf_counter() - started) * 1000, 1)  # total wall time on Voice
+    out.total_ms = round((time.perf_counter() - started) * 1000, 1)
     return out
 
 

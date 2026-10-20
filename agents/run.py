@@ -40,7 +40,7 @@ async def main_async(args: argparse.Namespace) -> Path:
     path.write_text(result.model_dump_json(by_alias=True, indent=1))
 
     print(f"moment {result.request.moment} · lens {result.findings.lens} · tier {result.tier} · "
-          f"plan from {result.plan_source}")  # fmt: skip
+          f"plan from {result.plan_source} · total {result.total_ms / 1000:.1f} s")  # fmt: skip
     for step in result.trace:
         error = f" · {step.error}" if step.error else ""
         print(

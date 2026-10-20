@@ -10,7 +10,15 @@ from __future__ import annotations
 import json
 
 from agents.context import MomentContext
-from agents.schemas import BreakdownRequest, Findings, Language, Persona, ScriptLine, Speaker
+from agents.schemas import (
+    CONNECTIVES,
+    BreakdownRequest,
+    Findings,
+    Language,
+    Persona,
+    ScriptLine,
+    Speaker,
+)
 
 CREW = (
     "You are part of an AI production crew that explains one moment of a synthetic football match. "
@@ -22,9 +30,9 @@ CREW = (
 
 DIRECTOR = f"""ROLE: director
 {CREW}
-You are the Director. Decide who gets this breakdown. Choose personas and languages only from the
-allowed lists, and a priority (low, normal or high) from how much the selected lens changed the
-outcome (its delta in expected threat). Give a one-sentence reason."""
+You are the Director. The audiences (personas and languages) are fixed by the request. Set the
+breakdown's priority (low, normal or high) from how much the selected lens changed the outcome (its
+delta in expected threat), and give a one-sentence reason."""
 
 ANALYST = f"""ROLE: analyst
 {CREW}
@@ -63,16 +71,13 @@ SPEAKERS: dict[Speaker, str] = {
     "play-by-play lines you are shown.",
 }
 
-NARRATION_RULES = """Rules for every line:
-- `claims` lists the ids of the claims the line states; the line states nothing else.
-- Write numbers and player ids only as placeholders from those claims' slots, exactly as in their
-  templates, e.g. {player}, {runner}, {n:times}, {secs|second|seconds}. Never write a digit, a
-  number word or a player id yourself.
-- No judgement words: mistake, error, dominated, controlled the game, certain goal, should have,
-  lazy, world-class; in Chinese 失误, 统治比赛, 必进, 本该, 偷懒.
-- A line without claims may only be a short connective such as "What did he see?" or
-  "他看到了什么？".
-- One sentence per line."""
+NARRATION_RULES = """How to build the script:
+- Each line is either one claim id (its verified sentence is spoken exactly as written) or one of
+  the allowed connectives. You choose which claims, their order, and where a connective helps the
+  rhythm (at most two connectives per voice); you never write sentences yourself.
+- Use each claim at most once in the whole script. The co-commentator never repeats a claim the
+  play-by-play already used; it adds the claims that explain why.
+- Keep to the persona's length."""
 
 
 def narration_instructions(speaker: Speaker) -> str:
@@ -104,10 +109,7 @@ def _claims(ctx: MomentContext, ids: list[str] | None, language: Language) -> li
     for cid, claim in ctx.supported.items():
         if ids is not None and cid not in ids:
             continue
-        out.append(
-            {"id": cid, "kind": claim.kind, "template": claim.template_for(language),
-             "slots": sorted(claim.slots)}
-        )  # fmt: skip
+        out.append({"id": cid, "kind": claim.kind, "sentence": claim.template_for(language)})
     return out
 
 
@@ -157,17 +159,24 @@ def narration_prompt(
         "angle": findings.angle,
         "headline_claims": _claims(ctx, findings.headline, language),
         "supporting_claims": _claims(ctx, findings.supporting, language),
+        "other_claims": _claims(
+            ctx,
+            [c for c in ctx.supported if c not in findings.headline + findings.supporting],
+            language,
+        ),
+        "allowed_connectives": list(CONNECTIVES[language]),
     }
     if pbp_lines:
-        data["play_by_play_lines"] = [
-            {"text": line.text, "claims": line.claims} for line in pbp_lines
+        data["play_by_play_used"] = [
+            {"claim": line.claims[0] if line.claims else None, "text": line.text}
+            for line in pbp_lines
         ]
     return _dump(data)
 
 
 def rewrite_prompt(base: str, failed: list[tuple[ScriptLine, list[str]]]) -> str:
     rejected = [
-        {"text": line.text, "claims": line.claims, "problems": problems}
+        {"claim": line.claims[0] if line.claims else None, "text": line.text, "problems": problems}
         for line, problems in failed
     ]
     return (

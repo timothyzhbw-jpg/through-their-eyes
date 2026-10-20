@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from explain.cards import LensName
 from explain.render import RenderPayload
@@ -29,8 +29,7 @@ class Strict(BaseModel):
 
 
 class DirectorChoice(Strict):
-    personas: list[Persona]
-    languages: list[Language]
+    # Who gets the breakdown is the request's call; the Director sets its priority (SPEC 6).
     priority: Priority
     reason: str = Field(max_length=400)
 
@@ -131,6 +130,19 @@ PlanStep = Annotated[
 ]
 
 
+class PlanDraft(Strict):
+    """The Telestrator's structured output. Same fields as `TelestrationPlan`, but the steps are a
+    plain union: Azure OpenAI structured outputs accept `anyOf`, not the `oneOf` that a
+    discriminated union produces. `to_plan` applies the full checks."""
+
+    moment: str
+    duration_s: float
+    steps: list[Freeze | Rewind | Play | Camera | Pov | ScanMarker | Zone | Ghost | Voice]
+
+    def to_plan(self) -> TelestrationPlan:
+        return TelestrationPlan.model_validate(self.model_dump(by_alias=True))
+
+
 class TelestrationPlan(Strict):
     moment: str
     duration_s: float = Field(gt=0.0, le=120.0)
@@ -151,6 +163,41 @@ class DraftLine(Strict):
 
 class NarrationDraft(Strict):
     lines: list[DraftLine] = Field(max_length=8)
+
+
+# Connectives a narration line may consist of; each passes `explain.lexicon.is_connective`.
+CONNECTIVES: dict[Language, tuple[str, ...]] = {
+    "en": ("What did he see?", "Watch this.", "Look again.", "Here's why.", "Now watch.",
+           "This is the moment.", "See it again."),
+    "zh": ("他看到了什么？", "注意看。", "再看看。", "关键在这里。", "就是这个瞬间。", "为什么？"),
+}  # fmt: skip
+
+
+def _enum(values: list[str] | tuple[str, ...]):
+    return Literal[tuple(values)] if values else Literal["__none__"]
+
+
+def anchored_draft_model(claim_ids: list[str], language: Language) -> type[BaseModel]:
+    """What a narration agent may return: per line, a verified claim id or an allowed connective.
+
+    The ids and connectives are enums in the JSON schema, so structured outputs cannot contain
+    free text: the spoken sentence of a claim is its verified template (SPEC 6).
+    """
+    line = create_model(
+        "AnchoredLine", __base__=Strict,
+        claim=(_enum(claim_ids) | None, ...), connective=(_enum(CONNECTIVES[language]) | None, ...),
+    )  # fmt: skip
+    return create_model("AnchoredDraft", __base__=Strict, lines=(list[line], Field(max_length=8)))
+
+
+def analyst_model(claim_ids: list[str]) -> type[BaseModel]:
+    """`AnalystChoice` with the claim ids as an enum: the Analyst can only pick verified claims."""
+    claim = _enum(claim_ids)
+    return create_model(
+        "AnalystChoice", __base__=Strict, lens=(LensName, ...),
+        headline=(list[claim], Field(min_length=1, max_length=3)),
+        supporting=(list[claim], Field(max_length=6)), angle=(str, Field(max_length=400)),
+    )  # fmt: skip
 
 
 class ScriptLine(Strict):
@@ -209,3 +256,4 @@ class BreakdownResult(Strict):
     tier: Tier
     scripts: list[ScriptResult]
     trace: list[StepTrace]
+    total_ms: float  # wall time of the whole breakdown
