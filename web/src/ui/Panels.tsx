@@ -1,11 +1,15 @@
-// Story beats with the verdict, and the decision the hero made on his belief.
-// Numbers here are read straight from the sim export; narration with verified claims replaces
-// the beat texts once explain/ and agents/ land (SPEC 5.3). The beats follow the hero's lens: the
-// look over the shoulder (blind_side_run), or the press he plays out of (press_escape).
+// Chapters of the moment's story: what happened (the beats), what he believed (the decision on
+// his belief), and the other match (the counterfactual and what the look was worth). Numbers here
+// are read straight from the sim export and say so, in Chalk; only a value the verifier checked is
+// set in Floodlight with its check (SPEC 5.3). The beats follow the hero's lens: the look over the
+// shoulder (blind_side_run), or the press he plays out of (press_escape).
 
 import { actionLabel, runLabels, type Hero, type Run, type Scan } from "../data/hero";
-import { useSession } from "../session";
+import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { Chapter, Title } from "./Chapter";
+import { CheckIcon } from "./icons";
+import { LineText } from "./Narration";
 
 interface Beat {
   from: number; // frame
@@ -110,17 +114,19 @@ export function StoryPanel() {
   const mode = useStore(playback, (s) => s.mode);
   const frame = useStore(playback, (s) => s.frame);
   const run = hero.runs[mode];
-  const list = beats(hero, run);
+  const list = beats(hero, run).filter((b) => b.text);
   let now = 0;
   list.forEach((b, k) => {
     if (frame + 1e-6 >= b.from) now = k;
   });
-  const f = hero.runs.factual.decision?.chosen ?? "";
-  const c = hero.runs.counterfactual.decision?.chosen ?? "";
   const labels = runLabels(hero);
   return (
-    <div className="panel">
-      <h2>What happened</h2>
+    <Chapter
+      className="story"
+      kicker={`What happened · ${labels.tag[mode]}`}
+      title={<Title lead="What" em="happened." />}
+      lede="Every beat of the move on the match clock. Choose one to replay from there."
+    >
       <ol className="beats">
         {list.map((b, k) => (
           <li key={k} className={k === now ? "now" : undefined}>
@@ -131,25 +137,11 @@ export function StoryPanel() {
           </li>
         ))}
       </ol>
-      <div className="verdict">
-        <div>
-          {labels.factual}: <b>{actionLabel(f)}</b>
-        </div>
-        <div>
-          {labels.counterfactual}: <b>{actionLabel(c)}</b>
-        </div>
-        <div>
-          {labels.gain}:{" "}
-          <b className="num">
-            {hero.deltaXt >= 0 ? "+" : ""}
-            {hero.deltaXt.toFixed(3)} xT
-          </b>
-        </div>
-      </div>
-    </div>
+    </Chapter>
   );
 }
 
+/** What he believed at the decision: how far off his picture of the runner was, his options. */
 export function DecisionPanel() {
   const { hero, playback, offset } = useSession();
   const mode = useStore(playback, (s) => s.mode);
@@ -158,44 +150,65 @@ export function DecisionPanel() {
   if (!dec) return null;
   const runner = hero.runnerId;
   const runnerOption = runner ? dec.options.find((o) => o.action === `pass:${runner}`) : undefined;
+  const at = ((dec.frame + offset) * hero.dt).toFixed(2);
+  const error = runner ? dec.belief_error[runner] : null;
   return (
-    <div className="panel">
-      <h2>
-        {hero.heroId}'s options at {((dec.frame + offset) * hero.dt).toFixed(2)} s, on his belief
-      </h2>
-      <div className="options">
-        {dec.options.slice(0, 6).map((o) => (
-          <div
-            key={o.action}
-            className={o.action === dec.chosen ? "opt chosen" : "opt"}
-            title={`P(success) ${o.p_success.toFixed(2)} · value ${o.value.toFixed(4)} xT`}
-          >
-            <span className="name">{actionLabel(o.action)}</span>
-            <span className="bar">
-              <i style={{ width: `${Math.max(1, o.prob * 100)}%` }} />
-            </span>
-            <span className="p">{o.prob.toFixed(2)}</span>
+    <Chapter
+      className="decision"
+      kicker={`What he believed · at ${at} s`}
+      label={`${hero.heroId}'s options at ${at} s, on his belief`}
+      title={<Title lead="On his" em="belief." />}
+      lede="He decides on what he believes, never on the truth. Each option is scored on his picture of the pitch; the probabilities come from the softmax of each option's expected threat."
+    >
+      <div className="belief">
+        {runner && error !== null && (
+          <figure className="numeral-figure">
+            <p className="numeral">
+              {error.toFixed(1)}
+              <span className="unit">m</span>
+            </p>
+            <figcaption>
+              His picture of {runner} was off by this much when he decided.{" "}
+              <span className="source" title="Read from the sim export, not a verified claim">
+                sim
+              </span>
+            </figcaption>
+          </figure>
+        )}
+        <div className="options-figure">
+          <p className="kicker">
+            {hero.heroId}'s options at {at} s, on his belief
+          </p>
+          <div className="options">
+            {dec.options.slice(0, 6).map((o) => (
+              <div
+                key={o.action}
+                className={o.action === dec.chosen ? "opt chosen" : "opt"}
+                title={`P(success) ${o.p_success.toFixed(2)} · value ${o.value.toFixed(4)} xT`}
+              >
+                <span className="name">{actionLabel(o.action)}</span>
+                <span className="bar">
+                  <i style={{ width: `${Math.max(1, o.prob * 100)}%` }} />
+                </span>
+                <span className="p">{o.prob.toFixed(2)}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {runner && (
-        <div className="facts">
-          <Fact
-            label={`Belief error on ${runner}`}
-            value={`${dec.belief_error[runner].toFixed(1)} m`}
-          />
-          <Fact label={`Last saw ${runner}`} value={`${dec.belief_age[runner].toFixed(2)} s ago`} />
-          <Fact
-            label={`P(pass to ${runner} arrives), as he sees it`}
-            value={runnerOption ? runnerOption.p_success.toFixed(2) : "not on"}
-          />
+          {runner && (
+            <div className="facts">
+              <Fact
+                label={`Last saw ${runner}`}
+                value={`${dec.belief_age[runner].toFixed(2)} s ago`}
+              />
+              <Fact
+                label={`P(pass to ${runner} arrives), as he sees it`}
+                value={runnerOption ? runnerOption.p_success.toFixed(2) : "not on"}
+              />
+            </div>
+          )}
         </div>
-      )}
-      <p className="note">
-        Options are scored on what he believes, never on the truth. Probabilities come from the
-        softmax of each option's expected threat.
-      </p>
-    </div>
+      </div>
+    </Chapter>
   );
 }
 
@@ -205,5 +218,83 @@ function Fact({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <b>{value}</b>
     </div>
+  );
+}
+
+/**
+ * The other match: what he did in each run and what the difference was worth. The value comes
+ * from a verified counterfactual claim when the breakdown has one (Floodlight, with its check and
+ * its line); otherwise from the sim export, in Chalk, marked as such.
+ */
+export function VerdictPanel() {
+  const { hero, playback } = useSession();
+  const { narration } = useBreakdown();
+  const mode = useStore(playback, (s) => s.mode);
+  if (!hero.counterfactual) return null;
+  const labels = runLabels(hero);
+  const did = hero.runs.factual.decision?.chosen ?? "";
+  const other = hero.runs.counterfactual.decision?.chosen ?? "";
+  const claim =
+    narration && !narration.fixture
+      ? [...narration.claims.values()].find(
+          (c) => c.kind === "counterfactual" && typeof c.values.dxt === "number",
+        )
+      : undefined;
+  const line = claim ? narration?.lines.find((l) => l.claims.includes(claim.id)) : undefined;
+  const value = claim ? (claim.values.dxt as number) : hero.deltaXt;
+  const shown = `${value >= 0 ? "+" : "\u2212"}${Math.abs(value).toFixed(claim ? 2 : 3)}`;
+  const look = !!hero.keyScan;
+  return (
+    <Chapter
+      className="verdict"
+      kicker={`Re-simulated · ${labels.tag.counterfactual}`}
+      title={
+        look ? <Title lead="Take the look" em="away." /> : <Title lead="The other" em="choice." />
+      }
+      lede={
+        look
+          ? "We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw."
+          : "We play the same match again with his choice forced. Everything else is held the same, so any difference comes from that choice."
+      }
+    >
+      <div className="versus">
+        <div className={mode === "factual" ? "run-card on" : "run-card"}>
+          <span className="kicker">{labels.tag.factual}</span>
+          <span className="run-action">{actionLabel(did)}</span>
+        </div>
+        <div className={mode === "counterfactual" ? "run-card cf on" : "run-card cf"}>
+          <span className="kicker">{labels.tag.counterfactual}</span>
+          <span className="run-action">{actionLabel(other)}</span>
+        </div>
+      </div>
+      <div className={claim ? "worth verified" : "worth"}>
+        <p className="numeral">{shown}</p>
+        <div className="worth-text">
+          {line ? (
+            <p className="worth-line">
+              <LineText text={line.text} verified />
+            </p>
+          ) : (
+            <p className="worth-line">{labels.gain}, in expected threat (xT).</p>
+          )}
+          <p className="note">
+            {claim ? (
+              <span className="checked">
+                <CheckIcon size={12} /> Counterfactual · checked by the verifier, in code
+              </span>
+            ) : (
+              <>
+                <span className="source" title="Read from the sim export, not a verified claim">
+                  sim
+                </span>{" "}
+                Read from the sim export, not a verified claim.
+              </>
+            )}{" "}
+            Expected threat is how much a position raises the chance of scoring soon. Causal inside
+            the simulation; not a claim about real football.
+          </p>
+        </div>
+      </div>
+    </Chapter>
   );
 }

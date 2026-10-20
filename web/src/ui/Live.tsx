@@ -8,6 +8,7 @@ import { restartLabel, scenarioLabel, type MatchMoment } from "../match/match";
 import type { MatchSession } from "../match/matchSession";
 import { useSession, useView } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
+import { Chapter } from "./Chapter";
 import "./live.css";
 
 /** "Offline data" without the live service; otherwise the Live button and the stream's state. */
@@ -59,12 +60,14 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
         <i aria-hidden="true" />
         Live
       </button>
-      <span className={`live-status ${status}`} title={error ?? undefined}>
-        {live || status === "ended" || status === "lost" ? STATUS[status] : STATUS.off}
-        {live && sprint.length > 0 && (
-          <span className="sprint"> · sprinting {sprint.join(", ")}</span>
-        )}
-      </span>
+      {(live || status === "ended" || status === "lost") && (
+        <span className={`live-status ${status}`} title={error ?? undefined}>
+          {STATUS[status]}
+          {live && sprint.length > 0 && (
+            <span className="sprint"> · sprinting {sprint.join(", ")}</span>
+          )}
+        </span>
+      )}
     </div>
   );
 }
@@ -100,11 +103,17 @@ function Moments({ feed }: { feed: LiveFeed }) {
   const moments = useStore(feed.state, (s) => s.moments);
   const status = useStore(feed.state, (s) => s.status);
   return (
-    <div className="panel moments">
-      <div className="breakdown-head">
-        <h2>Moments</h2>
-        <span className="meta">detected on the live stream</span>
-      </div>
+    <Chapter
+      className="moments"
+      split
+      kicker="Moments · detected on the live stream"
+      title={
+        <>
+          As they <em>happen.</em>
+        </>
+      }
+      lede="A moment is announced when its window closes on the stream. Breakdowns run once the hero moment is detected, like a broadcast replay after a goal; the other moments replay only."
+    >
       {moments.length === 0 ? (
         <p className="note">
           {status === "streaming" || status === "connecting"
@@ -127,7 +136,7 @@ function Moments({ feed }: { feed: LiveFeed }) {
                 </span>
               </button>
               {m.id === moment.id && (
-                <button type="button" className="play small" onClick={controls.playBreakdown}>
+                <button type="button" className="btn" onClick={controls.playBreakdown}>
                   Breakdown
                 </button>
               )}
@@ -135,11 +144,7 @@ function Moments({ feed }: { feed: LiveFeed }) {
           ))}
         </ol>
       )}
-      <p className="note">
-        A moment is announced when its window closes on the stream. Breakdowns run once the hero
-        moment is detected, like a broadcast replay after a goal; the other moments replay only.
-      </p>
-    </div>
+    </Chapter>
   );
 }
 
@@ -156,11 +161,16 @@ function MatchMoments({ session }: { session: MatchSession }) {
   const seen = new Set(detected.map((m) => m.id));
   const at = (f: number) => `${(f * session.hero.dt).toFixed(2)} s`;
   return (
-    <div className="panel moments match-moments">
-      <div className="breakdown-head">
-        <h2>Moments</h2>
-        <span className="meta">every possession, on the match clock</span>
-      </div>
+    <Chapter
+      className="moments match-moments"
+      kicker="Moments · every possession, on the match clock"
+      title={
+        <>
+          Every <em>moment.</em>
+        </>
+      }
+      lede="Every possession's moments, detected and explained on its own run and lifted to match time. The two hero moments open their breakdowns, played on the possession's own run; the others replay only."
+    >
       <div className="possessions">
         {match.possessions.map((p) => (
           <section key={p.index} aria-label={`Possession ${p.index + 1}`}>
@@ -188,12 +198,7 @@ function MatchMoments({ session }: { session: MatchSession }) {
           </section>
         ))}
       </div>
-      <p className="note">
-        Every possession's moments, detected and explained on its own run and lifted to match time.
-        The two hero moments open their breakdowns, played on the possession's own run; the others
-        replay only.
-      </p>
-    </div>
+    </Chapter>
   );
 }
 
@@ -216,12 +221,7 @@ function MatchMomentRow(props: {
         </span>
       </button>
       {m.hero && (
-        <button
-          type="button"
-          className="play small"
-          onClick={props.onBreakdown}
-          disabled={props.opening}
-        >
+        <button type="button" className="btn" onClick={props.onBreakdown} disabled={props.opening}>
           {props.opening ? "Loading…" : "Breakdown"}
         </button>
       )}

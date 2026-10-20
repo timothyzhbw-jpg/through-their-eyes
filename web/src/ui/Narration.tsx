@@ -24,7 +24,11 @@ import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
 import { LANGUAGES } from "../whatif/whatif";
+import { CheckIcon, SoundOffIcon, SoundOnIcon } from "./icons";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
+import { Chapter } from "./Chapter";
+import { numberParts } from "./numbers";
+import { Segmented } from "./Segmented";
 import "./live.css";
 import "./whatif.css";
 
@@ -52,6 +56,33 @@ export function KindTags({ narration, line }: { narration: Narration; line: Payl
 const hasCounterfactual = (narration: Narration, line: PayloadLine) =>
   lineKinds(narration, line).includes("counterfactual");
 
+/** A line the verifier checked: it has claims and the payload is not the unchecked fixture. */
+export const isVerified = (narration: Narration, line: PayloadLine) =>
+  !narration.fixture && line.claims.length > 0;
+
+/**
+ * A line's text; in a verified line each number, with its unit, gets the dotted Floodlight
+ * underline (every digit on air was slot-filled from a checked value).
+ */
+export function LineText({ text, verified }: { text: string; verified: boolean }) {
+  if (!verified) return <>{text}</>;
+  return (
+    <>
+      {numberParts(text).map((p, k) =>
+        p.num ? (
+          <span key={k} className="num">
+            {p.text}
+          </span>
+        ) : (
+          p.text
+        ),
+      )}
+    </>
+  );
+}
+
+const SPEAKER: Record<string, string> = { pbp: "Play-by-play", color: "Co-commentator" };
+
 /**
  * The current voice line over the first-person view. Click to open its evidence. Large print for
  * audio description (SPEC 1). A screen reader hears each line from a live region that is always
@@ -59,13 +90,15 @@ const hasCounterfactual = (narration: Narration, line: PayloadLine) =>
  */
 export function Caption() {
   const { playback, controls, voice } = useSession();
-  const { narration, persona } = useBreakdown();
+  const { narration, persona, voice: cues } = useBreakdown();
   const lineId = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
   // Only a clip that is playing speaks: sound on with a blocked, failed or capped clip is silent.
   const speaking = useStore(voice.state, (s) => s.on && s.status === "playing");
   const line = lineOf(narration, lineId);
   const large = DESCRIBED.has(persona) ? " large" : "";
+  const speaker = SPEAKER[cues.find((c) => c.line === lineId)?.speaker ?? ""];
+  const verified = !!narration && !!line && isVerified(narration, line);
   return (
     <>
       <p className="sr-only" aria-live={speaking ? "off" : "polite"}>
@@ -79,9 +112,22 @@ export function Caption() {
           onClick={() => controls.openLine(line.id)}
           title="Open the evidence for this line"
         >
-          <KindTags narration={narration} line={line} />
-          <span className="caption-text">{line.text}</span>
-          {line.claims.length > 0 && <span className="caption-more">Evidence ›</span>}
+          <span className="caption-meta">
+            {speaker && <span className="speaker">{speaker}</span>}
+            <KindTags narration={narration} line={line} />
+          </span>
+          <span className="caption-text">
+            <LineText text={line.text} verified={verified} />
+            {line.claims.length > 0 &&
+              (verified ? (
+                <span className="caption-more check">
+                  <CheckIcon />
+                  <span className="sr-only">Evidence</span>
+                </span>
+              ) : (
+                <span className="caption-more">Evidence</span>
+              ))}
+          </span>
         </button>
       )}
     </>
@@ -123,7 +169,7 @@ export function EvidenceCard() {
         </button>
       </div>
       <p className={hasCounterfactual(narration, line) ? "evidence-line cf" : "evidence-line"}>
-        {line.text}
+        <LineText text={line.text} verified={isVerified(narration, line)} />
       </p>
       {line.claims.length === 0 ? (
         <p className="note">A connective phrase: it states no fact, so there is no evidence.</p>
@@ -456,20 +502,19 @@ export function BreakdownChoice() {
           ))}
         </select>
       </label>
-      <span className="lang" role="group" aria-label="Narration language" title={why}>
-        {LANGUAGES.map((l) => (
-          <button
-            key={l}
-            type="button"
-            aria-pressed={language === l}
-            lang={l}
-            disabled={!online}
-            onClick={() => controls.setLanguage(l)}
-          >
-            {LANG_LABEL[l]}
-          </button>
-        ))}
-      </span>
+      <Segmented
+        label="Narration language"
+        className="lang"
+        title={why}
+        value={language}
+        onPick={controls.setLanguage}
+        options={LANGUAGES.map((l) => ({
+          value: l,
+          label: LANG_LABEL[l],
+          lang: l,
+          disabled: !online,
+        }))}
+      />
       <SoundToggle />
     </div>
   );
@@ -477,7 +522,7 @@ export function BreakdownChoice() {
 
 /** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on or
  * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. */
-export function SoundToggle() {
+export function SoundToggle({ icon = false }: { icon?: boolean }) {
   const { voice, controls } = useSession();
   const on = useStore(voice.state, (s) => s.on);
   const status = useStore(voice.state, (s) => s.status);
@@ -492,15 +537,32 @@ export function SoundToggle() {
   return (
     <button
       type="button"
-      className={status === "failed" ? "sound failed" : "sound"}
+      className={[
+        "sound",
+        icon ? "btn btn-icon" : "",
+        status === "failed" ? "failed" : "",
+        on && status === "loading" ? "loading" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Sound"
       aria-pressed={on}
       disabled={!voice.available}
       title={title}
       onClick={() => controls.setSound(!on)}
     >
-      {on ? "Sound on" : "Sound off"}
-      {on && status === "loading" && " …"}
+      {icon ? (
+        on ? (
+          <SoundOnIcon />
+        ) : (
+          <SoundOffIcon />
+        )
+      ) : (
+        <>
+          {on ? "Sound on" : "Sound off"}
+          {on && status === "loading" && " …"}
+        </>
+      )}
     </button>
   );
 }
@@ -544,22 +606,35 @@ export function NarrationPanel() {
   const caption = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
   return (
-    <div className="panel narration">
-      <div className="breakdown-head">
-        <h2>Narration</h2>
-        {narration && (
-          <span className="meta">
-            {narration.payload.persona} · {narration.payload.language}
-          </span>
-        )}
-        {narration?.fixture && (
-          <span className="plan-badge fallback" title={narration.payload.note}>
-            Fixture
-          </span>
-        )}
-        <BreakdownSource />
-      </div>
-      <BreakdownChoice />
+    <Chapter
+      className="narration"
+      split
+      kicker="The call"
+      title={
+        <>
+          Two voices. <em>Every line</em> a claim.
+        </>
+      }
+      lede="A play-by-play voice and a co-commentator, written for the audience you chose. Open any line to see the claim behind it and how it was checked."
+      aside={
+        <>
+          <BreakdownChoice />
+          <div className="breakdown-head">
+            {narration && (
+              <span className="meta">
+                {narration.payload.persona} · {narration.payload.language}
+              </span>
+            )}
+            {narration?.fixture && (
+              <span className="plan-badge fallback" title={narration.payload.note}>
+                Fixture
+              </span>
+            )}
+            <BreakdownSource />
+          </div>
+        </>
+      }
+    >
       <BreakdownNote />
       {narration ? (
         <ol className={DESCRIBED.has(persona) ? "lines large" : "lines"}>
@@ -573,7 +648,7 @@ export function NarrationPanel() {
                 <span className="t">{line.id}</span>
                 <span>
                   <KindTags narration={narration} line={line} />
-                  {line.text}
+                  <LineText text={line.text} verified={isVerified(narration, line)} />
                 </span>
               </button>
             </li>
@@ -598,6 +673,6 @@ export function NarrationPanel() {
         )
       )}
       {narration?.fixture && <p className="note">{narration.payload.note}</p>}
-    </div>
+    </Chapter>
   );
 }

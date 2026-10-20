@@ -47,7 +47,6 @@ import {
 } from "./scene";
 import { PitchControlLayer } from "../pitchControl/PitchControlLayer";
 import { OptionsOverlay } from "../ui/OptionsOverlay";
-import { TacticalToolbar } from "./TacticalToolbar";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 
 const TOKEN_R = 0.95; // m
@@ -87,7 +86,6 @@ export function TacticalView() {
   const { kind } = useView();
   return (
     <figure className="view tac" aria-label="Tactical view from above">
-      <TacticalToolbar />
       <div className="canvas-wrap">
         <Canvas
           orthographic
