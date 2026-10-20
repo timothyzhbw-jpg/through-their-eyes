@@ -298,10 +298,14 @@ class Simulation:
         )
         return times, path
 
+    def formation_spots(self) -> np.ndarray:
+        """(N, 2) formation anchors shifted with the ball (SPEC 3.2)."""
+        shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(self.params.formation_shift)
+        return self.anchor + shift
+
     def _movement_targets(self, f: int) -> tuple[np.ndarray, np.ndarray]:
         p = self.params
-        shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(p.formation_shift)
-        target = self.anchor + shift
+        target = self.formation_spots()
         cap = self.v_max.copy()
 
         if self.owner >= 0:
