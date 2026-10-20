@@ -64,3 +64,40 @@ def test_payloads_pass_the_final_check_and_every_claim_is_labelled(result):
         uses_cf = "cf_delta" in g.claim.predicate.model_dump_json() or g.kind.startswith("cf_")
         assert (g.claim.kind == "counterfactual") == uses_cf, g.kind
     assert result.card_anchored > len(result.generated) // 2
+
+
+DESCRIBING = ("reception_zone", "scan_side", "seen_in_scan")  # audio description (SPEC 1)
+
+
+def test_the_oracle_agrees_with_every_generated_claim_it_judges(result):
+    from eval.corruption import APPLICABLE, ground_truth
+
+    judged = {kind for table in APPLICABLE.values() for kind in table}
+    assert set(DESCRIBING) <= judged & {g.kind for g in result.generated}
+    for g in result.generated:
+        if g.kind in judged:
+            assert ground_truth(g.kind, g.claim, g.world) is True, (g.world.seed, g.kind)
+
+
+@pytest.mark.parametrize("kind", DESCRIBING)
+def test_perturbed_describing_claims_are_judged_like_the_oracle(result, kind):
+    """Every applicable perturbation of the new claims, on both seeds: the verifier refutes what
+    the oracle finds false and supports what stays true."""
+    import random
+
+    from eval.corruption import APPLICABLE, ground_truth, perturb
+
+    rng = random.Random(3)
+    judged = []
+    for g in (g for g in result.generated if g.kind == kind):
+        for ptype, table in APPLICABLE.items():
+            if kind not in table:
+                continue
+            for _ in range(4):
+                claim, change = perturb(g, ptype, rng)
+                truth = ground_truth(kind, claim, g.world)
+                verdict = g.world.verifier.verify(claim)
+                expected = {True: "supported", False: "refuted", None: "inconclusive"}[truth]
+                assert verdict.status == expected, (g.world.seed, ptype, change, verdict.reason)
+                judged.append(truth)
+    assert False in judged

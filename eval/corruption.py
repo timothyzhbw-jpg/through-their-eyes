@@ -34,7 +34,7 @@ import numpy as np
 
 from analytics.pitch_control import pitch_control, pitch_grid
 from analytics.pressing import aggregate, frame_pressing
-from analytics.vision import VisionParams, visibility, wrap_angle
+from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from explain.audit import JsonlAuditSink, MemoryAuditSink
 from explain.builders import HeroRefs, hero_claims
 from explain.claims import Claim, Slot
@@ -42,6 +42,7 @@ from explain.functions import EvalContext
 from explain.moments import detect_moments
 from explain.render import ScriptLine, Violation, build_payload, check_payload, render_claim
 from explain.verifier import Verdict, Verifier
+from sim.config import SimParams
 from sim.counterfactual import CounterfactualResult, drop_scan_counterfactual
 
 SCENARIO = "blind_side_run"
@@ -84,6 +85,9 @@ SWAPPABLE = {
     "gap_opened": ("player", "runner", "marker"),
     "runner_received": ("runner", "passer"),
     "pressure_at_pass": ("player",),
+    "reception_zone": ("player",),
+    "scan_side": ("player",),
+    "seen_in_scan": ("player", "runner"),
 }
 # Two references whose order the sentence depends on (gap_* are symmetric: they stay true).
 ORDER = {
@@ -95,6 +99,7 @@ ORDER = {
     "gap_to_marker": ("runner", "marker"),
     "gap_opened": ("runner", "marker"),
     "runner_received": ("runner", "passer"),
+    "seen_in_scan": ("player", "runner"),
 }
 APPLICABLE = {
     "number_pm1": MEASURED,
@@ -206,6 +211,31 @@ def _share(run, player: str, f: int, window_s: float) -> float:
     return float((seen * p_def).sum() / p_def.sum())
 
 
+def _place(run, player: str, f: int) -> tuple[str, str]:
+    """Band of the length and lane of the width, from the player's attacking direction."""
+    i = run.index(player)
+    x, y = run.pos[f, i] * (1.0 if run.players[i].team == 0 else -1.0)  # +x to goal, +y his left
+    band = ("own_third" if x < -17.5 else "own_half" if x < 0 else
+            "opponents_half" if x < 17.5 else "final_third")  # fmt: skip
+    lane = ("right_wing" if y < -20.4 else "right_of_centre" if y < -6.8 else
+            "centre" if y <= 6.8 else "left_of_centre" if y <= 20.4 else "left_wing")  # fmt: skip
+    return band, lane
+
+
+def _turned(run, player: str, scan) -> str:
+    """Which way the head turned: the larger swing of its integrated rotation over the scan."""
+    head = run.head_yaw[scan.frame : scan.attrs["end"] + 1, run.index(player)]
+    turned = np.cumsum(wrap_angle(np.diff(head)))
+    return "left" if turned[np.argmax(np.abs(turned))] > 0 else "right"
+
+
+def _saw(run, observer: str, target: str, scan) -> bool:
+    i, j = run.index(observer), run.index(target)
+    vis = [player_visibility(run.pos[f], run.head_yaw[f], np.linalg.norm(run.vel[f], axis=-1))[i, j]
+           for f in range(scan.frame, scan.attrs["end"] + 1)]  # fmt: skip
+    return bool(max(vis) >= SimParams().perception_threshold)
+
+
 def ground_truth(kind: str, c: Claim, w: World) -> bool | None:
     """Is the sentence true in the sim? None when the recording cannot say."""
     run, refs = w.run, w.refs
@@ -287,6 +317,18 @@ def ground_truth(kind: str, c: Claim, w: World) -> bool | None:
         pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], carrier)
         value = pf.on_carrier if i == carrier else float(aggregate(pf.column(i)))
         return _close(100.0 * value, _val(c, "pressure"), 0)
+    if kind == "reception_zone":
+        player = _ref(c, "player")
+        return recv.player == player and _place(run, player, recv.frame) == (
+            _val(c, "band"), _val(c, "lane"))  # fmt: skip
+    if kind == "scan_side":
+        scan, player = _events(run).get(_ref(c, "scan")), _ref(c, "player")
+        return (scan is not None and scan.type == "scan" and scan.player == player == recv.player
+                and scan.t < recv.t and _turned(run, player, scan) == _val(c, "side"))  # fmt: skip
+    if kind == "seen_in_scan":
+        scan, player = _events(run).get(_ref(c, "scan")), _ref(c, "player")
+        return (scan is not None and scan.player == player
+                and _saw(run, player, _ref(c, "runner"), scan))  # fmt: skip
     raise KeyError(kind)
 
 

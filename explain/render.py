@@ -15,8 +15,9 @@ lines that passed, and for each claim its kind, verdict, filled values, evidence
 `check_payload` re-runs every check on that final payload before it is sent.
 
 Placeholders: `{name}` (a slot of the line's only claim that has it) or `{claim.name}`, with an
-optional format — `{n:times}` (once / twice / 3 times; 3次), `{n:words}` (three; 三) — and an
-optional plural noun, `{n|second|seconds}` → "1 second", "6 seconds".
+optional format — `{n:times}` (once / twice / 3 times; 3次), `{n:words}` (three; 三), `{lane:vocab}`
+(a categorical value in words from `VOCABULARY`: right of centre; 中路偏右) — and an optional
+plural noun, `{n|second|seconds}` → "1 second", "6 seconds".
 """
 
 from __future__ import annotations
@@ -78,6 +79,23 @@ class _Unrenderable(ValueError):
 
 _ZH_DIGITS = "零一二三四五六七八九"
 
+# Categorical slot values as words (`{name:vocab}`): where on the pitch (`explain.functions` BANDS
+# and LANES, from the attacking direction) and which way a look turned. A word comes only from a
+# verified value, so "half" in "the opponents' half" sits inside a slot span.
+VOCABULARY: dict[str, dict[str, str]] = {
+    "own_third": {"en": "in his own third", "zh": "后场三区"},
+    "own_half": {"en": "in his own half", "zh": "本方半场"},
+    "opponents_half": {"en": "in the opponents' half", "zh": "对方半场"},
+    "final_third": {"en": "in the final third", "zh": "前场三区"},
+    "right_wing": {"en": "on the right wing", "zh": "右边路"},
+    "right_of_centre": {"en": "right of centre", "zh": "中路偏右"},
+    "centre": {"en": "in the centre", "zh": "中路"},
+    "left_of_centre": {"en": "left of centre", "zh": "中路偏左"},
+    "left_wing": {"en": "on the left wing", "zh": "左边路"},
+    "left": {"en": "left", "zh": "左"},
+    "right": {"en": "right", "zh": "右"},
+}
+
 
 def _words(n: int, lang: str) -> str | None:
     if not 0 <= n <= 99:
@@ -118,6 +136,11 @@ def format_slot(
     many: str | None = None,
 ) -> str:
     names = names or {}
+    if fmt == "vocab":
+        words = VOCABULARY.get(s.value) if isinstance(s.value, str) else None
+        if words is None:
+            raise _Unrenderable(f"{s.raw!r} has no vocabulary word")
+        return words.get(lang, words["en"])
     if s.ref is not None:
         if EVENT_ID.match(s.ref):
             raise _Unrenderable(f"event slot {s.ref} has no text form")
