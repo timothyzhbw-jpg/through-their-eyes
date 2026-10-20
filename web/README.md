@@ -77,9 +77,10 @@ The deploy workflow sets it from the repo variable `TTE_API_URL`, and `infra/dep
     such.
   - **Voice:** off by default; choosing the **Audio description** audience turns it on (and makes
     the captions large print), leaving it turns it off again unless the viewer set the sound.
-    **Sound on** sends each caption's SSML to `POST /api/tts` (Azure AI Speech) and plays the WAV as
-    the line comes up; clips are kept per cue. While the voice is off, a screen reader hears each
-    caption from a polite live region.
+    **Sound on** sends each caption's cue key (`cache_key`) to `POST /api/tts`, which speaks the
+    SSML the service's own crew wrote for it (Azure AI Speech), and plays the WAV as the line comes
+    up; clips are kept per cue. While the voice is off, a screen reader hears each caption from a
+    polite live region.
 
 The API's CORS allows only the static website's origin, so for `npm run dev` against the deployed
 service let Vite forward the API paths (dev server only):

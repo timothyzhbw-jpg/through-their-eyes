@@ -36,4 +36,6 @@ ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1
 USER app
 EXPOSE 8000
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --ws-max-size: uvicorn refuses a larger incoming WebSocket frame from its header (close 1009)
+# before buffering it; the live stream's control messages are at most 256 characters.
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--ws-max-size", "4096"]

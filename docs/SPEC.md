@@ -78,6 +78,11 @@ on an LLM.
   `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
   is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
   audited, rate-limited per client, no model call).
+- The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
+  key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
+  allows a few streams per client and a session length, and closes on a malformed control
+  message; request bodies are capped at 16 KiB; personas and languages are deduplicated; responses
+  carry security headers, and a 500 carries no traceback.
 - Measured locally: 25.0 fps with a p95 frame gap of 41 ms; a cached breakdown is served in about
   1 ms.
 - The cache is one JSON file per key under `TTE_CACHE_DIR`; Cosmos DB can replace it (§8).
@@ -905,6 +910,15 @@ to a real broadcast.
   - LLM spend is bounded by the breakdown cache (§2), the per-client rate limit, and a global daily
     cap on model-backed regenerations (`TTE_DAILY_MODEL_CAP`). Past the cap, the service serves the
     cache or the template.
+  - Speech spend: the service speaks only voice cues of breakdowns it served (by key), audio is
+    cached by key, requests are rate-limited per client (`TTE_TTS_RATE_LIMIT`) and syntheses are
+    capped per UTC day (`TTE_DAILY_TTS_CAP`; a failed synthesis gives its unit back, and requests
+    for one key share a single synthesis). At most `TTE_TTS_CONCURRENCY` Azure calls run at once.
+    The template lines bill about 80 characters each (markup counts, a Chinese character twice),
+    so 200 a day for 22 days is about 350K, under F0's 500K a month.
+  - Per-client limits key on the last `X-Forwarded-For` hop, the address the Container Apps
+    ingress appends; earlier hops come from the client. Live streams also have a ceiling per
+    process (`TTE_LIVE_MAX_TOTAL`), and uvicorn refuses WebSocket frames over 4 KiB.
   - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
     at $40 if the offer supports budgets.
 - **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days

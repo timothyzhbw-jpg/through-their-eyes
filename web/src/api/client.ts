@@ -188,7 +188,8 @@ export interface Api {
     persona: Persona;
     moment?: string;
   }): Promise<WhatIfResponse>;
-  tts(ssml: string): Promise<Blob>;
+  /** WAV of one voice cue, by its `cache_key`: the service speaks only SSML its crew wrote. */
+  tts(key: string): Promise<Blob>;
   verify(req: {
     claim: string;
     slot: string;
@@ -302,7 +303,7 @@ export function createApi(
         WHAT_IF_TIMEOUT_MS,
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
-    tts: (ssml) => call("/api/tts", post({ ssml }), TTS_TIMEOUT_MS, (res) => res.blob()),
+    tts: (key) => call("/api/tts", post({ key }), TTS_TIMEOUT_MS, (res) => res.blob()),
     verify: ({ claim, slot, value, language, moment }) =>
       call(
         "/api/verify",

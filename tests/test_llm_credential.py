@@ -49,7 +49,7 @@ def test_with_a_cosmos_endpoint_the_app_creates_its_own_credential(monkeypatch, 
 
 
 class _Storage:
-    breakdowns = answers = None
+    breakdowns = answers = voice = None
     audit = None
 
     def close(self):

@@ -11,6 +11,9 @@ regeneration is rate-limited per client and capped per UTC day across all client
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
 tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
 
+Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream, request
+bodies and response headers are bounded for a public service (api/live.py, api/guard.py).
+
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
 the per-client limit and, with a model, the daily model cap; offline, drills have their own daily
@@ -35,13 +38,14 @@ import shutil
 import uuid
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from agent_framework import FileCheckpointStorage
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.requests import HTTPConnection
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
 
 from agents import whatif
 from agents.context import MomentContext
@@ -50,8 +54,8 @@ from agents.prompts import PROMPT_VERSION
 from agents.schemas import AgentStep, Language, Persona
 from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
-from api import tts
-from api.live import stream
+from api import guard, tts
+from api.live import Slots, stream
 from api.settings import Settings
 from api.store import (
     DailyCap,
@@ -71,13 +75,26 @@ MAX_BRING_BACKS = 5  # per drill; with at most 8 supersteps each, well under MAX
 DAILY_OFFLINE_DRILLS = 200  # drills and bring-backs per UTC day without a model, all clients
 KEY = re.compile(r"[0-9a-f]{32}")  # content_key()
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
+MAX_LIST = 8  # personas or languages in one request, before duplicates are dropped
+
+
+def _unique(items: list) -> list:
+    return list(dict.fromkeys(items))
+
+
+Personas = Annotated[
+    list[Persona], Field(min_length=1, max_length=MAX_LIST), AfterValidator(_unique)
+]
+Languages = Annotated[
+    list[Language], Field(min_length=1, max_length=MAX_LIST), AfterValidator(_unique)
+]
 
 
 class BreakdownBody(BaseModel):
     match: str
     moment: str | None = None
-    personas: list[Persona] = Field(default_factory=lambda: ["casual", "analyst"])
-    languages: list[Language] = Field(default_factory=lambda: ["en", "zh"])
+    personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
+    languages: Languages = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
     fail: list[AgentStep] = Field(default_factory=list, max_length=4)  # agents to take down
 
@@ -95,7 +112,10 @@ class WhatIfBody(BaseModel):
 
 
 class TtsBody(BaseModel):
-    ssml: str = Field(min_length=1, max_length=20_000)
+    """A voice cue to speak, by the `cache_key` the crew gave it; never SSML."""
+
+    model_config = ConfigDict(extra="forbid")
+    key: str = Field(pattern=f"^{tts.KEY.pattern}$")
 
 
 class VerifyBody(BaseModel):
@@ -107,10 +127,12 @@ class VerifyBody(BaseModel):
     language: Language = "en"
 
 
-def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:  # first hop, as set by the Container Apps ingress
-        return forwarded.split(",")[0].strip()
+def _client_ip(request: HTTPConnection) -> str:
+    """The address the Container Apps ingress saw: it appends that as the last X-Forwarded-For
+    hop, after any hops the client sent itself. Every per-client limit uses this."""
+    hops = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",")]
+    if hops[-1]:
+        return hops[-1]
     return request.client.host if request.client else "unknown"
 
 
@@ -131,7 +153,8 @@ def create_app(
         credential = sync_credential_from_env()  # keyless: managed identity in Azure, az locally
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
-    breakdowns, answers = storage.breakdowns, storage.answers
+    cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
+    breakdowns, answers = cues.recording(storage.breakdowns), storage.answers
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
@@ -140,6 +163,11 @@ def create_app(
     runs_dir = checkpoint_dir / "runs"
     drills = DrillStore(checkpoint_dir / "drills", DRILLS_KEPT)
     locks = KeyedLocks()  # one crew run per key at a time
+    speech_limiter = RateLimiter(*settings.tts_rate_limit)  # POST /api/tts per client
+    speech_cap = DailyCap(settings.daily_tts_cap)  # Azure Speech syntheses per UTC day
+    speech_calls = asyncio.Semaphore(settings.tts_concurrency)  # Azure Speech calls in flight
+    synthesizing = KeyedLocks()  # one synthesis per cue key at a time
+    slots = Slots(settings.live_per_client, settings.live_max_total)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -149,6 +177,7 @@ def create_app(
             await close()
 
     app = FastAPI(title="Through Their Eyes", version=VERSION, lifespan=lifespan)
+    guard.install(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[o.strip() for o in settings.web_origin.split(",")],
@@ -240,8 +269,15 @@ def create_app(
             await ws.send_json({"type": "error", "detail": f"unknown match {mid}"})
             await ws.close(code=4404)
             return
-        await stream(ws, match, speed, start)
-        await ws.close()
+        ip = _client_ip(ws)
+        if refused := slots.take(ip):
+            await ws.send_json({"type": "error", "detail": refused})
+            await ws.close(code=4429)
+            return
+        try:
+            await stream(ws, match, speed, start, settings.live_max_s)
+        finally:
+            slots.give(ip)
 
     @app.post("/api/breakdowns")
     async def breakdown(body: BreakdownBody, request: Request) -> dict[str, Any]:
@@ -303,6 +339,7 @@ def create_app(
 
     def _drill_response(k: str, record: dict[str, Any]) -> dict[str, Any]:
         public = {name: record[name] for name in ("source", "result", "drill")}
+        breakdowns.record(k, public)  # its voice cues may be spoken, like any served breakdown
         where = {"possession": record["possession"]} if "possession" in record else {}
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **public,
                 **where}  # fmt: skip
@@ -410,19 +447,50 @@ def create_app(
             raise HTTPException(e.status, e.detail) from None
         return {"match": m.id, **out}
 
-    @app.post("/api/tts")
-    async def speech(body: TtsBody) -> Response:
+    tts_body = {"content": {"application/json": {"schema": TtsBody.model_json_schema()}}}
+
+    @app.post("/api/tts", openapi_extra={"requestBody": tts_body})
+    async def speech(request: Request) -> Response:
+        """WAV for one voice cue of a breakdown this service served, by its `cache_key`.
+
+        Rate-limited per client; synthesis (an audio cache miss) is also capped per UTC day, and
+        only a synthesis that is stored counts. Requests for one key wait for the synthesis in
+        flight and get its audio; at most `TTE_TTS_CONCURRENCY` Azure calls run at once.
+        """
+        try:  # parsed here, not by FastAPI, so that SSML or any other body is a 400
+            key = TtsBody.model_validate_json(await request.body()).key
+        except ValidationError:
+            raise HTTPException(
+                400, 'send {"key": VoiceCue.cache_key}; SSML is not accepted'
+            ) from None
+        if not speech_limiter.allow(_client_ip(request)):
+            raise HTTPException(429, "too many speech requests from this address; try again later")
+        if (ssml := cues.ssml(key)) is None:
+            raise HTTPException(404, "unknown voice cue: request its breakdown first")
         if not tts.configured():
             raise HTTPException(503, "Azure Speech is not configured")
-        try:
-            audio = tts.synthesize(body.ssml, settings.cache_dir)
-        except tts.SpeechUnavailable as e:
-            raise HTTPException(502, str(e)) from e
+        if (audio := tts.cached(key, settings.cache_dir)) is None:
+            async with synthesizing.hold(key):
+                if (audio := tts.cached(key, settings.cache_dir)) is None:  # made while waiting?
+                    audio = await _synthesize(ssml, key)
         return Response(audio, media_type="audio/wav")
+
+    async def _synthesize(ssml: str, key: str) -> bytes:
+        if not speech_cap.take():
+            raise HTTPException(429, "today's speech budget is used up; captions still work")
+        try:
+            async with speech_calls:
+                return await asyncio.to_thread(tts.synthesize, ssml, key, settings.cache_dir)
+        except Exception as e:  # nothing stored: the unit goes back (not on cancel: the worker
+            speech_cap.give()  # thread may still store its audio)
+            if isinstance(e, tts.SpeechUnavailable):
+                raise HTTPException(502, str(e)) from e
+            raise
 
     app.state.settings = settings
     app.state.store = store
     app.state.locks = locks
+    app.state.cues = cues
     return app
 
 

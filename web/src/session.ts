@@ -178,7 +178,7 @@ export function createSession(
     api && !possession
       ? new LiveFeed(hero, (start) => api.liveUrl(start), options.socket, hooks)
       : null;
-  const voice = new VoicePlayer(api ? (ssml) => api.tts(ssml) : null, options.makeAudio);
+  const voice = new VoicePlayer(api ? (key) => api.tts(key) : null, options.makeAudio);
   const parts = {
     kind: "hero" as const,
     hero,

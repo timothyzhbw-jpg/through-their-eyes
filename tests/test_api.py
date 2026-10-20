@@ -1,13 +1,27 @@
 """Acceptance checks for the API service (SPEC 2, 8): live stream, moments, cached breakdowns."""
 
-import pytest
-from fastapi.testclient import TestClient
+import asyncio
+import dataclasses
+import hashlib
+import json
+import threading
+import time
+from pathlib import Path
 
+import httpx
+import pytest
+from fastapi import FastAPI, WebSocket
+from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
+
+from api import tts
 from api.main import create_app
 from api.settings import Settings
+from api.store import RateLimiter
 from tests.test_agents import _good_replies
 
 MATCH = "blind_side_run-3"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(scope="module")
@@ -25,6 +39,11 @@ def settings(tmp_path_factory):
 def client(settings):
     with TestClient(create_app(settings)) as c:
         yield c
+
+
+def _app(settings, cache_dir, **limits):
+    """A fresh offline app on its own cache, with some settings changed."""
+    return create_app(dataclasses.replace(settings, cache_dir=cache_dir, **limits))
 
 
 def test_health_and_match_list(client):
@@ -115,6 +134,181 @@ def test_live_stream_can_seek_and_stop(client):
         ws.send_json({"type": "stop"})
         while (m := ws.receive_json())["type"] != "end":
             pass
+
+
+# --- the live stream is public: bounded per client, in time and in what it accepts (SPEC 2, 8) ---
+
+
+def _live(c, query="speed=1000", ip=None):
+    headers = {"x-forwarded-for": ip} if ip else {}
+    return c.websocket_connect(f"/ws/matches/{MATCH}/live?{query}", headers=headers)
+
+
+def _refusal(ws):
+    """(detail, close code) of the error a stream ends with; it must not reach its end first."""
+    while (m := ws.receive_json())["type"] != "error":
+        assert m["type"] != "end"
+    with pytest.raises(WebSocketDisconnect) as closed:
+        ws.receive_json()
+    return m["detail"], closed.value.code
+
+
+def test_live_streams_are_limited_per_client(settings, tmp_path):
+    with TestClient(_app(settings, tmp_path, live_per_client=2)) as c:
+        with _live(c, "speed=0.1") as a, _live(c, "speed=0.1") as b:
+            assert a.receive_json()["type"] == b.receive_json()["type"] == "hello"
+            with _live(c, "speed=0.1") as third:
+                detail, code = _refusal(third)
+            with _live(c, "speed=0.1", ip="203.0.113.8") as elsewhere:  # another client
+                assert elsewhere.receive_json()["type"] == "hello"
+        with _live(c) as again:  # both streams closed: their slots are free again
+            assert _drain(again)[-1]["type"] == "end"
+    assert code == 4429 and "too many live streams" in detail
+
+
+def test_a_live_session_has_a_time_limit_paused_or_not(settings, tmp_path):
+    with TestClient(_app(settings, tmp_path, live_max_s=0.3)) as c, _live(c, "speed=0.1") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        ws.send_json({"type": "pause"})
+        started = time.monotonic()
+        detail, code = _refusal(ws)
+    assert code == 4408 and "limit" in detail
+    assert time.monotonic() - started < 5
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "{not json",
+        "[1, 2]",
+        '"pause"',
+        "x" * 2000,
+        b'{"type": "pause"}',  # binary frames are not control messages
+        '{"type": "warp"}',
+        '{"type": "seek", "f": 165}',  # one past the last frame
+        '{"type": "seek", "f": -1}',
+        '{"type": "seek", "f": "12"}',
+        '{"type": "seek", "f": 1.5}',
+        '{"type": "seek"}',
+        '{"type": "speed", "x": NaN}',
+        '{"type": "speed", "x": "fast"}',
+        '{"type": "speed", "x": true}',
+    ],
+    ids=lambda m: repr(m)[:28],
+)
+def test_a_malformed_control_message_closes_the_stream_cleanly(client, message):
+    with _live(client, "speed=1") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        if isinstance(message, bytes):
+            ws.send_bytes(message)
+        else:
+            ws.send_text(message)
+        detail, code = _refusal(ws)
+    assert code == 4400 and detail
+
+
+def test_live_speed_is_clamped_and_a_nan_speed_plays_at_1x(client):
+    with _live(client, "speed=nan&start=155") as ws:
+        started = time.monotonic()
+        frames = [m for m in _drain(ws) if m["type"] == "frame"]
+        elapsed = time.monotonic() - started
+    assert [m["f"] for m in frames] == list(range(155, 165))
+    assert elapsed >= 0.9 * 9 * 0.04  # throttled at 1x: unthrottled takes milliseconds
+    with _live(client, "speed=1") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        ws.send_json({"type": "speed", "x": 1e12})  # clamped to 1000x, not refused
+        started = time.monotonic()
+        assert _drain(ws)[-1]["type"] == "end"
+    assert time.monotonic() - started < 3  # 165 frames at 1x would take 6.6 s
+
+
+def test_live_limits_come_from_the_environment(monkeypatch):
+    for name in ("TTE_LIVE_PER_CLIENT", "TTE_LIVE_MAX_S", "TTE_LIVE_MAX_TOTAL"):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings.from_env()
+    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (4, 600.0, 64)
+    monkeypatch.setenv("TTE_LIVE_PER_CLIENT", "2")
+    monkeypatch.setenv("TTE_LIVE_MAX_S", "90")
+    monkeypatch.setenv("TTE_LIVE_MAX_TOTAL", "16")
+    s = Settings.from_env()
+    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (2, 90.0, 16)
+
+
+def test_live_streams_have_a_ceiling_across_all_clients(settings, tmp_path):
+    """A new X-Forwarded-For per connect gets a new per-client bucket, not a new process limit."""
+    with TestClient(_app(settings, tmp_path, live_max_total=2)) as c:
+        a_ip, b_ip = "198.51.100.1", "198.51.100.2"
+        with _live(c, "speed=0.1", ip=a_ip) as a, _live(c, "speed=0.1", ip=b_ip) as b:
+            assert a.receive_json()["type"] == b.receive_json()["type"] == "hello"
+            with _live(c, "speed=0.1", ip="198.51.100.3") as third:
+                detail, code = _refusal(third)
+        with _live(c, ip="198.51.100.3") as again:  # both closed: room again
+            assert _drain(again)[-1]["type"] == "end"
+    assert code == 4429 and "live streams" in detail
+
+
+def test_spoofed_first_hops_share_the_live_slots_of_the_real_address(settings, tmp_path):
+    """The Container Apps ingress appends the address it saw; earlier hops are the client's."""
+    app = _app(settings, tmp_path, live_per_client=1)
+    with TestClient(app) as c, _live(c, "speed=0.1", ip="198.51.100.1, 192.0.2.50") as a:
+        assert a.receive_json()["type"] == "hello"
+        with _live(c, "speed=0.1", ip="198.51.100.2, 192.0.2.50") as spoofed:
+            detail, code = _refusal(spoofed)
+        with _live(c, "speed=0.1", ip="198.51.100.1, 192.0.2.51") as other:
+            assert other.receive_json()["type"] == "hello"
+    assert code == 4429
+
+
+def _dockerfile_ws_max_size() -> int:
+    lines = (ROOT / "Dockerfile").read_text().splitlines()
+    cmd = next(line for line in lines if line.startswith("CMD"))
+    args = json.loads(cmd.removeprefix("CMD").strip())
+    return int(args[args.index("--ws-max-size") + 1])
+
+
+def test_the_server_closes_a_socket_on_a_large_frame_before_buffering_it():
+    """uvicorn's --ws-max-size refuses a frame by its header (1009), so a large control message
+    never reaches the app; the image starts uvicorn with a limit near the longest valid message."""
+    import socket
+
+    import uvicorn
+    from websockets.exceptions import ConnectionClosed
+    from websockets.sync.client import connect
+
+    from api.live import MAX_CONTROL_CHARS
+
+    limit = _dockerfile_ws_max_size()
+    assert MAX_CONTROL_CHARS * 4 <= limit <= 16 * 1024  # 4 bytes per char at most in UTF-8
+    app = FastAPI()
+    received = []
+
+    @app.websocket("/ws")
+    async def echo(ws: WebSocket):
+        await ws.accept()
+        while True:
+            received.append(await ws.receive_text())
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(app, port=port, ws_max_size=limit, log_level="error"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic() + 10
+        while not server.started and time.monotonic() < deadline:
+            time.sleep(0.05)
+        with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            ws.send("x" * 100)
+            ws.send("x" * (1 << 20))
+            with pytest.raises(ConnectionClosed) as closed:
+                ws.recv(timeout=5)
+        assert closed.value.rcvd is not None and closed.value.rcvd.code == 1009
+        time.sleep(0.1)
+        assert [len(m) for m in received] == [100]
+    finally:
+        server.should_exit = True
+        thread.join(10)
 
 
 # --- breakdowns: cached by content hash, regeneration rate-limited (SPEC 2) ----------------------
@@ -462,6 +656,346 @@ def test_the_tamper_rate_limit_comes_from_the_environment(monkeypatch):
     assert Settings.from_env().verify_rate_limit == (5, 30.0)
 
 
-def test_tts_needs_speech(client):
-    r = client.post("/api/tts", json={"ssml": "<speak/>"})
-    assert r.status_code == 503
+# --- speech: only cues the crew wrote, audio cached by key, limited (SPEC 6 Voice, 8) -------------
+
+
+@pytest.fixture
+def speech(monkeypatch):
+    """Azure Speech configured, with a fake synthesis that records the SSML it is sent."""
+    from api import tts
+
+    monkeypatch.setenv("AZURE_SPEECH_KEY", "test-key")
+    monkeypatch.setenv("AZURE_SPEECH_REGION", "test-region")
+    sent: list[str] = []
+
+    def synthesize(ssml: str) -> bytes:
+        sent.append(ssml)
+        return b"RIFF" + hashlib.sha256(ssml.encode()).digest()
+
+    monkeypatch.setattr(tts, "request", synthesize)
+    return sent
+
+
+def _cues(c, persona="analyst", language="en"):
+    """The voice cues of one breakdown script, as the web client receives them."""
+    body = {"match": MATCH, "personas": [persona], "languages": [language]}
+    scripts = c.post("/api/breakdowns", json=body).json()["result"]["scripts"]
+    return [cue for s in scripts for cue in s["voice"]]
+
+
+def test_tts_speaks_only_voice_cues_the_crew_wrote(settings, tmp_path, speech):
+    """The API is public, so it must not read out text a client sends (SPEC 6 Voice)."""
+    with TestClient(_app(settings, tmp_path)) as c:
+        refused = [
+            c.post("/api/tts", json={"ssml": "<speak>anything at all</speak>"}),
+            c.post("/api/tts", content="<speak>anything</speak>",
+                   headers={"content-type": "application/ssml+xml"}),
+            c.post("/api/tts", json={"key": "<speak>anything</speak>"}),
+            c.post("/api/tts", json={"key": "0123456789abcdef", "ssml": "<speak/>"}),
+            c.post("/api/tts", json=["0123456789abcdef"]),
+        ]  # fmt: skip
+        unknown = c.post("/api/tts", json={"key": "0123456789abcdef"})
+        cue = _cues(c)[0]
+        spoken = c.post("/api/tts", json={"key": cue["cache_key"]})
+    assert [r.status_code for r in refused] == [400] * len(refused)
+    assert "SSML" in refused[0].json()["detail"]
+    assert unknown.status_code == 404
+    assert spoken.status_code == 200 and spoken.headers["content-type"] == "audio/wav"
+    assert speech == [cue["ssml"]]  # the server's own SSML, nothing a client sent
+
+
+def test_tts_speaks_the_cues_of_a_failure_drill(settings, tmp_path, speech):
+    """A drill's breakdown is served outside the breakdown cache (SPEC 6): its cues still speak."""
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"], "fail": ["director"]}
+    with TestClient(_app(settings, tmp_path)) as c:
+        drill = c.post("/api/breakdowns", json=body).json()
+        cue = next(cue for s in drill["result"]["scripts"] for cue in s["voice"])
+        spoken = c.post("/api/tts", json={"key": cue["cache_key"]})
+    assert drill["drill"]["pending"] == ["director"]
+    assert spoken.status_code == 200 and speech == [cue["ssml"]]
+
+
+def test_tts_audio_is_cached_by_key_across_restarts(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path)) as c:
+        key = _cues(c)[0]["cache_key"]
+        first = c.post("/api/tts", json={"key": key}).content
+        again = c.post("/api/tts", json={"key": key}).content
+    with TestClient(_app(settings, tmp_path)) as c:  # no breakdown asked: the cue was stored
+        restarted = c.post("/api/tts", json={"key": key})
+    assert restarted.status_code == 200 and first == again == restarted.content
+    assert len(speech) == 1
+    assert (tmp_path / "tts" / f"{key}.wav").read_bytes() == first
+
+
+def test_tts_is_rate_limited_per_client(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path, tts_rate_limit=(2, 600.0))) as c:
+        key = _cues(c)[0]["cache_key"]
+        mine = [c.post("/api/tts", json={"key": key}).status_code for _ in range(3)]
+        other = c.post("/api/tts", json={"key": key}, headers={"x-forwarded-for": "203.0.113.7"})
+    assert mine == [200, 200, 429] and other.status_code == 200
+
+
+def test_the_daily_speech_cap_counts_syntheses_only(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path, daily_tts_cap=1)) as c:
+        a, b = (cue["cache_key"] for cue in _cues(c)[:2])
+        first = c.post("/api/tts", json={"key": a})
+        capped = c.post("/api/tts", json={"key": b})
+        cached = c.post("/api/tts", json={"key": a})  # audio already made: free
+    assert first.status_code == cached.status_code == 200
+    assert capped.status_code == 429 and len(speech) == 1
+
+
+def test_tts_needs_speech(client, monkeypatch):
+    monkeypatch.delenv("AZURE_SPEECH_KEY", raising=False)
+    key = _cues(client)[0]["cache_key"]
+    assert client.post("/api/tts", json={"key": key}).status_code == 503
+
+
+def test_speech_limits_come_from_the_environment(monkeypatch):
+    for name in ("TTE_TTS_RATE_LIMIT", "TTE_DAILY_TTS_CAP", "TTE_TTS_CONCURRENCY"):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings.from_env()
+    assert (s.tts_rate_limit, s.daily_tts_cap, s.tts_concurrency) == ((60, 600.0), 200, 4)
+    monkeypatch.setenv("TTE_TTS_RATE_LIMIT", "5/60")
+    monkeypatch.setenv("TTE_DAILY_TTS_CAP", "7")
+    monkeypatch.setenv("TTE_TTS_CONCURRENCY", "2")
+    s = Settings.from_env()
+    assert (s.tts_rate_limit, s.daily_tts_cap, s.tts_concurrency) == ((5, 60.0), 7, 2)
+
+
+def _concurrently(app, requests):
+    """Send (method, path, json) requests to `app` at once; the responses, in order."""
+
+    async def run():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+            return await asyncio.gather(*(c.request(m, p, json=j) for m, p, j in requests))
+
+    return asyncio.run(run())
+
+
+def _slow(monkeypatch, delay=0.3):
+    """A fake synthesis that takes `delay` s; records the SSML sent and the most in flight."""
+    sent, in_flight, peak, lock = [], [0], [0], threading.Lock()
+
+    def synthesize(ssml: str) -> bytes:
+        with lock:
+            in_flight[0] += 1
+            peak[0] = max(peak[0], in_flight[0])
+        time.sleep(delay)
+        with lock:
+            in_flight[0] -= 1
+            sent.append(ssml)
+        return b"RIFF" + hashlib.sha256(ssml.encode()).digest() * 1000
+
+    monkeypatch.setattr(tts, "request", synthesize)
+    return sent, peak
+
+
+def test_concurrent_misses_for_one_cue_synthesize_once(settings, tmp_path, speech, monkeypatch):
+    sent, _ = _slow(monkeypatch)
+    app = _app(settings, tmp_path, daily_tts_cap=2)
+    with TestClient(app) as c:
+        a, b, third = (cue["cache_key"] for cue in _cues(c)[:3])
+    first = _concurrently(app, [("POST", "/api/tts", {"key": a})] * 4)
+    with TestClient(app) as c:
+        b_status = c.post("/api/tts", json={"key": b}).status_code  # one unit of two was used
+        third_status = c.post("/api/tts", json={"key": third}).status_code
+    assert [r.status_code for r in first] == [200] * 4
+    assert len({r.content for r in first}) == 1 and len(sent) == 2  # a once, then b
+    assert (b_status, third_status) == (200, 429)
+    assert (tmp_path / "tts" / f"{a}.wav").read_bytes() == first[0].content
+    assert sorted(p.name for p in (tmp_path / "tts").iterdir()) == sorted([f"{a}.wav", f"{b}.wav"])
+
+
+def test_a_failed_synthesis_gives_its_cap_unit_back(settings, tmp_path, speech, monkeypatch):
+    calls = []
+
+    def flaky(ssml: str) -> bytes:
+        calls.append(ssml)
+        if len(calls) <= 3:
+            raise tts.SpeechUnavailable("Azure Speech request failed")
+        return b"RIFF-ok"
+
+    monkeypatch.setattr(tts, "request", flaky)
+    with TestClient(_app(settings, tmp_path, daily_tts_cap=1)) as c:
+        key = _cues(c)[0]["cache_key"]
+        failed = [c.post("/api/tts", json={"key": key}) for _ in range(3)]
+        ok = c.post("/api/tts", json={"key": key})
+    assert [r.status_code for r in failed] == [502] * 3
+    assert failed[0].json() == {"detail": "Azure Speech request failed"}
+    assert ok.status_code == 200 and ok.content == b"RIFF-ok"
+    assert [p.name for p in (tmp_path / "tts").iterdir()] == [f"{key}.wav"]  # no temp files
+
+
+def test_azure_speech_calls_in_flight_are_capped(settings, tmp_path, speech, monkeypatch):
+    _, peak = _slow(monkeypatch, delay=0.2)
+    app = _app(settings, tmp_path, tts_concurrency=2)
+    with TestClient(app) as c:
+        keys = [cue["cache_key"] for lang in ("en", "zh") for cue in _cues(c, language=lang)]
+    keys = list(dict.fromkeys(keys))[:6]
+    assert len(keys) >= 4
+    replies = _concurrently(app, [("POST", "/api/tts", {"key": k}) for k in keys])
+    assert [r.status_code for r in replies] == [200] * len(keys)
+    assert peak[0] == 2
+
+
+def test_audio_files_are_written_whole_by_concurrent_writers(tmp_path, monkeypatch):
+    """Each writer has its own temp file, so the published WAV is one writer's bytes."""
+    key = "0123456789abcdef"
+    payloads = [bytes([i]) * (4 << 20) for i in range(6)]
+    turn = iter(payloads)
+    lock = threading.Lock()
+
+    def request(ssml):
+        with lock:
+            return next(turn)
+
+    monkeypatch.setattr(tts, "request", request)
+    args = ("<speak/>", key, tmp_path)
+    threads = [threading.Thread(target=tts.synthesize, args=args) for _ in payloads]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert (tmp_path / "tts" / f"{key}.wav").read_bytes() in payloads
+    assert [p.name for p in (tmp_path / "tts").iterdir()] == [f"{key}.wav"]
+
+
+# --- the voice cues a breakdown records never fail the breakdown (SPEC 6 Voice) -----------------
+
+
+def test_a_cached_breakdown_with_null_voice_is_served(settings, tmp_path):
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    with TestClient(_app(settings, tmp_path)) as c:
+        key = c.post("/api/breakdowns", json=body).json()["key"]
+    path = tmp_path / "breakdowns" / f"{key}.json"
+    value = json.loads(path.read_text())
+    for script in value["result"]["scripts"]:
+        script["voice"] = None
+    path.write_text(json.dumps(value))
+    with TestClient(_app(settings, tmp_path)) as c:  # a fresh process reads the file
+        r = c.post("/api/breakdowns", json=body)
+    assert r.status_code == 200 and r.json()["cached"] is True
+
+
+def test_a_failing_voice_store_does_not_fail_a_breakdown(settings, tmp_path):
+    body = {"match": MATCH, "personas": ["casual"], "languages": ["en"]}
+
+    def broken(*args):
+        raise OSError("disk full")
+
+    app = _app(settings, tmp_path)
+    app.state.cues.store.put = broken
+    app.state.cues.store.get = broken
+    with TestClient(app) as c:
+        computed = c.post("/api/breakdowns", json=body)
+        cached = c.post("/api/breakdowns", json=body)
+    assert computed.status_code == cached.status_code == 200
+    assert cached.json()["cached"] is True
+
+
+def test_a_restart_does_not_overwrite_the_ssml_stored_for_a_key():
+    class Store(dict):
+        def put(self, key, value):
+            self[key] = value
+
+    store = Store({"0123456789abcdef": {"ssml": "<speak>first</speak>"}})
+    breakdown = {"result": {"scripts": [{"voice": [
+        {"cache_key": "0123456789abcdef", "ssml": "<speak>changed</speak>"},
+        {"cache_key": "fedcba9876543210", "ssml": "<speak>new</speak>"},
+    ]}]}}  # fmt: skip
+    cues = tts.Cues(store)  # a new process: it has written nothing yet
+    cues.add(breakdown)
+    assert cues.ssml("0123456789abcdef") == "<speak>first</speak>"
+    assert cues.ssml("fedcba9876543210") == "<speak>new</speak>"
+
+
+# --- client addresses: the ingress appends the address it saw (SPEC 8) ----------------------------
+
+
+def test_spoofed_first_hops_share_one_rate_limit(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path, tts_rate_limit=(2, 600.0))) as c:
+        key = _cues(c)[0]["cache_key"]
+
+        def post(forwarded):
+            return c.post("/api/tts", json={"key": key}, headers={"x-forwarded-for": forwarded})
+
+        spoofed = [post(f"198.51.100.{i}, 192.0.2.50").status_code for i in range(3)]
+        other = post("198.51.100.1, 192.0.2.51").status_code
+    assert spoofed == [200, 200, 429] and other == 200
+
+
+def test_the_rate_limiter_forgets_idle_clients_and_tracks_a_bounded_number():
+    limiter = RateLimiter(1, 0.05, max_clients=3)
+    for i in range(10):
+        assert limiter.allow(f"c{i}")
+    assert len(limiter._seen) == 3 and set(limiter._seen) == {"c7", "c8", "c9"}
+    assert not limiter.allow("c9")  # a tracked client is still limited
+    time.sleep(0.1)
+    assert limiter.allow("c9") and len(limiter._seen) <= 3
+    limiter.allow("c0")
+    assert set(limiter._seen) == {"c9", "c0"}  # c7 and c8 went idle: forgotten
+    assert all(limiter._seen.values())  # no empty deques kept
+    assert not RateLimiter(0, 60).allow("c") and not RateLimiter(0, 60)._seen
+
+
+# --- input bounds, headers and errors: the API is public with no login (CLAUDE.md rule 6) --------
+
+
+def test_request_bodies_are_capped(client):
+    origin = {"origin": "https://example.org"}
+    padded = {"match": MATCH, "question": "What if he passed to H4?", "pad": "y" * 20_000}
+    r = client.post("/api/whatif", json=padded, headers=origin)
+    assert r.status_code == 413 and r.headers["access-control-allow-origin"] == "*"
+    chunks = iter([b'{"match": "' + b"x" * 10_000, b"x" * 10_000 + b'"}'])  # no content-length
+    r = client.post("/api/breakdowns", content=chunks, headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    assert client.post("/api/tts", content=b"x" * 20_000).status_code == 413
+
+
+def test_personas_and_languages_are_deduplicated_and_capped(client):
+    once = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    twice = {"match": MATCH, "personas": ["analyst", "analyst"], "languages": ["en", "en"]}
+    a = client.post("/api/breakdowns", json=once).json()
+    b = client.post("/api/breakdowns", json=twice).json()
+    assert b["key"] == a["key"] and b["cached"] is True  # duplicates do not bust the cache
+    assert b["result"]["request"]["personas"] == ["analyst"] and len(b["result"]["scripts"]) == 1
+    for bad in ({"personas": []}, {"languages": []}, {"personas": ["analyst"] * 9},
+                {"languages": ["en"] * 9}, {"personas": ["pundit"]}):  # fmt: skip
+        r = client.post("/api/breakdowns", json={"match": MATCH, **bad})
+        assert r.status_code == 422, bad
+
+
+def test_what_if_questions_are_capped(client):
+    body = {"match": MATCH, "question": "x" * 301}
+    assert client.post("/api/whatif", json=body).status_code == 422
+    assert client.post("/api/whatif", json={**body, "question": ""}).status_code == 422
+
+
+def test_responses_carry_security_headers_and_cors_is_unchanged(client):
+    r = client.get("/health", headers={"origin": "https://example.org"})
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["x-frame-options"] == "DENY"
+    assert r.headers["referrer-policy"] == "no-referrer"
+    assert r.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert r.headers["access-control-allow-origin"] == "*"
+    docs = client.get("/docs")  # HTML that loads Swagger UI: no CSP, the rest applies
+    assert docs.status_code == 200 and "content-security-policy" not in docs.headers
+    assert docs.headers["x-content-type-options"] == "nosniff"
+    assert client.post("/api/tts", json={}).headers["x-frame-options"] == "DENY"
+
+
+def test_a_500_carries_no_stack_trace(settings):
+    app = create_app(settings)
+
+    @app.get("/boom")
+    async def boom():
+        raise RuntimeError("internals: /app/api/main.py, key=abc")
+
+    with TestClient(app, raise_server_exceptions=False) as c:
+        r = c.get("/boom", headers={"origin": "https://example.org"})
+    assert r.status_code == 500 and r.json() == {"detail": "internal error"}
+    assert "internals" not in r.text and "Traceback" not in r.text
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["access-control-allow-origin"] == "*"  # the static site can read it
