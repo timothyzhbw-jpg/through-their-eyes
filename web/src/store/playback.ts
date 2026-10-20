@@ -1,5 +1,6 @@
 // Playback state: everything the views need to know about "what is on screen now".
-// Views only read it. User controls and the TelestrationPlan executor are the only writers.
+// Views only read it. User controls, the TelestrationPlan executor and the camera director
+// (director/, the camera only) are the only writers.
 
 import { easedHeadAt, wrapAngle, type Hero } from "../data/hero";
 import type { RunName } from "../data/types";
