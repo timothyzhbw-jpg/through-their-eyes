@@ -47,10 +47,15 @@ BRIDGE_S = 0.2
 MIN_TRUTH_S = 0.2
 MIN_UNSEEN_S = (0.4, 0.6, 0.8, 1.0, 1.2, 1.5)
 MIN_MOVED_M = (1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0)
+EXPECT_S = (0.0, 0.5, 1.0, 1.5)  # 0: off, the move is measured from the last sighting
 
 POSSESSION_PARAMS = replace(SimParams(), max_duration_s=45.0)
 TUNING = (("possession_play", range(0, 10)), ("blind_side_run", range(0, 20)))
-HELD_OUT = (("possession_play", range(100, 120)), ("blind_side_run", range(100, 140)))
+# Acceptance: seeds no eval looked at before the expectation was chosen on the tuning seeds.
+FRESH = (("possession_play", range(200, 220)), ("blind_side_run", range(200, 240)))
+# The first held-out set. The design (truth episodes, role hold, the expectation variant) was
+# settled after looking at it, so it no longer decides acceptance.
+SEEN = (("possession_play", range(100, 120)), ("blind_side_run", range(100, 140)))
 
 
 @dataclass
@@ -237,18 +242,27 @@ def samples_for(seed_sets) -> list[Sample]:
     return [simulate(name, seed) for name, seeds in seed_sets for seed in seeds]
 
 
-def tune(samples: list[Sample], expect_s: float = 0.0) -> tuple[BlindSideParams, dict]:
-    """Best (min_unseen_s, min_moved_m) by interval F1; ties go to the longer unseen time, then
-    the larger move (fewer alerts)."""
-    base = replace(DEFAULT_PARAMS, expect_s=expect_s)
-    truths = [truth(s, base) for s in samples]
+def tune(samples: list[Sample]) -> tuple[BlindSideParams, dict]:
+    """Best (expect_s, min_unseen_s, min_moved_m) by interval F1 on tuning seeds; ties go to the
+    longer unseen time, then the larger move (fewer alerts), then the shorter expectation."""
+    truths = [truth(s, DEFAULT_PARAMS) for s in samples]  # the truth ignores all three
     grid = {
-        (u, m): score(samples, replace(base, min_unseen_s=u, min_moved_m=m), truths)
+        (e, u, m): score(
+            samples, replace(DEFAULT_PARAMS, expect_s=e, min_unseen_s=u, min_moved_m=m), truths
+        )
+        for e in EXPECT_S
         for u in MIN_UNSEEN_S
         for m in MIN_MOVED_M
     }
-    u, m = max(grid, key=lambda k: (round(grid[k].f1, 4), k[0], k[1]))
-    return replace(base, min_unseen_s=u, min_moved_m=m), grid
+    e, u, m = max(grid, key=lambda k: (round(grid[k].f1, 4), k[1], k[2], -k[0]))
+    return replace(DEFAULT_PARAMS, expect_s=e, min_unseen_s=u, min_moved_m=m), grid
+
+
+def best_for(grid: dict, expect_s: float) -> tuple[float, float]:
+    """The (min_unseen_s, min_moved_m) the same rule picks for one expectation horizon."""
+    keys = [k for k in grid if k[0] == expect_s]
+    _, u, m = max(keys, key=lambda k: (round(grid[k].f1, 4), k[1], k[2]))
+    return u, m
 
 
 FALSE_ALERT_REASONS = {
@@ -301,33 +315,58 @@ def _seed_text(seed_sets) -> str:
     return ", ".join(f"`{name}` {s[0]}–{s[-1]} ({len(s)})" for name, s in seed_sets)
 
 
+def _params(e: float, u: float, m: float) -> BlindSideParams:
+    return replace(DEFAULT_PARAMS, expect_s=e, min_unseen_s=u, min_moved_m=m)
+
+
+def _label(p: BlindSideParams) -> str:
+    expect = f"expectation {p.expect_s} s" if p.expect_s else "no expectation"
+    return f"{expect}, unseen ≥ {p.min_unseen_s} s, moved ≥ {p.min_moved_m} m"
+
+
+def _results(samples: list[Sample], chosen: BlindSideParams, off: BlindSideParams) -> list[str]:
+    spec = _params(0.0, 1.0, 3.0)
+    rows = {
+        f"**chosen**: {_label(chosen)}": score(samples, chosen),
+        f"best without expectation: {_label(off)}": score(samples, off),
+        f"SPEC 4.4 starting values: {_label(spec)}": score(samples, spec),
+        "chosen, 25 m range for alert and truth": score(
+            samples, replace(chosen, max_distance=25.0)
+        ),
+        f"chosen; truth variant: target ≥ {chosen.min_speed} m/s on every frame": score(
+            samples, chosen, [truth(s, chosen, chosen.min_speed) for s in samples]
+        ),
+        "chosen; truth variant: target ≥ 2 m/s on every frame": score(
+            samples, chosen, [truth(s, chosen, 2.0) for s in samples]
+        ),
+    }
+    lines = [
+        "| Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |",
+        "|---|---|---|---|---|---|---|---|",
+        *(_row(name, c) for name, c in rows.items()),
+        "",
+        "| Scenario | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for name in ("possession_play", "blind_side_run"):
+        subset = [s for s in samples if s.scenario == name]
+        lines.append(_row(f"`{name}`, chosen", score(subset, chosen)))
+        lines.append(_row(f"`{name}`, best without expectation", score(subset, off)))
+    return lines
+
+
 def evaluate() -> str:
     tuning = samples_for(TUNING)
     chosen, grid = tune(tuning)
-    expecting, _ = tune(tuning, expect_s=1.0)
-    held = samples_for(HELD_OUT)
-    spec = replace(DEFAULT_PARAMS, min_unseen_s=1.0, min_moved_m=3.0, expect_s=0.0)
-    near = replace(chosen, max_distance=25.0)
-    rows = {
-        f"chosen ({chosen.min_unseen_s} s, {chosen.min_moved_m} m)": score(held, chosen),
-        "SPEC values (1.0 s, 3.0 m)": score(held, spec),
-        "chosen, 25 m range for alert and truth (SPEC 4.4 text)": score(held, near),
-        f"variant: expectation 1 s, tuned ({expecting.min_unseen_s} s, "
-        f"{expecting.min_moved_m} m)": score(held, expecting),
-        f"chosen; truth variant: target ≥ {chosen.min_speed} m/s on every frame": score(
-            held, chosen, [truth(s, chosen, chosen.min_speed) for s in held]
-        ),
-        "chosen; truth variant: target ≥ 2 m/s on every frame": score(
-            held, chosen, [truth(s, chosen, 2.0) for s in held]
-        ),
-    }
-    final = rows[next(iter(rows))]
-    tuned = grid[(chosen.min_unseen_s, chosen.min_moved_m)]
-    variant = score(held, expecting)
-    wrong = false_alerts(held, chosen)
-    ok_p = "✅" if final.precision >= 0.8 else "❌"
-    ok_r = "✅" if final.recall >= 0.7 else "❌"
-    minutes = sum(s.seconds for s in held) / 60
+    off = _params(0.0, *best_for(grid, 0.0))
+    fresh, seen = samples_for(FRESH), samples_for(SEEN)
+    final = score(fresh, chosen)
+    possession = score([s for s in fresh if s.scenario == "possession_play"], chosen)
+    tuned = grid[(chosen.expect_s, chosen.min_unseen_s, chosen.min_moved_m)]
+    wrong = false_alerts(fresh, chosen)
+    ok_p = "✅ meets" if final.precision >= 0.8 else "❌ misses"
+    ok_r = "✅ meets" if final.recall >= 0.7 else "❌ misses"
+    minutes = sum(s.seconds for s in fresh) / 60
     lines = [
         "# Blind-side alerts vs the sim's beliefs (SPEC 4.4)",
         "",
@@ -336,68 +375,84 @@ def evaluate() -> str:
         "",
         "| | Value |",
         "|---|---|",
-        f"| Chosen thresholds (tuning seeds) | unseen ≥ **{chosen.min_unseen_s} s**, moved ≥ "
-        f"**{chosen.min_moved_m} m**; speed ≥ {chosen.min_speed} m/s, range ≤ "
+        f"| Chosen on tuning seeds | {_label(chosen)}; speed ≥ {chosen.min_speed} m/s, range ≤ "
         f"{chosen.max_distance:.0f} m, on ≥ {chosen.min_on_s} s |",
-        f"| Held-out precision | **{final.precision:.3f}** {ok_p} target ≥ 0.8 |",
-        f"| Held-out recall | **{final.recall:.3f}** {ok_r} target ≥ 0.7 |",
+        f"| Fresh held-out precision | **{final.precision:.3f}** — {ok_p} the target ≥ 0.8 |",
+        f"| Fresh held-out recall | **{final.recall:.3f}** — {ok_r} the target ≥ 0.7 |",
+        f"| `possession_play` alone (the general-play overlay) | precision "
+        f"**{possession.precision:.3f}**, recall {possession.recall:.3f} |",
         f"| Tuning seeds, same thresholds | precision {tuned.precision:.3f}, recall "
         f"{tuned.recall:.3f} |",
-        f"| Held-out data | {minutes:.1f} min of play, {final.truths} truth intervals, "
-        f"{final.alerts} alerts |",
+        f"| Fresh held-out data | {_seed_text(FRESH)}: {minutes:.1f} min of play, "
+        f"{final.truths} truth episodes, {final.alerts} alerts |",
+        "",
+        "**An upper bound for real tracking.** The truth is the sim's belief, which carries the "
+        "last-seen velocity on for up to 1 s — the same constant-velocity extrapolation the "
+        "alert's expectation (`expect_s`) uses. The alert and the truth share that model of what "
+        "a player expects, so these numbers are an upper bound for real tracking, where nobody "
+        "knows how a player extrapolates. The *best without expectation* rows do not share it.",
+        "",
+        "## Fresh held-out seeds (acceptance)",
+        "",
+        f"{_seed_text(FRESH)}. No eval used these seeds before the parameters were chosen on the "
+        "tuning seeds. Interval level (the unit a viewer sees) and frame level.",
+        "",
+        *_results(fresh, chosen, off),
         "",
         "## What limits precision",
         "",
-        "Alerts that match no truth episode (held-out, chosen thresholds):",
+        "Alerts that match no truth episode (fresh held-out, chosen thresholds):",
         "",
         "| Reason | Alerts |",
         "|---|---|",
         *(f"| {FALSE_ALERT_REASONS[k]} | {v} |" for k, v in wrong.items()),
         "",
-        "- *Runner slowed* (the largest group): he ran while unseen, the belief carried his "
-        "velocity on, and it went stale only once he slowed — overshooting him. The truth counts "
-        "an episode only if he runs while the belief is stale; a truth that also counted a run "
-        "*since he was last seen* would accept these. That is a definition choice, left as is.",
-        "- *Never stale:* the belief stayed within 3 m — either he moved less than 3 m (the tuned "
-        "move threshold is lower), or the last sighting already showed the run and the sim's "
-        "belief carries that velocity on for up to 1 s. SPEC 4.4 measures the move from the last "
-        "sighting and cannot tell.",
-        "- The *expectation* variant measures the move from where he would be at his last-seen "
-        f"velocity (≤ 1 s) and reaches precision {variant.precision:.3f}, recall "
-        f"{variant.recall:.3f} on held-out seeds. But that is the same constant-velocity "
-        "assumption the sim's belief makes, so part of the gain is circular. It is a variant "
-        "(`expect_s`), off by default.",
+        "- *Runner slowed:* he ran while unseen, the belief carried his velocity on, and it went "
+        "stale only once he slowed — overshooting him. The truth counts an episode only if he "
+        "runs while the belief is stale.",
+        "- *Never stale:* the belief stayed within 3 m of him for the whole alert.",
         "- *Too short:* the pair was watched while the belief was stale for under 0.2 s.",
         "",
-        "## Held-out results",
+        "## Old held-out seeds (seen during the design)",
         "",
-        "Interval level (the unit a viewer sees) and frame level.",
+        f"{_seed_text(SEEN)}. The truth episodes, the defender role hold and the expectation "
+        "variant were settled after looking at these seeds, so they do not decide acceptance.",
         "",
-        "| Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |",
-        "|---|---|---|---|---|---|---|---|",
-        *(_row(name, c) for name, c in rows.items()),
+        *_results(seen, chosen, off),
         "",
-        "| Scenario (chosen) | Precision | Recall | F1 | Alerts | Truth intervals | Frame P "
-        "| Frame R |",
-        "|---|---|---|---|---|---|---|---|",
+        "## Tuning seeds",
+        "",
+        f"{_seed_text(TUNING)}. Best (unseen, moved) per expectation horizon, by interval F1:",
+        "",
+        "| Expectation (s) | Unseen ≥ (s) | Moved ≥ (m) | Precision | Recall | F1 |",
+        "|---|---|---|---|---|---|",
     ]
-    for name, _ in HELD_OUT:
-        lines.append(_row(f"`{name}`", score([s for s in held if s.scenario == name], chosen)))
+    for e in EXPECT_S:
+        u, m = best_for(grid, e)
+        c = grid[(e, u, m)]
+        mark = (
+            " ⬅" if (e, u, m) == (chosen.expect_s, chosen.min_unseen_s, chosen.min_moved_m) else ""
+        )
+        lines.append(
+            f"| {e or 'off'}{mark} | {u} | {m} | {c.precision:.3f} | {c.recall:.3f} | "
+            f"**{c.f1:.3f}** |"
+        )
+    for e in EXPECT_S:
+        lines += [
+            "",
+            f"Interval F1, expectation {e or 'off'}{' s' if e else ''}:",
+            "",
+            "| Unseen ≥ (s) \\ moved ≥ (m) | " + " | ".join(f"{m}" for m in MIN_MOVED_M) + " |",
+            "|---" * (len(MIN_MOVED_M) + 1) + "|",
+            *(
+                f"| {u} | " + " | ".join(f"{grid[(e, u, m)].f1:.3f}" for m in MIN_MOVED_M) + " |"
+                for u in MIN_UNSEEN_S
+            ),
+        ]
     lines += [
-        "",
-        "## Tuning grid (interval F1, tuning seeds)",
-        "",
-        "| Unseen ≥ (s) \\ moved ≥ (m) | " + " | ".join(f"{m}" for m in MIN_MOVED_M) + " |",
-        "|---" * (len(MIN_MOVED_M) + 1) + "|",
-        *(
-            f"| {u} | " + " | ".join(f"{grid[(u, m)].f1:.3f}" for m in MIN_MOVED_M) + " |"
-            for u in MIN_UNSEEN_S
-        ),
         "",
         "## Method",
         "",
-        f"- Tuning seeds: {_seed_text(TUNING)}. Held-out seeds: {_seed_text(HELD_OUT)}. "
-        "`possession_play` runs 45 s; `blind_side_run` is the ~6 s hero scenario.",
         f"- Truth: stale-belief episodes — watched pair, belief error > {STALE_M:.0f} m (the sim's "
         "extrapolated belief, sampled before every step), target within the alert's range — in "
         f"which the target ran at ≥ {chosen.min_speed} m/s at least once. Episodes: gaps ≤ "
@@ -406,16 +461,16 @@ def evaluate() -> str:
         "- Why episodes: the alert's speed is an onset condition and it then holds until the "
         "target is seen. A truth that needs 4 m/s on every frame flickers when a runner slows "
         "while still unseen; one that needs only 2 m/s adds stale beliefs about joggers that the "
-        "alert is not meant to raise. Both variants are in the last two results rows.",
+        "alert is not meant to raise. Both variants are in the results tables.",
         f"- Matching: same (observer, target), intervals overlapping within ±{TOLERANCE_S} s. "
-        "Precision = alerts that match a truth interval / alerts; recall = truth intervals "
-        "matched by an alert / truth intervals.",
-        "- Tuned: `min_unseen_s` × `min_moved_m` by interval F1; ties go to the longer unseen "
-        "time, then the larger move. Fixed: speed, range and the 0.4 s hold, which also define "
-        "the truth or come from SPEC 4.4.",
-        "- Range: SPEC 4.4 says 25 m, but on `blind_side_run` the runner H9 is 22–30 m from H8 "
-        "when the alert should be on, so the default is 35 m for both alert and truth. The 25 m "
-        "row shows the SPEC text.",
+        "Precision = alerts that match a truth episode / alerts; recall = truth episodes "
+        "matched by an alert / truth episodes.",
+        "- Tuned on the tuning seeds only: `expect_s` × `min_unseen_s` × `min_moved_m` by interval "
+        "F1; ties go to the longer unseen time, then the larger move, then the shorter "
+        "expectation. Fixed: speed, range and the 0.4 s hold, which also define the truth or "
+        "come from SPEC 4.4.",
+        "- Range: 35 m for alert and truth (SPEC 4.4): on `blind_side_run` the runner H9 is "
+        "22–30 m from H8 when the alert should be on. The 25 m rows show the earlier SPEC value.",
         "",
     ]
     return "\n".join(lines)
