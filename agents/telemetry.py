@@ -81,6 +81,13 @@ def configure_tracing(service_name: str = SERVICE_NAME) -> bool:
     Call it once, before the FastAPI app is created, so its requests are instrumented too.
     Returns whether tracing is on. Without the connection string, nothing is installed and spans
     stay no-ops.
+
+    Every span is kept. The distro's default sampler (5 spans/s, decided span by span) dropped
+    step spans out of the bursts a breakdown makes (`voice`, `mcp`), so live traces lost steps.
+    What bounds ingestion instead: spans carry ids and counts only, a live viewer gets FastAPI's
+    own three spans per WebSocket connection, and the Log Analytics workspace has a daily cap
+    (TTE_LOG_DAILY_CAP_GB). OpenTelemetry's FastAPI instrumentation stays off: it would add a span
+    per WebSocket message, 25 or more a second per live viewer.
     """
     global _configured
     if _configured:
@@ -94,6 +101,8 @@ def configure_tracing(service_name: str = SERVICE_NAME) -> bool:
     configure_azure_monitor(
         connection_string=connection_string,
         resource=Resource.create({"service.name": service_name}),
+        sampling_ratio=1.0,
+        instrumentation_options={"fastapi": {"enabled": False}},
     )
     _configured = True
     return True
