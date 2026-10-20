@@ -15,15 +15,35 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
 
 ## Hard constraints (hackathon rules — never violate)
 1. **New project only.** Don't copy code from any pre-existing repo of the user. Third-party libraries are fine.
-2. **Synthetic data only.** No real match data or footage in the app, repo, or demo. Fictional clubs
-   and players. No Premier League or club logos, real player names, broadcaster branding, or
-   copyrighted music — in code, assets, or video.
+2. **Synthetic data only.** No real match data or footage in the app or the repo, and none in the
+   demo except the one exception below. Fictional clubs and players. No Premier League or club
+   logos, real player names, broadcaster branding, or copyrighted music — in code, assets, or video.
+   - **The one exception** (Bowen approved it himself on 2026-10-19): a single real-footage
+     segment of **≤ 10 s in the demo video**. It shows the ground overlays drawn on a real camera.
+     The source is the Wikimedia Commons futsal final of 2019-10-06 by savinkins, CC BY 3.0.
+     Conditions:
+     - **Blurred:** everything off the pitch, every face, and any legible logo, sponsor or club
+       text on kit.
+     - **Attributed:** on screen and in `demo/realfeed/README.md` — author, title, source,
+       license, and "blurred and overlaid by us".
+     - **Decoupled from the app:**
+       - the footage is downloaded into `out/` and never committed;
+       - only camera calibration is committed (no frames, no player positions);
+       - `demo/realfeed/` is never imported by `sim/`, `analytics/`, `explain/`, `agents/`,
+         `api/` or `web/`;
+       - the public app never shows or loads it.
+     - **Never used** to train, tune or calibrate anything.
+     - **Cut it** if any of this can't be met; the risks and cut rule are in `docs/SPEC.md` §7, §9.
+     No other real data or footage goes in under this exception.
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
-   (multi-agent), MCP (our tool server), Azure AI Speech (TTS), Azure Container Apps + Static Web
-   Apps (hosting), Azure Cosmos DB (store), Application Insights (traces), GitHub Actions (CI).
-   Don't add Azure services just to tick boxes.
+   (multi-agent), MCP (our tool server), Azure AI Speech (TTS), Azure Container Apps (API) + an
+   Azure Storage static website (web), Azure Cosmos DB (store), Application Insights (traces),
+   GitHub Actions (CI and deploy). Don't add Azure services just to tick boxes.
+   - Bowen decided on 2026-10-20 to host the web app as a Storage static website instead of Static
+     Web Apps. Static Web Apps only runs in West US 2, Central US, East US 2, West Europe and East
+     Asia, and the Azure for Students policy allows none of them; creating one was refused.
 5. **Licenses:** dependencies must be MIT / BSD / Apache-2.0. No GPL/AGPL (e.g. PitchAura,
    Ultralytics YOLO). MPL only as an unmodified dependency. Never copy code from repos without a
    license (e.g. LaurieOnTracking) — reimplement from the papers.
@@ -81,10 +101,16 @@ _Fill in as they come to exist._
 - `uv run ruff check . && uv run ruff format --check .` — lint (same as CI)
 - `AZURE_SUBSCRIPTION_ID=<id> infra/m0_provision.sh` — create the M0 Azure resources (needs
   `az login`; refuses non-personal subscriptions); writes `.env`
+- `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
+  build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
+  subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
+  CI run on main.
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
+- `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
+  beliefs, about 2 min; writes `eval/reports/blind_side.md`
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
@@ -93,6 +119,8 @@ _Fill in as they come to exist._
   question by re-simulating with `force_action` (SPEC 3.7, 6)
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached), `POST /api/whatif`, `POST /api/tts`
+- `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
+  main dependencies only, non-root, `GET /health`
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)

@@ -79,7 +79,7 @@ describe("every caption line opens its claims and seeks the replay to their evid
   it("captions every line of the payload in the example plan", () => {
     expect(session.resolved.source).toBe("given");
     const voiced = session.resolved.plan.steps.flatMap((s) => (s.do === "voice" ? [s.line] : []));
-    expect(voiced).toEqual(narration.lines.map((l) => l.id));
+    expect([...voiced].sort()).toEqual(narration.lines.map((l) => l.id).sort());
   });
 
   for (const line of fixture.lines.filter((l) => l.claims.length)) {

@@ -213,6 +213,34 @@ def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
     ]
 
 
+def option_success(ctx: DecisionContext, action: str, target: tuple[float, float]) -> float | None:
+    """P(success) of one option with its target held fixed, on the state `ctx` holds.
+
+    `evaluate_options` picks each target on the carrier's belief; this re-scores that same target
+    on another state, e.g. the truth (true positions and velocities, belief age 0) for "he thought
+    vs it was" (SPEC 5.1). Same functions, so on the belief context it returns the option's own
+    p_success. None when a pass is not playable from the ball.
+    """
+    p = ctx.params
+    n = len(ctx.team)
+    c = ctx.carrier
+    ball = ctx.pos[c] if ctx.ball is None else np.asarray(ctx.ball, dtype=float)
+    point = np.asarray(target, dtype=float)
+    opp = np.flatnonzero(ctx.team != ctx.team[c])
+    if action.startswith("pass:"):
+        ids = ctx.ids or [str(i) for i in range(n)]
+        mates = np.flatnonzero((ctx.team == ctx.team[c]) & (np.arange(n) != c))
+        return _pass_success(ctx, ids.index(action[5:]), ball, point, opp, mates)
+    if action == "carry":
+        tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], point[None], p.reaction, p.v_max)
+        p_lose = logistic(np.pi / (np.sqrt(3.0) * _sigma(ctx, opp)) * (p.carry_time - tti[:, 0]))
+        return float(np.prod(1.0 - p_lose))
+    if action == "shot":
+        d_goal = float(np.linalg.norm(point - ball))
+        return float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
+    raise ValueError(f"unknown action {action!r}")
+
+
 def gumbel(u: float) -> float:
     u = min(max(u, 1e-12), 1.0 - 1e-12)
     return -math.log(-math.log(u))

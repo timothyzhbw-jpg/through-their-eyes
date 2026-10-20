@@ -1,0 +1,12 @@
+# The build context is an allowlist: everything is ignored except what the API image copies
+# (see Dockerfile). Secrets (.env), generated output (out/), the demo, web/ and tests stay out.
+*
+!agents
+!analytics
+!api
+!explain
+!sim
+!pyproject.toml
+!uv.lock
+**/__pycache__
+**/*.py[cod]

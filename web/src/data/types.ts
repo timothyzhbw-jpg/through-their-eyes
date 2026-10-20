@@ -1,4 +1,4 @@
-// Shape of the JSON written by `python -m sim.export` (schema version 2).
+// Shape of the JSON written by `python -m sim.export` (schema version 4).
 // Positions are integer mm, angles integer 1e-4 rad; pitch origin at the centre spot, home
 // attacks +x. `hero.ts` converts everything to metres and radians once, at load time.
 
@@ -22,10 +22,18 @@ export interface ExportEvent {
 
 export interface ExportOption {
   action: string; // "pass:H9", "carry", "shot"
-  target: Vec2; // m
-  p_success: number;
+  target: Vec2; // m, chosen on his belief
+  p_success: number; // on his belief: "he thought"
   value: number; // expected threat after the action
   prob: number; // softmax probability on the player's belief
+  // The same option re-scored on the true state at the decision (SPEC 5.1): "it was".
+  p_success_true: number | null;
+  value_true: number | null;
+  target_true: Vec2 | null; // pass targets re-chosen along the receiver's true run
+  p_success_true_same_target: number | null; // his believed target held fixed
+  receiver: string | null; // passes only
+  receiver_believed: Vec2 | null; // m, where he believed the receiver was
+  receiver_true: Vec2 | null; // m, where the receiver was
 }
 
 export interface ExportDecision {
@@ -64,6 +72,13 @@ export interface ExportRun {
   decision: ExportDecision | null;
   action: ExportAction | null;
   possession_value: number;
+  blind_side: ExportBlindSide;
+}
+
+/** Blind-side alerts (SPEC 4.4), computed from tracking only by analytics/blind_side.py. */
+export interface ExportBlindSide {
+  intervals: { observer: string; target: string; start: number; end: number }[];
+  frames: [number, number, number][][]; // [frame] -> [observer, target, frames unseen] (indices)
 }
 
 export interface ExportVision {

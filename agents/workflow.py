@@ -8,6 +8,7 @@
 Each executor handles one typed message and sends the next one, so every handoff is a typed edge
 of the workflow graph. Agent steps call a model when one is configured, with a timeout and one
 retry, and fall back to a deterministic template otherwise. The Verifier and Voice steps are code.
+Every breakdown is one trace: a span per step under a "breakdown" span (agents/telemetry.py).
 
 The Telestrator and narration both read only the Analyst's findings, so a fan-out edge runs them
 concurrently. Voice places the approved lines on the plan's clock, so a fan-in edge makes it wait
@@ -27,7 +28,7 @@ from typing import Any
 from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
 from pydantic import ValidationError
 
-from agents import fallbacks, prompts
+from agents import fallbacks, prompts, telemetry
 from agents.context import MomentContext
 from agents.delivery import VOICES, cache_key, delivery_tier, pick_style, ssml_for_line
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
@@ -125,6 +126,17 @@ class Crew:
     analyst_tools: list[Any] | None = None
     voice_styles: dict[str, set[str]] = field(default_factory=dict)  # voice -> speaking styles
     trace: list[StepTrace] = field(default_factory=list)
+    span: Any | None = None  # the breakdown's span; every step span is its child
+
+    @property
+    def model(self) -> str:
+        return telemetry.model_name(self.client)
+
+    def step(self, name: str, llm: bool = True, **attributes: Any):
+        """The span of one workflow step; `llm` steps also name the model."""
+        if llm:
+            attributes["model"] = self.model
+        return telemetry.span(name, self.span, moment=self.ctx.card.id, **attributes)
 
     async def ask(self, role: str, instructions: str, prompt: str, schema, tools=None) -> Attempt:
         return await ask(
@@ -132,17 +144,21 @@ class Crew:
             timeout_s=self.step_timeout_s, tools=tools,
         )  # fmt: skip
 
-    def record(self, step: str, attempt: Attempt | None, notes: list[str], used_llm: bool) -> None:
-        self.trace.append(
-            StepTrace(
-                step=step,
-                source="llm" if used_llm else "template",
-                attempts=attempt.attempts if attempt else 0,
-                ms=round(attempt.ms, 1) if attempt else 0.0,
-                error=attempt.error if attempt else None,
-                notes=notes,
-            )
+    def record(
+        self, step: str, attempt: Attempt | None, notes: list[str], used_llm: bool, span=None
+    ) -> None:
+        entry = StepTrace(
+            step=step,
+            source="llm" if used_llm else "template",
+            attempts=attempt.attempts if attempt else 0,
+            ms=round(attempt.ms, 1) if attempt else 0.0,
+            error=attempt.error if attempt else None,
+            notes=notes,
         )
+        self.trace.append(entry)
+        if span is not None:
+            telemetry.annotate(span, source=entry.source, attempts=entry.attempts, ms=entry.ms,
+                               error=entry.error)  # fmt: skip
 
 
 # --- executors ------------------------------------------------------------------------------------
@@ -156,20 +172,22 @@ class Director(Executor):
     @handler
     async def run(self, job: Job, ctx: WorkflowContext[Analyze]) -> None:
         crew, mc = self.crew, self.crew.ctx
-        request = fallbacks.director(mc, list(job.personas), list(job.languages))
-        attempt, notes = None, []
-        if crew.client is not None:
-            attempt = await crew.ask(
-                "director", prompts.DIRECTOR,
-                prompts.director_prompt(mc, list(job.personas), list(job.languages)),
-                DirectorChoice,
-            )  # fmt: skip
-            if attempt.value is not None:
-                choice: DirectorChoice = attempt.value
-                request = request.model_copy(
-                    update={"priority": choice.priority, "reason": choice.reason}
-                )
-        crew.record("director", attempt, notes, attempt is not None and attempt.value is not None)
+        with crew.step("director") as span:
+            request = fallbacks.director(mc, list(job.personas), list(job.languages))
+            attempt, notes = None, []
+            if crew.client is not None:
+                attempt = await crew.ask(
+                    "director", prompts.DIRECTOR,
+                    prompts.director_prompt(mc, list(job.personas), list(job.languages)),
+                    DirectorChoice,
+                )  # fmt: skip
+                if attempt.value is not None:
+                    choice: DirectorChoice = attempt.value
+                    request = request.model_copy(
+                        update={"priority": choice.priority, "reason": choice.reason}
+                    )
+            used = attempt is not None and attempt.value is not None
+            crew.record("director", attempt, notes, used, span)
         await ctx.send_message(Analyze(request))
 
 
@@ -181,31 +199,32 @@ class Analyst(Executor):
     @handler
     async def run(self, msg: Analyze, ctx: WorkflowContext[Briefing]) -> None:
         crew, mc = self.crew, self.crew.ctx
-        findings = fallbacks.analyst(mc)
-        attempt, notes, used = None, [], False
-        if crew.client is not None:
-            attempt = await crew.ask(
-                "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request),
-                analyst_model(list(mc.supported)), tools=crew.analyst_tools,
-            )  # fmt: skip
-            if attempt.value is not None:
-                choice = AnalystChoice.model_validate(attempt.value.model_dump())
-                supported = mc.supported
-                unknown = [c for c in choice.headline + choice.supporting if c not in supported]
-                if unknown:
-                    notes.append(f"dropped unknown or unsupported claims: {', '.join(unknown)}")
-                headline = [c for c in choice.headline if c in supported]
-                available = {lens.lens for lens in mc.card.lenses if lens.available}
-                if headline and choice.lens in available:
-                    findings = Findings(
-                        moment=mc.card.id, lens=choice.lens, headline=headline,
-                        supporting=[c for c in choice.supporting if c in supported],
-                        angle=choice.angle,
-                    )  # fmt: skip
-                    used = True
-                else:
-                    notes.append("no usable headline or lens: template findings")
-        crew.record("analyst", attempt, notes, used)
+        with crew.step("analyst") as span:
+            findings = fallbacks.analyst(mc)
+            attempt, notes, used = None, [], False
+            if crew.client is not None:
+                attempt = await crew.ask(
+                    "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request),
+                    analyst_model(list(mc.supported)), tools=crew.analyst_tools,
+                )  # fmt: skip
+                if attempt.value is not None:
+                    choice = AnalystChoice.model_validate(attempt.value.model_dump())
+                    supported = mc.supported
+                    unknown = [c for c in choice.headline + choice.supporting if c not in supported]
+                    if unknown:
+                        notes.append(f"dropped unknown or unsupported claims: {', '.join(unknown)}")
+                    headline = [c for c in choice.headline if c in supported]
+                    available = {lens.lens for lens in mc.card.lenses if lens.available}
+                    if headline and choice.lens in available:
+                        findings = Findings(
+                            moment=mc.card.id, lens=choice.lens, headline=headline,
+                            supporting=[c for c in choice.supporting if c in supported],
+                            angle=choice.angle,
+                        )  # fmt: skip
+                        used = True
+                    else:
+                        notes.append("no usable headline or lens: template findings")
+            crew.record("analyst", attempt, notes, used, span)
         await ctx.send_message(Briefing(msg.request, findings))
 
 
@@ -217,24 +236,26 @@ class Telestrator(Executor):
     @handler
     async def run(self, msg: Briefing, ctx: WorkflowContext[Planned]) -> None:
         crew, mc = self.crew, self.crew.ctx
-        template = template_plan(mc)
-        plan, source, errors, attempt, used = template, "template", [], None, False
-        if crew.client is not None:
-            attempt = await crew.ask(
-                "telestrator", prompts.TELESTRATOR,
-                prompts.telestrator_prompt(mc, msg.findings, template.to_web()), PlanDraft,
-            )  # fmt: skip
-            if attempt.value is not None:
-                used = True
-                try:
-                    candidate = attempt.value.to_plan()
-                    errors = validate_plan(candidate, mc)
-                except ValidationError as e:
-                    candidate, errors = None, [f"plan shape: {err['msg']}" for err in e.errors()]
-                if not errors:
-                    plan, source = candidate, "agent"
-        notes = [f"invalid plan, template used: {e}" for e in errors]
-        crew.record("telestrator", attempt, notes, used)
+        with crew.step("telestrator") as span:
+            template = template_plan(mc)
+            plan, source, errors, attempt, used = template, "template", [], None, False
+            if crew.client is not None:
+                attempt = await crew.ask(
+                    "telestrator", prompts.TELESTRATOR,
+                    prompts.telestrator_prompt(mc, msg.findings, template.to_web()), PlanDraft,
+                )  # fmt: skip
+                if attempt.value is not None:
+                    used = True
+                    try:
+                        candidate = attempt.value.to_plan()
+                        errors = validate_plan(candidate, mc)
+                    except ValidationError as e:
+                        candidate = None
+                        errors = [f"plan shape: {err['msg']}" for err in e.errors()]
+                    if not errors:
+                        plan, source = candidate, "agent"
+            notes = [f"invalid plan, template used: {e}" for e in errors]
+            crew.record("telestrator", attempt, notes, used, span)
         await ctx.send_message(Planned(plan, source, errors))
 
 
@@ -255,10 +276,15 @@ class Narration(Executor):
             return template, None
         prompt = prompts.narration_prompt(mc, base.findings, persona, language, speaker, pbp)
         schema = anchored_draft_model(list(mc.supported), language)
-        attempt = await crew.ask(speaker, prompts.narration_instructions(speaker), prompt, schema)
-        lines = compose(mc, attempt.value, language) if attempt.value is not None else []
-        if not lines:
-            attempt.value = None  # nothing usable: counts as a fallback
+        instructions = prompts.narration_instructions(speaker)
+        with crew.step("narration", persona=persona, language=language, speaker=speaker) as span:
+            attempt = await crew.ask(speaker, instructions, prompt, schema)
+            lines = compose(mc, attempt.value, language) if attempt.value is not None else []
+            if not lines:
+                attempt.value = None  # nothing usable: counts as a fallback
+            telemetry.annotate(span, source="llm" if lines else "template",
+                               attempts=attempt.attempts, ms=round(attempt.ms, 1),
+                               error=attempt.error, lines=len(lines or template))  # fmt: skip
         return (lines or template), attempt
 
     async def _script(
@@ -267,6 +293,11 @@ class Narration(Executor):
         persona, language = key
         if self.crew.client is None:  # the template already has the speaking order
             ordered = fallbacks.narration(self.crew.ctx, persona, language)
+            for speaker in ("pbp", "color"):
+                attrs = {"persona": persona, "language": language, "speaker": speaker}
+                with self.crew.step("narration", **attrs) as span:
+                    telemetry.annotate(span, source="template", attempts=0, ms=0.0,
+                                       lines=sum(who == speaker for who, _ in ordered))  # fmt: skip
             return [
                 ScriptLine(id=f"L{i + 1}", speaker=who, text=d.text, claims=d.claims)
                 for i, (who, d) in enumerate(ordered)
@@ -321,12 +352,19 @@ class Narration(Executor):
             base = prompts.narration_prompt(
                 self.crew.ctx, drafts.base.findings, persona, language, speaker
             )
-            attempt = await self.crew.ask(
-                speaker, prompts.narration_instructions(speaker),
-                prompts.rewrite_prompt(base, mine),
-                anchored_draft_model(list(self.crew.ctx.supported), language),
-            )  # fmt: skip
-            new = compose(self.crew.ctx, attempt.value, language) if attempt.value else []
+            attrs = {"persona": persona, "language": language, "speaker": speaker,
+                     "round": drafts.round + 1}  # fmt: skip
+            with self.crew.step("narration", **attrs) as span:
+                attempt = await self.crew.ask(
+                    speaker, prompts.narration_instructions(speaker),
+                    prompts.rewrite_prompt(base, mine),
+                    anchored_draft_model(list(self.crew.ctx.supported), language),
+                )  # fmt: skip
+                new = compose(self.crew.ctx, attempt.value, language) if attempt.value else []
+                # A failed rewrite replaces nothing; the Verifier then drops the line.
+                telemetry.annotate(span, source="llm", attempts=attempt.attempts,
+                                   ms=round(attempt.ms, 1), error=attempt.error,
+                                   lines=min(len(new), len(mine)))  # fmt: skip
             return key, {line.id: d for (line, _), d in zip(mine, new, strict=False)}
 
         for key, replaced in await asyncio.gather(*(redo(*job) for job in jobs)):
@@ -415,6 +453,20 @@ class Verifier(Executor):
 
     @handler
     async def check(self, drafts: Drafts, ctx: WorkflowContext[Rewrite | Approved]) -> None:
+        started = time.perf_counter()
+        with self.crew.step("verifier", llm=False, round=drafts.round) as span:
+            message, failing = self._round(drafts)
+            approved = isinstance(message, Approved)
+            telemetry.annotate(
+                span, source="code", ms=round((time.perf_counter() - started) * 1000, 1),
+                failed=failing, rewrites=sum(drafts.rewrites.values()),
+                dropped=sum(len(s.dropped) for s in message.scripts) if approved else 0,
+            )  # fmt: skip
+        await ctx.send_message(message)
+
+    def _round(self, drafts: Drafts) -> tuple[Rewrite | Approved, int]:
+        """One round: the failing lines go back for a rewrite, or the rest airs. Also returns
+        how many lines failed."""
         mc = self.crew.ctx
         failed: dict[Key, list[tuple[ScriptLine, list[str]]]] = {}
         for key, lines in drafts.scripts.items():
@@ -423,11 +475,11 @@ class Verifier(Executor):
                 failed[key] = [
                     (line, [f"{v.kind}: {v.detail}" for v in res.violations]) for line, res in bad
                 ]
+        failing = sum(len(lines) for lines in failed.values())
         if failed and drafts.round < MAX_REWRITES and self.crew.client is not None:
             for key in failed:
                 drafts.rewrites[key] = drafts.rewrites.get(key, 0) + 1
-            await ctx.send_message(Rewrite(drafts, failed))
-            return
+            return Rewrite(drafts, failed), failing
 
         notes, results = [], []
         for (persona, language), lines in drafts.scripts.items():
@@ -460,7 +512,7 @@ class Verifier(Executor):
         rounds = Attempt(None, drafts.round + 1, None, 0.0)
         self.crew.trace.append(StepTrace(step="verifier", source="code", attempts=rounds.attempts,
                                          ms=0.0, error=None, notes=notes))  # fmt: skip
-        await ctx.send_message(Approved(drafts.base, results))
+        return Approved(drafts.base, results), failing
 
 
 class Voice(Executor):
@@ -478,9 +530,18 @@ class Voice(Executor):
         self, joined: list[Planned | Approved], ctx: WorkflowContext[None, BreakdownResult]
     ) -> None:
         started = time.perf_counter()
-        crew, mc = self.crew, self.crew.ctx
         (planned,) = [m for m in joined if isinstance(m, Planned)]
-        (msg,) = [m for m in joined if isinstance(m, Approved)]
+        (approved,) = [m for m in joined if isinstance(m, Approved)]
+        with self.crew.step("voice", llm=False) as span:
+            result = self._speak(planned, approved)
+            telemetry.annotate(span, source="code", attempts=1,
+                               ms=round((time.perf_counter() - started) * 1000, 1),
+                               lines=sum(len(s.voice) for s in result.scripts))  # fmt: skip
+        await ctx.yield_output(result)
+
+    def _speak(self, planned: Planned, msg: Approved) -> BreakdownResult:
+        started = time.perf_counter()
+        crew, mc = self.crew, self.crew.ctx
         tier = delivery_tier(mc.card)
         scripts = []
         for script in msg.scripts:
@@ -507,12 +568,10 @@ class Voice(Executor):
                                     ms=round((time.perf_counter() - started) * 1000, 1), error=None,
                                     notes=notes))  # fmt: skip
         trace = sorted(crew.trace, key=lambda s: STEPS.index(s.step))
-        await ctx.yield_output(
-            BreakdownResult(
-                request=msg.base.request, findings=msg.base.findings, plan=planned.plan,
-                plan_source=planned.plan_source, plan_errors=planned.plan_errors, tier=tier,
-                scripts=scripts, trace=trace, total_ms=0.0,
-            )
+        return BreakdownResult(
+            request=msg.base.request, findings=msg.base.findings, plan=planned.plan,
+            plan_source=planned.plan_source, plan_errors=planned.plan_errors, tier=tier,
+            scripts=scripts, trace=trace, total_ms=0.0,
         )  # fmt: skip
 
 
@@ -543,17 +602,26 @@ async def run_breakdown(
     voice_styles: dict[str, set[str]] | None = None,
 ) -> BreakdownResult:
     crew = Crew(ctx, client, step_timeout_s, voice_styles=voice_styles or {})
-    if use_mcp and client is not None:
-        from agent_framework import MCPStdioTool
+    attrs = {"moment": ctx.card.id, "personas": personas, "languages": languages,
+             "model": crew.model}  # fmt: skip
+    with telemetry.span("breakdown", **attrs) as span:
+        crew.span = span
+        if use_mcp and client is not None:
+            from agent_framework import MCPStdioTool
 
-        tool = MCPStdioTool(
-            name="moment", command=sys.executable,
-            args=["-m", "agents.mcp_server", "--scenario", ctx.scenario, "--seed", str(ctx.seed)],
-        )  # fmt: skip
-        async with tool:
-            crew.analyst_tools = [tool]
-            return await _run(crew, personas, languages)
-    return await _run(crew, personas, languages)
+            tool = MCPStdioTool(
+                name="moment", command=sys.executable,
+                args=["-m", "agents.mcp_server", "--scenario", ctx.scenario, "--seed",
+                      str(ctx.seed)],
+            )  # fmt: skip
+            async with tool:
+                crew.analyst_tools = [tool]
+                out = await _run(crew, personas, languages)
+        else:
+            out = await _run(crew, personas, languages)
+        telemetry.annotate(span, ms=out.total_ms, rewrites=sum(s.rewrites for s in out.scripts),
+                           dropped=sum(len(s.dropped) for s in out.scripts))  # fmt: skip
+    return out
 
 
 async def _run(crew: Crew, personas, languages) -> BreakdownResult:

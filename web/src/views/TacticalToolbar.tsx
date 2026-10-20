@@ -28,6 +28,16 @@ export function TacticalToolbar() {
           }
         />
         <Chip
+          name="options"
+          label="Pass options"
+          title="At the decision: every option he weighed, on his belief and on the truth"
+        />
+        <Chip
+          name="blindSide"
+          label="Blind side"
+          title="Live: who has lost sight of a player on the move, from tracking only"
+        />
+        <Chip
           name="cfGhost"
           label={mode === "factual" ? "Ghost: no look" : "Ghost: with look"}
           title="Ball path of the other run, from the decision on"

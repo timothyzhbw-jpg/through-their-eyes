@@ -3,6 +3,7 @@
 
 import type {
   ExportAction,
+  ExportBlindSide,
   ExportDecision,
   ExportEvent,
   ExportPlayer,
@@ -10,7 +11,7 @@ import type {
   RunName,
 } from "./types";
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 4;
 
 export interface Scan {
   id: string;
@@ -36,6 +37,7 @@ export interface Run {
   action: ExportAction | null;
   possessionValue: number;
   firstPass: ExportEvent | null; // the pass that starts the moment
+  blindSide: ExportBlindSide;
 }
 
 export interface Vision {
@@ -98,6 +100,7 @@ function convertRun(name: RunName, raw: HeroExport["runs"][RunName], hero: strin
     action: raw.action,
     possessionValue: raw.possession_value,
     firstPass: raw.events.find((e) => e.type === "pass" && e.player !== hero) ?? null,
+    blindSide: raw.blind_side,
   };
 }
 
