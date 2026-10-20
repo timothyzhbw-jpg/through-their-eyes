@@ -30,6 +30,7 @@ claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.
 | Blind-side alerts vs the sim's beliefs (fresh seeds) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | False claims refuted by the verifier | 100% of perturbations | [corruption](eval/reports/corruption.md) |
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
+| Free-text vs anchored narration, same moment and seeds: first-draft lines the verifier rejects; groundedness (1–5) | 88% vs 0%; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
 | One live breakdown (4 scripts, every step from the model) | 6–12 s; cached 0.15 s | SPEC §8 |
 
 ## Synthetic data only
@@ -105,6 +106,7 @@ Every variable is documented in [.env.example](.env.example).
 | Azure Container Apps | the API, [Dockerfile](Dockerfile) | live URL above |
 | Azure Storage static website | the web app (Static Web Apps has no region the student subscription allows) | live URL above |
 | Azure Cosmos DB (serverless) | breakdown cache and the claims audit log, [api/store.py](api/store.py), [explain/audit.py](explain/audit.py) | `GET /api/matches/blind_side_run-3/audit` |
+| Microsoft Foundry evaluation (azure-ai-evaluation) | `GroundednessEvaluator` on our deployment scores free-text vs anchored narration against the claims, [eval/narration_ablation.py](eval/narration_ablation.py) | [the ablation report](eval/reports/narration_ablation.md) |
 | Application Insights | OpenTelemetry spans per agent step, [agents/telemetry.py](agents/telemetry.py) | one trace per breakdown with each step's source (model or template) and timing |
 | GitHub Actions | CI, and deploy on green main with OIDC (no stored Azure secret), [.github/workflows](.github/workflows) | workflow runs |
 
