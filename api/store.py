@@ -15,13 +15,15 @@ import logging
 import shutil
 import time
 from collections import defaultdict, deque
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+from agent_framework import FileCheckpointStorage
 from azure.core.exceptions import AzureError, ResourceNotFoundError
 
 from agents.context import MomentContext
@@ -72,6 +74,64 @@ class MatchStore:
                 scenario, seed = self.known[mid]
                 self._loaded[mid] = await asyncio.to_thread(Match.load, scenario, seed, self.audit)
         return self._loaded[mid]
+
+
+class KeyedLocks:
+    """One asyncio.Lock per key, held only while someone holds or waits for it: the table is as
+    small as the work in flight."""
+
+    def __init__(self) -> None:
+        self._locks: dict[str, tuple[asyncio.Lock, int]] = {}  # key -> (lock, holders + waiters)
+
+    @asynccontextmanager
+    async def hold(self, key: str) -> AsyncIterator[None]:
+        lock, users = self._locks.get(key, (None, 0))
+        lock = lock or asyncio.Lock()
+        self._locks[key] = (lock, users + 1)
+        try:
+            async with lock:
+                yield
+        finally:
+            lock, users = self._locks[key]
+            if users == 1:
+                del self._locks[key]
+            else:
+                self._locks[key] = (lock, users - 1)
+
+    def __len__(self) -> int:
+        return len(self._locks)
+
+
+class DrillStore:
+    """The failure drills (SPEC 6). Each drill is one directory on this replica's disk: its record
+    (`record.json`: the latest result, the agents still down, how often it was brought back) and
+    its workflow checkpoints (`checkpoints/`). Only the `keep` most recently used drills are kept.
+    Nothing is held in memory or written to Cosmos DB: without its checkpoints a record is of no
+    use, so both go together, and a restart onto a new disk drops them all.
+    """
+
+    def __init__(self, root: Path, keep: int) -> None:
+        self.root, self.keep = Path(root), keep
+
+    def checkpoints(self, key: str) -> FileCheckpointStorage:
+        return FileCheckpointStorage(self.root / key / "checkpoints")
+
+    def has_checkpoints(self, key: str) -> bool:
+        return (self.root / key / "checkpoints").is_dir()
+
+    def get(self, key: str) -> dict[str, Any] | None:
+        try:
+            return json.loads((self.root / key / "record.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    def put(self, key: str, record: dict[str, Any]) -> None:
+        folder = self.root / key
+        folder.mkdir(parents=True, exist_ok=True)
+        tmp = folder / "record.json.tmp"
+        tmp.write_text(json.dumps(record, ensure_ascii=False))
+        tmp.replace(folder / "record.json")  # also marks the drill as the most recently used
+        prune_dirs(self.root, self.keep)
 
 
 def prune_dirs(root: Path, keep: int) -> None:

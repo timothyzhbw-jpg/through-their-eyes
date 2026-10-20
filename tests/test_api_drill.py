@@ -5,8 +5,16 @@ own key, never the cache keys of normal breakdowns. It counts against the per-cl
 and no model is called for a downed step. POST /api/breakdowns/{key}/bring-back re-runs a downed
 step from the run's checkpoint. Checkpoints are files under the cache directory, so recovery
 works after a restart, and so does a normal breakdown interrupted mid-workflow.
+
+Drill state is bounded: one directory per drill (record and checkpoints) on the replica's disk,
+the most recent `DRILLS_KEPT` only, nothing in memory or in Cosmos DB. A drill is brought back at
+most `MAX_BRING_BACKS` times, offline drills have a daily cap, and one crew run per key at a time.
 """
 
+import asyncio
+import shutil
+
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -125,20 +133,26 @@ def test_bring_back_refuses_what_it_cannot_do(tmp_path, replies):
     assert traversal.status_code == 404 and bad_step.status_code == 422
 
 
-def test_bring_back_after_the_checkpoints_are_gone_says_so(tmp_path, replies):
-    """In Azure the checkpoints are on the replica's disk while the record is in Cosmos DB: a new
-    replica has the record but not the checkpoints."""
-    import shutil
-
+def test_a_drill_lasts_until_the_api_restarts_on_a_new_disk(tmp_path, replies):
+    """Every redeploy rolls a new revision on a fresh disk: the drill is gone, and says so."""
     app, _ = _app(tmp_path, replies)
     with TestClient(app) as c:
         drill = c.post("/api/breakdowns", json={**BODY, "fail": ["telestrator"]}).json()
-        shutil.rmtree(tmp_path / "checkpoints" / "drills" / drill["key"])
+        shutil.rmtree(tmp_path / "checkpoints" / "drills" / drill["key"])  # the new disk
+        gone = c.post(f"/api/breakdowns/{drill['key']}/bring-back", json={"step": "telestrator"})
+    assert gone.status_code == 404 and "run the drill again" in gone.json()["detail"]
+
+
+def test_bring_back_without_the_checkpoints_says_so(tmp_path, replies):
+    app, _ = _app(tmp_path, replies)
+    with TestClient(app) as c:
+        drill = c.post("/api/breakdowns", json={**BODY, "fail": ["telestrator"]}).json()
+        shutil.rmtree(tmp_path / "checkpoints" / "drills" / drill["key"] / "checkpoints")
         gone = c.post(f"/api/breakdowns/{drill['key']}/bring-back", json={"step": "telestrator"})
     assert gone.status_code == 410 and "run the drill again" in gone.json()["detail"]
 
 
-def test_only_the_latest_drills_keep_their_checkpoints(tmp_path, replies, monkeypatch):
+def test_only_the_latest_drills_are_kept(tmp_path, replies, monkeypatch):
     import api.main
 
     monkeypatch.setattr(api.main, "DRILLS_KEPT", 2)
@@ -146,8 +160,105 @@ def test_only_the_latest_drills_keep_their_checkpoints(tmp_path, replies, monkey
     with TestClient(app) as c:
         keys = [c.post("/api/breakdowns", json={**BODY, "fail": ["director"]}).json()["key"]
                 for _ in range(3)]  # fmt: skip
+        oldest = c.post(f"/api/breakdowns/{keys[0]}/bring-back", json={"step": "director"})
+        newest = c.post(f"/api/breakdowns/{keys[2]}/bring-back", json={"step": "director"})
     kept = {d.name for d in (tmp_path / "checkpoints" / "drills").iterdir()}
     assert kept == set(keys[1:])
+    assert oldest.status_code == 404 and newest.status_code == 200
+    assert not (tmp_path / "breakdowns").exists()  # no drill went to the result cache
+
+
+def test_drills_stay_out_of_cosmos_db(tmp_path, replies):
+    from tests.test_cosmos_store import FakeCosmos
+
+    settings = Settings(matches=[("blind_side_run", 3)], cache_dir=tmp_path, web_origin="*",
+                        rate_limit=(100, 600.0),
+                        cosmos_endpoint="https://tte-test.documents.azure.com:443/")  # fmt: skip
+    cosmos = FakeCosmos()
+    app = create_app(settings, client=FakeChatClient(replies), model_id="m", cosmos_client=cosmos)
+    with TestClient(app) as c:
+        drill = c.post("/api/breakdowns", json={**BODY, "fail": ["telestrator"]}).json()
+        back = c.post(f"/api/breakdowns/{drill['key']}/bring-back", json={"step": "telestrator"})
+    assert back.status_code == 200
+    assert cosmos.databases["tte"].containers["cache"].items == {}
+
+
+def test_an_offline_drill_past_the_limit_or_the_daily_cap_is_429(tmp_path, monkeypatch):
+    import api.main
+
+    monkeypatch.setattr(api.main, "DAILY_OFFLINE_DRILLS", 2)
+    app = create_app(_settings(tmp_path, rate=(1, 600.0)))  # no model: offline drills
+    body = {**BODY, "fail": ["director"]}
+
+    def ip(n):
+        return {"x-forwarded-for": f"203.0.113.{n}"}
+
+    with TestClient(app) as c:
+        first = c.post("/api/breakdowns", json=body, headers=ip(1))
+        limited = c.post("/api/breakdowns", json=body, headers=ip(1))
+        second = c.post("/api/breakdowns", json=body, headers=ip(2))
+        capped = c.post("/api/breakdowns", json=body, headers=ip(3))
+    assert first.status_code == second.status_code == 200
+    assert limited.status_code == 429 and limited.json()["detail"].startswith("rate_limited")
+    assert capped.status_code == 429 and capped.json()["detail"].startswith("capped")
+
+
+def test_two_bring_backs_at_once_run_one_after_the_other(tmp_path, replies):
+    """One re-runs the step; the other waits for it, then finds the step no longer waiting."""
+    fake = FakeChatClient(replies, delays={"telestrator": 0.3})
+    app, _ = _app(tmp_path, replies, fake=fake)
+
+    async def go():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+            drill = (await c.post("/api/breakdowns", json={**BODY, "fail": ["telestrator"]})).json()
+            url = f"/api/breakdowns/{drill['key']}/bring-back"
+            return await asyncio.gather(*(c.post(url, json={"step": "telestrator"})
+                                          for _ in range(2)))  # fmt: skip
+
+    responses = asyncio.run(go())
+    assert sorted(r.status_code for r in responses) == [200, 409]
+    assert fake.calls["telestrator"] == 1
+    assert len(app.state.locks) == 0  # no lock is kept once the runs are over
+
+
+def test_a_drill_is_brought_back_at_most_max_times(tmp_path, replies, monkeypatch):
+    """A step that keeps failing for real stays waiting; it cannot be brought back forever."""
+    import api.main
+
+    monkeypatch.setattr(api.main, "MAX_BRING_BACKS", 2)
+    fake = FakeChatClient({**replies, "telestrator": RuntimeError("model unavailable")})
+    app, _ = _app(tmp_path, replies, fake=fake)
+    with TestClient(app) as c:
+        drill = c.post("/api/breakdowns", json={**BODY, "fail": ["director"]}).json()
+        url = f"/api/breakdowns/{drill['key']}/bring-back"
+        tries = [c.post(url, json={"step": "telestrator"}) for _ in range(3)]
+        director = c.post(url, json={"step": "director"})
+    assert drill["drill"]["pending"] == ["director", "telestrator"]
+    assert [r.status_code for r in tries] == [200, 200, 409]
+    assert tries[1].json()["drill"]["pending"] == ["director", "telestrator"]  # still failing
+    assert "brought back" in tries[2].json()["detail"]
+    assert director.status_code == 409  # the cap is per drill
+
+
+def test_keyed_locks_serialize_a_key_and_forget_it_when_done():
+    from api.store import KeyedLocks
+
+    locks, order = KeyedLocks(), []
+
+    async def hold(key, name):
+        async with locks.hold(key):
+            order.append(f"{name}+")
+            await asyncio.sleep(0.01)
+            order.append(f"{name}-")
+
+    async def go():
+        await asyncio.gather(hold("k", "a"), hold("k", "b"), hold("other", "c"))
+
+    asyncio.run(go())
+    assert order.index("a-") < order.index("b+")  # same key: one after the other
+    assert order.index("c+") < order.index("a-")  # another key: not blocked
+    assert len(locks) == 0
 
 
 def test_an_interrupted_breakdown_resumes_after_a_restart(tmp_path, replies):

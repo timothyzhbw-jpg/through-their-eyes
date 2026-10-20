@@ -164,3 +164,42 @@ def test_a_finished_run_is_not_resumed(ctx, replies, tmp_path):
     fake = FakeChatClient(replies)
     _run(run_crew(ctx, client=fake, checkpoints=_storage(tmp_path), **ONE))
     assert fake.calls["director"] == 1  # nothing to resume: a new run
+
+
+def test_a_checkpoint_that_no_longer_resumes_is_discarded_and_the_run_starts_over(
+    ctx, replies, tmp_path, monkeypatch
+):
+    """A checkpoint left by older code can read fine and still fail when resumed (a message of
+    the wrong shape). The run then starts over without it, instead of failing on every request."""
+    from agents.workflow import Telestrator
+
+    slow = FakeChatClient({**replies, "pbp": FakeChatClient.SLOW})
+
+    async def interrupted():
+        task = asyncio.create_task(
+            run_crew(ctx, client=slow, checkpoints=_storage(tmp_path), step_timeout_s=60, **ONE)
+        )
+        while slow.calls["pbp"] == 0:
+            await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    _run(interrupted())
+    stale = {p.name for p in tmp_path.glob("*.json")}
+    (tmp_path / "unreadable.json").write_text("{not json")
+    plan, failed = Telestrator._plan, []
+
+    async def stale_message_once(self, msg, wctx, resumed=False):
+        if not failed:
+            failed.append(True)
+            raise AttributeError("'Briefing' object has no attribute 'rev'")
+        return await plan(self, msg, wctx, resumed)
+
+    monkeypatch.setattr(Telestrator, "_plan", stale_message_once)
+    fake = FakeChatClient(replies)
+    run = _run(run_crew(ctx, client=fake, checkpoints=_storage(tmp_path), **ONE))
+    assert failed and fake.calls["director"] == 1  # the resume failed, so it started over
+    assert [s.step for s in run.result.trace] == list(STEPS)
+    assert not stale & {p.name for p in tmp_path.glob("*.json")}  # the old checkpoints are gone
+    assert not (tmp_path / "unreadable.json").exists()

@@ -33,6 +33,7 @@ import sys
 import time
 from collections.abc import Collection
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from agent_framework import (
@@ -869,7 +870,13 @@ async def _start(
     checkpoints: CheckpointStorage | None, bring_back: str | None, job: Job
 ) -> dict[str, Any]:
     """How `Workflow.run` starts: a new run, a resumed one, or one resumed with an answer."""
-    latest = await checkpoints.get_latest(workflow_name=NAME) if checkpoints else None
+    try:
+        latest = await checkpoints.get_latest(workflow_name=NAME) if checkpoints else None
+    except Exception as e:  # the checkpoints do not read: nothing to resume
+        if bring_back is not None:
+            raise NotWaiting(f"the {bring_back}'s checkpoints do not read") from e
+        await _discard(checkpoints)
+        return {"message": job}
     if bring_back is not None:
         request = f"down:{bring_back}"
         if latest is None or request not in latest.pending_request_info_events:
@@ -884,16 +891,23 @@ async def _run(
     crew: Crew, start: dict[str, Any], job: Job, checkpoints: CheckpointStorage | None
 ) -> CrewRun:
     started = time.perf_counter()
+    resuming = "checkpoint_id" in start and "responses" not in start
     try:
         result = await build_workflow(crew, checkpoints=checkpoints).run(**start)
-    except WorkflowCheckpointException:
-        if "responses" in start or "message" in start:
+        outputs = _outputs(result)
+    except Exception as e:
+        if "responses" in start and isinstance(e, WorkflowCheckpointException):
+            raise NotWaiting("the checkpoint no longer restores") from e
+        if not resuming:
             raise
-        # The checkpoint no longer fits the graph (the code changed): start over.
+        # A checkpoint from older code may not restore, or restore and then fail (a message of
+        # an older shape). Start over without it, so it cannot fail this key on every request.
+        await _discard(checkpoints)
+        crew.trace = []
+        if crew.span is not None:
+            telemetry.annotate(crew.span, resumed=False)
         result = await build_workflow(crew, checkpoints=checkpoints).run(job)
-    outputs = result.get_outputs()
-    if not outputs:
-        raise RuntimeError("the breakdown workflow produced no output")
+        outputs = _outputs(result)
     out: BreakdownResult = outputs[-1]
     out.total_ms = round((time.perf_counter() - started) * 1000, 1)
     if checkpoints is not None:  # what still waits after this run, in its last checkpoint
@@ -902,6 +916,24 @@ async def _run(
     else:
         waiting = result.get_request_info_events()
     return CrewRun(out, sorted({e.source_executor_id for e in waiting}))
+
+
+def _outputs(result: Any) -> list[BreakdownResult]:
+    outputs = result.get_outputs()
+    if not outputs:
+        raise RuntimeError("the breakdown workflow produced no output")
+    return outputs
+
+
+async def _discard(checkpoints: CheckpointStorage) -> None:
+    """Delete every checkpoint of the run, readable or not."""
+    folder = getattr(checkpoints, "storage_path", None)
+    if folder is not None:  # file storage: a file that does not decode is not even listed
+        for path in Path(folder).glob("*.json"):
+            path.unlink(missing_ok=True)
+        return
+    for checkpoint_id in await checkpoints.list_checkpoint_ids(workflow_name=NAME):
+        await checkpoints.delete(checkpoint_id)
 
 
 def _trace_id(span: Any) -> str | None:

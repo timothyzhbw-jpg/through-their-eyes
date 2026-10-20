@@ -11,22 +11,25 @@ flagged `rate_limited` or `capped`.
 
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
-the per-client limit (and, with a model, the daily cap) and answers 429 past them. No model is
-called for a downed step. `POST /api/breakdowns/{key}/bring-back` re-runs one downed step from
-the run's checkpoint. Every crew run checkpoints to files under the cache directory
-(`checkpoints/`), so a normal breakdown interrupted mid-workflow, by a restart too, resumes from
-its last completed step. Its checkpoints are deleted once it is cached. A drill keeps its
-checkpoints, and only the most recent `DRILLS_KEPT` drills are kept.
+the per-client limit and, with a model, the daily model cap; offline, drills have their own daily
+cap (`DAILY_OFFLINE_DRILLS`). Past any of them: 429. No model is called for a downed step.
+`POST /api/breakdowns/{key}/bring-back` re-runs one downed step from the run's checkpoint, at most
+`MAX_BRING_BACKS` times per drill.
+
+Every crew run checkpoints to files under the cache directory (`checkpoints/`), so a normal
+breakdown interrupted mid-workflow, by a restart too, resumes from its last completed step. Its
+checkpoints are deleted once it is cached. A drill keeps its record and checkpoints on this
+replica's disk (`DrillStore`), the most recent `DRILLS_KEPT` only. A restart onto a new disk
+(every redeploy) drops them: bring-back then answers 404, "run the drill again". One crew run
+per key at a time.
 """
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import re
 import shutil
 import uuid
-from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
@@ -48,16 +51,19 @@ from api.live import stream
 from api.settings import Settings
 from api.store import (
     DailyCap,
+    DrillStore,
+    KeyedLocks,
     Match,
     MatchStore,
     RateLimiter,
     content_key,
     open_storage,
-    prune_dirs,
 )
 
 VERSION = "0.5.0"
-DRILLS_KEPT = 50  # failure drills whose checkpoints are kept for a bring-back
+DRILLS_KEPT = 50  # failure drills kept on disk for a bring-back
+MAX_BRING_BACKS = 5  # per drill; with at most 8 supersteps each, well under MAX_SUPERSTEPS
+DAILY_OFFLINE_DRILLS = 200  # drills and bring-backs per UTC day without a model, all clients
 KEY = re.compile(r"[0-9a-f]{32}")  # content_key()
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
 
@@ -113,9 +119,11 @@ def create_app(
     breakdowns, answers = storage.breakdowns, storage.answers
     limiter = RateLimiter(*settings.rate_limit)
     cap = DailyCap(settings.daily_model_cap)
+    drill_cap = DailyCap(DAILY_OFFLINE_DRILLS)  # offline drills; with a model, `cap` applies
     checkpoint_dir = Path(settings.cache_dir) / "checkpoints"
-    runs_dir, drills_dir = checkpoint_dir / "runs", checkpoint_dir / "drills"
-    locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)  # one crew run per key at a time
+    runs_dir = checkpoint_dir / "runs"
+    drills = DrillStore(checkpoint_dir / "drills", DRILLS_KEPT)
+    locks = KeyedLocks()  # one crew run per key at a time
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -151,16 +159,21 @@ def create_app(
         return "model"
 
     def drill_allowed(request: Request) -> None:
-        """A drill or a bring-back runs the crew: it counts against the per-client limit and,
-        with a model, the daily cap. Past either: 429."""
+        """A drill or a bring-back runs the crew: it counts against the per-client limit and a
+        daily cap, the model's or, offline, the drills' own. Past any of them: 429."""
         if client is not None:
             verdict = regeneration(request)
+        elif drill_cap.left() <= 0:
+            verdict = "capped"
+        elif not limiter.allow(_client_ip(request)):
+            verdict = "rate_limited"
         else:
-            verdict = "offline" if limiter.allow(_client_ip(request)) else "rate_limited"
+            drill_cap.take()
+            verdict = "offline"
         if verdict == "rate_limited":
             raise HTTPException(429, "rate_limited: try again in a few minutes")
         if verdict == "capped":
-            raise HTTPException(429, "capped: the model budget for today is used up")
+            raise HTTPException(429, "capped: today's budget is used up; try again tomorrow (UTC)")
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -244,7 +257,7 @@ def create_app(
     async def _compute(m: Match, body: BreakdownBody, llm, source: str, k: str) -> dict[str, Any]:
         """Run the crew and cache the result. A run of this key that was interrupted resumes from
         its checkpoint; once the result is cached, the checkpoints go."""
-        async with locks[k]:
+        async with locks.hold(k):
             run = await run_crew(m.ctx, client=llm, personas=tuple(body.personas),
                                  languages=tuple(body.languages),
                                  checkpoints=FileCheckpointStorage(runs_dir / k))  # fmt: skip
@@ -258,34 +271,39 @@ def create_app(
                 **value}  # fmt: skip
 
     def _drill_response(k: str, record: dict[str, Any]) -> dict[str, Any]:
-        public = {name: v for name, v in record.items() if name != "match"}
+        public = {name: record[name] for name in ("source", "result", "drill")}
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **public}
 
     async def _drill(m: Match, body: BreakdownBody, down: list[str], k: str) -> dict[str, Any]:
         """The crew with `down` taken down, checkpointed for a bring-back (SPEC 6)."""
-        async with locks[k]:
+        async with locks.hold(k):
             run = await run_crew(m.ctx, client=client, personas=tuple(body.personas),
                                  languages=tuple(body.languages), down=down,
-                                 checkpoints=FileCheckpointStorage(drills_dir / k))  # fmt: skip
+                                 checkpoints=drills.checkpoints(k))  # fmt: skip
             record = {"source": "model" if client is not None else "offline",
                       "result": run.result.model_dump(mode="json", by_alias=True),
-                      "drill": {"down": down, "pending": run.pending}, "match": m.id}  # fmt: skip
-            breakdowns.put(k, record)
-        prune_dirs(drills_dir, DRILLS_KEPT)
+                      "drill": {"down": down, "pending": run.pending}, "match": m.id,
+                      "bring_backs": 0}  # fmt: skip
+            drills.put(k, record)
         return _drill_response(k, record)
 
     @app.post("/api/breakdowns/{key}/bring-back")
     async def bring_back(key: str, body: BringBackBody, request: Request) -> dict[str, Any]:
         """Re-run one downed step of a drill from its checkpoint; the rest is kept (SPEC 6)."""
-        record = breakdowns.get(key) if KEY.fullmatch(key) else None
-        if record is None or not record.get("drill"):
-            raise HTTPException(404, "no failure drill with this key")
-        async with locks[key]:
-            record = breakdowns.get(key)
+        if not KEY.fullmatch(key) or drills.get(key) is None:
+            raise HTTPException(404, "no failure drill with this key (drills last until the API "
+                                     "restarts or redeploys): run the drill again")  # fmt: skip
+        async with locks.hold(key):
+            record = drills.get(key)
+            if record is None:  # pruned while this request waited
+                raise HTTPException(404, "no failure drill with this key: run the drill again")
             drill = record["drill"]
             if body.step not in drill["pending"]:
                 raise HTTPException(409, f"the {body.step} is not waiting to be brought back")
-            if not (drills_dir / key).is_dir():
+            if record["bring_backs"] >= MAX_BRING_BACKS:
+                raise HTTPException(409, f"this drill was brought back {MAX_BRING_BACKS} times: "
+                                         "run a new drill")  # fmt: skip
+            if not drills.has_checkpoints(key):
                 raise HTTPException(410, "this drill's checkpoints are gone: run the drill again")
             drill_allowed(request)
             m = await match_or_404(record["match"])
@@ -294,13 +312,14 @@ def create_app(
             try:
                 run = await run_crew(m.ctx, client=client, personas=tuple(asked["personas"]),
                                      languages=tuple(asked["languages"]), down=down,
-                                     checkpoints=FileCheckpointStorage(drills_dir / key),
+                                     checkpoints=drills.checkpoints(key),
                                      bring_back=body.step)  # fmt: skip
             except NotWaiting as e:
                 raise HTTPException(410, f"{e}: run the drill again") from e
             record = {**record, "result": run.result.model_dump(mode="json", by_alias=True),
-                      "drill": {"down": down, "pending": run.pending}}  # fmt: skip
-            breakdowns.put(key, record)
+                      "drill": {"down": down, "pending": run.pending},
+                      "bring_backs": record["bring_backs"] + 1}  # fmt: skip
+            drills.put(key, record)
         return _drill_response(key, record)
 
     @app.post("/api/whatif")
@@ -335,6 +354,7 @@ def create_app(
 
     app.state.settings = settings
     app.state.store = store
+    app.state.locks = locks
     return app
 
 
