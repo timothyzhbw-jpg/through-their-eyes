@@ -17,7 +17,8 @@ npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (a
 
 URL parameters: `?autoplay=0` starts neither the live stream nor the breakdown on load;
 `?offline=1` ignores the live service and plays the bundled data; `?plan=invalid` loads a
-deliberately broken plan to show the template fallback.
+deliberately broken plan to show the template fallback; `?rigged=1` turns on the rigged-player
+trial.
 
 ## The live service (`VITE_API_URL`)
 
@@ -163,7 +164,11 @@ src/
   visor marks the front of the head, so a look over the shoulder is visible on anyone in view. On
   the tactical board a short white tick shows each player's head direction. `views/tokens.ts`
   holds the pose maths; its test checks the rendered world yaw against the export (< 1e-3 rad).
-  The skinned humanoid model is a separate, later card; this is its fallback.
+  Tokens are the default. **Rigged players (trial)** in the first-person toolbar swaps their
+  bodies for an animated footballer converted from Gameplay Football (`src/players/`,
+  `public/models/README.md`, SPEC 7 trial): gait blended by sim speed with the playback rate
+  matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
+  turned so the head points along `head_yaw`, kits in the fictional clubs' colours.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 - **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",

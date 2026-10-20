@@ -7,6 +7,7 @@ import { useSession } from "../session";
 import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
 import { Caption } from "../ui/Narration";
+import { trial } from "../players/trial";
 
 export function PovToolbar() {
   const { hero, playback, controls } = useSession();
@@ -14,6 +15,7 @@ export function PovToolbar() {
   const comfort = useStore(playback, (s) => s.comfort);
   const ghosts = useStore(playback, (s) => s.beliefGhosts);
   const focus = useStore(playback, (s) => s.focus);
+  const rigged = useStore(trial, (s) => s.rigged);
   const player = hero.players[hero.ids.indexOf(povPlayer)];
   const ghostsAvailable = povPlayer === hero.heroId;
 
@@ -67,6 +69,15 @@ export function PovToolbar() {
           }
         >
           Belief ghosts
+        </button>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={rigged}
+          onClick={() => trial.set({ rigged: !rigged })}
+          title="Animated players from Gameplay Football instead of tokens: a one-day trial"
+        >
+          Rigged players (trial)
         </button>
       </div>
     </div>
