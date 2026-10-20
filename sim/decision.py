@@ -102,9 +102,9 @@ def _run_in_miss(
     """Closest approach (m) of each of N players to the ball while he has not reacted yet.
 
     He keeps his velocity (pos + vel * t, as in time to intercept); the ball is at `path` ((K, 2))
-    at `times` ((K,), ascending) and moves linearly in between. Only t <= reaction counts. Both
-    move linearly on each piece, so the closest approach is exact for the sampled path. inf when
-    the path starts after the reaction time.
+    at `times` ((K,), ascending, from t = 0) and moves linearly in between. Only t <= reaction
+    counts. Both move linearly on each piece, so the closest approach is exact for the sampled
+    path. inf when the path starts after the reaction time.
     """
     k = int(np.searchsorted(times, reaction, side="right"))
     if k == 0:
@@ -136,19 +136,33 @@ def _p_run_in(ctx: DecisionContext, players: np.ndarray, miss: np.ndarray) -> np
     return logistic(np.pi / (np.sqrt(3.0) * spread) * (p.control_radius - miss))
 
 
+def _p_win_ball(
+    ctx: DecisionContext, opp: np.ndarray, ball: np.ndarray, times: np.ndarray, path: np.ndarray
+) -> np.ndarray:
+    """P(each opponent wins the ball on its way), (N,). The ball starts at `ball` at t = 0 and is
+    at `path` ((K, 2)) at `times` ((K,), ascending, > 0). The larger of two chances: he reacts and
+    gets to a point of the path before the ball (time to intercept), or the ball runs into his
+    run before he reacts (the run-in, from t = 0)."""
+    p = ctx.params
+    tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], path, p.reaction, p.v_max)
+    sig = _sigma(ctx, opp)[:, None]
+    p_tti = logistic(np.pi / (np.sqrt(3.0) * sig) * (times[None, :] - tti)).max(axis=1)
+    miss = _run_in_miss(
+        ctx.pos[opp], ctx.vel[opp], np.append(0.0, times), np.vstack([ball, path]), p.reaction
+    )
+    return np.maximum(p_tti, _p_run_in(ctx, opp, miss))
+
+
 def _p_keep_carry(
     ctx: DecisionContext, ball: np.ndarray, target: np.ndarray, opp: np.ndarray
 ) -> float:
-    """P(no opponent wins the ball on a carry from `ball` to `target` in `carry_time`): he gets
-    to the target first, or runs into the ball on the way before he reacts."""
+    """P(no opponent wins the ball on a carry from `ball` to `target` in `carry_time`), scored
+    along the carry like a pass along its path. While the carry is no faster than v_max the time
+    to intercept is worst at its endpoint; the samples cover a faster one."""
     p = ctx.params
-    tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], target[None], p.reaction, p.v_max)
-    p_lose = logistic(np.pi / (np.sqrt(3.0) * _sigma(ctx, opp)) * (p.carry_time - tti[:, 0]))
-    times = np.array([p.path_step_s, p.carry_time])
+    times = np.append(np.arange(p.path_step_s, p.carry_time, p.path_step_s), p.carry_time)
     path = ball + (times / p.carry_time)[:, None] * (target - ball)
-    miss = _run_in_miss(ctx.pos[opp], ctx.vel[opp], times, path, p.reaction)
-    p_lose = np.maximum(p_lose, _p_run_in(ctx, opp, miss))
-    return float(np.prod(1.0 - p_lose))
+    return float(np.prod(1.0 - _p_win_ball(ctx, opp, ball, times, path)))
 
 
 def pass_speed(
@@ -182,12 +196,7 @@ def _pass_success(
     p_clear = 1.0
     if len(times):
         path = ball + path_distances(v0, times, bp)[:, None] * direction
-        tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], path, p.reaction, p.v_max)
-        sig = _sigma(ctx, opp)[:, None]
-        p_int = logistic(np.pi / (np.sqrt(3.0) * sig) * (times[None, :] - tti)).max(axis=1)
-        miss = _run_in_miss(ctx.pos[opp], ctx.vel[opp], times, path, p.reaction)
-        p_int = np.maximum(p_int, _p_run_in(ctx, opp, miss))
-        p_clear = float(np.prod(1.0 - p_int))
+        p_clear = float(np.prod(1.0 - _p_win_ball(ctx, opp, ball, times, path)))
     t_att = time_to_intercept(ctx.pos[mates], ctx.vel[mates], target[None], p.reaction, p.v_max)
     t_def = time_to_intercept(ctx.pos[opp], ctx.vel[opp], target[None], p.reaction, p.v_max)
     sigma_j = float(_sigma(ctx, np.array([j]))[0])
