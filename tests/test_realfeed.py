@@ -256,3 +256,28 @@ def test_pitch_polygon_contains_its_markings(margin):
     pitch = FutsalPitch(40.0, 20.0)
     for pts in pitch.feature_samples().values():
         assert pitch.contains(pts, margin=margin + 1e-6).all()
+
+
+def test_player_silhouettes_stay_in_their_boxes_and_the_rest_is_blurred():
+    from demo.realfeed.players import Detection
+    from demo.realfeed.render import player_silhouettes
+
+    rng = np.random.default_rng(7)
+    frame = rng.integers(0, 256, size=(360, 640, 3), dtype=np.uint8)
+    body = np.zeros((80, 30), bool)
+    body[5:, 8:22] = True  # a standing figure inside its box
+    det = Detection(
+        np.array([215.0, 179.0]), np.zeros(2), (200, 100, 30, 80), 0.0, 0.0,
+        silhouette=np.packbits(body, axis=1),
+    )  # fmt: skip
+    sil = player_silhouettes([det], frame.shape[:2], grow_px=3)
+    ys, xs = np.nonzero(sil)
+    assert xs.min() >= 200 - 3 and xs.max() < 230 + 3
+    assert ys.min() >= 100 - 3 and ys.max() < 180 + 3
+    pitch_area = np.zeros(frame.shape[:2], bool)
+    pitch_area[200:] = True
+    keep = pitch_area | sil
+    out = blur_outside(frame, keep)
+    outside = cv2.erode((~keep).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+    assert _hf_energy(out, outside) < 0.01 * _hf_energy(frame, outside)
+    np.testing.assert_array_equal(out[sil], frame[sil])

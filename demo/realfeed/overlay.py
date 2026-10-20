@@ -85,7 +85,7 @@ class Layer:
         self.bgr = self.bgr * (1 - a[..., None]) + np.array(colour, np.float32) * a[..., None]
         self.alpha = self.alpha + a * (1 - self.alpha)
 
-    def heat(self, values: np.ndarray, colours: np.ndarray, alpha: np.ndarray) -> None:
+    def heat(self, colours: np.ndarray, alpha: np.ndarray) -> None:
         """Paint a full-canvas colour image (h, w, 3) with per-pixel alpha (h, w)."""
         a = alpha.astype(np.float32)
         self.bgr = self.bgr * (1 - a[..., None]) + colours.astype(np.float32) * a[..., None]

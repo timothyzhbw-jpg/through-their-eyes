@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 
-from demo.realfeed.geometry import apply_h, local_scale
+from demo.realfeed.geometry import apply_h
 
 RED_HUE = 178.0  # OpenCV hue units (0-180)
 BLUE_HUE = 104.0
@@ -32,6 +32,12 @@ class Detection:
     hue: float  # circular mean shirt hue, OpenCV units; nan if unsaturated
     sat: float
     team: int = -1
+    silhouette: np.ndarray | None = None  # packed bool mask over bbox (np.packbits, axis 1)
+
+    def mask(self) -> np.ndarray:
+        """The player's foreground pixels inside `bbox`, (h, w) bool."""
+        w = self.bbox[2]
+        return np.unpackbits(self.silhouette, axis=1, count=w).astype(bool)
 
 
 def _circ_mean_hue(h: np.ndarray, w: np.ndarray) -> float:
@@ -135,15 +141,46 @@ def foreground(frame: np.ndarray, bg: np.ndarray, valid: np.ndarray, thresh: flo
     return fg.astype(bool)
 
 
+def horizontal_scale(h_img_from_world: np.ndarray, world_pt: np.ndarray) -> float:
+    """Pixels per metre across the image at a ground point (largest singular value)."""
+    p = np.asarray(world_pt, dtype=float)
+    eps = 0.05
+    img = apply_h(h_img_from_world, np.array([p, p + [eps, 0], p + [0, eps]]))
+    j = np.column_stack([img[1] - img[0], img[2] - img[0]]) / eps
+    return float(np.linalg.svd(j, compute_uv=False)[0])
+
+
+def _split_columns(blob: np.ndarray, max_parts: int) -> list[tuple[int, int]]:
+    """Split a blob of side-by-side players at the deepest valleys of its column profile."""
+    w = blob.shape[1]
+    if max_parts <= 1 or w < 8:
+        return [(0, w)]
+    prof = cv2.GaussianBlur(blob.sum(axis=0).astype(np.float32)[None], (0, 0), max(1.0, w / 30))[0]
+    lo, hi = int(w * 0.25), int(w * 0.75)
+    k = lo + int(np.argmin(prof[lo:hi]))
+    left_peak, right_peak = prof[:k].max(), prof[k:].max()
+    if prof[k] > 0.55 * min(left_peak, right_peak):
+        return [(0, w)]
+    left = _split_columns(blob[:, :k], max_parts - 1)
+    right = _split_columns(blob[:, k:], max_parts - 1)
+    return left + [(a + k, b + k) for a, b in right]
+
+
 def detect(
     frame: np.ndarray,
     fg: np.ndarray,
     h_img_from_world: np.ndarray,
     on_pitch,
-    min_height_m: float = 0.9,
-    max_width_m: float = 2.2,
+    min_height_m: float = 1.0,
+    max_height_m: float = 2.8,
+    person_width_m: float = 0.75,
 ) -> list[Detection]:
-    """Player detections from a foreground mask; `on_pitch(world_pts)` filters foot points."""
+    """Player detections from a foreground mask; `on_pitch(world_pts)` filters foot points.
+
+    Heights are compared with the image's horizontal scale at the foot point, which for an
+    upright person is close to the vertical scale. Blobs wider than one person are split at the
+    valleys of their column profile (two or three players overlapping in the image).
+    """
     h_world_from_img = np.linalg.inv(h_img_from_world)
     n, lab, st, _ = cv2.connectedComponentsWithStats(fg.astype(np.uint8), 8)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -152,29 +189,41 @@ def detect(
         x, y, w, h, area = st[i]
         if area < 40:
             continue
-        foot_img = np.array([x + w / 2.0, y + h - 1.0])
-        blob = lab[y : y + h, x : x + w] == i
-        rows = np.nonzero(blob.any(axis=1))[0]
-        bottom = rows[-1]
-        cols = np.nonzero(blob[max(0, bottom - max(2, h // 12)) : bottom + 1].any(axis=0))[0]
-        foot_img = np.array([x + cols.mean(), y + bottom])
-        foot = apply_h(h_world_from_img, foot_img)[0]
-        if not on_pitch(foot[None])[0]:
-            continue
-        ppm = local_scale(h_img_from_world, foot)
-        if h < min_height_m * ppm * 0.8 or w > max_width_m * ppm * 1.6:
-            continue
-        # Shirt: rows 18-50 % from the top of the blob, saturated pixels only.
-        t0, t1 = int(h * 0.18), max(int(h * 0.5), int(h * 0.18) + 2)
-        torso = blob[t0:t1]
-        hh = hsv[y + t0 : y + t1, x : x + w]
-        sel = torso & (hh[..., 1] > 90) & (hh[..., 2] > 70)
-        if sel.sum() >= 6:
-            hue = _circ_mean_hue(hh[..., 0][sel], np.ones(sel.sum()))
-            sat = float(hh[..., 1][sel].mean())
-        else:
-            hue, sat = float("nan"), 0.0
-        out.append(Detection(foot_img, foot, (int(x), int(y), int(w), int(h)), hue, sat))
+        blob_all = lab[y : y + h, x : x + w] == i
+        bottom_all = np.nonzero(blob_all.any(axis=1))[0][-1]
+        guess = apply_h(h_world_from_img, [[x + w / 2.0, y + bottom_all]])[0]
+        s_h = horizontal_scale(h_img_from_world, guess)
+        parts = _split_columns(blob_all, min(3, int(w / (person_width_m * s_h)) + 0))
+        for c0, c1 in parts:
+            blob = blob_all[:, c0:c1]
+            rows = np.nonzero(blob.any(axis=1))[0]
+            if len(rows) == 0:
+                continue
+            top, bottom = rows[0], rows[-1]
+            bh = bottom - top + 1
+            band = blob[max(0, bottom - max(2, bh // 12)) : bottom + 1]
+            cols = np.nonzero(band.any(axis=0))[0]
+            foot_img = np.array([x + c0 + cols.mean(), y + bottom])
+            foot = apply_h(h_world_from_img, foot_img)[0]
+            if not on_pitch(foot[None])[0]:
+                continue
+            s_h = horizontal_scale(h_img_from_world, foot)
+            if not (min_height_m * s_h <= bh <= max_height_m * s_h):
+                continue
+            # Shirt: rows 18-50 % from the top of the person, saturated pixels only.
+            t0 = top + int(bh * 0.18)
+            t1 = max(top + int(bh * 0.5), t0 + 2)
+            torso = blob[t0:t1]
+            hh = hsv[y + t0 : y + t1, x + c0 : x + c1]
+            sel = torso & (hh[..., 1] > 90) & (hh[..., 2] > 70)
+            if sel.sum() >= 6:
+                hue = _circ_mean_hue(hh[..., 0][sel], np.ones(sel.sum()))
+                sat = float(hh[..., 1][sel].mean())
+            else:
+                hue, sat = float("nan"), 0.0
+            box = (int(x + c0), int(y + top), int(c1 - c0), int(bh))
+            sil = np.packbits(blob[top : bottom + 1], axis=1)
+            out.append(Detection(foot_img, foot, box, hue, sat, silhouette=sil))
     return out
 
 
@@ -291,3 +340,44 @@ class NearestNeighbourTracker:
     def finished(self, min_length: int = 1) -> list[Track]:
         tracks = self.done + self.active
         return [t for t in tracks if len(t.frames) >= min_length]
+
+
+def stitch(
+    tracks: list[Track],
+    fps: float,
+    max_gap_s: float = 1.2,
+    base_m: float = 1.0,
+    speed_m_s: float = 3.0,
+    min_length: int = 25,
+) -> list[Track]:
+    """Join track fragments: a track that ends is continued by one that starts soon after,
+    close to where the first was heading and with a compatible team. Greedy by cost."""
+    tracks = sorted(tracks, key=lambda t: t.frames[0])
+    joined = True
+    while joined:
+        joined = False
+        best = None
+        for a in tracks:
+            fa = a.frames[-1]
+            for b in tracks:
+                fb = b.frames[0]
+                gap = (fb - fa) / fps
+                if b is a or not 0 < gap <= max_gap_s:
+                    continue
+                ta, tb = a.team(), b.team()
+                if ta >= 0 and tb >= 0 and ta != tb:
+                    continue
+                d = float(np.linalg.norm(b.points[0] - a.predict(fb)))
+                if d > base_m + speed_m_s * gap:
+                    continue
+                cost = d + gap
+                if best is None or cost < best[0]:
+                    best = (cost, a, b)
+        if best is not None:
+            _, a, b = best
+            a.frames += b.frames
+            a.points += b.points
+            a.teams += b.teams
+            tracks.remove(b)
+            joined = True
+    return [t for t in tracks if len(t.frames) >= min_length]
