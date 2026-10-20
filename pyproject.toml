@@ -27,6 +27,14 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
 ]
+# Real-footage overlay demo only (demo/realfeed): optical flow, homographies, image ops.
+# Apache-2.0; kept out of the main dependencies so the API image does not carry it.
+realfeed = [
+    "opencv-python-headless>=4.10",
+]
+
+[tool.uv]
+default-groups = ["dev", "realfeed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
