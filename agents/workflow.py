@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from agents import fallbacks, prompts, telemetry
 from agents.context import MomentContext
@@ -260,11 +260,38 @@ class Telestrator(Executor):
 
 
 class Narration(Executor):
-    """Commentator (play-by-play) and Co-commentator (analysis) for every persona × language."""
+    """Commentator (play-by-play) and Co-commentator (analysis) for every persona × language.
+
+    What a voice is asked and how its reply becomes lines are the five methods below: anchored
+    lines (SPEC 6). Only the narration ablation overrides them (eval/free_text.py); the crew
+    always runs this class.
+    """
 
     def __init__(self, crew: Crew) -> None:
         super().__init__("narration")
         self.crew = crew
+
+    def instructions(self, speaker: Speaker) -> str:
+        return prompts.narration_instructions(speaker)
+
+    def prompt(
+        self,
+        findings: Findings,
+        persona: Persona,
+        language: Language,
+        speaker: Speaker,
+        pbp: list[ScriptLine] | None = None,
+    ) -> str:
+        return prompts.narration_prompt(self.crew.ctx, findings, persona, language, speaker, pbp)
+
+    def rewrite_prompt(self, base: str, failed: list[tuple[ScriptLine, list[str]]]) -> str:
+        return prompts.rewrite_prompt(base, failed)
+
+    def schema(self, language: Language) -> type[BaseModel]:
+        return anchored_draft_model(list(self.crew.ctx.supported), language)
+
+    def to_lines(self, value: Any, language: Language) -> list[DraftLine]:
+        return compose(self.crew.ctx, value, language)
 
     async def _speaker(
         self, base: Briefing, key: Key, speaker: Speaker, pbp: list[ScriptLine] | None
@@ -274,12 +301,12 @@ class Narration(Executor):
         template = [line for _, line in fallbacks.narration(mc, persona, language, speaker)]
         if crew.client is None:
             return template, None
-        prompt = prompts.narration_prompt(mc, base.findings, persona, language, speaker, pbp)
-        schema = anchored_draft_model(list(mc.supported), language)
-        instructions = prompts.narration_instructions(speaker)
+        prompt = self.prompt(base.findings, persona, language, speaker, pbp)
+        schema = self.schema(language)
+        instructions = self.instructions(speaker)
         with crew.step("narration", persona=persona, language=language, speaker=speaker) as span:
             attempt = await crew.ask(speaker, instructions, prompt, schema)
-            lines = compose(mc, attempt.value, language) if attempt.value is not None else []
+            lines = self.to_lines(attempt.value, language) if attempt.value is not None else []
             if not lines:
                 attempt.value = None  # nothing usable: counts as a fallback
             telemetry.annotate(span, source="llm" if lines else "template",
@@ -349,18 +376,15 @@ class Narration(Executor):
 
         async def redo(key: Key, speaker: Speaker, mine) -> tuple[Key, dict[str, DraftLine]]:
             persona, language = key
-            base = prompts.narration_prompt(
-                self.crew.ctx, drafts.base.findings, persona, language, speaker
-            )
+            base = self.prompt(drafts.base.findings, persona, language, speaker)
             attrs = {"persona": persona, "language": language, "speaker": speaker,
                      "round": drafts.round + 1}  # fmt: skip
             with self.crew.step("narration", **attrs) as span:
                 attempt = await self.crew.ask(
-                    speaker, prompts.narration_instructions(speaker),
-                    prompts.rewrite_prompt(base, mine),
-                    anchored_draft_model(list(self.crew.ctx.supported), language),
+                    speaker, self.instructions(speaker), self.rewrite_prompt(base, mine),
+                    self.schema(language),
                 )  # fmt: skip
-                new = compose(self.crew.ctx, attempt.value, language) if attempt.value else []
+                new = self.to_lines(attempt.value, language) if attempt.value else []
                 # A failed rewrite replaces nothing; the Verifier then drops the line.
                 telemetry.annotate(span, source="llm", attempts=attempt.attempts,
                                    ms=round(attempt.ms, 1), error=attempt.error,
@@ -578,9 +602,11 @@ class Voice(Executor):
 # --- running a breakdown --------------------------------------------------------------------------
 
 
-def build_workflow(crew: Crew):
+def build_workflow(crew: Crew, narration: type[Narration] = Narration):
+    """The breakdown graph. `narration` is replaced only by the narration ablation's free-text
+    mode (eval/narration_ablation.py); `run_breakdown` always uses the default."""
     director, analyst, telestrator = Director(crew), Analyst(crew), Telestrator(crew)
-    narration, verifier, voice = Narration(crew), Verifier(crew), Voice(crew)
+    narration, verifier, voice = narration(crew), Verifier(crew), Voice(crew)
     return (
         WorkflowBuilder(max_iterations=40, name="breakdown", start_executor=director)
         .add_edge(director, analyst)
