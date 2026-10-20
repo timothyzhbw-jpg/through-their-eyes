@@ -7,6 +7,7 @@ plan ports web/src/plan/template.ts, so both sides fall back to the same breakdo
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import ValidationError
@@ -34,9 +35,37 @@ POV_MAX_S = 2.4  # below MAX_POV_CLIP_S
 OUTCOME_S = 2.0  # match time shown after the decision
 
 
+@dataclass(frozen=True)
+class PlanError:
+    """Why a plan cannot be played. `where` and `code` are ours: a field path, the step's kind and a
+    fixed reason. Only they are public (the trace, `plan_errors`); `detail` quotes what the model
+    wrote, which may hold a number, so it stays in tests and debugging (SPEC 5.3, 6)."""
+
+    where: str
+    code: str
+    detail: str
+
+    @property
+    def public(self) -> str:
+        return f"{self.where}: {self.code}"
+
+    def __str__(self) -> str:
+        return f"{self.where}: {self.detail}"
+
+
+def shape_errors(e: ValidationError) -> list[PlanError]:
+    """Field and error type, like `agents.llm.describe`: pydantic's message may quote the input,
+    and a key the model added (extra_forbidden) is its own text, so it is not named."""
+    errors = []
+    for err in e.errors():
+        loc = err["loc"][:-1] if err["type"] == "extra_forbidden" else err["loc"]
+        errors.append(PlanError(".".join(map(str, loc)) or "plan", err["type"], err["msg"]))
+    return errors
+
+
 def validate_plan(
     candidate: TelestrationPlan | dict[str, Any], ctx: MomentContext, script: set[str] | None = None
-) -> list[str]:
+) -> list[PlanError]:
     """Reasons the plan cannot be played; empty when it is valid. `script`: known line ids."""
     if isinstance(candidate, TelestrationPlan):
         plan = candidate
@@ -44,56 +73,57 @@ def validate_plan(
         try:
             plan = TelestrationPlan.model_validate(candidate)
         except ValidationError as e:
-            return [
-                f"{'.'.join(map(str, err['loc'])) or 'plan'}: {err['msg']}" for err in e.errors()
-            ]
-    errors: list[str] = []
+            return shape_errors(e)
+    errors: list[PlanError] = []
     first, last = ctx.rel(0), ctx.rel(ctx.frames - 1)
     lines = script or set()
 
+    def fail(where: str, code: str, detail: str) -> None:
+        errors.append(PlanError(where, code, detail))
+
     def in_clip(where: str, rel: float) -> None:
         if rel < first - EPS or rel > last + EPS:
-            errors.append(f"{where}: {rel} s is outside the clip [{first:.2f}, {last:.2f}]")
+            fail(where, "outside_clip", f"{rel} s is outside the clip [{first:.2f}, {last:.2f}]")
 
     def known_player(where: str, pid: str) -> None:
         if pid not in ctx.players:
-            errors.append(f"{where}: unknown player {pid}")
+            fail(where, "unknown_player", f"unknown player {pid}")
 
     if plan.moment != ctx.card.id:
-        errors.append(f"moment: plan is for {plan.moment}, not {ctx.card.id}")
+        fail("moment", "wrong_moment", f"plan is for {plan.moment}, not {ctx.card.id}")
     previous = 0.0
     for k, step in enumerate(plan.steps):
         where = f"steps.{k} ({step.do})"
         if step.t < previous - EPS:
-            errors.append(f"{where}: t = {step.t} goes back in time")
+            fail(where, "goes_back_in_time", f"t = {step.t} goes back in time")
         if step.t > plan.duration_s + EPS:
-            errors.append(f"{where}: t = {step.t} is after the end")
+            fail(where, "after_the_end", f"t = {step.t} is after the end")
         previous = max(previous, step.t)
         if isinstance(step, Rewind | Play):
-            in_clip(where, step.to)
+            in_clip(f"{where}.to", step.to)
         elif isinstance(step, Pov):
             known_player(where, step.player)
-            in_clip(where, step.from_)
-            in_clip(where, step.to)
+            in_clip(f"{where}.from", step.from_)
+            in_clip(f"{where}.to", step.to)
             if step.to <= step.from_:
-                errors.append(f"{where}: empty POV clip")
+                fail(where, "empty_pov_clip", "empty POV clip")
             elif step.to - step.from_ > MAX_POV_CLIP_S + EPS:
                 length = step.to - step.from_
-                errors.append(
-                    f"{where}: POV clip of {length:.2f} s is longer than {MAX_POV_CLIP_S} s"
-                )
+                fail(where, "pov_too_long",
+                     f"POV clip of {length:.2f} s is longer than {MAX_POV_CLIP_S} s")  # fmt: skip
         elif isinstance(step, ScanMarker):
             if step.scan not in ctx.scans:
-                errors.append(f"{where}: unknown scan {step.scan}")
+                fail(where, "unknown_scan", f"unknown scan {step.scan}")
             if step.label_claim is not None and step.label_claim not in ctx.supported:
-                errors.append(f"{where}: unknown or unsupported claim {step.label_claim}")
+                fail(where, "unsupported_claim",
+                     f"unknown or unsupported claim {step.label_claim}")  # fmt: skip
         elif isinstance(step, Zone):
             known_player(where, step.player)
         elif isinstance(step, Ghost):
             if step.kind == "counterfactual" and step.cf != ctx.counterfactual_id:
-                errors.append(f"{where}: unknown counterfactual {step.cf}")
+                fail(where, "unknown_counterfactual", f"unknown counterfactual {step.cf}")
         elif isinstance(step, Voice) and step.line not in lines:
-            errors.append(f"{where}: no script line {step.line}")
+            fail(where, "unknown_line", f"no script line {step.line}")
     return errors
 
 

@@ -32,7 +32,7 @@ from agents import fallbacks, prompts, telemetry
 from agents.context import MomentContext
 from agents.delivery import VOICES, cache_key, delivery_tier, pick_style, ssml_for_line
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
-from agents.plan import template_plan, validate_plan, voice_times
+from agents.plan import shape_errors, template_plan, validate_plan, voice_times
 from agents.schemas import (
     CONNECTIVES,
     AnalystChoice,
@@ -61,7 +61,7 @@ from explain.render import build_payload, render_line
 MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # Bump when code that shapes a breakdown changes without a prompt change: it is part of the
 # API's cache key, so cached breakdowns from the older code are not served again.
-PIPELINE_VERSION = 2  # 2: tidy() keeps each connective once across both voices
+PIPELINE_VERSION = 3  # 2: tidy() keeps each connective once; 3: plan errors are reason codes
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
 # lanes finish in either order, so the trace is sorted into this order before it is returned.
@@ -255,12 +255,14 @@ class Telestrator(Executor):
                         errors = validate_plan(candidate, mc)
                     except ValidationError as e:
                         candidate = None
-                        errors = [f"plan shape: {err['msg']}" for err in e.errors()]
+                        errors = shape_errors(e)
                     if not errors:
                         plan, source = candidate, "agent"
-            notes = [f"invalid plan, template used: {e}" for e in errors]
+            # Public: a location and a reason code, never a value the model wrote (SPEC 5.3).
+            public = [e.public for e in errors]
+            notes = [f"invalid plan, template used: {e}" for e in public]
             crew.record("telestrator", attempt, notes, used, span)
-        await ctx.send_message(Planned(plan, source, errors))
+        await ctx.send_message(Planned(plan, source, public))
 
 
 class Narration(Executor):
