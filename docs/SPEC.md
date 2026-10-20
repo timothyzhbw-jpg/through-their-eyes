@@ -12,6 +12,12 @@ every on-screen number before it airs.
 
 **Target prizes:** Grand Prize + Best Multi-Agent System (judges may reassign the category).
 
+**Lead with perception.** Freeze frames, tactical boards, shot probabilities, paced commentary and
+even deterministic number checks already appear in other broadcast-hackathon entries (REFERENCES,
+"Related hackathon work"). None of them shows what the player saw or what he would have done
+without one look. Open every pitch, video and README with perception and the counterfactual;
+verified numbers are the backbone, not the headline.
+
 | Judging criterion (20% each) | How we score |
 |---|---|
 | Technological implementation | Physics-based synthetic tracking with a research-calibrated perception layer; numpy↔GLSL parity-tested kernels; deterministic counterfactual re-simulation; CI eval suite; Foundry + Agent Framework + MCP + Azure Speech + ACA/SWA + Cosmos DB + App Insights |
@@ -256,6 +262,10 @@ for the agents: ids, time window, involved players, key metrics, candidate lense
   Goal, big chance and counter-press need shot outcomes and turnovers (M4).
 - Detections about the same action merge into one card with several tags. Card ids look like
   `m:decision_after_scan:H8:0075`.
+- **He thought vs it was.** For a decision moment, the card records P(success) of the chosen
+  option on the player's belief and on the true state, at the action frame — also for the
+  counterfactual run's choice. The freeze at the pass shows both ("he thought 0.05, it was 0.80").
+  Belief-side values are `computed` claims, counterfactual-run values are `counterfactual` claims.
 - A card names its anchor events (`reception`, `last_scan`, `action`, `completion`), so claims
   anchor on `<card>.<anchor>` (§5.3).
 - `content_hash()` keys the breakdown cache (§2).
@@ -363,12 +373,21 @@ tools exposed by our own MCP server.
 | Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
-| Narrator | Findings + plan + persona + language | `Script` (lines → claim refs + slot placeholders) | one call per persona × language; a style guide per persona |
+| Commentator | Findings + plan + persona + language | `Script` lines with `speaker: "pbp"` (claim refs + slot placeholders) | play-by-play voice: what happened, short and paced |
+| Co-commentator | Findings + Commentator's lines + persona + language | `Script` lines with `speaker: "color"` | analysis voice: why it happened, the perception story; replies to the play-by-play |
 | Verifier | Script + Claims | verdicts; approve or request a rewrite | deterministic code wrapped as a workflow step |
-| Voice | approved Script | audio (Azure Speech TTS, SSML) | cached by content hash |
+| Voice | approved Script | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
+
+**Two voices.** The two narration agents write one interleaved `Script`, each line tagged with its
+`speaker`. If either fails, a single-narrator template takes over (failure policy below).
+
+**Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
+MomentCard (lens |Δ|, outcome, phase), never from an LLM. Voice maps the tier to an SSML speaking
+style (`mstts:express-as`) where the chosen voice supports one, otherwise to prosody (rate, pitch).
+Check which styles the `en` and `zh` voices support during M3.
 
 **Failure policy.** Per-step timeout (≈ 8 s, *tunable*), one retry, then a template fallback for
-that step. Refuted claim → Narrator rewrite (max 2) → drop the line. Every handoff is traced to
+that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
 Application Insights.
 
 `TelestrationPlan` sketch:
@@ -406,7 +425,8 @@ original visual identity.
   - pitch control (GLSL shader);
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
-  - counterfactual ghost path.
+  - counterfactual ghost path;
+  - "he thought / it was" probability tag at the action freeze (§5.1).
 - **Breakdown player:** executes a `TelestrationPlan`; timeline with scan ticks; split view
   (POV | tactical).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
@@ -415,6 +435,8 @@ original visual identity.
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
+- *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
+  WebM); also usable as raw footage for the video.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
@@ -462,24 +484,30 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
-1. viewer pilot
-2. end-of-match recap reel
-3. `coach` persona
-4. `es` language
-5. Cosmos DB → file store
-6. occlusion model → FOV only
-7. pitch-control shader → precomputed textures
+1. shareable clip export (stretch)
+2. viewer pilot
+3. end-of-match recap reel
+4. two voices → one narrator
+5. `coach` persona
+6. `es` language
+7. Cosmos DB → file store
+8. occlusion model → FOV only
+9. pitch-control shader → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
 
 ## 10. Demo video storyboard (≤ 2:00)
-- **0:00–0:15** Broadcast camera; sprint speed tag; shot speed burst.
-- **0:15–0:55** Goal → freeze → "What did he see?" → POV through three scans; the third scan
-  lights up the free runner → counterfactual ghost: without that look he passes back.
-- **0:55–1:30** The same goal for casual / analyst / player-fan; switch voice `en` ↔ `zh`.
-- **1:30–1:45** The verifier blocks a wrong number in the producer console.
-- **1:45–2:00** Architecture (Microsoft stack) + eval numbers.
+- **0:00–0:08** Cold open in first person: the look over the shoulder, a runner appears.
+  "What did he see?"
+- **0:08–0:20** Broadcast camera; live overlays (sprint tag, pass speed); the move plays out.
+- **0:20–0:55** Breakdown, two voices: freeze → POV through the scans → the key scan lights up the
+  runner → freeze at the pass with "he thought / it was" → toggle **With / Without the look**:
+  without it he passes back (counterfactual ghost). The toggle is the highlight of the video.
+- **0:55–1:25** The same moment for casual / analyst / player-fan; `en` ↔ `zh`; open one caption's
+  evidence.
+- **1:25–1:40** The verifier blocks a wrong number and a banned judgement word.
+- **1:40–2:00** Architecture (Microsoft stack) + eval numbers.
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)

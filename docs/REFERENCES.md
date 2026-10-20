@@ -21,6 +21,24 @@
 - Learning resources: `RESOURCE PLAYLISTS.md` in the same repo.
 - Registration / landing: https://events.microsoft.com/flow/microsoft/plmshackathon/registration/page/landing
 
+### Related hackathon work (NBA × AWS "Broadcast Code 12H", 2026-10-10/11)
+Checked 2026-10-19; the winners list and the official brief were not reachable. Ideas only — no
+code is copied (CLAUDE.md rule 1).
+- **AgentDunker** (silver): 3D tactical sketches of screens and runs, freeze at the shot with xFG,
+  commentary in a pro style with an in-house voice model.
+  https://www.xiaohongshu.com/explore/6ad1e6e7000000000a027f1b
+- **GameBuddy** (silver, MIT): one evidence store; a small RL-trained model returns evidence ids
+  only; numbers copied from source records and checked programmatically (subject, metric, unit,
+  period, source); a 23.8 s play expanded to 55 s with freeze / rewind / slow motion; two-voice
+  commentary; shareable MP4. https://github.com/imhaojie/BroadcastCode-2026
+- **NBA_AWS_Broadcast12** (entry, MIT): seeded synthetic trajectories, labelled as such; key plays
+  scored on five dimensions; four-layer SVG tactics board; commentary tiers calm / excited /
+  clutch; overlay on/off comparison as the highlight.
+  https://github.com/CodeGanHaoZ/NBA_AWS_Broadcast12
+→ What we took: belief-vs-truth probability at the action freeze (§5.1), two voices and delivery
+  tiers (§6), the With / Without toggle as the video highlight (§10), clip export as a stretch (§7).
+  None of them models perception or counterfactuals (§0).
+
 ## Papers and how we use them
 
 ### Perception and scanning
