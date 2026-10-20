@@ -45,7 +45,9 @@ uv run python -m demo.realfeed.render              # out/realfeed/realfeed_overl
 The render writes `realfeed_overlay.mp4` (1920 × 1080, H.264, 50 fps, 9.98 s including a 1.2 s
 freeze on the carrier's first touch, marked by a pause sign), `realfeed_keyframe.png` and
 `report.json` (all numbers below) to `out/realfeed/`. `--preview 60,400` renders stills only.
-`uv run python -m demo.realfeed.check` then checks the label and attribution in every frame.
+`uv run python -m demo.realfeed.check` then checks every exported frame against its source:
+off-pitch legibility, every board and crest, the label and attribution (and the faces when
+`BLUR_FACES` is on). Source | export crops of each board and crest go to `out/realfeed/legibility/`.
 
 ## Method
 
@@ -91,11 +93,15 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
    - the goal frame: a camera recovered from the homography places the goal volume in the frame,
      and inside it only long straight white runs are kept (posts, crossbar, the frame of the net,
      found with a Hough transform), so the crest painted on the wall behind the net stays blurred;
-   - faces, which are not blurred (Bowen's decision on 2026-10-19).
+   - faces, which are not blurred. Bowen decided this on 2026-10-19; CLAUDE.md rule 2 and SPEC
+     §7 still ask for blurred faces until he confirms the change there. `render.BLUR_FACES`
+     turns a soft face blur back on, and `check.py` then verifies it.
 
-   The red kit carries a company logo. Light patches that are mostly bordered by red shirt are
-   inpainted from the shirt around them, which also removes the shirt numbers. The ball and white
-   socks are bordered by turf, so they are left alone.
+   The red kit carries a company logo on the chest and white numbers on the back. Their white is
+   warm, the same hue as skin, so position decides: every light pixel in the chest box of a
+   red-kit player (rows 15–50 % of the height, the middle 70 %) is inpainted from the shirt
+   around it, and so is any light blob mostly bordered by red shirt (for players the detector
+   missed). The ball and white socks are bordered by turf, so they are left alone.
 
 ## Measured (from `out/realfeed/report.json`)
 
@@ -105,7 +111,9 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 | Tracking drift, synthetic | under 1 px over 150 frames of known pan + zoom + keystone with moving distractors (`tests/test_realfeed.py`) |
 | Tracking drift, real clip | estimated against the painted lines every second: 1.7–3.2 px for the first 7 s; 3.8–6.9 px during the final zoom (8–10 s), about 5 cm on the ground at the end |
 | Players | about 80 % of visible players detected on spot-checked frames (28 of 34). Misses are mostly two players overlapping in the image and the goalkeeper diving. False positives are rare: a substitute standing on the far line, a goalpost in the final zoom. |
-| Masking | high-frequency (Laplacian) energy outside the pitch and player silhouettes is at most **2.2 %** of the source's in any frame |
+| Off-pitch legibility (`check.py`) | Share of the source's detail that survives off the pitch, measured as the export regressed on the source in every frame. Single-pixel detail: at most **0.05 %** (threshold 5 %). Letter-stroke scale, band-pass 1.5–4.5 px: at most **0.20 %** (threshold 10 %). H.264 noise is not correlated with the source, so it does not count. |
+| Boards and crests (`check.py`) | Letter-stroke detail kept inside each region tracked from the first frame, maximum over all frames (threshold 10 %): the three VETEK sponsor boards 0.4–1.1 %, the "ФК «МЕТАЛЛИСТ»" board 0.8 %, the V-logo board 1.0 %, the crests on the fence 1.0 % and 3.9 %, the crests on the dugout walls 2.7 % and 1.0 % |
+| Kit | Red kit: the chest logo and white back numbers are erased in the frames checked by eye (120, 250, 380, 430, 470, 495; Bowen's frame-by-frame review covers the rest). The small dark print under the back number is a few pixels wide and illegible. Sky-blue bibs and black shorts: numbers only, plus a maker's mark under 10 px. The orange goalkeeper's shirt is plain. |
 | Label and attribution | visible in **499 of 499** exported frames |
 | Graphics on non-turf pixels | **0** pixels in every frame |
 

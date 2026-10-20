@@ -156,7 +156,7 @@ def soften_heads(frame: np.ndarray, boxes, keep: np.ndarray) -> np.ndarray:
         if x1 - x0 < 3 or y1 - y0 < 3:
             continue
         roi = frame[y0:y1, x0:x1]
-        sigma = max(2.0, 0.22 * max(w, h))
+        sigma = max(3.0, 0.35 * max(w, h))
         soft = cv2.GaussianBlur(roi, (0, 0), sigma)
         m = np.zeros(roi.shape[:2], np.float32)
         centre = (int(x + w / 2 - x0), int(y + h / 2 - y0))
@@ -167,30 +167,43 @@ def soften_heads(frame: np.ndarray, boxes, keep: np.ndarray) -> np.ndarray:
     return out
 
 
-def kit_print_mask(frame: np.ndarray, region: np.ndarray, min_red_border: float = 0.6):
-    """Light prints on the red kit (a company logo, numbers) inside `region`.
+def kit_print_mask(
+    frame: np.ndarray,
+    region: np.ndarray,
+    chest_boxes: list[tuple[int, int, int, int]] = (),
+    min_red_border: float = 0.5,
+) -> np.ndarray:
+    """Light prints on the red kit (a company logo on the chest, numbers on the back).
 
-    A print is a light patch (white, or pinkish where red bleeds in) mostly bordered by red
-    shirt. The ball, a sock or an arm touching a red player is bordered by turf or background
-    as well, so it stays.
+    Two rules, united:
+    - inside each red-kit player's chest box (x, y, w, h): every light pixel of the region;
+    - anywhere in the region: a light blob, holes filled, mostly bordered by red shirt (this
+      catches players the detector missed; the ball or a sock touching a red player is bordered
+      by turf as well, so it stays).
+    Light means bright and not saturated; the prints here are warm white with red bleeding in,
+    the same hue as skin, so hue cannot separate them and position does instead.
     """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     red = ((h >= 168) | (h <= 6)) & (s > 120) & (v > 80)
-    light = ((s < 115) & (v > 165)).astype(np.uint8)
-    light = cv2.morphologyEx(light, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)).astype(bool)
-    n, lab, st, _ = cv2.connectedComponentsWithStats((light & region).astype(np.uint8), 8)
+    light = (s < 125) & (v > 155) & region
     out = np.zeros(frame.shape[:2], bool)
+    hh_, ww_ = frame.shape[:2]
+    for x, y, w, hb in chest_boxes:
+        x0, y0 = max(0, int(x)), max(0, int(y))
+        x1, y1 = min(ww_, int(x + w)), min(hh_, int(y + hb))
+        out[y0:y1, x0:x1] |= light[y0:y1, x0:x1]
+    n, lab, st, _ = cv2.connectedComponentsWithStats(light.astype(np.uint8), 8)
     k3 = np.ones((3, 3), np.uint8)
     for i in range(1, n):
-        x, y, w, hh, area = st[i]
+        x, y, w, hb, area = st[i]
         if area < 4 or area > 4000:
             continue
-        x0, y0 = max(0, x - 4), max(0, y - 4)
-        comp = _fill_holes(lab[y0 : y + hh + 4, x0 : x + w + 4] == i)  # dark text inside a print
-        ring = cv2.dilate(comp, k3, iterations=3).astype(bool) & ~comp.astype(bool)
-        if ring.any() and red[y0 : y + hh + 4, x0 : x + w + 4][ring].mean() >= min_red_border:
-            out[y0 : y + hh + 4, x0 : x + w + 4] |= comp.astype(bool)
+        x0, y0 = max(0, x - 5), max(0, y - 5)
+        comp = _fill_holes(lab[y0 : y + hb + 5, x0 : x + w + 5] == i)  # text inside a print
+        ring = cv2.dilate(comp, k3, iterations=2).astype(bool) & ~comp.astype(bool)
+        if ring.any() and red[y0 : y + hb + 5, x0 : x + w + 5][ring].mean() >= min_red_border:
+            out[y0 : y + hb + 5, x0 : x + w + 5] |= comp.astype(bool)
     return cv2.dilate(out.astype(np.uint8), k3, iterations=2).astype(bool)
 
 

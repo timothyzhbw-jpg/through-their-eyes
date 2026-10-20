@@ -380,3 +380,17 @@ def test_goal_frame_stays_sharp_but_a_pale_crest_behind_it_does_not():
     mask = goal_frame_mask(frame, h, gx)
     assert mask[posts.astype(bool)].mean() > 0.6
     assert mask[arc.astype(bool)].mean() < 0.1
+
+
+def test_warm_white_prints_in_a_chest_box_are_erased_but_skin_outside_is_not():
+    from demo.realfeed.privacy import kit_print_mask
+
+    frame = np.empty((200, 300, 3), np.uint8)
+    frame[:] = TURF[0]
+    cv2.rectangle(frame, (40, 30), (120, 150), (60, 60, 225), -1)  # red shirt
+    cv2.rectangle(frame, (60, 60), (100, 82), (190, 205, 235), -1)  # warm-white logo (skin hue)
+    cv2.rectangle(frame, (122, 40), (134, 110), (150, 175, 225), -1)  # bare arm beside the shirt
+    region = np.ones(frame.shape[:2], bool)
+    mask = kit_print_mask(frame, region, chest_boxes=[(52, 48, 56, 44)])
+    assert mask[62:80, 62:98].mean() > 0.95
+    assert not mask[45:105, 124:133].any()

@@ -43,6 +43,7 @@ from demo.realfeed.privacy import (
     goal_frame_mask,
     kit_print_mask,
     polygon_mask,
+    soften_heads,
 )
 from demo.realfeed.video import Writer
 
@@ -62,6 +63,10 @@ TEAM_COLOUR = {0: RED, 1: BLUE}
 # Off the pitch: blurred past reading any text, crest or face, yet still a football ground.
 BACKGROUND = {"factor": 10, "darken": 0.9, "desaturate": 0.2, "feather_px": 4}
 CONTROL_OPACITY = 0.24
+# Faces are not blurred: Bowen decided so on 2026-10-19. CLAUDE.md rule 2 and SPEC §7 still say
+# every face is blurred until he confirms the change there; True follows that text (and makes
+# check.py verify the faces).
+BLUR_FACES = False
 
 # The only text on the real footage (SPEC 7): what it is, and the CC BY attribution, on screen for
 # the whole segment. Graphics only otherwise: no numbers, captions or narration.
@@ -177,6 +182,38 @@ def _panel(img, box, alpha=0.55):
     roi[:] = (roi * (1 - alpha)).astype(np.uint8)
 
 
+def keep_mask(frame: np.ndarray, h: np.ndarray, pitch, dets: list[Detection]):
+    """(pitch area, pixels kept sharp). Players standing on the pitch rise above the far
+    touchline in the image, so their silhouettes stay sharp, and so does the white goal frame;
+    everything else outside the pitch is blurred."""
+    pitch_area = polygon_mask(h, pitch.polygon(margin=0.35), frame.shape[:2])
+    keep = pitch_area | player_silhouettes(dets, frame.shape[:2])
+    return pitch_area, keep | goal_frame_mask(frame, h, pitch.length / 2)
+
+
+def chest_boxes(dets: list[Detection], min_height_px: float = 60.0):
+    """Chest (or back) of every red-kit player: rows 15-50 % of the height, middle 70 %."""
+    out = []
+    for d in dets:
+        x, y, w, h = d.bbox
+        if d.team in (0, -1) and h >= min_height_px and _reddish(d.hue):
+            out.append((x + 0.15 * w, y + 0.15 * h, 0.7 * w, 0.35 * h))
+    return out
+
+
+def _reddish(hue: float) -> bool:
+    return not np.isnan(hue) and (hue >= 165 or hue <= 6)
+
+
+def head_boxes(dets: list[Detection], min_height_px: float = 90.0):
+    out = []
+    for d in dets:
+        x, y, w, h = d.bbox
+        if h >= min_height_px:
+            out.append((x + 0.15 * w, y - 0.03 * h, 0.7 * w, 0.2 * h))
+    return out
+
+
 def player_silhouettes(dets: list[Detection], shape, grow_px: int = 3) -> np.ndarray:
     m = np.zeros(shape, np.uint8)
     for d in dets:
@@ -205,6 +242,7 @@ def render(preview: set[int] | None = None) -> dict:
     pitch = cam.calibration.pitch
     canvas = Canvas(pitch, ppm=40.0, margin=1.0)
     writer = None if preview else Writer(VIDEO, FPS, SIZE)
+    held: list[tuple[int, tuple]] = []
     checks = {"frames": 0, "hf_ratio_outside_max": 0.0, "overlay_off_grass_px": 0}
     for i, frame in enumerate(frames()):
         if i < START or (preview is not None and i not in preview):
@@ -216,18 +254,17 @@ def render(preview: set[int] | None = None) -> dict:
             fade = 0.0
         layer = ground_layer(canvas, st[i], carrier, max(0.0, fade))
         bgr, alpha = layer.project(h, SIZE)
-        pitch_area = polygon_mask(h, pitch.polygon(margin=0.35), frame.shape[:2])
+        pitch_area, keep = keep_mask(frame, h, pitch, dets[i])
         key = grass_mask(frame) & pitch_area
-        # Players standing on the pitch rise above the far touchline in the image: their
-        # silhouettes stay sharp, and so does the white goal frame; the rest outside is blurred.
-        keep = pitch_area | player_silhouettes(dets[i], frame.shape[:2])
-        keep |= goal_frame_mask(frame, h, pitch.length / 2)
         out = composite(frame, bgr, alpha, key)
         changed = np.any(out != frame, axis=-1)
         checks["overlay_off_grass_px"] += int((changed & ~key).sum())
         # Shirt prints first, from the source pixels, then the background.
-        out = erase_prints(out, kit_print_mask(frame, keep))
+        out = erase_prints(out, kit_print_mask(frame, keep, chest_boxes(dets[i])))
         out = blur_outside(out, keep, **BACKGROUND)
+        if BLUR_FACES:  # detections held for a few frames against flicker
+            held = [(f, b) for f, b in held if i - f <= 6] + [(i, b) for b in head_boxes(dets[i])]
+            out = soften_heads(out, [b for _, b in held], keep)
         reps = FREEZE_FRAMES if i == CARRIER_FRAME else 1
         for r in range(reps):
             img = out.copy()
