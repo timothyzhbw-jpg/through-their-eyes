@@ -89,12 +89,6 @@ src/
   label "Counterfactual · inside the sim": they are causal only inside the simulation. The payload
   is checked like a plan (references resolve, evidence events exist, seek frames are in the clip);
   a line with an unsupported claim is withheld.
-- **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
-  "What if he carried it?"); what he actually did is marked. Picking one replays the moment from
-  the decision with the forced run as a gold ghost on the tactical board (its ball path, growing
-  with the playhead, and ghosts of the players on the ball) and shows the verified answer lines
-  with their counterfactual labels; each line opens its claims and seeks to the evidence, as in
-  the narration. Free questions need the live service: the text box is disabled until then.
 - **Body and head yaw on every player.** In first person a token is a capsule body turned to
   `body_yaw` with a head on top turned to `head_yaw` (relative to the body, never clamped); a white
   visor marks the front of the head, so a look over the shoulder is visible on anyone in view. On
@@ -103,6 +97,12 @@ src/
   The skinned humanoid model is a separate, later card; this is its fallback.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
+- **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
+  "What if he carried it?"); what he actually did is marked. Picking one replays the moment from
+  the decision with the forced run as a gold ghost on the tactical board (its ball path, growing
+  with the playhead, and ghosts of the players on the ball) and shows the verified answer lines
+  with their counterfactual labels; each line opens its claims and seeks to the evidence, as in
+  the narration. Free questions need the live service: the text box is disabled until then.
 
 ### Frontend choices, briefly (for Python / C++ readers)
 
