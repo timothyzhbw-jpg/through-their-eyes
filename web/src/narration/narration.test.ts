@@ -73,12 +73,13 @@ describe("render payload", () => {
 
 describe("every caption line opens its claims and seeks the replay to their evidence", () => {
   const session = createSession(hero, EXAMPLE_PLAN, fixture);
-  const narration = session.narration!;
+  const { narration: shown, resolved } = session.breakdown.get();
+  const narration = shown!;
   const { controls, playback } = session;
 
   it("captions every line of the payload in the example plan", () => {
-    expect(session.resolved.source).toBe("given");
-    const voiced = session.resolved.plan.steps.flatMap((s) => (s.do === "voice" ? [s.line] : []));
+    expect(resolved.source).toBe("given");
+    const voiced = resolved.plan.steps.flatMap((s) => (s.do === "voice" ? [s.line] : []));
     expect([...voiced].sort()).toEqual(narration.lines.map((l) => l.id).sort());
   });
 

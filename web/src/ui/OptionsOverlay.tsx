@@ -13,7 +13,7 @@ import {
   toScreen,
   type PassOption,
 } from "../options/passOptions";
-import { useSession } from "../session";
+import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { boardZoom } from "../views/scene";
 import { KindTag } from "./Narration";
@@ -37,7 +37,8 @@ function useSize<T extends HTMLElement>() {
 }
 
 export function OptionsOverlay() {
-  const { hero, narration, playback } = useSession();
+  const { hero, playback } = useSession();
+  const { narration } = useBreakdown();
   const mode = useStore(playback, (s) => s.mode);
   const frame = useStore(playback, (s) => s.frame);
   const playing = useStore(playback, (s) => s.playing);

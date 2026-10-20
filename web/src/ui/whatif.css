@@ -1,13 +1,13 @@
 /* The "What if…?" box (SPEC 6, 7). Answers are counterfactual: gold, like the run without the
    look, so a what-if never reads as something that happened. */
-.whatif .lang {
+.lang {
   display: inline-flex;
   margin-left: auto;
   border: 1px solid var(--line);
   border-radius: 5px;
   overflow: hidden;
 }
-.whatif .lang button {
+.lang button {
   font: 600 12px/1 var(--font-body);
   color: var(--muted);
   background: var(--surface);
@@ -15,7 +15,7 @@
   padding: 6px 9px;
   cursor: pointer;
 }
-.whatif .lang button[aria-pressed="true"] {
+.lang button[aria-pressed="true"] {
   color: var(--bg);
   background: var(--fg);
 }
@@ -55,15 +55,25 @@
   text-transform: uppercase;
   color: var(--sight);
 }
+.free {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
 .free-question {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   font: 14px/1.2 var(--font-body);
   color: var(--muted);
   background: var(--bg);
   border: 1px dashed var(--line);
   border-radius: 6px;
   padding: 9px 11px;
-  margin-bottom: 10px;
+}
+.free-question:enabled {
+  color: var(--fg);
+  border-style: solid;
 }
 .answer {
   border-left: 3px solid var(--sight);
@@ -120,4 +130,11 @@
 .answer-lines .claims {
   margin: 6px 0 4px;
   grid-template-columns: 1fr;
+}
+.answer.refused {
+  border-left-color: var(--muted);
+}
+.answer.refused p {
+  margin: 0;
+  color: var(--muted);
 }

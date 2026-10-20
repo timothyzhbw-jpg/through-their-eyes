@@ -2,7 +2,11 @@
 // evidence card under the views, and the list of every line. Any line can be opened: it shows
 // each claim with its kind label, verdict, values and evidence events, and seeks the replay to
 // the evidence. Counterfactual claims always carry their label: they are causal only in the sim.
+// With the live service the panel also picks the persona and language (SPEC 1), says where the
+// breakdown came from (cached or generated, model or template, rate limit and daily cap) and
+// turns the voice on.
 
+import { PERSONAS } from "../api/client";
 import type { Hero } from "../data/hero";
 import {
   claimRun,
@@ -14,8 +18,12 @@ import {
   type PayloadClaim,
   type PayloadLine,
 } from "../narration/payload";
-import { useSession } from "../session";
+import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { LANGUAGES } from "../whatif/whatif";
+import { LANG_LABEL, PERSONA_LABEL } from "./labels";
+import "./live.css";
+import "./whatif.css";
 
 export function KindTag({ kind }: { kind: ClaimKind }) {
   return (
@@ -43,7 +51,8 @@ const hasCounterfactual = (narration: Narration, line: PayloadLine) =>
 
 /** The current voice line over the first-person view. Click to open its evidence. */
 export function Caption() {
-  const { narration, playback, controls } = useSession();
+  const { playback, controls } = useSession();
+  const { narration } = useBreakdown();
   const lineId = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
   const line = lineOf(narration, lineId);
@@ -70,7 +79,8 @@ function eventFrame(hero: Hero, id: string): number | undefined {
 
 /** The claims behind the open line, right under the views. */
 export function EvidenceCard() {
-  const { hero, narration, playback, controls } = useSession();
+  const { hero, playback, controls } = useSession();
+  const { narration } = useBreakdown();
   const lineId = useStore(playback, (s) => s.evidenceLine);
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
@@ -188,9 +198,164 @@ export function ClaimCard({
   );
 }
 
+/** Where the breakdown on screen came from (SPEC 2, 8). */
+export function BreakdownSource() {
+  const { origin } = useBreakdown();
+  if (!origin) return null;
+  if (origin.kind === "bundled") {
+    return (
+      <span className="plan-badge fallback" title="The bundled breakdown in public/data">
+        Offline data
+      </span>
+    );
+  }
+  const seconds = (origin.totalMs / 1000).toFixed(1);
+  return (
+    <>
+      <span
+        className={origin.cached ? "plan-badge ok" : "plan-badge fresh"}
+        title={
+          origin.cached
+            ? `Served from the breakdown cache (key ${origin.key})`
+            : `Generated now by the agent crew in ${seconds} s, then cached`
+        }
+      >
+        {origin.cached ? "Cached" : "Generated"}
+      </span>
+      <span
+        className={origin.source === "model" ? "plan-badge" : "plan-badge fallback"}
+        title={
+          origin.source === "model"
+            ? "Written by the agent crew on the Microsoft Foundry model, then verified"
+            : "No model call: the crew's offline template wrote it, then the verifier checked it"
+        }
+      >
+        {origin.source === "model" ? "Model" : "Template"}
+      </span>
+      {origin.rateLimited && (
+        <span
+          className="plan-badge fallback"
+          title="Too many new breakdowns from this address: the cache or the template was served"
+        >
+          Rate-limited
+        </span>
+      )}
+      {origin.capped && (
+        <span
+          className="plan-badge fallback"
+          title="Today's model budget is used up: the cache or the template was served"
+        >
+          Daily cap reached
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Persona and language of the breakdown, and the voice. Offline only the bundled one exists. */
+export function BreakdownChoice() {
+  const { api, controls } = useSession();
+  const { persona, language } = useBreakdown();
+  const online = api !== null;
+  const why = online ? undefined : "Other audiences and languages need the live service";
+  return (
+    <div className="choice">
+      <label title={why}>
+        <span>Audience</span>
+        <select
+          value={persona}
+          disabled={!online}
+          onChange={(e) => controls.setPersona(e.target.value as (typeof PERSONAS)[number])}
+        >
+          {PERSONAS.map((p) => (
+            <option key={p} value={p}>
+              {PERSONA_LABEL[p]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span className="lang" role="group" aria-label="Narration language" title={why}>
+        {LANGUAGES.map((l) => (
+          <button
+            key={l}
+            type="button"
+            aria-pressed={language === l}
+            disabled={!online}
+            onClick={() => controls.setLanguage(l)}
+          >
+            {LANG_LABEL[l]}
+          </button>
+        ))}
+      </span>
+      <SoundToggle />
+    </div>
+  );
+}
+
+/** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on. */
+export function SoundToggle() {
+  const { voice, controls } = useSession();
+  const on = useStore(voice.state, (s) => s.on);
+  const status = useStore(voice.state, (s) => s.status);
+  const error = useStore(voice.state, (s) => s.error);
+  const title = !voice.available
+    ? "The voice needs the live service"
+    : error
+      ? `Speech failed: ${error}`
+      : on
+        ? "Turn the commentary voice off"
+        : "Speak each narration line as it comes up";
+  return (
+    <button
+      type="button"
+      className={status === "failed" ? "sound failed" : "sound"}
+      aria-pressed={on}
+      disabled={!voice.available}
+      title={title}
+      onClick={() => controls.setSound(!on)}
+    >
+      {on ? "Sound on" : "Sound off"}
+      {on && status === "loading" && " …"}
+    </button>
+  );
+}
+
+/** Online, before and while the breakdown is asked for; or why the service gave none. */
+function BreakdownNote() {
+  const { controls } = useSession();
+  const { status, error, persona, language } = useBreakdown();
+  if (status === "waiting") {
+    return (
+      <p className="note waiting">
+        The breakdown is asked for when the live stream detects the moment.{" "}
+        <button type="button" className="link" onClick={controls.requestBreakdown}>
+          Ask now
+        </button>
+      </p>
+    );
+  }
+  if (status === "loading") {
+    return (
+      <p className="note waiting">
+        Asking the agent crew for the {PERSONA_LABEL[persona].toLowerCase()} breakdown in{" "}
+        {LANG_LABEL[language]}: a cached one comes back at once, a new one takes about 10 s.
+      </p>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <p className="plan-errors">
+        The live service gave no breakdown ({error}). Showing the bundled one instead.
+      </p>
+    );
+  }
+  return null;
+}
+
 /** Every line of the breakdown's narration; each opens its evidence. */
 export function NarrationPanel() {
-  const { narration, payloadErrors, playback, controls } = useSession();
+  const { playback, controls } = useSession();
+  const { narration, payloadErrors, status } = useBreakdown();
   const caption = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
   return (
@@ -207,17 +372,11 @@ export function NarrationPanel() {
             Fixture
           </span>
         )}
+        <BreakdownSource />
       </div>
-      {!narration ? (
-        <div className="plan-errors">
-          <p>No narration: the render payload failed its checks.</p>
-          <ul>
-            {payloadErrors.map((e) => (
-              <li key={e}>{e}</li>
-            ))}
-          </ul>
-        </div>
-      ) : (
+      <BreakdownChoice />
+      <BreakdownNote />
+      {narration ? (
         <ol className="lines">
           {narration.lines.map((line) => (
             <li key={line.id} className={line.id === caption ? "now" : undefined}>
@@ -241,6 +400,17 @@ export function NarrationPanel() {
             </li>
           ))}
         </ol>
+      ) : (
+        (status === "ready" || status === "failed") && (
+          <div className="plan-errors">
+            <p>No narration: the render payload failed its checks.</p>
+            <ul>
+              {payloadErrors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          </div>
+        )
       )}
       {narration?.fixture && <p className="note">{narration.payload.note}</p>}
     </div>
