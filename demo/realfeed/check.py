@@ -35,9 +35,9 @@ from demo.realfeed.pipeline import camera
 from demo.realfeed.render import (
     BACKGROUND,
     BLUR_FACES,
-    CARRIER_FRAME,
     FREEZE_FRAMES,
     KEYFRAME,
+    SHOT_FRAME,
     START,
     VIDEO,
     head_boxes,
@@ -60,16 +60,16 @@ REGIONS = {
 }
 MAX_FINE = 0.05  # at most 5 % of the source's single-pixel detail survives off the pitch
 MAX_LETTER = 0.10  # ... and at most 10 % of its letter-stroke detail, also inside each region
-REVIEW_FRAMES = (0, 170, CARRIER_FRAME - START, 498)
+REVIEW_FRAMES = (0, 170, SHOT_FRAME - START, 498)
 CASCADES = ("haarcascade_frontalface_default.xml", "haarcascade_profileface.xml")
 
 
 def source_index(k: int) -> int:
-    """Clip frame shown at output frame k (the freeze repeats CARRIER_FRAME)."""
+    """Clip frame shown at output frame k (the freeze repeats SHOT_FRAME)."""
     i = START + k
-    if i <= CARRIER_FRAME:
+    if i <= SHOT_FRAME:
         return i
-    return max(CARRIER_FRAME, i - (FREEZE_FRAMES - 1))
+    return max(SHOT_FRAME, i - (FREEZE_FRAMES - 1))
 
 
 def _gray(img: np.ndarray) -> np.ndarray:
@@ -109,7 +109,8 @@ def main() -> None:
     pitch = cam.calibration.pitch
     blank = np.zeros((SIZE[1], SIZE[0], 3), np.uint8)
     label_box = hud(blank.copy(), freeze=False)[0]
-    hud_boxes = hud(blank.copy(), freeze=True, share=0.5)  # every panel that can appear
+    shot = {"goal_m": 10.0, "nearest_m": 1.0, "best_pass": 0.5}
+    hud_boxes = hud(blank.copy(), freeze=True, share=0.5, shot=shot)  # every panel that can appear
     grow = 2 * BACKGROUND["feather_px"] + 5  # the feathered rim reaches this far outward
     review = OUT / "legibility"
     review.mkdir(parents=True, exist_ok=True)

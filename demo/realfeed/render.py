@@ -52,19 +52,21 @@ from demo.realfeed.video import Writer
 VIDEO = OUT / "realfeed_overlay.mp4"
 KEYFRAME = OUT / "realfeed_keyframe.png"
 
-START = 60  # first clip frame in the output; keeps the segment under 10 s
+START = 90  # first clip frame in the output; keeps the segment under 10 s
 # The ball reaches a blue player at the centre circle: first touch at frame 400 (15:54.0 in the
 # source), shot at 410, read off the footage by eye. No ball detector and no committed player
 # positions: the carrier is chosen by rule, the blue player nearest the centre spot then.
 CARRIER_FRAME = 400
 CARRIER_TEAM = 1
-OPTIONS = (360, 412)  # frames showing his pass options
-FREEZE_FRAMES = 60  # 1.2 s hold on CARRIER_FRAME
+OPTIONS = (360, 414)  # frames showing his pass options and the shot line
+SHOT_FRAME = 405  # his foot meets the ball: the freeze
+FREEZE_FRAMES = 90  # 1.8 s hold on SHOT_FRAME
 GOALKEEPER_TEAM = 0  # the orange keeper defends the goal blue attacks: he plays for red
 TEAM_COLOUR = {0: RED, 1: BLUE}
+SHOT = (60, 225, 255)  # BGR, the shot line and its numbers
 # Off the pitch: blurred past reading any text, crest or face, yet still a football ground.
 BACKGROUND = {"factor": 10, "darken": 0.9, "desaturate": 0.2, "feather_px": 4}
-CONTROL_OPACITY = 0.24
+CONTROL_OPACITY = 0.30
 # Faces are not blurred: Bowen decided so on 2026-10-19. CLAUDE.md rule 2 and SPEC §7 still say
 # every face is blurred until he confirms the change there; True follows that text (and makes
 # check.py verify the faces).
@@ -140,10 +142,18 @@ def carrier_track(st: list[list[PlayerState]]) -> int:
     return min(blue, key=lambda s: float(np.linalg.norm(s.pos))).track
 
 
-def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None, fade: float):
-    """The ground graphics, plus notes (pitch point, text) for the estimated numbers."""
+def ground_layer(
+    canvas: Canvas,
+    players: list[PlayerState],
+    carrier: int | None,
+    fade: float,
+    goal: np.ndarray | None = None,
+):
+    """The ground graphics, notes (pitch point, text, accent colour) for the estimated numbers,
+    and a summary of the shot for the freeze panel."""
     layer = Layer(canvas)
-    notes: list[tuple[np.ndarray, str]] = []
+    notes: list[tuple[np.ndarray, str, tuple]] = []
+    summary: dict[str, float] = {}
     red = [p for p in players if p.team == 0]
     blue = [p for p in players if p.team == 1]
     if len(red) >= 2 and len(blue) >= 2:
@@ -160,7 +170,7 @@ def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None
         )
         layer.heat(colours, CONTROL_OPACITY * strength * valid)
     for q in players:
-        layer.circle(q.pos, 0.55, TEAM_COLOUR[q.team], 0.10, opacity=0.95)
+        layer.circle(q.pos, 0.55, TEAM_COLOUR[q.team], 0.14, opacity=0.95)
     if carrier is not None and fade > 0:
         c = next((q for q in players if q.track == carrier), None)
         if c is not None:
@@ -171,22 +181,35 @@ def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None
                 np.array([q.vel for q in opp]).reshape(-1, 2),
             )
             for r in (2.0, 4.0):
-                layer.circle(c.pos, r, WHITE, 0.035, opacity=0.6 * fade)
+                layer.circle(c.pos, r, WHITE, 0.05, opacity=0.75 * fade)
+            best = 0.0
             for m in mates:
                 safe = pass_safety(c.pos, m.pos, opp_pv)
+                best = max(best, safe)
                 d = m.pos - c.pos
                 end = m.pos - d / max(np.linalg.norm(d), 1e-6) * 0.6
-                layer.line(c.pos, end, safety_colour(safe), 0.16, opacity=0.95 * fade)
-                layer.circle(m.pos, 0.75, safety_colour(safe), 0.10, opacity=0.95 * fade)
-                notes.append((m.pos, f"~{round(100 * safe)}%"))
+                col = safety_colour(safe)
+                layer.line(c.pos, end, col, 0.2, opacity=0.95 * fade)
+                layer.circle(m.pos, 0.75, col, 0.14, opacity=0.95 * fade)
+                notes.append((m.pos, f"~{round(100 * safe)}%", col))
+            if mates:
+                summary["best_pass"] = best
             if opp:
                 near = min(opp, key=lambda q: float(np.linalg.norm(q.pos - c.pos)))
                 d = near.pos - c.pos
                 dist = float(np.linalg.norm(d))
                 for a in np.arange(0.0, 1.0, 0.16):  # dashed line to the nearest opponent
-                    layer.line(c.pos + d * a, c.pos + d * min(1.0, a + 0.09), WHITE, 0.06, fade)
-                notes.append((c.pos + d / 2, f"~{dist:.1f} m"))
-    return layer, notes
+                    layer.line(c.pos + d * a, c.pos + d * min(1.0, a + 0.09), WHITE, 0.08, fade)
+                notes.append((c.pos + d / 2, f"~{dist:.1f} m", WHITE))
+                summary["nearest_m"] = dist
+            if goal is not None:
+                d = goal - c.pos
+                dist = float(np.linalg.norm(d))
+                for a in np.arange(0.0, 1.0, 0.06):  # dashed shot line to the goal centre
+                    layer.line(c.pos + d * a, c.pos + d * min(1.0, a + 0.035), SHOT, 0.1, fade)
+                notes.append((c.pos + d * 0.55, f"~{dist:.1f} m to goal", SHOT))
+                summary["goal_m"] = dist
+    return layer, notes, summary
 
 
 def control_share(pitch, h: np.ndarray, players: list[PlayerState]) -> float | None:
@@ -215,10 +238,14 @@ def _text(img, text, org, scale=0.8, colour=(255, 255, 255), thick=1):
 
 
 def hud(
-    img: np.ndarray, freeze: bool, share: float | None = None
+    img: np.ndarray,
+    freeze: bool,
+    share: float | None = None,
+    shot: dict[str, float] | None = None,
 ) -> list[tuple[int, int, int, int]]:
     """Label and attribution (bottom left), the pitch-control share (top left, with the
-    estimate disclaimer), a pause sign while frozen; returns the panel boxes."""
+    estimate disclaimer), and while frozen a pause sign and the shot panel (top right);
+    returns the panel boxes."""
     h, w = img.shape[:2]
     pad, gap = 14, 10
     stats = [] if share is None else [_share_panel(img, share)]
@@ -240,47 +267,86 @@ def hud(
     )
     boxes = [box, *stats]
     if freeze:
-        # A pause sign, not a word: the footage carries no captions.
         box = (w - 24 - 64, 24, 64, 64)
-        _panel(img, box)
+        _panel(img, box, 0.7)
         for x0 in (w - 24 - 64 + 18, w - 24 - 64 + 36):
             cv2.rectangle(img, (x0, 24 + 16), (x0 + 10, 24 + 48), (255, 255, 255), -1)
         boxes.append(box)
+        if shot:
+            boxes.append(_shot_panel(img, shot, top=24 + 64 + 12))
     return boxes
 
 
+def _shot_panel(img: np.ndarray, shot: dict[str, float], top: int) -> tuple[int, int, int, int]:
+    """The numbers at the moment of the shot, large, under the pause sign."""
+    f = cv2.FONT_HERSHEY_DUPLEX
+    rows = []
+    if "goal_m" in shot:
+        rows.append(("Distance to goal", f"~{shot['goal_m']:.1f} m", SHOT))
+    if "nearest_m" in shot:
+        rows.append(("Nearest defender", f"~{shot['nearest_m']:.1f} m", WHITE))
+    if "best_pass" in shot:
+        best = shot["best_pass"]
+        rows.append(("Best pass option", f"~{round(100 * best)}%", safety_colour(best)))
+    pad, lw, vw, rh = 18, 0, 0, 0
+    for label, value, _ in rows:
+        (a, ah), _ = cv2.getTextSize(label, f, 0.75, 1)
+        (b, bh), _ = cv2.getTextSize(value, f, 1.15, 2)
+        lw, vw, rh = max(lw, a), max(vw, b), max(rh, ah, bh)
+    (tw, th), _ = cv2.getTextSize("SHOT", f, 0.9, 2)
+    (nw, nh), _ = cv2.getTextSize(ESTIMATE_NOTE, f, 0.5, 1)
+    width = max(lw + 30 + vw, tw, nw) + 2 * pad
+    height = th + len(rows) * (rh + 18) + nh + 2 * pad + 22
+    x0 = img.shape[1] - 24 - width
+    box = (x0, top, width, height)
+    _panel(img, box, 0.72)
+    cv2.rectangle(img, (x0, top), (x0 + 6, top + height), SHOT, -1)
+    y = top + pad + th
+    _text(img, "SHOT", (x0 + pad, y), 0.9, SHOT, 2)
+    for label, value, col in rows:
+        y += rh + 18
+        _text(img, label, (x0 + pad, y), 0.75, (225, 225, 225))
+        vx = x0 + width - pad - cv2.getTextSize(value, f, 1.15, 2)[0][0]
+        _text(img, value, (vx, y), 1.15, col, 2)
+    y += nh + 20
+    _text(img, ESTIMATE_NOTE, (x0 + pad, y), 0.5, (180, 180, 180))
+    return box
+
+
 def _share_panel(img: np.ndarray, share: float) -> tuple[int, int, int, int]:
-    pad = 14
+    pad = 16
     red_t, blue_t = f"RED ~{round(100 * share)}%", f"BLUE ~{100 - round(100 * share)}%"
     title, note = "PITCH CONTROL IN VIEW", ESTIMATE_NOTE
     f = cv2.FONT_HERSHEY_DUPLEX
-    (tw, th), _ = cv2.getTextSize(title, f, 0.55, 1)
-    (rw, rh), _ = cv2.getTextSize(red_t, f, 0.8, 1)
-    (bw, _), _ = cv2.getTextSize(blue_t, f, 0.8, 1)
+    (tw, th), _ = cv2.getTextSize(title, f, 0.65, 1)
+    (rw, rh), _ = cv2.getTextSize(red_t, f, 1.05, 2)
+    (bw, _), _ = cv2.getTextSize(blue_t, f, 1.05, 2)
     (nw, nh), _ = cv2.getTextSize(note, f, 0.5, 1)
-    width = max(tw, rw + 30 + bw, nw) + 2 * pad
-    height = th + rh + nh + 2 * pad + 28
+    width = max(tw, rw + 36 + bw, nw) + 2 * pad
+    height = th + rh + nh + 2 * pad + 32
     box = (24, 24, width, height)
-    _panel(img, box)
+    _panel(img, box, 0.65)
     y = 24 + pad + th
-    _text(img, title, (24 + pad, y), 0.55, (210, 210, 210))
-    y += rh + 14
-    _text(img, red_t, (24 + pad, y), 0.8, (90, 90, 245))
-    _text(img, blue_t, (24 + pad + rw + 30, y), 0.8, (245, 185, 90))
-    y += nh + 14
+    _text(img, title, (24 + pad, y), 0.65, (215, 215, 215))
+    y += rh + 16
+    _text(img, red_t, (24 + pad, y), 1.05, (90, 90, 245), 2)
+    _text(img, blue_t, (24 + pad + rw + 36, y), 1.05, (245, 185, 90), 2)
+    y += nh + 16
     _text(img, note, (24 + pad, y), 0.5, (180, 180, 180))
     return box
 
 
-def _tag(img, text: str, centre, scale: float = 0.6) -> tuple[int, int, int, int]:
-    """A number on a small dark panel centred at `centre`; returns the panel box."""
-    (tw, th), base = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 1)
-    pad = 5
+def _tag(img, text: str, centre, scale: float = 0.85, accent=None) -> tuple[int, int, int, int]:
+    """A number on a dark panel centred at `centre`, with a coloured edge; returns the box."""
+    (tw, th), base = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 2)
+    pad = 8
     x = int(np.clip(centre[0] - tw / 2 - pad, 0, img.shape[1] - tw - 2 * pad))
     y = int(np.clip(centre[1] - th / 2 - pad, 0, img.shape[0] - th - base - 2 * pad))
-    box = (x, y, tw + 2 * pad, th + base + 2 * pad)
-    _panel(img, box, 0.6)
-    _text(img, text, (x + pad, y + pad + th), scale)
+    box = (x, y, tw + 2 * pad + 4, th + base + 2 * pad)
+    _panel(img, box, 0.72)
+    if accent is not None:
+        cv2.rectangle(img, (x, y), (x + 4, y + box[3]), accent, -1)
+    _text(img, text, (x + pad + 4, y + pad + th), scale, (255, 255, 255), 2)
     return box
 
 
@@ -351,6 +417,7 @@ def render(preview: set[int] | None = None) -> dict:
     canvas = Canvas(pitch, ppm=40.0, margin=1.0)
     writer = None if preview else Writer(VIDEO, FPS, SIZE)
     held: list[tuple[int, tuple]] = []
+    goal = np.array([pitch.length / 2, 0.0])
     share: float | None = None
     checks = {"frames": 0, "hf_ratio_outside_max": 0.0, "overlay_off_grass_px": 0}
     for i, frame in enumerate(frames()):
@@ -361,7 +428,7 @@ def render(preview: set[int] | None = None) -> dict:
             fade = min(1.0, (i - OPTIONS[0]) / 10.0, (OPTIONS[1] - i) / 6.0 + 0.0)
         else:
             fade = 0.0
-        layer, notes = ground_layer(canvas, st[i], carrier, max(0.0, fade))
+        layer, notes, summary = ground_layer(canvas, st[i], carrier, max(0.0, fade), goal)
         s_now = control_share(pitch, h, st[i])
         if s_now is not None:
             share = s_now if share is None else share + 0.08 * (s_now - share)
@@ -379,20 +446,20 @@ def render(preview: set[int] | None = None) -> dict:
             out = soften_heads(out, [b for _, b in held], keep)
         # Estimated numbers, drawn as screen-space tags after the blur.
         tag_boxes = []
-        for world, text in notes:
+        for world, text, accent in notes:
             px = apply_h(h, world)[0]
-            tag_boxes.append(_tag(out, text, (px[0], px[1] + 26)))
+            tag_boxes.append(_tag(out, text, (px[0], px[1] + 34), 0.85, accent))
         fast = sorted((q for q in st[i] if q.show_speed), key=lambda q: -q.speed_kmh)[
             :MAX_SPEED_TAGS
         ]
         for q in fast:
             px = apply_h(h, q.pos)[0]
             text = f"~{round(q.speed_kmh)} km/h"
-            tag_boxes.append(_tag(out, text, (px[0], px[1] + 30), 0.55))
-        reps = FREEZE_FRAMES if i == CARRIER_FRAME else 1
+            tag_boxes.append(_tag(out, text, (px[0], px[1] + 36), 0.75, TEAM_COLOUR[q.team]))
+        reps = FREEZE_FRAMES if i == SHOT_FRAME else 1
         for r in range(reps):
             img = out.copy()
-            hud_boxes = hud(img, freeze=reps > 1, share=share) + tag_boxes
+            hud_boxes = hud(img, freeze=reps > 1, share=share, shot=summary) + tag_boxes
             if r == 0:
                 grow = 2 * BACKGROUND["feather_px"] + 5  # skip the feathered rim
                 outside = cv2.erode(
@@ -411,7 +478,7 @@ def render(preview: set[int] | None = None) -> dict:
                 cv2.imwrite(str(OUT / f"preview_{i:03d}.png"), img)
                 break
             writer.write(img)
-            if i == CARRIER_FRAME and r == 0:
+            if i == SHOT_FRAME and r == 0:
                 cv2.imwrite(str(KEYFRAME), img)
     if writer is not None:
         writer.close()
