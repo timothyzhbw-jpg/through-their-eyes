@@ -169,7 +169,22 @@ def test_a_wrong_number_is_checked_against_the_hero_moment_it_belongs_to(client,
     assert {k: r.json()[k] for k in ("verified_value", "status", "line")} == {
         k: own[k] for k in ("verified_value", "status", "line")
     }
-    assert (
-        client.post("/api/verify", json=body).status_code == 404
-    )  # the first hero has no such claim
+    first = client.post("/api/verify", json=body).json()  # no moment: the first hero (H8)
+    assert first["verified_value"] == 0 != own["verified_value"]
     assert client.post("/api/verify", json={**body, "moment": "nope"}).status_code == 404
+
+
+def test_the_pressure_hero_is_described_for_listeners(client):
+    # Audio description (SPEC 1) on a hero without a key scan: no scan lines, no analyst numbers.
+    from agents.delivery import ANALYST_NUMBERS
+
+    body = {"match": PRESS, "personas": ["audio_description"], "languages": ["en", "zh"]}
+    r = client.post("/api/breakdowns", json=body)
+    assert r.status_code == 200
+    for script in r.json()["result"]["scripts"]:
+        lines = script["payload"]["lines"]
+        claims = {c for line in lines for c in line["claims"]}
+        assert lines and not script["dropped"]
+        assert "heavy_pressure" in claims and "reception_zone" in claims
+        assert not claims & ANALYST_NUMBERS
+        assert not claims & {"scan_side", "seen_in_scan", "scan_before_reception"}
