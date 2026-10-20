@@ -102,6 +102,23 @@ def test_an_offline_breakdown_is_one_trace_with_a_span_per_step(ctx, exporter):
     _only_ids_and_counts(spans, {line.text for s in r.scripts for line in s.lines})
 
 
+def test_the_parallel_lanes_overlap_and_stay_children_of_the_breakdown(ctx, exporter):
+    """The Telestrator and narration run at the same time; the Verifier waits for both."""
+    exporter.clear()
+    delays = {"telestrator": 0.4, "pbp": 0.2, "color": 0.2}
+    fake = FakeChatClient(_good_replies(ctx), delays=delays)
+    breakdown(ctx, client=fake, personas=("analyst",), languages=("en",))
+    root, steps, spans = _trace(exporter)
+    assert len(steps) == len([s for s in spans if s.name in STEPS])  # all children of breakdown
+    assert list(dict.fromkeys(s.name for s in steps)) == STEPS
+    (tele,) = [s for s in steps if s.name == "telestrator"]
+    narration = [s for s in steps if s.name == "narration"]
+    (verifier,) = [s for s in steps if s.name == "verifier"]
+    assert len(narration) == 2
+    assert all(n.start_time < tele.end_time and tele.start_time < n.end_time for n in narration)
+    assert verifier.start_time >= max([tele.end_time] + [n.end_time for n in narration])
+
+
 def test_a_telestrator_timeout_is_a_template_span_with_the_error_class(ctx, exporter):
     exporter.clear()
     replies = _good_replies(ctx)
