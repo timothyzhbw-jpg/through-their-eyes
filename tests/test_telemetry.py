@@ -3,6 +3,7 @@
 Spans are collected with the OpenTelemetry SDK's in-memory exporter; nothing leaves the process.
 """
 
+import asyncio
 import re
 from collections import Counter
 
@@ -23,7 +24,7 @@ STEPS = ["director", "analyst", "telestrator", "narration", "verifier", "voice"]
 ATTRIBUTES = {
     "tte.moment", "tte.personas", "tte.languages", "tte.persona", "tte.language", "tte.speaker",
     "tte.model", "tte.attempts", "tte.source", "tte.error_class", "tte.rewrites", "tte.dropped",
-    "tte.ms", "tte.round", "tte.failed", "tte.lines",
+    "tte.ms", "tte.round", "tte.failed", "tte.lines", "tte.down", "tte.bring_back", "tte.resumed",
 }  # fmt: skip
 ID = re.compile(r"^[\w:.\-]+$")  # ids, names and classes: no spaces, so no sentences
 
@@ -170,6 +171,41 @@ def test_rewrites_are_narration_spans_and_each_verifier_round_has_a_span(ctx, ex
     rewrites = [(n["tte.round"], n["tte.speaker"]) for n in narration if "tte.round" in n]
     assert rewrites == [(1, "color"), (2, "color")]
     assert root.attributes["tte.rewrites"] == 2 and root.attributes["tte.dropped"] == 1
+
+
+def test_the_result_names_its_trace(ctx, exporter):
+    """The id to look up in Application Insights (operation_Id) is the breakdown span's trace."""
+    exporter.clear()
+    r = breakdown(ctx, client=None, personas=("analyst",), languages=("en",))
+    root, _, _ = _trace(exporter)
+    assert r.trace_id == format(root.context.trace_id, "032x")
+
+
+def test_a_bring_back_is_its_own_trace_with_only_the_steps_that_ran_again(ctx, exporter, tmp_path):
+    from agent_framework import FileCheckpointStorage
+
+    from agents.workflow import run_crew
+
+    replies, one = _good_replies(ctx), {"personas": ("analyst",), "languages": ("en",)}
+    exporter.clear()
+    first = asyncio.run(run_crew(ctx, client=FakeChatClient(replies), down={"telestrator"},
+                                 checkpoints=FileCheckpointStorage(tmp_path), **one))  # fmt: skip
+    root, steps, _ = _trace(exporter)
+    assert root.attributes["tte.down"] == ("telestrator",)
+    (tele,) = [s for s in steps if s.name == "telestrator"]
+    assert tele.attributes["tte.error_class"] == "AgentDown"
+
+    exporter.clear()
+    back = asyncio.run(run_crew(ctx, client=FakeChatClient(replies), bring_back="telestrator",
+                                checkpoints=FileCheckpointStorage(tmp_path), **one))  # fmt: skip
+    root, steps, spans = _trace(exporter)
+    assert root.attributes["tte.bring_back"] == "telestrator"
+    assert root.attributes["tte.resumed"] is True
+    assert [s.name for s in steps] == ["telestrator", "voice"]
+    assert steps[0].attributes["tte.resumed"] is True
+    assert steps[0].attributes["tte.source"] == "llm"
+    assert back.result.trace_id == format(root.context.trace_id, "032x") != first.result.trace_id
+    _only_ids_and_counts(spans, {line.text for s in back.result.scripts for line in s.lines})
 
 
 def test_error_class_keeps_only_the_exception_name():

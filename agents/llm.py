@@ -2,7 +2,7 @@
 
 `client_from_env` returns a Microsoft Foundry chat client when FOUNDRY_PROJECT_ENDPOINT and
 FOUNDRY_MODEL are set (keyless: a managed identity in Azure, `az login` locally), else None: the
-crew then runs on templates.
+crew then runs on templates. `Outage` stands in for the model of an agent the Producer took down.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
-from agent_framework import Agent
+from agent_framework import Agent, BaseChatClient
 from pydantic import BaseModel, ValidationError
 
 DEFAULT_TIMEOUT_S = 8.0
@@ -58,6 +58,26 @@ async def ask(
         except Exception as e:  # any failure counts against the step; the caller falls back
             error = describe(e)
     return Attempt(None, attempts, error, (time.perf_counter() - start) * 1000)
+
+
+class AgentDown(ConnectionError):
+    """A model call to an agent that is down (the failure drill, SPEC 6)."""
+
+
+class Outage(BaseChatClient):
+    """The chat client of an agent the Producer took down: every call raises `AgentDown`, as an
+    outage would, and no model is called. The step then takes the usual path: the retry, then its
+    template."""
+
+    def __init__(self, step: str) -> None:
+        super().__init__()
+        self.step = step
+
+    def _inner_get_response(self, *, messages, stream, options, **kwargs):
+        async def down():
+            raise AgentDown(f"the {self.step} is down")
+
+        return down()
 
 
 def describe(e: Exception) -> str:
