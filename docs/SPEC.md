@@ -17,6 +17,11 @@ even deterministic number checks already appear in other broadcast-hackathon ent
 "Related hackathon work"). None of them shows what the player saw or what he would have done
 without one look. Open every pitch, video and README with perception and the counterfactual;
 verified numbers are the backbone, not the headline.
+In this competition, number checking, fan/analyst modes and multiple languages are already
+standard (REFERENCES, "Competing entries"). What only we have: a perception model with a
+first-person view, counterfactuals re-simulated inside the sim, and 25 Hz physical tracking with
+head yaw. One entry shows "what he sees" as the passing lanes that existed; we show the lanes he
+knew existed.
 
 | Judging criterion (20% each) | How we score |
 |---|---|
