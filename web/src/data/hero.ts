@@ -5,13 +5,14 @@ import type {
   ExportAction,
   ExportBlindSide,
   ExportDecision,
+  ExportDetectedScan,
   ExportEvent,
   ExportPlayer,
   HeroExport,
   RunName,
 } from "./types";
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export interface Scan {
   id: string;
@@ -38,6 +39,30 @@ export interface Run {
   possessionValue: number;
   firstPass: ExportEvent | null; // the pass that starts the moment
   blindSide: ExportBlindSide;
+  detector: DetectorRun;
+}
+
+/** The scan detector at work on one run (SPEC 4.7), on the tracked head yaw. */
+export interface DetectorRun {
+  omega: Float32Array; // index t * n + player, rad/s, from frame t to t + 1 (frames - 1 rows)
+  onsets: number[][]; // [player] candidate onset frames
+  scans: DetectedScan[][]; // [player] accepted scans
+}
+
+export interface DetectedScan {
+  start: number;
+  end: number;
+  peak: number;
+  amplitude: number; // rad
+  side: 1 | -1;
+}
+
+export interface DetectorParams {
+  omegaThreshold: number; // rad/s
+  minExcursion: number; // rad
+  returnTolerance: number; // rad
+  onsetFrames: number;
+  maxDurationS: number;
 }
 
 export interface Vision {
@@ -62,6 +87,7 @@ export interface Hero {
   keyScan: Scan;
   counterfactual: HeroExport["counterfactual"];
   vision: Vision;
+  detector: DetectorParams;
   deltaXt: number;
   runs: Record<RunName, Run>;
   reception: number; // frame the hero receives the ball (the moment's anchor)
@@ -101,6 +127,13 @@ function convertRun(name: RunName, raw: HeroExport["runs"][RunName], hero: strin
     possessionValue: raw.possession_value,
     firstPass: raw.events.find((e) => e.type === "pass" && e.player !== hero) ?? null,
     blindSide: raw.blind_side,
+    detector: {
+      omega: flatten(raw.scan_detector.omega, 1e-4),
+      onsets: raw.scan_detector.onsets,
+      scans: raw.scan_detector.scans.map((player) =>
+        player.map((s: ExportDetectedScan) => ({ ...s, amplitude: s.amplitude * 1e-4 })),
+      ),
+    },
   };
 }
 
@@ -125,6 +158,7 @@ export function parseHero(json: unknown): Hero {
     (e) => e.type === "reception" && e.player === raw.hero,
   );
   const v = raw.vision;
+  const d = raw.scan_detector;
   return {
     scenario: raw.scenario,
     seed: raw.seed,
@@ -144,6 +178,13 @@ export function parseHero(json: unknown): Hero {
       narrowingPerMps: v.narrowing_per_mps * 1e-4,
       minHalfCone: v.min_half_cone * 1e-4,
       distanceSigma: v.distance_sigma * 1e-3,
+    },
+    detector: {
+      omegaThreshold: d.omega_threshold * 1e-4,
+      minExcursion: d.min_excursion * 1e-4,
+      returnTolerance: d.return_tolerance * 1e-4,
+      onsetFrames: d.onset_frames,
+      maxDurationS: d.max_duration_s,
     },
     deltaXt: raw.delta_xt,
     runs,

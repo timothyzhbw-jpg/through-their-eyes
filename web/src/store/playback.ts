@@ -5,7 +5,9 @@ import { easedHeadAt, wrapAngle, type Hero } from "../data/hero";
 import type { RunName } from "../data/types";
 import { createStore, type Store } from "./store";
 
-export type Focus = "split" | "pov" | "tactical";
+export type Focus = "split" | "pov" | "tactical" | "broadcast";
+/** The camera the 3D view films through: first person or the broadcast camera (SPEC 7). */
+export type Camera3D = "pov" | "broadcast";
 
 export interface PlaybackState {
   mode: RunName; // factual = with the look, counterfactual = without it
@@ -22,6 +24,7 @@ export interface PlaybackState {
   options: boolean; // pass options at the decision (shown around the decision frame only)
   blindSide: boolean; // blind-side alerts, live (SPEC 4.4)
   focus: Focus; // which view gets the space
+  camera: Camera3D; // the 3D view's camera
   scanMarker: string | null; // scan id highlighted by a plan
   captionLine: string | null; // id of the narration line on screen (a plan voice step)
   evidenceLine: string | null; // narration line whose claims and evidence are open
@@ -34,10 +37,13 @@ export type PlaybackStore = Store<PlaybackState>;
 export const KEY_SCAN_SLOW = 0.4; // free-play slow motion around the key scan, as in demo/
 export const COMFORT_MAX_YAW = (120 * Math.PI) / 180; // rad per wall-clock second, on screen
 
+/** A frame inside the key scan, with the head already turned: where the app opens. */
+export const keyScanFrame = (hero: Hero): number => hero.keyScan.start + 6;
+
 export function createPlayback(hero: Hero): PlaybackStore {
   return createStore<PlaybackState>({
     mode: "factual",
-    frame: hero.keyScan.start + 6,
+    frame: keyScanFrame(hero),
     playing: false,
     speed: 1,
     autoSlow: true,
@@ -50,6 +56,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     options: true,
     blindSide: true,
     focus: "split",
+    camera: "pov",
     scanMarker: null,
     captionLine: null,
     evidenceLine: null,

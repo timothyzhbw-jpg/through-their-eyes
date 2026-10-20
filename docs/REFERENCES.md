@@ -53,6 +53,17 @@ code is copied (CLAUDE.md rule 1).
   recaps; Azure Translator for languages.
 
 ### Real-world precedents for the impact pitch (check each detail before quoting it)
+- **ReSpo.Vision: first-person replay already exists commercially.** Checked 2026-10-20. Its
+  computer vision extracts 3D tracking, with body keypoints, from single-camera video such as a
+  standard TV broadcast; its digital twin lets fans relive key moments from a player's
+  first-person perspective, the company's example being a goal through a striker's eyes —
+  https://tech.eu/2025/06/10/respovision-raises-eur42m-to-redefine-the-sports-viewing-experience/
+  (funding news, 2025-06-10; the technical claims are the company's own), https://respo.vision/
+  (single video feed reconstructed in 2D and 3D; player positions, body keypoints and ball up to
+  25 times per second). Bekkers (2026, below) uses its head, shoulder and hip angles.
+  → We do not claim POV as new. Our contribution is the perception model behind it (what he saw,
+  what he believed, and the decision taken on that belief) and the counterfactual re-simulated
+  without one scan. README "Related work".
 - Beyond Sports (Sony): tracking turned into live animated broadcasts —
   https://www.beyondsports.nl/news/zappsport-live-wk-voetbal-animated-broadcasts-and-highlights-for-fifa-world-cup-2026
 - Premier League semi-automated offside (Genius Sports) tracks skeletal points per player —
@@ -69,6 +80,11 @@ code is copied (CLAUDE.md rule 1).
   Enhanced Positional Data.*** arXiv:2602.18519 — https://arxiv.org/abs/2602.18519
   → Our vision layer: probabilistic field of view (120° base, Gaussian decay, speed-dependent) +
   occlusion; observed-space metrics combined with pitch control.
+  Data (§2.2, checked 2026-10-20): 32 games of 2024 Copa América broadcast tracking from
+  ReSpo.Vision at 25 fps, with head, shoulder and hip rotation per player, synchronised with Opta
+  events. Code: https://github.com/USSoccerFederation/ssac26_visual_exploratory_behavior (not
+  used; we reimplement from the paper). It models vision, not belief or decisions; those, and the
+  re-simulated counterfactual, are ours.
 - **Jordet et al. (2020). *Scanning, contextual factors, and association with performance in
   English Premier League footballers.*** Frontiers in Psychology 11:553813 —
   https://nih.brage.unit.no/nih-xmlui/handle/11250/2734590 (full text:

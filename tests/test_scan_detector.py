@@ -145,3 +145,19 @@ def test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec(scenario, seeds):
     counts = score(samples, ScanDetectorParams())  # the chosen defaults
     assert counts.tp > 50
     assert counts.f1 >= 0.85
+
+
+def test_the_trace_is_the_detector_with_its_intermediate_signals():
+    """trace_scans exposes what detect_scans computes (viewers draw it, SPEC 4.7, 7)."""
+    from analytics.scan_detector import trace_scans
+
+    yaw, pos, ball = _scene(120)
+    yaw = _turn(_turn(yaw, 20, 90.0), 70, 35.0, out=1, dwell=0, back=1)  # a scan, a part-way turn
+    trace = trace_scans(yaw, pos, ball, DT, PARAMS)
+    assert trace.scans == detect_scans(yaw, pos, ball, DT, PARAMS)
+    assert [s.start for s in trace.scans] == [20]
+    assert trace.omega.shape == (119,)
+    assert np.allclose(trace.omega, np.diff(yaw) / DT)
+    # Both turns pass the threshold on their way out; only the first passes the excursion gate.
+    assert 20 in trace.onsets and 70 in trace.onsets
+    assert all(np.abs(trace.omega[trace.onsets]) >= PARAMS.omega_threshold)
