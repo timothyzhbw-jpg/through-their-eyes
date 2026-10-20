@@ -1,0 +1,123 @@
+/* The "What if…?" box (SPEC 6, 7). Answers are counterfactual: gold, like the run without the
+   look, so a what-if never reads as something that happened. */
+.whatif .lang {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.whatif .lang button {
+  font: 600 12px/1 var(--font-body);
+  color: var(--muted);
+  background: var(--surface);
+  border: 0;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.whatif .lang button[aria-pressed="true"] {
+  color: var(--bg);
+  background: var(--fg);
+}
+.questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.question {
+  font: 500 13px/1.2 var(--font-body);
+  color: var(--fg);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 11px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.question[aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--bg);
+  background: var(--gold);
+}
+.question:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.question.factual {
+  border-style: dashed;
+}
+.question .did {
+  font: 600 10px/1 var(--font-data);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sight);
+}
+.free-question {
+  width: 100%;
+  font: 14px/1.2 var(--font-body);
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 9px 11px;
+  margin-bottom: 10px;
+}
+.answer {
+  border-left: 3px solid var(--sight);
+  background: var(--surface-2);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.answer.cf {
+  border-left-color: var(--gold);
+}
+.answer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.answer-head .asked {
+  font: 600 15px/1.3 var(--font-body);
+}
+.answer-head .close {
+  margin-left: auto;
+  font: 600 18px/1 var(--font-body);
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+.answer-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.answer-lines > li > button {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  line-height: 1.45;
+}
+.answer-lines > li > button:hover,
+.answer-lines > li.open > button {
+  background: var(--surface);
+}
+.answer-lines > li > button:focus-visible {
+  outline: 2px solid var(--sight);
+}
+.answer-lines .claims {
+  margin: 6px 0 4px;
+  grid-template-columns: 1fr;
+}

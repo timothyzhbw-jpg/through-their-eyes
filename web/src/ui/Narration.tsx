@@ -11,6 +11,7 @@ import {
   lineOf,
   type ClaimKind,
   type Narration,
+  type PayloadClaim,
   type PayloadLine,
 } from "../narration/payload";
 import { useSession } from "../session";
@@ -25,7 +26,7 @@ export function KindTag({ kind }: { kind: ClaimKind }) {
   );
 }
 
-function KindTags({ narration, line }: { narration: Narration; line: PayloadLine }) {
+export function KindTags({ narration, line }: { narration: Narration; line: PayloadLine }) {
   const kinds = lineKinds(narration, line);
   if (!kinds.length) return null;
   return (
@@ -107,56 +108,83 @@ export function EvidenceCard() {
             const here =
               c.seek_frame != null && mode === run && Math.abs(frame - c.seek_frame) < 0.5;
             return (
-              <li key={id} className={`claim kind-${c.kind}${here ? " here" : ""}`}>
-                <div className="claim-head">
-                  <KindTag kind={c.kind} />
-                  <span className="claim-verdict">{c.verdict}</span>
-                  <code>{c.id}</code>
-                  {c.seek_frame != null && (
-                    <button
-                      type="button"
-                      className="seek"
-                      onClick={() => controls.openLine(line.id, c.id)}
-                    >
-                      Show at {at(c.seek_frame)}
-                      {run === "counterfactual" ? ", without the look" : ""}
-                    </button>
-                  )}
-                </div>
-                <p className="kind-detail">{KIND_LABEL[c.kind].detail}</p>
-                {Object.keys(c.values).length > 0 && (
-                  <dl className="values">
-                    {Object.entries(c.values).map(([k, v]) => (
-                      <div key={k}>
-                        <dt>{k}</dt>
-                        <dd>{String(v)}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-                <div className="events">
-                  <span>Evidence</span>
-                  {c.evidence.map((e) => {
-                    const f = eventFrame(hero, e);
-                    return (
-                      <button
-                        type="button"
-                        key={e}
-                        className="event"
-                        onClick={() => controls.seekEvidence(c.id, e)}
-                      >
-                        {e}
-                        {f !== undefined && <small> · {at(f)}</small>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </li>
+              <ClaimCard
+                key={id}
+                claim={c}
+                here={here}
+                showLabel={
+                  c.seek_frame != null &&
+                  `Show at ${at(c.seek_frame)}${run === "counterfactual" ? ", without the look" : ""}`
+                }
+                onShow={() => controls.openLine(line.id, c.id)}
+                eventTime={(e) => {
+                  const f = eventFrame(hero, e);
+                  return f === undefined ? undefined : at(f);
+                }}
+                onEvent={(e) => controls.seekEvidence(c.id, e)}
+              />
             );
           })}
         </ul>
       )}
     </section>
+  );
+}
+
+interface ClaimCardProps {
+  claim: PayloadClaim;
+  here: boolean; // the replay is at this claim's evidence
+  showLabel: string | false; // the seek button, if the claim has a seek frame
+  onShow: () => void;
+  eventTime: (eventId: string) => string | undefined;
+  onEvent: (eventId: string) => void;
+}
+
+/** One claim behind a line: kind label, verdict, values and evidence events (SPEC 5.3, 7). */
+export function ClaimCard({
+  claim: c,
+  here,
+  showLabel,
+  onShow,
+  eventTime,
+  onEvent,
+}: ClaimCardProps) {
+  return (
+    <li className={`claim kind-${c.kind}${here ? " here" : ""}`}>
+      <div className="claim-head">
+        <KindTag kind={c.kind} />
+        <span className="claim-verdict">{c.verdict}</span>
+        <code>{c.id}</code>
+        {showLabel && (
+          <button type="button" className="seek" onClick={onShow}>
+            {showLabel}
+          </button>
+        )}
+      </div>
+      <p className="kind-detail">{KIND_LABEL[c.kind].detail}</p>
+      {Object.keys(c.values).length > 0 && (
+        <dl className="values">
+          {Object.entries(c.values).map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{String(v)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <div className="events">
+        <span>Evidence</span>
+        {c.evidence.map((e) => {
+          const t = eventTime(e);
+          return (
+            <button type="button" key={e} className="event" onClick={() => onEvent(e)}>
+              {e}
+              {t !== undefined && <small> · {t}</small>}
+            </button>
+          );
+        })}
+      </div>
+    </li>
   );
 }
 

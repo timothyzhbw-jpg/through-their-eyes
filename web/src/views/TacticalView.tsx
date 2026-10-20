@@ -8,11 +8,21 @@ import { Line } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
 import * as THREE from "three";
-import { halfCone, isSeen, Sample, sampleInto, speedAt, type Hero, type Run } from "../data/hero";
+import {
+  actionLabel,
+  halfCone,
+  isSeen,
+  Sample,
+  sampleInto,
+  speedAt,
+  type Hero,
+  type Run,
+} from "../data/hero";
 import type { RunName } from "../data/types";
 import { useSession } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
+import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
 import {
   COLORS,
   LABEL,
@@ -127,6 +137,7 @@ function TacticalScene() {
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />
+      <WhatIfGhost hero={hero} shared={shared} scale={scale} px={px} />
     </>
   );
 }
@@ -583,6 +594,113 @@ function Ball({ shared, scale }: { shared: SharedRef; scale: number }) {
       <mesh rotation-x={lie} renderOrder={LAYER.ball + 0.5}>
         <circleGeometry args={[0.42, 24]} />
         <meshBasicMaterial color="#ffffff" {...flat} />
+      </mesh>
+    </group>
+  );
+}
+
+// ---------- "What if…?" ghost (SPEC 6, 7) ----------
+
+interface WhatIfGhostProps {
+  hero: Hero;
+  shared: SharedRef;
+  scale: number;
+  px: number;
+}
+
+/** The forced run over the actual one, from the decision on: its ball path, growing with the
+ * playhead, and ghosts of the players on the ball in it (passer, target, receiver) where they
+ * would have been. Gold: it never happened. */
+function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
+  const { whatIfs, playback } = useSession();
+  const selected = useStore(playback, (s) => s.whatIf);
+  const option = optionOf(whatIfs, selected);
+  const run = option?.run ?? null;
+  const path = useMemo(
+    () => (run ? ballPath(run).map(([x, y]) => [x, 0, -y] as [number, number, number]) : null),
+    [run],
+  );
+  const ghost = useMemo(
+    () => ({ pos: new Float32Array(2 * hero.n), ball: new Float32Array(2) }),
+    [hero],
+  );
+  const involved = useMemo(() => (run ? involvedPlayers(run) : new Set<string>()), [run]);
+  const group = useRef<THREE.Group>(null);
+  const line = useRef<ComponentRef<typeof Line>>(null);
+  const tokens = useRef<(THREE.Group | null)[]>([]);
+  const ball = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    const { sample, state } = shared.current;
+    const g = group.current;
+    if (!g) return;
+    const show = !!run && state.mode === "factual" && ghostAt(run, hero.n, state.frame, ghost);
+    g.visible = show;
+    if (!show || !run) return;
+    const done = Math.max(1, Math.min(run.frames - 1, Math.floor(state.frame - run.start)));
+    if (line.current) line.current.geometry.instanceCount = done;
+    for (let j = 0; j < hero.n; j++) {
+      const t = tokens.current[j];
+      if (!t) continue;
+      const moved = Math.hypot(
+        ghost.pos[2 * j] - sample.pos[2 * j],
+        ghost.pos[2 * j + 1] - sample.pos[2 * j + 1],
+      );
+      t.visible = involved.has(hero.ids[j]) && moved > 1.0;
+      t.position.set(ghost.pos[2 * j], 0, -ghost.pos[2 * j + 1]);
+    }
+    ball.current?.position.set(ghost.ball[0], 0, -ghost.ball[1]);
+  });
+
+  if (!run || !path || !option) return null;
+  const tagH = Math.max(2.4, TAG_PX * px);
+  const [ex, , ez] = path[path.length - 1];
+  const what = actionLabel(option.action);
+  const label = getLabelTexture(`what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
+    ...LABEL.tag,
+    color: COLORS.gold,
+  });
+  return (
+    <group ref={group} visible={false}>
+      <Line
+        ref={line}
+        points={path}
+        color={COLORS.gold}
+        lineWidth={2.5}
+        dashed
+        dashSize={1.0}
+        gapSize={0.8}
+        renderOrder={LAYER.path}
+        {...flat}
+      />
+      {hero.players.map((p, j) => (
+        <group
+          key={p.id}
+          ref={(g) => {
+            tokens.current[j] = g;
+          }}
+          scale={scale}
+          visible={false}
+        >
+          <mesh rotation-x={lie} renderOrder={LAYER.halo}>
+            <circleGeometry args={[TOKEN_R, 32]} />
+            <meshBasicMaterial color={COLORS.gold} opacity={0.35} {...flat} />
+          </mesh>
+          <mesh rotation-x={lie} renderOrder={LAYER.halo}>
+            <ringGeometry args={[TOKEN_R - 0.12, TOKEN_R + 0.08, 32]} />
+            <meshBasicMaterial color={COLORS.gold} opacity={0.9} {...flat} />
+          </mesh>
+        </group>
+      ))}
+      <group ref={ball} scale={Math.max(1, scale * 0.8)}>
+        <mesh rotation-x={lie} renderOrder={LAYER.ball}>
+          <ringGeometry args={[0.35, 0.6, 24]} />
+          <meshBasicMaterial color={COLORS.gold} {...flat} />
+        </mesh>
+      </group>
+      <mesh position={[ex, 0, ez - 1.5 - tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
+        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+        <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
   );

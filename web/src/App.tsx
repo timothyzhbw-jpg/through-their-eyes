@@ -7,6 +7,7 @@ import { BreakdownPanel } from "./ui/BreakdownPanel";
 import { EvidenceCard, NarrationPanel } from "./ui/Narration";
 import { DecisionPanel, StoryPanel } from "./ui/Panels";
 import { Transport } from "./ui/Transport";
+import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { TacticalView } from "./views/TacticalView";
 
@@ -63,6 +64,7 @@ export function App({ autoplay }: { autoplay: boolean }) {
 
       <section className="below">
         <NarrationPanel />
+        <WhatIfPanel />
         <BreakdownPanel />
         <StoryPanel />
         <DecisionPanel />
