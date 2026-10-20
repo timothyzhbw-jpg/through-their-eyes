@@ -161,6 +161,7 @@ src/
   voice/      spoken narration from /api/tts, off by default (on for audio description)
   data/       load the export (service or bundled), sample a player at a fractional frame, eased yaw
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
+  director/   camera director: rules over stream events, the chip and the Auto director switch
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
   narration/  render payload schema (zod), checks against the moment, kind labels
   match/      a stitched match: possessions, score, moments; its session (live, opens breakdowns)
@@ -169,7 +170,6 @@ src/
   views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
               toolbars and HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
-  director/   camera director: rules over stream events, the chip and the Auto director switch
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
               the transport and live controls a match shares; useView() for the shared views
