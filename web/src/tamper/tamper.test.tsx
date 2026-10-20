@@ -216,6 +216,53 @@ describe("the deep link ?tamper=<claim id>", () => {
     warn.mockRestore();
   });
 
+  /** Online, the breakdowns echoing the persona and language asked for; `fail` answers first. */
+  function echoing(fail: boolean) {
+    let calls = 0;
+    const fetch = fakeFetch({
+      "POST /api/breakdowns": (body) => {
+        calls += 1;
+        if (fail && calls === 1) return "fail";
+        const { personas, languages } = body as { personas: string[]; languages: string[] };
+        return json(breakdownResponse({}, { persona: personas[0], language: languages[0] }));
+      },
+    });
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null, {
+      api: createApi(API, "blind_side_run-3", fetch),
+    });
+    return { session, calls: () => calls };
+  }
+
+  it("is spent when the breakdown fails: a later breakdown does not open the card", async () => {
+    const { session, calls } = echoing(true);
+    applyDeepLink(session, parseDeepLink("?tamper=cf_value"));
+    await settle();
+    expect(session.breakdown.get().status).toBe("failed");
+    expect(session.playback.get().evidenceLine).toBeNull(); // not on the bundled fixture either
+    expect(session.tamper.get().open).toBeNull();
+
+    session.controls.setPersona("analyst"); // the viewer asks again: it arrives, nothing pops up
+    await settle();
+    expect(calls()).toBe(2);
+    expect(session.breakdown.get().status).toBe("ready");
+    expect(session.playback.get().evidenceLine).toBeNull();
+    expect(session.tamper.get()).toEqual(IDLE_TAMPER);
+  });
+
+  it("is spent on the first breakdown shown, even one with no narration", async () => {
+    const { session } = echoing(false);
+    session.controls.requestBreakdown();
+    await settle();
+    session.breakdown.set({ narration: null }); // a payload that failed its checks
+    session.controls.openTamperLink("cf_value");
+    session.controls.setLanguage("zh");
+    await settle();
+    expect(session.breakdown.get()).toMatchObject({ status: "ready", language: "zh" });
+    expect(session.breakdown.get().narration?.lines.length).toBeGreaterThan(0);
+    expect(session.playback.get().evidenceLine).toBeNull();
+    expect(session.tamper.get().open).toBeNull();
+  });
+
   it("opens the bundled breakdown's card offline", () => {
     const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null);
     applyDeepLink(session, parseDeepLink("?tamper=cf_value"));

@@ -233,13 +233,14 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   };
   /**
    * The deep link's claim, on the breakdown now on screen: the line that carries it, or else
-   * the first line with a claim that has a number, opened with "Try a wrong number" open.
+   * the first line with a claim that has a number, opened with "Try a wrong number" open. The
+   * link is spent on the first breakdown shown, so a later one never opens the card by surprise.
    */
   const openLinkedTamper = () => {
     const wanted = tamperLink;
+    tamperLink = null;
     const { narration } = breakdown.get();
     if (!wanted || !narration) return;
-    tamperLink = null;
     const hasNumber = (id: string) => {
       const c = narration.claims.get(id);
       return !!c && numericValues(c).length > 0;
@@ -289,6 +290,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       if (!askAgain)
         show({ ...apiBreakdown(res, persona, language, moment, hero), status: "ready" });
     } catch (err) {
+      tamperLink = null; // the linked breakdown never came: open nothing later
       if (!askAgain) show({ ...bundled, status: "failed", error: message(err) });
     } finally {
       asking = false;
