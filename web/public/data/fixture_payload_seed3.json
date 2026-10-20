@@ -1,0 +1,116 @@
+{
+  "fixture": true,
+  "note": "Fixture, not verifier output: claim values are computed from the sim export by sim.export.render_payload_fixture and no verifier has checked them.",
+  "moment": "m:decision_after_scan:H8:0075",
+  "persona": "casual",
+  "language": "en",
+  "lines": [
+    {
+      "id": "L1",
+      "text": "What did he see?",
+      "claims": []
+    },
+    {
+      "id": "L2",
+      "text": "H8 scanned once in the 2 seconds before receiving.",
+      "claims": [
+        "scans_before_reception"
+      ]
+    },
+    {
+      "id": "L3",
+      "text": "When he played the pass, H8's picture of H9 was off by 0.5 metres. Without that look, it would have been off by 12.3 metres.",
+      "claims": [
+        "belief_error",
+        "cf_belief_error"
+      ]
+    },
+    {
+      "id": "L4",
+      "text": "H9 took the pass from H8.",
+      "claims": [
+        "runner_received"
+      ]
+    },
+    {
+      "id": "L5",
+      "text": "Without that look, H8 would have passed to H4. That look was worth 0.11 in expected threat.",
+      "claims": [
+        "cf_pass",
+        "cf_value"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "scans_before_reception",
+      "kind": "observed",
+      "verdict": "supported",
+      "values": {
+        "n": 1,
+        "window_s": 2
+      },
+      "evidence": [
+        "scan:H8:0050"
+      ],
+      "seek_frame": 50
+    },
+    {
+      "id": "belief_error",
+      "kind": "computed",
+      "verdict": "supported",
+      "values": {
+        "err": 0.5
+      },
+      "evidence": [
+        "pass:H8:0075"
+      ],
+      "seek_frame": 75
+    },
+    {
+      "id": "cf_belief_error",
+      "kind": "counterfactual",
+      "verdict": "supported",
+      "values": {
+        "err": 12.3
+      },
+      "evidence": [
+        "scan:H8:0050"
+      ],
+      "seek_frame": 50
+    },
+    {
+      "id": "runner_received",
+      "kind": "observed",
+      "verdict": "supported",
+      "values": {},
+      "evidence": [
+        "pass:H8:0075",
+        "reception:H9:0140"
+      ],
+      "seek_frame": 75
+    },
+    {
+      "id": "cf_pass",
+      "kind": "counterfactual",
+      "verdict": "supported",
+      "values": {},
+      "evidence": [
+        "scan:H8:0050"
+      ],
+      "seek_frame": 50
+    },
+    {
+      "id": "cf_value",
+      "kind": "counterfactual",
+      "verdict": "supported",
+      "values": {
+        "dxt": 0.11
+      },
+      "evidence": [
+        "scan:H8:0050"
+      ],
+      "seek_frame": 50
+    }
+  ]
+}

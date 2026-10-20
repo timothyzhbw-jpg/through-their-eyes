@@ -1,14 +1,18 @@
 """Viewer export of a hero moment (SPEC 7)."""
 
 import json
+import re
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from sim.counterfactual import drop_scan_counterfactual
-from sim.export import export_hero
+from sim.export import VERSION, export_hero, render_payload_fixture
 
 SCENARIO, SEED = "blind_side_run", 3
+WEB_DATA = Path(__file__).parent.parent / "web" / "public" / "data" / "hero_seed3.json"
+WEB_PAYLOAD = WEB_DATA.parent / "fixture_payload_seed3.json"
 
 
 @pytest.fixture(scope="module")
@@ -45,3 +49,100 @@ def test_the_hero_ghost_is_himself(data):
     run = data["runs"]["factual"]
     for frame in (0, run["frames"] // 2, run["frames"] - 1):
         assert run["ghost"][frame][2 * i : 2 * i + 2] == run["pos"][frame][2 * i : 2 * i + 2]
+
+
+def test_every_player_sight_is_exported_and_matches_the_hero_row(data):
+    n = len(data["players"])
+    i = [p["id"] for p in data["players"]].index(data["hero"])
+    for run in data["runs"].values():
+        assert len(run["seen_by"]) == run["frames"]
+        assert all(len(row) == n for row in run["seen_by"])
+        assert [row[i] for row in run["seen_by"]] == run["seen"]
+        # V[i, i] = 1: every observer counts himself as seen.
+        assert all((row[j] >> j) & 1 for row in run["seen_by"] for j in range(n))
+
+
+def test_counterfactual_and_vision_metadata(data):
+    assert data["version"] == VERSION
+    assert data["counterfactual"]["intervention"] == "drop_scan"
+    assert data["counterfactual"]["scan"] == data["key_scan"]["id"]
+    v = data["vision"]
+    assert v["half_cone"] == round(np.deg2rad(60.0) * 1e4)
+    assert v["min_half_cone"] < v["half_cone"]
+    assert v["distance_sigma"] == 50_000
+
+
+def test_committed_web_data_has_the_current_schema(data):
+    """web/ ships a pre-built export; it must be regenerated when the schema changes.
+
+    Values are not compared byte for byte: output is identical only within one environment
+    (SPEC 3.7), and the file is built on a laptop while CI runs on x86.
+    """
+    committed = json.loads(WEB_DATA.read_text())
+    assert committed["version"] == VERSION
+    assert set(committed) == set(data)
+    assert committed["key_scan"] == data["key_scan"]
+    for name, run in data["runs"].items():
+        assert set(committed["runs"][name]) == set(run)
+        assert committed["runs"][name]["frames"] == run["frames"]
+        assert committed["runs"][name]["decision"]["chosen"] == run["decision"]["chosen"]
+
+
+# --- render-payload fixture (SPEC 5.3, 7) --------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def payload(data):
+    return render_payload_fixture(data)
+
+
+def test_payload_fixture_is_marked_and_has_every_claim_kind(payload):
+    assert payload["fixture"] is True
+    assert "not verifier output" in payload["note"]
+    assert payload["moment"] == "m:decision_after_scan:H8:0075"
+    assert {c["kind"] for c in payload["claims"]} == {"observed", "computed", "counterfactual"}
+    assert {c["verdict"] for c in payload["claims"]} == {"supported"}
+
+
+def test_payload_fixture_values_come_from_the_sim(data, payload):
+    f, c = data["runs"]["factual"], data["runs"]["counterfactual"]
+    claims = {cl["id"]: cl for cl in payload["claims"]}
+    lines = {line["id"]: line["text"] for line in payload["lines"]}
+    assert claims["scans_before_reception"]["values"] == {"n": 1, "window_s": 2}
+    assert claims["scans_before_reception"]["evidence"] == [data["key_scan"]["id"]]
+    err = claims["belief_error"]["values"]["err"]
+    cf_err = claims["cf_belief_error"]["values"]["err"]
+    assert err == round(f["decision"]["belief_error"][data["runner"]], 1)
+    assert cf_err == round(c["decision"]["belief_error"][data["runner"]], 1)
+    assert cf_err > err  # the look is what put the runner in the right place
+    assert c["decision"]["chosen"] == "pass:H4" and "would have passed to H4" in lines["L5"]
+    assert claims["cf_value"]["values"]["dxt"] == round(data["delta_xt"], 2)
+
+
+def test_payload_fixture_lines_claims_and_evidence_resolve(data, payload):
+    events = {e["id"]: e for run in data["runs"].values() for e in run["events"]}
+    claims = {c["id"]: c for c in payload["claims"]}
+    assert {cid for line in payload["lines"] for cid in line["claims"]} == set(claims)
+    for c in claims.values():
+        assert c["evidence"] and all(e in events for e in c["evidence"])
+        assert c["seek_frame"] == min(events[e]["frame"] for e in c["evidence"])
+    for line in payload["lines"]:
+        if not line["claims"]:
+            assert line["text"] == "What did he see?"  # a connective phrase
+        # Every number in a caption is a filled value of one of the line's claims.
+        text = re.sub(r"\b[HA]\d{1,2}\b", "", line["text"])
+        values = {str(v) for cid in line["claims"] for v in claims[cid]["values"].values()}
+        assert set(re.findall(r"\d+(?:\.\d+)?", text)) <= values
+
+
+def test_committed_payload_fixture_matches_the_generator(payload):
+    committed = json.loads(WEB_PAYLOAD.read_text())
+    assert [line["id"] for line in committed["lines"]] == [line["id"] for line in payload["lines"]]
+    assert [line["claims"] for line in committed["lines"]] == [
+        line["claims"] for line in payload["lines"]
+    ]
+    for got, want in zip(committed["claims"], payload["claims"], strict=True):
+        assert {k: v for k, v in got.items() if k != "values"} == {
+            k: v for k, v in want.items() if k != "values"
+        }
+        assert got["values"] == pytest.approx(want["values"], abs=0.11)
