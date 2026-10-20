@@ -29,7 +29,7 @@ from agents.workflow import run_breakdown
 from api import tts
 from api.live import stream
 from api.settings import Settings
-from api.store import DailyCap, Match, MatchStore, RateLimiter, ResultCache, content_key
+from api.store import DailyCap, Match, MatchStore, RateLimiter, content_key, open_storage
 
 VERSION = "0.4.0"
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
@@ -62,22 +62,28 @@ def _client_ip(request: Request) -> str:
 
 
 def create_app(
-    settings: Settings | None = None, client: Any | None = None, model_id: str | None = None
+    settings: Settings | None = None,
+    client: Any | None = None,
+    model_id: str | None = None,
+    credential: Any | None = None,
+    cosmos_client: Any | None = None,
 ) -> FastAPI:
+    """`credential` (a sync TokenCredential) is needed when TTE_COSMOS_ENDPOINT is set."""
     settings = settings or Settings.from_env()
     close = None
     if client is None and model_id is None:
         client, close = client_from_env()
     model = model_id or ("foundry" if client is not None else "offline")
-    store = MatchStore(settings)
-    breakdowns = ResultCache(settings.cache_dir, "breakdowns")
-    answers = ResultCache(settings.cache_dir, "whatif")
+    storage = open_storage(settings, credential, cosmos_client)
+    store = MatchStore(settings, audit=storage.audit)
+    breakdowns, answers = storage.breakdowns, storage.answers
     limiter = RateLimiter(*settings.rate_limit)
     cap = DailyCap(settings.daily_model_cap)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         yield
+        storage.close()
         if close is not None:
             await close()
 
@@ -135,8 +141,10 @@ def create_app(
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:
-        records = getattr((await match_or_404(mid)).ctx.audit, "records", [])
-        return [r.model_dump(mode="json") for r in records[-max(1, min(limit, 500)) :]]
+        ctx = (await match_or_404(mid)).ctx
+        recent = getattr(ctx.audit, "recent", None)
+        records = recent(ctx.evaluator.match, max(1, min(limit, 500))) if recent else []
+        return [r.model_dump(mode="json") for r in records]
 
     @app.websocket("/ws/matches/{mid}/live")
     async def live(ws: WebSocket, mid: str, speed: float = 1.0, start: int = 0) -> None:

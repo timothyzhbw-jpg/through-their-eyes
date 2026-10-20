@@ -1,8 +1,9 @@
 """What the service keeps: loaded matches, cached results, rate limits and the daily model cap.
 
 Matches load lazily, once, in a worker thread (the sim and the claim checks take a few seconds).
-Results are cached in memory and as JSON files keyed by a content hash, so a restart or a new
-replica serves them again; Cosmos DB can take the place of the files later (SPEC 8).
+Results are cached in memory in front of a store keyed by a content hash, so a restart or a new
+replica serves them again: JSON files by default, Cosmos DB when `TTE_COSMOS_ENDPOINT` is set
+(SPEC 8: container `cache`, and the claims audit in `claims_audit`).
 """
 
 from __future__ import annotations
@@ -10,19 +11,26 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+from azure.core.exceptions import AzureError, ResourceNotFoundError
 
 from agents.context import MomentContext
 from api.settings import Settings, match_id
+from explain.audit import AuditSink, CosmosAuditSink
 from sim.export import export_hero
+
+log = logging.getLogger(__name__)
+CACHE_CONTAINER = "cache"  # partition key /kind
+AUDIT_CONTAINER = "claims_audit"  # partition key /match_id
 
 SPRINT_MPS = 7.0  # SPEC 4.6
 
@@ -38,8 +46,8 @@ class Match:
     sprint: list[list[str]]  # per frame: players above sprint speed (live overlay)
 
     @classmethod
-    def load(cls, scenario: str, seed: int) -> Match:
-        ctx = MomentContext.load(scenario, seed)
+    def load(cls, scenario: str, seed: int, audit: AuditSink | None = None) -> Match:
+        ctx = MomentContext.load(scenario, seed, audit=audit)
         export = export_hero(scenario, seed)
         run = ctx.run
         speed = np.linalg.norm(run.vel, axis=-1)
@@ -49,8 +57,9 @@ class Match:
 
 
 class MatchStore:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, audit: AuditSink | None = None) -> None:
         self.known = {match_id(s, seed): (s, seed) for s, seed in settings.matches}
+        self.audit = audit  # None: each match keeps its verdicts in memory
         self._loaded: dict[str, Match] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
@@ -59,7 +68,8 @@ class MatchStore:
             return None
         async with self._locks[mid]:
             if mid not in self._loaded:
-                self._loaded[mid] = await asyncio.to_thread(Match.load, *self.known[mid])
+                scenario, seed = self.known[mid]
+                self._loaded[mid] = await asyncio.to_thread(Match.load, scenario, seed, self.audit)
         return self._loaded[mid]
 
 
@@ -90,6 +100,79 @@ class ResultCache:
         tmp = self.dir / f"{key}.json.tmp"
         tmp.write_text(json.dumps(value, ensure_ascii=False))
         tmp.replace(self.dir / f"{key}.json")
+
+
+class CosmosResultCache:
+    """Memory in front of a Cosmos DB container: one item per key, `id` = the content key and
+    partition key `/kind` (SPEC 8). `container` is an azure-cosmos ContainerProxy.
+
+    Cosmos DB errors are logged, not raised: a failed read is a miss, a failed write keeps the
+    value in memory only.
+    """
+
+    def __init__(self, container: Any, kind: str) -> None:
+        self.container, self.kind = container, kind
+        self._memory: dict[str, dict[str, Any]] = {}
+
+    def get(self, key: str) -> dict[str, Any] | None:
+        if key in self._memory:
+            return self._memory[key]
+        try:
+            item = self.container.read_item(item=key, partition_key=self.kind)
+        except ResourceNotFoundError:
+            return None
+        except AzureError as e:
+            log.warning("cache read %s/%s failed: %s", self.kind, key, type(e).__name__)
+            return None
+        self._memory[key] = item["value"]
+        return self._memory[key]
+
+    def put(self, key: str, value: dict[str, Any]) -> None:
+        self._memory[key] = value
+        try:
+            self.container.upsert_item({"id": key, "kind": self.kind, "value": value})
+        except AzureError as e:
+            log.warning("cache write %s/%s failed: %s", self.kind, key, type(e).__name__)
+
+
+@dataclass
+class Storage:
+    breakdowns: ResultCache | CosmosResultCache
+    answers: ResultCache | CosmosResultCache  # what-if answers
+    audit: AuditSink | None  # None: each match keeps its verdicts in memory
+    close: Callable[[], None] = field(default=lambda: None)
+
+
+def open_storage(
+    settings: Settings, credential: Any | None = None, cosmos_client: Any | None = None
+) -> Storage:
+    """Cosmos DB when `TTE_COSMOS_ENDPOINT` is set, else JSON files under `TTE_CACHE_DIR`.
+
+    `credential` is a synchronous azure-core TokenCredential (in Azure, the app's managed identity);
+    this module never creates one. `cosmos_client` stands in for the CosmosClient in tests. The
+    database and its containers are provisioned with the infrastructure, not created here.
+    """
+    if not settings.cosmos_endpoint:
+        return Storage(
+            ResultCache(settings.cache_dir, "breakdowns"),
+            ResultCache(settings.cache_dir, "whatif"),
+            None,
+        )
+    owned = cosmos_client is None
+    if owned:
+        if credential is None:
+            raise ValueError("TTE_COSMOS_ENDPOINT is set: pass a credential (the managed identity)")
+        from azure.cosmos import CosmosClient
+
+        cosmos_client = CosmosClient(settings.cosmos_endpoint, credential=credential)
+    database = cosmos_client.get_database_client(settings.cosmos_database)
+    cache = database.get_container_client(CACHE_CONTAINER)
+    return Storage(
+        CosmosResultCache(cache, "breakdowns"),
+        CosmosResultCache(cache, "whatif"),
+        CosmosAuditSink(database.get_container_client(AUDIT_CONTAINER)),
+        cosmos_client.close if owned else (lambda: None),
+    )
 
 
 class RateLimiter:

@@ -20,6 +20,8 @@ dependencies = [
     "fastapi>=0.150,<1",
     "uvicorn>=0.54",
     "websockets>=17",
+    # Cosmos DB store for cached results and the claims audit (SPEC 8).
+    "azure-cosmos>=4.17,<5",
 ]
 
 [dependency-groups]

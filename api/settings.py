@@ -35,6 +35,8 @@ class Settings:
     rate_limit: tuple[int, float] = (3, 600.0)
     web_origin: str = "*"
     daily_model_cap: int = 40  # model-backed regenerations per UTC day, all clients (SPEC 8)
+    cosmos_endpoint: str = ""  # set: Cosmos DB instead of the file store (SPEC 8)
+    cosmos_database: str = "tte"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -44,4 +46,6 @@ class Settings:
             rate_limit=_rate(os.environ.get("TTE_RATE_LIMIT", "3/600")),
             web_origin=os.environ.get("TTE_WEB_ORIGIN", "*"),
             daily_model_cap=int(os.environ.get("TTE_DAILY_MODEL_CAP") or 40),
+            cosmos_endpoint=os.environ.get("TTE_COSMOS_ENDPOINT", "").strip(),
+            cosmos_database=os.environ.get("TTE_COSMOS_DATABASE", "").strip() or "tte",
         )
