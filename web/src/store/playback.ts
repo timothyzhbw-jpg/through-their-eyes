@@ -26,6 +26,7 @@ export interface PlaybackState {
   captionLine: string | null; // id of the narration line on screen (a plan voice step)
   evidenceLine: string | null; // narration line whose claims and evidence are open
   whatIf: string | null; // option whose "What if…?" answer and ghost path are shown
+  live: boolean; // the playhead follows the live stream (SPEC 2); otherwise it is a replay
 }
 
 export type PlaybackStore = Store<PlaybackState>;
@@ -53,6 +54,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     captionLine: null,
     evidenceLine: null,
     whatIf: null,
+    live: false,
   });
 }
 

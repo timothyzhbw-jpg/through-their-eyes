@@ -1,5 +1,5 @@
-// "What if…?" answers (SPEC 6, 7), precomputed by sim.export.export_what_ifs until the live
-// service maps free questions: every option of the hero's decision forced and re-simulated, with
+// "What if…?" answers (SPEC 6, 7), precomputed by sim.export.export_what_ifs (free questions go to
+// the live service, see ask.ts): every option of the hero's decision forced and re-simulated, with
 // the verified answer (a SPEC 5.3 render payload in en and zh) and the forced run from the
 // decision on, for the ghost path.
 
@@ -113,16 +113,6 @@ export function parseWhatIfs(json: unknown, hero: Hero, m: MomentContext): WhatI
     refusal: raw.refusal,
     options,
   };
-}
-
-/** The what-ifs, or null when the file is missing: the app then hides the box. */
-export async function loadWhatIfs(url: string): Promise<unknown | null> {
-  try {
-    const res = await fetch(url);
-    return res.ok ? await res.json() : null;
-  } catch {
-    return null;
-  }
 }
 
 export function optionOf(whatIfs: WhatIfs | null, action: string | null) {

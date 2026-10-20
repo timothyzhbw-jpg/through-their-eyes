@@ -151,12 +151,6 @@ export function parseHero(json: unknown): Hero {
   };
 }
 
-export async function loadHero(url: string): Promise<Hero> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-  return parseHero(await res.json());
-}
-
 // ---------- angles ----------
 
 export function wrapAngle(a: number): number {

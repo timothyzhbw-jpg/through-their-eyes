@@ -1,0 +1,186 @@
+/* The live service in the page: the header's Live control or "Offline data" badge, the moments
+   detected on the stream, and the breakdown's audience, language, voice and source. */
+.header-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.data-badge {
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  padding: 6px 8px;
+  cursor: help;
+}
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.live-chip {
+  font: 700 13px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.live-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.live-chip[aria-pressed="true"] {
+  color: var(--fg);
+  border-color: var(--home);
+}
+.live-chip[aria-pressed="true"] i {
+  background: var(--home);
+  animation: live-pulse 1.2s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-chip[aria-pressed="true"] i {
+    animation: none;
+  }
+}
+.live-status {
+  font: 500 12px/1.2 var(--font-data);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.live-status.lost {
+  color: var(--gold);
+}
+.live-status .sprint {
+  color: var(--home);
+}
+
+/* moments detected on the stream */
+.moment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.moment-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.moment-list li > button:first-child {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+.moment-list li > button:first-child:hover {
+  background: var(--surface-2);
+}
+.moment-list li > button:first-child:focus-visible {
+  outline: 2px solid var(--sight);
+}
+.moment-list li.hero > button:first-child {
+  border-left-color: var(--sight);
+}
+.moment-list .t {
+  font: 500 12px/1.7 var(--font-data);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.moment-list small {
+  color: var(--muted);
+}
+
+/* audience, language and voice of the breakdown */
+.choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.choice label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.choice select {
+  color: var(--fg);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 5px 6px;
+}
+.choice .lang {
+  margin-left: 0;
+}
+.lang button:disabled,
+.choice select:disabled,
+.sound:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sound {
+  font: 600 12px/1 var(--font-body);
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.sound[aria-pressed="true"] {
+  color: var(--bg);
+  background: var(--sight);
+  border-color: var(--sight);
+}
+.sound.failed {
+  border-color: var(--gold);
+}
+.plan-badge.fresh {
+  color: var(--bg);
+  background: var(--sight);
+  border-color: var(--sight);
+}
+.note.waiting {
+  margin: 0 0 10px;
+}
+button.link {
+  all: unset;
+  color: var(--sight);
+  text-decoration: underline;
+  cursor: pointer;
+}
+button.link:focus-visible {
+  outline: 2px solid var(--sight);
+}
+.loading {
+  margin: 0;
+  padding: 24px;
+  color: var(--muted);
+}

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { startClock, useSession } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
+import { LiveBar, MomentsPanel } from "./ui/Live";
 import { EvidenceCard, NarrationPanel } from "./ui/Narration";
 import { DecisionPanel, StoryPanel } from "./ui/Panels";
 import { Transport } from "./ui/Transport";
@@ -19,8 +20,16 @@ export function App({ autoplay }: { autoplay: boolean }) {
 
   useEffect(() => startClock(session), [session]);
   useEffect(() => {
-    if (autoplay) controls.playBreakdown();
-  }, [autoplay, controls]);
+    if (!autoplay) return;
+    // With the live service: watch the match live, then its breakdown once the moment is
+    // detected (SPEC 2). Offline: play the bundled breakdown at once.
+    if (!session.feed) {
+      controls.playBreakdown();
+      return;
+    }
+    controls.startLive();
+    return () => session.feed?.stop();
+  }, [autoplay, controls, session]);
 
   return (
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
@@ -34,22 +43,25 @@ export function App({ autoplay }: { autoplay: boolean }) {
             done without one look over his shoulder.
           </p>
         </div>
-        <div className="segmented" role="group" aria-label="Run">
-          <button
-            type="button"
-            aria-pressed={mode === "factual"}
-            onClick={() => controls.setMode("factual")}
-          >
-            With the look
-          </button>
-          <button
-            type="button"
-            className="cf"
-            aria-pressed={mode === "counterfactual"}
-            onClick={() => controls.setMode("counterfactual")}
-          >
-            Without the look
-          </button>
+        <div className="header-controls">
+          <LiveBar />
+          <div className="segmented" role="group" aria-label="Run">
+            <button
+              type="button"
+              aria-pressed={mode === "factual"}
+              onClick={() => controls.setMode("factual")}
+            >
+              With the look
+            </button>
+            <button
+              type="button"
+              className="cf"
+              aria-pressed={mode === "counterfactual"}
+              onClick={() => controls.setMode("counterfactual")}
+            >
+              Without the look
+            </button>
+          </div>
         </div>
       </header>
 
@@ -64,6 +76,7 @@ export function App({ autoplay }: { autoplay: boolean }) {
 
       <section className="below">
         <NarrationPanel />
+        <MomentsPanel />
         <WhatIfPanel />
         <BreakdownPanel />
         <StoryPanel />

@@ -1,9 +1,10 @@
 // The breakdown player's console: which plan is loaded (and why, if it fell back to the template),
-// play / stop, and the cue list with the step being executed.
+// play / stop, and the cue list with the step being executed. With the live service the plan is
+// the Telestrator agent's, with the narration's voice cues added as voice steps.
 
 import { useEffect, useRef } from "react";
 import type { PlanStep, Script } from "../plan/schema";
-import { useSession } from "../session";
+import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 
 const rel = (s: number) => `${s >= 0 ? "+" : "−"}${Math.abs(s).toFixed(2)} s`;
@@ -32,12 +33,14 @@ export function describeStep(step: PlanStep, script: Script = {}): string {
 }
 
 export function BreakdownPanel() {
-  const { runner, resolved, script, controls } = useSession();
+  const { runner, controls } = useSession();
+  const { resolved, script, origin, status: arrival } = useBreakdown();
   const status = useStore(runner.status, (s) => s.status);
   const t = useStore(runner.status, (s) => s.t);
   const applied = useStore(runner.status, (s) => s.applied);
   const { plan, source, errors } = resolved;
   const running = status === "running";
+  const ready = arrival === "ready" || arrival === "failed";
   const list = useRef<HTMLOListElement>(null);
 
   // Keep the step being executed in view inside the (scrollable) cue list.
@@ -56,18 +59,51 @@ export function BreakdownPanel() {
     <div className="panel breakdown">
       <div className="breakdown-head">
         <h2>Breakdown</h2>
-        <span className={source === "given" ? "plan-badge ok" : "plan-badge fallback"}>
-          {source === "given" ? "Plan validated" : "Template plan (fallback)"}
-        </span>
+        {ready && (
+          <span className={source === "given" ? "plan-badge ok" : "plan-badge fallback"}>
+            {source === "given" ? "Plan validated" : "Template plan (fallback)"}
+          </span>
+        )}
+        {ready && origin?.kind === "api" && (
+          <span
+            className={origin.planSource === "agent" ? "plan-badge" : "plan-badge fallback"}
+            title={
+              origin.planSource === "agent"
+                ? "Written by the Telestrator agent"
+                : "The Telestrator's plan failed the server's checks: the server sent its template"
+            }
+          >
+            {origin.planSource === "agent" ? "Telestrator agent" : "Server template"}
+          </span>
+        )}
         <button
           type="button"
           className="play small"
+          disabled={!running && arrival === "loading"}
           onClick={running ? controls.stopBreakdown : controls.playBreakdown}
         >
-          {running ? "Stop" : status === "idle" ? "Play breakdown" : "Replay breakdown"}
+          {running
+            ? "Stop"
+            : arrival === "waiting"
+              ? "Get breakdown"
+              : arrival === "loading"
+                ? "Loading…"
+                : status === "idle"
+                  ? "Play breakdown"
+                  : "Replay breakdown"}
         </button>
       </div>
-      {errors.length > 0 && (
+      {ready && origin?.kind === "api" && origin.planErrors.length > 0 && (
+        <details className="plan-errors">
+          <summary>The Telestrator's plan failed the server's checks</summary>
+          <ul>
+            {origin.planErrors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {ready && errors.length > 0 && (
         <details className="plan-errors">
           <summary>
             The given plan failed validation ({errors.length}{" "}
@@ -80,24 +116,37 @@ export function BreakdownPanel() {
           </ul>
         </details>
       )}
+      {!ready && (
+        <p className="note waiting">
+          {arrival === "waiting"
+            ? "Waiting for the live stream to detect the moment. Get breakdown asks for it now."
+            : "Asking the agent crew for the breakdown…"}
+        </p>
+      )}
       <div className="progress" aria-hidden="true">
         <i style={{ width: `${Math.min(100, (100 * t) / plan.duration_s)}%` }} />
       </div>
-      <ol className="steps" ref={list}>
-        {plan.steps.map((step, k) => (
-          <li
-            key={k}
-            className={
-              running && k === applied - 1 ? "now" : k < applied && status !== "idle" ? "done" : ""
-            }
-          >
-            <span className="t">{step.t.toFixed(1)}</span>
-            <span>{describeStep(step, script)}</span>
-          </li>
-        ))}
-      </ol>
+      {ready && (
+        <ol className="steps" ref={list}>
+          {plan.steps.map((step, k) => (
+            <li
+              key={k}
+              className={
+                running && k === applied - 1
+                  ? "now"
+                  : k < applied && status !== "idle"
+                    ? "done"
+                    : ""
+              }
+            >
+              <span className="t">{step.t.toFixed(1)}</span>
+              <span>{describeStep(step, script)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
       <p className="note">
-        A TelestrationPlan is the cue list the Telestrator agent will write. Every plan is validated
+        A TelestrationPlan is the cue list the Telestrator agent writes. Every plan is validated
         before it plays; an invalid one is replaced by a template plan built from the moment.
       </p>
     </div>

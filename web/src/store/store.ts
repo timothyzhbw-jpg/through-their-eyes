@@ -32,5 +32,6 @@ export function createStore<T extends object>(initial: T): Store<T> {
  * already in the state (not a new object each call), or React re-renders forever.
  */
 export function useStore<T, U>(store: Store<T>, selector: (state: T) => U): U {
-  return useSyncExternalStore(store.subscribe, () => selector(store.get()));
+  const snapshot = () => selector(store.get());
+  return useSyncExternalStore(store.subscribe, snapshot, snapshot); // the third: server rendering
 }
