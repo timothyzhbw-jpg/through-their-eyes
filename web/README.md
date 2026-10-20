@@ -10,7 +10,7 @@ npm ci
 npm run dev          # http://localhost:5173
 npm test             # plan validation, executor, comfort-mode yaw
 npm run typecheck
-npm run build        # -> web/dist (static files for Azure Static Web Apps)
+npm run build        # -> web/dist (static files for the Azure Storage static website)
 npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 ```

@@ -4,8 +4,10 @@
 #   infra/deploy.sh provision   Log Analytics + Application Insights, Cosmos DB (serverless),
 #                               Container Registry, Container Apps environment, the `tte-api` app
 #                               with its user-assigned identity, and the GitHub Actions identity
-#                               (OIDC, no stored secret).
+#                               (OIDC, no stored secret), and the Storage static website for web/
+#                               (Static Web Apps has no region the student policy allows).
 #   infra/deploy.sh api [tag]   build the API image in the registry and roll it out.
+#   infra/deploy.sh web         build web/ and upload it to the Storage static website.
 #   infra/deploy.sh github      set the repo variables the deploy workflow reads (ids, no secrets).
 #
 # Same guard as m0_provision.sh: an explicit AZURE_SUBSCRIPTION_ID, personal offers only. Safe to
@@ -69,6 +71,7 @@ ACA_ENV=${TTE_ACA_ENV:-tte-env-$SUFFIX}
 APP=${TTE_ACA_APP:-tte-api}
 APP_ID=${TTE_API_IDENTITY:-tte-api-id-$SUFFIX}
 GH_ID=${TTE_GITHUB_IDENTITY:-tte-gh-$SUFFIX}
+SITE=${TTE_SITE_ACCOUNT:-ttesite$SUFFIX}
 REPO=${TTE_GITHUB_REPO:-timothyzhbw-jpg/through-their-eyes}
 LOG_CAP_GB=${TTE_LOG_DAILY_CAP_GB:-0.1}
 # North Central US had no Cosmos DB capacity on 2026-10-20 ("high demand"); West US is the
@@ -95,7 +98,7 @@ write_env() {
 provision() {
   step "Resource providers"
   for ns in Microsoft.App Microsoft.OperationalInsights Microsoft.Insights Microsoft.DocumentDB \
-    Microsoft.ContainerRegistry Microsoft.ManagedIdentity; do
+    Microsoft.ContainerRegistry Microsoft.ManagedIdentity Microsoft.Storage; do
     az provider register --namespace "$ns" --wait -o none
   done
 
@@ -173,15 +176,37 @@ provision() {
   RG_ID=$(az group show -n "$RG" --query id -o tsv)
   assign "$GH_PRINCIPAL" ServicePrincipal Contributor "$RG_ID"
 
+  step "Storage static website $SITE (keyless uploads)"
+  exists az storage account show -g "$RG" -n "$SITE" ||
+    az storage account create -g "$RG" -n "$SITE" -l "$LOCATION" --sku Standard_LRS \
+      --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false \
+      --allow-shared-key-access false -o none
+  SITE_ID=$(az storage account show -g "$RG" -n "$SITE" --query id -o tsv)
+  assign "$(az ad signed-in-user show --query id -o tsv)" User "Storage Blob Data Contributor" \
+    "$SITE_ID"
+  assign "$GH_PRINCIPAL" ServicePrincipal "Storage Blob Data Contributor" "$SITE_ID"
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do  # new role assignments take a few minutes to apply
+    if az storage blob service-properties update --account-name "$SITE" --auth-mode login \
+      --static-website --index-document index.html --404-document index.html -o none 2>/dev/null; then
+      break
+    fi
+    [[ $attempt == 10 ]] && { echo "Could not enable the static website on $SITE." >&2; exit 1; }
+    sleep 30
+  done
+  WEB_URL=$(az storage account show -g "$RG" -n "$SITE" --query primaryEndpoints.web -o tsv)
+  WEB_URL=${WEB_URL%/}
+
   step "Write $ENV_FILE"
   write_env "TTE_LOGS_WORKSPACE=$LOGS" "TTE_APP_INSIGHTS=$APPI" \
     "APPLICATIONINSIGHTS_CONNECTION_STRING=$APPI_CONN" "TTE_COSMOS_ACCOUNT=$COSMOS" \
     "TTE_COSMOS_ENDPOINT=$COSMOS_ENDPOINT" "TTE_COSMOS_DATABASE=$COSMOS_DB" "TTE_ACR=$ACR" \
     "TTE_ACA_ENV=$ACA_ENV" "TTE_ACA_APP=$APP" "TTE_API_URL=https://$APP_FQDN" \
     "TTE_API_IDENTITY=$APP_ID" "TTE_API_CLIENT_ID=$APP_CLIENT_ID" \
-    "TTE_GITHUB_IDENTITY=$GH_ID" "TTE_GITHUB_CLIENT_ID=$GH_CLIENT_ID"
+    "TTE_GITHUB_IDENTITY=$GH_ID" "TTE_GITHUB_CLIENT_ID=$GH_CLIENT_ID" "TTE_SITE_ACCOUNT=$SITE" \
+    "TTE_WEB_URL=$WEB_URL" "TTE_WEB_ORIGIN=$WEB_URL"
   step "Done"
   echo "API (placeholder until 'infra/deploy.sh api'): https://$APP_FQDN"
+  echo "Web (empty until 'infra/deploy.sh web'):        $WEB_URL"
 }
 
 assign() {  # principal, type, role, scope; idempotent
@@ -227,6 +252,15 @@ api() {
     --query properties.configuration.ingress.fqdn -o tsv)/health"
 }
 
+web() {
+  step "Build web/"
+  (cd web && npm ci --no-audit --no-fund && npm run build)
+  step "Upload web/dist to $SITE"
+  az storage blob upload-batch --account-name "$SITE" --auth-mode login -d '$web' -s web/dist \
+    --overwrite --content-cache-control "public, max-age=300" -o none
+  echo "${TTE_WEB_URL:-$(az storage account show -g "$RG" -n "$SITE" --query primaryEndpoints.web -o tsv)}"
+}
+
 github() {
   step "Repo variables for .github/workflows/deploy.yml ($REPO)"
   gh variable set AZURE_CLIENT_ID -R "$REPO" -b "${TTE_GITHUB_CLIENT_ID:?run provision first}"
@@ -235,11 +269,13 @@ github() {
   gh variable set AZURE_RESOURCE_GROUP -R "$REPO" -b "$RG"
   gh variable set TTE_ACR -R "$REPO" -b "$ACR"
   gh variable set TTE_ACA_APP -R "$REPO" -b "$APP"
+  gh variable set TTE_SITE_ACCOUNT -R "$REPO" -b "$SITE"
 }
 
 case $PHASE in
   provision) provision ;;
   api) api "${2:-}" ;;
+  web) web ;;
   github) github ;;
-  *) echo "usage: infra/deploy.sh provision | api [tag] | github" >&2; exit 2 ;;
+  *) echo "usage: infra/deploy.sh provision | api [tag] | web | github" >&2; exit 2 ;;
 esac

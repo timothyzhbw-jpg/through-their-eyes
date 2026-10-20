@@ -38,9 +38,12 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
-   (multi-agent), MCP (our tool server), Azure AI Speech (TTS), Azure Container Apps + Static Web
-   Apps (hosting), Azure Cosmos DB (store), Application Insights (traces), GitHub Actions (CI).
-   Don't add Azure services just to tick boxes.
+   (multi-agent), MCP (our tool server), Azure AI Speech (TTS), Azure Container Apps (API) + an
+   Azure Storage static website (web), Azure Cosmos DB (store), Application Insights (traces),
+   GitHub Actions (CI and deploy). Don't add Azure services just to tick boxes.
+   - Bowen decided on 2026-10-20 to host the web app as a Storage static website instead of Static
+     Web Apps. Static Web Apps only runs in West US 2, Central US, East US 2, West Europe and East
+     Asia, and the Azure for Students policy allows none of them; creating one was refused.
 5. **Licenses:** dependencies must be MIT / BSD / Apache-2.0. No GPL/AGPL (e.g. PitchAura,
    Ultralytics YOLO). MPL only as an unmodified dependency. Never copy code from repos without a
    license (e.g. LaurieOnTracking) — reimplement from the papers.

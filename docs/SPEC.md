@@ -25,7 +25,7 @@ knew existed.
 
 | Judging criterion (20% each) | How we score |
 |---|---|
-| Technological implementation | Physics-based synthetic tracking with a research-calibrated perception layer; numpy↔GLSL parity-tested kernels; deterministic counterfactual re-simulation; CI eval suite; Foundry + Agent Framework + MCP + Azure Speech + ACA/SWA + Cosmos DB + App Insights |
+| Technological implementation | Physics-based synthetic tracking with a research-calibrated perception layer; numpy↔GLSL parity-tested kernels; deterministic counterfactual re-simulation; CI eval suite; Foundry + Agent Framework + MCP + Azure Speech + Container Apps + Storage static website + Cosmos DB + App Insights |
 | Agentic design & innovation | AI production crew (Director, Analyst, Telestrator, Narrator, Verifier) with typed handoffs, shared moment state, MCP tools, deterministic verification, graceful fallbacks |
 | Real-world impact | Production path: the same schema can be fed by stadium skeletal tracking or broadcast-video models; machine-readable, timecoded overlay cues; audit log of every verified claim |
 | UX & presentation | First-person replay + tactical camera + live overlays; persona and language switching; a 2-minute video built around one hero moment |
@@ -613,7 +613,7 @@ to a real broadcast.
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
   on the Azure for Students credit until 2026-11-10. Free tiers where they exist: Speech F0,
-  Static Web Apps Free, the Application Insights free allowance, the Container Apps consumption
+  the Application Insights free allowance, the Container Apps consumption
   grant. Images go to Azure Container Registry Basic (about $0.17/day): while the repo is private,
   a GHCR image would need a personal access token, but ACR is pulled with the app's managed
   identity, so no secret is involved.
@@ -631,7 +631,7 @@ to a real broadcast.
   | Container Registry | Basic | $3.7 | $3.7 |
   | Cosmos DB | serverless, `cache` + `claims_audit` | < $0.5 | < $1 |
   | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
-  | Static Web Apps | Free | $0 | $0 |
+  | Storage static website (`web`) | StorageV2, LRS, hot | ≈ $0.1 | < $1 |
   | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
   | Foundry `gpt-4.1-mini` | ≈ $0.03 per four-script breakdown (≈ 60K input + 5K output tokens at $0.40 / $1.60 per M) | ≈ $3 (100 regenerations) | $26: cap of 40 per day, every day |
   | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
@@ -652,7 +652,13 @@ to a real broadcast.
 - **Azure Container Apps:** `api` (+ MCP server, a subprocess of the Analyst). Keep min replicas =
   1 during judging. A system-assigned identity holds Cognitive Services User on Foundry, AcrPull
   on the registry, and Cosmos DB data contributor on the account.
-- **Azure Static Web Apps:** `web`.
+- **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
+  Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
+  so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
+  keys; the API allows the site's origin only.
+  - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
+    2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
+    none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
 - **Azure Cosmos DB (serverless):** containers `cache` (breakdowns, what-if answers, audio keys)
   and `claims_audit`, behind the existing file-store and audit-sink interfaces. Matches and events
   are not stored: they are regenerated from their seeds at start-up, byte-identically, so storing
@@ -680,8 +686,8 @@ to a real broadcast.
   - The Container Apps environment came up as an *express* environment. It supports user-assigned
     identities only, so `tte-api` uses `tte-api-id-<suffix>` for Foundry, Cosmos and image pulls.
   - Static Web Apps could not be created: its regions (West US 2, Central US, East US 2, West
-    Europe, East Asia) are all outside the subscription's allowed regions. Web hosting is open
-    (§8 decision pending).
+    Europe, East Asia) are all outside the subscription's allowed regions. The web app is
+    therefore a Storage static website (above).
 - Every environment variable documented in `.env.example`; no secrets in the repo.
 
 ## 9. Milestones and cut list
@@ -695,7 +701,7 @@ by layer risks reaching Oct 26 with every layer 70% done and nothing to film.
 | Oct 19 (Mon) | M0 setup | registered (by Oct 20 12:00 PT); az/azd logged in; Foundry model + Speech pass the smoke test; repo + CI green |
 | Oct 20 (Tue) | M1 hero slice — sim | one scripted hero scenario; FOV + belief; decisions on belief; `drop_scan` flips the decision; determinism tests |
 | Oct 21 (Wed) | M2 hero slice — explain + render | MomentCard, claims + verifier on the hero moment; web: tactical + POV playback of the clip |
-| Oct 22 (Thu) | M3 walking skeleton | 5-agent workflow end-to-end (`en`) + TTS; **first deploy to ACA + SWA** |
+| Oct 22 (Thu) | M3 walking skeleton | 5-agent workflow end-to-end (`en`) + TTS; **first deploy to Container Apps + the Storage static website** |
 | Oct 23–25 | M4 widen | **blind-side alerts first, then "What if…?" with `force_action`**; stitched match (15–25 possessions); more scenarios; TTI/pitch control/pressing kernels + shader parity; overlays; broadcast camera; personas + `zh`; scan-detector sweep; eval suite; 3 hero moments |
 | Oct 26 (Mon) | M5 freeze | feature freeze; eval report; README; first video cut; repo public |
 | Oct 27 (Tue) | M6 submit | buffer; final ≤ 2:00 video; submission complete by mid-afternoon CT |
