@@ -178,12 +178,20 @@ on an LLM.
   his velocity for the reaction time, and its closed form only counts arrivals after it, so a
   presser sprinting at the carrier, or an opponent standing on the passing lane, looked as if the
   ball got past him. Under the same motion model, the decision model also takes the closest
-  approach of his reaction-time run to the ball, at the same moment, along the ball's path (pass)
-  or the carry (5 m in 1 s); within the sim's control radius (1 m, the radius its control and
-  tackle rules use) he wins it. P = logistic of (radius − closest approach) with the spread of
-  the belief's position uncertainty (0.3 m + 1 m per second of belief age); no new tuned
-  parameter. Per opponent the larger of the two chances counts. The TTI kernel itself (pitch
-  control, pressing, shaders) is unchanged. Test: `tests/test_decision_run_in.py`.
+  approach of his reaction-time run to the ball, at the same moment, from t = 0 along the ball's
+  path (pass) or the carry (5 m in 1 s); within the sim's control radius (1 m, the radius its
+  control and tackle rules use) he wins it. P = logistic of (radius − closest approach) with the
+  spread of the belief's position uncertainty (0.3 m + 1 m per second of belief age); no new
+  tuned parameter. Per opponent the larger of the two chances counts. The TTI kernel itself
+  (pitch control, pressing, shaders) is unchanged. Test: `tests/test_decision_run_in.py`.
+- A carry is scored along its path like a pass (TTI at each sample of the path, from 0.08 s to
+  1 s). While the carry is no faster than v_max (5 m in 1 s at v_max 5 m/s, as now) the TTI margin
+  never falls along it, so the endpoint is its worst point and the result is the same as before.
+  *Limit:* after the reaction, TTI is to a point of the path, not to within the 1 m control
+  radius, for passes, carries and pitch control alike. An opponent who would step to within 1 m
+  of the ball just after his reaction, but not onto its path in time, is under-counted, e.g. one
+  standing 1.2 m beside a 5 m carry, 3 m along it, gets P(keep) 0.64, while the sim's tackle rule
+  takes the ball from anyone who gets within 1 m of it.
 - Each teammate is evaluated at several targets along his believed run (lead 0–2 s); the best one
   is his option. Until the fitted xT grid exists (§4.5), decisions use a smooth xT prior.
 - Softmax with a per-player temperature. Receiver body orientation affects completion (facing play
@@ -381,7 +389,7 @@ of §3.4.
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.920, recall 0.984);
+      0.920, recall 0.985);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 

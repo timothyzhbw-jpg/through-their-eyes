@@ -26,8 +26,9 @@ claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.
 | Claim | Number | Report |
 |---|---|---|
 | Without one look, the hero decides differently | 39/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
-| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero; pressure hero (fresh seeds 200–239) | 40/40; 38/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
-| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%, fresh seeds 200–239) | 40/40 lost; 32/40 changed (was 22/40 before the decision model saw a presser's run-in) | [pressure](eval/reports/hero_lens_press_escape.md), [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
+| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 38/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
+| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
+| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
 | Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | False claims refuted by the verifier | 100% of perturbations | [corruption](eval/reports/corruption.md) |
