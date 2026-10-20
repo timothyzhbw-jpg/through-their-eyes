@@ -36,7 +36,13 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    and 88 of 88 false perturbations were refuted ([corruption](eval/reports/corruption.md)).
    Every live verdict and the check it ran is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
    Not in the app yet: a control to try a wrong number yourself.
-6. **The evidence.** The [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
+6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en):
+   in the Breakdown panel's **Producer** desk, press **Take down** on the Telestrator and run the
+   crew. It fails as in an outage: the call and one retry raise, it airs its template plan, and
+   the breakdown still plays. **Bring back** resumes the Agent Framework workflow from its
+   checkpoint and re-runs only the Telestrator; its plan replaces the template. The trace id is
+   the run's operation_Id in Application Insights. Each run counts against the rate limit.
+7. **The evidence.** The [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
    tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
    tests, reports and pull requests, and marks what is missing.
 
@@ -53,15 +59,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
     ```
   No login. Model-backed regenerations are rate-limited per client and capped per day; past that
   the service serves the cache or the deterministic template.
-- **Failure drill (agent recovery):** in the web app's Breakdown panel, the Producer desk lists the
-  crew's steps and who answered each: the model, its template, or code.
-  - "Take down" an agent, e.g. the Telestrator, and run the crew. Its model calls fail as in an
-    outage, so it retries once and airs its template; the breakdown still airs.
-  - "Bring back" resumes the Agent Framework workflow from its checkpoint and re-runs only that
-    step, plus the steps that read its output.
-  - The trace id is the run's operation_Id in Application Insights.
-
-  Over the API (each call counts against the rate limit):
+- **Failure drill** (tour step 6) over the API; each call counts against the rate limit:
   ```bash
   curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
     -H 'content-type: application/json' \
