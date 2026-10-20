@@ -22,6 +22,9 @@ dependencies = [
     "websockets>=17",
     # Cosmos DB store for cached results and the claims audit (SPEC 8).
     "azure-cosmos>=4.17,<5",
+    # Tracing spans for the agent crew, exported to Application Insights (SPEC 8).
+    "opentelemetry-api>=1.45,<2",
+    "azure-monitor-opentelemetry>=1.8.11,<2",
 ]
 
 [dependency-groups]
