@@ -471,6 +471,15 @@ Application Insights.
   answered with a fixed "not something he could do here" line. Latency as a breakdown (§2).
 - Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
   every tier is rendered as prosody.
+- *After deployment:* **Foundry evaluation as an ablation** (`eval/narration_ablation.py`).
+  Anchored lines are verified templates, so a groundedness score on them alone proves little.
+  Instead, compare two narration modes on the same moments and seeds:
+  - free text: the pre-anchoring prompt, kept as an eval-only mode;
+  - anchored: what ships.
+  Score both with `azure-ai-evaluation` (MIT) groundedness against the claims, and report the
+  deterministic Verifier's violations (number, entity, placeholder, banned) next to it.
+  The output, `eval/reports/narration_ablation.md`, is the evidence for the anchored design. It is
+  in the cut list.
 
 `TelestrationPlan` sketch:
 
@@ -605,16 +614,61 @@ to a real broadcast.
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
   on the Azure for Students credit until 2026-11-10. Free tiers where they exist: Speech F0,
   Static Web Apps Free, the Application Insights free allowance, the Container Apps consumption
-  grant. Container images go to GHCR (free for a public repo) instead of Azure Container Registry.
-  LLM spend is bounded by the breakdown cache (§2).
+  grant. Images go to Azure Container Registry Basic (about $0.17/day): while the repo is private,
+  a GHCR image would need a personal access token, but ACR is pulled with the app's managed
+  identity, so no secret is involved.
+  - LLM spend is bounded by the breakdown cache (§2), the per-client rate limit, and a global daily
+    cap on model-backed regenerations (`TTE_DAILY_MODEL_CAP`). Past the cap, the service serves the
+    cache or the template.
+  - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
+    at $40 if the offer supports budgets.
+- **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
+  from 2026-10-20 to 2026-11-10):
+
+  | Item | Setting | Expected | Worst case |
+  |---|---|---|---|
+  | Container Apps (`api`) | Consumption, 0.5 vCPU / 1 GiB, 1 replica always on | ≈ $6: idle most of the time ($3e-6 per vCPU-s and per GiB-s), less the monthly free grant | $28.5: active the whole time, no grant |
+  | Container Registry | Basic | $3.7 | $3.7 |
+  | Cosmos DB | serverless, `cache` + `claims_audit` | < $0.5 | < $1 |
+  | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
+  | Static Web Apps | Free | $0 | $0 |
+  | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
+  | Foundry `gpt-4.1-mini` | ≈ $0.03 per four-script breakdown (≈ 60K input + 5K output tokens at $0.40 / $1.60 per M) | ≈ $3 (100 regenerations) | $26: cap of 40 per day, every day |
+  | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
+  | **Total** | | **≈ $16** | **≈ $67** |
+- **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as
+  `infra/m0_provision.sh`:
+  - an explicit `AZURE_SUBSCRIPTION_ID`, and only Azure for Students, pay-as-you-go or free-trial
+    offers;
+  - never the CLI's default subscription, and never a Microsoft Internal or Enterprise Agreement
+    subscription.
+  GitHub Actions logs in with OIDC through a user-assigned managed identity. Its federated
+  credential trusts only this repo's `main` branch, and its roles are scoped to
+  `rg-through-their-eyes`. There is no app registration (the university tenant may forbid
+  student-created ones) and no stored Azure secret.
 - **Microsoft Foundry:** one project + one model deployment with structured outputs. Verify model
   quota on the Azure for Students subscription first (M0 smoke test: `infra/m0_provision.sh`, then
   `python -m infra.smoke`). Agent Framework is pinned to an exact version (weekly releases).
-- **Azure Container Apps:** `api` (+ MCP server). Keep min replicas = 1 during judging.
+- **Azure Container Apps:** `api` (+ MCP server, a subprocess of the Analyst). Keep min replicas =
+  1 during judging. A system-assigned identity holds Cognitive Services User on Foundry, AcrPull
+  on the registry, and Cosmos DB data contributor on the account.
 - **Azure Static Web Apps:** `web`.
-- **Azure Cosmos DB (serverless):** containers `matches`, `events`, `claims_audit`.
+- **Azure Cosmos DB (serverless):** containers `cache` (breakdowns, what-if answers, audio keys)
+  and `claims_audit`, behind the existing file-store and audit-sink interfaces. Matches and events
+  are not stored: they are regenerated from their seeds at start-up, byte-identically, so storing
+  them would be a service added for its own sake.
 - **Azure AI Speech:** neural TTS with SSML; one voice per language.
-- **Application Insights:** OpenTelemetry traces from Agent Framework and FastAPI.
+- **Application Insights:** OpenTelemetry traces from Agent Framework and FastAPI, through
+  `azure-monitor-opentelemetry` (MIT).
+  - Spans: one per breakdown, one child per workflow step (Director, Analyst with its MCP tool
+    calls, Telestrator, each narration voice, Verifier rounds, Voice).
+  - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
+    reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
+    ingestion.
+  - The end-to-end transaction view of one breakdown, with a fallback in it, is a video shot and a
+    README figure: evidence for the multi-agent prize.
+  - Acceptance: one breakdown yields one trace with a span per step, and a forced timeout shows up
+    as a `template` span with its reason.
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
 - Every environment variable documented in `.env.example`; no secrets in the repo.
@@ -643,16 +697,17 @@ pilot only, never generalised.
 0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
 1. rigged GRF players in POV and broadcast (stretch; §7, one-day trial after deployment)
-2. shareable clip export (stretch)
-3. viewer pilot
-4. end-of-match recap reel
-5. "What if…?" free text → suggested questions only
-6. two voices → one narrator
-7. `coach` persona
-8. `es` language
-9. Cosmos DB → file store
-10. occlusion model → FOV only
-11. pitch-control shader and pass value surface → precomputed textures
+2. Foundry evaluation ablation, free text vs anchored narration (§6)
+3. shareable clip export (stretch)
+4. viewer pilot
+5. end-of-match recap reel
+6. "What if…?" free text → suggested questions only
+7. two voices → one narrator
+8. `coach` persona
+9. `es` language
+10. Cosmos DB → file store
+11. occlusion model → FOV only
+12. pitch-control shader and pass value surface → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
@@ -680,3 +735,10 @@ Framework, live deployment, the video.
 - [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
       and its attribution), architecture, how to run, eval results, related work
 - [ ] All materials in English
+- [ ] **Claim only what we use.** README, video and submission list a technology only if the running
+      system or our development actually used it, each with evidence (file, screenshot, PR):
+      a "technology → where → evidence" table, which the closing architecture slide follows.
+      - We develop with Claude Code and say so.
+      - GitHub Copilot and the Azure MCP Server are listed only if we really used them, with the
+        PRs or commands that show it.
+      - Fabric is not used.
