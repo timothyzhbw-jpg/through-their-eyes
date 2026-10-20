@@ -64,13 +64,13 @@ None.
 | 18 | `pressure_at_pass` | `swap_player` | player: H8 → H1 | supported | approx(6.661338147750939e-16, 0.0) holds |
 | 11 | `blind_side` | `swap_player` | runner: H9 → A3 | supported | eq(True, True) holds |
 | 10 | `blind_side` | `swap_player` | runner: H9 → H10 | supported | eq(True, True) holds |
-| 14 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.969774147898603, 12.0) holds |
+| 14 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.969774147898589, 12.0) holds |
 | 5 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
-| 15 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.726468688150181, 10.7) holds |
-| 11 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.882016819024095, 12.9) holds |
-| 12 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(13.5026439845338, 13.5) holds |
+| 15 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.726468688150169, 10.7) holds |
+| 11 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.882016819024093, 12.9) holds |
+| 12 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(13.502643984533806, 13.5) holds |
 | 19 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.882355153926314, 11.9) holds |
-| 2 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.74324669501875, 10.7) holds |
+| 2 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(10.743246695018742, 10.7) holds |
 
 ## Excluded: not decidable from the recording
 
@@ -89,7 +89,7 @@ Player ids stand in for display names.
 | `blind_side` | H9's run was on H8's blind side. | H9的跑位在H8的盲区。 |
 | `cf_pass` | Without that look, H8 would have passed to H1. | 如果没有那一眼，H8会把球传给H1。 |
 | `cf_pass_success` | Without that look, H8 thought the pass to H9 had a 0.07 chance of arriving; it was 0.90. | 如果没有那一眼，H8以为传给H9的球到达的概率是0.07，实际是0.90。 |
-| `cf_value` | That look was worth 0.09 in expected threat. | 那一眼带来了0.09的预期威胁（xT）。 |
+| `cf_value` | That look was worth 0.13 in expected threat. | 那一眼带来了0.13的预期威胁（xT）。 |
 | `gap_opened` | While the ball travelled to H8, H9 opened up 6.9 metres on A5. | 球传向H8的途中，H9把与A5的距离拉开了6.9米。 |
 | `gap_to_marker` | H9 was 10.5 metres clear of A5 when the pass was played. | 出球时，H9与A5相距10.5米。 |
 | `gap_to_nearest_opponent` | H9 had 10.5 metres to the nearest opponent when the pass was played. | 出球时，H9离最近的对手有10.5米。 |
