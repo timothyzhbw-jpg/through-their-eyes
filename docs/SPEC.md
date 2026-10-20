@@ -427,7 +427,7 @@ Application Insights.
   template plan when invalid.
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
-  `run_counterfactual`.
+  `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
 - *M4:* **"What if…?" questions.** A viewer picks or types a question such as "what if he had
   passed to H4?". The Analyst maps it to one of the hero's evaluated options (structured output:
   an option id, nothing else) and calls the MCP tool `what_if(action)`, which re-simulates with
