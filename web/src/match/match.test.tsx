@@ -36,6 +36,7 @@ import {
   render,
   settle,
   type Route,
+  verifyResponse,
 } from "../testing";
 import { MomentsPanel } from "../ui/Live";
 import { Transport } from "../ui/Transport";
@@ -252,6 +253,19 @@ describe("hero breakdowns inside the match", () => {
     expect(hero.runner.status.get().status).toBe("done");
     expect(hero.playback.get().cfGhost).toBe(true);
     expect(hero.hero.runs.counterfactual.decision?.chosen).toBe("carry");
+  });
+
+  it("checks a wrong number against the possession's own hero moment", async () => {
+    const { session, fetch } = online({
+      "POST /api/verify": (body) => json(verifyResponse((body as { value: number }).value)),
+    });
+    session.controls.openBreakdown(card(MATCH_PRESS));
+    await settle();
+    const hero = session.screen.get().hero!;
+    hero.runner.stop();
+    await hero.controls.tryValue("cf_value", "dxt", 0.5);
+    const post = fetch.calls.find((c) => c.path === "/api/verify")!;
+    expect(post.body).toMatchObject({ match: MATCH, moment: MATCH_PRESS, claim: "cf_value" });
   });
 
   it("refuses a breakdown placed in another possession than the moment's", async () => {

@@ -156,3 +156,20 @@ def test_the_pressure_hero_on_its_own(client):
     assert out["result"]["findings"]["lens"] == "pressure"
     assert out["result"]["plan_source"] == "template"
     assert not any(s["do"] == "scan_marker" for s in out["result"]["plan"]["steps"])
+
+
+def test_a_wrong_number_is_checked_against_the_hero_moment_it_belongs_to(client, info):
+    # Inside the stitched match the evidence card asks about its possession's hero (SPEC 3.1, 7).
+    second = info["hero_moments"][1]
+    body = {"match": MATCH, "claim": "pressure_at_pass", "slot": "pressure", "value": 50}
+    own = client.post("/api/verify", json={**body, "match": PRESS}).json()
+    assert own["verified_value"] == 95 and own["status"] == "refuted"
+    r = client.post("/api/verify", json={**body, "moment": second})
+    assert r.status_code == 200
+    assert {k: r.json()[k] for k in ("verified_value", "status", "line")} == {
+        k: own[k] for k in ("verified_value", "status", "line")
+    }
+    assert (
+        client.post("/api/verify", json=body).status_code == 404
+    )  # the first hero has no such claim
+    assert client.post("/api/verify", json={**body, "moment": "nope"}).status_code == 404

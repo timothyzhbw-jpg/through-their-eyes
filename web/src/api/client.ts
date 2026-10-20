@@ -167,6 +167,7 @@ export interface Api {
     slot: string;
     value: number;
     language: Language;
+    moment?: string;
   }): Promise<VerifyResponse>;
   /** WebSocket URL of the live stream, starting at frame `start`. */
   liveUrl(start: number, speed?: number): string;
@@ -262,10 +263,10 @@ export function createApi(
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
     tts: (ssml) => call("/api/tts", post({ ssml }), TTS_TIMEOUT_MS, (res) => res.blob()),
-    verify: ({ claim, slot, value, language }) =>
+    verify: ({ claim, slot, value, language, moment }) =>
       call(
         "/api/verify",
-        post({ match, claim, slot, value, language }),
+        post({ match, claim, slot, value, language, ...(moment ? { moment } : {}) }),
         VERIFY_TIMEOUT_MS,
         json(VerifyResponse),
       ) as Promise<VerifyResponse>,

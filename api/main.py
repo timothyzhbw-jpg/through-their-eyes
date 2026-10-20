@@ -63,6 +63,7 @@ class TtsBody(BaseModel):
 
 class VerifyBody(BaseModel):
     match: str
+    moment: str | None = None  # which hero moment, in a match with several; default the first
     claim: str = Field(max_length=100)
     slot: str = Field(max_length=100)
     value: float = Field(strict=True, allow_inf_nan=False)  # a JSON number: no strings, no bools
@@ -260,10 +261,13 @@ def create_app(
         Not written to the audit log; limited per client like the model-backed requests.
         """
         m = await match_or_404(body.match)
+        ctx = m.context(body.moment)
+        if ctx is None:
+            raise HTTPException(404, f"checks are available for {', '.join(m.contexts)}")
         if not verify_limiter.allow(_client_ip(request)):
             raise HTTPException(429, "too many checks from this address: try again in a minute")
         try:
-            out = await asyncio.to_thread(tamper, m.ctx, body.claim, body.slot, body.value,
+            out = await asyncio.to_thread(tamper, ctx, body.claim, body.slot, body.value,
                                           body.language)  # fmt: skip
         except TamperError as e:
             raise HTTPException(e.status, e.detail) from None
