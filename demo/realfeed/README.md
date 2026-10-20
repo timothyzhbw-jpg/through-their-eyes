@@ -20,11 +20,18 @@ Wikimedia Commons, CC BY 3.0; modified (graphics overlaid, background blurred).
 <https://commons.wikimedia.org/wiki/File:Битва_Корпораций_-_2019-10-06_-_Нова_Пошта._-_Мини-футбол._Финал..webm>
 
 The clip is 15:46.0–15:56.0 of the original. The full attribution above goes in this README, the
-repo README and the video description. On screen, for the whole segment, there are exactly two
-lines of text: "Real footage, overlay demo only; the app uses synthetic data" and "savinkins,
-Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". Otherwise the footage carries graphics
-only: no numbers, captions or narration, because every number in the app is a verified claim
-about the synthetic match and nothing here is verified.
+repo README and the video description. On screen, for the whole segment: "Real footage, overlay
+demo only; the app uses synthetic data" and "savinkins, Wikimedia Commons, CC BY 3.0; blurred and
+overlaid by us".
+
+The footage also carries **estimated numbers**, by Bowen's decision on 2026-10-19 (SPEC §7 still
+says graphics only until he confirms the change there). Every number in the app is a verified
+claim about the synthetic match; these are not, so each reads "~x" and the panel that carries the
+pitch-control share says "Estimated from video, not verified". The numbers:
+- the pitch-control share of each team over the pitch in view (top left);
+- the chance that each pass option beats every defender (TTI model), next to the receiver;
+- the distance from the ball carrier to the nearest opponent, along a dashed line;
+- the speed of up to three running players, as tags at their feet.
 
 ## Run
 
@@ -111,8 +118,8 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 | Tracking drift, synthetic | under 1 px over 150 frames of known pan + zoom + keystone with moving distractors (`tests/test_realfeed.py`) |
 | Tracking drift, real clip | estimated against the painted lines every second: 1.7–3.2 px for the first 7 s; 3.8–6.9 px during the final zoom (8–10 s), about 5 cm on the ground at the end |
 | Players | about 80 % of visible players detected on spot-checked frames (28 of 34). Misses are mostly two players overlapping in the image and the goalkeeper diving. False positives are rare: a substitute standing on the far line, a goalpost in the final zoom. |
-| Off-pitch legibility (`check.py`) | Share of the source's detail that survives off the pitch, measured as the export regressed on the source in every frame. Single-pixel detail: at most **0.05 %** (threshold 5 %). Letter-stroke scale, band-pass 1.5–4.5 px: at most **0.20 %** (threshold 10 %). H.264 noise is not correlated with the source, so it does not count. |
-| Boards and crests (`check.py`) | Letter-stroke detail kept inside each region tracked from the first frame, maximum over all frames (threshold 10 %): the three VETEK sponsor boards 0.4–1.1 %, the "ФК «МЕТАЛЛИСТ»" board 0.8 %, the V-logo board 1.0 %, the crests on the fence 1.0 % and 3.9 %, the crests on the dugout walls 2.7 % and 1.0 % |
+| Off-pitch legibility (`check.py`) | Share of the source's detail that survives off the pitch, measured as the export regressed on the source in every frame. Single-pixel detail: at most **0.04 %** (threshold 5 %). Letter-stroke scale, band-pass 1.5–4.5 px: at most **0.30 %** (threshold 10 %). H.264 noise is not correlated with the source, so it does not count. |
+| Boards and crests (`check.py`) | Letter-stroke detail kept inside each region tracked from the first frame, maximum over all frames (threshold 10 %): the three VETEK sponsor boards 0.5–1.2 %, the "ФК «МЕТАЛЛИСТ»" board 0.8 %, the V-logo board 1.2 %, the crests on the fence 0.9 % and 5.0 %, the crests on the dugout walls 3.5 % and 5.7 % (the number tags sometimes pass over a region) |
 | Kit | Red kit: the chest logo and white back numbers are erased in the frames checked by eye (120, 250, 380, 430, 470, 495; Bowen's frame-by-frame review covers the rest). The small dark print under the back number is a few pixels wide and illegible. Sky-blue bibs and black shorts: numbers only, plus a maker's mark under 10 px. The orange goalkeeper's shirt is plain. |
 | Label and attribution | visible in **499 of 499** exported frames |
 | Graphics on non-turf pixels | **0** pixels in every frame |
@@ -121,6 +128,12 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 
 - **No head orientation** can be read from this footage, so this segment shows no scans, vision
   cones or belief: only space and passing graphics. The perception features stay synthetic.
+- **The numbers are estimates.** Positions carry the calibration and tracking errors above
+  (roughly 0.3–1 m), so distances read to a tenth of a metre are about ±0.5 m. Speeds come from
+  0.5 s of smoothing; they are shown only near real detections, with a plausible acceleration,
+  between 13 and 28 km/h (off below 10 km/h), and are about ±2 km/h. The pass and pitch-control
+  percentages are model outputs (TTI, pitch control) on those positions. Pitch control counts
+  only the players in view.
 - **The ball is not detected.** The moment of the first touch (15:54.0) is read off the footage
   by eye; the carrier is then picked by rule (the blue player nearest the centre spot at that
   moment), so no player position is committed.

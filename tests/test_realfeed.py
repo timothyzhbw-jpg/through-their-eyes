@@ -394,3 +394,18 @@ def test_warm_white_prints_in_a_chest_box_are_erased_but_skin_outside_is_not():
     mask = kit_print_mask(frame, region, chest_boxes=[(52, 48, 56, 44)])
     assert mask[62:80, 62:98].mean() > 0.95
     assert not mask[45:105, 124:133].any()
+
+
+def test_speed_tags_show_a_sustained_run_but_not_a_track_jump():
+    from demo.realfeed.players import Track
+    from demo.realfeed.render import speed_tags
+
+    fps, frames = 50.0, list(range(100))
+    run = Track(0, frames, [np.array([5.0 * f / fps, 0.0]) for f in frames], [0] * 100)
+    speed, show = speed_tags(run, fps)  # 5 m/s = 18 km/h
+    assert abs(np.nanmedian(speed) - 18.0) < 0.5
+    assert show[60] and not show[:5].any()
+    # Walking, then a 3 m jump (an identity switch): never shown as a sprint.
+    walk = [np.array([1.0 * f / fps + (3.0 if f >= 50 else 0.0), 0.0]) for f in frames]
+    _, show2 = speed_tags(Track(1, frames, walk, [0] * 100), fps)
+    assert not show2.any()

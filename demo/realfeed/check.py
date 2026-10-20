@@ -109,7 +109,7 @@ def main() -> None:
     pitch = cam.calibration.pitch
     blank = np.zeros((SIZE[1], SIZE[0], 3), np.uint8)
     label_box = hud(blank.copy(), freeze=False)[0]
-    hud_boxes = hud(blank.copy(), freeze=True)
+    hud_boxes = hud(blank.copy(), freeze=True, share=0.5)  # every panel that can appear
     grow = 2 * BACKGROUND["feather_px"] + 5  # the feathered rim reaches this far outward
     review = OUT / "legibility"
     review.mkdir(parents=True, exist_ok=True)

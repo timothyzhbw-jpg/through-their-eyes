@@ -22,7 +22,9 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
+from analytics.pitch_control import pitch_control
 from demo.realfeed.clip import FPS, OUT, SIZE
+from demo.realfeed.geometry import apply_h, depth_sign
 from demo.realfeed.overlay import (
     BLUE,
     RED,
@@ -67,6 +69,11 @@ CONTROL_OPACITY = 0.24
 # every face is blurred until he confirms the change there; True follows that text (and makes
 # check.py verify the faces).
 BLUR_FACES = False
+# Estimated numbers on the footage (Bowen's decision, 2026-10-19; SPEC §7 still says graphics
+# only until he confirms there). Every number reads "~x" and the panel says how it was made.
+ESTIMATE_NOTE = "Estimated from video, not verified"
+SPEED_ON_KMH, SPEED_OFF_KMH, SPEED_MAX_KMH = 13.0, 10.0, 28.0
+MAX_SPEED_TAGS = 3
 
 # The only text on the real footage (SPEC 7): what it is, and the CC BY attribution, on screen for
 # the whole segment. Graphics only otherwise: no numbers, captions or narration.
@@ -80,6 +87,35 @@ class PlayerState:
     team: int
     pos: np.ndarray
     vel: np.ndarray
+    speed_kmh: float = float("nan")  # nan where the estimate is not trusted
+    show_speed: bool = False
+
+
+def speed_tags(t: Track, fps: float) -> tuple[np.ndarray, np.ndarray]:
+    """Speed (km/h, nan where untrusted) and when to show a speed tag, per dense track frame.
+
+    Speed comes from 0.5 s of smoothing. It is trusted only near real detections (not across
+    interpolated gaps), with a plausible acceleration and below SPEED_MAX_KMH; the tag turns on
+    after SPEED_ON_KMH for 0.2 s and off below SPEED_OFF_KMH, so it does not flicker.
+    """
+    full, _ = t.dense()
+    vel = t.velocity(fps, window=25, lag=12)
+    speed = np.linalg.norm(vel, axis=1) * 3.6
+    seen = np.isin(full, t.frames)
+    near = np.convolve(seen.astype(float), np.ones(5), mode="same") > 0
+    acc = np.linalg.norm(np.gradient(vel, axis=0), axis=1) * fps
+    trusted = near & (acc < 8.0) & (speed < SPEED_MAX_KMH)
+    speed = np.where(trusted, speed, np.nan)
+    show = np.zeros(len(full), bool)
+    on, run = False, 0
+    for k, v in enumerate(speed):
+        run = run + 1 if v > SPEED_ON_KMH else 0
+        if np.isnan(v) or v < SPEED_OFF_KMH:
+            on = False
+        elif run >= round(0.2 * fps):
+            on = True
+        show[k] = on
+    return speed, show
 
 
 def states(trs: list[Track], n: int) -> list[list[PlayerState]]:
@@ -87,13 +123,15 @@ def states(trs: list[Track], n: int) -> list[list[PlayerState]]:
     for t in trs:
         full, sm = t.smoothed(window=11)
         vel = t.velocity(FPS, window=11, lag=6)
+        speed, show = speed_tags(t, FPS)
         team = t.team()
         team = GOALKEEPER_TEAM if team == 2 else team
         if team not in TEAM_COLOUR:
             continue
         for k, f in enumerate(full):
             if 0 <= f < n:
-                out[f].append(PlayerState(t.id, team, sm[k], np.clip(vel[k], -8, 8)))
+                st = PlayerState(t.id, team, sm[k], np.clip(vel[k], -8, 8), speed[k], show[k])
+                out[f].append(st)
     return out
 
 
@@ -103,7 +141,9 @@ def carrier_track(st: list[list[PlayerState]]) -> int:
 
 
 def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None, fade: float):
+    """The ground graphics, plus notes (pitch point, text) for the estimated numbers."""
     layer = Layer(canvas)
+    notes: list[tuple[np.ndarray, str]] = []
     red = [p for p in players if p.team == 0]
     blue = [p for p in players if p.team == 1]
     if len(red) >= 2 and len(blue) >= 2:
@@ -138,17 +178,50 @@ def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None
                 end = m.pos - d / max(np.linalg.norm(d), 1e-6) * 0.6
                 layer.line(c.pos, end, safety_colour(safe), 0.16, opacity=0.95 * fade)
                 layer.circle(m.pos, 0.75, safety_colour(safe), 0.10, opacity=0.95 * fade)
-    return layer
+                notes.append((m.pos, f"~{round(100 * safe)}%"))
+            if opp:
+                near = min(opp, key=lambda q: float(np.linalg.norm(q.pos - c.pos)))
+                d = near.pos - c.pos
+                dist = float(np.linalg.norm(d))
+                for a in np.arange(0.0, 1.0, 0.16):  # dashed line to the nearest opponent
+                    layer.line(c.pos + d * a, c.pos + d * min(1.0, a + 0.09), WHITE, 0.06, fade)
+                notes.append((c.pos + d / 2, f"~{dist:.1f} m"))
+    return layer, notes
+
+
+def control_share(pitch, h: np.ndarray, players: list[PlayerState]) -> float | None:
+    """Red's share of the pitch in view (pitch control, cells whose centre is in the frame)."""
+    red = [p for p in players if p.team == 0]
+    blue = [p for p in players if p.team == 1]
+    if len(red) < 2 or len(blue) < 2:
+        return None
+    pts, _ = pitch.grid(0.5)
+    img = apply_h(h, pts)
+    front = depth_sign(h, pts) > 0
+    seen = front & (img[:, 0] >= 0) & (img[:, 0] < SIZE[0]) & (img[:, 1] >= 0)
+    seen &= img[:, 1] < SIZE[1]
+    if seen.sum() < 50:
+        return None
+    pr = pitch_control(
+        pts[seen],
+        np.array([q.pos for q in red]), np.array([q.vel for q in red]),
+        np.array([q.pos for q in blue]), np.array([q.vel for q in blue]),
+    )  # fmt: skip
+    return float(pr.mean())
 
 
 def _text(img, text, org, scale=0.8, colour=(255, 255, 255), thick=1):
     cv2.putText(img, text, org, cv2.FONT_HERSHEY_DUPLEX, scale, colour, thick, cv2.LINE_AA)
 
 
-def hud(img: np.ndarray, freeze: bool) -> list[tuple[int, int, int, int]]:
-    """Label and attribution (bottom left), a pause sign while frozen; returns the panel boxes."""
+def hud(
+    img: np.ndarray, freeze: bool, share: float | None = None
+) -> list[tuple[int, int, int, int]]:
+    """Label and attribution (bottom left), the pitch-control share (top left, with the
+    estimate disclaimer), a pause sign while frozen; returns the panel boxes."""
     h, w = img.shape[:2]
     pad, gap = 14, 10
+    stats = [] if share is None else [_share_panel(img, share)]
     sizes = [
         cv2.getTextSize(t, cv2.FONT_HERSHEY_DUPLEX, s, 1)[0]
         for t, s in ((LABEL, 0.8), (ATTRIBUTION, 0.62))
@@ -165,7 +238,7 @@ def hud(img: np.ndarray, freeze: bool) -> list[tuple[int, int, int, int]]:
         0.62,
         (215, 215, 215),
     )
-    boxes = [box]
+    boxes = [box, *stats]
     if freeze:
         # A pause sign, not a word: the footage carries no captions.
         box = (w - 24 - 64, 24, 64, 64)
@@ -174,6 +247,41 @@ def hud(img: np.ndarray, freeze: bool) -> list[tuple[int, int, int, int]]:
             cv2.rectangle(img, (x0, 24 + 16), (x0 + 10, 24 + 48), (255, 255, 255), -1)
         boxes.append(box)
     return boxes
+
+
+def _share_panel(img: np.ndarray, share: float) -> tuple[int, int, int, int]:
+    pad = 14
+    red_t, blue_t = f"RED ~{round(100 * share)}%", f"BLUE ~{100 - round(100 * share)}%"
+    title, note = "PITCH CONTROL IN VIEW", ESTIMATE_NOTE
+    f = cv2.FONT_HERSHEY_DUPLEX
+    (tw, th), _ = cv2.getTextSize(title, f, 0.55, 1)
+    (rw, rh), _ = cv2.getTextSize(red_t, f, 0.8, 1)
+    (bw, _), _ = cv2.getTextSize(blue_t, f, 0.8, 1)
+    (nw, nh), _ = cv2.getTextSize(note, f, 0.5, 1)
+    width = max(tw, rw + 30 + bw, nw) + 2 * pad
+    height = th + rh + nh + 2 * pad + 28
+    box = (24, 24, width, height)
+    _panel(img, box)
+    y = 24 + pad + th
+    _text(img, title, (24 + pad, y), 0.55, (210, 210, 210))
+    y += rh + 14
+    _text(img, red_t, (24 + pad, y), 0.8, (90, 90, 245))
+    _text(img, blue_t, (24 + pad + rw + 30, y), 0.8, (245, 185, 90))
+    y += nh + 14
+    _text(img, note, (24 + pad, y), 0.5, (180, 180, 180))
+    return box
+
+
+def _tag(img, text: str, centre, scale: float = 0.6) -> tuple[int, int, int, int]:
+    """A number on a small dark panel centred at `centre`; returns the panel box."""
+    (tw, th), base = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 1)
+    pad = 5
+    x = int(np.clip(centre[0] - tw / 2 - pad, 0, img.shape[1] - tw - 2 * pad))
+    y = int(np.clip(centre[1] - th / 2 - pad, 0, img.shape[0] - th - base - 2 * pad))
+    box = (x, y, tw + 2 * pad, th + base + 2 * pad)
+    _panel(img, box, 0.6)
+    _text(img, text, (x + pad, y + pad + th), scale)
+    return box
 
 
 def _panel(img, box, alpha=0.55):
@@ -243,6 +351,7 @@ def render(preview: set[int] | None = None) -> dict:
     canvas = Canvas(pitch, ppm=40.0, margin=1.0)
     writer = None if preview else Writer(VIDEO, FPS, SIZE)
     held: list[tuple[int, tuple]] = []
+    share: float | None = None
     checks = {"frames": 0, "hf_ratio_outside_max": 0.0, "overlay_off_grass_px": 0}
     for i, frame in enumerate(frames()):
         if i < START or (preview is not None and i not in preview):
@@ -252,7 +361,10 @@ def render(preview: set[int] | None = None) -> dict:
             fade = min(1.0, (i - OPTIONS[0]) / 10.0, (OPTIONS[1] - i) / 6.0 + 0.0)
         else:
             fade = 0.0
-        layer = ground_layer(canvas, st[i], carrier, max(0.0, fade))
+        layer, notes = ground_layer(canvas, st[i], carrier, max(0.0, fade))
+        s_now = control_share(pitch, h, st[i])
+        if s_now is not None:
+            share = s_now if share is None else share + 0.08 * (s_now - share)
         bgr, alpha = layer.project(h, SIZE)
         pitch_area, keep = keep_mask(frame, h, pitch, dets[i])
         key = grass_mask(frame) & pitch_area
@@ -265,10 +377,22 @@ def render(preview: set[int] | None = None) -> dict:
         if BLUR_FACES:  # detections held for a few frames against flicker
             held = [(f, b) for f, b in held if i - f <= 6] + [(i, b) for b in head_boxes(dets[i])]
             out = soften_heads(out, [b for _, b in held], keep)
+        # Estimated numbers, drawn as screen-space tags after the blur.
+        tag_boxes = []
+        for world, text in notes:
+            px = apply_h(h, world)[0]
+            tag_boxes.append(_tag(out, text, (px[0], px[1] + 26)))
+        fast = sorted((q for q in st[i] if q.show_speed), key=lambda q: -q.speed_kmh)[
+            :MAX_SPEED_TAGS
+        ]
+        for q in fast:
+            px = apply_h(h, q.pos)[0]
+            text = f"~{round(q.speed_kmh)} km/h"
+            tag_boxes.append(_tag(out, text, (px[0], px[1] + 30), 0.55))
         reps = FREEZE_FRAMES if i == CARRIER_FRAME else 1
         for r in range(reps):
             img = out.copy()
-            hud_boxes = hud(img, freeze=reps > 1)
+            hud_boxes = hud(img, freeze=reps > 1, share=share) + tag_boxes
             if r == 0:
                 grow = 2 * BACKGROUND["feather_px"] + 5  # skip the feathered rim
                 outside = cv2.erode(
