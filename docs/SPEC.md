@@ -523,8 +523,8 @@ Every factual sentence on screen comes from a `Claim`:
       ≥ 98%. Perturbations that happen to stay true (e.g. swapping two players who both scanned
       3 times) are excluded and reported separately. `approx` tolerances are < 20%, so ±20%
       perturbations are refutable.
-      — [eval/reports/corruption.md](../eval/reports/corruption.md) (88/88 false perturbations
-      refuted, 25/25 at ±20%; 10 still true and 2 undecidable reported apart);
+      — [eval/reports/corruption.md](../eval/reports/corruption.md) (90/90 false perturbations
+      refuted, 25/25 at ±20%; 6 still true and 4 undecidable reported apart);
       [tests/test_verifier_corruption.py](../tests/test_verifier_corruption.py)::`test_false_perturbations_are_refuted`
 - [x] No rendered caption, in any language, contains a number (digits or number words) that did
       not come from a slot (check on the final render payload).

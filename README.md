@@ -38,8 +38,8 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    never hand it a wrong number, because the narration agents pick verified claim ids and never
    write a digit. Where a model writes free text, it blocks: 58 of 66 free-text first-draft lines
    failed the Verifier, for example "off by 1.2 metres" where the claim holds 0.5
-   ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)), and 88
-   of 88 false perturbations were refuted ([corruption](eval/reports/corruption.md)). Every
+   ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)), and 90
+   of 90 false perturbations were refuted ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
 6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en):
    in the Breakdown panel's **Producer** desk, press **Take down** on the Telestrator and run the
