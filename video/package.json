@@ -1,0 +1,16 @@
+{
+  "name": "through-their-eyes-video",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
