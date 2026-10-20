@@ -4,10 +4,9 @@
   back; scans are ground-truth `scan` events.
 - Non-scan head motion (SPEC 3.4 nuisance, `SimParams.head_nuisance`): slow drift of the resting
   gaze around the ball, and partial scans — a turn away that comes straight back, without a dwell,
-  before the ball leaves the binocular cone. Partial scans are `scan` events with
-  `attrs["partial"] = True` and do not count as scans: the player never took his eyes off the
-  ball. Anything that counts scans (metrics, detector ground truth) filters them out. The
-  scenario's forced scans are never partial and never blocked by nuisance.
+  before the ball leaves the binocular cone. They are not scans — the player never took his eyes
+  off the ball — so they are emitted as `head_turn` events (`attrs["partial"] = True`), never as
+  `scan` events. The scenario's forced scans are never partial and never blocked by nuisance.
 - What a player sees comes from `analytics.vision.player_visibility` on his true head yaw.
 - Belief (mental map): for every other player, the position and velocity at the last sighting and
   when it was. The belief is that sighting extrapolated, at most `horizon_s` ahead.
@@ -76,6 +75,11 @@ class FinishedScan:
 
 def scan_id(player_id: str, frame: int) -> str:
     return f"scan:{player_id}:{frame:04d}"
+
+
+def head_turn_id(player_id: str, frame: int) -> str:
+    """A partial scan: head motion that is not a scan (SPEC 3.4 nuisance)."""
+    return f"head_turn:{player_id}:{frame:04d}"
 
 
 class HeadModel:

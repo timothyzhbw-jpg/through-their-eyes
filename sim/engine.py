@@ -31,7 +31,7 @@ from sim.decision import (
 )
 from sim.model import Decision, Event
 from sim.movement import steer, turn_toward
-from sim.perception import BeliefStore, FinishedScan, HeadModel, scan_id
+from sim.perception import BeliefStore, FinishedScan, HeadModel, head_turn_id, scan_id
 from sim.rng import KeyedRng
 from sim.run import MatchRun
 
@@ -467,20 +467,11 @@ class Simulation:
 
     def _emit_scan(self, finished: FinishedScan) -> None:
         i, scan = finished.player, finished.scan
+        attrs = {"end": finished.end, "direction": scan.target, "amplitude": scan.amplitude}
+        if scan.partial:  # aborted: head motion that is not a scan (sim.perception)
+            etype, eid, attrs["partial"] = "head_turn", head_turn_id(self.ids[i], scan.start), True
+        else:
+            etype, eid, attrs["key"] = "scan", scan_id(self.ids[i], scan.start), scan.key
         self.events.append(
-            Event(
-                id=scan_id(self.ids[i], scan.start),
-                type="scan",
-                frame=scan.start,
-                t=scan.start * DT,
-                player=self.ids[i],
-                team=int(self.team[i]),
-                attrs={
-                    "end": finished.end,
-                    "direction": scan.target,
-                    "amplitude": scan.amplitude,
-                    "key": scan.key,
-                    "partial": scan.partial,  # aborted: not a scan (sim.perception)
-                },
-            )
+            Event(eid, etype, scan.start, scan.start * DT, self.ids[i], int(self.team[i]), attrs)
         )
