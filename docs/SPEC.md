@@ -66,9 +66,10 @@ on an LLM.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
   `moment` and `end` messages; clients can pause, resume, seek, change speed or stop.
 - REST: `/api/matches`, `/api/matches/<id>` (+ `/export`, `/moments`, `/audit`),
-  `POST /api/breakdowns`, `POST /api/whatif`, `POST /api/tts` (503 until Speech is configured),
-  `POST /api/verify` (one claim re-checked with one numeric slot changed; not audited, rate-limited
-  per client, no model call).
+  `POST /api/breakdowns` (`fail` for the failure drill, §6),
+  `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
+  is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
+  audited, rate-limited per client, no model call).
 - Measured locally: 25.0 fps with a p95 frame gap of 41 ms; a cached breakdown is served in about
   1 ms.
 - The cache is one JSON file per key under `TTE_CACHE_DIR`; Cosmos DB can replace it (§8).
@@ -575,10 +576,11 @@ Application Insights.
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
   outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
 - The Telestrator and narration read only the Analyst's findings, so a fan-out edge runs them
-  concurrently; Voice places lines on the plan's clock, so a fan-in edge makes it wait for both the
-  validated plan and the approved scripts. The framework runs in supersteps, so a rewrite round
-  starts after the Telestrator has finished. `trace` keeps the order Director, Analyst,
-  Telestrator, narration, Verifier, Voice whichever lane finishes first.
+  concurrently. Voice places lines on the plan's clock, so it waits for both the validated plan
+  and the approved scripts. That was a fan-in edge until the failure drill; it is now a join in
+  Voice, so a re-run step's result is voiced again. The framework runs in supersteps, so a
+  rewrite round starts after the Telestrator has finished. `trace` keeps the order Director,
+  Analyst, Telestrator, narration, Verifier, Voice whichever lane finishes first.
 - Models get claims as templates with slot names, never raw text to copy numbers from. The Analyst
   returns claim ids only, constrained to the supported ids by an enum in its JSON schema; a reply
   outside the enum fails validation and the Analyst's template takes over.
@@ -619,6 +621,56 @@ Application Insights.
   template plan when invalid. The reasons are public (`trace[].notes`, `plan_errors`), so each is a
   location and a fixed code (`steps.3 (scan_marker): unknown_scan`, `duration_s:
   less_than_equal`), never a value or time the model wrote (§5.3).
+- **Failure drill** (2026-10-20, for the "recover from failures" point of Best Multi-Agent
+  System). It makes the failure policy visible and adds recovery from Agent Framework workflow
+  checkpoints.
+  - *Take down.* `POST /api/breakdowns` with `fail: ["telestrator" | "analyst" | "narration" |
+    "director"]` runs the crew once with those agents down. A downed agent's chat client
+    (`agents/llm.py` `Outage`) raises `AgentDown` on every call, so no model is called for that
+    step. The step then takes the normal path above: the call, one retry, its template.
+    - The run has its own key, never a normal cache key, and every drill runs the crew afresh.
+    - A drill counts against the per-client rate limit and a daily cap: with a model, the daily
+      model cap; offline, its own cap of 200 drills and bring-backs per UTC day. Past any of
+      them: 429.
+  - *Waiting.* A step that fell back after an error (a drill or a real outage) sends a workflow
+    request (`AgentDown`, `request_info`): the run ends with its output aired and the request
+    pending.
+  - *Bring back.* `POST /api/breakdowns/<key>/bring-back` with `{"step": ...}` resumes the
+    workflow from its latest checkpoint with the answer (`AgentBack`). That step runs again on
+    its checkpointed input, and only the steps that read its output follow:
+    - the Telestrator: Telestrator → Voice;
+    - narration: narration → Verifier → Voice;
+    - the Analyst or the Director: everything downstream.
+    Voice joins the two lanes in code (by Briefing revision) instead of a fan-in edge, so a
+    revised plan or script is voiced again. The new breakdown replaces the drill's under the same
+    key. A drill can be brought back at most 5 times, so a step that keeps failing for real
+    cannot be retried forever. One crew run per key at a time: a second bring-back of the same
+    step waits, then answers 409 because the step no longer waits.
+  - *Interrupted runs.* Every crew run in the API checkpoints at each superstep
+    (`FileCheckpointStorage` under `TTE_CACHE_DIR/checkpoints/`). Each executor checkpoints its last
+    input and its trace entry. A breakdown interrupted mid-workflow, by a restart too, resumes
+    from its last completed superstep on the next identical request. Its checkpoints are deleted
+    once the result is cached. A checkpoint that no longer resumes, for example one left by older
+    code, is deleted and the run starts over, so it cannot fail its key on every request.
+  - *Where drills live.* A drill is one directory on the replica's disk: its record (the latest
+    result, the agents still down, the bring-backs so far) and its checkpoints. Nothing is kept
+    in memory or written to Cosmos DB, and only the 50 most recently used drills are kept.
+  - *Limits.* Every restart drops the drills, and so does every redeploy: each green run of CI
+    on `main` rolls a new revision onto a fresh disk. Bring-back then answers 404, and the drill
+    has to be run again. A drill whose checkpoints are missing answers 410.
+  - *Web.* The breakdown panel's Producer desk lists the six steps with their source (model,
+    template or code, from `StepTrace.source`), the error class and the attempts. It has "Take
+    down" toggles per agent, "Bring back" on each waiting step, and the breakdown's trace id
+    (`BreakdownResult.trace_id`, operation_Id in Application Insights).
+  - *Tracing.* A bring-back is its own trace (`tte.bring_back`, `tte.resumed`); its step spans
+    are only the steps that ran again.
+  - *Evidence:* `tests/test_crew_recovery.py`, `tests/test_api_drill.py`,
+    `tests/test_telemetry.py` and `web/src/producer/producer.test.tsx`.
+    - With the Telestrator down, the fake model gets no Telestrator call.
+    - After its bring-back the fake gets exactly one call: the Telestrator's. The other steps'
+      trace entries and the narration payload are unchanged.
+    - An API process killed during narration resumes after a restart without calling the
+      Director or the Analyst again.
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.

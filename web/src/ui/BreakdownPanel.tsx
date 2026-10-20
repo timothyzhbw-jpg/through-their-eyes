@@ -1,11 +1,13 @@
 // The breakdown player's console: which plan is loaded (and why, if it fell back to the template),
 // play / stop, and the cue list with the step being executed. With the live service the plan is
-// the Telestrator agent's, with the narration's voice cues added as voice steps.
+// the Telestrator agent's, with the narration's voice cues added as voice steps, and the Producer's
+// failure drill sits below it.
 
 import { useEffect, useRef } from "react";
 import type { PlanStep, Script } from "../plan/schema";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { Producer } from "./Producer";
 
 const rel = (s: number) => `${s >= 0 ? "+" : "−"}${Math.abs(s).toFixed(2)} s`;
 
@@ -70,7 +72,9 @@ export function BreakdownPanel() {
             title={
               origin.planSource === "agent"
                 ? "Written by the Telestrator agent"
-                : "The Telestrator's plan failed the server's checks: the server sent its template"
+                : origin.planErrors.length
+                  ? "The Telestrator's plan failed the server's checks: the server sent its template"
+                  : "The Telestrator gave no plan: the server sent its template"
             }
           >
             {origin.planSource === "agent" ? "Telestrator agent" : "Server template"}
@@ -149,6 +153,7 @@ export function BreakdownPanel() {
         A TelestrationPlan is the cue list the Telestrator agent writes. Every plan is validated
         before it plays; an invalid one is replaced by a template plan built from the moment.
       </p>
+      <Producer />
     </div>
   );
 }

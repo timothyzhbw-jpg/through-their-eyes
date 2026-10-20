@@ -12,6 +12,9 @@ export const PERSONAS = ["casual", "analyst", "player_fan", "coach", "audio_desc
 export type Persona = (typeof PERSONAS)[number];
 /** Audiences who listen rather than watch (agents/delivery.py DESCRIBED): sound on, large print. */
 export const DESCRIBED: ReadonlySet<Persona> = new Set<Persona>(["audio_description"]);
+/** The crew steps that call a model: the ones the Producer can take down (agents/schemas.py). */
+export const AGENTS = ["director", "analyst", "telestrator", "narration"] as const;
+export type Agent = (typeof AGENTS)[number];
 
 export const PROBE_TIMEOUT_MS = 3000; // GET /health: past this, the app runs on offline data
 export const EXPORT_TIMEOUT_MS = 15000; // the first request after a start re-simulates (≈ 6 s)
@@ -88,6 +91,20 @@ export const MatchInfoResponse = z.object({
   hero_moments: z.array(z.string()),
 });
 export type MatchInfoResponse = z.infer<typeof MatchInfoResponse>;
+/** One step of the crew run (agents/schemas.py StepTrace): who answered, the model or a template. */
+export const StepTrace = z.object({
+  step: z.string(),
+  source: z.enum(["llm", "template", "code"]),
+  attempts: z.number(),
+  ms: z.number(),
+  error: z.string().nullable(),
+  notes: z.array(z.string()),
+});
+export type StepTrace = z.infer<typeof StepTrace>;
+
+/** A failure drill's state: the agents still down, and the ones waiting to be brought back. */
+export const Drill = z.object({ down: z.array(z.enum(AGENTS)), pending: z.array(z.enum(AGENTS)) });
+export type Drill = z.infer<typeof Drill>;
 
 /** POST /api/breakdowns: the crew's result plus where it came from (api/main.py). */
 export const BreakdownResponse = z.object({
@@ -96,12 +113,15 @@ export const BreakdownResponse = z.object({
   rate_limited: z.boolean(),
   capped: z.boolean(),
   source: z.enum(["model", "offline"]),
+  drill: Drill.nullish(), // a failure drill; absent or null for a normal breakdown
   result: z.object({
     plan: z.unknown(), // a TelestrationPlan, validated like any other before it plays
     plan_source: z.enum(["agent", "template"]),
     plan_errors: z.array(z.string()),
     scripts: z.array(ScriptResult),
+    trace: z.array(StepTrace),
     total_ms: z.number(),
+    trace_id: z.string().nullish(), // operation_Id in Application Insights; null: tracing off
   }),
   // A hero moment of a stitched match: its possession. The plan and payload are in the
   // possession's local frames; add `start` for the match clock.
@@ -151,12 +171,16 @@ export interface Api {
   matches(): Promise<MatchList>;
   info(timeoutMs?: number): Promise<MatchInfoResponse>;
   exportJson(timeoutMs?: number): Promise<unknown>;
-  /** `moment`: a hero moment id (in match time for a stitched match). */
+  /** `moment`: a hero moment id (in match time for a stitched match). `fail`: agents taken down
+   * for this one run (the failure drill). */
   breakdown(req: {
     moment: string;
     persona: Persona;
     language: Language;
+    fail?: Agent[];
   }): Promise<BreakdownResponse>;
+  /** Re-run a drill's downed agent from the workflow checkpoint. */
+  bringBack(req: { key: string; step: Agent }): Promise<BreakdownResponse>;
   /** `moment`: which hero moment, in a match with several; absent: the first. */
   whatIf(req: {
     question: string;
@@ -251,10 +275,23 @@ export function createApi(
     info: (ms = EXPORT_TIMEOUT_MS) =>
       call(`/api/matches/${id}`, {}, ms, json(MatchInfoResponse)) as Promise<MatchInfoResponse>,
     exportJson: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/export`, {}, ms, json()),
-    breakdown: ({ moment, persona, language }) =>
+    breakdown: ({ moment, persona, language, fail = [] }) =>
       call(
         "/api/breakdowns",
-        post({ match, moment, personas: [persona], languages: [language] }),
+        post({
+          match,
+          moment,
+          personas: [persona],
+          languages: [language],
+          ...(fail.length ? { fail } : {}),
+        }),
+        BREAKDOWN_TIMEOUT_MS,
+        json(BreakdownResponse),
+      ) as Promise<BreakdownResponse>,
+    bringBack: ({ key, step }) =>
+      call(
+        `/api/breakdowns/${encodeURIComponent(key)}/bring-back`,
+        post({ step }),
         BREAKDOWN_TIMEOUT_MS,
         json(BreakdownResponse),
       ) as Promise<BreakdownResponse>,

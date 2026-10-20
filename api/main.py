@@ -10,15 +10,34 @@ regeneration is rate-limited per client and capped per UTC day across all client
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
 tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
+
+Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
+kept under its own key and never under the cache keys of normal breakdowns. It counts against
+the per-client limit and, with a model, the daily model cap; offline, drills have their own daily
+cap (`DAILY_OFFLINE_DRILLS`). Past any of them: 429. No model is called for a downed step.
+`POST /api/breakdowns/{key}/bring-back` re-runs one downed step from the run's checkpoint, at most
+`MAX_BRING_BACKS` times per drill.
+
+Every crew run checkpoints to files under the cache directory (`checkpoints/`), so a normal
+breakdown interrupted mid-workflow, by a restart too, resumes from its last completed step. Its
+checkpoints are deleted once it is cached. A drill keeps its record and checkpoints on this
+replica's disk (`DrillStore`), the most recent `DRILLS_KEPT` only. A restart onto a new disk
+(every redeploy) drops them: bring-back then answers 404, "run the drill again". One crew run
+per key at a time.
 """
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
-from contextlib import asynccontextmanager
+import re
+import shutil
+import uuid
+from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 from typing import Any
 
+from agent_framework import FileCheckpointStorage
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -28,16 +47,29 @@ from agents import whatif
 from agents.context import MomentContext
 from agents.llm import client_from_env, sync_credential_from_env
 from agents.prompts import PROMPT_VERSION
-from agents.schemas import Language, Persona
+from agents.schemas import AgentStep, Language, Persona
 from agents.telemetry import configure_tracing
-from agents.workflow import PIPELINE_VERSION, run_breakdown
+from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
 from api import tts
 from api.live import stream
 from api.settings import Settings
-from api.store import DailyCap, Match, MatchStore, RateLimiter, content_key, open_storage
+from api.store import (
+    DailyCap,
+    DrillStore,
+    KeyedLocks,
+    Match,
+    MatchStore,
+    RateLimiter,
+    content_key,
+    open_storage,
+)
 from api.tamper import TamperError, tamper
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
+DRILLS_KEPT = 50  # failure drills kept on disk for a bring-back
+MAX_BRING_BACKS = 5  # per drill; with at most 8 supersteps each, well under MAX_SUPERSTEPS
+DAILY_OFFLINE_DRILLS = 200  # drills and bring-backs per UTC day without a model, all clients
+KEY = re.compile(r"[0-9a-f]{32}")  # content_key()
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
 
 
@@ -47,6 +79,11 @@ class BreakdownBody(BaseModel):
     personas: list[Persona] = Field(default_factory=lambda: ["casual", "analyst"])
     languages: list[Language] = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
+    fail: list[AgentStep] = Field(default_factory=list, max_length=4)  # agents to take down
+
+
+class BringBackBody(BaseModel):
+    step: AgentStep
 
 
 class WhatIfBody(BaseModel):
@@ -98,6 +135,11 @@ def create_app(
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
+    drill_cap = DailyCap(DAILY_OFFLINE_DRILLS)  # offline drills; with a model, `cap` applies
+    checkpoint_dir = Path(settings.cache_dir) / "checkpoints"
+    runs_dir = checkpoint_dir / "runs"
+    drills = DrillStore(checkpoint_dir / "drills", DRILLS_KEPT)
+    locks = KeyedLocks()  # one crew run per key at a time
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -131,6 +173,23 @@ def create_app(
             return "rate_limited"
         cap.take()
         return "model"
+
+    def drill_allowed(request: Request) -> None:
+        """A drill or a bring-back runs the crew: it counts against the per-client limit and a
+        daily cap, the model's or, offline, the drills' own. Past any of them: 429."""
+        if client is not None:
+            verdict = regeneration(request)
+        elif drill_cap.left() <= 0:
+            verdict = "capped"
+        elif not limiter.allow(_client_ip(request)):
+            verdict = "rate_limited"
+        else:
+            drill_cap.take()
+            verdict = "offline"
+        if verdict == "rate_limited":
+            raise HTTPException(429, "rate_limited: try again in a few minutes")
+        if verdict == "capped":
+            raise HTTPException(429, "capped: today's budget is used up; try again tomorrow (UTC)")
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -192,12 +251,17 @@ def create_app(
             raise HTTPException(404, f"breakdowns are available for {', '.join(m.contexts)}")
         where = {"possession": m.where[body.moment]} if body.moment in m.where else {}
 
-        def key(model_name: str, **tools: str) -> str:
+        def key(model_name: str, **extra: Any) -> str:
             return content_key(card=ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
                                pipeline=PIPELINE_VERSION, model=model_name,
-                               **tools)  # fmt: skip
+                               **extra)  # fmt: skip
 
+        if body.fail:  # a fresh run under its own key: never a cache hit, never cached for others
+            drill_allowed(request)
+            down = sorted(set(body.fail))
+            k = key(model, fail=down, run=uuid.uuid4().hex)
+            return await _drill(m, ctx, body, down, k, where)
         # The Analyst's tools shape a model breakdown, so they are part of its key.
         model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
         offline_key = key("offline")
@@ -206,7 +270,7 @@ def create_app(
         # client was limited must not stand in for the model on later requests.
         if not body.regenerate and (hit := breakdowns.get(candidates[0])) is not None:
             return {"key": candidates[0], "cached": True, "rate_limited": False, "capped": False,
-                    **hit, **where}  # fmt: skip
+                    "drill": None, **hit, **where}  # fmt: skip
         limits = {"rate_limited": False, "capped": False}
         if client is not None:
             verdict = regeneration(request)
@@ -215,19 +279,92 @@ def create_app(
             limits[verdict] = True
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, **limits, **hit, **where}
+                    return {"key": k, "cached": True, **limits, "drill": None, **hit, **where}
         out = await _compute(ctx, body, None, "offline", offline_key)
         return {**out, **limits, **where}
 
     async def _compute(
         ctx: MomentContext, body: BreakdownBody, llm, source: str, k: str
     ) -> dict[str, Any]:
-        result = await run_breakdown(ctx, client=llm, personas=tuple(body.personas),
-                                     languages=tuple(body.languages),
-                                     use_mcp=settings.analyst_mcp)  # fmt: skip
-        value = {"source": source, "result": result.model_dump(mode="json", by_alias=True)}
-        breakdowns.put(k, value)
-        return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
+        """Run the crew and cache the result. A run of this key that was interrupted resumes from
+        its checkpoint; once the result is cached, the checkpoints go."""
+        async with locks.hold(k):
+            run = await run_crew(ctx, client=llm, personas=tuple(body.personas),
+                                 languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
+                                 checkpoints=FileCheckpointStorage(runs_dir / k))  # fmt: skip
+            value = {"source": source, "result": run.result.model_dump(mode="json", by_alias=True)}
+            breakdowns.put(k, value)
+            shutil.rmtree(runs_dir / k, ignore_errors=True)
+            for empty in (runs_dir, checkpoint_dir):  # a finished run leaves nothing on disk
+                with suppress(OSError):
+                    empty.rmdir()
+        return {"key": k, "cached": False, "rate_limited": False, "capped": False, "drill": None,
+                **value}  # fmt: skip
+
+    def _drill_response(k: str, record: dict[str, Any]) -> dict[str, Any]:
+        public = {name: record[name] for name in ("source", "result", "drill")}
+        where = {"possession": record["possession"]} if "possession" in record else {}
+        return {"key": k, "cached": False, "rate_limited": False, "capped": False, **public,
+                **where}  # fmt: skip
+
+    async def _drill(
+        m: Match,
+        ctx: MomentContext,
+        body: BreakdownBody,
+        down: list[str],
+        k: str,
+        where: dict[str, Any],
+    ) -> dict[str, Any]:
+        """The crew with `down` taken down, checkpointed for a bring-back (SPEC 6)."""
+        async with locks.hold(k):
+            run = await run_crew(ctx, client=client, personas=tuple(body.personas),
+                                 languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
+                                 down=down, checkpoints=drills.checkpoints(k))  # fmt: skip
+            record = {"source": "model" if client is not None else "offline",
+                      "result": run.result.model_dump(mode="json", by_alias=True),
+                      "drill": {"down": down, "pending": run.pending}, "match": m.id,
+                      "moment": body.moment, "bring_backs": 0, **where}  # fmt: skip
+            drills.put(k, record)
+        return _drill_response(k, record)
+
+    @app.post("/api/breakdowns/{key}/bring-back")
+    async def bring_back(key: str, body: BringBackBody, request: Request) -> dict[str, Any]:
+        """Re-run one downed step of a drill from its checkpoint; the rest is kept (SPEC 6)."""
+        if not KEY.fullmatch(key) or drills.get(key) is None:
+            raise HTTPException(404, "no failure drill with this key (drills last until the API "
+                                     "restarts or redeploys): run the drill again")  # fmt: skip
+        async with locks.hold(key):
+            record = drills.get(key)
+            if record is None:  # pruned while this request waited
+                raise HTTPException(404, "no failure drill with this key: run the drill again")
+            drill = record["drill"]
+            if body.step not in drill["pending"]:
+                raise HTTPException(409, f"the {body.step} is not waiting to be brought back")
+            if record["bring_backs"] >= MAX_BRING_BACKS:
+                raise HTTPException(409, f"this drill was brought back {MAX_BRING_BACKS} times: "
+                                         "run a new drill")  # fmt: skip
+            if not drills.has_checkpoints(key):
+                raise HTTPException(410, "this drill's checkpoints are gone: run the drill again")
+            drill_allowed(request)
+            m = await match_or_404(record["match"])
+            ctx = m.context(record.get("moment"))
+            if ctx is None:
+                raise HTTPException(410, "this drill's moment is no longer served: run it again")
+            asked = record["result"]["request"]
+            down = [d for d in drill["down"] if d != body.step]
+            try:
+                run = await run_crew(ctx, client=client, personas=tuple(asked["personas"]),
+                                     languages=tuple(asked["languages"]),
+                                     use_mcp=settings.analyst_mcp, down=down,
+                                     checkpoints=drills.checkpoints(key),
+                                     bring_back=body.step)  # fmt: skip
+            except NotWaiting as e:
+                raise HTTPException(410, f"{e}: run the drill again") from e
+            record = {**record, "result": run.result.model_dump(mode="json", by_alias=True),
+                      "drill": {"down": down, "pending": run.pending},
+                      "bring_backs": record["bring_backs"] + 1}  # fmt: skip
+            drills.put(key, record)
+        return _drill_response(key, record)
 
     @app.post("/api/whatif")
     async def what_if(body: WhatIfBody, request: Request) -> dict[str, Any]:
@@ -285,6 +422,7 @@ def create_app(
 
     app.state.settings = settings
     app.state.store = store
+    app.state.locks = locks
     return app
 
 

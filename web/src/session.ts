@@ -14,7 +14,14 @@
 // by both read a ViewSession with `useView()`.
 
 import { createContext, useContext } from "react";
-import { DESCRIBED, PERSONAS, type Api, type BreakdownResponse, type Persona } from "./api/client";
+import {
+  DESCRIBED,
+  PERSONAS,
+  type Agent,
+  type Api,
+  type BreakdownResponse,
+  type Persona,
+} from "./api/client";
 import {
   apiBreakdown,
   bundledBreakdown,
@@ -34,6 +41,7 @@ import {
 import { claimRun, lineOf, primaryClaim, RenderPayload } from "./narration/payload";
 import { heroMoment, type MomentContext } from "./plan/moment";
 import { BreakdownRunner } from "./plan/runner";
+import { IDLE_PRODUCER, toggled, type ProducerState } from "./producer/producer";
 import {
   advance,
   createPlayback,
@@ -94,6 +102,7 @@ export interface Session {
   playback: PlaybackStore;
   runner: BreakdownRunner;
   breakdown: Store<BreakdownState>; // narration, plan and voice for the chosen persona/language
+  producer: Store<ProducerState>; // the failure drill: agents to take down, a request in flight
   whatIfs: WhatIfs | null; // precomputed "What if…?" answers; null hides the box
   whatIfError: string | null;
   ask: Store<AskState>; // the latest free what-if question
@@ -176,6 +185,7 @@ export function createSession(
     playback,
     runner,
     breakdown,
+    producer: createStore<ProducerState>(IDLE_PRODUCER),
     whatIfs,
     whatIfError,
     ask: createStore<AskState>(IDLE_ASK),
@@ -341,6 +351,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     playback,
     runner,
     breakdown,
+    producer,
     whatIfs,
     ask,
     tamper,
@@ -486,6 +497,37 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       }
     }
   }
+  /**
+   * A failure drill or a bring-back (SPEC 6): its breakdown replaces the one on screen. It waits
+   * for no other request and none waits for it; a failure leaves the breakdown as it was.
+   */
+  async function produce(busy: Agent | "drill", call: () => Promise<BreakdownResponse>) {
+    if (!api || asking || producer.get().busy) return;
+    const { persona, language } = breakdown.get();
+    asking = true;
+    producer.set({ busy, error: null });
+    try {
+      const res = await call();
+      checkPossession(res.possession, possession, moment.id);
+      if (!askAgain) {
+        show({
+          ...apiBreakdown(res, persona, language, moment, hero),
+          status: "ready",
+          error: null,
+        });
+        if (busy === "drill") producer.set({ down: [] });
+      }
+    } catch (err) {
+      producer.set({ error: message(err) });
+    } finally {
+      asking = false;
+      producer.set({ busy: null });
+      if (askAgain) {
+        askAgain = false;
+        void requestBreakdown();
+      }
+    }
+  }
   /** Switch persona or language; online, the new breakdown is asked for at once (unless the
    * moment has not been detected yet: then it is asked for in the new choice). */
   const choose = (patch: { persona?: Persona; language?: Language }) => {
@@ -527,6 +569,25 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     setSound: (on: boolean) => {
       soundByAudience = false; // the viewer's own choice
       voice.setOn(on);
+    },
+
+    /** Pick an agent to take down (or not) in the next failure drill. */
+    toggleDown(agent: Agent) {
+      producer.set((p) => ({ down: toggled(p.down, agent), error: null }));
+    },
+    /** Run the crew with the picked agents down, for the chosen persona and language. */
+    runDrill() {
+      const fail = producer.get().down;
+      if (!api || !fail.length) return;
+      const { persona, language } = breakdown.get();
+      const id = possession?.moment ?? moment.id;
+      void produce("drill", () => api.breakdown({ moment: id, persona, language, fail }));
+    },
+    /** Bring a downed agent of the drill on screen back: its step re-runs from the checkpoint. */
+    bringBack(agent: Agent) {
+      const origin = breakdown.get().origin;
+      if (!api || origin?.kind !== "api" || !origin.drill?.pending.includes(agent)) return;
+      void produce(agent, () => api.bringBack({ key: origin.key, step: agent }));
     },
 
     /** Autoplay online: watch live, then play the breakdown once the moment is detected. */

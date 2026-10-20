@@ -22,6 +22,8 @@ Language = Literal["en", "zh"]
 Speaker = Literal["pbp", "color"]  # play-by-play commentator, co-commentator (analysis)
 Tier = Literal["calm", "excited", "clutch"]
 Priority = Literal["low", "normal", "high"]
+# The crew steps that call a model, so the ones the Producer can take down (SPEC 6, failure drill).
+AgentStep = Literal["director", "analyst", "telestrator", "narration"]
 
 
 class Strict(BaseModel):
@@ -279,4 +281,7 @@ class BreakdownResult(Strict):
     tier: Tier
     scripts: list[ScriptResult]
     trace: list[StepTrace]
-    total_ms: float  # wall time of the whole breakdown
+    total_ms: float  # wall time of the whole breakdown (of the resumed part, after a bring-back)
+    # The breakdown span's OpenTelemetry trace id: operation_Id in Application Insights. None
+    # when tracing is off, and in breakdowns cached before it was recorded.
+    trace_id: str | None = None
