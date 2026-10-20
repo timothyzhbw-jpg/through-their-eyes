@@ -260,7 +260,9 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99, held out 100–139):
 - [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
       — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
-      (39/40 seeds, 98%; `blind_side_run` is the only hero scenario so far);
+      (39/40 seeds, 98%; `blind_side_run` is the only scan hero; the pressure hero `press_escape`
+      is tested by its own intervention, `force:carry`, in
+      [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md), §3.6);
       [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_dropping_the_key_scan_changes_the_chosen_action_in_most_held_out_seeds`
 - [x] `force_action` with the action actually chosen reproduces the factual run byte for byte;
       with an action that was not an option, it is refused (not silently mapped).
