@@ -29,13 +29,18 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    press **Ask**. The API maps the question to one of his options, forces it, re-simulates the
    moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
    are rate-limited per client.
-5. **The verifier blocking a number.** Live breakdowns give it little to block: the narration
-   agents pick verified claim ids and never write a digit. Where a model writes free text, it
-   blocks: 58 of 66 free-text first-draft lines failed the Verifier, for example "off by 1.2
-   metres" where the claim holds 0.5 ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)),
-   and 88 of 88 false perturbations were refuted ([corruption](eval/reports/corruption.md)).
-   Every live verdict and the check it ran is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
-   Not in the app yet: a control to try a wrong number yourself.
+5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
+   the evidence card opens on "That look was worth 0.10 in expected threat." with a wrong value
+   filled in. Press **Check**: the API runs the real verifier on that claim with your number,
+   against the match data, and answers "Refuted — this line would not air" with its reason
+   (`approx(0.1007…, 0.2) is false`); **Check the true value** is supported. Any claim with a
+   number can be tried this way; nothing you try is written to the audit log. Live breakdowns
+   never hand it a wrong number, because the narration agents pick verified claim ids and never
+   write a digit. Where a model writes free text, it blocks: 58 of 66 free-text first-draft lines
+   failed the Verifier, for example "off by 1.2 metres" where the claim holds 0.5
+   ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)), and 88
+   of 88 false perturbations were refuted ([corruption](eval/reports/corruption.md)). Every
+   verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
 6. **The evidence.** The [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
    tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
    tests, reports and pull requests, and marks what is missing.
@@ -50,6 +55,12 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
     curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
       -H 'content-type: application/json' \
       -d '{"match": "blind_side_run-3", "personas": ["analyst"], "languages": ["en"]}'
+    ```
+  - a wrong number, checked by the verifier (not audited; no model call):
+    ```bash
+    curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/verify \
+      -H 'content-type: application/json' \
+      -d '{"match": "blind_side_run-3", "claim": "cf_value", "slot": "dxt", "value": 0.2}'
     ```
   No login. Model-backed regenerations are rate-limited per client and capped per day; past that
   the service serves the cache or the deterministic template.

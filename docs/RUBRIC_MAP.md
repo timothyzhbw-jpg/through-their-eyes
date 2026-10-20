@@ -55,7 +55,7 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 | Every caption opens its evidence | [web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx): claims with kind, verdict, values and evidence events; seeks the replay | ✅ |
 | Three-minute tour with deep links | README ["For judges"](../README.md#for-judges-try-it-in-3-minutes), [web/src/deeplink.ts](../web/src/deeplink.ts), [web/README.md](../web/README.md#url-parameters) | ✅ after this PR deploys |
 | Broadcast camera | — | **Missing** on `main` (in progress) |
-| A control to try a wrong number against the verifier | — | **Missing:** shown only in the eval reports and the audit log |
+| A control to try a wrong number against the verifier | Evidence card **Try a wrong number** ([web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx), [web/src/tamper/](../web/src/tamper/)) → `POST /api/verify` ([api/tamper.py](../api/tamper.py)): the real Verifier on the claim with the viewer's number, not audited; tests in [tests/test_api.py](../tests/test_api.py) (every numeric slot of the hero claims of `blind_side_run` seed 3: true value supported, changed value not; nothing reaches the audit log or Cosmos DB) and [web/src/tamper/tamper.test.tsx](../web/src/tamper/tamper.test.tsx); deep link `?persona=analyst&tamper=cf_value` | ✅ after this PR deploys |
 | 60 fps on an integrated GPU with the pitch-control shader on | — | **Missing** (SPEC §7; the shader is not built) |
 | The 2-minute video | storyboard in [SPEC §10](SPEC.md#10-demo-video-storyboard--200) | **Missing:** not made yet |
 
