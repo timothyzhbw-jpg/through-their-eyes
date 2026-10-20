@@ -532,6 +532,58 @@ original visual identity.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 
+### Real-footage overlay (demo video only; the one exception to synthetic data)
+Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
+segment of **≤ 10 s in the demo video**, showing the ground graphics drawn on a real camera, the
+way the app draws them on the synthetic pitch: it backs the claim that the overlays would transfer
+to a real broadcast.
+- **Source:** the Wikimedia Commons file "Битва Корпораций - 2019-10-06 - Нова Пошта. - Мини-футбол.
+  Финал." by savinkins, licensed CC BY 3.0. Checked on Commons on 2026-10-19: the license was
+  reviewed by YouTubeReviewBot, and the SHA-1 matches `demo/realfeed/download.py`. It is a
+  corporate-league futsal final (Атлант vs Нова Пошта).
+- **Code:** `demo/realfeed/`, with OpenCV in its own dependency group.
+  - It does classical computer vision only: pitch calibration, camera tracking, background
+    subtraction for the players' foot points, and the turf key for the graphics.
+  - It is never imported by `sim/`, `analytics/`, `explain/`, `agents/`, `api/` or `web/`, and the
+    public app never shows or loads it.
+  - The footage is downloaded into `out/` and never committed. Only camera calibration (pixel ↔
+    pitch correspondences) is committed: no frames, no player positions.
+- **Masking:** everything outside the pitch outline is blurred and darkened; every face is blurred;
+  any legible logo, sponsor or club text on kit is blurred too. Kit matters because the teams are
+  companies and the video rules ban third-party trademarks.
+- **Graphics only:** no numbers, captions or narration on the real footage. Every on-screen number
+  in the app is a verified claim about the synthetic match, and nothing in this segment is
+  verified.
+- **On screen:** a label saying "real footage, overlay demo only; the app uses synthetic data",
+  plus the attribution "savinkins, Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". The
+  same attribution goes in `demo/realfeed/README.md` and the repo README. CC BY requires author,
+  source, license and a note of changes.
+- **Never used** to train, tune or calibrate anything in the app.
+
+**Risks:**
+1. *Rules.* The official rules say "Projects must use synthetic, football-realistic data". The
+   app and all its data stay synthetic, but a judge or the Stage One viability check may still
+   read real footage in the video as using real data, and that could cost the entry.
+   - Mitigation: keep the segment short, clearly labelled and cuttable.
+   - Bowen may ask the organisers first; if they object, cut it.
+2. *Privacy.* The players are private individuals in an amateur corporate league. Faces are
+   blurred, and no names or identities are shown or tracked beyond the 10 s.
+3. *Trademarks.* Kit, boards and banners may carry company logos. Before upload, review every
+   frame of the exported segment for logos and faces, not only the automated masks.
+4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
+   endorsement. Keep the attribution on screen for the whole segment.
+5. *Time.* It is the first item in the cut order (§9); it never takes time from the "never cut"
+   list.
+
+**Acceptance checks:**
+- [ ] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
+      imports `demo.realfeed`, and that `web/` has no reference to it.
+- [ ] No video or image frames are tracked under `demo/` (test on `git ls-files`).
+- [ ] Every exported frame: off-pitch pixels are masked; a face detector finds no unblurred face;
+      the label and the attribution are visible.
+- [ ] Bowen has reviewed the exported segment frame by frame (faces, kit logos, boards) before it
+      goes into the video.
+
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
 - [ ] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
@@ -578,6 +630,8 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
+0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
+   or the organisers object)
 1. shareable clip export (stretch)
 2. viewer pilot
 3. end-of-match recap reel
@@ -602,7 +656,8 @@ Framework, live deployment, the video.
 - **0:55–1:25** The same moment for casual / analyst / player-fan; `en` ↔ `zh`; open one caption's
   evidence.
 - **1:25–1:40** The verifier blocks a wrong number and a banned judgement word.
-- **1:40–2:00** Architecture (Microsoft stack) + eval numbers.
+- **1:40–2:00** Architecture (Microsoft stack) + eval numbers. *If kept:* the ≤ 10 s real-footage
+  overlay segment (§7) sits here, labelled and attributed on screen, before the architecture.
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
@@ -611,5 +666,6 @@ Framework, live deployment, the video.
 - [ ] Video < 2:00 at a public URL (YouTube / Vimeo / Facebook Video / Youku); no third-party
       trademarks or copyrighted music
 - [ ] Test link live and free until 2026-11-10, with testing instructions
-- [ ] README: synthetic-data statement, architecture, how to run, eval results, related work
+- [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
+      and its attribution), architecture, how to run, eval results, related work
 - [ ] All materials in English

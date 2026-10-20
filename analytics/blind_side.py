@@ -4,9 +4,9 @@ Computed per frame from tracking only — the observed head yaw plus player and 
 velocities, the same inputs as the scan detector — never from the sim's beliefs, so it would run
 on real skeletal tracking. For an observer o and a target t the alert comes on when
 - t has been outside o's visible region (V < `visible`, `analytics.vision`) for `min_unseen_s`,
-- t has moved at least `min_moved_m` from where o last saw him, and runs at `min_speed` or more
-  (with `expect_s` > 0: from where o would expect him, his last-seen velocity carried on for up
-  to `expect_s` — off by default, SPEC 4.4 measures from the last sighting),
+- t is at least `min_moved_m` from where o would expect him — the last sighting with the
+  last-seen velocity carried on for up to `expect_s` (0 measures from the last sighting itself) —
+  and runs at `min_speed` or more,
 - t is within `max_distance` of o.
 It stays on for at least `min_on_s` whatever happens, then clears when o sees t again or o stops
 being an observer. Everyone counts as seen at the first frame (as in the sim, where all positions
@@ -30,10 +30,11 @@ from analytics.vision import player_visibility
 
 @dataclass(frozen=True)
 class BlindSideParams:
-    # Tuned by eval/blind_side.py (interval F1 on tuning seeds); SPEC 4.4 starts from 1.0 s, 3 m.
+    # Chosen by eval/blind_side.py on its tuning seeds (interval F1); SPEC 4.4 starts from
+    # 1.0 s and 3 m measured from the last sighting.
     min_unseen_s: float = 1.2
-    min_moved_m: float = 1.5
-    expect_s: float = 0.0  # extrapolate the last-seen velocity this far (0: SPEC 4.4 as written)
+    min_moved_m: float = 3.0
+    expect_s: float = 1.0  # extrapolate the last-seen velocity this far; 0 turns it off
     min_speed: float = 4.0  # m/s
     # SPEC 4.4 says 25 m, but the hero runner is 22-30 m from H8 when the alert should be on
     # (blind_side_run, 60 seeds); 35 m keeps him in. The eval uses the same gate for the truth.
