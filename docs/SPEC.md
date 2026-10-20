@@ -309,9 +309,16 @@ of §3.4.
       pitch flip.
       — [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_pitch_control_is_a_probability_that_sums_to_one_across_teams`,
       `test_pitch_control_is_symmetric_under_team_swap_and_pitch_flip`
-- [ ] Shader vs numpy: max abs diff < 0.02 on 10 fixed snapshots.
-      — *Open:* `web/` has no pitch-control shader yet (its only GLSL is the vision cone), so there
-      is no parity test.
+- [x] Shader vs numpy: max abs diff < 0.02 on 10 fixed snapshots.
+      — [web/src/pitchControl/pitchControl.gpu.test.ts](../web/src/pitchControl/pitchControl.gpu.test.ts)
+      ("frame N (…): max abs diff below 0.02 on the 1 m grid", one case per snapshot): the
+      tactical board's shader, run by three.js in headless Chrome (SwiftShader on CI), against
+      `analytics/pitch_control.py` at all 7 140 cell centres of the 1 m grid. Max abs diff
+      5.06e-5 to 5.25e-5 on the 10 snapshots, i.e. the reference's rounding to 1e-4 (2026-10-20,
+      SwiftShader); the test also holds it below 1e-3. Snapshots: the hero moment of
+      `blind_side_run` seed 3 from the first pass to the pass received, written by
+      [eval/pitch_control_parity.py](../eval/pitch_control_parity.py) and checked against the
+      kernel by [tests/test_pitch_control_parity.py](../tests/test_pitch_control_parity.py)
 - [x] Vision: cells directly behind the player (outside the cone) have V < 0.05; occluded cells
       score lower than unoccluded cells at the same angle and distance.
       — [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_cells_behind_the_player_are_not_visible`,
@@ -634,7 +641,8 @@ original visual identity.
   - ball / shot speed burst;
   - pass line coloured by difficulty;
   - pressing rings;
-  - pitch control (GLSL shader);
+  - pitch control (GLSL shader, per pixel; the tactical board's "Pitch control" toggle, off by
+    default; `web/src/pitchControl/`);
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
   - counterfactual ghost path;
@@ -721,7 +729,17 @@ to a real broadcast.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
-      — *Open:* not measured; the pitch-control shader does not exist yet (§4 shader check).
+      — *Open:* not measured on a laptop GPU yet. The shader exists (per pixel,
+      [web/src/pitchControl/](../web/src/pitchControl/), toggle off by default), and
+      `cd web && npm run build && npm run fps -- --headed` measures it on the machine's GPU: fps
+      with the overlay off and on, then the shader alone. So far it has only run on SwiftShader
+      (Chrome's CPU rasteriser; a cloud container with 4 vCPUs and no GPU, 2026-10-20), which is
+      far slower than any GPU and does not decide this check: the whole app 3.1–3.5 fps with the
+      overlay off and 2.8–3.1 with it on (1920 × 1080, board 606 × 468 px); the shader alone
+      22 ms per draw at the board's size, 154–180 ms at full HD. The shader is ALU-bound (a loop
+      over 22 players, about 200 flops per pixel), so full HD at 60 fps needs about 25 GFLOP/s,
+      a small share of a laptop iGPU. On that estimate the shader stays per pixel and the §9
+      fallback (precomputed textures) is not used; the laptop run decides.
 - [x] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
       a template plan.
       — [web/src/plan/plan.test.ts](../web/src/plan/plan.test.ts) ("falls back to the template
@@ -851,18 +869,19 @@ to a real broadcast.
 
 **Acceptance status** (2026-10-20). Each check carries its evidence inline: a test, an eval report
 or a live check. Ticked only when verified that day: `uv run pytest` 464 passed, `npm test` in
-`web/` 121 passed, the live checks run against the deployed API and site.
+`web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
+shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
 | §3 sim | 7 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 4 | 2 | pitch-control shader vs numpy parity; fitted xT grid and its sanity plot |
+| §4 analytics | 5 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
-| §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on |
+| §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 0 | 8 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; README architecture and related work; video and submission in English; technology table in the video and submission |
-| **Total** | **22** | **14** | |
+| **Total** | **23** | **13** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -896,7 +915,8 @@ pilot only, never generalised.
 9. `es` language
 10. Cosmos DB → file store
 11. occlusion model → FOV only
-12. pitch-control shader and pass value surface → precomputed textures
+12. pitch-control shader and pass value surface → precomputed textures (the pitch-control
+    shader exists and stays per pixel until a laptop measurement says otherwise, §7 render)
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.

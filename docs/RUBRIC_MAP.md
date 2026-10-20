@@ -19,7 +19,7 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 | Sim statistics checked against the papers | [realism](../eval/reports/realism.md): 10 inside the published range, 6 outside (all six are effect sizes between roles or pressure bins), 10 with no published reference; PR #14 | Partial: 6 outside |
 | Determinism and counterfactual re-simulation | keyed randomness [sim/rng.py](../sim/rng.py); [tests/test_sim_m1.py](../tests/test_sim_m1.py) `test_same_seed_twice_in_the_same_environment_is_byte_identical`, `test_an_override_on_one_player_leaves_every_draw_of_other_players_unchanged`; [tests/test_whatif.py](../tests/test_whatif.py) `test_forcing_the_action_actually_chosen_reproduces_the_factual_run`; [hero_flip](../eval/reports/hero_flip_blind_side_run.md): 39/40 held-out seeds decide differently without the key scan | ✅ |
 | Analytics kernels | [analytics/](../analytics/): time to intercept, pitch control, pressing (PRs #1, #4), vision after Bekkers 2026, scan detector (held-out F1 0.993, [scan_detector](../eval/reports/scan_detector.md), PR #3), blind-side alerts (fresh held-out precision 0.920, recall 0.984, [blind_side](../eval/reports/blind_side.md), PRs #10, #13), xT (our own) | Partial: the fitted xT grid's sanity plot is open (SPEC §4) |
-| numpy ↔ GLSL parity-tested kernels (SPEC §0) | The vision cone is a fragment shader of the sim's field-of-view model ([web/src/views/TacticalView.tsx](../web/src/views/TacticalView.tsx)), without occlusion | **Missing:** no parity test; the pitch-control shader is not built |
+| numpy ↔ GLSL parity-tested kernels (SPEC §0) | Pitch control: the tactical board's per-pixel shader ([web/src/pitchControl/](../web/src/pitchControl/)) against [analytics/pitch_control.py](../analytics/pitch_control.py) in headless Chrome on CI, max abs diff about 5e-5 on 10 hero-moment snapshots (SPEC §4 asks < 0.02), [pitchControl.gpu.test.ts](../web/src/pitchControl/pitchControl.gpu.test.ts). The vision cone is a fragment shader of the sim's field-of-view model ([web/src/views/TacticalView.tsx](../web/src/views/TacticalView.tsx)), without occlusion | Partial: the vision cone has no parity test |
 | CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml): ruff, pytest, shell syntax; web licences, typecheck, prettier, vitest, build. [deploy.yml](../.github/workflows/deploy.yml) redeploys on green `main` with OIDC, no stored Azure secret | Partial: the eval reports are generated locally and committed, not rerun in CI |
 | Microsoft stack, each piece used | README [table](../README.md#microsoft-technologies-where-they-are-used): Foundry, Agent Framework, MCP, Azure AI Speech, Container Apps, Storage static website, Cosmos DB, Foundry evaluation, Application Insights, GitHub Actions | Partial: our MCP server is used by `python -m agents.run --mcp` and in tests, not by the deployed API |
 
@@ -50,13 +50,13 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 | Claim | Evidence | Status |
 |---|---|---|
 | First-person replay and a tactical board | [web/](../web/) (PR #5), head and body yaw on every player (PR #7), animated players (PRs #26, #27), comfort mode | ✅ |
-| Overlays | pass options with "he thought / it was" (PR #8), blind-side alerts (PR #12), What if… ghost paths (PR #9) | ✅ |
+| Overlays | pass options with "he thought / it was" (PR #8), blind-side alerts (PR #12), What if… ghost paths (PR #9), pitch control on the tactical board (toggle, off by default) | ✅ |
 | Live, with persona and language switching | live WebSocket replay, breakdowns per persona (casual, analyst, player fan, coach) × language (en, zh), Azure AI Speech (PR #24); the first request per persona and language runs the crew (6–12 s), later ones come from the cache | ✅ |
 | Every caption opens its evidence | [web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx): claims with kind, verdict, values and evidence events; seeks the replay | ✅ |
 | Three-minute tour with deep links | README ["For judges"](../README.md#for-judges-try-it-in-3-minutes), [web/src/deeplink.ts](../web/src/deeplink.ts), [web/README.md](../web/README.md#url-parameters) | ✅ after this PR deploys |
 | Broadcast camera | — | **Missing** on `main` (in progress) |
 | A control to try a wrong number against the verifier | — | **Missing:** shown only in the eval reports and the audit log |
-| 60 fps on an integrated GPU with the pitch-control shader on | — | **Missing** (SPEC §7; the shader is not built) |
+| 60 fps on an integrated GPU with the pitch-control shader on | `cd web && npm run build && npm run fps -- --headed` measures it; so far run on SwiftShader only (no GPU), see SPEC §7 | **Missing:** no laptop GPU measured yet |
 | The 2-minute video | storyboard in [SPEC §10](SPEC.md#10-demo-video-storyboard--200) | **Missing:** not made yet |
 
 ## 5. Category adherence: Best Multi-Agent System
