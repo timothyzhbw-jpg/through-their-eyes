@@ -1,11 +1,19 @@
 """The production crew as a Microsoft Agent Framework workflow (SPEC 6).
 
-    Director → Analyst (⇄ MCP tools) → Telestrator → Narration (Commentator + Co-commentator)
-             → Verifier ⇄ Narration (rewrite, at most twice) → Voice → BreakdownResult
+    Director → Analyst (⇄ MCP tools) ┬→ Telestrator ───────────────────────────────────┐
+                                     └→ Narration (Commentator + Co-commentator)        ├→ Voice
+                                        → Verifier ⇄ Narration (rewrite, at most twice) ┘
+                                                                     Voice → BreakdownResult
 
 Each executor handles one typed message and sends the next one, so every handoff is a typed edge
 of the workflow graph. Agent steps call a model when one is configured, with a timeout and one
 retry, and fall back to a deterministic template otherwise. The Verifier and Voice steps are code.
+
+The Telestrator and narration both read only the Analyst's findings, so a fan-out edge runs them
+concurrently. Voice places the approved lines on the plan's clock, so a fan-in edge makes it wait
+for both the validated plan and the approved scripts. The framework runs in supersteps: the
+Verifier starts once the slower of the two lanes is done, and a rewrite round runs after the
+Telestrator has finished rather than alongside it.
 """
 
 from __future__ import annotations
@@ -50,6 +58,10 @@ from explain.render import build_payload, render_line
 
 MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 
+# The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
+# lanes finish in either order, so the trace is sorted into this order before it is returned.
+STEPS = ("director", "analyst", "telestrator", "narration", "verifier", "voice")
+
 Key = tuple[Persona, Language]
 
 
@@ -68,15 +80,15 @@ class Analyze:
 
 
 @dataclass
-class Telestrate:
+class Briefing:
+    """The Analyst's findings, sent to the Telestrator and to narration at once."""
+
     request: BreakdownRequest
     findings: Findings
 
 
 @dataclass
-class Narrate:
-    request: BreakdownRequest
-    findings: Findings
+class Planned:
     plan: TelestrationPlan
     plan_source: str
     plan_errors: list[str]
@@ -84,7 +96,7 @@ class Narrate:
 
 @dataclass
 class Drafts:
-    base: Narrate
+    base: Briefing
     scripts: dict[Key, list[ScriptLine]]
     round: int = 0
     rewrites: dict[Key, int] = field(default_factory=dict)
@@ -98,7 +110,7 @@ class Rewrite:
 
 @dataclass
 class Approved:
-    base: Narrate
+    base: Briefing
     scripts: list[ScriptResult]
 
 
@@ -167,7 +179,7 @@ class Analyst(Executor):
         self.crew = crew
 
     @handler
-    async def run(self, msg: Analyze, ctx: WorkflowContext[Telestrate]) -> None:
+    async def run(self, msg: Analyze, ctx: WorkflowContext[Briefing]) -> None:
         crew, mc = self.crew, self.crew.ctx
         findings = fallbacks.analyst(mc)
         attempt, notes, used = None, [], False
@@ -194,7 +206,7 @@ class Analyst(Executor):
                 else:
                     notes.append("no usable headline or lens: template findings")
         crew.record("analyst", attempt, notes, used)
-        await ctx.send_message(Telestrate(msg.request, findings))
+        await ctx.send_message(Briefing(msg.request, findings))
 
 
 class Telestrator(Executor):
@@ -203,7 +215,7 @@ class Telestrator(Executor):
         self.crew = crew
 
     @handler
-    async def run(self, msg: Telestrate, ctx: WorkflowContext[Narrate]) -> None:
+    async def run(self, msg: Briefing, ctx: WorkflowContext[Planned]) -> None:
         crew, mc = self.crew, self.crew.ctx
         template = template_plan(mc)
         plan, source, errors, attempt, used = template, "template", [], None, False
@@ -223,7 +235,7 @@ class Telestrator(Executor):
                     plan, source = candidate, "agent"
         notes = [f"invalid plan, template used: {e}" for e in errors]
         crew.record("telestrator", attempt, notes, used)
-        await ctx.send_message(Narrate(msg.request, msg.findings, plan, source, errors))
+        await ctx.send_message(Planned(plan, source, errors))
 
 
 class Narration(Executor):
@@ -234,7 +246,7 @@ class Narration(Executor):
         self.crew = crew
 
     async def _speaker(
-        self, base: Narrate, key: Key, speaker: Speaker, pbp: list[ScriptLine] | None
+        self, base: Briefing, key: Key, speaker: Speaker, pbp: list[ScriptLine] | None
     ) -> tuple[list[DraftLine], Attempt | None]:
         crew, mc = self.crew, self.crew.ctx
         persona, language = key
@@ -250,7 +262,7 @@ class Narration(Executor):
         return (lines or template), attempt
 
     async def _script(
-        self, base: Narrate, key: Key
+        self, base: Briefing, key: Key
     ) -> tuple[list[ScriptLine], list[Attempt | None]]:
         persona, language = key
         if self.crew.client is None:  # the template already has the speaking order
@@ -272,7 +284,7 @@ class Narration(Executor):
         ], [a1, a2]
 
     @handler
-    async def draft(self, base: Narrate, ctx: WorkflowContext[Drafts]) -> None:
+    async def draft(self, base: Briefing, ctx: WorkflowContext[Drafts]) -> None:
         keys = [(p, lg) for p in base.request.personas for lg in base.request.languages]
         results = await asyncio.gather(*(self._script(base, k) for k in keys))
         attempts = [a for _, atts in results for a in atts if a is not None]
@@ -452,21 +464,28 @@ class Verifier(Executor):
 
 
 class Voice(Executor):
-    """SSML per approved line: one voice per speaker and language, styled by the delivery tier."""
+    """SSML per approved line: one voice per speaker and language, styled by the delivery tier.
+
+    The join of the two lanes: it runs once both the plan and the approved scripts have arrived.
+    """
 
     def __init__(self, crew: Crew) -> None:
         super().__init__("voice")
         self.crew = crew
 
     @handler
-    async def speak(self, msg: Approved, ctx: WorkflowContext[None, BreakdownResult]) -> None:
+    async def speak(
+        self, joined: list[Planned | Approved], ctx: WorkflowContext[None, BreakdownResult]
+    ) -> None:
         started = time.perf_counter()
         crew, mc = self.crew, self.crew.ctx
+        (planned,) = [m for m in joined if isinstance(m, Planned)]
+        (msg,) = [m for m in joined if isinstance(m, Approved)]
         tier = delivery_tier(mc.card)
         scripts = []
         for script in msg.scripts:
             speaker_of = {line.id: line.speaker for line in script.lines}
-            times = voice_times(msg.base.plan, len(script.payload.lines))
+            times = voice_times(planned.plan, len(script.payload.lines))
             cues = []
             for t, line in zip(times, script.payload.lines, strict=True):
                 spoken = ScriptLine(
@@ -487,12 +506,12 @@ class Voice(Executor):
         crew.trace.append(StepTrace(step="voice", source="code", attempts=1,
                                     ms=round((time.perf_counter() - started) * 1000, 1), error=None,
                                     notes=notes))  # fmt: skip
-        base = msg.base
+        trace = sorted(crew.trace, key=lambda s: STEPS.index(s.step))
         await ctx.yield_output(
             BreakdownResult(
-                request=base.request, findings=base.findings, plan=base.plan,
-                plan_source=base.plan_source, plan_errors=base.plan_errors, tier=tier,
-                scripts=scripts, trace=list(crew.trace), total_ms=0.0,
+                request=msg.base.request, findings=msg.base.findings, plan=planned.plan,
+                plan_source=planned.plan_source, plan_errors=planned.plan_errors, tier=tier,
+                scripts=scripts, trace=trace, total_ms=0.0,
             )
         )  # fmt: skip
 
@@ -506,11 +525,10 @@ def build_workflow(crew: Crew):
     return (
         WorkflowBuilder(max_iterations=40, name="breakdown", start_executor=director)
         .add_edge(director, analyst)
-        .add_edge(analyst, telestrator)
-        .add_edge(telestrator, narration)
+        .add_fan_out_edges(analyst, [telestrator, narration])  # both lanes get the findings
         .add_edge(narration, verifier)
         .add_edge(verifier, narration)  # rewrite requests
-        .add_edge(verifier, voice)
+        .add_fan_in_edges([telestrator, verifier], voice)  # plan + approved scripts
         .build()
     )
 
