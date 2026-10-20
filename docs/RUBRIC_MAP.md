@@ -21,7 +21,7 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 | Analytics kernels | [analytics/](../analytics/): time to intercept, pitch control, pressing (PRs #1, #4), vision after Bekkers 2026, scan detector (held-out F1 0.993, [scan_detector](../eval/reports/scan_detector.md), PR #3), blind-side alerts (fresh held-out precision 0.920, recall 0.984, [blind_side](../eval/reports/blind_side.md), PRs #10, #13), xT (our own) | Partial: the fitted xT grid's sanity plot is open (SPEC §4) |
 | numpy ↔ GLSL parity-tested kernels (SPEC §0) | The vision cone is a fragment shader of the sim's field-of-view model ([web/src/views/TacticalView.tsx](../web/src/views/TacticalView.tsx)), without occlusion | **Missing:** no parity test; the pitch-control shader is not built |
 | CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml): ruff, pytest, shell syntax; web licences, typecheck, prettier, vitest, build. [deploy.yml](../.github/workflows/deploy.yml) redeploys on green `main` with OIDC, no stored Azure secret | Partial: the eval reports are generated locally and committed, not rerun in CI |
-| Microsoft stack, each piece used | README [table](../README.md#microsoft-technologies-where-they-are-used): Foundry, Agent Framework, MCP, Azure AI Speech, Container Apps, Storage static website, Cosmos DB, Foundry evaluation, Application Insights, GitHub Actions | Partial: our MCP server is used by `python -m agents.run --mcp` and in tests, not by the deployed API |
+| Microsoft stack, each piece used | README [table](../README.md#microsoft-technologies-where-they-are-used): Foundry, Agent Framework, MCP, Azure AI Speech, Container Apps, Storage static website, Cosmos DB, Foundry evaluation, Application Insights, GitHub Actions | ✅ |
 
 ## 2. Agentic design and innovation
 
@@ -32,7 +32,7 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 | Deterministic verification of every claim | [explain/verifier.py](../explain/verifier.py), [explain/claims.py](../explain/claims.py) (PR #6); [corruption](../eval/reports/corruption.md): 88/88 false perturbations refuted, 0 unsupported claims rendered | ✅ |
 | Anchoring beats free text | [narration_ablation](../eval/reports/narration_ablation.md) (PR #25): 58 of 66 (88%) free-text first-draft lines fail the Verifier, 47 with made-up ids or numbers; anchored 0 of 111; groundedness 4.90 vs 5.00 (Foundry `GroundednessEvaluator`) | ✅ |
 | Moments chosen by counterfactual impact, perception first | [explain/moments.py](../explain/moments.py), [explain/lenses.py](../explain/lenses.py) (PR #1); the hero lens is perception | ✅ |
-| Tools over MCP | [agents/mcp_server.py](../agents/mcp_server.py); [tests/test_agents.py](../tests/test_agents.py) `test_the_analyst_gets_the_mcp_tools_over_stdio`, `test_mcp_server_exposes_the_analyst_tools` | Partial: CLI only; the live trace below has no tool spans |
+| Tools over MCP | [agents/mcp_server.py](../agents/mcp_server.py), started by the deployed API for each uncached model breakdown (PR #41, `TTE_ANALYST_MCP`); [tests/test_api.py](../tests/test_api.py) `test_a_model_breakdown_gives_the_analyst_the_mcp_tools_when_on`; [tests/test_agents.py](../tests/test_agents.py) `test_the_analyst_calls_tools_over_mcp_and_its_trace_names_them` (a real stdio round trip); the live trace below: `execute_tool` and `tools/call` spans under `analyst` | ✅ |
 
 ## 3. Real-world impact
 
@@ -71,37 +71,54 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 
 ### The live trace
 
-One model-backed breakdown (analyst, zh) on the deployed API, from Application Insights,
-2026-10-20 18:20:46 UTC, 7.7 s inside the `breakdown` span. Spans with their attributes
-(`tte.source`: `llm` = the model answered, `code` = deterministic step); HTTP and framework
-plumbing spans trimmed.
+One model-backed breakdown (casual, en) on the deployed API, from Application Insights,
+2026-10-20 19:57:51 UTC, 12.3 s inside the `breakdown` span: 4.5 s to start our MCP server, then
+7.6 s for the crew. Spans with their attributes (`tte.source`: `llm` = the model answered,
+`code` = deterministic step); HTTP and framework plumbing spans trimmed.
 
 ```
-POST /api/breakdowns                                   8139 ms
-├─ ContainerProxy.read_item (Cosmos cache miss)         331 ms
-├─ breakdown  personas=analyst languages=zh model=gpt-4.1-mini rewrites=0 dropped=0   7693 ms
-│  ├─ workflow.run                                     7689 ms
-│  │  ├─ executor.process director                     3020 ms
-│  │  ├─ executor.process analyst                      1576 ms
-│  │  ├─ executor.process telestrator                  3084 ms   ┐ fan-out, concurrent
-│  │  ├─ executor.process narration                    2742 ms   ┘
-│  │  ├─ executor.process verifier                        4 ms
-│  │  └─ executor.process voice                           1 ms
-│  ├─ director     source=llm attempts=1               3020 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ analyst      source=llm attempts=1               1575 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ telestrator  source=llm attempts=1               3084 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ narration    speaker=pbp   source=llm lines=4    1498 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ narration    speaker=color source=llm lines=4    1234 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ verifier     round=0 source=code failed=0           3 ms
-│  └─ voice        source=code lines=8                    0 ms
-└─ ContainerProxy.upsert_item (Cosmos cache write)      111 ms
+POST /api/breakdowns                                   12919 ms
+├─ ContainerProxy.read_item (Cosmos cache miss)          513 ms
+├─ breakdown  personas=casual languages=en model=gpt-4.1-mini rewrites=0 dropped=0   12277 ms
+│  ├─ mcp  source=code tools=get_moment,list_claims,get_vision,get_pitch_control,get_xt,
+│  │       get_pressing,run_counterfactual,list_options,what_if                    4506 ms
+│  │  ├─ initialize  (python -m agents.mcp_server, a subprocess)                   4493 ms
+│  │  ├─ tools/list                                                                   2 ms
+│  │  └─ prompts/list                                                                 4 ms
+│  ├─ workflow.run                                      7563 ms
+│  │  ├─ executor.process director                      1553 ms
+│  │  ├─ executor.process analyst                       3117 ms
+│  │  ├─ executor.process telestrator                   2887 ms   ┐ fan-out, concurrent
+│  │  ├─ executor.process narration                     2095 ms   ┘
+│  │  └─ executor.process verifier                         2 ms
+│  ├─ director     source=llm attempts=1                1552 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ analyst      source=llm attempts=1 tools_called=get_moment,list_claims      3116 ms
+│  │  └─ invoke_agent analyst                           3114 ms
+│  │     ├─ chat gpt-4.1-mini                           1335 ms   (asks for two tools)
+│  │     ├─ execute_tool get_moment → tools/call get_moment      6 ms   (over MCP stdio)
+│  │     ├─ execute_tool list_claims → tools/call list_claims    9 ms
+│  │     └─ chat gpt-4.1-mini                           1769 ms   (the structured answer)
+│  ├─ telestrator  source=llm attempts=1                2887 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ narration    speaker=pbp   source=llm lines=2     1001 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ narration    speaker=color source=llm lines=2     1085 ms → invoke_agent → chat gpt-4.1-mini
+│  └─ verifier     round=0 source=code failed=0            2 ms
+└─ ContainerProxy.upsert_item (Cosmos cache write)       126 ms
 ```
 
-Query (Application Insights `tte-appi-1ff906`, Logs):
+The `voice` step span (and its `executor.process voice`) is missing from this trace and from the
+one before it, although the SDK emits it (checked locally with an in-memory exporter). The
+exporter's default rate-limited sampler (5 spans per second, `azure-monitor-opentelemetry` 1.8)
+is the likely cause; not fixed yet.
+
+Query (Application Insights `tte-appi-1ff906`, Logs). It keeps to requests that reached the
+deployed API, because local runs with the connection string set report under the same role name:
 
 ```kusto
-let op = toscalar(union dependencies, requests
-    | where name == 'breakdown' | top 1 by timestamp desc | project operation_Id);
+let deployed = requests
+    | where url has 'azurecontainerapps.io' and name has 'breakdowns' | project operation_Id;
+let op = toscalar(dependencies
+    | where name == 'breakdown' and operation_Id in (deployed)
+    | top 1 by timestamp desc | project operation_Id);
 union dependencies, requests
 | where operation_Id == op
 | project timestamp, name, id, operation_ParentId, duration, customDimensions
