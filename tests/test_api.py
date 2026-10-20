@@ -29,6 +29,7 @@ def client(settings):
 def test_health_and_match_list(client):
     health = client.get("/health").json()
     assert health["status"] == "ok" and health["model"] == "offline"
+    assert health["analyst_mcp"] is False  # no model, so no Analyst to give tools to
     matches = client.get("/api/matches").json()
     assert [m["id"] for m in matches] == [MATCH]
     assert client.get("/api/matches/nope-1").status_code == 404
@@ -255,6 +256,62 @@ def test_the_daily_cap_resets_at_utc_midnight():
     now[0] = datetime(2026, 10, 28, 0, 0, tzinfo=UTC)
     assert cap.left() == 2 and cap.take() and cap.left() == 1
     assert not DailyCap(0).take()
+
+
+# --- the Analyst's tools over our MCP server (SPEC 6, 8) ----------------------------------------
+
+
+def test_analyst_mcp_is_on_unless_the_environment_turns_it_off(monkeypatch):
+    monkeypatch.delenv("TTE_ANALYST_MCP", raising=False)
+    assert Settings.from_env().analyst_mcp is True
+    for off in ("0", "false", "OFF", " no "):
+        monkeypatch.setenv("TTE_ANALYST_MCP", off)
+        assert Settings.from_env().analyst_mcp is False
+    for on in ("1", "true", ""):
+        monkeypatch.setenv("TTE_ANALYST_MCP", on)
+        assert Settings.from_env().analyst_mcp is True
+
+
+def _mcp_app(settings, cache_dir, replies, on):
+    from agents.testing import FakeChatClient
+
+    fresh = Settings(matches=settings.matches, cache_dir=cache_dir, rate_limit=(100, 600.0),
+                     web_origin="*", analyst_mcp=on)  # fmt: skip
+    fake = FakeChatClient(replies)
+    return create_app(fresh, client=fake, model_id="fake-model"), fake
+
+
+@pytest.mark.parametrize("on", [True, False])
+def test_a_model_breakdown_gives_the_analyst_the_mcp_tools_when_on(settings, tmp_path, replies, on):
+    """Found 2026-10-20: the API never set use_mcp, so the deployed Analyst had no tools."""
+    app, fake = _mcp_app(settings, tmp_path, replies, on)
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    with TestClient(app) as c:
+        assert c.get("/health").json()["analyst_mcp"] is on
+        r = c.post("/api/breakdowns", json=body).json()
+    assert r["source"] == "model" and r["cached"] is False
+    if on:
+        assert {"get_moment", "list_claims", "run_counterfactual", "what_if"} <= set(
+            fake.tools["analyst"]
+        )
+    else:
+        assert fake.tools["analyst"] == []
+    assert fake.tools["director"] == [] and fake.tools["telestrator"] == []
+
+
+def test_a_breakdown_cached_without_the_tools_is_not_served_once_they_are_on(
+    settings, tmp_path, replies
+):
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    keys = []
+    for on in (False, True, True):
+        app, _ = _mcp_app(settings, tmp_path, replies, on)
+        with TestClient(app) as c:
+            r = c.post("/api/breakdowns", json=body).json()
+        keys.append((r["key"], r["cached"]))
+    (off_key, off_cached), (on_key, on_cached), (again_key, again_cached) = keys
+    assert not off_cached and not on_cached and again_cached
+    assert off_key != on_key == again_key
 
 
 def test_unknown_moment_is_404(client):
