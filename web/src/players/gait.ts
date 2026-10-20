@@ -1,4 +1,4 @@
-// Gait of a rigged player (SPEC 7 trial): which clip, how much of it and how fast, from the sim's
+// Gait of a rigged player (SPEC 7): which clip, how much of it and how fast, from the sim's
 // running speed alone. Everything is a pure function of the playback frame, so pausing,
 // scrubbing and slow motion pose the players exactly as playing through does.
 //
