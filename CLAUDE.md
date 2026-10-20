@@ -146,6 +146,11 @@ _Fill in as they come to exist._
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
   video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
   `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)
+- `python3 docs/architecture.py` — regenerate the architecture diagram (SPEC 2, 10):
+  `docs/architecture.svg` and `-dark.svg`, standard library only. `--png --chrome <path to
+  chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full
+  Chrome's `--headless` crops it). `tests/test_architecture.py` fails when any of them is stale
+  or the diagram drifts from the code
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)
