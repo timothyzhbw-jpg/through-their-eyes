@@ -1,7 +1,8 @@
 """Model calls with the failure policy of SPEC 6: a timeout per step, one retry, then give up.
 
 `client_from_env` returns a Microsoft Foundry chat client when FOUNDRY_PROJECT_ENDPOINT and
-FOUNDRY_MODEL are set (keyless, through `az login`), else None: the crew then runs on templates.
+FOUNDRY_MODEL are set (keyless: a managed identity in Azure, `az login` locally), else None: the
+crew then runs on templates.
 """
 
 from __future__ import annotations
@@ -70,8 +71,20 @@ def client_from_env() -> tuple[Any | None, Callable[[], Awaitable[None]]]:
     if not endpoint or not model:
         return None, nothing
     from agent_framework.foundry import FoundryChatClient
-    from azure.identity.aio import AzureCliCredential
 
-    credential = AzureCliCredential(tenant_id=os.environ.get("AZURE_TENANT_ID") or None)
+    credential = credential_from_env()
     client = FoundryChatClient(project_endpoint=endpoint, model=model, credential=credential)
     return client, credential.close
+
+
+def credential_from_env() -> Any:
+    """Keyless: the app's user-assigned identity in Azure Container Apps (which sets
+    IDENTITY_ENDPOINT; AZURE_CLIENT_ID names the identity), else the developer's `az login`."""
+    client_id = os.environ.get("AZURE_CLIENT_ID", "").strip()
+    if os.environ.get("IDENTITY_ENDPOINT") and client_id:
+        from azure.identity.aio import ManagedIdentityCredential
+
+        return ManagedIdentityCredential(client_id=client_id)
+    from azure.identity.aio import AzureCliCredential
+
+    return AzureCliCredential(tenant_id=os.environ.get("AZURE_TENANT_ID") or None)

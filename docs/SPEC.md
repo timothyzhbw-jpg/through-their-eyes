@@ -671,6 +671,17 @@ to a real broadcast.
     as a `template` span with its reason.
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
+- *Provisioned 2026-10-20 (`infra/deploy.sh provision`):*
+  - Log Analytics (0.1 GB/day cap), Application Insights, Container Registry Basic, a Container
+    Apps environment and `tte-api` (0.5 vCPU / 1 GiB, 1 replica), the GitHub Actions identity, and
+    a $40/month budget alert to the subscription owners.
+  - Cosmos DB is in West US: North Central US refused new accounts ("high demand"), and West US is
+    the nearest region the Azure for Students policy allows.
+  - The Container Apps environment came up as an *express* environment. It supports user-assigned
+    identities only, so `tte-api` uses `tte-api-id-<suffix>` for Foundry, Cosmos and image pulls.
+  - Static Web Apps could not be created: its regions (West US 2, Central US, East US 2, West
+    Europe, East Asia) are all outside the subscription's allowed regions. Web hosting is open
+    (§8 decision pending).
 - Every environment variable documented in `.env.example`; no secrets in the repo.
 
 ## 9. Milestones and cut list
