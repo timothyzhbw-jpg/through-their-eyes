@@ -7,7 +7,9 @@ statistic with a value printed in a paper cited in docs/REFERENCES.md. Only prin
 a statistic with no printed value is marked "no published reference", never filled in. A row is
 "inside" when the pooled sim value lies in the range checked: the printed 95% CI when the paper
 gives one, else the printed mean ± 1 SD, else the 95% CI of a printed share computed from its n.
-Nothing here tunes the sim; mismatches are reported, not fixed. Writes eval/reports/realism.md.
+Nothing here tunes the sim. The scan parameters in sim/config.py were fitted to some of these
+values on tuning seeds 0-99 (marked †; SPEC 3.4); this report runs held-out seeds. Writes
+eval/reports/realism.md.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from analytics.scan_detector import ball_offset
 from analytics.vision import wrap_angle
 from sim.config import ROLES, SimParams
 from sim.engine import Simulation
+from sim.perception import longest_scan_s
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -39,8 +42,8 @@ SCENARIO = "possession_play"
 PARAMS = replace(SimParams(), max_duration_s=45.0)
 WINDOW_S = 10.0  # scans are counted over the last 10 s of the team's possession (Jordet 2013, 2020)
 # A scan still under way when a run stops has no event yet (the sim emits it once the head is
-# back), so receptions in the last second are left out: no sim scan lasts longer.
-END_GUARD_S = 1.0
+# back), so receptions closer to the end than the longest sim scan are left out.
+END_GUARD_S = longest_scan_s(PARAMS)
 # Aksum et al. (2021) time a scan by the ball leaving the head-worn scene camera, which films at
 # least 82 deg horizontally: the ball is out of frame beyond 41 deg from the head direction.
 FRAME_HALF_WIDTH = np.deg2rad(82.0 / 2.0)
@@ -61,6 +64,20 @@ GROUPS = {
 }
 GROUP_ORDER = ("central midfielders", "central defenders", "wingers", "side defenders", "forwards")
 MIDFIELD = ("DM", "CM", "AM")
+# Jordet et al. (2020) Figure 2: role pairs with the printed Cohen's d of scan frequency and its
+# 95% CI. Sign: the first role scans more, as the text (central midfielders highest, forwards
+# lowest) and the bar order of Figure 2 show.
+ROLE_PAIRS = (
+    ("central midfielders", "forwards", 0.54, 0.48, 0.60, "Figure 2"),
+    ("central midfielders", "side defenders", 0.56, 0.51, 0.61,
+     "Results › Positional Role; Figure 2"),
+    ("central midfielders", "wingers", 0.33, 0.27, 0.39, "Figure 2"),
+    ("central midfielders", "central defenders", 0.29, 0.24, 0.34, "Figure 2"),
+    ("central defenders", "forwards", 0.51, 0.43, 0.59, "Figure 2"),
+    ("central defenders", "side defenders", 0.37, 0.31, 0.43, "Figure 2"),
+    ("wingers", "forwards", 0.36, 0.27, 0.45, "Figure 2"),
+    ("side defenders", "forwards", 0.20, 0.12, 0.28, "Figure 2"),
+)  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -115,6 +132,11 @@ class Row:
     source: str = "—"
     inside: str = "—"
     note: str = ""
+    calibrated: bool = False  # the sim was fitted to this value on tuning seeds (sim/config.py)
+
+    @property
+    def label(self) -> str:
+        return f"{self.metric} †" if self.calibrated else self.metric
 
 
 # --- measurements on one run -----------------------------------------------------------------
@@ -152,9 +174,9 @@ def out_of_frame_s(
     return None if back.size == 0 else float(back[0] * dt)
 
 
-def simulate(seed: int) -> dict[str, dict[str, np.ndarray]]:
+def simulate(seed: int, params: SimParams = PARAMS) -> dict[str, dict[str, np.ndarray]]:
     """Per-observation tables of one run: receptions, scans, player peaks, passes."""
-    run = Simulation.from_scenario(SCENARIO, seed, params=PARAMS).run()
+    run = Simulation.from_scenario(SCENARIO, seed, params=params).run()
     dt, frames = run.dt, len(run.owner)
     roles = [p.role for p in run.players]
     team = np.array([p.team for p in run.players])
@@ -166,7 +188,9 @@ def simulate(seed: int) -> dict[str, dict[str, np.ndarray]]:
     resolved = [e for e in run.events if e.type == "pass" and e.attrs.get("end") is not None]
     passes = {(e.attrs["receiver"], e.attrs["end"]): e for e in resolved}
 
-    rec: dict[str, list] = {k: [] for k in ("role", "scans", "window", "pressure", "behind")}
+    rec: dict[str, list] = {
+        k: [] for k in ("role", "scans", "window", "pressure", "pressure_window", "behind")
+    }
     last = frames - 1 - round(END_GUARD_S / dt)
     for e in run.events:
         i = run.index(e.player)
@@ -181,7 +205,11 @@ def simulate(seed: int) -> dict[str, dict[str, np.ndarray]]:
         rec["role"].append(roles[i])
         rec["scans"].append(sum(start <= s < f for s in onsets[i]))
         rec["window"].append((f - start) * dt)
-        rec["pressure"].append(np.linalg.norm(run.pos[f, opponents] - run.pos[f, i], axis=-1).min())
+        gap = np.linalg.norm(
+            run.pos[start : f + 1, opponents] - run.pos[start : f + 1, None, i], axis=-1
+        )
+        rec["pressure"].append(gap[-1].min())
+        rec["pressure_window"].append(gap.min(axis=1).mean())
         rec["behind"].append(
             attack * (run.pos[kick.frame, passer, 0] - run.pos[kick.frame, i, 0]) < 0
         )
@@ -322,7 +350,7 @@ def evaluate(seeds: list[int]) -> list[Row]:
 
     def mean_row(
         metric, table, x, mask, fmt, published, lo, hi, source, note="", scale=1.0,
-        label="mean ± SD",
+        label="mean ± SD", calibrated=False,
     ):  # fmt: skip
         def stat(w):
             return _wmean(x[mask], pool.weights(table, w)[mask]) * scale
@@ -337,6 +365,7 @@ def evaluate(seeds: list[int]) -> list[Row]:
             f"{_num(value, fmt)} ± {_num(sd, fmt)} (n = {n})",
             _span(a, b, fmt),
             note=note,
+            calibrated=calibrated,
         )
         if published is not None:
             row.published, row.source = published, source
@@ -345,7 +374,7 @@ def evaluate(seeds: list[int]) -> list[Row]:
         rows.append(row)
         return value
 
-    def d_row(metric, xa_mask, xb_mask, published, lo, hi, source, note=""):
+    def d_row(metric, xa_mask, xb_mask, published, lo, hi, source, note="", calibrated=True):
         def stat(w):
             wr = pool.weights("receptions", w)
             return _wd(rate[xa_mask], wr[xa_mask], rate[xb_mask], wr[xb_mask])
@@ -363,6 +392,7 @@ def evaluate(seeds: list[int]) -> list[Row]:
                 source,
                 _verdict(value, lo, hi, min(na, nb) >= MIN_GROUP),
                 note,
+                calibrated,
             )
         )
 
@@ -377,6 +407,7 @@ def evaluate(seeds: list[int]) -> list[Row]:
         "Sim `scan` events of the receiver with onset in the window; partial head turns are not "
         "scans. The window starts at the latest of 10 s before the reception, the moment the team "
         "won the ball, and the run start (the paper cuts it at turnovers and set plays).",
+        calibrated=True,
     )  # fmt: skip
     full = float(np.mean(rec["window"] >= WINDOW_S - 1e-9)) if len(rate) else math.nan
     rows[-1].note += (
@@ -389,10 +420,11 @@ def evaluate(seeds: list[int]) -> list[Row]:
         "receptions", rate, every, ".2f", "0.44 ± 0.30", 0.14, 0.74,
         _cite("jordet2020", "Results › General"),
         "Scans divided by the window length, per reception, then averaged as the paper does. "
-        "It sits below the configured spontaneous rates (sim/config.py ROLES) because a scan in "
-        "progress, its refractory time and partial head turns block new scans.",
+        "It sits far below the configured rates (sim/config.py ROLES), which hold while the head "
+        "is free and no opponent is within 10 m: a scan in progress, its refractory time and "
+        "partial head turns block new scans, and nearer opponents slow them.",
     )  # fmt: skip
-    behind = rec["behind"] & np.isin(rec["role"], [*MIDFIELD, "W", "ST"])
+    behind = rec["behind"].astype(bool) & np.isin(rec["role"], [*MIDFIELD, "W", "ST"])
     mean_row(
         "Scan frequency, midfielders and forwards receiving from a teammate nearer their goal "
         "(scans/s)",
@@ -413,9 +445,10 @@ def evaluate(seeds: list[int]) -> list[Row]:
         mean_row(
             f"Scan frequency, {g} (scans/s)",
             "receptions", rate, group == g, ".2f", None, 0, 0, "",
-            f"Configured spontaneous scan rate: {configured} per s. Jordet et al. (2020) Figure 2 "
-            "plots each role's mean without printing it, so no value is checked; the effect "
-            "sizes it prints are compared below.",
+            f"Configured rate while the head is free and no opponent is within 10 m: {configured} "
+            "per s. Jordet et al. (2020) Figure 2 plots each role's mean without printing it, so "
+            "no value is checked; the effect sizes it prints are compared below, and the "
+            "configured rates were fitted to them.",
         )  # fmt: skip
 
     def means_by_group(w):
@@ -446,22 +479,10 @@ def evaluate(seeds: list[int]) -> list[Row]:
             "not read off. Central midfielders pool the sim's DM, CM and AM; by sim role: "
             + ", ".join(f"{r} {v:.2f}" for r, v in by_role.items())
             + ".",
+            calibrated=True,
         )
     )
-    # Pairs with the printed effect size and 95% CI. Sign: the first role scans more, as the
-    # text (central midfielders highest, forwards lowest) and the bar order of Figure 2 show.
-    pairs = (
-        ("central midfielders", "forwards", 0.54, 0.48, 0.60, "Figure 2"),
-        ("central midfielders", "side defenders", 0.56, 0.51, 0.61,
-         "Results › Positional Role; Figure 2"),
-        ("central midfielders", "wingers", 0.33, 0.27, 0.39, "Figure 2"),
-        ("central midfielders", "central defenders", 0.29, 0.24, 0.34, "Figure 2"),
-        ("central defenders", "forwards", 0.51, 0.43, 0.59, "Figure 2"),
-        ("central defenders", "side defenders", 0.37, 0.31, 0.43, "Figure 2"),
-        ("wingers", "forwards", 0.36, 0.27, 0.45, "Figure 2"),
-        ("side defenders", "forwards", 0.20, 0.12, 0.28, "Figure 2"),
-    )  # fmt: skip
-    for a, b, d, lo, hi, where in pairs:
+    for a, b, d, lo, hi, where in ROLE_PAIRS:
         d_row(
             f"Cohen's d of scan frequency, {a} vs {b}",
             group == a, group == b, f"d = {d:.2f}", lo, hi, _cite("jordet2020", where),
@@ -469,13 +490,21 @@ def evaluate(seeds: list[int]) -> list[Row]:
 
     # Opponent pressure: closest opponent at the reception, in the paper's metre bins.
     close, free = rec["pressure"] < 1.5, rec["pressure"] >= 9.5
+    close_mid = int(np.sum(close & (group == "central midfielders")))
+    near_m, far_m = (
+        float(np.mean(rec["pressure_window"][m])) if m.any() else math.nan for m in (close, free)
+    )
     d_row(
         "Cohen's d of scan frequency, closest opponent 10+ m vs 0–1 m at the reception",
         free, close, "d = 0.57 (lower under tight pressure)", 0.49, 0.65,
         _cite("jordet2020", "Results › Opponent Pressure; Figure 3"),
         "The paper's bins are whole metres, so 0–1 m is read as < 1.5 m and 10+ m as ≥ 9.5 m. "
-        "The sim's scan scheduling has no pressure term (sim/engine.py: rate by role only), so "
-        "any difference comes from which roles receive where.",
+        "The sim slows scanning as the closest opponent nears (sim/config.py, "
+        "pressure_scan_factor, set from this d), but that does not reach this comparison: "
+        f"{close_mid} of the {int(close.sum())} receptions at 0–1 m are central midfielders, who "
+        f"scan most, and their closest opponent averaged {_num(near_m, '.1f')} m over the window, "
+        f"against {_num(far_m, '.1f')} m at 10+ m. possession_play has no tight marking: "
+        "pressure at a reception is mostly a defender arriving with the ball.",
     )  # fmt: skip
 
     # Head turns.
@@ -492,7 +521,9 @@ def evaluate(seeds: list[int]) -> list[Row]:
         "ball in frame are excluded there as here). Vertical framing is ignored. Printed but "
         f"not checked (no spread): median 0.34 s, most common 0.26 s, longest 3.28 s; sim median "
         f"{np.median(timed) if timed.size else math.nan:.2f} s, longest "
-        f"{timed.max() if timed.size else math.nan:.2f} s.",
+        f"{timed.max() if timed.size else math.nan:.2f} s. The median is set by the turn itself "
+        "(70–150° out and back at about 404°/s); the dwell was fitted to the share and SD.",
+        calibrated=True,
     )  # fmt: skip
 
     def short_share(w):
@@ -514,18 +545,20 @@ def evaluate(seeds: list[int]) -> list[Row]:
             "Same scans and timing as the row above. The range is the binomial 95% CI of the "
             "printed 90.3% with n = 869, computed here (normal approximation); the paper prints "
             "no interval.",
+            calibrated=True,
         )
     )
     every_scan = np.ones(len(scans["peak"]), dtype=bool)
-    cap = np.rad2deg(PARAMS.head_omega_max)
+    mean_omega, sd_omega = np.rad2deg(PARAMS.scan_omega)
     mean_row(
         "Peak head angular speed during a scan (°/s)",
         "scans", scans["peak"], every_scan, ".0f", "404.2 ± 50.7", 404.2 - 50.7, 404.2 + 50.7,
         _cite("kokubu2026", "Results 3.1"), f"Outfield scans; frame-to-frame yaw change of the "
         f"true head at 25 Hz (the paper: yaw rate from a head-worn IMU at 200 Hz, scans "
-        f"detected at 250°/s). The sim's head turns at most at its cap, head_omega_max = "
-        f"{cap:.0f}°/s. The paper does not say whether its SD is over scans or players.",
-        scale=180.0 / math.pi,
+        f"detected at 250°/s). Each sim scan draws its peak speed from {mean_omega:.1f} ± "
+        f"{sd_omega:.1f}°/s (sim/config.py scan_omega, this printed value), so inside is by "
+        "construction. The paper does not say whether its SD is over scans or players.",
+        scale=180.0 / math.pi, calibrated=True,
     )  # fmt: skip
 
     # Movement and ball: no paper in docs/REFERENCES.md prints a measured value.
@@ -594,15 +627,15 @@ def render(rows: list[Row], seeds: list[int]) -> str:
         "",
     ]
     if outside:
-        lines += ["Outside the published range (reported, not fixed):", ""]
-        lines += [f"- {r.metric}: sim {r.sim}; published {r.published}." for r in outside]
+        lines += ["Outside the published range:", ""]
+        lines += [f"- {r.label}: sim {r.sim}; published {r.published}." for r in outside]
         lines.append("")
     lines += [
         "| " + " | ".join(COLUMNS) + " |",
         "|" + "---|" * len(COLUMNS),
     ]
     for r in rows:
-        cells = (r.metric, r.sim, r.seeds, r.published, r.range, r.source, r.inside)
+        cells = (r.label, r.sim, r.seeds, r.published, r.range, r.source, r.inside)
         lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
     lines += [
         "",
@@ -617,6 +650,9 @@ def render(rows: list[Row], seeds: list[int]) -> str:
         "typical real value, not that the means agree; else, for a printed share, its binomial "
         "95% CI computed from the printed n. **Inside** compares the pooled value; a group with "
         f"fewer than {MIN_GROUP} observations is inconclusive.",
+        "- **†**: the sim's scan parameters (sim/config.py) were fitted to this printed value on "
+        "`possession_play` tuning seeds 0–99 (SPEC 3.4). The seeds here are held out, so *inside* "
+        "shows that the fit carries over to new matches, not independent agreement.",
         f"- Rows marked *{NO_REFERENCE}* have no printed value in any cited paper; they show the "
         "sim's distribution only. Nothing was filled in from memory or from datasets.",
         "- The populations differ from the sim's 22 synthetic players: one EPL club's 27 players "
@@ -626,7 +662,7 @@ def render(rows: list[Row], seeds: list[int]) -> str:
         "## Notes per row",
         "",
     ]
-    lines += [f"- **{r.metric}** — {r.note}" for r in rows if r.note]
+    lines += [f"- **{r.label}** — {r.note}" for r in rows if r.note]
     lines += [
         "",
         "## Sources",

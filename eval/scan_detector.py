@@ -17,9 +17,11 @@ from pathlib import Path
 
 import numpy as np
 
+from analytics.scan_detector import DEFAULT_PARAMS as DEFAULT
 from analytics.scan_detector import ScanDetectorParams, detect_all
 from sim.config import SimParams
 from sim.engine import Simulation
+from sim.perception import longest_scan_s
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -30,9 +32,9 @@ MIN_EXCURSIONS_DEG = tuple(range(20, 81, 5))  # deg, tuned together with the thr
 # detection can never match two scans.
 TOLERANCE_FRAMES = 3
 # The sim emits a scan event only once the head is back, so scans still under way when a run stops
-# are missing from the truth. Onsets in the last second are left out of the scoring: no sim scan
-# lasts longer (out <= 0.5 s, dwell <= 0.18 s, back <= 0.25 s).
-END_GUARD_S = 1.0
+# are missing from the truth. Onsets closer to the end than the longest sim scan are left out of
+# the scoring.
+END_GUARD_S = longest_scan_s(SimParams())
 BALL_MOVING = 2.0  # m/s, for the error breakdown only
 
 POSSESSION_PARAMS = replace(SimParams(), max_duration_s=45.0)
@@ -236,7 +238,8 @@ def evaluate() -> str:
     f1s = [c.f1 for c in sweep["full nuisance"].values()]
     per_true = {t: (c.tp + c.fp) / max(c.tp + c.fn, 1) for t, c in ablation.items()}
     hardest, hardest_f1 = min(((k, c.f1) for k, c in stress.items()), key=lambda kv: kv[1])
-    cap = np.rad2deg(SimParams().head_omega_max)
+    mean_omega, sd_omega = np.rad2deg(SimParams().scan_omega)
+    slowest = np.rad2deg(SimParams().scan_omega_min)
     lo_p, hi_p = np.rad2deg(SimParams().partial_scan_amplitude)
     lo_full = np.rad2deg(SimParams().scan_amplitude[0])
 
@@ -260,9 +263,11 @@ def evaluate() -> str:
         "",
         f"- **The threshold barely matters once the excursion gate is in.** Held-out F1 stays "
         f"between {min(f1s):.3f} and {max(f1s):.3f} over {THRESHOLDS_DEG[0]}–{THRESHOLDS_DEG[-1]}"
-        f"°/s. Every genuine sim scan turns at the head's speed cap ({cap:.0f}°/s) within a "
-        "frame, so the threshold only decides which noise-driven onsets get looked at; the "
-        f"choice of {best_t}°/s is weakly determined (it wins the tie-break).",
+        f"°/s. Every genuine sim scan turns at its own peak speed, {mean_omega:.0f} ± "
+        f"{sd_omega:.0f}°/s and never below {slowest:.0f}°/s (Kokubu et al. 2026), so below that "
+        "floor the threshold only decides which noise-driven onsets get looked at, and above it "
+        f"the slowest scans start to be missed; the choice of {best_t}°/s is weakly determined "
+        "(it wins the tie-break).",
         f"- **The literature's over-count is reproduced without the gate**: a velocity-only "
         f"detector finds {per_true[THRESHOLDS_DEG[0]]:.2f} detections per true scan at "
         f"{THRESHOLDS_DEG[0]}°/s and {per_true[THRESHOLDS_DEG[-1]]:.2f} at "
@@ -284,13 +289,13 @@ def evaluate() -> str:
         "a false positive.",
         f"- Matching: same player, onset frames at most ±{TOLERANCE_FRAMES} frames "
         f"({TOLERANCE_FRAMES * 40} ms) apart, one to one, closest pairs first. Onsets in the "
-        f"last {END_GUARD_S:.0f} s of a run are not scored: the sim emits a scan only once the "
+        f"last {END_GUARD_S:.1f} s of a run are not scored: the sim emits a scan only once the "
         "head is back, so scans under way when a run stops are missing from the truth.",
         f"- Tuning grid: threshold {THRESHOLDS_DEG[0]}–{THRESHOLDS_DEG[-1]}°/s in steps of 25 × "
         f"minimum excursion {MIN_EXCURSIONS_DEG[0]}–{MIN_EXCURSIONS_DEG[-1]}° in steps of 5. "
         "Highest F1 wins; ties go to the higher threshold, then the lower excursion. Other "
         "detector constants are fixed: return tolerance 15°, the head must pass it within 2 "
-        "frames of the onset, at most 1.5 s from onset to return.",
+        f"frames of the onset, at most {DEFAULT.max_duration_s:.1f} s from onset to return.",
         "- Conditions (held-out only; same seeds, so the same plays):",
         *(f"  - *{name}*: {CONDITION_NOTES[name]}" for name in CONDITIONS),
         "",
@@ -315,8 +320,8 @@ def evaluate() -> str:
         "## Ablation: velocity threshold only (held-out, nuisance on)",
         "",
         "No excursion gate: any turn away from the ball faster than the threshold that comes back "
-        "within 1.5 s (return tolerance 2°, about the sensor noise) counts as a scan — the "
-        "reading under which the literature's 125°/s over-counts.",
+        f"within {DEFAULT.max_duration_s:.1f} s (return tolerance 2°, about the sensor noise) "
+        "counts as a scan — the reading under which the literature's 125°/s over-counts.",
         "",
         "| Threshold (°/s) | P | R | F1 | Detections per true scan |",
         "|---|---|---|---|---|",
