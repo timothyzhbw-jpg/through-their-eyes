@@ -108,12 +108,19 @@ def test_spec_scan_statistics_on_twenty_seeds(receptions):
     assert rate[group == "central midfielders"].mean() > rate[group == "forwards"].mean()
 
 
-def test_spec_scan_rate_under_pressure_is_lower_than_without(possession):
-    # SPEC 3.8: within one role group, scans start less often while an opponent is close. (The
-    # realism report's comparison at the reception mixes roles; see its note.)
+@pytest.fixture(scope="module")
+def held_out():
+    return [
+        Simulation.from_scenario(POSSESSION, seed=s, params=LONG).run() for s in range(100, 120)
+    ]
+
+
+def test_spec_scan_rate_under_pressure_is_lower_than_without(held_out):
+    # SPEC 3.8: within one role group, scans start less often while an opponent is close, on 20
+    # held-out seeds. (The realism report's comparison at the reception mixes roles; see its note.)
     starts = {"close": 0, "free": 0}
     seconds = {"close": 0.0, "free": 0.0}
-    for run in possession:
+    for run in held_out:
         team = np.array([p.team for p in run.players])
         onsets = {(run.index(e.player), e.frame) for e in run.events if e.type == "scan"}
         for i, player in enumerate(run.players):
@@ -124,5 +131,5 @@ def test_spec_scan_rate_under_pressure_is_lower_than_without(possession):
             for name, mask in (("close", closest < 4.0), ("free", closest >= 8.0)):
                 seconds[name] += mask.sum() * DT
                 starts[name] += sum((i, f) in onsets for f in np.flatnonzero(mask))
-    assert min(seconds.values()) > 60.0
+    assert min(seconds.values()) > 600.0
     assert starts["close"] / seconds["close"] < starts["free"] / seconds["free"]

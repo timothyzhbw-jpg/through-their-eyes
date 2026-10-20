@@ -139,7 +139,9 @@ _Fill in as they come to exist._
 ## Decisions already made (don't relitigate without a reason)
 - The hero lens is **perception** (scans / vision / belief). `space` (pitch control, xT) and
   `pressure` lenses also exist; each moment uses the lens with the largest counterfactual impact.
-- Players are stylised tokens (no limb animation). Cameras: broadcast, tactical, POV, player-lock.
+- Players: animated footballers (Gameplay Football models, SPEC §7) in POV and broadcast, stylised
+  tokens on the tactical board; Bowen chose them by eye on 2026-10-20. Tokens stay the fallback.
+  Cameras: broadcast, tactical, POV, player-lock.
 - MVP languages `en` + `zh` (both QA-able by the team); `es` is a stretch goal.
 - No Microsoft Fabric (setup cost, uncertain student access). No real datasets, not even for
   calibration — parameters come from published papers.

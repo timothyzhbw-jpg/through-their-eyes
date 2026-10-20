@@ -1,4 +1,4 @@
-# Rigged player model (SPEC 7, trial)
+# Rigged player model (SPEC 7)
 
 `grf_player.glb` is one footballer converted from **Gameplay Football** by **Bastiaan Konings
 Schuiling**, as shipped in Google Research Football. It is released under the **Unlicense**
@@ -18,5 +18,5 @@ Unlicense asks for no credit; we give it anyway.
   the kits in the fictional clubs' colours and gives skin, hair and boots flat colours.
 
 The source files are fetched into `out/` (git-ignored) and never committed; only this converted
-model is. It is used by the "Rigged players (trial)" toggle in the first-person view, off by
-default.
+model is. The first-person view shows it by default; the "Animated players" toggle switches back
+to the tokens.

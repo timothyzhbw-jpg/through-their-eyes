@@ -1,6 +1,7 @@
-// The "Rigged players (trial)" switch (SPEC 7). Off by default: tokens stay the default
-// everywhere. `?rigged=1` turns it on at load, for screenshots and side-by-side review.
-// Kept out of the playback store on purpose: the trial must be removable by deleting players/.
+// The "Animated players" switch (SPEC 7). On by default in the first-person view: Bowen chose the
+// rigged players over the tokens by eye. `?rigged=0` starts with the tokens, for side-by-side
+// review; if the model cannot load, RiggedFallback switches back to the tokens.
+// Kept out of the playback store on purpose: the rigged players stay removable by deleting players/.
 
 import { createStore } from "../store/store";
 
@@ -8,11 +9,16 @@ export interface TrialState {
   rigged: boolean;
 }
 
+/** Rigged players unless the query string asks for the tokens with `rigged=0`. */
+export function riggedFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get("rigged") !== "0";
+}
+
 function fromUrl(): boolean {
   try {
-    return new URLSearchParams(window.location.search).get("rigged") === "1";
+    return riggedFromSearch(window.location.search);
   } catch {
-    return false;
+    return true;
   }
 }
 

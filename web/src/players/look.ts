@@ -1,4 +1,4 @@
-// Where a rigged player looks (SPEC 7 trial): the neck takes head_yaw − body_yaw, so a scan is
+// Where a rigged player looks (SPEC 7): the neck takes head_yaw − body_yaw, so a scan is
 // visible on anyone in view, and the head always points exactly along head_yaw.
 //
 // The sim's head can be up to 180° off the body (it runs one way and watches the ball behind

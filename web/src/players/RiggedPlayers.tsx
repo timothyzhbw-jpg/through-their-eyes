@@ -1,4 +1,4 @@
-// Rigged players in the first-person view (SPEC 7, one-day trial). One converted Gameplay
+// Rigged players in the first-person view (SPEC 7, on by default). One converted Gameplay
 // Football player (web/public/models/grf_player.glb), cloned per player. Every pose is a pure
 // function of the playback frame (rig.ts):
 // - position from the sim; the body faces body_yaw (plus the hips' share of a look, look.ts);
@@ -118,14 +118,14 @@ export function RiggedPlayers() {
   );
 }
 
-/** If the model cannot load, switch the trial off: the tokens come back. */
+/** If the model cannot load, switch the rigged players off: the tokens come back. */
 export class RiggedFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
   componentDidCatch(error: unknown) {
-    console.error("Rigged players (trial) failed to load; showing tokens.", error);
+    console.error("Rigged players failed to load; showing tokens.", error);
     trial.set({ rigged: false });
   }
   render() {
