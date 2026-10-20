@@ -5,6 +5,9 @@ see on every frame. Positions in integer mm, angles in integer 1e-4 rad; pitch o
 spot, home attacks +x.
 
 Schema changes are additive and bump VERSION; `demo/` reads version 1 fields only.
+Version 3 adds, for every option of the hero's decision, P(success) on the true state ("it was"
+against "he thought", SPEC 5.1) and the believed and true positions of the receiver. The decision
+block is in metres, like the decision model.
 
 `render_payload_fixture` derives a SPEC 5.3 render payload for the hero moment from the export,
 so the viewer can be built before the verifier's payloads exist. It is marked as a fixture.
@@ -24,13 +27,15 @@ from typing import Any
 import numpy as np
 
 from analytics.vision import VisionParams, player_visibility
+from explain.functions import same_target_on_truth, true_options
 from sim.config import DT
 from sim.counterfactual import possession_value
 from sim.engine import Simulation
+from sim.model import Decision
 from sim.overrides import DropScan
 from sim.run import MatchRun, _plain
 
-VERSION = 2
+VERSION = 3
 
 
 def _bitmask(row: np.ndarray) -> int:
@@ -45,6 +50,7 @@ class _Trace:
         self.ghosts: list[np.ndarray] = []
         self.seen: list[int] = []
         self.seen_by: list[list[int]] = []
+        self.decided: dict[int, np.ndarray] = {}  # frame -> belief the decisions saw
 
     def sample(self, sim: Simulation) -> None:
         i = self.observer
@@ -56,10 +62,18 @@ class _Trace:
         self.seen.append(_bitmask(visible[i]))
         self.seen_by.append([_bitmask(row) for row in visible])
 
+    def step(self, sim: Simulation) -> None:
+        """Advance one frame, keeping the belief a decision at this frame used: a step perceives
+        first and decides after, so it is read after the step, at the frame the step started."""
+        f = sim.frame
+        sim.step()
+        pos, _, _ = sim.beliefs.estimate(self.observer, f, DT, sim.params.belief_horizon_s)
+        self.decided[f] = pos
+
     def copy(self) -> _Trace:
         other = _Trace(self.observer)
         other.ghosts, other.seen = list(self.ghosts), list(self.seen)
-        other.seen_by = list(self.seen_by)
+        other.seen_by, other.decided = list(self.seen_by), dict(self.decided)
         return other
 
 
@@ -69,6 +83,35 @@ def _mm(a: np.ndarray) -> list:
 
 def _rad(a: np.ndarray) -> list:
     return np.rint(np.asarray(a) * 1e4).astype(np.int64).tolist()
+
+
+def _options(run: MatchRun, decision: Decision, believed: np.ndarray) -> list[dict[str, Any]]:
+    """The options he weighed, best first: on his belief, and the same options on the truth."""
+    f = decision.frame
+    truth = true_options(run, decision)
+    out = []
+    for o in sorted(decision.options, key=lambda o: -o.prob):
+        t = truth.get(o.action)
+        j = run.index(o.target_player) if o.kind == "pass" else None
+        out.append(
+            {
+                "action": o.action,
+                "target": o.target,
+                "p_success": o.p_success,
+                "value": o.value,
+                "prob": o.prob,
+                # The same option re-scored on the true state (target along the true run).
+                "p_success_true": None if t is None else t.p_success,
+                "value_true": None if t is None else t.value,
+                "target_true": None if t is None else t.target,
+                # His target held fixed on the true state.
+                "p_success_true_same_target": same_target_on_truth(run, decision, o),
+                "receiver": o.target_player,
+                "receiver_believed": None if j is None else believed[j].tolist(),
+                "receiver_true": None if j is None else run.pos[f, j].tolist(),
+            }
+        )
+    return out
 
 
 def _encode(run: MatchRun, trace: _Trace) -> dict[str, Any]:
@@ -103,16 +146,7 @@ def _encode(run: MatchRun, trace: _Trace) -> dict[str, Any]:
                 "frame": decision.frame,
                 "player": decision.player,
                 "chosen": decision.chosen,
-                "options": [
-                    {
-                        "action": o.action,
-                        "target": o.target,
-                        "p_success": o.p_success,
-                        "value": o.value,
-                        "prob": o.prob,
-                    }
-                    for o in sorted(decision.options, key=lambda o: -o.prob)
-                ],
+                "options": _options(run, decision, trace.decided[decision.frame]),
                 "belief_error": decision.belief_error,
                 "belief_age": decision.belief_age,
             }
@@ -140,14 +174,14 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
     trace = _Trace(hero)
     while sim.frame < key.frame:
         trace.sample(sim)
-        sim.step()
+        trace.step(sim)
     snap = sim.snapshot()
     runs = {}
     for name, overrides in (("factual", []), ("counterfactual", [DropScan(key.id)])):
         s, t = Simulation.resume(snap, overrides), trace.copy()
         while not s.done:
             t.sample(s)
-            s.step()
+            t.step(s)
         t.sample(s)
         runs[name] = _encode(s.result(), t)
     return {
@@ -194,8 +228,9 @@ def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
     It follows `explain.builders` (claim ids, value slots, evidence, rounding) and
     `explain.render` (verdicts, seek_frame = earliest evidence frame), so the real payload can
     replace it. Claims of each kind: observed (scans before reception, the completed pass),
-    computed (belief error on the runner at the decision), counterfactual (belief error, pass
-    and value without the key scan: re-simulated, so causal only inside the sim).
+    computed (belief error on the runner at the decision; he thought vs it was for the chosen
+    pass), counterfactual (belief error, pass, value and he thought vs it was for the runner's
+    option without the key scan: re-simulated, so causal only inside the sim).
     """
     f, c = data["runs"]["factual"], data["runs"]["counterfactual"]
     hero, runner, key = data["hero"], data["runner"], data["key_scan"]["id"]
@@ -222,6 +257,13 @@ def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
     cf_err = round(cf_decision["belief_error"][runner], 1)
     dxt = round(data["delta_xt"], 2)
 
+    def thought_vs_was(dec: dict, action: str) -> dict[str, float]:
+        o = next(o for o in dec["options"] if o["action"] == action)
+        return {"p_belief": round(o["p_success"], 2), "p_true": round(o["p_success_true"], 2)}
+
+    chosen = thought_vs_was(decision, decision["chosen"])
+    cf_runner = thought_vs_was(cf_decision, f"pass:{runner}")
+
     def claim(cid: str, kind: str, values: dict, evidence: list[str]) -> dict[str, Any]:
         return {
             "id": cid,
@@ -240,6 +282,8 @@ def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
         claim("runner_received", "observed", {}, [action["id"], received["id"]]),
         claim("cf_pass", "counterfactual", {}, [key]),
         claim("cf_value", "counterfactual", {"dxt": dxt}, [key]),
+        claim("pass_success", "computed", chosen, [action["id"]]),
+        claim("cf_pass_success", "counterfactual", cf_runner, [action["id"]]),
     ]  # fmt: skip
     lines = [
         ("L1", "What did he see?", []),
@@ -262,6 +306,18 @@ def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
             f"Without that look, {hero} would have passed to {cf_receiver}. "
             f"That look was worth {dxt} in expected threat.",
             ["cf_pass", "cf_value"],
+        ),
+        (
+            "L6",
+            f"{hero} thought the pass to {receiver} had a {chosen['p_belief']:.2f} chance of "
+            f"arriving; it was {chosen['p_true']:.2f}.",
+            ["pass_success"],
+        ),
+        (
+            "L7",
+            f"Without that look, {hero} thought the pass to {runner} had a "
+            f"{cf_runner['p_belief']:.2f} chance of arriving; it was {cf_runner['p_true']:.2f}.",
+            ["cf_pass_success"],
         ),
     ]
     return {
