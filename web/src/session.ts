@@ -4,8 +4,9 @@
 //
 // With the live service (`options.api`) the match plays from the WebSocket stream (SPEC 2), the
 // breakdown is asked for once the stream detects the moment (or when the viewer asks), per
-// persona and language, and free what-if questions and speech work. Without it, the bundled
-// fixture and the hand-written plan play as before ("offline data").
+// persona and language, and free what-if questions, speech and tamper checks ("Try a wrong
+// number") work. Without it, the bundled fixture and the hand-written plan play as before
+// ("offline data").
 
 import { createContext, useContext } from "react";
 import { PERSONAS, type Api, type Persona } from "./api/client";
@@ -35,6 +36,7 @@ import {
   type PlaybackStore,
 } from "./store/playback";
 import { createStore, useStore, type Store } from "./store/store";
+import { IDLE_TAMPER, numericValues, tamperError, type TamperState } from "./tamper/tamper";
 import { VoicePlayer, type MakeAudio } from "./voice/voice";
 import { answerOf, IDLE_ASK, type AskState } from "./whatif/ask";
 import {
@@ -64,6 +66,7 @@ export interface Session {
   whatIfs: WhatIfs | null; // precomputed "What if…?" answers; null hides the box
   whatIfError: string | null;
   ask: Store<AskState>; // the latest free what-if question
+  tamper: Store<TamperState>; // the evidence card's "Try a wrong number"
   api: Api | null;
   offline: string | null;
   feed: LiveFeed | null; // the live stream; null offline
@@ -136,6 +139,7 @@ export function createSession(
     whatIfs,
     whatIfError,
     ask: createStore<AskState>(IDLE_ASK),
+    tamper: createStore<TamperState>(IDLE_TAMPER),
     api,
     offline: api ? null : (options.offline ?? "no live service"),
     feed,
@@ -165,13 +169,15 @@ export type Controls = ReturnType<typeof makeControls>;
 
 /** What the viewer can do. Transport controls take over from a running breakdown. */
 function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
-  const { hero, moment, playback, runner, breakdown, whatIfs, ask, api, feed, voice } = s;
+  const { hero, moment, playback, runner, breakdown, whatIfs, ask, tamper, api, feed, voice } = s;
   let auto = false; // autoplay: play the breakdown by itself once the moment is detected
   let momentSeen = false; // the stream has detected the hero moment
   let playWhenReady = false; // the viewer pressed play before the breakdown arrived
   let asking = false; // a breakdown request is in flight
   let askAgain = false; // the viewer chose again meanwhile: ask for that one next
   let askTurn = 0;
+  let tamperTurn = 0;
+  let tamperLink: string | null = null; // ?tamper=<claim id>: open its card once a breakdown is here
 
   const run = () => hero.runs[playback.get().mode];
   const isLive = () => playback.get().live && !!feed?.isOpen;
@@ -195,12 +201,69 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     voice.stop();
     runner.start(breakdown.get().resolved.plan);
   };
+  const resetTamper = () => {
+    tamperTurn += 1;
+    tamper.set(IDLE_TAMPER);
+  };
+  /**
+   * Open a narration line's evidence (SPEC 7) and seek the replay there: to the seek frame of
+   * `claimId`, or of the line's first claim that has one. Counterfactual evidence is shown in
+   * the re-simulated run, with the other run's ghost path for comparison.
+   */
+  const openLine = (lineId: string, claimId?: string) => {
+    const { narration } = breakdown.get();
+    const line = lineOf(narration, lineId);
+    if (!narration || !line) return;
+    replay();
+    if (playback.get().evidenceLine !== lineId) resetTamper();
+    const claim = claimId ? narration.claims.get(claimId) : primaryClaim(narration, line);
+    playback.set({ evidenceLine: lineId, captionLine: lineId });
+    if (claim?.seek_frame == null) return;
+    const mode = claimRun(claim);
+    const scan = claim.evidence.find((e) => hero.runs.factual.scans.some((sc) => sc.id === e));
+    playback.set({
+      mode,
+      frame: clampFrame(hero.runs[mode], claim.seek_frame),
+      playing: false,
+      playUntil: null,
+      cfGhost: mode === "counterfactual" || playback.get().cfGhost,
+      // Mark the scan behind a factual claim; in the re-simulated run that look never happened.
+      scanMarker: mode === "factual" ? (scan ?? null) : null,
+    });
+  };
+  /**
+   * The deep link's claim, on the breakdown now on screen: the line that carries it, or else
+   * the first line with a claim that has a number, opened with "Try a wrong number" open.
+   */
+  const openLinkedTamper = () => {
+    const wanted = tamperLink;
+    const { narration } = breakdown.get();
+    if (!wanted || !narration) return;
+    tamperLink = null;
+    const hasNumber = (id: string) => {
+      const c = narration.claims.get(id);
+      return !!c && numericValues(c).length > 0;
+    };
+    const line =
+      narration.lines.find((l) => l.claims.includes(wanted)) ??
+      narration.lines.find((l) => l.claims.some(hasNumber));
+    if (!line) {
+      console.warn(`tamper=${wanted}: no line of this breakdown has a claim with a number`);
+      return;
+    }
+    const claim = line.claims.includes(wanted) ? wanted : line.claims.find(hasNumber)!;
+    if (claim !== wanted) console.warn(`tamper=${wanted}: no line carries it; opened ${claim}`);
+    openLine(line.id, claim);
+    tamper.set({ open: claim });
+  };
   /** Put a new breakdown on screen; the old one's captions and evidence close. */
   const show = (next: Partial<BreakdownState>) => {
     runner.stop();
     voice.stop();
     playback.set({ captionLine: null, evidenceLine: null });
+    resetTamper();
     breakdown.set(next);
+    openLinkedTamper();
     if (playWhenReady || (auto && momentSeen)) {
       playWhenReady = false;
       auto = false;
@@ -375,31 +438,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       });
     },
 
-    /**
-     * Open a narration line's evidence (SPEC 7) and seek the replay there: to the seek frame of
-     * `claimId`, or of the line's first claim that has one. Counterfactual evidence is shown in
-     * the re-simulated run, with the other run's ghost path for comparison.
-     */
-    openLine(lineId: string, claimId?: string) {
-      const { narration } = breakdown.get();
-      const line = lineOf(narration, lineId);
-      if (!narration || !line) return;
-      replay();
-      const claim = claimId ? narration.claims.get(claimId) : primaryClaim(narration, line);
-      playback.set({ evidenceLine: lineId, captionLine: lineId });
-      if (claim?.seek_frame == null) return;
-      const mode = claimRun(claim);
-      const scan = claim.evidence.find((e) => hero.runs.factual.scans.some((sc) => sc.id === e));
-      playback.set({
-        mode,
-        frame: clampFrame(hero.runs[mode], claim.seek_frame),
-        playing: false,
-        playUntil: null,
-        cfGhost: mode === "counterfactual" || playback.get().cfGhost,
-        // Mark the scan behind a factual claim; in the re-simulated run that look never happened.
-        scanMarker: mode === "factual" ? (scan ?? null) : null,
-      });
-    },
+    openLine,
     /** Seek to one evidence event of a claim, in the run that claim is about. */
     seekEvidence(claimId: string, eventId: string) {
       const claim = breakdown.get().narration?.claims.get(claimId);
@@ -412,7 +451,40 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       if (event) playback.set({ mode, frame: event.frame, playing: false, playUntil: null });
     },
     closeEvidence() {
+      resetTamper();
       playback.set({ evidenceLine: null });
+    },
+
+    /** Open (or, with null, close) a claim's "Try a wrong number" in the evidence card. */
+    openTamper(claimId: string | null) {
+      resetTamper();
+      tamper.set({ open: claimId });
+    },
+    /**
+     * Ask the live service's verifier about one claim with `slot` set to `value` (SPEC 5.3, 7),
+     * in the breakdown's language. Only the latest answer is shown.
+     */
+    async tryValue(claimId: string, slot: string, value: number) {
+      if (!api) return;
+      const turn = ++tamperTurn;
+      tamper.set({ status: "checking", claim: claimId, slot, value, result: null, error: null });
+      try {
+        const language = breakdown.get().language;
+        const result = await api.verify({ claim: claimId, slot, value, language });
+        if (turn === tamperTurn) tamper.set({ status: "done", result });
+      } catch (err) {
+        if (turn === tamperTurn) tamper.set({ status: "failed", error: tamperError(err) });
+      }
+    },
+    /**
+     * Deep link ?tamper=<claim id>: open the evidence card on that claim with its control open.
+     * Online the breakdown is asked for now and the card opens when it arrives.
+     */
+    openTamperLink(claimId: string) {
+      tamperLink = claimId;
+      const status = breakdown.get().status;
+      if (status === "waiting") void requestBreakdown();
+      else if (status !== "loading") openLinkedTamper();
     },
 
     /**

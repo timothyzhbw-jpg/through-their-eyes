@@ -13,6 +13,7 @@
   --sight: #a6ecff;
   --gold: #ffd36b;
   --detector: #b6e86f; /* the scan detector's own output, apart from the sim's truth */
+  --refuted: #ff6b81; /* a line the verifier kept off air */
   --font-display: "Saira Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -849,6 +850,122 @@ header {
   .tdetail {
     display: none;
   }
+}
+/* "Try a wrong number": the verifier checks a claim again with the viewer's value */
+.tamper {
+  display: grid;
+  gap: 8px;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.tamper-toggle {
+  justify-self: start;
+  font: 500 12px/1 var(--font-body);
+  color: var(--refuted);
+  background: none;
+  border: 1px solid var(--refuted);
+  border-radius: 5px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.tamper-toggle[aria-expanded="true"] {
+  background: rgba(255, 107, 129, 0.12);
+}
+.tamper-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.tamper-note.offline {
+  color: var(--gold);
+}
+.tamper-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.tamper-form label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 13px/1 var(--font-data);
+  color: var(--muted);
+}
+.tamper-form input {
+  width: 7.5em;
+  font: 500 15px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 6px 8px;
+}
+.tamper-form input:disabled {
+  color: var(--muted);
+  border-style: dashed;
+}
+.tamper-form button[type="submit"] {
+  font: 600 13px/1 var(--font-body);
+  color: var(--bg);
+  background: var(--refuted);
+  border: 0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.tamper-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.tamper-form button.link {
+  font-size: 13px;
+}
+.tamper-result {
+  display: grid;
+  gap: 4px;
+  border-left: 3px solid var(--sight);
+  padding: 2px 0 2px 10px;
+}
+.tamper-result.held {
+  border-left-color: var(--refuted);
+}
+.tamper-result p {
+  margin: 0;
+}
+.tamper-verdict {
+  font: 600 15px/1.3 var(--font-body);
+  color: var(--sight);
+}
+.tamper-result.held .tamper-verdict {
+  color: var(--refuted);
+}
+.tamper-line {
+  font: 600 15px/1.35 var(--font-body);
+}
+.tamper-line s {
+  color: var(--muted);
+  text-decoration-color: var(--refuted);
+  text-decoration-thickness: 2px;
+}
+.tamper-why {
+  font-size: 13px;
+}
+.tamper-reason {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.tamper-reason code {
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--fg);
+}
+.tamper-violations {
+  margin: 0;
+  padding-left: 18px;
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--muted);
 }
 
 /* ---------- panels ---------- */

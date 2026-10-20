@@ -328,6 +328,40 @@ export function refusalResponse(question: string) {
   };
 }
 
+// ---------- POST /api/verify ----------
+
+/**
+ * A tamper check of cf_value.dxt as the local service answers it (api/tamper.py): `value` other
+ * than the verified 0.11 is refuted.
+ */
+export function verifyResponse(
+  value: number,
+  patch: Partial<{ status: string; reason: string; line: string | null; airs: boolean }> = {},
+) {
+  const supported = value === 0.11;
+  const text = `That look was worth ${value.toFixed(2)} in expected threat.`;
+  return {
+    match: "blind_side_run-3",
+    claim: "cf_value",
+    slot: "dxt",
+    language: "en",
+    value,
+    verified_value: 0.11,
+    status: supported ? "supported" : "refuted",
+    reason: supported
+      ? "approx(0.11074015198311513, 0.11) holds"
+      : `approx(0.11074015198311513, ${value}) is false`,
+    trace: [{ op: "approx", lhs: 0.11074015198311513, rhs: value, holds: supported }],
+    line: text,
+    airs: supported,
+    violations: supported
+      ? []
+      : [`unsupported_claim: cf_value: refuted (approx(0.11074015198311513, ${value}) is false)`],
+    audited: false,
+    ...patch,
+  };
+}
+
 // ---------- rendering ----------
 
 /** Server-render `node` inside the session's context: the HTML a viewer would get. */

@@ -1,5 +1,5 @@
 // The deployed API service (SPEC 2): the match export, the live stream, cached breakdowns,
-// what-if answers and speech. The app uses it when VITE_API_URL is set at build time and the
+// what-if answers, speech and tamper checks. The app uses it when VITE_API_URL is set at build time and the
 // service answers quickly; otherwise it plays the bundled files in public/data ("offline data").
 // Responses are checked with zod before use, like plans and payloads.
 
@@ -15,6 +15,7 @@ export const EXPORT_TIMEOUT_MS = 15000; // the first request after a start re-si
 export const BREAKDOWN_TIMEOUT_MS = 60000; // a model-backed breakdown takes ≈ 10 s
 export const WHAT_IF_TIMEOUT_MS = 30000;
 export const TTS_TIMEOUT_MS = 30000;
+export const VERIFY_TIMEOUT_MS = 10000; // the verifier alone, no model: well under a second
 
 /** `fetch`, or a stand-in for tests. */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -25,7 +26,25 @@ export function apiBase(raw: string | undefined): string | null {
   return value ? value : null;
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | null = null, // the HTTP status of a refused request
+    readonly detail: string | null = null, // the service's `detail`, when it is a sentence
+  ) {
+    super(message);
+  }
+}
+
+/** FastAPI's `{"detail": "..."}`, when the detail is one sentence (not a list of field errors). */
+function detailOf(body: string): string | null {
+  try {
+    const detail: unknown = JSON.parse(body)?.detail;
+    return typeof detail === "string" ? detail : null;
+  } catch {
+    return null;
+  }
+}
 
 export const Health = z.object({
   status: z.literal("ok"),
@@ -86,6 +105,22 @@ export const WhatIfResponse = z.object({
 });
 export type WhatIfResponse = z.infer<typeof WhatIfResponse>;
 
+/** POST /api/verify (api/tamper.py): one claim checked with one number changed; not audited. */
+export const VerifyResponse = z.object({
+  match: z.string(),
+  claim: z.string(),
+  slot: z.string(),
+  language: z.enum(LANGUAGES),
+  value: z.number(),
+  verified_value: z.number(),
+  status: z.enum(["supported", "refuted", "inconclusive"]),
+  reason: z.string(),
+  line: z.string().nullable(), // the sentence with that number, whether or not it would air
+  airs: z.boolean(),
+  violations: z.array(z.string()),
+});
+export type VerifyResponse = z.infer<typeof VerifyResponse>;
+
 export interface Api {
   readonly base: string;
   readonly match: string;
@@ -98,6 +133,12 @@ export interface Api {
   }): Promise<BreakdownResponse>;
   whatIf(req: { question: string; language: Language; persona: Persona }): Promise<WhatIfResponse>;
   tts(ssml: string): Promise<Blob>;
+  verify(req: {
+    claim: string;
+    slot: string;
+    value: number;
+    language: Language;
+  }): Promise<VerifyResponse>;
   /** WebSocket URL of the live stream, starting at frame `start`. */
   liveUrl(start: number, speed?: number): string;
 }
@@ -135,6 +176,8 @@ export function createApi(
         const detail = await res.text().catch(() => "");
         throw new ApiError(
           `${path}: HTTP ${res.status}${detail ? ` ${detail.slice(0, 200)}` : ""}`,
+          res.status,
+          detailOf(detail),
         );
       }
       return read(res);
@@ -184,6 +227,13 @@ export function createApi(
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
     tts: (ssml) => call("/api/tts", post({ ssml }), TTS_TIMEOUT_MS, (res) => res.blob()),
+    verify: ({ claim, slot, value, language }) =>
+      call(
+        "/api/verify",
+        post({ match, claim, slot, value, language }),
+        VERIFY_TIMEOUT_MS,
+        json(VerifyResponse),
+      ) as Promise<VerifyResponse>,
     liveUrl: (start, speed = 1) =>
       `${base.replace(/^http/, "ws")}/ws/matches/${id}/live?start=${start}&speed=${speed}`,
   };
