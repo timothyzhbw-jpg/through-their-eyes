@@ -42,7 +42,7 @@ describe("stadium", () => {
     }
   });
 
-  it("seats a crowd of about twenty thousand, all in the stands", () => {
+  it("seats a crowd of nearly twenty thousand, all in the stands", () => {
     const all = seats();
     expect(all.length).toBeGreaterThan(15000);
     expect(all.length).toBeLessThan(25000);
