@@ -90,3 +90,25 @@ def test_the_structural_check_catches_stale_alerts_but_not_last_unit_noise(hero)
     shifted["runs"]["factual"]["pos"][10][0] += 2  # 2 mm
     with pytest.raises(AssertionError):
         _assert_close(shifted, committed)
+
+
+def test_the_single_file_demo_page_is_current():
+    """demo/hero.html embeds the hero export; regenerate it with `uv run python -m demo.build`.
+
+    It once kept the pre-calibration ΔxT (0.105) while the web data had 0.101.
+    """
+    from demo.build import build
+
+    committed = (DATA.parents[2] / "demo" / "hero.html").read_text()
+    fresh = build(SCENARIO, SEED)
+    stale = "demo/hero.html is stale: regenerate it with `uv run python -m demo.build --seed 3`"
+    if (platform.system(), platform.machine()) == GENERATED_ON:
+        assert fresh == committed, stale
+    else:
+        start = '<script id="data" type="application/json">'
+
+        def data(page: str):
+            body = page.split(start, 1)[1].split("</script>", 1)[0]
+            return json.loads(body.replace("<\\/", "</"))
+
+        _assert_close(data(fresh), data(committed), "demo/hero.html")

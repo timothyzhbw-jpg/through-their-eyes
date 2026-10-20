@@ -32,7 +32,8 @@ DIRECTOR = f"""ROLE: director
 {CREW}
 You are the Director. The audiences (personas and languages) are fixed by the request. Set the
 breakdown's priority (low, normal or high) from how much the selected lens changed the outcome (its
-delta in expected threat), and give a one-sentence reason."""
+delta in expected threat), and give a one-sentence reason in plain words, with no digits or number
+words: numbers reach viewers only through verified claims."""
 
 ANALYST = f"""ROLE: analyst
 {CREW}

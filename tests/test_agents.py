@@ -340,3 +340,37 @@ def test_mcp_server_exposes_the_analyst_tools(ctx):
     listed = json.loads(claims.content[0].text)
     assert len(listed) == len(ctx.claims) and {c["verdict"] for c in listed} == {"supported"}
     assert "H9" in json.loads(vision.content[0].text)["in_sight"]
+
+
+# --- free text from a model never carries numbers (CLAUDE.md: LLMs never write digits) -----------
+
+
+def test_model_free_text_with_a_number_is_rejected():
+    """Seen live: the Director's reason said "(+0.09881)", the lens delta, in a public response."""
+    from pydantic import ValidationError
+
+    from agents.schemas import AnalystChoice, DirectorChoice, analyst_model
+
+    with pytest.raises(ValidationError):
+        DirectorChoice(priority="high", reason="The scan lens raised expected threat (+0.09881).")
+    with pytest.raises(ValidationError):
+        DirectorChoice(priority="high", reason="He scanned twice before the ball arrived.")
+    ok = DirectorChoice(priority="high", reason="H8's look found H9 on his blind side.")
+    assert ok.reason.startswith("H8")  # player ids are names, not numbers
+    with pytest.raises(ValidationError):
+        AnalystChoice(lens="scan", headline=["a"], supporting=[], angle="It was worth 0.1 xT.")
+    model = analyst_model(["scan_before_reception"])
+    with pytest.raises(ValidationError):
+        model(lens="scan", headline=["scan_before_reception"], supporting=[], angle="一共3次。")
+
+
+def test_a_director_reason_with_a_number_falls_back_to_the_template(ctx):
+    replies = _good_replies(ctx)
+    replies["director"] = {"priority": "high", "reason": "Big swing (+0.09881 xT)."}
+    r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    steps = {s.step: s for s in r.trace}
+    assert steps["director"].source == "template"
+    assert "0.09881" not in r.request.reason and not any(
+        ch.isdigit() for ch in r.request.reason.replace("H8", "")
+    )
+    assert "0.09881" not in r.model_dump_json()

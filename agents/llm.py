@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_framework import Agent
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 DEFAULT_TIMEOUT_S = 8.0
 RETRIES = 1
@@ -56,8 +56,17 @@ async def ask(
                 raise ValueError("no structured output")
             return Attempt(value, attempts, None, (time.perf_counter() - start) * 1000)
         except Exception as e:  # any failure counts against the step; the caller falls back
-            error = f"{type(e).__name__}: {e}"[:300]
+            error = describe(e)
     return Attempt(None, attempts, error, (time.perf_counter() - start) * 1000)
+
+
+def describe(e: Exception) -> str:
+    """The error for the trace, which is public: a ValidationError is reduced to field and error
+    type, so the model's own text (which may hold a number) never reaches a viewer through it."""
+    if isinstance(e, ValidationError):
+        parts = [".".join(map(str, err["loc"])) + ": " + err["type"] for err in e.errors()]
+        return f"ValidationError: {'; '.join(parts)}"[:300]
+    return f"{type(e).__name__}: {e}"[:300]
 
 
 def client_from_env() -> tuple[Any | None, Callable[[], Awaitable[None]]]:

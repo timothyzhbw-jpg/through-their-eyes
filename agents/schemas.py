@@ -7,11 +7,13 @@ what the crew passes along and returns. `TelestrationPlan` mirrors web/src/plan/
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 
 from explain.cards import LensName
+from explain.numbers import number_tokens
 from explain.render import RenderPayload
 
 Persona = Literal["casual", "analyst", "player_fan", "coach"]
@@ -25,6 +27,21 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+PLAYER_ID = re.compile(r"(?<![A-Za-z0-9])[HA]\d{1,2}(?!\d)")
+
+
+def no_numbers(text: str) -> str:
+    """Model free text (a reason, an angle) may name players (H8) but never carry a number.
+
+    Numbers reach viewers only through verified claims (CLAUDE.md: LLMs never write digits). The
+    same detector as the render check: digits, English number words, Chinese numeral + measure.
+    """
+    tokens = number_tokens(PLAYER_ID.sub("X", text))
+    if tokens:
+        raise ValueError(f"no numbers in free text ({len(tokens)} found)")
+    return text
+
+
 # --- Director ------------------------------------------------------------------------------------
 
 
@@ -32,6 +49,8 @@ class DirectorChoice(Strict):
     # Who gets the breakdown is the request's call; the Director sets its priority (SPEC 6).
     priority: Priority
     reason: str = Field(max_length=400)
+
+    _no_numbers = field_validator("reason")(no_numbers)
 
 
 class BreakdownRequest(Strict):
@@ -50,6 +69,8 @@ class AnalystChoice(Strict):
     headline: list[str]  # claim ids, most important first
     supporting: list[str]  # claim ids
     angle: str = Field(max_length=400)  # the story in one sentence, for the other agents
+
+    _no_numbers = field_validator("angle")(no_numbers)
 
 
 class Findings(Strict):
@@ -197,6 +218,7 @@ def analyst_model(claim_ids: list[str]) -> type[BaseModel]:
         "AnalystChoice", __base__=Strict, lens=(LensName, ...),
         headline=(list[claim], Field(min_length=1, max_length=3)),
         supporting=(list[claim], Field(max_length=6)), angle=(str, Field(max_length=400)),
+        __validators__={"angle_no_numbers": field_validator("angle")(no_numbers)},
     )  # fmt: skip
 
 
