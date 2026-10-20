@@ -12,11 +12,13 @@ import {
   actionLabel,
   halfCone,
   isSeen,
+  runLabels,
   Sample,
   sampleInto,
   speedAt,
   type Hero,
   type Run,
+  type Vision,
 } from "../data/hero";
 import type { RunName } from "../data/types";
 import {
@@ -26,7 +28,7 @@ import {
   valueRange,
   widthFor,
 } from "../options/passOptions";
-import { useSession } from "../session";
+import { useSession, useView } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
 import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
@@ -81,6 +83,7 @@ interface Shared {
 }
 
 export function TacticalView() {
+  const { kind } = useView();
   return (
     <figure className="view tac" aria-label="Tactical view from above">
       <TacticalToolbar />
@@ -96,7 +99,7 @@ export function TacticalView() {
         >
           <TacticalScene />
         </Canvas>
-        <OptionsOverlay />
+        {kind === "hero" && <OptionsOverlay />}
         <BlindSideOverlay />
       </div>
     </figure>
@@ -104,7 +107,7 @@ export function TacticalView() {
 }
 
 function TacticalScene() {
-  const { hero, playback } = useSession();
+  const { kind, hero, playback } = useView();
   useRedrawOn(playback);
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const size = useThree((s) => s.size);
@@ -143,15 +146,15 @@ function TacticalScene() {
     <>
       <color attach="background" args={["#14271d"]} />
       <Field />
-      <VisionCone hero={hero} shared={shared} />
+      {hero.vision && <VisionCone hero={hero} vision={hero.vision} shared={shared} />}
       <PassLine run={hero.runs[mode]} mode={mode} shared={shared} />
-      <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />
+      {hero.counterfactual && <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />}
       <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />
-      <WhatIfGhost hero={hero} shared={shared} scale={scale} px={px} />
+      {kind === "hero" && <WhatIfGhost hero={hero} shared={shared} scale={scale} px={px} />}
       <BlindSideLayer hero={hero} shared={shared} scale={scale} />
     </>
   );
@@ -225,7 +228,7 @@ const coneFragment = /* glsl */ `
   }
 `;
 
-function VisionCone({ hero, shared }: { hero: Hero; shared: SharedRef }) {
+function VisionCone({ hero, vision, shared }: { hero: Hero; vision: Vision; shared: SharedRef }) {
   const mesh = useRef<THREE.Mesh>(null);
   const material = useMemo(
     () =>
@@ -235,15 +238,15 @@ function VisionCone({ hero, shared }: { hero: Hero; shared: SharedRef }) {
         uniforms: {
           uColor: { value: new THREE.Color(COLORS.sight) },
           uYaw: { value: 0 },
-          uHalf: { value: hero.vision.halfCone },
-          uEdge: { value: hero.vision.edgeSigma },
-          uSigmaD: { value: hero.vision.distanceSigma },
+          uHalf: { value: vision.halfCone },
+          uEdge: { value: vision.edgeSigma },
+          uSigmaD: { value: vision.distanceSigma },
           uRadius: { value: CONE_RADIUS },
           uAlpha: { value: 0.3 },
         },
         ...flat,
       }),
-    [hero],
+    [vision],
   );
   useFrame(() => {
     const { sample, state, run, me } = shared.current;
@@ -255,7 +258,7 @@ function VisionCone({ hero, shared }: { hero: Hero; shared: SharedRef }) {
       (s) => s.player === state.povPlayer && sample.frame >= s.start && sample.frame <= s.end,
     );
     material.uniforms.uYaw.value = sample.head[me];
-    material.uniforms.uHalf.value = halfCone(hero.vision, speedAt(hero, run, me, state.frame));
+    material.uniforms.uHalf.value = halfCone(vision, speedAt(hero, run, me, state.frame));
     material.uniforms.uAlpha.value = scanning ? 0.5 : 0.3;
   });
   return (
@@ -337,10 +340,7 @@ function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
     for (let f = start; f <= end; f++) points.push([other.ball[2 * f], 0, -other.ball[2 * f + 1]]);
     return { start, end, points };
   }, [other]);
-  const label = getLabelTexture(
-    other.name === "counterfactual" ? "without the look" : "with the look",
-    { ...LABEL.tag, color },
-  );
+  const label = getLabelTexture(runLabels(hero).tag[other.name], { ...LABEL.tag, color });
   const [ex, , ez] = path.points[path.points.length - 1];
   const tagH = Math.max(2.4, TAG_PX * px);
 

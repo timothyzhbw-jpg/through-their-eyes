@@ -3,14 +3,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
-import { useSession } from "../session";
+import { useView } from "../session";
 import { useStore } from "../store/store";
 import { boardZoom } from "../views/scene";
 import { Sample, sampleInto } from "../data/hero";
 import { toScreen } from "../options/passOptions";
 
 export function BlindSideOverlay() {
-  const { hero, playback } = useSession();
+  const { hero, playback } = useView();
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
   const on = useStore(playback, (s) => s.blindSide);

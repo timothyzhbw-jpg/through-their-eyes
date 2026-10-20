@@ -125,7 +125,7 @@ describe("plan executor", () => {
   it("applies overlays, captions and the counterfactual ghost, then finishes", () => {
     const { runner, until } = start(EXAMPLE_PLAN);
     const mid = until(4.5);
-    expect(mid.scanMarker).toBe(hero.keyScan.id);
+    expect(mid.scanMarker).toBe(hero.keyScan!.id);
     expect(mid.cone).toBe(true);
     expect(mid.beliefGhosts).toBe(true);
     expect(mid.cfGhost).toBe(false);

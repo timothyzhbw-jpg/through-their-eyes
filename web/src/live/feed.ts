@@ -14,7 +14,8 @@ import type { Hero } from "../data/hero";
 import type { ExportEvent } from "../data/types";
 import { createStore, type Store } from "../store/store";
 
-/** A MomentCard as the stream sends it (explain/cards.py); only the fields the viewer shows. */
+/** A MomentCard as the stream sends it (explain/cards.py); only the fields the viewer shows. In
+ * a stitched match the card is in match time and says which possession it is in. */
 export const LiveMoment = z.object({
   id: z.string(),
   kind: z.string(),
@@ -24,6 +25,11 @@ export const LiveMoment = z.object({
   frame_end: z.number().int(),
   anchor_t: z.number(),
   selected_lens: z.string().nullable().optional(),
+  live_only: z.boolean().optional(),
+  possession: z.number().int().optional(), // stitched match only (explain/match.py)
+  local_id: z.string().optional(),
+  hero: z.boolean().optional(),
+  start: z.number().int().optional(),
 });
 export type LiveMoment = z.infer<typeof LiveMoment>;
 
@@ -33,7 +39,8 @@ const Hello = z.object({
   dt: z.number(),
   frames: z.number().int(),
   players: z.array(z.object({ id: z.string() })),
-  hero: z.string(),
+  hero: z.string().nullable(), // null: a stitched match
+  kind: z.enum(["hero", "match"]).optional(),
 });
 
 export interface FrameMessage {
@@ -253,7 +260,8 @@ export class LiveFeed {
       !hello.success ||
       hello.data.frames !== run.frames ||
       ids !== this.hero.ids.join() ||
-      hello.data.hero !== this.hero.heroId
+      hello.data.hero !== this.hero.heroId ||
+      (hello.data.kind ?? "hero") !== this.hero.kind
     ) {
       return this.lose("the live stream is for another match than the loaded export");
     }

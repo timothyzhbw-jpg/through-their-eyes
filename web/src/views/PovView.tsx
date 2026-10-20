@@ -7,7 +7,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
-import { useSession } from "../session";
+import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
@@ -67,7 +67,7 @@ const visorGeometry = new THREE.CylinderGeometry(
 );
 
 function PovScene() {
-  const { hero, playback } = useSession();
+  const { hero, playback } = useView();
   useRedrawOn(playback);
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);

@@ -34,17 +34,31 @@ export type PlaybackStore = Store<PlaybackState>;
 export const KEY_SCAN_SLOW = 0.4; // free-play slow motion around the key scan, as in demo/
 export const COMFORT_MAX_YAW = (120 * Math.PI) / 180; // rad per wall-clock second, on screen
 
+/** Where the replay opens: inside the key scan; without one, a second before the decision; a
+ * match at kick-off. */
+function openingFrame(hero: Hero): number {
+  if (hero.keyScan) return hero.keyScan.start + 6;
+  const decision = hero.runs.factual.decision?.frame;
+  return decision === undefined ? 0 : Math.max(0, decision - Math.round(1 / hero.dt));
+}
+
+/** Whose eyes the first-person view opens with: the hero; in a match, its first hero. */
+function openingPov(hero: Hero): string {
+  const first = hero.match?.possessions.find((p) => p.hero)?.hero;
+  return hero.heroId ?? first ?? hero.ids[0];
+}
+
 export function createPlayback(hero: Hero): PlaybackStore {
   return createStore<PlaybackState>({
     mode: "factual",
-    frame: hero.keyScan.start + 6,
+    frame: openingFrame(hero),
     playing: false,
     speed: 1,
     autoSlow: true,
     playUntil: null,
-    povPlayer: hero.heroId,
+    povPlayer: openingPov(hero),
     comfort: false,
-    cone: true,
+    cone: hero.vision !== null, // a match export has no vision model
     beliefGhosts: true,
     cfGhost: false,
     options: true,
@@ -65,7 +79,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
  */
 export function frameStep(hero: Hero, s: PlaybackState, dtWall: number): number {
   const key = hero.keyScan;
-  const nearKey = s.frame >= key.start - 4 && s.frame <= key.end + 4;
+  const nearKey = !!key && s.frame >= key.start - 4 && s.frame <= key.end + 4;
   const free = s.autoSlow && nearKey ? KEY_SCAN_SLOW : 1;
   const step = (dtWall / hero.dt) * s.speed * free;
   if (!s.comfort || step <= 0) return step;

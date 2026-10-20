@@ -2,15 +2,22 @@
 // toggles), and over the canvas the HUD and the caption of the current narration line.
 
 import { useMemo } from "react";
-import { Sample, headOffBall, isSeen, sampleInto } from "../data/hero";
-import { useSession } from "../session";
+import { Sample, headOffBall, isSeen, sampleInto, type Hero } from "../data/hero";
+import { useView } from "../session";
 import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
 import { Caption } from "../ui/Narration";
 import { trial } from "../players/trial";
 
+/** Why the belief ghosts are off for this player: beliefs are recorded for the hero only. */
+export function noBeliefs(hero: Hero): string {
+  return hero.heroId
+    ? `Beliefs are recorded for ${hero.heroId} only`
+    : "Beliefs are recorded in a hero moment's breakdown";
+}
+
 export function PovToolbar() {
-  const { hero, playback, controls } = useSession();
+  const { hero, playback, controls } = useView();
   const povPlayer = useStore(playback, (s) => s.povPlayer);
   const comfort = useStore(playback, (s) => s.comfort);
   const ghosts = useStore(playback, (s) => s.beliefGhosts);
@@ -62,11 +69,7 @@ export function PovToolbar() {
           aria-pressed={ghosts && ghostsAvailable}
           disabled={!ghostsAvailable}
           onClick={() => controls.toggle("beliefGhosts")}
-          title={
-            ghostsAvailable
-              ? "Where he believes each player is"
-              : `Beliefs are recorded for ${hero.heroId} only`
-          }
+          title={ghostsAvailable ? "Where he believes each player is" : noBeliefs(hero)}
         >
           Belief ghosts
         </button>
@@ -85,19 +88,19 @@ export function PovToolbar() {
 }
 
 export function PovOverlay() {
-  const { playback } = useSession();
+  const { kind, playback } = useView();
   const comfort = useStore(playback, (s) => s.comfort);
   return (
     <>
       {comfort && <div className="vignette" aria-hidden="true" />}
-      <Caption />
+      {kind === "hero" && <Caption />}
       <Hud />
     </>
   );
 }
 
 function Hud() {
-  const { hero, playback } = useSession();
+  const { hero, playback } = useView();
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
   const povPlayer = useStore(playback, (s) => s.povPlayer);
@@ -117,6 +120,7 @@ function Hud() {
   const showBlind = useStore(playback, (s) => s.blindSide);
   const blind = showBlind ? alertsAt(hero, run, frame).filter((a) => a.observer === me) : [];
   const droppedLook =
+    !!key &&
     mode === "counterfactual" &&
     povPlayer === hero.heroId &&
     sample.frame >= key.start &&
@@ -127,7 +131,7 @@ function Hud() {
       <span>
         {povPlayer} · head {offBall.toFixed(0)}° from the ball
       </span>
-      <span>{inSight} players in sight</span>
+      {run.sight && <span>{inSight} players in sight</span>}
       {scan && (
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
       )}

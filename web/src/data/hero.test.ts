@@ -33,7 +33,7 @@ describe("eased head yaw", () => {
 
   it.each([1 / 60, 1 / 240])("keeps the on-screen turn rate under the cap (dt %f s)", (dt) => {
     const playback = createPlayback(hero);
-    const key = hero.keyScan;
+    const key = hero.keyScan!; // the bundled scan hero has one
     playback.set({ frame: key.start - 4, playing: true, comfort: true, autoSlow: false });
     let fastest = 0;
     while (playback.get().frame < key.end + 4) {

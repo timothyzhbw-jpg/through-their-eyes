@@ -6,9 +6,14 @@
 // breakdown is asked for once the stream detects the moment (or when the viewer asks), per
 // persona and language, and free what-if questions and speech work. Without it, the bundled
 // fixture and the hand-written plan play as before ("offline data").
+//
+// A stitched match (SPEC 3.1) has a MatchSession instead (match/matchSession.ts): the whole match
+// live, no breakdown of its own. Each of its hero moments opens a Session of the possession's own
+// run (`options.possession`): local frames, shown on the match clock (`offset`). The views shared
+// by both read a ViewSession with `useView()`.
 
 import { createContext, useContext } from "react";
-import { PERSONAS, type Api, type Persona } from "./api/client";
+import { PERSONAS, type Api, type BreakdownResponse, type Persona } from "./api/client";
 import {
   apiBreakdown,
   bundledBreakdown,
@@ -17,6 +22,7 @@ import {
 } from "./breakdown/breakdown";
 import { clampFrame, type Hero } from "./data/hero";
 import type { RunName } from "./data/types";
+import type { MatchSession } from "./match/matchSession";
 import {
   followLive,
   LiveFeed,
@@ -47,9 +53,33 @@ export interface SessionOptions {
   offline?: string | null; // why there is no live service (shown on the badge)
   socket?: SocketFactory; // WebSocket stand-in for tests
   makeAudio?: MakeAudio; // <audio> stand-in for tests
+  momentId?: string | null; // the hero moment's id as the service names it (heroMoment)
+  possession?: PossessionRef | null; // a hero moment of a stitched match
+}
+
+/** A hero moment inside a stitched match: where its possession sits on the match clock. */
+export interface PossessionRef {
+  index: number;
+  start: number; // match frame of the possession's first frame: match frame = local + start
+  moment: string; // the hero moment's id in match time: breakdowns and what-ifs ask by it
+}
+
+/** What the views shared by a hero moment and a stitched match can do. */
+export interface ViewControls {
+  togglePlay(): void;
+  seek(frame: number): void;
+  setMode(mode: RunName): void;
+  setSpeed(speed: number): void;
+  setPovPlayer(id: string): void;
+  setFocus(focus: Focus): void;
+  toggle(key: Toggle): void;
+  goLive(): void;
+  leaveLive(): void;
+  replayMoment(card: LiveMoment): void;
 }
 
 export interface Session {
+  kind: "hero";
   hero: Hero;
   moment: MomentContext;
   playback: PlaybackStore;
@@ -60,10 +90,15 @@ export interface Session {
   ask: Store<AskState>; // the latest free what-if question
   api: Api | null;
   offline: string | null;
-  feed: LiveFeed | null; // the live stream; null offline
+  feed: LiveFeed | null; // the live stream; null offline (and inside a stitched match)
   voice: VoicePlayer;
+  possession: PossessionRef | null; // inside a stitched match: its possession
+  offset: number; // frames added on the clock: the possession's start, else 0
   controls: Controls;
 }
+
+/** A hero moment's Session or a stitched match's: what the shared views read. */
+export type ViewSession = Session | MatchSession;
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -89,7 +124,8 @@ export function createSession(
   options: SessionOptions = {},
 ): Session {
   const api = options.api ?? null;
-  const moment = heroMoment(hero);
+  const possession = options.possession ?? null;
+  const moment = heroMoment(hero, options.momentId);
   const playback = createPlayback(hero);
   const runner = new BreakdownRunner(playback, hero, moment);
   const bundled = bundledBreakdown(payloadCandidate, planCandidate, moment, hero);
@@ -117,11 +153,14 @@ export function createSession(
     whatIfError = message(err);
   }
   const hooks: FeedHooks = {};
-  const feed = api
-    ? new LiveFeed(hero, (start) => api.liveUrl(start), options.socket, hooks)
-    : null;
+  // Inside a stitched match the stream belongs to the match; the possession is a replay.
+  const feed =
+    api && !possession
+      ? new LiveFeed(hero, (start) => api.liveUrl(start), options.socket, hooks)
+      : null;
   const voice = new VoicePlayer(api ? (ssml) => api.tts(ssml) : null, options.makeAudio);
   const parts = {
+    kind: "hero" as const,
     hero,
     moment,
     playback,
@@ -134,6 +173,8 @@ export function createSession(
     offline: api ? null : (options.offline ?? "no live service"),
     feed,
     voice,
+    possession,
+    offset: possession?.start ?? 0,
   };
   const controls = makeControls(parts, bundled);
   hooks.onMoment = controls.momentDetected;
@@ -155,11 +196,127 @@ export function createSession(
   return { ...parts, controls };
 }
 
+export interface TransportDeps {
+  hero: Hero;
+  playback: PlaybackStore;
+  feed: LiveFeed | null;
+  takeOver: () => void; // a viewer action: a hero Session stops its running breakdown
+  beforeLive: () => void; // going live: a hero Session stops the voice and the what-if
+}
+
+/**
+ * Play, seek, speed, run, POV and overlays, and the live stream: the controls a hero moment and
+ * a stitched match share. `endLive` stops the stream and leaves the replay where it is.
+ */
+export function transportControls(d: TransportDeps) {
+  const { hero, playback, feed, takeOver } = d;
+  const run = () => hero.runs[playback.get().mode];
+  const isLive = () => playback.get().live && !!feed?.isOpen;
+  /** Stop the stream: the replay takes over at the current frame. */
+  const endLive = () => {
+    if (!playback.get().live) return;
+    feed?.stop();
+    playback.set({ live: false });
+  };
+  /** Watch the match from the live stream (SPEC 2): from where it was, or again from the start. */
+  const goLive = () => {
+    if (!feed) return;
+    takeOver();
+    d.beforeLive();
+    const { status, latest } = feed.state.get();
+    const last = hero.runs.factual.frames - 1;
+    const start = status === "ended" || latest >= last ? 0 : Math.max(0, latest + 1);
+    playback.set({
+      live: true,
+      mode: "factual",
+      frame: start,
+      playing: true,
+      playUntil: null,
+      speed: 1,
+      whatIf: null,
+      captionLine: null,
+      evidenceLine: null,
+      scanMarker: null,
+    });
+    feed.connect(start);
+  };
+  const controls: ViewControls = {
+    togglePlay() {
+      takeOver();
+      const st = playback.get();
+      if (isLive()) {
+        if (st.playing) feed!.pause();
+        else feed!.resume();
+        playback.set({ playing: !st.playing });
+        return;
+      }
+      if (st.playing) return playback.set({ playing: false });
+      const atEnd = st.frame >= run().frames - 1;
+      playback.set({
+        playing: true,
+        frame: atEnd ? 0 : st.frame,
+        playUntil: null,
+        captionLine: null,
+      });
+    },
+    seek(frame: number) {
+      takeOver();
+      if (isLive()) {
+        feed!.seek(frame);
+        playback.set({ frame: clampFrame(run(), Math.round(frame)), playUntil: null });
+        return;
+      }
+      playback.set({ frame: clampFrame(run(), frame), playUntil: null });
+    },
+    setMode(mode: RunName) {
+      if (mode === "counterfactual" && !hero.counterfactual) return; // a match has one run
+      takeOver();
+      if (mode !== "factual") endLive(); // the stream is the factual run
+      const frame = Math.min(playback.get().frame, hero.runs[mode].frames - 1);
+      playback.set({ mode, frame });
+    },
+    setSpeed(speed: number) {
+      takeOver();
+      if (isLive()) feed!.setSpeed(speed);
+      playback.set({ speed });
+    },
+    setPovPlayer(id: string) {
+      takeOver();
+      playback.set({ povPlayer: id });
+    },
+    setFocus(focus: Focus) {
+      playback.set({ focus });
+    },
+    toggle(key: Toggle) {
+      playback.set((st) => ({ [key]: !st[key] }));
+    },
+    goLive,
+    /** Leave the stream and keep the replay where it is. */
+    leaveLive() {
+      takeOver();
+      endLive();
+      playback.set({ playing: false });
+    },
+    /** Replay a detected moment from its anchor, out of live mode. */
+    replayMoment(card: LiveMoment) {
+      takeOver();
+      endLive();
+      playback.set({
+        mode: "factual",
+        frame: clampFrame(hero.runs.factual, card.anchor_frame),
+        playing: false,
+        playUntil: null,
+      });
+    },
+  };
+  return { controls, endLive };
+}
+
 export type Controls = ReturnType<typeof makeControls>;
 
 /** What the viewer can do. Transport controls take over from a running breakdown. */
 function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
-  const { hero, moment, playback, runner, breakdown, whatIfs, ask, api, feed, voice } = s;
+  const { hero, moment, playback, runner, breakdown, whatIfs, ask, api, voice, possession } = s;
   let auto = false; // autoplay: play the breakdown by itself once the moment is detected
   let momentSeen = false; // the stream has detected the hero moment
   let playWhenReady = false; // the viewer pressed play before the breakdown arrived
@@ -167,19 +324,21 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   let askAgain = false; // the viewer chose again meanwhile: ask for that one next
   let askTurn = 0;
 
-  const run = () => hero.runs[playback.get().mode];
-  const isLive = () => playback.get().live && !!feed?.isOpen;
   /** Any viewer action ends a running breakdown and the autoplay. */
   const takeOver = () => {
     runner.stop();
     auto = false;
   };
-  /** Stop the stream: the replay takes over at the current frame. */
-  const leaveLive = () => {
-    if (!playback.get().live) return;
-    feed?.stop();
-    playback.set({ live: false });
-  };
+  const { controls: transport, endLive: leaveLive } = transportControls({
+    hero,
+    playback,
+    feed: s.feed,
+    takeOver,
+    beforeLive: () => {
+      voice.stop();
+      ask.set(IDLE_ASK);
+    },
+  });
   const replay = () => {
     takeOver();
     leaveLive();
@@ -216,7 +375,12 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     const { persona, language } = breakdown.get();
     breakdown.set({ status: "loading", error: null });
     try {
-      const res = await api.breakdown({ moment: moment.id, persona, language });
+      const res = await api.breakdown({
+        moment: possession?.moment ?? moment.id,
+        persona,
+        language,
+      });
+      checkPossession(res.possession, possession, moment.id);
       if (!askAgain)
         show({ ...apiBreakdown(res, persona, language, moment, hero), status: "ready" });
     } catch (err) {
@@ -239,79 +403,8 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     breakdown.set(patch);
     if (current.status !== "waiting") void requestBreakdown();
   };
-  /** Watch the match from the live stream (SPEC 2): from where it was, or again from the start. */
-  const goLive = () => {
-    if (!feed) return;
-    takeOver();
-    voice.stop();
-    const { status, latest } = feed.state.get();
-    const last = hero.runs.factual.frames - 1;
-    const start = status === "ended" || latest >= last ? 0 : Math.max(0, latest + 1);
-    ask.set(IDLE_ASK);
-    playback.set({
-      live: true,
-      mode: "factual",
-      frame: start,
-      playing: true,
-      playUntil: null,
-      speed: 1,
-      whatIf: null,
-      captionLine: null,
-      evidenceLine: null,
-      scanMarker: null,
-    });
-    feed.connect(start);
-  };
-
   return {
-    togglePlay() {
-      takeOver();
-      const st = playback.get();
-      if (isLive()) {
-        if (st.playing) feed!.pause();
-        else feed!.resume();
-        playback.set({ playing: !st.playing });
-        return;
-      }
-      if (st.playing) return playback.set({ playing: false });
-      const atEnd = st.frame >= run().frames - 1;
-      playback.set({
-        playing: true,
-        frame: atEnd ? 0 : st.frame,
-        playUntil: null,
-        captionLine: null,
-      });
-    },
-    seek(frame: number) {
-      takeOver();
-      if (isLive()) {
-        feed!.seek(frame);
-        playback.set({ frame: clampFrame(run(), Math.round(frame)), playUntil: null });
-        return;
-      }
-      playback.set({ frame: clampFrame(run(), frame), playUntil: null });
-    },
-    setMode(mode: RunName) {
-      takeOver();
-      if (mode !== "factual") leaveLive(); // the stream is the factual run
-      const frame = Math.min(playback.get().frame, hero.runs[mode].frames - 1);
-      playback.set({ mode, frame });
-    },
-    setSpeed(speed: number) {
-      takeOver();
-      if (isLive()) feed!.setSpeed(speed);
-      playback.set({ speed });
-    },
-    setPovPlayer(id: string) {
-      takeOver();
-      playback.set({ povPlayer: id });
-    },
-    setFocus(focus: Focus) {
-      playback.set({ focus });
-    },
-    toggle(key: Toggle) {
-      playback.set((st) => ({ [key]: !st[key] }));
-    },
+    ...transport,
 
     /** Play the breakdown; online and not here yet, ask for it and play it when it arrives. */
     playBreakdown() {
@@ -327,17 +420,10 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     setLanguage: (language: Language) => choose({ language }),
     setSound: (on: boolean) => voice.setOn(on),
 
-    goLive,
     /** Autoplay online: watch live, then play the breakdown once the moment is detected. */
     startLive() {
-      goLive();
-      auto = feed !== null;
-    },
-    /** Leave the stream and keep the replay where it is. */
-    leaveLive() {
-      takeOver();
-      leaveLive();
-      playback.set({ playing: false });
+      transport.goLive();
+      auto = s.feed !== null;
     },
     /** A moment arrived on the stream; the hero moment's breakdown is asked for now (SPEC 2). */
     momentDetected(card: LiveMoment) {
@@ -349,16 +435,6 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
         auto = false;
         startBreakdown();
       }
-    },
-    /** Replay a detected moment from its anchor, out of live mode. */
-    replayMoment(card: LiveMoment) {
-      replay();
-      playback.set({
-        mode: "factual",
-        frame: clampFrame(hero.runs.factual, card.anchor_frame),
-        playing: false,
-        playUntil: null,
-      });
     },
 
     /**
@@ -433,7 +509,12 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       ask.set({ ...IDLE_ASK, status: "asking", question: q, language });
       playback.set({ whatIf: null });
       try {
-        const res = await api.whatIf({ question: q, language, persona: breakdown.get().persona });
+        const res = await api.whatIf({
+          question: q,
+          language,
+          persona: breakdown.get().persona,
+          moment: possession?.moment,
+        });
         if (turn !== askTurn) return;
         const answer = answerOf(res, hero, moment, whatIfs);
         ask.set(answer);
@@ -471,9 +552,29 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   };
 }
 
+/**
+ * A breakdown of a stitched match's hero moment says where it is: it must be this moment, in
+ * this possession, or its local frames would be placed on the wrong stretch of the match clock.
+ */
+function checkPossession(
+  got: BreakdownResponse["possession"],
+  want: PossessionRef | null,
+  localMoment: string,
+): void {
+  if (!want) return;
+  if (!got)
+    throw new Error(`the breakdown of ${want.moment} does not say which possession it is in`);
+  if (got.index !== want.index || got.start !== want.start || got.local_moment !== localMoment) {
+    throw new Error(
+      `the breakdown is for ${got.local_moment} in possession ${got.index} from frame ` +
+        `${got.start}, not ${localMoment} in possession ${want.index} from frame ${want.start}`,
+    );
+  }
+}
+
 /** Drive the playhead from requestAnimationFrame: the stream's in live mode, else the runner and
  * the replay clock. Returns a stop function. */
-export function startClock(session: Session): () => void {
+export function startClock(session: ViewSession): () => void {
   let last = performance.now();
   let id = 0;
   const tick = (now: number) => {
@@ -487,7 +588,7 @@ export function startClock(session: Session): () => void {
 }
 
 /** One clock step of `dt` wall-clock seconds. */
-export function tickSession(session: Session, dt: number): void {
+export function tickSession(session: ViewSession, dt: number): void {
   const { playback, feed, hero } = session;
   const s = playback.get();
   if (s.live && feed) {
@@ -496,15 +597,23 @@ export function tickSession(session: Session, dt: number): void {
     if (next !== s.frame) playback.set({ frame: next });
     return;
   }
-  session.runner.tick(dt);
+  if (session.kind === "hero") session.runner.tick(dt);
   advance(playback, hero, dt);
 }
 
-export const SessionContext = createContext<Session | null>(null);
+export const SessionContext = createContext<ViewSession | null>(null);
 
-export function useSession(): Session {
+/** The session on screen, a hero moment's or a stitched match's: for the shared views. */
+export function useView(): ViewSession {
   const session = useContext(SessionContext);
-  if (!session) throw new Error("useSession outside SessionContext");
+  if (!session) throw new Error("useView outside SessionContext");
+  return session;
+}
+
+/** The hero moment's session on screen (breakdown, narration, what-ifs). */
+export function useSession(): Session {
+  const session = useView();
+  if (session.kind !== "hero") throw new Error("useSession needs a hero moment, not a match");
   return session;
 }
 

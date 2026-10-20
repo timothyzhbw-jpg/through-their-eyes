@@ -115,7 +115,7 @@ describe("every caption line opens its claims and seeks the replay to their evid
     controls.openLine("L5");
     expect(playback.get()).toMatchObject({ mode: "counterfactual", cfGhost: true });
     controls.openLine("L2");
-    expect(playback.get()).toMatchObject({ mode: "factual", scanMarker: hero.keyScan.id });
+    expect(playback.get()).toMatchObject({ mode: "factual", scanMarker: hero.keyScan!.id });
   });
 
   it("seeks to a single evidence event", () => {

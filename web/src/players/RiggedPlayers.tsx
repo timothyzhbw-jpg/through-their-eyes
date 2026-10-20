@@ -16,7 +16,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Sample, sampleInto } from "../data/hero";
 import type { ExportPlayer, RunName } from "../data/types";
-import { useSession } from "../session";
+import { useView } from "../session";
 import { trial } from "./trial";
 import { BOOTS, hairColour, kitTexture, skinTone } from "./kit";
 import {
@@ -53,17 +53,19 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
 }
 
 export function RiggedPlayers() {
-  const { hero, playback } = useSession();
+  const { hero, playback } = useView();
   const gltf = useLoader(GLTFLoader, MODEL_URL);
   const meta = gltf.scene.userData as ModelMeta;
   const clips = useMemo(() => modelClips(meta), [meta]);
-  const motion = useMemo<Record<RunName, Motion>>(
-    () => ({
-      factual: runMotion(hero, hero.runs.factual, clips.gait),
-      counterfactual: runMotion(hero, hero.runs.counterfactual, clips.gait),
-    }),
-    [hero, clips],
-  );
+  const motion = useMemo<Record<RunName, Motion>>(() => {
+    const factual = runMotion(hero, hero.runs.factual, clips.gait);
+    // A stitched match has one run under both names: its motion is computed once.
+    const cf = hero.runs.counterfactual;
+    return {
+      factual,
+      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips.gait),
+    };
+  }, [hero, clips]);
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {

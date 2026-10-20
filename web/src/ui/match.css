@@ -1,0 +1,108 @@
+/* A stitched match: the score bug, the possession on screen, the match picker, the moments of
+   every possession, and the way back from a hero moment's breakdown. */
+.scoreboard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.scoreboard .score {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 22px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.scoreboard .team {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  border-radius: 4px;
+  color: var(--bg);
+}
+.scoreboard .team.home {
+  background: var(--home);
+}
+.scoreboard .team.away {
+  background: var(--away);
+}
+.scoreboard .dash {
+  color: var(--muted);
+}
+.scoreboard .possession {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.scoreboard .possession .count {
+  color: var(--fg);
+  font-weight: 600;
+}
+.scoreboard .possession .scenario {
+  color: var(--sight);
+}
+.scoreboard > .play {
+  margin-left: auto;
+}
+.match-picker select {
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 10px;
+  max-width: 100%;
+}
+.notice {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.notice.error {
+  color: var(--gold);
+}
+
+/* moments of every possession: the whole width, possessions in columns */
+.app.match .below {
+  grid-template-columns: 1fr;
+}
+.match-moments .possessions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  gap: 4px 20px;
+  align-items: start;
+}
+.moments .possession-head {
+  margin: 12px 0 4px;
+  font: 600 13px/1.3 var(--font-body);
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.moments .possession-head b {
+  color: var(--fg);
+}
+.moment-list li.ahead > button:first-child {
+  opacity: 0.45;
+}
+.moment-list .lens {
+  color: var(--muted);
+}
+.moment-list .lens.on {
+  color: var(--sight);
+}
+
+/* the match timeline: possession bands, numbered */
+.timeline .possession-label {
+  font: 600 9px/1 var(--font-data);
+  fill: var(--muted);
+  pointer-events: none;
+}

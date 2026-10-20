@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 
-export const MATCH_ID = "blind_side_run-3"; // api/store.py match_id(scenario, seed)
+export const MATCH_ID = "blind_side_run-3"; // the default: api/settings.py match_id(scenario, seed)
 export const PERSONAS = ["casual", "analyst", "player_fan", "coach"] as const; // agents/schemas.py
 export type Persona = (typeof PERSONAS)[number];
 
@@ -52,6 +52,21 @@ const ScriptResult = z.object({
   voice: z.array(VoiceCue),
 });
 
+/** GET /api/matches: the matches the service plays (TTE_MATCHES). */
+export const MatchList = z.array(
+  z.object({ id: z.string(), scenario: z.string(), seed: z.number() }),
+);
+export type MatchList = z.infer<typeof MatchList>;
+
+/** GET /api/matches/<id>: what the viewer needs before the export (api/main.py match_info). */
+export const MatchInfoResponse = z.object({
+  id: z.string(),
+  kind: z.enum(["hero", "match"]).default("hero"),
+  hero_moment: z.string(), // the first hero moment's id (a hero scenario: its only one)
+  hero_moments: z.array(z.string()),
+});
+export type MatchInfoResponse = z.infer<typeof MatchInfoResponse>;
+
 /** POST /api/breakdowns: the crew's result plus where it came from (api/main.py). */
 export const BreakdownResponse = z.object({
   key: z.string(),
@@ -66,6 +81,11 @@ export const BreakdownResponse = z.object({
     scripts: z.array(ScriptResult),
     total_ms: z.number(),
   }),
+  // A hero moment of a stitched match: its possession. The plan and payload are in the
+  // possession's local frames; add `start` for the match clock.
+  possession: z
+    .object({ index: z.number().int(), start: z.number().int(), local_moment: z.string() })
+    .optional(),
 });
 export type BreakdownResponse = z.infer<typeof BreakdownResponse>;
 
@@ -90,16 +110,27 @@ export interface Api {
   readonly base: string;
   readonly match: string;
   health(timeoutMs?: number): Promise<z.infer<typeof Health>>;
+  matches(): Promise<MatchList>;
+  info(timeoutMs?: number): Promise<MatchInfoResponse>;
   exportJson(timeoutMs?: number): Promise<unknown>;
+  /** `moment`: a hero moment id (in match time for a stitched match). */
   breakdown(req: {
     moment: string;
     persona: Persona;
     language: Language;
   }): Promise<BreakdownResponse>;
-  whatIf(req: { question: string; language: Language; persona: Persona }): Promise<WhatIfResponse>;
+  /** `moment`: which hero moment, in a match with several; absent: the first. */
+  whatIf(req: {
+    question: string;
+    language: Language;
+    persona: Persona;
+    moment?: string;
+  }): Promise<WhatIfResponse>;
   tts(ssml: string): Promise<Blob>;
   /** WebSocket URL of the live stream, starting at frame `start`. */
   liveUrl(start: number, speed?: number): string;
+  /** The same service for another match (a possession's own scenario run, say). */
+  withMatch(match: string): Api;
 }
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -168,6 +199,10 @@ export function createApi(
     match,
     health: (ms = PROBE_TIMEOUT_MS) =>
       call("/health", {}, ms, json(Health)) as Promise<z.infer<typeof Health>>,
+    matches: () =>
+      call("/api/matches", {}, PROBE_TIMEOUT_MS, json(MatchList)) as Promise<MatchList>,
+    info: (ms = EXPORT_TIMEOUT_MS) =>
+      call(`/api/matches/${id}`, {}, ms, json(MatchInfoResponse)) as Promise<MatchInfoResponse>,
     exportJson: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/export`, {}, ms, json()),
     breakdown: ({ moment, persona, language }) =>
       call(
@@ -176,15 +211,16 @@ export function createApi(
         BREAKDOWN_TIMEOUT_MS,
         json(BreakdownResponse),
       ) as Promise<BreakdownResponse>,
-    whatIf: ({ question, language, persona }) =>
+    whatIf: ({ question, language, persona, moment }) =>
       call(
         "/api/whatif",
-        post({ match, question, language, persona }),
+        post({ match, question, language, persona, ...(moment ? { moment } : {}) }),
         WHAT_IF_TIMEOUT_MS,
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
     tts: (ssml) => call("/api/tts", post({ ssml }), TTS_TIMEOUT_MS, (res) => res.blob()),
     liveUrl: (start, speed = 1) =>
       `${base.replace(/^http/, "ws")}/ws/matches/${id}/live?start=${start}&speed=${speed}`,
+    withMatch: (other) => createApi(base, other, fetchImpl),
   };
 }

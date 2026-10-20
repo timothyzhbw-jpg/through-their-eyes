@@ -1,8 +1,9 @@
 // Story beats with the verdict, and the decision the hero made on his belief.
 // Numbers here are read straight from the sim export; narration with verified claims replaces
-// the beat texts once explain/ and agents/ land (SPEC 5.3).
+// the beat texts once explain/ and agents/ land (SPEC 5.3). The beats follow the hero's lens: the
+// look over the shoulder (blind_side_run), or the press he plays out of (press_escape).
 
-import { actionLabel, type Hero, type Run } from "../data/hero";
+import { actionLabel, runLabels, type Hero, type Run, type Scan } from "../data/hero";
 import { useSession } from "../session";
 import { useStore } from "../store/store";
 
@@ -12,11 +13,14 @@ interface Beat {
 }
 
 function beats(hero: Hero, run: Run): Beat[] {
+  return hero.keyScan ? scanBeats(hero, run, hero.keyScan) : pressureBeats(hero, run);
+}
+
+function scanBeats(hero: Hero, run: Run, key: Scan): Beat[] {
   const factual = run.name === "factual";
   const runner = hero.runnerId ?? "the runner";
   const dec = run.decision;
   const act = run.action;
-  const key = hero.keyScan;
   const err = dec && hero.runnerId ? dec.belief_error[hero.runnerId] : 0;
   const age = dec && hero.runnerId ? dec.belief_age[hero.runnerId] : 0;
   const chosen = dec ? actionLabel(dec.chosen) : "";
@@ -63,8 +67,46 @@ function beats(hero: Hero, run: Run): Beat[] {
   ];
 }
 
+/** A decision under pressure; in the re-simulated run the forced action and what it led to. */
+function pressureBeats(hero: Hero, run: Run): Beat[] {
+  const factual = run.name === "factual";
+  const dec = run.decision;
+  const act = run.action;
+  const heroId = hero.heroId ?? "He";
+  const passer = run.firstPass?.player ?? "A teammate";
+  const chosen = dec ? actionLabel(dec.chosen) : "";
+  const p = dec ? (dec.options.find((o) => o.action === dec.chosen)?.prob ?? 0) : 0;
+  const decided = dec ? dec.frame : run.frames - 1;
+  const lost = run.events.find(
+    (e) => e.frame >= decided && ["tackle", "interception"].includes(e.type),
+  );
+  const outcome = lost
+    ? { from: lost.frame, text: `Lost: ${lost.type} by ${lost.player}.` }
+    : act
+      ? {
+          from: act.end ?? run.frames - 1,
+          text:
+            act.outcome === "complete"
+              ? `Completed to ${act.receiver}: out of the press.`
+              : `Lost: ${act.outcome} by ${act.receiver || "nobody"}.`,
+        }
+      : { from: run.frames - 1, text: "He keeps the ball." };
+  const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+  return [
+    { from: 0, text: `${passer} plays it to ${heroId}.` },
+    { from: hero.reception, text: `${heroId} takes it with an opponent closing him down.` },
+    factual
+      ? {
+          from: decided,
+          text: `Decision: ${lower(chosen)} (chosen with probability ${p.toFixed(2)}).`,
+        }
+      : { from: decided, text: `Decision forced in the re-simulation: ${lower(chosen)}.` },
+    outcome,
+  ];
+}
+
 export function StoryPanel() {
-  const { hero, playback, controls } = useSession();
+  const { hero, playback, controls, offset } = useSession();
   const mode = useStore(playback, (s) => s.mode);
   const frame = useStore(playback, (s) => s.frame);
   const run = hero.runs[mode];
@@ -75,6 +117,7 @@ export function StoryPanel() {
   });
   const f = hero.runs.factual.decision?.chosen ?? "";
   const c = hero.runs.counterfactual.decision?.chosen ?? "";
+  const labels = runLabels(hero);
   return (
     <div className="panel">
       <h2>What happened</h2>
@@ -82,7 +125,7 @@ export function StoryPanel() {
         {list.map((b, k) => (
           <li key={k} className={k === now ? "now" : undefined}>
             <button type="button" onClick={() => controls.seek(b.from)}>
-              <span className="t">{(b.from * hero.dt).toFixed(2)} s</span>
+              <span className="t">{((b.from + offset) * hero.dt).toFixed(2)} s</span>
               <span>{b.text}</span>
             </button>
           </li>
@@ -90,13 +133,13 @@ export function StoryPanel() {
       </ol>
       <div className="verdict">
         <div>
-          With the look: <b>{actionLabel(f)}</b>
+          {labels.factual}: <b>{actionLabel(f)}</b>
         </div>
         <div>
-          Without: <b>{actionLabel(c)}</b>
+          {labels.counterfactual}: <b>{actionLabel(c)}</b>
         </div>
         <div>
-          Expected threat gained by looking:{" "}
+          {labels.gain}:{" "}
           <b className="num">
             {hero.deltaXt >= 0 ? "+" : ""}
             {hero.deltaXt.toFixed(3)} xT
@@ -108,7 +151,7 @@ export function StoryPanel() {
 }
 
 export function DecisionPanel() {
-  const { hero, playback } = useSession();
+  const { hero, playback, offset } = useSession();
   const mode = useStore(playback, (s) => s.mode);
   const run = hero.runs[mode];
   const dec = run.decision;
@@ -118,7 +161,7 @@ export function DecisionPanel() {
   return (
     <div className="panel">
       <h2>
-        {hero.heroId}'s options at {(dec.frame * hero.dt).toFixed(2)} s, on his belief
+        {hero.heroId}'s options at {((dec.frame + offset) * hero.dt).toFixed(2)} s, on his belief
       </h2>
       <div className="options">
         {dec.options.slice(0, 6).map((o) => (

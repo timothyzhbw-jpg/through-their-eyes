@@ -206,10 +206,10 @@ function Answer({
   onClose: () => void;
   flags?: ReactNode;
 }) {
-  const { hero, playback, controls } = useSession();
+  const { hero, playback, controls, offset } = useSession();
   const frame = useStore(playback, (s) => s.frame);
   const [open, setOpen] = useState<string | null>(null);
-  const at = (f: number) => `${(f * hero.dt).toFixed(2)} s`;
+  const at = (f: number) => `${((f + offset) * hero.dt).toFixed(2)} s`; // the match clock
   const events = new Map(
     [...hero.runs.factual.events, ...(run?.events ?? [])].map((e) => [e.id, e.frame]),
   );

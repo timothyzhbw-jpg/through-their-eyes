@@ -193,7 +193,7 @@ describe("neck angle mapping", () => {
   it("points every rigged player's head along head_yaw in the seed-3 export", () => {
     const hero = parseHero(raw);
     const run = hero.runs.factual;
-    const key = hero.keyScan;
+    const key = hero.keyScan!; // the bundled scan hero has one
     for (const f of [0, key.start, Math.round((key.start + key.end) / 2), key.end, 100]) {
       for (let j = 0; j < hero.n; j++) {
         const bodyYaw = run.body[f * hero.n + j];

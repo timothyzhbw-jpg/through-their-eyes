@@ -7,7 +7,7 @@
 // turns the voice on.
 
 import { PERSONAS } from "../api/client";
-import type { Hero } from "../data/hero";
+import { runLabels, type Hero } from "../data/hero";
 import {
   claimRun,
   KIND_LABEL,
@@ -79,14 +79,15 @@ function eventFrame(hero: Hero, id: string): number | undefined {
 
 /** The claims behind the open line, right under the views. */
 export function EvidenceCard() {
-  const { hero, playback, controls } = useSession();
+  const { hero, playback, controls, offset } = useSession();
   const { narration } = useBreakdown();
   const lineId = useStore(playback, (s) => s.evidenceLine);
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
   const line = lineOf(narration, lineId);
   if (!narration || !line) return null;
-  const at = (f: number) => `${(f * hero.dt).toFixed(2)} s`;
+  const at = (f: number) => `${((f + offset) * hero.dt).toFixed(2)} s`; // the match clock
+  const elsewhere = `, ${runLabels(hero).tag.counterfactual}`;
   return (
     <section className="evidence" aria-label="Evidence for this line">
       <div className="evidence-head">
@@ -124,7 +125,7 @@ export function EvidenceCard() {
                 here={here}
                 showLabel={
                   c.seek_frame != null &&
-                  `Show at ${at(c.seek_frame)}${run === "counterfactual" ? ", without the look" : ""}`
+                  `Show at ${at(c.seek_frame)}${run === "counterfactual" ? elsewhere : ""}`
                 }
                 onShow={() => controls.openLine(line.id, c.id)}
                 eventTime={(e) => {

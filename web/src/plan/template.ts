@@ -1,6 +1,8 @@
 // The fallback plan: built from the moment alone, so it is valid by construction for any seed.
 // Freeze, rewind to just before the key scan, POV through it, mark it, show the beliefs, play the
-// outcome, then the counterfactual ghost. No voice steps: it needs no Script.
+// outcome, then the counterfactual ghost. A hero without a key scan (a pressure moment) gets the
+// POV of the last 2.4 s up to his decision and no scan marker, like agents/plan.py's template.
+// No voice steps: it needs no Script.
 
 import { frameToRel, type MomentContext } from "./moment";
 import type { PlanStep, TelestrationPlan } from "./schema";
@@ -15,10 +17,10 @@ const round = (x: number) => Math.round(x * 100) / 100;
 export function templatePlan(m: MomentContext): TelestrationPlan {
   const first = frameToRel(m, 0);
   const last = frameToRel(m, m.frames - 1);
-  const keyStart = frameToRel(m, m.keyScan.start);
   const decision = frameToRel(m, m.decisionFrame);
+  const lead = m.keyScan ? frameToRel(m, m.keyScan.start) - POV_LEAD_S : decision - POV_MAX_S;
 
-  const from = round(Math.max(first, keyStart - POV_LEAD_S));
+  const from = round(Math.max(first, lead));
   const to = round(Math.min(last, from + POV_MAX_S, Math.max(decision, from + 0.4)));
   const playTo = round(Math.min(last, Math.max(to, decision + OUTCOME_S)));
   const povStart = 1.2;
@@ -32,7 +34,7 @@ export function templatePlan(m: MomentContext): TelestrationPlan {
     { t: 0.6, do: "zone", layer: "vision", player: m.hero },
     { t: 0.8, do: "camera", mode: "pov" },
     { t: povStart, do: "pov", player: m.hero, from, to, speed: POV_SPEED },
-    { t: 1.4, do: "scan_marker", scan: m.keyScan.id },
+    ...(m.keyScan ? [{ t: 1.4, do: "scan_marker" as const, scan: m.keyScan.id }] : []),
     { t: 1.6, do: "ghost", kind: "belief" },
     { t: round(povEnd + 0.4), do: "camera", mode: "split" },
     { t: playStart, do: "play", to: playTo, speed: 1 },

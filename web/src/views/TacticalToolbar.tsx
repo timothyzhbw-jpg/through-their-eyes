@@ -1,14 +1,17 @@
 // Toolbar of the tactical board: its label and overlay toggles.
 
-import { useSession, type Toggle } from "../session";
+import { runLabels } from "../data/hero";
+import { useView, type Toggle } from "../session";
 import { useStore } from "../store/store";
+import { noBeliefs } from "./PovOverlay";
 
 export function TacticalToolbar() {
-  const { hero, playback } = useSession();
+  const { hero, playback } = useView();
   const focus = useStore(playback, (s) => s.focus);
   const mode = useStore(playback, (s) => s.mode);
   const povPlayer = useStore(playback, (s) => s.povPlayer);
   const ghostsAvailable = povPlayer === hero.heroId;
+  const labels = runLabels(hero);
   return (
     <div className="viewbar">
       <div className="label">
@@ -16,16 +19,21 @@ export function TacticalToolbar() {
         {focus === "tactical" && <span className="live-dot" aria-hidden="true" />}
       </div>
       <div className="toggles">
-        <Chip name="cone" label="Vision cone" title={`${povPlayer}'s field of view`} />
+        <Chip
+          name="cone"
+          label="Vision cone"
+          disabled={!hero.vision}
+          title={
+            hero.vision
+              ? `${povPlayer}'s field of view`
+              : "The vision model comes with a hero moment's export"
+          }
+        />
         <Chip
           name="beliefGhosts"
           label="Belief ghosts"
           disabled={!ghostsAvailable}
-          title={
-            ghostsAvailable
-              ? "Where he believes each player is"
-              : `Beliefs are recorded for ${hero.heroId} only`
-          }
+          title={ghostsAvailable ? "Where he believes each player is" : noBeliefs(hero)}
         />
         <Chip
           name="options"
@@ -37,18 +45,20 @@ export function TacticalToolbar() {
           label="Blind side"
           title="Live: who has lost sight of a player on the move, from tracking only"
         />
-        <Chip
-          name="cfGhost"
-          label={mode === "factual" ? "Ghost: no look" : "Ghost: with look"}
-          title="Ball path of the other run, from the decision on"
-        />
+        {hero.counterfactual && (
+          <Chip
+            name="cfGhost"
+            label={mode === "factual" ? labels.ghostOfCounterfactual : labels.ghostOfFactual}
+            title="Ball path of the other run, from the decision on"
+          />
+        )}
       </div>
     </div>
   );
 }
 
 function Chip(props: { name: Toggle; label: string; title: string; disabled?: boolean }) {
-  const { playback, controls } = useSession();
+  const { playback, controls } = useView();
   const on = useStore(playback, (s) => s[props.name]);
   return (
     <button

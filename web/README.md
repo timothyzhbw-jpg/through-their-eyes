@@ -15,10 +15,12 @@ npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 ```
 
-URL parameters: `?autoplay=0` starts neither the live stream nor the breakdown on load;
-`?offline=1` ignores the live service and plays the bundled data; `?plan=invalid` loads a
-deliberately broken plan to show the template fallback; `?rigged=0` starts with the tokens
-instead of the animated players.
+URL parameters: `?match=match-1` plays another match the live service serves (the stitched
+match, or a hero moment such as `press_escape-0`; the header's match picker sets it), default
+`blind_side_run-3`, the bundled one; `?autoplay=0` starts neither the live stream nor the
+breakdown on load; `?offline=1` ignores the live service and plays the bundled data;
+`?plan=invalid` loads a deliberately broken plan to show the template fallback; `?rigged=0`
+starts with the tokens instead of the animated players.
 
 ## The live service (`VITE_API_URL`)
 
@@ -60,6 +62,32 @@ service let Vite forward the API paths (dev server only):
 TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io \
   VITE_API_URL=http://localhost:5173 npm run dev
 ```
+
+## The stitched match (`?match=match-1`, SPEC 3.1)
+
+`match-1` is six scenario possessions on one 132.6 s clock (`sim/match.py`). It exists only on the
+live service: offline, the bundled hero moment plays and the badge says why.
+
+- **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
+  possession on screen (n of 6, its scenario) and how play restarted (kick-off, throw-in, …, or a
+  cut). The timeline is banded by possession, numbered, hero possessions in gold, the two hero
+  moments as gold diamonds; ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
+  has no beliefs, sight or vision model, so belief ghosts, "in his sight" and the vision cone are
+  off until a hero moment is opened.
+- **Moments.** Every moment of every possession, in match time, with its lens (`scan lens`,
+  `pressure lens`, or `live only`); while live, those the stream has not announced yet are dimmed.
+  Any moment replays; the two hero moments have **Breakdown**.
+- **Breakdowns.** A hero moment's breakdown plays on its possession's own run: the app loads that
+  run's hero export from the service (`/api/matches/<scenario>-<seed>/export`, so `TTE_MATCHES`
+  must list it; for `blind_side_run-3` the bundled file stands in) and asks
+  `POST /api/breakdowns` (and `/api/whatif`) with the moment's id in match time. The answer's
+  plan and payload are in the possession's local frames: the response's `possession` must name
+  this moment, possession and `start`, or it is refused. Clocks and evidence times show the match
+  clock (local frame + `start`); **Back to the match** puts the match playhead there.
+- **A hero without a key scan.** The pressure hero (`press_escape`) has `key_scan: null` and a
+  counterfactual that forces an action. The run toggle and the ghost say "What he did" / "If he
+  carried it", there is no key-scan jump or scan marker (the template plan watches the 2.4 s up
+  to the decision instead), and the counterfactual ghost is the forced carry's ball path.
 
 ## Data
 
@@ -107,9 +135,11 @@ src/
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
   narration/  render payload schema (zod), checks against the moment, kind labels
+  match/      a stitched match: possessions, score, moments; its session (live, opens breakdowns)
   views/      PovView and TacticalView (React Three Fiber), their toolbars and HUD
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
-  session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls
+  session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
+              the transport and live controls a match shares; useView() for the shared views
   testing.tsx test stand-ins: routed fetch, scripted WebSocket, API responses, server rendering
 ```
 

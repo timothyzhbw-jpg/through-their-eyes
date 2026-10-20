@@ -10,7 +10,7 @@ import type { RunName } from "../data/types";
 import { aimYaw, poseToken, worldYaw } from "./tokens";
 
 const hero = parseHero(raw);
-const key = hero.keyScan;
+const key = hero.keyScan!; // the bundled scan hero has one
 const TOL = 1e-3;
 
 /** A token as PovView builds it: a body group on the pitch with the head group as its child. */

@@ -1,13 +1,19 @@
-// Load a hero-moment export and turn it into flat typed arrays in metres and radians.
+// Load an export and turn it into flat typed arrays in metres and radians: a hero moment (two
+// runs: what happened, and the counterfactual) or a stitched match (one run on the match clock).
 // Everything the views draw is sampled from here, at a fractional frame (linear interpolation).
 
+import { parseMatch, type MatchInfo } from "../match/match";
 import type {
   ExportAction,
   ExportBlindSide,
+  ExportCounterfactual,
   ExportDecision,
   ExportEvent,
+  ExportMatchRun,
   ExportPlayer,
+  ExportRun,
   HeroExport,
+  MatchExport,
   RunName,
 } from "./types";
 
@@ -28,8 +34,9 @@ export interface Run {
   head: Float32Array; // index frame * n + player, rad
   body: Float32Array;
   ball: Float32Array; // index frame * 2 + xy, m
-  ghost: Float32Array; // like pos: where the hero believes each player is
+  ghost: Float32Array; // like pos: where the hero believes each player is (zeros in a match)
   seenBy: Uint32Array; // index frame * n + observer: bitmask of the players he sees
+  sight: boolean; // seenBy was exported (a stitched match has no sight data: all zeros)
   owner: Int16Array;
   events: ExportEvent[];
   scans: Scan[];
@@ -48,23 +55,31 @@ export interface Vision {
   distanceSigma: number; // m
 }
 
+/**
+ * What the views play. `kind: "hero"` is one hero moment with its counterfactual run;
+ * `kind: "match"` is a stitched match (SPEC 3.1): one run on the match clock with its possessions
+ * and moments, no hero, beliefs, sight, vision model or counterfactual. A match has no second run
+ * to compare, so both run names point at the stitched run and the views hide what needs one.
+ */
 export interface Hero {
+  kind: "hero" | "match";
   scenario: string;
   seed: number;
   dt: number;
   players: ExportPlayer[];
   ids: string[];
   n: number;
-  hero: number; // player index
-  heroId: string;
+  hero: number; // player index; -1 in a match
+  heroId: string | null; // null in a match
   runner: number; // player index, -1 if the scenario has none
   runnerId: string | null;
-  keyScan: Scan;
-  counterfactual: HeroExport["counterfactual"];
-  vision: Vision;
+  keyScan: Scan | null; // the look the counterfactual drops; null without a scan lens
+  counterfactual: ExportCounterfactual | null; // null in a match
+  vision: Vision | null; // null in a match (the match export has no vision model)
   deltaXt: number;
   runs: Record<RunName, Run>;
   reception: number; // frame the hero receives the ball (the moment's anchor)
+  match: MatchInfo | null; // possessions, score and moments of a stitched match
 }
 
 function flatten(rows: number[][], scale: number): Float32Array {
@@ -74,7 +89,7 @@ function flatten(rows: number[][], scale: number): Float32Array {
   return out;
 }
 
-function convertRun(name: RunName, raw: HeroExport["runs"][RunName], hero: string): Run {
+function convertRun(name: RunName, raw: ExportRun, hero: string | null, n: number): Run {
   const scans = raw.events
     .filter((e) => e.type === "scan")
     .map((e) => ({
@@ -91,8 +106,9 @@ function convertRun(name: RunName, raw: HeroExport["runs"][RunName], hero: strin
     head: flatten(raw.head, 1e-4),
     body: flatten(raw.body, 1e-4),
     ball: flatten(raw.ball, 1e-3),
-    ghost: flatten(raw.ghost, 1e-3),
-    seenBy: Uint32Array.from(raw.seen_by.flat()),
+    ghost: raw.ghost ? flatten(raw.ghost, 1e-3) : new Float32Array(raw.frames * 2 * n),
+    seenBy: raw.seen_by ? Uint32Array.from(raw.seen_by.flat()) : new Uint32Array(raw.frames * n),
+    sight: !!raw.seen_by,
     owner: Int16Array.from(raw.owner),
     events: raw.events,
     scans,
@@ -105,27 +121,30 @@ function convertRun(name: RunName, raw: HeroExport["runs"][RunName], hero: strin
 }
 
 export function parseHero(json: unknown): Hero {
-  const raw = json as HeroExport;
-  if (!raw || typeof raw !== "object" || !raw.runs?.factual || !raw.runs?.counterfactual) {
-    throw new Error("not a hero-moment export");
-  }
+  const raw = json as HeroExport | MatchExport;
+  if (!raw || typeof raw !== "object" || !raw.runs?.factual) throw new Error("not an export");
   if (raw.version !== SCHEMA_VERSION) {
     throw new Error(
       `export schema version ${raw.version}, app expects ${SCHEMA_VERSION}: re-run python -m sim.export`,
     );
   }
+  if (isMatchExport(raw)) return parseMatchExport(raw);
+  if (!raw.runs.counterfactual) throw new Error("not a hero-moment export");
   const ids = raw.players.map((p) => p.id);
+  const n = ids.length;
   const runs = {
-    factual: convertRun("factual", raw.runs.factual, raw.hero),
-    counterfactual: convertRun("counterfactual", raw.runs.counterfactual, raw.hero),
+    factual: convertRun("factual", raw.runs.factual, raw.hero, n),
+    counterfactual: convertRun("counterfactual", raw.runs.counterfactual, raw.hero, n),
   };
-  const keyScan = runs.factual.scans.find((s) => s.id === raw.key_scan.id);
-  if (!keyScan) throw new Error(`key scan ${raw.key_scan.id} missing from the factual run`);
+  const keyScanId = raw.key_scan?.id ?? null;
+  const keyScan = keyScanId ? runs.factual.scans.find((s) => s.id === keyScanId) : null;
+  if (keyScanId && !keyScan) throw new Error(`key scan ${keyScanId} missing from the factual run`);
   const reception = runs.factual.events.find(
     (e) => e.type === "reception" && e.player === raw.hero,
   );
   const v = raw.vision;
   return {
+    kind: "hero",
     scenario: raw.scenario,
     seed: raw.seed,
     dt: raw.dt,
@@ -136,7 +155,7 @@ export function parseHero(json: unknown): Hero {
     heroId: raw.hero,
     runner: raw.runner ? ids.indexOf(raw.runner) : -1,
     runnerId: raw.runner,
-    keyScan,
+    keyScan: keyScan ?? null,
     counterfactual: raw.counterfactual,
     vision: {
       halfCone: v.half_cone * 1e-4,
@@ -148,7 +167,85 @@ export function parseHero(json: unknown): Hero {
     deltaXt: raw.delta_xt,
     runs,
     reception: reception ? reception.frame : (runs.factual.decision?.frame ?? 0),
+    match: null,
   };
+}
+
+const isMatchExport = (raw: HeroExport | MatchExport): raw is MatchExport =>
+  "kind" in raw && raw.kind === "match";
+
+/** A stitched match: its one run on the match clock, plus possessions, score and moments. */
+function parseMatchExport(raw: MatchExport): Hero {
+  const ids = raw.players.map((p) => p.id);
+  const run: ExportMatchRun & Partial<ExportRun> = raw.runs.factual;
+  const factual = convertRun(
+    "factual",
+    { ...run, decision: null, action: null, possession_value: 0 } as ExportRun,
+    null,
+    ids.length,
+  );
+  return {
+    kind: "match",
+    scenario: raw.scenario,
+    seed: raw.seed,
+    dt: raw.dt,
+    players: raw.players,
+    ids,
+    n: ids.length,
+    hero: -1,
+    heroId: null,
+    runner: -1,
+    runnerId: null,
+    keyScan: null,
+    counterfactual: null,
+    vision: null,
+    deltaXt: 0,
+    runs: { factual, counterfactual: factual },
+    reception: 0,
+    match: parseMatch(raw),
+  };
+}
+
+/** What the two runs are called on screen: the dropped look, or the forced action. */
+export interface RunLabels {
+  factual: string; // the run toggle
+  counterfactual: string;
+  ghostOfFactual: string; // the ghost chip and tag showing the other run
+  ghostOfCounterfactual: string;
+  tag: Record<RunName, string>; // on the board and evidence: "without the look", "if he …"
+  gain: string; // what `deltaXt` measures: factual minus counterfactual possession value
+}
+
+export function runLabels(hero: Hero): RunLabels {
+  const cf = hero.counterfactual;
+  if (cf?.intervention === "force_action") {
+    const [verb, gerund] = forced(cf.action);
+    return {
+      factual: "What he did",
+      counterfactual: `If he ${verb}`,
+      ghostOfFactual: "Ghost: what he did",
+      ghostOfCounterfactual: `Ghost: if he ${verb}`,
+      tag: { factual: "what he did", counterfactual: `if he ${verb}` },
+      gain: `Possession value gained over ${gerund}`,
+    };
+  }
+  return {
+    factual: "With the look",
+    counterfactual: "Without the look",
+    ghostOfFactual: "Ghost: with look",
+    ghostOfCounterfactual: "Ghost: no look",
+    tag: { factual: "with the look", counterfactual: "without the look" },
+    gain: "Expected threat gained by looking",
+  };
+}
+
+/** A forced action as "if he …" and "… over …": ["carried it", "carrying it"]. */
+function forced(action: string): [string, string] {
+  if (action.startsWith("pass:"))
+    return [`passed to ${action.slice(5)}`, `passing to ${action.slice(5)}`];
+  if (action === "carry") return ["carried it", "carrying it"];
+  if (action === "shot") return ["shot", "shooting"];
+  return [`chose ${action}`, action];
 }
 
 // ---------- angles ----------

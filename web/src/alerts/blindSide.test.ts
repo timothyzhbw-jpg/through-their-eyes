@@ -10,7 +10,7 @@ import { createSession } from "../session";
 import { alertOn, alertsAt, pulse, unseenLabel } from "./blindSide";
 
 const hero = parseHero(raw);
-const key = hero.keyScan;
+const key = hero.keyScan!; // the bundled scan hero has one
 const on = (run: Run, f: number) => alertOn(hero, run, f, "H8", "H9");
 
 describe("H9 behind H8", () => {
