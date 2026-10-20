@@ -85,6 +85,10 @@ _Fill in as they come to exist._
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
+- `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
+  without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
+  Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
+- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
 - Not yet: `uv run python -m eval.run_all`, `uv run uvicorn api.main:app --reload`,
   `cd web && npm run dev`
 

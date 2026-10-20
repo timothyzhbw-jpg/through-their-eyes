@@ -390,6 +390,20 @@ Check which styles the `en` and `zh` voices support during M3.
 that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
 Application Insights.
 
+*Implemented (M3, `agents/`):*
+- One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
+  outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
+- Models get claims as templates with slot names, never raw text to copy numbers from. The Analyst
+  returns claim ids only; unknown or unsupported ids are dropped and noted in the trace.
+- Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
+  offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
+  template plan when invalid.
+- The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
+  `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
+  `run_counterfactual`.
+- Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
+  every tier is rendered as prosody.
+
 `TelestrationPlan` sketch:
 
 ```json
