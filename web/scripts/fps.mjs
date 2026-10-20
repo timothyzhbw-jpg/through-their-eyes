@@ -1,7 +1,8 @@
-// Frames per second of the app with the tactical board's pitch-control overlay off and on
-// (SPEC 7): plays the hero moment from the production build in Chrome and times its animation
-// frames while both views redraw. Then times the overlay's shader alone, at the board's canvas
-// size and at full HD. Prints the WebGL renderer it measured on.
+// Frames per second of the app with the tactical board's pitch-control overlay off and on, and
+// with the skeleton (every player's torso and head yaw) off and on over the broadcast camera and
+// the board (SPEC 7): plays the hero moment from the production build in Chrome and times its
+// animation frames while both views redraw. Then times the pitch-control shader alone, at the
+// board's canvas size and at full HD. Prints the WebGL renderer it measured on.
 //
 //   npm run build && npm run fps            headless; SwiftShader (software) where there is no GPU
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
@@ -49,11 +50,17 @@ try {
   await page.waitForTimeout(1500); // models and textures
   const renderer = await rendererOf(page);
   const board = await page.locator(".tac canvas").evaluate((c) => [c.width, c.height]);
-  const chip = button("Pitch control");
+  const chips = {
+    "pitch control": button("Pitch control"),
+    skeleton: page.locator(".tac").getByRole("button", { name: "Skeleton", exact: true }),
+  };
+  const set = async (overlay, on) => {
+    const chip = chips[overlay];
+    if ((await chip.getAttribute("aria-pressed")) !== String(on)) await chip.click();
+  };
 
   /** Play from the key scan and time `seconds` of animation frames. */
-  async function measure(overlay) {
-    if ((await chip.getAttribute("aria-pressed")) !== String(overlay)) await chip.click();
+  async function measure() {
     await button("Key scan").click();
     await button("Play").click();
     await page.waitForTimeout(300);
@@ -84,19 +91,31 @@ try {
   }
 
   const rows = [];
-  for (let r = 0; r < Number(opt.runs); r++) {
-    for (const overlay of [false, true]) rows.push({ overlay, ...(await measure(overlay)) });
+  for (const [overlay, camera] of [
+    ["pitch control", "First person"],
+    ["skeleton", "Broadcast"], // the skeleton is drawn on the broadcast camera and the board
+  ]) {
+    await button(camera).click();
+    for (const other of Object.keys(chips)) await set(other, false);
+    for (let r = 0; r < Number(opt.runs); r++) {
+      for (const on of [false, true]) {
+        await set(overlay, on);
+        rows.push({ overlay, camera, on, ...(await measure()) });
+      }
+    }
   }
+  await set("skeleton", false);
   console.log(`renderer: ${renderer}`);
   console.log(
     `viewport ${opt.width}x${opt.height} @ dpr ${opt.dpr}; tactical canvas ${board[0]}x${board[1]} px; ` +
       `${opt.seconds} s per run, playing the hero moment at 1x`,
   );
-  console.log("| pitch control | fps | median frame ms | p95 frame ms |");
-  console.log("|---|---:|---:|---:|");
+  console.log("| overlay | 3D camera | | fps | median frame ms | p95 frame ms |");
+  console.log("|---|---|---|---:|---:|---:|");
   for (const r of rows) {
     console.log(
-      `| ${r.overlay ? "on" : "off"} | ${r.fps.toFixed(1)} | ${r.median.toFixed(1)} | ${r.p95.toFixed(1)} |`,
+      `| ${r.overlay} | ${r.camera.toLowerCase()} | ${r.on ? "on" : "off"} | ${r.fps.toFixed(1)} | ` +
+        `${r.median.toFixed(1)} | ${r.p95.toFixed(1)} |`,
     );
   }
 

@@ -49,6 +49,7 @@ import {
   type Focus,
   type PlaybackStore,
 } from "./store/playback";
+import type { YawSource } from "./skeleton/skeleton";
 import { createStore, useStore, type Store } from "./store/store";
 import { IDLE_TAMPER, numericValues, tamperError, type TamperState } from "./tamper/tamper";
 import { VoicePlayer, type MakeAudio } from "./voice/voice";
@@ -63,7 +64,14 @@ import {
 } from "./whatif/whatif";
 
 export type Toggle =
-  "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options" | "blindSide" | "pitchControl";
+  | "cone"
+  | "beliefGhosts"
+  | "cfGhost"
+  | "comfort"
+  | "options"
+  | "blindSide"
+  | "pitchControl"
+  | "skeleton";
 
 export interface SessionOptions {
   api?: Api | null; // the live service; null or absent: offline data
@@ -91,6 +99,7 @@ export interface ViewControls {
   setFocus(focus: Focus): void;
   setCamera(camera: Camera3D): void;
   toggle(key: Toggle): void;
+  setSkeletonSource(source: YawSource): void;
   goLive(): void;
   leaveLive(): void;
   replayMoment(card: LiveMoment): void;
@@ -319,6 +328,10 @@ export function transportControls(d: TransportDeps) {
     },
     toggle(key: Toggle) {
       playback.set((st) => ({ [key]: !st[key] }));
+    },
+    /** The skeleton's head yaw: true, or as tracked (drawn only where the export has it). */
+    setSkeletonSource(source: YawSource) {
+      playback.set({ skeletonSource: source });
     },
     goLive,
     /** Leave the stream and keep the replay where it is. */
