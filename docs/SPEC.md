@@ -205,18 +205,37 @@ chance.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
 
 ### Acceptance checks — sim
-- [ ] Same seed twice in the same environment ⇒ identical output hashes.
-- [ ] `resume(snapshot(t), overrides={})` reproduces the factual run from t exactly.
-- [ ] An override that only touches player A leaves every random draw of player B unchanged.
-- [ ] No player exceeds role max speed/accel; ball mechanical energy never increases between contacts.
+- [x] Same seed twice in the same environment ⇒ identical output hashes.
+      — [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_same_seed_twice_in_the_same_environment_is_byte_identical`
+- [x] `resume(snapshot(t), overrides={})` reproduces the factual run from t exactly.
+      — [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_resume_from_snapshot_without_overrides_reproduces_the_run`
+- [x] An override that only touches player A leaves every random draw of player B unchanged.
+      — [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_an_override_on_one_player_leaves_every_draw_of_other_players_unchanged`
+- [x] No player exceeds role max speed/accel; ball mechanical energy never increases between contacts.
+      — [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_players_respect_role_speed_and_acceleration_limits`,
+      `test_ball_energy_never_increases_between_contacts`;
+      [eval/reports/realism.md](../eval/reports/realism.md) (peak acceleration and deceleration sit
+      at the 3.5 and 5.0 m/s² caps over 100 seeds)
 - [ ] Realism report on 20 seeds: passes, shots, possession changes per match fall inside configured
       target ranges (table written to `eval/`).
+      — *Open:* [eval/reports/realism.md](../eval/reports/realism.md) covers scans, head turns and
+      speeds, not passes, shots or possession changes per match; shots and stitched matches are M4.
 - [ ] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
-- [ ] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
+      — *Open:* the mean (2.95 on 100 seeds, [realism.md](../eval/reports/realism.md)) and
+      CMs > forwards hold, on 20 seeds too ([tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`),
+      but the pressure part is tested within midfielders on 4 seeds only
+      (`test_spec_scan_rate_under_pressure_is_lower_than_without`), and pooled at the reception
+      it goes the other way (realism.md, d = −0.12).
+- [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
-- [ ] `force_action` with the action actually chosen reproduces the factual run byte for byte;
+      — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
+      (39/40 seeds, 98%; `blind_side_run` is the only hero scenario so far);
+      [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_dropping_the_key_scan_changes_the_chosen_action_in_most_held_out_seeds`
+- [x] `force_action` with the action actually chosen reproduces the factual run byte for byte;
       with an action that was not an option, it is refused (not silently mapped).
+      — [tests/test_whatif.py](../tests/test_whatif.py)::`test_forcing_the_action_actually_chosen_reproduces_the_factual_run`,
+      `test_an_action_that_was_not_an_option_is_refused`
 
 ## 4. Analytics kernels (`analytics/`)
 Every kernel: numpy reference + unit tests. GLSL versions in `web/` must match the numpy reference
@@ -285,19 +304,35 @@ Report a precision / recall / F1 table in `eval/`, with and without the nuisance
 of §3.4.
 
 ### Acceptance checks — analytics
-- [ ] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
+- [x] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
       pitch flip.
+      — [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_pitch_control_is_a_probability_that_sums_to_one_across_teams`,
+      `test_pitch_control_is_symmetric_under_team_swap_and_pitch_flip`
 - [ ] Shader vs numpy: max abs diff < 0.02 on 10 fixed snapshots.
-- [ ] Vision: cells directly behind the player (outside the cone) have V < 0.05; occluded cells
+      — *Open:* `web/` has no pitch-control shader yet (its only GLSL is the vision cone), so there
+      is no parity test.
+- [x] Vision: cells directly behind the player (outside the cone) have V < 0.05; occluded cells
       score lower than unoccluded cells at the same angle and distance.
-- [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
+      — [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_cells_behind_the_player_are_not_visible`,
+      `test_occluded_cells_score_lower_than_unoccluded_at_same_angle_and_distance`
+- [x] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
+      — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.993 at
+      200°/s, 125–300°/s table);
+      [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
 - [ ] xT grid increases toward goal (sanity plot saved).
-- [ ] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
+      — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
+      [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
+      no fitted 16 × 12 grid and no plot.
+- [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
+      — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
+      0.920, recall 0.984);
+      [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
+      [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
 ## 5. Explain layer (`explain/`)
 
@@ -410,18 +445,33 @@ Every factual sentence on screen comes from a `Claim`:
 ```
 
 ### Acceptance checks — explain
-- [ ] Corruption test: perturb 100 supported claims (numbers ±1 / ±20%, swapped players, wrong
+- [x] Corruption test: perturb 100 supported claims (numbers ±1 / ±20%, swapped players, wrong
       order). Among perturbations that are **false under ground truth**, the verifier refutes
       ≥ 98%. Perturbations that happen to stay true (e.g. swapping two players who both scanned
       3 times) are excluded and reported separately. `approx` tolerances are < 20%, so ±20%
       perturbations are refutable.
-- [ ] No rendered caption, in any language, contains a number (digits or number words) that did
+      — [eval/reports/corruption.md](../eval/reports/corruption.md) (88/88 false perturbations
+      refuted, 25/25 at ±20%; 10 still true and 2 undecidable reported apart);
+      [tests/test_verifier_corruption.py](../tests/test_verifier_corruption.py)::`test_false_perturbations_are_refuted`
+- [x] No rendered caption, in any language, contains a number (digits or number words) that did
       not come from a slot (check on the final render payload).
-- [ ] Every lexicon term in a rendered line is backed by a supported claim on that line.
-- [ ] No rendered caption contains a banned evaluative term (`en`, `zh`).
-- [ ] Every claim has a kind; claims built on `cf_delta` are `counterfactual`; every rendered line
+      — [tests/test_render.py](../tests/test_render.py)::`test_the_render_check_rejects_numbers_not_from_slots`,
+      `test_check_payload_catches_tampering_after_render`;
+      [eval/reports/corruption.md](../eval/reports/corruption.md) (40/40 final payloads, en + zh,
+      0 violations)
+- [x] Every lexicon term in a rendered line is backed by a supported claim on that line.
+      — [tests/test_render.py](../tests/test_render.py)::`test_a_lexicon_term_needs_a_supported_claim_on_the_same_line`;
+      [tests/test_verifier_lexicon.py](../tests/test_verifier_lexicon.py)::`test_a_term_is_backed_only_by_its_own_definition`
+- [x] No rendered caption contains a banned evaluative term (`en`, `zh`).
+      — [tests/test_render.py](../tests/test_render.py)::`test_banned_evaluative_terms_never_render`;
+      [tests/test_verifier_lexicon.py](../tests/test_verifier_lexicon.py)::`test_banned_evaluative_terms_in_english_and_chinese`
+- [x] Every claim has a kind; claims built on `cf_delta` are `counterfactual`; every rendered line
       references at least one supported claim or is a connective phrase.
-- [ ] Lens selection is deterministic for a given seed.
+      — [tests/test_claims.py](../tests/test_claims.py)::`test_every_claim_gets_its_kind_from_the_predicate`,
+      `test_a_declared_kind_must_match_the_predicate`;
+      [tests/test_render.py](../tests/test_render.py)::`test_a_line_without_claims_must_be_a_connective_phrase`
+- [x] Lens selection is deterministic for a given seed.
+      — [tests/test_lenses.py](../tests/test_lenses.py)::`test_lens_selection_is_deterministic_for_a_seed`
 
 ## 6. Agents (`agents/`)
 Microsoft Agent Framework (Python) workflow; models via Microsoft Foundry with structured outputs;
@@ -651,20 +701,32 @@ to a real broadcast.
    list.
 
 **Acceptance checks:**
-- [ ] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
+- [x] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
       imports `demo.realfeed`, and that `web/` has no reference to it.
-- [ ] No video or image frames are tracked under `demo/` (test on `git ls-files`).
+      — [tests/test_realfeed.py](../tests/test_realfeed.py)::`test_the_app_never_imports_or_references_the_real_footage_demo`
+- [x] No video or image frames are tracked under `demo/` (test on `git ls-files`).
+      — [tests/test_realfeed.py](../tests/test_realfeed.py)::`test_no_video_or_image_frames_are_tracked_under_demo`
 - [ ] Every exported frame: off-pitch pixels are masked; a face detector finds no unblurred face;
       the label and the attribution are visible.
+      — *Open:* no export has passed `demo/realfeed/check.py` yet; the latest one (2026-10-19, on
+      an unmerged branch) reports faces not blurred.
 - [ ] Bowen has reviewed the exported segment frame by frame (faces, kit logos, boards) before it
       goes into the video.
+      — *Open:* Bowen's review; there is no final export to review yet.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
-- [ ] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
+      — *Open:* not measured; the pitch-control shader does not exist yet (§4 shader check).
+- [x] Every `TelestrationPlan` is schema-validated before playback; an invalid plan falls back to
       a template plan.
-- [ ] Every caption line in the breakdown player opens its claims and seeks the replay to their
+      — [web/src/plan/plan.test.ts](../web/src/plan/plan.test.ts) ("falls back to the template
+      plan, with the reasons"); bundled and API plans both go through `resolvePlan`
+      ([web/src/breakdown/breakdown.ts](../web/src/breakdown/breakdown.ts));
+      [tests/test_agents.py](../tests/test_agents.py)::`test_an_invalid_agent_plan_is_replaced_by_the_template`
+- [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
+      — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
+      caption line opens its claims and seeks the replay to their evidence", one case per line)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -743,8 +805,12 @@ to a real broadcast.
     ingestion.
   - The end-to-end transaction view of one breakdown, with a fallback in it, is a video shot and a
     README figure: evidence for the multi-agent prize.
-  - Acceptance: one breakdown yields one trace with a span per step, and a forced timeout shows up
-    as a `template` span with its reason.
+  - [x] Acceptance: one breakdown yields one trace with a span per step, and a forced timeout
+    shows up as a `template` span with its reason.
+    — [tests/test_telemetry.py](../tests/test_telemetry.py)::`test_an_offline_breakdown_is_one_trace_with_a_span_per_step`,
+    `test_a_telestrator_timeout_is_a_template_span_with_the_error_class`; live, Application
+    Insights holds one trace per deployed breakdown with a span for each step from Director to
+    Voice (queried 2026-10-20).
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
 - *Provisioned 2026-10-20 (`infra/deploy.sh provision`):*
@@ -777,6 +843,21 @@ to a real broadcast.
 - Every environment variable documented in `.env.example`; no secrets in the repo.
 
 ## 9. Milestones and cut list
+
+**Acceptance status** (2026-10-20). Each check carries its evidence inline: a test, an eval report
+or a live check. Ticked only when verified that day: `uv run pytest` 464 passed, `npm test` in
+`web/` 121 passed, the live checks run against the deployed API and site.
+
+| Section | Ticked | Open | Open items |
+|---|---:|---:|---|
+| §3 sim | 6 | 2 | passes, shots and possession changes per match vs targets; scan rate under pressure on 20 seeds |
+| §4 analytics | 4 | 2 | pitch-control shader vs numpy parity; fitted xT grid and its sanity plot |
+| §5 explain | 6 | 0 | — |
+| §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
+| §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on |
+| §8 platform (Application Insights) | 1 | 0 | — |
+| §11 submission | 0 | 8 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; README architecture and related work; video and submission in English; technology table in the video and submission |
+| **Total** | **21** | **15** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -830,17 +911,30 @@ Framework, live deployment, the video.
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
+      — *Open:* Bowen's; not verifiable from the repo.
 - [ ] Project on Innovation Studio: pitch, Microsoft technologies used, problem solved
+      — *Open:* Bowen's.
 - [ ] Public GitHub repo created after 2026-09-29 (private during development; made public by Oct 26)
+      — *Open:* created 2026-10-19 (`gh repo view`), still private.
 - [ ] Video < 2:00 at a public URL (YouTube / Vimeo / Facebook Video / Youku); no third-party
       trademarks or copyrighted music
+      — *Open:* Bowen's; not made yet.
 - [ ] Test link live and free until 2026-11-10, with testing instructions
+      — *Open:* live with no login on 2026-10-20 (checked: `/health` reports `model: foundry`,
+      `speech: true`; a cached breakdown in 0.04 s; live WebSocket at 25.0 fps; the site loads and
+      streams from the API), and the README's "Try it" has the instructions; staying up until
+      2026-11-10 can only be checked then.
 - [ ] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
       and its attribution), architecture, how to run, eval results, related work
+      — *Open:* [README.md](../README.md) has the statement, the attribution, how to run and the
+      eval results; no architecture diagram and no related work yet.
 - [ ] All materials in English
+      — *Open:* the video and the submission text don't exist yet.
 - [ ] **Claim only what we use.** README, video and submission list a technology only if the running
       system or our development actually used it, each with evidence (file, screenshot, PR):
       a "technology → where → evidence" table, which the closing architecture slide follows.
+      — *Open:* the README has the table and says Claude Code; the video and the submission don't
+      exist yet.
       - We develop with Claude Code and say so.
       - GitHub Copilot and the Azure MCP Server are listed only if we really used them, with the
         PRs or commands that show it.
