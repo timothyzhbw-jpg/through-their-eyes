@@ -21,6 +21,22 @@ claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.
     ```
   No login. Model-backed regenerations are rate-limited per client and capped per day; past that
   the service serves the cache or the deterministic template.
+- **Failure drill (agent recovery):** in the web app's Breakdown panel, the Producer desk lists the
+  crew's steps and who answered each: the model, its template, or code.
+  - "Take down" an agent, e.g. the Telestrator, and run the crew. Its model calls fail as in an
+    outage, so it retries once and airs its template; the breakdown still airs.
+  - "Bring back" resumes the Agent Framework workflow from its checkpoint and re-runs only that
+    step, plus the steps that read its output.
+  - The trace id is the run's operation_Id in Application Insights.
+
+  Over the API (each call counts against the rate limit):
+  ```bash
+  curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
+    -H 'content-type: application/json' \
+    -d '{"match": "blind_side_run-3", "personas": ["analyst"], "languages": ["en"], "fail": ["telestrator"]}'
+  curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns/<key>/bring-back \
+    -H 'content-type: application/json' -d '{"step": "telestrator"}'
+  ```
 
 ## Evidence
 | Claim | Number | Report |

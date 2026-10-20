@@ -131,7 +131,8 @@ _Fill in as they come to exist._
 - `uv run python -m agents.whatif --seed 3 "What if he passed to H4?"` — answer a what-if
   question by re-simulating with `force_action` (SPEC 3.7, 6)
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
-  `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached), `POST /api/whatif`, `POST /api/tts`
+  `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
+  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - Not yet: `uv run python -m eval.run_all`
