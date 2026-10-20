@@ -7,8 +7,9 @@ Per frame: pitch control between the two teams (analytics.pitch_control) as a tr
 surface, a ring under every tracked player, and, while the ball reaches the blue carrier, his
 pass options coloured by interception risk (analytics.tti) with distance rings. Graphics are
 drawn in pitch coordinates, projected with the frame's homography and keyed onto the turf.
-Everything outside the pitch is blurred and darkened, except the silhouettes of players standing
-on it; their heads and the prints on their shirts (a company logo on the red kit) are blurred.
+Everything outside the pitch is blurred, except the silhouettes of players standing on it and
+the white frame of the goal; the prints on the red kit (a company logo) are erased. Faces are not
+blurred (Bowen's decision, 2026-10-19).
 The clip holds a short freeze on the carrier's first touch so the options can be read.
 """
 
@@ -36,7 +37,13 @@ from demo.realfeed.overlay import (
 )
 from demo.realfeed.pipeline import assign_teams, camera, frames, tracks
 from demo.realfeed.players import Detection, Track
-from demo.realfeed.privacy import blur_boxes, blur_outside, polygon_mask
+from demo.realfeed.privacy import (
+    blur_outside,
+    erase_prints,
+    goal_frame_mask,
+    kit_print_mask,
+    polygon_mask,
+)
 from demo.realfeed.video import Writer
 
 VIDEO = OUT / "realfeed_overlay.mp4"
@@ -52,6 +59,9 @@ OPTIONS = (360, 412)  # frames showing his pass options
 FREEZE_FRAMES = 60  # 1.2 s hold on CARRIER_FRAME
 GOALKEEPER_TEAM = 0  # the orange keeper defends the goal blue attacks: he plays for red
 TEAM_COLOUR = {0: RED, 1: BLUE}
+# Off the pitch: blurred past reading any text, crest or face, yet still a football ground.
+BACKGROUND = {"factor": 10, "darken": 0.9, "desaturate": 0.2, "feather_px": 4}
+CONTROL_OPACITY = 0.24
 
 # The only text on the real footage (SPEC 7): what it is, and the CC BY attribution, on screen for
 # the whole segment. Graphics only otherwise: no numbers, captions or narration.
@@ -99,11 +109,11 @@ def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None
         )
         valid = ~np.isnan(p)
         p = np.nan_to_num(p, nan=0.5)
-        strength = np.abs(2 * p - 1) ** 0.9
+        strength = np.abs(2 * p - 1) ** 1.3
         colours = np.where(
             (p > 0.5)[..., None], np.array(RED, np.float32), np.array(BLUE, np.float32)
         )
-        layer.heat(colours, 0.42 * strength * valid)
+        layer.heat(colours, CONTROL_OPACITY * strength * valid)
     for q in players:
         layer.circle(q.pos, 0.55, TEAM_COLOUR[q.team], 0.10, opacity=0.95)
     if carrier is not None and fade > 0:
@@ -177,36 +187,6 @@ def player_silhouettes(dets: list[Detection], shape, grow_px: int = 3) -> np.nda
     return cv2.dilate(m, k).astype(bool)
 
 
-def head_boxes(dets: list[Detection], min_height_px: float = 90.0):
-    out = []
-    for d in dets:
-        x, y, w, h = d.bbox
-        if h >= min_height_px:
-            out.append((x + 0.15 * w, y - 0.03 * h, 0.7 * w, 0.2 * h))
-    return out
-
-
-def kit_mark_boxes(frame: np.ndarray, dets: list[Detection], min_height_px: float = 60.0):
-    """Boxes around white prints on shirts (the red kit carries a company logo; numbers too)."""
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    out = []
-    for d in dets:
-        x, y, w, h = d.bbox
-        if h < min_height_px:
-            continue
-        r0, r1 = int(0.12 * h), int(0.58 * h)
-        band = hsv[y + r0 : y + r1, x : x + w]
-        sil = d.mask()[r0:r1]
-        white = sil[: band.shape[0], : band.shape[1]] & (band[..., 1] < 70) & (band[..., 2] > 160)
-        if white.sum() < 8:
-            continue
-        ys, xs = np.nonzero(white)
-        bw, bh = xs.max() - xs.min() + 1, ys.max() - ys.min() + 1
-        mx, my = max(6, 0.3 * bw), max(6, 0.3 * bh)
-        out.append((x + xs.min() - mx, y + r0 + ys.min() - my, bw + 2 * mx, bh + 2 * my))
-    return out
-
-
 def hf_energy(img: np.ndarray, mask: np.ndarray) -> float:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
     lap = cv2.Laplacian(gray, cv2.CV_32F, ksize=3)
@@ -225,7 +205,6 @@ def render(preview: set[int] | None = None) -> dict:
     pitch = cam.calibration.pitch
     canvas = Canvas(pitch, ppm=40.0, margin=1.0)
     writer = None if preview else Writer(VIDEO, FPS, SIZE)
-    held: list[tuple[int, tuple]] = []
     checks = {"frames": 0, "hf_ratio_outside_max": 0.0, "overlay_off_grass_px": 0}
     for i, frame in enumerate(frames()):
         if i < START or (preview is not None and i not in preview):
@@ -240,27 +219,24 @@ def render(preview: set[int] | None = None) -> dict:
         pitch_area = polygon_mask(h, pitch.polygon(margin=0.35), frame.shape[:2])
         key = grass_mask(frame) & pitch_area
         # Players standing on the pitch rise above the far touchline in the image: their
-        # silhouettes stay sharp (heads are blurred below); everything else outside is blurred.
+        # silhouettes stay sharp, and so does the white goal frame; the rest outside is blurred.
         keep = pitch_area | player_silhouettes(dets[i], frame.shape[:2])
+        keep |= goal_frame_mask(frame, h, pitch.length / 2)
         out = composite(frame, bgr, alpha, key)
         changed = np.any(out != frame, axis=-1)
         checks["overlay_off_grass_px"] += int((changed & ~key).sum())
-        out = blur_outside(out, keep, darken=0.45)
-        # Heads of players on the pitch (detections held for a few frames against flicker).
-        marks = head_boxes(dets[i]) + kit_mark_boxes(frame, dets[i])
-        held = [(f, b) for f, b in held if i - f <= 6] + [(i, b) for b in marks]
-        # Pixelate heads and shirt prints only on the kept (sharp) pixels: outside them the
-        # frame is already blurred, and box edges there would add detail back.
-        pixelated = blur_boxes(out.copy(), [b for _, b in held])
-        out = np.where(keep[..., None], pixelated, out)
+        # Shirt prints first, from the source pixels, then the background.
+        out = erase_prints(out, kit_print_mask(frame, keep))
+        out = blur_outside(out, keep, **BACKGROUND)
         reps = FREEZE_FRAMES if i == CARRIER_FRAME else 1
         for r in range(reps):
             img = out.copy()
             hud_boxes = hud(img, freeze=reps > 1)
             if r == 0:
-                outside = cv2.erode((~keep).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(
-                    bool
-                )
+                grow = 2 * BACKGROUND["feather_px"] + 5  # skip the feathered rim
+                outside = cv2.erode(
+                    (~keep).astype(np.uint8), np.ones((grow, grow), np.uint8)
+                ).astype(bool)
                 for x, y, w, hh in hud_boxes:  # panels and their 1 px anti-aliased rim
                     x, y = max(0, int(x) - 3), max(0, int(y) - 3)
                     outside[y : y + int(hh) + 6, x : x + int(w) + 6] = False

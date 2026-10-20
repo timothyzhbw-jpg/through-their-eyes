@@ -15,10 +15,11 @@ even for calibration; model parameters come from published research
 
 The one exception is in the demo video only: a labelled segment of under 10 s that draws our
 ground graphics on real amateur futsal footage, to show that the overlays carry over to a real
-camera. Everything off the pitch, every face and the kit logos are blurred. The footage is never
-committed and the app never loads it. Source: savinkins, "Битва корпораций 2019-20. Атлант – Нова
-Пошта. Мини-футбол. Финал. 06.10.2019", Wikimedia Commons, CC BY 3.0; modified (graphics
-overlaid, background blurred). Method and limits: [demo/realfeed/README.md](demo/realfeed/README.md).
+camera. Everything off the pitch is blurred and the company logo on the kit is erased. The
+footage is never committed and the app never loads it. Source: savinkins, "Битва корпораций
+2019-20. Атлант – Нова Пошта. Мини-футбол. Финал. 06.10.2019", Wikimedia Commons, CC BY 3.0;
+modified (graphics overlaid, background blurred). Method and limits:
+[demo/realfeed/README.md](demo/realfeed/README.md).
 
 ## Layout
 ```
