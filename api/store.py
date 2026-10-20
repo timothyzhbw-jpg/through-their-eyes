@@ -12,6 +12,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import shutil
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
@@ -71,6 +72,15 @@ class MatchStore:
                 scenario, seed = self.known[mid]
                 self._loaded[mid] = await asyncio.to_thread(Match.load, scenario, seed, self.audit)
         return self._loaded[mid]
+
+
+def prune_dirs(root: Path, keep: int) -> None:
+    """Keep the `keep` most recently changed directories under `root`; delete the rest."""
+    if not root.is_dir():
+        return
+    dirs = sorted((d for d in root.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime)
+    for old in dirs[: max(0, len(dirs) - keep)]:
+        shutil.rmtree(old, ignore_errors=True)
 
 
 def content_key(**parts: Any) -> str:
