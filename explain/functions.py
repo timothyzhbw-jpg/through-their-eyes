@@ -2,7 +2,8 @@
 
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
 observed_share, cf_delta. Every function accepts `cf: <scan id>` to evaluate on the
-counterfactual run without that scan instead of the factual run.
+counterfactual run without that scan instead of the factual run, or `cf: force:<player>:<frame>:
+<action>` for the what-if run with that decision forced (SPEC 3.7).
 
 Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
 anchor "<card id>.<name>" (SPEC 5.1, e.g. "m:decision_after_scan:H8:0075.reception"), and offsets
@@ -32,7 +33,13 @@ from analytics.pressing import aggregate, frame_pressing
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from analytics.xt import xt_for
 from explain.cards import MomentCard
-from sim.counterfactual import CounterfactualResult, drop_scan_counterfactual
+from sim.counterfactual import (
+    WHAT_IF_PREFIX,
+    CounterfactualResult,
+    WhatIfResult,
+    drop_scan_counterfactual,
+    what_if_from_id,
+)
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
@@ -128,8 +135,19 @@ class EvalContext:
             raise Inconclusive(f"{anchor}{offset_s:+} s is after the recorded run")
         return f
 
-    def counterfactual(self, scan_ref: Any) -> CounterfactualResult:
-        """The run without one scan (an event id or a moment anchor such as `<card>.last_scan`)."""
+    def counterfactual(self, scan_ref: Any) -> CounterfactualResult | WhatIfResult:
+        """The run without one scan (an event id or a moment anchor such as `<card>.last_scan`),
+        or a what-if with one decision forced (`force:<player>:<frame>:<action>`, SPEC 3.7)."""
+        if isinstance(scan_ref, str) and scan_ref.startswith(WHAT_IF_PREFIX):
+            if scan_ref not in self.counterfactuals:
+                if not self.resimulate:
+                    raise Inconclusive(f"no what-if {scan_ref} was supplied")
+                try:
+                    result = what_if_from_id(self.run.scenario, self.run.seed, scan_ref)
+                except ValueError as e:
+                    raise Refuted(str(e)) from None
+                self.counterfactuals[scan_ref] = result
+            return self.counterfactuals[scan_ref]
         scan = self.event(self.run, scan_ref)
         if scan.type != "scan":
             raise Refuted(f"{scan.id} is not a scan; counterfactuals drop scans")
