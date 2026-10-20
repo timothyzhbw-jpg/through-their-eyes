@@ -72,9 +72,9 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --what-if web/public/data/whatif_seed3.json
 ```
 
-- `hero_seed3.json`: the replay (schema version 4, with blind-side alerts: integer mm and 1e-4
-  rad, origin at the centre spot, home attacks +x). `src/data/hero.ts` converts it once into typed
-  arrays in metres and radians.
+- `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
+  output: integer mm, 1e-4 rad and 1e-4 rad/s, origin at the centre spot, home attacks +x).
+  `src/data/hero.ts` converts it once into typed arrays in metres and radians.
 - `fixture_payload_seed3.json`: a **fixture** render payload (SPEC 5.3) for the same moment,
   marked `"fixture": true`. Its claim values are computed from the replay by
   `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
@@ -107,6 +107,7 @@ src/
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
   narration/  render payload schema (zod), checks against the moment, kind labels
+  telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
   views/      PovView and TacticalView (React Three Fiber), their toolbars and HUD
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls
@@ -170,6 +171,18 @@ src/
   `public/models/README.md`, SPEC 7): gait blended by sim speed with the playback rate
   matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
   turned so the head points along `head_yaw`, kits in the fictional clubs' colours.
+- **Perception telemetry** (SPEC 4.7, 7). Under the timeline, curves for the player in the
+  first-person view ("Whose eyes"), with a cursor on the playhead: head angle to the ball with
+  his scans from the sim (the key scan highlighted; without the look, a dashed box where it
+  was), head angular speed with the scan detector at work (its threshold, candidate onsets, the
+  onsets its excursion gate rejected, and the scans it accepted), players in his sight, and, for
+  the hero only, belief error on the runner (his ghost to the true position; "n/a" for anyone
+  else, as beliefs are recorded for the hero only). The speed row and the detector's marks are
+  `analytics/scan_detector.py` run by `sim.export` on the tracked head yaw (with sensor noise),
+  as `eval/scan_detector.py` runs it; the head-angle row uses the true head yaw the views draw,
+  so its readout matches the HUD. Live, the curves stop at the last frame the stream sent and a
+  scan appears once it has ended. Every value is marked `sim`: a computed metric, not a verified
+  claim. `telemetry/telemetry.ts` holds the logic and its tests.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 - **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
