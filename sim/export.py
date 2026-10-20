@@ -10,6 +10,15 @@ against "he thought", SPEC 5.1) and the believed and true positions of the recei
 block is in metres, like the decision model. Version 4 adds each run's blind-side alerts
 (SPEC 4.4) with how long each target has gone unseen.
 
+Without a new version, two additive variants of version 4:
+- a hero whose intervention is not a dropped scan (`press_escape`, SPEC 3.6) has `key_scan: null`
+  and `counterfactual: {"id": "cf1", "intervention": "force_action", "action": "carry"}`; its
+  counterfactual run is the hero forced to take that action. A scan hero's export is unchanged.
+- `export_match` writes a stitched match (SPEC 3.1): `kind: "match"`, the same `runs.factual`
+  tracking, events and blind-side alerts over the whole match clock (no ghosts or decision: those
+  belong to a hero export), plus a `match` block (possessions, restarts, score) and `moments`.
+    uv run python -m sim.export --match 1 --out out/match_seed1.json
+
 `render_payload_fixture` derives a SPEC 5.3 render payload for the hero moment from the export,
 so the viewer can be built before the verifier's payloads exist. It is marked as a fixture.
 
@@ -37,8 +46,9 @@ from explain.moments import blind_side_alerts
 from sim.config import DT
 from sim.counterfactual import possession_value
 from sim.engine import Simulation
-from sim.model import Decision
-from sim.overrides import DropScan
+from sim.match import Possession, StitchedMatch, build_match, global_id
+from sim.model import Decision, Event
+from sim.overrides import DropScan, ForceAction
 from sim.run import MatchRun, _plain
 
 VERSION = 4
@@ -206,16 +216,29 @@ def _vision_params() -> dict[str, int]:
 
 
 def export_hero(scenario: str, seed: int) -> dict[str, Any]:
-    key = Simulation.from_scenario(scenario, seed).run().key_scan()
+    probe = Simulation.from_scenario(scenario, seed)
+    intervention = probe.scenario.intervention or "drop_scan"
+    factual = probe.run()
+    if intervention == "drop_scan":
+        key = factual.key_scan()
+        at, override = key.frame, DropScan(key.id)
+        key_scan = {"id": key.id, "start": key.frame, "end": key.attrs["end"]}
+        counterfactual = {"id": "cf1", "intervention": "drop_scan", "scan": key.id}
+    else:  # "force:<action>": the hero takes that action at his decision (SPEC 3.7)
+        action = intervention.removeprefix("force:")
+        decision = factual.hero_decision()
+        at, override = decision.frame, ForceAction(decision.player, decision.frame, action)
+        key_scan = None
+        counterfactual = {"id": "cf1", "intervention": "force_action", "action": action}
     sim = Simulation.from_scenario(scenario, seed)
     hero = sim.index(sim.scenario.hero)
     trace = _Trace(hero)
-    while sim.frame < key.frame:
+    while sim.frame < at:
         trace.sample(sim)
         trace.step(sim)
     snap = sim.snapshot()
     runs = {}
-    for name, overrides in (("factual", []), ("counterfactual", [DropScan(key.id)])):
+    for name, overrides in (("factual", []), ("counterfactual", [override])):
         s, t = Simulation.resume(snap, overrides), trace.copy()
         while not s.done:
             t.sample(s)
@@ -233,12 +256,91 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
         "players": [
             {"id": p.id, "team": p.team, "role": p.role, "number": p.number} for p in sim.players
         ],
-        "key_scan": {"id": key.id, "start": key.frame, "end": key.attrs["end"]},
-        "counterfactual": {"id": "cf1", "intervention": "drop_scan", "scan": key.id},
+        "key_scan": key_scan,
+        "counterfactual": counterfactual,
         "vision": _vision_params(),
         "delta_xt": runs["factual"]["possession_value"]
         - runs["counterfactual"]["possession_value"],
         "runs": runs,
+    }
+
+
+def _match_event(e: Event, p: Possession) -> dict[str, Any]:
+    attrs = dict(e.attrs)
+    if isinstance(attrs.get("end"), int):  # pass, scan and head-turn ends are frames
+        attrs["end"] += p.start
+    lifted = {"id": global_id(e.id, p.start), "type": e.type, "frame": e.frame + p.start,
+              "player": e.player, "attrs": attrs, "possession": p.index}  # fmt: skip
+    return _plain(lifted)
+
+
+def export_match(
+    seed: int, match: StitchedMatch | None = None, moments: list[dict] | None = None
+) -> dict[str, Any]:
+    """A stitched match for the live stream (SPEC 2, 3.1): the hero export's run schema over the
+    whole match clock, its possessions, restarts and score, and its moments in match time."""
+    from explain.match import match_moments  # explain builds on sim; imported when used
+
+    m = match or build_match(seed)
+    cards = moments if moments is not None else match_moments(m)
+    pos, head, body, ball, owner, events, intervals, alerts = [], [], [], [], [], [], [], []
+    for p in m.possessions:
+        run = p.run
+        pos += _mm(run.pos)
+        head += _rad(run.head_yaw)
+        body += _rad(run.body_yaw)
+        ball += _mm(run.ball_pos[:, :2])
+        owner += run.owner.tolist()
+        events += [_match_event(e, p) for e in sorted(run.events, key=lambda e: (e.frame, e.id))]
+        bs = _blind_side(run)
+        intervals += [
+            {**a, "start": a["start"] + p.start, "end": a["end"] + p.start, "possession": p.index}
+            for a in bs["intervals"]
+        ]
+        alerts += bs["frames"]
+    hero_moments = {c["possession"]: c["id"] for c in cards if c["hero"]}
+    return {
+        "version": VERSION,
+        "kind": "match",
+        "scenario": "match",
+        "seed": seed,
+        "dt": DT,
+        "units": {"position": "mm", "angle": "1e-4 rad"},
+        "hero": None,
+        "players": [
+            {"id": p.id, "team": p.team, "role": p.role, "number": p.number} for p in m.players
+        ],
+        "match": {
+            "duration_s": round(m.duration_s, 2),
+            "score": {"home": m.score[0], "away": m.score[1]},
+            "possessions": [
+                {
+                    "index": p.index,
+                    "scenario": p.scenario,
+                    "seed": p.seed,
+                    "start": p.start,
+                    "frames": p.frames,
+                    "restart": p.restart,
+                    "score_before": {"home": p.score_before[0], "away": p.score_before[1]},
+                    "hero": p.run.hero,
+                    "hero_moment": hero_moments.get(p.index),
+                }
+                for p in m.possessions
+            ],
+        },
+        "runs": {
+            "factual": {
+                "frames": m.frames,
+                "pos": pos,
+                "head": head,
+                "body": body,
+                "ball": ball,
+                "owner": owner,
+                "events": events,
+                "blind_side": {"intervals": intervals, "frames": alerts},
+            }
+        },
+        "moments": cards,
     }
 
 
@@ -468,10 +570,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Export a hero moment for viewers.")
     parser.add_argument("--scenario", default="blind_side_run")
     parser.add_argument("--seed", type=int, default=3)
+    parser.add_argument("--match", type=int, help="export the stitched match with this seed")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--payload-fixture", type=Path, help="also write a render-payload fixture")
     parser.add_argument("--what-if", type=Path, help="also write every option's what-if answer")
     args = parser.parse_args()
+    if args.match is not None:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(hero_json(export_match(args.match)))
+        print(f"wrote {args.out} ({args.out.stat().st_size / 1024:.0f} KB)")
+        return
     data = export_hero(args.scenario, args.seed)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(hero_json(data))
