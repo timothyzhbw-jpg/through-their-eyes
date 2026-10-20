@@ -21,6 +21,13 @@ export const teamColor = (team: number) => (team === 0 ? COLORS.home : COLORS.aw
 
 // Pitch (x, y) in metres maps to three.js (x, height, -y): y is up and the pitch lies in XZ.
 export const PITCH = { length: 105, width: 68, halfLength: 52.5, halfWidth: 34 };
+/** What the tactical board shows: the pitch plus a 3 m apron, centred on the centre spot. */
+export const BOARD_EXTENT = { x: 111, y: 74 };
+
+/** CSS pixels per metre on a tactical board of this size (the orthographic camera's zoom). */
+export function boardZoom(width: number, height: number): number {
+  return Math.max(1e-3, Math.min(width / BOARD_EXTENT.x, height / BOARD_EXTENT.y));
+}
 
 /** Pitch markings drawn once into a canvas texture (20 px per metre). */
 let pitchTexture: THREE.CanvasTexture | null = null;

@@ -18,7 +18,7 @@ import type { Script } from "./plan/schema";
 import { resolvePlan, type ResolvedPlan } from "./plan/validate";
 import { advance, createPlayback, type Focus, type PlaybackStore } from "./store/playback";
 
-export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort";
+export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options";
 
 export interface Session {
   hero: Hero;

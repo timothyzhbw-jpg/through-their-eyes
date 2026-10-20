@@ -28,7 +28,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --payload-fixture web/public/data/fixture_payload_seed3.json
 ```
 
-- `hero_seed3.json`: the replay (schema version 2: integer mm and 1e-4 rad, origin at the centre
+- `hero_seed3.json`: the replay (schema version 3: integer mm and 1e-4 rad, origin at the centre
   spot, home attacks +x). `src/data/hero.ts` converts it once into typed arrays in metres and
   radians.
 - `fixture_payload_seed3.json`: a **fixture** render payload (SPEC 5.3) for the same moment,
@@ -82,6 +82,16 @@ src/
   label "Counterfactual · inside the sim": they are causal only inside the simulation. The payload
   is checked like a plan (references resolve, evidence events exist, seek frames are in the clip);
   a line with an unsupported claim is withheld.
+- **Pass options at the decision** (SPEC 5.1, 7). From two frames before the hero's decision
+  until the pass is on its way, the tactical board draws a line from him to the believed target
+  of each of his top six options (plus the chosen one and the runner's): width = the chance he
+  picked it, colour = its value (one scale for both runs), the chosen one haloed, carry and shot
+  as rings. A dashed line goes to where the same option was on the true state. Hover (or tap)
+  shows the option with "he thought" and "it was"; at a freeze the chosen pass (with the look)
+  or the runner's option (without it) gets a "he thought / it was" tag. Those numbers come from
+  the `pass_success` / `cf_pass_success` claims; other options' numbers are marked `sim`
+  (from the export, not verified). The layer has a toggle and needs no plan step.
+  `options/passOptions.ts` holds the logic and its tests.
 - **Body and head yaw on every player.** In first person a token is a capsule body turned to
   `body_yaw` with a head on top turned to `head_yaw` (relative to the body, never clamped); a white
   visor marks the front of the head, so a look over the shoulder is visible on anyone in view. On

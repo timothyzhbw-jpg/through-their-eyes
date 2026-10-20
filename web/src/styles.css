@@ -886,3 +886,114 @@ header {
     transition: none;
   }
 }
+
+/* ---------- pass options on the tactical board (SPEC 7) ---------- */
+.options-overlay {
+  position: absolute;
+  inset: 0;
+}
+.thought-tag {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 16px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: rgba(11, 18, 16, 0.9);
+  border: 1px solid var(--sight);
+  font: 500 13px/1.2 var(--font-body);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.thought-tag.kind-counterfactual {
+  border-color: var(--gold);
+}
+.thought-tag b {
+  font: 600 13px/1 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.option-card {
+  position: absolute;
+  width: 262px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(11, 18, 16, 0.94);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 2;
+}
+.option-title {
+  font: 600 14px/1.3 var(--font-body);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.option-title .chosen {
+  font: 600 10px/1 var(--font-data);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bg);
+  background: var(--fg);
+  border-radius: 3px;
+  padding: 3px 5px;
+}
+.option-card dl {
+  margin: 0;
+  display: grid;
+  gap: 3px;
+}
+.option-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.option-card dt {
+  color: var(--muted);
+}
+.option-card dd {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.option-card .source {
+  width: 26px;
+  text-align: center;
+  font: 500 10px/1 var(--font-data);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  padding: 2px 0;
+}
+.option-card .source.verified {
+  color: var(--sight);
+  border: 1px solid var(--sight);
+}
+.option-source {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.option-source code {
+  font: 500 11px/1 var(--font-data);
+}
+.options-legend {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  right: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
