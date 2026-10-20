@@ -18,20 +18,26 @@ D_MAX = 5.0  # m/s^2
 @dataclass(frozen=True)
 class Role:
     v_max: float  # m/s
-    scan_rate: float  # spontaneous scans per second, before context factors
+    # Spontaneous scans per second while the head is free (no scan, partial scan or refractory
+    # under way) and no opponent is within 10 m. Measured rates are about half of it.
+    scan_rate: float
     temperature: float  # softmax temperature of the decision model
 
 
-# Centre midfielders and centre-backs scan most, forwards least (Jordet et al.).
+# Scan rates are fitted on possession_play tuning seeds 0-99 by eval/scan_calibration.py: about
+# 3 scans in the 10 s before receiving (SPEC 3.4), and per-group means placed by a weighted
+# least-squares fit of the effect sizes Jordet et al. (2020) print in Figure 2 — central
+# midfielders highest, then central defenders, wingers, side defenders, forwards. The paper has
+# one central-midfielder group, so DM, CM and AM share a rate. Goalkeepers are not in its sample.
 ROLES = {
     "GK": Role(7.0, 0.15, 0.010),
-    "CB": Role(8.0, 0.40, 0.010),
-    "FB": Role(9.0, 0.30, 0.010),
-    "DM": Role(8.3, 0.42, 0.009),
-    "CM": Role(8.5, 0.45, 0.008),
-    "AM": Role(8.7, 0.35, 0.009),
-    "W": Role(9.5, 0.25, 0.010),
-    "ST": Role(9.3, 0.22, 0.010),
+    "CB": Role(8.0, 0.71, 0.010),
+    "FB": Role(9.0, 0.56, 0.010),
+    "DM": Role(8.3, 1.00, 0.009),
+    "CM": Role(8.5, 1.00, 0.008),
+    "AM": Role(8.7, 1.00, 0.009),
+    "W": Role(9.5, 0.68, 0.010),
+    "ST": Role(9.3, 0.62, 0.010),
 }
 
 
