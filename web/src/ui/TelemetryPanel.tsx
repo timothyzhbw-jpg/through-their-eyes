@@ -1,20 +1,25 @@
 // Perception telemetry for the player in the first-person view ("Whose eyes"), synced to the
 // playhead: head angle to the ball, head angular speed with the scan detector at work, players in
-// sight, and the hero's belief error. Sparklines are SVG in viewBox units stretched to the row's
-// width; strokes keep their pixel width (non-scaling-stroke). The logic is in telemetry/.
+// sight, and the hero's belief error. As in motorsport telemetry, the other run is overlaid
+// (dashed) on one time axis, and the moment's key points mark every sparkline. Sparklines are SVG
+// in viewBox units stretched to the row's width; strokes keep their pixel width
+// (non-scaling-stroke). The logic is in telemetry/.
 
 import { useMemo, type ReactNode } from "react";
 import { Sample } from "../data/hero";
+import type { RunName } from "../data/types";
 import { useSession } from "../session";
 import { createStore, useStore } from "../store/store";
 import {
   frameX,
+  keyPoints,
   linePath,
   readout,
   ROW_H,
   telemetry,
   valueY,
   VIEW_W,
+  type KeyPoints,
   type Telemetry,
 } from "../telemetry/telemetry";
 
@@ -22,6 +27,10 @@ const NO_FEED = createStore({ latest: -1 }); // offline: there is no stream to w
 const THIN = { vectorEffect: "non-scaling-stroke" } as const;
 
 const SIM_NOTE = "Computed from the sim export: a metric, not a verified claim";
+const RUN_LABEL: Record<RunName, string> = {
+  factual: "with the look",
+  counterfactual: "without the look",
+};
 const DETECTOR_NOTE =
   "Computed by the scan detector from tracked head yaw: a metric, not a verified claim";
 
@@ -34,13 +43,28 @@ export function TelemetryPanel() {
   const live = useStore(playback, (s) => s.live);
   const latest = useStore(feed?.state ?? NO_FEED, (s) => s.latest);
   const run = hero.runs[mode];
+  const otherName: RunName = mode === "factual" ? "counterfactual" : "factual";
   const known = live ? Math.min(latest, run.frames - 1) : run.frames - 1;
   const t = useMemo(() => telemetry(hero, run, povPlayer, known), [hero, run, povPlayer, known]);
+  // Live, the stream sends one run: no overlay.
+  const o = useMemo(
+    () => (live ? null : telemetry(hero, hero.runs[otherName], povPlayer)),
+    [hero, otherName, povPlayer, live],
+  );
+  const kp = useMemo(() => keyPoints(hero, run, known), [hero, run, known]);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const now = readout(hero, run, t, frame, comfort, sample);
   const player = hero.players[t.player];
-  const cursor = frameX(t.frames, frame);
+  const cursor = frameX(t.axis, Math.min(frame, run.frames - 1));
+  const guides = [
+    ...new Set([
+      ...(kp.scan ? [kp.scan.start, kp.scan.end] : []),
+      ...kp.points.map((p) => p.frame),
+    ]),
+  ];
   const threshold = t.thresholdDeg.toFixed(0);
+  const beliefMax = Math.max(t.max.belief, o?.max.belief ?? 0); // one scale for both runs
+  const row = { cursor, guides, axis: t.axis };
 
   return (
     <section className="telemetry" aria-label="Perception telemetry" data-player={player.id}>
@@ -54,19 +78,31 @@ export function TelemetryPanel() {
         </p>
       </header>
 
+      <Axis hero={hero.heroId} kp={kp} axis={t.axis} />
+
       <Row
         name="head"
         label="Head to ball"
         value={`${now.headToBall.toFixed(0)}°`}
         detail="0–180° · sim scans"
         note={SIM_NOTE}
-        cursor={cursor}
+        {...row}
       >
         <Spans t={t} />
+        {o && (
+          <path
+            data-series="head-other"
+            data-run={otherName}
+            d={linePath(o.headToBall, o.axis, 180, o.known)}
+            className={`curve other run-${otherName}`}
+            style={THIN}
+          />
+        )}
         <path
           data-series="head"
-          d={linePath(t.headToBall, t.frames, 180, t.known)}
-          className="curve"
+          data-run={mode}
+          d={linePath(t.headToBall, t.axis, 180, t.known)}
+          className={`curve run-${mode}`}
           style={THIN}
         />
       </Row>
@@ -77,12 +113,12 @@ export function TelemetryPanel() {
         value={`${now.headSpeed.toFixed(0)}°/s`}
         detail={`detector · threshold ${threshold}°/s`}
         note={DETECTOR_NOTE}
-        cursor={cursor}
+        {...row}
       >
         <Detector t={t} />
         <path
           data-series="speed"
-          d={linePath(t.headSpeed, t.frames, t.max.speed, t.known - 1)}
+          d={linePath(t.headSpeed, t.axis, t.max.speed, t.known - 1)}
           className="curve"
           style={THIN}
         />
@@ -94,12 +130,12 @@ export function TelemetryPanel() {
         value={String(now.inSight)}
         detail="players he can see"
         note={SIM_NOTE}
-        cursor={cursor}
+        {...row}
       >
         <path
           data-series="sight"
-          d={linePath(t.inSight, t.frames, t.max.inSight, t.known)}
-          className="curve sight"
+          d={linePath(t.inSight, t.axis, t.max.inSight, t.known)}
+          className="curve"
           style={THIN}
         />
       </Row>
@@ -114,19 +150,37 @@ export function TelemetryPanel() {
             : `beliefs are recorded for ${hero.heroId} only`
         }
         note={SIM_NOTE}
-        cursor={cursor}
+        {...row}
       >
+        {o?.belief && (
+          <path
+            data-series="belief-other"
+            data-run={otherName}
+            d={linePath(o.belief.error, o.axis, beliefMax, o.known)}
+            className={`curve other run-${otherName}`}
+            style={THIN}
+          />
+        )}
         {t.belief && (
           <path
             data-series="belief"
-            d={linePath(t.belief.error, t.frames, t.max.belief, t.known)}
-            className="curve belief"
+            data-run={mode}
+            d={linePath(t.belief.error, t.axis, beliefMax, t.known)}
+            className={`curve run-${mode}`}
             style={THIN}
           />
         )}
       </Row>
 
       <ul className="tlegend" aria-label="Legend">
+        <li>
+          <i className={`sw line run-${mode}`} /> {RUN_LABEL[mode]}
+        </li>
+        {o && (
+          <li>
+            <i className={`sw line other run-${otherName}`} /> {RUN_LABEL[otherName]}
+          </li>
+        )}
         <li>
           <i className="sw key" /> key scan
         </li>
@@ -147,6 +201,43 @@ export function TelemetryPanel() {
   );
 }
 
+/** The moment's key points above the sparklines, on the same time axis. */
+function Axis({ hero, kp, axis }: { hero: string; kp: KeyPoints; axis: number }) {
+  const pct = (f: number) => `${(frameX(axis, f) / VIEW_W) * 100}%`;
+  return (
+    <div className="trow" data-row="axis">
+      <div className="tlabel">
+        <span className="tname">Key points</span>
+      </div>
+      <div className="taxis">
+        {kp.scan && (
+          <span
+            className={kp.scan.dropped ? "tbracket dropped" : "tbracket"}
+            style={{
+              left: pct(kp.scan.start),
+              width: `calc(${pct(kp.scan.end)} - ${pct(kp.scan.start)})`,
+            }}
+          >
+            <span>
+              {hero} key scan{kp.scan.dropped ? " · dropped" : ""}
+            </span>
+          </span>
+        )}
+        {kp.points.map((p) => (
+          <span
+            key={p.frame}
+            data-key-point={p.frame}
+            className={`tpoint ${p.align}`}
+            style={{ left: pct(p.frame) }}
+          >
+            {p.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Row(props: {
   name: string;
   label: string;
@@ -154,6 +245,8 @@ function Row(props: {
   detail: string;
   note: string;
   cursor: number;
+  guides: number[];
+  axis: number;
   children: ReactNode;
 }) {
   return (
@@ -174,6 +267,18 @@ function Row(props: {
         preserveAspectRatio="none"
         aria-hidden="true"
       >
+        {props.guides.map((f) => (
+          <line
+            key={f}
+            data-guide={f}
+            x1={frameX(props.axis, f)}
+            x2={frameX(props.axis, f)}
+            y1={0}
+            y2={ROW_H}
+            className="guide"
+            style={THIN}
+          />
+        ))}
         {props.children}
         <line
           data-cursor="playhead"
@@ -191,7 +296,7 @@ function Row(props: {
 
 /** The sim's scans of this player (ground truth), the key scan highlighted. */
 function Spans({ t }: { t: Telemetry }) {
-  const X = (f: number) => frameX(t.frames, f);
+  const X = (f: number) => frameX(t.axis, f);
   return (
     <>
       {t.scans.map((s) => (
@@ -222,7 +327,7 @@ function Spans({ t }: { t: Telemetry }) {
 
 /** The detector at work: its threshold, accepted scans and candidate onsets. */
 function Detector({ t }: { t: Telemetry }) {
-  const X = (f: number) => frameX(t.frames, f);
+  const X = (f: number) => frameX(t.axis, f);
   const thresholdY = valueY(t.thresholdDeg, t.max.speed);
   return (
     <>

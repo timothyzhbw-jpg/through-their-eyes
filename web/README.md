@@ -177,11 +177,15 @@ src/
   was), head angular speed with the scan detector at work (its threshold, candidate onsets, the
   onsets its excursion gate rejected, and the scans it accepted), players in his sight, and, for
   the hero only, belief error on the runner (his ghost to the true position; "n/a" for anyone
-  else, as beliefs are recorded for the hero only). The speed row and the detector's marks are
+  else, as beliefs are recorded for the hero only). As in motorsport telemetry, the other run is
+  overlaid dashed on the head-angle and belief rows (with the look cyan, without it gold, as
+  elsewhere), both runs on one time axis so the curves coincide until the key scan and split
+  there; a key-points row marks the key scan, the ball reaching the hero, and his decision and
+  pass, with guides through every row. The speed row and the detector's marks are
   `analytics/scan_detector.py` run by `sim.export` on the tracked head yaw (with sensor noise),
   as `eval/scan_detector.py` runs it; the head-angle row uses the true head yaw the views draw,
-  so its readout matches the HUD. Live, the curves stop at the last frame the stream sent and a
-  scan appears once it has ended. Every value is marked `sim`: a computed metric, not a verified
+  so its readout matches the HUD. Live, the curves and key points stop at the last frame the
+  stream sent, a scan appears once it has ended, and there is no overlay (the stream is one run). Every value is marked `sim`: a computed metric, not a verified
   claim. `telemetry/telemetry.ts` holds the logic and its tests.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.

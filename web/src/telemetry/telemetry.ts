@@ -34,6 +34,7 @@ export interface Telemetry {
   player: number;
   playerId: string;
   frames: number;
+  axis: number; // frames on the time axis: the longer run, so both runs share one axis
   known: number; // last frame on screen; live: the last frame the stream sent
   headToBall: Float32Array; // deg in [0, 180] per frame, as the HUD shows it
   headSpeed: Float32Array; // deg/s per frame interval t -> t + 1 (frames - 1), the detector's |omega|
@@ -105,6 +106,7 @@ export function telemetry(hero: Hero, run: Run, playerId: string, known = run.fr
     player: j,
     playerId,
     frames,
+    axis: timeAxis(hero),
     known: last,
     headToBall,
     headSpeed,
@@ -121,6 +123,68 @@ export function telemetry(hero: Hero, run: Run, playerId: string, known = run.fr
       belief: belief ? Math.max(2, Math.ceil(peak(belief.error, frames - 1))) : 1,
     },
   } satisfies Telemetry;
+}
+
+/** Frames on the shared time axis: both runs on one axis, so overlaid curves line up. */
+export function timeAxis(hero: Hero): number {
+  return Math.max(hero.runs.factual.frames, hero.runs.counterfactual.frames);
+}
+
+export interface KeyPoint {
+  frame: number;
+  label: string;
+  align: "start" | "end"; // the label starts at its line, or ends there (a later point is close)
+}
+
+export interface KeyPoints {
+  scan: { start: number; end: number; dropped: boolean } | null; // the hero's key scan
+  points: KeyPoint[]; // the ball reaching the hero, his decision, his pass; same frames merged
+}
+
+const CLOSE = 0.12; // labels closer than this share of the axis would overlap
+
+/**
+ * The moment's key points on the time axis, shared by every sparkline: the hero's key scan
+ * (dropped in the run without the look), the ball reaching him, his decision and his pass.
+ * Up to frame `known`, like the curves.
+ */
+export function keyPoints(hero: Hero, run: Run, known = run.frames - 1): KeyPoints {
+  const key = hero.keyScan;
+  const scan =
+    key.end <= known
+      ? { start: key.start, end: key.end, dropped: run.name === "counterfactual" }
+      : null;
+  const arrival = run.events.find((e) => e.type === "reception" && e.player === hero.heroId);
+  const pass = run.events.find(
+    (e) => e.type === "pass" && e.player === hero.heroId && e.frame >= (arrival?.frame ?? 0),
+  );
+  const marks: [number | undefined, string][] = [
+    [arrival?.frame, `Ball at ${hero.heroId}`],
+    [run.decision?.frame, "Decision"],
+    [pass?.frame, "Pass"],
+  ];
+  const byFrame = new Map<number, string[]>();
+  for (const [frame, label] of marks) {
+    if (frame === undefined || frame > known) continue;
+    byFrame.set(frame, [...(byFrame.get(frame) ?? []), label]);
+  }
+  const frames = [...byFrame.keys()].sort((a, b) => a - b);
+  const close = CLOSE * timeAxis(hero);
+  const lower = (l: string) => l.charAt(0).toLowerCase() + l.slice(1);
+  const labels = frames.map((f) =>
+    byFrame
+      .get(f)!
+      .map((l, i) => (i ? lower(l) : l))
+      .join(" · "),
+  );
+  return {
+    scan,
+    points: frames.map((frame, k) => ({
+      frame,
+      label: labels[k],
+      align: k + 1 < frames.length && frames[k + 1] - frame < close ? "end" : "start",
+    })),
+  };
 }
 
 /** Distance from the belief ghost to the true position, m; target -1: mean over the others. */
@@ -180,9 +244,9 @@ export function readout(
 
 // ---------- drawing (viewBox units: x in [0, VIEW_W], y in [0, ROW_H]) ----------
 
-/** x of a (fractional) frame: the playhead cursor and every mark use it. */
-export function frameX(frames: number, f: number): number {
-  const last = Math.max(1, frames - 1);
+/** x of a (fractional) frame on an axis of `axis` frames: the cursor and every mark use it. */
+export function frameX(axis: number, f: number): number {
+  const last = Math.max(1, axis - 1);
   return (Math.max(0, Math.min(last, f)) / last) * VIEW_W;
 }
 
@@ -191,12 +255,12 @@ export function valueY(v: number, max: number): number {
   return ROW_H - PAD - k * (ROW_H - 2 * PAD);
 }
 
-/** SVG path of `values[k]` at frame k, for k up to `upTo`. */
-export function linePath(values: ArrayLike<number>, frames: number, max: number, upTo: number) {
+/** SVG path of `values[k]` at frame k on an axis of `axis` frames, for k up to `upTo`. */
+export function linePath(values: ArrayLike<number>, axis: number, max: number, upTo: number) {
   const parts: string[] = [];
   const last = Math.min(values.length - 1, upTo);
   for (let k = 0; k <= last; k++) {
-    const x = frameX(frames, k).toFixed(1);
+    const x = frameX(axis, k).toFixed(1);
     const y = valueY(values[k], max).toFixed(1);
     parts.push(`${k === 0 ? "M" : "L"}${x} ${y}`);
   }

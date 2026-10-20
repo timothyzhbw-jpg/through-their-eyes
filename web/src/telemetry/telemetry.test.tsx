@@ -11,11 +11,13 @@ import { createSession, type Session } from "../session";
 import { API, exportJson, fakeFetch, fakeSockets, render } from "../testing";
 import { TelemetryPanel } from "../ui/TelemetryPanel";
 import { PovOverlay } from "../views/PovOverlay";
-import { DEG, frameX, telemetry } from "./telemetry";
+import { DEG, frameX, keyPoints, telemetry } from "./telemetry";
 
 const hero = parseHero(raw);
 const key = hero.keyScan;
 const ROWS = ["head", "speed", "sight", "belief"];
+// One time axis for both runs, so the two curves line up when overlaid (and on switching runs).
+const AXIS = Math.max(hero.runs.factual.frames, hero.runs.counterfactual.frames);
 
 const offline = () => createSession(hero, EXAMPLE_PLAN, payloadJson);
 
@@ -42,16 +44,22 @@ describe("the cursor follows the playhead", () => {
     for (const f of [0, key.start, key.start + 7.5, frames - 1]) {
       const xs = cursors(at(s, { frame: f }));
       expect(xs).toHaveLength(ROWS.length);
-      for (const x of xs) expect(x).toBeCloseTo(frameX(frames, f), 6);
+      for (const x of xs) expect(x).toBeCloseTo(frameX(AXIS, f), 6);
     }
   });
 
-  it("uses the run on screen: without the look the run is shorter", () => {
+  it("keeps one time axis for both runs, though the run without the look is shorter", () => {
     const s = offline();
-    const cf = hero.runs.counterfactual.frames;
-    expect(cf).not.toBe(hero.runs.factual.frames);
-    const xs = cursors(at(s, { mode: "counterfactual", frame: 100 }));
-    for (const x of xs) expect(x).toBeCloseTo(frameX(cf, 100), 6);
+    expect(hero.runs.counterfactual.frames).toBeLessThan(AXIS);
+    const factual = cursors(at(s, { frame: 100 }));
+    const cf = cursors(at(s, { mode: "counterfactual", frame: 100 }));
+    expect(cf).toEqual(factual);
+    for (const x of cf) expect(x).toBeCloseTo(frameX(AXIS, 100), 6);
+    const last = hero.runs.counterfactual.frames - 1;
+    expect(cursors(at(s, { mode: "counterfactual", frame: last + 5 }))[0]).toBeCloseTo(
+      frameX(AXIS, last),
+      6,
+    );
   });
 
   it("reads out the HUD's head angle and players in sight at the playhead", () => {
@@ -169,6 +177,109 @@ describe("belief error is the hero's only", () => {
     }
     expect(html).not.toContain("source verified");
     expect(html).not.toContain("✓");
+  });
+});
+
+const points = (d: string | null) =>
+  (d ?? "")
+    .split(/[ML]/)
+    .filter(Boolean)
+    .map((p) => p.trim().split(" ").map(Number));
+
+describe("the other run, overlaid", () => {
+  it("draws the run without the look under the run with it, coinciding until the key scan", () => {
+    const html = at(offline(), { frame: key.start });
+    const other = tags(row(html, "head"), "data-series").find(
+      (t) => attr(t, "data-series") === "head-other",
+    )!;
+    expect(attr(other, "data-run")).toBe("counterfactual");
+    const mine = points(series(html, "head"));
+    const theirs = points(series(html, "head-other"));
+    expect(mine).toHaveLength(hero.runs.factual.frames);
+    expect(theirs).toHaveLength(hero.runs.counterfactual.frames);
+    for (let f = 0; f <= key.start; f++) expect(theirs[f]).toEqual(mine[f]);
+    const apart = (f: number) => Math.abs(theirs[f][1] - mine[f][1]);
+    expect(
+      Math.max(...[...Array(key.end - key.start)].map((_, k) => apart(key.start + 1 + k))),
+    ).toBeGreaterThan(10);
+  });
+
+  it("overlays the run with the look when the run without it is on screen", () => {
+    const html = at(offline(), { mode: "counterfactual", frame: key.start });
+    const other = tags(html, "data-series").find((t) => attr(t, "data-series") === "head-other")!;
+    expect(attr(other, "data-run")).toBe("factual");
+    // The whole run with the look, past the end of the shorter one: one axis for both.
+    expect(points(series(html, "head-other"))).toHaveLength(hero.runs.factual.frames);
+  });
+
+  it("overlays the hero's belief error too: it drops after the look, stays high without it", () => {
+    const html = at(offline(), { frame: key.start });
+    const f = hero.runs.factual.decision!.frame;
+    const y = (name: string) => points(series(html, name))[f][1];
+    expect(y("belief-other")).toBeLessThan(y("belief")); // larger error is higher up (smaller y)
+    const s = offline();
+    s.controls.setPovPlayer("H9");
+    expect(series(render(s, <TelemetryPanel />), "belief-other")).toBeNull();
+  });
+
+  it("is not drawn live: the stream sends one run", () => {
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null, {
+      api: createApi(API, "blind_side_run-3", fakeFetch({})),
+      socket: fakeSockets(),
+    });
+    session.feed!.state.set({ latest: 100 });
+    const html = at(session, { live: true, frame: 100 });
+    expect(series(html, "head-other")).toBeNull();
+    expect(series(html, "belief-other")).toBeNull();
+  });
+});
+
+describe("key points on the shared time axis", () => {
+  it("marks the key scan, the ball reaching the hero, and his decision and pass", () => {
+    const kp = keyPoints(hero, hero.runs.factual);
+    expect(kp.scan).toEqual({ start: key.start, end: key.end, dropped: false });
+    const arrival = hero.reception;
+    const decision = hero.runs.factual.decision!.frame;
+    expect(hero.runs.factual.action!.frame).toBe(decision); // the pass leaves as he decides
+    expect(kp.points.map((p) => [p.frame, p.label])).toEqual([
+      [arrival, `Ball at ${hero.heroId}`],
+      [decision, "Decision · pass"],
+    ]);
+    // Close together: the first label sits left of its line, the second right of its own.
+    expect(kp.points.map((p) => p.align)).toEqual(["end", "start"]);
+  });
+
+  it("draws them above the curves and as guides through every sparkline", () => {
+    const html = at(offline(), { frame: key.start });
+    const axis = row(html, "axis");
+    const marks = tags(axis, "data-key-point").map((t) => Number(attr(t, "data-key-point")));
+    expect(marks).toEqual([hero.reception, hero.runs.factual.decision!.frame]);
+    expect(axis).toContain(`${hero.heroId} key scan`);
+    const frames = [key.start, key.end, hero.reception, hero.runs.factual.decision!.frame];
+    for (const name of ROWS) {
+      const guides = tags(row(html, name), "data-guide").map((t) => Number(attr(t, "data-guide")));
+      expect([...new Set(guides)].sort((a, b) => a - b)).toEqual(
+        [...new Set(frames)].sort((a, b) => a - b),
+      );
+      for (const t of tags(row(html, name), "data-guide")) {
+        expect(Number(attr(t, "x1"))).toBeCloseTo(frameX(AXIS, Number(attr(t, "data-guide"))), 6);
+      }
+    }
+  });
+
+  it("without the look, marks the dropped key scan", () => {
+    const kp = keyPoints(hero, hero.runs.counterfactual);
+    expect(kp.scan).toEqual({ start: key.start, end: key.end, dropped: true });
+    expect(row(at(offline(), { mode: "counterfactual", frame: 10 }), "axis")).toContain("dropped");
+  });
+
+  it("live, shows only what has happened by the last frame sent", () => {
+    const early = keyPoints(hero, hero.runs.factual, key.start + 5);
+    expect(early.scan).toBeNull();
+    expect(early.points).toEqual([]);
+    const later = keyPoints(hero, hero.runs.factual, hero.reception);
+    expect(later.scan).not.toBeNull();
+    expect(later.points.map((p) => p.frame)).toEqual([hero.reception]);
   });
 });
 
