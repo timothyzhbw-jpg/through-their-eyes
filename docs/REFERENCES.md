@@ -162,6 +162,7 @@ code is copied (CLAUDE.md rule 1).
 | azure-cosmos | MIT | **use** (Cosmos DB store for the result cache and the claims audit, SPEC §8) |
 | opentelemetry-api | Apache-2.0 | **use** (tracing spans for the agent crew, SPEC §8); `opentelemetry-sdk` (Apache-2.0) comes with azure-monitor-opentelemetry and backs the in-memory exporter in tests |
 | azure-monitor-opentelemetry | MIT | **use** (exports the spans to Application Insights, SPEC §8); pulls OpenTelemetry instrumentations (Apache-2.0) and asgiref, oauthlib, psutil (BSD-3), wrapt (BSD-2), msrest (MIT), requests-oauthlib (ISC) |
+| azure-ai-evaluation | MIT | **use, `eval/narration_ablation.py` only** (own dependency group `eval`): `GroundednessEvaluator` scores free-text vs anchored narration against the claims, judged by our Foundry deployment (SPEC §6). Pulls pandas, jinja2, markupsafe, joblib, cloudpickle (BSD-3), nltk, tzdata (Apache-2.0), python-dateutil (Apache-2.0/BSD), pytz, ruamel.yaml, six (MIT), tqdm (MPL-2.0 and MIT, unmodified), defusedxml (PSF-2.0, like typing-extensions already in the main dependencies) |
 | pytest, ruff | MIT | **use** (dev only) |
 | three.js, @react-three/fiber, @react-three/drei | MIT | **use** |
 | socceraction | MIT | **not used** — xT is our own value iteration (~100 lines); socceraction is no longer developed (1.5.3 supports Python < 3.13) |

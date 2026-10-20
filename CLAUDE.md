@@ -114,6 +114,10 @@ _Fill in as they come to exist._
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
+- `uv run --group eval --env-file .env python -m eval.narration_ablation --seeds 3,100-103`
+  — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
+  Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
+  `out/narration_ablation/`. Writes `eval/reports/narration_ablation.md`
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
