@@ -1,5 +1,6 @@
 // First-person view: the camera sits in the chosen player's head (1.72 m) and turns with his head
-// yaw; 95 degrees of horizontal field of view (SPEC 7). Players are capsules with shirt numbers.
+// yaw; 95 degrees of horizontal field of view (SPEC 7). Players are capsule bodies turned to their
+// body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
@@ -16,11 +17,14 @@ import {
   useRedrawOn,
 } from "./scene";
 import { PovOverlay, PovToolbar } from "./PovOverlay";
+import { poseToken, VISOR_COLOR } from "./tokens";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
 const LOOK_AHEAD = 10; // m: the camera looks at a point this far ahead, 1.3 m high
-const BODY_CENTRE = 0.88; // capsule centre height
+const BODY_CENTRE = 0.755; // capsule centre height (body 1.51 m tall)
+const HEAD_CENTRE = 1.66; // head sphere centre height
+const HEAD_RADIUS = 0.14;
 
 export function PovView() {
   return (
@@ -43,7 +47,19 @@ export function PovView() {
   );
 }
 
-const capsule = new THREE.CapsuleGeometry(0.3, 1.15, 6, 14);
+const capsule = new THREE.CapsuleGeometry(0.28, 0.95, 6, 14);
+const headGeometry = new THREE.SphereGeometry(HEAD_RADIUS, 20, 14);
+// A band round the front of the head, centred on its local +x (cylinder angle pi/2), +-55 degrees.
+const visorGeometry = new THREE.CylinderGeometry(
+  HEAD_RADIUS + 0.008,
+  HEAD_RADIUS + 0.008,
+  0.075,
+  20,
+  1,
+  true,
+  Math.PI / 2 - 0.96,
+  1.92,
+);
 
 function PovScene() {
   const { hero, playback } = useSession();
@@ -52,7 +68,8 @@ function PovScene() {
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
-  const bodies = useRef<(THREE.Mesh | null)[]>([]);
+  const bodies = useRef<(THREE.Group | null)[]>([]);
+  const heads = useRef<(THREE.Group | null)[]>([]);
   const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
 
@@ -69,6 +86,7 @@ function PovScene() {
       teams: [0, 1].map(
         (t) => new THREE.MeshStandardMaterial({ color: teamColor(t), roughness: 0.6 }),
       ),
+      visor: new THREE.MeshBasicMaterial({ color: VISOR_COLOR, side: THREE.DoubleSide }),
       ghost: new THREE.MeshBasicMaterial({
         color: COLORS.fg,
         transparent: true,
@@ -95,9 +113,11 @@ function PovScene() {
       const x = sample.pos[2 * j];
       const y = sample.pos[2 * j + 1];
       const body = bodies.current[j];
-      if (body) {
-        body.position.set(x, BODY_CENTRE, -y);
+      const head = heads.current[j];
+      if (body && head) {
+        body.position.set(x, 0, -y);
         body.visible = j !== me;
+        poseToken(body, head, sample.body[j], sample.head[j]);
       }
       const ghost = ghosts.current[j];
       if (ghost) {
@@ -131,15 +151,23 @@ function PovScene() {
       </mesh>
       <Goals />
       {hero.players.map((p, j) => (
-        <mesh
+        <group
           key={p.id}
-          ref={(m) => {
-            bodies.current[j] = m;
+          ref={(g) => {
+            bodies.current[j] = g;
           }}
-          geometry={capsule}
-          material={materials.teams[p.team]}
         >
-          <sprite position-y={1.35} scale={[0.75, 0.75, 1]}>
+          <mesh position-y={BODY_CENTRE} geometry={capsule} material={materials.teams[p.team]} />
+          <group
+            position-y={HEAD_CENTRE}
+            ref={(g) => {
+              heads.current[j] = g;
+            }}
+          >
+            <mesh geometry={headGeometry} material={materials.teams[p.team]} />
+            <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
+          </group>
+          <sprite position-y={2.1} scale={[0.75, 0.75, 1]}>
             <spriteMaterial
               map={getLabelTexture(String(p.number), {
                 ...LABEL.shirt,
@@ -148,7 +176,7 @@ function PovScene() {
               depthWrite={false}
             />
           </sprite>
-        </mesh>
+        </group>
       ))}
       {hero.players.map((p, j) => (
         <mesh

@@ -82,6 +82,12 @@ src/
   label "Counterfactual · inside the sim": they are causal only inside the simulation. The payload
   is checked like a plan (references resolve, evidence events exist, seek frames are in the clip);
   a line with an unsupported claim is withheld.
+- **Body and head yaw on every player.** In first person a token is a capsule body turned to
+  `body_yaw` with a head on top turned to `head_yaw` (relative to the body, never clamped); a white
+  visor marks the front of the head, so a look over the shoulder is visible on anyone in view. On
+  the tactical board a short white tick shows each player's head direction. `views/tokens.ts`
+  holds the pose maths; its test checks the rendered world yaw against the export (< 1e-3 rad).
+  The skinned humanoid model is a separate, later card; this is its fallback.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 

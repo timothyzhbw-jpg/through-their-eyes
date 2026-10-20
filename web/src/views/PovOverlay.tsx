@@ -2,7 +2,7 @@
 // toggles), and over the canvas the HUD and the caption of the current narration line.
 
 import { useMemo } from "react";
-import { Sample, isSeen, sampleInto, wrapAngle } from "../data/hero";
+import { Sample, headOffBall, isSeen, sampleInto } from "../data/hero";
 import { useSession } from "../session";
 import { useStore } from "../store/store";
 import { Caption } from "../ui/Narration";
@@ -95,10 +95,7 @@ function Hud() {
   const run = hero.runs[mode];
   sampleInto(sample, hero, run, frame, comfort);
   const me = hero.ids.indexOf(povPlayer);
-  const hx = sample.pos[2 * me];
-  const hy = sample.pos[2 * me + 1];
-  const toBall = Math.atan2(sample.ball[1] - hy, sample.ball[0] - hx);
-  const offBall = Math.abs(wrapAngle(sample.head[me] - toBall)) * (180 / Math.PI);
+  const offBall = headOffBall(sample, me) * (180 / Math.PI);
   let inSight = 0;
   for (let j = 0; j < hero.n; j++) if (j !== me && isSeen(hero, run, frame, me, j)) inSight++;
   const scan = run.scans.find(
