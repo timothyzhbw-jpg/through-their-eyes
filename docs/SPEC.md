@@ -72,8 +72,9 @@ on an LLM.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
 - Events: `pass, reception, carry, shot, tackle, interception, pressure, possession_change, out,
-  goal, scan` with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed, outcome,
-  difficulty). Ids are `<type>:<player>:<frame>`, stable across factual and counterfactual runs.
+  goal, scan, head_turn` with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed,
+  outcome, difficulty). Ids are `<type>:<player>:<frame>`, stable across factual and
+  counterfactual runs.
 - `scan` events are **ground truth** from the sim. The analytics scan detector must recover them
   from tracking data only — `head_yaw` plus player and ball positions — with no access to sim
   scan events or other sim-internal state (§4.7).
@@ -109,7 +110,8 @@ on an LLM.
   - scanning drops under tight pressure.
 - **Non-scan head motion (nuisance).** So the scan detector is not graded on a signal we made
   clean ourselves, the sim also produces head motion that is not a scan: fast ball tracking during
-  passes, sensor noise (σ ≈ 2°, *tunable*), partial/aborted scans and slow drift.
+  passes, sensor noise (σ ≈ 2°, *tunable*), partial/aborted scans and slow drift. Partial turns
+  are `head_turn` events (`attrs.partial = true`), never `scan` events: they are not scans.
 - **Field of view** (after Bekkers 2026, *Wide Open Gazes*): base 120° binocular cone around
   `head_yaw`; visibility decays with angular offset and distance (Gaussian); the cone narrows as
   running speed rises.

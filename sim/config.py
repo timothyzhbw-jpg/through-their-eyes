@@ -52,6 +52,18 @@ class SimParams:
     scan_max_out_s: float = 0.5
     scan_refractory_s: float = 0.3
     sensor_noise: float = np.deg2rad(2.0)  # on the head yaw written to tracking output
+    # Non-scan head motion (SPEC 3.4 nuisance), switched as a whole by head_nuisance. Sensor noise
+    # is a property of the tracking, not of the head, and has its own knob above.
+    head_nuisance: bool = True
+    # Partial (aborted) scans: a turn away from the ball that comes straight back, without a dwell,
+    # before the ball leaves the 60 degree binocular half-cone (analytics.vision). Not scans.
+    partial_scan_ratio: float = 0.5  # aborted scans per completed spontaneous scan
+    partial_scan_amplitude: tuple[float, float] = (np.deg2rad(10.0), np.deg2rad(50.0))
+    # Slow drift: the resting gaze wanders around the ball (a mean-reverting offset driven by a
+    # smooth, mean-reverting rate), so it never moves faster than a few tens of deg/s.
+    drift_sigma: float = np.deg2rad(6.0)  # stationary std of the offset
+    drift_tau_s: float = 2.0  # mean reversion of the offset
+    drift_rate_tau_s: float = 0.5  # correlation time of the drift rate
     # Perception and belief.
     perception_threshold: float = 0.5  # visibility at which a player counts as seen
     belief_horizon_s: float = 1.0  # beliefs are extrapolated at most this far
