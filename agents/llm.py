@@ -1,0 +1,77 @@
+"""Model calls with the failure policy of SPEC 6: a timeout per step, one retry, then give up.
+
+`client_from_env` returns a Microsoft Foundry chat client when FOUNDRY_PROJECT_ENDPOINT and
+FOUNDRY_MODEL are set (keyless, through `az login`), else None: the crew then runs on templates.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import time
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from typing import Any
+
+from agent_framework import Agent
+from pydantic import BaseModel
+
+DEFAULT_TIMEOUT_S = 8.0
+RETRIES = 1
+
+
+@dataclass
+class Attempt:
+    value: Any | None
+    attempts: int
+    error: str | None
+    ms: float
+
+
+async def ask(
+    client: Any,
+    *,
+    name: str,
+    instructions: str,
+    prompt: str,
+    schema: type[BaseModel],
+    timeout_s: float = DEFAULT_TIMEOUT_S,
+    retries: int = RETRIES,
+    tools: list[Any] | None = None,
+) -> Attempt:
+    """One structured answer from an agent, or None with the last error after the retries."""
+    start = time.perf_counter()
+    error: str | None = None
+    attempts = 0
+    for _ in range(1 + retries):
+        attempts += 1
+        try:
+            agent = Agent(client, instructions=instructions, name=name, tools=tools)
+            response = await asyncio.wait_for(
+                agent.run(prompt, options={"response_format": schema}), timeout_s
+            )
+            value = response.value
+            if value is None:
+                raise ValueError("no structured output")
+            return Attempt(value, attempts, None, (time.perf_counter() - start) * 1000)
+        except Exception as e:  # any failure counts against the step; the caller falls back
+            error = f"{type(e).__name__}: {e}"[:300]
+    return Attempt(None, attempts, error, (time.perf_counter() - start) * 1000)
+
+
+def client_from_env() -> tuple[Any | None, Callable[[], Awaitable[None]]]:
+    """(client, close) for Microsoft Foundry, or (None, no-op) when it is not configured."""
+
+    async def nothing() -> None:
+        return None
+
+    endpoint = os.environ.get("FOUNDRY_PROJECT_ENDPOINT", "").strip()
+    model = os.environ.get("FOUNDRY_MODEL", "").strip()
+    if not endpoint or not model:
+        return None, nothing
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity.aio import AzureCliCredential
+
+    credential = AzureCliCredential(tenant_id=os.environ.get("AZURE_TENANT_ID") or None)
+    client = FoundryChatClient(project_endpoint=endpoint, model=model, credential=credential)
+    return client, credential.close

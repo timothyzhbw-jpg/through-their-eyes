@@ -1,0 +1,488 @@
+"""The production crew as a Microsoft Agent Framework workflow (SPEC 6).
+
+    Director → Analyst (⇄ MCP tools) → Telestrator → Narration (Commentator + Co-commentator)
+             → Verifier ⇄ Narration (rewrite, at most twice) → Voice → BreakdownResult
+
+Each executor handles one typed message and sends the next one, so every handoff is a typed edge
+of the workflow graph. Agent steps call a model when one is configured, with a timeout and one
+retry, and fall back to a deterministic template otherwise. The Verifier and Voice steps are code.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+import time
+from dataclasses import dataclass, field
+from typing import Any
+
+from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
+
+from agents import fallbacks, prompts
+from agents.context import MomentContext
+from agents.delivery import VOICES, cache_key, delivery_tier, pick_style, ssml_for_line
+from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
+from agents.plan import template_plan, validate_plan, voice_times
+from agents.schemas import (
+    AnalystChoice,
+    BreakdownRequest,
+    BreakdownResult,
+    DirectorChoice,
+    DraftLine,
+    DroppedLine,
+    Findings,
+    Language,
+    NarrationDraft,
+    Persona,
+    ScriptLine,
+    ScriptResult,
+    Speaker,
+    StepTrace,
+    TelestrationPlan,
+    VoiceCue,
+)
+from explain.render import ScriptLine as RenderLine
+from explain.render import build_payload, render_line
+
+MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
+
+Key = tuple[Persona, Language]
+
+
+# --- messages on the edges ------------------------------------------------------------------------
+
+
+@dataclass
+class Job:
+    personas: tuple[Persona, ...]
+    languages: tuple[Language, ...]
+
+
+@dataclass
+class Analyze:
+    request: BreakdownRequest
+
+
+@dataclass
+class Telestrate:
+    request: BreakdownRequest
+    findings: Findings
+
+
+@dataclass
+class Narrate:
+    request: BreakdownRequest
+    findings: Findings
+    plan: TelestrationPlan
+    plan_source: str
+    plan_errors: list[str]
+
+
+@dataclass
+class Drafts:
+    base: Narrate
+    scripts: dict[Key, list[ScriptLine]]
+    round: int = 0
+    rewrites: dict[Key, int] = field(default_factory=dict)
+
+
+@dataclass
+class Rewrite:
+    drafts: Drafts
+    failed: dict[Key, list[tuple[ScriptLine, list[str]]]]
+
+
+@dataclass
+class Approved:
+    base: Narrate
+    scripts: list[ScriptResult]
+
+
+# --- shared state of one breakdown ----------------------------------------------------------------
+
+
+@dataclass
+class Crew:
+    ctx: MomentContext
+    client: Any | None
+    step_timeout_s: float = DEFAULT_TIMEOUT_S
+    analyst_tools: list[Any] | None = None
+    voice_styles: dict[str, set[str]] = field(default_factory=dict)  # voice -> speaking styles
+    trace: list[StepTrace] = field(default_factory=list)
+
+    async def ask(self, role: str, instructions: str, prompt: str, schema, tools=None) -> Attempt:
+        return await ask(
+            self.client, name=role, instructions=instructions, prompt=prompt, schema=schema,
+            timeout_s=self.step_timeout_s, tools=tools,
+        )  # fmt: skip
+
+    def record(self, step: str, attempt: Attempt | None, notes: list[str], used_llm: bool) -> None:
+        self.trace.append(
+            StepTrace(
+                step=step,
+                source="llm" if used_llm else "template",
+                attempts=attempt.attempts if attempt else 0,
+                ms=round(attempt.ms, 1) if attempt else 0.0,
+                error=attempt.error if attempt else None,
+                notes=notes,
+            )
+        )
+
+
+# --- executors ------------------------------------------------------------------------------------
+
+
+class Director(Executor):
+    def __init__(self, crew: Crew) -> None:
+        super().__init__("director")
+        self.crew = crew
+
+    @handler
+    async def run(self, job: Job, ctx: WorkflowContext[Analyze]) -> None:
+        crew, mc = self.crew, self.crew.ctx
+        request = fallbacks.director(mc, list(job.personas), list(job.languages))
+        attempt, notes = None, []
+        if crew.client is not None:
+            attempt = await crew.ask(
+                "director", prompts.DIRECTOR,
+                prompts.director_prompt(mc, list(job.personas), list(job.languages)),
+                DirectorChoice,
+            )  # fmt: skip
+            if attempt.value is not None:
+                choice: DirectorChoice = attempt.value
+                personas = [p for p in choice.personas if p in job.personas] or list(job.personas)
+                languages = [lg for lg in choice.languages if lg in job.languages] or list(
+                    job.languages
+                )
+                if personas != list(choice.personas) or languages != list(choice.languages):
+                    notes.append("kept to the requested personas and languages")
+                request = BreakdownRequest(
+                    moment=mc.card.id, personas=personas, languages=languages,
+                    priority=choice.priority, reason=choice.reason,
+                )  # fmt: skip
+        crew.record("director", attempt, notes, attempt is not None and attempt.value is not None)
+        await ctx.send_message(Analyze(request))
+
+
+class Analyst(Executor):
+    def __init__(self, crew: Crew) -> None:
+        super().__init__("analyst")
+        self.crew = crew
+
+    @handler
+    async def run(self, msg: Analyze, ctx: WorkflowContext[Telestrate]) -> None:
+        crew, mc = self.crew, self.crew.ctx
+        findings = fallbacks.analyst(mc)
+        attempt, notes, used = None, [], False
+        if crew.client is not None:
+            attempt = await crew.ask(
+                "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request), AnalystChoice,
+                tools=crew.analyst_tools,
+            )  # fmt: skip
+            if attempt.value is not None:
+                choice: AnalystChoice = attempt.value
+                supported = mc.supported
+                unknown = [c for c in choice.headline + choice.supporting if c not in supported]
+                if unknown:
+                    notes.append(f"dropped unknown or unsupported claims: {', '.join(unknown)}")
+                headline = [c for c in choice.headline if c in supported]
+                available = {lens.lens for lens in mc.card.lenses if lens.available}
+                if headline and choice.lens in available:
+                    findings = Findings(
+                        moment=mc.card.id, lens=choice.lens, headline=headline,
+                        supporting=[c for c in choice.supporting if c in supported],
+                        angle=choice.angle,
+                    )  # fmt: skip
+                    used = True
+                else:
+                    notes.append("no usable headline or lens: template findings")
+        crew.record("analyst", attempt, notes, used)
+        await ctx.send_message(Telestrate(msg.request, findings))
+
+
+class Telestrator(Executor):
+    def __init__(self, crew: Crew) -> None:
+        super().__init__("telestrator")
+        self.crew = crew
+
+    @handler
+    async def run(self, msg: Telestrate, ctx: WorkflowContext[Narrate]) -> None:
+        crew, mc = self.crew, self.crew.ctx
+        template = template_plan(mc)
+        plan, source, errors, attempt, used = template, "template", [], None, False
+        if crew.client is not None:
+            attempt = await crew.ask(
+                "telestrator", prompts.TELESTRATOR,
+                prompts.telestrator_prompt(mc, msg.findings, template.to_web()), TelestrationPlan,
+            )  # fmt: skip
+            if attempt.value is not None:
+                used = True
+                errors = validate_plan(attempt.value, mc)
+                if not errors:
+                    plan, source = attempt.value, "agent"
+        notes = [f"invalid plan, template used: {e}" for e in errors]
+        crew.record("telestrator", attempt, notes, used)
+        await ctx.send_message(Narrate(msg.request, msg.findings, plan, source, errors))
+
+
+class Narration(Executor):
+    """Commentator (play-by-play) and Co-commentator (analysis) for every persona × language."""
+
+    def __init__(self, crew: Crew) -> None:
+        super().__init__("narration")
+        self.crew = crew
+
+    async def _speaker(
+        self, base: Narrate, key: Key, speaker: Speaker, pbp: list[ScriptLine] | None
+    ) -> tuple[list[DraftLine], Attempt | None]:
+        crew, mc = self.crew, self.crew.ctx
+        persona, language = key
+        template = [line for _, line in fallbacks.narration(mc, persona, language, speaker)]
+        if crew.client is None:
+            return template, None
+        prompt = prompts.narration_prompt(mc, base.findings, persona, language, speaker, pbp)
+        attempt = await crew.ask(
+            speaker, prompts.narration_instructions(speaker), prompt, NarrationDraft
+        )
+        lines = attempt.value.lines if attempt.value is not None and attempt.value.lines else None
+        return (lines if lines is not None else template), attempt
+
+    async def _script(
+        self, base: Narrate, key: Key
+    ) -> tuple[list[ScriptLine], list[Attempt | None]]:
+        persona, language = key
+        if self.crew.client is None:  # the template already has the speaking order
+            ordered = fallbacks.narration(self.crew.ctx, persona, language)
+            return [
+                ScriptLine(id=f"L{i + 1}", speaker=who, text=d.text, claims=d.claims)
+                for i, (who, d) in enumerate(ordered)
+            ], [None]
+        pbp, a1 = await self._speaker(base, key, "pbp", None)
+        pbp_lines = [ScriptLine(id="", speaker="pbp", text=d.text, claims=d.claims) for d in pbp]
+        color, a2 = await self._speaker(base, key, "color", pbp_lines)
+        ordered: list[tuple[Speaker, DraftLine]] = []
+        for i in range(max(len(pbp), len(color))):
+            ordered += [("pbp", pbp[i])] if i < len(pbp) else []
+            ordered += [("color", color[i])] if i < len(color) else []
+        return [
+            ScriptLine(id=f"L{i + 1}", speaker=who, text=d.text, claims=d.claims)
+            for i, (who, d) in enumerate(ordered)
+        ], [a1, a2]
+
+    @handler
+    async def draft(self, base: Narrate, ctx: WorkflowContext[Drafts]) -> None:
+        keys = [(p, lg) for p in base.request.personas for lg in base.request.languages]
+        results = await asyncio.gather(*(self._script(base, k) for k in keys))
+        attempts = [a for _, atts in results for a in atts if a is not None]
+        fell_back = [a for a in attempts if a.value is None]
+        notes = (
+            [f"{len(fell_back)} of {len(attempts)} narration calls fell back to templates"]
+            if fell_back
+            else []
+        )
+        summary = None
+        if attempts:
+            error = fell_back[0].error if fell_back else None
+            total = sum(a.attempts for a in attempts)
+            summary = Attempt(None, total, error, max(a.ms for a in attempts))
+        self.crew.record("narration", summary, notes, bool(attempts) and not fell_back)
+        await ctx.send_message(
+            Drafts(base, {k: lines for k, (lines, _) in zip(keys, results, strict=True)})
+        )
+
+    @handler
+    async def rewrite(self, msg: Rewrite, ctx: WorkflowContext[Drafts]) -> None:
+        drafts = msg.drafts
+        jobs = []
+        for key, failed in msg.failed.items():
+            for speaker in ("pbp", "color"):
+                mine = [(line, problems) for line, problems in failed if line.speaker == speaker]
+                if mine:
+                    jobs.append((key, speaker, mine))
+
+        async def redo(key: Key, speaker: Speaker, mine) -> tuple[Key, dict[str, DraftLine]]:
+            persona, language = key
+            base = prompts.narration_prompt(
+                self.crew.ctx, drafts.base.findings, persona, language, speaker
+            )
+            attempt = await self.crew.ask(
+                speaker, prompts.narration_instructions(speaker),
+                prompts.rewrite_prompt(base, mine), NarrationDraft,
+            )  # fmt: skip
+            new = attempt.value.lines if attempt.value is not None else []
+            return key, {line.id: d for (line, _), d in zip(mine, new, strict=False)}
+
+        for key, replaced in await asyncio.gather(*(redo(*job) for job in jobs)):
+            drafts.scripts[key] = [
+                _replace(line, replaced[line.id]) if line.id in replaced else line
+                for line in drafts.scripts[key]
+            ]
+        drafts.round += 1
+        await ctx.send_message(drafts)
+
+
+def _replace(line: ScriptLine, draft: DraftLine) -> ScriptLine:
+    return line.model_copy(update={"text": draft.text, "claims": draft.claims})
+
+
+class Verifier(Executor):
+    """Deterministic: verified claims and the render check decide what may air (SPEC 5.3)."""
+
+    def __init__(self, crew: Crew) -> None:
+        super().__init__("verifier")
+        self.crew = crew
+
+    def _check(self, line: ScriptLine, language: Language):
+        mc = self.crew.ctx
+        render = RenderLine(id=line.id, text=line.text, claims=line.claims)
+        return render_line(render, mc.claims, mc.verdicts, language, mc.names)
+
+    @handler
+    async def check(self, drafts: Drafts, ctx: WorkflowContext[Rewrite | Approved]) -> None:
+        mc = self.crew.ctx
+        failed: dict[Key, list[tuple[ScriptLine, list[str]]]] = {}
+        for key, lines in drafts.scripts.items():
+            bad = [(line, res) for line in lines if not (res := self._check(line, key[1])).ok]
+            if bad:
+                failed[key] = [
+                    (line, [f"{v.kind}: {v.detail}" for v in res.violations]) for line, res in bad
+                ]
+        if failed and drafts.round < MAX_REWRITES and self.crew.client is not None:
+            for key in failed:
+                drafts.rewrites[key] = drafts.rewrites.get(key, 0) + 1
+            await ctx.send_message(Rewrite(drafts, failed))
+            return
+
+        notes, results = [], []
+        for (persona, language), lines in drafts.scripts.items():
+            kept, dropped = [], []
+            for line in lines:
+                res = self._check(line, language)
+                if res.ok:
+                    kept.append(line)
+                else:
+                    first = res.violations[0]
+                    dropped.append(DroppedLine(id=line.id, speaker=line.speaker, text=line.text,
+                                               reason=first.kind, detail=first.detail))  # fmt: skip
+                    notes.append(f"{persona}/{language} {line.id} dropped: {first.kind}")
+            built = build_payload(
+                mc.card.id, persona, language,
+                [RenderLine(id=line.id, text=line.text, claims=line.claims) for line in kept],
+                mc.claims, mc.verdicts, mc.names,
+            )  # fmt: skip
+            results.append(
+                ScriptResult(
+                    persona=persona,
+                    language=language,
+                    lines=kept,
+                    payload=built.payload,
+                    dropped=dropped,
+                    rewrites=drafts.rewrites.get((persona, language), 0),
+                    voice=[],
+                )  # fmt: skip
+            )
+        rounds = Attempt(None, drafts.round + 1, None, 0.0)
+        self.crew.trace.append(StepTrace(step="verifier", source="code", attempts=rounds.attempts,
+                                         ms=0.0, error=None, notes=notes))  # fmt: skip
+        await ctx.send_message(Approved(drafts.base, results))
+
+
+class Voice(Executor):
+    """SSML per approved line: one voice per speaker and language, styled by the delivery tier."""
+
+    def __init__(self, crew: Crew) -> None:
+        super().__init__("voice")
+        self.crew = crew
+
+    @handler
+    async def speak(self, msg: Approved, ctx: WorkflowContext[None, BreakdownResult]) -> None:
+        crew, mc = self.crew, self.crew.ctx
+        tier = delivery_tier(mc.card)
+        scripts = []
+        for script in msg.scripts:
+            speaker_of = {line.id: line.speaker for line in script.lines}
+            times = voice_times(msg.base.plan, len(script.payload.lines))
+            cues = []
+            for t, line in zip(times, script.payload.lines, strict=True):
+                spoken = ScriptLine(
+                    id=line.id, speaker=speaker_of[line.id], text=line.text, claims=line.claims
+                )
+                voice = VOICES[(script.language, spoken.speaker)]
+                styles = crew.voice_styles.get(voice, set())
+                ssml = ssml_for_line(spoken, script.language, tier, styles)
+                style = pick_style(tier, styles)
+                cues.append(
+                    VoiceCue(line=line.id, speaker=spoken.speaker, t=t, voice=voice, style=style,
+                             ssml=ssml, cache_key=cache_key(ssml))
+                )  # fmt: skip
+            scripts.append(script.model_copy(update={"voice": cues}))
+        notes = [f"tier {tier}"] + (
+            [] if crew.voice_styles else ["voice styles unknown: prosody only"]
+        )
+        crew.trace.append(StepTrace(step="voice", source="code", attempts=1, ms=0.0, error=None,
+                                    notes=notes))  # fmt: skip
+        base = msg.base
+        await ctx.yield_output(
+            BreakdownResult(
+                request=base.request, findings=base.findings, plan=base.plan,
+                plan_source=base.plan_source, plan_errors=base.plan_errors, tier=tier,
+                scripts=scripts, trace=list(crew.trace),
+            )
+        )  # fmt: skip
+
+
+# --- running a breakdown --------------------------------------------------------------------------
+
+
+def build_workflow(crew: Crew):
+    director, analyst, telestrator = Director(crew), Analyst(crew), Telestrator(crew)
+    narration, verifier, voice = Narration(crew), Verifier(crew), Voice(crew)
+    return (
+        WorkflowBuilder(max_iterations=40, name="breakdown", start_executor=director)
+        .add_edge(director, analyst)
+        .add_edge(analyst, telestrator)
+        .add_edge(telestrator, narration)
+        .add_edge(narration, verifier)
+        .add_edge(verifier, narration)  # rewrite requests
+        .add_edge(verifier, voice)
+        .build()
+    )
+
+
+async def run_breakdown(
+    ctx: MomentContext,
+    client: Any | None = None,
+    personas: tuple[Persona, ...] = ("casual", "analyst"),
+    languages: tuple[Language, ...] = ("en", "zh"),
+    step_timeout_s: float = DEFAULT_TIMEOUT_S,
+    use_mcp: bool = False,
+    voice_styles: dict[str, set[str]] | None = None,
+) -> BreakdownResult:
+    crew = Crew(ctx, client, step_timeout_s, voice_styles=voice_styles or {})
+    if use_mcp and client is not None:
+        from agent_framework import MCPStdioTool
+
+        tool = MCPStdioTool(
+            name="moment", command=sys.executable,
+            args=["-m", "agents.mcp_server", "--scenario", ctx.scenario, "--seed", str(ctx.seed)],
+        )  # fmt: skip
+        async with tool:
+            crew.analyst_tools = [tool]
+            return await _run(crew, personas, languages)
+    return await _run(crew, personas, languages)
+
+
+async def _run(crew: Crew, personas, languages) -> BreakdownResult:
+    started = time.perf_counter()
+    result = await build_workflow(crew).run(Job(tuple(personas), tuple(languages)))
+    outputs = result.get_outputs()
+    if not outputs:
+        raise RuntimeError("the breakdown workflow produced no output")
+    out: BreakdownResult = outputs[0]
+    out.trace[-1].ms = round((time.perf_counter() - started) * 1000, 1)  # total wall time on Voice
+    return out
+
+
+def breakdown(ctx: MomentContext, **kwargs: Any) -> BreakdownResult:
+    """Synchronous wrapper around `run_breakdown`."""
+    return asyncio.run(run_breakdown(ctx, **kwargs))

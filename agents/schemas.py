@@ -1,0 +1,211 @@
+"""Typed handoffs between the agents (SPEC 6).
+
+Models the language model fills (`DirectorChoice`, `AnalystChoice`, `TelestrationPlan`,
+`NarrationDraft`) have every field required, so they work as strict structured outputs. The rest is
+what the crew passes along and returns. `TelestrationPlan` mirrors web/src/plan/schema.ts.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from explain.cards import LensName
+from explain.render import RenderPayload
+
+Persona = Literal["casual", "analyst", "player_fan", "coach"]
+Language = Literal["en", "zh"]
+Speaker = Literal["pbp", "color"]  # play-by-play commentator, co-commentator (analysis)
+Tier = Literal["calm", "excited", "clutch"]
+Priority = Literal["low", "normal", "high"]
+
+
+class Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+# --- Director ------------------------------------------------------------------------------------
+
+
+class DirectorChoice(Strict):
+    personas: list[Persona]
+    languages: list[Language]
+    priority: Priority
+    reason: str = Field(max_length=400)
+
+
+class BreakdownRequest(Strict):
+    moment: str  # MomentCard id
+    personas: list[Persona]
+    languages: list[Language]
+    priority: Priority
+    reason: str
+
+
+# --- Analyst -------------------------------------------------------------------------------------
+
+
+class AnalystChoice(Strict):
+    lens: LensName
+    headline: list[str]  # claim ids, most important first
+    supporting: list[str]  # claim ids
+    angle: str = Field(max_length=400)  # the story in one sentence, for the other agents
+
+
+class Findings(Strict):
+    moment: str
+    lens: LensName
+    headline: list[str]
+    supporting: list[str]
+    angle: str
+
+
+# --- Telestrator: the plan (mirror of web/src/plan/schema.ts) -------------------------------------
+
+Rel = Annotated[float, Field(ge=-60.0, le=60.0)]  # s of match time relative to the anchor
+Speed = Annotated[float, Field(ge=0.1, le=2.0)]
+PlayerId = Annotated[str, Field(pattern=r"^[HA]\d{1,2}$")]
+
+
+class _Step(Strict):
+    t: float = Field(ge=0.0)  # s since the plan started
+
+
+class Freeze(_Step):
+    do: Literal["freeze"]
+
+
+class Rewind(_Step):
+    do: Literal["rewind"]
+    to: Rel
+
+
+class Play(_Step):
+    do: Literal["play"]
+    to: Rel
+    speed: Speed
+
+
+class Camera(_Step):
+    do: Literal["camera"]
+    mode: Literal["split", "pov", "tactical"]
+
+
+class Pov(_Step):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    do: Literal["pov"]
+    player: PlayerId
+    from_: Rel = Field(alias="from")
+    to: Rel
+    speed: Speed
+
+
+class ScanMarker(_Step):
+    do: Literal["scan_marker"]
+    scan: str
+    label_claim: str | None
+
+
+class Zone(_Step):
+    do: Literal["zone"]
+    layer: Literal["vision"]
+    player: PlayerId
+
+
+class Ghost(_Step):
+    do: Literal["ghost"]
+    kind: Literal["belief", "counterfactual"]
+    cf: str | None
+
+
+class Voice(_Step):
+    do: Literal["voice"]
+    line: str
+
+
+PlanStep = Annotated[
+    Freeze | Rewind | Play | Camera | Pov | ScanMarker | Zone | Ghost | Voice,
+    Field(discriminator="do"),
+]
+
+
+class TelestrationPlan(Strict):
+    moment: str
+    duration_s: float = Field(gt=0.0, le=120.0)
+    steps: list[PlanStep] = Field(min_length=1, max_length=100)
+
+    def to_web(self) -> dict:
+        """JSON for web/src/plan/schema.ts: aliases, and no nulls for optional fields."""
+        return self.model_dump(by_alias=True, exclude_none=True)
+
+
+# --- Commentator and Co-commentator ---------------------------------------------------------------
+
+
+class DraftLine(Strict):
+    text: str = Field(max_length=300)  # placeholders like {player}; never digits or names
+    claims: list[str]  # ids of the claims the line states
+
+
+class NarrationDraft(Strict):
+    lines: list[DraftLine] = Field(max_length=8)
+
+
+class ScriptLine(Strict):
+    id: str
+    speaker: Speaker
+    text: str
+    claims: list[str]
+
+
+# --- what the crew returns ------------------------------------------------------------------------
+
+
+class DroppedLine(Strict):
+    id: str
+    speaker: Speaker
+    text: str
+    reason: str  # the first violation kind: number, banned, lexicon, entity, placeholder, ...
+    detail: str
+
+
+class VoiceCue(Strict):
+    line: str
+    speaker: Speaker
+    t: float  # s on the plan clock
+    voice: str
+    style: str | None  # SSML speaking style, when the voice has one for the tier
+    ssml: str
+    cache_key: str
+
+
+class ScriptResult(Strict):
+    persona: Persona
+    language: Language
+    lines: list[ScriptLine]  # approved lines, with placeholders
+    payload: RenderPayload  # what a viewer receives (SPEC 5.3)
+    dropped: list[DroppedLine]
+    rewrites: int  # rewrite rounds the Verifier requested
+    voice: list[VoiceCue]
+
+
+class StepTrace(Strict):
+    step: str
+    source: Literal["llm", "template", "code"]
+    attempts: int
+    ms: float
+    error: str | None
+    notes: list[str]
+
+
+class BreakdownResult(Strict):
+    request: BreakdownRequest
+    findings: Findings
+    plan: TelestrationPlan
+    plan_source: Literal["agent", "template"]
+    plan_errors: list[str]
+    tier: Tier
+    scripts: list[ScriptResult]
+    trace: list[StepTrace]
