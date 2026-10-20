@@ -34,6 +34,14 @@ uv run pytest
 uv run ruff check .
 ```
 
+### API service
+```bash
+uv run uvicorn api.main:app --reload
+```
+Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
+"What if…?" answers. Without Microsoft Foundry configured, every agent step runs on its
+deterministic template.
+
 ### Azure smoke test (M0)
 Needs the Azure CLI (`az login`) and an Azure for Students (or personal pay-as-you-go)
 subscription; the script refuses Microsoft-internal and Enterprise Agreement subscriptions.

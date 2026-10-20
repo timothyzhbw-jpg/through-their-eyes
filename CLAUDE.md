@@ -91,8 +91,9 @@ _Fill in as they come to exist._
 - `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
 - `uv run python -m agents.whatif --seed 3 "What if he passed to H4?"` — answer a what-if
   question by re-simulating with `force_action` (SPEC 3.7, 6)
-- Not yet: `uv run python -m eval.run_all`, `uv run uvicorn api.main:app --reload`,
-  `cd web && npm run dev`
+- `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
+  `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached), `POST /api/whatif`, `POST /api/tts`
+- Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)
 - The hero lens is **perception** (scans / vision / belief). `space` (pitch control, xT) and

@@ -61,6 +61,15 @@ server-side). AI breakdowns run asynchronously once a moment is detected and are
 replay window (target p95 < 12 s), the way broadcast replays follow a goal. Live play never waits
 on an LLM.
 
+*Implemented (`api/`, M3):* FastAPI.
+- `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
+  `moment` and `end` messages; clients can pause, resume, seek, change speed or stop.
+- REST: `/api/matches`, `/api/matches/<id>` (+ `/export`, `/moments`, `/audit`),
+  `POST /api/breakdowns`, `POST /api/whatif`, `POST /api/tts` (503 until Speech is configured).
+- Measured locally: 25.0 fps with a p95 frame gap of 41 ms; a cached breakdown is served in about
+  1 ms.
+- The cache is one JSON file per key under `TTE_CACHE_DIR`; Cosmos DB can replace it (§8).
+
 **Data flow.**
 - The sim runs offline and writes match files. `api/` replays a match at 1× wall-clock as the live
   ingest stream (frames + events over WebSocket), so Ingest really happens "as events happen"
