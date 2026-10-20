@@ -143,6 +143,9 @@ _Fill in as they come to exist._
   `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
+- `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
+  video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
+  `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)

@@ -1069,6 +1069,9 @@ Framework, live deployment, the video.
 - **1:40–2:00** Architecture (Microsoft stack) + eval numbers. *If kept:* the ≤ 10 s real-footage
   overlay segment (§7) sits here, labelled and attributed on screen, before the architecture.
 
+Shot list and capture kit: [video/](../video/README.md). `shots.json` holds each beat's URL,
+scripted actions, target length and voice-over; `capture.mjs` records them from the live site.
+
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
       — *Open:* Bowen's; not verifiable from the repo.
