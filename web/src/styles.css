@@ -12,6 +12,7 @@
   --away: #5b86ff;
   --sight: #a6ecff;
   --gold: #ffd36b;
+  --detector: #b6e86f; /* the scan detector's own output, apart from the sim's truth */
   --font-display: "Saira Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -129,7 +130,8 @@ header {
   gap: 12px;
   transition: grid-template-columns 0.45s ease;
 }
-.stage.focus-pov {
+.stage.focus-pov,
+.stage.focus-broadcast {
   grid-template-columns: 1.9fr 1fr;
 }
 .stage.focus-tactical {
@@ -157,6 +159,7 @@ header {
 @media (max-width: 880px) {
   .stage,
   .stage.focus-pov,
+  .stage.focus-broadcast,
   .stage.focus-tactical {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -213,6 +216,25 @@ header {
   height: 7px;
   border-radius: 50%;
   background: var(--gold);
+}
+.viewbar-start {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* The 3D view's camera switch: first person or broadcast. */
+.segmented.cam {
+  background: rgba(11, 18, 16, 0.72);
+}
+.segmented.cam button {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 9px;
+  background: transparent;
+}
+.segmented.cam button[aria-pressed="true"] {
+  background: var(--sight);
 }
 .toggles {
   margin-left: auto;
@@ -577,6 +599,256 @@ header {
 .event small {
   color: var(--muted);
   font-size: 11px;
+}
+
+/* ---------- perception telemetry (SPEC 4.7, 7) ---------- */
+.telemetry {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px 10px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.telemetry header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 4px;
+}
+.telemetry h2 {
+  font: 600 13px/1.2 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+.telemetry h2 .role {
+  color: var(--fg);
+  opacity: 0.7;
+  letter-spacing: 0.08em;
+}
+.telemetry .note {
+  margin: 0;
+  font-size: 12px;
+}
+.trow {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.tlabel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: 8px;
+  min-width: 0;
+}
+.tname {
+  font: 600 12px/1.3 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tread {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tvalue {
+  font: 500 13px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  min-width: 52px;
+  text-align: right;
+}
+.tread .source {
+  font: 500 10px/1 var(--font-data);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  padding: 1px 3px;
+}
+.tdetail {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.spark {
+  display: block;
+  width: 100%;
+  height: 40px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.spark .curve {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+/* Overlaid runs, in the run colours used everywhere else: with the look cyan, without it gold.
+   The run on screen is solid; the other run is dashed underneath. */
+.spark .curve.run-factual {
+  stroke: var(--sight);
+}
+.spark .curve.run-counterfactual {
+  stroke: var(--gold);
+}
+.spark .curve.other {
+  stroke-width: 1.25;
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+.spark .guide {
+  stroke: rgba(230, 238, 233, 0.22);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.spark .scan {
+  fill: rgba(142, 163, 154, 0.28);
+}
+.spark .scan.key {
+  fill: rgba(166, 236, 255, 0.3);
+}
+.spark .dropped-key {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.spark .detected {
+  fill: rgba(182, 232, 111, 0.2);
+}
+.spark .threshold {
+  stroke: var(--detector);
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+}
+.spark .onset {
+  stroke-width: 2;
+}
+.spark .onset.accepted {
+  stroke: var(--detector);
+}
+.spark .onset.rejected {
+  stroke: #ff9f6b;
+}
+.spark .cursor {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+/* The moment's key points, on the sparklines' time axis. */
+.trow[data-row="axis"] {
+  align-items: end;
+}
+/* Two lanes: the key-scan bracket with its label on top, point labels underneath. */
+.taxis {
+  position: relative;
+  height: 34px;
+  font: 500 11px/1 var(--font-data);
+  color: var(--muted);
+}
+.tbracket {
+  position: absolute;
+  top: 13px;
+  height: 6px;
+  border: 1px solid var(--sight);
+  border-bottom: 0;
+}
+.tbracket.dropped {
+  border-color: var(--gold);
+  border-style: dashed;
+}
+.tbracket span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  color: var(--fg);
+}
+.tpoint {
+  position: absolute;
+  bottom: 0;
+  height: 14px;
+  white-space: nowrap;
+  border-left: 1px solid var(--muted);
+  padding-left: 4px;
+  color: var(--fg);
+}
+.tpoint.end {
+  transform: translateX(-100%);
+  border-left: 0;
+  border-right: 1px solid var(--muted);
+  padding-left: 0;
+  padding-right: 4px;
+}
+.tlegend {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.tlegend .sw {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border-radius: 2px;
+}
+.tlegend .sw.key {
+  background: rgba(166, 236, 255, 0.55);
+}
+.tlegend .sw.scan {
+  background: rgba(142, 163, 154, 0.5);
+}
+.tlegend .sw.detected {
+  background: rgba(182, 232, 111, 0.4);
+}
+.tlegend .sw.onset,
+.tlegend .sw.rejected {
+  width: 2px;
+  border-radius: 0;
+  background: var(--detector);
+}
+.tlegend .sw.rejected {
+  background: #ff9f6b;
+}
+.tlegend .sw.line {
+  height: 0;
+  width: 16px;
+  border-radius: 0;
+  border-top: 2px solid var(--sight);
+  vertical-align: 3px;
+}
+.tlegend .sw.line.run-counterfactual {
+  border-top-color: var(--gold);
+}
+.tlegend .sw.line.other {
+  border-top-style: dashed;
+}
+@media (max-width: 560px) {
+  .trow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .tdetail {
+    display: none;
+  }
 }
 
 /* ---------- panels ---------- */

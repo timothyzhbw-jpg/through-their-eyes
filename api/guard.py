@@ -72,15 +72,49 @@ class SecurityHeaders:
         await self.app(scope, receive, with_headers)
 
 
-async def internal_error(request: Request, exc: Exception) -> JSONResponse:
-    """Starlette re-raises `exc` after this response, so the server still logs the traceback."""
+def _internal_error_response() -> JSONResponse:
     return JSONResponse(
         {"detail": "internal error"}, 500, headers={**HEADERS, "content-security-policy": CSP}
     )
 
 
+class InternalErrors:
+    """The 500 for an unhandled exception, sent inside CORS so the browser can read it.
+
+    Starlette's own handler for `Exception` runs outside every middleware, CORS included. The
+    exception is re-raised after the response, so the server still logs the traceback.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        started = False
+
+        async def tracked(message: Message) -> None:
+            nonlocal started
+            started = started or message["type"] == "http.response.start"
+            await send(message)
+
+        try:
+            await self.app(scope, receive, tracked)
+        except Exception:
+            if not started:
+                await _internal_error_response()(scope, receive, send)
+            raise
+
+
+async def internal_error(request: Request, exc: Exception) -> JSONResponse:
+    """The fallback for an exception outside InternalErrors (in a middleware further out)."""
+    return _internal_error_response()
+
+
 def install(app: FastAPI) -> None:
-    """Before CORS is added, so CORS stays outermost and a 413 still reaches the browser."""
+    """Before CORS is added, so CORS stays outermost and a 413 or a 500 still reaches the
+    browser."""
+    app.add_middleware(InternalErrors)
     app.add_middleware(BodyLimit)
     app.add_middleware(SecurityHeaders)
     app.add_exception_handler(Exception, internal_error)

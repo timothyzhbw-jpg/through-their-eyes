@@ -94,6 +94,11 @@ def get_pressing(ctx: MomentContext, frame: int) -> str:
 
 
 def run_counterfactual(ctx: MomentContext, scan_id: str | None = None) -> str:
+    if scan_id is not None and scan_id not in ctx.scans:
+        # Seen live: a model passed an id that is not a scan, which raised inside the re-sim.
+        hero_scans = [s for s in ctx.scans if ctx.run.event(s).player == ctx.hero]
+        return _dump({"error": f"{scan_id} is not a scan id", "key_scan": ctx.cf.scan_id,
+                      "hero_scans": hero_scans})  # fmt: skip
     cf = (
         ctx.cf
         if scan_id in (None, ctx.cf.scan_id)

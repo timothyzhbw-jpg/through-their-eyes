@@ -14,7 +14,7 @@ import hashlib
 import json
 import logging
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -180,21 +180,36 @@ def open_storage(
 
 
 class RateLimiter:
-    """At most `count` events per `window_s` seconds per client."""
+    """At most `count` events per `window_s` seconds per client.
 
-    def __init__(self, count: int, window_s: float) -> None:
-        self.count, self.window_s = count, window_s
-        self._seen: dict[str, deque[float]] = defaultdict(deque)
+    Memory is bounded: a client with no event left in the window is forgotten, and past
+    `max_clients` tracked clients the least recently seen one is dropped (it starts afresh).
+    """
+
+    def __init__(self, count: int, window_s: float, max_clients: int = 10_000) -> None:
+        self.count, self.window_s, self.max_clients = count, window_s, max_clients
+        self._seen: OrderedDict[str, deque[float]] = OrderedDict()  # least recently seen first
 
     def allow(self, client: str) -> bool:
         now = time.monotonic()
-        seen = self._seen[client]
+        seen = self._seen.pop(client, None) or deque()
         while seen and now - seen[0] > self.window_s:
             seen.popleft()
-        if len(seen) >= self.count:
-            return False
-        seen.append(now)
-        return True
+        allowed = len(seen) < self.count
+        if allowed:
+            seen.append(now)
+        if seen:
+            self._forget(now)
+            self._seen[client] = seen
+        return allowed
+
+    def _forget(self, now: float) -> None:
+        """Make room for one more client: idle ones first, then the least recently seen."""
+        while self._seen:
+            oldest = next(iter(self._seen.values()))
+            if now - oldest[-1] <= self.window_s and len(self._seen) < self.max_clients:
+                return
+            self._seen.popitem(last=False)
 
 
 class DailyCap:
@@ -221,3 +236,8 @@ class DailyCap:
             return False
         self._used += 1
         return True
+
+    def give(self) -> None:
+        """Return a unit whose work failed, so it does not count against the day."""
+        self.left()  # rolls the day over first
+        self._used = max(0, self._used - 1)

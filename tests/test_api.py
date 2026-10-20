@@ -1,18 +1,27 @@
 """Acceptance checks for the API service (SPEC 2, 8): live stream, moments, cached breakdowns."""
 
+import asyncio
 import dataclasses
 import hashlib
+import json
+import threading
 import time
+from pathlib import Path
 
+import httpx
 import pytest
+from fastapi import FastAPI, WebSocket
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
+from api import tts
 from api.main import create_app
 from api.settings import Settings
+from api.store import RateLimiter
 from tests.test_agents import _good_replies
 
 MATCH = "blind_side_run-3"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(scope="module")
@@ -39,6 +48,7 @@ def _app(settings, cache_dir, **limits):
 def test_health_and_match_list(client):
     health = client.get("/health").json()
     assert health["status"] == "ok" and health["model"] == "offline"
+    assert health["analyst_mcp"] is False  # no model, so no Analyst to give tools to
     matches = client.get("/api/matches").json()
     assert [m["id"] for m in matches] == [MATCH]
     assert client.get("/api/matches/nope-1").status_code == 404
@@ -212,14 +222,92 @@ def test_live_speed_is_clamped_and_a_nan_speed_plays_at_1x(client):
 
 
 def test_live_limits_come_from_the_environment(monkeypatch):
-    monkeypatch.delenv("TTE_LIVE_PER_CLIENT", raising=False)
-    monkeypatch.delenv("TTE_LIVE_MAX_S", raising=False)
+    for name in ("TTE_LIVE_PER_CLIENT", "TTE_LIVE_MAX_S", "TTE_LIVE_MAX_TOTAL"):
+        monkeypatch.delenv(name, raising=False)
     s = Settings.from_env()
-    assert (s.live_per_client, s.live_max_s) == (4, 600.0)
+    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (4, 600.0, 64)
     monkeypatch.setenv("TTE_LIVE_PER_CLIENT", "2")
     monkeypatch.setenv("TTE_LIVE_MAX_S", "90")
+    monkeypatch.setenv("TTE_LIVE_MAX_TOTAL", "16")
     s = Settings.from_env()
-    assert (s.live_per_client, s.live_max_s) == (2, 90.0)
+    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (2, 90.0, 16)
+
+
+def test_live_streams_have_a_ceiling_across_all_clients(settings, tmp_path):
+    """A new X-Forwarded-For per connect gets a new per-client bucket, not a new process limit."""
+    with TestClient(_app(settings, tmp_path, live_max_total=2)) as c:
+        a_ip, b_ip = "198.51.100.1", "198.51.100.2"
+        with _live(c, "speed=0.1", ip=a_ip) as a, _live(c, "speed=0.1", ip=b_ip) as b:
+            assert a.receive_json()["type"] == b.receive_json()["type"] == "hello"
+            with _live(c, "speed=0.1", ip="198.51.100.3") as third:
+                detail, code = _refusal(third)
+        with _live(c, ip="198.51.100.3") as again:  # both closed: room again
+            assert _drain(again)[-1]["type"] == "end"
+    assert code == 4429 and "live streams" in detail
+
+
+def test_spoofed_first_hops_share_the_live_slots_of_the_real_address(settings, tmp_path):
+    """The Container Apps ingress appends the address it saw; earlier hops are the client's."""
+    app = _app(settings, tmp_path, live_per_client=1)
+    with TestClient(app) as c, _live(c, "speed=0.1", ip="198.51.100.1, 192.0.2.50") as a:
+        assert a.receive_json()["type"] == "hello"
+        with _live(c, "speed=0.1", ip="198.51.100.2, 192.0.2.50") as spoofed:
+            detail, code = _refusal(spoofed)
+        with _live(c, "speed=0.1", ip="198.51.100.1, 192.0.2.51") as other:
+            assert other.receive_json()["type"] == "hello"
+    assert code == 4429
+
+
+def _dockerfile_ws_max_size() -> int:
+    lines = (ROOT / "Dockerfile").read_text().splitlines()
+    cmd = next(line for line in lines if line.startswith("CMD"))
+    args = json.loads(cmd.removeprefix("CMD").strip())
+    return int(args[args.index("--ws-max-size") + 1])
+
+
+def test_the_server_closes_a_socket_on_a_large_frame_before_buffering_it():
+    """uvicorn's --ws-max-size refuses a frame by its header (1009), so a large control message
+    never reaches the app; the image starts uvicorn with a limit near the longest valid message."""
+    import socket
+
+    import uvicorn
+    from websockets.exceptions import ConnectionClosed
+    from websockets.sync.client import connect
+
+    from api.live import MAX_CONTROL_CHARS
+
+    limit = _dockerfile_ws_max_size()
+    assert MAX_CONTROL_CHARS * 4 <= limit <= 16 * 1024  # 4 bytes per char at most in UTF-8
+    app = FastAPI()
+    received = []
+
+    @app.websocket("/ws")
+    async def echo(ws: WebSocket):
+        await ws.accept()
+        while True:
+            received.append(await ws.receive_text())
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(app, port=port, ws_max_size=limit, log_level="error"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic() + 10
+        while not server.started and time.monotonic() < deadline:
+            time.sleep(0.05)
+        with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            ws.send("x" * 100)
+            ws.send("x" * (1 << 20))
+            with pytest.raises(ConnectionClosed) as closed:
+                ws.recv(timeout=5)
+        assert closed.value.rcvd is not None and closed.value.rcvd.code == 1009
+        time.sleep(0.1)
+        assert [len(m) for m in received] == [100]
+    finally:
+        server.should_exit = True
+        thread.join(10)
 
 
 # --- breakdowns: cached by content hash, regeneration rate-limited (SPEC 2) ----------------------
@@ -364,6 +452,62 @@ def test_the_daily_cap_resets_at_utc_midnight():
     assert not DailyCap(0).take()
 
 
+# --- the Analyst's tools over our MCP server (SPEC 6, 8) ----------------------------------------
+
+
+def test_analyst_mcp_is_on_unless_the_environment_turns_it_off(monkeypatch):
+    monkeypatch.delenv("TTE_ANALYST_MCP", raising=False)
+    assert Settings.from_env().analyst_mcp is True
+    for off in ("0", "false", "OFF", " no "):
+        monkeypatch.setenv("TTE_ANALYST_MCP", off)
+        assert Settings.from_env().analyst_mcp is False
+    for on in ("1", "true", ""):
+        monkeypatch.setenv("TTE_ANALYST_MCP", on)
+        assert Settings.from_env().analyst_mcp is True
+
+
+def _mcp_app(settings, cache_dir, replies, on):
+    from agents.testing import FakeChatClient
+
+    fresh = Settings(matches=settings.matches, cache_dir=cache_dir, rate_limit=(100, 600.0),
+                     web_origin="*", analyst_mcp=on)  # fmt: skip
+    fake = FakeChatClient(replies)
+    return create_app(fresh, client=fake, model_id="fake-model"), fake
+
+
+@pytest.mark.parametrize("on", [True, False])
+def test_a_model_breakdown_gives_the_analyst_the_mcp_tools_when_on(settings, tmp_path, replies, on):
+    """Found 2026-10-20: the API never set use_mcp, so the deployed Analyst had no tools."""
+    app, fake = _mcp_app(settings, tmp_path, replies, on)
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    with TestClient(app) as c:
+        assert c.get("/health").json()["analyst_mcp"] is on
+        r = c.post("/api/breakdowns", json=body).json()
+    assert r["source"] == "model" and r["cached"] is False
+    if on:
+        assert {"get_moment", "list_claims", "run_counterfactual", "what_if"} <= set(
+            fake.tools["analyst"]
+        )
+    else:
+        assert fake.tools["analyst"] == []
+    assert fake.tools["director"] == [] and fake.tools["telestrator"] == []
+
+
+def test_a_breakdown_cached_without_the_tools_is_not_served_once_they_are_on(
+    settings, tmp_path, replies
+):
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    keys = []
+    for on in (False, True, True):
+        app, _ = _mcp_app(settings, tmp_path, replies, on)
+        with TestClient(app) as c:
+            r = c.post("/api/breakdowns", json=body).json()
+        keys.append((r["key"], r["cached"]))
+    (off_key, off_cached), (on_key, on_cached), (again_key, again_cached) = keys
+    assert not off_cached and not on_cached and again_cached
+    assert off_key != on_key == again_key
+
+
 def test_unknown_moment_is_404(client):
     body = {"match": MATCH, "moment": "m:sprint:H9:0085"}
     assert client.post("/api/breakdowns", json=body).status_code == 404
@@ -477,14 +621,192 @@ def test_tts_needs_speech(client, monkeypatch):
 
 
 def test_speech_limits_come_from_the_environment(monkeypatch):
-    monkeypatch.delenv("TTE_TTS_RATE_LIMIT", raising=False)
-    monkeypatch.delenv("TTE_DAILY_TTS_CAP", raising=False)
+    for name in ("TTE_TTS_RATE_LIMIT", "TTE_DAILY_TTS_CAP", "TTE_TTS_CONCURRENCY"):
+        monkeypatch.delenv(name, raising=False)
     s = Settings.from_env()
-    assert (s.tts_rate_limit, s.daily_tts_cap) == ((60, 600.0), 200)
+    assert (s.tts_rate_limit, s.daily_tts_cap, s.tts_concurrency) == ((60, 600.0), 200, 4)
     monkeypatch.setenv("TTE_TTS_RATE_LIMIT", "5/60")
     monkeypatch.setenv("TTE_DAILY_TTS_CAP", "7")
+    monkeypatch.setenv("TTE_TTS_CONCURRENCY", "2")
     s = Settings.from_env()
-    assert (s.tts_rate_limit, s.daily_tts_cap) == ((5, 60.0), 7)
+    assert (s.tts_rate_limit, s.daily_tts_cap, s.tts_concurrency) == ((5, 60.0), 7, 2)
+
+
+def _concurrently(app, requests):
+    """Send (method, path, json) requests to `app` at once; the responses, in order."""
+
+    async def run():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+            return await asyncio.gather(*(c.request(m, p, json=j) for m, p, j in requests))
+
+    return asyncio.run(run())
+
+
+def _slow(monkeypatch, delay=0.3):
+    """A fake synthesis that takes `delay` s; records the SSML sent and the most in flight."""
+    sent, in_flight, peak, lock = [], [0], [0], threading.Lock()
+
+    def synthesize(ssml: str) -> bytes:
+        with lock:
+            in_flight[0] += 1
+            peak[0] = max(peak[0], in_flight[0])
+        time.sleep(delay)
+        with lock:
+            in_flight[0] -= 1
+            sent.append(ssml)
+        return b"RIFF" + hashlib.sha256(ssml.encode()).digest() * 1000
+
+    monkeypatch.setattr(tts, "request", synthesize)
+    return sent, peak
+
+
+def test_concurrent_misses_for_one_cue_synthesize_once(settings, tmp_path, speech, monkeypatch):
+    sent, _ = _slow(monkeypatch)
+    app = _app(settings, tmp_path, daily_tts_cap=2)
+    with TestClient(app) as c:
+        a, b, third = (cue["cache_key"] for cue in _cues(c)[:3])
+    first = _concurrently(app, [("POST", "/api/tts", {"key": a})] * 4)
+    with TestClient(app) as c:
+        b_status = c.post("/api/tts", json={"key": b}).status_code  # one unit of two was used
+        third_status = c.post("/api/tts", json={"key": third}).status_code
+    assert [r.status_code for r in first] == [200] * 4
+    assert len({r.content for r in first}) == 1 and len(sent) == 2  # a once, then b
+    assert (b_status, third_status) == (200, 429)
+    assert (tmp_path / "tts" / f"{a}.wav").read_bytes() == first[0].content
+    assert sorted(p.name for p in (tmp_path / "tts").iterdir()) == sorted([f"{a}.wav", f"{b}.wav"])
+
+
+def test_a_failed_synthesis_gives_its_cap_unit_back(settings, tmp_path, speech, monkeypatch):
+    calls = []
+
+    def flaky(ssml: str) -> bytes:
+        calls.append(ssml)
+        if len(calls) <= 3:
+            raise tts.SpeechUnavailable("Azure Speech request failed")
+        return b"RIFF-ok"
+
+    monkeypatch.setattr(tts, "request", flaky)
+    with TestClient(_app(settings, tmp_path, daily_tts_cap=1)) as c:
+        key = _cues(c)[0]["cache_key"]
+        failed = [c.post("/api/tts", json={"key": key}) for _ in range(3)]
+        ok = c.post("/api/tts", json={"key": key})
+    assert [r.status_code for r in failed] == [502] * 3
+    assert failed[0].json() == {"detail": "Azure Speech request failed"}
+    assert ok.status_code == 200 and ok.content == b"RIFF-ok"
+    assert [p.name for p in (tmp_path / "tts").iterdir()] == [f"{key}.wav"]  # no temp files
+
+
+def test_azure_speech_calls_in_flight_are_capped(settings, tmp_path, speech, monkeypatch):
+    _, peak = _slow(monkeypatch, delay=0.2)
+    app = _app(settings, tmp_path, tts_concurrency=2)
+    with TestClient(app) as c:
+        keys = [cue["cache_key"] for lang in ("en", "zh") for cue in _cues(c, language=lang)]
+    keys = list(dict.fromkeys(keys))[:6]
+    assert len(keys) >= 4
+    replies = _concurrently(app, [("POST", "/api/tts", {"key": k}) for k in keys])
+    assert [r.status_code for r in replies] == [200] * len(keys)
+    assert peak[0] == 2
+
+
+def test_audio_files_are_written_whole_by_concurrent_writers(tmp_path, monkeypatch):
+    """Each writer has its own temp file, so the published WAV is one writer's bytes."""
+    key = "0123456789abcdef"
+    payloads = [bytes([i]) * (4 << 20) for i in range(6)]
+    turn = iter(payloads)
+    lock = threading.Lock()
+
+    def request(ssml):
+        with lock:
+            return next(turn)
+
+    monkeypatch.setattr(tts, "request", request)
+    args = ("<speak/>", key, tmp_path)
+    threads = [threading.Thread(target=tts.synthesize, args=args) for _ in payloads]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert (tmp_path / "tts" / f"{key}.wav").read_bytes() in payloads
+    assert [p.name for p in (tmp_path / "tts").iterdir()] == [f"{key}.wav"]
+
+
+# --- the voice cues a breakdown records never fail the breakdown (SPEC 6 Voice) -----------------
+
+
+def test_a_cached_breakdown_with_null_voice_is_served(settings, tmp_path):
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"]}
+    with TestClient(_app(settings, tmp_path)) as c:
+        key = c.post("/api/breakdowns", json=body).json()["key"]
+    path = tmp_path / "breakdowns" / f"{key}.json"
+    value = json.loads(path.read_text())
+    for script in value["result"]["scripts"]:
+        script["voice"] = None
+    path.write_text(json.dumps(value))
+    with TestClient(_app(settings, tmp_path)) as c:  # a fresh process reads the file
+        r = c.post("/api/breakdowns", json=body)
+    assert r.status_code == 200 and r.json()["cached"] is True
+
+
+def test_a_failing_voice_store_does_not_fail_a_breakdown(settings, tmp_path):
+    body = {"match": MATCH, "personas": ["casual"], "languages": ["en"]}
+
+    def broken(*args):
+        raise OSError("disk full")
+
+    app = _app(settings, tmp_path)
+    app.state.cues.store.put = broken
+    app.state.cues.store.get = broken
+    with TestClient(app) as c:
+        computed = c.post("/api/breakdowns", json=body)
+        cached = c.post("/api/breakdowns", json=body)
+    assert computed.status_code == cached.status_code == 200
+    assert cached.json()["cached"] is True
+
+
+def test_a_restart_does_not_overwrite_the_ssml_stored_for_a_key():
+    class Store(dict):
+        def put(self, key, value):
+            self[key] = value
+
+    store = Store({"0123456789abcdef": {"ssml": "<speak>first</speak>"}})
+    breakdown = {"result": {"scripts": [{"voice": [
+        {"cache_key": "0123456789abcdef", "ssml": "<speak>changed</speak>"},
+        {"cache_key": "fedcba9876543210", "ssml": "<speak>new</speak>"},
+    ]}]}}  # fmt: skip
+    cues = tts.Cues(store)  # a new process: it has written nothing yet
+    cues.add(breakdown)
+    assert cues.ssml("0123456789abcdef") == "<speak>first</speak>"
+    assert cues.ssml("fedcba9876543210") == "<speak>new</speak>"
+
+
+# --- client addresses: the ingress appends the address it saw (SPEC 8) ----------------------------
+
+
+def test_spoofed_first_hops_share_one_rate_limit(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path, tts_rate_limit=(2, 600.0))) as c:
+        key = _cues(c)[0]["cache_key"]
+
+        def post(forwarded):
+            return c.post("/api/tts", json={"key": key}, headers={"x-forwarded-for": forwarded})
+
+        spoofed = [post(f"198.51.100.{i}, 192.0.2.50").status_code for i in range(3)]
+        other = post("198.51.100.1, 192.0.2.51").status_code
+    assert spoofed == [200, 200, 429] and other == 200
+
+
+def test_the_rate_limiter_forgets_idle_clients_and_tracks_a_bounded_number():
+    limiter = RateLimiter(1, 0.05, max_clients=3)
+    for i in range(10):
+        assert limiter.allow(f"c{i}")
+    assert len(limiter._seen) == 3 and set(limiter._seen) == {"c7", "c8", "c9"}
+    assert not limiter.allow("c9")  # a tracked client is still limited
+    time.sleep(0.1)
+    assert limiter.allow("c9") and len(limiter._seen) <= 3
+    limiter.allow("c0")
+    assert set(limiter._seen) == {"c9", "c0"}  # c7 and c8 went idle: forgotten
+    assert all(limiter._seen.values())  # no empty deques kept
+    assert not RateLimiter(0, 60).allow("c") and not RateLimiter(0, 60)._seen
 
 
 # --- input bounds, headers and errors: the API is public with no login (CLAUDE.md rule 6) --------
@@ -541,7 +863,8 @@ def test_a_500_carries_no_stack_trace(settings):
         raise RuntimeError("internals: /app/api/main.py, key=abc")
 
     with TestClient(app, raise_server_exceptions=False) as c:
-        r = c.get("/boom")
+        r = c.get("/boom", headers={"origin": "https://example.org"})
     assert r.status_code == 500 and r.json() == {"detail": "internal error"}
     assert "internals" not in r.text and "Traceback" not in r.text
     assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["access-control-allow-origin"] == "*"  # the static site can read it

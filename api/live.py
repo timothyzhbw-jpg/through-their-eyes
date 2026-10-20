@@ -8,10 +8,12 @@ SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
 `{"type": "seek", "f": 120}` (a frame of the match) or `{"type": "speed", "x": 2.0}` (clamped to
 0.1–1000).
 
-The stream is public, so it is bounded: a few open at once per client (`Slots`), a session
-length with paused time included, and control messages that are exactly one of the forms above.
-Anything else gets an `error` with the reason, then the stream closes: 4400 for a malformed
-control message, 4408 past the session length, 4429 for too many streams (4404: unknown match).
+The stream is public, so it is bounded: a few open at once per client and a ceiling across all
+clients (`Slots`), a session length with paused time included, and control messages that are
+exactly one of the forms above. Anything else gets an `error` with the reason, then the stream
+closes: 4400 for a malformed control message, 4408 past the session length, 4429 for too many
+streams (4404: unknown match). A frame larger than the server's `--ws-max-size` (Dockerfile) is
+refused by uvicorn from its header, with 1009, before it is buffered.
 """
 
 from __future__ import annotations
@@ -44,19 +46,29 @@ class Control:
 
 
 class Slots:
-    """Live streams open at once, at most `per_client` per client address."""
+    """Live streams open at once: at most `per_client` per client address and `total` in all.
 
-    def __init__(self, per_client: int) -> None:
-        self.per_client = per_client
+    The per-client count trusts the address the ingress saw; `total` bounds the process even if
+    that address can be faked.
+    """
+
+    def __init__(self, per_client: int, total: int = 64) -> None:
+        self.per_client, self.total = per_client, total
         self._open: dict[str, int] = defaultdict(int)
+        self._count = 0
 
-    def take(self, client: str) -> bool:
+    def take(self, client: str) -> str | None:
+        """Take a slot for `client`; None if taken, else why not."""
+        if self._count >= self.total:
+            return "the server has too many live streams open; try again shortly"
         if self._open[client] >= self.per_client:
-            return False
+            return "too many live streams from this address"
         self._open[client] += 1
-        return True
+        self._count += 1
+        return None
 
     def give(self, client: str) -> None:
+        self._count -= 1
         self._open[client] -= 1
         if self._open[client] <= 0:
             del self._open[client]

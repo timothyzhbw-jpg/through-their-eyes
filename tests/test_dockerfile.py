@@ -103,4 +103,5 @@ def test_service_command_is_uvicorn_on_port_8000():
     assert cmds
     assert re.sub(r"[\[\]\",]", " ", cmds[-1]).split() == [
         "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000",
+        "--ws-max-size", "4096",  # the longest live control message is 256 chars (api/live.py)
     ]  # fmt: skip

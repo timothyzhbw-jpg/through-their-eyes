@@ -7,7 +7,8 @@ what-if answers are computed once and cached by a content hash of everything tha
 (moment card, personas, languages, prompt version, model deployment). With a model configured,
 regeneration is rate-limited per client and capped per UTC day across all clients
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
-flagged `rate_limited` or `capped`.
+flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
+tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
 
 Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream, request
 bodies and response headers are bounded for a public service (api/live.py, api/guard.py).
@@ -77,9 +78,11 @@ class TtsBody(BaseModel):
 
 
 def _client_ip(request: HTTPConnection) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:  # first hop, as set by the Container Apps ingress
-        return forwarded.split(",")[0].strip()
+    """The address the Container Apps ingress saw: it appends that as the last X-Forwarded-For
+    hop, after any hops the client sent itself. Every per-client limit uses this."""
+    hops = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",")]
+    if hops[-1]:
+        return hops[-1]
     return request.client.host if request.client else "unknown"
 
 
@@ -106,7 +109,9 @@ def create_app(
     cap = DailyCap(settings.daily_model_cap)
     speech_limiter = RateLimiter(*settings.tts_rate_limit)  # POST /api/tts per client
     speech_cap = DailyCap(settings.daily_tts_cap)  # Azure Speech syntheses per UTC day
-    slots = Slots(settings.live_per_client)
+    speech_calls = asyncio.Semaphore(settings.tts_concurrency)  # Azure Speech calls in flight
+    synthesizing = tts.KeyLocks()  # one synthesis per cue key at a time
+    slots = Slots(settings.live_per_client, settings.live_max_total)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -144,7 +149,8 @@ def create_app(
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
-        return {"status": "ok", "version": VERSION, "model": model, "speech": tts.configured()}
+        return {"status": "ok", "version": VERSION, "model": model, "speech": tts.configured(),
+                "analyst_mcp": client is not None and settings.analyst_mcp}  # fmt: skip
 
     @app.get("/api/matches")
     async def matches() -> list[dict[str, Any]]:
@@ -184,10 +190,8 @@ def create_app(
             await ws.close(code=4404)
             return
         ip = _client_ip(ws)
-        if not slots.take(ip):
-            await ws.send_json(
-                {"type": "error", "detail": "too many live streams from this address"}
-            )
+        if refused := slots.take(ip):
+            await ws.send_json({"type": "error", "detail": refused})
             await ws.close(code=4429)
             return
         try:
@@ -201,13 +205,15 @@ def create_app(
         if body.moment not in (None, m.ctx.card.id):
             raise HTTPException(404, f"breakdowns are available for {m.ctx.card.id}")
 
-        def key(model_name: str) -> str:
+        def key(model_name: str, **tools: str) -> str:
             return content_key(card=m.ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
-                               pipeline=PIPELINE_VERSION,
-                               model=model_name)  # fmt: skip
+                               pipeline=PIPELINE_VERSION, model=model_name,
+                               **tools)  # fmt: skip
 
-        model_key, offline_key = key(model), key("offline")
+        # The Analyst's tools shape a model breakdown, so they are part of its key.
+        model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
+        offline_key = key("offline")
         candidates = ([model_key] if client is not None else []) + [offline_key]
         # With a model, only a model result is a cache hit up front: a template served while a
         # client was limited must not stand in for the model on later requests.
@@ -228,7 +234,8 @@ def create_app(
 
     async def _compute(m: Match, body: BreakdownBody, llm, source: str, k: str) -> dict[str, Any]:
         result = await run_breakdown(m.ctx, client=llm, personas=tuple(body.personas),
-                                     languages=tuple(body.languages))  # fmt: skip
+                                     languages=tuple(body.languages),
+                                     use_mcp=settings.analyst_mcp)  # fmt: skip
         value = {"source": source, "result": result.model_dump(mode="json", by_alias=True)}
         breakdowns.put(k, value)
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
@@ -259,7 +266,9 @@ def create_app(
     async def speech(request: Request) -> Response:
         """WAV for one voice cue of a breakdown this service served, by its `cache_key`.
 
-        Rate-limited per client; synthesis (an audio cache miss) is also capped per UTC day.
+        Rate-limited per client; synthesis (an audio cache miss) is also capped per UTC day, and
+        only a synthesis that is stored counts. Requests for one key wait for the synthesis in
+        flight and get its audio; at most `TTE_TTS_CONCURRENCY` Azure calls run at once.
         """
         try:  # parsed here, not by FastAPI, so that SSML or any other body is a 400
             key = TtsBody.model_validate_json(await request.body()).key
@@ -274,16 +283,26 @@ def create_app(
         if not tts.configured():
             raise HTTPException(503, "Azure Speech is not configured")
         if (audio := tts.cached(key, settings.cache_dir)) is None:
-            if not speech_cap.take():
-                raise HTTPException(429, "today's speech budget is used up; captions still work")
-            try:
-                audio = await asyncio.to_thread(tts.synthesize, ssml, key, settings.cache_dir)
-            except tts.SpeechUnavailable as e:
-                raise HTTPException(502, str(e)) from e
+            async with synthesizing.hold(key):
+                if (audio := tts.cached(key, settings.cache_dir)) is None:  # made while waiting?
+                    audio = await _synthesize(ssml, key)
         return Response(audio, media_type="audio/wav")
+
+    async def _synthesize(ssml: str, key: str) -> bytes:
+        if not speech_cap.take():
+            raise HTTPException(429, "today's speech budget is used up; captions still work")
+        try:
+            async with speech_calls:
+                return await asyncio.to_thread(tts.synthesize, ssml, key, settings.cache_dir)
+        except Exception as e:  # nothing stored: the unit goes back (not on cancel: the worker
+            speech_cap.give()  # thread may still store its audio)
+            if isinstance(e, tts.SpeechUnavailable):
+                raise HTTPException(502, str(e)) from e
+            raise
 
     app.state.settings = settings
     app.state.store = store
+    app.state.cues = cues
     return app
 
 

@@ -16,7 +16,8 @@ from agents.context import MomentContext
 
 
 def build_server(ctx: MomentContext) -> FastMCP:
-    server = FastMCP("through-their-eyes")
+    # WARNING: at INFO every request is logged to stderr, which the API's container logs inherit.
+    server = FastMCP("through-their-eyes", log_level="WARNING")
 
     @server.tool()
     def get_moment(moment_id: str | None = None) -> str:

@@ -87,7 +87,7 @@ export function RiggedPlayers() {
     const s = playback.get();
     const run = hero.runs[s.mode];
     sampleInto(sample, hero, run, s.frame, s.comfort);
-    const me = hero.ids.indexOf(s.povPlayer);
+    const me = s.camera === "broadcast" ? -1 : hero.ids.indexOf(s.povPlayer); // hidden: his own
     for (let j = 0; j < hero.n; j++) {
       const { rig } = rigs[j];
       rig.holder.visible = j !== me;

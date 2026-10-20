@@ -8,11 +8,15 @@ that cache, and POST /api/tts takes a key, never SSML. Audio is cached by key un
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import os
 import re
+import tempfile
 import urllib.error
 import urllib.request
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -36,14 +40,18 @@ class Cues:
 
     def __init__(self, store: Any) -> None:
         self.store = store
-        self._stored: set[str] = set()  # written by this process; a key fixes its SSML
+        self._stored: set[str] = set()  # known to be in the store; a key fixes its SSML
 
     def add(self, breakdown: dict[str, Any]) -> None:
-        for script in breakdown.get("result", {}).get("scripts", ()):
-            for cue in script.get("voice", ()):
-                if (key := cue["cache_key"]) not in self._stored:
+        """Record the cues of `breakdown`. A key already in the store keeps its SSML (its audio
+        may be cached already), even when written by an earlier process."""
+        for script in (breakdown.get("result") or {}).get("scripts") or ():
+            for cue in script.get("voice") or ():
+                if (key := cue["cache_key"]) in self._stored:
+                    continue
+                if self.store.get(key) is None:
                     self.store.put(key, {"ssml": cue["ssml"]})
-                    self._stored.add(key)
+                self._stored.add(key)
 
     def ssml(self, key: str) -> str | None:
         hit = self.store.get(key)
@@ -54,7 +62,11 @@ class Cues:
 
 
 class Recording:
-    """A breakdown cache that records the voice cues of every value read from or written to it."""
+    """A breakdown cache that records the voice cues of every value read from or written to it.
+
+    Recording is a side effect: if it fails, the breakdown is still served (its cues then answer
+    404 until a later read records them).
+    """
 
     def __init__(self, cache: Any, cues: Cues) -> None:
         self.cache, self.cues = cache, cues
@@ -62,12 +74,39 @@ class Recording:
     def get(self, key: str) -> dict[str, Any] | None:
         value = self.cache.get(key)
         if value is not None:
-            self.cues.add(value)
+            self._record(key, value)
         return value
 
     def put(self, key: str, value: dict[str, Any]) -> None:
         self.cache.put(key, value)
-        self.cues.add(value)
+        self._record(key, value)
+
+    def _record(self, key: str, value: dict[str, Any]) -> None:
+        try:
+            self.cues.add(value)
+        except Exception:
+            log.exception("recording the voice cues of breakdown %s failed", key)
+
+
+class KeyLocks:
+    """One asyncio lock per key, dropped once nobody holds or waits for it."""
+
+    def __init__(self) -> None:
+        self._locks: dict[str, tuple[asyncio.Lock, int]] = {}
+
+    @contextlib.asynccontextmanager
+    async def hold(self, key: str) -> AsyncIterator[None]:
+        lock, users = self._locks.get(key) or (asyncio.Lock(), 0)
+        self._locks[key] = (lock, users + 1)
+        try:
+            async with lock:
+                yield
+        finally:
+            lock, users = self._locks[key]
+            if users <= 1:
+                del self._locks[key]
+            else:
+                self._locks[key] = (lock, users - 1)
 
 
 def _path(key: str, cache_dir: Path) -> Path:
@@ -82,13 +121,23 @@ def cached(key: str, cache_dir: Path) -> bytes | None:
 
 
 def synthesize(ssml: str, key: str, cache_dir: Path) -> bytes:
-    """Azure Speech for `ssml`, cached under `key`. Blocking: run it in a worker thread."""
+    """Azure Speech for `ssml`, cached under `key`. Blocking: run it in a worker thread.
+
+    The audio goes to a temp file of its own, then replaces the cached file in one step, so a
+    reader sees the whole of one synthesis or nothing, even with several writers.
+    """
     path = _path(key, cache_dir)
     audio = request(ssml)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".wav.tmp")
-    tmp.write_bytes(audio)
-    tmp.replace(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{key}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(audio)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
     return audio
 
 
