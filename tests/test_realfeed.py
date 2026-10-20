@@ -281,3 +281,35 @@ def test_player_silhouettes_stay_in_their_boxes_and_the_rest_is_blurred():
     outside = cv2.erode((~keep).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
     assert _hf_energy(out, outside) < 0.01 * _hf_energy(frame, outside)
     np.testing.assert_array_equal(out[sil], frame[sil])
+
+
+# --- decoupling from the app (SPEC 7, real-footage overlay) -----------------------------------
+
+ROOT = Path(__file__).parents[1]
+APP_PACKAGES = ("sim", "analytics", "explain", "agents", "api")
+FRAME_SUFFIXES = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".png", ".jpg", ".jpeg", ".gif"}
+
+
+def test_the_app_never_imports_or_references_the_real_footage_demo():
+    for pkg in APP_PACKAGES:
+        for path in (ROOT / pkg).rglob("*.py"):
+            text = path.read_text(encoding="utf-8")
+            assert "realfeed" not in text, f"{path.relative_to(ROOT)} references demo.realfeed"
+    skip = {"node_modules", "dist"}
+    for path in (ROOT / "web").rglob("*"):
+        if path.is_file() and not skip & set(path.parts):
+            text = path.read_bytes().decode("utf-8", errors="ignore")
+            assert "realfeed" not in text, f"{path.relative_to(ROOT)} references realfeed"
+
+
+def test_no_video_or_image_frames_are_tracked_under_demo():
+    import subprocess
+
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "demo"], cwd=ROOT, capture_output=True, text=True, check=True
+        ).stdout.split()
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip("not a git checkout")
+    frames = [p for p in tracked if Path(p).suffix.lower() in FRAME_SUFFIXES]
+    assert frames == []

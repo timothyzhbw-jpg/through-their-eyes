@@ -43,7 +43,7 @@ from demo.realfeed.video import Writer
 VIDEO = OUT / "realfeed_overlay.mp4"
 KEYFRAME = OUT / "realfeed_keyframe.png"
 
-START = 25  # first clip frame in the output
+START = 60  # first clip frame in the output; keeps the segment under 10 s
 # The ball reaches the blue player on the left; first touch at frame 400 (15:54.0 in the
 # source), shot at 410. Hand annotation: his feet in frame 400, in pixels.
 CARRIER_FRAME = 400
@@ -53,13 +53,10 @@ FREEZE_FRAMES = 60  # 1.2 s hold on CARRIER_FRAME
 GOALKEEPER_TEAM = 0  # the orange keeper defends the goal blue attacks: he plays for red
 TEAM_COLOUR = {0: RED, 1: BLUE}
 
-CAPTION = "Real amateur footage (CC BY 3.0). Graphics computed by our pipeline."
-LEGEND = [
-    "Pitch control: red vs blue (time-to-intercept model)",
-    "Pass options from the ball carrier: green safe, red likely intercepted",
-    "Rings: 2 m and 4 m around the carrier",
-    "Positions from classic computer vision; pitch size estimated (approx. 40 x 20 m)",
-]
+# The only text on the real footage (SPEC 7): what it is, and the CC BY attribution, on screen for
+# the whole segment. Graphics only otherwise: no numbers, captions or narration.
+LABEL = "Real footage, overlay demo only; the app uses synthetic data"
+ATTRIBUTION = "savinkins, Wikimedia Commons, CC BY 3.0; blurred and overlaid by us"
 
 
 @dataclass
@@ -113,7 +110,6 @@ def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None
         layer.heat(colours, 0.42 * strength * valid)
     for q in players:
         layer.circle(q.pos, 0.55, TEAM_COLOUR[q.team], 0.10, opacity=0.95)
-    lines = []
     if carrier is not None and fade > 0:
         c = next((q for q in players if q.track == carrier), None)
         if c is not None:
@@ -131,49 +127,40 @@ def ground_layer(canvas: Canvas, players: list[PlayerState], carrier: int | None
                 end = m.pos - d / max(np.linalg.norm(d), 1e-6) * 0.6
                 layer.line(c.pos, end, safety_colour(safe), 0.16, opacity=0.95 * fade)
                 layer.circle(m.pos, 0.75, safety_colour(safe), 0.10, opacity=0.95 * fade)
-                lines.append((m, safe))
-            if opp:
-                near = min(opp, key=lambda q: np.linalg.norm(q.pos - c.pos))
-                lines.append(("nearest", float(np.linalg.norm(near.pos - c.pos)), c))
-    return layer, lines
+    return layer
 
 
 def _text(img, text, org, scale=0.8, colour=(255, 255, 255), thick=1):
     cv2.putText(img, text, org, cv2.FONT_HERSHEY_DUPLEX, scale, colour, thick, cv2.LINE_AA)
 
 
-def _label(img, text, centre, scale=0.7) -> tuple[int, int, int, int]:
-    """Text on a dark panel centred at `centre`; returns the panel box."""
-    (tw, th), base = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 1)
-    pad = 8
-    x, y = int(centre[0] - tw / 2 - pad), int(centre[1] - th / 2 - pad)
-    box = (max(0, x), max(0, y), tw + 2 * pad, th + base + 2 * pad)
-    _panel(img, box, 0.6)
-    _text(img, text, (box[0] + pad, box[1] + pad + th), scale)
-    return box
-
-
 def hud(img: np.ndarray, freeze: bool) -> list[tuple[int, int, int, int]]:
-    """Caption and legend; returns their boxes (excluded from the blur check)."""
-    boxes = []
+    """Label and attribution (bottom left), a pause sign while frozen; returns the panel boxes."""
     h, w = img.shape[:2]
-    pad = 14
-    (tw, th), _ = cv2.getTextSize(CAPTION, cv2.FONT_HERSHEY_DUPLEX, 0.8, 1)
-    box = (24, h - 24 - th - 2 * pad, tw + 2 * pad, th + 2 * pad)
+    pad, gap = 14, 10
+    sizes = [
+        cv2.getTextSize(t, cv2.FONT_HERSHEY_DUPLEX, s, 1)[0]
+        for t, s in ((LABEL, 0.8), (ATTRIBUTION, 0.62))
+    ]
+    bw = max(sw for sw, _ in sizes) + 2 * pad
+    bh = sizes[0][1] + sizes[1][1] + gap + 2 * pad + 6
+    box = (24, h - 24 - bh, bw, bh)
     _panel(img, box)
-    _text(img, CAPTION, (24 + pad, h - 24 - pad), 0.8)
-    boxes.append(box)
-    widths = [cv2.getTextSize(s, cv2.FONT_HERSHEY_DUPLEX, 0.62, 1)[0][0] for s in LEGEND]
-    box = (24, 24, max(widths) + 2 * pad, 30 * len(LEGEND) + pad)
-    _panel(img, box)
-    for i, s in enumerate(LEGEND):
-        _text(img, s, (24 + pad, 24 + pad + 18 + 30 * i), 0.62)
-    boxes.append(box)
+    _text(img, LABEL, (24 + pad, box[1] + pad + sizes[0][1]), 0.8)
+    _text(
+        img,
+        ATTRIBUTION,
+        (24 + pad, box[1] + pad + sizes[0][1] + gap + sizes[1][1] + 4),
+        0.62,
+        (215, 215, 215),
+    )
+    boxes = [box]
     if freeze:
-        (tw, th), _ = cv2.getTextSize("FREEZE", cv2.FONT_HERSHEY_DUPLEX, 0.8, 2)
-        box = (w - 24 - tw - 2 * pad, 24, tw + 2 * pad, th + 2 * pad)
+        # A pause sign, not a word: the footage carries no captions.
+        box = (w - 24 - 64, 24, 64, 64)
         _panel(img, box)
-        _text(img, "FREEZE", (box[0] + pad, 24 + pad + th), 0.8, (90, 220, 255), 2)
+        for x0 in (w - 24 - 64 + 18, w - 24 - 64 + 36):
+            cv2.rectangle(img, (x0, 24 + 16), (x0 + 10, 24 + 48), (255, 255, 255), -1)
         boxes.append(box)
     return boxes
 
@@ -252,7 +239,7 @@ def render(preview: set[int] | None = None) -> dict:
             fade = min(1.0, (i - OPTIONS[0]) / 10.0, (OPTIONS[1] - i) / 6.0 + 0.0)
         else:
             fade = 0.0
-        layer, labels = ground_layer(canvas, st[i], carrier, max(0.0, fade))
+        layer = ground_layer(canvas, st[i], carrier, max(0.0, fade))
         bgr, alpha = layer.project(h, SIZE)
         pitch_area = polygon_mask(h, pitch.polygon(margin=0.35), frame.shape[:2])
         key = grass_mask(frame) & pitch_area
@@ -270,17 +257,10 @@ def render(preview: set[int] | None = None) -> dict:
         # frame is already blurred, and box edges there would add detail back.
         pixelated = blur_boxes(out.copy(), [b for _, b in held])
         out = np.where(keep[..., None], pixelated, out)
-        label_boxes = []
-        for item in labels:
-            if item[0] == "nearest" and fade > 0.3:
-                _, dist, c = item
-                p = apply_h(h, c.pos)[0]
-                text = f"nearest opponent {dist:.1f} m"
-                label_boxes.append(_label(out, text, (p[0], p[1] + 60)))
         reps = FREEZE_FRAMES if i == CARRIER_FRAME else 1
         for r in range(reps):
             img = out.copy()
-            hud_boxes = hud(img, freeze=reps > 1) + label_boxes
+            hud_boxes = hud(img, freeze=reps > 1)
             if r == 0:
                 outside = cv2.erode((~keep).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(
                     bool

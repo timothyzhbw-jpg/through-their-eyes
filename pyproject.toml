@@ -28,9 +28,10 @@ dev = [
     "ruff>=0.8",
 ]
 # Real-footage overlay demo only (demo/realfeed): optical flow, homographies, image ops.
-# Apache-2.0; kept out of the main dependencies so the API image does not carry it.
+# Apache-2.0; kept out of the main dependencies so the API image does not carry it. Below 5:
+# 5.x dropped the Haar cascades that the face check (demo/realfeed/check.py) relies on.
 realfeed = [
-    "opencv-python-headless>=4.10",
+    "opencv-python-headless>=4.10,<5",
 ]
 
 [tool.uv]
