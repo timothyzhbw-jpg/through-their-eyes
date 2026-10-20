@@ -48,6 +48,7 @@ END_GUARD_S = longest_scan_s(PARAMS)
 # least 82 deg horizontally: the ball is out of frame beyond 41 deg from the head direction.
 FRAME_HALF_WIDTH = np.deg2rad(82.0 / 2.0)
 MIN_GROUP = 10  # observations per group below which a comparison is inconclusive
+MARKED_M = 3.0  # a receiver counts as marked while an opponent is this close
 BOOTSTRAP = 1000
 BOOTSTRAP_SEED = 20261019
 
@@ -189,7 +190,8 @@ def simulate(seed: int, params: SimParams = PARAMS) -> dict[str, dict[str, np.nd
     passes = {(e.attrs["receiver"], e.attrs["end"]): e for e in resolved}
 
     rec: dict[str, list] = {
-        k: [] for k in ("role", "scans", "window", "pressure", "pressure_window", "behind")
+        k: []
+        for k in ("role", "scans", "window", "pressure", "pressure_window", "marked", "behind")
     }
     last = frames - 1 - round(END_GUARD_S / dt)
     for e in run.events:
@@ -210,6 +212,7 @@ def simulate(seed: int, params: SimParams = PARAMS) -> dict[str, dict[str, np.nd
         )
         rec["pressure"].append(gap[-1].min())
         rec["pressure_window"].append(gap.min(axis=1).mean())
+        rec["marked"].append(np.mean(gap.min(axis=1) <= MARKED_M))
         rec["behind"].append(
             attack * (run.pos[kick.frame, passer, 0] - run.pos[kick.frame, i, 0]) < 0
         )
