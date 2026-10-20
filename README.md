@@ -51,6 +51,12 @@ Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cach
 "What if…?" answers. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
+The container image for Azure Container Apps (main dependencies only, runs as a non-root user):
+```bash
+docker build -t tte-api .
+docker run --rm -p 8000:8000 tte-api   # GET http://localhost:8000/health
+```
+
 ### Azure smoke test (M0)
 Needs the Azure CLI (`az login`) and an Azure for Students (or personal pay-as-you-go)
 subscription; the script refuses Microsoft-internal and Enterprise Agreement subscriptions.
