@@ -14,7 +14,7 @@ npm run typecheck
 npm run build        # -> web/dist (static files for the Azure Storage static website)
 npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
-npm run fps          # after a build: fps with the pitch-control overlay off and on (below)
+npm run fps          # after a build: fps with pitch control and the skeleton off and on (below)
 ```
 
 ## URL parameters
@@ -168,6 +168,7 @@ src/
   views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
               toolbars and HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
+  skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
               the transport and live controls a match shares; useView() for the shared views
@@ -232,6 +233,16 @@ src/
   - _Frame rate:_ `npm run build && npm run fps` plays the hero moment in Chrome and prints fps
     with the overlay off and on, then the shader's own cost per draw; `npm run fps -- --headed`
     measures on this machine's GPU.
+- **Skeleton data** (SPEC 7, optional; first in the SPEC 9 cut order). Toggle "Skeleton", off by
+  default, on the broadcast camera and the tactical board; one state for both. Per player it
+  draws only sim data: the position, the torso line (shoulders, across `body`), a head ray from
+  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. The ray
+  lights up (detector green) while the scan detector marks a scan. The key's switch picks the
+  head yaw: true, or as tracked (2° sensor noise, the detector's input), rebuilt from the
+  detector's exported angular velocity (`skeleton/skeleton.ts` says how; within 0.38° of the
+  sim's tracked yaw on seed 3). A match export has no detector run, so there it is true yaw only
+  and the ray lights up during the sim's own scans (sight blue). No limbs: the sim has none.
+  `npm run fps` also measures it, over the broadcast camera.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
   voice steps name its line ids. Click a caption (or any line in the Narration panel) and the
   evidence card under the views lists each claim with its kind (observed / computed /

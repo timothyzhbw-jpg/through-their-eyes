@@ -818,6 +818,24 @@ original visual identity.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
+- *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
+  broadcast camera and the tactical board, off by default ([web/src/skeleton/](../web/src/skeleton/)).
+  It shows our perception signals the way limb-tracking data is shown, but draws only what the
+  sim records per frame:
+  - the position; the torso line from `body` (the shoulders, across the torso's facing); a head
+    ray from the head yaw; and a fan from torso to head that fills in as the head–torso angle
+    grows. The key reads out that angle for the player whose eyes the first-person view uses.
+  - The head ray lights up while the scan detector (§4.7) marks a scan.
+  - A switch picks the head yaw: **true**, or **as tracked**, with the §3.4 sensor noise (the
+    series the detector runs on). The export carries the tracked yaw only as the detector's
+    angular velocity, so the web app integrates that and pins the constant to the circular mean of
+    true minus integrated yaw. On blind_side_run seed 3 that is within 0.38° of the sim's
+    `head_yaw_observed`, every player and both runs (the noise itself reaches 7.5°).
+  - A stitched match's export has no detector run: there the head yaw is the true one and the ray
+    lights up during the sim's own scans, and the key says so.
+  - Limbs are not sim data and are not drawn. On the broadcast camera the torso line sits at
+    shoulder height and the ray at eye height; heights and the shoulder width are a drawing
+    choice, not data.
 
 ### Real-footage overlay (demo video only; the one exception to synthetic data)
 Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
@@ -859,8 +877,8 @@ to a real broadcast.
    frame of the exported segment for logos and faces, not only the automated masks.
 4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
    endorsement. Keep the attribution on screen for the whole segment.
-5. *Time.* It is the first item in the cut order (§9); it never takes time from the "never cut"
-   list.
+5. *Time.* It is near the top of the cut order (§9), after the optional skeleton view; it never
+   takes time from the "never cut" list.
 
 **Acceptance checks:**
 - [x] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
@@ -899,6 +917,14 @@ to a real broadcast.
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
       caption line opens its claims and seeks the replay to their evidence", one case per line)
+- [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
+      draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
+      in a hero moment and in a stitched match; 60 fps with 22 players.
+      — [web/src/skeleton/skeleton.test.tsx](../web/src/skeleton/skeleton.test.tsx) (21 cases);
+      `npm run fps` (2026-10-20, Apple M4 Pro, headless Chrome, 1920 × 1080 at dpr 1 and 2):
+      60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
+      uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
+      integrated GPU.
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -1062,7 +1088,8 @@ to a real broadcast.
 **Acceptance status** (2026-10-20). Each check carries its evidence inline: a test, an eval report
 or a live check. Ticked only when verified that day: `uv run pytest` 464 passed, `npm test` in
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
-shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed.
+shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
+check, the same day: `npm test` 292 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
@@ -1070,10 +1097,10 @@ shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed.
 | §4 analytics | 5 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
-| §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 3 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **24** | **12** | |
+| **Total** | **25** | **12** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1094,20 +1121,21 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
-0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
+0. skeleton data view (§7, optional): remove the toggle; nothing else depends on it
+1. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
-1. rigged GRF players: back to tokens in POV and broadcast (§7)
-2. Foundry evaluation ablation, free text vs anchored narration (§6)
-3. shareable clip export (stretch)
-4. viewer pilot
-5. end-of-match recap reel
-6. "What if…?" free text → suggested questions only
-7. two voices → one narrator
-8. `coach` persona
-9. `es` language
-10. Cosmos DB → file store
-11. occlusion model → FOV only
-12. pitch-control shader and pass value surface → precomputed textures (the pitch-control
+2. rigged GRF players: back to tokens in POV and broadcast (§7)
+3. Foundry evaluation ablation, free text vs anchored narration (§6)
+4. shareable clip export (stretch)
+5. viewer pilot
+6. end-of-match recap reel
+7. "What if…?" free text → suggested questions only
+8. two voices → one narrator
+9. `coach` persona
+10. `es` language
+11. Cosmos DB → file store
+12. occlusion model → FOV only
+13. pitch-control shader and pass value surface → precomputed textures (the pitch-control
     shader exists and stays per pixel until a laptop measurement says otherwise, §7 render)
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
