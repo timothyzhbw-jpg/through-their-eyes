@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from analytics.pitch_control import pitch_control
+from analytics.vision import wrap_angle
 from analytics.xt import xt_for
 from explain.cards import LensResult
 from explain.lenses import (
@@ -20,6 +21,9 @@ from explain.lenses import (
 from explain.moments import detect_moments
 from sim.counterfactual import drop_scan_counterfactual
 from sim.engine import Simulation
+from sim.perception import ForcedScan
+from sim.scenarios import SCENARIOS
+from sim.scenarios.blind_side_run import BlindSideRun
 
 SCENARIO = "blind_side_run"
 HERO, RUNNER = "H8", "H9"
@@ -83,14 +87,34 @@ def test_the_key_scan_carries_the_largest_belief_update_about_the_runner(run3):
     assert best["belief_update_m"] > 5.0
 
 
-def test_a_scan_that_changes_nothing_has_no_impact_and_loses_to_space(run3, hero3):
-    decision = run3.hero_decision()
-    early = min(scan_candidates(run3, decision), key=lambda c: c["start_frame"])
-    assert early["scan_id"] != run3.key_scan().id and early["belief_update_m"] == 0.0
-    idle = scan_lens(run3, decision, early["scan_id"])
+class IdleLookFirst(BlindSideRun):
+    """The hero scenario plus one early look by H8 to the side away from the runner."""
+
+    name = "blind_side_run_idle_look"
+    idle_frame = 2
+
+    def forced_scans(self, sim, frame):
+        if frame != self.idle_frame:
+            return super().forced_scans(sim, frame)
+        me = sim.pos[self.i_hero]
+        ball = float(np.arctan2(*(sim.ball_pos[:2] - me)[::-1]))
+        runner = float(np.arctan2(*(sim.pos[self.i_runner] - me)[::-1]))
+        away = -np.sign(wrap_angle(runner - ball))
+        return {self.i_hero: ForcedScan(target_yaw=ball + away * np.deg2rad(80.0), dwell_s=0.1)}
+
+
+def test_a_scan_that_changes_nothing_has_no_impact_and_loses_to_space(monkeypatch):
+    monkeypatch.setitem(SCENARIOS, IdleLookFirst.name, IdleLookFirst)
+    run = Simulation.from_scenario(IdleLookFirst.name, seed=3).run()
+    hero = _hero(run)
+    decision = run.hero_decision()
+    early = min(scan_candidates(run, decision), key=lambda c: c["start_frame"])
+    assert early["start_frame"] == IdleLookFirst.idle_frame
+    assert early["scan_id"] != run.key_scan().id and early["belief_update_m"] == 0.0
+    idle = scan_lens(run, decision, early["scan_id"])
     assert idle.metrics["decision_changed"] is False
     assert idle.delta_xt == pytest.approx(0.0, abs=1e-6)
-    assert pick_lens([idle, hero3.lens("space"), hero3.lens("pressure")]) == "space"
+    assert pick_lens([idle, hero.lens("space"), hero.lens("pressure")]) == "space"
 
 
 def test_the_space_lens_compares_the_chosen_option_with_the_best_alternative(run3, hero3):

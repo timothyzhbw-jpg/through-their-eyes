@@ -5,11 +5,11 @@
 | | Value |
 |---|---|
 | Chosen on tuning seeds | expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m; speed ≥ 4.0 m/s, range ≤ 35 m, on ≥ 0.4 s |
-| Fresh held-out precision | **0.947** — ✅ meets the target ≥ 0.8 |
-| Fresh held-out recall | **0.967** — ✅ meets the target ≥ 0.7 |
-| `possession_play` alone (the general-play overlay) | precision **0.950**, recall 0.955 |
-| Tuning seeds, same thresholds | precision 0.956, recall 0.979 |
-| Fresh held-out data | `possession_play` 200–219 (20), `blind_side_run` 200–239 (40): 18.0 min of play, 794 truth episodes, 813 alerts |
+| Fresh held-out precision | **0.920** — ✅ meets the target ≥ 0.8 |
+| Fresh held-out recall | **0.984** — ✅ meets the target ≥ 0.7 |
+| `possession_play` alone (the general-play overlay) | precision **0.922**, recall 0.983 |
+| Tuning seeds, same thresholds | precision 0.914, recall 0.966 |
+| Fresh held-out data | `possession_play` 200–219 (20), `blind_side_run` 200–239 (40): 18.2 min of play, 1015 truth episodes, 1081 alerts |
 
 **An upper bound for real tracking.** The truth is the sim's belief, which carries the last-seen velocity on for up to 1 s — the same constant-velocity extrapolation the alert's expectation (`expect_s`) uses. The alert and the truth share that model of what a player expects, so these numbers are an upper bound for real tracking, where nobody knows how a player extrapolates. The *best without expectation* rows do not share it.
 
@@ -19,19 +19,19 @@
 
 | Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m | 0.947 | 0.967 | **0.957** | 813 | 794 | 0.893 | 0.713 |
-| best without expectation: no expectation, unseen ≥ 1.2 s, moved ≥ 1.5 m | 0.822 | 0.981 | **0.895** | 950 | 794 | 0.760 | 0.729 |
-| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.803 | 0.950 | **0.870** | 941 | 794 | 0.764 | 0.713 |
-| chosen, 25 m range for alert and truth | 0.921 | 0.960 | **0.940** | 571 | 546 | 0.813 | 0.705 |
-| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.793 | 0.985 | **0.879** | 813 | 667 | 0.310 | 0.965 |
-| chosen; truth variant: target ≥ 2 m/s on every frame | 0.950 | 0.229 | **0.370** | 813 | 4050 | 0.554 | 0.250 |
+| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m | 0.920 | 0.984 | **0.951** | 1081 | 1015 | 0.909 | 0.819 |
+| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.882 | 0.909 | **0.895** | 1042 | 1015 | 0.826 | 0.707 |
+| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.765 | 0.942 | **0.844** | 1247 | 1015 | 0.762 | 0.789 |
+| chosen, 25 m range for alert and truth | 0.909 | 0.983 | **0.944** | 800 | 743 | 0.842 | 0.831 |
+| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.800 | 0.989 | **0.885** | 1081 | 886 | 0.422 | 0.954 |
+| chosen; truth variant: target ≥ 2 m/s on every frame | 0.923 | 0.291 | **0.442** | 1081 | 3831 | 0.678 | 0.325 |
 
 | Scenario | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| `possession_play`, chosen | 0.950 | 0.955 | **0.953** | 519 | 516 | 0.879 | 0.667 |
-| `possession_play`, best without expectation | 0.801 | 0.973 | **0.878** | 627 | 516 | 0.740 | 0.685 |
-| `blind_side_run`, chosen | 0.942 | 0.989 | **0.965** | 294 | 278 | 0.950 | 0.959 |
-| `blind_side_run`, best without expectation | 0.864 | 0.996 | **0.925** | 323 | 278 | 0.848 | 0.962 |
+| `possession_play`, chosen | 0.922 | 0.983 | **0.951** | 794 | 749 | 0.905 | 0.794 |
+| `possession_play`, best without expectation | 0.861 | 0.888 | **0.874** | 768 | 749 | 0.811 | 0.680 |
+| `blind_side_run`, chosen | 0.916 | 0.989 | **0.951** | 287 | 266 | 0.927 | 0.946 |
+| `blind_side_run`, best without expectation | 0.942 | 0.970 | **0.956** | 274 | 266 | 0.900 | 0.846 |
 
 ## What limits precision
 
@@ -39,11 +39,11 @@ Alerts that match no truth episode (fresh held-out, chosen thresholds):
 
 | Reason | Alerts |
 |---|---|
-| the belief was never stale by > 3 m during the alert | 1 |
-| stale only after the runner slowed below the run speed (the belief overshoots) | 1 |
-| stale while watched for < 0.2 s (too short to be an episode) | 40 |
-| stale only while the pair was not watched, or out of range | 0 |
-| other | 1 |
+| the belief was never stale by > 3 m during the alert | 3 |
+| stale only after the runner slowed below the run speed (the belief overshoots) | 2 |
+| stale while watched for < 0.2 s (too short to be an episode) | 77 |
+| stale only while the pair was not watched, or out of range | 4 |
+| other | 0 |
 
 - *Runner slowed:* he ran while unseen, the belief carried his velocity on, and it went stale only once he slowed — overshooting him. The truth counts an episode only if he runs while the belief is stale.
 - *Never stale:* the belief stayed within 3 m of him for the whole alert.
@@ -55,19 +55,19 @@ Alerts that match no truth episode (fresh held-out, chosen thresholds):
 
 | Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m | 0.946 | 0.981 | **0.964** | 822 | 796 | 0.904 | 0.793 |
-| best without expectation: no expectation, unseen ≥ 1.2 s, moved ≥ 1.5 m | 0.796 | 0.984 | **0.880** | 983 | 796 | 0.737 | 0.792 |
-| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.791 | 0.942 | **0.860** | 947 | 796 | 0.757 | 0.766 |
-| chosen, 25 m range for alert and truth | 0.925 | 0.982 | **0.953** | 577 | 546 | 0.838 | 0.815 |
-| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.828 | 0.986 | **0.900** | 822 | 701 | 0.292 | 0.961 |
-| chosen; truth variant: target ≥ 2 m/s on every frame | 0.950 | 0.241 | **0.384** | 822 | 4088 | 0.533 | 0.265 |
+| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m | 0.935 | 0.980 | **0.957** | 1228 | 1171 | 0.896 | 0.829 |
+| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.861 | 0.901 | **0.881** | 1225 | 1171 | 0.797 | 0.730 |
+| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.746 | 0.918 | **0.823** | 1442 | 1171 | 0.736 | 0.777 |
+| chosen, 25 m range for alert and truth | 0.921 | 0.973 | **0.946** | 900 | 851 | 0.824 | 0.829 |
+| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.799 | 0.988 | **0.883** | 1228 | 1007 | 0.395 | 0.965 |
+| chosen; truth variant: target ≥ 2 m/s on every frame | 0.940 | 0.311 | **0.467** | 1228 | 4229 | 0.660 | 0.347 |
 
 | Scenario | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| `possession_play`, chosen | 0.946 | 0.976 | **0.961** | 521 | 508 | 0.893 | 0.763 |
-| `possession_play`, best without expectation | 0.748 | 0.978 | **0.848** | 660 | 508 | 0.711 | 0.760 |
-| `blind_side_run`, chosen | 0.947 | 0.990 | **0.968** | 301 | 288 | 0.953 | 0.947 |
-| `blind_side_run`, best without expectation | 0.892 | 0.993 | **0.940** | 323 | 288 | 0.864 | 0.950 |
+| `possession_play`, chosen | 0.937 | 0.975 | **0.955** | 948 | 910 | 0.888 | 0.810 |
+| `possession_play`, best without expectation | 0.834 | 0.880 | **0.857** | 960 | 910 | 0.779 | 0.716 |
+| `blind_side_run`, chosen | 0.929 | 0.996 | **0.961** | 280 | 261 | 0.944 | 0.957 |
+| `blind_side_run`, best without expectation | 0.958 | 0.973 | **0.966** | 265 | 261 | 0.917 | 0.827 |
 
 ## Tuning seeds
 
@@ -75,54 +75,54 @@ Alerts that match no truth episode (fresh held-out, chosen thresholds):
 
 | Expectation (s) | Unseen ≥ (s) | Moved ≥ (m) | Precision | Recall | F1 |
 |---|---|---|---|---|---|
-| off | 1.2 | 1.5 | 0.847 | 0.994 | **0.915** |
-| 0.5 | 1.2 | 3.0 | 0.911 | 0.973 | **0.941** |
-| 1.0 ⬅ | 1.2 | 3.0 | 0.956 | 0.979 | **0.968** |
-| 1.5 | 1.2 | 3.0 | 0.965 | 0.912 | **0.938** |
+| off | 1.5 | 1.5 | 0.883 | 0.885 | **0.884** |
+| 0.5 | 1.2 | 3.0 | 0.848 | 0.956 | **0.899** |
+| 1.0 ⬅ | 1.2 | 3.0 | 0.914 | 0.966 | **0.939** |
+| 1.5 | 1.2 | 3.0 | 0.928 | 0.901 | **0.914** |
 
 Interval F1, expectation off:
 
 | Unseen ≥ (s) \ moved ≥ (m) | 1.5 | 2.0 | 2.5 | 3.0 | 3.5 | 4.0 | 5.0 |
 |---|---|---|---|---|---|---|---|
-| 0.4 | 0.677 | 0.695 | 0.728 | 0.759 | 0.771 | 0.774 | 0.757 |
-| 0.6 | 0.741 | 0.735 | 0.750 | 0.771 | 0.776 | 0.779 | 0.757 |
-| 0.8 | 0.820 | 0.813 | 0.816 | 0.827 | 0.815 | 0.806 | 0.762 |
-| 1.0 | 0.873 | 0.867 | 0.868 | 0.872 | 0.853 | 0.838 | 0.785 |
-| 1.2 | 0.915 | 0.909 | 0.909 | 0.909 | 0.883 | 0.860 | 0.796 |
-| 1.5 | 0.907 | 0.900 | 0.901 | 0.894 | 0.862 | 0.837 | 0.775 |
+| 0.4 | 0.621 | 0.646 | 0.673 | 0.701 | 0.719 | 0.729 | 0.738 |
+| 0.6 | 0.698 | 0.696 | 0.700 | 0.719 | 0.728 | 0.732 | 0.738 |
+| 0.8 | 0.763 | 0.759 | 0.753 | 0.761 | 0.755 | 0.750 | 0.740 |
+| 1.0 | 0.822 | 0.817 | 0.811 | 0.811 | 0.793 | 0.783 | 0.758 |
+| 1.2 | 0.880 | 0.876 | 0.869 | 0.864 | 0.835 | 0.819 | 0.779 |
+| 1.5 | 0.884 | 0.879 | 0.872 | 0.862 | 0.831 | 0.815 | 0.766 |
 
 Interval F1, expectation 0.5 s:
 
 | Unseen ≥ (s) \ moved ≥ (m) | 1.5 | 2.0 | 2.5 | 3.0 | 3.5 | 4.0 | 5.0 |
 |---|---|---|---|---|---|---|---|
-| 0.4 | 0.807 | 0.848 | 0.875 | 0.919 | 0.896 | 0.876 | 0.786 |
-| 0.6 | 0.807 | 0.848 | 0.875 | 0.919 | 0.896 | 0.876 | 0.786 |
-| 0.8 | 0.823 | 0.850 | 0.875 | 0.919 | 0.896 | 0.876 | 0.786 |
-| 1.0 | 0.873 | 0.877 | 0.888 | 0.925 | 0.896 | 0.876 | 0.786 |
-| 1.2 | 0.915 | 0.919 | 0.926 | 0.941 | 0.904 | 0.879 | 0.786 |
-| 1.5 | 0.907 | 0.912 | 0.920 | 0.924 | 0.883 | 0.850 | 0.770 |
+| 0.4 | 0.755 | 0.789 | 0.821 | 0.867 | 0.859 | 0.848 | 0.794 |
+| 0.6 | 0.755 | 0.789 | 0.821 | 0.867 | 0.859 | 0.848 | 0.794 |
+| 0.8 | 0.768 | 0.791 | 0.821 | 0.867 | 0.859 | 0.848 | 0.794 |
+| 1.0 | 0.821 | 0.826 | 0.836 | 0.871 | 0.860 | 0.848 | 0.794 |
+| 1.2 | 0.880 | 0.885 | 0.887 | 0.899 | 0.875 | 0.853 | 0.793 |
+| 1.5 | 0.883 | 0.888 | 0.891 | 0.896 | 0.871 | 0.841 | 0.781 |
 
 Interval F1, expectation 1.0 s:
 
 | Unseen ≥ (s) \ moved ≥ (m) | 1.5 | 2.0 | 2.5 | 3.0 | 3.5 | 4.0 | 5.0 |
 |---|---|---|---|---|---|---|---|
-| 0.4 | 0.881 | 0.903 | 0.932 | 0.968 | 0.921 | 0.877 | 0.758 |
-| 0.6 | 0.881 | 0.903 | 0.932 | 0.968 | 0.921 | 0.877 | 0.758 |
-| 0.8 | 0.881 | 0.903 | 0.932 | 0.968 | 0.921 | 0.877 | 0.758 |
-| 1.0 | 0.886 | 0.905 | 0.932 | 0.968 | 0.921 | 0.877 | 0.758 |
-| 1.2 | 0.917 | 0.922 | 0.935 | 0.968 | 0.921 | 0.877 | 0.758 |
-| 1.5 | 0.908 | 0.913 | 0.925 | 0.939 | 0.900 | 0.871 | 0.758 |
+| 0.4 | 0.816 | 0.854 | 0.902 | 0.939 | 0.917 | 0.891 | 0.767 |
+| 0.6 | 0.816 | 0.854 | 0.902 | 0.939 | 0.917 | 0.891 | 0.767 |
+| 0.8 | 0.816 | 0.854 | 0.902 | 0.939 | 0.917 | 0.891 | 0.767 |
+| 1.0 | 0.829 | 0.855 | 0.902 | 0.939 | 0.917 | 0.891 | 0.767 |
+| 1.2 | 0.881 | 0.887 | 0.910 | 0.939 | 0.917 | 0.891 | 0.767 |
+| 1.5 | 0.883 | 0.889 | 0.908 | 0.919 | 0.904 | 0.880 | 0.767 |
 
 Interval F1, expectation 1.5 s:
 
 | Unseen ≥ (s) \ moved ≥ (m) | 1.5 | 2.0 | 2.5 | 3.0 | 3.5 | 4.0 | 5.0 |
 |---|---|---|---|---|---|---|---|
-| 0.4 | 0.870 | 0.883 | 0.918 | 0.938 | 0.887 | 0.848 | 0.759 |
-| 0.6 | 0.870 | 0.883 | 0.918 | 0.938 | 0.887 | 0.848 | 0.759 |
-| 0.8 | 0.870 | 0.883 | 0.918 | 0.938 | 0.887 | 0.848 | 0.759 |
-| 1.0 | 0.875 | 0.886 | 0.918 | 0.938 | 0.887 | 0.848 | 0.759 |
-| 1.2 | 0.904 | 0.905 | 0.920 | 0.938 | 0.887 | 0.848 | 0.759 |
-| 1.5 | 0.897 | 0.900 | 0.910 | 0.919 | 0.881 | 0.848 | 0.759 |
+| 0.4 | 0.816 | 0.857 | 0.896 | 0.914 | 0.892 | 0.861 | 0.765 |
+| 0.6 | 0.816 | 0.857 | 0.896 | 0.914 | 0.892 | 0.861 | 0.765 |
+| 0.8 | 0.816 | 0.857 | 0.896 | 0.914 | 0.892 | 0.861 | 0.765 |
+| 1.0 | 0.829 | 0.859 | 0.896 | 0.914 | 0.892 | 0.861 | 0.765 |
+| 1.2 | 0.882 | 0.885 | 0.899 | 0.914 | 0.892 | 0.861 | 0.765 |
+| 1.5 | 0.885 | 0.884 | 0.897 | 0.900 | 0.885 | 0.861 | 0.765 |
 
 ## Method
 

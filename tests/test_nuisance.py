@@ -57,7 +57,9 @@ def test_partial_scans_are_head_turn_events_and_turn_back_before_the_ball_leaves
         assert set(e.attrs) == {"end", "direction", "amplitude", "partial"}
         assert e.attrs["partial"] is True
         assert lo - 1e-9 <= e.attrs["amplitude"] <= hi + 1e-9
-        assert 0 < e.attrs["end"] - e.frame <= round(0.4 / DT)  # out and straight back
+        # Out and straight back, at no less than the slowest scan speed (plus the last few degrees
+        # under the proportional gain).
+        assert 0 < e.attrs["end"] - e.frame <= round((2 * hi / p.scan_omega_min + 0.1) / DT)
     assert min(e.attrs["amplitude"] for e in full) >= p.scan_amplitude[0] - 1e-9
 
 

@@ -107,6 +107,11 @@ on an LLM.
   ≈ 3.5 m/s², max decel ≈ 5 m/s², turn-rate limit.
 - Separation steering to avoid overlaps (Python-RVO2 optional, see REFERENCES).
 - Pressing: the nearest 1–2 defenders converge on the ball carrier when a team pressing trigger fires.
+- Marking (`possession_play`): every other outfield defender takes an attacker in his zone and stays
+  goal-side of him, 3–6 m off or, in half of his 10 s spells (keyed draws), tight at 1–2 m. So a
+  receiver under tight pressure has usually been marked for a while, and the scan slowdown under
+  pressure (§3.4) can show in the realism report. A passer judges a teammate's space without the
+  opponents beyond him along the pass, such as a goal-side marker: a ball to his feet gets there first.
 
 ### 3.3 Ball physics
 - Flight: gravity + quadratic drag — *tunable*: m = 0.43 kg, r = 0.11 m, ρ = 1.2 kg/m³, C_d ≈ 0.25.
@@ -128,6 +133,14 @@ on an LLM.
   - > 0.5 scans/s counts as very high (elite central midfielders);
   - central midfielders and centre-backs scan most, forwards least;
   - scanning drops under tight pressure.
+
+  *Calibrated values* (`eval/scan_calibration.py`, tuning seeds 0–99; held-out check in
+  `eval/reports/realism.md`): each scan turns at a peak speed drawn from 404 ± 51°/s (Kokubu et
+  al. 2026); the dwell is lognormal, so 90% of scans keep the ball out of an 82° frame ≤ 0.66 s
+  and a few hold the look for up to ~3 s (Aksum et al. 2021); the rate scales with the closest
+  opponent's distance, from 0.61 at ≤ 1 m to 1 at ≥ 10 m (Jordet et al. 2020); role rates are
+  fitted to ≈ 3 scans in the 10 s before receiving and to Jordet et al.'s role effect sizes. The
+  per-player trait multiplier is not in yet.
 - **Non-scan head motion (nuisance).** So the scan detector is not graded on a signal we made
   clean ourselves, the sim also produces head motion that is not a scan: fast ball tracking during
   passes, sensor noise (σ ≈ 2°, *tunable*), partial/aborted scans and slow drift. Partial turns

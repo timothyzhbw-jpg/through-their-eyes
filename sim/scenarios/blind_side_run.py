@@ -123,9 +123,10 @@ class BlindSideRun(Scenario):
         return {self.i_hero: ForcedScan(target_yaw=yaw, dwell_s=self.scan_dwell, key=True)}
 
     def scan_suppressed(self, sim: Simulation, frame: int) -> np.ndarray:
-        """While the ball travels to him, H8 tracks it; the key scan is his only look away."""
+        """Until he acts, the key scan is H8's only look away (the hero design rule): a spontaneous
+        scan before the kick could already show him the runner, who sets off before it."""
         mask = np.zeros(len(sim.ids), dtype=bool)
-        mask[self.i_hero] = frame >= self.kick_frame and not sim.hero_acted
+        mask[self.i_hero] = not sim.hero_acted
         return mask
 
     def decides(self, sim: Simulation, player: int) -> bool:

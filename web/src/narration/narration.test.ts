@@ -119,8 +119,8 @@ describe("every caption line opens its claims and seeks the replay to their evid
   });
 
   it("seeks to a single evidence event", () => {
-    controls.seekEvidence("runner_received", "reception:H9:0140");
-    expect(playback.get()).toMatchObject({ mode: "factual", frame: 140 });
+    controls.seekEvidence("runner_received", "reception:H9:0139");
+    expect(playback.get()).toMatchObject({ mode: "factual", frame: 139 });
   });
 
   it("takes over from a running breakdown", () => {

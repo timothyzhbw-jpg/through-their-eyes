@@ -195,8 +195,9 @@ class Simulation:
         # Head nuisance draws are made every frame, whether or not the nuisance is switched on.
         partial_draws = self.rng.uniform("partial_scan", f, n, entities=self.ids)
         drift_noise = self.rng.normal("head_drift", f, n, entities=self.ids)
+        speed_noise = self.rng.normal("scan_speed", f, n, entities=self.ids)
         allowed = ~self.scenario.scan_suppressed(self, f)
-        p_scan = self.scan_rate * DT
+        p_scan = self.scan_rate * self._pressure_factor() * DT
         spontaneous = allowed & (trigger < p_scan)
         # The same trigger draw: just above the scan probability, a scan starts and is aborted.
         partial = allowed & ~spontaneous & (trigger < p_scan * (1 + p.partial_scan_ratio))
@@ -214,6 +215,7 @@ class Simulation:
             partial=partial,
             partial_draws=partial_draws,
             drift_noise=drift_noise,
+            speed_noise=speed_noise,
         )
         for scan in finished:
             self._emit_scan(scan)
@@ -258,6 +260,15 @@ class Simulation:
         h["ball_vel"].append(self.ball_vel.copy())
         h["owner"].append(np.array(self.owner))
 
+    def _pressure_factor(self) -> np.ndarray:
+        """Scan-rate factor per player from the closest opponent's distance (SPEC 3.4)."""
+        p = self.params
+        gap = np.linalg.norm(self.pos[:, None, :] - self.pos[None, :, :], axis=-1)
+        closest = np.where(self.team[:, None] != self.team[None, :], gap, np.inf).min(axis=1)
+        near, far = p.pressure_scan_range
+        ramp = np.clip((closest - near) / (far - near), 0.0, 1.0)
+        return p.pressure_scan_factor + (1.0 - p.pressure_scan_factor) * ramp
+
     def _attach_ball(self) -> None:
         i = self.owner
         yaw = self.body_yaw[i]
@@ -287,10 +298,14 @@ class Simulation:
         )
         return times, path
 
+    def formation_spots(self) -> np.ndarray:
+        """(N, 2) formation anchors shifted with the ball (SPEC 3.2)."""
+        shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(self.params.formation_shift)
+        return self.anchor + shift
+
     def _movement_targets(self, f: int) -> tuple[np.ndarray, np.ndarray]:
         p = self.params
-        shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(p.formation_shift)
-        target = self.anchor + shift
+        target = self.formation_spots()
         cap = self.v_max.copy()
 
         if self.owner >= 0:
