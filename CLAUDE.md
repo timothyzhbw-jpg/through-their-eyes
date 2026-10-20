@@ -101,6 +101,10 @@ _Fill in as they come to exist._
 - `uv run ruff check . && uv run ruff format --check .` — lint (same as CI)
 - `AZURE_SUBSCRIPTION_ID=<id> infra/m0_provision.sh` — create the M0 Azure resources (needs
   `az login`; refuses non-personal subscriptions); writes `.env`
+- `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
+  build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
+  subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
+  CI run on main.
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping

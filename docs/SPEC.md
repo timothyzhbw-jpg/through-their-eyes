@@ -683,11 +683,27 @@ to a real broadcast.
     a $40/month budget alert to the subscription owners.
   - Cosmos DB is in West US: North Central US refused new accounts ("high demand"), and West US is
     the nearest region the Azure for Students policy allows.
-  - The Container Apps environment came up as an *express* environment. It supports user-assigned
-    identities only, so `tte-api` uses `tte-api-id-<suffix>` for Foundry, Cosmos and image pulls.
+  - Container Apps: the CLI now creates *express* environments by default, and there the app
+    could not pull from ACR with a managed identity (`BuildFailed`). The script therefore creates
+    the environment through ARM with `environmentMode: WorkloadProfiles` (Consumption profile).
+    `tte-api` uses one user-assigned identity, `tte-api-id-<suffix>`, for Foundry, Cosmos and image
+    pulls.
+  - ACR Tasks (`az acr build`) is not allowed on Azure for Students. Images are built with docker
+    (linux/amd64), locally by `infra/deploy.sh api` or on the GitHub runner.
   - Static Web Apps could not be created: its regions (West US 2, Central US, East US 2, West
     Europe, East Asia) are all outside the subscription's allowed regions. The web app is
     therefore a Storage static website (above).
+- *Deployed 2026-10-20, measured from Nashville:*
+  - API: `https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io`. `/health`
+    reports `model: foundry`, `speech: true`. The first moments request after a start takes 6 s
+    (sim + claims).
+  - A model-backed breakdown (casual and analyst × en and zh) took 9.2 s end to end, every step
+    from the model (Director 2.2 s, Analyst 1.3 s with MCP tools, Telestrator 3.0 s, narration
+    1.3 s). The same request from the cache took 0.15 s.
+  - What-if: verified, cached. TTS: 200 with WAV. Cosmos: cache and audit items written.
+  - Live WebSocket: 25.3 fps at the client, p95 frame gap 101 ms over the internet.
+  - Web: `https://ttesite1ff906.z14.web.core.windows.net`.
+  - `.github/workflows/deploy.yml` redeploys both after CI passes on main.
 - Every environment variable documented in `.env.example`; no secrets in the repo.
 
 ## 9. Milestones and cut list

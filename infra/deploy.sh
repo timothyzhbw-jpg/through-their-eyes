@@ -6,7 +6,7 @@
 #                               with its user-assigned identity, and the GitHub Actions identity
 #                               (OIDC, no stored secret), and the Storage static website for web/
 #                               (Static Web Apps has no region the student policy allows).
-#   infra/deploy.sh api [tag]   build the API image in the registry and roll it out.
+#   infra/deploy.sh api [tag]   build the API image with docker, push it, and roll it out.
 #   infra/deploy.sh web         build web/ and upload it to the Storage static website.
 #   infra/deploy.sh github      set the repo variables the deploy workflow reads (ids, no secrets).
 #
@@ -135,17 +135,24 @@ provision() {
   ACR_ID=$(az acr show -g "$RG" -n "$ACR" --query id -o tsv)
 
   step "Container Apps environment $ACA_ENV (Consumption) and app $APP"
-  exists az containerapp env show -g "$RG" -n "$ACA_ENV" ||
-    az containerapp env create -g "$RG" -n "$ACA_ENV" -l "$LOCATION" --logs-destination none \
-      -o none
+  # Through ARM with an explicit mode: the CLI now creates *express* environments, whose apps
+  # could not pull from ACR with a managed identity (BuildFailed, 2026-10-20).
+  if ! exists az containerapp env show -g "$RG" -n "$ACA_ENV"; then
+    az rest --method put -o none --url "https://management.azure.com/subscriptions/$SUB_ID/resourceGroups/$RG/providers/Microsoft.App/managedEnvironments/$ACA_ENV?api-version=2026-07-01" \
+      --body "{\"location\": \"$LOCATION\", \"properties\": {\"environmentMode\": \"WorkloadProfiles\", \"workloadProfiles\": [{\"name\": \"Consumption\", \"workloadProfileType\": \"Consumption\"}]}}"
+    for _ in $(seq 1 60); do
+      [[ $(az containerapp env show -g "$RG" -n "$ACA_ENV" --query properties.provisioningState \
+        -o tsv 2>/dev/null) == Succeeded ]] && break
+      sleep 10
+    done
+  fi
   if ! exists az containerapp show -g "$RG" -n "$APP"; then
     # A placeholder image until `infra/deploy.sh api` builds ours.
     az containerapp create -g "$RG" -n "$APP" --environment "$ACA_ENV" \
       --image mcr.microsoft.com/k8se/quickstart:latest --target-port 80 --ingress external \
       --min-replicas 1 --max-replicas 1 --cpu 0.5 --memory 1.0Gi -o none
   fi
-  # The environment is a Container Apps express environment, which supports user-assigned
-  # identities only (for the app at runtime and for image pulls), not system-assigned ones.
+  # One user-assigned identity for Foundry, Cosmos and image pulls.
   exists az identity show -g "$RG" -n "$APP_ID" ||
     az identity create -g "$RG" -n "$APP_ID" -l "$LOCATION" -o none
   APP_ID_RES=$(az identity show -g "$RG" -n "$APP_ID" --query id -o tsv)
@@ -231,8 +238,12 @@ cosmos_data_role() {  # Cosmos DB Built-in Data Contributor (data plane), accoun
 api() {
   local tag=${1:-$(git rev-parse --short HEAD)}
   local image="$ACR.azurecr.io/tte-api:$tag"
-  step "Build $image in the registry"
-  az acr build -r "$ACR" -t "tte-api:$tag" -t tte-api:latest . -o none
+  # ACR Tasks (`az acr build`) is not allowed on Azure for Students, so the image is built with
+  # docker here or on the GitHub runner, for the platform Container Apps runs (linux/amd64).
+  step "Build and push $image"
+  az acr login -n "$ACR" -o none
+  docker buildx build --platform linux/amd64 -t "$image" -t "$ACR.azurecr.io/tte-api:latest" \
+    --push .
   step "Roll out $APP"
   local speech_key
   speech_key=$(az cognitiveservices account keys list -g "$RG" -n "${AZURE_SPEECH_ACCOUNT:?}" \
