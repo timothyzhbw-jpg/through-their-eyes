@@ -39,6 +39,29 @@ code is copied (CLAUDE.md rule 1).
   tiers (§6), the With / Without toggle as the video highlight (§10), clip export as a stretch (§7).
   None of them models perception or counterfactuals (§0).
 
+### Competing entries (Inside the Game, public repos, checked 2026-10-19)
+14 public entry repos were created after 2026-09-29; four were read. Ideas only, no code copied.
+- **Matchday Companion** — https://github.com/ogu83/inside-the-game-hackathon — deployed on ACA,
+  video done; interruptible AI co-commentator (push to talk); a fact-checker evaluated with Foundry
+  groundedness; English and Turkish; a table of proof numbers at the top of the README.
+- **Shield** — https://github.com/digitaladaption/shield — "What he sees": every passing lane from
+  a selected player (open / contested / blocked), drawn on the true state, with no vision or
+  belief; a "without him" counterfactual estimated from other plays, not re-simulated.
+- **Tactical Intelligence Live** — https://github.com/Harvare1/tactical-intelligence-live — event
+  stream with rolling-window rules; no tracking data.
+- **StudioLens** — https://github.com/Josephjbassey/inside-the-game — narrative, tactics and
+  recaps; Azure Translator for languages.
+
+### Real-world precedents for the impact pitch (check each detail before quoting it)
+- Beyond Sports (Sony): tracking turned into live animated broadcasts —
+  https://www.beyondsports.nl/news/zappsport-live-wk-voetbal-animated-broadcasts-and-highlights-for-fifa-world-cup-2026
+- Premier League semi-automated offside (Genius Sports) tracks skeletal points per player —
+  https://www.sportico.com/business/tech/2024/premier-leagues-new-offside-tech-genius-sports-1234793387/
+  Head *orientation* needs more than one head point; confirm before claiming it feeds §4.7.
+- LaLiga × Microsoft "Beyond Stats": a Microsoft-stack precedent for live football analytics.
+- Amazon Prime Vision live alerts for NFL —
+  https://www.aboutamazon.com/news/entertainment/thursday-night-football-amazon-prime-video-ai-features
+
 ## Papers and how we use them
 
 ### Perception and scanning
@@ -101,6 +124,9 @@ code is copied (CLAUDE.md rule 1).
 - **Yang et al. (2026). *SoccerMaster: A Vision Foundation Model for Soccer Understanding.*** CVPR
   2026 Oral — https://haolinyang-hlyang.github.io/SoccerMaster/
 - **Rao et al.** UniSoccer (CVPR 2025), SoccerAgent (ACM MM 2025), MatchTime (EMNLP 2024).
+
+- **NFL "step and turn"** — arXiv:2603.17866 (as reported, not yet read): compares actual movement
+  with simulated alternatives; related work for counterfactual movement.
 
 ### Faithful generation
 - **Wiseman, Shieber, Rush (2017). *Challenges in Data-to-Document Generation*** (RotoWire), EMNLP

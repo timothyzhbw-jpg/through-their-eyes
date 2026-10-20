@@ -15,7 +15,7 @@ import numpy as np
 from analytics.xt import xt_for
 from sim.engine import Simulation
 from sim.model import Decision
-from sim.overrides import DropScan
+from sim.overrides import DropScan, ForceAction
 from sim.run import MatchRun
 
 
@@ -86,3 +86,92 @@ def drop_scan_counterfactual(
         counterfactual_decision=counterfactual.hero_decision(),
         delta_xt=possession_value(factual) - possession_value(counterfactual),
     )
+
+
+# --- "What if…?": force one of the options the player evaluated (SPEC 3.7, 6) --------------------
+
+WHAT_IF_PREFIX = "force:"
+
+
+def what_if_id(player: str, frame: int, action: str) -> str:
+    return f"{WHAT_IF_PREFIX}{player}:{frame:04d}:{action}"
+
+
+def parse_what_if_id(what_if: str) -> tuple[str, int, str]:
+    if not what_if.startswith(WHAT_IF_PREFIX):
+        raise ValueError(f"not a what-if id: {what_if}")
+    player, frame, action = what_if.removeprefix(WHAT_IF_PREFIX).split(":", 2)
+    return player, int(frame), action
+
+
+@dataclass
+class WhatIfResult:
+    """The factual run vs the same run with one decision forced to another option."""
+
+    id: str  # what_if_id(...): the intervention, also used as the counterfactual's id in claims
+    action: str
+    factual: MatchRun
+    counterfactual: MatchRun
+    factual_decision: Decision
+    counterfactual_decision: Decision | None
+    delta_xt: float  # possession value after the action: factual minus the forced option
+
+    @property
+    def scan_id(self) -> str:
+        """Interventions are looked up by id; for a what-if that is its own id."""
+        return self.id
+
+    @property
+    def factual_action(self) -> str:
+        return self.factual_decision.chosen
+
+    @property
+    def counterfactual_action(self) -> str | None:
+        return self.counterfactual_decision.chosen if self.counterfactual_decision else None
+
+
+def force_action_counterfactual(
+    scenario: str,
+    seed: int,
+    action: str,
+    player: str | None = None,
+    frame: int | None = None,
+    record_draws: bool = False,
+) -> WhatIfResult:
+    """Re-simulate a decision (default: the hero's) with `action` forced. Refuses an action that
+    was not among the options the player evaluated."""
+    probe = Simulation.from_scenario(scenario, seed).run()
+    decision = next(
+        (d for d in probe.decisions
+         if (d.player == (player or probe.hero)) and (frame is None or d.frame == frame)),
+        None,
+    )  # fmt: skip
+    if decision is None:
+        raise ValueError(f"no decision by {player or probe.hero} to force")
+    if action not in {o.action for o in decision.options}:
+        raise ValueError(
+            f"{action} is not an option of {decision.player} at frame {decision.frame}"
+        )
+    intervention = ForceAction(decision.player, decision.frame, action)
+    factual, counterfactual = run_counterfactual(
+        scenario, seed, decision.frame, [intervention], record_draws
+    )
+    forced = next(
+        (d for d in counterfactual.decisions
+         if d.player == decision.player and d.frame == decision.frame),
+        None,
+    )  # fmt: skip
+    return WhatIfResult(
+        id=what_if_id(decision.player, decision.frame, action),
+        action=action,
+        factual=factual,
+        counterfactual=counterfactual,
+        factual_decision=decision,
+        counterfactual_decision=forced,
+        delta_xt=possession_value(factual) - possession_value(counterfactual),
+    )
+
+
+def what_if_from_id(scenario: str, seed: int, what_if: str) -> WhatIfResult:
+    player, frame, action = parse_what_if_id(what_if)
+    return force_action_counterfactual(scenario, seed, action, player, frame)

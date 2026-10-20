@@ -89,6 +89,8 @@ _Fill in as they come to exist._
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
 - `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
+- `uv run python -m agents.whatif --seed 3 "What if he passed to H4?"` — answer a what-if
+  question by re-simulating with `force_action` (SPEC 3.7, 6)
 - Not yet: `uv run python -m eval.run_all`, `uv run uvicorn api.main:app --reload`,
   `cd web && npm run dev`
 

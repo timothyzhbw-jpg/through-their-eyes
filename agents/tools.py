@@ -16,7 +16,7 @@ from analytics.pitch_control import pitch_control
 from analytics.pressing import frame_pressing
 from analytics.vision import player_visibility
 from analytics.xt import xt_for
-from sim.counterfactual import drop_scan_counterfactual
+from sim.counterfactual import drop_scan_counterfactual, what_if_id
 
 
 def _dump(data: Any) -> str:
@@ -105,6 +105,35 @@ def run_counterfactual(ctx: MomentContext, scan_id: str | None = None) -> str:
     )  # fmt: skip
 
 
+def list_options(ctx: MomentContext) -> str:
+    """The options the hero evaluated at his decision, on his belief."""
+    decision = ctx.run.hero_decision()
+    return _dump([
+        {"action": o.action, "prob": round(o.prob, 3), "p_success": round(o.p_success, 3),
+         "value": round(o.value, 4), "chosen": o.action == decision.chosen}
+        for o in decision.options
+    ])  # fmt: skip
+
+
+def what_if(ctx: MomentContext, action: str) -> str:
+    """Re-simulate the hero's decision with `action` forced (SPEC 3.7)."""
+    decision = ctx.run.hero_decision()
+    if action not in {o.action for o in decision.options}:
+        return _dump({"error": f"{action} is not one of his options", "action": action})
+    result = ctx.evaluator.counterfactual(what_if_id(decision.player, decision.frame, action))
+    passes = [
+        e for e in result.counterfactual.events
+        if e.type == "pass" and e.player == decision.player and e.frame == decision.frame
+    ]  # fmt: skip
+    outcome = passes[0].attrs if passes else {}
+    return _dump(
+        {"what_if": result.id, "factual_action": result.factual_action,
+         "counterfactual_action": result.counterfactual_action,
+         "outcome": outcome.get("outcome"), "receiver": outcome.get("receiver"),
+         "delta_xt": round(result.delta_xt, 4)}
+    )  # fmt: skip
+
+
 TOOLS = {
     "get_moment": get_moment,
     "list_claims": list_claims,
@@ -113,4 +142,6 @@ TOOLS = {
     "get_xt": get_xt,
     "get_pressing": get_pressing,
     "run_counterfactual": run_counterfactual,
+    "list_options": list_options,
+    "what_if": what_if,
 }

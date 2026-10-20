@@ -53,6 +53,16 @@ def build_server(ctx: MomentContext) -> FastMCP:
         """Re-simulate without one scan (default: the key scan): both decisions and the delta xT."""
         return tools.run_counterfactual(ctx, scan_id)
 
+    @server.tool()
+    def list_options() -> str:
+        """The options the hero evaluated at his decision: action, probability, value."""
+        return tools.list_options(ctx)
+
+    @server.tool()
+    def what_if(action: str) -> str:
+        """Re-simulate the moment with the hero forced to take `action` (an option id)."""
+        return tools.what_if(ctx, action)
+
     return server
 
 

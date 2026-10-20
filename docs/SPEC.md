@@ -17,6 +17,11 @@ even deterministic number checks already appear in other broadcast-hackathon ent
 "Related hackathon work"). None of them shows what the player saw or what he would have done
 without one look. Open every pitch, video and README with perception and the counterfactual;
 verified numbers are the backbone, not the headline.
+In this competition, number checking, fan/analyst modes and multiple languages are already
+standard (REFERENCES, "Competing entries"). What only we have: a perception model with a
+first-person view, counterfactuals re-simulated inside the sim, and 25 Hz physical tracking with
+head yaw. One entry shows "what he sees" as the passing lanes that existed; we show the lanes he
+knew existed.
 
 | Judging criterion (20% each) | How we score |
 |---|---|
@@ -171,7 +176,10 @@ chance.
   transcendental functions can differ in the last bits between ARM and x86, and a multi-agent sim
   amplifies that. CI compares runs inside CI, never against hashes made on a laptop.
 - `snapshot(t)` / `resume(snapshot, overrides)` re-simulate from t with overrides such as
-  `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`.
+  `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`, and
+  `force_action(player, frame, action)` (*M4*): at that decision the player takes `action` — any
+  option he evaluated, e.g. `pass:H4` — instead of sampling; everything else re-simulates as
+  usual. It answers "what if he had passed to H4?" with a re-simulation, not a statistic.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
 
 ### Acceptance checks — sim
@@ -185,6 +193,8 @@ chance.
       CMs > forwards; scan rate under pressure < without pressure.
 - [ ] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
+- [ ] `force_action` with the action actually chosen reproduces the factual run byte for byte;
+      with an action that was not an option, it is refused (not silently mapped).
 
 ## 4. Analytics kernels (`analytics/`)
 Every kernel: numpy reference + unit tests. GLSL versions in `web/` must match the numpy reference
@@ -217,6 +227,18 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
   the opponents' space he actually saw.
 - `time_since_last_scan_at_reception`, `scans_in_window(t−10 s, t)`.
 - `belief_error`: mean distance between believed and true positions of the relevant players.
+- **Blind-side alert** (*M4*, live): perception made visible during play, not only in replays.
+  Computed per frame from tracking only — observed `head_yaw` plus positions, the same inputs as
+  the scan detector (§4.7), never the sim's internal beliefs — so it would run on real skeletal
+  tracking. For an observer `o` and a target `t`, the alert is on when:
+  - `t` has been outside `o`'s visible region (V < 0.5, §4.4) for ≥ 1.0 s;
+  - `t` has moved ≥ 3 m since `o` last saw him, at ≥ 4 m/s;
+  - `t` is within 25 m of `o`.
+  Observers are the ball carrier and the intended receiver (targets: teammates making runs) and
+  the four defenders nearest the ball (targets: opponents). Hysteresis: on for at least 0.4 s; it
+  clears when `o` sees `t` again. All thresholds are *tunable*. Deterministic, no LLM, within the
+  live overlay budget (§2). An alert that ends in a pass to its target within 3 s is a moment
+  trigger (§5.1).
 
 ### 4.5 Expected threat (xT)
 16 × 12 grid fitted on synthetic event data with our own Markov implementation (value iteration,
@@ -247,13 +269,18 @@ of §3.4.
 - [ ] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
 - [ ] xT grid increases toward goal (sanity plot saved).
+- [ ] Blind-side alerts vs the sim's ground truth (a belief that is stale by > 3 m for a moving
+      target within 25 m): precision ≥ 0.8 and recall ≥ 0.7 on held-out seeds (*tunable*);
+      table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
+      and clears during it.
 
 ## 5. Explain layer (`explain/`)
 
 ### 5.1 Moment detection
 Rule-based detectors over events + analytics: goal, big chance, line-breaking pass, successful
-counter-press, sprint tag (live overlay only). Each moment yields a `MomentCard` — the shared state
-for the agents: ids, time window, involved players, key metrics, candidate lenses.
+counter-press, sprint tag (live overlay only), and *M4* a pass to the target of a blind-side alert
+(§4.4). Each moment yields a `MomentCard` — the shared state for the agents: ids, time window,
+involved players, key metrics, candidate lenses.
 - *Implemented (M2):*
   - line-breaking pass: completed, past ≥ 2 outfield opponents;
   - decision after a scan: a reception, then the receiver's decision, with a scan ending ≤ 2 s
@@ -400,7 +427,13 @@ Application Insights.
   template plan when invalid.
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
-  `run_counterfactual`.
+  `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
+- *M4:* **"What if…?" questions.** A viewer picks or types a question such as "what if he had
+  passed to H4?". The Analyst maps it to one of the hero's evaluated options (structured output:
+  an option id, nothing else) and calls the MCP tool `what_if(action)`, which re-simulates with
+  `force_action` (§3.7). Its answer becomes `counterfactual` claims (the outcome, ΔxT), narrated and
+  verified like any other line, plus a ghost path in the plan. Questions that map to no option are
+  answered with a fixed "not something he could do here" line. Latency as a breakdown (§2).
 - Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
   every tier is rendered as prosody.
 
@@ -440,6 +473,8 @@ original visual identity.
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
   - counterfactual ghost path;
+  - *M4:* **blind-side alert** (§4.4): the target's token pulses and a thin line points to the
+    observer's blind side, with how long he has gone unseen; it clears when he is seen;
   - "he thought / it was" probability tag at the action freeze (§5.1);
   - **pass options** on the tactical board: a line from the carrier to every option's target,
     width = choice probability, colour = value, the chosen one highlighted; values on hover come
@@ -453,6 +488,8 @@ original visual identity.
   (POV | tactical).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
+- *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
+  answer plays as a ghost path with its verified lines (§6).
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame.
@@ -497,7 +534,7 @@ by layer risks reaching Oct 26 with every layer 70% done and nothing to film.
 | Oct 20 (Tue) | M1 hero slice — sim | one scripted hero scenario; FOV + belief; decisions on belief; `drop_scan` flips the decision; determinism tests |
 | Oct 21 (Wed) | M2 hero slice — explain + render | MomentCard, claims + verifier on the hero moment; web: tactical + POV playback of the clip |
 | Oct 22 (Thu) | M3 walking skeleton | 5-agent workflow end-to-end (`en`) + TTS; **first deploy to ACA + SWA** |
-| Oct 23–25 | M4 widen | stitched match (15–25 possessions); more scenarios; TTI/pitch control/pressing kernels + shader parity; overlays; broadcast camera; personas + `zh`; scan-detector sweep; eval suite; 3 hero moments |
+| Oct 23–25 | M4 widen | **blind-side alerts first, then "What if…?" with `force_action`**; stitched match (15–25 possessions); more scenarios; TTI/pitch control/pressing kernels + shader parity; overlays; broadcast camera; personas + `zh`; scan-detector sweep; eval suite; 3 hero moments |
 | Oct 26 (Mon) | M5 freeze | feature freeze; eval report; README; first video cut; repo public |
 | Oct 27 (Tue) | M6 submit | buffer; final ≤ 2:00 video; submission complete by mid-afternoon CT |
 
@@ -509,12 +546,13 @@ pilot only, never generalised.
 1. shareable clip export (stretch)
 2. viewer pilot
 3. end-of-match recap reel
-4. two voices → one narrator
-5. `coach` persona
-6. `es` language
-7. Cosmos DB → file store
-8. occlusion model → FOV only
-9. pitch-control shader and pass value surface → precomputed textures
+4. "What if…?" free text → suggested questions only
+5. two voices → one narrator
+6. `coach` persona
+7. `es` language
+8. Cosmos DB → file store
+9. occlusion model → FOV only
+10. pitch-control shader and pass value surface → precomputed textures
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
 Framework, live deployment, the video.
