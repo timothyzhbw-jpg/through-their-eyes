@@ -75,6 +75,68 @@ def test_questions_map_to_his_options_or_to_nothing(ctx, question, action):
     assert asyncio.run(map_question(ctx, question, client=None))[0] == action
 
 
+# blind_side_run seed 3: H8 (CM) on the ball near the centre spot, attacking +x; his teammates.
+ROLES = {"H1": "goalkeeper", "H2": "full-back", "H3": "full-back", "H4": "centre-back",
+         "H5": "centre-back", "H6": "defensive midfielder", "H10": "central midfielder",
+         "H7": "winger", "H11": "winger", "H9": "striker"}  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    ("question", "action"),
+    [
+        # two centre-backs: the nearer one (H4, who played him the ball) unless a side is named
+        ("What if he had played it back to the centre-back?", "pass:H4"),
+        ("What if he had played it back to the center back?", "pass:H4"),
+        ("What if he passed to the CB?", "pass:H4"),
+        ("What if he had found the left centre-back?", "pass:H5"),
+        ("What if he gave it to the keeper?", "pass:H1"),
+        ("What if he passed back to the goalkeeper?", "pass:H1"),
+        ("What if he found the left-back?", "pass:H3"),
+        ("What if he found the right back?", "pass:H2"),
+        ("What if he had passed to the full-back?", "pass:H2"),
+        ("What if he played it to the defensive midfielder?", "pass:H6"),
+        ("What if he had played in the striker?", "pass:H9"),
+        ("What if he switched it to the left winger?", "pass:H11"),
+        ("What if he passed to the winger?", "pass:H7"),
+        ("What if he passed to the other central midfielder?", "pass:H10"),
+        ("如果他回传给中后卫呢？", "pass:H4"),
+        ("如果他传给门将呢？", "pass:H1"),
+        ("如果他传给左边锋呢？", "pass:H11"),
+        # the first thing the question names decides; "instead of" rules out what follows it
+        ("What if he carried it past the centre-back?", "carry"),
+        ("What if he had passed to the striker instead of carrying it?", "pass:H9"),
+        ("What if he had carried it instead of passing to the striker?", "carry"),
+        ("What if instead of carrying it he had found the striker?", "pass:H9"),
+        # nothing he could do: no shot from there, no attacking midfielder in his team
+        ("What if he shot past the keeper?", None),
+        ("What if he had passed to the attacking midfielder?", None),
+    ],
+)
+def test_role_words_map_to_a_receiver_with_that_role(ctx, question, action):
+    assert asyncio.run(map_question(ctx, question, client=None)) == (action, "template")
+
+
+def test_the_model_is_told_each_receivers_role_and_where_he_stood(ctx):
+    fake = FakeChatClient({"whatif": {"action": "pass:H4"}})
+    asyncio.run(map_question(ctx, "What if he had played it back to the centre-back?", client=fake))
+    prompt = fake.prompts["whatif"][0]
+    lines = {line.split(":", 2)[1]: line for line in prompt.splitlines()
+             if line.startswith("- pass:")}  # fmt: skip
+    assert set(lines) == set(ROLES)  # every pass option, once
+    for pid, role in ROLES.items():
+        assert f"the {role}" in lines[pid]
+    assert "behind the ball" in lines["H4"] and "on the right" in lines["H4"]
+    assert "behind the ball" in lines["H5"] and "on the left" in lines["H5"]
+    assert "ahead of the ball" in lines["H9"]
+    # full-backs by the names viewers use; Foundry read a bare "left-back" as the left centre-back
+    assert "left-back" in lines["H3"] and "right-back" in lines["H2"]
+    assert "- carry:" in prompt and "central midfielder" in prompt  # he is H8, the CM
+    # nearest receiver first, so "the centre-back" means H4 to the model as to the rule parser
+    order = [line.split(":", 2)[1] for line in prompt.splitlines() if line.startswith("- pass:")]
+    assert order.index("H4") < order.index("H5")
+    assert order.index("H7") < order.index("H11")
+
+
 # --- the answer: verified counterfactual lines ---------------------------------------------------
 
 
@@ -102,7 +164,7 @@ def test_the_model_can_only_choose_among_his_options(ctx):
     action, source = asyncio.run(map_question(ctx, "What if he passed to H4?", client=fake))
     assert action == "pass:H4" and source == "template"  # invalid model answer: rule fallback
     fake = FakeChatClient({"whatif": {"action": "pass:H4"}})
-    action, source = asyncio.run(map_question(ctx, "And the full-back behind him?", client=fake))
+    action, source = asyncio.run(map_question(ctx, "And the centre-back behind him?", client=fake))
     assert action == "pass:H4" and source == "llm"
 
 

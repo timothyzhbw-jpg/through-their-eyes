@@ -128,8 +128,9 @@ _Fill in as they come to exist._
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
 - `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
-- `uv run python -m agents.whatif --seed 3 "What if he passed to H4?"` — answer a what-if
-  question by re-simulating with `force_action` (SPEC 3.7, 6)
+- `uv run --env-file .env python -m agents.whatif --seed 3 "What if he had played it back to the
+  centre-back?"` — answer a what-if question by re-simulating with `force_action` (SPEC 3.7, 6);
+  Foundry maps the question when `FOUNDRY_*` is set, `--offline` uses the rule parser only
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached), `POST /api/whatif`, `POST /api/tts`
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
