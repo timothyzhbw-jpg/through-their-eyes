@@ -378,3 +378,164 @@ def test_a_director_reason_with_a_number_falls_back_to_the_template(ctx):
         ch.isdigit() for ch in r.request.reason.replace("H8", "")
     )
     assert "0.09881" not in r.model_dump_json()
+
+
+# --- audio description: the moment told to blind and low-vision viewers (SPEC 1, 6) --------------
+
+AD = "audio_description"
+# Who, where, which way he looked, what he could and couldn't see; and what he did with it.
+DESCRIBING = {"reception_zone", "blind_side", "scan_side", "scan_before_reception",
+              "seen_in_scan", "pass_to_runner", "runner_received", "gap_to_marker", "unmarked",
+              "cf_pass"}  # fmt: skip
+NUMBERS_FOR_ANALYSTS = {"cf_value", "pass_success", "cf_pass_success", "observed_share",
+                        "pressure_at_pass"}  # fmt: skip
+# Every speaking style a voice might offer; audio description must pick only a calm one.
+ALL_STYLES = {"sports_commentary", "sports_commentary_excited", "excited", "cheerful", "shouting",
+              "narration-relaxed", "calm", "newscast", "chat"}  # fmt: skip
+EXCITED_STYLES = {"sports_commentary", "sports_commentary_excited", "excited", "cheerful",
+                  "shouting"}  # fmt: skip
+
+
+@pytest.fixture(scope="module")
+def described(ctx):
+    return breakdown(ctx, client=None, personas=(AD,), languages=("en", "zh"))
+
+
+def _script(result, persona, language):
+    return next(s for s in result.scripts if (s.persona, s.language) == (persona, language))
+
+
+def test_audio_description_is_a_persona_end_to_end(ctx, described):
+    from typing import get_args
+
+    from agents import fallbacks, prompts
+    from agents.schemas import BreakdownRequest, Persona
+
+    assert AD in get_args(Persona)
+    assert AD in prompts.PERSONAS and AD in fallbacks.SEQUENCES
+    BreakdownRequest(moment="m", personas=[AD], languages=["en"], priority="low", reason="-")
+    assert described.request.personas == [AD]
+    assert {(s.persona, s.language) for s in described.scripts} == {(AD, "en"), (AD, "zh")}
+    assert [s.step for s in described.trace] == STEPS
+
+
+def test_the_audio_description_template_script_is_fully_verified(ctx, described):
+    from agents import fallbacks
+
+    for script in described.scripts:
+        template = fallbacks.narration(ctx, AD, script.language)
+        assert script.dropped == [] and script.rewrites == 0
+        assert len(script.payload.lines) == len(template) >= 5  # every template line airs
+        assert check_payload(script.payload) == []
+        claims = {c.id: c for c in script.payload.claims}
+        assert all(claims[cid].verdict == "supported" for line in script.lines
+                   for cid in line.claims)  # fmt: skip
+        assert len(script.voice) == len(script.payload.lines)
+
+
+def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
+    en, zh = _script(described, AD, "en"), _script(described, AD, "zh")
+    claims = [cid for line in en.lines for cid in line.claims]
+    assert {"reception_zone", "scan_side", "seen_in_scan", "blind_side"} <= set(claims)
+    assert set(claims) <= DESCRIBING and not set(claims) & NUMBERS_FOR_ANALYSTS
+    assert [line.text for line in en.payload.lines] == [
+        "H8 received the ball in the opponents' half, right of centre.",
+        "H9's run was on H8's blind side.",
+        "Before the ball reached him, H8 looked over his right shoulder.",
+        "During that look, H8 saw H9.",
+        "H8 found H9 with a 42-metre pass.",
+        "Without that look, H8 would have passed to H4.",
+    ]
+    assert [line.text for line in zh.payload.lines] == [
+        "H8在对方半场中路偏右接球。",
+        "H9的跑位在H8的盲区。",
+        "球到之前，H8扭头看向了右后方。",
+        "回头那一眼，H8看到了H9。",
+        "H8一脚42米的传球找到了H9。",
+        "如果没有那一眼，H8会把球传给H4。",
+    ]
+    assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
+
+
+def test_the_model_is_asked_for_describing_claims_first(ctx):
+    """With a model, the narration prompt lists the describing claims, in telling order."""
+    from agents import fallbacks
+    from agents.prompts import PREFERRED_CLAIMS, narration_prompt
+
+    findings = fallbacks.analyst(ctx)
+    data = json.loads(narration_prompt(ctx, findings, AD, "en", "pbp"))
+    preferred = [c["id"] for c in data["preferred_claims"]]
+    assert preferred == [c for c in PREFERRED_CLAIMS[AD] if c in ctx.supported]
+    assert preferred[:2] == ["reception_zone", "blind_side"]
+    assert set(preferred) <= DESCRIBING and not set(preferred) & NUMBERS_FOR_ANALYSTS
+    assert "preferred_claims" not in json.loads(
+        narration_prompt(ctx, findings, "analyst", "en", "pbp")
+    )
+
+
+def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx):
+    replies = _good_replies(ctx)
+    replies["pbp"] = {"lines": [{"claim": "reception_zone", "connective": None},
+                                {"claim": "scan_side", "connective": None}]}  # fmt: skip
+    replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None}]}
+    r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD,), languages=("zh",))
+    (script,) = r.scripts
+    assert [line.text for line in script.payload.lines] == [
+        "H8在对方半场中路偏右接球。", "回头那一眼，H8看到了H9。", "球到之前，H8扭头看向了右后方。",
+    ]  # fmt: skip
+    assert check_payload(script.payload) == []
+
+
+@pytest.mark.parametrize("tier", ["calm", "excited", "clutch"])
+@pytest.mark.parametrize("language", ["en", "zh"])
+def test_audio_description_is_voiced_calm_and_slower_whatever_the_tier(tier, language):
+    from agents.delivery import PROSODY
+
+    line = ScriptLine(id="L1", speaker="pbp", text="H8 looked over his right shoulder.", claims=[])
+    for styles in (ALL_STYLES, EXCITED_STYLES, set()):
+        ssml = ssml_for_line(line, language, tier, styles, persona=AD)
+        root = ET.fromstring(ssml)
+        (prosody,) = [e for e in root.iter() if e.tag.endswith("prosody")]
+        assert float(prosody.get("rate").rstrip("%")) < 0  # slower than the voice's default
+        assert float(prosody.get("pitch").rstrip("%")) == 0
+        assert not any(f'style="{s}"' in ssml for s in EXCITED_STYLES)
+        if styles == ALL_STYLES:
+            assert 'style="narration-relaxed"' in ssml
+        else:
+            assert "express-as" not in ssml  # no calm style on offer: prosody only
+    rate = float(PROSODY[tier][0].rstrip("%"))
+    other = ssml_for_line(line, language, tier, set(), persona="casual")
+    assert f'rate="{PROSODY[tier][0]}"' in other and rate >= 0  # other personas keep the tier
+
+
+def _with_delta(ctx, delta: float):
+    import copy
+
+    out = copy.copy(ctx)
+    out.card = ctx.card.model_copy(deep=True)
+    for lens in out.card.lenses:
+        if lens.delta_xt is not None:
+            lens.delta_xt = delta if lens.lens == out.card.selected_lens else 0.001
+    out.card.tags = [t for t in out.card.tags if t != "line_breaking_pass"]
+    return out
+
+
+@pytest.mark.parametrize("delta, tier", [(0.001, "calm"), (0.2, "clutch")])
+def test_the_voice_step_reads_audio_description_calmly_on_any_moment(ctx, delta, tier):
+    from agents.delivery import STYLE_PREFERENCE, VOICES
+
+    moment = _with_delta(ctx, delta)
+    styles = {voice: ALL_STYLES for voice in VOICES.values()}
+    r = breakdown(moment, client=None, personas=("casual", AD), languages=("en", "zh"),
+                  voice_styles=styles)  # fmt: skip
+    assert r.tier == tier
+    for language in ("en", "zh"):
+        casual, ad = _script(r, "casual", language), _script(r, AD, language)
+        assert {cue.style for cue in casual.voice} == {STYLE_PREFERENCE[tier][0]}
+        assert {cue.style for cue in ad.voice} == {"narration-relaxed"}
+        for cue in ad.voice:
+            ET.fromstring(cue.ssml)
+            assert 'rate="-' in cue.ssml and cue.voice == VOICES[(language, cue.speaker)]
+    assert len({cue.cache_key for s in r.scripts for cue in s.voice}) == sum(
+        len(s.voice) for s in r.scripts
+    )  # an audio-description clip is never the commentary clip of the same line

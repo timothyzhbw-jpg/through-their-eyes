@@ -27,8 +27,9 @@ HEADLINE = {
 SUPPORTING = ["blind_side", "unmarked", "cf_value", "runner_received", "scans_before_reception",
               "gap_opened", "observed_share", "pass_to_runner"]  # fmt: skip
 
-# Per persona: the lines in speaking order, (speaker, claim id or None for the connective).
-SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
+# Per persona: the lines in speaking order, (speaker, claim id or None for the connective). A tuple
+# of ids is one line: the first of them that is supported.
+SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
     "casual": [("pbp", None), ("pbp", "scan_before_reception"), ("color", "blind_side"),
                ("color", "cf_pass"), ("pbp", "runner_received")],
     "analyst": [("pbp", None), ("pbp", "scans_before_reception"), ("color", "observed_share"),
@@ -38,6 +39,12 @@ SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
                    ("color", "cf_pass"), ("pbp", "runner_received")],
     "coach": [("pbp", "scans_before_reception"), ("pbp", "time_since_last_scan"),
               ("color", "belief_error"), ("color", "cf_pass")],
+    # Told for listeners, in the order it happened: where, who he could not see, which way he
+    # looked, whom he saw, what he did with it. No connectives, no xT or probabilities.
+    "audio_description": [("pbp", "reception_zone"), ("color", "blind_side"),
+                          ("pbp", ("scan_side", "scan_before_reception")),
+                          ("color", "seen_in_scan"), ("pbp", ("pass_to_runner", "runner_received")),
+                          ("color", "cf_pass")],
 }  # fmt: skip
 
 
@@ -78,11 +85,14 @@ def narration(
 ) -> list[tuple[Speaker, DraftLine]]:
     """Template lines in speaking order; only one speaker's lines when `speaker` is given."""
     out = []
-    for who, cid in SEQUENCES[persona]:
+    for who, ids in SEQUENCES[persona]:
         if speaker is not None and who != speaker:
             continue
-        if cid is None:
+        if ids is None:
             out.append((who, DraftLine(text=CONNECTIVE[language], claims=[])))
-        elif cid in ctx.supported:
+            continue
+        cid = next((c for c in (ids if isinstance(ids, tuple) else (ids,)) if c in ctx.supported),
+                   None)  # fmt: skip
+        if cid is not None:
             out.append((who, DraftLine(text=ctx.claims[cid].template_for(language), claims=[cid])))
     return out

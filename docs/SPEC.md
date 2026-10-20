@@ -39,6 +39,7 @@ knew existed.
 | `analyst` | Scan rate vs research benchmarks, time since last scan at reception, observed-space share, belief error, counterfactual delta, pitch-control / pressing overlays | dense, technical |
 | `player_fan` | Camera locked on the chosen player all match; his scans before each reception; his best decisions | personal |
 | `coach` (stretch) | "Scanned vs didn't scan" side-by-side + one coaching cue | instructional |
+| `audio_description` | Blind and low-vision viewers: the moment told in the order it happened — where he got the ball, who he could not see, which way he looked, whom the look showed him, what he did — sound on by default, large-print captions | calm, slower voice at any tier; no xT or probabilities |
 
 All personas render the **same verified fact set**. Persona changes presentation, never facts.
 Languages: `en` and `zh` for the MVP; `es` is a stretch goal.

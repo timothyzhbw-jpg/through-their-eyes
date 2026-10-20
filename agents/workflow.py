@@ -30,7 +30,15 @@ from pydantic import BaseModel, ValidationError
 
 from agents import fallbacks, prompts, telemetry
 from agents.context import MomentContext
-from agents.delivery import VOICES, cache_key, delivery_tier, pick_style, ssml_for_line
+from agents.delivery import (
+    DESCRIBED,
+    VOICES,
+    cache_key,
+    delivery_tier,
+    persona_tier,
+    pick_style,
+    ssml_for_line,
+)
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, ask
 from agents.plan import template_plan, validate_plan, voice_times
 from agents.schemas import (
@@ -61,7 +69,7 @@ from explain.render import build_payload, render_line
 MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # Bump when code that shapes a breakdown changes without a prompt change: it is part of the
 # API's cache key, so cached breakdowns from the older code are not served again.
-PIPELINE_VERSION = 2  # 2: tidy() keeps each connective once across both voices
+PIPELINE_VERSION = 3  # 2: tidy() keeps each connective once; 3: audio-description delivery
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
 # lanes finish in either order, so the trace is sorted into this order before it is returned.
@@ -555,7 +563,8 @@ class Verifier(Executor):
 
 
 class Voice(Executor):
-    """SSML per approved line: one voice per speaker and language, styled by the delivery tier.
+    """SSML per approved line: one voice per speaker and language, styled by the delivery tier
+    (calm and slower for audio description, whatever the tier).
 
     The join of the two lanes: it runs once both the plan and the approved scripts have arrived.
     """
@@ -593,8 +602,8 @@ class Voice(Executor):
                 )
                 voice = VOICES[(script.language, spoken.speaker)]
                 styles = crew.voice_styles.get(voice, set())
-                ssml = ssml_for_line(spoken, script.language, tier, styles)
-                style = pick_style(tier, styles)
+                ssml = ssml_for_line(spoken, script.language, tier, styles, script.persona)
+                style = pick_style(persona_tier(tier, script.persona), styles)
                 cues.append(
                     VoiceCue(line=line.id, speaker=spoken.speaker, t=t, voice=voice, style=style,
                              ssml=ssml, cache_key=cache_key(ssml))
@@ -603,6 +612,7 @@ class Voice(Executor):
         notes = [f"tier {tier}"] + (
             [] if crew.voice_styles else ["voice styles unknown: prosody only"]
         )
+        notes += [f"{p}: calm and slower" for p in sorted({s.persona for s in scripts} & DESCRIBED)]
         crew.trace.append(StepTrace(step="voice", source="code", attempts=1,
                                     ms=round((time.perf_counter() - started) * 1000, 1), error=None,
                                     notes=notes))  # fmt: skip
