@@ -3,7 +3,8 @@ name: deploy
 # SPEC 8: after CI passes on main, roll out the API image to Azure Container Apps and the web app
 # to the Azure Storage static website. Azure login is OIDC through a user-assigned managed identity
 # whose federated credential trusts only this repo's main branch; no Azure secret is stored here.
-# The identity, registry and app names are repo variables set by `infra/deploy.sh github`.
+# The identity, registry and app names, and the API URL the web build points at (TTE_API_URL), are
+# repo variables set by `infra/deploy.sh github`.
 
 on:
   workflow_run:
@@ -71,6 +72,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Build
         working-directory: web
+        env:
+          # The API the web app talks to (SPEC 2). Unset: the build plays the bundled data only.
+          VITE_API_URL: ${{ vars.TTE_API_URL }}
         run: |
           npm ci
           npm run build

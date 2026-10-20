@@ -7,7 +7,8 @@
 #                               (OIDC, no stored secret), and the Storage static website for web/
 #                               (Static Web Apps has no region the student policy allows).
 #   infra/deploy.sh api [tag]   build the API image with docker, push it, and roll it out.
-#   infra/deploy.sh web         build web/ and upload it to the Storage static website.
+#   infra/deploy.sh web         build web/ against TTE_API_URL and upload it to the Storage
+#                               static website.
 #   infra/deploy.sh github      set the repo variables the deploy workflow reads (ids, no secrets).
 #
 # Same guard as m0_provision.sh: an explicit AZURE_SUBSCRIPTION_ID, personal offers only. Safe to
@@ -270,8 +271,8 @@ api() {
 }
 
 web() {
-  step "Build web/"
-  (cd web && npm ci --no-audit --no-fund && npm run build)
+  step "Build web/ (API: ${TTE_API_URL:-none, bundled data only})"
+  (cd web && npm ci --no-audit --no-fund && VITE_API_URL="${TTE_API_URL:-}" npm run build)
   step "Upload web/dist to $SITE"
   az storage blob upload-batch --account-name "$SITE" --auth-mode login -d '$web' -s web/dist \
     --overwrite --content-cache-control "public, max-age=300" -o none
@@ -287,6 +288,8 @@ github() {
   gh variable set TTE_ACR -R "$REPO" -b "$ACR"
   gh variable set TTE_ACA_APP -R "$REPO" -b "$APP"
   gh variable set TTE_SITE_ACCOUNT -R "$REPO" -b "$SITE"
+  # The web build's VITE_API_URL (SPEC 2); written to .env by `provision`.
+  gh variable set TTE_API_URL -R "$REPO" -b "${TTE_API_URL:?run provision first}"
 }
 
 case $PHASE in
