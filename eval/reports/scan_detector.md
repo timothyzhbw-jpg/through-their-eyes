@@ -8,7 +8,7 @@
 | Chosen minimum excursion | **60°** |
 | Held-out F1, nuisance on | **0.997** — ✅ meets the SPEC target ≥ 0.85 |
 | Held-out F1, sensor noise only / clean | 0.999 / 0.998 |
-| Held-out data, nuisance on | 17.9 min of play, 22 players, 5486 scans, 2707 partial scans |
+| Held-out data, nuisance on | 17.9 min of play, 22 players, 5486 scans, 2707 head turns (partial scans) |
 
 ## Reading
 
@@ -19,7 +19,7 @@
 ## Method
 
 - Tuning seeds: `possession_play` 0–9 (10), `blind_side_run` 0–19 (20). Held-out seeds: `possession_play` 100–119 (20), `blind_side_run` 100–139 (40). `possession_play` runs 45 s (ends early if the ball goes out); `blind_side_run` is the ~6 s hero scenario.
-- Ground truth: sim `scan` events. Partial (aborted) scans are not scans — the head comes straight back before the ball leaves the binocular cone — so a detection on one is a false positive.
+- Ground truth: sim `scan` events are the positives. Partial (aborted) scans are not scans — the head comes straight back before the ball leaves the binocular cone — and the sim emits them as `head_turn` events: labelled negatives, so a detection on one is a false positive.
 - Matching: same player, onset frames at most ±3 frames (120 ms) apart, one to one, closest pairs first. Onsets in the last 1 s of a run are not scored: the sim emits a scan only once the head is back, so scans under way when a run stops are missing from the truth.
 - Tuning grid: threshold 125–300°/s in steps of 25 × minimum excursion 20–80° in steps of 5. Highest F1 wins; ties go to the higher threshold, then the lower excursion. Other detector constants are fixed: return tolerance 15°, the head must pass it within 2 frames of the onset, at most 1.5 s from onset to return.
 - Conditions (held-out only; same seeds, so the same plays):
@@ -96,7 +96,7 @@ Each row changes one setting of the default (full nuisance) sim.
 
 ## Where the errors are (chosen detector, held-out, nuisance on)
 
-| | Count | On a partial scan | Ball moving > 2 m/s |
+| | Count | On a `head_turn` | Ball moving > 2 m/s |
 |---|---|---|---|
 | False positives | 7 | 3 | 6 |
 | Missed scans | 26 | — | 17 |

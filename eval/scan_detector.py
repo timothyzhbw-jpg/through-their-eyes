@@ -2,8 +2,9 @@
 
     uv run python -m eval.scan_detector
 
-Ground truth: the sim's `scan` events minus partial (aborted) scans, which are not scans
-(sim.perception). A detection matches a true scan of the same player when their onset frames
+Ground truth: the sim's `scan` events are the positives; its `head_turn` events (partial,
+aborted scans: not scans, sim.perception) are labelled negatives, so a detection on one is a
+false positive. A detection matches a true scan of the same player when their onset frames
 are at most TOLERANCE_FRAMES apart, one to one, closest pairs first. The threshold and the
 minimum excursion are chosen by F1 on tuning seeds with nuisance on; held-out seeds are then
 reported with and without nuisance. Writes eval/reports/scan_detector.md.
@@ -70,7 +71,7 @@ class Sample:
     pos: np.ndarray  # (F, N, 2)
     ball: np.ndarray  # (F, 2)
     truth: list[list[int]]  # per player: onset frames of scans
-    partial: list[list[int]]  # per player: onset frames of partial scans
+    head_turns: list[list[int]]  # per player: onset frames of head turns (labelled negatives)
 
     @property
     def seconds(self) -> float:
@@ -82,7 +83,7 @@ class Counts:
     tp: int = 0
     fp: int = 0
     fn: int = 0
-    fp_partial: int = 0  # false positives on a partial scan
+    fp_head_turn: int = 0  # false positives on a head turn (a labelled negative)
     fp_ball_moving: int = 0
     fn_ball_moving: int = 0
 
@@ -114,13 +115,14 @@ def simulate(scenario: str, seed: int, params: SimParams) -> Sample:
     run = Simulation.from_scenario(scenario, seed, params=params).run()
     n = len(run.players)
     truth: list[list[int]] = [[] for _ in range(n)]
-    partial: list[list[int]] = [[] for _ in range(n)]
+    head_turns: list[list[int]] = [[] for _ in range(n)]
     for e in run.events:
-        if e.type == "scan":
-            (partial if e.attrs["partial"] else truth)[run.index(e.player)].append(e.frame)
+        if e.type in ("scan", "head_turn"):
+            (truth if e.type == "scan" else head_turns)[run.index(e.player)].append(e.frame)
     return Sample(
-        scenario, seed, run.dt, run.head_yaw_observed, run.pos, run.ball_pos[:, :2], truth, partial
-    )
+        scenario, seed, run.dt, run.head_yaw_observed, run.pos, run.ball_pos[:, :2], truth,
+        head_turns,
+    )  # fmt: skip
 
 
 def match(
@@ -159,14 +161,14 @@ def score(
         for i, scans in enumerate(detect_all(s.head_yaw, s.pos, s.ball, s.dt, params)):
             detected = _scored(s, [d.start for d in scans])
             pairs, false_pos, missed = match(_scored(s, s.truth[i]), detected, tolerance)
-            on_partial = [
-                d for d in false_pos if any(abs(d - p) <= tolerance for p in s.partial[i])
+            on_turn = [
+                d for d in false_pos if any(abs(d - h) <= tolerance for h in s.head_turns[i])
             ]
             total += Counts(
                 tp=len(pairs),
                 fp=len(false_pos),
                 fn=len(missed),
-                fp_partial=len(on_partial),
+                fp_head_turn=len(on_turn),
                 fp_ball_moving=int(np.sum(ball_speed[false_pos] > BALL_MOVING)),
                 fn_ball_moving=int(np.sum(ball_speed[missed] > BALL_MOVING)),
             )
@@ -228,7 +230,7 @@ def evaluate() -> str:
     stress = {name: score(samples_for(HELD_OUT, **kw), chosen) for name, kw in STRESS.items()}
     final = sweep["full nuisance"][best_t]
     truth = sum(len(_scored(s, t)) for s in nuisance for t in s.truth)
-    partial = sum(len(_scored(s, p)) for s in nuisance for p in s.partial)
+    turns = sum(len(_scored(s, h)) for s in nuisance for h in s.head_turns)
     minutes = sum(s.seconds for s in nuisance) / 60
     ok = "✅ meets" if final.f1 >= 0.85 else "❌ misses"
     f1s = [c.f1 for c in sweep["full nuisance"].values()]
@@ -252,7 +254,7 @@ def evaluate() -> str:
         f"| Held-out F1, sensor noise only / clean | {sweep['sensor noise only'][best_t].f1:.3f} "
         f"/ {sweep['clean'][best_t].f1:.3f} |",
         f"| Held-out data, nuisance on | {minutes:.1f} min of play, 22 players, {truth} scans, "
-        f"{partial} partial scans |",
+        f"{turns} head turns (partial scans) |",
         "",
         "## Reading",
         "",
@@ -276,9 +278,10 @@ def evaluate() -> str:
         f"- Tuning seeds: {_seed_text(TUNING)}. Held-out seeds: {_seed_text(HELD_OUT)}. "
         "`possession_play` runs 45 s (ends early if the ball goes out); `blind_side_run` is the "
         "~6 s hero scenario.",
-        "- Ground truth: sim `scan` events. Partial (aborted) scans are not scans — the head "
-        "comes straight back before the ball leaves the binocular cone — so a detection on one "
-        "is a false positive.",
+        "- Ground truth: sim `scan` events are the positives. Partial (aborted) scans are not "
+        "scans — the head comes straight back before the ball leaves the binocular cone — and "
+        "the sim emits them as `head_turn` events: labelled negatives, so a detection on one is "
+        "a false positive.",
         f"- Matching: same player, onset frames at most ±{TOLERANCE_FRAMES} frames "
         f"({TOLERANCE_FRAMES * 40} ms) apart, one to one, closest pairs first. Onsets in the "
         f"last {END_GUARD_S:.0f} s of a run are not scored: the sim emits a scan only once the "
@@ -351,9 +354,9 @@ def evaluate() -> str:
         "",
         "## Where the errors are (chosen detector, held-out, nuisance on)",
         "",
-        "| | Count | On a partial scan | Ball moving > 2 m/s |",
+        "| | Count | On a `head_turn` | Ball moving > 2 m/s |",
         "|---|---|---|---|",
-        f"| False positives | {final.fp} | {final.fp_partial} | {final.fp_ball_moving} |",
+        f"| False positives | {final.fp} | {final.fp_head_turn} | {final.fp_ball_moving} |",
         f"| Missed scans | {final.fn} | — | {final.fn_ball_moving} |",
         "",
     ]
