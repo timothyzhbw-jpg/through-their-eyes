@@ -484,6 +484,7 @@ optgroup {
 .swap:focus-visible svg {
   opacity: 1;
 }
+.slot.pip .skeleton-key,
 .slot.pip .hud,
 .slot.pip .vignette,
 .slot.pip .options-legend,
@@ -2460,6 +2461,45 @@ optgroup {
 }
 .blind-tag b {
   color: var(--alert);
+}
+
+/* ---------- the skeleton's key (skeleton/), in the live screen's language ---------- */
+.skeleton-key {
+  padding: 12px 14px;
+  border-radius: var(--r-media);
+  background: rgba(11, 17, 14, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  font: 500 12px/1.4 var(--font-body);
+}
+.skeleton-key .sk-title {
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.1em;
+}
+.skeleton-key .segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--r-control);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.16);
+}
+.skeleton-key .segmented button {
+  appearance: none;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--chalk-2);
+  font: 500 10px/1 var(--font-data);
+  cursor: pointer;
+}
+.skeleton-key .segmented button[aria-pressed="true"] {
+  background: var(--chalk);
+  color: var(--ink);
+}
+.slot.main .view.pov .skeleton-key {
+  top: calc(var(--head-h) + 52px);
+  bottom: auto;
+  left: var(--gutter);
 }
 
 /* ---------- legend ---------- */

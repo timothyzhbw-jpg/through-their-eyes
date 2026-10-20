@@ -19,7 +19,7 @@ import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { useStore } from "../store/store";
-import { Hud, noBeliefs } from "../views/PovOverlay";
+import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 import { ArrowIcon, ChevronIcon, CloseIcon, ExpandIcon, SlidersIcon } from "./icons";
 import { PERSONA_LABEL } from "./labels";
@@ -261,7 +261,7 @@ function SpeedOption() {
 }
 
 /** First person: comfort, belief ghosts, animated players; and the playback speed. */
-function PovOptions() {
+export function PovOptions() {
   const { hero, playback } = useView();
   const povPlayer = useStore(playback, (s) => s.povPlayer);
   const rigged = useStore(trial, (s) => s.rigged);
@@ -296,8 +296,11 @@ function PovOptions() {
   );
 }
 
-/** The tactical board's layers, and whether it rides along as a picture in picture. */
-function TacticalOptions() {
+/**
+ * The tactical board's layers (the skeleton is drawn on the broadcast camera too: one chip, one
+ * state), and whether the board rides along as a picture in picture.
+ */
+export function TacticalOptions() {
   const { hero, playback, controls } = useView();
   const mode = useStore(playback, (s) => s.mode);
   const focus = useStore(playback, (s) => s.focus);
@@ -334,6 +337,7 @@ function TacticalOptions() {
           label="Pitch control"
           title="Which team gets to each point of the pitch first (home: coral, away: blue)"
         />
+        <Chip name="skeleton" label="Skeleton" title={SKELETON_TITLE} />
         {hero.counterfactual && (
           <Chip
             name="cfGhost"

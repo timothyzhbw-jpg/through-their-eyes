@@ -28,6 +28,7 @@ import { pathFor, type Shot } from "./broadcast";
 import { BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { MotionBlur } from "./PovMotionBlur";
 import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
+import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -65,6 +66,7 @@ export function PovView() {
           <PovScene />
         </Canvas>
         <PovOverlay />
+        {broadcast && <SkeletonLegend />}
       </div>
     </figure>
   );

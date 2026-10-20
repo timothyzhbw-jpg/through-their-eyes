@@ -71,44 +71,50 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 
 ### The live trace
 
-One model-backed breakdown (casual, en) on the deployed API, from Application Insights,
-2026-10-20 19:57:51 UTC, 12.3 s inside the `breakdown` span: 4.5 s to start our MCP server, then
-7.6 s for the crew. Spans with their attributes (`tte.source`: `llm` = the model answered,
-`code` = deterministic step); HTTP and framework plumbing spans trimmed.
+One model-backed breakdown (coach, en) on the deployed API, from Application Insights,
+2026-10-20 21:34:51 UTC (revision `tte-api--0000017`, image `6e58a48`), 15.5 s inside the
+`breakdown` span: 5.1 s to start our MCP server, then 9.9 s for the crew. Spans with their
+attributes (`tte.source`: `llm` = the model answered, `code` = deterministic step); HTTP and
+framework plumbing spans trimmed.
 
 ```
-POST /api/breakdowns                                   12919 ms
-├─ ContainerProxy.read_item (Cosmos cache miss)          513 ms
-├─ breakdown  personas=casual languages=en model=gpt-4.1-mini rewrites=0 dropped=0   12277 ms
+POST /api/breakdowns                                   23826 ms
+├─ ContainerProxy.upsert_item ×24  (the match's claims audit: first request after the deploy)
+├─ breakdown  personas=coach languages=en model=gpt-4.1-mini rewrites=0 dropped=0   15467 ms
 │  ├─ mcp  source=code tools=get_moment,list_claims,get_vision,get_pitch_control,get_xt,
-│  │       get_pressing,run_counterfactual,list_options,what_if                    4506 ms
-│  │  ├─ initialize  (python -m agents.mcp_server, a subprocess)                   4493 ms
-│  │  ├─ tools/list                                                                   2 ms
-│  │  └─ prompts/list                                                                 4 ms
-│  ├─ workflow.run                                      7563 ms
-│  │  ├─ executor.process director                      1553 ms
-│  │  ├─ executor.process analyst                       3117 ms
-│  │  ├─ executor.process telestrator                   2887 ms   ┐ fan-out, concurrent
-│  │  ├─ executor.process narration                     2095 ms   ┘
-│  │  └─ executor.process verifier                         2 ms
-│  ├─ director     source=llm attempts=1                1552 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ analyst      source=llm attempts=1 tools_called=get_moment,list_claims      3116 ms
-│  │  └─ invoke_agent analyst                           3114 ms
-│  │     ├─ chat gpt-4.1-mini                           1335 ms   (asks for two tools)
-│  │     ├─ execute_tool get_moment → tools/call get_moment      6 ms   (over MCP stdio)
-│  │     ├─ execute_tool list_claims → tools/call list_claims    9 ms
-│  │     └─ chat gpt-4.1-mini                           1769 ms   (the structured answer)
-│  ├─ telestrator  source=llm attempts=1                2887 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ narration    speaker=pbp   source=llm lines=2     1001 ms → invoke_agent → chat gpt-4.1-mini
-│  ├─ narration    speaker=color source=llm lines=2     1085 ms → invoke_agent → chat gpt-4.1-mini
-│  └─ verifier     round=0 source=code failed=0            2 ms
-└─ ContainerProxy.upsert_item (Cosmos cache write)       126 ms
+│  │       get_pressing,run_counterfactual,list_options,what_if                    5093 ms
+│  │  ├─ initialize  (python -m agents.mcp_server, a subprocess)                   4621 ms
+│  │  ├─ tools/list                                                                   4 ms
+│  │  └─ prompts/list                                                                 3 ms
+│  ├─ workflow.run                                      9898 ms
+│  │  ├─ executor.process director                      2373 ms
+│  │  ├─ executor.process analyst                       3590 ms
+│  │  ├─ executor.process telestrator                   3095 ms   ┐ fan-out, concurrent
+│  │  ├─ executor.process narration                     3884 ms   ┘
+│  │  ├─ executor.process voice                            0 ms   (the plan: waits for the scripts)
+│  │  ├─ executor.process verifier                         4 ms
+│  │  └─ executor.process voice                            1 ms   (the approved scripts: speaks)
+│  ├─ director     source=llm attempts=1                2373 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ analyst      source=llm attempts=1 tools_called=get_moment,list_claims      3590 ms
+│  │  └─ invoke_agent analyst                           3588 ms
+│  │     ├─ chat gpt-4.1-mini                           1528 ms   (asks for two tools)
+│  │     ├─ execute_tool get_moment → tools/call get_moment     10 ms   (over MCP stdio)
+│  │     ├─ execute_tool list_claims → tools/call list_claims   13 ms
+│  │     └─ chat gpt-4.1-mini                           2041 ms   (the structured answer)
+│  ├─ telestrator  source=llm attempts=1                3094 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ narration    speaker=pbp   source=llm lines=3     1976 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ narration    speaker=color source=llm lines=3     1898 ms → invoke_agent → chat gpt-4.1-mini
+│  ├─ verifier     round=0 source=code failed=0            3 ms
+│  └─ voice        source=code lines=6                     0 ms
+├─ ContainerProxy.upsert_item (Cosmos cache write)       242 ms
+└─ ContainerProxy.read_item ×6, upsert_item ×2  (the voice cues POST /api/tts may speak)
 ```
 
-The `voice` step span (and its `executor.process voice`) is missing from this trace and from the
-one before it, although the SDK emits it (checked locally with an in-memory exporter). The
-exporter's default rate-limited sampler (5 spans per second, `azure-monitor-opentelemetry` 1.8)
-is the likely cause; not fixed yet.
+Every span of the trace arrives, each with `itemCount` 1 (unsampled), and so does every span of
+the next breakdown (player_fan, zh, 21:35:08 UTC: the same steps, 82 spans). Since PR #50
+`configure_tracing` keeps all spans. Before it, the distro's default sampler (5 spans per second,
+decided span by span) dropped steps out of the bursts a breakdown makes: earlier traces of the
+day lack `voice`, some also `mcp` or `verifier`.
 
 Query (Application Insights `tte-appi-1ff906`, Logs). It keeps to requests that reached the
 deployed API, because local runs with the connection string set report under the same role name:

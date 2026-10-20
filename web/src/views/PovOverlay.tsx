@@ -8,6 +8,10 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
 
+/** The Skeleton chip's tooltip, on the broadcast camera and the tactical board (SPEC 7). */
+export const SKELETON_TITLE =
+  "Skeleton data: every player's torso and head yaw, as limb tracking shows them (optional)";
+
 /** Why the belief ghosts are off for this player: beliefs are recorded for the hero only. */
 export function noBeliefs(hero: Hero): string {
   return hero.heroId
