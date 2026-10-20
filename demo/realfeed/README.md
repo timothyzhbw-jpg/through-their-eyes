@@ -1,6 +1,7 @@
 # Real-footage overlay demo (`demo/realfeed`)
 
-A separate, clearly labelled ~10 s segment for the demo video: the same kind of broadcast graphics
+A separate, clearly labelled segment of under 10 s for the demo video (the one exception to the
+synthetic-data rule, approved by Bowen on 2026-10-19; conditions in `docs/SPEC.md` §7): the same kind of broadcast graphics
 as the main product (pitch control, pass options, distance rings), computed by our own pipeline and
 drawn onto **real amateur futsal footage** instead of our synthetic matches. It shows that the
 graphics are not tied to the simulator.
@@ -8,7 +9,9 @@ graphics are not tied to the simulator.
 The main product uses synthetic data only. This demo is decoupled from it: nothing in `sim/`,
 `analytics/`, `explain/`, `agents/`, `api/` or `web/` depends on it. Removing it means deleting
 `demo/realfeed/`, `tests/test_realfeed.py` and the `realfeed` dependency group in `pyproject.toml`.
-No footage or rendered video is committed; both live in `out/realfeed/` (git-ignored).
+No footage or rendered video is committed; both live in `out/realfeed/` (git-ignored). Only the
+camera calibration (pixel ↔ pitch correspondences of the markings) is committed. Nothing here is
+used to train, tune or calibrate anything in the app.
 
 ## Source and attribution
 
@@ -16,13 +19,18 @@ savinkins, "Битва корпораций 2019-20. Атлант – Нова �
 Wikimedia Commons, CC BY 3.0; modified (graphics overlaid, background blurred).
 <https://commons.wikimedia.org/wiki/File:Битва_Корпораций_-_2019-10-06_-_Нова_Пошта._-_Мини-футбол._Финал..webm>
 
-The attribution goes in this README and in the video description, not on screen (the title names
-companies). The clip is 15:46.0–15:56.0 of the original. On screen there is only the caption
-"Real amateur footage (CC BY 3.0). Graphics computed by our pipeline."
+The clip is 15:46.0–15:56.0 of the original. The full attribution above goes in this README, the
+repo README and the video description. On screen, for the whole segment, there are exactly two
+lines of text: "Real footage, overlay demo only; the app uses synthetic data" and "savinkins,
+Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". Otherwise the footage carries graphics
+only: no numbers, captions or narration, because every number in the app is a verified claim
+about the synthetic match and nothing here is verified.
 
 ## Run
 
 Needs the `ffmpeg` command line tool (decode VP9, encode H.264) and the default `uv sync`.
+Before the segment goes into the video, Bowen reviews the export frame by frame (faces, kit logos,
+boards), as SPEC §7 requires; the automated checks below do not replace that.
 
 ```bash
 uv run python -m demo.realfeed.download            # 650 MB original, SHA-256 checked
@@ -31,9 +39,10 @@ uv run python -m demo.realfeed.pipeline            # camera track, detections, t
 uv run python -m demo.realfeed.render              # out/realfeed/realfeed_overlay.mp4
 ```
 
-The render writes `realfeed_overlay.mp4` (1920 × 1080, H.264, 50 fps, 10.7 s including a 1.2 s
-freeze), `realfeed_keyframe.png` and `report.json` (all numbers below) to `out/realfeed/`.
-`--preview 60,400` renders stills only.
+The render writes `realfeed_overlay.mp4` (1920 × 1080, H.264, 50 fps, 9.98 s including a 1.2 s
+freeze on the carrier's first touch, marked by a pause sign), `realfeed_keyframe.png` and
+`report.json` (all numbers below) to `out/realfeed/`. `--preview 60,400` renders stills only.
+`uv run python -m demo.realfeed.check` then checks every exported frame (faces, label).
 
 ## Method
 
@@ -83,7 +92,9 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 | Tracking drift, synthetic | under 1 px over 150 frames of known pan + zoom + keystone with moving distractors (`tests/test_realfeed.py`) |
 | Tracking drift, real clip | estimated against the painted lines every second: 1.7–3.2 px for the first 7 s; 3.8–6.9 px during the final zoom (8–10 s), about 5 cm on the ground at the end |
 | Players | about 80 % of visible players detected on spot-checked frames (28 of 34). Misses are mostly two players overlapping in the image and the goalkeeper diving. False positives are rare: a substitute standing on the far line, a goalpost in the final zoom. |
-| Masking | high-frequency (Laplacian) energy outside the pitch and player silhouettes is at most **1.1 %** of the source's in any frame |
+| Masking | high-frequency (Laplacian) energy outside the pitch and player silhouettes is at most **1.3 %** of the source's in any frame |
+| Faces (`check.py`) | OpenCV's Haar cascades find 1,226 face candidates in the segment's source frames and 259 in the export. At all but 3, the export keeps none of the source's fine detail (Laplacian correlation below 0.5). The 3 were reviewed: a player's legs and a boot, not faces. |
+| Label and attribution | visible in **499 of 499** exported frames |
 | Graphics on non-turf pixels | **0** pixels in every frame |
 
 ## Limits
@@ -105,6 +116,7 @@ OpenCV and numpy only. There is no learned detector anywhere (no YOLO, no face d
 
 ## Licences
 
-`opencv-python-headless` is Apache-2.0 (its wheel bundles unmodified, dynamically linked LGPL
-FFmpeg libraries, which we do not use for I/O). Decoding and H.264 encoding go through the
+`opencv-python-headless` (4.x) is Apache-2.0 (its wheel bundles unmodified, dynamically linked
+LGPL FFmpeg libraries, which we do not use for I/O). It stays below 5 because 5.x dropped the Haar
+cascades the face check uses; the cascades only verify the export, the pipeline never uses them. Decoding and H.264 encoding go through the
 `ffmpeg` command-line tool, run as a separate program. The footage is CC BY 3.0 (above).
