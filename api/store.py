@@ -25,8 +25,10 @@ from azure.core.exceptions import AzureError, ResourceNotFoundError
 
 from agents.context import MomentContext
 from api.settings import Settings, match_id
-from explain.audit import AuditSink, CosmosAuditSink
-from sim.export import export_hero
+from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
+from explain.match import match_moments
+from sim.export import export_hero, export_match
+from sim.match import build_match
 
 log = logging.getLogger(__name__)
 CACHE_CONTAINER = "cache"  # partition key /kind
@@ -37,23 +39,68 @@ SPRINT_MPS = 7.0  # SPEC 4.6
 
 @dataclass
 class Match:
+    """A match the service streams: one hero scenario, or a stitched match (`scenario` "match").
+
+    `contexts` holds the crew's evidence for every hero moment, keyed by the moment's id in match
+    time; `where` says, for a stitched match, which possession each one is in (its index, first
+    match frame and the moment's id inside it). Breakdowns and what-ifs work on the possession's
+    own run, so their frames are local: add `start` to place them on the match clock.
+    """
+
     id: str
     scenario: str
     seed: int
-    ctx: MomentContext
+    contexts: dict[str, MomentContext]
     export: dict[str, Any]
     cards: list[dict[str, Any]]
     sprint: list[list[str]]  # per frame: players above sprint speed (live overlay)
+    where: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    @property
+    def ctx(self) -> MomentContext:
+        """The first hero moment's context (for a hero scenario, its hero)."""
+        return next(iter(self.contexts.values()))
+
+    def context(self, moment: str | None) -> MomentContext | None:
+        if moment is None:
+            return self.ctx
+        return self.contexts.get(moment)
 
     @classmethod
     def load(cls, scenario: str, seed: int, audit: AuditSink | None = None) -> Match:
+        if scenario == "match":
+            return cls._load_match(seed, audit)
         ctx = MomentContext.load(scenario, seed, audit=audit)
         export = export_hero(scenario, seed)
-        run = ctx.run
-        speed = np.linalg.norm(run.vel, axis=-1)
-        sprint = [[run.ids[j] for j in np.flatnonzero(row > SPRINT_MPS)] for row in speed]
         cards = [c.model_dump(mode="json") for c in ctx.cards.values()]
-        return cls(match_id(scenario, seed), scenario, seed, ctx, export, cards, sprint)
+        mid = match_id(scenario, seed)
+        sprint = _sprint(ctx.run.ids, ctx.run.vel)
+        return cls(mid, scenario, seed, {ctx.card.id: ctx}, export, cards, sprint)
+
+    @classmethod
+    def _load_match(cls, seed: int, audit: AuditSink | None) -> Match:
+        match = build_match(seed)
+        sink = audit or MemoryAuditSink()  # one audit trail for every hero of the match
+        heroes = {
+            p.index: MomentContext.load(p.scenario, p.seed, audit=sink)
+            for p in match.possessions if p.run.hero is not None
+        }  # fmt: skip
+        cards = match_moments(match, {k: list(c.cards.values()) for k, c in heroes.items()})
+        export = export_match(seed, match, cards)
+        contexts, where = {}, {}
+        for card in cards:
+            if card["hero"]:
+                contexts[card["id"]] = heroes[card["possession"]]
+                where[card["id"]] = {"index": card["possession"], "start": card["start"],
+                                     "local_moment": card["local_id"]}  # fmt: skip
+        vel = np.concatenate([p.run.vel for p in match.possessions])
+        sprint = _sprint([p.id for p in match.players], vel)
+        return cls(match_id("match", seed), "match", seed, contexts, export, cards, sprint, where)
+
+
+def _sprint(ids: list[str], vel: np.ndarray) -> list[list[str]]:
+    speed = np.linalg.norm(vel, axis=-1)
+    return [[ids[j] for j in np.flatnonzero(row > SPRINT_MPS)] for row in speed]
 
 
 class MatchStore:

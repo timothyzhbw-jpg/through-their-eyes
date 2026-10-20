@@ -6,7 +6,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_MATCHES = [("blind_side_run", 3)]
+# "match" is a stitched match (sim.match, SPEC 3.1); the number is its match seed.
+DEFAULT_MATCHES = [("blind_side_run", 3), ("match", 1)]
 
 
 def match_id(scenario: str, seed: int) -> str:
@@ -14,7 +15,7 @@ def match_id(scenario: str, seed: int) -> str:
 
 
 def _matches(text: str) -> list[tuple[str, int]]:
-    """Parse "blind_side_run:3,blind_side_run:5" into [("blind_side_run", 3), ...]."""
+    """Parse "blind_side_run:3,match:1" into [("blind_side_run", 3), ("match", 1)]."""
     out = []
     for item in filter(None, (part.strip() for part in text.split(","))):
         scenario, _, seed = item.partition(":")

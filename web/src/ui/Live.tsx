@@ -67,6 +67,7 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
 }
 
 const KIND: Record<string, string> = {
+  pressed_decision: "Decision under pressure",
   decision_after_scan: "Decision after a scan",
   line_breaking_pass: "Line-breaking pass",
   sprint: "Sprint",

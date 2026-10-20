@@ -22,6 +22,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from agents import whatif
+from agents.context import MomentContext
 from agents.llm import client_from_env, sync_credential_from_env
 from agents.prompts import PROMPT_VERSION
 from agents.schemas import Language, Persona
@@ -46,6 +47,7 @@ class BreakdownBody(BaseModel):
 
 class WhatIfBody(BaseModel):
     match: str
+    moment: str | None = None  # which hero moment, in a match with several; default the first
     question: str = Field(min_length=1, max_length=300)
     language: Language = "en"
     persona: Persona = "analyst"
@@ -128,11 +130,15 @@ def create_app(
     async def match_info(mid: str) -> dict[str, Any]:
         m = await match_or_404(mid)
         e = m.export
-        return {
+        info = {
             "id": m.id, "scenario": m.scenario, "seed": m.seed, "dt": e["dt"],
             "frames": e["runs"]["factual"]["frames"], "players": e["players"], "hero": e["hero"],
-            "key_scan": e["key_scan"], "hero_moment": m.ctx.card.id,
+            "key_scan": e.get("key_scan"), "hero_moment": next(iter(m.contexts)),
+            "hero_moments": list(m.contexts), "kind": e.get("kind", "hero"),
         }  # fmt: skip
+        if "match" in e:  # a stitched match (SPEC 3.1)
+            info |= {"possessions": e["match"]["possessions"], "score": e["match"]["score"]}
+        return info
 
     @app.get("/api/matches/{mid}/export")
     async def match_export(mid: str) -> dict[str, Any]:
@@ -144,10 +150,13 @@ def create_app(
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:
-        ctx = (await match_or_404(mid)).ctx
-        recent = getattr(ctx.audit, "recent", None)
-        records = recent(ctx.evaluator.match, max(1, min(limit, 500))) if recent else []
-        return [r.model_dump(mode="json") for r in records]
+        m = await match_or_404(mid)
+        limit = max(1, min(limit, 500))
+        records = []
+        for ctx in {id(c): c for c in m.contexts.values()}.values():  # each hero's run once
+            recent = getattr(ctx.audit, "recent", None)
+            records += recent(ctx.evaluator.match, limit) if recent else []
+        return [r.model_dump(mode="json") for r in records[:limit]]
 
     @app.websocket("/ws/matches/{mid}/live")
     async def live(ws: WebSocket, mid: str, speed: float = 1.0, start: int = 0) -> None:
@@ -163,11 +172,13 @@ def create_app(
     @app.post("/api/breakdowns")
     async def breakdown(body: BreakdownBody, request: Request) -> dict[str, Any]:
         m = await match_or_404(body.match)
-        if body.moment not in (None, m.ctx.card.id):
-            raise HTTPException(404, f"breakdowns are available for {m.ctx.card.id}")
+        ctx = m.context(body.moment)
+        if ctx is None:
+            raise HTTPException(404, f"breakdowns are available for {', '.join(m.contexts)}")
+        where = {"possession": m.where[body.moment]} if body.moment in m.where else {}
 
         def key(model_name: str) -> str:
-            return content_key(card=m.ctx.card.content_hash(), personas=sorted(body.personas),
+            return content_key(card=ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
                                pipeline=PIPELINE_VERSION,
                                model=model_name)  # fmt: skip
@@ -178,21 +189,23 @@ def create_app(
         # client was limited must not stand in for the model on later requests.
         if not body.regenerate and (hit := breakdowns.get(candidates[0])) is not None:
             return {"key": candidates[0], "cached": True, "rate_limited": False, "capped": False,
-                    **hit}  # fmt: skip
+                    **hit, **where}  # fmt: skip
         limits = {"rate_limited": False, "capped": False}
         if client is not None:
             verdict = regeneration(request)
             if verdict == "model":
-                return await _compute(m, body, client, "model", model_key)
+                return {**await _compute(ctx, body, client, "model", model_key), **where}
             limits[verdict] = True
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, **limits, **hit}
-        out = await _compute(m, body, None, "offline", offline_key)
-        return {**out, **limits}
+                    return {"key": k, "cached": True, **limits, **hit, **where}
+        out = await _compute(ctx, body, None, "offline", offline_key)
+        return {**out, **limits, **where}
 
-    async def _compute(m: Match, body: BreakdownBody, llm, source: str, k: str) -> dict[str, Any]:
-        result = await run_breakdown(m.ctx, client=llm, personas=tuple(body.personas),
+    async def _compute(
+        ctx: MomentContext, body: BreakdownBody, llm, source: str, k: str
+    ) -> dict[str, Any]:
+        result = await run_breakdown(ctx, client=llm, personas=tuple(body.personas),
                                      languages=tuple(body.languages))  # fmt: skip
         value = {"source": source, "result": result.model_dump(mode="json", by_alias=True)}
         breakdowns.put(k, value)
@@ -201,16 +214,21 @@ def create_app(
     @app.post("/api/whatif")
     async def what_if(body: WhatIfBody, request: Request) -> dict[str, Any]:
         m = await match_or_404(body.match)
+        ctx = m.context(body.moment)
+        if ctx is None:
+            raise HTTPException(404, f"what-ifs are available for {', '.join(m.contexts)}")
         verdict = regeneration(request) if client is not None else "offline"
         use_model, capped = verdict == "model", verdict == "capped"
-        action, _ = await whatif.map_question(m.ctx, body.question, client if use_model else None)
+        action, _ = await whatif.map_question(ctx, body.question, client if use_model else None)
         if action is not None:
+            # A match with one hero keeps its cache keys; with several, the moment is part of it.
+            moment = {"moment": ctx.card.id} if len(m.contexts) > 1 else {}
             k = content_key(match=m.id, action=action, language=body.language,
-                            persona=body.persona, version=WHATIF_VERSION)  # fmt: skip
+                            persona=body.persona, version=WHATIF_VERSION, **moment)  # fmt: skip
             if (hit := answers.get(k)) is not None:
                 return {"key": k, "cached": True, "capped": capped,
                         "answer": {**hit, "question": body.question}}  # fmt: skip
-        answer = await whatif.answer_question(m.ctx, body.question, body.language, body.persona,
+        answer = await whatif.answer_question(ctx, body.question, body.language, body.persona,
                                               client if use_model else None)  # fmt: skip
         data = answer.model_dump(mode="json")
         if action is None or answer.action is None:

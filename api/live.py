@@ -6,6 +6,10 @@ alerts) are computed ahead of time, so a frame costs no analytics at send time. 
 `blind_side` lists the alerts on as [observer, target, frames unseen] (player indices,
 SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
 `{"type": "seek", "f": 120}` or `{"type": "speed", "x": 2.0}`.
+
+A stitched match (SPEC 3.1) streams the same way over its whole clock: `hello` says
+`kind: "match"`, every event carries its `possession`, and the moments of every possession are
+announced as their windows close.
 """
 
 from __future__ import annotations
@@ -64,6 +68,7 @@ async def stream(ws: WebSocket, match: Match, speed: float = 1.0, start: int = 0
     await ws.send_json({
         "type": "hello", "match": match.id, "dt": dt, "frames": frames,
         "players": match.export["players"], "hero": match.export["hero"],
+        "kind": match.export.get("kind", "hero"),
     })  # fmt: skip
     control = Control(speed=min(max(speed, 0.1), 1000.0))
     listener = asyncio.create_task(_listen(ws, control))
