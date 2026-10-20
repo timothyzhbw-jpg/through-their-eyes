@@ -1,4 +1,5 @@
-"""The API service (SPEC 2): live match stream, moments, cached breakdowns, what-if, TTS.
+"""The API service (SPEC 2): live match stream, moments, cached breakdowns, what-if, TTS, and
+tamper checks (the verifier on a claim with one number changed, SPEC 7).
 
     uv run uvicorn api.main:app --reload
 
@@ -12,6 +13,7 @@ flagged `rate_limited` or `capped`.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from contextlib import asynccontextmanager
 from typing import Any
@@ -31,6 +33,7 @@ from api import tts
 from api.live import stream
 from api.settings import Settings
 from api.store import DailyCap, Match, MatchStore, RateLimiter, content_key, open_storage
+from api.tamper import TamperError, tamper
 
 VERSION = "0.4.0"
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
@@ -53,6 +56,14 @@ class WhatIfBody(BaseModel):
 
 class TtsBody(BaseModel):
     ssml: str = Field(min_length=1, max_length=20_000)
+
+
+class VerifyBody(BaseModel):
+    match: str
+    claim: str = Field(max_length=100)
+    slot: str = Field(max_length=100)
+    value: float = Field(strict=True, allow_inf_nan=False)  # a JSON number: no strings, no bools
+    language: Language = "en"
 
 
 def _client_ip(request: Request) -> str:
@@ -81,6 +92,7 @@ def create_app(
     store = MatchStore(settings, audit=storage.audit)
     breakdowns, answers = storage.breakdowns, storage.answers
     limiter = RateLimiter(*settings.rate_limit)
+    verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
 
     @asynccontextmanager
@@ -217,6 +229,22 @@ def create_app(
             return {"key": None, "cached": False, "capped": capped, "answer": data}
         answers.put(k, data)
         return {"key": k, "cached": False, "capped": capped, "answer": data}
+
+    @app.post("/api/verify")
+    async def verify(body: VerifyBody, request: Request) -> dict[str, Any]:
+        """Check one claim of the match with one numeric slot set to `value` (api/tamper.py).
+
+        Not written to the audit log; limited per client like the model-backed requests.
+        """
+        m = await match_or_404(body.match)
+        if not verify_limiter.allow(_client_ip(request)):
+            raise HTTPException(429, "too many checks from this address: try again in a minute")
+        try:
+            out = await asyncio.to_thread(tamper, m.ctx, body.claim, body.slot, body.value,
+                                          body.language)  # fmt: skip
+        except TamperError as e:
+            raise HTTPException(e.status, e.detail) from None
+        return {"match": m.id, **out}
 
     @app.post("/api/tts")
     async def speech(body: TtsBody) -> Response:

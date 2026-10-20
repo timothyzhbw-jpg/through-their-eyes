@@ -16,6 +16,7 @@ def settings(tmp_path_factory):
         matches=[("blind_side_run", 3)],
         cache_dir=tmp_path_factory.mktemp("cache"),
         rate_limit=(2, 600.0),
+        verify_rate_limit=(100, 60.0),
         web_origin="*",
     )
 
@@ -283,6 +284,98 @@ def test_audit_log_lists_the_verdicts(client):
     records = client.get(f"/api/matches/{MATCH}/audit?limit=5").json()
     assert 0 < len(records) <= 5
     assert {"claim", "verdict", "decided_at"} <= set(records[0])
+
+
+# --- tamper checks: the verifier on a claim with one number changed (SPEC 5.3, 7) -----------------
+
+
+def _verify(client, claim="cf_value", slot="dxt", value=0.5, headers=None, **extra):
+    body = {"match": MATCH, "claim": claim, "slot": slot, "value": value, **extra}
+    return client.post("/api/verify", json=body, headers=headers)
+
+
+def test_a_wrong_number_is_refuted_and_its_line_would_not_air(client):
+    r = _verify(client, value=0.5)
+    assert r.status_code == 200
+    out = r.json()
+    assert out["claim"] == "cf_value" and out["slot"] == "dxt" and out["value"] == 0.5
+    assert out["verified_value"] == pytest.approx(0.1)
+    assert out["status"] == "refuted" and out["airs"] is False
+    assert out["reason"].startswith("approx(") and out["reason"].endswith(", 0.5) is false")
+    assert out["line"] == "That look was worth 0.50 in expected threat."  # as it would render
+    assert any(v.startswith("unsupported_claim: cf_value: refuted") for v in out["violations"])
+    assert out["trace"] and out["trace"][0]["holds"] is False
+    assert out["audited"] is False
+
+
+def test_the_verified_number_is_supported_and_its_line_airs(client):
+    true = _verify(client).json()["verified_value"]
+    out = _verify(client, value=true).json()
+    assert out["status"] == "supported" and out["airs"] is True and out["violations"] == []
+    assert out["line"] == "That look was worth 0.10 in expected threat."
+    zh = _verify(client, value=true, language="zh").json()
+    assert zh["line"] == "那一眼带来了0.10的预期威胁（xT）。" and zh["airs"] is True
+
+
+def test_every_numeric_slot_of_every_claim_can_be_tampered(client):
+    """Each true value is supported; the same slot doubled (or 1 for a zero) is not."""
+    from agents.context import MomentContext
+
+    ctx = MomentContext.load("blind_side_run", 3)
+    tried = 0
+    for cid, claim in ctx.claims.items():
+        for name, s in claim.slots.items():
+            if isinstance(s.value, bool) or not isinstance(s.value, int | float):
+                continue
+            assert _verify(client, cid, name, s.value).json()["status"] == "supported", cid
+            wrong = (s.value * 2 or 1) if name != "window_s" else s.value * 5
+            out = _verify(client, cid, name, wrong).json()
+            assert out["status"] != "supported" and out["airs"] is False, (cid, name, out)
+            assert out["line"] is None or out["line"] != claim.template, cid
+            tried += 1
+    assert tried >= 10
+
+
+def test_only_numeric_slots_of_existing_claims_are_accepted(client):
+    assert _verify(client, claim="no_such_claim").status_code == 404
+    assert _verify(client, slot="no_such_slot").status_code == 404
+    assert client.post("/api/verify", json={"match": "nope-1", "claim": "cf_value", "slot": "dxt",
+                                            "value": 1}).status_code == 404  # fmt: skip
+    assert _verify(client, "pass_speed", "passer", 1).status_code == 422  # a player, not a number
+    assert _verify(client, value="0.5").status_code == 422  # strings are not numbers
+    assert _verify(client, value=True).status_code == 422
+    assert _verify(client, value=0.123).status_code == 422  # the slot renders 2 decimals
+    assert _verify(client, "pass_speed", "kmh", 83.5).status_code == 422  # a whole number
+    assert _verify(client, value=1e12).status_code == 422
+    assert _verify(client, language="fr").status_code == 422
+
+
+def test_tamper_checks_are_not_written_to_the_audit_log(client):
+    url = f"/api/matches/{MATCH}/audit?limit=500"
+    before = client.get(url).json()
+    _verify(client, value=0.5)
+    _verify(client, "pass_speed", "kmh", 120)
+    after = client.get(url).json()
+    assert after == before
+    assert all(r["verdict"]["status"] == "supported" for r in after)
+
+
+def test_tamper_checks_are_rate_limited_per_client(settings, tmp_path):
+    fresh = Settings(matches=settings.matches, cache_dir=tmp_path, verify_rate_limit=(2, 600.0),
+                     web_origin="*")  # fmt: skip
+    with TestClient(create_app(fresh)) as c:
+        assert _verify(c).status_code == 200 and _verify(c).status_code == 200
+        limited = _verify(c)
+        other = _verify(c, headers={"x-forwarded-for": "203.0.113.7"})
+    assert limited.status_code == 429 and "too many" in limited.json()["detail"]
+    assert other.status_code == 200
+
+
+def test_the_tamper_rate_limit_comes_from_the_environment(monkeypatch):
+    monkeypatch.delenv("TTE_VERIFY_RATE_LIMIT", raising=False)
+    assert Settings.from_env().verify_rate_limit == (20, 60.0)
+    monkeypatch.setenv("TTE_VERIFY_RATE_LIMIT", "5/30")
+    assert Settings.from_env().verify_rate_limit == (5, 30.0)
 
 
 def test_tts_needs_speech(client):
