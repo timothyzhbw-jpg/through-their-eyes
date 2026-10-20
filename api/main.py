@@ -29,8 +29,8 @@ replica's disk (`DrillStore`), the most recent `DRILLS_KEPT` only. A restart ont
 per key at a time.
 
 Started from the environment, the service loads every match before it opens its port
-(`TTE_WARM`, on unless set to 0), so a redeploy keeps serving the old revision until the new one
-can answer the first export at once.
+(`TTE_WARM`, default on; 0, false or off turns it off), so the first export after a redeploy or
+a restart is answered at once.
 """
 
 from __future__ import annotations

@@ -993,9 +993,11 @@ to a real broadcast.
   - *Warm start (2026-10-20):* a new revision used to simulate each match on its first request.
     The stitched match took longer than the 15 s the web app waits for an export, so the first
     visitor of `?match=match-1` after a deploy got the bundled offline hero instead. The API now
-    loads every match in its lifespan, before uvicorn opens the port (`TTE_WARM`, on unless set
-    to 0), and Container Apps keeps the old revision serving until the new one answers. Locally
-    the port opens after 6.0 s and the first `match-1` export takes 7 ms (3.5 s without).
+    loads every match in its lifespan, before uvicorn opens the port (`TTE_WARM`, default on;
+    0, false or off turns it off). In single revision mode, with the default TCP startup probe,
+    Container Apps should then route traffic to a new revision only once it is warm; not yet
+    measured there. Locally the port opens after 6.0 s and the first `match-1` export takes
+    7 ms (3.5 s without).
 - **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
