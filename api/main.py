@@ -22,9 +22,10 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from agents import whatif
-from agents.llm import client_from_env
+from agents.llm import client_from_env, sync_credential_from_env
 from agents.prompts import PROMPT_VERSION
 from agents.schemas import Language, Persona
+from agents.telemetry import configure_tracing
 from agents.workflow import run_breakdown
 from api import tts
 from api.live import stream
@@ -74,6 +75,8 @@ def create_app(
     if client is None and model_id is None:
         client, close = client_from_env()
     model = model_id or ("foundry" if client is not None else "offline")
+    if settings.cosmos_endpoint and credential is None and cosmos_client is None:
+        credential = sync_credential_from_env()  # keyless: managed identity in Azure, az locally
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
     breakdowns, answers = storage.breakdowns, storage.answers
@@ -229,4 +232,5 @@ def create_app(
     return app
 
 
+configure_tracing()  # Application Insights when its connection string is set (SPEC 8)
 app = create_app()

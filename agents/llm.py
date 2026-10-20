@@ -88,3 +88,15 @@ def credential_from_env() -> Any:
     from azure.identity.aio import AzureCliCredential
 
     return AzureCliCredential(tenant_id=os.environ.get("AZURE_TENANT_ID") or None)
+
+
+def sync_credential_from_env() -> Any:
+    """The same choice as `credential_from_env`, for synchronous SDKs (Cosmos DB)."""
+    client_id = os.environ.get("AZURE_CLIENT_ID", "").strip()
+    if os.environ.get("IDENTITY_ENDPOINT") and client_id:
+        from azure.identity import ManagedIdentityCredential
+
+        return ManagedIdentityCredential(client_id=client_id)
+    from azure.identity import AzureCliCredential
+
+    return AzureCliCredential(tenant_id=os.environ.get("AZURE_TENANT_ID") or None)
