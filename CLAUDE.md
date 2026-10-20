@@ -134,6 +134,11 @@ _Fill in as they come to exist._
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached), `POST /api/whatif`, `POST /api/tts`
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
+- `python3 docs/architecture.py` — regenerate the architecture diagram (SPEC 2, 10):
+  `docs/architecture.svg` and `-dark.svg`, standard library only. `--png --chrome <path to
+  chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full
+  Chrome's `--headless` crops it). `tests/test_architecture.py` fails when any of them is stale
+  or the diagram drifts from the code
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)
