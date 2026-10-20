@@ -38,7 +38,7 @@ COMPONENTS = [
     "sim/", "analytics/", "explain/", "agents/ + api/", "web/",
     # The Agent Framework workflow.
     "Microsoft Agent Framework", "Director", "Analyst", "MCP tool server", "Telestrator",
-    "Narration", "Commentator + Co-commentator", "Verifier", "Voice", "fan-out", "fan-in",
+    "Narration", "Commentator + Co-commentator", "Verifier", "Voice", "fan-out", "joined in code",
     "rewrite",
     # The deterministic Verifier and the claims audit.
     "Deterministic Verifier", "claims audit",

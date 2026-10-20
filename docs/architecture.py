@@ -218,9 +218,9 @@ def workflow(c: Canvas) -> None:
     c.wire(f"M1040,{ly} H1108", edge="narration verifier", group="single")
     c.wire(f"M1170,{low} V{cy} H962 V{low - 2}", edge="verifier narration", group="single")
     c.text(1184, cy + 9, f"rewrite ≤ {MAX_REWRITES}, then drop", 19, "muted")
-    c.wire(f"M1040,{ty} H1400 V{cy} H1448", edge="telestrator voice", group="fan-in")
-    c.wire(f"M1350,{ly} H1400 V{cy}", arrow=False, edge="verifier voice", group="fan-in")
-    c.text(1400, ty - 16, "fan-in", 19, "muted", anchor="middle")
+    c.wire(f"M1040,{ty} H1400 V{cy} H1448", edge="telestrator voice", group="single")
+    c.wire(f"M1350,{ly} H1400 V{cy}", arrow=False, edge="verifier voice", group="single")
+    c.text(1400, ty - 16, "joined in code", 19, "muted", anchor="middle")
     c.wire(f"M1650,{cy} H1678")  # Voice → result
 
     # The Analyst's MCP tools: a subprocess per model breakdown, in the API and the CLI.

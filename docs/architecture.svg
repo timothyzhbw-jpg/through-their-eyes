@@ -126,9 +126,9 @@ text { fill: #13201a; }
 <path d="M1040,638.0 H1108" class="wire" marker-end="url(#head)" data-edge="narration verifier" data-group="single"/>
 <path d="M1170,590 V570.0 H962 V588" class="wire" marker-end="url(#head)" data-edge="verifier narration" data-group="single"/>
 <text x="1184" y="579.0" font-size="19" class="muted"><tspan x="1184" dy="0">rewrite ≤ 2, then drop</tspan></text>
-<path d="M1040,494.0 H1400 V570.0 H1448" class="wire" marker-end="url(#head)" data-edge="telestrator voice" data-group="fan-in"/>
-<path d="M1350,638.0 H1400 V570.0" class="wire" data-edge="verifier voice" data-group="fan-in"/>
-<text x="1400" y="478.0" font-size="19" class="muted" text-anchor="middle"><tspan x="1400" dy="0">fan-in</tspan></text>
+<path d="M1040,494.0 H1400 V570.0 H1448" class="wire" marker-end="url(#head)" data-edge="telestrator voice" data-group="single"/>
+<path d="M1350,638.0 H1400 V570.0" class="wire" data-edge="verifier voice" data-group="single"/>
+<text x="1400" y="478.0" font-size="19" class="muted" text-anchor="middle"><tspan x="1400" dy="0">joined in code</tspan></text>
 <path d="M1650,570.0 H1678" class="wire" marker-end="url(#head)"/>
 <g id="mcp">
 <path d="M455,622 V662" class="wire" marker-end="url(#head)"/>
