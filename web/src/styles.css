@@ -1316,7 +1316,7 @@ optgroup {
   color: var(--chalk-3);
 }
 .breakdown-head .btn {
-  margin-left: 4px;
+  margin-top: 6px;
 }
 /* tags: kinds of claim, plan and source badges */
 .plan-badge,
@@ -1924,7 +1924,8 @@ optgroup {
   margin: 0;
 }
 .checked {
-  display: inline-flex;
+  display: flex;
+  margin-bottom: 8px;
   align-items: center;
   gap: 6px;
   color: var(--floodlight);
@@ -2775,7 +2776,14 @@ optgroup {
     grid-template-areas:
       "kicker"
       "title"
-      "lede";
+      "lede"
+      "cta";
+  }
+  .moment-head .kicker {
+    display: block;
+  }
+  .moment-head .kicker::before {
+    display: none;
   }
   .chapter {
     padding-top: 112px;
