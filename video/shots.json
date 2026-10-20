@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "about": "Shot list for the < 2:00 demo video (SPEC 10). capture.mjs records every shot whose status is 'ready' or 'stand-in'; see video/README.md. Each shot loads its URL fresh, runs 'setup' off camera, then records 'actions'. 'hold' is screen time in seconds after an action; waits use selectors, never sleeps. VO: no digits or number words; a number comes in only as a {claim.value} slot, filled from the verified claims the page shows, else 'vo_fallback' is used.",
+  "site": "https://ttesite1ff906.z14.web.core.windows.net",
+  "viewport": { "width": 1920, "height": 1080 },
+  "harvest": [
+    { "persona": "casual", "language": "en" },
+    { "persona": "analyst", "language": "en" }
+  ],
+  "shots": [
+    {
+      "id": "01-cold-open",
+      "spec_beat": "0:00-0:08",
+      "title": "Cold open in first person: the look over the shoulder, a runner appears",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 8,
+      "crop": "pov",
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "select", "label": "Playback speed", "value": "0.5" },
+        { "do": "click", "role": "button", "name": "Key scan" }
+      ],
+      "actions": [
+        {
+          "do": "click",
+          "role": "button",
+          "name": "Play",
+          "exact": true,
+          "hold": 4,
+          "still": true
+        },
+        { "do": "hold", "s": 4 }
+      ],
+      "vo": "What did he see?",
+      "notes": "Free play at 0.5x from just before the key scan; the app slows further around the scan. Crop to the first-person view (manifest.json gives the box)."
+    },
+    {
+      "id": "02-live-stream",
+      "spec_beat": "0:08-0:20",
+      "title": "Broadcast camera with live overlays (sprint tag, pass speed); the move plays out",
+      "status": "stand-in",
+      "pending": "Broadcast camera (SPEC 7) is not on main. Stand-in: the live stream in the current split view, with the sprint tag in the header and the moment card when it is detected.",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 10,
+      "crop": "stage",
+      "setup": [{ "do": "wait", "for": "assets" }],
+      "actions": [
+        { "do": "click", "role": "button", "name": "Live", "exact": true },
+        { "do": "wait", "for": "live", "hold": 3, "still": true },
+        { "do": "wait", "for": "moment", "timeout_s": 30, "hold": 2 }
+      ],
+      "vo": "A synthetic match with fictional clubs, streamed live from our API on Azure. As it plays, the system flags the moments worth explaining.",
+      "notes": "Re-record when the broadcast camera lands: add its toggle to the actions and change status to ready."
+    },
+    {
+      "id": "03-breakdown",
+      "spec_beat": "0:20-0:55",
+      "title": "Breakdown: freeze, POV through the scans, the key scan lights up the runner, freeze at the pass",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 24,
+      "crop": "stage",
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
+      ],
+      "actions": [
+        {
+          "do": "click",
+          "within": ".panel.breakdown",
+          "role": "button",
+          "name": "Play breakdown",
+          "hold": 6,
+          "still": true
+        },
+        { "do": "wait", "for": "breakdown-done", "timeout_s": 90, "hold": 1.5 }
+      ],
+      "vo": "Our agent crew builds the replay. Back inside his head: the scans before the ball arrived, and the key look that showed him the runner. When he played the pass, his picture of the runner was off by {belief_error.err} metres.",
+      "vo_fallback": "Our agent crew builds the replay. Back inside his head: the scans before the ball arrived, and the key look that showed him the runner.",
+      "notes": "The plan's length is the Telestrator's; trim in the edit. Captions are the app's verified lines."
+    },
+    {
+      "id": "04-with-without",
+      "spec_beat": "0:20-0:55",
+      "title": "Toggle With / Without the look: without it he passes back (counterfactual ghost)",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 10,
+      "crop": "stage",
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "casual",
+          "language": "en",
+          "timeout_s": 90
+        },
+        { "do": "click", "role": "button", "name": "Decision" }
+      ],
+      "actions": [
+        { "do": "hold", "s": 2 },
+        { "do": "click", "role": "button", "name": "Without the look", "hold": 2.5, "still": true },
+        { "do": "click", "role": "button", "name": "With the look", "hold": 1.5 },
+        { "do": "click", "role": "button", "name": "Without the look", "hold": 0.5 },
+        { "do": "click", "role": "button", "name": "Ghost: with look", "hold": 0.5 },
+        { "do": "click", "role": "button", "name": "Play", "exact": true, "hold": 3 }
+      ],
+      "vo": "Now take that look away and re-run the simulation. Without it, he plays it safe and passes back. That look was worth {cf_value.dxt} in expected threat.",
+      "vo_fallback": "Now take that look away and re-run the simulation. Without it, he plays it safe and passes back.",
+      "notes": "The highlight of the video. Frozen at the decision, the pass options flip between the runs; then the run without the look plays on with the other run's ghost path."
+    },
+    {
+      "id": "05-personas",
+      "spec_beat": "0:55-1:25",
+      "title": "The same moment for casual / analyst / player-fan",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 12,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "casual",
+          "language": "en",
+          "timeout_s": 90
+        },
+        { "do": "scroll", "to": ".panel.narration", "block": "end" }
+      ],
+      "actions": [
+        { "do": "hold", "s": 2 },
+        { "do": "select", "label": "Audience", "value": "analyst" },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "analyst",
+          "language": "en",
+          "timeout_s": 90,
+          "hold": 4,
+          "still": true
+        },
+        { "do": "select", "label": "Audience", "value": "player_fan" },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "player_fan",
+          "language": "en",
+          "timeout_s": 90,
+          "hold": 4
+        }
+      ],
+      "vo": "The same moment, told for a casual fan, an analyst or a fan of the player.",
+      "notes": "A breakdown not yet cached takes about ten seconds to generate: cut the wait (manifest.json has each action's time)."
+    },
+    {
+      "id": "06-language",
+      "spec_beat": "0:55-1:25",
+      "title": "en <-> zh",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 6,
+      "crop": "stage",
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
+      ],
+      "actions": [
+        {
+          "do": "click",
+          "within": "[aria-label='Narration language']",
+          "role": "button",
+          "name": "中文"
+        },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "casual",
+          "language": "zh",
+          "timeout_s": 90
+        },
+        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "wait", "for": "caption", "hold": 4, "still": true }
+      ],
+      "vo": "In English or in Chinese.",
+      "notes": "The captions over the first-person view switch to Chinese."
+    },
+    {
+      "id": "07-evidence",
+      "spec_beat": "0:55-1:25",
+      "title": "Open one caption's evidence",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 7,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
+      ],
+      "actions": [
+        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "wait", "for": "caption-with-evidence", "hold": 1 },
+        { "do": "click", "selector": ".caption", "hold": 5, "still": true }
+      ],
+      "vo": "Every line opens its evidence: each claim, its kind, its verdict, and the frame that proves it.",
+      "notes": "Clicking the caption pauses the breakdown, opens the evidence card under the views and seeks to the evidence frame."
+    },
+    {
+      "id": "08-what-if",
+      "spec_beat": "0:55-1:25",
+      "title": "Ask a what-if: suggested question, then a free question to the live service",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 8,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "scroll", "y": 160 }
+      ],
+      "actions": [
+        {
+          "do": "click",
+          "role": "button",
+          "name": "What if he passed to H4?",
+          "hold": 4,
+          "still": true
+        },
+        {
+          "do": "fill",
+          "label": "Ask your own question",
+          "text": "What if he had carried it forward?",
+          "hold": 0.5
+        },
+        { "do": "click", "role": "button", "name": "Ask", "exact": true },
+        {
+          "do": "wait",
+          "for": "whatif-answer",
+          "question": "What if he had carried it forward?",
+          "timeout_s": 60,
+          "hold": 3
+        }
+      ],
+      "vo": "Ask what if. The simulator forces that choice and replays the moment, and the answer is verified like everything else.",
+      "notes": "Scrolled 160 px so the tactical board (ghost path) and the answer are both in frame. Suggested answers are precomputed and verified; the free question goes to the live service. The app's own example (back to the centre-back) is refused by the rule matcher when the model is capped, so the shot asks one that maps to an option either way."
+    },
+    {
+      "id": "09-verifier",
+      "spec_beat": "1:25-1:40",
+      "title": "The verifier blocks a wrong number and a banned judgement word",
+      "status": "pending feature",
+      "pending": "No view on main shows the verifier blocking a line (the narration panel only lists withheld lines). Not captured until such a view exists.",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 12,
+      "crop": null,
+      "setup": [],
+      "actions": [],
+      "vo": "Before anything airs, the verifier checks every number against the simulation. A wrong number is blocked, and so is a judgement like 'he should have'.",
+      "notes": "Candidates once built: a producer-console view of a rejected draft with its verdict and the banned-word hit."
+    },
+    {
+      "id": "10-real-footage",
+      "spec_beat": "1:40-2:00",
+      "title": "Optional: the overlays on a real camera (at most ten seconds; demo/realfeed)",
+      "status": "external",
+      "pending": "Not from the app and not captured by this kit: made by demo/realfeed under the rules of SPEC 7 and cut first if any of them fails (SPEC 9).",
+      "url": null,
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 8,
+      "crop": null,
+      "setup": [],
+      "actions": [],
+      "vo": "The same graphics on a real camera, as a short test. Everything in the app itself is synthetic.",
+      "notes": "Label and attribution stay on screen for the whole segment (SPEC 7). No numbers, captions or narration on the real footage."
+    },
+    {
+      "id": "11-architecture",
+      "spec_beat": "1:40-2:00",
+      "title": "Architecture (Microsoft stack) and eval numbers",
+      "status": "external",
+      "pending": "A slide, not a capture: follow the README technology table; take eval numbers from eval/reports and cite each file.",
+      "url": null,
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 10,
+      "crop": null,
+      "setup": [],
+      "actions": [],
+      "vo": "Built on Microsoft Foundry and Agent Framework, with our own MCP tool server, Azure AI Speech, Container Apps, Cosmos DB and Application Insights, shipped with GitHub Actions.",
+      "notes": "If the real-footage segment is cut, this slide takes its time."
+    }
+  ]
+}
