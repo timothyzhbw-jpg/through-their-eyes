@@ -789,6 +789,24 @@ to a real broadcast.
 - **Azure Container Apps:** `api` (+ MCP server, a subprocess of the Analyst). Keep min replicas =
   1 during judging. A system-assigned identity holds Cognitive Services User on Foundry, AcrPull
   on the registry, and Cosmos DB data contributor on the account.
+  - *MCP in the deployed API:* Bowen decided on 2026-10-20 to turn it on by default, behind
+    `TTE_ANALYST_MCP` (0 turns it off). Until then `api/` never set `use_mcp`, so the deployed
+    Analyst had no tools (a live trace showed no tool spans) and MCP ran only from the CLI. Every
+    uncached model breakdown starts `python -m agents.mcp_server` as a subprocess of the API
+    (non-root in the image). If it cannot start, the Analyst answers without tools.
+  - *Measured cost (2026-10-20, seed 3, three runs each):* in the CLI crew the Analyst took
+    3.3 s with tools and 1.2–1.4 s without, and the whole crew 7.9–8.9 s with them and 6.3–7.4 s
+    without (not counting the subprocess start). Alone, the Analyst read about 7.4K input tokens
+    with tools and 1.7K without, made 2–3 tool calls (`get_moment`, `list_claims`, sometimes
+    `run_counterfactual`) and chose the same lens. Its headline claims matched in two runs of
+    three: the prompt already lists the claims, so the tools add inspection, not better picks.
+  - *Twenty single attempts each, no retry:* with tools 19 answered (median 3.3 s, slowest
+    5.2 s, inside the 8 s step timeout) and one `angle` with a digit was rejected, which the
+    retry covers; without tools 20 answered (median 1.4 s). Through the API with Foundry, eight
+    breakdowns in a row all had the Analyst answer from the model with tools.
+  - *Subprocess start:* 0.6–1.5 s on a laptop and 2.9 s in the image capped at 0.5 vCPU and
+    1 GiB; peak memory about 90 MB. With the daily cap of 40 that is at most about 230K more
+    input tokens a day. Cached breakdowns cost nothing extra; the cache key includes the tools.
 - **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
@@ -839,8 +857,9 @@ to a real broadcast.
     reports `model: foundry`, `speech: true`. The first moments request after a start takes 6 s
     (sim + claims).
   - A model-backed breakdown (casual and analyst × en and zh) took 9.2 s end to end, every step
-    from the model (Director 2.2 s, Analyst 1.3 s with MCP tools, Telestrator 3.0 s, narration
-    1.3 s). The same request from the cache took 0.15 s.
+    from the model (Director 2.2 s, Analyst 1.3 s, Telestrator 3.0 s, narration 1.3 s). The
+    Analyst had no tools then: the API did not use MCP before `TTE_ANALYST_MCP` (above). The
+    same request from the cache took 0.15 s.
   - What-if: verified, cached. TTS: 200 with WAV. Cosmos: cache and audit items written.
   - Live WebSocket: 25.3 fps at the client, p95 frame gap 101 ms over the internet.
   - Web: `https://ttesite1ff906.z14.web.core.windows.net`.

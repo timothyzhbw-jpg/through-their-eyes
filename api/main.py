@@ -7,7 +7,8 @@ what-if answers are computed once and cached by a content hash of everything tha
 (moment card, personas, languages, prompt version, model deployment). With a model configured,
 regeneration is rate-limited per client and capped per UTC day across all clients
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
-flagged `rate_limited` or `capped`.
+flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
+tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
 """
 
 from __future__ import annotations
@@ -118,7 +119,8 @@ def create_app(
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
-        return {"status": "ok", "version": VERSION, "model": model, "speech": tts.configured()}
+        return {"status": "ok", "version": VERSION, "model": model, "speech": tts.configured(),
+                "analyst_mcp": client is not None and settings.analyst_mcp}  # fmt: skip
 
     @app.get("/api/matches")
     async def matches() -> list[dict[str, Any]]:
@@ -166,13 +168,15 @@ def create_app(
         if body.moment not in (None, m.ctx.card.id):
             raise HTTPException(404, f"breakdowns are available for {m.ctx.card.id}")
 
-        def key(model_name: str) -> str:
+        def key(model_name: str, **tools: str) -> str:
             return content_key(card=m.ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
-                               pipeline=PIPELINE_VERSION,
-                               model=model_name)  # fmt: skip
+                               pipeline=PIPELINE_VERSION, model=model_name,
+                               **tools)  # fmt: skip
 
-        model_key, offline_key = key(model), key("offline")
+        # The Analyst's tools shape a model breakdown, so they are part of its key.
+        model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
+        offline_key = key("offline")
         candidates = ([model_key] if client is not None else []) + [offline_key]
         # With a model, only a model result is a cache hit up front: a template served while a
         # client was limited must not stand in for the model on later requests.
@@ -193,7 +197,8 @@ def create_app(
 
     async def _compute(m: Match, body: BreakdownBody, llm, source: str, k: str) -> dict[str, Any]:
         result = await run_breakdown(m.ctx, client=llm, personas=tuple(body.personas),
-                                     languages=tuple(body.languages))  # fmt: skip
+                                     languages=tuple(body.languages),
+                                     use_mcp=settings.analyst_mcp)  # fmt: skip
         value = {"source": source, "result": result.model_dump(mode="json", by_alias=True)}
         breakdowns.put(k, value)
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
