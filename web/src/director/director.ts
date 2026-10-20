@@ -188,6 +188,10 @@ export class Director {
       this.current = null;
       return this.show(null, true);
     }
+    // A breakdown that has played (or was stopped) is not suggested again.
+    if (this.session.kind === "hero" && this.session.runner.status.get().status !== "idle") {
+      this.dismissed.add(`moment:${this.session.moment.id}`);
+    }
     const k = this.knowledge(s);
     const cands = candidates(k, f);
     const picked = pick(cands, f, s, this.current, this.dismissed, k.dt);

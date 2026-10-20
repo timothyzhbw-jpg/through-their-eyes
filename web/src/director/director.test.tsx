@@ -117,6 +117,15 @@ describe("the chip", () => {
     );
   });
 
+  it("does not suggest a breakdown that has already played", () => {
+    const session = offline();
+    const page = mount(session);
+    act(() => session.controls.playBreakdown()); // offline autoplay
+    act(() => session.controls.stopBreakdown());
+    at(session, session.moment.endFrame + 5);
+    expect(text(chip(page)) ?? "").not.toMatch(/breakdown/);
+  });
+
   it("can be dismissed, and that suggestion stays away", () => {
     const session = offline();
     const page = mount(session);
