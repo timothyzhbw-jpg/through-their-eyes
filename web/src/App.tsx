@@ -12,6 +12,7 @@ import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match"
 import { EvidenceCard, NarrationPanel } from "./ui/Narration";
 import { DecisionPanel, StoryPanel } from "./ui/Panels";
 import { RunToggle } from "./ui/RunToggle";
+import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
@@ -74,6 +75,8 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       <EvidenceCard />
 
       <Transport />
+
+      <TelemetryPanel />
 
       <section className="below">
         <NarrationPanel />

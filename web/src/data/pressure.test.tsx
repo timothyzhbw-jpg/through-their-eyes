@@ -23,6 +23,7 @@ import {
 } from "../testing";
 import { RunToggle } from "../ui/RunToggle";
 import { StoryPanel } from "../ui/Panels";
+import { TelemetryPanel } from "../ui/TelemetryPanel";
 import { Transport } from "../ui/Transport";
 import { parseHero, runLabels } from "./hero";
 
@@ -92,6 +93,16 @@ describe("a hero without a key scan", () => {
     expect(session.runner.status.get().status).toBe("done");
     expect([...marks]).toEqual([null]);
     expect(session.playback.get().cfGhost).toBe(true);
+  });
+
+  it("shows the perception telemetry with no key scan to mark, in either run", () => {
+    const session = createSession(hero, null, null);
+    for (const mode of ["factual", "counterfactual"] as const) {
+      session.playback.set({ mode, frame: hero.runs[mode].frames - 1 });
+      const html = render(session, <TelemetryPanel />);
+      expect(html).toContain("Perception telemetry");
+      expect(html).not.toMatch(/key scan/i);
+    }
   });
 
   it("labels the runs by the forced action and drops the key-scan jump", () => {

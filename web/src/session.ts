@@ -33,7 +33,13 @@ import {
 import { claimRun, lineOf, primaryClaim, RenderPayload } from "./narration/payload";
 import { heroMoment, type MomentContext } from "./plan/moment";
 import { BreakdownRunner } from "./plan/runner";
-import { advance, createPlayback, type Focus, type PlaybackStore } from "./store/playback";
+import {
+  advance,
+  createPlayback,
+  type Camera3D,
+  type Focus,
+  type PlaybackStore,
+} from "./store/playback";
 import { createStore, useStore, type Store } from "./store/store";
 import { VoicePlayer, type MakeAudio } from "./voice/voice";
 import { answerOf, IDLE_ASK, type AskState } from "./whatif/ask";
@@ -72,6 +78,7 @@ export interface ViewControls {
   setSpeed(speed: number): void;
   setPovPlayer(id: string): void;
   setFocus(focus: Focus): void;
+  setCamera(camera: Camera3D): void;
   toggle(key: Toggle): void;
   goLive(): void;
   leaveLive(): void;
@@ -286,6 +293,14 @@ export function transportControls(d: TransportDeps) {
     },
     setFocus(focus: Focus) {
       playback.set({ focus });
+    },
+    /** Film the 3D view in first person or from the broadcast camera; a focused 3D view stays
+     * focused. Like the overlay toggles, it does not stop a breakdown. */
+    setCamera(camera: Camera3D) {
+      playback.set((st) => ({
+        camera,
+        focus: st.focus === "pov" || st.focus === "broadcast" ? camera : st.focus,
+      }));
     },
     toggle(key: Toggle) {
       playback.set((st) => ({ [key]: !st[key] }));

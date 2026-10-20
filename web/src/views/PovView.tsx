@@ -4,7 +4,7 @@
 // body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
@@ -23,6 +23,9 @@ import {
 import { PovOverlay, PovToolbar } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
+import { pathFor, type Shot } from "./broadcast";
+import { BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
+import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -30,18 +33,32 @@ const LOOK_AHEAD = 10; // m: the camera looks at a point this far ahead, 1.3 m h
 const BODY_CENTRE = 0.755; // capsule centre height (body 1.51 m tall)
 const HEAD_CENTRE = 1.66; // head sphere centre height
 const HEAD_RADIUS = 0.14;
+const POV_NEAR = 0.05;
+const POV_FAR = 300;
+/** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
+const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
 
+/**
+ * The 3D view. It films through one of two cameras (SPEC 7): first person (above) or the
+ * broadcast camera, high on the near side following the ball (broadcast.ts, BroadcastLayers.tsx).
+ * One canvas for both, so a cut between them in a breakdown is instant. Both show the stadium
+ * (Stadium.tsx); colours go through ACES tone mapping.
+ */
 export function PovView() {
+  const { playback } = useView();
+  const broadcast = useStore(playback, (s) => s.camera === "broadcast");
   return (
-    <figure className="view pov" aria-label="First-person view">
+    <figure
+      className={broadcast ? "view pov broadcast" : "view pov"}
+      aria-label={broadcast ? "Broadcast view" : "First-person view"}
+    >
       <PovToolbar />
       <div className="canvas-wrap">
         <Canvas
           frameloop="demand"
-          flat
           dpr={[1, 2]}
           gl={{ antialias: true }}
-          camera={{ fov: 60, near: 0.05, far: 300 }}
+          camera={{ fov: 60, near: POV_NEAR, far: POV_FAR }}
           fallback={<p className="no-webgl">This view needs WebGL.</p>}
         >
           <PovScene />
@@ -72,29 +89,25 @@ function PovScene() {
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
-  const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const shot = useMemo<Shot>(() => ({ x: 0, y: 0, width: 0 }), []);
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
   const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
 
-  // Keep the horizontal field of view fixed whatever the aspect ratio.
-  useLayoutEffect(() => {
-    camera.aspect = size.width / size.height;
-    camera.fov = (2 * Math.atan(Math.tan(POV_HFOV / 2) / camera.aspect) * 180) / Math.PI;
-    camera.updateProjectionMatrix();
-    invalidate();
-  }, [camera, size, invalidate]);
-
   const materials = useMemo(
     () => ({
       teams: [0, 1].map(
         (t) => new THREE.MeshStandardMaterial({ color: teamColor(t), roughness: 0.6 }),
       ),
-      visor: new THREE.MeshBasicMaterial({ color: VISOR_COLOR, side: THREE.DoubleSide }),
+      visor: new THREE.MeshBasicMaterial({
+        color: VISOR_COLOR,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      }),
       ghost: new THREE.MeshBasicMaterial({
         color: COLORS.fg,
         transparent: true,
@@ -111,12 +124,15 @@ function PovScene() {
     [],
   );
 
-  useFrame(() => {
+  // Runs before the layers' own frames (negative priority): they read `sample` and the camera.
+  useFrame(({ scene, size }) => {
     const s = playback.get();
     const run = hero.runs[s.mode];
     sampleInto(sample, hero, run, s.frame, s.comfort);
-    const me = hero.ids.indexOf(s.povPlayer);
-    const showGhosts = s.beliefGhosts && me === hero.hero;
+    const broadcast = s.camera === "broadcast";
+    const pov = hero.ids.indexOf(s.povPlayer);
+    const me = broadcast ? -1 : pov; // whose body is hidden: nobody's on broadcast
+    const showGhosts = s.beliefGhosts && pov === hero.hero;
     const alerted = new Set(s.blindSide ? alertsAt(hero, run, s.frame).map((a) => a.target) : []);
     const beat = pulse(performance.now() / 1000);
     for (let j = 0; j < hero.n; j++) {
@@ -139,24 +155,38 @@ function PovScene() {
         const gx = sample.ghost[2 * j];
         const gy = sample.ghost[2 * j + 1];
         ghost.position.set(gx, BODY_CENTRE, -gy);
-        ghost.visible = showGhosts && j !== me && Math.hypot(gx - x, gy - y) > 1.2;
+        ghost.visible = showGhosts && j !== pov && Math.hypot(gx - x, gy - y) > 1.2;
       }
     }
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
-    const hx = sample.pos[2 * me];
-    const hy = sample.pos[2 * me + 1];
-    const yaw = sample.head[me];
-    camera.position.set(hx, EYE_HEIGHT, -hy);
-    camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
+    const aspect = size.width / size.height;
+    const fog = scene.fog as THREE.Fog;
+    [fog.near, fog.far] = FOG[s.camera];
+    if (broadcast) filmBroadcast(camera, pathFor(run, hero.dt), s.frame, aspect, shot);
+    else {
+      // Keep the horizontal field of view fixed whatever the aspect ratio.
+      const fov = (2 * Math.atan(Math.tan(POV_HFOV / 2) / aspect) * 180) / Math.PI;
+      if (camera.fov !== fov || camera.near !== POV_NEAR || camera.aspect !== aspect) {
+        camera.fov = fov;
+        camera.near = POV_NEAR;
+        camera.far = POV_FAR;
+        camera.aspect = aspect;
+        camera.updateProjectionMatrix();
+      }
+      const hx = sample.pos[2 * me];
+      const hy = sample.pos[2 * me + 1];
+      const yaw = sample.head[me];
+      camera.position.set(hx, EYE_HEIGHT, -hy);
+      camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
+    }
     if (alerted.size) invalidate(); // keep the blind-side pulse going
-  });
+  }, -1);
 
   return (
     <>
-      <color attach="background" args={["#0c1a16"]} />
-      <fog attach="fog" args={["#0c1a16", 45, 120]} />
-      <hemisphereLight args={["#dfeee6", "#1b3326", 1.6]} />
-      <directionalLight position={[-30, 60, 20]} intensity={1.4} />
+      <color attach="background" args={[NIGHT.horizon]} />
+      <fog attach="fog" args={[NIGHT.horizon, ...FOG.pov]} />
+      <Stadium />
       <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
         <planeGeometry args={[130, 92]} />
         <meshStandardMaterial color="#173826" />
@@ -166,6 +196,7 @@ function PovScene() {
         <meshStandardMaterial map={getPitchTexture()} />
       </mesh>
       <Goals />
+      <PlayerShadows />
       {hero.players.map((p, j) => (
         <group
           key={p.id}
@@ -207,6 +238,7 @@ function PovScene() {
                 color: j === hero.runner ? COLORS.gold : COLORS.white,
               })}
               depthWrite={false}
+              toneMapped={false}
             />
           </sprite>
         </group>
@@ -233,6 +265,7 @@ function PovScene() {
         <sphereGeometry args={[0.11, 20, 14]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
+      <BroadcastLayers sample={sample} />
     </>
   );
 }

@@ -1,4 +1,4 @@
-// Shape of the JSON written by `python -m sim.export` (schema version 4): a hero moment
+// Shape of the JSON written by `python -m sim.export` (schema version 5): a hero moment
 // (`export_hero`) or a stitched match (`export_match`, SPEC 3.1).
 // Positions are integer mm, angles integer 1e-4 rad; pitch origin at the centre spot, home
 // attacks +x. `hero.ts` converts everything to metres and radians once, at load time.
@@ -75,12 +75,39 @@ export interface ExportRun {
   action: ExportAction | null;
   possession_value: number;
   blind_side: ExportBlindSide;
+  scan_detector: ExportScanDetector;
 }
 
 /** Blind-side alerts (SPEC 4.4), computed from tracking only by analytics/blind_side.py. */
 export interface ExportBlindSide {
   intervals: { observer: string; target: string; start: number; end: number }[];
   frames: [number, number, number][][]; // [frame] -> [observer, target, frames unseen] (indices)
+}
+
+/**
+ * The scan detector (SPEC 4.7, analytics/scan_detector.py) on this run, on the tracked head yaw
+ * (with sensor noise), as eval/scan_detector.py runs it. Per player j:
+ */
+export interface ExportScanDetector {
+  omega: number[][]; // [t][j] head angular velocity from frame t to t + 1, 1e-4 rad/s (frames - 1)
+  onsets: number[][]; // [j] frames past the threshold, turning away from the ball: candidates
+  scans: ExportDetectedScan[][]; // [j] candidates that passed the excursion gate and came back
+}
+
+export interface ExportDetectedScan {
+  start: number; // onset frame
+  end: number; // first frame back near the pre-onset offset
+  peak: number; // frame of the largest excursion
+  amplitude: number; // 1e-4 rad
+  side: 1 | -1; // +1 counter-clockwise
+}
+
+export interface ExportScanDetectorParams {
+  omega_threshold: number; // 1e-4 rad/s
+  min_excursion: number; // 1e-4 rad
+  return_tolerance: number; // 1e-4 rad
+  onset_frames: number;
+  max_duration_s: number;
 }
 
 export interface ExportVision {
@@ -103,6 +130,7 @@ export interface HeroExport {
   key_scan: { id: string; start: number; end: number } | null;
   counterfactual: ExportCounterfactual;
   vision: ExportVision;
+  scan_detector: ExportScanDetectorParams;
   delta_xt: number;
   runs: Record<RunName, ExportRun>;
 }

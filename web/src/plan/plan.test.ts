@@ -71,6 +71,15 @@ describe("plan validation", () => {
     expect(errorsOf({ ...EXAMPLE_PLAN, duration_s: 5 })).not.toEqual([]);
   });
 
+  it("accepts every camera of SPEC 7 that exists, and nothing else", () => {
+    const camera = EXAMPLE_PLAN.steps.findIndex((s) => s.do === "camera");
+    for (const mode of ["split", "pov", "tactical", "broadcast"]) {
+      expect(errorsOf(withStep(EXAMPLE_PLAN, camera, { mode }))).toEqual([]);
+    }
+    expect(errorsOf(withStep(EXAMPLE_PLAN, camera, { mode: "drone" }))).not.toEqual([]);
+    expect(errorsOf(withStep(EXAMPLE_PLAN, camera, { mode: "player_lock" }))).not.toEqual([]);
+  });
+
   it("rejects a plan for another moment", () => {
     expect(moment.id).toBe("m:decision_after_scan:H8:0075");
     expect(errorsOf({ ...EXAMPLE_PLAN, moment: "m:decision_after_scan:H8:0099" })).not.toEqual([]);
@@ -142,6 +151,22 @@ describe("plan executor", () => {
     until(EXAMPLE_PLAN.duration_s + 1);
     expect(runner.status.get().status).toBe("done");
     expect(runner.status.get().applied).toBe(EXAMPLE_PLAN.steps.length);
+  });
+
+  it("cuts to the broadcast camera, and back to first person for a POV clip", () => {
+    const split = EXAMPLE_PLAN.steps.findIndex((s) => s.do === "camera" && s.mode === "split");
+    const plan = withStep(EXAMPLE_PLAN, split, { mode: "broadcast" }) as Plan;
+    const { playback, runner, until } = start(plan);
+    expect(playback.get().camera).toBe("pov"); // a breakdown starts in first person
+    const cut = until(plan.steps[split].t + 0.05);
+    expect(cut.focus).toBe("broadcast");
+    expect(cut.camera).toBe("broadcast");
+    expect(cut.playing).toBe(true); // the outcome plays on the broadcast camera
+    // A POV step films in first person even if the focus says broadcast.
+    const pov = { t: 0, do: "pov", player: "H8", from: -1.8, to: -1.0, speed: 0.5 };
+    playback.set({ camera: "broadcast", focus: "broadcast" });
+    runner.start({ moment: moment.id, duration_s: 3, steps: [pov] } as never);
+    expect(playback.get().camera).toBe("pov");
   });
 
   it("plays the template plan to the end too", () => {

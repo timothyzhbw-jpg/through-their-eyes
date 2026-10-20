@@ -8,7 +8,9 @@ Schema changes are additive and bump VERSION; `demo/` reads version 1 fields onl
 Version 3 adds, for every option of the hero's decision, P(success) on the true state ("it was"
 against "he thought", SPEC 5.1) and the believed and true positions of the receiver. The decision
 block is in metres, like the decision model. Version 4 adds each run's blind-side alerts
-(SPEC 4.4) with how long each target has gone unseen.
+(SPEC 4.4) with how long each target has gone unseen. Version 5 adds the scan detector at work
+(SPEC 4.7): its parameters, and per run and player its head angular velocity, candidate onsets
+and accepted scans, computed on the tracked head yaw as eval/scan_detector.py runs it.
 
 Without a new version, two additive variants of version 4:
 - a hero whose intervention is not a dropped scan (`press_escape`, SPEC 3.6) has `key_scan: null`
@@ -40,6 +42,8 @@ from typing import Any
 import numpy as np
 
 from analytics.blind_side import visible_mask
+from analytics.scan_detector import DEFAULT_PARAMS as DETECTOR
+from analytics.scan_detector import trace_scans
 from analytics.vision import VisionParams, player_visibility
 from explain.functions import same_target_on_truth, true_options
 from explain.moments import blind_side_alerts
@@ -51,7 +55,7 @@ from sim.model import Decision, Event
 from sim.overrides import DropScan, ForceAction
 from sim.run import MatchRun, _plain
 
-VERSION = 4
+VERSION = 5
 
 
 def _bitmask(row: np.ndarray) -> int:
@@ -161,6 +165,40 @@ def _blind_side(run: MatchRun) -> dict[str, Any]:
     }
 
 
+def _scan_detector(run: MatchRun) -> dict[str, Any]:
+    """The scan detector (SPEC 4.7) on this run, as eval/scan_detector.py runs it: on the tracked
+    head yaw (`head_yaw_observed`, with sensor noise; not the true `head` above), the players'
+    and the ball's positions, with the default parameters.
+
+    `omega[t][j]`: player j's head angular velocity from frame t to t + 1 (frames - 1 rows,
+    1e-4 rad/s, signed, counter-clockwise positive). `onsets[j]`: frames where |omega| reaches
+    the threshold while the head turns away from the ball, the candidates the detector looks at.
+    `scans[j]`: the candidates that passed the excursion gate and came back (amplitude 1e-4 rad).
+    """
+    ball = run.ball_pos[:, :2]
+    traces = [
+        trace_scans(run.head_yaw_observed[:, j], run.pos[:, j], ball, run.dt, DETECTOR)
+        for j in range(len(run.players))
+    ]
+    return {
+        "omega": _rad(np.stack([t.omega for t in traces], axis=-1)),
+        "onsets": [t.onsets.tolist() for t in traces],
+        "scans": [
+            [
+                {
+                    "start": s.start,
+                    "end": s.end,
+                    "peak": s.peak,
+                    "amplitude": round(s.amplitude * 1e4),
+                    "side": s.side,
+                }
+                for s in t.scans
+            ]
+            for t in traces
+        ],
+    }
+
+
 def _encode(run: MatchRun, trace: _Trace) -> dict[str, Any]:
     decision = run.hero_decision()
     hero_action = None
@@ -203,6 +241,7 @@ def _encode(run: MatchRun, trace: _Trace) -> dict[str, Any]:
         else _plain(hero_action.attrs | {"frame": hero_action.frame}),
         "possession_value": possession_value(run),
         "blind_side": _blind_side(run),
+        "scan_detector": _scan_detector(run),
     }
 
 
@@ -212,6 +251,18 @@ def _vision_params() -> dict[str, int]:
     rad = ("half_cone", "edge_sigma", "narrowing_per_mps", "min_half_cone")
     return {k: round(getattr(v, k) * 1e4) for k in rad} | {
         "distance_sigma": round(v.distance_sigma * 1000)
+    }
+
+
+def _detector_params() -> dict[str, Any]:
+    """The scan detector's parameters (angles 1e-4 rad, angular velocity 1e-4 rad/s)."""
+    p = DETECTOR
+    return {
+        "omega_threshold": round(p.omega_threshold * 1e4),
+        "min_excursion": round(p.min_excursion * 1e4),
+        "return_tolerance": round(p.return_tolerance * 1e4),
+        "onset_frames": p.onset_frames,
+        "max_duration_s": p.max_duration_s,
     }
 
 
@@ -250,7 +301,7 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
         "scenario": scenario,
         "seed": seed,
         "dt": DT,
-        "units": {"position": "mm", "angle": "1e-4 rad"},
+        "units": {"position": "mm", "angle": "1e-4 rad", "angular_velocity": "1e-4 rad/s"},
         "hero": sim.scenario.hero,
         "runner": getattr(sim.scenario, "runner", None),
         "players": [
@@ -259,6 +310,7 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
         "key_scan": key_scan,
         "counterfactual": counterfactual,
         "vision": _vision_params(),
+        "scan_detector": _detector_params(),
         "delta_xt": runs["factual"]["possession_value"]
         - runs["counterfactual"]["possession_value"],
         "runs": runs,

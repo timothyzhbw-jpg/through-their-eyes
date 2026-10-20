@@ -282,6 +282,10 @@ def test_plan_validation_matches_the_web_rules(ctx):
     bad["steps"][-1]["t"] = 0.1  # goes back in time
     assert validate_plan(bad, ctx)
     assert validate_plan({"moment": data["moment"], "steps": []}, ctx)  # shape
+    for mode in ("split", "pov", "tactical", "broadcast"):  # the cameras of SPEC 7 that exist
+        assert errors_with({"t": end, "do": "camera", "mode": mode}) == []
+    assert errors_with({"t": end, "do": "camera", "mode": "drone"})
+    assert errors_with({"t": end, "do": "camera", "mode": "player_lock"})  # not built yet
 
 
 # --- delivery: tiers from rules, SSML only with supported styles ----------------------------------

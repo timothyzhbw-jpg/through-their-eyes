@@ -4,27 +4,26 @@
 // Build-time setting: VITE_API_URL, the API service's base URL (see README). Unset, or when the
 // service does not answer within a few seconds, the app plays the bundled data ("offline data").
 //
-// URL parameters (for testing and filming):
-//   ?match=match-1  play another match the service serves: the stitched match, or a hero moment
-//                   such as press_escape-0 (default blind_side_run-3, the bundled one)
-//   ?plan=invalid   load a deliberately broken plan to show the template fallback
-//   ?autoplay=0     do not start the live stream (or the breakdown) on load
-//   ?offline=1      ignore the live service and play the bundled data
+// URL parameters (deep links for judges, testing and filming): see deeplink.ts and the README.
+// ?match=match-1 plays another match the service serves (data/load.ts matchFromUrl).
+// ?camera=broadcast starts on the broadcast camera, focused (for filming).
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App, MatchApp } from "./App";
 import { apiBase, MATCH_ID } from "./api/client";
 import { loadData, matchFromUrl } from "./data/load";
+import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
-import { SessionContext, createSession } from "./session";
+import { SessionContext, createSession, type ViewControls } from "./session";
 import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
-  const params = new URLSearchParams(window.location.search);
-  const forcedOffline = params.get("offline") === "1";
+  const link = parseDeepLink(window.location.search);
+  if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
+  const forcedOffline = link.offline;
   root.render(<p className="loading">Loading the match…</p>);
   try {
     // Canvas textures draw shirt numbers with the web fonts, so wait for them (briefly).
@@ -38,10 +37,15 @@ async function main() {
       }),
       fonts,
     ]);
-    const plan = params.get("plan") === "invalid" ? INVALID_PLAN : EXAMPLE_PLAN;
+    const plan = link.invalidPlan ? INVALID_PLAN : EXAMPLE_PLAN;
     const offline = forcedOffline ? "offline=1 in the address" : loaded.offline;
+    const broadcast = (controls: ViewControls) => {
+      if (new URLSearchParams(window.location.search).get("camera") !== "broadcast") return;
+      controls.setFocus("broadcast");
+      controls.setCamera("broadcast");
+    };
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const autoplay = params.get("autoplay") !== "0" && !reducedMotion;
+    const autoplay = link.autoplay && !reducedMotion;
 
     if (loaded.hero.kind === "match") {
       const session = createMatchSession(loaded.hero, {
@@ -52,9 +56,15 @@ async function main() {
         payload: loaded.payload,
         whatIfs: loaded.whatIfs,
       });
+      // A match has no audience, run or named frames of its own: its view and a frame apply.
+      if (link.view) session.controls.setFocus(link.view);
+      if (typeof link.at === "number") session.controls.seek(link.at);
+      broadcast(session.controls);
       root.render(
         <StrictMode>
-          <MatchApp session={session} autoplay={autoplay} />
+          <DeepLinkContext.Provider value={link}>
+            <MatchApp session={session} autoplay={autoplay} />
+          </DeepLinkContext.Provider>
         </StrictMode>,
       );
       return;
@@ -68,10 +78,14 @@ async function main() {
       bundled ? loaded.whatIfs : null,
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
+    applyDeepLink(session, link);
+    broadcast(session.controls);
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>
-          <App autoplay={autoplay} />
+          <DeepLinkContext.Provider value={link}>
+            <App autoplay={autoplay} />
+          </DeepLinkContext.Provider>
         </SessionContext.Provider>
       </StrictMode>,
     );
