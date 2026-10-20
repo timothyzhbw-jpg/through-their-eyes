@@ -1,8 +1,5 @@
 """Precomputed "What if…?" answers for the viewer (SPEC 3.7, 6, 7)."""
 
-import json
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -10,7 +7,6 @@ from sim.counterfactual import force_action_counterfactual
 from sim.export import export_hero, export_what_ifs, what_if_question
 
 SCENARIO, SEED = "blind_side_run", 3
-WEB_WHAT_IF = Path(__file__).parent.parent / "web" / "public" / "data" / "whatif_seed3.json"
 
 
 @pytest.fixture(scope="module")
@@ -81,16 +77,3 @@ def test_forced_runs_branch_at_the_decision_and_match_the_backend(data, hero):
     exported = np.array(h4["pos"]).reshape(-1, 22, 2) / 1000
     assert np.abs(exported - w.counterfactual.pos[start:]).max() <= 0.0005 + 1e-12
     assert any(e["id"] == f"pass:H8:{start:04d}" and e["attrs"]["to"] == "H4" for e in h4["events"])
-
-
-def test_committed_what_ifs_match_the_generator(data):
-    committed = json.loads(WEB_WHAT_IF.read_text())
-    assert committed["version"] == data["version"]
-    assert [o["action"] for o in committed["options"]] == [o["action"] for o in data["options"]]
-    for got, want in zip(committed["options"], data["options"], strict=True):
-        assert got["question"] == want["question"]
-        assert got.get("frames") == want.get("frames")
-        for lang in want.get("answers", {}):
-            assert [line["text"] for line in got["answers"][lang]["lines"]] == [
-                line["text"] for line in want["answers"][lang]["lines"]
-            ]

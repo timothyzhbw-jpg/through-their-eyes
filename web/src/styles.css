@@ -997,3 +997,43 @@ header {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
+
+/* ---------- blind-side alerts (SPEC 4.4, 7) ---------- */
+.blind-side-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.blind-tag {
+  position: absolute;
+  transform: translate(-50%, 14px);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(11, 18, 16, 0.88);
+  border: 1px solid #ff6b9a;
+  font: 500 12px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.blind-tag b {
+  color: #ff6b9a;
+}
+.blind-tag .source,
+.hud .source {
+  font: 500 10px/1 var(--font-data);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  padding: 1px 3px;
+}
+.hud .badge.blind {
+  background: #ff6b9a;
+}
+.hud .blind-hud {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
