@@ -4,6 +4,9 @@
   each goal-side of the ball when it is played and behind it when it is received.
 - `decision_after_scan`: a reception followed by a decision of the receiver, with a scan of his
   ending at most `SCAN_JUST_BEFORE_S` before the reception (or during the first touch).
+- `pressed_decision`: a decision taken on the ball under heavy pressure, pressing intensity on
+  the carrier at least `PRESSED_THRESHOLD` (SPEC 4.3) — the lexicon's own threshold for "under
+  heavy pressure" (SPEC 5.3), so the card and its narration agree.
 - `sprint`: speed above 7.0 m/s (SPEC 4.6) for at least `MIN_SPRINT_S`; a live overlay tag only.
 - `blind_side_pass` (M4): a pass to the target of a blind-side alert (SPEC 4.4), played while the
   alert is on or at most `BLIND_SIDE_PASS_S` after it cleared. Run on its own with
@@ -19,8 +22,10 @@ from __future__ import annotations
 import numpy as np
 
 from analytics.blind_side import DEFAULT_PARAMS, BlindSideAlerts, BlindSideParams, detect_alerts
+from analytics.pressing import frame_pressing
 from analytics.xt import xt_for
 from explain.cards import LensName, MomentCard, MomentKind, Scalar
+from explain.lexicon import TERMS
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
@@ -33,7 +38,13 @@ MAX_TOUCH_S = 1.0  # longest reception-to-decision gap that still counts as one 
 PRE_ROLL_S = 6.0  # replay window before the anchor
 POST_ROLL_S = 1.0  # and after the action is resolved
 BLIND_SIDE_PASS_S = 3.0  # a pass this soon after a blind-side alert cleared is its moment
-PRIORITY: tuple[MomentKind, ...] = ("decision_after_scan", "line_breaking_pass", "sprint")
+PRESSED_THRESHOLD = float(TERMS["under heavy pressure"].threshold)
+PRIORITY: tuple[MomentKind, ...] = (
+    "pressed_decision",
+    "decision_after_scan",
+    "line_breaking_pass",
+    "sprint",
+)
 ALL_LENSES: list[LensName] = ["scan", "space", "pressure"]
 
 
@@ -267,6 +278,77 @@ def detect_decisions_after_scan(run: MatchRun) -> list[MomentCard]:
     return cards
 
 
+# --- decision under heavy pressure -------------------------------------------------------
+
+
+def _team(run: MatchRun) -> np.ndarray:
+    return np.array([p.team for p in run.players])
+
+
+def pressure_on_carrier(run: MatchRun, frame: int) -> float:
+    """Pressing intensity on the ball carrier at a frame (SPEC 4.3); 0 while the ball is free."""
+    carrier = int(run.owner[frame])
+    if carrier < 0:
+        return 0.0
+    pf = frame_pressing(run.pos[frame], run.vel[frame], _team(run), run.ball_pos[frame], carrier)
+    return float(pf.on_carrier)
+
+
+def detect_pressed_decisions(run: MatchRun) -> list[MomentCard]:
+    """Decisions on the ball with pressing intensity on the carrier >= PRESSED_THRESHOLD."""
+    receptions = _sorted_events(run, "reception")
+    team = _team(run)
+    cards = []
+    for d in run.decisions:
+        i = run.index(d.player)
+        if int(run.owner[d.frame]) != i:
+            continue
+        f = d.frame
+        pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], i)
+        if pf.on_carrier < PRESSED_THRESHOLD:
+            continue
+        presser = int(pf.defenders[int(np.argmax(pf.column(i)))])
+        anchors, events, end = {}, [], f + _frames(run, MAX_TOUCH_S)
+        touch = _frames(run, MAX_TOUCH_S)
+        rec = [e for e in receptions if e.player == d.player and 0 <= f - e.frame <= touch]
+        if rec:
+            anchors["reception"] = rec[-1].id
+            events.append(rec[-1])
+        action = next(
+            (e for e in run.events
+             if e.player == d.player and e.frame == f and e.type in ("pass", "shot")),
+            None,
+        )  # fmt: skip
+        if action is not None:
+            anchors["action"] = action.id
+            events.append(action)
+            resolved = _resolution(run, action)
+            if resolved:
+                anchors[resolved[0]] = resolved[1].id
+                events.append(resolved[1])
+                end = resolved[1].frame
+        chosen = next(o for o in d.options if o.action == d.chosen)
+        metrics: dict[str, Scalar] = {
+            "pressure_on_carrier": _r(pf.on_carrier),
+            "main_presser": run.ids[presser],
+            "presser_distance_m": _r(np.linalg.norm(run.pos[f, presser] - run.pos[f, i]), 2),
+            "chosen": d.chosen,
+            "chosen_prob": _r(chosen.prob),
+            "options": len(d.options),
+        }
+        if rec:
+            metrics["time_to_decision_s"] = _r((f - rec[-1].frame) * run.dt, 2)
+        cards.append(
+            _card(
+                run, "pressed_decision", d.player, f,
+                (f - _frames(run, PRE_ROLL_S), end + _frames(run, POST_ROLL_S)),
+                receiver=chosen.target_player, players=[chosen.target_player, run.ids[presser]],
+                anchors=anchors, events=events, metrics=metrics,
+            )
+        )  # fmt: skip
+    return cards
+
+
 # --- pass to the target of a blind-side alert (M4) -------------------------------------------
 
 
@@ -336,8 +418,8 @@ def _absorb(primary: MomentCard, other: MomentCard) -> None:
 
 def detect_moments(run: MatchRun) -> list[MomentCard]:
     """Every moment of a run, one card per action, sorted by anchor frame."""
-    cards = detect_decisions_after_scan(run) + detect_line_breaking_passes(run)
-    cards += detect_sprints(run)
+    cards = detect_pressed_decisions(run) + detect_decisions_after_scan(run)
+    cards += detect_line_breaking_passes(run) + detect_sprints(run)
     by_action: dict[str, MomentCard] = {}
     merged: list[MomentCard] = []
     for card in sorted(cards, key=lambda c: PRIORITY.index(c.kind)):
