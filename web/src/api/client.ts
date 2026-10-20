@@ -9,6 +9,9 @@ import { LANGUAGES, type Language } from "../whatif/whatif";
 export const MATCH_ID = "blind_side_run-3"; // api/store.py match_id(scenario, seed)
 export const PERSONAS = ["casual", "analyst", "player_fan", "coach"] as const; // agents/schemas.py
 export type Persona = (typeof PERSONAS)[number];
+/** The crew steps that call a model: the ones the Producer can take down (agents/schemas.py). */
+export const AGENTS = ["director", "analyst", "telestrator", "narration"] as const;
+export type Agent = (typeof AGENTS)[number];
 
 export const PROBE_TIMEOUT_MS = 3000; // GET /health: past this, the app runs on offline data
 export const EXPORT_TIMEOUT_MS = 15000; // the first request after a start re-simulates (≈ 6 s)
@@ -52,6 +55,21 @@ const ScriptResult = z.object({
   voice: z.array(VoiceCue),
 });
 
+/** One step of the crew run (agents/schemas.py StepTrace): who answered, the model or a template. */
+export const StepTrace = z.object({
+  step: z.string(),
+  source: z.enum(["llm", "template", "code"]),
+  attempts: z.number(),
+  ms: z.number(),
+  error: z.string().nullable(),
+  notes: z.array(z.string()),
+});
+export type StepTrace = z.infer<typeof StepTrace>;
+
+/** A failure drill's state: the agents still down, and the ones waiting to be brought back. */
+export const Drill = z.object({ down: z.array(z.enum(AGENTS)), pending: z.array(z.enum(AGENTS)) });
+export type Drill = z.infer<typeof Drill>;
+
 /** POST /api/breakdowns: the crew's result plus where it came from (api/main.py). */
 export const BreakdownResponse = z.object({
   key: z.string(),
@@ -59,12 +77,15 @@ export const BreakdownResponse = z.object({
   rate_limited: z.boolean(),
   capped: z.boolean(),
   source: z.enum(["model", "offline"]),
+  drill: Drill.nullish(), // a failure drill; absent or null for a normal breakdown
   result: z.object({
     plan: z.unknown(), // a TelestrationPlan, validated like any other before it plays
     plan_source: z.enum(["agent", "template"]),
     plan_errors: z.array(z.string()),
     scripts: z.array(ScriptResult),
+    trace: z.array(StepTrace),
     total_ms: z.number(),
+    trace_id: z.string().nullish(), // operation_Id in Application Insights; null: tracing off
   }),
 });
 export type BreakdownResponse = z.infer<typeof BreakdownResponse>;
@@ -91,11 +112,15 @@ export interface Api {
   readonly match: string;
   health(timeoutMs?: number): Promise<z.infer<typeof Health>>;
   exportJson(timeoutMs?: number): Promise<unknown>;
+  /** `fail`: agents taken down for this one run (the failure drill). */
   breakdown(req: {
     moment: string;
     persona: Persona;
     language: Language;
+    fail?: Agent[];
   }): Promise<BreakdownResponse>;
+  /** Re-run a drill's downed agent from the workflow checkpoint. */
+  bringBack(req: { key: string; step: Agent }): Promise<BreakdownResponse>;
   whatIf(req: { question: string; language: Language; persona: Persona }): Promise<WhatIfResponse>;
   tts(ssml: string): Promise<Blob>;
   /** WebSocket URL of the live stream, starting at frame `start`. */
@@ -169,10 +194,23 @@ export function createApi(
     health: (ms = PROBE_TIMEOUT_MS) =>
       call("/health", {}, ms, json(Health)) as Promise<z.infer<typeof Health>>,
     exportJson: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/export`, {}, ms, json()),
-    breakdown: ({ moment, persona, language }) =>
+    breakdown: ({ moment, persona, language, fail = [] }) =>
       call(
         "/api/breakdowns",
-        post({ match, moment, personas: [persona], languages: [language] }),
+        post({
+          match,
+          moment,
+          personas: [persona],
+          languages: [language],
+          ...(fail.length ? { fail } : {}),
+        }),
+        BREAKDOWN_TIMEOUT_MS,
+        json(BreakdownResponse),
+      ) as Promise<BreakdownResponse>,
+    bringBack: ({ key, step }) =>
+      call(
+        `/api/breakdowns/${encodeURIComponent(key)}/bring-back`,
+        post({ step }),
         BREAKDOWN_TIMEOUT_MS,
         json(BreakdownResponse),
       ) as Promise<BreakdownResponse>,

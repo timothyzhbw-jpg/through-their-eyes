@@ -8,7 +8,7 @@
 // fixture and the hand-written plan play as before ("offline data").
 
 import { createContext, useContext } from "react";
-import { PERSONAS, type Api, type Persona } from "./api/client";
+import { PERSONAS, type Agent, type Api, type BreakdownResponse, type Persona } from "./api/client";
 import {
   apiBreakdown,
   bundledBreakdown,
@@ -27,6 +27,7 @@ import {
 import { claimRun, lineOf, primaryClaim, RenderPayload } from "./narration/payload";
 import { heroMoment, type MomentContext } from "./plan/moment";
 import { BreakdownRunner } from "./plan/runner";
+import { IDLE_PRODUCER, toggled, type ProducerState } from "./producer/producer";
 import { advance, createPlayback, type Focus, type PlaybackStore } from "./store/playback";
 import { createStore, useStore, type Store } from "./store/store";
 import { VoicePlayer, type MakeAudio } from "./voice/voice";
@@ -55,6 +56,7 @@ export interface Session {
   playback: PlaybackStore;
   runner: BreakdownRunner;
   breakdown: Store<BreakdownState>; // narration, plan and voice for the chosen persona/language
+  producer: Store<ProducerState>; // the failure drill: agents to take down, a request in flight
   whatIfs: WhatIfs | null; // precomputed "What if…?" answers; null hides the box
   whatIfError: string | null;
   ask: Store<AskState>; // the latest free what-if question
@@ -127,6 +129,7 @@ export function createSession(
     playback,
     runner,
     breakdown,
+    producer: createStore<ProducerState>(IDLE_PRODUCER),
     whatIfs,
     whatIfError,
     ask: createStore<AskState>(IDLE_ASK),
@@ -159,7 +162,7 @@ export type Controls = ReturnType<typeof makeControls>;
 
 /** What the viewer can do. Transport controls take over from a running breakdown. */
 function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
-  const { hero, moment, playback, runner, breakdown, whatIfs, ask, api, feed, voice } = s;
+  const { hero, moment, playback, runner, breakdown, producer, whatIfs, ask, api, feed, voice } = s;
   let auto = false; // autoplay: play the breakdown by itself once the moment is detected
   let momentSeen = false; // the stream has detected the hero moment
   let playWhenReady = false; // the viewer pressed play before the breakdown arrived
@@ -223,6 +226,36 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       if (!askAgain) show({ ...bundled, status: "failed", error: message(err) });
     } finally {
       asking = false;
+      if (askAgain) {
+        askAgain = false;
+        void requestBreakdown();
+      }
+    }
+  }
+  /**
+   * A failure drill or a bring-back (SPEC 6): its breakdown replaces the one on screen. It waits
+   * for no other request and none waits for it; a failure leaves the breakdown as it was.
+   */
+  async function produce(busy: Agent | "drill", call: () => Promise<BreakdownResponse>) {
+    if (!api || asking || producer.get().busy) return;
+    const { persona, language } = breakdown.get();
+    asking = true;
+    producer.set({ busy, error: null });
+    try {
+      const res = await call();
+      if (!askAgain) {
+        show({
+          ...apiBreakdown(res, persona, language, moment, hero),
+          status: "ready",
+          error: null,
+        });
+        if (busy === "drill") producer.set({ down: [] });
+      }
+    } catch (err) {
+      producer.set({ error: message(err) });
+    } finally {
+      asking = false;
+      producer.set({ busy: null });
       if (askAgain) {
         askAgain = false;
         void requestBreakdown();
@@ -326,6 +359,24 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     setPersona: (persona: Persona) => choose({ persona }),
     setLanguage: (language: Language) => choose({ language }),
     setSound: (on: boolean) => voice.setOn(on),
+
+    /** Pick an agent to take down (or not) in the next failure drill. */
+    toggleDown(agent: Agent) {
+      producer.set((p) => ({ down: toggled(p.down, agent), error: null }));
+    },
+    /** Run the crew with the picked agents down, for the chosen persona and language. */
+    runDrill() {
+      const fail = producer.get().down;
+      if (!api || !fail.length) return;
+      const { persona, language } = breakdown.get();
+      void produce("drill", () => api.breakdown({ moment: moment.id, persona, language, fail }));
+    },
+    /** Bring a downed agent of the drill on screen back: its step re-runs from the checkpoint. */
+    bringBack(agent: Agent) {
+      const origin = breakdown.get().origin;
+      if (!api || origin?.kind !== "api" || !origin.drill?.pending.includes(agent)) return;
+      void produce(agent, () => api.bringBack({ key: origin.key, step: agent }));
+    },
 
     goLive,
     /** Autoplay online: watch live, then play the breakdown once the moment is detected. */

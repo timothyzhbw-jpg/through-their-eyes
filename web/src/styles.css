@@ -862,6 +862,93 @@ header {
   border-left-color: var(--gold);
 }
 
+/* ---------- the Producer's failure drill (SPEC 6) ---------- */
+.producer {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.producer h3 {
+  font: 600 12px/1.2 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.crew {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+.crew-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+.crew-step.fallback {
+  background: var(--surface-2);
+  border-left-color: var(--gold);
+}
+.crew-name {
+  min-width: 88px;
+}
+.crew-error {
+  font: 500 11px/1.2 var(--font-data);
+  color: var(--gold);
+}
+.crew-action {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+.crew-action[aria-pressed="true"] {
+  color: var(--bg);
+  background: var(--home);
+  border-color: var(--home);
+}
+.crew-action.back {
+  color: var(--bg);
+  background: var(--sight);
+  border-color: var(--sight);
+}
+.crew-action:disabled,
+.producer-foot .play:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.producer-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+.trace-id {
+  font: 500 11px/1.4 var(--font-data);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.trace-id code {
+  color: var(--fg);
+  user-select: all;
+}
+.producer-error {
+  color: var(--gold);
+  overflow-wrap: anywhere;
+}
+
 /* ---------- legend ---------- */
 .legend {
   display: flex;

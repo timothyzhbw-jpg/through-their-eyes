@@ -8,7 +8,7 @@
 // A breakdown from the service is checked exactly like the bundled one: the payload against the
 // moment (validatePayload), the plan against the moment and the script (resolvePlan).
 
-import type { BreakdownResponse, Persona, VoiceCue } from "../api/client";
+import type { BreakdownResponse, Drill, Persona, StepTrace, VoiceCue } from "../api/client";
 import type { Hero } from "../data/hero";
 import { scriptOf, validatePayload, type Narration } from "../narration/payload";
 import type { MomentContext } from "../plan/moment";
@@ -31,6 +31,9 @@ export type BreakdownOrigin =
       planSource: "agent" | "template"; // the Telestrator's plan, or the server's template
       planErrors: string[];
       totalMs: number; // the crew's wall time when it was generated
+      trace: StepTrace[]; // each crew step: the model, its template, or code
+      traceId: string | null; // operation_Id in Application Insights; null: tracing was off
+      drill: Drill | null; // a failure drill (SPEC 6); null for a normal breakdown
     };
 
 /** What the narration, the breakdown player and the voice read. */
@@ -108,6 +111,9 @@ export function apiBreakdown(
     planSource: result.plan_source,
     planErrors: result.plan_errors,
     totalMs: result.total_ms,
+    trace: result.trace,
+    traceId: result.trace_id ?? null,
+    drill: res.drill ?? null,
   };
   const script = result.scripts.find((s) => s.persona === persona && s.language === language);
   const checked = script

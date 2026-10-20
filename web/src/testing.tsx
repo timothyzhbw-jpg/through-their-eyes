@@ -146,10 +146,47 @@ export const momentMsg = (id: string, frameEnd: number) => ({
 
 const ssml = (text: string) => `<speak version="1.0" xml:lang="en-US">${text}</speak>`;
 
+type Source = "llm" | "template" | "code";
+
+/** A crew trace (agents/schemas.py StepTrace): every agent on the model unless `sources` says. */
+export function crewTrace(
+  sources: Partial<Record<string, Source>> = {},
+  patch: Partial<Record<string, { error?: string; notes?: string[]; attempts?: number }>> = {},
+) {
+  const steps = ["director", "analyst", "telestrator", "narration", "verifier", "voice"];
+  return steps.map((step) => {
+    const source = sources[step] ?? (step === "verifier" || step === "voice" ? "code" : "llm");
+    return {
+      step,
+      source,
+      attempts: patch[step]?.attempts ?? 1,
+      ms: 1200.5,
+      error: patch[step]?.error ?? null,
+      notes: patch[step]?.notes ?? [],
+    };
+  });
+}
+
+/** The trace of a drill with the Telestrator down: its call and the retry raised AgentDown. */
+export const telestratorDownTrace = () =>
+  crewTrace(
+    { telestrator: "template" },
+    { telestrator: { error: "AgentDown: the telestrator is down", attempts: 2 } },
+  );
+
 /** The casual / en script of the deployed service's breakdown (Telestrator plan + 3 lines). */
 export function breakdownResponse(
   flags: Partial<{ cached: boolean; rate_limited: boolean; capped: boolean }> = {},
-  patch: { persona?: string; language?: string; payload?: object } = {},
+  patch: {
+    persona?: string;
+    language?: string;
+    payload?: object;
+    key?: string;
+    trace?: object[];
+    trace_id?: string | null;
+    drill?: { down: string[]; pending: string[] } | null;
+    plan_source?: "agent" | "template";
+  } = {},
 ) {
   const persona = patch.persona ?? "casual";
   const language = patch.language ?? "en";
@@ -167,11 +204,12 @@ export function breakdownResponse(
     { id: "L3", text: "Without that look, H8 would have passed to H4.", claims: ["cf_pass"] },
   ];
   return {
-    key: "d05e90c31e6fdbe42d0e9c63a1d1e0ce",
+    key: patch.key ?? "d05e90c31e6fdbe42d0e9c63a1d1e0ce",
     cached: flags.cached ?? true,
     rate_limited: flags.rate_limited ?? false,
     capped: flags.capped ?? false,
     source: "model",
+    drill: patch.drill ?? null,
     result: {
       request: { moment: HERO_MOMENT, personas: [persona], languages: [language] },
       plan: {
@@ -195,7 +233,7 @@ export function breakdownResponse(
           { t: 7.5, do: "ghost", kind: "counterfactual", cf: "cf1" },
         ],
       },
-      plan_source: "agent",
+      plan_source: patch.plan_source ?? "agent",
       plan_errors: [],
       tier: "excited",
       scripts: [
@@ -248,8 +286,9 @@ export function breakdownResponse(
           })),
         },
       ],
-      trace: [],
+      trace: patch.trace ?? crewTrace(),
       total_ms: 6260.9,
+      trace_id: patch.trace_id === undefined ? "4bf92f3577b34da6a3ce929d0e0e4736" : patch.trace_id,
     },
   };
 }
