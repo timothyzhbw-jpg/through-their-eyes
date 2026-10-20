@@ -23,6 +23,12 @@ def _matches(text: str) -> list[tuple[str, int]]:
     return out
 
 
+def _flag(text: str | None, default: bool) -> bool:
+    """Off for "0", "false", "no" or "off"; unset or empty keeps the default."""
+    text = (text or "").strip().lower()
+    return default if not text else text not in ("0", "false", "no", "off")
+
+
 def _rate(text: str) -> tuple[int, float]:
     """Parse "3/600": 3 model regenerations per client per 600 s."""
     count, _, window = text.partition("/")
@@ -38,6 +44,7 @@ class Settings:
     daily_model_cap: int = 40  # model-backed regenerations per UTC day, all clients (SPEC 8)
     cosmos_endpoint: str = ""  # set: Cosmos DB instead of the file store (SPEC 8)
     cosmos_database: str = "tte"
+    analyst_mcp: bool = True  # the Analyst inspects the moment through our MCP server (SPEC 6, 8)
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -49,4 +56,5 @@ class Settings:
             daily_model_cap=int(os.environ.get("TTE_DAILY_MODEL_CAP") or 40),
             cosmos_endpoint=os.environ.get("TTE_COSMOS_ENDPOINT", "").strip(),
             cosmos_database=os.environ.get("TTE_COSMOS_DATABASE", "").strip() or "tte",
+            analyst_mcp=_flag(os.environ.get("TTE_ANALYST_MCP"), True),
         )

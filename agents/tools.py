@@ -97,6 +97,12 @@ def run_counterfactual(ctx: MomentContext, scan_id: str | None = None) -> str:
     """The moment's own counterfactual (by default), or the run without another scan."""
     if scan_id in (None, ctx.cf.scan_id):
         cf, intervention = ctx.cf, ctx.intervention
+    elif scan_id not in ctx.scans:
+        # Seen live: a model passed an id that is not a scan, which raised inside the re-sim.
+        hero_scans = [s for s in ctx.scans if ctx.run.event(s).player == ctx.hero]
+        key_scan = ctx.key_scan.id if ctx.key_scan is not None else None
+        return _dump({"error": f"{scan_id} is not a scan id", "key_scan": key_scan,
+                      "hero_scans": hero_scans})  # fmt: skip
     else:
         cf, intervention = drop_scan_counterfactual(ctx.scenario, ctx.seed, scan_id), "drop_scan"
     return _dump(

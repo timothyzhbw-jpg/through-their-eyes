@@ -1,6 +1,7 @@
 """Tracing for the agent crew (SPEC 8): one span per breakdown, one child span per workflow step.
 
-    breakdown ─┬─ director
+    breakdown ─┬─ mcp                                      (with tools: our MCP server starting)
+               ├─ director
                ├─ analyst                                  (its MCP tool calls nest under it)
                ├─ telestrator
                ├─ narration   per persona × language × speaker, and per rewrite (round ≥ 1)
