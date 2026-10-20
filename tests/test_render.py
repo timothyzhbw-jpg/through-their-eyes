@@ -205,6 +205,16 @@ def test_placeholders_must_resolve_to_a_referenced_claim(verifier, refs):
     assert render_line(unknown, claims, verdicts).violations[0].kind == "unsupported_claim"
 
 
+def test_a_malformed_placeholder_never_airs_as_literal_braces(verifier, refs):
+    """Seen with a real model: `{window_s|second}` is not placeholder syntax, so it was left in."""
+    claims = {"c1": pass_claim(refs)}
+    verdicts = {"c1": verifier.verify(claims["c1"])}
+    line = ScriptLine(id="L", text="{passer} found him {window_s|second} later.", claims=["c1"])
+    out = render_line(line, claims, verdicts, "en", NAMES)
+    assert not out.ok and "placeholder" in {v.kind for v in out.violations}
+    assert [v.kind for v in check_caption("Look {again}.", spans=[])] == ["placeholder"] * 2
+
+
 # --- the render check: numbers ------------------------------------------------------------
 
 
