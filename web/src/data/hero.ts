@@ -175,12 +175,14 @@ export class Sample {
   frame = 0; // integer frame at or before the sample time
   pos: Float32Array;
   ghost: Float32Array;
-  head: Float32Array;
+  head: Float32Array; // head yaw, rad, world frame
+  body: Float32Array; // body yaw, rad, world frame
   ball = new Float32Array(2);
   constructor(n: number) {
     this.pos = new Float32Array(2 * n);
     this.ghost = new Float32Array(2 * n);
     this.head = new Float32Array(n);
+    this.body = new Float32Array(n);
   }
 }
 
@@ -203,11 +205,21 @@ export function sampleInto(out: Sample, hero: Hero, run: Run, f: number, eased =
     out.head[j] = eased
       ? easedHeadAt(hero, run, j, c)
       : lerpAngle(run.head[i0 * n + j], run.head[i1 * n + j], t);
+    out.body[j] = lerpAngle(run.body[i0 * n + j], run.body[i1 * n + j], t);
   }
   out.ball[0] = lerp(run.ball[i0 * 2], run.ball[i1 * 2], t);
   out.ball[1] = lerp(run.ball[i0 * 2 + 1], run.ball[i1 * 2 + 1], t);
   out.frame = i0;
   return out;
+}
+
+/** How far player j's head points away from the ball, rad in [0, pi] (the HUD figure). */
+export function headOffBall(sample: Sample, j: number): number {
+  const toBall = Math.atan2(
+    sample.ball[1] - sample.pos[2 * j + 1],
+    sample.ball[0] - sample.pos[2 * j],
+  );
+  return Math.abs(wrapAngle(sample.head[j] - toBall));
 }
 
 export function isSeen(hero: Hero, run: Run, frame: number, observer: number, target: number) {
