@@ -5,7 +5,8 @@ Each step from frame f to f + 1:
   2. scripted actions and due decisions (on belief);
   3. heads and scans;
   4. player movement;
-  5. ball: attached to its owner, or rolling; control and out-of-play checks at f + 1;
+  5. ball: attached to its owner (an opponent may tackle it, in scenarios with tackles), or
+     rolling; control and out-of-play checks at f + 1;
   6. record frame f + 1.
 `snapshot()` / `resume(snapshot, overrides)` re-simulate from any frame (SPEC 3.7).
 """
@@ -92,6 +93,7 @@ class Simulation:
         self.pending_decision: tuple[int, int] | None = None
         self.pass_in_flight: dict | None = None
         self.carry: dict[int, tuple[np.ndarray, int]] = {}
+        self.tackle_lockout: dict[int, int] = {}  # player -> first frame he may tackle again
         self.last_kicker = -1
         self.kick_frame = -(10**9)
         self.hero_acted = False
@@ -233,6 +235,8 @@ class Simulation:
         self.frame = f + 1
         if self.owner >= 0:
             self._attach_ball()
+            if self.scenario.tackles:
+                self._check_tackle()
         else:
             self._roll_ball()
             if not self._check_out():
@@ -471,6 +475,36 @@ class Simulation:
         self._attach_ball()
         if self.scenario.decides(self, i):
             self.pending_decision = (i, self.frame + round(self.params.first_touch_s / DT))
+
+    def _check_tackle(self) -> None:
+        """An opponent within the control radius of a carried ball wins it, as he would win a free
+        ball there (scenarios with `tackles`; no draw, so no randomness). The nearest one wins it;
+        the player who lost it cannot win it back for `tackle_lockout_s`."""
+        i = self.owner
+        dist = np.linalg.norm(self.pos - self.ball_pos[:2], axis=-1)
+        eligible = (self.team != self.team[i]) & (dist <= self.params.control_radius)
+        for j, until in self.tackle_lockout.items():
+            if self.frame < until:
+                eligible[j] = False
+        if not eligible.any():
+            return
+        j = int(np.argmin(np.where(eligible, dist, np.inf)))
+        at = [float(self.ball_pos[0]), float(self.ball_pos[1])]
+        for etype, attrs in (("tackle", {"won_from": self.ids[i], "at": at}),
+                             ("possession_change", {})):  # fmt: skip
+            self.events.append(
+                Event(f"{etype}:{self.ids[j]}:{self.frame:04d}", etype, self.frame,
+                      self.frame * DT, self.ids[j], int(self.team[j]), attrs)
+            )  # fmt: skip
+        self.tackle_lockout[i] = self.frame + round(self.params.tackle_lockout_s / DT)
+        self.carry.pop(i, None)
+        if self.pending_decision is not None and self.pending_decision[0] == i:
+            self.pending_decision = None
+        if self.ids[i] == self.scenario.hero and self.hero_acted:
+            resolved = self.hero_resolved_frame
+            self.hero_resolved_frame = self.frame if resolved is None else min(resolved, self.frame)
+        self.owner = j
+        self._attach_ball()
 
     def _resolve_pass(self, receiver: int | None, outcome: str) -> None:
         flight = self.pass_in_flight

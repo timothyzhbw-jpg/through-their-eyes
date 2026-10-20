@@ -47,7 +47,8 @@ def run_counterfactual(
 
 
 def possession_value(run: MatchRun) -> float:
-    """xT for the hero's team where his action ended; minus the opponent's xT if it was lost."""
+    """xT for the hero's team where his action ended; minus the opponent's xT if it was lost
+    (intercepted, out of play, or tackled while he carried it)."""
     decision = run.hero_decision()
     if decision is None:
         return float("nan")
@@ -58,7 +59,14 @@ def possession_value(run: MatchRun) -> float:
          and e.type in ("pass", "shot")),
         None,
     )  # fmt: skip
-    if action is None:  # carry: wherever he ended up
+    if action is None:  # carry: wherever he ended up, unless a tackle won the ball off him
+        tackle = next(
+            (e for e in run.events if e.type == "tackle" and e.frame > decision.frame
+             and e.attrs.get("won_from") == decision.player),
+            None,
+        )  # fmt: skip
+        if tackle is not None:
+            return -float(xt_for(np.array(tackle.attrs["at"]), -sign))
         return float(xt_for(run.pos[-1, run.index(decision.player)], sign))
     end = np.array(action.attrs.get("end_at") or run.ball_pos[-1, :2])
     if action.attrs.get("outcome") == "complete":
@@ -66,6 +74,31 @@ def possession_value(run: MatchRun) -> float:
     if action.attrs.get("outcome") is None:  # still rolling when the run ended
         return float(xt_for(run.ball_pos[-1, :2], sign))
     return -float(xt_for(end, -sign))
+
+
+def possession_result(run: MatchRun) -> str:
+    """What the hero's action did with the ball: "kept" (a completed pass, or a carry nobody won
+    off him), "lost" (intercepted, out of play, or tackled during the carry), "open" (a pass still
+    rolling when the run ended), "shot", or "none" without a decision."""
+    decision = run.hero_decision()
+    if decision is None:
+        return "none"
+    action = next(
+        (e for e in run.events if e.player == decision.player and e.frame == decision.frame
+         and e.type in ("pass", "shot")),
+        None,
+    )  # fmt: skip
+    if action is None:
+        tackled = any(
+            e.type == "tackle" and e.attrs.get("won_from") == decision.player
+            and e.frame > decision.frame
+            for e in run.events
+        )  # fmt: skip
+        return "lost" if tackled else "kept"
+    if action.type == "shot":
+        return "shot"
+    outcome = action.attrs.get("outcome")
+    return "open" if outcome is None else "kept" if outcome == "complete" else "lost"
 
 
 def drop_scan_counterfactual(
@@ -175,3 +208,19 @@ def force_action_counterfactual(
 def what_if_from_id(scenario: str, seed: int, what_if: str) -> WhatIfResult:
     player, frame, action = parse_what_if_id(what_if)
     return force_action_counterfactual(scenario, seed, action, player, frame)
+
+
+def hero_counterfactual(
+    scenario: str, seed: int, record_draws: bool = False
+) -> CounterfactualResult | WhatIfResult:
+    """The scenario's own intervention on its hero (`Scenario.intervention`, SPEC 3.6): the run
+    without the key scan ("drop_scan"), or the hero forced to take an option ("force:carry")."""
+    from sim.scenarios import SCENARIOS
+
+    intervention = SCENARIOS[scenario].intervention
+    if intervention == "drop_scan":
+        return drop_scan_counterfactual(scenario, seed, record_draws=record_draws)
+    if intervention and intervention.startswith("force:"):
+        action = intervention.removeprefix("force:")
+        return force_action_counterfactual(scenario, seed, action, record_draws=record_draws)
+    raise ValueError(f"{scenario} has no hero intervention")

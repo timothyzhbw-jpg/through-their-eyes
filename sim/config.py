@@ -46,6 +46,7 @@ class SimParams:
     control_radius: float = 1.0  # m, a free ball this close is controlled
     first_touch_s: float = 0.2  # from control to the decision
     kick_lockout_s: float = 0.25  # the kicker cannot regain the ball this soon
+    tackle_lockout_s: float = 1.0  # a tackled player cannot win the ball back this soon
     # Head dynamics: proportional gain with an angular-velocity cap.
     head_gain: float = 25.0  # 1/s
     head_omega_max: float = 12.0  # rad/s (about 690 deg/s), the cap on any head motion

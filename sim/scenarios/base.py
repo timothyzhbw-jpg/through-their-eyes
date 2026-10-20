@@ -51,6 +51,14 @@ def make_player(pid: str, role: str) -> PlayerInfo:
 class Scenario:
     name = "base"
     hero: str | None = None
+    # What a hero scenario is built to show (SPEC 3.6, 5.2): the lens that should explain its
+    # moment, and the intervention that tests it (`sim.counterfactual.hero_counterfactual`):
+    # "drop_scan" drops the key scan, "force:<action>" makes the hero take that option.
+    lens: str | None = None
+    intervention: str | None = None
+    # Whether an opponent who gets to a carried ball wins it (`Simulation._check_tackle`). Off
+    # unless a scenario needs it, so scenarios without it keep their runs byte for byte.
+    tackles: bool = False
 
     def setup(self, gen: np.random.Generator) -> Setup:
         raise NotImplementedError

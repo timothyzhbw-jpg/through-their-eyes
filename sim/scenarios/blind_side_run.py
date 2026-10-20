@@ -63,6 +63,8 @@ SCAN_STOP_SHORT = np.deg2rad(40.0)  # the head stops this far short of pointing 
 class BlindSideRun(Scenario):
     name = "blind_side_run"
     hero = "H8"
+    lens = "scan"
+    intervention = "drop_scan"
     passer = "H4"
     runner = "H9"
     marker = "A5"
