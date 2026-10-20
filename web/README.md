@@ -15,10 +15,29 @@ npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 ```
 
-URL parameters: `?autoplay=0` starts neither the live stream nor the breakdown on load;
-`?offline=1` ignores the live service and plays the bundled data; `?plan=invalid` loads a
-deliberately broken plan to show the template fallback; `?rigged=0` starts with the tokens
-instead of the animated players.
+## URL parameters
+
+Deep links for the README's tour for judges, and for testing and filming
+(`src/deeplink.ts`, tests in `src/deeplink.test.tsx`). Parameters combine, e.g.
+`?run=counterfactual&at=decision&view=tactical`.
+
+| Parameter  | Values                                          | Effect                                                                                                     |
+| ---------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `persona`  | `casual`, `analyst`, `player_fan`, `coach`      | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one) |
+| `lang`     | `en`, `zh`                                      | the breakdown's language (live service only) and the What if box's answer language                         |
+| `run`      | `factual`, `counterfactual`                     | with the look / without it                                                                                 |
+| `view`     | `pov`, `tactical`, `split`                      | which view gets the space; a breakdown resets it to `split` when it starts                                 |
+| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision` | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan               |
+| `ask`      | a question                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask      |
+| `autoplay` | `0`                                             | start neither the live stream nor the breakdown on load                                                    |
+| `offline`  | `1`                                             | ignore the live service and play the bundled data                                                          |
+| `plan`     | `invalid`                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                          |
+| `rigged`   | `0`                                             | start with the tokens instead of the animated players                                                      |
+
+A link that points at a spot (`at`, `run` or `ask`) opens paused: no live stream and no
+breakdown on load. Without them, the app watches live and then plays the breakdown, in the
+linked `persona` and `lang` if given. Values the app does not know are ignored and listed in
+the console. There is no broadcast view on main yet.
 
 ## The live service (`VITE_API_URL`)
 
@@ -110,6 +129,7 @@ src/
   views/      PovView and TacticalView (React Three Fiber), their toolbars and HUD
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls
+  deeplink.ts URL parameters: parsed once, applied to the session before the first render
   testing.tsx test stand-ins: routed fetch, scripted WebSocket, API responses, server rendering
 ```
 

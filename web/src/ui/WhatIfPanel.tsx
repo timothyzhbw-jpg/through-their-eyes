@@ -4,7 +4,8 @@
 // A free question goes to POST /api/whatif, which maps it to an option or refuses; a verified
 // answer replays the same way. Every answer line has its counterfactual label and evidence.
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useDeepLink } from "../deeplink";
 import { lineKinds, type Narration, type PayloadLine } from "../narration/payload";
 import { useSession } from "../session";
 import { useStore } from "../store/store";
@@ -24,7 +25,8 @@ export function WhatIfPanel() {
   const { whatIfs, whatIfError, playback, controls, api, ask: askStore } = useSession();
   const selected = useStore(playback, (s) => s.whatIf);
   const ask = useStore(askStore, (s) => s);
-  const [lang, setLang] = useState<Language>("en");
+  const link = useDeepLink();
+  const [lang, setLang] = useState<Language>(link.language ?? "en");
   if (!whatIfs) {
     return whatIfError ? (
       <div className="panel whatif">
@@ -84,7 +86,13 @@ function FreeQuestion({
   asking: boolean;
 }) {
   const { controls } = useSession();
-  const [text, setText] = useState("");
+  const prefill = useDeepLink().ask;
+  const [text, setText] = useState(prefill ?? "");
+  const input = useRef<HTMLInputElement>(null);
+  // A question from the link: bring the box into view, ready to send.
+  useEffect(() => {
+    if (prefill && online) input.current?.scrollIntoView({ block: "center" });
+  }, [prefill, online]);
   return (
     <form
       className="free"
@@ -94,6 +102,7 @@ function FreeQuestion({
       }}
     >
       <input
+        ref={input}
         className="free-question"
         type="text"
         maxLength={MAX_QUESTION}
