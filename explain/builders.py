@@ -19,10 +19,13 @@ from explain import lexicon
 from explain.cards import MomentCard
 from explain.claims import Claim, Predicate, Slot, event, fn, slot
 from explain.functions import EvalContext, Inconclusive, Refuted
+from sim.config import SimParams
 from sim.counterfactual import CounterfactualResult, WhatIfResult
 from sim.model import Decision, Event
 from sim.run import MatchRun
 from sim.scenarios import SCENARIOS
+
+SEEN = SimParams().perception_threshold  # visibility from which the sim counts a player as seen
 
 
 @dataclass(frozen=True)
@@ -601,6 +604,76 @@ def receiver_pressure(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     )
 
 
+# --- what a listener needs to picture the moment (SPEC 1, audio description) ---------------------
+
+
+def reception_zone(ctx: EvalContext, r: HeroRefs) -> Claim:
+    """Where he got the ball, as a band of the pitch's length and a lane of its width."""
+    at = r.at_reception
+    band, lane = (fn("metric_at", metric=m, player=slot("player"), anchor=at)
+                  for m in ("pitch_band", "pitch_lane"))  # fmt: skip
+    values = {"player": r.hero}
+    return Claim(
+        id="reception_zone",
+        template="{player} received the ball {band:vocab}, {lane:vocab}.",
+        templates={"zh": "{player}在{band:vocab}{lane:vocab}接球。"},
+        slots={"player": Slot(ref=r.hero), "band": Slot(value=ctx.value(band, values)),
+               "lane": Slot(value=ctx.value(lane, values))},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=at, attr="player"), slot("player")),
+            _eq(band, slot("band")), _eq(lane, slot("lane")),
+        ]),
+        evidence=[r.reception.id],
+    )  # fmt: skip
+
+
+def scan_side(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """Which way the key scan turned his head away from the ball, before the ball reached him."""
+    if r.key_scan is None:
+        return None
+    side = fn("scan_side", scan=slot("scan"))
+    return Claim(
+        id="scan_side",
+        template="Before the ball reached him, {player} looked over his {side:vocab} shoulder.",
+        templates={"zh": "球到之前，{player}扭头看向了{side:vocab}后方。"},
+        slots={"player": Slot(ref=r.hero), "scan": Slot(ref=r.key_scan.id),
+               "side": Slot(value=ctx.value(side, {"scan": r.key_scan.id}))},
+        predicate=Predicate(op="all", args=[
+            Predicate(op="before", lhs=event(slot("scan")), rhs=event(r.at_reception)),
+            _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+            _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
+            _eq(side, slot("side")),
+        ]),
+        evidence=[r.key_scan.id, r.reception.id],
+    )  # fmt: skip
+
+
+def seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """The runner came into his view during the key scan (the sim's own definition of seen).
+
+    The sentence names the look itself: it can air before, or without, the line that tells it."""
+    if r.runner is None or r.key_scan is None:
+        return None
+    seen = fn("max_visibility", observer=slot("player"), target=slot("runner"), event=slot("scan"))
+    values = {"player": r.hero, "runner": r.runner, "scan": r.key_scan.id}
+    if ctx.value(seen, values) < SEEN:
+        return None
+    return Claim(
+        id="seen_in_scan",
+        template="When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+        templates={"zh": "球到之前回头的那一眼，{player}看到了{runner}。"},
+        slots={"player": Slot(ref=r.hero), "runner": Slot(ref=r.runner),
+               "scan": Slot(ref=r.key_scan.id)},
+        predicate=Predicate(op="all", args=[
+            Predicate(op="before", lhs=event(slot("scan")), rhs=event(r.at_reception)),
+            _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+            _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
+            Predicate(op="ge", lhs=seen, rhs=SEEN),
+        ]),
+        evidence=[r.key_scan.id, r.reception.id],
+    )  # fmt: skip
+
+
 Builder = Callable[..., Claim | None]
 
 BUILDERS: dict[str, Builder] = {
@@ -623,6 +696,9 @@ BUILDERS: dict[str, Builder] = {
     "heavy_pressure": heavy_pressure,
     "presser_distance": nearest_opponent_at_pass,
     "receiver_pressure": receiver_pressure,
+    "reception_zone": reception_zone,
+    "scan_side": scan_side,
+    "seen_in_scan": seen_in_scan,
 }
 CF_BUILDERS: dict[str, Builder] = {
     "cf_pass": counterfactual_pass,

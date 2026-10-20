@@ -39,13 +39,15 @@ PLACEHOLDER = re.compile(
 )
 
 
-OBSERVED_FUNCTIONS = {"count_events", "event_attr", "distance", "scans_in_window"}
+OBSERVED_FUNCTIONS = {"count_events", "event_attr", "distance", "scans_in_window", "scan_side"}
 OBSERVED_METRICS = {
     "distance",
     "speed",
     "ball_speed",
     "nearest_opponent_distance",
     "nearest_opponent",
+    "pitch_band",
+    "pitch_lane",
     "time_since_last_scan",
 }
 _KIND_ORDER: tuple[ClaimKind, ...] = ("observed", "computed", "counterfactual")

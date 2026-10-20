@@ -66,7 +66,21 @@ PERSONAS: dict[Persona, str] = {
     "picture of the pitch, his choice. Up to three lines.",
     "coach": "Audience: coaches. Instructional: what the look gave him and what a player can copy. "
     "Up to three lines.",
+    "audio_description": "Audience: blind and low-vision viewers, who hear the moment instead of "
+    "seeing it (audio description). Tell it in the order it happened: who has the ball and where, "
+    "who he could not see, which way he looked, whom the look showed him, what he did. Use the "
+    "preferred claims, in their order; leave out expected threat and probabilities. Calm and "
+    "clear; no connectives. Up to six lines.",
 }
+
+# Claims a persona should build from, in telling order; the narration prompt lists the supported
+# ones as `preferred_claims`. Audio description: who, where, which way he looked, what he could
+# and could not see, then what he did with it.
+PREFERRED_CLAIMS: dict[Persona, tuple[str, ...]] = {
+    "audio_description": ("reception_zone", "blind_side", "scan_side", "scan_before_reception",
+                          "seen_in_scan", "pass_to_runner", "runner_received", "gap_to_marker",
+                          "unmarked", "cf_pass"),
+}  # fmt: skip
 
 SPEAKERS: dict[Speaker, str] = {
     "pbp": "You are the play-by-play commentator: what happened, short and paced.",
@@ -107,11 +121,17 @@ def _card_summary(ctx: MomentContext) -> dict:
     }
 
 
-def _claims(ctx: MomentContext, ids: list[str] | None, language: Language) -> list[dict]:
+def _claims(
+    ctx: MomentContext, ids: list[str] | None, language: Language, ordered: bool = False
+) -> list[dict]:
+    """Supported claims as the models see them: in context order, or in the order of `ids`."""
+    supported = ctx.supported
+    order = [c for c in ids if c in supported] if ordered and ids is not None else supported
     out = []
-    for cid, claim in ctx.supported.items():
+    for cid in order:
         if ids is not None and cid not in ids:
             continue
+        claim = supported[cid]
         out.append({"id": cid, "kind": claim.kind, "sentence": claim.template_for(language)})
     return out
 
@@ -171,6 +191,9 @@ def narration_prompt(
         ),
         "allowed_connectives": list(CONNECTIVES[language]),
     }
+    if persona in PREFERRED_CLAIMS:
+        preferred = [c for c in PREFERRED_CLAIMS[persona] if c in ctx.supported]
+        data["preferred_claims"] = _claims(ctx, preferred, language, ordered=True)
     if pbp_lines:
         data["play_by_play_used"] = [
             {"claim": line.claims[0] if line.claims else None, "text": line.text}
@@ -196,7 +219,7 @@ def _prompt_version() -> str:
     import hashlib
 
     texts = [CREW, DIRECTOR, ANALYST, TELESTRATOR, NARRATION_RULES, *PERSONAS.values(),
-             *SPEAKERS.values()]  # fmt: skip
+             *SPEAKERS.values(), *(" ".join(ids) for ids in PREFERRED_CLAIMS.values())]  # fmt: skip
     return hashlib.sha256("\n".join(texts).encode()).hexdigest()[:12]
 
 

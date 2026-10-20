@@ -30,8 +30,9 @@ SUPPORTING = ["blind_side", "unmarked", "cf_value", "runner_received", "scans_be
               "gap_opened", "observed_share", "pass_to_runner", "presser_distance",
               "receiver_pressure", "pressure_at_pass"]  # fmt: skip
 
-# Per persona: the lines in speaking order, (speaker, claim id or None for the connective).
-SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
+# Per persona: the lines in speaking order, (speaker, claim id or None for the connective). A tuple
+# of ids is one line: the first of them that is supported.
+SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
     "casual": [("pbp", None), ("pbp", "scan_before_reception"), ("color", "blind_side"),
                ("color", "cf_pass"), ("pbp", "runner_received")],
     "analyst": [("pbp", None), ("pbp", "scans_before_reception"), ("color", "observed_share"),
@@ -41,10 +42,16 @@ SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
                    ("color", "cf_pass"), ("pbp", "runner_received")],
     "coach": [("pbp", "scans_before_reception"), ("pbp", "time_since_last_scan"),
               ("color", "belief_error"), ("color", "cf_pass")],
+    # Told for listeners, in the order it happened: where, who he could not see, which way he
+    # looked, whom he saw, what he did with it. No connectives, no xT or probabilities.
+    "audio_description": [("pbp", "reception_zone"), ("color", "blind_side"),
+                          ("pbp", ("scan_side", "scan_before_reception")),
+                          ("color", "seen_in_scan"), ("pbp", ("pass_to_runner", "runner_received")),
+                          ("color", "cf_pass")],
 }  # fmt: skip
 # The same for a moment the pressure lens explains (SPEC 5.2): the press, the escape, and what
 # keeping the ball would have cost.
-PRESSURE_SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
+PRESSURE_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
     "casual": [("pbp", None), ("pbp", "heavy_pressure"), ("pbp", "runner_received"),
                ("color", "cf_carry_lost")],
     "analyst": [("pbp", None), ("pbp", "pressure_at_pass"), ("color", "presser_distance"),
@@ -54,6 +61,12 @@ PRESSURE_SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
                    ("pbp", "runner_received"), ("color", "cf_carry_lost")],
     "coach": [("pbp", "pressure_at_pass"), ("color", "presser_distance"),
               ("color", "cf_carry_lost"), ("color", "cf_value")],
+    # For listeners, in the order it happened: where, the press, who was closing, the escape, what
+    # keeping the ball would have cost. No connectives, no xT or pressing percentages.
+    "audio_description": [("pbp", "reception_zone"), ("color", "heavy_pressure"),
+                          ("color", "presser_distance"),
+                          ("pbp", ("pass_to_runner", "runner_received")),
+                          ("color", "cf_carry_lost")],
 }  # fmt: skip
 
 
@@ -97,11 +110,14 @@ def narration(
     sequence = (PRESSURE_SEQUENCES if pressure else SEQUENCES)[persona]
     connective = (PRESSURE_CONNECTIVE if pressure else CONNECTIVE)[language]
     out = []
-    for who, cid in sequence:
+    for who, ids in sequence:
         if speaker is not None and who != speaker:
             continue
-        if cid is None:
+        if ids is None:
             out.append((who, DraftLine(text=connective, claims=[])))
-        elif cid in ctx.supported:
+            continue
+        cid = next((c for c in (ids if isinstance(ids, tuple) else (ids,)) if c in ctx.supported),
+                   None)  # fmt: skip
+        if cid is not None:
             out.append((who, DraftLine(text=ctx.claims[cid].template_for(language), claims=[cid])))
     return out

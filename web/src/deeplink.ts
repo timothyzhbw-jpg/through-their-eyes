@@ -1,7 +1,8 @@
 // Deep links: URL parameters that open the app on a given audience, language, run, view and
 // frame, so each step of the README's three-minute tour for judges is one link.
 //
-//   ?persona=casual|analyst|player_fan|coach   the breakdown's audience (live service only)
+//   ?persona=casual|analyst|player_fan|coach|audio_description
+//                                              the breakdown's audience (live service only)
 //   ?lang=en|zh                                its language, and the What if box's
 //   ?run=factual|counterfactual                with the look / without it
 //   ?view=pov|tactical|split                   which view gets the space

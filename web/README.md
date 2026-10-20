@@ -22,21 +22,21 @@ Deep links for the README's tour for judges, and for testing and filming
 (`src/deeplink.ts`, tests in `src/deeplink.test.tsx`). Parameters combine, e.g.
 `?run=counterfactual&at=decision&view=tactical`.
 
-| Parameter  | Values                                                          | Effect                                                                                                                                                         |
-| ---------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at` and `camera` |
-| `persona`  | `casual`, `analyst`, `player_fan`, `coach`                      | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one)                                                     |
-| `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                             |
-| `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                     |
-| `view`     | `pov`, `tactical`, `split`                                      | which view gets the space; a breakdown resets it to `split` when it starts                                                                                     |
-| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                   |
-| `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                          |
-| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                |
-| `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                        |
-| `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                              |
-| `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                              |
-| `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                          |
-| `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                   |
+| Parameter  | Values                                                          | Effect                                                                                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at` and `camera`                                                             |
+| `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page |
+| `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                         |
+| `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                 |
+| `view`     | `pov`, `tactical`, `split`                                      | which view gets the space; a breakdown resets it to `split` when it starts                                                                                                                                                 |
+| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                               |
+| `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
+| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
+| `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                    |
+| `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                          |
+| `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                          |
+| `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                      |
+| `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                               |
 
 A link that points at a spot (`at`, `run`, `ask` or `tamper`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
@@ -74,8 +74,11 @@ The deploy workflow sets it from the repo variable `TTE_API_URL`, and `infra/dep
   - **What if…?:** free questions go to `POST /api/whatif`; a verified answer replays from the
     decision with the forced run as the ghost (from the bundled what-ifs), a refusal is shown as
     such.
-  - **Voice:** off by default. **Sound on** sends each caption's SSML to `POST /api/tts` (Azure AI
-    Speech) and plays the WAV as the line comes up; clips are kept per cue.
+  - **Voice:** off by default; choosing the **Audio description** audience turns it on (and makes
+    the captions large print), leaving it turns it off again unless the viewer set the sound.
+    **Sound on** sends each caption's SSML to `POST /api/tts` (Azure AI Speech) and plays the WAV as
+    the line comes up; clips are kept per cue. While the voice is off, a screen reader hears each
+    caption from a polite live region.
 
 The API's CORS allows only the static website's origin, so for `npm run dev` against the deployed
 service let Vite forward the API paths (dev server only):
@@ -152,7 +155,7 @@ src/
   api/        the API client (zod-checked responses, timeouts) and VITE_API_URL
   live/       the live stream: WebSocket feed, frame ordering, control messages, live playhead
   breakdown/  the breakdown on screen per persona and language: service or bundled, checked
-  voice/      spoken narration from /api/tts, off by default
+  voice/      spoken narration from /api/tts, off by default (on for audio description)
   data/       load the export (service or bundled), sample a player at a fractional frame, eased yaw
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor

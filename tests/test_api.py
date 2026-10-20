@@ -315,6 +315,24 @@ def test_a_breakdown_cached_without_the_tools_is_not_served_once_they_are_on(
     assert off_key != on_key == again_key
 
 
+def test_breakdowns_take_the_audio_description_persona(client):
+    """Blind and low-vision viewers (SPEC 1): a persona like any other, validated like the rest."""
+    body = {"match": MATCH, "personas": ["audio_description"], "languages": ["en", "zh"]}
+    r = client.post("/api/breakdowns", json=body)
+    assert r.status_code == 200
+    scripts = r.json()["result"]["scripts"]
+    assert {(s["persona"], s["language"]) for s in scripts} == {
+        ("audio_description", "en"), ("audio_description", "zh"),
+    }  # fmt: skip
+    assert all(s["payload"]["lines"] and not s["dropped"] for s in scripts)
+    assert client.post("/api/breakdowns", json={**body, "personas": ["blind"]}).status_code == 422
+    question = {"match": MATCH, "question": "What if he passed to H4?", "language": "zh"}
+    answer = client.post("/api/whatif", json={**question, "persona": "audio_description"})
+    assert answer.status_code == 200
+    assert answer.json()["answer"]["payload"]["persona"] == "audio_description"
+    assert client.post("/api/whatif", json={**question, "persona": "blind"}).status_code == 422
+
+
 def test_unknown_moment_is_404(client):
     body = {"match": MATCH, "moment": "m:sprint:H9:0085"}
     assert client.post("/api/breakdowns", json=body).status_code == 404

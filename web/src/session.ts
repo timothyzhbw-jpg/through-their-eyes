@@ -14,7 +14,7 @@
 // by both read a ViewSession with `useView()`.
 
 import { createContext, useContext } from "react";
-import { PERSONAS, type Api, type BreakdownResponse, type Persona } from "./api/client";
+import { DESCRIBED, PERSONAS, type Api, type BreakdownResponse, type Persona } from "./api/client";
 import {
   apiBreakdown,
   bundledBreakdown,
@@ -356,6 +356,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   let askTurn = 0;
   let tamperTurn = 0;
   let tamperLink: string | null = null; // ?tamper=<claim id>: open its card once a breakdown is here
+  let soundByAudience = false; // the voice is on because audio description was chosen
 
   /** Any viewer action ends a running breakdown and the autoplay. */
   const takeOver = () => {
@@ -493,7 +494,20 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     const next = { ...current, ...patch };
     if (next.persona === current.persona && next.language === current.language) return;
     breakdown.set(patch);
+    if (next.persona !== current.persona) followAudience(next.persona);
     if (current.status !== "waiting") void requestBreakdown();
+  };
+  /** Audio description is heard, not watched: choosing it turns the voice on, and leaving it turns
+   * the voice off again unless the viewer has set the sound since. Other audiences start silent. */
+  const followAudience = (persona: Persona) => {
+    if (DESCRIBED.has(persona)) {
+      if (voice.state.get().on) return;
+      voice.setOn(true);
+      soundByAudience = voice.state.get().on;
+    } else if (soundByAudience) {
+      soundByAudience = false;
+      voice.setOn(false);
+    }
   };
   return {
     ...transport,
@@ -510,7 +524,10 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     requestBreakdown: () => void requestBreakdown(),
     setPersona: (persona: Persona) => choose({ persona }),
     setLanguage: (language: Language) => choose({ language }),
-    setSound: (on: boolean) => voice.setOn(on),
+    setSound: (on: boolean) => {
+      soundByAudience = false; // the viewer's own choice
+      voice.setOn(on);
+    },
 
     /** Autoplay online: watch live, then play the breakdown once the moment is detected. */
     startLive() {

@@ -10,4 +10,5 @@ export const PERSONA_LABEL: Record<Persona, string> = {
   analyst: "Analyst",
   player_fan: "Player fan",
   coach: "Coach",
+  audio_description: "Audio description",
 };

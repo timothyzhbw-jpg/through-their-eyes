@@ -16,7 +16,8 @@ from explain.cards import LensName
 from explain.numbers import number_tokens
 from explain.render import RenderPayload
 
-Persona = Literal["casual", "analyst", "player_fan", "coach"]
+# audio_description: blind and low-vision viewers, who listen to the moment (SPEC 1).
+Persona = Literal["casual", "analyst", "player_fan", "coach", "audio_description"]
 Language = Literal["en", "zh"]
 Speaker = Literal["pbp", "color"]  # play-by-play commentator, co-commentator (analysis)
 Tier = Literal["calm", "excited", "clutch"]

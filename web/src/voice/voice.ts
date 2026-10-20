@@ -1,6 +1,7 @@
 // Spoken narration (SPEC 6 Voice): each line's SSML goes to the API's /api/tts (Azure AI Speech)
 // and the WAV plays as its caption comes up. Off by default: sound starts only when the viewer
-// turns it on. Without the live service there is no SSML and no speech, so the switch is disabled.
+// turns it on or chooses audio description (session.ts). Without the live service there is no SSML
+// and no speech, so the switch is disabled.
 // Clips are kept per cue cache key, so a replayed line is not synthesized twice.
 
 import type { VoiceCue } from "../api/client";

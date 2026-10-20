@@ -1,9 +1,9 @@
 """Predicate functions (SPEC 5.3), evaluated against a sim run and its counterfactuals.
 
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
-observed_share, cf_delta. Every function accepts `cf: <scan id>` to evaluate on the
-counterfactual run without that scan instead of the factual run, or `cf: force:<player>:<frame>:
-<action>` for the what-if run with that decision forced (SPEC 3.7).
+observed_share, scan_side, max_visibility, cf_delta. Every function accepts `cf: <scan id>` to
+evaluate on the counterfactual run without that scan instead of the factual run, or
+`cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7).
 
 Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
 anchor "<card id>.<name>" (SPEC 5.1, e.g. "m:decision_after_scan:H8:0075.reception"), and offsets
@@ -33,6 +33,7 @@ from analytics.pressing import aggregate, frame_pressing
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from analytics.xt import xt_for
 from explain.cards import MomentCard
+from sim.config import HALF_LENGTH, HALF_WIDTH
 from sim.counterfactual import (
     WHAT_IF_PREFIX,
     CounterfactualResult,
@@ -368,6 +369,39 @@ def observed_share(
     return _observed_share(ctx, run, ctx.frame(run, anchor, at), player, window_s)
 
 
+def scan_side(ctx: EvalContext, run: MatchRun, scan: str) -> str:
+    """Which way a scan turned the head away from the ball: "left" (anticlockwise) or "right".
+
+    When a scan begins the head still points at the ball (baseline gaze, SPEC 3.4) and the scan's
+    `direction` is the yaw it turned to, so for a player facing the ball a turn to the right is a
+    look over his right shoulder.
+    """
+    e = ctx.event(run, scan)
+    if e.type != "scan":
+        raise Refuted(f"{e.id} is not a scan")
+    i = ctx.player(run, e.player)
+    turn = float(wrap_angle(float(e.attrs["direction"]) - run.head_yaw[e.frame, i]))
+    if abs(turn) < 1e-3:
+        raise Inconclusive(f"{e.id} turned neither left nor right")
+    return "left" if turn > 0 else "right"
+
+
+def max_visibility(
+    ctx: EvalContext, run: MatchRun, observer: str, target: str, event: str
+) -> float:
+    """The most the observer saw of the target during an event with an end frame (a scan): the
+    vision model with occlusion (`analytics.vision`) on each frame of it. The sim counts a player
+    as seen from `SimParams.perception_threshold` (SPEC 3.4)."""
+    e = ctx.event(run, event)
+    end = e.attrs.get("end")
+    if end is None:
+        raise Inconclusive(f"{e.id} has no end frame")
+    if int(end) >= len(run.owner):
+        raise Inconclusive(f"{e.id} ends after the recorded run")
+    i, j = ctx.player(run, observer), ctx.player(run, target)
+    return max(float(ctx.visibility_matrix(run, f)[i, j]) for f in range(e.frame, int(end) + 1))
+
+
 _GRID: list[np.ndarray] = []
 
 
@@ -385,6 +419,8 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "distance": distance,
     "scans_in_window": scans_in_window,
     "observed_share": observed_share,
+    "scan_side": scan_side,
+    "max_visibility": max_visibility,
     # "cf_delta" is evaluated lazily by `Evaluator.cf_delta`: its `of` runs on two runs.
 }
 
@@ -458,6 +494,30 @@ def _blind_side(ctx: EvalContext, run: MatchRun, f: int, observer: str, target: 
     speed = float(np.linalg.norm(run.vel[g, i]))
     half = max(vp.min_half_cone, vp.half_cone - vp.narrowing_per_mps * speed)
     return bool(offset > half)
+
+
+# Where a player is, from his team's attacking direction (home attacks +x, SPEC 3.1). The length is
+# split at the halfway line and the thirds; the width into five lanes, centre lane in the middle.
+BANDS = ("own_third", "own_half", "opponents_half", "final_third")
+LANES = ("right_wing", "right_of_centre", "centre", "left_of_centre", "left_wing")
+THIRD = 2 * HALF_LENGTH / 6  # 17.5 m either side of the halfway line
+LANE = 2 * HALF_WIDTH / 10  # 6.8 m: half a lane's width
+
+
+def _attacking(run: MatchRun, i: int, f: int) -> np.ndarray:
+    """Position with +x towards the goal his team attacks, so +y is to his left."""
+    return run.pos[f, i] * (1.0 if run.players[i].team == 0 else -1.0)
+
+
+def _pitch_band(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
+    x = _attacking(run, ctx.player(run, player), f)[0]
+    return BANDS[0 if x < -THIRD else 1 if x < 0 else 2 if x < THIRD else 3]
+
+
+def _pitch_lane(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
+    y = _attacking(run, ctx.player(run, player), f)[1]
+    return LANES[0 if y < -3 * LANE else 1 if y < -LANE else 2 if y <= LANE else
+                 3 if y <= 3 * LANE else 4]  # fmt: skip
 
 
 def _decision(ctx: EvalContext, run: MatchRun, f: int, player: str) -> Decision:
@@ -604,6 +664,8 @@ METRICS: dict[str, Callable[..., Any]] = {
     "ball_speed": _ball_speed,
     "nearest_opponent_distance": _nearest_opponent_distance,
     "nearest_opponent": _nearest_opponent,
+    "pitch_band": _pitch_band,
+    "pitch_lane": _pitch_lane,
     "time_since_last_scan": _time_since_last_scan,
     "visibility": _visibility,
     "blind_side": _blind_side,

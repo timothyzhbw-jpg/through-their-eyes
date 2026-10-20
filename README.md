@@ -78,6 +78,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
 | Free-text vs anchored narration, same moment and seeds: first-draft lines the verifier rejects; groundedness (1–5) | 88% vs 0%; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
 | One live breakdown (4 scripts, every step from the model) | 6–12 s; cached 0.15 s | SPEC §8 |
+| Audio description for blind and low-vision viewers: where he got the ball, which way he looked, whom he saw, each a verified claim; calm, slower SSML at any tier; in the web app sound on, large-print captions, narration and playback controls named and focusable | 6/6 template lines verified, 0 dropped (seed 3, en + zh) | [test_agents](tests/test_agents.py), [access.test](web/src/ui/access.test.tsx) |
 
 ## Related work
 - **First-person replay is not new.** ReSpo.Vision builds 3D tracking from single-camera
