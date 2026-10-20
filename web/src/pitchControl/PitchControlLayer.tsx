@@ -6,7 +6,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import type { Hero } from "../data/hero";
-import { useSession } from "../session";
+import { useView } from "../session";
 import {
   ControlInputs,
   controlInputsAt,
@@ -16,7 +16,7 @@ import {
 } from "./pitchControl";
 
 export function PitchControlLayer({ hero, renderOrder }: { hero: Hero; renderOrder: number }) {
-  const { playback } = useSession();
+  const { playback } = useView(); // a hero moment or a stitched match: both draw it
   const inputs = useMemo(() => new ControlInputs(), []);
   const material = useMemo(() => createPitchControlMaterial(), []);
   const mesh = useMemo(() => createPitchControlMesh(material), [material]);
