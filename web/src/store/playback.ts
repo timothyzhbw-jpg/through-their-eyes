@@ -20,6 +20,7 @@ export interface PlaybackState {
   beliefGhosts: boolean;
   cfGhost: boolean; // ghost path of the other run
   options: boolean; // pass options at the decision (shown around the decision frame only)
+  blindSide: boolean; // blind-side alerts, live (SPEC 4.4)
   focus: Focus; // which view gets the space
   scanMarker: string | null; // scan id highlighted by a plan
   captionLine: string | null; // id of the narration line on screen (a plan voice step)
@@ -46,6 +47,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     beliefGhosts: true,
     cfGhost: false,
     options: true,
+    blindSide: true,
     focus: "split",
     scanMarker: null,
     captionLine: null,

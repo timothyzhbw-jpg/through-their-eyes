@@ -29,9 +29,9 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --what-if web/public/data/whatif_seed3.json
 ```
 
-- `hero_seed3.json`: the replay (schema version 3: integer mm and 1e-4 rad, origin at the centre
-  spot, home attacks +x). `src/data/hero.ts` converts it once into typed arrays in metres and
-  radians.
+- `hero_seed3.json`: the replay (schema version 4, with blind-side alerts: integer mm and 1e-4
+  rad, origin at the centre spot, home attacks +x). `src/data/hero.ts` converts it once into typed
+  arrays in metres and radians.
 - `fixture_payload_seed3.json`: a **fixture** render payload (SPEC 5.3) for the same moment,
   marked `"fixture": true`. Its claim values are computed from the replay by
   `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
@@ -99,6 +99,13 @@ src/
   the `pass_success` / `cf_pass_success` claims; other options' numbers are marked `sim`
   (from the export, not verified). The layer has a toggle and needs no plan step.
   `options/passOptions.ts` holds the logic and its tests.
+- **Blind-side alerts** (SPEC 4.4, 7, live). From tracking only (`analytics/blind_side.py`), an
+  observer who has lost sight of a player on the move: on the tactical board a thin line from the
+  observer to that player (brighter for the POV player's own alerts) and a pulsing ring on him;
+  in first person a ring on him and, for the POV player's alerts, a "BLIND SIDE H9 unseen 2.1 s"
+  HUD badge; on the board an "unseen" tag. It clears the moment he is seen (the module may hold
+  an alert on for its minimum duration; the viewer does not show that). The numbers are marked
+  `sim`: a live deterministic overlay, not a claim. Toggle "Blind side".
 - **Body and head yaw on every player.** In first person a token is a capsule body turned to
   `body_yaw` with a head on top turned to `head_yaw` (relative to the body, never clamped); a white
   visor marks the front of the head, so a look over the shoulder is visible on anyone in view. On
