@@ -6,10 +6,10 @@
 |---|---|
 | Chosen on tuning seeds | expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m; speed ≥ 4.0 m/s, range ≤ 35 m, on ≥ 0.4 s |
 | Fresh held-out precision | **0.920** — ✅ meets the target ≥ 0.8 |
-| Fresh held-out recall | **0.984** — ✅ meets the target ≥ 0.7 |
+| Fresh held-out recall | **0.985** — ✅ meets the target ≥ 0.7 |
 | `possession_play` alone (the general-play overlay) | precision **0.922**, recall 0.983 |
 | Tuning seeds, same thresholds | precision 0.914, recall 0.966 |
-| Fresh held-out data | `possession_play` 200–219 (20), `blind_side_run` 200–239 (40): 18.2 min of play, 1015 truth episodes, 1081 alerts |
+| Fresh held-out data | `possession_play` 200–219 (20), `blind_side_run` 200–239 (40): 18.2 min of play, 1025 truth episodes, 1093 alerts |
 
 **An upper bound for real tracking.** The truth is the sim's belief, which carries the last-seen velocity on for up to 1 s — the same constant-velocity extrapolation the alert's expectation (`expect_s`) uses. The alert and the truth share that model of what a player expects, so these numbers are an upper bound for real tracking, where nobody knows how a player extrapolates. The *best without expectation* rows do not share it.
 
@@ -19,19 +19,19 @@
 
 | Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m | 0.920 | 0.984 | **0.951** | 1081 | 1015 | 0.909 | 0.819 |
-| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.882 | 0.909 | **0.895** | 1042 | 1015 | 0.826 | 0.707 |
-| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.765 | 0.942 | **0.844** | 1247 | 1015 | 0.762 | 0.789 |
-| chosen, 25 m range for alert and truth | 0.909 | 0.983 | **0.944** | 800 | 743 | 0.842 | 0.831 |
-| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.800 | 0.989 | **0.885** | 1081 | 886 | 0.422 | 0.954 |
-| chosen; truth variant: target ≥ 2 m/s on every frame | 0.923 | 0.291 | **0.442** | 1081 | 3831 | 0.678 | 0.325 |
+| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.0 m | 0.920 | 0.985 | **0.952** | 1093 | 1025 | 0.909 | 0.816 |
+| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.882 | 0.910 | **0.896** | 1053 | 1025 | 0.827 | 0.705 |
+| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.766 | 0.942 | **0.845** | 1259 | 1025 | 0.761 | 0.786 |
+| chosen, 25 m range for alert and truth | 0.908 | 0.984 | **0.945** | 808 | 749 | 0.841 | 0.827 |
+| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.793 | 0.990 | **0.881** | 1093 | 887 | 0.419 | 0.954 |
+| chosen; truth variant: target ≥ 2 m/s on every frame | 0.923 | 0.293 | **0.445** | 1093 | 3835 | 0.679 | 0.327 |
 
 | Scenario | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
 | `possession_play`, chosen | 0.922 | 0.983 | **0.951** | 794 | 749 | 0.905 | 0.794 |
 | `possession_play`, best without expectation | 0.861 | 0.888 | **0.874** | 768 | 749 | 0.811 | 0.680 |
-| `blind_side_run`, chosen | 0.916 | 0.989 | **0.951** | 287 | 266 | 0.927 | 0.946 |
-| `blind_side_run`, best without expectation | 0.942 | 0.970 | **0.956** | 274 | 266 | 0.900 | 0.846 |
+| `blind_side_run`, chosen | 0.916 | 0.993 | **0.953** | 299 | 276 | 0.925 | 0.921 |
+| `blind_side_run`, best without expectation | 0.940 | 0.971 | **0.955** | 285 | 276 | 0.898 | 0.823 |
 
 ## What limits precision
 
@@ -41,7 +41,7 @@ Alerts that match no truth episode (fresh held-out, chosen thresholds):
 |---|---|
 | the belief was never stale by > 3 m during the alert | 3 |
 | stale only after the runner slowed below the run speed (the belief overshoots) | 2 |
-| stale while watched for < 0.2 s (too short to be an episode) | 77 |
+| stale while watched for < 0.2 s (too short to be an episode) | 78 |
 | stale only while the pair was not watched, or out of range | 4 |
 | other | 0 |
 

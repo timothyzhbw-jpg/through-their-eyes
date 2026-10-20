@@ -174,6 +174,24 @@ on an LLM.
   Implemented as expected threat after the action, P·xT(target) − (1 − P)·xT_opp(target): the
   current xT is the same for every option and drops out of the softmax. P also includes the chance
   that the receiver gets there before the ball has rolled on (0.5 s slack).
+- **An opponent can also run into the ball before he reacts** (2026-10-20). TTI (§4.1) has him keep
+  his velocity for the reaction time, and its closed form only counts arrivals after it, so a
+  presser sprinting at the carrier, or an opponent standing on the passing lane, looked as if the
+  ball got past him. Under the same motion model, the decision model also takes the closest
+  approach of his reaction-time run to the ball, at the same moment, from t = 0 along the ball's
+  path (pass) or the carry (5 m in 1 s); within the sim's control radius (1 m, the radius its
+  control and tackle rules use) he wins it. P = logistic of (radius − closest approach) with the
+  spread of the belief's position uncertainty (0.3 m + 1 m per second of belief age); no new
+  tuned parameter. Per opponent the larger of the two chances counts. The TTI kernel itself
+  (pitch control, pressing, shaders) is unchanged. Test: `tests/test_decision_run_in.py`.
+- A carry is scored along its path like a pass (TTI at each sample of the path, from 0.08 s to
+  1 s). While the carry is no faster than v_max (5 m in 1 s at v_max 5 m/s, as now) the TTI margin
+  never falls along it, so the endpoint is its worst point and the result is the same as before.
+  *Limit:* after the reaction, TTI is to a point of the path, not to within the 1 m control
+  radius, for passes, carries and pitch control alike. An opponent who would step to within 1 m
+  of the ball just after his reaction, but not onto its path in time, is under-counted, e.g. one
+  standing 1.2 m beside a 5 m carry, 3 m along it, gets P(keep) 0.64, while the sim's tackle rule
+  takes the ball from anyone who gets within 1 m of it.
 - Each teammate is evaluated at several targets along his believed run (lead 0–2 s); the best one
   is his option. Until the fitted xT grid exists (§4.5), decisions use a smooth xT prior.
 - Softmax with a per-player temperature. Receiver body orientation affects completion (facing play
@@ -203,16 +221,24 @@ presser comes from where H4 is looking, so he needs no scan to see him, and noth
 suppresses or times a scan. Tackles are on in this scenario only (`Scenario.tackles`: an opponent
 within the control radius of a carried ball wins it), so the other scenarios keep their runs byte
 for byte. Its intervention is `force:carry`: had he kept the ball, would the press have won it?
-Acceptance (`eval/hero_lens.py`; designed on seeds 0–99, held out 100–139):
-- the pressure lens is selected in 31/40 (target ≥ 60%: met; median margin 0.097 xT);
-- forcing the carry loses the ball in 40/40, but the possession outcome changes in 22/40 (target
-  ≥ 60%: **missed**). In the other 18 seeds H4's own action lost the ball as well: he carried into
-  the press (7) or passed through the presser (11).
-- Cause: the decision model's TTI keeps a sprinting presser's velocity for the 0.7 s reaction
-  time, so it rates a carry, or a pass along the presser's line, as getting past him; the sim's
-  tackle and control rules do not. One redesign, tried on design seeds only (pressing him 6 m
-  deeper; the presser off the passing lanes), did not help (39/80 kept; or no press at all), so
-  the scenario was not tuned further. The fix is a decision-model change that touches every hero.
+Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 200–239, as
+100–139 were used to find the cause below):
+- the pressure lens is selected in 38/40 (target ≥ 60%: met; median margin 0.102 xT);
+- forcing the carry loses the ball in 40/40, and the possession outcome changes in 32/40 (target
+  ≥ 60%: met). In the other 8 H4's own pass was intercepted too, none by a carry: 6 long passes
+  (32–46 m) he rated 0.24–0.75, cut out 1–2.3 s later by a defender 22–48 m away (the truth
+  within 0.11 of his belief), and 2 balls to H9 he rated 0.04, drawn by the softmax with
+  probability 0.02 and taken by the presser.
+- History: first measured on 100–139 with lens 31/40 and outcome 22/40 (**missed**). In 18 seeds
+  H4's own action lost the ball as well: he carried into the press (7) or passed through the
+  presser (11). Cause: the decision model's TTI kept a sprinting presser's velocity for the 0.7 s
+  reaction time, so it rated a carry, or a pass along the presser's line, as getting past him;
+  the sim's tackle and control rules did not. One redesign, tried on design seeds only (pressing
+  him 6 m deeper; the presser off the passing lanes), did not help (39/80 kept; or no press at
+  all), so the scenario was not tuned further. The fix is in the decision model (§3.5, the run-in), not
+  in the scenario; on 100–139 it gives lens 39/40 and outcome 30/40, no carry lost
+  ([hero_lens_press_escape_100-139.md](../eval/reports/hero_lens_press_escape_100-139.md)).
+  `blind_side_run` is unchanged where it matters: 39/40 flips, its seed 3 byte for byte.
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
@@ -277,7 +303,8 @@ within tolerance on fixed snapshots.
 Shaw-style simplification of Spearman: the player keeps current velocity for reaction time τ_r,
 then runs at v_max to the target. Defaults (*tunable*): τ_r = 0.7 s, v_max = 5 m/s (a deliberately
 conservative model parameter, not real sprint speed). Targets: grid cells (pitch control) and
-moving players/ball (pressing).
+moving players/ball (pressing). The kernel counts arrivals after the reaction time only; the
+decision model adds the run-in during it (§3.5) on top of the kernel, which stays as it is.
 
 ### 4.2 Pitch control
 Closed-form approximation:
@@ -362,7 +389,7 @@ of §3.4.
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.920, recall 0.984);
+      0.920, recall 0.985);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
@@ -417,9 +444,11 @@ changed the decision. The scan lens therefore wins exactly when the scan was dec
 uninformative scan scores 0, and then `space` wins (tested). On `blind_side_run`, 80 seeds
 (0–39 and 100–139): `scan` is selected every time, the key scan is the most informative scan every
 time, and the median margin over `space` is about 0.003 xT.
-On `press_escape`, held-out seeds 100–139: `pressure` is selected in 31/40 and `space` in 9/40 —
-the seeds where H4 carried the ball and the space lens measures what the best pass was worth
-instead; `scan` never (H4's own scans change nothing, Δscan ≈ 0). Report:
+On `press_escape`, fresh held-out seeds 200–239: `pressure` is selected in 38/40 and `space` in
+2/40 — the seeds where the softmax drew a poor long ball (probability 0.02) and the space lens
+measures what the best pass was worth instead; `scan` never (H4's own scans change nothing,
+Δscan ≈ 0). Before the decision model saw the presser's run-in (§3.5), H4 carried into the press
+in 7 of seeds 100–139 and `space` won 9/40 there (now 1/40). Report:
 `eval/reports/hero_lens_press_escape.md`.
 
 ### 5.3 Claims and verifier

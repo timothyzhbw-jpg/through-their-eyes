@@ -1,7 +1,7 @@
 """Hero lens eval (SPEC 3.6, 5.2): is the scenario's moment explained by the lens it was built for,
 and does the scenario's intervention change the outcome?
 
-    uv run python -m eval.hero_lens --scenario press_escape --seeds 100-139
+    uv run python -m eval.hero_lens --scenario press_escape
 
 Every hero scenario names the lens it is built to show (`Scenario.lens`) and the intervention that
 tests it (`Scenario.intervention`, re-simulated with keyed randomness, SPEC 3.7):
@@ -14,8 +14,10 @@ tests it (`Scenario.intervention`, re-simulated with keyed randomness, SPEC 3.7)
 For every seed the hero's decision moment is detected (`explain.moments`), all three lenses are
 computed (`explain.lenses`), and the selected one is compared with the scenario's. Targets: the
 intended lens in at least 60% of held-out seeds, and the intervention changes the outcome in at
-least 60% (SPEC 3.6: otherwise the moment is not that lens's story). Writes
-eval/reports/hero_lens_<scenario>.md.
+least 60% (SPEC 3.6: otherwise the moment is not that lens's story). Held-out seeds are 100-139,
+and 200-239 for `press_escape` (100-139 were seen while its decision-model fix was made). Writes
+eval/reports/hero_lens_<scenario>.md on the held-out seeds, hero_lens_<scenario>_<seeds>.md on any
+others, or the file `--out` names.
 """
 
 from __future__ import annotations
@@ -33,6 +35,9 @@ from sim.scenarios import SCENARIOS
 
 REPORTS = Path(__file__).parent / "reports"
 TARGET = 0.6
+HELD_OUT = "100-139"
+# 100-139 were seen while the decision model was fixed for this scenario (SPEC 3.5, 3.6).
+HELD_OUT_BY_SCENARIO = {"press_escape": "200-239"}
 
 
 @dataclass
@@ -164,14 +169,31 @@ def _parse_seeds(text: str) -> list[int]:
     return list(range(int(lo), int(hi or lo) + 1))
 
 
+def default_seeds(scenario: str) -> list[int]:
+    """The scenario's held-out seeds."""
+    return _parse_seeds(HELD_OUT_BY_SCENARIO.get(scenario, HELD_OUT))
+
+
+def report_path(scenario: str, seeds: list[int], out: Path | None = None) -> Path:
+    """`out`, else hero_lens_<scenario>.md for the held-out seeds and
+    hero_lens_<scenario>_<first>-<last>.md for any others, so they never overwrite it."""
+    if out is not None:
+        return out
+    if seeds == default_seeds(scenario):
+        return REPORTS / f"hero_lens_{scenario}.md"
+    return REPORTS / f"hero_lens_{scenario}_{seeds[0]}-{seeds[-1]}.md"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scenario", default="press_escape", choices=sorted(SCENARIOS))
-    parser.add_argument("--seeds", default="100-139")
+    parser.add_argument("--seeds", help="e.g. 100-139 (default: the scenario's held-out seeds)")
+    parser.add_argument("--out", type=Path, help="report path (default: by scenario and seeds)")
     args = parser.parse_args()
-    _, text = evaluate(args.scenario, _parse_seeds(args.seeds))
-    REPORTS.mkdir(exist_ok=True)
-    path = REPORTS / f"hero_lens_{args.scenario}.md"
+    seeds = _parse_seeds(args.seeds) if args.seeds else default_seeds(args.scenario)
+    _, text = evaluate(args.scenario, seeds)
+    path = report_path(args.scenario, seeds, args.out)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     print(text.split("\n\nΔ per lens")[0])
     print(f"\nwrote {path}")
