@@ -323,6 +323,15 @@ header {
 .caption.cf {
   border-left-color: var(--gold);
 }
+/* Large print for audio description (SPEC 1): half as large again, and the evidence hint too. */
+.caption.large {
+  font-size: 26px;
+  line-height: 1.35;
+  padding: 12px 18px;
+}
+.caption.large .caption-more {
+  font-size: 16px;
+}
 .caption:hover .caption-more,
 .caption[aria-expanded="true"] .caption-more {
   color: var(--fg);
@@ -335,6 +344,9 @@ header {
   .caption {
     font-size: 14px;
     bottom: 36px;
+  }
+  .caption.large {
+    font-size: 20px;
   }
 }
 .no-webgl,
@@ -1037,6 +1049,13 @@ header {
 .lines .t {
   font: 500 12px/1.7 var(--font-data);
   color: var(--muted);
+}
+.lines.large {
+  font-size: 20px;
+  line-height: 1.45;
+}
+.lines.large .t {
+  font-size: 16px;
 }
 .lines .withheld {
   display: grid;

@@ -71,8 +71,11 @@ The deploy workflow sets it from the repo variable `TTE_API_URL`, and `infra/dep
   - **What if…?:** free questions go to `POST /api/whatif`; a verified answer replays from the
     decision with the forced run as the ghost (from the bundled what-ifs), a refusal is shown as
     such.
-  - **Voice:** off by default. **Sound on** sends each caption's SSML to `POST /api/tts` (Azure AI
-    Speech) and plays the WAV as the line comes up; clips are kept per cue.
+  - **Voice:** off by default; choosing the **Audio description** audience turns it on (and makes
+    the captions large print), leaving it turns it off again unless the viewer set the sound.
+    **Sound on** sends each caption's SSML to `POST /api/tts` (Azure AI Speech) and plays the WAV as
+    the line comes up; clips are kept per cue. While the voice is off, a screen reader hears each
+    caption from a polite live region.
 
 The API's CORS allows only the static website's origin, so for `npm run dev` against the deployed
 service let Vite forward the API paths (dev server only):
@@ -123,7 +126,7 @@ src/
   api/        the API client (zod-checked responses, timeouts) and VITE_API_URL
   live/       the live stream: WebSocket feed, frame ordering, control messages, live playhead
   breakdown/  the breakdown on screen per persona and language: service or bundled, checked
-  voice/      spoken narration from /api/tts, off by default
+  voice/      spoken narration from /api/tts, off by default (on for audio description)
   data/       load the export (service or bundled), sample a player at a fractional frame, eased yaw
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor

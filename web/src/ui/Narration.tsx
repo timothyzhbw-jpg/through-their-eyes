@@ -6,7 +6,7 @@
 // breakdown came from (cached or generated, model or template, rate limit and daily cap) and
 // turns the voice on.
 
-import { PERSONAS } from "../api/client";
+import { DESCRIBED, PERSONAS } from "../api/client";
 import type { Hero } from "../data/hero";
 import {
   claimRun,
@@ -49,26 +49,38 @@ export function KindTags({ narration, line }: { narration: Narration; line: Payl
 const hasCounterfactual = (narration: Narration, line: PayloadLine) =>
   lineKinds(narration, line).includes("counterfactual");
 
-/** The current voice line over the first-person view. Click to open its evidence. */
+/**
+ * The current voice line over the first-person view. Click to open its evidence. Large print for
+ * audio description (SPEC 1). A screen reader hears each line from a live region that is always
+ * present, except while the voice speaks the lines itself.
+ */
 export function Caption() {
-  const { playback, controls } = useSession();
-  const { narration } = useBreakdown();
+  const { playback, controls, voice } = useSession();
+  const { narration, persona } = useBreakdown();
   const lineId = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
+  const speaking = useStore(voice.state, (s) => s.on);
   const line = lineOf(narration, lineId);
-  if (!narration || !line) return null;
+  const large = DESCRIBED.has(persona) ? " large" : "";
   return (
-    <button
-      type="button"
-      className={hasCounterfactual(narration, line) ? "caption cf" : "caption"}
-      aria-expanded={open === line.id}
-      onClick={() => controls.openLine(line.id)}
-      title="Open the evidence for this line"
-    >
-      <KindTags narration={narration} line={line} />
-      <span className="caption-text">{line.text}</span>
-      {line.claims.length > 0 && <span className="caption-more">Evidence ›</span>}
-    </button>
+    <>
+      <p className="sr-only" aria-live={speaking ? "off" : "polite"}>
+        {line?.text}
+      </p>
+      {narration && line && (
+        <button
+          type="button"
+          className={(hasCounterfactual(narration, line) ? "caption cf" : "caption") + large}
+          aria-expanded={open === line.id}
+          onClick={() => controls.openLine(line.id)}
+          title="Open the evidence for this line"
+        >
+          <KindTags narration={narration} line={line} />
+          <span className="caption-text">{line.text}</span>
+          {line.claims.length > 0 && <span className="caption-more">Evidence ›</span>}
+        </button>
+      )}
+    </>
   );
 }
 
@@ -280,6 +292,7 @@ export function BreakdownChoice() {
             key={l}
             type="button"
             aria-pressed={language === l}
+            lang={l}
             disabled={!online}
             onClick={() => controls.setLanguage(l)}
           >
@@ -292,7 +305,8 @@ export function BreakdownChoice() {
   );
 }
 
-/** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on. */
+/** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on or
+ * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. */
 export function SoundToggle() {
   const { voice, controls } = useSession();
   const on = useStore(voice.state, (s) => s.on);
@@ -309,6 +323,7 @@ export function SoundToggle() {
     <button
       type="button"
       className={status === "failed" ? "sound failed" : "sound"}
+      aria-label="Sound"
       aria-pressed={on}
       disabled={!voice.available}
       title={title}
@@ -355,7 +370,7 @@ function BreakdownNote() {
 /** Every line of the breakdown's narration; each opens its evidence. */
 export function NarrationPanel() {
   const { playback, controls } = useSession();
-  const { narration, payloadErrors, status } = useBreakdown();
+  const { narration, payloadErrors, status, persona } = useBreakdown();
   const caption = useStore(playback, (s) => s.captionLine);
   const open = useStore(playback, (s) => s.evidenceLine);
   return (
@@ -377,7 +392,7 @@ export function NarrationPanel() {
       <BreakdownChoice />
       <BreakdownNote />
       {narration ? (
-        <ol className="lines">
+        <ol className={DESCRIBED.has(persona) ? "lines large" : "lines"}>
           {narration.lines.map((line) => (
             <li key={line.id} className={line.id === caption ? "now" : undefined}>
               <button

@@ -7,8 +7,11 @@ import { z } from "zod";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 
 export const MATCH_ID = "blind_side_run-3"; // api/store.py match_id(scenario, seed)
-export const PERSONAS = ["casual", "analyst", "player_fan", "coach"] as const; // agents/schemas.py
+// agents/schemas.py Persona
+export const PERSONAS = ["casual", "analyst", "player_fan", "coach", "audio_description"] as const;
 export type Persona = (typeof PERSONAS)[number];
+/** Audiences who listen rather than watch (agents/delivery.py DESCRIBED): sound on, large print. */
+export const DESCRIBED: ReadonlySet<Persona> = new Set<Persona>(["audio_description"]);
 
 export const PROBE_TIMEOUT_MS = 3000; // GET /health: past this, the app runs on offline data
 export const EXPORT_TIMEOUT_MS = 15000; // the first request after a start re-simulates (≈ 6 s)

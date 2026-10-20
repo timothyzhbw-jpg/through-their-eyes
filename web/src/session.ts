@@ -8,7 +8,7 @@
 // fixture and the hand-written plan play as before ("offline data").
 
 import { createContext, useContext } from "react";
-import { PERSONAS, type Api, type Persona } from "./api/client";
+import { DESCRIBED, PERSONAS, type Api, type Persona } from "./api/client";
 import {
   apiBreakdown,
   bundledBreakdown,
@@ -172,6 +172,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   let asking = false; // a breakdown request is in flight
   let askAgain = false; // the viewer chose again meanwhile: ask for that one next
   let askTurn = 0;
+  let soundByAudience = false; // the voice is on because audio description was chosen
 
   const run = () => hero.runs[playback.get().mode];
   const isLive = () => playback.get().live && !!feed?.isOpen;
@@ -243,7 +244,20 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     const next = { ...current, ...patch };
     if (next.persona === current.persona && next.language === current.language) return;
     breakdown.set(patch);
+    if (next.persona !== current.persona) followAudience(next.persona);
     if (current.status !== "waiting") void requestBreakdown();
+  };
+  /** Audio description is heard, not watched: choosing it turns the voice on, and leaving it turns
+   * the voice off again unless the viewer has set the sound since. Other audiences start silent. */
+  const followAudience = (persona: Persona) => {
+    if (DESCRIBED.has(persona)) {
+      if (voice.state.get().on) return;
+      voice.setOn(true);
+      soundByAudience = voice.state.get().on;
+    } else if (soundByAudience) {
+      soundByAudience = false;
+      voice.setOn(false);
+    }
   };
   /** Watch the match from the live stream (SPEC 2): from where it was, or again from the start. */
   const goLive = () => {
@@ -339,7 +353,10 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     requestBreakdown: () => void requestBreakdown(),
     setPersona: (persona: Persona) => choose({ persona }),
     setLanguage: (language: Language) => choose({ language }),
-    setSound: (on: boolean) => voice.setOn(on),
+    setSound: (on: boolean) => {
+      soundByAudience = false; // the viewer's own choice
+      voice.setOn(on);
+    },
 
     goLive,
     /** Autoplay online: watch live, then play the breakdown once the moment is detected. */
