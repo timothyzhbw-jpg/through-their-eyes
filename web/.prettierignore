@@ -1,3 +1,4 @@
 dist
 public/data
 package-lock.json
+src/pitchControl/snapshots.json

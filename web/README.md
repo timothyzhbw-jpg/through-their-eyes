@@ -9,11 +9,12 @@ match comes from `sim/`, the clubs and players are fictional.
 cd web
 npm ci
 npm run dev          # http://localhost:5173
-npm test             # plan validation, executor, comfort-mode yaw
+npm test             # plan validation, executor, comfort-mode yaw; GPU tests need Chrome (below)
 npm run typecheck
 npm run build        # -> web/dist (static files for the Azure Storage static website)
 npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
+npm run fps          # after a build: fps with the pitch-control overlay off and on (below)
 ```
 
 ## URL parameters
@@ -165,6 +166,7 @@ src/
   telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
   views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
               toolbars and HUD, the broadcast camera and the stadium
+  pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
               the transport and live controls a match shares; useView() for the shared views
@@ -208,9 +210,27 @@ src/
   hazed on purpose; glow and shadows are faked (sprites and decals, no bloom pass or shadow maps)
   and the 3D view uses ACES tone mapping.
 - **Tactical board.** An orthographic camera straight down. Layers are drawn in a fixed order
-  with depth testing off, like a 2D canvas, so GLSL overlays such as pitch control can be added
-  as further layers. The vision cone is already a fragment shader of the sim's FOV model
-  (angular term and distance decay of `analytics/vision.py`; occlusion not yet).
+  with depth testing off, like a 2D canvas. The vision cone is a fragment shader of the sim's FOV
+  model (angular term and distance decay of `analytics/vision.py`; occlusion not yet).
+- **Pitch control** (SPEC 4.2, 7). Toggle "Pitch control", off by default. A fragment shader over
+  the whole pitch evaluates the closed-form model of `analytics/pitch_control.py` per pixel, with
+  its parameters (σ = 0.45 s, reaction 0.7 s, v_max = 5 m/s): coral where the home team gets
+  there first, blue where the away team does, clear where it is contested, and a light line on
+  the frontier (control = ½). Each redraw feeds it both teams' positions and velocities as
+  uniforms. The export has no velocities, so the board takes the backward difference of the
+  positions: the sim steps with semi-implicit Euler, so that is the sim's own velocity up to the
+  1 mm rounding, and the board shows what the `get_pitch_control` MCP tool computes.
+  - _Parity with numpy_ (SPEC 4): `pitchControl.gpu.test.ts` renders the shader with three.js in
+    headless Chrome on 10 fixed snapshots of the hero moment, at the centre of every 1 m cell, and
+    compares with the numpy kernel: max abs diff < 0.02 (SPEC) and < 1e-3 (what float32 should
+    give; it measures about 5e-5, the reference's rounding to 1e-4). It also checks that swapping
+    the teams gives 1 − P and that the colour ramp blends as intended. The snapshots and the numpy
+    values are in `src/pitchControl/snapshots.json`, written by
+    `uv run python -m eval.pitch_control_parity` (repo root); `tests/test_pitch_control_parity.py`
+    checks them against the kernel.
+  - _Frame rate:_ `npm run build && npm run fps` plays the hero moment in Chrome and prints fps
+    with the overlay off and on, then the shader's own cost per draw; `npm run fps -- --headed`
+    measures on this machine's GPU.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
   voice steps name its line ids. Click a caption (or any line in the Narration panel) and the
   evidence card under the views lists each claim with its kind (observed / computed /
@@ -305,6 +325,7 @@ checks the whole tree in CI.
 | @types/react, @types/react-dom 19.3.0, @types/three 0.186.0 (dev) | MIT        | type definitions                                                       |
 | vitest 5.0.3 (dev)                                                | MIT        | unit tests, reusing the Vite config                                    |
 | prettier 3.9.9 (dev)                                              | MIT        | formatting, checked in CI like `ruff format`                           |
+| playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests and `npm run fps`; no browser download     |
 
 Transitive exceptions, reviewed by hand: `lightningcss` (Vite's CSS minifier) is MPL-2.0, used
 unmodified at build time only (allowed by CLAUDE.md); `webgl-constants` (via drei → detect-gpu)
@@ -312,3 +333,12 @@ has no licence field in its package.json, its LICENSE file is MIT.
 
 Fonts (Barlow, Saira Condensed, IBM Plex Mono) are loaded from Google Fonts at runtime, as in
 `demo/`; they are under the SIL Open Font License and are not bundled.
+
+## GPU tests (Chrome)
+
+`npm test` includes `src/pitchControl/pitchControl.gpu.test.ts`, which runs real GLSL in headless
+Chrome. `scripts/gpu.mjs` finds a browser: `$TTE_CHROME` (a path), else a Playwright-installed
+Chromium under `$PLAYWRIGHT_BROWSERS_PATH`, else the system's Google Chrome (GitHub's Ubuntu
+runners have one). Without a GPU, Chrome draws WebGL with SwiftShader, its software rasteriser;
+on CI (`CI` set) the tests always use SwiftShader so runs are reproducible, elsewhere they use the
+GPU when there is one. The test fails, rather than skips, when no browser is found.

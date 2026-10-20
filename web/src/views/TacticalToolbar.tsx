@@ -45,6 +45,11 @@ export function TacticalToolbar() {
           label="Blind side"
           title="Live: who has lost sight of a player on the move, from tracking only"
         />
+        <Chip
+          name="pitchControl"
+          label="Pitch control"
+          title="Which team gets to each point of the pitch first (home: coral, away: blue)"
+        />
         {hero.counterfactual && (
           <Chip
             name="cfGhost"

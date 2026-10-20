@@ -180,7 +180,7 @@ Every variable is documented in [.env.example](.env.example).
 ## Architecture
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
-  <img src="docs/architecture.svg" alt="Architecture. The brief's pipeline Ingest, Interpret, Explain, Render, Personalize runs over sim/, analytics/, explain/, agents/ + api/ and web/. The agent crew is one Microsoft Agent Framework workflow: Director, then Analyst (with our MCP tool server from the CLI), then Telestrator and narration in parallel, narration and the deterministic Verifier in a rewrite loop, and Voice joining both lanes. It runs on Microsoft Foundry, Azure AI Speech, Azure Container Apps, an Azure Storage static website, Azure Cosmos DB, Application Insights and GitHub Actions.">
+  <img src="docs/architecture.svg" alt="Architecture. The brief's pipeline Ingest, Interpret, Explain, Render, Personalize runs over sim/, analytics/, explain/, agents/ + api/ and web/. The agent crew is one Microsoft Agent Framework workflow: Director, then Analyst (with our MCP tool server), then Telestrator and narration in parallel, narration and the deterministic Verifier in a rewrite loop, and Voice joining both lanes. It runs on Microsoft Foundry, Azure AI Speech, Azure Container Apps, an Azure Storage static website, Azure Cosmos DB, Application Insights and GitHub Actions.">
 </picture>
 
 Model steps run on Microsoft Foundry and fall back to a deterministic template; the Verifier is

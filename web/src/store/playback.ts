@@ -23,6 +23,7 @@ export interface PlaybackState {
   cfGhost: boolean; // ghost path of the other run
   options: boolean; // pass options at the decision (shown around the decision frame only)
   blindSide: boolean; // blind-side alerts, live (SPEC 4.4)
+  pitchControl: boolean; // team pitch control on the tactical board (SPEC 4.2, 7)
   focus: Focus; // which view gets the space
   camera: Camera3D; // the 3D view's camera
   scanMarker: string | null; // scan id highlighted by a plan
@@ -71,6 +72,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     cfGhost: false,
     options: true,
     blindSide: true,
+    pitchControl: false,
     focus: "split",
     camera: "pov",
     scanMarker: null,

@@ -62,7 +62,8 @@ import {
   type WhatIfs,
 } from "./whatif/whatif";
 
-export type Toggle = "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options" | "blindSide";
+export type Toggle =
+  "cone" | "beliefGhosts" | "cfGhost" | "comfort" | "options" | "blindSide" | "pitchControl";
 
 export interface SessionOptions {
   api?: Api | null; // the live service; null or absent: offline data
