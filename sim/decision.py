@@ -6,6 +6,15 @@ Value of an option = expected threat after the action:
 P(completion) of a pass = P(no opponent intercepts along the ball path) * pitch control of the
 receiver's team at the target. Older beliefs are less certain: each player's timing uncertainty
 grows with the age of his last sighting.
+
+An opponent wins the ball in either of two ways, both from the time-to-intercept motion model
+(SPEC 4.1: he keeps his velocity for the reaction time, then runs at v_max):
+- he reacts and gets to a point of the ball's path before the ball does (time to intercept);
+- before he reacts, the ball comes within the control radius of where his run takes him at that
+  same moment (the run-in). A presser sprinting at the carrier, or an opponent standing on the
+  passing lane, is in the ball's way without reacting to anything; the closed-form time to
+  intercept only counts arrivals after the reaction time, so it misses him. The sim wins the ball
+  by the same radius (`SimParams.control_radius`: control of a free ball, tackles).
 """
 
 from __future__ import annotations
@@ -19,7 +28,7 @@ from analytics.pitch_control import control_from_times, logistic
 from analytics.tti import REACTION_S, V_MAX, time_to_intercept
 from analytics.xt import GOAL_X, xt_for
 from sim.ball import BallParams, flight_time, launch_speed, path_distances
-from sim.config import HALF_LENGTH, HALF_WIDTH
+from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
 
 
 @dataclass(frozen=True)
@@ -29,6 +38,7 @@ class DecisionParams:
     sigma: float = 0.45  # s, timing uncertainty of a fresh sighting
     uncertainty0: float = 0.3  # m
     uncertainty_growth: float = 1.0  # m per second of belief age
+    control_radius: float = SimParams.control_radius  # m, an opponent this close wins the ball
     arrival_speed_per_m: float = 0.35  # longer passes arrive faster
     arrival_speed_range: tuple[float, float] = (6.0, 12.0)
     max_pass_speed: float = 30.0
@@ -86,6 +96,61 @@ def _sigma(ctx: DecisionContext, players: np.ndarray) -> np.ndarray:
     return p.sigma + (p.uncertainty0 + p.uncertainty_growth * ctx.age_s[players]) / p.v_max
 
 
+def _run_in_miss(
+    pos: np.ndarray, vel: np.ndarray, times: np.ndarray, path: np.ndarray, reaction: float
+) -> np.ndarray:
+    """Closest approach (m) of each of N players to the ball while he has not reacted yet.
+
+    He keeps his velocity (pos + vel * t, as in time to intercept); the ball is at `path` ((K, 2))
+    at `times` ((K,), ascending) and moves linearly in between. Only t <= reaction counts. Both
+    move linearly on each piece, so the closest approach is exact for the sampled path. inf when
+    the path starts after the reaction time.
+    """
+    k = int(np.searchsorted(times, reaction, side="right"))
+    if k == 0:
+        return np.full(len(pos), np.inf)
+    t, b = times[:k], path[:k]
+    if k < len(times) and t[-1] < reaction:  # close the window at the reaction time
+        frac = (reaction - t[-1]) / (times[k] - t[-1])
+        t = np.append(t, reaction)
+        b = np.vstack([b, path[k - 1] + frac * (path[k] - path[k - 1])])
+    gap = b[None, :, :] - (pos[:, None, :] + vel[:, None, :] * t[None, :, None])  # (N, K, 2)
+    if len(t) == 1:
+        return np.linalg.norm(gap[:, 0], axis=-1)
+    start, step = gap[:, :-1], np.diff(gap, axis=1)
+    s = -np.einsum("nkd,nkd->nk", start, step) / np.maximum(
+        np.einsum("nkd,nkd->nk", step, step), 1e-12
+    )
+    closest = start + np.clip(s, 0.0, 1.0)[..., None] * step
+    return np.linalg.norm(closest, axis=-1).min(axis=1)
+
+
+def _p_run_in(ctx: DecisionContext, players: np.ndarray, miss: np.ndarray) -> np.ndarray:
+    """P(the ball comes within the control radius of a player's run before he reacts).
+
+    Before the reaction his path is fixed by the belief, so the only uncertainty is where he is:
+    the belief's position uncertainty (m), the same that `_sigma` turns into time.
+    """
+    p = ctx.params
+    spread = p.uncertainty0 + p.uncertainty_growth * ctx.age_s[players]
+    return logistic(np.pi / (np.sqrt(3.0) * spread) * (p.control_radius - miss))
+
+
+def _p_keep_carry(
+    ctx: DecisionContext, ball: np.ndarray, target: np.ndarray, opp: np.ndarray
+) -> float:
+    """P(no opponent wins the ball on a carry from `ball` to `target` in `carry_time`): he gets
+    to the target first, or runs into the ball on the way before he reacts."""
+    p = ctx.params
+    tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], target[None], p.reaction, p.v_max)
+    p_lose = logistic(np.pi / (np.sqrt(3.0) * _sigma(ctx, opp)) * (p.carry_time - tti[:, 0]))
+    times = np.array([p.path_step_s, p.carry_time])
+    path = ball + (times / p.carry_time)[:, None] * (target - ball)
+    miss = _run_in_miss(ctx.pos[opp], ctx.vel[opp], times, path, p.reaction)
+    p_lose = np.maximum(p_lose, _p_run_in(ctx, opp, miss))
+    return float(np.prod(1.0 - p_lose))
+
+
 def pass_speed(
     distance: float, p: DecisionParams = DecisionParams(), bp: BallParams = BallParams()
 ) -> float:
@@ -120,6 +185,8 @@ def _pass_success(
         tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], path, p.reaction, p.v_max)
         sig = _sigma(ctx, opp)[:, None]
         p_int = logistic(np.pi / (np.sqrt(3.0) * sig) * (times[None, :] - tti)).max(axis=1)
+        miss = _run_in_miss(ctx.pos[opp], ctx.vel[opp], times, path, p.reaction)
+        p_int = np.maximum(p_int, _p_run_in(ctx, opp, miss))
         p_clear = float(np.prod(1.0 - p_int))
     t_att = time_to_intercept(ctx.pos[mates], ctx.vel[mates], target[None], p.reaction, p.v_max)
     t_def = time_to_intercept(ctx.pos[opp], ctx.vel[opp], target[None], p.reaction, p.v_max)
@@ -182,10 +249,7 @@ def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
         )
 
     carry_target = _clip_to_pitch(ball + np.array([sign * p.carry_distance, 0.0]))
-    tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], carry_target[None], p.reaction, p.v_max)
-    sig = _sigma(ctx, opp)
-    p_lose = logistic(np.pi / (np.sqrt(3.0) * sig) * (p.carry_time - tti[:, 0]))
-    p_keep = float(np.prod(1.0 - p_lose))
+    p_keep = _p_keep_carry(ctx, ball, carry_target, opp)
     options.append(
         OptionEval(
             "carry",
@@ -221,7 +285,6 @@ def option_success(ctx: DecisionContext, action: str, target: tuple[float, float
     vs it was" (SPEC 5.1). Same functions, so on the belief context it returns the option's own
     p_success. None when a pass is not playable from the ball.
     """
-    p = ctx.params
     n = len(ctx.team)
     c = ctx.carrier
     ball = ctx.pos[c] if ctx.ball is None else np.asarray(ctx.ball, dtype=float)
@@ -232,9 +295,7 @@ def option_success(ctx: DecisionContext, action: str, target: tuple[float, float
         mates = np.flatnonzero((ctx.team == ctx.team[c]) & (np.arange(n) != c))
         return _pass_success(ctx, ids.index(action[5:]), ball, point, opp, mates)
     if action == "carry":
-        tti = time_to_intercept(ctx.pos[opp], ctx.vel[opp], point[None], p.reaction, p.v_max)
-        p_lose = logistic(np.pi / (np.sqrt(3.0) * _sigma(ctx, opp)) * (p.carry_time - tti[:, 0]))
-        return float(np.prod(1.0 - p_lose))
+        return _p_keep_carry(ctx, ball, point, opp)
     if action == "shot":
         d_goal = float(np.linalg.norm(point - ball))
         return float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
