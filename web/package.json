@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
     "licenses": "node scripts/check-licenses.mjs",
+    "fps": "node scripts/fps.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
