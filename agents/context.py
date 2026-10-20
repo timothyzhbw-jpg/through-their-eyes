@@ -2,6 +2,10 @@
 
 Built once per breakdown and shared by every agent and by the MCP tools. Claims are verified here,
 before any model sees them, so agents can only pick among facts that already hold.
+
+The counterfactual is the scenario's own intervention (`sim.counterfactual.hero_counterfactual`):
+the run without the key scan for a scan hero, the run with the hero forced to keep the ball for a
+pressure hero. Either way web/ and plans call it `cf1`.
 """
 
 from __future__ import annotations
@@ -15,11 +19,11 @@ from explain.claims import Claim
 from explain.functions import EvalContext
 from explain.lenses import explain_moments
 from explain.verifier import Verdict, Verifier
-from sim.counterfactual import CounterfactualResult, drop_scan_counterfactual
+from sim.counterfactual import CounterfactualResult, WhatIfResult, hero_counterfactual
 from sim.model import Event
 from sim.run import MatchRun
 
-COUNTERFACTUAL_ID = "cf1"  # the id web/ and plans use for the drop-scan run (sim/export.py)
+COUNTERFACTUAL_ID = "cf1"  # the id web/ and plans use for the hero's counterfactual run
 
 
 @dataclass
@@ -27,9 +31,9 @@ class MomentContext:
     scenario: str
     seed: int
     run: MatchRun
-    cf: CounterfactualResult
+    cf: CounterfactualResult | WhatIfResult
     cards: dict[str, MomentCard]
-    card: MomentCard  # the hero's decision after a scan
+    card: MomentCard  # the hero's decision
     claims: dict[str, Claim]
     verdicts: dict[str, Verdict]
     evaluator: EvalContext
@@ -37,12 +41,14 @@ class MomentContext:
 
     @classmethod
     def load(cls, scenario: str, seed: int, audit: AuditSink | None = None) -> MomentContext:
-        cf = drop_scan_counterfactual(scenario, seed)
+        cf = hero_counterfactual(scenario, seed)
         run = cf.factual
         cards = {c.id: c for c in explain_moments(run)}
+        decision = run.hero_decision()
         card = next(
-            c for c in cards.values() if c.actor == run.hero and "decision_after_scan" in c.tags
-        )
+            c for c in cards.values()
+            if not c.live_only and (c.actor, c.anchor_frame) == (decision.player, decision.frame)
+        )  # fmt: skip
         evaluator = EvalContext(run, counterfactuals={cf.scan_id: cf}, cards=cards)
         sink = audit or MemoryAuditSink()
         verifier = Verifier(evaluator, sink=sink)
@@ -70,8 +76,16 @@ class MomentContext:
         return [e.id for e in self.run.events if e.type == "scan"]
 
     @property
-    def key_scan(self) -> Event:
+    def key_scan(self) -> Event | None:
+        """The scan the counterfactual drops; None when the intervention is not a dropped scan."""
+        if not isinstance(self.cf, CounterfactualResult):
+            return None
         return self.run.event(self.cf.scan_id)
+
+    @property
+    def intervention(self) -> str:
+        """What the counterfactual run changed: "drop_scan" or "force:<action>"."""
+        return "drop_scan" if self.key_scan is not None else f"force:{self.cf.action}"
 
     @property
     def counterfactual_id(self) -> str:

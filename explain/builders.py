@@ -19,7 +19,7 @@ from explain import lexicon
 from explain.cards import MomentCard
 from explain.claims import Claim, Predicate, Slot, event, fn, slot
 from explain.functions import EvalContext, Inconclusive, Refuted
-from sim.counterfactual import CounterfactualResult
+from sim.counterfactual import CounterfactualResult, WhatIfResult
 from sim.model import Decision, Event
 from sim.run import MatchRun
 from sim.scenarios import SCENARIOS
@@ -37,7 +37,7 @@ class HeroRefs:
     reception: Event
     decision: Decision
     hero_pass: Event | None  # the pass or shot the hero chose, if any
-    key_scan: Event
+    key_scan: Event | None  # the scripted key scan of a scan hero; None for other heroes
     card: MomentCard | None = None  # the hero's decision moment, when detected
 
     @classmethod
@@ -65,7 +65,7 @@ class HeroRefs:
             reception=reception,
             decision=decision,
             hero_pass=hero_pass,
-            key_scan=run.key_scan(),
+            key_scan=next((e for e in run.events if e.type == "scan" and e.attrs.get("key")), None),
             card=card,
         )
 
@@ -81,6 +81,18 @@ class HeroRefs:
     @property
     def at_action(self) -> str:
         return self._anchor("action", self.hero_pass)
+
+    @property
+    def completion(self) -> Event | None:
+        """The reception that completed the hero's pass, if it was completed."""
+        if self.hero_pass is None or self.hero_pass.attrs.get("outcome") != "complete":
+            return None
+        end, receiver = self.hero_pass.attrs["end"], self.hero_pass.attrs["receiver"]
+        return next(
+            (e for e in self.run.events
+             if e.type == "reception" and e.player == receiver and e.frame == end),
+            None,
+        )  # fmt: skip
 
 
 def _eq(lhs, rhs) -> Predicate:
@@ -128,7 +140,9 @@ def time_since_last_scan(ctx: EvalContext, r: HeroRefs) -> Claim:
     )
 
 
-def key_scan_duration(ctx: EvalContext, r: HeroRefs) -> Claim:
+def key_scan_duration(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    if r.key_scan is None:
+        return None
     dur = fn("event_attr", event=slot("scan"), attr="duration_s")
     value = ctx.value(dur, {"scan": r.key_scan.id})
     return Claim(
@@ -249,7 +263,9 @@ def blind_side_run(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     )
 
 
-def scan_before_reception(ctx: EvalContext, r: HeroRefs) -> Claim:
+def scan_before_reception(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    if r.key_scan is None:
+        return None
     return Claim(
         id="scan_before_reception",
         template="{player} checked his shoulder before the ball reached him.",
@@ -321,6 +337,8 @@ def counterfactual_pass_success(
     ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult
 ) -> Claim | None:
     """The same he-thought-vs-it-was for the runner's option in the run without the look."""
+    if not isinstance(cf, CounterfactualResult):  # "without that look": scan heroes only
+        return None
     if r.runner is None or r.hero_pass is None:
         return None
     belief, truth = _thought_vs_was(r.runner, r.at_action, cf=cf.scan_id)
@@ -343,6 +361,8 @@ def counterfactual_pass_success(
 
 def counterfactual_pass(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim | None:
     d = cf.counterfactual_decision
+    if not isinstance(cf, CounterfactualResult):  # "without that look": scan heroes only
+        return None
     if d is None or not d.chosen.startswith("pass:"):
         return None
     alt = next(
@@ -362,16 +382,68 @@ def counterfactual_pass(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult)
     )  # fmt: skip
 
 
-def counterfactual_value(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim:
+def counterfactual_value(
+    ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult | WhatIfResult
+) -> Claim:
     delta = fn("cf_delta", of="possession_value", scan=cf.scan_id)
+    if isinstance(cf, CounterfactualResult):
+        return Claim(
+            id="cf_value",
+            template="That look was worth {dxt} in expected threat.",
+            templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
+            slots={"dxt": _num(ctx.value(delta), 2)},
+            predicate=_approx(delta, slot("dxt"), 2),
+            evidence=[cf.scan_id],
+        )
+    # A forced option (SPEC 3.7): what he did against what he was made to do instead.
+    value = ctx.value(delta)
+    more = value >= 0
+    instead = {"carry": ("keeping the ball", "持球")}.get(
+        cf.action, ("the other option", "另一种处理")
+    )  # fmt: skip
     return Claim(
         id="cf_value",
-        template="That look was worth {dxt} in expected threat.",
-        templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
-        slots={"dxt": _num(ctx.value(delta), 2)},
-        predicate=_approx(delta, slot("dxt"), 2),
-        evidence=[cf.scan_id],
-    )
+        template=f"What {{player}} did was worth {{dxt}} {'more' if more else 'less'} in "
+        f"expected threat than {instead[0]}.",
+        templates={"zh": f"{{player}}的处理比{instead[1]}{'多' if more else '少'}{{dxt}}的预期"
+                         "威胁（xT）。"},
+        slots={"player": Slot(ref=r.hero), "dxt": _num(abs(value), 2)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
+            _approx(delta, slot("dxt", scale=1.0 if more else -1.0), 2),
+        ]),
+        evidence=[r.hero_pass.id if r.hero_pass else r.reception.id],
+    )  # fmt: skip
+
+
+def counterfactual_carry_lost(
+    ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult | WhatIfResult
+) -> Claim | None:
+    """Had he kept the ball (the forced carry), who would have won it off him."""
+    if not isinstance(cf, WhatIfResult) or cf.action != "carry":
+        return None
+    d = cf.counterfactual_decision
+    tackle = next(
+        (e for e in cf.counterfactual.events
+         if e.type == "tackle" and e.attrs.get("won_from") == r.hero and d is not None
+         and e.frame > d.frame),
+        None,
+    )  # fmt: skip
+    if tackle is None:
+        return None
+    at = {"event": tackle.id, "cf": cf.scan_id}
+    return Claim(
+        id="cf_carry_lost",
+        template="Had {player} kept the ball, {tackler} would have won it off him.",
+        templates={"zh": "如果{player}继续持球，{tackler}会把球抢走。"},
+        slots={"player": Slot(ref=r.hero), "tackler": Slot(ref=tackle.player)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", attr="type", **at), "tackle"),
+            _eq(fn("event_attr", attr="player", **at), slot("tackler")),
+            _eq(fn("event_attr", attr="won_from", **at), slot("player")),
+        ]),
+        evidence=[r.hero_pass.id if r.hero_pass else r.reception.id],
+    )  # fmt: skip
 
 
 def observed_share(ctx: EvalContext, r: HeroRefs, window_s: int = 1) -> Claim:
@@ -467,6 +539,68 @@ def pressure_at_pass(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     )
 
 
+def heavy_pressure(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """The lexicon term "under heavy pressure" (pressing intensity >= 0.7), when it holds."""
+    if r.hero_pass is None:
+        return None
+    pred = lexicon.under_heavy_pressure(slot("player"), anchor=r.at_action)
+    if not ctx.value(pred.lhs, {"player": r.hero}) >= pred.rhs:
+        return None
+    return Claim(
+        id="heavy_pressure",
+        template="{player} was under heavy pressure when he released the ball.",
+        templates={"zh": "{player}是在重压之下出球的。"},
+        slots={"player": Slot(ref=r.hero)},
+        predicate=Predicate(op="all", args=[_pass_by("player", r), pred]),
+        terms=["under heavy pressure"],
+        evidence=[r.hero_pass.id],
+    )
+
+
+def nearest_opponent_at_pass(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    if r.hero_pass is None:
+        return None
+    who = fn("metric_at", metric="nearest_opponent", player=slot("player"), anchor=r.at_action)
+    presser = ctx.value(who, {"player": r.hero})
+    gap = fn("distance", a=slot("player"), b=slot("presser"), anchor=r.at_action)
+    value = ctx.value(gap, {"player": r.hero, "presser": presser})
+    return Claim(
+        id="presser_distance",
+        template="The nearest opponent, {presser}, was {gap|metre|metres} from {player} when he "
+        "released the ball.",
+        templates={"zh": "{player}出球时，离他最近的对手是{presser}，相距{gap}米。"},
+        slots={"player": Slot(ref=r.hero), "presser": Slot(ref=presser), "gap": _num(value, 1)},
+        predicate=Predicate(op="all", args=[
+            _pass_by("player", r), _eq(who, slot("presser")), _approx(gap, slot("gap"), 1),
+        ]),
+        evidence=[r.hero_pass.id],
+    )  # fmt: skip
+
+
+def receiver_pressure(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """Pressing intensity on the receiver as the pass reached him: what the pass escaped to."""
+    rec = r.completion
+    if rec is None:
+        return None
+    at = r._anchor("completion", rec)
+    press = fn("metric_at", metric="pressing_intensity", player=slot("receiver"), anchor=at)
+    value = 100.0 * ctx.value(press, {"receiver": rec.player})
+    return Claim(
+        id="receiver_pressure",
+        template="When the pass reached {receiver}, pressing intensity on him was {pressure}%.",
+        templates={"zh": "球到{receiver}脚下时，他承受的逼抢强度为{pressure}%。"},
+        slots={"receiver": Slot(ref=rec.player), "pressure": _num(value, 0)},
+        predicate=Predicate(
+            op="all",
+            args=[
+                _eq(fn("event_attr", event=at, attr="player"), slot("receiver")),
+                _approx(press, slot("pressure", scale=0.01), 0, scale=0.01),
+            ],
+        ),
+        evidence=[rec.id],
+    )
+
+
 Builder = Callable[..., Claim | None]
 
 BUILDERS: dict[str, Builder] = {
@@ -486,19 +620,27 @@ BUILDERS: dict[str, Builder] = {
     "observed_share": observed_share,
     "pressure_at_pass": pressure_at_pass,
     "pass_success": pass_success,
+    "heavy_pressure": heavy_pressure,
+    "presser_distance": nearest_opponent_at_pass,
+    "receiver_pressure": receiver_pressure,
 }
 CF_BUILDERS: dict[str, Builder] = {
     "cf_pass": counterfactual_pass,
     "cf_value": counterfactual_value,
     "cf_pass_success": counterfactual_pass_success,
+    "cf_carry_lost": counterfactual_carry_lost,
 }
 
 
-def hero_claims(ctx: EvalContext, cf: CounterfactualResult | None = None) -> dict[str, Claim]:
+def hero_claims(
+    ctx: EvalContext, cf: CounterfactualResult | WhatIfResult | None = None
+) -> dict[str, Claim]:
     """Every hero-moment fact that can be measured in this run, keyed by kind."""
+    decision = ctx.run.hero_decision()
     card = next(
         (c for c in ctx.cards.values()
-         if c.actor == ctx.run.hero and "decision_after_scan" in c.tags),
+         if decision is not None and not c.live_only
+         and (c.actor, c.anchor_frame) == (decision.player, decision.frame)),
         None,
     )  # fmt: skip
     refs = HeroRefs.of(ctx.run, card)

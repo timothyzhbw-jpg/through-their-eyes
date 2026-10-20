@@ -64,6 +64,8 @@ MEASURED = {
     "gap_to_marker": "gap",
     "gap_opened": "gain",
     "pressure_at_pass": "pressure",
+    "presser_distance": "gap",
+    "receiver_pressure": "pressure",
 }
 # Player slots that may be swapped. Not the observer of belief_error: other players' beliefs
 # are not recorded, so a swap there could never be judged.
@@ -84,6 +86,8 @@ SWAPPABLE = {
     "gap_opened": ("player", "runner", "marker"),
     "runner_received": ("runner", "passer"),
     "pressure_at_pass": ("player",),
+    "presser_distance": ("player", "presser"),
+    "receiver_pressure": ("receiver",),
 }
 # Two references whose order the sentence depends on (gap_* are symmetric: they stay true).
 ORDER = {
@@ -287,6 +291,25 @@ def ground_truth(kind: str, c: Claim, w: World) -> bool | None:
         pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], carrier)
         value = pf.on_carrier if i == carrier else float(aggregate(pf.column(i)))
         return _close(100.0 * value, _val(c, "pressure"), 0)
+    if kind == "presser_distance":
+        player, presser = _ref(c, "player"), _ref(c, "presser")
+        i = run.index(player)
+        team = np.array([p.team for p in run.players])
+        opps = np.flatnonzero(team != team[i])
+        gaps = np.linalg.norm(run.pos[hp.frame, opps] - run.pos[hp.frame, i], axis=-1)
+        nearest = run.ids[opps[int(np.argmin(gaps))]]
+        return bool(nearest == presser and _close(gaps.min(), _val(c, "gap"), 1))
+    if kind == "receiver_pressure":
+        receiver = _ref(c, "receiver")
+        rec = next((e for e in run.events if e.type == "reception" and e.player == receiver
+                    and e.frame == hp.attrs.get("end")), None)  # fmt: skip
+        if rec is None:
+            return False  # he did not receive this pass
+        f, i = rec.frame, run.index(receiver)
+        team = np.array([p.team for p in run.players])
+        pf = frame_pressing(run.pos[f], run.vel[f], team, run.ball_pos[f], int(run.owner[f]))
+        value = pf.on_carrier if int(run.owner[f]) == i else float(aggregate(pf.column(i)))
+        return bool(_close(100.0 * value, _val(c, "pressure"), 0))
     raise KeyError(kind)
 
 

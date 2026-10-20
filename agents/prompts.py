@@ -25,7 +25,9 @@ CREW = (
     "Clubs and players are fictional: H8 is home number 8, A5 away number 5. The home team attacks "
     "towards +x. Our signature is perception: what the player saw before the ball arrived, what he "
     "believed, and what he would have done without one look over his shoulder (a re-simulation "
-    "inside the synthetic match). Reply with JSON that matches the requested schema, nothing else."
+    "inside the synthetic match). Some moments are explained instead by the space he found or the "
+    "press he escaped; the card's selected lens says which. Reply with JSON that matches the "
+    "requested schema, nothing else."
 )
 
 DIRECTOR = f"""ROLE: director
@@ -52,8 +54,8 @@ You are the Telestrator. Turn the findings into a TelestrationPlan: a timed cue 
 - A `pov` step shows at most 3 seconds of match time; use speed 0.5 for the look over the shoulder.
 - Refer only to the player, scan and counterfactual ids you are given. Do not add `voice` steps:
   narration is placed after it is verified.
-- Start with a freeze, show the key scan in first person, then the outcome, then the
-  counterfactual ghost."""
+- Start with a freeze, show the key scan in first person (when there is no key scan, the moments
+  before the decision), then the outcome, then the counterfactual ghost."""
 
 PERSONAS: dict[Persona, str] = {
     "casual": "Audience: casual fans. Plain words and few numbers: prefer claims without numeric "
@@ -137,9 +139,11 @@ def telestrator_prompt(ctx: MomentContext, findings: Findings, example: dict) ->
             "decision_at": 0.0,
             "hero": ctx.hero,
             "players": ctx.players,
-            "key_scan": {"id": key.id, "from": round(ctx.rel(key.frame), 2),
-                         "to": round(ctx.rel(key.attrs["end"]), 2)},
+            "key_scan": None if key is None else {
+                "id": key.id, "from": round(ctx.rel(key.frame), 2),
+                "to": round(ctx.rel(key.attrs["end"]), 2)},
             "counterfactual": ctx.counterfactual_id,
+            "intervention": ctx.intervention,
             "claims_for_labels": list(ctx.supported),
             "example_plan": example,
         }

@@ -99,14 +99,16 @@ def validate_plan(
 
 def template_plan(ctx: MomentContext) -> TelestrationPlan:
     """Freeze, rewind before the key scan, POV through it, mark it, show beliefs, play the
-    outcome, then the counterfactual ghost. Valid by construction for any seed."""
+    outcome, then the counterfactual ghost. Without a key scan (a pressure hero), the POV runs up
+    to the decision instead and there is no scan marker. Valid by construction for any seed."""
 
     def r(x: float) -> float:
         return round(x, 2)
 
     first, last = ctx.rel(0), ctx.rel(ctx.frames - 1)
-    key_start = ctx.rel(ctx.key_scan.frame)
     decision = ctx.rel(ctx.card.anchor_frame)
+    key = ctx.key_scan
+    key_start = ctx.rel(key.frame) if key is not None else decision - POV_MAX_S + POV_LEAD_S
     start = r(max(first, key_start - POV_LEAD_S))
     end = r(min(last, start + POV_MAX_S, max(decision, start + 0.4)))
     play_to = r(min(last, max(end, decision + OUTCOME_S)))
@@ -120,7 +122,7 @@ def template_plan(ctx: MomentContext) -> TelestrationPlan:
         Zone(t=0.6, do="zone", layer="vision", player=ctx.hero),
         Camera(t=0.8, do="camera", mode="pov"),
         Pov(t=pov_start, do="pov", player=ctx.hero, from_=start, to=end, speed=POV_SPEED),
-        ScanMarker(t=1.4, do="scan_marker", scan=ctx.key_scan.id, label_claim=None),
+        *([ScanMarker(t=1.4, do="scan_marker", scan=key.id, label_claim=None)] if key else []),
         Ghost(t=1.6, do="ghost", kind="belief", cf=None),
         Camera(t=r(pov_end + 0.4), do="camera", mode="split"),
         Play(t=play_start, do="play", to=play_to, speed=1.0),

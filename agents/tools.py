@@ -94,14 +94,16 @@ def get_pressing(ctx: MomentContext, frame: int) -> str:
 
 
 def run_counterfactual(ctx: MomentContext, scan_id: str | None = None) -> str:
-    cf = (
-        ctx.cf
-        if scan_id in (None, ctx.cf.scan_id)
-        else drop_scan_counterfactual(ctx.scenario, ctx.seed, scan_id)
-    )
+    """The moment's own counterfactual (by default), or the run without another scan."""
+    if scan_id in (None, ctx.cf.scan_id):
+        cf, intervention = ctx.cf, ctx.intervention
+    else:
+        cf, intervention = drop_scan_counterfactual(ctx.scenario, ctx.seed, scan_id), "drop_scan"
     return _dump(
-        {"dropped_scan": cf.scan_id, "factual_action": cf.factual_action,
-         "counterfactual_action": cf.counterfactual_action, "delta_xt": round(cf.delta_xt, 4)}
+        {"intervention": intervention,
+         "dropped_scan": cf.scan_id if intervention == "drop_scan" else None,
+         "factual_action": cf.factual_action, "counterfactual_action": cf.counterfactual_action,
+         "delta_xt": round(cf.delta_xt, 4)}
     )  # fmt: skip
 
 

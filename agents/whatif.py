@@ -98,6 +98,14 @@ async def map_question(
     return _rule_map(question, available), "template"
 
 
+def _decision_evidence(ctx: MomentContext) -> str:
+    """An event at the decision to seek to: the key scan, else the action or the reception."""
+    if ctx.key_scan is not None:
+        return ctx.key_scan.id
+    anchors = ctx.card.anchors
+    return anchors.get("action") or anchors["reception"]
+
+
 def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
     hero = w.factual_decision.player
     passes = [
@@ -137,6 +145,29 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
                        "interceptor": Slot(ref=receiver)},
                 predicate=Predicate(op="all", args=checks), evidence=[p.id],
             ))  # fmt: skip
+    if w.action == "carry":
+        tackle = next(
+            (e for e in w.counterfactual.events
+             if e.type == "tackle" and e.attrs.get("won_from") == hero
+             and e.frame > w.factual_decision.frame),
+            None,
+        )  # fmt: skip
+        if tackle is not None:
+            at = {"event": tackle.id, "cf": w.id}
+            out.append(Claim(
+                id="whatif_outcome",
+                template="If {player} had carried it, {tackler} would have won the ball off him.",
+                templates={"zh": "如果{player}带球，{tackler}会把球抢走。"},
+                slots={"player": Slot(ref=hero), "tackler": Slot(ref=tackle.player)},
+                predicate=Predicate(op="all", args=[
+                    Predicate(op="eq", lhs=fn("event_attr", attr="type", **at), rhs="tackle"),
+                    Predicate(op="eq", lhs=fn("event_attr", attr="player", **at),
+                              rhs=slot("tackler")),
+                    Predicate(op="eq", lhs=fn("event_attr", attr="won_from", **at),
+                              rhs=slot("player")),
+                ]),
+                evidence=[_decision_evidence(ctx)],
+            ))  # fmt: skip
     delta = fn("cf_delta", of="possession_value", scan=w.id)
     value = round(abs(w.delta_xt), 2)
     better = w.delta_xt >= 0  # what he did was worth more than the forced option
@@ -149,7 +180,7 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=delta, rhs=slot("dxt", scale=1.0 if better else -1.0),
                             abs_tol=0.005),
-        evidence=[p.id for p in passes] or [ctx.key_scan.id],
+        evidence=[p.id for p in passes] or [_decision_evidence(ctx)],
     ))  # fmt: skip
     return out
 
