@@ -1,4 +1,4 @@
-"""What the service keeps: loaded matches, cached results, and per-client rate limits.
+"""What the service keeps: loaded matches, cached results, rate limits and the daily model cap.
 
 Matches load lazily, once, in a worker thread (the sim and the claim checks take a few seconds).
 Results are cached in memory and as JSON files keyed by a content hash, so a restart or a new
@@ -12,7 +12,9 @@ import hashlib
 import json
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -105,4 +107,30 @@ class RateLimiter:
         if len(seen) >= self.count:
             return False
         seen.append(now)
+        return True
+
+
+class DailyCap:
+    """At most `count` events per UTC day across all clients (SPEC 8).
+
+    Counted in process memory: the API runs one replica, and a restart starts the day's count
+    again.
+    """
+
+    def __init__(self, count: int, clock: Callable[[], datetime] | None = None) -> None:
+        self.count = count
+        self._clock = clock or (lambda: datetime.now(UTC))
+        self._day: date | None = None
+        self._used = 0
+
+    def left(self) -> int:
+        day = self._clock().astimezone(UTC).date()
+        if day != self._day:
+            self._day, self._used = day, 0
+        return max(0, self.count - self._used)
+
+    def take(self) -> bool:
+        if self.left() <= 0:
+            return False
+        self._used += 1
         return True
