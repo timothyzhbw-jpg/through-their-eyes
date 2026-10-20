@@ -1,7 +1,8 @@
 # web/ — the breakdown player (SPEC 7)
 
-Replays a hero moment in two views — first person through the player's eyes, and a tactical board
-from above — and plays a `TelestrationPlan` (SPEC 6) over them. Everything is synthetic: the
+Replays a hero moment in two views — a 3D view filmed in first person through the player's eyes
+or from a broadcast camera, and a tactical board from above — and plays a `TelestrationPlan`
+(SPEC 6) over them. Everything is synthetic: the
 match comes from `sim/`, the clubs and players are fictional.
 
 ```bash
@@ -33,11 +34,12 @@ Deep links for the README's tour for judges, and for testing and filming
 | `offline`  | `1`                                             | ignore the live service and play the bundled data                                                          |
 | `plan`     | `invalid`                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                          |
 | `rigged`   | `0`                                             | start with the tokens instead of the animated players                                                      |
+| `camera`   | `broadcast`                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person               |
 
 A link that points at a spot (`at`, `run` or `ask`) opens paused: no live stream and no
 breakdown on load. Without them, the app watches live and then plays the breakdown, in the
 linked `persona` and `lang` if given. Values the app does not know are ignored and listed in
-the console. There is no broadcast view on main yet.
+the console.
 
 ## The live service (`VITE_API_URL`)
 
@@ -127,7 +129,8 @@ src/
   plan/       TelestrationPlan schema (zod), validation + template fallback, executor
   narration/  render payload schema (zod), checks against the moment, kind labels
   telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
-  views/      PovView and TacticalView (React Three Fiber), their toolbars and HUD
+  views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
+              toolbars and HUD, the broadcast camera and the stadium
   ui/         transport + timeline, caption + evidence card + narration list, panels, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls
   deeplink.ts URL parameters: parsed once, applied to the session before the first render
@@ -151,6 +154,24 @@ src/
   is kept — what the player saw stays on screen. Playback also slows while the head turns faster
   than 120°/s on screen; during a plan the plan clock slows with it, so captions stay in sync.
   Plan POV clips always use comfort mode.
+- **Broadcast camera** (SPEC 7: high side angle, follows the ball, smoothed). The **Broadcast**
+  switch in the 3D view's toolbar, or a plan's `camera` step with mode `broadcast`, films the same
+  scene from a fixed camera 21 m up, 26 m behind the near touchline at the halfway line, which
+  pans, tilts and zooms (`views/broadcast.ts`). Critically damped springs follow the ball and
+  widen the frame with its speed; while a pass is in flight the aim follows an S-curve from where
+  it starts to where it ends, so the receiver comes into frame and the camera arrives at rest; the
+  ball always stays inside a 16:9 safe frame. The path is computed once per run in match time, so
+  a seek or a plan rewind is a hard cut with no lag and slow motion slows the camera move with it.
+  On screen: rings under the hero (white) and the runner (gold), tags for sprints above 7 m/s
+  (the live stream's threshold), the POV player's scans and blind-side alerts (all marked `sim`),
+  and on the grass the blind-side lines and, at the decision, the pass options. `pov` and
+  `broadcast` camera steps pick the 3D view's camera; a `pov` step always films in first person.
+- **Stadium** (`views/Stadium.tsx`), generated, around both 3D cameras: a two-tier bowl under a
+  roof, about 15,000 instanced spectators in one draw call, four floodlight masts with a glow
+  sprite, boards with our own words only ("Through Their Eyes", "Synthetic match", "All players
+  fictional"), a night-sky gradient, and four faint floodlight shadows per player. It is dark and
+  hazed on purpose; glow and shadows are faked (sprites and decals, no bloom pass or shadow maps)
+  and the 3D view uses ACES tone mapping.
 - **Tactical board.** An orthographic camera straight down. Layers are drawn in a fixed order
   with depth testing off, like a 2D canvas, so GLSL overlays such as pitch control can be added
   as further layers. The vision cone is already a fragment shader of the sim's FOV model

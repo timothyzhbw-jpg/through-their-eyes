@@ -5,6 +5,7 @@
 // service does not answer within a few seconds, the app plays the bundled data ("offline data").
 //
 // URL parameters (deep links for judges, testing and filming): see deeplink.ts and the README.
+// ?camera=broadcast starts on the broadcast camera, focused (for filming).
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -38,6 +39,10 @@ async function main() {
       offline: forcedOffline ? "offline=1 in the address" : loaded.offline,
     });
     applyDeepLink(session, link);
+    if (new URLSearchParams(window.location.search).get("camera") === "broadcast") {
+      session.controls.setFocus("broadcast");
+      session.controls.setCamera("broadcast");
+    }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const autoplay = link.autoplay && !reducedMotion;
     root.render(
