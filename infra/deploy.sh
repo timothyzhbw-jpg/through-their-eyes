@@ -176,10 +176,16 @@ provision() {
     az identity create -g "$RG" -n "$GH_ID" -l "$LOCATION" -o none
   GH_PRINCIPAL=$(az identity show -g "$RG" -n "$GH_ID" --query principalId -o tsv)
   GH_CLIENT_ID=$(az identity show -g "$RG" -n "$GH_ID" --query clientId -o tsv)
-  exists az identity federated-credential show -g "$RG" --identity-name "$GH_ID" -n github-main ||
-    az identity federated-credential create -g "$RG" --identity-name "$GH_ID" -n github-main \
-      --issuer https://token.actions.githubusercontent.com \
-      --subject "repo:$REPO:ref:refs/heads/main" --audiences api://AzureADTokenExchange -o none
+  # GitHub's OIDC subject now carries immutable ids (owner@id/repo@id); keep the plain form too.
+  local ids subject_ids
+  ids=$(gh api "repos/$REPO" --jq '"\(.owner.login)@\(.owner.id)/\(.name)@\(.id)"')
+  subject_ids="repo:$ids:ref:refs/heads/main"
+  for cred in "github-main:repo:$REPO:ref:refs/heads/main" "github-main-ids:$subject_ids"; do
+    exists az identity federated-credential show -g "$RG" --identity-name "$GH_ID" -n "${cred%%:*}" ||
+      az identity federated-credential create -g "$RG" --identity-name "$GH_ID" -n "${cred%%:*}" \
+        --issuer https://token.actions.githubusercontent.com --subject "${cred#*:}" \
+        --audiences api://AzureADTokenExchange -o none
+  done
   RG_ID=$(az group show -n "$RG" --query id -o tsv)
   assign "$GH_PRINCIPAL" ServicePrincipal Contributor "$RG_ID"
 
