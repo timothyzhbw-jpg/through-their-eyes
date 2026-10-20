@@ -50,8 +50,9 @@ The deploy workflow sets it from the repo variable `TTE_API_URL`, and `infra/dep
   - **What if…?:** free questions go to `POST /api/whatif`; a verified answer replays from the
     decision with the forced run as the ghost (from the bundled what-ifs), a refusal is shown as
     such.
-  - **Voice:** off by default. **Sound on** sends each caption's SSML to `POST /api/tts` (Azure AI
-    Speech) and plays the WAV as the line comes up; clips are kept per cue.
+  - **Voice:** off by default. **Sound on** sends each caption's cue key (`cache_key`) to
+    `POST /api/tts`, which speaks the SSML the service's own crew wrote for it (Azure AI Speech),
+    and plays the WAV as the line comes up; clips are kept per cue.
 
 The API's CORS allows only the static website's origin, so for `npm run dev` against the deployed
 service let Vite forward the API paths (dev server only):

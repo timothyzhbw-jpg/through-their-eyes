@@ -1,5 +1,6 @@
-// Spoken narration (SPEC 6 Voice): off by default; once the viewer turns it on, each caption's SSML
-// goes to /api/tts and the clip plays. Without the live service the switch is disabled.
+// Spoken narration (SPEC 6 Voice): off by default; once the viewer turns it on, each caption's cue
+// key (never its SSML) goes to /api/tts and the clip plays. Without the live service the switch is
+// disabled.
 
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
@@ -64,7 +65,7 @@ describe("voice", () => {
     expect(audio.played).toEqual([]);
   });
 
-  it("speaks each caption's SSML once turned on, and stops when turned off", async () => {
+  it("speaks each caption by its cue key once turned on, and stops when turned off", async () => {
     const { session, fetch, audio } = online();
     session.controls.requestBreakdown();
     await settle();
@@ -73,7 +74,7 @@ describe("voice", () => {
     session.controls.openLine("L2");
     await settle();
     const cue = session.breakdown.get().voice.find((c) => c.line === "L2")!;
-    expect(ttsCalls(fetch.calls).map((c) => c.body)).toEqual([{ ssml: cue.ssml }]);
+    expect(ttsCalls(fetch.calls).map((c) => c.body)).toEqual([{ key: cue.cache_key }]);
     expect(audio.played).toHaveLength(1);
     expect(session.voice.state.get()).toMatchObject({ status: "playing", line: "L2" });
 
@@ -99,16 +100,19 @@ describe("voice", () => {
 
   it("reports a failed synthesis and tries again next time", async () => {
     let fail = true;
-    const voice = new VoicePlayer(async () => {
-      if (fail) throw new Error("HTTP 503");
+    const asked: string[] = [];
+    const voice = new VoicePlayer(async (key) => {
+      asked.push(key);
+      if (fail) throw new Error("HTTP 429");
       return new Blob(["RIFF"]);
     }, fakeAudio());
     voice.setOn(true);
     const cue = { line: "L1", speaker: "pbp", t: 0, voice: "v", ssml: "<speak/>", cache_key: "k" };
     await voice.say(cue);
-    expect(voice.state.get()).toMatchObject({ status: "failed", error: "HTTP 503" });
+    expect(voice.state.get()).toMatchObject({ status: "failed", error: "HTTP 429" });
     fail = false;
     await voice.say(cue);
     expect(voice.state.get().status).toBe("playing");
+    expect(asked).toEqual(["k", "k"]);
   });
 });

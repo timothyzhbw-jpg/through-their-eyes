@@ -1,7 +1,8 @@
-// Spoken narration (SPEC 6 Voice): each line's SSML goes to the API's /api/tts (Azure AI Speech)
-// and the WAV plays as its caption comes up. Off by default: sound starts only when the viewer
-// turns it on. Without the live service there is no SSML and no speech, so the switch is disabled.
-// Clips are kept per cue cache key, so a replayed line is not synthesized twice.
+// Spoken narration (SPEC 6 Voice): each line's cue key goes to the API's /api/tts, which speaks
+// the SSML its own crew wrote for that key (Azure AI Speech), and the WAV plays as its caption
+// comes up. Off by default: sound starts only when the viewer turns it on. Without the live service
+// there are no cues and no speech, so the switch is disabled. Clips are kept per cue key, so a
+// replayed line is not fetched twice.
 
 import type { VoiceCue } from "../api/client";
 import { createStore, type Store } from "../store/store";
@@ -55,7 +56,7 @@ export class VoicePlayer {
   private turn = 0;
 
   constructor(
-    private readonly synthesize: ((ssml: string) => Promise<Blob>) | null,
+    private readonly synthesize: ((key: string) => Promise<Blob>) | null,
     private readonly makeAudio: MakeAudio = browserAudio,
   ) {}
 
@@ -79,7 +80,7 @@ export class VoicePlayer {
     try {
       let clip = this.clips.get(cue.cache_key);
       if (!clip) {
-        clip = this.synthesize(cue.ssml);
+        clip = this.synthesize(cue.cache_key);
         this.clips.set(cue.cache_key, clip);
         clip.catch(() => this.clips.delete(cue.cache_key));
       }

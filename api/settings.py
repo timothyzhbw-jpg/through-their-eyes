@@ -23,7 +23,7 @@ def _matches(text: str) -> list[tuple[str, int]]:
 
 
 def _rate(text: str) -> tuple[int, float]:
-    """Parse "3/600": 3 model regenerations per client per 600 s."""
+    """Parse "3/600": 3 requests per client per 600 s."""
     count, _, window = text.partition("/")
     return int(count), float(window or 600)
 
@@ -37,6 +37,8 @@ class Settings:
     daily_model_cap: int = 40  # model-backed regenerations per UTC day, all clients (SPEC 8)
     cosmos_endpoint: str = ""  # set: Cosmos DB instead of the file store (SPEC 8)
     cosmos_database: str = "tte"
+    tts_rate_limit: tuple[int, float] = (60, 600.0)  # speech requests per client per window
+    daily_tts_cap: int = 200  # speech syntheses (audio cache misses) per UTC day, all clients
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -48,4 +50,6 @@ class Settings:
             daily_model_cap=int(os.environ.get("TTE_DAILY_MODEL_CAP") or 40),
             cosmos_endpoint=os.environ.get("TTE_COSMOS_ENDPOINT", "").strip(),
             cosmos_database=os.environ.get("TTE_COSMOS_DATABASE", "").strip() or "tte",
+            tts_rate_limit=_rate(os.environ.get("TTE_TTS_RATE_LIMIT", "60/600")),
+            daily_tts_cap=int(os.environ.get("TTE_DAILY_TTS_CAP") or 200),
         )

@@ -3,7 +3,8 @@
 Matches load lazily, once, in a worker thread (the sim and the claim checks take a few seconds).
 Results are cached in memory in front of a store keyed by a content hash, so a restart or a new
 replica serves them again: JSON files by default, Cosmos DB when `TTE_COSMOS_ENDPOINT` is set
-(SPEC 8: container `cache`, and the claims audit in `claims_audit`).
+(SPEC 8: container `cache`, and the claims audit in `claims_audit`). The voice cues that
+POST /api/tts may speak are kept the same way (kind `voice`, api/tts.py).
 """
 
 from __future__ import annotations
@@ -140,6 +141,7 @@ class Storage:
     breakdowns: ResultCache | CosmosResultCache
     answers: ResultCache | CosmosResultCache  # what-if answers
     audit: AuditSink | None  # None: each match keeps its verdicts in memory
+    voice: ResultCache | CosmosResultCache  # voice cue key -> SSML (api/tts.py)
     close: Callable[[], None] = field(default=lambda: None)
 
 
@@ -157,6 +159,7 @@ def open_storage(
             ResultCache(settings.cache_dir, "breakdowns"),
             ResultCache(settings.cache_dir, "whatif"),
             None,
+            ResultCache(settings.cache_dir, "voice"),
         )
     owned = cosmos_client is None
     if owned:
@@ -171,6 +174,7 @@ def open_storage(
         CosmosResultCache(cache, "breakdowns"),
         CosmosResultCache(cache, "whatif"),
         CosmosAuditSink(database.get_container_client(AUDIT_CONTAINER)),
+        CosmosResultCache(cache, "voice"),
         cosmos_client.close if owned else (lambda: None),
     )
 

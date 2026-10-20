@@ -1,5 +1,8 @@
 """Acceptance checks for the API service (SPEC 2, 8): live stream, moments, cached breakdowns."""
 
+import dataclasses
+import hashlib
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -24,6 +27,11 @@ def settings(tmp_path_factory):
 def client(settings):
     with TestClient(create_app(settings)) as c:
         yield c
+
+
+def _app(settings, cache_dir, **limits):
+    """A fresh offline app on its own cache, with some settings changed."""
+    return create_app(dataclasses.replace(settings, cache_dir=cache_dir, **limits))
 
 
 def test_health_and_match_list(client):
@@ -285,6 +293,96 @@ def test_audit_log_lists_the_verdicts(client):
     assert {"claim", "verdict", "decided_at"} <= set(records[0])
 
 
-def test_tts_needs_speech(client):
-    r = client.post("/api/tts", json={"ssml": "<speak/>"})
-    assert r.status_code == 503
+# --- speech: only cues the crew wrote, audio cached by key, limited (SPEC 6 Voice, 8) -------------
+
+
+@pytest.fixture
+def speech(monkeypatch):
+    """Azure Speech configured, with a fake synthesis that records the SSML it is sent."""
+    from api import tts
+
+    monkeypatch.setenv("AZURE_SPEECH_KEY", "test-key")
+    monkeypatch.setenv("AZURE_SPEECH_REGION", "test-region")
+    sent: list[str] = []
+
+    def synthesize(ssml: str) -> bytes:
+        sent.append(ssml)
+        return b"RIFF" + hashlib.sha256(ssml.encode()).digest()
+
+    monkeypatch.setattr(tts, "request", synthesize)
+    return sent
+
+
+def _cues(c, persona="analyst", language="en"):
+    """The voice cues of one breakdown script, as the web client receives them."""
+    body = {"match": MATCH, "personas": [persona], "languages": [language]}
+    scripts = c.post("/api/breakdowns", json=body).json()["result"]["scripts"]
+    return [cue for s in scripts for cue in s["voice"]]
+
+
+def test_tts_speaks_only_voice_cues_the_crew_wrote(settings, tmp_path, speech):
+    """The API is public, so it must not read out text a client sends (SPEC 6 Voice)."""
+    with TestClient(_app(settings, tmp_path)) as c:
+        refused = [
+            c.post("/api/tts", json={"ssml": "<speak>anything at all</speak>"}),
+            c.post("/api/tts", content="<speak>anything</speak>",
+                   headers={"content-type": "application/ssml+xml"}),
+            c.post("/api/tts", json={"key": "<speak>anything</speak>"}),
+            c.post("/api/tts", json={"key": "0123456789abcdef", "ssml": "<speak/>"}),
+            c.post("/api/tts", json=["0123456789abcdef"]),
+        ]  # fmt: skip
+        unknown = c.post("/api/tts", json={"key": "0123456789abcdef"})
+        cue = _cues(c)[0]
+        spoken = c.post("/api/tts", json={"key": cue["cache_key"]})
+    assert [r.status_code for r in refused] == [400] * len(refused)
+    assert "SSML" in refused[0].json()["detail"]
+    assert unknown.status_code == 404
+    assert spoken.status_code == 200 and spoken.headers["content-type"] == "audio/wav"
+    assert speech == [cue["ssml"]]  # the server's own SSML, nothing a client sent
+
+
+def test_tts_audio_is_cached_by_key_across_restarts(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path)) as c:
+        key = _cues(c)[0]["cache_key"]
+        first = c.post("/api/tts", json={"key": key}).content
+        again = c.post("/api/tts", json={"key": key}).content
+    with TestClient(_app(settings, tmp_path)) as c:  # no breakdown asked: the cue was stored
+        restarted = c.post("/api/tts", json={"key": key})
+    assert restarted.status_code == 200 and first == again == restarted.content
+    assert len(speech) == 1
+    assert (tmp_path / "tts" / f"{key}.wav").read_bytes() == first
+
+
+def test_tts_is_rate_limited_per_client(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path, tts_rate_limit=(2, 600.0))) as c:
+        key = _cues(c)[0]["cache_key"]
+        mine = [c.post("/api/tts", json={"key": key}).status_code for _ in range(3)]
+        other = c.post("/api/tts", json={"key": key}, headers={"x-forwarded-for": "203.0.113.7"})
+    assert mine == [200, 200, 429] and other.status_code == 200
+
+
+def test_the_daily_speech_cap_counts_syntheses_only(settings, tmp_path, speech):
+    with TestClient(_app(settings, tmp_path, daily_tts_cap=1)) as c:
+        a, b = (cue["cache_key"] for cue in _cues(c)[:2])
+        first = c.post("/api/tts", json={"key": a})
+        capped = c.post("/api/tts", json={"key": b})
+        cached = c.post("/api/tts", json={"key": a})  # audio already made: free
+    assert first.status_code == cached.status_code == 200
+    assert capped.status_code == 429 and len(speech) == 1
+
+
+def test_tts_needs_speech(client, monkeypatch):
+    monkeypatch.delenv("AZURE_SPEECH_KEY", raising=False)
+    key = _cues(client)[0]["cache_key"]
+    assert client.post("/api/tts", json={"key": key}).status_code == 503
+
+
+def test_speech_limits_come_from_the_environment(monkeypatch):
+    monkeypatch.delenv("TTE_TTS_RATE_LIMIT", raising=False)
+    monkeypatch.delenv("TTE_DAILY_TTS_CAP", raising=False)
+    s = Settings.from_env()
+    assert (s.tts_rate_limit, s.daily_tts_cap) == ((60, 600.0), 200)
+    monkeypatch.setenv("TTE_TTS_RATE_LIMIT", "5/60")
+    monkeypatch.setenv("TTE_DAILY_TTS_CAP", "7")
+    s = Settings.from_env()
+    assert (s.tts_rate_limit, s.daily_tts_cap) == ((5, 60.0), 7)

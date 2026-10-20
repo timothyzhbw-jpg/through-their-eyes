@@ -8,10 +8,13 @@ what-if answers are computed once and cached by a content hash of everything tha
 regeneration is rate-limited per client and capped per UTC day across all clients
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
 flagged `rate_limited` or `capped`.
+
+Speech speaks only voice cues the crew wrote, by key (api/tts.py).
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from contextlib import asynccontextmanager
 from typing import Any
@@ -19,7 +22,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from agents import whatif
 from agents.llm import client_from_env, sync_credential_from_env
@@ -52,7 +55,10 @@ class WhatIfBody(BaseModel):
 
 
 class TtsBody(BaseModel):
-    ssml: str = Field(min_length=1, max_length=20_000)
+    """A voice cue to speak, by the `cache_key` the crew gave it; never SSML."""
+
+    model_config = ConfigDict(extra="forbid")
+    key: str = Field(pattern=f"^{tts.KEY.pattern}$")
 
 
 def _client_ip(request: Request) -> str:
@@ -79,9 +85,12 @@ def create_app(
         credential = sync_credential_from_env()  # keyless: managed identity in Azure, az locally
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
-    breakdowns, answers = storage.breakdowns, storage.answers
+    cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
+    breakdowns, answers = cues.recording(storage.breakdowns), storage.answers
     limiter = RateLimiter(*settings.rate_limit)
     cap = DailyCap(settings.daily_model_cap)
+    speech_limiter = RateLimiter(*settings.tts_rate_limit)  # POST /api/tts per client
+    speech_cap = DailyCap(settings.daily_tts_cap)  # Azure Speech syntheses per UTC day
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -218,14 +227,33 @@ def create_app(
         answers.put(k, data)
         return {"key": k, "cached": False, "capped": capped, "answer": data}
 
-    @app.post("/api/tts")
-    async def speech(body: TtsBody) -> Response:
+    tts_body = {"content": {"application/json": {"schema": TtsBody.model_json_schema()}}}
+
+    @app.post("/api/tts", openapi_extra={"requestBody": tts_body})
+    async def speech(request: Request) -> Response:
+        """WAV for one voice cue of a breakdown this service served, by its `cache_key`.
+
+        Rate-limited per client; synthesis (an audio cache miss) is also capped per UTC day.
+        """
+        try:  # parsed here, not by FastAPI, so that SSML or any other body is a 400
+            key = TtsBody.model_validate_json(await request.body()).key
+        except ValidationError:
+            raise HTTPException(
+                400, 'send {"key": VoiceCue.cache_key}; SSML is not accepted'
+            ) from None
+        if not speech_limiter.allow(_client_ip(request)):
+            raise HTTPException(429, "too many speech requests from this address; try again later")
+        if (ssml := cues.ssml(key)) is None:
+            raise HTTPException(404, "unknown voice cue: request its breakdown first")
         if not tts.configured():
             raise HTTPException(503, "Azure Speech is not configured")
-        try:
-            audio = tts.synthesize(body.ssml, settings.cache_dir)
-        except tts.SpeechUnavailable as e:
-            raise HTTPException(502, str(e)) from e
+        if (audio := tts.cached(key, settings.cache_dir)) is None:
+            if not speech_cap.take():
+                raise HTTPException(429, "today's speech budget is used up; captions still work")
+            try:
+                audio = await asyncio.to_thread(tts.synthesize, ssml, key, settings.cache_dir)
+            except tts.SpeechUnavailable as e:
+                raise HTTPException(502, str(e)) from e
         return Response(audio, media_type="audio/wav")
 
     app.state.settings = settings

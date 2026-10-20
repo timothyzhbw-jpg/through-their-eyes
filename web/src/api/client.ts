@@ -97,7 +97,8 @@ export interface Api {
     language: Language;
   }): Promise<BreakdownResponse>;
   whatIf(req: { question: string; language: Language; persona: Persona }): Promise<WhatIfResponse>;
-  tts(ssml: string): Promise<Blob>;
+  /** WAV of one voice cue, by its `cache_key`: the service speaks only SSML its crew wrote. */
+  tts(key: string): Promise<Blob>;
   /** WebSocket URL of the live stream, starting at frame `start`. */
   liveUrl(start: number, speed?: number): string;
 }
@@ -183,7 +184,7 @@ export function createApi(
         WHAT_IF_TIMEOUT_MS,
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
-    tts: (ssml) => call("/api/tts", post({ ssml }), TTS_TIMEOUT_MS, (res) => res.blob()),
+    tts: (key) => call("/api/tts", post({ key }), TTS_TIMEOUT_MS, (res) => res.blob()),
     liveUrl: (start, speed = 1) =>
       `${base.replace(/^http/, "ws")}/ws/matches/${id}/live?start=${start}&speed=${speed}`,
   };
