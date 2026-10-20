@@ -191,7 +191,7 @@ export function breakdownResponse(
           },
           { t: 1.5, do: "ghost", kind: "belief", cf: null },
           { t: 4.5, do: "camera", mode: "split" },
-          { t: 4.7, do: "play", to: 3.6, speed: 1.0 },
+          { t: 4.7, do: "play", to: 3.5, speed: 1.0 },
           { t: 7.5, do: "ghost", kind: "counterfactual", cf: "cf1" },
         ],
       },
