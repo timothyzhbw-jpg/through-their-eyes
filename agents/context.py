@@ -18,6 +18,7 @@ from explain.cards import MomentCard
 from explain.claims import Claim
 from explain.functions import EvalContext
 from explain.lenses import explain_moments
+from explain.moments import hero_card
 from explain.verifier import Verdict, Verifier
 from sim.counterfactual import CounterfactualResult, WhatIfResult, hero_counterfactual
 from sim.model import Event
@@ -33,7 +34,7 @@ class MomentContext:
     run: MatchRun
     cf: CounterfactualResult | WhatIfResult
     cards: dict[str, MomentCard]
-    card: MomentCard  # the hero's decision
+    card: MomentCard  # the hero's moment: his decision, or a marker's look (`marker_scan`)
     claims: dict[str, Claim]
     verdicts: dict[str, Verdict]
     evaluator: EvalContext
@@ -44,11 +45,9 @@ class MomentContext:
         cf = hero_counterfactual(scenario, seed)
         run = cf.factual
         cards = {c.id: c for c in explain_moments(run)}
-        decision = run.hero_decision()
-        card = next(
-            c for c in cards.values()
-            if not c.live_only and (c.actor, c.anchor_frame) == (decision.player, decision.frame)
-        )  # fmt: skip
+        card = hero_card(run, cards)
+        if card is None:
+            raise ValueError(f"no hero moment detected in {scenario} seed {seed}")
         evaluator = EvalContext(run, counterfactuals={cf.scan_id: cf}, cards=cards)
         sink = audit or MemoryAuditSink()
         verifier = Verifier(evaluator, sink=sink)
@@ -96,7 +95,8 @@ class MomentContext:
         return len(self.run.owner)
 
     def rel(self, frame: int) -> float:
-        """Seconds of match time relative to the card's anchor frame (the decision)."""
+        """Seconds of match time relative to the card's anchor frame (the decision, or where the
+        pass to a marker's man resolved)."""
         return (frame - self.card.anchor_frame) * self.run.dt
 
     @property

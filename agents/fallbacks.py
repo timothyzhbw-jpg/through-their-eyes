@@ -69,6 +69,33 @@ PRESSURE_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | No
                           ("color", "cf_carry_lost")],
 }  # fmt: skip
 
+# A marker's look (`marker_scan`, no decision on the ball): his man on his blind side, the look,
+# whether he stayed with him, and the run without it.
+MARKER_HEADLINE = ["marker_scan", "stayed_with_runner", "cf_lost_runner"]
+MARKER_SUPPORTING = ["blind_side", "seen_in_scan", "marker_unseen", "runner_pressure",
+                     "cf_unmarked", "cf_belief_error", "cf_value", "runner_received"]  # fmt: skip
+MARKER_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
+    "casual": [("pbp", None), ("color", "blind_side"), ("pbp", "marker_scan"),
+               ("color", "seen_in_scan"), ("pbp", "stayed_with_runner"),
+               ("color", ("cf_lost_runner", "cf_unmarked"))],
+    "analyst": [("pbp", None), ("color", "marker_unseen"), ("pbp", "marker_scan"),
+                ("color", "seen_in_scan"), ("pbp", "stayed_with_runner"),
+                ("color", "runner_pressure"), ("color", "cf_belief_error"),
+                ("color", "cf_lost_runner"), ("color", "cf_value")],
+    "player_fan": [("pbp", None), ("pbp", "marker_scan"), ("color", "seen_in_scan"),
+                   ("pbp", "stayed_with_runner"), ("color", ("cf_lost_runner", "cf_unmarked"))],
+    "coach": [("pbp", "marker_unseen"), ("pbp", "marker_scan"), ("color", "stayed_with_runner"),
+              ("color", "cf_lost_runner"), ("color", "cf_value")],
+    # For listeners, in the order it happened: his man out of sight, which way he looked, whom he
+    # saw, where the ball went, how close he was, and the run without the look. No connectives,
+    # no xT or pressing percentages.
+    "audio_description": [("color", "blind_side"), ("pbp", ("scan_side", "marker_scan")),
+                          ("color", "seen_in_scan"),
+                          ("pbp", ("reception_zone", "runner_received")),
+                          ("color", "stayed_with_runner"),
+                          ("color", ("cf_lost_runner", "cf_unmarked"))],
+}  # fmt: skip
+
 
 def priority_for(ctx: MomentContext) -> Priority:
     lens = ctx.card.lens(ctx.card.selected_lens) if ctx.card.selected_lens else None
@@ -91,6 +118,12 @@ def director(
 def analyst(ctx: MomentContext) -> Findings:
     lens = ctx.card.selected_lens or "scan"
     supported = ctx.supported
+    if ctx.card.kind == "marker_scan":
+        headline = [c for c in MARKER_HEADLINE if c in supported]
+        supporting = [c for c in MARKER_SUPPORTING if c in supported and c not in headline]
+        angle = "One look over his shoulder kept him with his man; without it the runner is free."
+        return Findings(moment=ctx.card.id, lens=lens, headline=headline, supporting=supporting,
+                        angle=angle)  # fmt: skip
     headline = [c for c in HEADLINE[lens] if c in supported]
     supporting = [c for c in SUPPORTING if c in supported and c not in headline]
     angle = {
@@ -108,6 +141,8 @@ def narration(
     """Template lines in speaking order; only one speaker's lines when `speaker` is given."""
     pressure = ctx.card.selected_lens == "pressure"
     sequence = (PRESSURE_SEQUENCES if pressure else SEQUENCES)[persona]
+    if ctx.card.kind == "marker_scan":
+        sequence = MARKER_SEQUENCES[persona]
     connective = (PRESSURE_CONNECTIVE if pressure else CONNECTIVE)[language]
     out = []
     for who, ids in sequence:
