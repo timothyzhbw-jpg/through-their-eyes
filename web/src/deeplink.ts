@@ -12,11 +12,12 @@
 //                                              wrong number" open (online: the breakdown is
 //                                              asked for at once)
 //   ?play=yourcall                             open "Your call" at the decision (yourcall/); with
-//                                              ?match=, on the match's first hero moment
+//                                              ?match=, on its first hero moment that has bundled
+//                                              what-ifs
 // and the testing parameters ?autoplay=0, ?offline=1, ?plan=invalid (and ?rigged=0, read by
-// players/trial.ts). A link that points at a spot (at, run, ask, tamper or play) opens paused: no live
-// stream, and no breakdown on load unless tamper needs one. Unknown values are ignored and
-// logged.
+// players/trial.ts). A link that points at a spot (at, run, ask, tamper or play) opens paused and
+// skips any intro on load: no live stream, and no breakdown on load unless tamper needs one.
+// Unknown values are ignored and logged.
 
 import { createContext, useContext } from "react";
 import { PERSONAS, type Persona } from "./api/client";

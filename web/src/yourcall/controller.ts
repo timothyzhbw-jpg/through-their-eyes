@@ -2,7 +2,7 @@
 // and the truth beat's move from his picture to the truth, with their own clock. One controller
 // per Session, made on first use, so the Session itself does not change. Opening it takes over
 // from the breakdown and the live stream and parks the replay at the decision; closing it leaves
-// the replay there.
+// the replay there. It opens only when every option of his decision has a run to play.
 
 import type { Session } from "../session";
 import { createStore, type Store } from "../store/store";
@@ -12,6 +12,11 @@ import { pictureOf, type Picture } from "./picture";
 
 /** Seconds the truth beat takes to move everyone from where he pictured them to the truth. */
 export const MORPH_S = 0.9;
+
+/** Why Your call stays shut unless every option has its re-simulated run. A shorter list is his
+ * choice plus something he did not pick, which gives the choice away. */
+export const MISSING_RUNS =
+  "Every option of his decision needs its re-simulated run; these are bundled for this moment only with its what-ifs.";
 
 export interface ClipState extends Clip {
   of: string; // the option whose run plays
@@ -64,11 +69,15 @@ function create(session: Session): YourCall {
   const options = callOptions(hero, session.whatIfs);
   const picture = pictureOf(hero);
   const his = options.find((o) => o.factual) ?? null;
+  const decision = hero.runs.factual.decision;
+  // One entry per option: callOptions drops any option that has no run to play.
+  const covered =
+    !!decision && decision.options.length > 0 && options.length === decision.options.length;
   const unavailable = !picture
     ? "This moment has no decision on the ball."
-    : !his || options.length < 2
-      ? "No re-simulated runs of his other options are loaded."
-      : null;
+    : covered
+      ? null
+      : MISSING_RUNS;
   const state = createStore<YourCallState>(INITIAL);
   const ctx = { actions: options.map((o) => o.action) };
 

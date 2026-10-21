@@ -7,7 +7,7 @@
 
 import { Line } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { NIGHT, Stadium } from "../views/Stadium";
 import { Goals } from "../views/PovView";
@@ -78,6 +78,12 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
       stale: [0, 1].map(() => make(GREY, 0.3)),
     } satisfies Record<Look, THREE.Material[]>;
   }, []);
+  useEffect(
+    () => () => {
+      for (const list of Object.values(materials)) list.forEach((m) => m.dispose());
+    },
+    [materials],
+  );
   const bodies = useRef<(THREE.Mesh | null)[]>([]);
   const heads = useRef<(THREE.Mesh | null)[]>([]);
   const groups = useRef<(THREE.Group | null)[]>([]);
@@ -91,6 +97,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(hero.n * 6), 3));
     return g;
   }, [hero]);
+  useEffect(() => () => links.dispose(), [links]);
   const work = useMemo(() => ({ a: newPose(hero.n), b: newPose(hero.n) }), [hero]);
   const trailOf = options.find((o) => o.action === clip?.of) ?? null;
   const trailPoints = useMemo(() => {

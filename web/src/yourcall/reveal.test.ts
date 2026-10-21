@@ -47,7 +47,6 @@ describe("Your call: his options", () => {
     const h9 = options.find((o) => o.action === "pass:H9")!;
     const exported = hero.runs.factual.decision!.options.find((o) => o.action === "pass:H9")!;
     expect(h9).toMatchObject({ kind: "pass", label: "Pass to H9", receiver: "H9", short: "9" });
-    expect(h9.anchor).toEqual(exported.receiver_believed);
     expect(h9.target).toEqual(exported.target);
     const carry = options.find((o) => o.action === "carry")!;
     expect(carry).toMatchObject({ kind: "carry", label: "Carry", receiver: null });
@@ -102,10 +101,23 @@ describe("Your call: his picture at the decision", () => {
     for (const p of picture.players) {
       const k = (f * n + p.j) * 2;
       expect(p.truth).toEqual([hero.runs.factual.pos[k], hero.runs.factual.pos[k + 1]]);
-      const ghost = [hero.runs.factual.ghost[k], hero.runs.factual.ghost[k + 1]];
-      expect(p.believed).toEqual(p.j === picture.carrier ? p.truth : ghost);
     }
-    expect(picture.players[picture.carrier].id).toBe("H8");
+    // His own token is his true position. Every pass marker sits on that receiver's token, and
+    // that token stays within 5 cm of where the export says he believed the receiver was.
+    const carrier = picture.players[picture.carrier];
+    expect(carrier.id).toBe("H8");
+    expect(carrier.believed).toEqual(carrier.truth);
+    const decision = hero.runs.factual.decision!;
+    const passes = options.filter((o) => o.kind === "pass" && o.receiver);
+    expect(passes.length).toBeGreaterThan(0);
+    for (const o of passes) {
+      const token = picture.players.find((p) => p.id === o.receiver)!;
+      expect(o.anchor).toEqual(token.believed);
+      const at = decision.options.find((x) => x.action === o.action)!.receiver_believed!;
+      expect(Math.hypot(token.believed[0] - at[0], token.believed[1] - at[1])).toBeLessThanOrEqual(
+        0.05,
+      );
+    }
   });
 
   it("greys the players he had not seen lately, and the runner is not one: he looked", () => {

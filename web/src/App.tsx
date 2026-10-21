@@ -4,7 +4,7 @@
 // with the score card, and every moment below; a hero moment's breakdown opens over it as the
 // hero layout with a way back (MatchApp).
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
@@ -42,8 +42,16 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const evidence = useStore(playback, (s) => s.evidenceLine);
   const yourCall = useYourCallOpen();
   const start = onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />;
+  const wasYourCall = useRef(false);
 
   useEffect(() => startClock(session), [session]);
+  // Closing Your call (Back, Escape, the header pill) returns focus to the live screen's pill.
+  useEffect(() => {
+    if (wasYourCall.current && !yourCall) {
+      document.getElementById("your-call-open")?.focus({ preventScroll: true });
+    }
+    wasYourCall.current = yourCall;
+  }, [yourCall]);
   useEffect(() => {
     if (!autoplay) return;
     // With the live service: watch the match live, then its breakdown once the moment is

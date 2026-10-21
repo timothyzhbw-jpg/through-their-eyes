@@ -7,6 +7,7 @@ import { actionLabel, clampFrame, Sample, sampleInto, type Hero } from "../data/
 import type { Vec2 } from "../data/types";
 import type { MomentContext } from "../plan/moment";
 import { ghostAt, optionOf, type WhatIfRun, type WhatIfs } from "../whatif/whatif";
+import { believedAt } from "./picture";
 
 /** Frames the clip of what happened keeps running after his action is resolved. */
 export const HOLD_FRAMES = 12;
@@ -22,7 +23,7 @@ export interface CallOption {
   label: string; // "Pass to H9"
   short: string; // on the marker: the receiver's shirt number, or the label
   receiver: string | null;
-  anchor: Vec2; // the marker: over the receiver where he pictured him, else the option's target
+  anchor: Vec2; // the marker: the receiver's token (believedAt), else the option's target
   target: Vec2; // where he would have aimed it, on his belief (the end of the dotted path)
   factual: boolean; // what he did
   run: OptionRun;
@@ -42,7 +43,8 @@ function runOf(hero: Hero, whatIfs: WhatIfs | null, action: string, chosen: stri
 /**
  * Every option of the hero's decision that has a run to play, listed left to right as seen from
  * behind him facing the attack (home attacks +x, so his left is +y): an order that says nothing
- * about how likely he was to pick each one.
+ * about how likely he was to pick each one. Your call opens only when this is every option
+ * (controller.ts): a shorter list would point at the one he did not pick.
  */
 export function callOptions(hero: Hero, whatIfs: WhatIfs | null): CallOption[] {
   const d = hero.runs.factual.decision;
@@ -54,7 +56,8 @@ export function callOptions(hero: Hero, whatIfs: WhatIfs | null): CallOption[] {
     if (!run) continue;
     const pass = o.action.startsWith("pass:");
     const receiver = pass ? o.action.slice(5) : null;
-    const number = receiver ? hero.players.find((p) => p.id === receiver)?.number : undefined;
+    const receiverJ = receiver === null ? -1 : hero.ids.indexOf(receiver);
+    const number = receiverJ >= 0 ? hero.players[receiverJ].number : undefined;
     const label = o.action === "carry" ? "Carry" : actionLabel(o.action);
     out.push({
       action: o.action,
@@ -62,7 +65,9 @@ export function callOptions(hero: Hero, whatIfs: WhatIfs | null): CallOption[] {
       label: o.action === "shot" ? "Shot" : label,
       short: number !== undefined ? String(number) : o.action === "shot" ? "Shot" : "Carry",
       receiver,
-      anchor: o.receiver_believed ?? o.target,
+      // On the receiver's token. Carry and shot have none: the option's target, which is also
+      // where the dotted path ends.
+      anchor: receiverJ >= 0 ? believedAt(hero, receiverJ) : o.target,
       target: o.target,
       factual: o.action === d.chosen,
       run,

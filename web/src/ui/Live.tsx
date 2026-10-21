@@ -3,10 +3,18 @@
 // the stream has detected, in the order they arrived; for a stitched match, every moment of every
 // possession with its lens, the hero moments opening their breakdowns.
 
+import { WHAT_IF_FILES } from "../data/load";
 import type { LiveFeed, LiveMoment, LiveState, LiveStatus } from "../live/feed";
-import { restartLabel, scenarioLabel, type MatchMoment } from "../match/match";
+import {
+  restartLabel,
+  scenarioLabel,
+  scenarioMatchId,
+  type MatchMoment,
+  type Possession,
+} from "../match/match";
 import type { MatchSession } from "../match/matchSession";
 import { useSession, useView } from "../session";
+import { MISSING_RUNS } from "../yourcall/controller";
 import { createStore, useStore, type Store } from "../store/store";
 import { Chapter } from "./Chapter";
 import "./live.css";
@@ -198,6 +206,7 @@ function MatchMoments({ session }: { session: MatchSession }) {
                     onReplay={() => controls.replayMoment(m)}
                     onBreakdown={() => controls.openBreakdown(m)}
                     onYourCall={() => controls.openBreakdown(m, "yourcall")}
+                    yourCallReason={yourCallReason(p)}
                   />
                 ))}
             </ol>
@@ -208,6 +217,11 @@ function MatchMoments({ session }: { session: MatchSession }) {
   );
 }
 
+/** Your call needs every option re-simulated, and those runs are bundled with the what-ifs. */
+function yourCallReason(p: Possession): string | null {
+  return WHAT_IF_FILES[scenarioMatchId(p)] ? null : MISSING_RUNS;
+}
+
 function MatchMomentRow(props: {
   m: MatchMoment;
   ahead: boolean;
@@ -215,6 +229,7 @@ function MatchMomentRow(props: {
   onReplay: () => void;
   onBreakdown: () => void;
   onYourCall: () => void;
+  yourCallReason: string | null;
 }) {
   const { m } = props;
   const classes = [m.hero ? "hero" : "", props.ahead ? "ahead" : ""].filter(Boolean).join(" ");
@@ -237,9 +252,11 @@ function MatchMomentRow(props: {
           type="button"
           className="btn"
           onClick={props.onYourCall}
-          disabled={props.opening}
+          disabled={props.opening || props.yourCallReason !== null}
           aria-label={`Your call: ${momentLabel(m)}`}
-          title="Decide with only what he knew, then see what really happened"
+          title={
+            props.yourCallReason ?? "Decide with only what he knew, then see what really happened"
+          }
         >
           Your call
         </button>

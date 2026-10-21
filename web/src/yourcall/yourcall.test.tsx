@@ -13,9 +13,10 @@ import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
-import { HERO_FILE, PAYLOAD_FILE, WHAT_IF_FILE } from "../data/load";
+import { HERO_FILE, PAYLOAD_FILE, WHAT_IF_FILE, WHAT_IF_FILES } from "../data/load";
 import { App } from "../App";
 import { applyDeepLink, parseDeepLink } from "../deeplink";
+import { scenarioMatchId } from "../match/match";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
@@ -39,7 +40,7 @@ import {
 } from "../testing";
 import { MomentsPanel } from "../ui/Live";
 import { frameCall, project, swipePick, toWorld } from "./camera";
-import { yourCallOf } from "./controller";
+import { MISSING_RUNS, yourCallOf } from "./controller";
 import { YourCallButton, YourCallStage } from "./YourCall";
 
 // Mounting App: the live screen's views and Your call's 3D view need WebGL; stub them.
@@ -126,7 +127,34 @@ describe("Your call: opening", () => {
     const bare = createSession(hero, EXAMPLE_PLAN, payloadJson, null);
     const off = mount(bare, <YourCallButton />).querySelector("button")!;
     expect(off.disabled).toBe(true);
-    expect(off.title).toMatch(/No re-simulated runs/);
+    expect(off.title).toBe(MISSING_RUNS);
+  });
+
+  it("returns focus to the header pill on close, and Escape on that pill closes it", () => {
+    const session = offline();
+    const page = mount(session, <App autoplay={false} />);
+    const pill = () => page.querySelector<HTMLButtonElement>("#your-call-open");
+    click(button(page, "Make his call"));
+    key(page.querySelector(".yc-card")!, "Escape");
+    expect(yourCallOf(session).state.get().step).toBe("closed");
+    expect(document.activeElement).toBe(pill());
+
+    click(pill()!);
+    click(button(page, "Back to the replay"));
+    expect(document.activeElement).toBe(pill());
+
+    click(pill()!);
+    click(pill()!); // the pressed pill in the Your call header
+    expect(yourCallOf(session).state.get().step).toBe("closed");
+    expect(document.activeElement).toBe(pill());
+
+    click(pill()!);
+    const openPill = pill()!;
+    act(() => openPill.focus());
+    expect(document.activeElement).toBe(openPill);
+    key(openPill, "Escape");
+    expect(yourCallOf(session).state.get().step).toBe("closed");
+    expect(document.activeElement).toBe(pill());
   });
 
   it("in App it takes the live screen's place and hides the moment below until closed", () => {
@@ -358,7 +386,67 @@ describe("Your call: the reveal", () => {
   });
 });
 
+/** A breakdown request that finishes only when the test says so. */
+function heldBreakdown() {
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const route = (body: unknown) => {
+    const { personas, languages } = body as { personas: string[]; languages: string[] };
+    return pending.then(() =>
+      json(breakdownResponse({}, { persona: personas[0], language: languages[0] })),
+    );
+  };
+  return { route, release };
+}
+
 describe("Your call: online and in the match", () => {
+  it("a breakdown asked for while loading does not play behind Your call", async () => {
+    const held = heldBreakdown();
+    const played = vi.fn(async () => {});
+    const fetch = fakeFetch({
+      "POST /api/breakdowns": held.route,
+      "POST /api/tts": () => new Response(new Blob(["RIFF"], { type: "audio/wav" })),
+    });
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+      api: createApi(API, "blind_side_run-3", fetch),
+      makeAudio: () => ({ play: played, pause: () => {}, onended: null }),
+    });
+    const decision = session.moment.decisionFrame;
+    session.controls.setSound(true);
+    session.controls.playBreakdown();
+    expect(session.breakdown.get().status).toBe("loading");
+    yourCallOf(session).open();
+    held.release();
+    await settle();
+    expect(session.breakdown.get().status).toBe("ready");
+    expect(session.runner.status.get().status).not.toBe("running");
+    expect(session.playback.get()).toMatchObject({
+      frame: decision,
+      playing: false,
+      captionLine: null,
+    });
+    expect(fetch.calls.filter((c) => c.path === "/api/tts")).toEqual([]);
+    expect(played).not.toHaveBeenCalled();
+  });
+
+  it("a seek while the breakdown is loading ends the pending play", async () => {
+    const held = heldBreakdown();
+    const fetch = fakeFetch({ "POST /api/breakdowns": held.route });
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+      api: createApi(API, "blind_side_run-3", fetch),
+    });
+    session.controls.playBreakdown();
+    expect(session.breakdown.get().status).toBe("loading");
+    session.controls.seek(12);
+    held.release();
+    await settle();
+    expect(session.breakdown.get().status).toBe("ready");
+    expect(session.runner.status.get().status).not.toBe("running");
+    expect(session.playback.get()).toMatchObject({ frame: 12, playing: false, captionLine: null });
+  });
+
   it("asks for the breakdown on opening, and its lines join the reveal when it arrives", async () => {
     const fetch = fakeFetch({
       "POST /api/breakdowns": (body) => {
@@ -423,23 +511,45 @@ describe("Your call: online and in the match", () => {
       whatIfs: whatIfJson,
     });
     const panel = render(session, <MomentsPanel />);
-    expect(panel).toContain('aria-label="Your call: ');
-    expect(panel.match(/>Your call</g)).toHaveLength(2);
+    const host = document.createElement("div");
+    host.innerHTML = panel;
+    const yourCallIn = (possession: number) => {
+      const section = host.querySelector(`section[aria-label="Possession ${possession}"]`);
+      return [...(section?.querySelectorAll("button") ?? [])].find((b) =>
+        b.getAttribute("aria-label")?.startsWith("Your call"),
+      );
+    };
+    // A button is on only when that possession's <scenario>-<seed> has bundled what-ifs.
+    for (const p of session.match.possessions) {
+      const button = yourCallIn(p.index + 1);
+      if (!p.hero) {
+        expect(button).toBeUndefined();
+        continue;
+      }
+      const bundled = !!WHAT_IF_FILES[scenarioMatchId(p)];
+      expect(button).toBeDefined();
+      expect(button!.disabled).toBe(!bundled);
+      if (!bundled) expect(button!.title).toBe(MISSING_RUNS);
+    }
+    // blind_side_run-3 is bundled, so its row can open. The press stand-in is press_escape-0,
+    // which is bundled for the real pressure hero: its button stays enabled.
+    expect(yourCallIn(2)!.disabled).toBe(false);
+    expect(WHAT_IF_FILES["press_escape-0"]).toBeTruthy();
+    expect(yourCallIn(3)!.disabled).toBe(false);
 
+    const calls = () => fetch.calls.map((c) => `${c.method} ${c.path}`);
     session.controls.openBreakdown(
       m.moments.find((x) => x.id === MATCH_PRESS)!,
       "yourcall",
     );
     await settle();
-    const press = session.screen.get().hero!;
-    const yc = yourCallOf(press);
-    expect(yc.state.get().step).toBe("deciding");
-    expect(press.runner.status.get().status).not.toBe("running");
-    // The stand-in has no bundled what-ifs: his pass and the export's forced carry.
-    expect(yc.options.map((o) => o.action).sort()).toEqual(["carry", "pass:H9"]);
+    // The stand-in has no run for every option (his pass, plus the export's forced carry).
+    // Playing the breakdown would post for it and start the runner: the match stays up instead.
+    expect(session.screen.get().hero).toBeNull();
+    expect(session.screen.get().error).toBe(`${MATCH_PRESS}: ${MISSING_RUNS}`);
+    expect(calls()).toContain("GET /api/matches/press_escape-0/export");
+    expect(calls()).not.toContain("POST /api/breakdowns");
 
-    session.controls.backToMatch();
-    expect(yc.state.get().step).toBe("closed");
     session.controls.openBreakdown(
       m.moments.find((x) => x.id === MATCH_HERO)!,
       "yourcall",
@@ -447,6 +557,7 @@ describe("Your call: online and in the match", () => {
     await settle();
     const scan = yourCallOf(session.screen.get().hero!);
     expect(scan.state.get().step).toBe("deciding");
+    expect(session.screen.get().hero!.runner.status.get().status).not.toBe("running");
     expect(scan.options).toHaveLength(hero.runs.factual.decision!.options.length);
   });
 });

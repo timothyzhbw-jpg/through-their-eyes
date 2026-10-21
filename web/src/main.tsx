@@ -12,8 +12,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App, MatchApp } from "./App";
 import { apiBase, MATCH_ID } from "./api/client";
-import { loadData, matchFromUrl } from "./data/load";
+import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
+import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls } from "./session";
@@ -59,8 +60,12 @@ async function main() {
       // A match has no audience, run or named frames of its own: its view and a frame apply.
       if (link.view) session.controls.setFocus(link.view);
       if (typeof link.at === "number") session.controls.seek(link.at);
-      // play=yourcall: the first hero moment's breakdown, opened in Your call.
-      const hero = session.match.moments.find((m) => m.hero);
+      // play=yourcall: the first hero moment whose possession has bundled what-ifs, in Your call.
+      const hero = session.match.moments.find((m) => {
+        if (!m.hero) return false;
+        const p = session.match.possessions.find((x) => x.index === m.possession);
+        return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
+      });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
       broadcast(session.controls);
       root.render(

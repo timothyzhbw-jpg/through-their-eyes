@@ -59,6 +59,7 @@ export function YourCallButton() {
   const open = useStore(yc.state, (s) => s.step !== "closed");
   return (
     <button
+      id="your-call-open"
       type="button"
       className="btn yc-open"
       aria-pressed={open}
@@ -95,8 +96,15 @@ function useSize(fallback: { w: number; h: number }) {
  * live screen: the director, the caption and the playback bar would give his decision away.
  */
 export function YourCallScreen({ start, scene = true }: { start: ReactNode; scene?: boolean }) {
+  const yc = useYourCall();
   return (
-    <section className="stage yc-screen" aria-label="Your call">
+    <section
+      className="stage yc-screen"
+      aria-label="Your call"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") yc.close();
+      }}
+    >
       <header className="stage-head">
         <div className="brand">
           <h1>Through Their Eyes</h1>

@@ -3,7 +3,8 @@
 // Each hero moment opens a breakdown: the possession's own hero export (`<scenario>-<seed>` on
 // the service) becomes a hero Session in local frames, asking for its breakdown and what-ifs by
 // the moment's id in match time; its clock shows local frame + the possession's start. Back to
-// the match puts the match playhead where the breakdown left off.
+// the match puts the match playhead where the breakdown left off. Your call opens the same hero
+// when every option has a re-simulated run; otherwise the match stays up and nothing plays.
 
 import { MATCH_ID, type Api, type Fetch } from "../api/client";
 import type { Hero } from "../data/hero";
@@ -41,7 +42,7 @@ export interface MatchScreen {
 export interface MatchControls extends ViewControls {
   startLive(): void;
   /** Open a hero moment's breakdown (the moment's card, in match time); with "yourcall", open it
-   * in Your call instead of playing the breakdown. */
+   * in Your call instead of playing the breakdown. If Your call cannot open, the match stays up. */
   openBreakdown(
     card: Pick<MatchMoment, "id" | "hero" | "possession" | "local_id">,
     play?: "breakdown" | "yourcall",
@@ -86,10 +87,19 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
   });
 
-  const show = (session: Session, play: "breakdown" | "yourcall") => {
-    screen.set({ hero: session, opening: null, error: null });
+  const show = (session: Session, cardId: string, play: "breakdown" | "yourcall") => {
     const yc = yourCallOf(session);
-    if (play === "yourcall" && !yc.unavailable) return yc.open();
+    if (play === "yourcall") {
+      if (yc.unavailable) {
+        // Not the hero screen, and not the breakdown: that replay would show what he picked.
+        screen.set({ hero: null, opening: null, error: `${cardId}: ${yc.unavailable}` });
+        return;
+      }
+      screen.set({ hero: session, opening: null, error: null });
+      yc.open();
+      return;
+    }
+    screen.set({ hero: session, opening: null, error: null });
     yc.close();
     session.controls.playBreakdown();
   };
@@ -103,7 +113,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     endLive();
     playback.set({ playing: false });
     const loaded = heroes.get(p.index);
-    if (loaded) return show(loaded, play);
+    if (loaded) return show(loaded, card.id, play);
     if (!api) {
       screen.set({ error: "Breakdowns need the live service." });
       return;
@@ -137,7 +147,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
         },
       );
       heroes.set(p.index, session);
-      if (screen.get().opening === card.id) show(session, play);
+      if (screen.get().opening === card.id) show(session, card.id, play);
     } catch (err) {
       if (screen.get().opening === card.id) {
         screen.set({ opening: null, error: `${card.id}: ${message(err)}` });
