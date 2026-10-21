@@ -5,7 +5,6 @@
 // action: read the moment.
 
 import { QualityOption } from "../quality/QualityOption";
-import { withViewTransition } from "../beat/viewTransition";
 import {
   useEffect,
   useId,
@@ -154,14 +153,11 @@ export function CameraSwitch() {
   const camera = useStore(playback, (s) => s.camera);
   const value: Shot = focus === "tactical" ? "tactical" : camera;
   const pick = (shot: Shot) => {
-    if (shot === "tactical") return withViewTransition(() => controls.setFocus("tactical"));
-    // From the board the panes swap (a morph); between the two cameras the 3D view flies.
-    const swap = focus === "tactical" ? withViewTransition : (change: () => void) => change();
-    swap(() => {
-      controls.setCamera(shot);
-      // The picture in picture stays as it was: off (the 3D view alone) or on (the board with it).
-      controls.setFocus(focus === "pov" || focus === "broadcast" ? shot : "split");
-    });
+    // Every switch is a clean cut (beat/cut.ts).
+    if (shot === "tactical") return controls.setFocus("tactical");
+    controls.setCamera(shot);
+    // The picture in picture stays as it was: off (the 3D view alone) or on (the board with it).
+    controls.setFocus(focus === "pov" || focus === "broadcast" ? shot : "split");
   };
   return (
     <Segmented<Shot>
@@ -200,9 +196,7 @@ export function SwapViews() {
       aria-label={name}
       title={name}
       onClick={() =>
-        withViewTransition(() =>
-          controls.setFocus(board ? (camera === "broadcast" ? "broadcast" : "split") : "tactical"),
-        )
+        controls.setFocus(board ? (camera === "broadcast" ? "broadcast" : "split") : "tactical")
       }
     >
       <ExpandIcon />

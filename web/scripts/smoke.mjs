@@ -107,6 +107,9 @@ const PAGES = [
     device: PHONE,
     check: (p) => phone(p, (q) => tier(q, "medium")),
   },
+  // Camera switches are clean cuts: no blur pass on the frames right after one (beat/cut.ts).
+  { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
+  { name: "cut-no-blur-high", path: "?autoplay=0&intro=0&quality=high", check: cutNoBlur },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
@@ -243,6 +246,42 @@ async function tier(page, want) {
   } catch {
     const data = await canvas.evaluate((el) => ({ ...el.dataset }));
     throw new Error(`expected the ${want} tier on the 3D canvas, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** Play into the key scan (where the first-person head-whip blur runs), cut to the broadcast
+ * camera and back, and read the blur on the frames right after each cut: it must be 0. */
+async function cutNoBlur(page) {
+  await hero(page);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  const canvas = page.locator(".view.pov canvas");
+  // The blur comes on as his head whips round (a few seconds in); without it the check below
+  // still holds, it just proves less.
+  await page
+    .waitForFunction((el) => Number(el.dataset.blurSigma) > 0, await canvas.elementHandle(), {
+      timeout: 15_000,
+    })
+    .catch(() => {});
+  const after = await page.evaluate(async () => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+    const el = document.querySelector(".view.pov canvas");
+    const pick = (name) =>
+      [...document.querySelectorAll('[aria-label="Camera"] button')]
+        .find((b) => b.textContent.trim() === name)
+        .click();
+    const seen = [];
+    for (const name of ["Broadcast", "His eyes"]) {
+      pick(name);
+      for (let k = 0; k < 4; k++) {
+        await frame();
+        // The head-whip blur and, at the medium and high tiers, the depth of field.
+        seen.push(Number(el.dataset.blurSigma ?? 0) + Number(el.dataset.dof ?? 0));
+      }
+    }
+    return seen;
+  });
+  if (after.some((sigma) => sigma > 0)) {
+    throw new Error(`expected no blur right after a camera cut, got ${after.join(", ")}`);
   }
 }
 

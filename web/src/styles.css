@@ -3576,27 +3576,3 @@ optgroup {
     transform: none;
   }
 }
-
-/* the 3D view and the board morph into each other's place (beat/viewTransition.ts); the rest of
-   the page changes at once */
-:root {
-  view-transition-name: none;
-}
-.views > .slot:nth-child(1) {
-  view-transition-name: tte-view-3d;
-}
-.views > .slot:nth-child(2) {
-  view-transition-name: tte-view-board;
-}
-::view-transition-group(tte-view-3d),
-::view-transition-group(tte-view-board) {
-  animation-duration: var(--t-slow);
-  animation-timing-function: var(--settle);
-}
-::view-transition-old(tte-view-3d),
-::view-transition-old(tte-view-board),
-::view-transition-new(tte-view-3d),
-::view-transition-new(tte-view-board) {
-  height: 100%;
-  object-fit: cover;
-}

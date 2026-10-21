@@ -26,6 +26,7 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { beatAt, beatsOf, motion } from "../beat/beat";
+import { cuts } from "../beat/cut";
 import type { Sample } from "../data/hero";
 import { useView } from "../session";
 import { useStore } from "../store/store";
@@ -261,7 +262,9 @@ export function QualityPost({ sample, hfov }: { sample: Sample; hfov: number }) 
     if (meter.frame(performance.now() / 1000, s.playing) === "lower") stepDown();
 
     // Depth of field: only through the key-moment slow motion.
-    const amount = chain.bokeh ? dofAt(hero, run, s.frame, s.camera) : 0;
+    // Never across a cut (beat/cut.ts): off around a camera switch, easing back after it.
+    const cutScale = cuts.blurScale(performance.now() / 1000);
+    const amount = chain.bokeh ? dofAt(hero, run, s.frame, s.camera) * cutScale : 0;
     if (chain.bokeh) {
       chain.bokeh.enabled = amount > 0.01;
       if (chain.bokeh.enabled) {
@@ -290,14 +293,16 @@ export function QualityPost({ sample, hfov }: { sample: Sample; hfov: number }) 
     const width = Math.max(1, buffer.x);
     const j = hero.ids.indexOf(s.povPlayer);
     const yawRate = j < 0 ? 0 : headYawRate(hero, run, j, s.frame, s.comfort);
-    const sigma = povBlurSigmaPx({
-      reducedMotion: reduced,
-      camera: s.camera,
-      playing: s.playing,
-      yawRate,
-      widthPx: width,
-      hfovDeg,
-    });
+    const sigma =
+      cutScale *
+      povBlurSigmaPx({
+        reducedMotion: reduced,
+        camera: s.camera,
+        playing: s.playing,
+        yawRate,
+        widthPx: width,
+        hfovDeg,
+      });
     const plan = blurPlan(sigma, width, planBuffer);
     const shown = plan.passes ? plan.sigma.toFixed(1) : "0";
     if (gl.domElement.dataset.blurSigma !== shown) gl.domElement.dataset.blurSigma = shown;

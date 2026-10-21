@@ -1600,10 +1600,12 @@ original visual identity.
   side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
   by what the beats added and catches up at the next possession's cut. Timing is a function of
   the frame only: no position, event or number changes.
-  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
-    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
-    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
-    with the playhead.
+  - Every camera switch is a clean cut (Bowen, 2026-10-21: no blur when the camera switches):
+    his eyes, the broadcast camera, the tactical board and the director's cuts change the
+    picture at once, with no camera move or morph between them, and for 0.3 s after a cut no
+    blur pass runs (the head-whip blur, depth of field), easing back over 0.25 s
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The other
+    run's ghost path draws itself on and its dashes march with the playhead.
   - Verified numbers in a caption count up from zero the first time they come up and take a
     check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
     page's text is the verified value throughout.
@@ -1613,7 +1615,7 @@ original visual identity.
     the Sound switch.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
-  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+  - `prefers-reduced-motion`: no slow motion, push-in, count-up or sting;
     the ring, the sweep and the stamp still show.
 - **Render tiers and one look** ([web/src/quality/](../web/src/quality/), behind `?quality=` until
   the art director and Bowen approve): *classic* (`standard`) is the picture above, the default.
@@ -1632,7 +1634,9 @@ original visual identity.
     View options switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s
     steps it down (low is the floor).
   - First person gets no depth of field: the shirt numbers float in front of the stands, and a
-    blur from the scene's depth would blur them with the stands.
+    blur from the scene's depth would blur them with the stands. Depth of field and the post
+    chain's head-whip blur are off around a camera cut like the standard blur
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts); smoke page `cut-no-blur-high`).
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1744,7 +1748,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
       and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
       — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
-      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [cut.test.ts](../web/src/beat/cut.test.ts) (no blur around a camera cut; smoke page
+      `cut-no-blur`: 0 px on the frames after a switch, 27.9 px with the guard taken out),
       [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
       [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
@@ -1882,6 +1887,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
   keys; the API allows the site's origin only.
+  - *Compression and caching (2026-10-21):* Storage sends each blob as stored and never
+    compresses, so the site sent 1.6 MB of JS raw. `infra/upload_web.sh` uploads a staged build
+    (`web/scripts/stage.mjs`): text gzipped (`Content-Encoding: gzip`), hashed assets
+    `max-age=31536000, immutable`, `data/` and `models/` `max-age=300`, `index.html` last with
+    `no-cache`. No Azure setting changes: these are blob properties set at upload. Cold loads
+    before and after, laptop and phone, plain and on Fast 3G with a 4× CPU slowdown:
+    [eval/reports/web_load.md](../eval/reports/web_load.md) (`cd web && npm run loadperf`).
   - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
     2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
     none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
