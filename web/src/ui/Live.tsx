@@ -27,17 +27,18 @@ export function LiveBar() {
   return <LiveControl feed={feed} />;
 }
 
+// Short enough to sit beside the Live pill; the tooltip says where the frames come from.
 const STATUS: Record<LiveStatus, string> = {
   off: "replay",
   connecting: "connecting…",
-  streaming: "streaming from the API",
+  streaming: "streaming",
   paused: "paused",
   ended: "match over",
   lost: "connection lost",
 };
 
 function LiveControl({ feed }: { feed: LiveFeed }) {
-  const { playback, controls } = useView();
+  const { playback, controls, kind } = useView();
   const live = useStore(playback, (s) => s.live);
   const status = useStore(feed.state, (s) => s.status);
   const sprint = useStore(feed.state, (s) => s.sprint);
@@ -61,8 +62,12 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
         Live
       </button>
       {(live || status === "ended" || status === "lost") && (
-        <span className={`live-status ${status}`} title={error ?? undefined}>
-          {STATUS[status]}
+        <span
+          className={`live-status ${status}`}
+          title={error ?? "Frames arrive live from the API over a WebSocket"}
+        >
+          {/* a hero moment streams one possession: "match over" would oversell it */}
+          {status === "ended" && kind === "hero" ? "stream ended" : STATUS[status]}
           {live && sprint.length > 0 && (
             <span className="sprint"> · sprinting {sprint.join(", ")}</span>
           )}
