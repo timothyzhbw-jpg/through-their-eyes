@@ -553,11 +553,11 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "scan_side": scan_side,
     "max_visibility": max_visibility,
     "opponents_bypassed": opponents_bypassed,
-    "seconds_between": seconds_between,
-    "turnover_at_resolution": turnover_at_resolution,
     "possession_result": possession_result,
     "possession_value": possession_value,
     "action_end": action_end,
+    "seconds_between": seconds_between,
+    "turnover_at_resolution": turnover_at_resolution,
     # "cf_delta" is evaluated lazily by `Evaluator.cf_delta`: its `of` runs on two runs.
 }
 
