@@ -15,6 +15,7 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { claimTable, fill } from "./lib/claims.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -27,7 +28,8 @@ const USAGE = `Usage: npm run capture -- [options]
   --out <dir>          output directory (default: <repo>/out/video)
   --fps <n>            output frame rate, 30-60 (default: 60)
   --quality <n>        JPEG quality of captured frames, 50-100 (default: 90)
-  --headed             show the browser (uses the GPU: more captured frames per second)
+  --headed             show the browser
+  --software-gl        draw WebGL with SwiftShader (the CPU) instead of the GPU (Metal on macOS)
   --chromium <path>    Chromium executable to use instead of Playwright's
   --ffmpeg <path>      ffmpeg to encode with (default: the one Playwright installs)
   --no-harvest         skip reading the verified claims (the voice-over uses its fallbacks)
@@ -46,6 +48,7 @@ const ACTIONS = {
   fill: ["label", "text"],
   scroll: [],
   hold: ["s"],
+  drag: ["from", "to"],
 };
 
 const STATUSES = ["ready", "stand-in", "pending feature", "external"];
@@ -122,7 +125,9 @@ const WAITS = {
     // A shot that opens on the lineup card (covered: true) waits for the canvases behind it.
     const state = a.covered ? "attached" : "visible";
     await page.locator(".view.pov canvas").waitFor({ state, timeout });
-    await page.locator(".view.tac canvas").waitFor({ state, timeout });
+    // views: ["pov"] for a shot that shows only the 3D view (the broadcast camera, focused).
+    if (!a.views || a.views.includes("tac"))
+      await page.locator(".view.tac canvas").waitFor({ state, timeout });
     await page.waitForLoadState("networkidle", { timeout });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     // Animated players unless the address asks for the tokens (players/trial.ts).
@@ -168,6 +173,9 @@ const WAITS = {
   "caption-with-evidence": (page, a, timeout) =>
     page.locator(".caption .caption-more").waitFor({ timeout }),
   evidence: (page, a, timeout) => page.locator("section.evidence").waitFor({ timeout }),
+  /** Any element, by CSS selector; `state` as in Playwright ("visible" by default, or "detached"). */
+  selector: (page, a, timeout) =>
+    page.locator(a.selector).first().waitFor({ state: a.state ?? "visible", timeout }),
   /** A what-if answer (or refusal) is shown; with `question`, the answer to that question. */
   "whatif-answer": (page, a, timeout) => {
     const asked = page.locator(".panel.whatif .answer .asked");
@@ -228,6 +236,43 @@ async function act(page, a) {
     case "hold":
       await page.waitForTimeout(a.s * 1000); // screen time, not synchronisation
       break;
+    case "drag": {
+      // From one element's centre to another's, by the mouse, so the viewer sees the drag.
+      // With `around` (a selector), the pointer travels on an arc about that element's centre
+      // instead of a straight line (a dial is dragged round, not through its middle).
+      const centre = async (target) => {
+        const box = await locate(page, target).boundingBox({ timeout });
+        if (!box) throw new Error(`drag: ${describe(target)} is not on screen`);
+        return [box.x + box.width / 2, box.y + box.height / 2];
+      };
+      const [x0, y0] = await centre(a.from);
+      const [x1, y1] = await centre(a.to);
+      const steps = a.steps ?? 30;
+      const ms = ((a.duration_s ?? 1) * 1000) / steps;
+      let path;
+      if (a.around) {
+        const [cx, cy] = await centre({ selector: a.around });
+        // radius_scale < 1 keeps the pointer inside the targets' ring, off the buttons that sit on it.
+        const k = a.radius_scale ?? 1;
+        const r0 = k * Math.hypot(x0 - cx, y0 - cy);
+        const r1 = k * Math.hypot(x1 - cx, y1 - cy);
+        const t0 = Math.atan2(y0 - cy, x0 - cx);
+        let dt = Math.atan2(y1 - cy, x1 - cx) - t0;
+        if (a.clockwise === true && dt < 0) dt += 2 * Math.PI;
+        if (a.clockwise === false && dt > 0) dt -= 2 * Math.PI;
+        path = (u) => [cx + (r0 + (r1 - r0) * u) * Math.cos(t0 + dt * u), cy + (r0 + (r1 - r0) * u) * Math.sin(t0 + dt * u)];
+      } else path = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u];
+      const [sx, sy] = path(0);
+      await page.mouse.move(sx, sy);
+      await page.mouse.down();
+      for (let k = 1; k <= steps; k++) {
+        const [x, y] = path(k / steps);
+        await page.mouse.move(x, y);
+        await page.waitForTimeout(ms);
+      }
+      await page.mouse.up();
+      break;
+    }
   }
   if (a.hold) await page.waitForTimeout(a.hold * 1000);
 }
@@ -243,7 +288,9 @@ const describe = (a) =>
           ? `type "${a.text}"`
           : a.do === "scroll"
             ? `scroll ${a.to ?? a.y}`
-            : `hold ${a.s} s`;
+            : a.do === "drag"
+              ? `drag ${a.from.name ?? a.from.selector} → ${a.to.name ?? a.to.selector}`
+              : `hold ${a.s} s`;
 
 // --- what the page shows -------------------------------------------------------------------------
 
@@ -314,7 +361,8 @@ async function readClaims(page, persona, language) {
         kind: [...el.classList].find((c) => c.startsWith("kind-"))?.slice(5),
         values: Object.fromEntries(
           [...el.querySelectorAll("dl.values > div")].map((d) => [
-            d.querySelector("dt").textContent.trim(),
+            // The machine name (e.g. dxt) is the dt's title; its text is a label for viewers.
+            (d.querySelector("dt").getAttribute("title") || d.querySelector("dt").textContent).trim(),
             d.querySelector("dd").textContent.trim(),
           ]),
         ),
@@ -356,55 +404,35 @@ async function harvest(browser, doc, opts) {
   }
 }
 
-/** Verified claims by id: values as the evidence card shows them, and where each was seen. */
-function claimTable(sources) {
-  const table = {};
-  for (const src of sources) {
-    for (const line of src.lines) {
-      for (const c of line.claims) {
-        const seen = `${src.persona}/${src.language} ${line.id}: "${line.text}"`;
-        const usable = src.verified && c.verdict === "supported";
-        const prev = table[c.id];
-        if (!prev) {
-          table[c.id] = {
-            kind: c.kind,
-            verdict: c.verdict,
-            values: c.values,
-            usable,
-            seen: [seen],
-          };
-          continue;
-        }
-        prev.seen.push(seen);
-        prev.usable = prev.usable && usable;
-        if (JSON.stringify(prev.values) !== JSON.stringify(c.values)) {
-          prev.usable = false;
-          prev.conflict = (prev.conflict ?? []).concat([c.values]);
-        }
-      }
-    }
-  }
-  return table;
-}
-
-const SLOT = /\{([a-z_]+)\.([a-z_]+)\}/g;
-
 /** The shot's voice-over with its {claim.value} slots filled from verified claims, or its fallback. */
 function voiceOver(shot, claims) {
-  const used = [];
-  const missing = [];
-  const filled = shot.vo.replace(SLOT, (slot, id, key) => {
-    const c = claims?.[id];
-    if (c?.usable && key in c.values) {
-      used.push({ slot, value: c.values[key], seen: c.seen[0] });
-      return c.values[key];
-    }
-    missing.push(slot);
-    return slot;
-  });
-  if (!missing.length) return { text: filled, used, missing };
+  const { text, used, missing } = fill(shot.vo, claims);
+  if (!missing.length) return { text, used, missing };
   if (shot.vo_fallback) return { text: shot.vo_fallback, used: [], missing, fallback: true };
-  return { text: filled, used, missing };
+  return { text, used, missing };
+}
+
+/** Chromium flags for WebGL on the GPU: headless Chromium otherwise draws WebGL with SwiftShader,
+ * its CPU rasteriser (about a dozen fps here). On macOS that means ANGLE on Metal. */
+function gpuArgs(software) {
+  if (software) return ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
+  return ["--ignore-gpu-blocklist", ...(process.platform === "darwin" ? ["--use-angle=metal"] : [])];
+}
+
+/** Recorded shots of an earlier manifest whose clip still exists, minus those re-run now. */
+function previousShots(file, results) {
+  if (!existsSync(file)) return {};
+  try {
+    const old = JSON.parse(readFileSync(file, "utf8"));
+    const dir = path.dirname(file);
+    return Object.fromEntries(
+      (old.shots ?? [])
+        .filter((s) => s.ok && !(s.id in results) && s.video && existsSync(path.join(dir, s.video)))
+        .map(({ start, end, vo, ...rest }) => [rest.id, rest]),
+    );
+  } catch {
+    return {};
+  }
 }
 
 // --- recording -----------------------------------------------------------------------------------
@@ -702,6 +730,7 @@ async function main() {
       chromium: { type: "string" },
       ffmpeg: { type: "string" },
       "no-harvest": { type: "boolean", default: false },
+      "software-gl": { type: "boolean", default: false },
       list: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -736,7 +765,7 @@ async function main() {
   const browser = await chromium.launch({
     headless: !args.headed,
     executablePath: args.chromium,
-    args: ["--hide-scrollbars"],
+    args: ["--hide-scrollbars", ...gpuArgs(args["software-gl"])],
   });
   const site = base ?? doc.site;
   const commit = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
@@ -774,6 +803,8 @@ async function main() {
 
   const vo = Object.fromEntries(doc.shots.map((s) => [s.id, voiceOver(s, claims)]));
   writeFileSync(path.join(outDir, "voiceover.md"), voiceOverScript(plan, vo, results, meta));
+  // A run with --only keeps what earlier runs recorded for the other shots (their clips stay).
+  const previous = previousShots(path.join(outDir, "manifest.json"), results);
   const manifest = {
     meta,
     site,
@@ -782,7 +813,8 @@ async function main() {
       id: shot.id,
       start,
       end,
-      ...(results[shot.id] ?? { status: shot.status, captured: false }),
+      ...(results[shot.id] ??
+        previous[shot.id] ?? { status: shot.status, captured: false }),
       vo: vo[shot.id],
     })),
   };
@@ -807,7 +839,7 @@ async function main() {
   );
   if (slow.length)
     console.log(
-      `fewer than 30 captured fps in ${slow.map((r) => r.id).join(", ")}: try --headed (GPU)`,
+      `fewer than 30 captured fps in ${slow.map((r) => r.id).join(", ")}: a still page draws few frames; otherwise close heavy apps`,
     );
   if (failed.length) {
     console.error(`failed: ${failed.map((r) => r.id).join(", ")}`);

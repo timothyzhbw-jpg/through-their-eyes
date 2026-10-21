@@ -1,0 +1,35 @@
+[
+  {
+    "id": "music-unsolicited",
+    "kind": "music",
+    "title": "Unsolicited trailer music (loop edit)",
+    "author": "Emma_MA",
+    "page": "https://opengameart.org/content/unsolicited-trailer-music",
+    "file": "https://opengameart.org/sites/default/files/Unsolicited%20trailer%20music%20loop%20edit.wav",
+    "licence": "CC0-1.0",
+    "sha256": "54d4cd81e813f087e078ed1d4f930d23d499e8005de2d4f6cdd09a49e35b3634",
+    "checked_on": "2026-10-21"
+  },
+  {
+    "id": "music-generic",
+    "kind": "music",
+    "title": "Generic trailer music",
+    "author": "Emma_MA",
+    "page": "https://opengameart.org/content/generic-trailer-music",
+    "file": "https://opengameart.org/sites/default/files/Generic%20Trailer%20Music_0.mp3",
+    "licence": "CC0-1.0",
+    "sha256": "f1bbeeaa8155afc180fba14e0a3b127ffdc157ad3c0b35e7e679265306fad682",
+    "checked_on": "2026-10-21"
+  },
+  {
+    "id": "music-digital-acid",
+    "kind": "music",
+    "title": "Digital Acid (glitch hop)",
+    "author": "Xenocity (Deva)",
+    "page": "https://opengameart.org/content/xenocity-digital-acid-glitch-hop",
+    "file": "https://opengameart.org/sites/default/files/Xenocity%20-%20Digital%20Acid%20%28HD%29.mp3",
+    "licence": "CC0-1.0",
+    "sha256": "5b982fd58ed092c86b88cc95815262b85c223b56dd0de4091b5c90a031d4f514",
+    "checked_on": "2026-10-21"
+  }
+]
