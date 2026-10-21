@@ -14,11 +14,11 @@ import {
   createApi,
   MATCH_ID,
   PROBE_TIMEOUT_MS,
-  scanLensDelta,
+  lensDelta,
   type Api,
   type Fetch,
 } from "../api/client";
-import { parseHero, type Hero } from "./hero";
+import { parseHero, placedShot, type Hero } from "./hero";
 
 export const HERO_FILE = "hero_seed3.json";
 // A fixture until the API answers (sim.export.render_payload_fixture).
@@ -29,6 +29,8 @@ export const WHAT_IF_FILE = "whatif_seed3.json";
 export const WHAT_IF_FILES: Record<string, string> = {
   [MATCH_ID]: WHAT_IF_FILE,
   "press_escape-0": "whatif_press_escape_seed0.json",
+  "far_post_finish-11": "whatif_far_post_finish_seed11.json",
+  "cutback_scan-7": "whatif_cutback_scan_seed7.json",
 };
 
 export interface LoadOptions {
@@ -87,7 +89,11 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
       ]);
       hero = parseHero(exported);
       momentId = hero.kind === "hero" ? (info?.hero_moment ?? null) : null;
-      if (hero.marker && hero.deltaXt === null && momentId) {
+      if (
+        (hero.marker || hero.keeperStep || placedShot(hero)) &&
+        hero.deltaXt === null &&
+        momentId
+      ) {
         hero = await withLensValue(hero, candidate, momentId);
       }
       api = candidate;
@@ -112,13 +118,17 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
 }
 
 /**
- * A marker's look has no possession value in the export (no decision on the ball), so its worth
- * is the scan lens's delta on its MomentCard (explain.lenses.marker_scan_lens). Without the card
- * the value stays null and the verdict waits for the breakdown's verified claim.
+ * A marker's look has no possession value in the export (no decision on the ball), and a placed
+ * shot's and a keeper's step's are outcomes, so their worth is a lens's delta on the MomentCard
+ * (explain.lenses: the marker's expected turnover, the shot's chance of a goal on the truth, the
+ * step's chance of a save).
+ * Without the card the value stays null and the verdict waits for the breakdown's claim.
  */
 async function withLensValue(hero: Hero, api: Api, momentId: string): Promise<Hero> {
   try {
-    const delta = scanLensDelta(await api.moments(), momentId);
+    // A keeper's step is told by the sight lens (his chance of saving it); the others by the scan.
+    const lens = hero.keeperStep ? "sight" : "scan";
+    const delta = lensDelta(await api.moments(), momentId, lens);
     return delta === null ? hero : { ...hero, deltaXt: delta, deltaSource: "lens" };
   } catch {
     return hero;

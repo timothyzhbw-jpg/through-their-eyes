@@ -46,11 +46,12 @@ export const COMFORT_MAX_YAW = (120 * Math.PI) / 180; // rad per wall-clock seco
 export const keyScanFrame = (hero: Hero): number | null =>
   hero.keyScan ? hero.keyScan.start + 6 : null;
 
-/** Where the replay opens: inside the key scan; without one, a second before the decision; a
- * match at kick-off. */
+/** Where the replay opens: inside the key scan; for a keeper's step, as the shot is struck;
+ * without either, a second before the decision; a match at kick-off. */
 export function openingFrame(hero: Hero): number {
   const key = keyScanFrame(hero);
   if (key !== null) return key;
+  if (hero.keeperStep) return hero.keeperStep.shot.frame;
   const decision = hero.runs.factual.decision?.frame;
   return decision === undefined ? 0 : Math.max(0, decision - Math.round(1 / hero.dt));
 }
