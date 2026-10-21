@@ -15,6 +15,7 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { claimTable, fill } from "./lib/claims.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -27,7 +28,8 @@ const USAGE = `Usage: npm run capture -- [options]
   --out <dir>          output directory (default: <repo>/out/video)
   --fps <n>            output frame rate, 30-60 (default: 60)
   --quality <n>        JPEG quality of captured frames, 50-100 (default: 90)
-  --headed             show the browser (uses the GPU: more captured frames per second)
+  --headed             show the browser
+  --software-gl        draw WebGL with SwiftShader (the CPU) instead of the GPU (Metal on macOS)
   --chromium <path>    Chromium executable to use instead of Playwright's
   --ffmpeg <path>      ffmpeg to encode with (default: the one Playwright installs)
   --no-harvest         skip reading the verified claims (the voice-over uses its fallbacks)
@@ -122,7 +124,9 @@ const WAITS = {
     // A shot that opens on the lineup card (covered: true) waits for the canvases behind it.
     const state = a.covered ? "attached" : "visible";
     await page.locator(".view.pov canvas").waitFor({ state, timeout });
-    await page.locator(".view.tac canvas").waitFor({ state, timeout });
+    // views: ["pov"] for a shot that shows only the 3D view (the broadcast camera, focused).
+    if (!a.views || a.views.includes("tac"))
+      await page.locator(".view.tac canvas").waitFor({ state, timeout });
     await page.waitForLoadState("networkidle", { timeout });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     // Animated players unless the address asks for the tokens (players/trial.ts).
@@ -168,6 +172,9 @@ const WAITS = {
   "caption-with-evidence": (page, a, timeout) =>
     page.locator(".caption .caption-more").waitFor({ timeout }),
   evidence: (page, a, timeout) => page.locator("section.evidence").waitFor({ timeout }),
+  /** Any element, by CSS selector; `state` as in Playwright ("visible" by default, or "detached"). */
+  selector: (page, a, timeout) =>
+    page.locator(a.selector).first().waitFor({ state: a.state ?? "visible", timeout }),
   /** A what-if answer (or refusal) is shown; with `question`, the answer to that question. */
   "whatif-answer": (page, a, timeout) => {
     const asked = page.locator(".panel.whatif .answer .asked");
@@ -356,55 +363,35 @@ async function harvest(browser, doc, opts) {
   }
 }
 
-/** Verified claims by id: values as the evidence card shows them, and where each was seen. */
-function claimTable(sources) {
-  const table = {};
-  for (const src of sources) {
-    for (const line of src.lines) {
-      for (const c of line.claims) {
-        const seen = `${src.persona}/${src.language} ${line.id}: "${line.text}"`;
-        const usable = src.verified && c.verdict === "supported";
-        const prev = table[c.id];
-        if (!prev) {
-          table[c.id] = {
-            kind: c.kind,
-            verdict: c.verdict,
-            values: c.values,
-            usable,
-            seen: [seen],
-          };
-          continue;
-        }
-        prev.seen.push(seen);
-        prev.usable = prev.usable && usable;
-        if (JSON.stringify(prev.values) !== JSON.stringify(c.values)) {
-          prev.usable = false;
-          prev.conflict = (prev.conflict ?? []).concat([c.values]);
-        }
-      }
-    }
-  }
-  return table;
-}
-
-const SLOT = /\{([a-z_]+)\.([a-z_]+)\}/g;
-
 /** The shot's voice-over with its {claim.value} slots filled from verified claims, or its fallback. */
 function voiceOver(shot, claims) {
-  const used = [];
-  const missing = [];
-  const filled = shot.vo.replace(SLOT, (slot, id, key) => {
-    const c = claims?.[id];
-    if (c?.usable && key in c.values) {
-      used.push({ slot, value: c.values[key], seen: c.seen[0] });
-      return c.values[key];
-    }
-    missing.push(slot);
-    return slot;
-  });
-  if (!missing.length) return { text: filled, used, missing };
+  const { text, used, missing } = fill(shot.vo, claims);
+  if (!missing.length) return { text, used, missing };
   if (shot.vo_fallback) return { text: shot.vo_fallback, used: [], missing, fallback: true };
-  return { text: filled, used, missing };
+  return { text, used, missing };
+}
+
+/** Chromium flags for WebGL on the GPU: headless Chromium otherwise draws WebGL with SwiftShader,
+ * its CPU rasteriser (about a dozen fps here). On macOS that means ANGLE on Metal. */
+function gpuArgs(software) {
+  if (software) return ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
+  return ["--ignore-gpu-blocklist", ...(process.platform === "darwin" ? ["--use-angle=metal"] : [])];
+}
+
+/** Recorded shots of an earlier manifest whose clip still exists, minus those re-run now. */
+function previousShots(file, results) {
+  if (!existsSync(file)) return {};
+  try {
+    const old = JSON.parse(readFileSync(file, "utf8"));
+    const dir = path.dirname(file);
+    return Object.fromEntries(
+      (old.shots ?? [])
+        .filter((s) => s.ok && !(s.id in results) && s.video && existsSync(path.join(dir, s.video)))
+        .map(({ start, end, vo, ...rest }) => [rest.id, rest]),
+    );
+  } catch {
+    return {};
+  }
 }
 
 // --- recording -----------------------------------------------------------------------------------
@@ -702,6 +689,7 @@ async function main() {
       chromium: { type: "string" },
       ffmpeg: { type: "string" },
       "no-harvest": { type: "boolean", default: false },
+      "software-gl": { type: "boolean", default: false },
       list: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -736,7 +724,7 @@ async function main() {
   const browser = await chromium.launch({
     headless: !args.headed,
     executablePath: args.chromium,
-    args: ["--hide-scrollbars"],
+    args: ["--hide-scrollbars", ...gpuArgs(args["software-gl"])],
   });
   const site = base ?? doc.site;
   const commit = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
@@ -774,6 +762,8 @@ async function main() {
 
   const vo = Object.fromEntries(doc.shots.map((s) => [s.id, voiceOver(s, claims)]));
   writeFileSync(path.join(outDir, "voiceover.md"), voiceOverScript(plan, vo, results, meta));
+  // A run with --only keeps what earlier runs recorded for the other shots (their clips stay).
+  const previous = previousShots(path.join(outDir, "manifest.json"), results);
   const manifest = {
     meta,
     site,
@@ -782,7 +772,8 @@ async function main() {
       id: shot.id,
       start,
       end,
-      ...(results[shot.id] ?? { status: shot.status, captured: false }),
+      ...(results[shot.id] ??
+        previous[shot.id] ?? { status: shot.status, captured: false }),
       vo: vo[shot.id],
     })),
   };
@@ -807,7 +798,7 @@ async function main() {
   );
   if (slow.length)
     console.log(
-      `fewer than 30 captured fps in ${slow.map((r) => r.id).join(", ")}: try --headed (GPU)`,
+      `fewer than 30 captured fps in ${slow.map((r) => r.id).join(", ")}: a still page draws few frames; otherwise close heavy apps`,
     );
   if (failed.length) {
     console.error(`failed: ${failed.map((r) => r.id).join(", ")}`);
