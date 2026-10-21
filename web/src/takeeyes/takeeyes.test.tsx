@@ -16,7 +16,23 @@ import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { App } from "../App";
 import { createSession, SessionContext, type Session } from "../session";
-import { pressureExport, settle } from "../testing";
+import { createApi } from "../api/client";
+import { createMatchSession } from "../match/matchSession";
+import {
+  API,
+  exportJson,
+  fakeFetch,
+  fakeSockets,
+  health,
+  json,
+  MATCH,
+  MATCH_HERO,
+  MATCH_PRESS,
+  matchExport,
+  matchInfo,
+  pressureExport,
+  settle,
+} from "../testing";
 import { takeEyesOf, type Fetch } from "./controller";
 import { NO_GRID } from "./looks";
 import { TakeEyesButton, TakeEyesStage } from "./TakeEyes";
@@ -298,5 +314,47 @@ describe("Take his eyes: looking and the result", () => {
     expect(te.state.get().step).toBe("closed");
     expect(live()).not.toBeNull();
     expect(document.activeElement).toBe(pill());
+  });
+});
+
+describe("Take his eyes: in a stitched match", () => {
+  it("opens the match's scan hero in Take his eyes; one without a grid says why", async () => {
+    const m = matchExport();
+    const fetch = fakeFetch({
+      "GET /health": health,
+      [`GET /api/matches/${MATCH}`]: () => json(matchInfo(m)),
+      "GET /api/matches/blind_side_run-3/export": () => json(exportJson),
+      "GET /api/matches/press_escape-0/export": () => json({ ...pressureExport(), seed: 7 }), // a pressure hero with no look grid
+    });
+    const session = createMatchSession(parseHero(structuredClone(m)), {
+      api: createApi(API, MATCH, fetch),
+      dataUrl: "/data/",
+      fetch,
+      socket: fakeSockets(),
+      whatIfs: whatIfJson,
+    });
+    vi.stubGlobal("fetch", served); // the controller fetches the bundled grid itself
+    try {
+      session.controls.openBreakdown(
+        m.moments.find((x) => x.id === MATCH_PRESS)!,
+        "eyes",
+      );
+      await settle();
+      expect(session.screen.get().hero).toBeNull();
+      expect(session.screen.get().error).toBe(`${MATCH_PRESS}: ${NO_GRID}`);
+
+      session.controls.openBreakdown(
+        m.moments.find((x) => x.id === MATCH_HERO)!,
+        "eyes",
+      );
+      await settle();
+      const open = session.screen.get().hero!;
+      expect(open).not.toBeNull();
+      const te = takeEyesOf(open);
+      expect(te.state.get()).toMatchObject({ step: "choosing", frame: 50, offset: -150 });
+      expect(open.runner.status.get().status).not.toBe("running");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

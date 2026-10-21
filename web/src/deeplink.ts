@@ -15,7 +15,8 @@
 //                                              ?match=, on its first hero moment that has bundled
 //                                              what-ifs
 //   ?play=eyes                                 open "Take his eyes" (takeeyes/) on his own look;
-//                                              a hero moment's link only (not with ?match=)
+//                                              with ?match=, on its first hero moment that has
+//                                              a bundled look grid
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the lineup card), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
 // (at, run, ask, tamper or play) skips the lineup card and opens paused: no live stream, and no

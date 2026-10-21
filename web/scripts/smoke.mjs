@@ -69,6 +69,14 @@ const PAGES = [
   { name: "link-eyes", path: "?play=eyes", check: takeEyes },
   { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
   {
+    name: "link-eyes-match-1",
+    path: "?match=match-1&play=eyes",
+    check: async (p) => {
+      await see(p.getByRole("button", { name: /Back to the match/ }), "Back to the match");
+      await takeEyes(p);
+    },
+  },
+  {
     name: "phone-320-eyes",
     path: "?play=eyes",
     device: PHONE_320,

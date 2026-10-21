@@ -13,6 +13,7 @@ import { createRoot } from "react-dom/client";
 import { App, MatchApp } from "./App";
 import { apiBase, MATCH_ID } from "./api/client";
 import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
+import { LOOK_FILES } from "./takeeyes/looks";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
@@ -69,6 +70,13 @@ async function main() {
         return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
       });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
+      // play=eyes: the first hero moment whose possession has a bundled look grid.
+      const eyes = session.match.moments.find((m) => {
+        if (!m.hero) return false;
+        const p = session.match.possessions.find((x) => x.index === m.possession);
+        return !!p && !!LOOK_FILES[scenarioMatchId(p)];
+      });
+      if (link.play === "eyes" && eyes) session.controls.openBreakdown(eyes, "eyes");
       broadcast(session.controls);
       root.render(
         <StrictMode>
