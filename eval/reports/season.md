@@ -28,9 +28,9 @@ Goals come only from a shooting hero; match-1's plan has none yet, so the count 
 | Kind `marker_scan` | 1.20 (1.15–1.25) |
 | Kind `pressed_decision` | 1.00 (1.00–1.00) |
 | Kind `sprint` | 128.99 (127.15–131.00) |
-| Selected lens `pressure` | 38.71 (38.12–39.30) |
+| Selected lens `pressure` | 38.72 (38.12–39.32) |
 | Selected lens `scan` | 2.02 (2.00–2.04) |
-| Selected lens `space` | 0.02 (0.01–0.04) |
+| Selected lens `space` | 0.01 (0.00–0.03) |
 | No lens (live only or none available) | 129.16 (127.32–131.15) |
 
 Hero moments, by scenario (the hero's decision or, for a marker, his look):
@@ -38,72 +38,12 @@ Hero moments, by scenario (the hero's decision or, for a marker, his look):
 | Hero | Hero moment detected | Selected lens | Breakdown built | Failures |
 |---|---|---|---|---|
 | `blind_side_run` | 380/380 = 100.0% (99.0–100.0%) | scan 376, space 4 | 380/380 = 100.0% (99.0–100.0%) | 0 |
-| `press_escape` | 380/380 = 100.0% (99.0–100.0%) | pressure 375, space 5 | 319/380 = 83.9% (79.9–87.3%) | 61 |
+| `press_escape` | 380/380 = 100.0% (99.0–100.0%) | pressure 379, space 1 | 319/380 = 83.9% (79.9–87.3%) | 61 |
 | `corner_blind_side` | 380/380 = 100.0% (99.0–100.0%) | scan 380 | 380/380 = 100.0% (99.0–100.0%) | 0 |
 
-Breakdowns that failed:
+Breakdowns that failed, by cause:
 
-- `press_escape` seed 904009532: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1811291785: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 146844577: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1186044885: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1053389533: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1429287199: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 466562860: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 99978600: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 685789832: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1212430382: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1656725592: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1142801909: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1002362939: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 564361177: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 881948639: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 720461559: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1670412688: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 248418889: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 917584294: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1373193967: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 48593548: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1797471346: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 803717288: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1210821933: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1240449603: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1364428982: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 592683598: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 772827907: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1341357307: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1095715498: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1090884169: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 219821598: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 90180462: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 673421504: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 405386352: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1006717139: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1359281419: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 553617506: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1467612133: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1266119863: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1340994584: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1329863855: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 2098336240: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 987714082: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 631071455: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 583625026: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 587113327: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1475734288: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 132824116: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 574786955: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1352272986: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1697408986: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 2083480042: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1450918613: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 683099279: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1211849943: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 2134600095: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 1086273493: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 464622391: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 62825483: StopIteration in runner_received (explain/builders.py:513): 
-- `press_escape` seed 562857918: StopIteration in runner_received (explain/builders.py:513): 
+- `press_escape`, 61×: StopIteration in runner_received (explain/builders.py:513) Seeds 904009532, 1811291785, 146844577, 1186044885, 1053389533, 1429287199, 466562860, 99978600 ….
 
 ## 2. Claims and the Verifier
 
