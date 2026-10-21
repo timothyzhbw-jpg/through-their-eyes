@@ -467,6 +467,36 @@ expansion pack, on Module A (§3.3).
   - Demo seed 11, a typical design seed: `shot:far`, a goal, chance 0.79 on the truth; without
     the look `shot:near`, saved by A1, chance 0.26.
 
+**Keeper hero (`keeper_switch`, 2026-10-21).** A cheap extra of the hero expansion pack
+([drafts/hero_expansion.md](drafts/hero_expansion.md) §7): the same scan story from the keeper,
+with no new mechanism.
+- **The play.** The home team builds from the back against a high, man-oriented press. H4 plays
+  back to the keeper H1 at (−45, −8) while A9 curves his press across the return lane. The near
+  full-back and both centre-backs are covered. Across the pitch the far full-back H3 drops wide and
+  deep, toward (−37, 29), as his winger A7 gives up the press and drops off.
+- **Key action and intervention.** H1's look across the pitch about 0.8 s before the back pass
+  reaches him is the key scan; the intervention is `drop_scan`. Only the back pass is scripted:
+  H1's pass is the normal decision on his belief.
+- **Hero design rule.** An early look shows H1 that H3 is marked by A7. H3's release happens behind
+  H1's gaze, so only the key scan shows him free. Without it, H1's belief still has A7 beside him.
+- **Keepers' scan rates are not calibrated:** Jordet et al. (2020) excluded keepers. Both of H1's
+  looks are forced, and his spontaneous scans are suppressed until he plays.
+- **Acceptance** (`eval/hero_flip.py --scenario keeper_switch`; designed on seeds 0–39, held-out
+  100–139): dropping the key scan changes H1's pass in 26/40 (65%, target ≥ 60%: met; 29/40 on the
+  design seeds). With the look he plays the switch to H3 in 32/40, and all 32 are completed; mean
+  ΔxT +0.034 on the fitted xT grid (§4; +0.043 on the prior). Report:
+  [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md).
+  Tests ([tests/test_keeper_switch.py](../tests/test_keeper_switch.py), design seeds): the design
+  rule, role speed and acceleration limits, and every pair of players at least 0.7 m apart until
+  H1 plays.
+- **Not a scan story by the lens rule.** On the same held-out seeds `eval/hero_lens.py` selects
+  `pressure` 37/40, `space` 3/40 and `scan` 0/40 (`pressure` 40/40 on the prior xT grid)
+  ([hero_lens_keeper_switch.md](../eval/reports/hero_lens_keeper_switch.md)). The look decides the
+  pass (without it the ball is lost in 30/40), but in xT the moment is the keeper escaping A9's
+  press next to his own goal, and that delta is larger than the look's. By the rule above (the
+  intended lens in ≥ 60%), it is not served in the app as a scan hero. It stays in the sim, where
+  its gate holds. Its declared lens was not changed after this result.
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -523,9 +553,10 @@ expansion pack, on Module A (§3.3).
 - [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
       — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
-      (39/40 seeds, 98%; `blind_side_run` is the only scan hero; the pressure hero `press_escape`
-      is tested by its own intervention, `force:carry`, in
-      [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md), §3.6);
+      (39/40 seeds, 98%) and [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md)
+      (26/40 held-out seeds, 65%). The pressure hero `press_escape` is tested by its own
+      intervention, `force:carry`, in
+      [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md) (§3.6);
       [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_dropping_the_key_scan_changes_the_chosen_action_in_most_held_out_seeds`
 - [x] Set-piece hero: without the marker's key scan, the runner receives the cutback `unmarked`
       (the lexicon's nearest opponent > 5 m), and with it the marker is within 5 m of him as it
