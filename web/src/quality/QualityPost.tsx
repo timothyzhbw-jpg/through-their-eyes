@@ -43,6 +43,7 @@ import { FLOODLIGHTS } from "../views/stadiumGeometry";
 import { NIGHT } from "../views/Stadium";
 import { addRim, aimRim, bakedLook, LOOK, playerMaterials, removeRim, undoBakedLook } from "./look";
 import {
+  DofEase,
   dofAt,
   featuresOf,
   focusOf,
@@ -243,6 +244,7 @@ export function QualityPost({ sample, hfov }: { sample: Sample; hfov: number }) 
   const buffer = useMemo(() => new THREE.Vector2(), []);
   const focusPoint = useMemo(() => new THREE.Vector3(), []);
   const meter = useMemo(() => new FrameMeter(), [chain]); // a new chain is measured afresh
+  const dofEase = useMemo(() => new DofEase(), [chain]);
   const hfovDeg = (hfov * 180) / Math.PI;
 
   useFrame((state) => {
@@ -261,10 +263,13 @@ export function QualityPost({ sample, hfov }: { sample: Sample; hfov: number }) 
     // An automatic tier that cannot keep up while playing steps down (quality.ts).
     if (meter.frame(performance.now() / 1000, s.playing) === "lower") stepDown();
 
-    // Depth of field: only through the key-moment slow motion.
+    // Depth of field: only through the key-moment slow motion, eased in and out over wall time.
     // Never across a cut (beat/cut.ts): off around a camera switch, easing back after it.
-    const cutScale = cuts.blurScale(performance.now() / 1000);
-    const amount = chain.bokeh ? dofAt(hero, run, s.frame, s.camera) * cutScale : 0;
+    const now = performance.now() / 1000;
+    const cutScale = cuts.blurScale(now);
+    const wanted = chain.bokeh ? dofAt(hero, run, s.frame, s.camera) : 0;
+    const amount = dofEase.step(wanted, now, cutScale);
+    if (dofEase.moving(wanted)) state.invalidate(); // keep easing while paused
     if (chain.bokeh) {
       chain.bokeh.enabled = amount > 0.01;
       if (chain.bokeh.enabled) {

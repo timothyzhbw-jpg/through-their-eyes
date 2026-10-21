@@ -7,6 +7,8 @@ import { beatsOf, motion } from "../beat/beat";
 import { parseHero } from "../data/hero";
 import {
   detectTier,
+  DOF_EASE_S,
+  DofEase,
   dofAt,
   FrameMeter,
   featuresOf,
@@ -118,6 +120,61 @@ describe("depth of field", () => {
     expect(focusOf(b, b.sighted! - 1, "pov")).toBe(-1);
     expect(focusOf(b, b.sighted! + 1, "pov")).toBe(b.target);
     expect(focusOf(b, b.sighted! + 1, "broadcast")).toBe(b.target);
+  });
+});
+
+describe("depth of field eases (LOOKDEV 2b: a gentle focus pull, never a pop)", () => {
+  /** Step `ease` at 60 Hz from `t0` for `seconds` towards `target`; the amounts drawn. */
+  const run60 = (ease: DofEase, target: number, t0: number, seconds: number, cut = 1) => {
+    const out: number[] = [];
+    for (let k = 1; k <= Math.round(seconds * 60); k++)
+      out.push(ease.step(target, t0 + k / 60, cut));
+    return out;
+  };
+
+  it("takes at least half a second to come in, starting and ending gently", () => {
+    expect(DOF_EASE_S).toBeGreaterThanOrEqual(0.5);
+    const ease = new DofEase();
+    expect(ease.step(1, 10, 1)).toBe(0); // the first frame has no elapsed time
+    const inn = run60(ease, 1, 10, 1);
+    const reached = inn.findIndex((v) => v >= 0.999);
+    expect(reached / 60).toBeGreaterThanOrEqual(0.5);
+    expect(inn.at(-1)).toBe(1);
+    for (let k = 1; k < inn.length; k++) expect(inn[k]).toBeGreaterThanOrEqual(inn[k - 1]);
+    // Eased in and out: the first and last steps are much smaller than the middle ones.
+    const steps = inn.slice(0, reached + 1).map((v, k) => v - (k ? inn[k - 1] : 0));
+    const most = Math.max(...steps);
+    expect(steps[0]).toBeLessThan(most / 5);
+    expect(steps[reached]).toBeLessThan(most / 5);
+  });
+
+  it("and at least half a second to go out", () => {
+    const ease = new DofEase();
+    ease.step(1, 0, 1);
+    run60(ease, 1, 0, 1);
+    const out = run60(ease, 0, 1, 1);
+    expect(out.findIndex((v) => v <= 0.001) / 60).toBeGreaterThanOrEqual(0.5);
+    expect(out.at(-1)).toBe(0);
+  });
+
+  it("is off at once around a cut, then comes in again from nothing", () => {
+    const ease = new DofEase();
+    ease.step(1, 0, 1);
+    run60(ease, 1, 0, 1);
+    expect(ease.step(1, 1.01, 0)).toBe(0); // the cut's frame is sharp
+    expect(ease.step(1, 1.1, 0.5)).toBe(0); // and so is the ramp of the cut guard
+    const back = run60(ease, 1, 1.1, 1);
+    expect(back[0]).toBeLessThan(0.05);
+    expect(back.findIndex((v) => v >= 0.999) / 60).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("does not jump after a pause or a hidden tab: a long gap counts as one short step", () => {
+    const ease = new DofEase();
+    ease.step(1, 0, 1);
+    expect(ease.step(1, 30, 1)).toBeLessThan(0.1);
+    expect(ease.moving(1)).toBe(true);
+    run60(ease, 1, 30, 1);
+    expect(ease.moving(1)).toBe(false);
   });
 });
 

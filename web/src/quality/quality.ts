@@ -106,6 +106,40 @@ export function focusOf(b: Beat, f: number, camera: "pov" | "broadcast"): number
 }
 
 /**
+ * Depth of field comes and goes as a gentle focus pull, never a pop (the art direction, LOOKDEV
+ * 2b): the amount drawn follows the wanted one (`dofAt`) at no more than the full range in
+ * DOF_EASE_S of wall time, on an S-curve that starts and ends gently. Around a camera switch it
+ * is off at once (beat/cut.ts), and after it comes in again from nothing.
+ */
+export const DOF_EASE_S = 0.6;
+const DOF_MAX_STEP_S = 0.1; // a longer gap (paused, a hidden tab) counts as this much
+
+export class DofEase {
+  private progress = 0; // follows the wanted amount linearly; drawn through the S-curve
+  private last: number | null = null;
+
+  /** The amount to draw at wall time `now` (s), wanting `target` (0..1); `cutScale` from cuts. */
+  step(target: number, now: number, cutScale: number): number {
+    const dt = this.last === null ? 0 : Math.min(DOF_MAX_STEP_S, Math.max(0, now - this.last));
+    this.last = now;
+    if (cutScale < 1) {
+      this.progress = 0;
+      return 0;
+    }
+    const room = dt / DOF_EASE_S;
+    const gap = target - this.progress;
+    this.progress = Math.abs(gap) <= room ? target : this.progress + Math.sign(gap) * room;
+    const p = this.progress;
+    return p * p * (3 - 2 * p);
+  }
+
+  /** Whether frames are still needed to reach `target` (the canvas only redraws on demand). */
+  moving(target: number): boolean {
+    return this.progress !== target;
+  }
+}
+
+/**
  * The safety net of an automatic tier: playing frames are timed (paused, the canvas only
  * redraws on demand, so those gaps say nothing), and when they average under MIN_FPS over
  * WINDOW_S of play the tier should come down.
