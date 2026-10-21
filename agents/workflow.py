@@ -51,16 +51,7 @@ from pydantic import BaseModel, ValidationError
 
 from agents import fallbacks, prompts, schemas, telemetry
 from agents.context import MomentContext
-from agents.delivery import (
-    DESCRIBED,
-    VOICES,
-    cache_key,
-    delivery_tier,
-    persona_tier,
-    pick_style,
-    ssml_for_line,
-    withheld,
-)
+from agents.delivery import DESCRIBED, VOICE_STYLES, delivery_tier, voice_cues, withheld
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, Outage, ask, describe
 from agents.plan import shape_errors, template_plan, validate_plan, voice_times
 from agents.schemas import (
@@ -81,7 +72,6 @@ from agents.schemas import (
     Speaker,
     StepTrace,
     TelestrationPlan,
-    VoiceCue,
     analyst_model,
     anchored_draft_model,
 )
@@ -731,8 +721,8 @@ class Verifier(Step):
 
 
 class Voice(Step):
-    """SSML per approved line: one voice per speaker and language, styled by the delivery tier
-    (calm and slower for audio description, whatever the tier).
+    """SSML per approved line, from `voice_cues` (the same rules `revoice` applies on a cached
+    read).
 
     The join of the two lanes: it speaks once it holds a plan and approved scripts from the same
     Briefing. It speaks again when a step brought back revises either: a new plan from the
@@ -778,27 +768,26 @@ class Voice(Step):
         started = time.perf_counter()
         crew, mc = self.crew, self.crew.ctx
         tier = delivery_tier(mc.card)
+        # Tests pass a style map. Production leaves it empty and `voice_cues` uses VOICE_STYLES.
+        given = crew.voice_styles or None
         scripts = []
         for script in msg.scripts:
             speaker_of = {line.id: line.speaker for line in script.lines}
             times = voice_times(planned.plan, len(script.payload.lines))
-            cues = []
-            for t, line in zip(times, script.payload.lines, strict=True):
-                spoken = ScriptLine(
-                    id=line.id, speaker=speaker_of[line.id], text=line.text, claims=line.claims
-                )
-                voice = VOICES[(script.language, spoken.speaker)]
-                styles = crew.voice_styles.get(voice, set())
-                ssml = ssml_for_line(spoken, script.language, tier, styles, script.persona)
-                style = pick_style(persona_tier(tier, script.persona), styles)
-                cues.append(
-                    VoiceCue(line=line.id, speaker=spoken.speaker, t=t, voice=voice, style=style,
-                             ssml=ssml, cache_key=cache_key(ssml))
-                )  # fmt: skip
+            lines = [
+                {"id": line.id, "text": line.text, "claims": list(line.claims),
+                 "speaker": speaker_of[line.id]}
+                for line in script.payload.lines
+            ]  # fmt: skip
+            cues = voice_cues(
+                script.persona, script.language, tier, script.payload.moment, lines,
+                script.payload.claims, times, given,
+            )  # fmt: skip
             scripts.append(script.model_copy(update={"voice": cues}))
-        notes = [f"tier {tier}"] + (
-            [] if crew.voice_styles else ["voice styles unknown: prosody only"]
+        unknown = given is None and any(
+            cue.voice not in VOICE_STYLES for script in scripts for cue in script.voice
         )
+        notes = [f"tier {tier}"] + (["voice styles unknown: prosody only"] if unknown else [])
         notes += [f"{p}: calm and slower" for p in sorted({s.persona for s in scripts} & DESCRIBED)]
         crew.put(StepTrace(step="voice", source="code", attempts=1,
                            ms=round((time.perf_counter() - started) * 1000, 1), error=None,

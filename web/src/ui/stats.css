@@ -1,0 +1,301 @@
+/* Live match stats (SPEC 4.6, 7). Numbers are data, in the mono face; the source chip is the
+   global `.source`. On a phone the table scrolls inside its wrap and two columns drop out. */
+
+.stats .chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
+.stats-team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 500 14px/1.4 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-2);
+}
+
+.stats .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chalk-3);
+  flex: none;
+}
+.stats .dot[data-team="0"] {
+  background: var(--home);
+}
+.stats .dot[data-team="1"] {
+  background: var(--away);
+}
+
+.stats-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: var(--r-card);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 500 13px/1.35 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+}
+.stats-table th {
+  padding: 12px 10px;
+  text-align: right;
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+  border-bottom: 1px solid var(--hairline-strong);
+  white-space: nowrap;
+}
+.stats-table th.player,
+.stats-table td.player {
+  text-align: left;
+}
+.stats-table th .source,
+.stats-log h3 .source {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.stats-table td {
+  padding: 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.stats-table td.player .who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--chalk);
+}
+.stats-table .shirt {
+  color: var(--chalk-3);
+}
+
+.stats-ball,
+.stats-now,
+.stats-last {
+  margin: 0;
+  font: 500 14px/1.4 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-2);
+}
+.stats-ball b,
+.stats-now b {
+  color: var(--chalk);
+  font-weight: 500;
+}
+
+.stats-log h3 {
+  margin: 0 0 12px;
+  font: 500 12px/1.2 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.stats-passes,
+.stats-shots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stats-passes li,
+.stats-shots li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  min-width: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--hairline);
+  font: 500 13px/1.4 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-2);
+}
+.stats-passes .who,
+.stats-headlines .who,
+.stats-player .who {
+  color: var(--chalk);
+}
+.stats-passes .parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  width: 100%;
+  color: var(--chalk-3);
+  font-size: 11px;
+}
+.diff-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--hairline);
+}
+.diff-bar i {
+  display: block;
+  height: 100%;
+}
+.diff-bar .lane {
+  background: var(--floodlight);
+}
+.diff-bar .passer {
+  background: var(--home);
+}
+.diff-bar .receiver {
+  background: var(--away);
+}
+.diff-bar .distance {
+  background: var(--chalk-3);
+}
+
+.stats-headlines {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stats-headlines li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 20px;
+  border-radius: var(--r-card);
+  background: var(--night-2);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.stats-headlines .label {
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.stats-headlines .value {
+  font: 500 clamp(28px, 3vw, 40px) / 1.05 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+
+.stats-player {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  min-width: 0;
+  max-width: 720px;
+}
+.stats-player-id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+.stats-player-id h3 {
+  margin: 0;
+  font: 400 32px/1.1 var(--font-display);
+  color: var(--chalk);
+}
+.stats-player-id p {
+  margin: 0;
+  font: 500 13px/1 var(--font-data);
+  color: var(--chalk-3);
+}
+.stats-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 20px;
+  width: 100%;
+  margin: 0;
+}
+.stats-figures dt {
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.stats-figures dd {
+  margin: 4px 0 0;
+  font: 500 28px/1.1 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+}
+
+.stage-ticker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+  pointer-events: none;
+}
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.38);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font: 500 12px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-2);
+}
+.stat-chip b {
+  color: var(--floodlight);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 760px) {
+  .stats .seg {
+    display: flex;
+    max-width: 100%;
+  }
+  .stats .seg button {
+    padding: 0 10px;
+  }
+  .stats-table .hsr,
+  .stats-table .sprint {
+    display: none;
+  }
+  /* the player stays in view while the numbers scroll sideways */
+  .stats-table th.player,
+  .stats-table td.player {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--night);
+  }
+  .stats-headlines,
+  .stats-figures {
+    grid-template-columns: 1fr;
+  }
+  .stage-ticker {
+    grid-area: views;
+    align-self: end;
+    margin: 0 16px 12px;
+    position: relative;
+    z-index: 5;
+  }
+}

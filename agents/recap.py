@@ -36,12 +36,10 @@ from pydantic import BaseModel, Field, create_model, field_validator
 from agents import prompts, telemetry
 from agents.delivery import (
     CLUTCH_DELTA,
+    DESCRIBED,
     EXCITED_DELTA,
-    VOICES,
-    cache_key,
-    persona_tier,
-    pick_style,
-    ssml_for_line,
+    VOICE_STYLES,
+    voice_cues,
     withheld,
 )
 from agents.llm import DEFAULT_TIMEOUT_S, client_from_env
@@ -57,7 +55,6 @@ from agents.schemas import (
     StepTrace,
     Strict,
     Tier,
-    VoiceCue,
     _enum,
     no_numbers,
 )
@@ -830,6 +827,8 @@ class RecapVoice(Voice):
         reel: RecapReel = planned.plan
         findings: RecapFindings = msg.base.findings
         tier = recap_tier(rc)
+        # Tests pass a style map. Production leaves it empty and `voice_cues` uses VOICE_STYLES.
+        given = crew.voice_styles or None
         scripts = []
         for script in msg.scripts:
             persona, language = script.persona, script.language
@@ -837,26 +836,26 @@ class RecapVoice(Voice):
             card_payload, card_moments = card(rc, findings, persona, language)
             sheet, starts = cue_sheet(rc, reel, script.payload, card_payload, card_moments,
                                       speakers, persona, language)  # fmt: skip
-            cues = []
-            for line in script.payload.lines:
-                spoken = ScriptLine(id=line.id, speaker=speakers[line.id], text=line.text,
-                                    claims=line.claims)  # fmt: skip
-                voice = VOICES[(language, spoken.speaker)]
-                styles = crew.voice_styles.get(voice, set())
-                ssml = ssml_for_line(spoken, language, tier, styles, persona)
-                cues.append(VoiceCue(
-                    line=line.id, speaker=spoken.speaker, t=starts[line.id], voice=voice,
-                    style=pick_style(persona_tier(tier, persona), styles), ssml=ssml,
-                    cache_key=cache_key(ssml),
-                ))  # fmt: skip
+            lines = [
+                {"id": line.id, "text": line.text, "claims": list(line.claims),
+                 "speaker": speakers[line.id]}
+                for line in script.payload.lines
+            ]  # fmt: skip
+            # No one moment's decision to peak on: the recap tells several (`moment` empty).
+            cues = voice_cues(
+                persona, language, tier, "", lines, script.payload.claims,
+                [starts[line.id] for line in script.payload.lines], given,
+            )  # fmt: skip
             scripts.append(RecapScript(
                 persona=persona, language=language, lines=script.lines, payload=script.payload,
                 dropped=script.dropped, rewrites=script.rewrites, voice=cues, card=card_payload,
                 card_moments=card_moments, cues=sheet,
             ))  # fmt: skip
-        notes = [f"tier {tier}"] + (
-            [] if crew.voice_styles else ["voice styles unknown: prosody only"]
+        unknown = given is None and any(
+            cue.voice not in VOICE_STYLES for script in scripts for cue in script.voice
         )
+        notes = [f"tier {tier}"] + (["voice styles unknown: prosody only"] if unknown else [])
+        notes += [f"{p}: calm and slower" for p in sorted({s.persona for s in scripts} & DESCRIBED)]
         crew.put(StepTrace(step="voice", source="code", attempts=1, ms=0.0, error=None,
                            notes=notes))  # fmt: skip
         score = rc.all_claims["final_score"].slots

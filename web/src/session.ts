@@ -156,7 +156,6 @@ export function createSession(
   const possession = options.possession ?? null;
   const moment = heroMoment(hero, options.momentId);
   const playback = createPlayback(hero);
-  const runner = new BreakdownRunner(playback, hero, moment);
   const bundled = bundledBreakdown(payloadCandidate, planCandidate, moment, hero);
   const breakdown = createStore<BreakdownState>(
     api
@@ -188,6 +187,8 @@ export function createSession(
       ? new LiveFeed(hero, (start) => api.liveUrl(start), options.socket, hooks)
       : null;
   const voice = new VoicePlayer(api ? (key) => api.tts(key) : null, options.makeAudio);
+  // While a line is loading or playing, the next voice step waits so it is not cut off.
+  const runner = new BreakdownRunner(playback, hero, moment, { hold: () => voice.busy });
   const parts = {
     kind: "hero" as const,
     hero,
@@ -216,7 +217,8 @@ export function createSession(
     if (!playback.get().live || (status !== "ended" && status !== "lost")) return;
     playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
   });
-  // Speak each caption as it comes up (only while sound is on).
+  // Speak each caption as it comes up (only while sound is on). The runner's hold reads
+  // `voice.busy`, so the plan waits out the clip instead of starting the next line over it.
   let caption: string | null = null;
   playback.subscribe(() => {
     const line = playback.get().captionLine;
@@ -579,6 +581,14 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       // Any mode, including the pressed factual button: take-over would cancel the autoplay.
       if (s.feed && runLocked(playback.get().live, s.feed.state.get().moments, moment.id)) return;
       transport.setMode(mode);
+    },
+    /** Pause holds a running breakdown, caption and all, instead of ending it; play goes on. */
+    togglePlay() {
+      const { status, paused } = runner.status.get();
+      if (status !== "running") return transport.togglePlay();
+      if (paused) return runner.resume();
+      runner.pause();
+      voice.stop(); // the line's caption stays up; the next line speaks after play
     },
 
     /** Play the breakdown; online and not here yet, ask for it and play it when it arrives. */
