@@ -1803,7 +1803,7 @@
       "picture": {
         "src": "capture",
         "shot": "06-language",
-        "in": 4.2,
+        "in": 4.9,
         "push": [
           1.0,
           1.04
@@ -1823,7 +1823,7 @@
           "line": {
             "persona": "casual",
             "language": "zh",
-            "index": 2
+            "index": 3
           },
           "style": "sports-commentary",
           "degree": 1.3

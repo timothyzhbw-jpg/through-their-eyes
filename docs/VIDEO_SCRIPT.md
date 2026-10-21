@@ -56,7 +56,7 @@ Times are in the finished film. **Picture**: `cine` = filmed in the web app's ci
 | 0:54.75 | 4.5 | Substitution | app `10-drill` | Bring back: the row turns back to MODEL from its checkpoint; an LED board flips OFF TEMPLATE → ON TELESTRATOR. | …bring it back, and it picks up where it left off. |
 | 0:59.25 | 2.25 | Casual fan | app `03-breakdown` | The replay with the casual captions; tag "CASUAL FAN". | The same moment, for every fan, in every language. |
 | 1:01.5 | 2.25 | Analyst | app `05-personas` | The analyst's captions; tag "ANALYST". | — |
-| 1:03.75 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, e.g. 关键在这里。球到之前回头的那一眼，H8看到了H9。 |
+| 1:03.75 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, the caption on screen: 出球时，H9离最近的对手有11.0米。 |
 | 1:08.25 | 3.75 | What if | app `08-what-if` | A free question typed, the simulator's verified answer. | Ask what if, and the simulation answers. |
 | 1:12 | 4.5 | Live | app `02-live-stream` | The stitched match on the broadcast camera, live from the API, with the camera director's chip; "A WHOLE MATCH — LIVE". | A whole match, live, with a camera director. |
 | **Your call** (the music drops out) | | | | | |
