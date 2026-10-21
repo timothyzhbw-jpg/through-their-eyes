@@ -1766,8 +1766,9 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
       3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
       (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
-      LCP is text in both (the moment card's heading at about 6.1 s; in some runs of both, the
-      heading's first paint is smaller and a 13 s caption becomes the LCP). `npm run fps` 60
+      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
+      eval/reports/web_load.md). `npm run fps` 60
       capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
       245–299 → 339–344 fps broadcast.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
