@@ -12,16 +12,16 @@ Each hero's held-out acceptance eval, run once more and unchanged (same design, 
 | `corner_blind_side` | Without the look `A9` receives unmarked | ≥ 60% | 37/40 (92%) (100–139) | 80%–97% | 193/200 (96%) | 93%–98% | pass |
 | `corner_blind_side` | Without the look, `H5`'s belief error | ≥ 90% | 37/40 (92%) (100–139) | 80%–97% | 188/200 (94%) | 90%–97% | pass (interval reaches below the target) |
 | `corner_blind_side` | Design rule: `A9` unseen | ≥ 90% | 40/40 (100%) (100–139) | 91%–100% | 200/200 (100%) | 98%–100% | pass |
-| `corner_blind_side` | Scan lens Δ > 0 | ≥ 60% | 39/40 (98%) (100–139) | 87%–100% | not run yet | — | — |
-| `corner_blind_side` | The lens's scan | ≥ 90% | 40/40 (100%) (100–139) | 91%–100% | not run yet | — | — |
-| `far_post_finish` | Placement changed without the key scan | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | not run yet | — | — |
-| `far_post_finish` | Design rule: A1 unseen | ≥ 90% | 38/40 (95%) (200–239) | 83%–99% | not run yet | — | — |
-| `far_post_finish` | Placement changed, v_dive = 2.5 | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | not run yet | — | — |
-| `far_post_finish` | Placement changed, v_dive = 4.0 | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | not run yet | — | — |
+| `corner_blind_side` | Scan lens Δ > 0 | ≥ 60% | 39/40 (98%) (100–139) | 87%–100% | 195/200 (98%) | 94%–99% | pass |
+| `corner_blind_side` | The lens's scan | ≥ 90% | 40/40 (100%) (100–139) | 91%–100% | 200/200 (100%) | 98%–100% | pass |
+| `far_post_finish` | Placement changed without the key scan | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | 198/200 (99%) | 96%–100% | pass |
+| `far_post_finish` | Design rule: A1 unseen | ≥ 90% | 38/40 (95%) (200–239) | 83%–99% | 198/200 (99%) | 96%–100% | pass |
+| `far_post_finish` | Placement changed, v_dive = 2.5 | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | 198/200 (99%) | 96%–100% | pass |
+| `far_post_finish` | Placement changed, v_dive = 4.0 | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | 198/200 (99%) | 96%–100% | pass |
 
 | Hero | Gate on a value | Target | Original | 1000–1199 | Verdict |
 |---|---|---|---|---|---|
-| `far_post_finish` | Median ΔP_goal on truth | ≥ 0.300 | +0.524 | not run yet | — |
+| `far_post_finish` | Median ΔP_goal on truth | ≥ 0.300 | +0.524 | +0.520 | pass |
 
 Pending, their scenario or original report not on this branch yet: `hero_lens_far_post_finish`, `hero_flip_keeper_switch`, `hero_flip_cutback_scan`, `hero_lens_cutback_scan`, `hero_save_screened_shot`, `hero_flip_read_the_run`.
 
