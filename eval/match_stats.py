@@ -41,6 +41,7 @@ from eval.realism import (
     _wsd,
 )
 from sim.match import DEFAULT_PLAN, SET_PIECES, Possession, StitchedMatch, build_match
+from sim.scenarios import SCENARIOS
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -360,15 +361,30 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
     )  # fmt: skip
 
     # Shots.
+    shooters = [
+        f"`{s.scenario}` {s.seed}" for s in DEFAULT_PLAN
+        if s.seed is not None and SCENARIOS[s.scenario].shots
+    ]  # fmt: skip
     count_row(
         "Shots per 90 min", "shots",
-        "Shot events (engine `shot`, an option of the decision model). The hero possessions keep "
-        "their demo seeds, so they decide the same in every match, and neither they nor "
-        "possession_play have the shot model on (`Scenario.shots`), so no shot is taken.",
+        "Shot events (engine `shot`, an option of the decision model). Only a scenario with the "
+        "shot model on (`Scenario.shots`) shoots: in the default plan "
+        + (", ".join(shooters) + ", a hero that keeps its seed, so its shot is the same in every "
+           "match; possession_play never shoots." if shooters else "none, so no shot is taken."),
     )  # fmt: skip
-    goals = int(np.sum(m["goals"]))
-    rows.append(
-        Row(
+    goals, shots = int(np.sum(m["goals"])), int(np.sum(m["shots"]))
+    if shots:
+        outcome = Row(
+            "Shot outcomes (goals, saves, misses)",
+            f"{goals} goal{'s' * (goals != 1)} of {shots} shot{'s' * (shots != 1)}",
+            "—",
+            note="Counted from `goal` events (sim/match.py scores them, never sets a score). Every "
+            "shot here is a hero's with the same seed in every match, so its outcome repeats by "
+            "construction: a property of the plan, not a measured scoring rate. SPEC 3.3's shot "
+            "speed, roughly 80–130 km/h, is module A's and is not checked here.",
+        )
+    else:
+        outcome = Row(
             "Shot outcomes (goals, saves, misses)",
             PENDING,
             "—",
@@ -378,7 +394,7 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
             "SPEC 3.3's shot speed, roughly 80–130 km/h, is module A's as well and is not checked "
             "here.",
         )
-    )
+    rows.append(outcome)
     return rows
 
 
@@ -403,8 +419,13 @@ def render(rows: list[Row], seeds: list[int]) -> str:
         "3 or a number printed in a paper cited in docs/REFERENCES.md; no dataset was used.",
         "",
         f"**{counts[INSIDE]} inside, {counts[OUTSIDE]} outside, {counts[INCONCLUSIVE]} "
-        f"inconclusive, {no_ref} with no published reference "
-        f"({sum(r.sim == PENDING for r in rows)} of them {PENDING}).**",
+        f"inconclusive, {no_ref} with no published reference"
+        + (
+            f" ({pending} of them {PENDING})"
+            if (pending := sum(r.sim == PENDING for r in rows))
+            else ""
+        )
+        + ".**",
         "",
     ]
     if outside:
@@ -436,8 +457,15 @@ def render(rows: list[Row], seeds: list[int]) -> str:
         f"- Rows marked *{NO_REFERENCE}* have no target: SPEC 3 sets none and no paper cited in "
         "docs/REFERENCES.md is recorded there as printing one. They show the sim's distribution "
         "only. Nothing was filled in from memory or from datasets.",
-        f"- *{PENDING}*: shot outcomes need a possession with the shot model on (`Scenario.shots`, "
-        "module A); the default plan has none, so none is counted or invented.",
+        *(
+            [
+                f"- *{PENDING}*: shot outcomes need a possession with the shot model on "
+                "(`Scenario.shots`, module A); the default plan has none, so none is counted or "
+                "invented."
+            ]
+            if any(r.sim == PENDING for r in rows)
+            else []
+        ),
         "- Held-out seeds: the plan was built on match 1, the demo match (SPEC 3.1). Open-play "
         "possessions take seeds keyed off the match seed, from 1,000,000 up, so they are never "
         "design or eval seeds. The hero possessions keep their demo seeds ("

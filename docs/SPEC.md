@@ -494,14 +494,14 @@ expansion pack, on Module A (§3.3).
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,855 passes attempted (79.4% of resolved ones completed), 371 possession changes
-      (354 interceptions, 18 out of play, no tackles), 485 team possessions of 11.1 s on average,
-      and no shots: no scenario of the default plan has the shot model on, so shot outcomes are
-      pending module A. None of these has a target to check: no range is configured, and no paper
-      in REFERENCES.md is recorded as printing one. The two rows that have a target are SPEC 3.1's,
-      and both are inside: 18 scenario possessions per match (target 15–25) and 12.31 min of play
-      (target 10–15). 340 of 360 scenario possessions start with the home team, which has 56.1% of
-      the possession time.
+      of play, 1,853 passes attempted (79.7% of resolved ones completed), 367 possession changes
+      (349 interceptions, 17 out of play, no tackles), 486 team possessions of 11.1 s on average,
+      and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
+      match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
+      has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
+      printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
+      scenario possessions per match (target 15–25) and 12.47 min of play (target 10–15). 360 of
+      380 scenario possessions start with the home team, which has 56.6% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
@@ -1588,7 +1588,7 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (19 possessions, 12.5 min) is inside §3.1's 15–25 and 10–15 min; its one shot per match is the shot hero's, a goal by construction |
 | §4 analytics | 8 | 0 | — |
 | §5 explain | 7 | 0 | — |
 | §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
