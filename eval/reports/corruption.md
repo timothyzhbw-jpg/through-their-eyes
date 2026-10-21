@@ -1,10 +1,10 @@
 # Corruption eval — claims verifier
 
-Scenario `blind_side_run`, seeds 0–19 (20): the factual run and the drop-key-scan counterfactual per seed. Claims come from `explain/builders.py` (24 facts); 100 perturbations, an equal share per type. Each perturbed sentence is judged by the verifier and by an independent ground-truth oracle (`eval/corruption.py`, plain numpy over the run, never through `explain/`). Numbers are true when the truth rounds to the shown value (half a display unit).
+Scenario `blind_side_run`, seeds 0–19 (20): the factual run and the drop-key-scan counterfactual per seed. Claims come from `explain/builders.py` (25 facts); 100 perturbations, an equal share per type. Each perturbed sentence is judged by the verifier and by an independent ground-truth oracle (`eval/corruption.py`, plain numpy over the run, never through `explain/`). Numbers are true when the truth rounds to the shown value (half a display unit).
 
 | Metric | Value | Target (SPEC 5.3) |
 |---|---|---|
-| Generated claims verified `supported` | 468/468 (100%) | all |
+| Generated claims verified `supported` | 474/474 (100%) | all |
 | Perturbations false under ground truth | 90 | — |
 | … refuted by the verifier | **90/90 (100%)** | ≥ 98% |
 | … blocked (refuted or inconclusive) | 90/90 (100%) | — |
@@ -12,11 +12,11 @@ Scenario `blind_side_run`, seeds 0–19 (20): the factual run and the drop-key-s
 | Perturbations the recording cannot decide (excluded) | 4 | reported |
 | Still-true perturbations verified `supported` | 6/6 (100%) | — |
 | Unsupported perturbed claims that rendered | 0 | 0 |
-| Supported claims rendered in en + zh, render check clean | 936/936 (100%) | all |
-| Render payloads (seed × language) re-checked clean | 40/40, 976 lines, 0 violations | all |
-| Claims labelled observed / computed / counterfactual | 280 / 140 / 48 | every claim |
-| Claims anchored on the moment card | 374/468 (80%) | — |
-| Verdicts written to the audit log | 568/568 | all |
+| Supported claims rendered in en + zh, render check clean | 948/948 (100%) | all |
+| Render payloads (seed × language) re-checked clean | 40/40, 988 lines, 0 violations | all |
+| Claims labelled observed / computed / counterfactual | 280 / 140 / 54 | every claim |
+| Claims anchored on the moment card | 380/474 (80%) | — |
+| Verdicts written to the audit log | 574/574 | all |
 
 Result: PASS (refutation 100.0%).
 
@@ -35,6 +35,7 @@ Result: PASS (refutation 100.0%).
 |---|---|---|---|---|---|---|
 | `belief_error` | computed | 20 | 20 | 9 | 9 | 9 |
 | `blind_side` | computed | 20 | 20 | 8 | 4 | 4 |
+| `cf_carry` | counterfactual | 6 | 6 | 0 | 0 | 0 |
 | `cf_pass` | counterfactual | 14 | 14 | 3 | 3 | 3 |
 | `cf_pass_success` | counterfactual | 14 | 14 | 0 | 0 | 0 |
 | `cf_value` | counterfactual | 20 | 20 | 3 | 3 | 3 |
@@ -90,6 +91,7 @@ Player ids stand in for display names.
 |---|---|---|
 | `belief_error` | When he played the pass, H8's picture of H9 was off by 0.5 metres. | 出球时，H8对H9位置的判断偏差为0.5米。 |
 | `blind_side` | H9's run was on H8's blind side. | H9的跑位在H8的盲区。 |
+| `cf_carry` | — | — |
 | `cf_pass` | Without that look, H8 would have passed to H1. | 如果没有那一眼，H8会把球传给H1。 |
 | `cf_pass_success` | Without that look, H8 thought the pass to H9 had a 0.07 chance of arriving; it was 0.90. | 如果没有那一眼，H8会以为传给H9的球能到的概率是0.07，实际是0.90。 |
 | `cf_value` | That look was worth 0.09 in expected threat. | 那一眼带来了0.09的预期威胁（xT）。 |
