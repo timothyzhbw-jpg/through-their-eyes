@@ -1289,6 +1289,15 @@ original visual identity.
   minimum shot length and never mid-scan ([web/src/director/](../web/src/director/)).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
+  - The persona and language menu stays open across picks until Escape or a press outside.
+  - A stitched match's Moments panel pins its hero moments (Breakdown, Your call) at the top. Every
+    other moment folds into one row per kind and lens, lensed groups first, and groups of up to
+    five start open. match-1's 149 sprints are one row.
+  - On a phone the header keeps the name and "A synthetic match" on a line of their own above the
+    controls.
+  - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
+    another is lifted one label up, else hidden; the runner's gold number always shows
+    ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1342,6 +1351,14 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
+- [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
+      moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
+      the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt
+      numbers are lifted or hidden, nearest first.
+      — [web/src/ui/moments.test.tsx](../web/src/ui/moments.test.tsx),
+      [stage.test.tsx](../web/src/ui/stage.test.tsx) ("stays open after each pick"),
+      [web/src/views/declutter.test.ts](../web/src/views/declutter.test.ts); `npm run smoke`
+      phone pages (header name, note and overlaps)
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
       — *Open:* not measured on a laptop GPU yet. The shader exists (per pixel,
       [web/src/pitchControl/](../web/src/pitchControl/), toggle off by default), and
