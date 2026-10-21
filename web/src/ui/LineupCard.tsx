@@ -1,5 +1,6 @@
 // The pre-match opening lives above both kinds of live screen. Its store belongs to the page,
-// so opening a possession's breakdown never brings it back.
+// so opening a possession's breakdown never brings it back. It opens over a stream that is
+// already playing, and closes by itself, on Start/Skip/Escape, or on any other click or key.
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useView } from "../session";
@@ -7,6 +8,8 @@ import { useStore } from "../store/store";
 import { ArrowIcon } from "./icons";
 import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
+
+export const INTRO_MS = 5000; // the card closes by itself after this long
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
 export function playLength(minutes: number): string {
@@ -21,16 +24,25 @@ export function LineupCard() {
 }
 
 function OpenLineupCard() {
-  const { hero, controls } = useView();
+  const { hero, playback } = useView();
+  // Not controls.setPovPlayer: its viewer take-over would cancel the autoplay behind the card.
   const teams = lineup(hero);
   const options = watchOptions(hero);
   const [chosen, setChosen] = useState(options[0]?.id ?? null);
+  const [counting, setCounting] = useState(true);
+  const [reduced] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const titleId = useId();
   const dialog = useRef<HTMLDivElement>(null);
   const start = useRef<HTMLButtonElement>(null);
   const measured = measure(hero);
   const size = (row: LineupRow) => (measured === "count" ? row.scans : row.scansPerMinute);
   const highest = Math.max(0, ...teams.home.concat(teams.away).map(size));
+
+  useEffect(() => {
+    if (!counting) return;
+    const timer = window.setTimeout(() => intro.set({ open: false }), INTRO_MS);
+    return () => window.clearTimeout(timer);
+  }, [counting]);
 
   useEffect(() => {
     const previous = document.activeElement;
@@ -42,21 +54,37 @@ function OpenLineupCard() {
       if (event.key === "Escape") {
         event.preventDefault();
         intro.set({ open: false });
+        return;
       }
-      if (event.key !== "Tab") return;
-      const focusable = dialog.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable?.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
+      if (event.key === "Tab") {
+        setCounting(false);
+        const focusable = dialog.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+        return;
       }
+      // Enter and Space act on the focused button. The bare modifiers do nothing.
+      if (
+        event.key === "Enter" ||
+        event.key === " " ||
+        event.key === "Shift" ||
+        event.key === "Control" ||
+        event.key === "Alt" ||
+        event.key === "Meta"
+      ) {
+        return;
+      }
+      intro.set({ open: false });
     };
     document.addEventListener("keydown", onKey);
     return () => {
@@ -74,13 +102,29 @@ function OpenLineupCard() {
       aria-modal="true"
       aria-labelledby={titleId}
       ref={dialog}
+      onClick={(event) => {
+        if ((event.target as Element).closest("button, a, input, select, textarea, label")) return;
+        intro.set({ open: false });
+      }}
     >
+      {counting && !reduced && (
+        <span
+          className="lineup-countdown"
+          style={{ animationDuration: `${INTRO_MS}ms` }}
+          aria-hidden="true"
+        />
+      )}
       <div className="lineup-inner">
         <header className="lineup-head">
           <p className="kicker">A synthetic match · every player fictional</p>
           <h2 id={titleId}>
             Home <em>v</em> Away
           </h2>
+          <p className="lineup-pitch">
+            <em>See what they saw.</em> An AI studio that explains key moments through the player's
+            own perception — the scans before the ball arrived, what was visible, what he believed —
+            and proves every on-screen number before it airs.
+          </p>
         </header>
 
         <div className="lineup-teams">
@@ -149,7 +193,8 @@ function OpenLineupCard() {
                 aria-pressed={chosen === option.id}
                 onClick={() => {
                   setChosen(option.id);
-                  controls.setPovPlayer(option.id);
+                  playback.set({ povPlayer: option.id });
+                  setCounting(false);
                 }}
               >
                 <span className="persona-name">
@@ -167,7 +212,7 @@ function OpenLineupCard() {
             className="btn btn-primary"
             ref={start}
             onClick={() => {
-              if (chosen) controls.setPovPlayer(chosen);
+              if (chosen) playback.set({ povPlayer: chosen });
               intro.set({ open: false });
             }}
           >
