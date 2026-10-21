@@ -55,16 +55,16 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasYourCall.current = yourCall;
   }, [yourCall]);
+  // Online: play behind the card. Not `introOpen`: closing the card must not restart the stream.
   useEffect(() => {
-    if (!autoplay || introOpen) return;
-    // With the live service: watch the match live, then its breakdown once the moment is
-    // detected (SPEC 2). Offline: play the bundled breakdown at once.
-    if (!session.feed) {
-      controls.playBreakdown();
-      return;
-    }
+    if (!autoplay || !session.feed) return;
     controls.startLive();
     return () => session.feed?.stop();
+  }, [autoplay, controls, session]);
+  // The bundled breakdown still waits for the card so the viewer sees it from its first line.
+  useEffect(() => {
+    if (!autoplay || session.feed || introOpen) return;
+    controls.playBreakdown();
   }, [autoplay, controls, introOpen, session]);
 
   return (
@@ -224,16 +224,15 @@ function LiveScreen(props: {
 /** A stitched match, or one of its hero moments' breakdowns over it. */
 export function MatchApp({ session, autoplay }: { session: MatchSession; autoplay: boolean }) {
   const open = useStore(session.screen, (s) => s.hero);
-  const introOpen = useStore(intro, (s) => s.open);
   // The Breakdown buttons sit low on the page: show the views of whichever screen comes up.
   useEffect(() => {
     window.scrollTo({ top: 0 }); // newer browsers return a promise: not a cleanup
   }, [open]);
   useEffect(() => {
-    if (!autoplay || introOpen) return;
+    if (!autoplay) return;
     session.controls.startLive();
     return () => session.feed?.stop();
-  }, [autoplay, introOpen, session]);
+  }, [autoplay, session]);
   if (open) {
     return (
       <SessionContext.Provider value={open}>
