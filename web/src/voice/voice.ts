@@ -65,6 +65,12 @@ export class VoicePlayer {
     return this.synthesize !== null;
   }
 
+  /** Sound is on and a clip is loading or playing. */
+  get busy(): boolean {
+    const { on, status } = this.state.get();
+    return on && (status === "loading" || status === "playing");
+  }
+
   setOn(on: boolean): void {
     if (!this.available) return;
     if (!on) this.stop();

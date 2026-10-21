@@ -70,6 +70,23 @@ def test_check_lines():
     assert check_lines(bad) == ["no 'zh' line", "'en' line lacks the {player} slot"]
 
 
+def test_voices_list_comparison_uses_a_fake_list():
+    from agents.delivery import VOICE_STYLES, VOICES
+    from infra.voices import mismatches
+
+    voices = list(dict.fromkeys(VOICES.values()))
+    good = [{"ShortName": voice, "StyleList": sorted(VOICE_STYLES[voice])} for voice in voices]
+    assert mismatches(good) == []
+    assert mismatches(good + [{"ShortName": "xx-XX-ExtraNeural", "StyleList": ["chat"]}]) == []
+    missing = mismatches(good[1:])
+    assert missing == [f"{voices[0]}: missing"]
+    bad = [{**row, "StyleList": ["chat"]} for row in good]
+    problems = mismatches(bad)
+    assert [line.split(":")[0] for line in problems] == voices
+    assert all("StyleList" in line for line in problems)
+    assert mismatches([{"ShortName": voice} for voice in voices])  # no StyleList: empty, not equal
+
+
 def test_build_ssml_is_well_formed_and_escaped():
     ssml = build_ssml("<b> & 'quotes'", "zh")
     root = ET.fromstring(ssml)
