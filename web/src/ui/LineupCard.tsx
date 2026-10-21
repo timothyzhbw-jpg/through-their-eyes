@@ -46,6 +46,9 @@ function OpenLineupCard() {
 
   useEffect(() => {
     const previous = document.activeElement;
+    // With nothing focused before (a fresh load), the focus goes to the live screen's title on
+    // close: left on <body>, the next Tab would start after the card, past the whole live screen.
+    const title = dialog.current?.closest(".stage")?.querySelector<HTMLElement>(".stage-head h1");
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     start.current?.focus({ preventScroll: true });
@@ -90,8 +93,11 @@ function OpenLineupCard() {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
-      if (previous instanceof HTMLElement && previous.isConnected)
-        previous.focus({ preventScroll: true });
+      const back =
+        previous instanceof HTMLElement && previous !== document.body && previous.isConnected
+          ? previous
+          : title;
+      back?.focus({ preventScroll: true });
     };
   }, []);
 
@@ -101,6 +107,7 @@ function OpenLineupCard() {
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      aria-describedby={counting ? `${titleId}-auto` : undefined}
       ref={dialog}
       onClick={(event) => {
         if ((event.target as Element).closest("button, a, input, select, textarea, label")) return;
@@ -113,6 +120,12 @@ function OpenLineupCard() {
           style={{ animationDuration: `${INTRO_MS}ms` }}
           aria-hidden="true"
         />
+      )}
+      {/* What the countdown line shows, for a screen reader (WCAG 2.2.1): it can be stopped. */}
+      {counting && (
+        <p className="sr-only" id={`${titleId}-auto`}>
+          This card closes by itself in {INTRO_MS / 1000} seconds. Press Tab to keep it open.
+        </p>
       )}
       <div className="lineup-inner">
         <header className="lineup-head">

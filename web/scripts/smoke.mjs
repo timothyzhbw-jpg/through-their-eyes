@@ -1,6 +1,7 @@
 // End-to-end smoke test of the web app (SPEC 7, 8): the production build, talking to a local API
 // service, opened page by page in headless Chromium. Every page must show its main view with no
-// console error and no uncaught exception; a screenshot of each goes to out/smoke/. The unit tests
+// console error, no uncaught exception and no serious or critical WCAG violation (axe-core); a
+// screenshot of each goes to out/smoke/. The unit tests
 // render the app's pieces; this loads the whole app as a visitor gets it. On 2026-10-20
 // `?match=match-1` rendered a black page on the live site ("useSession needs a hero moment, not a
 // match") although every unit test passed.
@@ -23,6 +24,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { devices } from "playwright-core";
 import { build, preview } from "vite";
+import { axe, BLOCKING, describe, WCAG } from "./axe.mjs";
 import { launchChrome } from "./gpu.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
@@ -215,7 +217,8 @@ async function phone(page, check) {
     ].filter((el) => {
       if (el.closest(".popover")) return false;
       const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && getComputedStyle(el).visibility !== "hidden";
+      // 1 px or less: visually hidden for screen readers (the brand on a phone), not on screen.
+      return rect.width > 1 && rect.height > 1 && getComputedStyle(el).visibility !== "hidden";
     });
     // A control that holds another is the other's box, not its own: keep the leaves.
     const controls = found.filter(
@@ -388,6 +391,14 @@ async function visit(browser, base, page) {
     checks.catch(() => {}); // left behind if the page throws first
     await Promise.race([checks, thrown]);
     await Promise.race([tab.waitForTimeout(SETTLE), thrown]);
+    // Accessibility (docs/ACCESSIBILITY.md): axe's WCAG 2.2 A/AA rules on the page as it is now.
+    // A serious or critical violation fails the page; a lesser one is a note.
+    const { violations } = await axe(tab, { tags: WCAG });
+    const blocking = violations.filter((v) => BLOCKING.has(v.impact));
+    for (const line of describe(blocking)) errors.push(`axe: ${line}`);
+    for (const line of describe(violations.filter((v) => !blocking.includes(v)))) {
+      notes.push(`axe: ${line}`);
+    }
   } catch (err) {
     const text = await tab
       .locator("#root")

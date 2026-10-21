@@ -253,6 +253,8 @@ function MatchMomentRow(props: {
         <span>
           {label} <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>
         </span>
+        {/* The dimmer colour says it on screen; this says it to a screen reader. */}
+        {props.ahead && <span className="sr-only"> · not on the stream yet</span>}
       </button>
       {m.hero && (
         <button type="button" className="btn" onClick={props.onBreakdown} disabled={props.opening}>

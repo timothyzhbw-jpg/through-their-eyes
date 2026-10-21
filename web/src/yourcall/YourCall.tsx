@@ -266,7 +266,13 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
             {markers.map(({ option: o, at }, k) => {
               const unseen = !!o.receiver && stale.has(o.receiver);
               const done = tried.includes(o.action);
-              const name = [o.label, unseen && "not seen lately", done && "tried"]
+              // The shirt number it shows is in its name too: a speech user says what they see.
+              const name = [
+                o.label,
+                o.receiver && `number ${o.short}`,
+                unseen && "not seen lately",
+                done && "tried",
+              ]
                 .filter(Boolean)
                 .join(", ");
               return (

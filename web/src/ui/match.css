@@ -101,8 +101,11 @@
   font-weight: 500;
   color: var(--chalk);
 }
-.moment-list li.ahead > button:first-child {
-  opacity: 0.45;
+/* Not announced by the stream yet: dimmed, but still a button that replays. Chalk 3 keeps 5.8:1
+   on Night; an opacity of 0.45 left its text at 2.1:1. */
+.moment-list li.ahead > button:first-child,
+.moment-list li.ahead > button:first-child .lens {
+  color: var(--chalk-3);
 }
 .moment-list .lens {
   color: var(--chalk-3);
