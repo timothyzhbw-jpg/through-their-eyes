@@ -383,10 +383,12 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   let tamperLink: string | null = null; // ?tamper=<claim id>: open its card once a breakdown is here
   let soundByAudience = false; // the voice is on because audio description was chosen
 
-  /** Any viewer action ends a running breakdown and the autoplay. */
+  /** Any viewer action ends a running breakdown and a play still waiting on the breakdown, as it
+   * ends the autoplay. */
   const takeOver = () => {
     runner.stop();
     auto = false;
+    playWhenReady = false;
   };
   const { controls: transport, endLive: leaveLive } = transportControls({
     hero,

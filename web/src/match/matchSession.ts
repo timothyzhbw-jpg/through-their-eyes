@@ -3,16 +3,18 @@
 // Each hero moment opens a breakdown: the possession's own hero export (`<scenario>-<seed>` on
 // the service) becomes a hero Session in local frames, asking for its breakdown and what-ifs by
 // the moment's id in match time; its clock shows local frame + the possession's start. Back to
-// the match puts the match playhead where the breakdown left off.
+// the match puts the match playhead where the breakdown left off. Your call opens the same hero
+// when every option has a re-simulated run; otherwise the match stays up and nothing plays.
 
 import { MATCH_ID, type Api, type Fetch } from "../api/client";
 import type { Hero } from "../data/hero";
-import { loadScenarioHero } from "../data/load";
+import { bundledWhatIfs, loadScenarioHero } from "../data/load";
 import { LiveFeed, type SocketFactory } from "../live/feed";
 import { createSession, transportControls, type Session, type ViewControls } from "../session";
 import { createPlayback, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import type { MakeAudio } from "../voice/voice";
+import { yourCallOf } from "../yourcall/controller";
 import { scenarioMatchId, type MatchInfo, type MatchMoment } from "./match";
 
 export interface MatchSessionOptions {
@@ -23,7 +25,8 @@ export interface MatchSessionOptions {
   socket?: SocketFactory; // WebSocket stand-in for tests
   makeAudio?: MakeAudio;
   // The bundled breakdown of the default hero (blind_side_run-3): the fallback narration and plan
-  // and the suggested what-ifs, for that possession only.
+  // and the suggested what-ifs, for that possession only. Other heroes' what-ifs are fetched
+  // from the bundled files (data/load.ts WHAT_IF_FILES) when their breakdown opens.
   payload?: unknown;
   plan?: unknown;
   whatIfs?: unknown;
@@ -38,8 +41,12 @@ export interface MatchScreen {
 
 export interface MatchControls extends ViewControls {
   startLive(): void;
-  /** Open a hero moment's breakdown (the moment's card, in match time). */
-  openBreakdown(card: Pick<MatchMoment, "id" | "hero" | "possession" | "local_id">): void;
+  /** Open a hero moment's breakdown (the moment's card, in match time); with "yourcall", open it
+   * in Your call instead of playing the breakdown. If Your call cannot open, the match stays up. */
+  openBreakdown(
+    card: Pick<MatchMoment, "id" | "hero" | "possession" | "local_id">,
+    play?: "breakdown" | "yourcall",
+  ): void;
   backToMatch(): void;
 }
 
@@ -80,18 +87,33 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
   });
 
-  const show = (session: Session) => {
+  const show = (session: Session, cardId: string, play: "breakdown" | "yourcall") => {
+    const yc = yourCallOf(session);
+    if (play === "yourcall") {
+      if (yc.unavailable) {
+        // Not the hero screen, and not the breakdown: that replay would show what he picked.
+        screen.set({ hero: null, opening: null, error: `${cardId}: ${yc.unavailable}` });
+        return;
+      }
+      screen.set({ hero: session, opening: null, error: null });
+      yc.open();
+      return;
+    }
     screen.set({ hero: session, opening: null, error: null });
+    yc.close();
     session.controls.playBreakdown();
   };
 
-  async function openBreakdown(card: Parameters<MatchControls["openBreakdown"]>[0]) {
+  async function openBreakdown(
+    card: Parameters<MatchControls["openBreakdown"]>[0],
+    play: "breakdown" | "yourcall" = "breakdown",
+  ) {
     const p = match!.possessions.find((x) => x.index === card.possession);
     if (!card.hero || !p) return;
     endLive();
     playback.set({ playing: false });
     const loaded = heroes.get(p.index);
-    if (loaded) return show(loaded);
+    if (loaded) return show(loaded, card.id, play);
     if (!api) {
       screen.set({ error: "Breakdowns need the live service." });
       return;
@@ -103,13 +125,20 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
       if (run.frames !== p.frames || possessionHero.ids.join() !== hero.ids.join()) {
         throw new Error(`${scenarioMatchId(p)} is not possession ${p.index + 1} of this match`);
       }
-      // The bundled fixture, plan and what-ifs are for the default hero only.
+      // The bundled fixture and plan are for the default hero only.
       const bundled = scenarioMatchId(p) === MATCH_ID;
+      const whatIfs = bundled
+        ? (options.whatIfs ?? null)
+        : await bundledWhatIfs(
+            options.fetch ?? ((url, init) => fetch(url, init)),
+            options.dataUrl,
+            scenarioMatchId(p),
+          );
       const session = createSession(
         possessionHero,
         bundled ? (options.plan ?? null) : null,
         bundled ? (options.payload ?? null) : null,
-        bundled ? (options.whatIfs ?? null) : null,
+        whatIfs,
         {
           api,
           makeAudio: options.makeAudio,
@@ -118,7 +147,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
         },
       );
       heroes.set(p.index, session);
-      if (screen.get().opening === card.id) show(session);
+      if (screen.get().opening === card.id) show(session, card.id, play);
     } catch (err) {
       if (screen.get().opening === card.id) {
         screen.set({ opening: null, error: `${card.id}: ${message(err)}` });
@@ -129,11 +158,12 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
   const controls: MatchControls = {
     ...transport,
     startLive: transport.goLive,
-    openBreakdown: (card) => void openBreakdown(card),
+    openBreakdown: (card, play) => void openBreakdown(card, play),
     backToMatch() {
       const session = screen.get().hero;
       screen.set({ hero: null, opening: null, error: null });
       if (!session?.possession) return;
+      yourCallOf(session).close();
       session.controls.stopBreakdown();
       session.voice.stop();
       const p = match.possessions.find((x) => x.index === session.possession!.index)!;
