@@ -242,7 +242,8 @@ within the control radius of a carried ball wins it), so the other scenarios kee
 for byte. Its intervention is `force:carry`: had he kept the ball, would the press have won it?
 Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 200–239, as
 100–139 were used to find the cause below):
-- the pressure lens is selected in 38/40 (target ≥ 60%: met; median margin 0.102 xT);
+- the pressure lens is selected in 40/40 (target ≥ 60%: met; median margin 0.132 xT with the
+  fitted grid; with the smooth prior it was 38/40 and 0.102);
 - forcing the carry loses the ball in 40/40, and the possession outcome changes in 32/40 (target
   ≥ 60%: met). In the other 8 H4's own pass was intercepted too, none by a carry: 6 long passes
   (32–46 m) he rated 0.24–0.75, cut out 1–2.3 s later by a defender 22–48 m away (the truth
@@ -434,7 +435,7 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
 about 100 lines). socceraction is not used: it is no longer maintained and would be a dependency
 for a few lines of maths. Cache the grid per sim version.
 *Implemented (2026-10-20):* `analytics/xt.py`, fitted by `eval/xt_fit.py`.
-- Data: `open_play` tuning seeds 0–999 — `possession_play`'s shape, pressing and marking, but
+- Data: `open_play` tuning seeds 0–1999 — `possession_play`'s shape, pressing and marking, but
   every ball carrier decides with the decision model (§3.5), so play reaches the box and ends in
   shots. The scripted scenarios cannot carry the fit: `possession_play` and `blind_side_run` have
   no shots at all. A shot scores its expected goals under the sim's shot model (the decision
@@ -523,8 +524,8 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [x] xT grid increases toward goal (sanity plot saved).
-      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.136, central
-      lanes ≥ 0.27 above the wings in the last three columns; plot
+      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
+      lanes ≥ 0.22 above the wings in the last three columns; plot
       [xt_fit.svg](../eval/reports/xt_fit.svg));
       [tests/test_xt.py](../tests/test_xt.py)::`test_fitted_grid_increases_toward_the_attacked_goal`,
       `test_central_lanes_are_worth_at_least_the_wings_near_goal`,
@@ -590,10 +591,12 @@ Without the scan, the player chooses one of the alternatives, so Δscan ≥ Δsp
 changed the decision. The scan lens therefore wins exactly when the scan was decisive. An
 uninformative scan scores 0, and then `space` wins (tested). On `blind_side_run`, 80 seeds
 (0–39 and 100–139): `scan` is selected every time, the key scan is the most informative scan every
-time, and the median margin over `space` is about 0.003 xT.
-On `press_escape`, fresh held-out seeds 200–239: `pressure` is selected in 38/40 and `space` in
-2/40 — the seeds where the softmax drew a poor long ball (probability 0.02) and the space lens
-measures what the best pass was worth instead; `scan` never (H4's own scans change nothing,
+time, and the median margin over `space` is about 0.013 xT with the fitted grid (0.003 with the
+smooth prior; [eval/reports/xt_fit.md](../eval/reports/xt_fit.md)).
+On `press_escape`, fresh held-out seeds 200–239: `pressure` is selected in 40/40 with the fitted
+grid. With the smooth prior it was 38/40 and `space` in 2/40 — the seeds where the softmax drew
+a poor long ball (probability 0.02) and the space lens measured what the best pass was worth
+instead; `scan` never (H4's own scans change nothing,
 Δscan ≈ 0). Before the decision model saw the presser's run-in (§3.5), H4 carried into the press
 in 7 of seeds 100–139 and `space` won 9/40 there (now 1/40). Report:
 `eval/reports/hero_lens_press_escape.md`.

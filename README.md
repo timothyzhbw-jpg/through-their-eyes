@@ -30,7 +30,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
    are rate-limited per client.
 5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
-   the evidence card opens on "That look was worth 0.10 in expected threat." with a wrong value
+   the evidence card opens on "That look was worth 0.13 in expected threat." with a wrong value
    filled in. Press **Check**: the API runs the real verifier on that claim with your number,
    against the match data, and answers "Refuted — this line would not air" with its reason
    (`approx(0.1007…, 0.2) is false`); **Check the true value** is supported. Any claim with a

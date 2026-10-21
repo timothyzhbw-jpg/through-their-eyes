@@ -34,7 +34,7 @@
     },
     {
       "id": "L5",
-      "text": "Without that look, H8 would have passed to H4. That look was worth 0.12 in expected threat.",
+      "text": "Without that look, H8 would have passed to H4. That look was worth 0.13 in expected threat.",
       "claims": [
         "cf_pass",
         "cf_value"
@@ -119,7 +119,7 @@
       "kind": "counterfactual",
       "verdict": "supported",
       "values": {
-        "dxt": 0.12
+        "dxt": 0.13
       },
       "evidence": [
         "scan:H8:0050"
