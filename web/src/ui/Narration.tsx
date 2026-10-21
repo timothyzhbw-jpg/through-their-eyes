@@ -21,18 +21,21 @@ import {
   type PayloadClaim,
   type PayloadLine,
 } from "../narration/payload";
-import { useBreakdown, useSession, useView } from "../session";
+import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
 import { LANGUAGES } from "../whatif/whatif";
-import { CheckIcon, SoundOffIcon, SoundOnIcon } from "./icons";
+import { CheckIcon } from "./icons";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
 import { Chapter } from "./Chapter";
 import { numberParts } from "./numbers";
 import { Segmented } from "./Segmented";
+import { SoundToggle } from "./SoundToggle";
 import { formatSlot, plainReason, slotLabel } from "./tamperText";
 import "./live.css";
 import "./whatif.css";
+
+export { SoundToggle }; // the header's Sound switch, imported from here before it had a file
 
 export function KindTag({ kind }: { kind: ClaimKind }) {
   return (
@@ -556,73 +559,6 @@ export function BreakdownChoice() {
       />
       <SoundToggle />
     </div>
-  );
-}
-
-/** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on or
- * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. The text
- * button shows "Sound" and draws "off" / "on" from aria-pressed (live.css), so what it shows
- * is in its name (WCAG 2.5.3). On a stitched match it is the match's switch (its recap's voice,
- * and every breakdown opened from it). Until the sound has been on once the icon button says
- * "Tap for sound" (then that is its name): browsers start sound only from a tap. A line that
- * could not be spoken says so next to it. */
-export function SoundToggle({ icon = false }: { icon?: boolean }) {
-  const session = useView();
-  const { voice, setSound } =
-    session.kind === "hero"
-      ? { voice: session.voice, setSound: session.controls.setSound }
-      : { voice: session.recap.voice, setSound: session.recap.setSound };
-  const on = useStore(voice.state, (s) => s.on);
-  const status = useStore(voice.state, (s) => s.status);
-  const error = useStore(voice.state, (s) => s.error);
-  const asked = useStore(voice.sound, (s) => s.asked);
-  const hint = icon && voice.available && !on && !asked;
-  const failed = on && status === "failed";
-  const title = !voice.available
-    ? "The voice needs the live service"
-    : failed
-      ? `Speech failed: ${error}`
-      : on
-        ? "Turn the commentary voice and the crowd off"
-        : "Speak each narration line as it comes up, with the crowd";
-  return (
-    <>
-      <button
-        type="button"
-        className={[
-          "sound",
-          icon ? "btn btn-icon" : "",
-          hint ? "with-hint" : "",
-          failed ? "failed" : "",
-          on && status === "loading" ? "loading" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        aria-label={hint ? undefined : "Sound"}
-        aria-pressed={on}
-        disabled={!voice.available}
-        title={title}
-        onClick={() => setSound(!on)}
-      >
-        {!icon ? (
-          "Sound"
-        ) : hint ? (
-          <>
-            <SoundOffIcon />
-            <span className="sound-hint">Tap for sound</span>
-          </>
-        ) : on ? (
-          <SoundOnIcon />
-        ) : (
-          <SoundOffIcon />
-        )}
-      </button>
-      {icon && failed && (
-        <span className="sound-note" role="status" title={title}>
-          No voice
-        </span>
-      )}
-    </>
   );
 }
 
