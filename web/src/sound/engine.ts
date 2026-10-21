@@ -53,16 +53,7 @@ export class SoundEngine implements SoundOut {
   private duckGain = 1;
   private cutoff = 3200;
 
-  constructor(private readonly make: () => Ctx | null = defaultContext) {
-    // A hidden tab stops making sound and lets the audio thread sleep; it comes back on return.
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", () => {
-        if (!this.ctx || !this.on) return;
-        if (document.hidden) void this.ctx.suspend();
-        else void this.ctx.resume();
-      });
-    }
-  }
+  constructor(private readonly make: () => Ctx | null = defaultContext) {}
 
   setOn(on: boolean): void {
     if (on === this.on) return;

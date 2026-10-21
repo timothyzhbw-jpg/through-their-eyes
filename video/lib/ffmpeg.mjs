@@ -11,7 +11,26 @@ import { spawn } from "node:child_process";
  * @returns {Promise<{ code: number, stderr: string }>}
  */
 export function runFfmpeg(ffmpeg, args, { allowFail = false } = {}) {
-  return runProcess(ffmpeg, args, { allowFail });
+  return runProcess(ffmpeg, limitThreads(args), { allowFail });
+}
+
+/** Threads for one ffmpeg: TTE_FFMPEG_THREADS, default 4, so a render shares the machine. */
+export function ffmpegThreads() {
+  const n = Number.parseInt(process.env.TTE_FFMPEG_THREADS ?? "", 10);
+  return Number.isFinite(n) && n > 0 ? n : 4;
+}
+
+/**
+ * `args` with the thread cap: `-filter_complex_threads` up front (global) and `-threads` just
+ * before the output (it binds to the encoder). Argument lists that already set either are kept.
+ * @param {string[]} args
+ */
+export function limitThreads(args) {
+  // A probe (`-i file` and no output) has nothing to encode: leave it alone.
+  if (args.includes("-threads") || args.length < 2 || args[args.length - 2] === "-i") return args;
+  const n = String(ffmpegThreads());
+  const out = args[args.length - 1];
+  return ["-filter_complex_threads", n, ...args.slice(0, -1), "-threads", n, out];
 }
 
 /**

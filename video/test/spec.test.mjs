@@ -165,3 +165,13 @@ test("spokenIssues treats number words as whole words", () => {
   assert.deepEqual(spokenIssues("Off by {belief_error.err}.", { allowPause: true }), []);
   assert.ok(spokenIssues("Off by {Belief.err}.", { allowPause: true }).some((issue) => issue.includes("malformed slot")));
 });
+
+test("a clip must stay inside the repo and may be absent at --check", () => {
+  const spec = clone();
+  spec.beats[3].picture = { src: "clip", path: "out/video/blender/not-rendered-yet.mp4", fit: "pad", reverse: true };
+  assert.deepEqual(check(spec).errors, []);
+  spec.beats[3].picture = { src: "clip", path: "../outside.mp4", fit: "zoom" };
+  const { errors } = check(spec);
+  assert.ok(errors.some((e) => e.includes('clip path "../outside.mp4" must stay inside the repo')), errors.join("\n"));
+  assert.ok(errors.some((e) => e.includes("fit must be one of cover, pad")), errors.join("\n"));
+});

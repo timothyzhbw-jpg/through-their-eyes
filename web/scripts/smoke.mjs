@@ -62,6 +62,7 @@ const PAGES = [
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
     path: "?match=match-1",
@@ -276,15 +277,16 @@ async function cutNoBlur(page) {
     throw new Error(`expected no head-turn blur by default, got sigma ${byDefault.most} px`);
   }
 
-  await page.goto(page.url());
-  await hero(page);
   await page.getByRole("button", { name: "View options" }).click();
   const blur = page.getByRole("button", { name: "Motion blur" });
   await blur.click();
   if ((await blur.getAttribute("aria-pressed")) !== "true")
     throw new Error("Motion blur did not turn on");
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Play", exact: true }).click();
+  // Back to just before the key scan (the timeline's mark), playing.
+  await page.getByTitle("Jump to just before the key scan").click();
+  const play = page.getByRole("button", { name: "Play", exact: true });
+  if (await play.count()) await play.click();
   const canvas = page.locator(".view.pov canvas");
   // Turned on, the blur comes on as his head whips round.
   await page.waitForFunction(
@@ -390,6 +392,35 @@ async function recap(page, shoot) {
   await page.getByRole("button", { name: "Play the recap reel" }).first().click();
   await see(page.locator(".recap-caption").filter({ hasText: /\S/ }), "a caption of the reel");
   await page.waitForTimeout(SETTLE);
+}
+
+/** A cold load with no click (SPEC 2, 7): the lineup card closes by itself, the stream plays, and
+ * within about 20 s of opening the page the run without the look is on screen with its line.
+ * The 20 s is for a viewer's machine. The app's clock steps at most 0.1 s a frame (session.ts
+ * `startClock`), so where WebGL is drawn in software, as on a CI runner (SwiftShader, about 0.5 s
+ * a frame), the show plays slower than the wall clock: there the check is only that a cold load
+ * gets there, and the time it took is printed. */
+const COLD_LOAD_S = process.env.CI ? 120 : 22;
+
+async function coldLoad(page, shoot) {
+  const opened = Date.now();
+  const without = page
+    .getByRole("group", { name: "Run" })
+    .getByRole("button", { name: "Without the look", pressed: true });
+  try {
+    await without.waitFor({ timeout: COLD_LOAD_S * 1000 });
+  } catch {
+    throw new Error(
+      `expected the run without the look on screen within ${COLD_LOAD_S} s of a cold load`,
+    );
+  }
+  const took = Math.round((Date.now() - opened) / 1000);
+  console.log(`     the run without the look after ${took} s (deadline ${COLD_LOAD_S} s)`);
+  await see(
+    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
+    'the "Without that look" line',
+  );
+  await shoot(`at-${took}s`);
 }
 
 /** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a

@@ -3500,11 +3500,10 @@ optgroup {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Plain alpha gradients: a blend mode over the canvas costs a full-screen composite per frame
-     on a phone. */
   background:
-    radial-gradient(90% 70% at 50% 38%, rgba(255, 222, 160, 0.035), rgba(255, 222, 160, 0) 70%),
-    linear-gradient(180deg, rgba(10, 18, 30, 0.16), rgba(10, 18, 30, 0) 38%);
+    radial-gradient(90% 70% at 50% 38%, rgba(255, 222, 160, 0.07), rgba(255, 222, 160, 0) 70%),
+    linear-gradient(180deg, rgba(14, 26, 44, 0.22), rgba(14, 26, 44, 0) 38%);
+  mix-blend-mode: soft-light;
 }
 .pov-vignette {
   position: absolute;

@@ -57,13 +57,10 @@ export function CountUp({
     const run = () => {
       counted.add(id);
       const t0 = performance.now();
-      // The counting digits go straight to the element: no React render per frame, one when
-      // the count lands.
       const tick = (now: number) => {
         const t = Math.min(1, (now - t0) / COUNT_MS);
-        if (t >= 1) return setProgress(1);
-        el.current?.setAttribute("data-count", countText(text, easeOut(t)));
-        raf = requestAnimationFrame(tick);
+        setProgress(t >= 1 ? 1 : easeOut(t));
+        if (t < 1) raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     };

@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 
 /** ffmpeg argv for one image2pipe encode. `alpha` selects ProRes 4444, otherwise H.264. */
-export function ffmpegArgs({ fps, outFile, alpha = false }) {
+export function ffmpegArgs({ fps, outFile, alpha = false, threads = 4 }) {
   const input = alpha
     ? ["-f", "image2pipe", "-c:v", "png"]
     : ["-f", "image2pipe", "-c:v", "mjpeg"];
@@ -23,6 +23,8 @@ export function ffmpegArgs({ fps, outFile, alpha = false }) {
     "-",
     "-an",
     ...output,
+    "-threads",
+    String(threads),
     "-y",
     outFile,
   ];
@@ -46,7 +48,8 @@ export async function recordFrames({
   log = () => {},
 }) {
   const frames = Math.max(0, Math.round(Number(duration) * Number(fps)));
-  const proc = spawn(ffmpeg, ffmpegArgs({ fps, outFile, alpha }), {
+  const threads = Number.parseInt(process.env.TTE_FFMPEG_THREADS ?? "", 10) || 4;
+  const proc = spawn(ffmpeg, ffmpegArgs({ fps, outFile, alpha, threads }), {
     stdio: ["pipe", "ignore", "pipe"],
   });
   const stderrLines = [];
