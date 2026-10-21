@@ -145,6 +145,16 @@ def report(scenario: str, seeds: list[int]) -> str:
     hard = sum(row["hard"] for row in rows)
     sight = sum(row["sight"] for row in rows)
     flips = sum(row["flip"] for row in rows)
+    # Reported only, no targets: where the misses of the two secondary targets come from, and
+    # how many hard-gate passes are shots that went wide (P_save at a crossing outside the posts).
+    seen = [row for row in rows if row["p_step"] is not None and row["p_no"] is not None]
+    blocked = n - len(seen)
+    on_target = [row for row in rows if row["outcome_step"] in ("saved", "goal")]
+    hard_on = sum(row["hard"] for row in on_target)
+    hard_wide = sum(row["hard"] for row in rows if row["outcome_step"] == "wide")
+    later_seen = sum(row["later"] for row in seen)
+    untied = [row for row in seen if row["delta_sight"] or row["delta_position"]]
+    sight_untied = sum(row["sight"] for row in untied)
     hero = SCENARIOS[scenario].hero
     lines = [
         f"# Save hero — `{scenario}`",
@@ -173,6 +183,26 @@ def report(scenario: str, seeds: list[int]) -> str:
         f"| P_save gap ≥ {HARD_GAP:.1f}, v_dive = {speed:g} m/s | {count}/{n} ({count / n:.0%}) "
         "| ≥ 60% |"
         for speed, count in sweep.items()
+    )
+    lines.extend(
+        [
+            f"| Shots blocked before the save model (no `p_save`) | {blocked}/{n} | reported |",
+            f"| … first sight ≥ {LATE_GAP:.2f} s later, shots not blocked | {later_seen}/"
+            f"{len(seen)} | reported |",
+            f"| … delta_sight > delta_position, shots not blocked and not both 0 | "
+            f"{sight_untied}/{len(untied)} | reported |",
+            f"| … P_save gap ≥ {HARD_GAP:.1f}, shots on target with the step (saved or goal) | "
+            f"{hard_on}/{len(on_target)} | reported |",
+            f"| … P_save gap ≥ {HARD_GAP:.1f}, shots wide with the step | {hard_wide}/{hard} "
+            "of the gate's passes | reported |",
+            "",
+            "The rows marked … are reported only. A blocked shot fails every gate that needs "
+            "`p_save`. A wide shot still has a `p_save`: the save model at the point where it "
+            "crosses the goal line, outside the posts. So it counts in the hard gate as the "
+            "keeper's reach, even though no save was needed. delta_sight and delta_position "
+            "are both 0 when the shot is beyond the keeper's reach with or without the step; "
+            "that tie fails the decomposition.",
+        ]
     )
     lines.extend(
         [

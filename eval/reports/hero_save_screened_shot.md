@@ -12,6 +12,13 @@ P_save is the shot event's `p_save`. delta_sight is P(step) minus P(step, late s
 | Realised save to goal when the step is removed | 17/40 (42%) | reported |
 | P_save gap ≥ 0.4, v_dive = 2.5 m/s | 28/40 (70%) | ≥ 60% |
 | P_save gap ≥ 0.4, v_dive = 4 m/s | 29/40 (72%) | ≥ 60% |
+| Shots blocked before the save model (no `p_save`) | 5/40 | reported |
+| … first sight ≥ 0.25 s later, shots not blocked | 35/35 | reported |
+| … delta_sight > delta_position, shots not blocked and not both 0 | 30/32 | reported |
+| … P_save gap ≥ 0.4, shots on target with the step (saved or goal) | 23/23 | reported |
+| … P_save gap ≥ 0.4, shots wide with the step | 5/28 of the gate's passes | reported |
+
+The rows marked … are reported only. A blocked shot fails every gate that needs `p_save`. A wide shot still has a `p_save`: the save model at the point where it crosses the goal line, outside the posts. So it counts in the hard gate as the keeper's reach, even though no save was needed. delta_sight and delta_position are both 0 when the shot is beyond the keeper's reach with or without the step; that tie fails the decomposition.
 
 The sweep re-simulates the step and the dropped step only, then restores the default keeper. It does not re-run the late-sight decomposition.
 
