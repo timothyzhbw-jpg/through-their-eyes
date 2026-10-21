@@ -9,7 +9,7 @@
 // capped at 3% of the image width. Turning the head is a rotation about the vertical axis, so the
 // image moves sideways: the blur is horizontal. The rate is the measured head yaw rate of the
 // player whose eyes these are, in match time, so a slow-motion replay keeps the blur a broadcast
-// replay would have. Off under prefers-reduced-motion and on the broadcast camera.
+// replay would have. Off under prefers-reduced-motion, on the broadcast camera and while paused.
 
 import { easedHeadAt, wrapAngle, type Hero, type Run } from "../data/hero";
 import type { Camera3D } from "../store/playback";
@@ -58,15 +58,19 @@ export function blurSigmaPx(yawRate: number, pxPerDeg: number, shutterDeg = SHUT
   return SIGMA_PER_SWEEP * degPerS * exposure * pxPerDeg;
 }
 
-/** The blur on the first-person view right now: 0 under reduced motion or on another camera. */
+/**
+ * The blur on the first-person view right now: 0 under reduced motion, on another camera, or
+ * while paused.
+ */
 export function povBlurSigmaPx(o: {
   reducedMotion: boolean;
   camera: Camera3D;
+  playing: boolean; // a paused frame is a still: no motion, no blur
   yawRate: number; // rad/s
   widthPx: number; // drawing-buffer width
   hfovDeg: number;
 }): number {
-  if (o.reducedMotion || o.camera !== "pov") return 0;
+  if (o.reducedMotion || o.camera !== "pov" || !o.playing) return 0;
   return blurSigmaPx(o.yawRate, centrePxPerDeg(o.widthPx, o.hfovDeg));
 }
 

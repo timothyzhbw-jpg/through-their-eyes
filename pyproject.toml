@@ -60,4 +60,6 @@ extend-immutable-calls = [
     "sim.ball.BallParams",
     "sim.config.SimParams",
     "sim.decision.DecisionParams",
+    "sim.shots.KeeperParams",
+    "sim.shots.ShotParams",
 ]

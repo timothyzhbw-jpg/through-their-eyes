@@ -34,6 +34,7 @@ import { useStore } from "../store/store";
 import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { BlindSideOverlay } from "../ui/BlindSideOverlay";
+import { pathTagPx, placePathTag } from "./boardLabels";
 import {
   BOARD_EXTENT,
   boardZoom,
@@ -151,7 +152,9 @@ function TacticalScene() {
       <PitchControlLayer hero={hero} renderOrder={LAYER.pitch + 0.5} />
       {hero.vision && <VisionCone hero={hero} vision={hero.vision} shared={shared} />}
       <PassLine run={hero.runs[mode]} mode={mode} shared={shared} />
-      {hero.counterfactual && <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />}
+      {hero.counterfactual && (
+        <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} scale={scale} />
+      )}
       <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} />
       <SkeletonLayer sample={shared.current.sample} variant="board" scale={scale} />
@@ -329,14 +332,17 @@ interface GhostProps {
   hero: Hero;
   mode: RunName;
   shared: SharedRef;
+  scale: number;
   px: number;
 }
 
-function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
+function OtherRunGhost({ hero, mode, shared, scale, px }: GhostProps) {
   const other = hero.runs[mode === "factual" ? "counterfactual" : "factual"];
   const color = other.name === "counterfactual" ? COLORS.gold : COLORS.sight;
   const line = useRef<ComponentRef<typeof Line>>(null);
   const group = useRef<THREE.Group>(null);
+  const tag = useRef<THREE.Mesh>(null);
+  const prefer = useRef(-1);
   const path = useMemo(() => {
     const start = other.decision?.frame ?? 0;
     const end = Math.min(other.frames - 1, other.action?.end ?? other.frames - 1);
@@ -346,10 +352,13 @@ function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
   }, [other]);
   const label = getLabelTexture(runLabels(hero).tag[other.name], { ...LABEL.tag, color });
   const [ex, , ez] = path.points[path.points.length - 1];
-  const tagH = Math.max(2.4, TAG_PX * px);
+  const pitchPx = 105 / px;
+  const tagPx = pathTagPx(pitchPx);
+  const tagH = tagPx === null ? 0 : Math.max(2.4, tagPx * px);
+  const tagW = tagH * TAG_ASPECT;
 
   useFrame(() => {
-    const { state } = shared.current;
+    const { sample, state } = shared.current;
     const g = group.current;
     if (!g) return;
     g.visible = state.cfGhost && state.frame >= path.start && path.points.length > 1;
@@ -359,6 +368,24 @@ function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
       Math.min(path.points.length - 1, Math.floor(state.frame - path.start)),
     );
     if (line.current) line.current.geometry.instanceCount = done;
+    // The tag sits beside the path end, clear of the tokens, and keeps its side while it can.
+    const mesh = tag.current;
+    if (!mesh) return;
+    if (tagPx === null) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.visible = true;
+    const at = placePathTag({
+      end: [ex, -ez],
+      w: tagW,
+      h: tagH,
+      tokens: sample.pos,
+      clearance: TOKEN_R * scale + 0.4,
+      prefer: prefer.current,
+    });
+    prefer.current = at.index;
+    mesh.position.set(at.x, 0, -at.y);
   });
 
   return (
@@ -375,8 +402,8 @@ function OtherRunGhost({ hero, mode, shared, px }: GhostProps) {
         renderOrder={LAYER.path}
         {...flat}
       />
-      <mesh position={[ex, 0, ez - 1.5 - tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
-        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+      <mesh ref={tag} rotation-x={lie} renderOrder={LAYER.name}>
+        <planeGeometry args={[tagW, tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
