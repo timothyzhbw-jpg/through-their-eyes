@@ -3295,17 +3295,41 @@ optgroup {
   }
 }
 
-/* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
-   the stream label goes (the pill already says live), then the brand tightens, then the sound
-   button goes (the commentary panel keeps one). The way back, the match picker or the Your call
-   pill replaces the brand. */
+/* The phone header: the brand takes a short line of its own, the name and "A synthetic match"
+   (the rest of the note waits for a wider screen), so the controls get the whole row under it:
+   the live pill (its stream label goes, the pill already says live), the way back or the match
+   picker, Your call, sound and who is watching. The picture's badges and the viewer menu move
+   down by the brand's line. */
 @media (max-width: 480px) {
-  .stage-head .live-status {
+  .stage-head {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding-top: 8px;
+  }
+  .stage-head .brand {
+    flex: 1 0 100%;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+  }
+  .stage-head .brand h1 {
+    font-size: 17px;
+  }
+  .stage-head .brand .sub {
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .brand .sub-more {
     display: none;
   }
-  .stage:has(.live-chip.back) .stage-head .brand,
-  .stage:has(.header-start .match-picker) .stage-head .brand,
-  .stage:has(.header-end .yc-open) .stage-head .brand {
+  .stage-hud,
+  .viewer-panel {
+    top: 84px;
+  }
+  .stage-head .live-status {
     display: none;
   }
   /* the story's big numbers shrink with the screen instead of running off it */

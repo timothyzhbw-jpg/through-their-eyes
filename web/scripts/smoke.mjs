@@ -149,7 +149,7 @@ async function match(page) {
   const score = page.getByRole("region", { name: "Score and possession" });
   await see(score.filter({ hasText: /Possession \d+ of \d+/ }), "the score bug with a possession");
   await mainView(page, "eyes");
-  await see(page.getByRole("region", { name: "Possession 1" }), "the Moments panel", "attached");
+  await see(page.getByRole("region", { name: "Key moments" }), "the Moments panel", "attached");
 }
 
 /** `?persona=analyst&tamper=cf_value`: the evidence card with "Try a wrong number" open. */
@@ -204,6 +204,12 @@ async function lineup(page, shoot, button, then) {
 async function phone(page, check) {
   await check(page);
   await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+  // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
+  await see(page.locator(".stage-head .brand h1"), "the product name in the header");
+  await see(
+    page.locator(".stage-head .brand .sub").filter({ hasText: /synthetic match/i }),
+    'the "synthetic match" note in the header',
+  );
   const { wide, width, overlaps, offscreen } = await page.evaluate(() => {
     const root = document.documentElement;
     const wide = root.scrollWidth;

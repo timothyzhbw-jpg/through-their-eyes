@@ -204,7 +204,9 @@ function LiveScreen(props: {
         <header className="stage-head">
           <div className="brand">
             <h1>Through Their Eyes</h1>
-            <p className="sub">A synthetic match · every player fictional</p>
+            <p className="sub">
+              A synthetic match<span className="sub-more"> · every player fictional</span>
+            </p>
           </div>
           <div className="header-start">{props.start}</div>
           <div className="header-end">{props.end}</div>
