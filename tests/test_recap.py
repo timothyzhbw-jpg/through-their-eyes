@@ -248,3 +248,26 @@ def test_the_recap_analyst_reads_the_match_through_mcp(rc, tmp_path):
     assert stats["score"] == {"home": rc.score[0], "away": rc.score[1]}
     assert stats["stats"][0]["id"] == "final_score"
     assert [m["moment"] for m in moments] == [c.id for c in rc.candidates]
+
+
+def test_a_match_with_a_goal_leads_its_recap_with_it():
+    from agents.context import MomentContext
+    from explain.match import match_moments
+    from sim.match import PossessionSpec, build_match
+
+    plan = (PossessionSpec("possession_play", max_duration_s=10.0),
+            PossessionSpec("far_post_finish", 4))  # fmt: skip
+    match = build_match(7, plan)
+    heroes = {p.index: MomentContext.load(p.scenario, p.seed)
+              for p in match.possessions if p.run.hero}  # fmt: skip
+    cards = match_moments(match, {k: list(c.cards.values()) for k, c in heroes.items()})
+    rc = RecapContext.build("match-7", match, cards, heroes)
+    r = _recap(rc, personas=("casual", "audio_description"), languages=("en",))
+    assert r.score == {"home": 1, "away": 0} and r.tier in ("excited", "clutch")
+    assert "goal" in r.moments[0].tags
+    for script in r.scripts:
+        texts = [line.text for line in script.payload.lines]
+        assert texts[0] == "Full time: Home 1, Away 0." and "H9 scored." in texts
+        assert check_payload(script.payload, rc.names) == []
+        bug = script.cues.cues[0]
+        assert (bug.data["home"], bug.data["away"]) == (1, 0)

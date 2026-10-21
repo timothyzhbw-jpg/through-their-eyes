@@ -7,6 +7,7 @@ import type { MatchSession } from "../match/matchSession";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { Chapter } from "../ui/Chapter";
+import { SoundOffIcon, SoundOnIcon } from "../ui/icons";
 import { LANG_LABEL, PERSONA_LABEL } from "../ui/labels";
 import { momentLabel } from "../ui/Live";
 import { Segmented } from "../ui/Segmented";
@@ -131,7 +132,10 @@ function Panel({ session }: { session: MatchSession }) {
                       <button
                         type="button"
                         className="btn"
-                        onClick={() => recap.watch(moment.id)}
+                        onClick={() => {
+                          window.scrollTo({ top: 0 }); // the replay plays at the top
+                          recap.watch(moment.id);
+                        }}
                         title="Watch this moment"
                       >
                         Watch
@@ -174,6 +178,7 @@ function Panel({ session }: { session: MatchSession }) {
               >
                 {state.reel ? "Stop the reel" : "Play the recap reel"}
               </button>
+              <RecapSound session={session} />
               {recap.cuesUrl() && (
                 <a className="btn" href={recap.cuesUrl()!} target="_blank" rel="noreferrer">
                   Overlay cues (JSON)
@@ -254,9 +259,12 @@ function Stage({ session }: { session: MatchSession }) {
             <ul>{reel.stats.map((cue) => cue.text && <li key={cue.id}>{cue.text}</li>)}</ul>
           </section>
         )}
-        <button type="button" className="btn recap-stop" onClick={recap.stopReel}>
-          Stop
-        </button>
+        <div className="recap-actions">
+          <button type="button" className="btn recap-stop" onClick={recap.stopReel}>
+            Stop
+          </button>
+          <RecapSound session={session} />
+        </div>
       </>
     );
   }
@@ -284,5 +292,33 @@ function Stage({ session }: { session: MatchSession }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** The reel's voices: off until the viewer turns them on (audio description: on by itself). */
+function RecapSound({ session }: { session: MatchSession }) {
+  const { voice } = session.recap;
+  const on = useStore(voice.state, (s) => s.on);
+  const error = useStore(voice.state, (s) => s.error);
+  const title = !voice.available
+    ? "The voice needs the live service"
+    : error
+      ? `Speech failed: ${error}`
+      : on
+        ? "Turn the commentary voice off"
+        : "Speak each line of the reel as it comes up";
+  return (
+    <button
+      type="button"
+      className="btn recap-sound"
+      aria-label="Sound"
+      aria-pressed={on}
+      disabled={!voice.available}
+      title={title}
+      onClick={() => session.recap.setSound(!on)}
+    >
+      {on ? <SoundOnIcon /> : <SoundOffIcon />}
+      {on ? "Sound on" : "Sound off"}
+    </button>
   );
 }

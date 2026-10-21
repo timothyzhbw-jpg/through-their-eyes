@@ -212,6 +212,19 @@ describe("the recap over the live screen", () => {
   });
 });
 
+describe("the reel's sound", () => {
+  it("is off until the viewer turns it on, beside the reel's play button", async () => {
+    const { session } = online();
+    await ready(session);
+    const page = mount(session, <RecapPanel />);
+    const sound = page.querySelector<HTMLButtonElement>("button.recap-sound")!;
+    expect(sound.getAttribute("aria-pressed")).toBe("false");
+    act(() => sound.click());
+    expect(session.recap.voice.state.get().on).toBe(true);
+    expect(page.querySelector("button.recap-sound")!.getAttribute("aria-pressed")).toBe("true");
+  });
+});
+
 describe("the recap button", () => {
   it("asks for the recap from the Moments panel", async () => {
     const { session, fetch } = online();

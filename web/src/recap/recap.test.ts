@@ -156,6 +156,18 @@ describe("asking for the recap", () => {
     });
   });
 
+  it("turns the voice on for audio description, and off again when the audience changes", async () => {
+    const { session } = online();
+    const on = () => session.recap.voice.state.get().on;
+    await session.recap.request({ persona: "audio_description" });
+    expect(on()).toBe(true);
+    await session.recap.request({ persona: "casual" });
+    expect(on()).toBe(false);
+    session.recap.setSound(true); // the viewer's own choice stays
+    await session.recap.request({ persona: "analyst" });
+    expect(on()).toBe(true);
+  });
+
   it("says why when the service refuses", async () => {
     const detail = "rate_limited: try again in a few minutes";
     const { session } = online({ "POST /api/recaps": () => json({ detail }, 429) });

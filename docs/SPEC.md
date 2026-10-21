@@ -961,10 +961,10 @@ Application Insights.
     the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
     - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
       ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
-      pressure; a `goal` tag first; live-only overlays never), at most 8. The model may name only
-      candidates (an enum); the template takes the largest impacts (at least 3, those ≥ 0.01 xT,
-      at most 5). The reel plays them in match order, and the crew then works on those moments
-      only.
+      pressure; a moment whose shot went in first; live-only overlays never), at most 8. The
+      model may name only candidates (an enum); the template takes the largest impacts (at least
+      3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
+      on those moments only.
     - Analyst: picks the headline claims, reading the match through our MCP tools
       (`get_match_stats`, `list_key_moments`, `list_recap_claims`; `agents.mcp_server --recap
       <evidence file>`, which the API writes so the server starts without simulating). The card
@@ -979,12 +979,15 @@ Application Insights.
     - Verifier: unchanged. Voice: SSML per line on the reel's clock (a clip holds its last frame
       while its lines still run), and the overlay cue sheet.
   - *Evidence* (`agents/recap_context.py`, `explain/recap.py`). Match totals (score, passes
-    completed of played, scans, balls won back, shots once the sim has them) are claims on one run
-    over the match clock (`count_events` without an anchor counts the whole run). A hero moment's
+    completed of those resolved, scans, balls won back, shots) are claims on one run over the
+    match clock (`count_events` without an anchor counts the whole run; a `where` value may be a
+    list of allowed values). A pass counts once received, intercepted or out, as the live stats
+    panel counts it: one still in flight when its possession ends does not. A hero moment's
     claims are its MomentContext's, re-verified under `k<rank>.<id>` on the hero's evaluator, so
     every renamed claim has its own fingerprint and audit record. Other moments get observed
     claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
-    the line-breaking detector's own count), scans before the reception, heavy pressure, a goal.
+    the line-breaking detector's own count), scans before the reception, heavy pressure, and how
+    its shot ended (scored, saved by the keeper, wide; §3.3).
     Payload evidence and seek frames are lifted to the match clock.
   - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
     (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken

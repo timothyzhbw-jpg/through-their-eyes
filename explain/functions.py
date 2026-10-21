@@ -275,6 +275,7 @@ def count_events(
 ) -> int:
     """Events of a type (optionally by player / team / attributes) with anchor+from ≤ t ≤ to.
 
+    `where` maps an attribute to the value it must have, or to a list of the values it may have.
     Without an anchor, the whole recorded run: a stitched match's totals (SPEC 3.1, the recap)."""
     if anchor is None:
         if from_ or to:
@@ -292,9 +293,13 @@ def count_events(
         and lo <= e.frame <= hi
         and (player is None or e.player == player)
         and (team is None or e.team == team)
-        and all(e.attrs.get(k) == v for k, v in where.items())
+        and all(_matches(e.attrs.get(k), v) for k, v in where.items())
         for e in run.events
     )
+
+
+def _matches(value: Any, wanted: Any) -> bool:
+    return value in wanted if isinstance(wanted, list) else value == wanted
 
 
 def opponents_bypassed(ctx: EvalContext, run: MatchRun, event: str) -> int:

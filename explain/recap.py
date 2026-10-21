@@ -9,7 +9,8 @@ recap needs both views:
 
 `rank_moments` orders the candidates for the Director: by counterfactual impact, the |Δ| of the
 selected lens in xT (SPEC 5.2), exact ties scan > space > pressure, then match order. A moment
-tagged `goal` ranks first. Live-only overlays (sprints) are never key moments.
+that scored (`scored_moments`: its action is a shot whose outcome is a goal, or it is tagged
+`goal`) ranks first. Live-only overlays (sprints) are never key moments.
 
 Nothing here calls a model, and nothing here is new verification logic: the claims are `Claim`s,
 checked by the same `Verifier` as every breakdown.
@@ -17,7 +18,7 @@ checked by the same `Verifier` as every breakdown.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from numbers import Integral
 from typing import Any
 
@@ -34,6 +35,9 @@ LENS_ORDER = ("scan", "space", "pressure")  # exact ties in impact (SPEC 5.2)
 FIRST_TAGS = ("goal",)  # moments that lead the ranking whatever their impact
 SCAN_WINDOW_S = 2  # scans counted before a reception, as the hero claims count them
 TEAM = {0: "Home", 1: "Away"}  # the fictional clubs, as the score bug names them
+# A pass is counted once it is resolved: received, intercepted or out. One still in flight when
+# its possession ends is not, as the live stats panel counts them (analytics/live_stats.py).
+RESOLVED = ["complete", "intercepted", "out"]
 TEAM_ZH = {0: "主队", 1: "客队"}
 
 
@@ -89,11 +93,20 @@ def impact(card: Mapping[str, Any]) -> float:
     return abs(float(delta)) if delta is not None else 0.0
 
 
-def rank_moments(cards: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+def scored_moments(cards: Iterable[Mapping[str, Any]], run: MatchRun) -> set[str]:
+    """The moments (ids on the match clock) whose action is a shot that went in; `run` is the
+    stitched run, where the cards' anchors are."""
+    shots = {e.id for e in run.events if e.type == "shot" and e.attrs.get("outcome") == "goal"}
+    return {c["id"] for c in cards if c.get("anchors", {}).get("action") in shots}
+
+
+def rank_moments(
+    cards: Iterable[Mapping[str, Any]], scored: Collection[str] = ()
+) -> list[Mapping[str, Any]]:
     """Key-moment candidates, most important first (see the module docstring)."""
 
     def key(c: Mapping[str, Any]):
-        first = 0 if set(FIRST_TAGS) & set(c.get("tags", ())) else 1
+        first = 0 if set(FIRST_TAGS) & set(c.get("tags", ())) or c["id"] in scored else 1
         lens = c.get("selected_lens")
         order = LENS_ORDER.index(lens) if lens in LENS_ORDER else len(LENS_ORDER)
         return (first, -round(impact(c), 9), order, c["anchor_frame"], c["id"])
@@ -117,7 +130,7 @@ def _eq(lhs: Any, rhs: Any) -> Predicate:
 
 def match_claims(ctx: EvalContext) -> list[Claim]:
     """The match's totals, on the stitched run: the score always; per team its passes (completed
-    of played), scans, balls won back and shots when it has any."""
+    of resolved), scans, balls won back and shots when it has any."""
     value = ctx.value
     home, away = (value(_count("goal", t)) for t in (0, 1))
     out = [
@@ -134,7 +147,7 @@ def match_claims(ctx: EvalContext) -> list[Claim]:
     ]
     for team, side in ((0, "home"), (1, "away")):
         name, zh = TEAM[team], TEAM_ZH[team]
-        passes = value(_count("pass", team))
+        passes = value(_count("pass", team, outcome=RESOLVED))
         done = value(_count("pass", team, outcome="complete"))
         if passes:
             out.append(Claim(
@@ -144,7 +157,7 @@ def match_claims(ctx: EvalContext) -> list[Claim]:
                 slots={"done": Slot(value=done), "passes": Slot(value=passes)},
                 predicate=Predicate(op="all", args=[
                     _eq(_count("pass", team, outcome="complete"), slot("done")),
-                    _eq(_count("pass", team), slot("passes")),
+                    _eq(_count("pass", team, outcome=RESOLVED), slot("passes")),
                 ]),
             ))  # fmt: skip
         for kind, type_, en, cn in (
@@ -265,23 +278,60 @@ def moment_claims(ctx: EvalContext, card: Mapping[str, Any], start: int) -> list
 
         attempt(scans)
 
-    lo, hi = card["frame_start"] - start, card["frame_end"] - start
-    for goal in (e for e in ctx.run.events if e.type == "goal" and lo <= e.frame <= hi):
-
-        def scored(goal: Event = goal) -> Claim:
-            return Claim(
-                id="goal",
-                template="{scorer} scored.",
-                templates={"zh": "{scorer}进球了。"},
-                slots={"scorer": Slot(ref=goal.player)},
-                predicate=_eq(fn("count_events", type="goal", player=slot("scorer"),
-                                 anchor=goal.id), 1),
-                evidence=[goal.id],
-            )  # fmt: skip
-
-        attempt(scored)
-        break  # one goal per moment
+    if action is not None and action.type == "shot" and action.attrs.get("outcome"):
+        attempt(lambda: _shot_claim(ctx, action))
     return out
+
+
+def _shot_claim(ctx: EvalContext, shot: Event) -> Claim | None:
+    """How the moment's shot ended: in the goal, saved by the keeper, or wide (SPEC 3.3)."""
+    a = shot.id
+    by = _eq(fn("event_attr", event=a, attr="player"), slot("shooter"))
+    outcome = shot.attrs["outcome"]
+    ended = _eq(fn("event_attr", event=a, attr="outcome"), outcome)
+    slots = {"shooter": Slot(ref=shot.player)}
+    after = [e for e in ctx.run.events if e.frame >= shot.frame]
+    if outcome == "goal":
+        goal = next((e for e in after if e.type == "goal" and e.player == shot.player), None)
+        if goal is None:
+            return None
+        return Claim(
+            id="goal",
+            template="{shooter} scored.",
+            templates={"zh": "{shooter}进球了。"},
+            slots=slots,
+            predicate=Predicate(op="all", args=[
+                by, ended,
+                _eq(fn("count_events", type="goal", player=slot("shooter"), anchor=goal.id), 1),
+            ]),
+            evidence=[a, goal.id],
+        )  # fmt: skip
+    if outcome == "saved":
+        save = next((e for e in after if e.type == "save" and e.attrs.get("shot") == a), None)
+        if save is None:
+            return None
+        return Claim(
+            id="saved",
+            template="{keeper} saved {shooter}'s shot.",
+            templates={"zh": "{keeper}扑出了{shooter}的射门。"},
+            slots={**slots, "keeper": Slot(ref=save.player), "save": Slot(ref=save.id)},
+            predicate=Predicate(op="all", args=[
+                by, ended,
+                _eq(fn("event_attr", event=slot("save"), attr="player"), slot("keeper")),
+                _eq(fn("event_attr", event=slot("save"), attr="shot"), a),
+            ]),
+            evidence=[a, save.id],
+        )  # fmt: skip
+    if outcome == "wide":
+        return Claim(
+            id="wide",
+            template="{shooter}'s shot went wide.",
+            templates={"zh": "{shooter}的射门偏出了。"},
+            slots=slots,
+            predicate=Predicate(op="all", args=[by, ended]),
+            evidence=[a],
+        )
+    return None
 
 
 def namespaced(claim: Claim, prefix: str) -> Claim:

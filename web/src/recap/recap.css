@@ -274,6 +274,20 @@
   color: var(--chalk-2);
 }
 
+.recap-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.recap-sound svg {
+  width: 16px;
+  height: 16px;
+}
+.stage-card .recap-actions .btn {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 12px;
+}
 .recap-stop {
   align-self: flex-start;
   height: 34px;

@@ -39,6 +39,7 @@ from explain.recap import (
     moment_claims,
     namespaced,
     rank_moments,
+    scored_moments,
     stitched_run,
 )
 from explain.render import RenderPayload
@@ -133,8 +134,9 @@ class RecapContext:
         whole = EvalContext(stitched_run(match), resimulate=False)
         stats = [c.id for c in match_claims(whole) if add(c, whole, 0)]
         by_index = {p.index: p for p in match.possessions}
+        scored = scored_moments(cards, whole.run)
         candidates: list[Candidate] = []
-        for rank, card in enumerate(rank_moments(cards), start=1):
+        for rank, card in enumerate(rank_moments(cards, scored), start=1):
             if len(candidates) == MAX_CANDIDATES:
                 break
             p = by_index[card["possession"]]
@@ -155,7 +157,8 @@ class RecapContext:
             selected = card.get("selected_lens")
             lens = next((x for x in card.get("lenses", ()) if x.get("lens") == selected), None)
             candidates.append(Candidate(
-                id=card["id"], rank=rank, kind=card["kind"], tags=list(card.get("tags", ())),
+                id=card["id"], rank=rank, kind=card["kind"],
+                tags=list(card.get("tags", ())) + (["goal"] if card["id"] in scored else []),
                 actor=card["actor"], receiver=card.get("receiver"), lens=selected,
                 delta_xt=lens.get("delta_xt") if lens else None, hero=hero is not None,
                 possession=p.index, start=p.start, end=p.end, anchor_frame=card["anchor_frame"],

@@ -5,14 +5,16 @@ from collections import Counter
 
 import pytest
 
+from agents.context import MomentContext
 from agents.recap_context import MAX_CANDIDATES, RecapContext
 from explain.claims import Slot
 from explain.functions import EvalContext, Inconclusive
+from explain.match import match_moments
 from explain.recap import impact, local_id, rank_moments, stitched_run
 from explain.render import ScriptLine as RenderLine
 from explain.render import build_payload, check_payload, render_claim
 from explain.verifier import Verifier
-from sim.match import build_match, global_id
+from sim.match import PossessionSpec, build_match, global_id
 
 
 @pytest.fixture(scope="module")
@@ -59,6 +61,12 @@ def test_count_events_without_an_anchor_counts_the_whole_match(match):
     for team in (0, 1):
         got = ctx.value({"fn": "count_events", "args": {"type": "pass", "team": team}})
         assert got == passes[team]
+    resolved = Counter(e.team for p in match.possessions for e in p.run.events
+                       if e.type == "pass" and e.attrs.get("outcome") is not None)  # fmt: skip
+    for team in (0, 1):  # `where` with a list: the attribute is one of those values
+        args = {"type": "pass", "team": team, "where": {"outcome": ["complete", "intercepted",
+                                                                    "out"]}}  # fmt: skip
+        assert ctx.value({"fn": "count_events", "args": args}) == resolved[team]
     with pytest.raises(Inconclusive):  # a window needs somewhere to start
         ctx.value({"fn": "count_events", "args": {"type": "pass", "from": -2.0}})
 
@@ -81,13 +89,17 @@ def test_every_match_claim_is_supported_and_holds_the_true_totals(rc, match):
     assert rc.stats[0] == "final_score"
     assert rc.score == match.score
     events = Counter((e.type, e.team) for p in match.possessions for e in p.run.events)
-    done = Counter(e.team for p in match.possessions for e in p.run.events
-                   if e.type == "pass" and e.attrs.get("outcome") == "complete")  # fmt: skip
+    passes = [e for p in match.possessions for e in p.run.events if e.type == "pass"]
+    done = Counter(e.team for e in passes if e.attrs.get("outcome") == "complete")
+    # A pass is counted once resolved (outcome set), as the live stats panel counts them: one
+    # still in flight when its possession ends is not.
+    resolved = Counter(e.team for e in passes if e.attrs.get("outcome") is not None)
+    assert sum(resolved.values()) < len(passes)  # match-1 has passes cut off by the stitch
     for cid in rc.stats:
         assert rc.verdicts[cid].status == "supported", cid
     for team, side in ((0, "home"), (1, "away")):
         slots = rc.all_claims[f"passes_{side}"].slots
-        assert (slots["passes"].value, slots["done"].value) == (events["pass", team], done[team])
+        assert (slots["passes"].value, slots["done"].value) == (resolved[team], done[team])
         assert rc.all_claims[f"scans_{side}"].slots["n"].value == events["scan", team]
 
 
@@ -177,3 +189,61 @@ def test_the_recap_evidence_is_deterministic(rc):
     assert again.content_hash() == rc.content_hash()
     assert [c.id for c in again.candidates] == [c.id for c in rc.candidates]
     assert again.evidence() == rc.evidence()
+
+
+# --- a match with a goal: open play, then far_post_finish seed 4, where H9's shot goes in -------
+
+GOAL_PLAN = (PossessionSpec("possession_play", max_duration_s=10.0),
+             PossessionSpec("far_post_finish", 4))  # fmt: skip
+
+
+@pytest.fixture(scope="module")
+def scoring():
+    match = build_match(7, GOAL_PLAN)
+    heroes = {p.index: MomentContext.load(p.scenario, p.seed)
+              for p in match.possessions if p.run.hero}  # fmt: skip
+    cards = match_moments(match, {k: list(c.cards.values()) for k, c in heroes.items()})
+    return match, RecapContext.build("match-7", match, cards, heroes)
+
+
+def test_a_goal_is_in_the_score_and_its_moment_leads_the_candidates(scoring):
+    match, rc = scoring
+    assert match.score == rc.score == (1, 0)
+    assert rc.verdicts["final_score"].status == "supported"
+    assert "shots_home" in rc.stats and rc.all_claims["shots_home"].slots["n"].value == 1
+    first = rc.candidates[0]
+    assert "goal" in first.tags and first.hero
+    cid = f"{first.prefix}.goal"
+    assert cid in first.claims
+    out = render_claim(rc.all_claims[cid], rc.verdicts[cid], "en", rc.names)
+    assert out.text == "H9 scored."
+    zh = render_claim(rc.all_claims[cid], rc.verdicts[cid], "zh", rc.names)
+    assert zh.text == "H9进球了。"
+
+
+def test_a_goal_claim_with_another_scorer_is_refuted(scoring):
+    match, rc = scoring
+    cid = f"{rc.candidates[0].prefix}.goal"
+    claim = rc.all_claims[cid]
+    wrong = claim.model_copy(update={"slots": {**claim.slots, "shooter": Slot(ref="H8")}})
+    p = next(p for p in match.possessions if p.run.hero)
+    assert Verifier(EvalContext(p.run, resimulate=False)).verify(wrong).status == "refuted"
+
+
+def test_a_saved_or_wide_shot_is_told_as_it_ended():
+    """Every outcome of a placed shot has a claim, on runs where it happens (SPEC 3.3)."""
+    from explain.recap import _shot_claim
+    from sim.engine import Simulation
+
+    seen = {}
+    for seed in (3, 4, 40):  # wide, goal, saved
+        run = Simulation.from_scenario("far_post_finish", seed).run()
+        ctx = EvalContext(run, resimulate=False)
+        names = {pid: pid for pid in run.ids}
+        for shot in (e for e in run.events if e.type == "shot"):
+            claim = _shot_claim(ctx, shot)
+            verdict = Verifier(ctx).verify(claim)
+            assert claim is not None and verdict.status == "supported"
+            seen[shot.attrs["outcome"]] = render_claim(claim, verdict, "en", names).text
+    assert seen["goal"] == "H9 scored." and seen["wide"] == "H9's shot went wide."
+    assert seen["saved"].endswith(" saved H9's shot.") and seen["saved"].startswith("A")

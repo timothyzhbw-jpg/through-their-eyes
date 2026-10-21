@@ -13,7 +13,15 @@
 // Nothing here writes a number: every text is a verified line, every value a verified claim's.
 
 import { z } from "zod";
-import { ApiError, PERSONAS, StepTrace, VoiceCue, type Api, type Persona } from "../api/client";
+import {
+  ApiError,
+  DESCRIBED,
+  PERSONAS,
+  StepTrace,
+  VoiceCue,
+  type Api,
+  type Persona,
+} from "../api/client";
 import type { Hero } from "../data/hero";
 import { directorPrefs } from "../director/director";
 import { RenderPayload } from "../narration/payload";
@@ -202,6 +210,8 @@ export interface Recap {
   stopReel(): void;
   /** One clock step of `dt` wall-clock seconds while the reel plays. */
   tick(dt: number): void;
+  /** Speak the reel's lines (the viewer's choice; audio description turns it on by itself). */
+  setSound(on: boolean): void;
   /** The script for the persona and language on screen. */
   script(): RecapScript | null;
   /** GET /api/recaps/<key>/cues for the script on screen: the machine-readable cue sheet. */
@@ -236,6 +246,20 @@ export function createRecap(options: RecapOptions): Recap {
   let turn = 0;
   let saved: Pick<PlaybackState, "autoSlow" | "speed"> | null = null; // restored after the reel
   let auto: boolean | null = null; // the viewer's auto director, restored after the reel
+  let soundByAudience = false; // audio description turned the voice on, not the viewer
+
+  /** Audio description is heard, not watched: as in a breakdown (session.ts), choosing it turns
+   * the voice on, and leaving it turns the voice off again unless the viewer set it since. */
+  const followAudience = (persona: Persona) => {
+    if (DESCRIBED.has(persona)) {
+      if (voice.state.get().on) return;
+      voice.setOn(true);
+      soundByAudience = voice.state.get().on;
+    } else if (soundByAudience) {
+      soundByAudience = false;
+      voice.setOn(false);
+    }
+  };
 
   const script = (): RecapScript | null => {
     const { response, persona, language } = state.get();
@@ -249,6 +273,7 @@ export function createRecap(options: RecapOptions): Recap {
     const language = patch.language ?? state.get().language;
     if (!PERSONAS.includes(persona) || !LANGUAGES.includes(language)) return;
     stopReel();
+    if (persona !== state.get().persona) followAudience(persona);
     state.set({ persona, language });
     if (!api) {
       state.set({ status: "failed", error: "The recap needs the live service." });
@@ -379,6 +404,11 @@ export function createRecap(options: RecapOptions): Recap {
       show(t);
     },
     script,
+    setSound(on) {
+      soundByAudience = false;
+      if (!on) voice.stop();
+      voice.setOn(on);
+    },
     cuesUrl() {
       const { response, persona, language } = state.get();
       if (!api || !response) return null;
