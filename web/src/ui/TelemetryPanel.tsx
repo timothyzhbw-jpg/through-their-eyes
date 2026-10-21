@@ -63,138 +63,165 @@ export function TelemetryPanel() {
   const row = { cursor, guides, axis: t.axis };
 
   return (
-    <section className="telemetry" aria-label="Perception telemetry" data-player={player.id}>
-      <header>
-        <h2>
-          Perception telemetry · {player.id} <span className="role">{player.role}</span>
-        </h2>
-        <p className="note">
-          Synced to the playhead. Computed metrics from the sim and the scan detector, not verified
-          claims.
-        </p>
+    <section
+      className="panel chapter telemetry"
+      aria-label="Perception telemetry"
+      data-player={player.id}
+    >
+      <header className="chapter-head">
+        <div className="chapter-title">
+          <p className="kicker">
+            Perception telemetry · {player.id} {player.role}
+          </p>
+          <h2>
+            {hero.keyScan ? (
+              <>
+                He <em>looks.</em>
+              </>
+            ) : (
+              <>
+                Where he <em>looked.</em>
+              </>
+            )}
+          </h2>
+        </div>
+        <div className="chapter-lede">
+          <p className="lede">
+            His head, second by second, against the ball: every look away, how fast it turned, what
+            it showed him and what he believed. Synced to the playhead.
+          </p>
+          <p className="note">
+            Computed metrics from the sim and the scan detector, not verified claims.
+          </p>
+        </div>
       </header>
+      <div className="chapter-body">
+        <Axis hero={hero.heroId} kp={kp} axis={t.axis} />
 
-      <Axis hero={hero.heroId} kp={kp} axis={t.axis} />
-
-      <Row
-        name="head"
-        label="Head to ball"
-        value={`${now.headToBall.toFixed(0)}°`}
-        detail="0–180° · sim scans"
-        note={SIM_NOTE}
-        {...row}
-      >
-        <Spans t={t} />
-        {o && (
+        <Row
+          name="head"
+          label="Head to ball"
+          value={`${now.headToBall.toFixed(0)}°`}
+          detail="0–180° · sim scans"
+          note={SIM_NOTE}
+          source="sim"
+          {...row}
+        >
+          <Spans t={t} />
+          {o && (
+            <path
+              data-series="head-other"
+              data-run={otherName}
+              d={linePath(o.headToBall, o.axis, 180, o.known)}
+              className={`curve other run-${otherName}`}
+              style={THIN}
+            />
+          )}
           <path
-            data-series="head-other"
-            data-run={otherName}
-            d={linePath(o.headToBall, o.axis, 180, o.known)}
-            className={`curve other run-${otherName}`}
-            style={THIN}
-          />
-        )}
-        <path
-          data-series="head"
-          data-run={mode}
-          d={linePath(t.headToBall, t.axis, 180, t.known)}
-          className={`curve run-${mode}`}
-          style={THIN}
-        />
-      </Row>
-
-      <Row
-        name="speed"
-        label="Head speed"
-        value={`${now.headSpeed.toFixed(0)}°/s`}
-        detail={`detector · threshold ${threshold}°/s`}
-        note={DETECTOR_NOTE}
-        {...row}
-      >
-        <Detector t={t} />
-        <path
-          data-series="speed"
-          d={linePath(t.headSpeed, t.axis, t.max.speed, t.known - 1)}
-          className="curve"
-          style={THIN}
-        />
-      </Row>
-
-      <Row
-        name="sight"
-        label="In sight"
-        value={String(now.inSight)}
-        detail="players he can see"
-        note={SIM_NOTE}
-        {...row}
-      >
-        <path
-          data-series="sight"
-          d={linePath(t.inSight, t.axis, t.max.inSight, t.known)}
-          className="curve"
-          style={THIN}
-        />
-      </Row>
-
-      <Row
-        name="belief"
-        label={t.belief ? `Belief error · ${t.belief.target ?? "mean"}` : "Belief error"}
-        value={now.belief === null ? "n/a" : `${now.belief.toFixed(1)} m`}
-        detail={
-          t.belief
-            ? "his ghost to the true position"
-            : `beliefs are recorded for ${hero.heroId} only`
-        }
-        note={SIM_NOTE}
-        {...row}
-      >
-        {o?.belief && (
-          <path
-            data-series="belief-other"
-            data-run={otherName}
-            d={linePath(o.belief.error, o.axis, beliefMax, o.known)}
-            className={`curve other run-${otherName}`}
-            style={THIN}
-          />
-        )}
-        {t.belief && (
-          <path
-            data-series="belief"
+            data-series="head"
             data-run={mode}
-            d={linePath(t.belief.error, t.axis, beliefMax, t.known)}
+            d={linePath(t.headToBall, t.axis, 180, t.known)}
             className={`curve run-${mode}`}
             style={THIN}
           />
-        )}
-      </Row>
+        </Row>
 
-      <ul className="tlegend" aria-label="Legend">
-        <li>
-          <i className={`sw line run-${mode}`} /> {runLabels(hero).tag[mode]}
-        </li>
-        {o && (
+        <Row
+          name="speed"
+          label="Head speed"
+          value={`${now.headSpeed.toFixed(0)}°/s`}
+          detail={`detector · threshold ${threshold}°/s`}
+          note={DETECTOR_NOTE}
+          source="detector"
+          {...row}
+        >
+          <Detector t={t} />
+          <path
+            data-series="speed"
+            d={linePath(t.headSpeed, t.axis, t.max.speed, t.known - 1)}
+            className="curve"
+            style={THIN}
+          />
+        </Row>
+
+        <Row
+          name="sight"
+          label="In sight"
+          value={String(now.inSight)}
+          detail="players he can see"
+          note={SIM_NOTE}
+          source="sim"
+          {...row}
+        >
+          <path
+            data-series="sight"
+            d={linePath(t.inSight, t.axis, t.max.inSight, t.known)}
+            className="curve"
+            style={THIN}
+          />
+        </Row>
+
+        <Row
+          name="belief"
+          label={t.belief ? `Belief error · ${t.belief.target ?? "mean"}` : "Belief error"}
+          value={now.belief === null ? "n/a" : `${now.belief.toFixed(1)} m`}
+          detail={
+            t.belief
+              ? "how far his belief is from where the player really is"
+              : `beliefs are recorded for ${hero.heroId} only`
+          }
+          note={SIM_NOTE}
+          source="sim"
+          {...row}
+        >
+          {o?.belief && (
+            <path
+              data-series="belief-other"
+              data-run={otherName}
+              d={linePath(o.belief.error, o.axis, beliefMax, o.known)}
+              className={`curve other run-${otherName}`}
+              style={THIN}
+            />
+          )}
+          {t.belief && (
+            <path
+              data-series="belief"
+              data-run={mode}
+              d={linePath(t.belief.error, t.axis, beliefMax, t.known)}
+              className={`curve run-${mode}`}
+              style={THIN}
+            />
+          )}
+        </Row>
+
+        <ul className="tlegend" aria-label="Legend">
           <li>
-            <i className={`sw line other run-${otherName}`} /> {runLabels(hero).tag[otherName]}
+            <i className={`sw line run-${mode}`} /> {runLabels(hero).tag[mode]}
           </li>
-        )}
-        {hero.keyScan && (
+          {o && (
+            <li>
+              <i className={`sw line other run-${otherName}`} /> {runLabels(hero).tag[otherName]}
+            </li>
+          )}
+          {hero.keyScan && (
+            <li>
+              <i className="sw key" /> key scan
+            </li>
+          )}
           <li>
-            <i className="sw key" /> key scan
+            <i className="sw scan" /> scan (sim)
           </li>
-        )}
-        <li>
-          <i className="sw scan" /> scan (sim)
-        </li>
-        <li>
-          <i className="sw detected" /> scan (detector)
-        </li>
-        <li>
-          <i className="sw onset" /> onset: over {threshold}°/s, turning away from the ball
-        </li>
-        <li>
-          <i className="sw rejected" /> onset the gate rejected
-        </li>
-      </ul>
+          <li>
+            <i className="sw detected" /> scan (detector)
+          </li>
+          <li>
+            <i className="sw onset" /> onset: over {threshold}°/s, turning away from the ball
+          </li>
+          <li>
+            <i className="sw rejected" /> onset the gate rejected
+          </li>
+        </ul>
+      </div>
     </section>
   );
 }
@@ -242,6 +269,7 @@ function Row(props: {
   value: string;
   detail: string;
   note: string;
+  source: "sim" | "detector";
   cursor: number;
   guides: number[];
   axis: number;
@@ -254,7 +282,7 @@ function Row(props: {
         <span className="tread">
           <b className="tvalue">{props.value}</b>
           <span className="source" title={props.note}>
-            sim
+            {props.source}
           </span>
         </span>
         <span className="tdetail">{props.detail}</span>

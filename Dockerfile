@@ -3,7 +3,7 @@
 #     docker build -t tte-api .
 #     docker run --rm -p 8000:8000 tte-api      # then GET http://localhost:8000/health
 #
-# Only the main dependencies from uv.lock go in: no dev group, no realfeed group (OpenCV). Only the
+# Only the main dependencies from uv.lock go in: no dev group. Only the
 # service's packages are copied; .dockerignore keeps everything else out of the build context.
 # One uvicorn worker: the rate limits are per process.
 

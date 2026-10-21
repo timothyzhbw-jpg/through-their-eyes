@@ -18,7 +18,9 @@ import {
   type WhatIfRun,
 } from "../whatif/whatif";
 import { LANG_LABEL } from "./labels";
-import { ClaimCard, KindTags } from "./Narration";
+import { Chapter } from "./Chapter";
+import { ClaimCard, isVerified, KindTags, LineText } from "./Narration";
+import { Segmented } from "./Segmented";
 import "./whatif.css";
 
 export function WhatIfPanel() {
@@ -29,31 +31,35 @@ export function WhatIfPanel() {
   const [lang, setLang] = useState<Language>(link.language ?? "en");
   if (!whatIfs) {
     return whatIfError ? (
-      <div className="panel whatif">
-        <h2>What if…?</h2>
+      <Chapter className="whatif" kicker="Ask the replay" title={ASK_TITLE}>
         <p className="note">No what-if answers: {whatIfError}</p>
-      </div>
+      </Chapter>
     ) : null;
   }
   const option = optionOf(whatIfs, selected);
   return (
-    <div className="panel whatif">
-      <div className="breakdown-head">
-        <h2>What if…?</h2>
-        <span className="lang" role="group" aria-label="Answer language">
-          {LANGUAGES.map((l) => (
-            <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>
-              {LANG_LABEL[l]}
-            </button>
-          ))}
-        </span>
-      </div>
+    <Chapter
+      className="whatif"
+      kicker="Ask the replay"
+      title={ASK_TITLE}
+      lede="Each answer forces that choice and re-simulates the moment: the outcome is causal inside the sim only. Suggested answers were computed ahead of time by the same verifier as the narration; your own questions are answered by the live service."
+      aside={
+        <Segmented
+          label="Answer language"
+          className="lang"
+          value={lang}
+          onPick={setLang}
+          options={LANGUAGES.map((l) => ({ value: l, label: LANG_LABEL[l], lang: l }))}
+        />
+      }
+    >
+      <FreeQuestion lang={lang} online={api !== null} asking={ask.status === "asking"} />
       <div className="questions">
+        <span className="try">Try</span>
         {whatIfs.options.map((o) => (
           <Question key={o.action} option={o} lang={lang} selected={o.action === selected} />
         ))}
       </div>
-      <FreeQuestion lang={lang} online={api !== null} asking={ask.status === "asking"} />
       {ask.status !== "idle" ? (
         <FreeAnswer ask={ask} run={optionOf(whatIfs, ask.action)?.run ?? null} />
       ) : (
@@ -67,14 +73,15 @@ export function WhatIfPanel() {
           />
         )
       )}
-      <p className="note">
-        Each answer forces that option and re-simulates the moment: the outcome is causal inside the
-        sim only. Suggested answers were computed ahead of time by the same verifier as the
-        narration; your own questions are answered by the live service.
-      </p>
-    </div>
+    </Chapter>
   );
 }
+
+const ASK_TITLE = (
+  <>
+    What <em>if</em>…
+  </>
+);
 
 function FreeQuestion({
   lang,
@@ -112,14 +119,14 @@ function FreeQuestion({
         placeholder={
           online
             ? "Ask your own, e.g. what if he had played it back to the centre-back?"
-            : "Ask your own question: needs the live service (offline data)"
+            : "Ask your own question: needs the live service"
         }
         aria-label={
           online ? "Ask your own question" : "Ask your own question (needs the live service)"
         }
       />
       {online && (
-        <button type="submit" className="play small" disabled={asking || !text.trim()}>
+        <button type="submit" className="btn" disabled={asking || !text.trim()}>
           {asking ? "Asking…" : "Ask"}
         </button>
       )}
@@ -236,7 +243,7 @@ function Answer({
         }}
       >
         <KindTags narration={narration} line={l} />
-        {l.text}
+        <LineText text={l.text} verified={isVerified(narration, l)} />
       </button>
       {open === l.id && (
         <ul className="claims">

@@ -1,29 +1,29 @@
-// Play / pause, clock, timeline with scan bars and the decision marker, jumps and speed. In a
-// stitched match the timeline also marks where each possession starts (hero possessions shaded)
-// and the hero moments; the clock is the match clock, also inside a hero moment's breakdown.
+// The bar along the bottom of the live screen: play / pause, the timeline with scan bars and the
+// decision marker (the key scan and the decision are labelled under it, and jump there), the
+// clock, the view options and the camera. In a stitched match the timeline also marks where each
+// possession starts (hero possessions shaded) and the hero moments, with jumps between
+// possessions; the clock is the match clock, also inside a hero moment's breakdown.
 
 import { useEffect, useRef, useState } from "react";
 import { possessionAt } from "../match/match";
 import { useView } from "../session";
 import { useStore } from "../store/store";
-
-const SPEEDS = [0.25, 0.5, 1];
-const MATCH_SPEEDS = [0.5, 1, 2, 4]; // a whole match is long: faster, no slow motion
+import { PauseIcon, PlayIcon } from "./icons";
+import { intro } from "./intro";
+import { CameraSwitch, ViewOptions } from "./Stage";
 
 export function Transport() {
   const session = useView();
   const { hero, playback, controls } = session;
   const playing = useStore(playback, (s) => s.playing);
   const frame = useStore(playback, (s) => s.frame);
-  const speed = useStore(playback, (s) => s.speed);
-  const mode = useStore(playback, (s) => s.mode);
-  const run = hero.runs[mode];
   const offset = session.kind === "hero" ? session.offset : 0;
-  const speeds = hero.match ? MATCH_SPEEDS : SPEEDS;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" && e.target === document.body) {
+        // The pre-match card has the page: Space must not play the picture behind it.
+        if (intro.get().open) return;
         e.preventDefault();
         controls.togglePlay();
       }
@@ -34,46 +34,26 @@ export function Transport() {
 
   return (
     <section className="transport" aria-label="Playback">
-      <button type="button" className="play" onClick={controls.togglePlay}>
-        {playing ? "Pause" : "Play"}
+      <button
+        type="button"
+        className="play btn-icon"
+        aria-label={playing ? "Pause" : "Play"}
+        onClick={controls.togglePlay}
+      >
+        {playing ? <PauseIcon /> : <PlayIcon />}
       </button>
-      <div className="clock" title={offset ? "Match clock" : undefined}>
-        <b>{((frame + offset) * hero.dt).toFixed(2)} s</b> · frame {Math.floor(frame) + offset}
-      </div>
       <Timeline />
-      <div className="jumps">
-        {hero.match ? (
-          <PossessionJumps />
-        ) : (
-          <>
-            {hero.keyScan && (
-              <button
-                type="button"
-                onClick={() => controls.seek(Math.max(0, hero.keyScan!.start - 8))}
-              >
-                Key scan
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => controls.seek(run.decision ? run.decision.frame : hero.reception)}
-            >
-              Decision
-            </button>
-          </>
-        )}
-        <select
-          value={String(speeds.includes(speed) ? speed : 1)}
-          onChange={(e) => controls.setSpeed(Number(e.target.value))}
-          aria-label="Playback speed"
-        >
-          {speeds.map((s) => (
-            <option key={s} value={String(s)}>
-              {s}×
-            </option>
-          ))}
-        </select>
+      <div className="clock" title={offset ? "Match clock" : undefined}>
+        <b>{((frame + offset) * hero.dt).toFixed(2)} s</b>
+        <span> · frame {Math.floor(frame) + offset}</span>
       </div>
+      {hero.match && (
+        <div className="jumps">
+          <PossessionJumps />
+        </div>
+      )}
+      <ViewOptions />
+      <CameraSwitch />
     </section>
   );
 }
@@ -134,8 +114,11 @@ function Timeline() {
   const marked = marker ? hero.runs.factual.scans.find((s) => s.id === marker) : undefined;
   const possessions = hero.match?.possessions ?? [];
   // A whole match has many scans: short bars, so possession bands and boundaries stay readable.
-  const scanTop = hero.match ? 15 : 8;
+  const scanTop = hero.match ? 15 : 17;
   const heroes = hero.match?.moments.filter((m) => m.hero) ?? [];
+  const decision = run.decision ? run.decision.frame : hero.reception;
+  // The same mapping as X, in CSS: the labels need no measured width.
+  const at = (f: number) => ({ left: `calc(6px + (100% - 12px) * ${f / last})` });
 
   return (
     <div
@@ -163,9 +146,9 @@ function Timeline() {
                 height={height}
                 fill={
                   p.hero
-                    ? "rgba(255,211,107,0.16)"
+                    ? "rgba(246,213,102,0.14)"
                     : p.index % 2
-                      ? "rgba(230,238,233,0.05)"
+                      ? "rgba(239,237,229,0.05)"
                       : "transparent"
                 }
               />
@@ -176,7 +159,7 @@ function Timeline() {
                   y={0}
                   width={2}
                   height={height}
-                  fill="rgba(230,238,233,0.6)"
+                  fill="rgba(239,237,229,0.45)"
                 />
               )}
               <text x={X(p.start) + 4} y={10} className="possession-label">
@@ -184,7 +167,22 @@ function Timeline() {
               </text>
             </g>
           ))}
-          <rect x={6} y={height / 2 - 1} width={width - 12} height={2} fill="var(--line)" />
+          <rect
+            x={6}
+            y={height / 2 - 1}
+            width={width - 12}
+            height={2}
+            rx={1}
+            fill="var(--hairline-strong)"
+          />
+          <rect
+            x={6}
+            y={height / 2 - 1}
+            width={Math.max(0, X(Math.min(frame, last)) - 6)}
+            height={2}
+            rx={1}
+            fill="var(--chalk)"
+          />
           {scans.map((s) => (
             <rect
               key={s.id}
@@ -192,7 +190,7 @@ function Timeline() {
               y={scanTop}
               width={Math.max(hero.match ? 1.5 : 3, X(s.end) - X(s.start))}
               height={height - 2 * scanTop}
-              fill={s.key ? "var(--sight)" : "rgba(142,163,154,0.7)"}
+              fill={s.key ? "var(--floodlight)" : "var(--chalk-3)"}
             />
           ))}
           {mode === "counterfactual" && key && povPlayer === hero.heroId && (
@@ -202,7 +200,7 @@ function Timeline() {
               width={X(key.end) - X(key.start)}
               height={height - 16}
               fill="none"
-              stroke="var(--gold)"
+              stroke="var(--dusk)"
               strokeWidth={1.5}
               strokeDasharray="3 3"
             />
@@ -214,7 +212,7 @@ function Timeline() {
               width={X(marked.end) - X(marked.start) + 6}
               height={height - 8}
               fill="none"
-              stroke="var(--gold)"
+              stroke="var(--floodlight)"
               strokeWidth={2}
               rx={3}
             />
@@ -222,14 +220,14 @@ function Timeline() {
           {run.decision && (
             <path
               d={`M ${X(run.decision.frame)} ${height / 2 - 7} l 6 7 l -6 7 l -6 -7 z`}
-              fill="var(--fg)"
+              fill="var(--chalk)"
             />
           )}
           {heroes.map((m) => (
             <path
               key={m.id}
               d={`M ${X(m.anchor_frame)} ${height / 2 - 8} l 7 8 l -7 8 l -7 -8 z`}
-              fill="var(--gold)"
+              fill="var(--floodlight)"
             />
           ))}
           {run.action?.end !== undefined && (
@@ -238,10 +236,10 @@ function Timeline() {
               y={6}
               width={2}
               height={height - 12}
-              fill="var(--muted)"
+              fill="var(--chalk-3)"
             />
           )}
-          <rect x={X(Math.min(frame, last)) - 1} y={2} width={2} height={height - 4} fill="#fff" />
+          <circle cx={X(Math.min(frame, last))} cy={height / 2} r={7} fill="var(--chalk)" />
         </svg>
       )}
       <input
@@ -253,6 +251,30 @@ function Timeline() {
         onChange={(e) => controls.seek(Number(e.target.value))}
         aria-label="Timeline"
       />
+      {!hero.match && (
+        <div className="marks">
+          {key && (
+            <button
+              type="button"
+              className="mark key"
+              style={at(key.start)}
+              onClick={() => controls.seek(Math.max(0, key.start - 8))}
+              title="Jump to just before the key scan"
+            >
+              Key scan
+            </button>
+          )}
+          <button
+            type="button"
+            className="mark"
+            style={at(decision)}
+            onClick={() => controls.seek(decision)}
+            title="Jump to the decision"
+          >
+            Decision
+          </button>
+        </div>
+      )}
     </div>
   );
 }

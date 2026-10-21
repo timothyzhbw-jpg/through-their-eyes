@@ -11,8 +11,9 @@
 //   ?tamper=<claim id>                         open the evidence card on that claim with "Try a
 //                                              wrong number" open (online: the breakdown is
 //                                              asked for at once)
-// and the testing parameters ?autoplay=0, ?offline=1, ?plan=invalid (and ?rigged=0, read by
-// players/trial.ts). A link that points at a spot (at, run, ask or tamper) opens paused: no live
+// and the testing parameters ?autoplay=0, ?intro=0 (skip the lineup card), ?offline=1,
+// ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
+// (at, run, ask or tamper) skips the lineup card and opens paused: no live
 // stream, and no breakdown on load unless tamper needs one. Unknown values are ignored and
 // logged.
 
@@ -36,6 +37,7 @@ export type At = number | (typeof NAMED_FRAMES)[number];
 
 export interface DeepLink {
   autoplay: boolean; // watch live, then the breakdown; false with autoplay=0 or at / run / ask
+  intro: boolean; // show the lineup card; false with intro=0 or a link to a spot
   offline: boolean; // offline=1: ignore the live service
   invalidPlan: boolean; // plan=invalid: load the broken plan to show the template fallback
   persona: Persona | null;
@@ -50,6 +52,7 @@ export interface DeepLink {
 
 export const NO_LINK: DeepLink = {
   autoplay: true,
+  intro: true,
   offline: false,
   invalidPlan: false,
   persona: null,
@@ -92,6 +95,7 @@ export function parseDeepLink(search: string): DeepLink {
   const spot = at !== null || run !== null || ask !== null || tamper !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
+    intro: params.get("intro") !== "0" && !spot,
     offline: params.get("offline") === "1",
     invalidPlan: params.get("plan") === "invalid",
     persona,

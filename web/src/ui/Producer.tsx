@@ -91,7 +91,7 @@ export function Producer() {
       <div className="producer-foot">
         <button
           type="button"
-          className="play small"
+          className="btn"
           // aria-disabled, not disabled: it stays focusable and says why it waits (SPEC 1).
           aria-disabled={!ready}
           onClick={ready ? controls.runDrill : undefined}

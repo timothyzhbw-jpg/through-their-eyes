@@ -1,41 +1,50 @@
-// Page layout: header with the run toggle, the two views, transport, then the panels. A stitched
-// match has its own layout (MatchView): the score bug, the views, the match transport and every
-// moment; a hero moment's breakdown opens over it as the hero layout with a way back (MatchApp).
+// Page layout (the Floodlit design): the live screen fills the first screen (the picture with the
+// header, the moment card, the caption and the playback bar over it), and the moment is told
+// below it, panel by panel. A stitched match has its own layout (MatchView): the same live screen
+// with the score card, and every moment below; a hero moment's breakdown opens over it as the
+// hero layout with a way back (MatchApp).
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
-import { SessionContext, startClock, useSession, useView } from "./session";
+import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
+import { LineupCard } from "./ui/LineupCard";
 import { LiveBar, MomentsPanel } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
-import { EvidenceCard, NarrationPanel } from "./ui/Narration";
-import { DecisionPanel, StoryPanel } from "./ui/Panels";
+import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
+import { ArrowIcon, CheckIcon } from "./ui/icons";
+import { intro } from "./ui/intro";
+import { PERSONA_LABEL } from "./ui/labels";
+import { DecisionPanel, StoryPanel, VerdictPanel } from "./ui/Panels";
 import { RunToggle } from "./ui/RunToggle";
+import {
+  blurbOf,
+  MomentCard,
+  momentKicker,
+  MomentTitle,
+  StageHud,
+  SwapViews,
+  ViewerMenu,
+} from "./ui/Stage";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { TacticalView } from "./views/TacticalView";
 
-const BLURB: Record<string, string> = {
-  blind_side_run:
-    "Hero moment: the blind-side run. See what the midfielder saw, and what he would have done without one look over his shoulder.",
-  press_escape:
-    "Hero moment: escaping the press. See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
-};
-
-/** A hero moment: its views, the breakdown and the panels. `onBack`: it is inside a match. */
+/** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
   const session = useSession();
-  const { hero, playback, controls } = session;
+  const { hero, playback, controls, moment, offset } = session;
   const mode = useStore(playback, (s) => s.mode);
-  const focus = useStore(playback, (s) => s.focus);
+  const evidence = useStore(playback, (s) => s.evidenceLine);
+  const introOpen = useStore(intro, (s) => s.open);
 
   useEffect(() => startClock(session), [session]);
   useEffect(() => {
-    if (!autoplay) return;
+    if (!autoplay || introOpen) return;
     // With the live service: watch the match live, then its breakdown once the moment is
     // detected (SPEC 2). Offline: play the bundled breakdown at once.
     if (!session.feed) {
@@ -44,68 +53,150 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     controls.startLive();
     return () => session.feed?.stop();
-  }, [autoplay, controls, session]);
+  }, [autoplay, controls, introOpen, session]);
 
   return (
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
-      <header>
-        <div className="brand">
-          <h1>
-            Through Their Eyes <span className="tag">synthetic match</span>
-          </h1>
-          <p>{BLURB[hero.scenario] ?? `Hero moment: ${hero.scenario.replaceAll("_", " ")}.`}</p>
+      <LiveScreen
+        start={onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />}
+        end={
+          <>
+            <SoundToggle icon />
+            <ViewerMenu />
+          </>
+        }
+        run={<RunToggle />}
+        card={evidence ? <EvidenceCard /> : <MomentCard />}
+        caption={<Caption />}
+      />
+
+      <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+        <header className="moment-head">
+          <p className="kicker accent">
+            {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
+          </p>
+          <h2 id="moment-title">
+            <MomentTitle hero={hero} />
+          </h2>
+          <p className="lede">{blurbOf(hero)}</p>
+          <StoryCta />
+        </header>
+        <div className="below">
+          <StoryPanel />
+          <TelemetryPanel />
+          <DecisionPanel />
+          <VerdictPanel />
+          <WhatIfPanel />
+          <NarrationPanel />
+          <BreakdownPanel />
+          <MomentsPanel />
         </div>
-        <div className="header-controls">
-          {onBack ? (
-            <BackToMatch onBack={onBack} />
-          ) : (
-            <>
-              <MatchPicker />
-              <LiveBar />
-            </>
-          )}
-          <RunToggle />
-        </div>
-      </header>
-
-      <DirectorBar />
-      <section className={`stage focus-${focus}`}>
-        <PovView />
-        <TacticalView />
-      </section>
-
-      <EvidenceCard />
-
-      <Transport />
-
-      <TelemetryPanel />
-
-      <section className="below">
-        <NarrationPanel />
-        <MomentsPanel />
-        <WhatIfPanel />
-        <BreakdownPanel />
-        <StoryPanel />
-        <DecisionPanel />
-      </section>
+      </main>
 
       <Legend />
     </div>
   );
 }
 
+/** The story's one primary action: back to the picture, with the breakdown playing. */
+function StoryCta() {
+  const { controls } = useSession();
+  const { narration, persona, status } = useBreakdown();
+  const checked = narration && !narration.fixture;
+  return (
+    <div className="moment-cta">
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => {
+          window.scrollTo({ top: 0 });
+          controls.playBreakdown();
+        }}
+      >
+        Watch it through his eyes
+        <ArrowIcon />
+      </button>
+      {(status === "ready" || status === "failed") && (
+        <span className="written">
+          {checked && <CheckIcon />}
+          {checked
+            ? `Written for ${PERSONA_LABEL[persona]} · every number checked in code`
+            : "Bundled example · not checked by the verifier"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The live screen: the main view fills it and the other rides along as a picture in picture
+ * (unless the 3D view is focused alone); the header, a card on the right, the caption and the
+ * playback bar sit over the picture.
+ */
+function LiveScreen(props: {
+  start: ReactNode; // next to the brand: the live pill, or the way back to the match
+  end?: ReactNode; // the header's right: sound and who is watching
+  run?: ReactNode; // the run switch: centred over the picture, under the bar on a phone
+  card: ReactNode;
+  caption?: ReactNode;
+}) {
+  const { playback } = useView();
+  const focus = useStore(playback, (s) => s.focus);
+  const introOpen = useStore(intro, (s) => s.open);
+  const board = focus === "tactical";
+  const pip = focus === "split" || board;
+  return (
+    <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
+      {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
+      <div className="stage-content" inert={introOpen} style={{ display: "contents" }}>
+        <div className="views">
+          <div className={board ? "slot pip" : "slot main"}>
+            <PovView />
+          </div>
+          <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
+            <TacticalView />
+          </div>
+          <div className="shade top" aria-hidden="true" />
+          <div className="shade bottom" aria-hidden="true" />
+          {pip && <SwapViews />}
+        </div>
+        <header className="stage-head">
+          <div className="brand">
+            <h1>Through Their Eyes</h1>
+            <p className="sub">A synthetic match · every player fictional</p>
+          </div>
+          <div className="header-start">{props.start}</div>
+          <div className="header-end">{props.end}</div>
+        </header>
+        <div className="stage-top">
+          <StageHud />
+          <div className="stage-director">
+            <DirectorBar />
+          </div>
+        </div>
+        {props.run && <div className="stage-run">{props.run}</div>}
+        {props.caption && <div className="stage-caption">{props.caption}</div>}
+        <Transport />
+        <div className="stage-card">{props.card}</div>
+      </div>
+      <LineupCard />
+    </section>
+  );
+}
+
 /** A stitched match, or one of its hero moments' breakdowns over it. */
 export function MatchApp({ session, autoplay }: { session: MatchSession; autoplay: boolean }) {
   const open = useStore(session.screen, (s) => s.hero);
+  const introOpen = useStore(intro, (s) => s.open);
   // The Breakdown buttons sit low on the page: show the views of whichever screen comes up.
   useEffect(() => {
     window.scrollTo({ top: 0 }); // newer browsers return a promise: not a cleanup
   }, [open]);
   useEffect(() => {
-    if (!autoplay) return;
+    if (!autoplay || introOpen) return;
     session.controls.startLive();
     return () => session.feed?.stop();
-  }, [autoplay, session]);
+  }, [autoplay, introOpen, session]);
   if (open) {
     return (
       <SessionContext.Provider value={open}>
@@ -122,42 +213,42 @@ export function MatchApp({ session, autoplay }: { session: MatchSession; autopla
 
 function MatchView() {
   const session = useView();
-  const focus = useStore(session.playback, (s) => s.focus);
+  const introOpen = useStore(intro, (s) => s.open);
   useEffect(() => startClock(session), [session]);
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
-      <header>
-        <div className="brand">
-          <h1>
-            Through Their Eyes <span className="tag">synthetic match</span>
-          </h1>
-          <p>
-            A whole match of {count} possessions on one clock, streamed live from the API. Every
-            moment is on the timeline and in the Moments panel; open a hero moment's breakdown to
-            see the decision through the player's eyes.
+      <LiveScreen
+        start={
+          <>
+            <LiveBar />
+            <MatchPicker />
+          </>
+        }
+        card={
+          <>
+            <Scoreboard />
+            <OpeningNotice />
+          </>
+        }
+      />
+
+      <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+        <header className="moment-head">
+          <p className="kicker accent">The match · {count} possessions</p>
+          <h2 id="moment-title">
+            Every moment, <em>on one clock.</em>
+          </h2>
+          <p className="lede">
+            A whole match of {count} possessions, streamed live from the API. Every moment is on the
+            timeline and below; open a hero moment's breakdown to see the decision through the
+            player's eyes.
           </p>
+        </header>
+        <div className="below">
+          <MomentsPanel />
         </div>
-        <div className="header-controls">
-          <MatchPicker />
-          <LiveBar />
-        </div>
-      </header>
-
-      <Scoreboard />
-      <OpeningNotice />
-
-      <DirectorBar />
-      <section className={`stage focus-${focus}`}>
-        <PovView />
-        <TacticalView />
-      </section>
-
-      <Transport />
-
-      <section className="below">
-        <MomentsPanel />
-      </section>
+      </main>
 
       <Legend />
     </div>
@@ -166,8 +257,9 @@ function MatchView() {
 
 function Legend() {
   const { hero } = useView();
+  const introOpen = useStore(intro, (s) => s.open);
   return (
-    <footer className="legend">
+    <footer className="legend" inert={introOpen}>
       <span>
         <i style={{ background: "var(--home)" }} />
         Home (attacking right)

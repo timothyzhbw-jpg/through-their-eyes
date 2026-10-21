@@ -22,6 +22,7 @@ from analytics.scan_detector import ScanDetectorParams, detect_all
 from sim.config import SimParams
 from sim.engine import Simulation
 from sim.perception import longest_scan_s
+from sim.run import MatchRun
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -114,7 +115,14 @@ def scenario_params(scenario: str, **overrides) -> SimParams:
 
 
 def simulate(scenario: str, seed: int, params: SimParams) -> Sample:
-    run = Simulation.from_scenario(scenario, seed, params=params).run()
+    return sample_of(Simulation.from_scenario(scenario, seed, params=params).run())
+
+
+def sample_of(
+    run: MatchRun, head_yaw: np.ndarray | None = None, pos: np.ndarray | None = None
+) -> Sample:
+    """The run's sample with its truth; head yaw and positions from the tracking output unless
+    given (eval/keypoint_ingest.py passes those recovered from limb tracking)."""
     n = len(run.players)
     truth: list[list[int]] = [[] for _ in range(n)]
     head_turns: list[list[int]] = [[] for _ in range(n)]
@@ -122,8 +130,10 @@ def simulate(scenario: str, seed: int, params: SimParams) -> Sample:
         if e.type in ("scan", "head_turn"):
             (truth if e.type == "scan" else head_turns)[run.index(e.player)].append(e.frame)
     return Sample(
-        scenario, seed, run.dt, run.head_yaw_observed, run.pos, run.ball_pos[:, :2], truth,
-        head_turns,
+        run.scenario, run.seed, run.dt,
+        run.head_yaw_observed if head_yaw is None else head_yaw,
+        run.pos if pos is None else pos,
+        run.ball_pos[:, :2], truth, head_turns,
     )  # fmt: skip
 
 

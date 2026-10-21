@@ -5,6 +5,19 @@ or from a broadcast camera, and a tactical board from above — and plays a `Tel
 (SPEC 6) over them. Everything is synthetic: the
 match comes from `sim/`, the clubs and players are fictional.
 
+The look is "Floodlit" (the design canvas Bowen approved on 2026-10-20): a night pitch set like a
+magazine. Floodlight `#F6D566` is the one accent (what he saw, the look, verified numbers, the
+primary action), Dusk `#95A7BA` is always the other match, Flare `#EF774B` is for errors only;
+Newsreader is the voice, Geist the instrument, Geist Mono the labels (tokens at the top of
+`src/styles.css`). The first screen is the live screen: the main view fills it (his eyes, the
+broadcast camera or the tactical board, from the camera switch in the bar) and the other view
+rides along as a picture in picture; the header, the player picker, the moment card, the caption
+and the playback bar sit over the picture, and every overlay toggle is behind **View options**.
+Below it the moment is told as a story, chapter by chapter: what happened, his look (the
+telemetry), what he believed, the re-simulated match, ask the replay, the call, behind the replay
+and the moments. In a verified line every number has a dotted Floodlight underline and the line
+ends in a check that opens its evidence; the unchecked bundled fixture shows its numbers plain.
+
 ```bash
 cd web
 npm ci
@@ -15,6 +28,7 @@ npm run build        # -> web/dist (static files for the Azure Storage static we
 npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 npm run fps          # after a build: fps with pitch control and the skeleton off and on (below)
+npm run smoke        # end to end: a local API, the build, every page in headless Chromium (below)
 ```
 
 ## URL parameters
@@ -29,11 +43,12 @@ Deep links for the README's tour for judges, and for testing and filming
 | `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page |
 | `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                         |
 | `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                 |
-| `view`     | `pov`, `tactical`, `split`                                      | which view gets the space; a breakdown resets it to `split` when it starts                                                                                                                                                 |
+| `view`     | `pov`, `tactical`, `split`                                      | the main view: `pov` the 3D view alone, `split` the 3D view with the board as a picture in picture, `tactical` the board with the 3D view small; a breakdown resets it to `split` when it starts                           |
 | `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                               |
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                    |
+| `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                          |
 | `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                          |
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                      |
@@ -135,7 +150,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   marked `"fixture": true`. Its claim values are computed from the replay by
   `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
   evidence) and `explain.render` (seek frame = earliest evidence event), but no verifier has
-  checked them. The UI labels it "Fixture · not checked by the verifier". With the live service
+  checked them. The UI labels it "Sample data · not checked by the verifier". With the live service
   the verified payload from `POST /api/breakdowns` replaces it; the fixture stays as the offline
   fallback.
 
@@ -167,11 +182,12 @@ src/
   match/      a stitched match: possessions, score, moments; its session (live, opens breakdowns)
   tamper/     "Try a wrong number": a claim re-checked by the service's verifier, POST /api/verify
   telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
-  views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
-              toolbars and HUD, the broadcast camera and the stadium
+  views/      PovView (first person and broadcast) with its motion blur pass, TacticalView (React
+              Three Fiber), the HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
   skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
-  ui/         transport + timeline, caption + evidence card + narration list, panels, console
+  ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
+              transport + timeline, caption + evidence card, the story's chapters, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
               the transport and live controls a match shares; useView() for the shared views
   deeplink.ts URL parameters: parsed once, applied to the session before the first render
@@ -196,8 +212,17 @@ src/
   is kept — what the player saw stays on screen. Playback also slows while the head turns faster
   than 120°/s on screen; during a plan the plan clock slows with it, so captions stay in sync.
   Plan POV clips always use comfort mode.
+- **Motion blur in first person** (the Floodlit design). When the head whips round the picture
+  smears sideways, as a camera's would, and it is sharp the instant the head stops: a horizontal
+  Gaussian whose sigma is 0.3 × the angle the head sweeps while a 25 Hz, 180° shutter is open,
+  in pixels at the image centre (sigma = 0.3 · |ω| · 1/50 s · px per degree), capped at 3% of the
+  width, from the measured head yaw rate in match time (`views/motionBlur.ts`). The scene is drawn
+  into a half-float target that three.js treats like the canvas, so the blur converges on the
+  sharp frame; one pass of 17 taps up to 3 px, two passes beyond (`views/PovMotionBlur.tsx`).
+  Under half a pixel, on the broadcast camera and under `prefers-reduced-motion` the scene is
+  drawn straight to the canvas. The canvas carries the current sigma in `data-blur-sigma`.
 - **Broadcast camera** (SPEC 7: high side angle, follows the ball, smoothed). The **Broadcast**
-  switch in the 3D view's toolbar, or a plan's `camera` step with mode `broadcast`, films the same
+  button of the camera switch, or a plan's `camera` step with mode `broadcast`, films the same
   scene from a fixed camera 21 m up, 26 m behind the near touchline at the halfway line, which
   pans, tilts and zooms (`views/broadcast.ts`). Critically damped springs follow the ball and
   widen the frame with its speed; while a pass is in flight the aim follows an S-curve from where
@@ -250,11 +275,13 @@ src/
     values are in `src/pitchControl/snapshots.json`, written by
     `uv run python -m eval.pitch_control_parity` (repo root); `tests/test_pitch_control_parity.py`
     checks them against the kernel.
-  - _Frame rate:_ `npm run build && npm run fps` plays the hero moment in Chrome and prints fps
-    with the overlay off and on, then the shader's own cost per draw; `npm run fps -- --headed`
-    measures on this machine's GPU.
-- **Skeleton data** (SPEC 7, optional; first in the SPEC 9 cut order). Toggle "Skeleton", off by
-  default, on the broadcast camera and the tactical board; one state for both. Per player it
+  - _Frame rate:_ `npm run build && npm run fps` plays the hero moment in Chrome through the key
+    scan and prints fps with the overlay off and on (with the widest first-person blur of each
+    run), then the shader's own cost per draw, and checks that `prefers-reduced-motion` turns the
+    blur off; `npm run fps -- --headed` measures on this machine's GPU.
+- **Skeleton data** (SPEC 7, optional; first in the SPEC 9 cut order). Toggle "Skeleton" in View
+  options, off by default; it draws on the broadcast camera and the tactical board, one state for
+  both. Per player it
   draws only sim data: the position, the torso line (shoulders, across `body`), a head ray from
   the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. The ray
   lights up (detector green) while the scan detector marks a scan. The key's switch picks the
@@ -264,7 +291,7 @@ src/
   and the ray lights up during the sim's own scans (sight blue). No limbs: the sim has none.
   `npm run fps` also measures it, over the broadcast camera.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
-  voice steps name its line ids. Click a caption (or any line in the Narration panel) and the
+  voice steps name its line ids. Click a caption (or any line of the call) and the
   evidence card under the views lists each claim with its kind (observed / computed /
   counterfactual), verdict, values and evidence events, and the replay seeks to the claim's
   `seek_frame`. Counterfactual claims are shown in the re-simulated run and always carry the
@@ -294,7 +321,7 @@ src/
   the tactical board a short white tick shows each player's head direction. `views/tokens.ts`
   holds the pose maths; its test checks the rendered world yaw against the export (< 1e-3 rad).
   In the first-person view the animated players are the default (Bowen chose them by eye over
-  the tokens); **Animated players** in the toolbar switches back to the tokens. They are an
+  the tokens); **Animated players** in View options switches back to the tokens. They are an
   animated footballer converted from Gameplay Football (`src/players/`,
   `public/models/README.md`, SPEC 7): gait blended by sim speed with the playback rate
   matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
@@ -304,7 +331,7 @@ src/
   his scans from the sim (the key scan highlighted; without the look, a dashed box where it
   was), head angular speed with the scan detector at work (its threshold, candidate onsets, the
   onsets its excursion gate rejected, and the scans it accepted), players in his sight, and, for
-  the hero only, belief error on the runner (his ghost to the true position; "n/a" for anyone
+  the hero only, belief error on the runner (how far his belief is from where the player really is; "n/a" for anyone
   else, as beliefs are recorded for the hero only). As in motorsport telemetry, the other run is
   overlaid dashed on the head-angle and belief rows (with the look cyan, without it gold, as
   elsewhere), both runs on one time axis so the curves coincide until the key scan and split
@@ -357,7 +384,7 @@ checks the whole tree in CI.
 | @types/react, @types/react-dom 19.3.0, @types/three 0.186.0 (dev) | MIT        | type definitions                                                       |
 | vitest 5.0.3 (dev)                                                | MIT        | unit tests, reusing the Vite config                                    |
 | prettier 3.9.9 (dev)                                              | MIT        | formatting, checked in CI like `ruff format`                           |
-| playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests and `npm run fps`; no browser download     |
+| playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests, `fps` and `smoke`; no browser download    |
 
 Transitive exceptions, reviewed by hand: `lightningcss` (Vite's CSS minifier) is MPL-2.0, used
 unmodified at build time only (allowed by CLAUDE.md); `webgl-constants` (via drei → detect-gpu)
@@ -374,3 +401,38 @@ Chromium under `$PLAYWRIGHT_BROWSERS_PATH`, else the system's Google Chrome (Git
 runners have one). Without a GPU, Chrome draws WebGL with SwiftShader, its software rasteriser;
 on CI (`CI` set) the tests always use SwiftShader so runs are reproducible, elsewhere they use the
 GPU when there is one. The test fails, rather than skips, when no browser is found.
+
+## Smoke test (end to end)
+
+`npm run smoke` (`scripts/smoke.mjs`, SPEC 7, 8) loads the whole app as a visitor gets it, which
+the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on the live site
+("useSession needs a hero moment, not a match") although every unit test passed. It
+
+1. starts the API from the repo root (`uv run uvicorn api.main:app --port 8765`, after `uv sync`)
+   offline whatever the shell has set: no model, Speech, Cosmos DB or telemetry, a fresh cache,
+   and `TTE_MATCHES=blind_side_run:3,match:1,press_escape:0`; it waits for `/health`;
+2. builds web/ with `VITE_API_URL=http://localhost:8765` into a temporary directory and serves
+   it with `vite preview`;
+3. opens each page in headless Chromium, found as for the GPU tests (below), on SwiftShader on CI:
+
+| Page                                    | Its main view                                                      |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `?autoplay=0`                           | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
+| `?match=press_escape-0&autoplay=0`      | the pressure hero, the same                                        |
+| `?match=match-1&autoplay=0`             | the score bug, the 3D view, the Moments panel                      |
+| `?match=match-1`                        | lineup card, live; each **Breakdown**, then **Back to the match**  |
+| `?persona=analyst&tamper=cf_value`      | the evidence card with "Try a wrong number" open                   |
+| `?at=decision&view=tactical`            | the tactical board                                                 |
+| `/` and `?match=match-1`, 375 px, touch | the phone width, live                                              |
+
+A page passes when its main view shows (with its WebGL canvas) and it logs no console error and
+throws no uncaught exception; an uncaught exception fails it at once. The checks find controls by
+role and accessible name, as a screen reader does, so a new layout or style does not break them;
+a renamed control does, and the test changes with it. Requests to other hosts (the web fonts) are
+answered empty, so a run needs no network. A screenshot of each page, and the API's log, go to
+`out/smoke/`. About 2 minutes, a quarter of it the API's warm start.
+
+`-- --api http://localhost:8765` uses an API that is already running, `-- --only match` runs the
+pages whose name contains `match`, `-- --headed` shows the window. CI runs it in the `smoke` job,
+with playwright-core's own Chromium (`npx playwright-core install --no-shell chromium`, cached
+per playwright-core version), and keeps `out/smoke/` as the `web-smoke` artifact.
