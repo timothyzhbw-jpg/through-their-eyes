@@ -376,3 +376,28 @@
     margin-bottom: 8px;
   }
 }
+
+/* Why a crew: the crew-vs-single eval, cited with its costs. */
+.trace-why {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+.trace-why h4 {
+  margin: 0 0 6px;
+  font: 400 21px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.trace-why ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 12px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.trace-why a {
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--chalk);
+}

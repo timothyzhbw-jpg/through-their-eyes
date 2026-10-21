@@ -25,6 +25,7 @@ import {
 } from "../testing";
 import { BreakdownPanel } from "../ui/BreakdownPanel";
 import { CrewTraceView } from "./CrewTrace";
+import { CREW_VS_SINGLE } from "./eval";
 import fixtureJson from "./fixture.json";
 import {
   CrewTrace,
@@ -215,6 +216,24 @@ describe("the timeline", () => {
     const page = html({ status: "missing" });
     expect(page.toLowerCase()).toContain(NOT_RECORDED);
     expect(page).not.toContain("trace-bar");
+  });
+});
+
+describe("why a crew, from the crew-vs-single eval", () => {
+  it("cites the eval's findings with the report, the cost and the no-quality-win included", () => {
+    const page = mount(<CrewTraceView state={ready} />);
+    const aside = page.querySelector(".trace-why")!;
+    const items = [...aside.querySelectorAll("li")].map((li) => li.textContent);
+    expect(items).toEqual(CREW_VS_SINGLE.findings.map((f) => f.text));
+    expect(aside.textContent).toContain("3 of 4 roles from the model");
+    expect(aside.textContent).toContain("Not a quality win");
+    expect(aside.querySelector("a")!.getAttribute("href")).toBe(CREW_VS_SINGLE.report);
+  });
+
+  it("is about breakdowns: a recap's trace does not cite it", () => {
+    const recap = { ...fixture, story: "recap" };
+    const page = mount(<CrewTraceView state={{ status: "ready", trace: recap }} />);
+    expect(page.querySelector(".trace-why")).toBeNull();
   });
 });
 

@@ -14,6 +14,7 @@
 import asyncio
 import copy
 import json
+from pathlib import Path
 
 import pytest
 from agent_framework import FileCheckpointStorage
@@ -390,8 +391,6 @@ def test_a_recorder_numbers_steps_per_run():
 def test_the_webs_fixture_is_a_trace_of_this_schema():
     """web/src/crewtrace/fixture.json, written by `python -m agents.crewtrace`: the web's tests
     render it, so it must stay a valid trace of the schema the API serves."""
-    from pathlib import Path
-
     path = Path(__file__).parent.parent / "web" / "src" / "crewtrace" / "fixture.json"
     trace = CrewTrace.model_validate_json(path.read_text())
     assert [(r.kind, r.step) for r in trace.runs] == [("run", None), ("bring_back", "telestrator")]
@@ -399,3 +398,40 @@ def test_the_webs_fixture_is_a_trace_of_this_schema():
     assert {"down", "fallback", "waiting", "checkpoint", "back"} <= kinds
     assert any(s.tools for s in trace.steps) and any(s.rejected for s in trace.steps)
     assert any(s.rewritten for s in trace.steps)
+
+
+# --- what the Crew trace view cites from the crew-vs-single eval ---------------------------------
+
+ROOT = Path(__file__).parent.parent
+REPORT = ROOT / "eval" / "reports" / "crew_vs_single.md"
+
+
+@pytest.mark.skipif(
+    not REPORT.exists(), reason="the crew-vs-single eval report is not on this branch"
+)
+def test_the_trace_view_cites_the_eval_as_the_report_reads():
+    """Each figure web/src/crewtrace/eval.ts shows is in eval/reports/crew_vs_single.md, so a
+    re-run that changes one fails here until the view is updated (SPEC 6)."""
+    report = REPORT.read_text()
+    cited = (ROOT / "web" / "src" / "crewtrace" / "eval.ts").read_text()
+    backing = {
+        # one agent down: 3 of 4 roles from the model for the crew, 0 of 4 for one agent
+        "3 of 4 roles from the model": "crew: 3 of 3 aired a valid, verified breakdown with 3",
+        "fell back entirely, 0 of 4": "single: 3 of 3 aired a valid, verified breakdown with 0",
+        "3 of 3 drills": "3 of 3 aired a valid, verified breakdown",
+        # bring-back cost: the Telestrator alone vs the single agent's whole call
+        "1 model request, about 2.1k tokens": "| telestrator | crew | 3 | 3 of 3 |",
+        "about 11.7k": "1.7 [1.0, 2.0] · 11747",
+        "11 requests": "11.0 · 21627",
+        # step length against the deployed timeout
+        "0 of 66 crew agent runs": "0 of 66 crew agent runs would have timed out, and 6 of 6",
+        # the same quality, a higher cost
+        "groundedness 5.00 in both": "groundedness 5.00 vs 5.00",
+        "0 wrong facts aired": "wrong facts aired 0 vs 0",
+        "12.0 vs 1.8 model requests": "1.8 vs 12.0 model requests",
+        "$0.0090 vs $0.0046": "$0.0046 vs $0.0090 per breakdown",
+    }
+    for phrase, evidence in backing.items():
+        assert phrase in cited, phrase
+        assert evidence in report, evidence
+    assert "1.0 · 2129" in report  # the Telestrator's bring-back: one request, ~2.1k tokens

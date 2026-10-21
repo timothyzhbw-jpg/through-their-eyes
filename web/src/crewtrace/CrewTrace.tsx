@@ -10,11 +10,11 @@
 // on it is telemetry (the server's wall clock), labelled as such; no number on it is a claim.
 
 import { useEffect, useState } from "react";
-import type { Provenance } from "../provenance/provenance";
-import { utcTime } from "../provenance/provenance";
+import { utcTime, type Provenance } from "../provenance/provenance";
 import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { useView } from "../session";
 import "./crewtrace.css";
+import { CREW_VS_SINGLE } from "./eval";
 import {
   errorClass,
   firstStep,
@@ -223,7 +223,31 @@ function Timeline({ trace }: { trace: CrewTrace }) {
       {step && (
         <StepCard step={step} traceId={run?.trace_id ?? null} runName={run ? runTitle(run) : ""} />
       )}
+      {trace.story === "breakdown" && <WhyACrew />}
     </>
+  );
+}
+
+/** What the crew-vs-single eval found, as the report states it (./eval.ts). */
+function WhyACrew() {
+  return (
+    <aside className="trace-why" aria-label="Why a crew, not one agent">
+      <h4>Why a crew, not one agent</h4>
+      <p className="note">
+        From the crew-vs-single eval: {CREW_VS_SINGLE.setup}. Eval results, not claims about this
+        moment.
+      </p>
+      <ul>
+        {CREW_VS_SINGLE.findings.map((f) => (
+          <li key={f.id} data-finding={f.id}>
+            {f.text}
+          </li>
+        ))}
+      </ul>
+      <a href={CREW_VS_SINGLE.report} target="_blank" rel="noreferrer">
+        The report: eval/reports/crew_vs_single.md
+      </a>
+    </aside>
   );
 }
 
