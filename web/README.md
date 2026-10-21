@@ -55,6 +55,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                           |
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                                                    |
 | `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                                         |
+| `cine`     | `1`                                                             | filming the demo video only (`src/cine/`, SPEC 10), never linked: the 3D view full screen with no UI, driven by `window.__cine`                                                                                                                 |
 
 A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
@@ -204,6 +205,8 @@ src/
   players/    the rigged Gameplay Football players: rig, gait, look, kits
   whatif/     "What if…?": the bundled what-ifs, and free questions to POST /api/whatif
   yourcall/   "Your call": decide with what he knew, then the reveal (a pure reducer, its scene)
+  cine/       filming mode for the demo video (`?cine=1`, never linked): a full-screen 3D view a
+              script drives frame by frame through `window.__cine` (shot spec, cameras, post)
   producer/   the Producer's failure drill: take agents down, bring them back, step sources
   ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
               transport + timeline, caption + evidence card, the story's chapters, console
