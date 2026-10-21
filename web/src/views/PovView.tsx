@@ -23,9 +23,9 @@ import { declutter, labelBox } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
-import { motion, pushedBy } from "../beat/beat";
+import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
-import { CameraBlend } from "../beat/cameraBlend";
+import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
 import { featuresOf, quality } from "../quality/quality";
 
@@ -113,7 +113,6 @@ function PovScene() {
   const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const labels = useRef<(THREE.Sprite | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
-  const blend = useMemo(() => new CameraBlend(), []);
 
   const materials = useMemo(
     () => ({
@@ -178,13 +177,11 @@ function PovScene() {
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
+    // A switch of camera or view is a clean cut: the camera is on its new pose at once, and the
+    // blur passes stay off around it (beat/cut.ts).
     const now = performance.now() / 1000;
-    blend.begin(camera, fog, {
-      camera: s.camera,
-      frame: s.frame,
-      now,
-      reduced: motion.get().reduced,
-    });
+    cuts.note(viewKey(s), now);
+    if (cuts.inCut(now)) invalidate(); // until the blur has eased back
     [fog.near, fog.far] = FOG[s.camera];
     if (broadcast) {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
@@ -217,8 +214,6 @@ function PovScene() {
       camera.position.set(hx, EYE_HEIGHT, -hy);
       camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
     }
-    // A camera move between the two cameras, before the labels are placed on the pose it gives.
-    const moving = blend.apply(camera, fog, now);
     // Shirt numbers, nearest first: lifted or hidden where they would sit on another; the
     // runner's gold number always shows.
     camera.updateMatrixWorld();
@@ -236,7 +231,6 @@ function PovScene() {
       label.visible = visible;
       label.position.y = LABEL_Y + lift * LABEL_TEXT;
     });
-    if (moving) invalidate();
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
 

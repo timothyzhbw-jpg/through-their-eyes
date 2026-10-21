@@ -1600,10 +1600,12 @@ original visual identity.
   side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
   by what the beats added and catches up at the next possession's cut. Timing is a function of
   the frame only: no position, event or number changes.
-  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
-    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
-    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
-    with the playhead.
+  - Every camera switch is a clean cut (Bowen, 2026-10-21: no blur when the camera switches):
+    his eyes, the broadcast camera, the tactical board and the director's cuts change the
+    picture at once, with no camera move or morph between them, and for 0.3 s after a cut no
+    blur pass runs (the head-whip blur, depth of field), easing back over 0.25 s
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The other
+    run's ghost path draws itself on and its dashes march with the playhead.
   - Verified numbers in a caption count up from zero the first time they come up and take a
     check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
     page's text is the verified value throughout.
@@ -1613,7 +1615,7 @@ original visual identity.
     the Sound switch.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
-  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+  - `prefers-reduced-motion`: no slow motion, push-in, count-up or sting;
     the ring, the sweep and the stamp still show.
 - **Render tiers** ([web/src/quality/](../web/src/quality/), behind `?quality=` until they beat
   the standard picture): *standard* draws the scene straight to the canvas as above; *medium* adds
