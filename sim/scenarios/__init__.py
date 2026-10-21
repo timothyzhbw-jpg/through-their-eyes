@@ -9,6 +9,7 @@ from sim.scenarios.keeper_switch import KeeperSwitch
 from sim.scenarios.open_play import OpenPlay
 from sim.scenarios.possession_play import PossessionPlay
 from sim.scenarios.press_escape import PressEscape
+from sim.scenarios.screened_shot import ScreenedShot
 
 SCENARIOS: dict[str, type[Scenario]] = {
     BlindSideRun.name: BlindSideRun,
@@ -19,4 +20,5 @@ SCENARIOS: dict[str, type[Scenario]] = {
     OpenPlay.name: OpenPlay,
     PossessionPlay.name: PossessionPlay,
     PressEscape.name: PressEscape,
+    ScreenedShot.name: ScreenedShot,
 }
