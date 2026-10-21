@@ -35,6 +35,7 @@ import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
+import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
@@ -120,6 +121,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       )}
 
       <Legend />
+      <Tour />
     </div>
   );
 }
@@ -157,6 +159,7 @@ function StoryCta() {
           Make his call
         </button>
       )}
+      <TourButton className="btn" />
       {(status === "ready" || status === "failed") && (
         <span className="written">
           {checked && <CheckIcon />}
@@ -297,6 +300,7 @@ function MatchView() {
       </main>
 
       <Legend />
+      <Tour />
     </div>
   );
 }
