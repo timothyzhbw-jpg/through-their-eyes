@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as THREE from "three";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { stadium } from "./bakedStadium";
-import { Ground, Stadium } from "./Stadium";
+import { Grass, Stadium } from "./Stadium";
 
 vi.mock("@react-three/fiber", async (original) => ({
   ...(await original<typeof import("@react-three/fiber")>()),
@@ -36,7 +36,7 @@ describe("the stadium switch", () => {
       const out = html(<Stadium />);
       expect(out).toContain("<instancedmesh"); // the procedural crowd
       expect(out).not.toContain("<primitive");
-      expect(html(<Ground />).match(/<mesh[ >]/g)).toHaveLength(2); // apron and pitch
+      expect(html(<Grass />).match(/<mesh[ >]/g)).toHaveLength(2); // apron and pitch
     }
   });
 
@@ -50,7 +50,7 @@ describe("the stadium switch", () => {
     expect(out).toContain("<primitive");
     expect(out).not.toContain("<instancedmesh");
     expect(out).toContain("<sprite"); // the masts' glow and the sky stay
-    const grass = html(<Ground />);
+    const grass = html(<Grass />);
     expect(grass.match(/<mesh[ >]/g)).toHaveLength(2); // the same apron and pitch
     expect(grass).not.toContain("<meshstandardmaterial"); // with the baked grass material
   });

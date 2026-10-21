@@ -8,7 +8,7 @@
 // Two builds of the same bowl (stadiumGeometry.ts). The procedural one is generated here and
 // draws on the first frame. The baked one (bakedStadium.ts) is modelled in Blender with its
 // lighting baked in; it loads after the first frame and replaces the procedural bowl, crowd,
-// boards and masts when it is ready, and its baked light shapes the grass (Ground). The sky, the
+// boards and masts when it is ready, and its baked light shapes the grass (Grass). The sky, the
 // lights for the players, the masts' glow and the gantry are shared.
 
 import { useFrame } from "@react-three/fiber";
@@ -30,6 +30,14 @@ import { COLORS, getPitchTexture, PITCH } from "./scene";
 
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
+
+/**
+ * Seconds the crowd animation reads. The live view uses the wall clock; capture replaces
+ * `now` while it is mounted, so a filmed frame does not depend on when it was drawn.
+ */
+export const sceneClock: { now: () => number } = {
+  now: () => performance.now() / 1000,
+};
 
 setBoardWords(boardTexture);
 
@@ -61,7 +69,7 @@ export function Stadium() {
 
 /** The grass: the apron round the pitch and the pitch with its markings, lit by the scene's
  * lights. Once the baked stadium is in, its baked light shapes them too (bakedStadium.ts). */
-export function Ground() {
+export function Grass() {
   const light = useStore(stadium, (s) => s.model?.groundLight ?? null);
   const baked = useMemo(
     () =>
@@ -105,7 +113,7 @@ function BakedStadium() {
   const model = useStore(stadium, (s) => s.model)!;
   const scene = useMemo(() => model.scene.clone(true), [model]);
   useFrame(() => {
-    model.time.value = performance.now() / 1000;
+    model.time.value = sceneClock.now();
   });
   return <primitive object={scene} />;
 }
@@ -297,7 +305,7 @@ function Crowd() {
   }, [time]);
 
   useFrame(() => {
-    time.value = performance.now() / 1000;
+    time.value = sceneClock.now();
   });
   useLayoutEffect(() => {
     const m = mesh.current;
@@ -404,6 +412,30 @@ function glowTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** A horizontal streak, as a lens draws a bright lamp (the bloom's flare). */
+function flareTexture(): THREE.CanvasTexture {
+  const cv = document.createElement("canvas");
+  cv.width = 256;
+  cv.height = 16;
+  const c = cv.getContext("2d")!;
+  const g = c.createLinearGradient(0, 0, 256, 0);
+  g.addColorStop(0, "rgba(255,236,200,0)");
+  g.addColorStop(0.5, "rgba(255,240,214,1)");
+  g.addColorStop(1, "rgba(255,236,200,0)");
+  c.fillStyle = g;
+  c.fillRect(0, 0, 256, 16);
+  const v = c.createLinearGradient(0, 0, 0, 16);
+  v.addColorStop(0, "rgba(0,0,0,1)");
+  v.addColorStop(0.5, "rgba(0,0,0,0)");
+  v.addColorStop(1, "rgba(0,0,0,1)");
+  c.globalCompositeOperation = "destination-out";
+  c.fillStyle = v;
+  c.fillRect(0, 0, 256, 16);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /** The procedural masts: a pole and a lamp bank facing the centre spot. */
 function Masts() {
   const lamp = useMemo(() => new THREE.Color(NIGHT.lamp).multiplyScalar(2.5), []);
@@ -436,24 +468,31 @@ function Masts() {
   );
 }
 
-/** The glow round each mast's lamps, for both stadiums. */
+/** The glow round each mast's lamps, for both stadiums: the lamps' glow, and the bloom (a wide,
+ * faint halo in the night air, and the lens's flare). */
 function FloodlightGlow() {
   const glow = useMemo(glowTexture, []);
+  const flare = useMemo(flareTexture, []);
   useArmBakedStadium();
+  const sprite = (map: THREE.Texture, opacity: number) => (
+    <spriteMaterial
+      map={map}
+      transparent
+      opacity={opacity}
+      blending={THREE.AdditiveBlending}
+      depthWrite={false}
+      fog={false}
+      toneMapped={false}
+    />
+  );
   return (
     <>
       {FLOODLIGHTS.map((m, k) => (
-        <sprite key={k} position={[m.x, m.height, -m.y]} scale={[34, 34, 1]}>
-          <spriteMaterial
-            map={glow}
-            transparent
-            opacity={0.5}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            fog={false}
-            toneMapped={false}
-          />
-        </sprite>
+        <group key={k} position={[m.x, m.height, -m.y]}>
+          <sprite scale={[34, 34, 1]}>{sprite(glow, 0.5)}</sprite>
+          <sprite scale={[96, 96, 1]}>{sprite(glow, 0.13)}</sprite>
+          <sprite scale={[70, 2.6, 1]}>{sprite(flare, 0.2)}</sprite>
+        </group>
       ))}
     </>
   );
@@ -495,6 +534,7 @@ export function PlayerShadows() {
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
+  const core = useRef<THREE.InstancedMesh>(null); // the darker spot right under the feet
   const geometry = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), []);
   const materials = useMemo(() => {
     const alphaMap = blobTexture();
@@ -509,7 +549,7 @@ export function PlayerShadows() {
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
       });
-    return { star: make(0.2), contact: make(0.42) };
+    return { star: make(0.2), contact: make(0.42), core: make(0.4) };
   }, []);
   const at = useMemo(() => new THREE.Object3D(), []);
 
@@ -537,9 +577,14 @@ export function PlayerShadows() {
       at.scale.set(size, 1, size);
       at.updateMatrix();
       contact.current?.setMatrixAt(j, at.matrix);
+      at.position.y = 0.022;
+      at.scale.set(0.5 * size, 1, 0.5 * size);
+      at.updateMatrix();
+      core.current?.setMatrixAt(j, at.matrix);
     }
     if (star.current) star.current.instanceMatrix.needsUpdate = true;
     if (contact.current) contact.current.instanceMatrix.needsUpdate = true;
+    if (core.current) core.current.instanceMatrix.needsUpdate = true;
   });
 
   return (
@@ -553,6 +598,12 @@ export function PlayerShadows() {
       <instancedMesh
         ref={contact}
         args={[geometry, materials.contact, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={core}
+        args={[geometry, materials.core, hero.n]}
         frustumCulled={false}
         renderOrder={1}
       />

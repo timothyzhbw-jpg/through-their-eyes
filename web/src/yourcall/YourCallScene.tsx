@@ -9,7 +9,7 @@ import { Line } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { Ground, NIGHT, Stadium } from "../views/Stadium";
+import { Grass, NIGHT, Stadium } from "../views/Stadium";
 import { Goals } from "../views/PovView";
 import { COLORS, LABEL, getLabelTexture, teamColor, useRedrawOn } from "../views/scene";
 import { useStore } from "../store/store";
@@ -183,7 +183,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
       <color attach="background" args={[NIGHT.horizon]} />
       <fog attach="fog" args={[NIGHT.horizon, 150, 360]} />
       <Stadium />
-      <Ground />
+      <Grass />
       <Goals />
       {step === "deciding" &&
         options.map((o) => (

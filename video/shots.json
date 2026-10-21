@@ -5,7 +5,8 @@
   "viewport": { "width": 1920, "height": 1080 },
   "harvest": [
     { "persona": "casual", "language": "en" },
-    { "persona": "analyst", "language": "en" }
+    { "persona": "analyst", "language": "en" },
+    { "persona": "casual", "language": "zh" }
   ],
   "shots": [
     {
@@ -56,30 +57,28 @@
     {
       "id": "02-live-stream",
       "spec_beat": "0:08-0:20",
-      "title": "Broadcast camera with live overlays (sprint tag, pass speed); the move plays out",
-      "status": "stand-in",
-      "pending": "Broadcast camera (SPEC 7) is not on main. Stand-in: the live stream in the current split view, with the sprint tag in the header and the moment card when it is detected.",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "title": "A whole stitched match, live from the API on the broadcast camera, with the camera director's chip",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 10,
+      "target_s": 5,
       "crop": "stage",
-      "setup": [{ "do": "wait", "for": "assets" }],
+      "setup": [{ "do": "wait", "for": "assets", "views": ["pov"], "timeout_s": 40 }],
       "actions": [
-        { "do": "click", "role": "button", "name": "Live", "exact": true },
-        { "do": "wait", "for": "live", "hold": 3, "still": true },
-        { "do": "wait", "for": "moment", "timeout_s": 30, "hold": 2 }
+        { "do": "wait", "for": "live", "hold": 4, "still": true },
+        { "do": "hold", "s": 6 }
       ],
-      "vo": "A synthetic match with fictional clubs, streamed live from our API on Azure. As it plays, the system flags the moments worth explaining.",
-      "notes": "Re-record when the broadcast camera lands: add its toggle to the actions and change status to ready."
+      "vo": "A whole synthetic match, streamed live from our API on Azure, with a camera director that suggests where to look.",
+      "notes": "match-1 starts live at kick-off with autoplay; the director's chip shows when a pass is on its way to a player."
     },
     {
       "id": "03-breakdown",
       "spec_beat": "0:20-0:55",
-      "title": "Breakdown: freeze, POV through the scans, the key scan lights up the runner, freeze at the pass",
+      "title": "The crew's replay on the stage: first person through the look, the verified captions over it",
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 24,
+      "target_s": 8,
       "crop": "stage",
       "setup": [
         { "do": "wait", "for": "assets" },
@@ -87,15 +86,10 @@
         { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
       ],
       "actions": [
-        {
-          "do": "click",
-          "within": ".panel.breakdown",
-          "role": "button",
-          "name": "Play breakdown",
-          "hold": 6,
-          "still": true
-        },
-        { "do": "wait", "for": "breakdown-done", "timeout_s": 90, "hold": 1.5 }
+        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "scroll", "y": 0 },
+        { "do": "wait", "for": "caption", "hold": 1.5, "still": true },
+        { "do": "wait", "for": "breakdown-done", "timeout_s": 60 }
       ],
       "vo": "Our agent crew builds the replay. Back inside his head: the scans before the ball arrived, and the key look that showed him the runner. When he played the pass, his picture of the runner was off by {belief_error.err} metres.",
       "vo_fallback": "Our agent crew builds the replay. Back inside his head: the scans before the ball arrived, and the key look that showed him the runner.",
@@ -138,45 +132,27 @@
     {
       "id": "05-personas",
       "spec_beat": "0:55-1:25",
-      "title": "The same moment for casual / analyst / player-fan",
+      "title": "The same replay for the analyst: denser verified captions",
       "status": "ready",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0&autoplay=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 12,
-      "crop": null,
+      "target_s": 8,
+      "crop": "stage",
       "setup": [
         { "do": "wait", "for": "assets" },
         { "do": "click", "role": "button", "name": "Ask now" },
         {
           "do": "wait",
           "for": "breakdown",
-          "persona": "casual",
-          "language": "en",
-          "timeout_s": 90
-        },
-        { "do": "scroll", "to": ".panel.narration", "block": "end" }
-      ],
-      "actions": [
-        { "do": "hold", "s": 2 },
-        { "do": "select", "label": "Audience", "value": "analyst" },
-        {
-          "do": "wait",
-          "for": "breakdown",
           "persona": "analyst",
           "language": "en",
-          "timeout_s": 90,
-          "hold": 4,
-          "still": true
-        },
-        { "do": "select", "label": "Audience", "value": "player_fan" },
-        {
-          "do": "wait",
-          "for": "breakdown",
-          "persona": "player_fan",
-          "language": "en",
-          "timeout_s": 90,
-          "hold": 4
+          "timeout_s": 90
         }
+      ],
+      "actions": [
+        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "scroll", "y": 0 },
+        { "do": "wait", "for": "caption", "hold": 8, "still": true }
       ],
       "vo": "The same moment, told for a casual fan, an analyst or a fan of the player.",
       "notes": "A breakdown not yet cached takes about ten seconds to generate: cut the wait (manifest.json has each action's time)."
@@ -184,33 +160,21 @@
     {
       "id": "06-language",
       "spec_beat": "0:55-1:25",
-      "title": "en <-> zh",
+      "title": "The same replay in Chinese: the app's own verified zh captions",
       "status": "ready",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?lang=zh&intro=0&autoplay=0",
       "viewport": { "width": 1920, "height": 1080 },
       "target_s": 6,
       "crop": "stage",
       "setup": [
         { "do": "wait", "for": "assets" },
         { "do": "click", "role": "button", "name": "Ask now" },
-        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
+        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "zh", "timeout_s": 90 }
       ],
       "actions": [
-        {
-          "do": "click",
-          "within": "[aria-label='Narration language']",
-          "role": "button",
-          "name": "中文"
-        },
-        {
-          "do": "wait",
-          "for": "breakdown",
-          "persona": "casual",
-          "language": "zh",
-          "timeout_s": 90
-        },
         { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
-        { "do": "wait", "for": "caption", "hold": 4, "still": true }
+        { "do": "scroll", "y": 0 },
+        { "do": "wait", "for": "caption", "hold": 8, "still": true }
       ],
       "vo": "In English or in Chinese.",
       "notes": "The captions over the first-person view switch to Chinese."
@@ -244,7 +208,7 @@
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 8,
+      "target_s": 5,
       "crop": null,
       "setup": [
         { "do": "wait", "for": "assets" },
@@ -279,17 +243,100 @@
     {
       "id": "09-verifier",
       "spec_beat": "1:25-1:40",
-      "title": "The verifier blocks a wrong number and a banned judgement word",
-      "status": "pending feature",
-      "pending": "No view on main shows the verifier blocking a line (the narration panel only lists withheld lines). Not captured until such a view exists.",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "title": "Try a wrong number: the verifier re-checks the claim and the line would not air; the true value airs",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 8,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "analyst",
+          "language": "en",
+          "timeout_s": 90
+        },
+        { "do": "wait", "for": "evidence" },
+        { "do": "scroll", "to": "section.evidence", "block": "center" }
+      ],
+      "actions": [
+        { "do": "hold", "s": 1.2 },
+        {
+          "do": "click",
+          "within": ".tamper-form",
+          "role": "button",
+          "name": "Check",
+          "exact": true
+        },
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": ".tamper-result.held",
+          "hold": 2.5,
+          "still": true
+        },
+        {
+          "do": "click",
+          "within": ".tamper-form",
+          "role": "button",
+          "name": "Check the true value",
+          "exact": false
+        },
+        { "do": "wait", "for": "selector", "selector": ".tamper-result.airs", "hold": 2 }
+      ],
+      "vo": "Before anything airs, a verifier checks every number against the simulation. Type in a wrong number, and the line won't air."
+    },
+    {
+      "id": "10-drill",
+      "spec_beat": "1:31-1:45",
+      "title": "Take the Telestrator down: its template airs and the breakdown still plays; bring it back from the checkpoint",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0&autoplay=0",
       "viewport": { "width": 1920, "height": 1080 },
       "target_s": 12,
       "crop": null,
-      "setup": [],
-      "actions": [],
-      "vo": "Before anything airs, the verifier checks every number against the simulation. A wrong number is blocked, and so is a judgement like 'he should have'.",
-      "notes": "Candidates once built: a producer-console view of a rejected draft with its verdict and the banned-word hit."
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        {
+          "do": "wait",
+          "for": "breakdown",
+          "persona": "analyst",
+          "language": "en",
+          "timeout_s": 90
+        },
+        { "do": "scroll", "to": "section.producer", "block": "center" }
+      ],
+      "actions": [
+        { "do": "click", "role": "button", "name": "Take down the Telestrator", "hold": 0.6 },
+        {
+          "do": "click",
+          "within": "section.producer",
+          "role": "button",
+          "name": "Run with Telestrator down"
+        },
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "section.producer .crew-action.back",
+          "timeout_s": 90,
+          "hold": 2.5,
+          "still": true
+        },
+        { "do": "click", "role": "button", "name": "Bring back the Telestrator" },
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "section.producer .crew-action.back",
+          "state": "detached",
+          "timeout_s": 90,
+          "hold": 2.5
+        }
+      ],
+      "vo": "Take an agent down, and its template airs: the breakdown still plays. Bring it back, and the workflow resumes from its checkpoint.",
+      "notes": "Costs two model calls from the API's daily cap (the drill and the bring-back); record it last."
     },
     {
       "id": "11-architecture",
@@ -304,6 +351,122 @@
       "setup": [],
       "actions": [],
       "vo": "Built on Microsoft Foundry and Agent Framework, with our own MCP tool server, Azure AI Speech, Container Apps, Cosmos DB and Application Insights, shipped with GitHub Actions."
+    },
+    {
+      "id": "12-your-call",
+      "spec_beat": "trailer 1:13-1:28",
+      "title": "Your call: decide with only what he knew (the safe pass back), then the truth, what he did, and the two compared",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 17,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": ".yc-view canvas", "timeout_s": 40 },
+        { "do": "hold", "s": 2.5 }
+      ],
+      "actions": [
+        { "do": "hold", "s": 3, "still": true },
+        { "do": "click", "role": "button", "name": "Pass to H4", "hold": 3.5 },
+        { "do": "click", "role": "button", "name": "See the truth", "hold": 3.5, "still": true },
+        { "do": "click", "role": "button", "name": "What he did", "hold": 3.5 },
+        { "do": "click", "role": "button", "name": "Compare", "hold": 3 }
+      ],
+      "vo": "Your call: decide with only what he knew, then see what really happened."
+    },
+    {
+      "id": "13-take-his-eyes",
+      "spec_beat": "trailer 1:08",
+      "title": "Take his eyes: the viewer drags the cone round him to his left, presses Look, sees through his eyes with that look, and the sim re-runs: he passes back to H4",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?play=eyes",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 3,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": ".te-dial", "timeout_s": 40 },
+        { "do": "hold", "s": 1.5 }
+      ],
+      "actions": [
+        { "do": "hold", "s": 1.0, "still": true },
+        {
+          "do": "drag",
+          "from": { "role": "radio", "name": "Over his right shoulder" },
+          "to": { "role": "radio", "name": "To his left" },
+          "around": ".te-me",
+          "clockwise": true,
+          "duration_s": 1.4,
+          "hold": 0.3,
+          "radius_scale": 0.72
+        },
+        { "do": "click", "role": "radio", "name": "To his left", "hold": 0.5 },
+        { "do": "click", "role": "radio", "name": "0.8 s before the ball arrives", "hold": 0.4 },
+        { "do": "click", "role": "button", "name": "Look" },
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "text=Try another look",
+          "timeout_s": 30,
+          "hold": 3.5,
+          "still": true
+        }
+      ],
+      "vo": "Take his eyes: you choose the look, and the simulation plays it out."
+    },
+    {
+      "id": "14-stats",
+      "spec_beat": "trailer 1:35",
+      "title": "Live match stats: every named player's distance, sprints, passes and pass difficulty, from tracking alone",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&intro=0&at=4000",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 3,
+      "crop": null,
+      "setup": [
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "section.panel.stats table",
+          "timeout_s": 40
+        },
+        { "do": "hold", "s": 5 },
+        { "do": "scroll", "to": "section.panel.stats", "block": "start" },
+        { "do": "hold", "s": 1 }
+      ],
+      "actions": [{ "do": "hold", "s": 3.5, "still": true }],
+      "vo": "Every player's numbers, live, from tracking alone."
+    },
+    {
+      "id": "15-recap",
+      "spec_beat": "trailer 1:32",
+      "title": "Full time: the crew writes the match recap — the moments that changed it, checked stats, a reel and machine-readable overlay cues",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&intro=0&autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 3,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": "section.panel.recap", "timeout_s": 40 },
+        { "do": "scroll", "to": "section.panel.recap", "block": "start" }
+      ],
+      "actions": [
+        { "do": "hold", "s": 0.8 },
+        {
+          "do": "click",
+          "within": "section.panel.recap",
+          "role": "button",
+          "name": "Write the match recap"
+        },
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "text=Play the recap reel",
+          "timeout_s": 90,
+          "hold": 3,
+          "still": true
+        }
+      ],
+      "vo": "At the final whistle, the crew writes the recap."
     }
   ]
 }
