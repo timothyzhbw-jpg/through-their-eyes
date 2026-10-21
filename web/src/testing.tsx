@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import raw from "../public/data/hero_seed3.json";
 import type { Fetch } from "./api/client";
-import type { ExportEvent, ExportMatchMoment, HeroExport, MatchExport } from "./data/types";
+import type { ExportEvent, ExportMatchMoment, HeroExport, MatchExport, Vec2 } from "./data/types";
 import type { SocketFactory, SocketLike } from "./live/feed";
 import { SessionContext, type ViewSession } from "./session";
 
@@ -492,6 +492,151 @@ export const markerCards = (delta: number | null = 0.09596) => [
   },
 ];
 
+export const SHOT_MOMENT = "m:decision_after_scan:H8:0075";
+
+/**
+ * Like far_post_finish-11 (Module A placed shots, SPEC 3.3): the hero's options include
+ * `shot:far` and `shot:near`. With the look he shoots at the far post and scores; without it he
+ * shoots at the near post and A1 saves. The bundled runs, with the hero's pass at the decision
+ * turned into the shot as sim.export writes it: an action with `aim`, `placement` and `keeper`
+ * (no `to` or `target`), and `shot`, `dive` and `goal` / `save` events.
+ */
+export function shotExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  const pad = (f: number) => String(f).padStart(4, "0");
+  for (const [name, placement, outcome] of [
+    ["factual", "far", "goal"],
+    ["counterfactual", "near", "saved"],
+  ] as const) {
+    const run = e.runs[name];
+    const d = run.decision!;
+    const f = d.frame;
+    const end = f + 15;
+    const aim: [number, number] = [52.5, placement === "far" ? 3.16 : -3.16];
+    const [first, second, ...rest] = d.options;
+    const far = { ...first, action: "shot:far", target: [52.5, 3.16] as [number, number] };
+    const near = { ...second, action: "shot:near", target: [52.5, -3.16] as [number, number] };
+    d.options = placement === "far" ? [far, near, ...rest] : [near, far, ...rest];
+    d.chosen = `shot:${placement}`;
+    run.action = {
+      frame: f,
+      start: run.action!.start,
+      aim,
+      placement,
+      keeper: "A1",
+      speed: 27.6,
+      distance: 50,
+      outcome,
+      end,
+      end_at: aim,
+    };
+    const shotEnds = run.events.find((ev) => ev.type === "pass" && ev.frame === f)?.attrs.end;
+    run.events = run.events.filter(
+      (ev) => !(ev.frame === f && ev.type === "pass") && !(ev.frame === shotEnds),
+    );
+    run.events.push(
+      { id: `shot:H8:${pad(f)}`, type: "shot", frame: f, player: "H8",
+attrs: { placement, outcome, end } },
+      { id: `dive:A1:${pad(f + 5)}`, type: "dive", frame: f + 5, player: "A1", attrs: {} },
+      outcome === "goal"
+        ? { id: `goal:H8:${pad(end)}`, type: "goal", frame: end, player: "H8", attrs: {} }
+        : { id: `save:A1:${pad(end)}`, type: "save", frame: end, player: "A1", attrs: {} },
+    ); // prettier-ignore
+    run.events.sort((a, b) => a.frame - b.frame || a.id.localeCompare(b.id));
+  }
+  return { ...e, scenario: "far_post_finish", seed: 11, runner: null };
+}
+
+export const CUTBACK_MOMENT = "m:decision_after_scan:H8:0075";
+
+/**
+ * Like cutback_scan-7: an ordinary scan hero that is not blind_side_run. With the look he passes
+ * to the runner; without it he carries the ball, so the counterfactual run has no action (a carry
+ * is not a pass), as sim.export writes it. The bundled runs, renamed.
+ */
+export function cutbackExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  const cf = e.runs.counterfactual;
+  const [first, ...rest] = cf.decision!.options;
+  const carry = rest.find((o) => o.action === "carry") ?? { ...first, action: "carry" };
+  cf.decision = {
+    ...cf.decision!,
+    chosen: "carry",
+    options: [
+      { ...carry, prob: 0.76 },
+      ...cf.decision!.options.filter((o) => o.action !== "carry"),
+    ],
+  };
+  const passFrame = cf.decision.frame;
+  const ends = cf.events.find((ev) => ev.type === "pass" && ev.frame === passFrame)?.attrs.end;
+  cf.events = cf.events.filter(
+    (ev) =>
+      !(ev.type === "pass" && ev.frame === passFrame) &&
+      !(ev.type === "reception" && ev.frame === ends),
+  );
+  cf.action = null;
+  return { ...e, scenario: "cutback_scan", seed: 7 };
+}
+
+export const STEP_MOMENT = "m:keeper_step:H1:0052";
+
+/**
+ * Like screened_shot-0 (SPEC 3.6, C2): the hero is the keeper H1, with no decision on the ball and
+ * no key scan but a key step across his goal (`key_step`, events `step`). The counterfactual drops
+ * the step (`drop_step`). A9 shoots at frame 35: with the step H1 dives and saves at 52; without
+ * it A9 scores at 55. `decision`, `action`, `possession_value` and `delta_xt` are null. The
+ * bundled runs, with those events, as sim.export writes them.
+ */
+export function stepExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  for (const run of Object.values(e.runs)) {
+    for (const ev of run.events) if (ev.type === "scan") ev.attrs = { ...ev.attrs, key: false };
+  }
+  const step = { id: "step:H1:0013", frame: 13, start: [-51, 0] as Vec2, end: [-51, -0.6436] as Vec2, lateral_m: 0.6436, key: true };
+  for (const [name, saved] of [["factual", true], ["counterfactual", false]] as const) {
+    const run = e.runs[name];
+    const end = saved ? 52 : 55;
+    run.decision = null;
+    run.action = null;
+    run.possession_value = null;
+    run.events = run.events.filter((ev) => ev.type !== "pass" && ev.type !== "reception");
+    if (saved) run.events.push({ id: step.id, type: "step", frame: 13, player: "H1", attrs: { end: step.end, lateral_m: step.lateral_m, key: true } });
+    run.events.push(
+      { id: "pass:A8:0025", type: "pass", frame: 25, player: "A8", attrs: { to: "A9", outcome: "complete", end: 30 } },
+      { id: "reception:A9:0030", type: "reception", frame: 30, player: "A9", attrs: {} },
+      { id: "shot:A9:0035", type: "shot", frame: 35, player: "A9", attrs: { placement: "corner", outcome: saved ? "saved" : "goal", end } },
+      { id: `dive:H1:${saved ? "0040" : "0055"}`, type: "dive", frame: saved ? 40 : 55, player: "H1", attrs: {} },
+      saved
+        ? { id: "save:H1:0052", type: "save", frame: 52, player: "H1", attrs: {} }
+        : { id: "goal:A9:0055", type: "goal", frame: 55, player: "A9", attrs: {} },
+    );
+    run.events.sort((a, b) => a.frame - b.frame || a.id.localeCompare(b.id));
+  }
+  return {
+    ...e,
+    scenario: "screened_shot",
+    seed: 0,
+    hero: "H1",
+    runner: null,
+    key_scan: null,
+    key_step: step,
+    counterfactual: { id: "cf1", intervention: "drop_step", step: step.id },
+    delta_xt: null,
+  };
+} // prettier-ignore
+
+/** GET /api/matches/<id>/moments for the keeper: his card with the sight lens's delta. */
+export const stepCards = () => [
+  {
+    id: STEP_MOMENT,
+    kind: "keeper_step",
+    actor: "H1",
+    anchor_frame: 52,
+    selected_lens: "sight",
+    lenses: [{ lens: "sight", available: true, delta_xt: 0.7, metrics: {} }],
+  },
+];
+
 export const MATCH = "match-1";
 export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled run's first 60 frames
 export const BLIND_START = OPEN_FRAMES; // possession 1: blind_side_run 3
@@ -544,7 +689,14 @@ export function matchExport(): MatchExport {
     run.blind_side.frames.push(...p.run.blind_side.frames.slice(0, n));
     const events: ExportEvent[] = p.run.events
       .filter((e) => e.frame < n)
-      .map((e) => ({ ...e, id: globalId(e.id, start), frame: e.frame + start, possession: index }));
+      .map((e) => ({
+        ...e,
+        id: globalId(e.id, start),
+        frame: e.frame + start,
+        // sim/export.py: pass, scan and head-turn ends are frames, moved to match time too.
+        attrs: typeof e.attrs.end === "number" ? { ...e.attrs, end: e.attrs.end + start } : e.attrs,
+        possession: index,
+      }));
     if (index === 1) {
       events.push({
         id: `goal:H9:${GOAL_FRAME}`,

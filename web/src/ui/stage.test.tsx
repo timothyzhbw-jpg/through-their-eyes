@@ -350,16 +350,51 @@ describe("who is watching", () => {
     await act(settle);
     expect(session.breakdown.get().persona).toBe("analyst");
 
-    click(page.querySelector<HTMLButtonElement>("button[aria-haspopup=dialog]")!);
+    // The menu stays open after a pick: the language is one more click, not two.
     const zh = page.querySelector<HTMLButtonElement>(
       "[role=dialog] [role=group][aria-label=Language] button[lang=zh]",
     )!;
+    expect(zh).not.toBeNull();
     click(zh);
     await act(settle);
     expect(session.breakdown.get().language).toBe("zh");
+    expect(page.querySelector("[role=dialog][aria-label='Who is watching']")).not.toBeNull();
     expect(text(page.querySelector("button[aria-haspopup=dialog]"))).toContain(
       "Watching as Analyst · 中文",
     );
+  });
+
+  it("stays open after each pick until Escape or a press outside closes it", async () => {
+    const session = online();
+    session.controls.requestBreakdown();
+    await settle();
+    const page = mount(session, <ViewerMenu />);
+    const toggle = page.querySelector<HTMLButtonElement>("button[aria-haspopup=dialog]")!;
+    const dialog = () => page.querySelector("[role=dialog][aria-label='Who is watching']");
+    click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const coach = button(dialog()!, "Coach Shapes, distances, decisions.");
+    act(() => coach.focus()); // as a press or Enter on it would
+    click(coach);
+    await act(settle);
+    expect(dialog()).not.toBeNull();
+    // The keyboard stays where it was: on the audience just picked, now pressed.
+    const picked = button(dialog()!, "Coach Shapes, distances, decisions.");
+    expect(pressed(picked)).toBe("true");
+    expect(document.activeElement).toBe(picked);
+    // Escape closes it and hands the keyboard back to the toggle.
+    act(() => {
+      picked.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(toggle);
+    // A press outside closes it too.
+    click(toggle);
+    expect(dialog()).not.toBeNull();
+    act(() => {
+      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    expect(dialog()).toBeNull();
   });
 
   it("says why only the bundled audience exists offline", () => {

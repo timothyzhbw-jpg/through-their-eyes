@@ -149,7 +149,8 @@ export function BreakdownPanel() {
         <i style={{ width: `${Math.min(100, (100 * t) / plan.duration_s)}%` }} />
       </div>
       {ready && (
-        <ol className="steps" ref={list}>
+        // A scrolling box with no control inside: focusable, so the keyboard can scroll it.
+        <ol className="steps" ref={list} tabIndex={0} aria-label="Telestration steps">
           {plan.steps.map((step, k) => (
             <li
               key={k}

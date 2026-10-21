@@ -3,7 +3,16 @@
 // per option (whatif_*.json, SPEC 3.7), the run that happened for his own choice, or the export's
 // own counterfactual when it forces that action (press_escape forces a carry).
 
-import { actionLabel, clampFrame, Sample, sampleInto, type Hero } from "../data/hero";
+import {
+  actionLabel,
+  clampFrame,
+  isShot,
+  Sample,
+  sampleInto,
+  shotPost,
+  type Hero,
+} from "../data/hero";
+import { optionLabel } from "../options/passOptions";
 import type { Vec2 } from "../data/types";
 import type { MomentContext } from "../plan/moment";
 import { ghostAt, optionOf, type WhatIfRun, type WhatIfs } from "../whatif/whatif";
@@ -18,7 +27,7 @@ export type OptionRun =
   | { source: "counterfactual" }; // the export's counterfactual run forces this action
 
 export interface CallOption {
-  action: string; // "pass:H9", "carry", "shot"
+  action: string; // "pass:H9", "carry", "shot", "shot:far"
   kind: "pass" | "carry" | "shot";
   label: string; // "Pass to H9"
   short: string; // on the marker: the receiver's shirt number, or the label
@@ -58,12 +67,22 @@ export function callOptions(hero: Hero, whatIfs: WhatIfs | null): CallOption[] {
     const receiver = pass ? o.action.slice(5) : null;
     const receiverJ = receiver === null ? -1 : hero.ids.indexOf(receiver);
     const number = receiverJ >= 0 ? hero.players[receiverJ].number : undefined;
-    const label = o.action === "carry" ? "Carry" : actionLabel(o.action);
+    const shot = isShot(o.action);
+    const post = shotPost(o.action);
+    const label =
+      o.action === "carry" ? "Carry" : shot ? optionLabel(o.action) : actionLabel(o.action);
     out.push({
       action: o.action,
-      kind: pass ? "pass" : o.action === "shot" ? "shot" : "carry",
-      label: o.action === "shot" ? "Shot" : label,
-      short: number !== undefined ? String(number) : o.action === "shot" ? "Shot" : "Carry",
+      kind: pass ? "pass" : shot ? "shot" : "carry",
+      label,
+      short:
+        number !== undefined
+          ? String(number)
+          : post
+            ? `${post === "near" ? "Near" : "Far"} post`
+            : shot
+              ? "Shot"
+              : "Carry",
       receiver,
       // On the receiver's token. Carry and shot have none: the option's target, which is also
       // where the dotted path ends.

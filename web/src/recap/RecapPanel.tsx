@@ -326,7 +326,7 @@ function RecapSound({ session }: { session: MatchSession }) {
       onClick={() => session.recap.setSound(!on)}
     >
       {on ? <SoundOnIcon /> : <SoundOffIcon />}
-      {on ? "Sound on" : "Sound off"}
+      Sound
     </button>
   );
 }
