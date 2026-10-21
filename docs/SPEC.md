@@ -1509,13 +1509,6 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
-- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
-      without the look and its verified line are on screen within 20 s of opening the page, and
-      any viewer action ends the show.
-      — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
-      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
-      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
-      2026-10-21)
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
       — *Open:* not measured on a laptop GPU yet. The shader exists (per pixel,
       [web/src/pitchControl/](../web/src/pitchControl/), toggle off by default), and
@@ -1577,6 +1570,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
+- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
+      without the look and its verified line are on screen within 20 s of opening the page, and
+      any viewer action ends the show.
+      — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
+      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
+      2026-10-21)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
