@@ -114,6 +114,10 @@ _Fill in as they come to exist._
   the striker's key scan, does his placement change, and by how much does his scoring chance on
   the truth drop? Includes the v_dive sweep. Held-out seeds 200–239 (design 0–39), about a minute;
   writes `eval/reports/hero_shot_far_post_finish.md`
+- `uv run python -m eval.hero_save` — save hero eval (SPEC 3.3, 3.6, `screened_shot`): without
+  the keeper's key step, does his save probability drop by ≥ 0.4, and is that mostly from seeing
+  the ball later? Includes the v_dive sweep. Held-out seeds 300–339 (design 0–39), about 15 s;
+  writes `eval/reports/hero_save_screened_shot.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's

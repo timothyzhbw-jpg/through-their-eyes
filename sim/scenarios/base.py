@@ -33,6 +33,19 @@ class ForcedPass:
     target: tuple[float, float] | None = None  # defaults to the receiver's position
 
 
+@dataclass(frozen=True)
+class ForcedShot:
+    """A scripted strike. `action` is `shot:<placement>`, the same shape `_kick_shot` reads."""
+
+    shooter: str
+    placement: str
+    target: tuple[float, float]
+
+    @property
+    def action(self) -> str:
+        return f"shot:{self.placement}"
+
+
 def make_player(pid: str, role: str) -> PlayerInfo:
     r = ROLES[role]
     return PlayerInfo(
@@ -73,6 +86,10 @@ class Scenario:
     def forced_pass(self, sim: Simulation, frame: int) -> ForcedPass | None:
         return None
 
+    def forced_shot(self, sim: Simulation, frame: int) -> ForcedShot | None:
+        """A scripted strike when `shots` is on. Default off, so no other scenario kicks one."""
+        return None
+
     def forced_scans(self, sim: Simulation, frame: int) -> dict[int, ForcedScan]:
         return {}
 
@@ -88,6 +105,11 @@ class Scenario:
         """Whether this pass, played by `passer` now, is the moment's pass: the run ends
         `SimParams.tail_s` after it is resolved. By default, any pass by the hero."""
         return sim.ids[passer] == self.hero
+
+    def ends_on_shot(self, sim: Simulation, shooter: int) -> bool:
+        """Whether this shot ends the run `SimParams.tail_s` after it resolves. Defaults to
+        `ends_on_pass`, so a hero's own strike still ends the run."""
+        return self.ends_on_pass(sim, shooter)
 
 
 def marking_target_on_belief(sim: Simulation, marker: int, man: int, gap: float) -> np.ndarray:

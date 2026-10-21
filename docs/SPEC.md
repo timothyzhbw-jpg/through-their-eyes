@@ -464,6 +464,53 @@ expansion pack, on Module A (§3.3).
   - Demo seed 11, a typical design seed: `shot:far`, a goal, chance 0.79 on the truth; without
     the look `shot:near`, saved by A1, chance 0.26.
 
+**Save hero (`screened_shot`, 2026-10-21).** The keeper finds a sightline through a crowded box;
+C2 of the hero expansion pack, on Module A (§3.3). Its lens is sight, not a scan: the key action
+is a step.
+- **The play.** The away team attacks −x. A8 lays the ball off to A10 at the edge of the box, and
+  A10 strikes low for the corner (a forced shot, the same path in both runs). Between him and the
+  goal, H4 stands goal-side of A9 in the six-yard box and H5 covers behind them; the full-backs
+  hold the width.
+- **Key action and intervention.** The keeper H1 steps 0.63–0.70 m sideways about 0.9 s before the
+  strike, so that he sees the ball past H4 and A9. The intervention is the new `drop_step`: the
+  run without that step.
+- **Physics.** Every player, the keeper's step included, moves through the scenario's movement
+  targets under the engine's normal speed and acceleration limits; the scenario never writes
+  positions or velocities. On design seeds (`tests/test_screened_shot.py`), no two players are
+  closer than 0.7 m before the strike, the screening players stand at least 1.5 m from the keeper,
+  and at the strike the keeper's visibility of the ball is < 0.5 from his starting spot and ≥ 0.5
+  after the step.
+- **New hooks, all off by default** (every other run is unchanged byte for byte):
+  `Scenario.forced_shot` (`ForcedShot`), `Scenario.ends_on_shot` (defaults to `ends_on_pass`),
+  the `DropStep` override with `drop_step_counterfactual` and `MatchRun.key_step`, and
+  `SightAt`, an analysis-only override that sets when the keeper first sees the ball.
+- **Acceptance** (`eval/hero_save.py`; designed on seeds 0–39, held out on fresh seeds 300–339):
+  - hard gate: P_save(step) − P_save(no step) ≥ 0.4 in 28/40 (target ≥ 60%: met);
+  - the same at v_dive = 2.5 and 4.0 m/s: 28/40 and 29/40 (target ≥ 60% at both: met);
+  - without the step, first sight comes ≥ 0.25 s later in 35/40 (target ≥ 90%: **not met**);
+  - the effect is mostly sight, Δ_sight > Δ_position, in 30/40 (target ≥ 80%: **not met**).
+    Δ_sight = P_save(step) − P_save(step, sight forced as late as without it); Δ_position =
+    that − P_save(no step).
+  - Reported only: the realised result goes from saved to goal without the step in 17/40.
+  - Report: [hero_save_screened_shot.md](../eval/reports/hero_save_screened_shot.md).
+- **Where the two misses come from** (the report's rows marked …; Bowen decided on 2026-10-21 to
+  ship the moment with them stated):
+  - Five shots (309, 312, 316, 320, 329) are blocked by H4, who moves across to cover the corner
+    after the strike, before the save model runs, in both runs. They fail every check that needs
+    P_save. Among the 35 that reach the keeper, first sight is ≥ 0.25 s later in 35/35.
+  - The other three decomposition misses are ties at 0: a shot beyond the keeper's reach with or
+    without the step. Among the 32 that are not blocked and not both 0, Δ_sight > Δ_position in
+    30/32 (302 and 303 are the two where position matters more).
+  - A wide shot still has a P_save, the save model at the point where it crosses the goal line
+    outside the posts, so it counts in the hard gate as reach although no save was needed. Five of
+    the 28 passes are such shots. Among the shots on target with the step, the gate holds in 23/23.
+- **How the held-out run went.** A first scene (frozen players, a teleported step, overlapping
+  bodies) was rejected in review after it had run on 200–239, so those seeds are seen. The scene
+  was rebuilt on design seeds 0–39 (there: 38, 29, 32, 28 and 30 of 40 on the five checks above),
+  then run once on 300–339. Nothing in the scene changed after that. The reported-only rows were
+  added to the eval afterwards; the report regenerates with every earlier value unchanged.
+- **Not done yet:** the `sight` lens, its claims and narration (the explain PR for this moment).
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -477,7 +524,8 @@ expansion pack, on Module A (§3.3).
   transcendental functions can differ in the last bits between ARM and x86, and a multi-agent sim
   amplifies that. CI compares runs inside CI, never against hashes made on a laptop.
 - `snapshot(t)` / `resume(snapshot, overrides)` re-simulate from t with overrides such as
-  `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`, and
+  `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`,
+  `drop_step(step_id)` (a scripted step not taken; `screened_shot`, §3.6), and
   `force_action(player, frame, action)` (*M4*): at that decision the player takes `action` — any
   option he evaluated, e.g. `pass:H4` — instead of sampling; everything else re-simulates as
   usual. It answers "what if he had passed to H4?" with a re-simulation, not a statistic.
@@ -529,6 +577,14 @@ expansion pack, on Module A (§3.3).
       — [eval/reports/hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md)
       (38/40, +0.524, 38/40 at both ends, on seeds 200–239; §3.6);
       [tests/test_shots.py](../tests/test_shots.py) (design seeds)
+- [x] Save hero: without the keeper's key step, his save probability drops by ≥ 0.4 in ≥ 60% of
+      fresh held-out seeds, at both ends of the uncited v_dive range too. The secondary targets
+      (first sight ≥ 0.25 s later in ≥ 90%, Δ_sight > Δ_position in ≥ 80%) are not met and are
+      reported with their causes (§3.6).
+      — [eval/reports/hero_save_screened_shot.md](../eval/reports/hero_save_screened_shot.md)
+      (28/40; 28/40 and 29/40 at 2.5 and 4.0 m/s; secondary 35/40 and 30/40; seeds 300–339);
+      [tests/test_screened_shot.py](../tests/test_screened_shot.py) (design seeds: physics,
+      separation, sightline, `DropStep`, `SightAt`)
 - [x] Placed shots and the keeper's save model behind `Scenario.shots`: P_save matches the cited
       piecewise model; the keeper cannot react before he sees the ball; with the flag off every
       run is byte-identical.
@@ -1420,13 +1476,13 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
+| §3 sim | 11 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 8 | 0 | — |
 | §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **30** | **10** | |
+| **Total** | **31** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
