@@ -556,6 +556,21 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       That is equal by construction at matched noise, a consistency check, not evidence. The
       0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
+- [x] *Live match stats (§4.6):* the kernels give the known answers on hand-built tracks (speed,
+      distance, sprints, milestones, release speed, lane risk equal to the decision model's run-in,
+      the difficulty formula); the timeline is causal (truncating the stream at a frame changes
+      nothing up to it, on a hero and on the stitched match); pass outcomes read from the feed equal
+      the sim's own; totals add up; same seed ⇒ byte-identical; the REST snapshot, the stream's
+      `stat` messages and the MCP tool give the same numbers; difficulty separates failed from
+      completed passes on fresh seeds (AUC interval above 0.5, criterion set before the run).
+      — [tests/test_stats_kernels.py](../tests/test_stats_kernels.py),
+      [tests/test_live_stats.py](../tests/test_live_stats.py),
+      [tests/test_stats_api.py](../tests/test_stats_api.py);
+      [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-21,
+      `possession_play` seeds 300–399: 1 439 passes, AUC 0.737, 95% interval 0.712–0.763,
+      supported). Reported, not tuned: the distance part alone ranks the other way (AUC 0.257),
+      because an intercepted pass is measured to where it was won, and the "very hard" band (50
+      passes) completes more often than "hard".
 - [ ] xT grid increases toward goal (sanity plot saved).
       — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
       [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
@@ -1056,6 +1071,22 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
       caption line opens its claims and seeks the replay to their evidence", one case per line)
+- [x] *Live match stats panel and tags (§4.6):* the panel shows the analyst the full table, a casual
+      viewer two or three headlines and a player fan his player; every number carries the
+      `tracking` chip and the note that it is measured, not verified; nothing after the playhead;
+      it works in a hero moment and in a stitched match; the viewer's totals at a checkpoint equal
+      the API's snapshot; the broadcast camera names the ball carrier and tags sprints, passes,
+      distance milestones and shots; the ticker shows them on every camera; 375 px with no
+      horizontal scroll; fps unchanged.
+      — [web/src/stats/stats.test.ts](../web/src/stats/stats.test.ts) (parity with the Python
+      snapshots), [store.test.ts](../web/src/stats/store.test.ts),
+      [web/src/ui/StatsPanel.test.tsx](../web/src/ui/StatsPanel.test.tsx),
+      [StatsTicker.test.tsx](../web/src/ui/StatsTicker.test.tsx),
+      [web/src/views/statTags.test.ts](../web/src/views/statTags.test.ts). At 375 px nothing in the
+      panel or the ticker overflows (the table scrolls inside its frame, the player column stays).
+      `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
+      stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
+      16.7–16.8 ms, as offline.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
@@ -1237,17 +1268,18 @@ or a live check. Ticked only when verified that day: `uv run pytest` 464 passed,
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
 check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
-`uv run pytest` 1015 passed (merged with main, after the review fixes).
+`uv run pytest` 1015 passed (merged with main, after the review fixes). The live match stats
+checks, 2026-10-21: `uv run pytest` 1054 passed, `npm test` 514 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
 | §3 sim | 8 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
+| §4 analytics | 7 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
-| §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 5 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **26** | **10** | |
+| **Total** | **28** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
