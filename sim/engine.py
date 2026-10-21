@@ -34,7 +34,14 @@ from sim.decision import (
 )
 from sim.model import Decision, Event
 from sim.movement import steer, turn_toward
-from sim.perception import BeliefStore, FinishedScan, HeadModel, head_turn_id, scan_id
+from sim.perception import (
+    BeliefStore,
+    FinishedScan,
+    ForcedScan,
+    HeadModel,
+    head_turn_id,
+    scan_id,
+)
 from sim.rng import KeyedRng
 from sim.run import MatchRun
 
@@ -90,6 +97,9 @@ class Simulation:
         self.dropped_scans: set[str] = set()
         self.frozen_belief: dict[int, int] = {}
         self.forced_actions: dict[tuple[int, int], str] = {}  # (player, frame) -> action
+        # (player, frame) -> (offset from the ball in rad, dwell in s): looks added by `AddScan`.
+        self.added_scans: dict[tuple[int, int], tuple[float, float]] = {}
+        self.no_scans: dict[int, tuple[int, int]] = {}  # player -> [start, end): `NoScans`
         self.events: list[Event] = []
         self.decisions: list[Decision] = []
         self.pending_decision: tuple[int, int] | None = None
@@ -206,17 +216,27 @@ class Simulation:
         drift_noise = self.rng.normal("head_drift", f, n, entities=self.ids)
         speed_noise = self.rng.normal("scan_speed", f, n, entities=self.ids)
         allowed = ~self.scenario.scan_suppressed(self, f)
+        for i, (start, end) in self.no_scans.items():  # a `NoScans` override (SPEC 3.7)
+            if start <= f < end:
+                allowed[i] = False
         p_scan = self.scan_rate * self._pressure_factor() * DT
         spontaneous = allowed & (trigger < p_scan)
         # The same trigger draw: just above the scan probability, a scan starts and is aborted.
         partial = allowed & ~spontaneous & (trigger < p_scan * (1 + p.partial_scan_ratio))
+        forced_scans = self.scenario.forced_scans(self, f)
+        if self.added_scans:  # an `AddScan` override (SPEC 3.7) goes the forced scans' way
+            forced_scans = forced_scans | {
+                i: ForcedScan(target_yaw=float(base[i] + offset), dwell_s=dwell)
+                for (i, at), (offset, dwell) in self.added_scans.items()
+                if at == f
+            }
         self.head_yaw, finished = self.head.step(
             f,
             self.head_yaw,
             base,
             spontaneous,
             draws,
-            self.scenario.forced_scans(self, f),
+            forced_scans,
             self.dropped_scans,
             self.ids,
             p,
@@ -728,6 +748,8 @@ class Simulation:
             etype, eid, attrs["partial"] = "head_turn", head_turn_id(self.ids[i], scan.start), True
         else:
             etype, eid, attrs["key"] = "scan", scan_id(self.ids[i], scan.start), scan.key
+            if (i, scan.start) in self.added_scans:
+                attrs["added"] = True
         self.events.append(
             Event(eid, etype, scan.start, scan.start * DT, self.ids[i], int(self.team[i]), attrs)
         )

@@ -3,7 +3,8 @@
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
 observed_share, scan_side, max_visibility, cf_delta. Every function accepts `cf: <scan id>` to
 evaluate on the counterfactual run without that scan instead of the factual run, or
-`cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7).
+`cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7), or
+`cf: look:<player>:<frame>:<degrees>` for the run where he looks only there (SPEC 3.7, 7).
 
 Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
 anchor "<card id>.<name>" (SPEC 5.1, e.g. "m:decision_after_scan:H8:0075.reception"), and offsets
@@ -35,10 +36,11 @@ from analytics.xt import xt_for
 from explain.cards import MomentCard
 from sim.config import HALF_LENGTH, HALF_WIDTH
 from sim.counterfactual import (
-    WHAT_IF_PREFIX,
     CounterfactualResult,
+    LookResult,
     WhatIfResult,
     drop_scan_counterfactual,
+    is_what_if_id,
     what_if_from_id,
 )
 from sim.decision import DecisionContext, OptionEval, evaluate_options, option_success
@@ -138,10 +140,11 @@ class EvalContext:
             raise Inconclusive(f"{anchor}{offset_s:+} s is after the recorded run")
         return f
 
-    def counterfactual(self, scan_ref: Any) -> CounterfactualResult | WhatIfResult:
+    def counterfactual(self, scan_ref: Any) -> CounterfactualResult | WhatIfResult | LookResult:
         """The run without one scan (an event id or a moment anchor such as `<card>.last_scan`),
-        or a what-if with one decision forced (`force:<player>:<frame>:<action>`, SPEC 3.7)."""
-        if isinstance(scan_ref, str) and scan_ref.startswith(WHAT_IF_PREFIX):
+        a what-if with one decision forced (`force:<player>:<frame>:<action>`, SPEC 3.7), or with
+        the player's eyes taken (`look:<player>:<frame>:<degrees>`, SPEC 3.7, 7)."""
+        if is_what_if_id(scan_ref):
             if scan_ref not in self.counterfactuals:
                 if not self.resimulate:
                     raise Inconclusive(f"no what-if {scan_ref} was supplied")
@@ -388,19 +391,28 @@ def scan_side(ctx: EvalContext, run: MatchRun, scan: str) -> str:
 
 
 def max_visibility(
-    ctx: EvalContext, run: MatchRun, observer: str, target: str, event: str
+    ctx: EvalContext,
+    run: MatchRun,
+    observer: str,
+    target: str,
+    event: str,
+    until: str | None = None,
 ) -> float:
     """The most the observer saw of the target during an event with an end frame (a scan): the
     vision model with occlusion (`analytics.vision`) on each frame of it. The sim counts a player
-    as seen from `SimParams.perception_threshold` (SPEC 3.4)."""
+    as seen from `SimParams.perception_threshold` (SPEC 3.4). With `until` (an event id), frames
+    after that event do not count: what he saw of a look before he decided."""
     e = ctx.event(run, event)
     end = e.attrs.get("end")
     if end is None:
         raise Inconclusive(f"{e.id} has no end frame")
     if int(end) >= len(run.owner):
         raise Inconclusive(f"{e.id} ends after the recorded run")
+    last = int(end) if until is None else min(int(end), ctx.event(run, until).frame)
+    if last < e.frame:
+        raise Inconclusive(f"{e.id} starts after {until}")
     i, j = ctx.player(run, observer), ctx.player(run, target)
-    return max(float(ctx.visibility_matrix(run, f)[i, j]) for f in range(e.frame, int(end) + 1))
+    return max(float(ctx.visibility_matrix(run, f)[i, j]) for f in range(e.frame, last + 1))
 
 
 _GRID: list[np.ndarray] = []
