@@ -149,6 +149,12 @@ _Fill in as they come to exist._
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
   `out/narration_ablation/`. Writes `eval/reports/narration_ablation.md`
+- `uv run --group eval --env-file .env python -m eval.crew_vs_single` — crew vs single agent
+  (SPEC 6, Best Multi-Agent System): one Foundry call doing the four agents' jobs
+  (`eval/single_agent.py`) vs the crew, each with and without the Verifier, on six hero moments,
+  plus the failure drill and a free-text sensitivity. Every model request is cached in
+  `out/crew_vs_single/` (about 200 calls the first time, none after; `--cached-only` re-scores).
+  Writes `eval/reports/crew_vs_single.md`
 - `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
   (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
   `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
