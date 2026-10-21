@@ -80,12 +80,59 @@
   color: var(--flare);
 }
 
-/* moments of every possession: possessions in columns */
-.match-moments .possessions {
+/* a match's moments: the key ones first, then the routine ones folded by kind */
+.match-moments .key-moments > .possession-head {
+  margin-top: 0;
+}
+.routine-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
-  gap: 4px 24px;
-  align-items: start;
+  gap: 2px;
+}
+.routine-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: var(--chalk-2);
+  cursor: pointer;
+  transition: background-color var(--t-quick);
+}
+.routine-toggle:hover {
+  background: rgba(239, 237, 229, 0.05);
+}
+.routine-toggle:focus-visible {
+  outline: 2px solid var(--floodlight);
+}
+.routine-toggle small {
+  color: var(--chalk-3);
+}
+.routine-toggle .lens.on {
+  color: var(--floodlight);
+}
+.routine-toggle svg {
+  margin-left: auto;
+  transition: transform var(--t-quick) var(--glide);
+}
+.routine.open .routine-toggle svg {
+  transform: rotate(180deg);
+}
+/* an open group scrolls inside itself: a hundred sprints must not push the page away */
+.routine > .moment-list {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-left: 12px;
+}
+.moment-list .where {
+  color: var(--chalk-3);
+  white-space: nowrap;
 }
 .moments .possession-head {
   margin: 16px 0 6px;

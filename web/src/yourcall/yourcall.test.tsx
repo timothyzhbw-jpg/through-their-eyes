@@ -550,7 +550,7 @@ describe("Your call: online and in the match", () => {
     host.innerHTML = panel;
     // The hero row of blind_side_run 3 (possession 2) leaves his receiver out; the other row keeps
     // it, and the Your call button names the same shortened label.
-    const scanRows = [...host.querySelectorAll('section[aria-label="Possession 2"] li')];
+    const scanRows = [...host.querySelectorAll('li[data-possession="2"]')];
     const heroRow = scanRows.find((li) => li.classList.contains("hero"))!;
     const passRow = scanRows.find((li) => !li.classList.contains("hero"))!;
     expect(textOf(heroRow)).not.toContain("→");
@@ -560,10 +560,10 @@ describe("Your call: online and in the match", () => {
     )!;
     expect(yourCallRow.getAttribute("aria-label")).toBe("Your call: Decision after a scan · H8");
     const yourCallIn = (possession: number) => {
-      const section = host.querySelector(`section[aria-label="Possession ${possession}"]`);
-      return [...(section?.querySelectorAll("button") ?? [])].find((b) =>
-        b.getAttribute("aria-label")?.startsWith("Your call"),
-      );
+      const rows = host.querySelectorAll(`li[data-possession="${possession}"]`);
+      return [...rows]
+        .flatMap((row) => [...row.querySelectorAll("button")])
+        .find((b) => b.getAttribute("aria-label")?.startsWith("Your call"));
     };
     // A button is on only when that possession's <scenario>-<seed> has bundled what-ifs.
     for (const p of session.match.possessions) {
