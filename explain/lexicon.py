@@ -3,7 +3,8 @@
 Each term maps to one predicate with a fixed threshold (all *tunable*):
 - `unmarked` ⇒ nearest opponent > 5 m;
 - `blind side` ⇒ the target was outside the observer's vision cone when his last scan began;
-- `under heavy pressure` ⇒ pressing intensity on the player ≥ 0.7 (`analytics.pressing`).
+- `under heavy pressure` ⇒ pressing intensity on the player ≥ 0.7 (`analytics.pressing`);
+- `lost his man` ⇒ a marker more than 5 m from the man he marks (the `unmarked` distance).
 
 A claim backs a term only if its predicate (or one conjunct of an `all`) is that definition with
 the lexicon's own threshold — a claim cannot weaken "unmarked" to "nearest opponent > 1 m". The
@@ -47,6 +48,8 @@ TERMS: dict[str, Term] = {
         Term("under heavy pressure", "pressing_intensity", "ge", 0.7,
              _p(r"\bunder (?:heavy|intense|severe|huge) pressure\b", r"\bheavily pressed\b",
                 r"重压之下|高压之下|巨大的?压力|被紧逼")),
+        Term("lost his man", "distance", "gt", 5.0,
+             _p(r"\blos(?:t|es|e|ing) his man\b", r"跟丢")),
     )
 }  # fmt: skip
 
@@ -87,6 +90,11 @@ def under_heavy_pressure(player: Any, anchor: Any, at: float = 0.0) -> Predicate
     return predicate("under heavy pressure", anchor, at, player=player)
 
 
+def lost_his_man(marker: Any, man: Any, anchor: Any, at: float = 0.0, **run: Any) -> Predicate:
+    """`run` may name a counterfactual (`cf=...`): the marker loses his man in that run."""
+    return predicate("lost his man", anchor, at, a=marker, b=man, **run)
+
+
 def backs(key: str, pred: Predicate) -> bool:
     """Whether the predicate asserts the term's own definition (possibly inside an `all`)."""
     t = TERMS.get(key)
@@ -116,7 +124,8 @@ BANNED = _p(
     r"\bshould(?: have|'ve|n't have| not have)\b",
     r"\blaz(?:y|iness|ily)\b",
     r"\bworld[- ]class\b",
-    r"失误|统治(?:了)?比赛|主宰(?:了)?比赛|必进|本该|本应|偷懒|世界级",
+    r"\bball[- ]watch(?:ing|ed|er|ers)?\b",  # pundits' blame for a marker who lost his man
+    r"失误|统治(?:了)?比赛|主宰(?:了)?比赛|必进|本该|本应|偷懒|世界级|盯球不盯人",
 )
 
 

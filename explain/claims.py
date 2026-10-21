@@ -46,6 +46,7 @@ OBSERVED_FUNCTIONS = {
     "scans_in_window",
     "scan_side",
     "opponents_bypassed",
+    "seconds_between",
 }
 OBSERVED_METRICS = {
     "distance",

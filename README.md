@@ -1,14 +1,71 @@
 # Through Their Eyes
 
-> See what they saw. An AI studio that explains key football moments through the player's own
+[![ci](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml?query=branch%3Amain)
+[![deploy](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/deploy.yml?query=branch%3Amain)
+[![tests: Python, web and end to end in CI](https://img.shields.io/badge/tests-Python%20%C2%B7%20web%20%C2%B7%20end%20to%20end-2b7a3d)](.github/workflows/ci.yml)
+[![data: synthetic only](https://img.shields.io/badge/data-synthetic%20only-555)](#synthetic-data-only)
+[![license: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
+
+> **See what they saw.** An AI studio that explains key football moments through the player's own
 > perception — the scans before the ball arrived, what was visible, what he believed — and proves
 > every on-screen number before it airs.
 
+### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
+
+[![The live app in first person, through the eyes of H8, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner H9, marked in gold by the goal on the right, is in his sight; the caption reads "What did he see? H8 checked his shoulder before the ball reached him." with a verified tick.](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
+
+<sub>The live app through the eyes of H8, the midfielder, as he looks over his shoulder, away from
+the ball. The runner H9 (the gold 9, by the goal on the right) is in his sight during this look
+and at no other time before his pass. The caption is a verified claim (✓).</sub>
+
+## Judge it in 3 minutes
+1. **See what he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0):
+   press **Play**. Playback slows through the look (the KEY SCAN tag), and the runner H9 comes
+   into view.
+2. **Take the look away.** [Without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
+   the same moment re-simulated with that one scan removed. He no longer knows where H9 is, and
+   plays it back to H4; **With the look** switches back to the pass to H9. Without the look, 39 of
+   40 held-out seeds decide differently ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
+3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
+   the match streams in, and once the moment is detected the agent crew's breakdown plays
+   (Microsoft Foundry; **Sound on** for Azure AI Speech). Click a caption to open its claims and
+   the evidence frame. Then [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value)
+   and press **Check**: the verifier refutes it, and the line would not air.
+
+[The full tour](#the-full-tour) adds your own "What if…?", taking an agent down mid-breakdown,
+and a whole stitched match.
+
+## What only we do
+First-person replays and vision cones already exist ([related work](#related-work)); they show
+what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
+turns his head on a schedule calibrated to published scan rates (2.95 scans in the 10 s before
+receiving, against 3.0 ± 2.1 in Jordet et al. 2020: [realism](eval/reports/realism.md)), sees
+only what falls in his field of view, and decides on his *belief*: everyone where he last saw
+them, carried forward. Other tools show the passing lanes that existed; we show the ones he knew
+existed. And because the match is simulated, a moment can be played again with one look removed:
+the run is the same up to that scan and differs only through what he no longer saw
+([test](tests/test_export.py#L37)), so what he would have done without it is re-simulated, not
+guessed. Under all of it runs the backbone a broadcast needs: a crew of agents writes the
+breakdown for each audience and language, and code checks every number before it airs (90 of 90
+false claims refuted: [corruption](eval/reports/corruption.md)).
+
+## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
 Status: **deployed on Azure (M3)** — the sim, analytics, explain layer (moments, lenses, verified
 claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.md](docs/SPEC.md) §8–9.
 
-## For judges: try it in 3 minutes
+**How this differs from FIFA AI Pro.** FIFA AI Pro, the assistant Lenovo built with FIFA for the
+2026 World Cup teams, answers *what happened*, from statistics, before and after a match, and
+labels its answers "validated". We answer *what he saw and what he believed*, while the synthetic
+match streams live. Every number in the captions and narration is a verified claim that a viewer
+can open and challenge with **Try a wrong number**, and every "What if…?" is re-simulated in the
+sim, not estimated. Lenovo's figures for its Referee View, an AI-stabilised referee body camera,
+show that fans want first person; it shows what a camera captured, we show what the player
+perceived. Sources: [docs/REFERENCES.md](docs/REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026).
+
+<a name="for-judges-try-it-in-3-minutes"></a>
+
+## The full tour
 A simulated match with fictional players; no login. Each link opens the live site on Azure (the
 players take a few seconds to load). URL parameters: [web/README.md](web/README.md#url-parameters).
 
@@ -21,7 +78,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    and his pass options point backwards; he plays it back to H4. Click **With the look**: one
    thick line to H9. Over 40 held-out seeds, 39 decide differently without the look
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
-3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh):
+3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz; once the moment is detected, the agent crew's
    breakdown plays (Microsoft Foundry, cached after the first request). Click a caption to open
    its claims and the evidence frame; **Sound on** speaks it with Azure AI Speech.
@@ -30,34 +87,47 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
    are rate-limited per client.
 5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
-   the evidence card opens on "That look was worth 0.10 in expected threat." with a wrong value
+   the evidence card opens on "That look was worth … in expected threat." with a wrong value
    filled in. Press **Check**: the API runs the real verifier on that claim with your number,
-   against the match data, and answers "Refuted — this line would not air" with its reason
-   (`approx(0.1007…, 0.2) is false`); **Check the true value** is supported. Any claim with a
-   number can be tried this way; nothing you try is written to the audit log. Live breakdowns
-   never hand it a wrong number, because the narration agents pick verified claim ids and never
-   write a digit. Where a model writes free text, it blocks: 58 of 66 free-text first-draft lines
-   failed the Verifier, for example "off by 1.2 metres" where the claim holds 0.5
+   against the match data, and answers "Refuted — this line would not air" with its reason;
+   **Check the true value** is supported. Any claim with a number can be tried this way; nothing
+   you try is written to the audit log. Live breakdowns never hand it a wrong number, because the
+   narration agents pick verified claim ids and never write a digit. Where a model writes free
+   text, it blocks: 58 of 66 free-text first-draft lines failed the Verifier, for example "off by
+   1.2 metres" where the claim holds 0.5
    ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)), and 90
    of 90 false perturbations were refuted ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
-6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en):
-   in the Breakdown panel's **Producer** desk, press **Take down** on the Telestrator and run the
-   crew. It fails as in an outage: the call and one retry raise, it airs its template plan, and
-   the breakdown still plays. **Bring back** resumes the Agent Framework workflow from its
-   checkpoint and re-runs only the Telestrator; its plan replaces the template. The trace id is
-   the run's operation_Id in Application Insights. Each run counts against the rate limit;
-   a drill lasts until the API's next restart or deploy.
-7. **The match recap, at full time.** [Match recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap):
+6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0):
+   in the **Producer · failure drill** desk under **Behind the replay**, press **Take down** on
+   the Telestrator and run the crew. It fails as in an outage: the call and one retry raise, it
+   airs its template plan, and the breakdown still plays. **Bring back** resumes the Agent
+   Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
+   plan replaces the template. The trace id is the run's operation_Id in Application Insights.
+   Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
+7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
+   six possessions on one 132.6 s clock, opened where the scan hero's possession starts. Press
+   **Play**. The chip above the views is the camera director: it suggests a camera and says
+   why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
+   has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
+   to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
+   ([pressure](eval/reports/hero_lens_press_escape.md)). **View options** → **Skeleton** on the
+   broadcast camera or the board draws each player's torso and head direction, the way
+   limb-tracking data is shown.
+
+8. **The match recap, at full time.** [Match recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap):
    the crew recaps the whole stitched match, as it does when the live stream reaches full time.
    The Director picks the key moments by counterfactual impact, the Analyst reads the match
    stats through our MCP tools, the Telestrator cuts the reel, and every sentence and number on
    the card is verified. **Play the recap reel** plays the moments in order with the camera
    director, and **Overlay cues (JSON)** is the timed, machine-readable cue sheet a broadcast
    graphics engine would render.
-8. **The evidence.** The [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
-   tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
-   tests, reports and pull requests, and marks what is missing.
+
+Then the [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
+tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
+tests, reports and pull requests, and marks what is missing. A third hero, a corner where a
+defender marks the striker where he believes him to be, is in the simulator and its eval, not
+yet in the app.
 
 ## Try it
 - **Web app:** https://ttesite1ff906.z14.web.core.windows.net — the hero moment in first person and
@@ -101,6 +171,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 | Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 38/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
+| Set-piece hero (a corner; in the sim and its eval, not yet in the app): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
 | Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | False claims refuted by the verifier | 100% of perturbations | [corruption](eval/reports/corruption.md) |
@@ -133,21 +204,28 @@ even for calibration; model parameters come from published research
 ([docs/REFERENCES.md](docs/REFERENCES.md)).
 
 ## Layout
-```
-sim/        synthetic match engine
-analytics/  kernels: time-to-intercept, pitch control, pressing, vision, xT, scan detector
-explain/    moments, lenses, counterfactuals, claims + verifier
-agents/     Agent Framework workflow on Microsoft Foundry, MCP server
-api/        FastAPI service
-web/        React + three.js front end (React Three Fiber)
-eval/       eval suites and reports
-infra/      Azure setup and deployment
-docs/       specification and references
-demo/       hero demo page
-```
+Each package's README covers what it does, its modules and data flow, the invariants it keeps
+and how to run its tests.
+
+| Path | What | Docs |
+|---|---|---|
+| `sim/` | synthetic match engine: movement, ball, perception, decisions, scenarios | [sim/README.md](sim/README.md) |
+| `analytics/` | kernels: time-to-intercept, pitch control, pressing, vision, xT, scan detector, blind-side alerts | [analytics/README.md](analytics/README.md) |
+| `explain/` | moments, lenses, counterfactuals, claims + verifier | [explain/README.md](explain/README.md) |
+| `agents/` | Agent Framework workflow on Microsoft Foundry, MCP server | [agents/README.md](agents/README.md) |
+| `api/` | FastAPI service | [api/README.md](api/README.md) |
+| `web/` | React + three.js front end (React Three Fiber) | [web/README.md](web/README.md) |
+| `eval/` | eval suites and reports | [eval/README.md](eval/README.md), [docs/EVALS.md](docs/EVALS.md) |
+| `infra/` | Azure setup and deployment | [infra/README.md](infra/README.md) |
+| `video/` | capture kit for the demo video | [video/README.md](video/README.md) |
+| `tests/` | the Python test suite | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md#the-checks-ci-runs) |
+| `docs/` | specification, references, evals, rubric map, contributing | [docs/SPEC.md](docs/SPEC.md) |
+| `demo/` | hero demo page, rigged-player converter | — |
 
 ## Development
-Requires [uv](https://docs.astral.sh/uv/) (Python 3.11 is installed by uv).
+Requires [uv](https://docs.astral.sh/uv/) (Python 3.11 is installed by uv). Setup with uv and
+npm, the checks CI runs, the pull-request flow and the eval-before-merge rule for `sim/`,
+`analytics/` and `explain/` are in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ```bash
 uv sync
@@ -161,7 +239,8 @@ uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
 "What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): six possessions on
-one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), open play —
+one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), then open
+play twice —
 with moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
@@ -191,8 +270,9 @@ Every variable is documented in [.env.example](.env.example).
 </picture>
 
 Model steps run on Microsoft Foundry and fall back to a deterministic template; the Verifier is
-code. The Analyst's MCP tool server is wired into the workflow and used from the command line
-(`agents.run --mcp`); the deployed API's Analyst reads the claims from its prompt instead. The
+code. The Analyst calls our MCP tool server: in the deployed API as a subprocess for every
+uncached model breakdown (`TTE_ANALYST_MCP`, on by default), and from the command line with
+`agents.run --mcp`. The
 diagram is generated by [docs/architecture.py](docs/architecture.py), and
 [tests/test_architecture.py](tests/test_architecture.py) fails when it drifts from the code.
 
