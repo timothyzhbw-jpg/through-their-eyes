@@ -17,7 +17,7 @@ from agents import prompts
 from agents.context import MomentContext
 from agents.schemas import NarrationDraft, ScriptLine
 from agents.testing import FakeChatClient
-from agents.workflow import Narration, breakdown, build_workflow, run_breakdown
+from agents.workflow import BREAKDOWN, Narration, breakdown, build_workflow, run_breakdown
 
 ROOT = Path(__file__).resolve().parents[1]
 SHIPPED = ("agents", "analytics", "api", "explain", "sim")
@@ -84,7 +84,10 @@ def test_the_shipped_crew_narrates_anchored_lines(ctx):
 
 
 def test_the_default_workflow_and_run_breakdown_use_the_shipped_narration():
-    assert inspect.signature(build_workflow).parameters["narration"].default is Narration
+    params = inspect.signature(build_workflow).parameters
+    # No narration override: the story's, and the default story is the breakdown's.
+    assert params["narration"].default is None and params["story"].default is BREAKDOWN
+    assert BREAKDOWN.narration is Narration
     assert "narration" not in inspect.signature(run_breakdown).parameters
 
 

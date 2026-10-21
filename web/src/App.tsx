@@ -7,6 +7,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
+import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
@@ -28,6 +29,8 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
+import { StatsPanel } from "./ui/StatsPanel";
+import { StatsTicker } from "./ui/StatsTicker";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
@@ -106,6 +109,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           <div className="below">
             <StoryPanel />
             <TelemetryPanel />
+            <StatsPanel />
             <DecisionPanel />
             <VerdictPanel />
             <WhatIfPanel />
@@ -213,6 +217,7 @@ function LiveScreen(props: {
           <div className="stage-director">
             <DirectorBar />
           </div>
+          <StatsTicker />
         </div>
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}
@@ -268,8 +273,10 @@ function MatchView() {
           <>
             <Scoreboard />
             <OpeningNotice />
+            <RecapStage />
           </>
         }
+        caption={<RecapCaption />}
       />
 
       <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
@@ -285,6 +292,8 @@ function MatchView() {
           </p>
         </header>
         <div className="below">
+          <StatsPanel />
+          <RecapPanel />
           <MomentsPanel />
         </div>
       </main>

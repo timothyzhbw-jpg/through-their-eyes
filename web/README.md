@@ -37,24 +37,24 @@ Deep links for the README's tour for judges, and for testing and filming
 (`src/deeplink.ts`, tests in `src/deeplink.test.tsx`). Parameters combine, e.g.
 `?run=counterfactual&at=decision&view=tactical`.
 
-| Parameter  | Values                                                          | Effect                                                                                                                                                                                                                     |
-| ---------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at`, `camera` and `play`                                                     |
-| `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page |
-| `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                         |
-| `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                 |
-| `view`     | `pov`, `tactical`, `split`                                      | the main view: `pov` the 3D view alone, `split` the 3D view with the board as a picture in picture, `tactical` the board with the 3D view small; a breakdown resets it to `split` when it starts                           |
-| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                               |
-| `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
-| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
-| `play`     | `yourcall`                                                      | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused                                                                                         |
-| `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                    |
-| `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                |
-| `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                          |
-| `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                          |
-| `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                      |
-| `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                               |
-| `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                    |
+| Parameter  | Values                                                          | Effect                                                                                                                                                                                                                                          |
+| ---------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at`, `camera` and `play` (and `persona`, `lang` with `play=recap`)                                |
+| `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page                      |
+| `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                                              |
+| `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                                      |
+| `view`     | `pov`, `tactical`, `split`                                      | the main view: `pov` the 3D view alone, `split` the 3D view with the board as a picture in picture, `tactical` the board with the 3D view small; a breakdown resets it to `split` when it starts                                                |
+| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                                                    |
+| `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                                           |
+| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                                                 |
+| `play`     | `yourcall`, `recap`                                             | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused; `recap` (with a stitched `match`): its end-of-match recap for `persona` and `lang`, offered as at full time |
+| `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                                         |
+| `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                                     |
+| `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                                               |
+| `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                                               |
+| `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                           |
+| `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                                                    |
+| `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                                         |
 
 A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
@@ -109,18 +109,21 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 ## The stitched match (`?match=match-1`, SPEC 3.1)
 
-`match-1` is six scenario possessions on one 132.6 s clock (`sim/match.py`). It exists only on the
-live service: offline, the bundled hero moment plays and the badge says why.
+`match-1` is 18 scenario possessions on one clock of about 11½ minutes (`sim/match.py`, SPEC 3.1):
+open-play passages and three heroes (the blind-side run at 0:30, escaping the press at 4:33, the
+short corner at 8:21). It exists only on the live service: offline, the bundled hero
+moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
-  possession on screen (n of 6, its scenario) and how play restarted (kick-off, throw-in, …, or a
-  cut). The timeline is banded by possession, numbered, hero possessions in gold, the two hero
-  moments as gold diamonds; ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
+  possession on screen (n of 18, its scenario) and how play restarted (kick-off, throw-in, …, or a
+  cut). The timeline is banded by possession, numbered where the numbers fit, hero possessions
+  in gold, the three hero moments as gold diamonds (the short corner's is the marker's look);
+  ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
   has no beliefs, sight or vision model, so belief ghosts, "in his sight" and the vision cone are
   off until a hero moment is opened.
 - **Moments.** Every moment of every possession, in match time, with its lens (`scan lens`,
   `pressure lens`, or `live only`); while live, those the stream has not announced yet are dimmed.
-  Any moment replays; the two hero moments have **Breakdown**.
+  Any moment replays; the three hero moments have **Breakdown**.
 - **Breakdowns.** A hero moment's breakdown plays on its possession's own run: the app loads that
   run's hero export from the service (`/api/matches/<scenario>-<seed>/export`, so `TTE_MATCHES`
   must list it; for `blind_side_run-3` the bundled file stands in) and asks
@@ -132,6 +135,14 @@ live service: offline, the bundled hero moment plays and the badge says why.
   counterfactual that forces an action. The run toggle and the ghost say "What he did" / "If he
   carried it", there is no key-scan jump or scan marker (the template plan watches the 2.4 s up
   to the decision instead), and the counterfactual ghost is the forced carry's ball path.
+- **A marker's look.** The set-piece hero (`corner_blind_side`) is a defender with a key scan and
+  no decision on the ball, so the export's `decision`, `action`, `possession_value` and
+  `delta_xt` are null. `Hero.marker` holds the man he marks, the pass to him and how far the
+  marker was from him when it resolved in each run; that frame anchors the moment, as on the
+  service's `marker_scan` card. The story tells his look and his man, the counterfactual cards
+  compare the two separations, the timeline marks "Ball arrives" instead of a decision, and the
+  look's worth is the verified `cf_value` claim when the narration airs it, else the scan lens's
+  delta from `/api/matches/<id>/moments` (marked "lens"), else nothing until the breakdown.
 
 ## Data
 
@@ -188,6 +199,12 @@ src/
               Three Fiber), the HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
   skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
+  alerts/     blind-side alerts from the export, for the board, first person and the HUD
+  options/    pass options at the decision: believed and true targets, chance and value
+  players/    the rigged Gameplay Football players: rig, gait, look, kits
+  whatif/     "What if…?": the bundled what-ifs, and free questions to POST /api/whatif
+  yourcall/   "Your call": decide with what he knew, then the reveal (a pure reducer, its scene)
+  producer/   the Producer's failure drill: take agents down, bring them back, step sources
   ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
               transport + timeline, caption + evidence card, the story's chapters, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
@@ -366,6 +383,28 @@ src/
   runtime validator. The Python side can produce the same JSON shape for the Telestrator agent.
 - **TypeScript strict mode** is on; `npm run typecheck` is the compile step (Vite itself only
   strips types).
+
+### Invariants and tests
+
+- **Nothing unchecked looks checked.** Captions, the call and what-if answers come from render
+  payloads (SPEC 5.3) checked against the moment before use; a line with an unsupported claim is
+  withheld, and a counterfactual claim always says it is inside the sim. Numbers that are not
+  claims (telemetry, alerts, options other than the ones claims cover) are marked `sim`, and the
+  bundled fixture says it was not checked by the verifier.
+- **Plans are validated before they play**, by the same rules as `agents/plan.py`; an invalid
+  plan becomes the template plan.
+- **Shader parity.** The pitch-control shader must match `analytics/pitch_control.py` within 0.02
+  on fixed snapshots (`src/pitchControl/pitchControl.gpu.test.ts`, real GLSL in headless
+  Chrome). A change to the kernel regenerates `snapshots.json`
+  (`uv run python -m eval.pitch_control_parity`) in the same PR.
+- **Bundled data is generated, never edited** (`public/data/`, [Data](#data));
+  `tests/test_committed_exports.py` fails when it is stale.
+- **Views only read the store**, and anything a stitched match draws reads `useView()`;
+  `useSession()` is for hero-only panels and throws inside a match.
+- Tests sit next to the code (`*.test.ts`, `*.test.tsx`, with `testing.tsx` for fetch, WebSocket
+  and API stand-ins). CI's `web` job runs `npm ci`, `licenses`, `typecheck`, `format:check`,
+  `test`, `build` and `node ../video/capture.mjs --list`; its `smoke` job runs `npm run smoke`.
+  The whole flow: [docs/CONTRIBUTING.md](../docs/CONTRIBUTING.md).
 
 ## Dependencies
 

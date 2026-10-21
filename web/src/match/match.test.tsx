@@ -39,7 +39,7 @@ import {
   verifyResponse,
 } from "../testing";
 import { MomentsPanel } from "../ui/Live";
-import { Transport } from "../ui/Transport";
+import { numbered, Transport } from "../ui/Transport";
 import { possessionAt, scoreAt } from "./match";
 import { createMatchSession, type MatchSessionOptions } from "./matchSession";
 import { Scoreboard } from "../ui/Match";
@@ -197,6 +197,13 @@ describe("the live match", () => {
     expect(html).toContain(`data-heroes="${OPEN_FRAMES + 75},${PRESS_START + 75}"`);
     expect(html).toContain(`${(PRESS_START * raw.dt).toFixed(2)} s`);
     expect(html).not.toContain("Key scan");
+  });
+
+  it("numbers only the possessions whose number fits on the timeline", () => {
+    // match-1 has 20 possessions on a few hundred pixels on a phone; a hero lasts about 6 s.
+    expect(numbered([6, 10, 30, 40, 46, 70])).toEqual([true, false, true, false, true, true]);
+    expect(numbered([6, 22, 38], 16)).toEqual([true, true, true]);
+    expect(numbered([])).toEqual([]);
   });
 
   it("lists every moment with its lens; the two hero moments open breakdowns", () => {
