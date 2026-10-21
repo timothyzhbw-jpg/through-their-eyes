@@ -7,7 +7,7 @@
 // - the standing pass clip with its ball contact on each pass event, the body turned so the
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
-// - kits in the fictional clubs' colours (kit.ts).
+// - kits in the fictional clubs' colours, keepers in their own (kit.ts).
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
 import { useFrame, useLoader } from "@react-three/fiber";
@@ -32,11 +32,12 @@ import {
 
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player.glb`;
 
-/** Kit in the club's colours with the shirt number; flat skin, hair and boots. */
+/** Kit in the club's colours (the keeper's own kit) with the shirt number; flat skin, hair and
+ * boots. */
 function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
   const byName: Record<string, THREE.Material> = {
     kit: new THREE.MeshStandardMaterial({
-      map: kitTexture(player.team, player.number),
+      map: kitTexture(player),
       roughness: 0.75,
     }),
     skin: new THREE.MeshStandardMaterial({ color: skinTone(j), roughness: 0.65 }),

@@ -4,6 +4,7 @@
 // below each, socks bottom left. UV origin top left, as in glTF (texture.flipY = false).
 
 import * as THREE from "three";
+import type { ExportPlayer } from "../data/types";
 import { COLORS } from "../views/scene";
 
 export interface Kit {
@@ -17,6 +18,26 @@ export const KITS: [Kit, Kit] = [
   { shirt: COLORS.home, shorts: "#1d2833", socks: COLORS.home, trim: "#ffffff" },
   { shirt: COLORS.away, shorts: "#eef2f6", socks: COLORS.away, trim: "#0f1d3d" },
 ];
+
+/** The keepers' kits, as in the trailer's look-dev: teal and violet, clear of both teams, the
+ * pitch and the reserved data colours (floodlight, detector, alert). */
+export const GK_KITS: [Kit, Kit] = [
+  { shirt: "#2ec4b6", shorts: "#10302d", socks: "#2ec4b6", trim: "#ffffff" },
+  { shirt: "#c062e8", shorts: "#2a1638", socks: "#c062e8", trim: "#ffffff" },
+];
+
+/** Every kit in a fixed order, for one material per kit: home, away, home GK, away GK. */
+export const ALL_KITS: Kit[] = [...KITS, ...GK_KITS];
+
+type Wearer = Pick<ExportPlayer, "team" | "role">;
+
+export const isKeeper = (player: Wearer) => player.role === "GK";
+
+/** The player's index into ALL_KITS. */
+export const kitSlot = (player: Wearer) => player.team + (isKeeper(player) ? 2 : 0);
+
+/** What the player wears: his team's kit, or its keeper's kit. */
+export const kitOf = (player: Wearer): Kit => ALL_KITS[kitSlot(player)];
 
 /** Flat colours for the rest of the body, varied by player so the squad is not 22 clones. */
 const SKIN = ["#e0b08c", "#c68e64", "#8d5a3b", "#f1c9a5", "#6b4128"];
@@ -34,11 +55,11 @@ export function hairColour(j: number): string {
 const SIZE = 256;
 const cache = new Map<string, THREE.CanvasTexture>();
 
-export function kitTexture(team: 0 | 1, number: number): THREE.CanvasTexture {
-  const key = `${team}:${number}`;
+export function kitTexture(player: Wearer & Pick<ExportPlayer, "number">): THREE.CanvasTexture {
+  const key = `${kitSlot(player)}:${player.number}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const kit = KITS[team];
+  const kit = kitOf(player);
   const cv = document.createElement("canvas");
   cv.width = SIZE;
   cv.height = SIZE;
@@ -66,7 +87,7 @@ export function kitTexture(team: 0 | 1, number: number): THREE.CanvasTexture {
   c.font = `700 ${0.19 * SIZE}px "Saira Condensed", "Arial Narrow", sans-serif`;
   c.textAlign = "center";
   c.textBaseline = "middle";
-  c.fillText(String(number), 0.765 * SIZE, 0.23 * SIZE);
+  c.fillText(String(player.number), 0.765 * SIZE, 0.23 * SIZE);
   const tex = new THREE.CanvasTexture(cv);
   tex.flipY = false;
   tex.colorSpace = THREE.SRGBColorSpace;
