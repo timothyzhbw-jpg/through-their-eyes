@@ -1740,7 +1740,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
       and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
       — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
-      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [cut.test.ts](../web/src/beat/cut.test.ts) (no blur around a camera cut; smoke page
+      `cut-no-blur`: 0 px on the frames after a switch, 27.9 px with the guard taken out),
       [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
       [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
