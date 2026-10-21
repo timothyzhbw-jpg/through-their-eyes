@@ -3419,28 +3419,25 @@ optgroup {
 }
 
 /* ---------- motion ---------- */
+/* Text rises in by opacity and position only: no blur (LOOKDEV 2b: blur is uncomfortable). */
 @keyframes tt-rise {
   from {
     opacity: 0;
     transform: translateY(14px);
-    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-cap {
   from {
     opacity: 0;
     transform: translateY(10px);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-beat {
