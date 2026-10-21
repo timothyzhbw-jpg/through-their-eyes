@@ -1456,7 +1456,7 @@ original visual identity.
     or textures). Cycles bakes the four masts' floodlights, the strips, the sky and the ambient
     occlusion into a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a
     light map for the grass. The floodlight spots' powers are fitted by least squares so the pitch
-    is evenly lit (5th percentile 0.78 of the median). Everything but the grass is unlit; the
+    is evenly lit (5th percentile 0.75 of the median). Everything but the grass is unlit; the
     grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
     geometry, WebP textures.
   - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of
