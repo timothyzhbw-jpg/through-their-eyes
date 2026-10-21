@@ -1186,7 +1186,7 @@ or a live check. Ticked only when verified that day: `uv run pytest` 464 passed,
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
 check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
-`uv run pytest` 1002 passed.
+`uv run pytest` 1012 passed (merged with main).
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
