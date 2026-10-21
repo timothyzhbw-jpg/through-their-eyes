@@ -108,8 +108,20 @@ const STATES = [
       await see(p.getByRole("list", { name: "Reveal" }), "the reveal's steps");
     },
   },
-  { name: "lineup-match", path: "?match=match-1", ready: (p) => see(p.getByRole("dialog"), "card") },
+  {
+    name: "lineup-match",
+    path: "?match=match-1",
+    ready: (p) => see(p.getByRole("dialog"), "card"),
+  },
   { name: "match", path: "?match=match-1&intro=0&autoplay=0", ready: scoreBug },
+  {
+    name: "match-live",
+    path: "?match=match-1&intro=0",
+    ready: async (p) => {
+      await scoreBug(p);
+      await p.waitForTimeout(4000); // moments the stream has not announced yet are dimmed
+    },
+  },
   {
     name: "match-breakdown",
     path: "?match=match-1&intro=0&autoplay=0",
@@ -182,11 +194,20 @@ try {
       const bp = r.violations.filter((v) => !wcag.includes(v));
       const block = wcag.filter((v) => BLOCKING.has(v.impact));
       blocking += block.length;
-      rows.push({ device: device.name, state: state.name, wcag, bp, incomplete: r.incomplete, errors: r.errors });
+      rows.push({
+        device: device.name,
+        state: state.name,
+        wcag,
+        bp,
+        incomplete: r.incomplete,
+        errors: r.errors,
+      });
       const tag = r.errors.length ? "ERR " : block.length ? "FAIL" : wcag.length ? "warn" : "ok  ";
       console.log(`${tag} ${device.name.padEnd(7)} ${state.name}`);
-      for (const v of wcag) console.log(`       ${v.impact} ${v.id} ×${v.nodes.length}: ${v.nodes[0]?.target[0]}`);
-      for (const v of bp) console.log(`       (bp) ${v.impact} ${v.id} ×${v.nodes.length}: ${v.nodes[0]?.target[0]}`);
+      for (const v of wcag)
+        console.log(`       ${v.impact} ${v.id} ×${v.nodes.length}: ${v.nodes[0]?.target[0]}`);
+      for (const v of bp)
+        console.log(`       (bp) ${v.impact} ${v.id} ×${v.nodes.length}: ${v.nodes[0]?.target[0]}`);
       for (const e of r.errors) console.log(`       error: ${e}`);
     }
   }

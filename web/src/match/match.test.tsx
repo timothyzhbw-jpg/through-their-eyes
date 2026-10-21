@@ -224,6 +224,21 @@ describe("the live match", () => {
     expect(html).toContain(copy);
     expect(html.match(/>Breakdown</g) ?? []).toHaveLength(count);
   });
+
+  it("says in words, not only by a dimmer colour, which moments the stream has not reached", () => {
+    const { session, sockets } = online();
+    session.controls.startLive();
+    const ws = sockets.sockets[0];
+    ws.open();
+    ws.push(matchHello(raw), matchFrameMsg(raw, 0), { type: "moment", card: card(MATCH_HERO) });
+    const html = render(session, <MomentsPanel />);
+    const rows = html.match(/<li[^>]*>.*?<\/li>/gs)!;
+    const ahead = rows.filter((r) => /^<li class="[^"]*\bahead\b/.test(r));
+    expect(ahead).toHaveLength(raw.moments.length - 1);
+    for (const r of ahead)
+      expect(r).toContain('<span class="sr-only"> · not on the stream yet</span>');
+    expect(rows.filter((r) => r.includes("not on the stream yet"))).toHaveLength(ahead.length);
+  });
 });
 
 describe("hero breakdowns inside the match", () => {

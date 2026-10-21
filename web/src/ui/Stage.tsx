@@ -419,9 +419,12 @@ export function ViewerMenu() {
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <span className="avatar" aria-hidden="true">
-          {PERSONA_LABEL[persona].charAt(0)}
-        </span>
+        {/* The initial is drawn by CSS: as text it would be shown but not named (WCAG 2.5.3). */}
+        <span
+          className="avatar"
+          aria-hidden="true"
+          data-initial={PERSONA_LABEL[persona].charAt(0)}
+        />
         <span>
           <span className="hide-sm">Watching as </span>
           {PERSONA_LABEL[persona]} · {LANGUAGE_NAME[language]}

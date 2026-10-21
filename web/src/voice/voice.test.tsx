@@ -52,7 +52,7 @@ describe("voice", () => {
     expect(session.voice.state.get().on).toBe(false);
     const html = render(session, <SoundToggle />);
     expect(html).toContain('aria-pressed="false"');
-    expect(html).toContain("Sound off");
+    expect(html).toContain(">Sound</button>"); // "off" is drawn from aria-pressed
 
     session.controls.requestBreakdown();
     await settle();

@@ -83,6 +83,41 @@ function accessibleName(el: Element): string {
   return textOf(el) ?? "";
 }
 
+/** The text a sighted viewer reads on `el`: every text node, aria-hidden ones included, except
+ * visually hidden ones (.sr-only, display: none). */
+function visibleText(el: Element): string {
+  const parts: string[] = [];
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) parts.push(node.textContent ?? "");
+    if (!(node instanceof HTMLElement || node instanceof SVGElement)) return;
+    if (node.classList.contains("sr-only")) return;
+    if (node instanceof HTMLElement && node.style.display === "none") return;
+    node.childNodes.forEach(walk);
+  };
+  el.childNodes.forEach(walk);
+  return parts.join(" ");
+}
+
+/** Words only, as axe compares them: lower case, no punctuation or symbols. */
+const words = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+/** Widgets named from their content, where WCAG 2.5.3 applies (not a list, a group, a region). */
+const FROM_CONTENT = /^(button|link|switch|tab|menuitem|checkbox|radio|option)$/;
+
+/** WCAG 2.5.3 Label in Name, as axe checks it: a control named by aria-label or aria-labelledby
+ * must have the words it shows inside its name, so a speech user can say what they see. */
+function labelInName(el: HTMLElement): boolean {
+  if (!el.hasAttribute("aria-label") && !el.hasAttribute("aria-labelledby")) return true;
+  const role = el.getAttribute("role") ?? { BUTTON: "button", A: "link" }[el.tagName] ?? "";
+  if (!FROM_CONTENT.test(role)) return true;
+  const shown = words(visibleText(el));
+  return !shown || ` ${words(accessibleName(el))} `.includes(` ${shown} `);
+}
+
 const CONTROLS =
   "button, select, input, textarea, a[href], [tabindex], [role=button], [role=switch], [role=slider]";
 const NATIVE = new Set(["BUTTON", "SELECT", "INPUT", "TEXTAREA", "A"]);
@@ -95,6 +130,7 @@ function problems(root: HTMLElement): string[] {
   for (const el of controls) {
     const what = `${el.tagName.toLowerCase()} "${textOf(el)?.slice(0, 30)}"`;
     if (!accessibleName(el)) out.push(`${what}: no accessible name`);
+    if (!labelInName(el)) out.push(`${what}: shown text not in its name "${accessibleName(el)}"`);
     if (!NATIVE.has(el.tagName) && el.tabIndex < 0) out.push(`${what}: not focusable`);
     if (el.tabIndex < 0 || el.getAttribute("tabindex") === "-1") out.push(`${what}: tabindex -1`);
     if (el.closest("[aria-hidden=true]")) out.push(`${what}: inside aria-hidden`);
@@ -235,6 +271,44 @@ describe("keyboard and screen reader access", () => {
     expect(accessibleName(page.querySelector("section.transport")!)).toBe("Playback");
   });
 
+  it("closes the evidence card on Escape and gives the focus back to the caption", async () => {
+    const { session } = online();
+    session.controls.requestBreakdown();
+    await settle();
+    const page = mount(
+      session,
+      <>
+        <Caption />
+        <EvidenceCard />
+      </>,
+    );
+    act(() => session.controls.openLine("L1"));
+    act(() => session.controls.closeEvidence());
+    const caption = page.querySelector<HTMLButtonElement>("button.caption")!;
+    caption.focus();
+    act(() => caption.click()); // opens the evidence for this line
+    const card = () => page.querySelector<HTMLElement>("section.evidence");
+    expect(card()).not.toBeNull();
+    const seek = card()!.querySelector<HTMLButtonElement>("button.seek")!;
+    seek.focus(); // the viewer tabbed into the card
+    act(() => {
+      seek.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(card()).toBeNull();
+    expect(session.playback.get().evidenceLine).toBeNull();
+    expect(document.activeElement).toBe(caption);
+  });
+
+  it("lets the keyboard reach and scroll the telestration steps", async () => {
+    const { session } = online();
+    session.controls.requestBreakdown();
+    await settle();
+    const page = mount(session, <BreakdownPanel />);
+    const steps = page.querySelector<HTMLOListElement>("ol.steps")!;
+    expect(steps.tabIndex).toBe(0); // a scrolling box with no control inside (axe)
+    expect(accessibleName(steps)).toBe("Telestration steps");
+  });
+
   it("names the camera director's chip, its dismiss button and the Auto director switch", () => {
     const { session } = online();
     const page = mount(session, <DirectorBar />);
@@ -322,7 +396,7 @@ describe("keyboard and screen reader access", () => {
 });
 
 describe("the checks themselves", () => {
-  it("catch a nameless, unfocusable, disabled or badly pressed control", () => {
+  it("catch a nameless, unfocusable, disabled, badly pressed or mislabelled control", () => {
     const page = document.createElement("div");
     page.innerHTML = `
       <button type="button"></button>
@@ -331,7 +405,10 @@ describe("the checks themselves", () => {
       <button type="button" disabled>Sound</button>
       <button type="button" aria-pressed="yes">Mixed</button>
       <div aria-hidden="true"><button type="button">Hidden</button></div>
-      <span role="group"><button type="button">EN</button></span>`;
+      <span role="group"><button type="button">EN</button></span>
+      <button type="button" aria-label="Sound">Sound off</button>
+      <button type="button" aria-label="Pass to H3"><span aria-hidden="true">3</span></button>
+      <button type="button" aria-label="Close">×</button>`;
     document.body.append(page);
     expect(problems(page)).toEqual([
       'button "": no accessible name',
@@ -342,6 +419,8 @@ describe("the checks themselves", () => {
       'button "Sound": does not take focus',
       'button "Mixed": aria-pressed',
       'button "Hidden": inside aria-hidden',
+      'button "Sound off": shown text not in its name "Sound"',
+      'button "3": shown text not in its name "Pass to H3"',
       "group: no name",
     ]);
     page.remove();
