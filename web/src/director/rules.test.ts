@@ -74,7 +74,7 @@ function play(k: Knowledge, from: number, to: number, view: ViewShot = NEUTRAL) 
   let last: string | null = null;
   for (let f = from; f <= to; f++) {
     const p = pick(candidates(k, f), f, view, last, new Set(), k.dt);
-    last = p.top?.id ?? null;
+    last = p.show?.id ?? null;
     out.push({ frame: f, s: p.show });
   }
   return out;
@@ -256,6 +256,20 @@ describe("what is on screen", () => {
     expect(p.top?.rule).toBe("incoming"); // held, not shown
   });
 
+  it("does not show a held suggestion late when the viewer leaves its camera", () => {
+    const k = knowledge([pass(10, "H4", "H8", 60)]);
+    let last: string | null = null;
+    const shown: [number, string | null][] = [];
+    for (let f = 10; f <= 59; f++) {
+      const view = f <= 50 ? onEyes("H8") : NEUTRAL;
+      const p = pick(candidates(k, f), f, view, last, new Set(), DT);
+      last = p.show?.id ?? null;
+      if (f >= 51) shown.push([f, p.show?.rule ?? null]);
+    }
+    expect((60 - 51) * DT).toBeLessThan(LEAD_S);
+    expect(shown.filter(([, rule]) => rule === "incoming")).toEqual([]);
+  });
+
   it("drops a suggestion the viewer dismissed, until it ends", () => {
     const first = pick(candidates(k, 20), 20, BROADCAST, null, new Set(), DT).show!;
     const next = pick(candidates(k, 20), 20, BROADCAST, first.id, new Set([first.id]), DT);
@@ -433,7 +447,7 @@ describe("reasons", () => {
       }
     }
     expect(seen.size).toBeGreaterThan(5);
-    const ids = new RegExp(`\\b(${hero.ids.join("|")})\\b`, "g");
+    const ids = new RegExp(`\\b(${[...new Set([...hero.ids, ...match.ids])].join("|")})\\b`, "g");
     for (const text of seen) expect(text.replace(ids, "")).not.toMatch(/\d/);
   });
 });

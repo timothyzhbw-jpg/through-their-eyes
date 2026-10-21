@@ -105,19 +105,35 @@ function heroCard(moment: MomentContext): LiveMoment {
 
 const viewKey = (s: PlaybackState) => `${s.camera}|${s.povPlayer}|${s.focus}`;
 
+/** What the director keeps per session, not per bar: a match's bar unmounts while a breakdown is
+ * open over it, and the one that mounts on the way back carries on from here. */
+interface Kept {
+  dismissed: Set<string>; // dismissed, or a breakdown or replay taken
+  cutter: AutoCutter;
+  view: string; // the camera on screen at the last update
+}
+const kept = new WeakMap<ViewSession, Kept>();
+
+function keptFor(session: ViewSession): Kept {
+  let k = kept.get(session);
+  if (!k) kept.set(session, (k = { dismissed: new Set(), cutter: new AutoCutter(), view: "" }));
+  return k;
+}
+
 export class Director {
   readonly state: Store<DirectorState> = createStore<DirectorState>({
     show: null,
     directing: false,
   });
   private readonly log: StreamLog | null;
-  private readonly cutter = new AutoCutter();
-  private readonly dismissed = new Set<string>(); // dismissed, or a breakdown or replay taken
-  private current: string | null = null; // the top suggestion at the last update
+  private readonly kept: Kept;
+  private readonly dismissed: Set<string>;
+  private readonly cutter: AutoCutter;
+  private readonly teams: ReadonlyMap<string, number>;
+  private current: string | null = null; // the suggestion on screen at the last update
   private ended: number | null = null; // frame the chip on screen ended, while it lingers
   private frame = -1;
   private mode = "";
-  private view = "";
   private cutting = false; // the director is writing the camera itself
 
   constructor(
@@ -125,6 +141,10 @@ export class Director {
     private readonly clock: () => number = () => performance.now() / 1000,
   ) {
     this.log = session.feed ? new StreamLog(session.feed) : null;
+    this.kept = keptFor(session);
+    this.dismissed = this.kept.dismissed;
+    this.cutter = this.kept.cutter;
+    this.teams = new Map(session.hero.players.map((p) => [p.id, p.team] as const));
   }
 
   /** Follow the session; returns the function that stops. */
@@ -138,6 +158,16 @@ export class Director {
         this.update();
       }),
       session.kind === "hero" ? session.runner.status.subscribe(() => this.update()) : undefined,
+      // A breakdown opened (from the chip or the Moments panel) is not suggested again; the
+      // store says so before the bar unmounts.
+      session.kind === "match"
+        ? session.screen.subscribe(() => {
+            const { opening, hero } = session.screen.get();
+            for (const id of [opening, hero?.possession?.moment]) {
+              if (id) this.dismissed.add(`moment:${id}`);
+            }
+          })
+        : undefined,
     ];
     this.update();
     return () => offs.forEach((off) => off?.());
@@ -148,16 +178,17 @@ export class Director {
     const { hero } = this.session;
     const live = s.live && this.log !== null;
     const events = live ? this.log!.events : hero.runs[s.mode].events;
-    return eventKnowledge(hero, hero.runs[s.mode], events, this.moments(live));
+    return eventKnowledge(hero, hero.runs[s.mode], events, this.moments(live, s.mode), this.teams);
   }
 
-  private moments(live: boolean): Announced[] {
+  private moments(live: boolean, mode: PlaybackState["mode"]): Announced[] {
     const { session } = this;
     if (session.kind === "match") {
       const cards: LiveMoment[] =
         live && session.feed ? session.feed.state.get().moments : session.match.moments;
       return cards.map((card) => ({ card, breakdown: !!card.hero && session.api !== null }));
     }
+    if (mode !== "factual") return []; // the moments happened in the factual run
     const cards = session.feed ? session.feed.state.get().moments : [heroCard(session.moment)];
     return cards.map((card) => ({ card, breakdown: card.id === session.moment.id }));
   }
@@ -171,9 +202,9 @@ export class Director {
     const s = this.session.playback.get();
     const now = this.clock();
     const view = viewKey(s);
-    if (view !== this.view) {
+    if (view !== this.kept.view) {
       if (!this.cutting) this.cutter.viewerCut(now);
-      this.view = view;
+      this.kept.view = view;
     }
     const f = Math.floor(s.frame);
     // A new run, or a seek: start afresh, and let nothing from before linger.
@@ -195,7 +226,7 @@ export class Director {
     const k = this.knowledge(s);
     const cands = candidates(k, f);
     const picked = pick(cands, f, s, this.current, this.dismissed, k.dt);
-    this.current = picked.top?.id ?? null;
+    this.current = picked.show?.id ?? null;
     if (directorPrefs.get().auto) {
       const target = autoTarget(cands, s, this.dismissed);
       const shot = this.cutter.decide(target, f, k.dt, now, s, (p) => inScan(k, p, f));

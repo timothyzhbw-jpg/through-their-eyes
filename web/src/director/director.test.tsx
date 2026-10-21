@@ -77,6 +77,14 @@ function mount(session: ViewSession): HTMLElement {
   return container;
 }
 
+/** Unmount a bar, as MatchApp does when a breakdown opens over the match. */
+function unmount(page: HTMLElement): void {
+  const i = mounted.findIndex((m) => m.container === page);
+  const [{ root, container }] = mounted.splice(i, 1);
+  act(() => root.unmount());
+  container.remove();
+}
+
 const chip = (page: HTMLElement) => page.querySelector<HTMLButtonElement>(".director-chip");
 const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, " ").trim() ?? null;
 const at = (session: ViewSession, frame: number) =>
@@ -136,6 +144,29 @@ describe("the chip", () => {
     at(session, 30);
     expect(chip(page)).toBeNull();
   });
+
+  it("keeps what was dismissed when the bar mounts again", () => {
+    const session = offline();
+    const page = mount(session);
+    onBroadcast(session);
+    at(session, 20);
+    act(() => page.querySelector<HTMLButtonElement>(".director-dismiss")!.click());
+    unmount(page);
+    const again = mount(session);
+    at(session, 21);
+    expect(chip(again)).toBeNull();
+  });
+
+  it("suggests no moment in the run without the look", () => {
+    const session = offline();
+    const page = mount(session);
+    act(() => session.controls.setMode("counterfactual"));
+    const end = session.moment.endFrame;
+    for (let f = end; f <= end + 5; f++) {
+      at(session, f);
+      expect(text(chip(page)) ?? "", `frame ${f}`).not.toMatch(/breakdown|moment was detected/);
+    }
+  });
 });
 
 describe("between suggestions", () => {
@@ -166,6 +197,18 @@ describe("between suggestions", () => {
     expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him."); // 0.16 s on
     for (let f = 35; f <= 45; f++) at(session, f);
     expect(text(page.querySelector(".director-idle"))).toMatch(/^Pick any camera/);
+  });
+
+  it("a suggestion held on the viewer's camera does not show late when he leaves it", () => {
+    const session = withEvents([pass(10, "H8", 60)]);
+    const page = mount(session);
+    act(() => session.playback.set({ camera: "pov", povPlayer: "H8", focus: "split" }));
+    for (let f = 10; f <= 50; f++) at(session, f);
+    onBroadcast(session);
+    for (let f = 51; f <= 59; f++) {
+      at(session, f);
+      expect(chip(page), `frame ${f}`).toBeNull(); // (60 - 51) x 0.04 s is under LEAD_S
+    }
   });
 
   it("a dismissed chip does not linger", () => {
@@ -274,6 +317,36 @@ describe("in a stitched match", () => {
     expect(session.screen.get().opening).toBe(MATCH_HERO);
     await act(settle);
     expect(session.screen.get().hero?.possession?.moment).toBe(MATCH_HERO);
+  });
+
+  /** Back from the breakdown: a new bar over the match, past the moment's end. */
+  function backPastTheMoment(session: ReturnType<typeof match>, page: HTMLElement) {
+    const card = session.match.moments.find((m) => m.id === MATCH_HERO)!;
+    unmount(page);
+    act(() => session.controls.backToMatch());
+    const again = mount(session);
+    at(session, card.frame_end + 5);
+    return again;
+  }
+
+  it("does not suggest a breakdown opened from the chip again, after back to the match", async () => {
+    const session = match();
+    const page = mount(session);
+    const card = session.match.moments.find((m) => m.id === MATCH_HERO)!;
+    at(session, card.frame_end);
+    act(() => chip(page)!.click());
+    await act(settle);
+    expect(text(chip(backPastTheMoment(session, page))) ?? "").not.toMatch(/breakdown/);
+  });
+
+  it("does not suggest a breakdown opened from the Moments panel again", async () => {
+    const session = match();
+    const page = mount(session);
+    const card = session.match.moments.find((m) => m.id === MATCH_HERO)!;
+    act(() => session.controls.openBreakdown(card));
+    await act(settle);
+    expect(session.screen.get().hero?.possession?.moment).toBe(MATCH_HERO);
+    expect(text(chip(backPastTheMoment(session, page))) ?? "").not.toMatch(/breakdown/);
   });
 });
 

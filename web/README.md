@@ -221,7 +221,10 @@ src/
   **Auto director** (off by default) cuts by itself: at least 2 s of wall clock per shot, never
   while the player on screen is mid-scan, and never a breakdown or replay. While a breakdown runs
   its plan chooses the cameras and the director stays out. Camera cuts write the playback store
-  directly, like the camera switch, so they never stop a breakdown or its autoplay.
+  directly, like the camera switch, so they never stop a breakdown or its autoplay. The chip is
+  deliberately not an aria-live region: switching cameras is visual, and announcing every
+  suggestion would talk over the captions that audio description relies on; it stays a
+  focusable, named button.
 - **Stadium** (`views/Stadium.tsx`), generated, around both 3D cameras: a two-tier bowl under a
   roof, about 15,000 instanced spectators in one draw call, four floodlight masts with a glow
   sprite, boards with our own words only ("Through Their Eyes", "Synthetic match", "All players

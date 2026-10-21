@@ -292,23 +292,31 @@ export function runKnowledge(hero: Hero, run: Run, moments: readonly Announced[]
   return eventKnowledge(hero, run, run.events, moments);
 }
 
-/** Like runKnowledge, with the events from somewhere else (the live stream's). */
+/** Like runKnowledge, with the events from somewhere else (the live stream's). `teams`: the
+ * hero's player id -> team map, when the caller keeps one. */
 export function eventKnowledge(
   hero: Hero,
   run: Run,
   events: readonly ExportEvent[],
   moments: readonly Announced[],
+  teams: ReadonlyMap<string, number> = new Map(hero.players.map((p) => [p.id, p.team] as const)),
 ): Knowledge {
-  const teams = new Map(hero.players.map((p) => [p.id, p.team] as const));
+  // The rules ask for the same frame's alerts several times: keep the last one.
+  let last = -1;
+  let alerts: readonly (readonly [string, string, number])[] = [];
   return {
     dt: hero.dt,
     teams,
     events,
     alerts(f) {
-      const row = run.blindSide.frames[Math.max(0, Math.min(run.frames - 1, Math.floor(f)))];
-      return (row ?? [])
-        .filter(([, , unseen]) => unseen > 0)
-        .map(([o, t, unseen]) => [hero.ids[o], hero.ids[t], unseen * hero.dt] as const);
+      const i = Math.max(0, Math.min(run.frames - 1, Math.floor(f)));
+      if (i !== last) {
+        alerts = (run.blindSide.frames[i] ?? [])
+          .filter(([, , unseen]) => unseen > 0)
+          .map(([o, t, unseen]) => [hero.ids[o], hero.ids[t], unseen * hero.dt] as const);
+        last = i;
+      }
+      return alerts;
     },
     moments,
   };

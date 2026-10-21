@@ -75,8 +75,9 @@ export interface Picked {
 }
 
 /**
- * The chip at frame `f`. `current` is the top suggestion of the previous frame: it is kept
- * against equals, and it may stay on screen inside LEAD_S of the ball (it came in time).
+ * The chip at frame `f`. `current` is the suggestion shown on the previous frame (not one held
+ * there): it is kept against equals, and it may stay on screen inside LEAD_S of the ball (it came
+ * in time).
  */
 export function pick(
   cands: Suggestion[],
