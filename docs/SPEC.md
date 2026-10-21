@@ -486,8 +486,17 @@ expansion pack, on Module A (§3.3).
       at the 3.5 and 5.0 m/s² caps over 100 seeds)
 - [ ] Realism report on 20 seeds: passes, shots, possession changes per match fall inside configured
       target ranges (table written to `eval/`).
-      — *Open:* [eval/reports/realism.md](../eval/reports/realism.md) covers scans, head turns and
-      speeds, not passes, shots or possession changes per match; shots and stitched matches are M4.
+      — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
+      (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
+      of play, 1,841 passes attempted (82.7% of resolved ones completed), 305 possession changes
+      (290 interceptions, 15 out of play, no tackles), 544 team possessions of 9.9 s on average,
+      and no shots; shot outcomes are pending module A. None of these has a target to check: no
+      range is configured, and no paper in REFERENCES.md is recorded as printing one. The two rows
+      that have a target are SPEC 3.1's, and both are outside: 6 scenario possessions per match
+      (target 15–25) and 2.12 min of play (target 10–15). Every scenario possession starts with
+      the home team, which has 66.3% of the possession time.
+      [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
+      hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
       — [tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`
@@ -1405,7 +1414,7 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
+| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match is 6 possessions and 2.1 min against §3.1's 15–25 and 10–15 min; shot outcomes pending module A |
 | §4 analytics | 7 | 0 | — |
 | §5 explain | 7 | 0 | — |
 | §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
