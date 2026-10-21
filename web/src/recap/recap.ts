@@ -194,6 +194,8 @@ export interface Recap {
   request(patch?: { persona?: Persona; language?: Language }): Promise<void>;
   /** The live stream reached full time: fetch the recap. */
   fullTime(): void;
+  /** As at full time, for this audience when given (the `?play=recap` deep link). */
+  openAtFullTime(persona: Persona | null, language: Language | null): void;
   /** Seek the match to a key moment and play its clip. */
   watch(moment: string): void;
   playReel(): void;
@@ -345,6 +347,10 @@ export function createRecap(options: RecapOptions): Recap {
       state.set({ fullTime: true });
       const { status } = state.get();
       if (status === "idle" || status === "failed") void request();
+    },
+    openAtFullTime(persona, language) {
+      state.set({ fullTime: true });
+      void request({ persona: persona ?? undefined, language: language ?? undefined });
     },
     watch(moment) {
       const clip = state.get().response?.result.reel.clips.find((c) => c.moment === moment);

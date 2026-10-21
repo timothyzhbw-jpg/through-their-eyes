@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
+import { parseDeepLink } from "../deeplink";
 import { directorPrefs } from "../director/director";
 import { createMatchSession } from "../match/matchSession";
 import { tickSession } from "../session";
@@ -135,6 +136,24 @@ describe("asking for the recap", () => {
     expect(session.recap.cuesUrl()).toBe(
       `${API}/api/recaps/${"a".repeat(32)}/cues?persona=analyst&language=zh`,
     );
+  });
+
+  it("opens as at full time for a deep link's audience", async () => {
+    const { session, fetch } = online();
+    session.recap.openAtFullTime("analyst", "zh");
+    await settle();
+    expect(posts(fetch)[0].body).toEqual({
+      match: MATCH,
+      personas: ["analyst"],
+      languages: ["zh"],
+    });
+    expect(session.recap.state.get()).toMatchObject({ status: "ready", fullTime: true });
+    expect(parseDeepLink("?match=match-1&play=recap&persona=analyst")).toMatchObject({
+      play: "recap",
+      persona: "analyst",
+      autoplay: false,
+      intro: false,
+    });
   });
 
   it("says why when the service refuses", async () => {
