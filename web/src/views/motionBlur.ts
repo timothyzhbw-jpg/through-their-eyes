@@ -1,12 +1,13 @@
 // Motion blur of the first-person view (SPEC 7, the Floodlit design): when the head whips round,
 // the picture smears sideways as a camera's would, and it is sharp the instant the head stops.
 //
-// The view is filmed as if by a camera running at the sim's 25 Hz with a 180-degree shutter: each
-// frame is exposed for 1/50 s of match time. A head turning at w deg/s sweeps w / 50 degrees in
-// that time; at the image centre that is (w / 50) * px-per-degree pixels. A box blur of length L
+// The view is filmed as if by a camera running at the sim's 25 Hz with a 90-degree shutter: each
+// frame is exposed for 1/100 s of match time. A head turning at w deg/s sweeps w / 100 degrees in
+// that time; at the image centre that is (w / 100) * px-per-degree pixels. A box blur of length L
 // has a standard deviation of L / sqrt(12), about 0.3 L, so the horizontal Gaussian has
 //   sigma = 0.3 * |w| * (shutter / 360 / 25 s) * px-per-degree,
-// capped at 3% of the image width. Turning the head is a rotation about the vertical axis, so the
+// capped at 0.3% of the image width (about 6 px at 1920): a subtle smear, not a streak (the art
+// direction, LOOKDEV 2b). Turning the head is a rotation about the vertical axis, so the
 // image moves sideways: the blur is horizontal. The rate is the measured head yaw rate of the
 // player whose eyes these are, in match time, so a slow-motion replay keeps the blur a broadcast
 // replay would have. Off under prefers-reduced-motion, on the broadcast camera and while paused.
@@ -14,10 +15,10 @@
 import { easedHeadAt, wrapAngle, type Hero, type Run } from "../data/hero";
 import type { Camera3D } from "../store/playback";
 
-export const SHUTTER_DEG = 180;
+export const SHUTTER_DEG = 90; // a subtle smear (LOOKDEV 2b: blur is uncomfortable)
 export const CAPTURE_HZ = 25; // the sim's frame rate
 export const SIGMA_PER_SWEEP = 0.3; // sigma of a box blur over the sweep, as a fraction of it
-export const MAX_SIGMA_FRACTION = 0.03; // of the image width
+export const MAX_SIGMA_FRACTION = 0.003; // of the image width: about 6 px at 1920
 export const MIN_SIGMA_PX = 0.5; // below this the frame is drawn sharp, without the pass
 export const TAPS_PER_SIDE = 8;
 const TAP_SPAN = 3; // taps reach +-3 sigma

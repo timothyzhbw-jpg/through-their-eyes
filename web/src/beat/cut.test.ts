@@ -4,6 +4,17 @@
 import { describe, expect, it } from "vitest";
 import { CUT_GUARD_S, CUT_RAMP_S, CutWatch, viewKey } from "./cut";
 
+// Vitest stubs CSS imports, so read the stylesheets from disk.
+type Fs = {
+  readFileSync(path: string, encoding: "utf8"): string;
+  readdirSync(path: string, o: { recursive: true }): string[];
+};
+const nodeProcess = (
+  globalThis as unknown as { process: { getBuiltinModule(id: string): Fs; cwd(): string } }
+).process;
+const fs = nodeProcess.getBuiltinModule("node:fs");
+const src = `${nodeProcess.cwd()}/src`;
+
 const view = (camera: string, focus = "split") => viewKey({ camera, focus });
 
 describe("cuts", () => {
@@ -39,5 +50,22 @@ describe("cuts", () => {
 
   it("the guard is short: a cut, not a transition", () => {
     expect(CUT_GUARD_S + CUT_RAMP_S).toBeLessThanOrEqual(0.6);
+  });
+
+  it("no stylesheet blurs the page: text rises in by opacity and position only (LOOKDEV 2b)", () => {
+    const sheets = fs.readdirSync(src, { recursive: true }).filter((f) => f.endsWith(".css"));
+    expect(sheets).toContain("styles.css");
+    for (const sheet of sheets) {
+      const css = fs.readFileSync(`${src}/${sheet}`, "utf8");
+      // A frosted panel's static backdrop-filter stays; a filter blur on the page does not.
+      const blurs = css.match(/(?<![-\w])filter\s*:[^;}]*blur\(/g) ?? [];
+      expect(blurs, sheet).toEqual([]);
+    }
+    const styles = fs.readFileSync(`${src}/styles.css`, "utf8");
+    for (const name of ["tt-rise", "tt-cap"]) {
+      const frames = styles.match(new RegExp(`@keyframes ${name} \\{[\\s\\S]*?\\n\\}`))![0];
+      expect(frames).toContain("opacity");
+      expect(frames).toContain("transform");
+    }
   });
 });
