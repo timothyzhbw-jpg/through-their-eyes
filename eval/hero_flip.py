@@ -24,6 +24,8 @@ def _prob(decision, action: str) -> float:
 
 def _hero_pass_outcome(run) -> str:
     decision = run.hero_decision()
+    if any(o.kind == "defend" for o in decision.options):
+        return _defended_outcome(run, decision.player)
     event = next(
         (e for e in run.events if e.player == decision.player and e.frame == decision.frame
          and e.type in ("pass", "shot")),
@@ -32,10 +34,20 @@ def _hero_pass_outcome(run) -> str:
     return "carry" if event is None else str(event.attrs.get("outcome"))
 
 
+def _defended_outcome(run, hero: str) -> str:
+    """A defender's decision (C3): what became of the pass he read — `won` when he got it."""
+    event = next((e for e in run.events if e.type == "pass"), None)
+    if event is None:
+        return "no pass"
+    receiver = event.attrs.get("receiver")
+    return "won" if receiver == hero else f"{event.attrs.get('outcome')} ({receiver})"
+
+
 def evaluate(scenario: str, seeds: list[int]) -> str:
     cls = SCENARIOS[scenario]
     runner = getattr(cls, "runner", None)
-    key_action = f"pass:{runner}" if runner else None
+    key_action = getattr(cls, "key_action", None) or (f"pass:{runner}" if runner else None)
+    success = "won" if key_action and key_action.startswith("cut:") else "complete"
     rows, changed, keyed, completed, deltas = [], 0, 0, 0, []
     for seed in seeds:
         r = drop_scan_counterfactual(scenario, seed)
@@ -44,7 +56,7 @@ def evaluate(scenario: str, seeds: list[int]) -> str:
         outcome = _hero_pass_outcome(r.factual)
         if r.factual_action == key_action:
             keyed += 1
-            completed += outcome == "complete"
+            completed += outcome == success
         deltas.append(r.delta_xt)
         rows.append(
             f"| {seed} | `{r.factual_action}` | {_prob(f, key_action):.2f} | {outcome} "
@@ -62,7 +74,8 @@ def evaluate(scenario: str, seeds: list[int]) -> str:
         "|---|---|---|",
         f"| Decision changed without the key scan | {changed}/{n} ({changed / n:.0%}) | ≥ 60% |",
         f"| Factual decision is `{key_action}` | {keyed}/{n} ({keyed / n:.0%}) | — |",
-        f"| … and the pass is completed | {completed}/{max(keyed, 1)} | — |",
+        f"| … and {'he wins the ball' if success == 'won' else 'the pass is completed'} "
+        f"| {completed}/{max(keyed, 1)} | — |",
         f"| Mean ΔxT (factual − counterfactual) | {np.mean(deltas):+.3f} | — |",
         "",
         f"| Seed | Factual | P({key_action}) | Outcome | Counterfactual | P({key_action}) "

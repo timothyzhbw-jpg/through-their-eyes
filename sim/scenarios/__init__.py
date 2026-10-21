@@ -6,6 +6,7 @@ from sim.scenarios.corner_blind_side import CornerBlindSide
 from sim.scenarios.far_post_finish import FarPostFinish
 from sim.scenarios.possession_play import PossessionPlay
 from sim.scenarios.press_escape import PressEscape
+from sim.scenarios.read_the_run import ReadTheRun
 from sim.scenarios.screened_shot import ScreenedShot
 
 SCENARIOS: dict[str, type[Scenario]] = {
@@ -14,5 +15,6 @@ SCENARIOS: dict[str, type[Scenario]] = {
     FarPostFinish.name: FarPostFinish,
     PossessionPlay.name: PossessionPlay,
     PressEscape.name: PressEscape,
+    ReadTheRun.name: ReadTheRun,
     ScreenedShot.name: ScreenedShot,
 }

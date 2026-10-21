@@ -56,6 +56,8 @@ def possession_value(run: MatchRun) -> float:
         return float("nan")
     hero = run.players[run.index(decision.player)]
     sign = 1 if hero.team == 0 else -1
+    if any(o.kind == "defend" for o in decision.options):
+        return _defended_value(run, hero.team, sign)
     action = next(
         (e for e in run.events if e.player == decision.player and e.frame == decision.frame
          and e.type in ("pass", "shot")),
@@ -77,6 +79,19 @@ def possession_value(run: MatchRun) -> float:
         return float(xt_for(end, sign))
     if action.attrs.get("outcome") is None:  # still rolling when the run ended
         return float(xt_for(run.ball_pos[-1, :2], sign))
+    return -float(xt_for(end, -sign))
+
+
+def _defended_value(run: MatchRun, team: int, sign: int) -> float:
+    """A defender's decision (C3): the pass he read, valued for his team — xT where his team
+    won it, minus the opponent's xT where it was received."""
+    event = next((e for e in run.events if e.type == "pass"), None)
+    if event is None:
+        return float("nan")
+    end = np.array(event.attrs.get("end_at") or run.ball_pos[-1, :2])
+    receiver = event.attrs.get("receiver")
+    if receiver is not None and run.players[run.index(receiver)].team == team:
+        return float(xt_for(end, sign))
     return -float(xt_for(end, -sign))
 
 
