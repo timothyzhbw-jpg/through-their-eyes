@@ -145,6 +145,10 @@ _Fill in as they come to exist._
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
+- `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
+  seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
+  and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
+  behaves as it did for the fit: re-run it, then regenerate the exports (web/README.md)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`

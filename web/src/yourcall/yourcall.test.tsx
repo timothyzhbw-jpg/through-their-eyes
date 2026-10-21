@@ -361,7 +361,7 @@ describe("Your call: the reveal", () => {
       ["His call", "Pass to H9"],
     ]);
     expect(textOf(el)).toContain(
-      "That option would have been worth 0.10 less in expected threat than what he did.",
+      "That option would have been worth 0.13 less in expected threat than what he did.",
     );
 
     click(button(el, "Try another call"));
