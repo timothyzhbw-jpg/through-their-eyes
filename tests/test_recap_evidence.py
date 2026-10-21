@@ -118,7 +118,9 @@ def test_every_candidate_is_a_moment_with_something_verified_to_say(rc):
 
 
 def test_hero_claims_are_verified_again_under_their_recap_ids(rc):
-    hero = next(c for c in rc.candidates if c.hero and c.lens == "scan")
+    # the scan hero with a counterfactual: blind_side_run, the plan's second possession (the
+    # corner's scan hero is a marker's look, with no decision on the ball)
+    hero = next(c for c in rc.candidates if c.hero and c.lens == "scan" and c.possession == 1)
     cid = f"{hero.prefix}.cf_pass"
     assert cid in hero.claims
     claim, verdict = rc.all_claims[cid], rc.verdicts[cid]
@@ -193,7 +195,7 @@ def test_the_recap_evidence_is_deterministic(rc):
 
 # --- a match with a goal: open play, then far_post_finish seed 4, where H9's shot goes in -------
 
-GOAL_PLAN = (PossessionSpec("possession_play", max_duration_s=10.0),
+GOAL_PLAN = (PossessionSpec("possession_play", max_s=10.0),
              PossessionSpec("far_post_finish", 4))  # fmt: skip
 
 

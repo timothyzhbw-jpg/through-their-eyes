@@ -255,7 +255,7 @@ def test_a_match_with_a_goal_leads_its_recap_with_it():
     from explain.match import match_moments
     from sim.match import PossessionSpec, build_match
 
-    plan = (PossessionSpec("possession_play", max_duration_s=10.0),
+    plan = (PossessionSpec("possession_play", max_s=10.0),
             PossessionSpec("far_post_finish", 4))  # fmt: skip
     match = build_match(7, plan)
     heroes = {p.index: MomentContext.load(p.scenario, p.seed)
