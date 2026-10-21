@@ -414,9 +414,10 @@ optgroup {
   z-index: 30;
   overflow: auto;
   overscroll-behavior: contain;
+  /* 0.92: the stream still shows through, and Chalk 3 labels keep 4.5:1 over a white pill behind */
   background:
     radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%),
-    rgba(8, 14, 11, 0.88);
+    rgba(8, 14, 11, 0.92);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: var(--chalk);

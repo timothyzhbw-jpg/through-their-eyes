@@ -29,7 +29,7 @@ screen reader.
   - A scripted Tab walk through the whole hero page records every stop: what it is, its focus
     ring, and whether it is on screen or covered.
   - Escape was pressed in every overlay: the lineup card, the viewer menu, View options, Your
-    call, the evidence card and the director chip.
+    call and the evidence card.
 - **Names and roles.** Playwright's accessibility snapshot (role and accessible name) of the hero,
   `match-1`, Your call and the lineup card.
 - **Contrast over the picture.** axe cannot judge text drawn over the WebGL views; it reports
@@ -105,8 +105,9 @@ Found by hand, fixed here:
   toggles expose `aria-pressed`, and the groups and regions are named. The unit tests check this
   on the mounted components (`web/src/ui/access.test.tsx`), now with label-in-name too.
 - **Keyboard.**
-  - Every control is reached by Tab with a visible Floodlight ring, and there is no trap: Tab
-    wraps from the last control to the first.
+  - On the hero page, desktop and phone, every control is reached by Tab and shows a visible
+    Floodlight ring ("Whose eyes" draws it on its wrapper). No stop is hidden or covered. There
+    is no trap: Tab wraps from the last control to the first.
   - The lineup card keeps Tab inside itself while it is open (it is a modal).
   - Escape closes the lineup card, the viewer menu, View options, Your call and the evidence card.
     The focus returns to the control that opened each one, or to the live screen's title.
@@ -122,12 +123,14 @@ Found by hand, fixed here:
   - With the voice playing, the screen reader's live region is off (no double reading). It is
     polite whenever the voice is off, blocked, failed or capped.
 - **Audio description.**
-  - Reached from a fresh page in 5 Tabs (the viewer menu), then 1 Enter. Choosing it turns the
-    sound on.
+  - From a fresh load, by keyboard:
+    - Escape closes the lineup card, then 4 Tabs reach the viewer menu.
+    - Enter opens the menu, and audio description is 4 Tabs further down.
+    - Enter chooses it and turns the sound on.
   - Captions are large print (46 px on desktop), and the narration list is large print too.
-  - Its six lines tell the moment in order: where he got the ball, who was on his blind side,
-    which way he looked, whom the look showed him, what he did, and what he would have done
-    without the look. They have no xT or probabilities.
+  - The offline crew's six lines tell the moment in order: where he got the ball, who was on his
+    blind side, which way he looked, whom the look showed him, what he did, and what he would have
+    done without the look. They have no xT or probabilities.
   - With speech unavailable, every line still reached the live region.
 - **Reflow.** No sideways scroll at 320, 375 and 402 px (the smoke test checks it). The viewer
   menu, View options and the evidence card fit and are readable at 375 px.
@@ -155,6 +158,7 @@ Found by hand, fixed here:
   - Your call has no `<main>`.
   - The Decision chapter's option bars and the telemetry chart read as runs of plain text.
   - Dismissing the moment card drops the focus.
+  - The director's suggestion chip has a dismiss button but ignores Escape.
 - **Speech and the live region.** While a clip is being fetched, the live region is still polite,
   so a screen reader may read the caption just before the voice speaks it.
 - **Not covered.**
