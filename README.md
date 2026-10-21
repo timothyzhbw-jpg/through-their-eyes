@@ -119,21 +119,28 @@ even for calibration; model parameters come from published research
 ([docs/REFERENCES.md](docs/REFERENCES.md)).
 
 ## Layout
-```
-sim/        synthetic match engine
-analytics/  kernels: time-to-intercept, pitch control, pressing, vision, xT, scan detector
-explain/    moments, lenses, counterfactuals, claims + verifier
-agents/     Agent Framework workflow on Microsoft Foundry, MCP server
-api/        FastAPI service
-web/        React + three.js front end (React Three Fiber)
-eval/       eval suites and reports
-infra/      Azure setup and deployment
-docs/       specification and references
-demo/       hero demo page
-```
+Each package's README covers what it does, its modules and data flow, the invariants it keeps
+and how to run its tests.
+
+| Path | What | Docs |
+|---|---|---|
+| `sim/` | synthetic match engine: movement, ball, perception, decisions, scenarios | [sim/README.md](sim/README.md) |
+| `analytics/` | kernels: time-to-intercept, pitch control, pressing, vision, xT, scan detector, blind-side alerts | [analytics/README.md](analytics/README.md) |
+| `explain/` | moments, lenses, counterfactuals, claims + verifier | [explain/README.md](explain/README.md) |
+| `agents/` | Agent Framework workflow on Microsoft Foundry, MCP server | [agents/README.md](agents/README.md) |
+| `api/` | FastAPI service | [api/README.md](api/README.md) |
+| `web/` | React + three.js front end (React Three Fiber) | [web/README.md](web/README.md) |
+| `eval/` | eval suites and reports | [eval/README.md](eval/README.md), [docs/EVALS.md](docs/EVALS.md) |
+| `infra/` | Azure setup and deployment | [infra/README.md](infra/README.md) |
+| `video/` | capture kit for the demo video | [video/README.md](video/README.md) |
+| `tests/` | the Python test suite | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md#the-checks-ci-runs) |
+| `docs/` | specification, references, evals, rubric map, contributing | [docs/SPEC.md](docs/SPEC.md) |
+| `demo/` | hero demo page, rigged-player converter | — |
 
 ## Development
-Requires [uv](https://docs.astral.sh/uv/) (Python 3.11 is installed by uv).
+Requires [uv](https://docs.astral.sh/uv/) (Python 3.11 is installed by uv). Setup with uv and
+npm, the checks CI runs, the pull-request flow and the eval-before-merge rule for `sim/`,
+`analytics/` and `explain/` are in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ```bash
 uv sync
