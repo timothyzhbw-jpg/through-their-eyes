@@ -6,6 +6,7 @@
 // (cutback_scan; far_post_finish, where the look is at the keeper), a marker's look at the man he
 // marks (corner_blind_side), or the press he plays out of (press_escape).
 
+import { CountUp } from "./CountUp";
 import {
   actionLabel,
   isSeen,
@@ -535,7 +536,9 @@ export function VerdictPanel() {
         </div>
       </div>
       <div className={claim ? "worth verified" : "worth"}>
-        <p className="numeral">{shown}</p>
+        <p className="numeral">
+          {claim ? <CountUp text={shown} id={`verdict|${claim.id}|${shown}`} whenVisible /> : shown}
+        </p>
         <div className="worth-text">
           {line ? (
             <p className="worth-line">

@@ -3495,3 +3495,107 @@ optgroup {
     display: none;
   }
 }
+
+/* ---------- the key-moment beat and the grade (beat/) ---------- */
+/* The 3D view's grade: a warm floodlit centre over a cool night edge; in first person a slight
+   vignette that deepens with the beat's push-in (--push, 0..1). A layer, not a render pass. */
+.grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(90% 70% at 50% 38%, rgba(255, 222, 160, 0.07), rgba(255, 222, 160, 0) 70%),
+    linear-gradient(180deg, rgba(14, 26, 44, 0.22), rgba(14, 26, 44, 0) 38%);
+  mix-blend-mode: soft-light;
+}
+.pov-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 211, 107, calc(0.42 * var(--edge-left, 0))),
+      rgba(255, 211, 107, 0) 14%
+    ),
+    linear-gradient(
+      270deg,
+      rgba(255, 211, 107, calc(0.42 * var(--edge-right, 0))),
+      rgba(255, 211, 107, 0) 14%
+    ),
+    radial-gradient(
+      125% 100% at 50% 48%,
+      rgba(5, 8, 6, 0) calc(58% - 10% * var(--push, 0)),
+      rgba(5, 8, 6, calc(0.38 + 0.22 * var(--push, 0))) 100%
+    );
+}
+.slot.pip .pov-vignette {
+  display: none;
+}
+
+/* verified numbers count up the first time they come up, then take a check stamp (ui/CountUp.tsx) */
+.count {
+  position: relative;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.count.counting .count-value {
+  color: transparent;
+}
+.count.counting::before {
+  content: attr(data-count) / "";
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.count .stamp {
+  display: inline-flex;
+  width: 0.55em;
+  height: 0.55em;
+  margin-left: 0.14em;
+  vertical-align: 0.4em;
+  color: var(--floodlight);
+  animation: stamp-pop var(--t-base) var(--spring) both;
+}
+.count.counting .stamp {
+  opacity: 0;
+  animation: none;
+}
+.count .stamp svg {
+  width: 100%;
+  height: 100%;
+}
+@keyframes stamp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2) rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* the 3D view and the board morph into each other's place (beat/viewTransition.ts); the rest of
+   the page changes at once */
+:root {
+  view-transition-name: none;
+}
+.views > .slot:nth-child(1) {
+  view-transition-name: tte-view-3d;
+}
+.views > .slot:nth-child(2) {
+  view-transition-name: tte-view-board;
+}
+::view-transition-group(tte-view-3d),
+::view-transition-group(tte-view-board) {
+  animation-duration: var(--t-slow);
+  animation-timing-function: var(--settle);
+}
+::view-transition-old(tte-view-3d),
+::view-transition-old(tte-view-board),
+::view-transition-new(tte-view-3d),
+::view-transition-new(tte-view-board) {
+  height: 100%;
+  object-fit: cover;
+}

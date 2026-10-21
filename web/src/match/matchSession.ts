@@ -11,7 +11,13 @@ import { MATCH_ID, type Api, type Fetch } from "../api/client";
 import type { Hero } from "../data/hero";
 import { bundledWhatIfs, loadScenarioHero } from "../data/load";
 import { LiveFeed, type SocketFactory } from "../live/feed";
-import { createSession, transportControls, type Session, type ViewControls } from "../session";
+import {
+  createSession,
+  leaveStream,
+  transportControls,
+  type Session,
+  type ViewControls,
+} from "../session";
 import { createPlayback, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { createRecap, type Recap } from "../recap/recap";
@@ -103,7 +109,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
   feed?.state.subscribe(() => {
     const { status, latest } = feed.state.get();
     if (!playback.get().live || (status !== "ended" && status !== "lost")) return;
-    playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
+    leaveStream(playback, status, latest);
     if (status === "ended" && latest >= hero.runs.factual.frames - 1) recap.fullTime();
   });
 

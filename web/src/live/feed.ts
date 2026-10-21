@@ -293,8 +293,9 @@ export const LIVE_MAX_LAG = 6; // frames
 
 /**
  * The live playhead after `dtWall` seconds: it plays at the chosen speed but stops at the last
- * frame received, and jumps forward when it falls more than LIVE_MAX_LAG frames behind (a burst
- * after a network stall). Before the frame sought has arrived it holds.
+ * frame received, and jumps forward when it falls more than `maxLag` frames behind (a burst
+ * after a network stall; a key-moment beat allows more, beat/beat.ts). Before the frame sought
+ * has arrived it holds.
  */
 export function followLive(
   frame: number,
@@ -302,9 +303,10 @@ export function followLive(
   dt: number,
   speed: number,
   dtWall: number,
+  maxLag = LIVE_MAX_LAG,
 ): number {
   if (latest < 0 || frame >= latest) return frame;
   let next = frame + (dtWall / dt) * speed;
-  if (latest - next > LIVE_MAX_LAG) next = latest - 1;
+  if (latest - next > maxLag) next = latest - 1;
   return Math.min(next, latest);
 }

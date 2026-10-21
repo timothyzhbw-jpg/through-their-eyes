@@ -37,7 +37,8 @@ def _object_keys(name: str) -> set[str]:
     return set(re.findall(r'^  (?:async )?"?([a-z-]+)"?[:(]', body.group(1), re.M))
 
 
-PARAM_READ = re.compile(r'(?:params|URLSearchParams\([^)]*\))\.get\("([a-z]+)"\)')
+# A parameter read straight off the query, or through deeplink.ts's read("name", parse) helper.
+PARAM_READ = re.compile(r'(?:(?:params|URLSearchParams\([^)]*\))\.get|\bread)\("([a-z]+)"')
 
 
 def _url_params() -> set[str]:
