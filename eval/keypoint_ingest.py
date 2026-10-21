@@ -98,7 +98,6 @@ def _row(name: str, r: Route) -> str:
 
 def render(routes: dict[str, Route], seed_sets=HELD_OUT) -> str:
     base, matched = routes[BASELINE].counts, routes[MATCHED].counts
-    gap = matched.f1 - base.f1
     stress = [name for name, sigma in ROUTES.items() if isinstance(sigma, float)]
     sensor = np.rad2deg(SimParams().sensor_noise)
     samples = routes[BASELINE].samples
@@ -120,13 +119,16 @@ def render(routes: dict[str, Route], seed_sets=HELD_OUT) -> str:
         "",
         "## Reading",
         "",
-        f"- **Limb tracking in, the same scans out.** At the sim's own noise level the keypoint "
-        f"route scores F1 {matched.f1:.3f} against {base.f1:.3f} on the sim's tracked head yaw "
-        f"({gap:+.3f}). The keypoint noise there, {routes[MATCHED].sigma * 1000:.1f} mm per axis, "
-        f"is chosen so the recovered head yaw is as noisy as the sim's tracking output "
-        f"({sensor:.0f}° of sensor noise): the comparison changes the route, not the noise.",
-        f"- **Noisier keypoints cost precision first.** From the sim's noise to 10 and 20 mm, "
-        f"false positives go {matched.fp} → "
+        f"- **The matched row is a consistency check, not evidence.** The baseline and the "
+        f"keypoint route start from the same true head yaw at the same noise level "
+        f"({sensor:.0f}° of sensor noise; the {routes[MATCHED].sigma * 1000:.1f} mm per keypoint "
+        f"axis is chosen to give it), so equal F1 ({matched.f1:.3f} vs {base.f1:.3f}) is expected "
+        f"by construction. It shows that the adapter adds no bias or extra noise on the way to "
+        f"the detector. The evidence that the ingest works is the round trip in "
+        "`tests/test_keypoints.py` (exact without noise, a hand-built frame, collapsed and "
+        "missing points) and the head-yaw RMS column here.",
+        f"- **The stress rows test the detector, not the ingest.** From the sim's noise to 10 "
+        f"and 20 mm, false positives go {matched.fp} → "
         + " → ".join(str(routes[n].counts.fp) for n in stress)
         + f" while recall goes {matched.recall:.3f} → "
         + " → ".join(f"{routes[n].counts.recall:.3f}" for n in stress)

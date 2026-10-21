@@ -11,8 +11,8 @@
 
 ## Reading
 
-- **Limb tracking in, the same scans out.** At the sim's own noise level the keypoint route scores F1 0.993 against 0.993 on the sim's tracked head yaw (+0.000). The keypoint noise there, 4.7 mm per axis, is chosen so the recovered head yaw is as noisy as the sim's tracking output (2° of sensor noise): the comparison changes the route, not the noise.
-- **Noisier keypoints cost precision first.** From the sim's noise to 10 and 20 mm, false positives go 31 → 94 → 363 while recall goes 0.991 → 0.991 → 0.980: with more head-yaw noise, more noise-driven onsets clear the detector's excursion gate. No tracking system was measured to have this keypoint noise here; the rows show how much head-yaw noise the detector tolerates, not how any real system performs.
+- **The matched row is a consistency check, not evidence.** The baseline and the keypoint route start from the same true head yaw at the same noise level (2° of sensor noise; the 4.7 mm per keypoint axis is chosen to give it), so equal F1 (0.993 vs 0.993) is expected by construction. It shows that the adapter adds no bias or extra noise on the way to the detector. The evidence that the ingest works is the round trip in `tests/test_keypoints.py` (exact without noise, a hand-built frame, collapsed and missing points) and the head-yaw RMS column here.
+- **The stress rows test the detector, not the ingest.** From the sim's noise to 10 and 20 mm, false positives go 31 → 94 → 363 while recall goes 0.991 → 0.991 → 0.980: with more head-yaw noise, more noise-driven onsets clear the detector's excursion gate. No tracking system was measured to have this keypoint noise here; the rows show how much head-yaw noise the detector tolerates, not how any real system performs.
 - Only the head and torso enter the schema. Limbs are not in the sim, so none are generated or claimed.
 
 ## Method

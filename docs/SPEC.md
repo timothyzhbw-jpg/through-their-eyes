@@ -446,7 +446,8 @@ Report a precision / recall / F1 table in `eval/`, with and without the nuisance
 of §3.4.
 
 *Ingest from limb tracking (optional; it goes with the skeleton view, item 0 of the §9 cut
-order).* The Ingest stage also accepts body keypoints, the kind of data limb tracking reports.
+order).* An offline adapter shows that the Ingest stage could accept body keypoints, the kind of
+data limb tracking reports; nothing in the API or the app calls it yet.
 - **Schema:** a generic open one, a named subset of the COCO keypoints (nose, ears, shoulders,
   hips), in metres in pitch coordinates. It travels one frame per message (pydantic
   `KeypointFrame`).
@@ -455,7 +456,8 @@ order).* The Ingest stage also accepts body keypoints, the kind of data limb tra
   - Head yaw: the ear axis and the nose's offset from the ear midpoint, combined with
     inverse-variance weights.
   - Torso yaw: the shoulder and hip axes, combined the same way.
-  - An untracked keypoint holds the last estimate.
+  - An untracked keypoint holds the last estimate. (Collapsed or infinite points count as
+    untracked.)
   - The scan detector then runs on that head yaw unchanged.
 - **Synthetic stream** ([sim/keypoints.py](../sim/keypoints.py)): keypoints placed from a run's
   truth.
@@ -489,17 +491,18 @@ order).* The Ingest stage also accepts body keypoints, the kind of data limb tra
       — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.993 at
       200°/s, 125–300°/s table);
       [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
-- [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers the head yaw within a
-      stated tolerance, and the scan detector scores as well on keypoint-derived head yaw as on
-      the sim's tracked head yaw, on its held-out seeds.
-      — Round trip: [tests/test_keypoints.py](../tests/test_keypoints.py). Without noise it is
-      exact (< 1e-9 rad). With the sim's noise the head-yaw RMS error must be within 15% of 2°,
-      and no frame may exceed 5 σ: blind_side_run seed 3 gives 1.99° RMS and 8.2° at most.
-      Torso yaw 0.76° RMS, position 4.7 mm RMS.
-      Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md), held-out F1
-      0.993 from keypoints and 0.993 from tracked head yaw (7121 scans). Under stress, F1 is
-      0.989 at 10 mm keypoint noise and 0.965 at 20 mm.
-      [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
+- [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers position, head yaw and
+      torso yaw, and the scan detector runs on the adapter's output unchanged.
+      — Round trip: [tests/test_keypoints.py](../tests/test_keypoints.py). Exact without noise
+      (< 1e-9 rad); a hand-built frame (facing +x, rotated, mirrored) gives the expected yaws;
+      collapsed and infinite points count as untracked. With the sim's noise the head-yaw RMS
+      error must be within 15% of 2° and no frame may exceed 5 σ: blind_side_run seed 3 gives
+      1.99° RMS and 8.2° at most. Torso yaw 0.76° RMS, position 4.7 mm RMS.
+      Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
+      detector on the adapter's output on its held-out seeds: F1 0.993, as on the tracked yaw.
+      That is equal by construction at matched noise, a consistency check, not evidence. The
+      0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [ ] xT grid increases toward goal (sanity plot saved).
       — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
       [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
@@ -1207,7 +1210,7 @@ or a live check. Ticked only when verified that day: `uv run pytest` 464 passed,
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
 check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
-`uv run pytest` 1012 passed (merged with main).
+`uv run pytest` 1015 passed (merged with main, after the review fixes).
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|

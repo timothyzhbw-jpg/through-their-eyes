@@ -13,6 +13,7 @@ from analytics import keypoints as adapter
 from analytics.keypoints import (
     KEYPOINTS,
     KeypointFrame,
+    KeypointStream,
     frames_of,
     keypoint_sigma,
     pose_from_keypoints,
@@ -105,6 +106,67 @@ def test_untracked_keypoints_hold_the_last_estimate(run):
     assert np.abs(wrap_angle(pose.head_yaw[35] - run.head_yaw[35])).max() < 1e-9
     assert np.abs(wrap_angle(pose.torso_yaw[40] - run.body_yaw[40])).max() < 1e-9
     assert np.abs(pose.pos[40] - run.pos[40]).max() < 1e-9  # shoulder midpoint stands in
+
+
+def test_collapsed_head_keypoints_are_untracked(run):
+    stream = keypoint_stream(run, sigma=0.0)
+    xyz = stream.xyz.copy()
+    x, y = run.pos[30:35, :, 0], run.pos[30:35, :, 1]
+    point = np.stack([x, y, np.full_like(x, 1.64)], axis=-1)  # (5, N, 3), all head points equal
+    for k in (KEYPOINTS.index(n) for n in ("nose", "left_ear", "right_ear")):
+        xyz[30:35, :, k] = point
+    pose = pose_from_keypoints(stream.with_xyz(xyz))
+    assert np.allclose(pose.head_yaw[30:35], run.head_yaw[29])
+    j = int(np.argmax(np.abs(run.head_yaw[29])))
+    assert abs(run.head_yaw[29, j]) > 1.0  # a player facing well away from +x: held, not 0
+    assert not np.isclose(pose.head_yaw[30, j], 0.0)
+
+
+def _hand_frame(points: dict[str, tuple[float, float, float]]) -> KeypointStream:
+    xyz = np.array([[points[name] for name in KEYPOINTS]], dtype=float)[None]  # (1, 1, 7, 3)
+    return KeypointStream(dt=0.04, players=["H1"], xyz=xyz)
+
+
+def test_a_hand_built_frame_gives_the_expected_yaws():
+    facing_x = {
+        "nose": (0.10, 0.0, 1.62),
+        "left_ear": (0.0, 0.075, 1.64),
+        "right_ear": (0.0, -0.075, 1.64),
+        "left_shoulder": (0.0, 0.20, 1.42),
+        "right_shoulder": (0.0, -0.20, 1.42),
+        "left_hip": (0.0, 0.15, 0.95),
+        "right_hip": (0.0, -0.15, 0.95),
+    }
+    pose = pose_from_keypoints(_hand_frame(facing_x))
+    assert abs(float(pose.head_yaw[0, 0])) < 1e-12
+    assert abs(float(pose.torso_yaw[0, 0])) < 1e-12
+    assert np.abs(pose.pos[0, 0]).max() < 1e-12
+
+    turned = {name: (-y, x, z) for name, (x, y, z) in facing_x.items()}  # +90 degrees about z
+    pose = pose_from_keypoints(_hand_frame(turned))
+    assert abs(wrap_angle(float(pose.head_yaw[0, 0]) - np.pi / 2)) < 1e-12
+    assert abs(wrap_angle(float(pose.torso_yaw[0, 0]) - np.pi / 2)) < 1e-12
+
+    mirrored = {  # left and right swapped, so the body faces -x
+        "nose": (-0.10, 0.0, 1.62),
+        "left_ear": (0.0, -0.075, 1.64),
+        "right_ear": (0.0, 0.075, 1.64),
+        "left_shoulder": (0.0, -0.20, 1.42),
+        "right_shoulder": (0.0, 0.20, 1.42),
+        "left_hip": (0.0, -0.15, 0.95),
+        "right_hip": (0.0, 0.15, 0.95),
+    }
+    pose = pose_from_keypoints(_hand_frame(mirrored))
+    assert abs(wrap_angle(float(pose.head_yaw[0, 0]) - np.pi)) < 1e-12
+    assert abs(wrap_angle(float(pose.torso_yaw[0, 0]) - np.pi)) < 1e-12
+
+
+def test_an_infinite_hip_falls_back_to_the_shoulders(run):
+    stream = keypoint_stream(run, sigma=0.0)
+    xyz = stream.xyz.copy()
+    xyz[40, :, KEYPOINTS.index("left_hip"), 0] = np.inf  # one bad coordinate is an untracked point
+    pose = pose_from_keypoints(stream.with_xyz(xyz))
+    assert np.abs(pose.pos[40] - run.pos[40]).max() < 1e-9
 
 
 def test_frames_round_trip_through_json(run):
