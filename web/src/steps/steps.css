@@ -1,0 +1,430 @@
+/* Scan step-through (SPEC 7): his eyes frozen mid-look with the board beside them, the steps, and
+   the card, in the live screen's place. Laid out like Take his eyes (takeeyes.css). Floodlight is
+   what he saw and his pick; the team colours carry the movement arrows. */
+
+.ss-open[aria-pressed="true"] {
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
+}
+.stage-head .ss-open {
+  background: rgba(8, 14, 11, 0.55);
+}
+/* a phone's live screen header has no room for another pill: the moment's own button opens it;
+   inside the mode the pressed pill is the header's only control and stays */
+@media (max-width: 880px) {
+  .stage-head .ss-open[aria-pressed="false"] {
+    display: none;
+  }
+}
+@media (min-width: 881px) and (max-width: 1240px) {
+  .stage-head:has(.ss-open[aria-pressed="false"]):has(.te-open) .viewer-toggle > span:not(.avatar),
+  .stage-head:has(.ss-open[aria-pressed="false"]):has(.te-open) .viewer-toggle > svg {
+    display: none;
+  }
+  .stage-head:has(.ss-open[aria-pressed="false"]):has(.te-open) .viewer-toggle {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+.scansteps {
+  position: absolute;
+  inset: var(--head-h) var(--gutter) var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--card-w);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--gutter);
+}
+.ss-view {
+  position: relative;
+  margin: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--night-2);
+  border-radius: var(--r-board);
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 24px 48px -20px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.ss-stage {
+  position: relative;
+  min-height: 0;
+  touch-action: pan-y;
+}
+.ss-slot {
+  position: absolute;
+  overflow: hidden;
+}
+.ss-slot.main {
+  inset: 0;
+}
+.ss-slot.pip {
+  top: 12px;
+  right: 12px;
+  width: 30%;
+  aspect-ratio: 16 / 10;
+  z-index: 3;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 16px 32px -12px rgba(0, 0, 0, 0.9);
+}
+.ss-slot .view,
+.ss-slot .canvas-wrap {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+.ss-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* movement hints: dashed, in the team's colour, with a head */
+.ss-arrow {
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  stroke-linecap: round;
+  fill: none;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.85));
+}
+.ss-marks.small .ss-arrow {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.ss-arrow.home,
+.ss-head.home {
+  stroke: var(--home);
+  fill: var(--home);
+}
+.ss-arrow.away,
+.ss-head.away {
+  stroke: var(--away);
+  fill: var(--away);
+}
+.ss-arrow.home,
+.ss-arrow.away {
+  fill: none;
+}
+.ss-head {
+  stroke: none;
+}
+
+/* who came into his sight on this look */
+.ss-seen ellipse {
+  fill: none;
+  stroke: var(--floodlight);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(246, 213, 102, 0.7));
+}
+.ss-seen text,
+.ss-lane text,
+.ss-sharp-ring text {
+  fill: var(--chalk);
+  font: 600 12px/1 var(--font-data);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(8, 14, 11, 0.9);
+  stroke-width: 3px;
+}
+.ss-seen text {
+  fill: var(--floodlight);
+}
+.ss-seen-dot {
+  fill: none;
+  stroke: var(--floodlight);
+  stroke-width: 2;
+}
+
+/* potential passes: the decision record's options */
+.ss-lane line {
+  stroke: rgba(79, 184, 208, 0.55);
+  stroke-linecap: round;
+}
+.ss-lane.seen line {
+  stroke: #9fe6f5;
+}
+.ss-lane.chosen line {
+  stroke: var(--floodlight);
+}
+.ss-lane.carry line {
+  stroke-dasharray: 2 6;
+}
+.ss-lane.chosen text {
+  fill: var(--floodlight);
+}
+
+/* the decision: the board blurred and dimmed but round two players */
+.ss-focus {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  backdrop-filter: blur(5px) brightness(0.45) saturate(0.6);
+  -webkit-backdrop-filter: blur(5px) brightness(0.45) saturate(0.6);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+  animation: ss-dim 500ms var(--settle) both;
+}
+@keyframes ss-dim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.ss-sharp-ring circle {
+  fill: none;
+  stroke: var(--floodlight);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+}
+
+.ss-tag {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 4;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-tag);
+  background: var(--floodlight);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  pointer-events: none;
+}
+.ss-view.ss-decision .ss-tag {
+  background: var(--glass);
+  color: var(--chalk);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+.ss-legend {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 4;
+  max-width: min(520px, calc(100% - 28px));
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  border-radius: 12px;
+  background: rgba(8, 14, 11, 0.72);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  color: var(--chalk-2);
+  font: 400 12px/1.4 var(--font-body);
+  pointer-events: none;
+}
+.ss-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.ss-key-arrow {
+  border-top: 2px dashed var(--chalk-2);
+}
+.ss-key-seen {
+  height: 10px !important;
+  width: 10px !important;
+  border-radius: 50%;
+  border: 2px solid var(--floodlight);
+}
+.ss-key-lane {
+  border-top: 3px solid var(--floodlight);
+}
+
+/* the steps */
+.ss-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+.ss-dot {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--hairline-strong);
+  background: var(--night-3);
+  color: var(--chalk-2);
+  font: 500 13px/1 var(--font-data);
+  cursor: pointer;
+}
+.ss-dot.on {
+  border-color: var(--floodlight);
+  background: var(--floodlight);
+  color: var(--ink);
+}
+.ss-dot.missing {
+  text-decoration: line-through;
+  border-style: dashed;
+}
+
+/* the card */
+.ss-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: start;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  padding: 22px 22px 22px 24px;
+  border-radius: var(--r-card);
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  color: var(--chalk);
+}
+.ss-kicker {
+  margin: 0;
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--floodlight);
+}
+.ss-card h2 {
+  font: 400 28px/1.1 var(--font-display);
+  letter-spacing: -0.01em;
+  margin: 0;
+  outline: none;
+  text-wrap: balance;
+}
+.ss-lead,
+.ss-hint {
+  margin: 0;
+  font: 400 15px/1.5 var(--font-body);
+  color: var(--chalk-2);
+}
+.ss-hint {
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+.ss-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.ss-lines li {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--night-3);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.ss-line {
+  font: 400 16px/1.35 var(--font-display);
+}
+.ss-label {
+  margin: 0 0 6px;
+  font: 500 10px/1.2 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.ss-sight ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ss-sight li {
+  padding: 4px 8px;
+  border-radius: var(--r-tag);
+  background: var(--night-3);
+  font: 600 12px/1 var(--font-data);
+  box-shadow: inset 3px 0 0 var(--home);
+}
+.ss-sight li.away {
+  box-shadow: inset 3px 0 0 var(--away);
+}
+.ss-passes {
+  align-self: start;
+}
+.ss-passes[aria-pressed="true"] {
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
+}
+.ss-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.ss-actions .btn {
+  min-height: 44px;
+}
+
+/* a phone or a narrow tablet: the header, the views and the steps, then the card */
+@media (max-width: 880px) {
+  .stage.ss-screen {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .ss-screen .stage-head {
+    position: relative;
+  }
+  .scansteps {
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 0 var(--gutter) var(--gutter);
+  }
+  .ss-stage {
+    aspect-ratio: 4 / 5;
+    max-height: 72vh;
+  }
+  .ss-slot.pip {
+    width: 42%;
+  }
+  .ss-legend {
+    font-size: 11px;
+    left: 8px;
+    bottom: 8px;
+    max-width: calc(100% - 16px);
+  }
+  .ss-card {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-focus {
+    animation: none;
+  }
+}
+.scansteps.reduced .ss-focus {
+  animation: none;
+}
