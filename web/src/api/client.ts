@@ -111,9 +111,10 @@ export const MomentCards = z.array(
 );
 export type MomentCards = z.infer<typeof MomentCards>;
 
-/** The scan lens's delta (xT) of one moment's card; null when it has none. */
-export function scanLensDelta(cards: MomentCards, moment: string): number | null {
-  const lens = cards.find((c) => c.id === moment)?.lenses.find((l) => l.lens === "scan");
+/** A lens's delta (`scan`: xT or a chance; `sight`: a chance) on one moment's card; null when it
+ * has none. */
+export function lensDelta(cards: MomentCards, moment: string, name = "scan"): number | null {
+  const lens = cards.find((c) => c.id === moment)?.lenses.find((l) => l.lens === name);
   return lens?.available && typeof lens.delta_xt === "number" ? lens.delta_xt : null;
 }
 /** One step of the crew run (agents/schemas.py StepTrace): who answered, the model or a template. */

@@ -25,7 +25,7 @@ text { fill: #e6eee9; }
 </defs>
 <rect width="1920" height="1080" class="bg"/>
 <text x="48" y="84" font-size="44" class="b"><tspan x="48" dy="0">Through Their Eyes  ·  architecture</tspan></text>
-<text x="48" y="120" font-size="22" class="muted"><tspan x="48" dy="0">Synthetic matches only. Every number on screen is checked by code before it airs.</tspan></text>
+<text x="48" y="120" font-size="22" class="muted"><tspan x="48" dy="0">Synthetic matches only. Every number the crew says or captions is checked by code before it airs.</tspan></text>
 <g id="legend">
 <rect x="1290" y="58" width="34" height="22" rx="6" class="model"/>
 <text x="1336" y="76" font-size="19"><tspan x="1336" dy="0">model step on Microsoft Foundry, template fallback</tspan></text>
