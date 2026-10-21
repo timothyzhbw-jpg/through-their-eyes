@@ -312,11 +312,11 @@ new mechanism.
 - **Acceptance** (`eval/hero_flip.py --scenario cutback_scan`; designed on seeds 0–39, held-out
   100–139): dropping the key scan changes H7's decision in 38/40 (95%, target ≥ 60%: met; 34/40
   on the design seeds). With the look he cuts the ball back to H8 in 38/40, and all 38 are
-  completed; mean ΔxT +0.092. Without it he carries (32) or shoots from the angle (8): the
-  near-post ball to the marked H9 that the design expected never wins. Report:
-  [hero_flip_cutback_scan.md](../eval/reports/hero_flip_cutback_scan.md). On the same seeds
-  `eval/hero_lens.py` selects `scan` 38/40 (median margin over the next lens 0.10 xT;
-  [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
+  completed; mean ΔxT +0.233 on the fitted xT grid (§4; +0.092 on the prior). Without it he
+  carries (32) or shoots from the angle (8): the near-post ball to the marked H9 that the design
+  expected never wins. Report: [hero_flip_cutback_scan.md](../eval/reports/hero_flip_cutback_scan.md).
+  On the same seeds `eval/hero_lens.py` selects `scan` 38/40 (median margin over the next lens
+  0.20 xT, 0.10 on the prior; [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
   ([tests/test_cutback_scan.py](../tests/test_cutback_scan.py), design seeds): the design rule,
   role speed and acceleration limits, and at least 0.7 m between every pair of players before H7
   acts.
