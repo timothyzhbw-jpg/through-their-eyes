@@ -171,7 +171,7 @@ def test_free_text_lines_are_scored_by_violation_kind(ctx):
     assert [d.kinds[0] for d in s.dropped] == ["number"]
     assert all("{" not in text and "mistake" not in text for text in s.aired)
     # The rewrites replaced the failing lines with a line that already airs, twice.
-    assert s.aired == ["H8 checked his shoulder before the ball reached him."] * 3
+    assert s.aired == ["J. Ferriday checked his shoulder before the ball reached him."] * 3
     assert s.aired_repeats == 2 and all(a.verbatim for a in s.aired_lines)
     assert calls == fake.calls["pbp"] + fake.calls["color"] == 6
 
@@ -263,8 +263,8 @@ def test_the_grammar_check_flags_count_words_that_do_not_agree():
 
 
 def test_a_written_out_id_counts_once_as_an_entity_in_both_languages(ctx):
-    """In zh the Verifier's `\\b` entity check misses H8 before a Chinese character, but still
-    rejects its digit as a number; the ablation counts it as the entity it is."""
+    """The Verifier rejects a written-out H8 as an entity (in zh too, next to a Chinese
+    character) and its digit as a number; the ablation counts it once, as the entity it is."""
     from eval.narration_ablation import _check
 
     for language, text in (("en", "H8 checked his shoulder before the ball reached him."),

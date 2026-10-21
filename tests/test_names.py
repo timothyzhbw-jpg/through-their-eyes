@@ -70,6 +70,25 @@ def test_the_verifier_keeps_names_and_ids_inside_slots(ctx):
         assert "entity" in [v.kind for v in bad.violations], bad.violations
 
 
+@pytest.mark.parametrize(
+    "language, text, written",
+    [
+        # Chinese has no spaces: a CJK character next to a name is still a boundary.
+        ("zh", "球到之前，J. Ferriday先回头看了一眼。", "J. Ferriday"),
+        ("zh", "球到之前，Ferriday先回头看了一眼。", "Ferriday"),
+        ("en", "Ferriday checked his shoulder.", "Ferriday"),  # the surname alone
+        ("en", "Joss Ferriday checked his shoulder.", "Ferriday"),  # or in the full name
+    ],
+)
+def test_a_name_written_outside_a_slot_is_one_entity_in_any_language(ctx, language, text, written):
+    assert ROSTER["H8"] == ("Joss", "Ferriday")
+    line = RenderLine(id="L1", text=text, claims=["scan_before_reception"])
+    bad = render_line(line, ctx.claims, ctx.verdicts, language, ctx.names)
+    assert not bad.ok
+    entities = [v.detail for v in bad.violations if v.kind == "entity"]
+    assert entities == [written], bad.violations  # once, not as the name and its surname too
+
+
 def test_ids_are_renamed_only_where_they_are_whole_tokens():
     assert rename_ids("Without that look, H8 would have passed to H4.") == (
         "Without that look, J. Ferriday would have passed to K. Annersley."

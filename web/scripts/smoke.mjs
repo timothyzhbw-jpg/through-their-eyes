@@ -269,7 +269,10 @@ async function tour(page, shoot, after = hero) {
 async function takeEyes(page) {
   await see(page.getByRole("region", { name: "Take his eyes" }), "Take his eyes");
   await see(page.getByRole("radiogroup", { name: "When he looks" }), "the times to look");
-  await see(page.getByRole("radiogroup", { name: /^Where [HA]\d+ looks$/ }), "the directions");
+  await see(
+    page.getByRole("radiogroup", { name: /^Where [A-Z]\. [A-Z][a-z]+ looks$/ }),
+    "the directions",
+  );
   await mainView(page, "board");
   await page.getByRole("button", { name: "Look", exact: true }).click();
   const play = page.getByRole("button", { name: "See what he does" });

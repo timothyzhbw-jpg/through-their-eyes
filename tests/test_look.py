@@ -279,11 +279,11 @@ def finish_ctx():
         (
             90,
             [
-                "You make H9 look to his left 0.4 s before the ball reaches him.",
+                "You make N. Varnhall look to his left 0.4 s before the ball reaches him.",
                 "His head is still turning when he has to decide.",
-                "Before he decides, that look brings A1 and H6 into his sight.",
-                "When he decides, he pictures A1 0.0 m from where he really is; with no look at"
-                " all, 3.0 m.",
+                "Before he decides, that look brings H. Talvisto and E. Saltonby into his sight.",
+                "When he decides, he pictures H. Talvisto 0.0 m from where he really is; with no"
+                " look at all, 3.0 m.",
                 "He still shoots at the far post, as he really did.",
                 "It goes in.",
             ],
@@ -291,10 +291,11 @@ def finish_ctx():
         (
             -150,
             [
-                "You make H9 look over his right shoulder 0.4 s before the ball reaches him.",
-                "Before he decides, that look brings H10 and H6 into his sight.",
+                "You make N. Varnhall look over his right shoulder 0.4 s before the ball reaches"
+                " him.",
+                "Before he decides, that look brings L. Brackwell and E. Saltonby into his sight.",
                 "So he shoots at the near post; he really shot at the far post.",
-                "A1 saves it.",
+                "H. Talvisto saves it.",
                 "That is worth 1.00 less in expected threat than what he really did.",
             ],
         ),

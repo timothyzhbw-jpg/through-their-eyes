@@ -290,10 +290,8 @@ ID = r"(?<![A-Za-z0-9]){}(?![0-9])"  # a player id, with ASCII-only boundaries
 
 
 def _ids_as_entities(ctx: MomentContext, text: str, found: list[Violation]) -> list[Violation]:
-    """The digit of a player id written outside a slot (H8) is a number violation for the
-    Verifier; count it once, as the entity. The Verifier's own entity check uses `\\b`, which
-    misses an id next to a Chinese character (CJK counts as a word character), so ids are found
-    here with ASCII-only boundaries."""
+    """A player id written outside a slot (H8) is an entity violation for the Verifier, and its
+    digit a number violation too; count it once, as the entity."""
     spans = [(m.start(), m.end(), pid) for pid in sorted(set(ctx.names))
              for m in re.finditer(ID.format(re.escape(pid)), text)]  # fmt: skip
     out, seen = [], set()

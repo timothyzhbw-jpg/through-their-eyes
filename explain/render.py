@@ -247,6 +247,9 @@ def _unbacked(claims: list[str], text: str) -> list[Violation]:
     return [Violation("unbacked_line", "no claim and not a connective phrase")]
 
 
+_ENTITY = r"(?<![A-Za-z0-9_]){}(?![A-Za-z0-9_])"  # a player's id or name, ASCII boundaries
+
+
 def check_caption(
     text: str,
     spans: list[SlotSpan],
@@ -273,15 +276,25 @@ def check_caption(
         Violation("placeholder", "unrendered brace", m.start(), m.end())
         for m in re.finditer(r"[{}]", text)
     ]
-    # A player is named only by a slot: his on-screen name, and his id, are entities.
-    entities = set((names or {}).values()) | set(names or {})
-    for name in sorted(entities):
-        pattern = rf"\b{re.escape(name)}\b" if name.isascii() else re.escape(name)
-        violations += [
-            Violation("entity", name, m.start(), m.end())
-            for m in re.finditer(pattern, text)
-            if not in_slot(m.start(), m.end())
-        ]
+    # A player is named only by a slot. Outside one, his id, his on-screen name ("J. Ferriday")
+    # and his surname alone or in his full name are entities, each written-out name once. ASCII
+    # boundaries: `\b` would miss a name next to a Chinese character (a word character to it).
+    entities: set[str] = set()
+    for pid, name in (names or {}).items():
+        entities |= {pid, name}
+        if ". " in name:
+            entities.add(name.rsplit(" ", 1)[1])
+    found = []
+    for name in entities:
+        pattern = _ENTITY.format(re.escape(name)) if name.isascii() else re.escape(name)
+        found += [(m.start(), m.end(), name) for m in re.finditer(pattern, text)]
+    found.sort(key=lambda f: (f[0], -f[1]))  # the longest first where several start together
+    end = -1
+    for a, b, name in found:
+        if b <= end or in_slot(a, b):  # inside a name already counted, or a slot's value
+            continue
+        violations.append(Violation("entity", name, a, b))
+        end = b
     return violations
 
 
