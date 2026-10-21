@@ -18,11 +18,13 @@ import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls } from "./session";
+import { intro } from "./ui/intro";
 import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
   const link = parseDeepLink(window.location.search);
+  intro.set({ open: link.intro });
   if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
   const forcedOffline = link.offline;
   root.render(<p className="loading">Loading the match…</p>);

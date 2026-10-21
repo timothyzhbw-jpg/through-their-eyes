@@ -12,7 +12,8 @@ Writes eval/reports/hero_marking_<scenario>.md (with other seeds, ..._<first>-<l
 - Mechanism: without the look, the marker's belief error about the runner half a second after
   the cutback is played (when he would have to set off) is ≥ 3 m (target ≥ 90%). Design rule:
   the runner is not visible to the marker from the dart until the key scan (factual) or until the
-  cutback (without the look); target ≥ 90%.
+  cutback (without the look), and the marker does see him during the key scan (factual; one frame
+  is enough); target ≥ 90%.
 - Reported: separation and pressing intensity on the runner as the ball arrives, interceptions,
   and the blind-side alert (SPEC 4.4) for the marker and the runner: on before the cutback
   arrives without the look; on before the look and cleared during it with the look.
@@ -93,6 +94,16 @@ def _not_seen(run, marker: str, runner: str, start: int, stop: int) -> bool:
     return all(
         player_visibility(run.pos[f], run.head_yaw[f], speed[f])[m, r] < SEEN
         for f in range(start, stop)
+    )
+
+
+def _seen_in_scan(run, marker: str, runner: str, key) -> bool:
+    """The marker sees the runner on at least one frame of the key scan, start to `end`."""
+    m, r = run.index(marker), run.index(runner)
+    speed = np.linalg.norm(run.vel, axis=-1)
+    return any(
+        player_visibility(run.pos[f], run.head_yaw[f], speed[f])[m, r] >= SEEN
+        for f in range(key.frame, int(key.attrs["end"]) + 1)
     )
 
 
@@ -181,7 +192,8 @@ def evaluate_seed(scenario: str, seed: int) -> dict:
         "before_look": _before_look(r.factual, marker, runner, key.frame),
         "dart_to_look": (key.frame - dart) * r.factual.dt,
         "design_rule": _not_seen(r.factual, marker, runner, dart, key.frame)
-        and _not_seen(r.counterfactual, marker, runner, dart, cc.frame),
+        and _not_seen(r.counterfactual, marker, runner, dart, cc.frame)
+        and _seen_in_scan(r.factual, marker, runner, key),
         "alert": _alert_clears_in_scan(r.factual, marker, runner, key),
         "alert_without": _alert_before(run, marker, runner, dart, _arrival(run, cc)),
     }
@@ -241,7 +253,8 @@ def report(scenario: str, seeds: list[int]) -> str:
         f"| Without the look, `{m}`'s belief error about `{rn}` {BELIEF_LAG_S:g} s after the "
         f"cutback is played ≥ {BELIEF_ERROR:g} m | {belief}/{n} ({belief / n:.0%}) | ≥ 90% |",
         f"| Design rule: `{rn}` unseen by `{m}` from the dart to the look (factual) or to the "
-        f"cutback (without the look) | {design}/{n} ({design / n:.0%}) | ≥ 90% |",
+        f"cutback (without the look), and seen by `{m}` during the key scan (factual; visibility "
+        f"≥ {SEEN:g} on at least one frame) | {design}/{n} ({design / n:.0%}) | ≥ 90% |",
         f"| Median separation as the ball arrives: with the look / without | {f_sep:.1f} m / "
         f"{c_sep:.1f} m | — |",
         f"| With the look: `{rn}` under heavy pressure (pressing ≥ 0.7) · `{m}` wins the ball "

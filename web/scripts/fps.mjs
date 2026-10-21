@@ -46,7 +46,7 @@ try {
   });
   const page = await context.newPage();
   const button = (name) => page.getByRole("button", { name, exact: true });
-  await page.goto(`${base}?offline=1&autoplay=0`);
+  await page.goto(`${base}?offline=1&autoplay=0&intro=0`);
   await button("Play").waitFor();
   await page.waitForFunction(() => document.querySelectorAll("canvas").length >= 2);
   await page.waitForTimeout(1500); // models and textures
@@ -136,10 +136,10 @@ try {
     reducedMotion: "reduce",
   });
   const reduced = await still.newPage();
-  await reduced.goto(`${base}?offline=1&autoplay=0&at=54`);
+  await reduced.goto(`${base}?offline=1&autoplay=0&at=54&intro=0`);
   await reduced.waitForFunction(() => document.querySelector(".pov canvas")?.dataset.blurSigma);
   const sharp = await reduced.locator(".pov canvas").evaluate((c) => c.dataset.blurSigma);
-  await page.goto(`${base}?offline=1&autoplay=0&at=54`);
+  await page.goto(`${base}?offline=1&autoplay=0&at=54&intro=0`);
   await page.waitForFunction(() => document.querySelector(".pov canvas")?.dataset.blurSigma);
   const whip = await page.locator(".pov canvas").evaluate((c) => c.dataset.blurSigma);
   console.log(
@@ -153,7 +153,7 @@ try {
   ).default.snapshots.find((s) => s.label === "decision");
   const metres = (rows) => rows.map((row) => row.map((v) => v / 1000));
   const bench = await context.newPage();
-  await bench.goto(harness.url);
+  await bench.goto(`${harness.url}?intro=0`);
   await bench.waitForFunction(() => window.pitchControlHarness !== undefined);
   console.log("\n| shader alone | canvas px | ms per draw |");
   console.log("|---|---|---:|");

@@ -272,8 +272,9 @@ the defending side.
     other scenarios mark the true position, as before.
 - **Key action and intervention.** H5's one look over his shoulder as A9 darts is the key scan,
   and the intervention is `drop_scan`.
-- **Hero design rule.** A9 is visible to H5 only during the key scan once he darts. His previous
-  sighting shows him drifting slowly beside H5.
+- **Hero design rule.** A9 is visible to H5 only during the key scan once he darts, and the scan
+  does show him (`player_visibility` ≥ 0.5 on at least one of its frames); from the dart until
+  the look he is unseen. His previous sighting shows him drifting slowly beside H5.
 - **Nothing decides here.** The passes are scripted (as the passers' are in both other heroes),
   and the moment is where H5 runs.
 - **The one engine change.** The moment's pass is now a scenario hook,
@@ -285,7 +286,8 @@ the defending side.
   - the median separation as the ball arrives is 3.3 m with the look and 8.5 m without it;
   - without the look, H5's belief error about A9 half a second after the cutback is played is
     ≥ 3 m in 37/40 (target ≥ 90%: met; the other three are 2.6–2.8 m);
-  - the design rule holds in 40/40.
+  - the design rule holds in 40/40 on both halves: A9 unseen by H5 from the dart to the look (or,
+    without the look, to the cutback), and seen by him during the key scan.
   - The three misses are near the thresholds. In two (107, 109) H5 is 5.3 and 5.6 m away with the
     look. In one (103) another defender is 4.9 m from A9 without the look, while H5 is 7.5 m away.
   - With the look, A9 is under heavy pressure (pressing ≥ 0.7) in 23/40; H5 never wins the ball.
@@ -445,6 +447,28 @@ over-count versus video annotation, so sweep 125–300°/s and choose by F1 agai
 Report a precision / recall / F1 table in `eval/`, with and without the nuisance head motion
 of §3.4.
 
+*Ingest from limb tracking (optional; it goes with the skeleton view, item 0 of the §9 cut
+order).* An offline adapter shows that the Ingest stage could accept body keypoints, the kind of
+data limb tracking reports; nothing in the API or the app calls it yet.
+- **Schema:** a generic open one, a named subset of the COCO keypoints (nose, ears, shoulders,
+  hips), in metres in pitch coordinates. It travels one frame per message (pydantic
+  `KeypointFrame`).
+- **Adapter** ([analytics/keypoints.py](../analytics/keypoints.py), no sim state): recovers each
+  player's position (hip midpoint), head yaw and torso yaw.
+  - Head yaw: the ear axis and the nose's offset from the ear midpoint, combined with
+    inverse-variance weights.
+  - Torso yaw: the shoulder and hip axes, combined the same way.
+  - An untracked keypoint holds the last estimate. (Collapsed or infinite points count as
+    untracked.)
+  - The scan detector then runs on that head yaw unchanged.
+- **Synthetic stream** ([sim/keypoints.py](../sim/keypoints.py)): keypoints placed from a run's
+  truth.
+  - Noise is independent and Gaussian, keyed by (match seed, `keypoint_noise`, frame).
+  - Its size is the §3.4 sensor noise carried into keypoint space: 4.7 mm per axis makes the
+    recovered head yaw as noisy as the sim's tracked yaw (2°).
+  - Generating a stream changes no run and no export.
+  - Limbs beyond shoulders and hips are not generated: the sim has none.
+
 ### Acceptance checks — analytics
 - [x] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
       pitch flip.
@@ -469,6 +493,18 @@ of §3.4.
       — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.993 at
       200°/s, 125–300°/s table);
       [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
+- [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers position, head yaw and
+      torso yaw, and the scan detector runs on the adapter's output unchanged.
+      — Round trip: [tests/test_keypoints.py](../tests/test_keypoints.py). Exact without noise
+      (< 1e-9 rad); a hand-built frame (facing +x, rotated, mirrored) gives the expected yaws;
+      collapsed and infinite points count as untracked. With the sim's noise the head-yaw RMS
+      error must be within 15% of 2° and no frame may exceed 5 σ: blind_side_run seed 3 gives
+      1.99° RMS and 8.2° at most. Torso yaw 0.76° RMS, position 4.7 mm RMS.
+      Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
+      detector on the adapter's output on its held-out seeds: F1 0.993, as on the tracked yaw.
+      That is equal by construction at matched noise, a consistency check, not evidence. The
+      0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [ ] xT grid increases toward goal (sanity plot saved).
       — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
       [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
@@ -1203,12 +1239,13 @@ to a real broadcast.
 or a live check. Ticked only when verified that day: `uv run pytest` 464 passed, `npm test` in
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
-check, the same day: `npm test` 292 passed.
+check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
+`uv run pytest` 1015 passed (merged with main, after the review fixes).
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
 | §3 sim | 8 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 5 | 1 | fitted xT grid and its sanity plot |
+| §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
 | §7 render | 5 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
@@ -1235,7 +1272,8 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
-0. skeleton data view (§7, optional): remove the toggle; nothing else depends on it
+0. skeleton data view (§7, optional) and the limb-tracking ingest (§4.7, optional): remove the
+   toggle and the adapter; nothing else depends on them
 1. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
 2. rigged GRF players: back to tokens in POV and broadcast (§7)
@@ -1258,7 +1296,9 @@ pilot only, never generalised.
 Framework, live deployment, the video.
 
 ## 10. Demo video storyboard (≤ 2:00)
-- **0:00–0:08** Cold open in first person: the look over the shoulder, a runner appears.
+- **0:00–0:04** Before kick-off: the lineup card, every player and every look over his shoulder in
+  this move.
+- **0:04–0:08** Cold open in first person: the look over the shoulder, a runner appears.
   "What did he see?"
 - **0:08–0:20** Broadcast camera; live overlays (sprint tag, pass speed); the move plays out.
 - **0:20–0:55** Breakdown, two voices: freeze → POV through the scans → the key scan lights up the
