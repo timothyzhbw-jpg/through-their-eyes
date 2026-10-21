@@ -1541,7 +1541,7 @@ or a live check. Ticked only when verified that day: `uv run pytest` 464 passed,
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
 check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
 `uv run pytest` 1015 passed (merged with main, after the review fixes). The live match stats
-checks, 2026-10-21 (merged with main): `uv run pytest` 1117 passed, `npm test` 541 passed.
+checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 568 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
