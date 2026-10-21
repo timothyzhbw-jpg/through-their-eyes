@@ -102,6 +102,19 @@ const PAGES = [
     device: { ...DESKTOP, reducedMotion: "reduce" },
     check: (p) => beat(p, { push: 0 }),
   },
+  // The render tiers (SPEC 7, src/quality/): the post chain loads, draws, and says which tier.
+  { name: "quality-high", path: "?at=60&quality=high", check: (p) => tier(p, "high") },
+  {
+    name: "quality-high-broadcast",
+    path: "?at=66&camera=broadcast&quality=high",
+    check: (p) => tier(p, "high"),
+  },
+  {
+    name: "phone-quality-medium",
+    path: "?intro=0&quality=medium",
+    device: PHONE,
+    check: (p) => phone(p, (q) => tier(q, "medium")),
+  },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
@@ -222,6 +235,22 @@ async function beat(page, { push }) {
   } catch {
     const data = await canvas.evaluate((el) => ({ ...el.dataset }));
     throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** A hero moment drawn at a render tier: the 3D canvas carries data-quality once the tier's
+ * chunk has loaded and taken over drawing. */
+async function tier(page, want) {
+  await hero(page);
+  const canvas = page.locator(".view.pov canvas");
+  try {
+    await page.waitForFunction(
+      ([el, t]) => el.dataset.quality === t,
+      [await canvas.elementHandle(), want],
+    );
+  } catch {
+    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
+    throw new Error(`expected the ${want} tier on the 3D canvas, got ${JSON.stringify(data)}`);
   }
 }
 

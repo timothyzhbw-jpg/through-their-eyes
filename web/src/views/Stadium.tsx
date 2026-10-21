@@ -14,6 +14,8 @@ import { useView } from "../session";
 import { BROADCAST_CAMERA } from "./broadcast";
 import { BOARDS, BOWL, FLOODLIGHTS, hash01, loopAt, PROFILE, ROOF, seats } from "./stadiumGeometry";
 import { COLORS } from "./scene";
+import { useStore } from "../store/store";
+import { featuresOf, quality } from "../quality/quality";
 
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
@@ -355,7 +357,10 @@ function flareTexture(): THREE.CanvasTexture {
 function Floodlights() {
   const glow = useMemo(glowTexture, []);
   const flare = useMemo(flareTexture, []);
-  const lamp = useMemo(() => new THREE.Color(NIGHT.lamp).multiplyScalar(2.5), []);
+  // With a bloom pass (medium and high tiers) the lamps are brighter than white and bloom by
+  // themselves; the faked halo and flare step aside.
+  const bloom = useStore(quality, (s) => featuresOf(s.tier, false).bloom);
+  const lamp = useMemo(() => new THREE.Color(NIGHT.lamp).multiplyScalar(bloom ? 4 : 2.5), [bloom]);
   return (
     <>
       {FLOODLIGHTS.map((m, k) => {
@@ -382,7 +387,7 @@ function Floodlights() {
               <spriteMaterial
                 map={glow}
                 transparent
-                opacity={0.5}
+                opacity={bloom ? 0.25 : 0.5}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 fog={false}
@@ -390,7 +395,7 @@ function Floodlights() {
               />
             </sprite>
             {/* The bloom: a wide, faint halo in the night air, and the lens's flare. */}
-            <sprite position-y={m.height} scale={[96, 96, 1]}>
+            <sprite position-y={m.height} scale={[96, 96, 1]} visible={!bloom}>
               <spriteMaterial
                 map={glow}
                 transparent
@@ -401,7 +406,7 @@ function Floodlights() {
                 toneMapped={false}
               />
             </sprite>
-            <sprite position-y={m.height} scale={[70, 2.6, 1]}>
+            <sprite position-y={m.height} scale={[70, 2.6, 1]} visible={!bloom}>
               <spriteMaterial
                 map={flare}
                 transparent
@@ -452,6 +457,8 @@ function blobTexture(): THREE.CanvasTexture {
  * person the POV player's own are left out, like his body. */
 export function PlayerShadows() {
   const { hero, playback } = useView();
+  // At the high tier the key floodlight casts real shadows: the faked ones step aside.
+  const shadowMapped = useStore(quality, (s) => featuresOf(s.tier, false).shadows);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
@@ -512,6 +519,7 @@ export function PlayerShadows() {
     <>
       <instancedMesh
         ref={star}
+        visible={!shadowMapped}
         args={[geometry, materials.star, 4 * hero.n]}
         frustumCulled={false}
         renderOrder={1}
