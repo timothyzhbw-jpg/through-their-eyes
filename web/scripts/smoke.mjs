@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { devices } from "playwright-core";
 import { build, preview } from "vite";
 import { launchChrome } from "./gpu.mjs";
 
@@ -41,27 +42,45 @@ const { values: opt } = parseArgs({
 });
 
 const DESKTOP = { viewport: { width: 1440, height: 900 } };
-const PHONE = {
-  viewport: { width: 375, height: 812 },
-  deviceScaleFactor: 2,
-  isMobile: true,
-  hasTouch: true,
-};
+// The phone is an iPhone as Playwright describes it (viewport, pixel ratio, touch, Safari's user
+// agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering.
+const { defaultBrowserType: _, ...PHONE } = devices["iPhone 17"];
 
-/** The README's tour for judges, and the pages around it. */
+/** The README's tour for judges, and the pages around it. `intro=0` skips the lineup card, which
+ * the two lineup pages open and close as a visitor does. */
 const PAGES = [
-  { name: "hero", path: "?autoplay=0", check: (p) => hero(p) },
-  { name: "press-escape", path: "?match=press_escape-0&autoplay=0", check: (p) => hero(p) },
-  { name: "match-1", path: "?match=match-1&autoplay=0", check: (p) => match(p) },
-  { name: "match-1-breakdowns", path: "?match=match-1", check: breakdownsAndBack },
+  { name: "hero", path: "?autoplay=0&intro=0", check: (p) => hero(p) },
+  {
+    name: "press-escape",
+    path: "?match=press_escape-0&autoplay=0&intro=0",
+    check: (p) => hero(p),
+  },
+  { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
+  { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
+  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  {
+    name: "lineup-match-1",
+    path: "?match=match-1",
+    check: (p, shoot) => lineup(p, shoot, "Start watching", match),
+  },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
     check: (p) => hero(p, { main: "board" }),
   },
-  { name: "phone-hero", path: "", device: PHONE, check: (p) => hero(p) },
-  { name: "phone-match-1", path: "?match=match-1", device: PHONE, check: (p) => match(p) },
+  {
+    name: "phone-hero",
+    path: "?intro=0",
+    device: PHONE,
+    check: (p, _, note) => phone(p, hero, note),
+  },
+  {
+    name: "phone-match-1",
+    path: "?match=match-1&intro=0",
+    device: PHONE,
+    check: (p, _, note) => phone(p, match, note),
+  },
 ];
 
 /** Wait for `locator` (its first match) to be on screen, or `attached` to the page. */
@@ -116,20 +135,37 @@ async function tamper(page) {
   );
 }
 
-/** The pre-match lineup card (SPEC 10) opens first on a link that is not to a spot, over the
- * whole page: it is shown as a visitor sees it, and "Start watching" closes it. */
-async function startWatching(page, shoot) {
+/** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
+ * spot: shown, closed with `button` ("Start watching" or "Skip"), then the page's main view. */
+async function lineup(page, shoot, button, then) {
   const card = page.getByRole("dialog");
   await see(card, "the lineup card");
-  await shoot("lineup");
-  await page.getByRole("button", { name: "Start watching" }).click();
-  await card.first().waitFor({ state: "detached" });
+  await see(card.getByRole("list", { name: "Home line-up" }), "the home line-up on the card");
+  await shoot("card");
+  await card.getByRole("button", { name: button }).click();
+  try {
+    await card.first().waitFor({ state: "detached" });
+  } catch {
+    throw new Error(`expected "${button}" to close the lineup card`);
+  }
+  await then(page);
+}
+
+/** On the phone the page should scroll only up and down. On main it does not yet (the live
+ * screen's header is wider than a phone), so a sideways scroll is a note, not a failure, until the
+ * layout is fixed; then it should fail the page. */
+async function phone(page, check, note) {
+  await check(page);
+  const [wide, width] = await page.evaluate(() => [
+    document.documentElement.scrollWidth,
+    document.documentElement.clientWidth,
+  ]);
+  if (wide > width) note(`scrolls sideways: ${wide} px wide in ${width} px`);
 }
 
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */
 async function breakdownsAndBack(page, shoot) {
   await match(page);
-  await startWatching(page, shoot);
   await shoot("live");
   const open = page.getByRole("button", { name: "Breakdown", exact: true });
   const n = await open.count();
@@ -218,7 +254,7 @@ async function health(url) {
 }
 
 /** Open one page in a fresh context; resolves to its console errors and uncaught exceptions, and
- * notes on the screenshots. */
+ * notes (on the screenshots, and what a page reports without failing). */
 async function visit(browser, base, page) {
   const context = await browser.newContext(page.device ?? DESKTOP);
   context.setDefaultTimeout(TIMEOUT);
@@ -251,17 +287,19 @@ async function visit(browser, base, page) {
   });
   // Now and then, right after the app swaps screens, SwiftShader hands back a capture with only
   // the page's background in it while every check on the page passes; it is retaken once. The
-  // screenshots are for people: no check looks at pixels.
+  // screenshots are for people: no check looks at pixels. Finite CSS animations (a card coming in)
+  // are run to their end first, so a screenshot shows the page at rest.
+  const capture = (path) => tab.screenshot({ path, animations: "disabled" });
   const shoot = async (suffix) => {
     const name = `${page.name}${suffix ? `-${suffix}` : ""}.png`;
-    if ((await tab.screenshot({ path: join(opt.out, name) })).length >= BLANK) return;
+    if ((await capture(join(opt.out, name))).length >= BLANK) return;
     await tab.waitForTimeout(500);
-    const again = await tab.screenshot({ path: join(opt.out, name) });
+    const again = await capture(join(opt.out, name));
     notes.push(`${name}: a blank capture, retaken${again.length < BLANK ? ", blank again" : ""}`);
   };
   try {
     await tab.goto(new URL(page.path, base).href);
-    const checks = page.check(tab, shoot);
+    const checks = page.check(tab, shoot, (n) => notes.push(n));
     checks.catch(() => {}); // left behind if the page throws first
     await Promise.race([checks, thrown]);
     await Promise.race([tab.waitForTimeout(SETTLE), thrown]);
