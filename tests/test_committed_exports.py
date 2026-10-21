@@ -1,6 +1,6 @@
 """The data files web/ ships must be what sim.export generates now (SPEC 3.7, 7).
 
-Regenerate with the command in web/README.md whenever sim/, analytics/ or explain/ change.
+Regenerate with the commands in web/README.md whenever sim/, analytics/ or explain/ change.
 
 Where the files are generated (macOS on Apple silicon) they must match byte for byte. Elsewhere,
 CI on x86 included, SPEC 3.7 promises no cross-platform identity, so the check is structural:
@@ -74,6 +74,12 @@ def test_payload_fixture_is_current(hero):
 
 def test_what_ifs_are_current():
     _assert_current(what_ifs_json(export_what_ifs(SCENARIO, SEED)), "whatif_seed3.json")
+
+
+def test_press_escape_what_ifs_are_current():
+    _assert_current(
+        what_ifs_json(export_what_ifs("press_escape", 0)), "whatif_press_escape_seed0.json"
+    )
 
 
 def test_the_structural_check_catches_stale_alerts_but_not_last_unit_noise(hero):

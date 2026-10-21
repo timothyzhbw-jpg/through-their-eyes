@@ -16,25 +16,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
 ## Hard constraints (hackathon rules — never violate)
 1. **New project only.** Don't copy code from any pre-existing repo of the user. Third-party libraries are fine.
 2. **Synthetic data only.** No real match data or footage in the app or the repo, and none in the
-   demo except the one exception below. Fictional clubs and players. No Premier League or club
+   demo. Fictional clubs and players. No Premier League or club
    logos, real player names, broadcaster branding, or copyrighted music — in code, assets, or video.
-   - **The one exception** (Bowen approved it himself on 2026-10-19): a single real-footage
-     segment of **≤ 10 s in the demo video**. It shows the ground overlays drawn on a real camera.
-     The source is the Wikimedia Commons futsal final of 2019-10-06 by savinkins, CC BY 3.0.
-     Conditions:
-     - **Blurred:** everything off the pitch, every face, and any legible logo, sponsor or club
-       text on kit.
-     - **Attributed:** on screen and in `demo/realfeed/README.md` — author, title, source,
-       license, and "blurred and overlaid by us".
-     - **Decoupled from the app:**
-       - the footage is downloaded into `out/` and never committed;
-       - only camera calibration is committed (no frames, no player positions);
-       - `demo/realfeed/` is never imported by `sim/`, `analytics/`, `explain/`, `agents/`,
-         `api/` or `web/`;
-       - the public app never shows or loads it.
-     - **Never used** to train, tune or calibrate anything.
-     - **Cut it** if any of this can't be met; the risks and cut rule are in `docs/SPEC.md` §7, §9.
-     No other real data or footage goes in under this exception.
+   - The real-footage exception (approved 2026-10-19) was cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video.
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
@@ -140,6 +124,9 @@ _Fill in as they come to exist._
   it, copy the values into `sim/config.py`, then re-run every scan eval and `sim.export`
 - `uv run python -m eval.scan_detector` — scan-detector threshold sweep (SPEC 4.7), a few
   minutes; writes `eval/reports/scan_detector.md`
+- `uv run python -m eval.keypoint_ingest` — the scan detector on limb tracking (SPEC 4.7):
+  held-out F1 from keypoint-derived head yaw (`sim/keypoints.py` → `analytics/keypoints.py`) vs
+  the sim's tracked head yaw, about 20 s; writes `eval/reports/keypoint_ingest.md`
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
@@ -147,6 +134,7 @@ _Fill in as they come to exist._
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
+- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`

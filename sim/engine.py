@@ -455,9 +455,9 @@ class Simulation:
             self.carry[i] = (np.array(chosen.target), until)
             if hero:
                 self.hero_resolved_frame = until
-        elif self.scenario.shots:
+        elif chosen.kind == "shot" and chosen.action.startswith("shot:"):
             self._kick_shot(i, chosen, f)
-        else:  # shot: struck at goal; with `Scenario.shots`, `_kick_shot` instead
+        else:  # legacy `shot` (no placement): struck at goal and resolved like a pass
             self._kick_pass(i, np.array(chosen.target), i, f)
             self.events[-1].type = "shot"
             self.events[-1].id = f"shot:{self.ids[i]}:{f:04d}"
@@ -620,6 +620,7 @@ class Simulation:
         self.ball_vel = np.array([*(u * speed), 0.0])
         self.owner, self.last_kicker, self.kick_frame = -1, i, f
         k = self._keeper(1 - int(self.team[i]))
+        assert k >= 0, f"{self.ids[i]} takes a placed shot but the defending team has no keeper"
         x_k = float(self.pos[k, 0])
         y_k_line, t_k = shots.crossing(ball, ball + u, x_k, speed, self.ball_params)
         gx = shots.goal_x(1 if self.team[i] == 0 else -1)
@@ -695,6 +696,8 @@ class Simulation:
                           self.ids[k], int(self.team[k]),
                           {"toward": [float(aim[0]), float(aim[1])], "seen": f})
                 )  # fmt: skip
+        # `stopped` credits the keeper from any distance, but a struck ball does not stop in
+        # range with the default ball: distance_to_stop(24 m/s) is about 99 m, shot_range 30 m.
         stopped = float(np.linalg.norm(self.ball_vel[:2])) < 1.0
         if s["decided"] or not (stopped or (s["cross"] is not None and f >= s["cross"])):
             return False

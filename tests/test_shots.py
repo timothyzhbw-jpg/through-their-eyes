@@ -14,6 +14,7 @@ from sim.config import HALF_LENGTH
 from sim.counterfactual import drop_scan_counterfactual
 from sim.decision import DecisionContext, _placed_shot, evaluate_options
 from sim.engine import Simulation
+from sim.export import export_hero
 from sim.match import restart_after
 from sim.model import Decision, Event
 from sim.overrides import DropScan
@@ -55,6 +56,14 @@ def _fresh_context(side: float = -1.0) -> DecisionContext:
         keeper=1,
         from_y=side * 20.0,
     )
+
+
+def test_crossing_behind_the_ball_is_no_crossing():
+    ball = np.array([10.0, 2.0])
+    target = np.array([20.0, 2.0])
+    y, t = shots.crossing(ball, target, x_line=5.0, speed=24.0)
+    assert y == ball[1]
+    assert math.isinf(t)
 
 
 def test_fresh_near_post_sighting_prefers_far_and_mirrors_in_y():
@@ -367,6 +376,33 @@ def test_a_goal_has_one_terminal_event_and_a_kickoff_after_its_tail():
     assert restart_after(run) == "kick_off"
 
 
+class _NoAwayKeeper(Scenario):
+    """A flagged scenario whose defending team has no goalkeeper."""
+
+    name = "test_no_away_keeper"
+    hero = "H9"
+    shots = True
+
+    def setup(self, gen):
+        players = [make_player("H9", "ST"), make_player("A2", "CB")]
+        return Setup(players, np.array([[41.0, 0.0], [50.0, 0.0]]), 0)
+
+
+def test_a_shot_without_an_opposing_keeper_takes_the_legacy_path():
+    sim = Simulation(_NoAwayKeeper(), seed=0)
+    assert sim._keeper(1) == -1
+    sim.pending_decision = (sim.index("H9"), 0)
+    sim.forced_actions[(sim.index("H9"), 0)] = "shot"
+    run = sim.run()  # no crash: `_kick_shot` is never reached without a keeper
+    assert sim.decisions[0].chosen == "shot"
+    shot = next(e for e in run.events if e.type == "shot")
+    assert "placement" not in shot.attrs
+    # Resolved by the pass and out-of-play rules, not by the save model.
+    assert shot.attrs["outcome"] in {"complete", "intercepted", "out"}
+    assert sim.shot_in_flight is None
+    assert not any(e.type == "dive" for e in run.events)
+
+
 class _KeeperPassLane(Scenario):
     """A keeper is the earliest interceptor, but his positioning still follows the bisector."""
 
@@ -408,6 +444,19 @@ def test_resume_before_the_scan_and_during_the_shot_reproduces_the_run():
         snapshot = sim.snapshot()
         assert Simulation.resume(snapshot).run().to_bytes() == full.to_bytes()
         assert Simulation.resume(snapshot).run().to_bytes() == full.to_bytes()
+
+
+def test_hero_export_rescores_the_strikers_shot_options_on_the_truth():
+    data = export_hero(SCENARIO, 0)
+    decision = data["runs"]["factual"]["decision"]
+    assert {"shot:near", "shot:far"} <= {option["action"] for option in decision["options"]}
+
+
+def test_report_names_the_outcome_label_and_counts_goal_status():
+    text = hero_shot.report(SCENARIO, [40])
+    assert "Shot outcome label changed (e.g. wide -> saved), reported" in text
+    assert "Goal status changed (goal with the look vs without), reported" in text
+    assert "| Goal status |" in text
 
 
 def test_eval_truth_probability_matches_the_engine_context_at_each_decision(design_pairs):
@@ -481,7 +530,7 @@ def test_eval_design_rule_includes_the_counterfactual_decision_frame(monkeypatch
 
 @pytest.mark.parametrize("seed", DESIGN_SEEDS)
 def test_c1_defends_in_the_box_and_every_pass_of_the_routine_is_completed(seed):
-    """A believable cutback defence: at H9's reception at least four away outfielders are inside
+    """A believable cutback defence: at H9's reception at least five away outfielders are inside
     the penalty area, and none of them cut out a pass of the routine."""
     run = Simulation.from_scenario(SCENARIO, seed).run()
     passes = [e for e in run.events if e.type == "pass"]
@@ -490,4 +539,4 @@ def test_c1_defends_in_the_box_and_every_pass_of_the_routine_is_completed(seed):
     away = [j for j, p in enumerate(run.players) if p.team == 1 and p.role != "GK"]
     x, y = run.pos[reception.frame, away, 0], run.pos[reception.frame, away, 1]
     in_box = (x >= HALF_LENGTH - 16.5) & (np.abs(y) <= 20.16)
-    assert int(in_box.sum()) >= 4, seed
+    assert int(in_box.sum()) >= 5, seed
