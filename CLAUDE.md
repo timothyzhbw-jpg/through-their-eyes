@@ -124,6 +124,9 @@ _Fill in as they come to exist._
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
+- `uv run python -m eval.match_stats` — match statistics (SPEC 3.1, 9): passes, possession
+  changes, team possessions and shots per stitched match and per 90 min of play, on held-out
+  match seeds 100–119, about 30 s on all cores; writes `eval/reports/match_stats.md`
 - `uv run --group eval --env-file .env python -m eval.narration_ablation --seeds 3,100-103`
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
