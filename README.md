@@ -1,9 +1,55 @@
 # Through Their Eyes
 
-> See what they saw. An AI studio that explains key football moments through the player's own
+[![ci](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml?query=branch%3Amain)
+[![deploy](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/deploy.yml?query=branch%3Amain)
+[![tests: 1053 Python, 491 web, 10 pages end to end](https://img.shields.io/badge/tests-1053%20Python%20%C2%B7%20491%20web%20%C2%B7%2010%20pages%20end%20to%20end-2b7a3d)](.github/workflows/ci.yml)
+[![data: synthetic only](https://img.shields.io/badge/data-synthetic%20only-555)](#synthetic-data-only)
+[![license: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
+
+> **See what they saw.** An AI studio that explains key football moments through the player's own
 > perception — the scans before the ball arrived, what was visible, what he believed — and proves
 > every on-screen number before it airs.
 
+### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
+
+[![The live app in first person, through the eyes of H8, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner H9, marked in gold by the goal on the right, is in his sight; the caption reads "What did he see? H8 checked his shoulder before the ball reached him." with a verified tick.](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
+
+<sub>The live app through the eyes of H8, the midfielder, as he looks over his shoulder, away from
+the ball. The runner H9 (the gold 9, by the goal on the right) is in his sight during this look
+and at no other time before his pass. The caption is a verified claim (✓).</sub>
+
+## Judge it in 3 minutes
+1. **See what he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0):
+   press **Play**. Playback slows through the look (the KEY SCAN tag), and the runner H9 comes
+   into view.
+2. **Take the look away.** [Without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
+   the same moment re-simulated with that one scan removed. He no longer knows where H9 is, and
+   plays it back to H4; **With the look** switches back to the pass to H9. Without the look, 39 of
+   40 held-out seeds decide differently ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
+3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
+   the match streams in, and once the moment is detected the agent crew's breakdown plays
+   (Microsoft Foundry; **Sound on** for Azure AI Speech). Click a caption to open its claims and
+   the evidence frame. Then [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value)
+   and press **Check**: the verifier refutes it, and the line would not air.
+
+[The full tour](#the-full-tour) adds your own "What if…?", taking an agent down mid-breakdown,
+and a whole stitched match.
+
+## What only we do
+First-person replays and vision cones already exist ([related work](#related-work)); they show
+what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
+turns his head on a schedule calibrated to published scan rates (2.95 scans in the 10 s before
+receiving, against 3.0 ± 2.1 in Jordet et al. 2020: [realism](eval/reports/realism.md)), sees
+only what falls in his field of view, and decides on his *belief*: everyone where he last saw
+them, carried forward. Other tools show the passing lanes that existed; we show the ones he knew
+existed. And because the match is simulated, a moment can be played again with one look removed:
+the run is the same up to that scan and differs only through what he no longer saw
+([test](tests/test_export.py#L37)), so what he would have done without it is re-simulated, not
+guessed. Under all of it runs the backbone a broadcast needs: a crew of agents writes the
+breakdown for each audience and language, and code checks every number before it airs (90 of 90
+false claims refuted: [corruption](eval/reports/corruption.md)).
+
+## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
 Status: **deployed on Azure (M3)** — the sim, analytics, explain layer (moments, lenses, verified
 claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.md](docs/SPEC.md) §8–9.
@@ -17,7 +63,9 @@ sim, not estimated. Lenovo's figures for its Referee View, an AI-stabilised refe
 show that fans want first person; it shows what a camera captured, we show what the player
 perceived. Sources: [docs/REFERENCES.md](docs/REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026).
 
-## For judges: try it in 3 minutes
+<a name="for-judges-try-it-in-3-minutes"></a>
+
+## The full tour
 A simulated match with fictional players; no login. Each link opens the live site on Azure (the
 players take a few seconds to load). URL parameters: [web/README.md](web/README.md#url-parameters).
 
@@ -156,7 +204,8 @@ uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
 "What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): six possessions on
-one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), open play —
+one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), then open
+play twice —
 with moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
@@ -186,8 +235,9 @@ Every variable is documented in [.env.example](.env.example).
 </picture>
 
 Model steps run on Microsoft Foundry and fall back to a deterministic template; the Verifier is
-code. The Analyst's MCP tool server is wired into the workflow and used from the command line
-(`agents.run --mcp`); the deployed API's Analyst reads the claims from its prompt instead. The
+code. The Analyst calls our MCP tool server: in the deployed API as a subprocess for every
+uncached model breakdown (`TTE_ANALYST_MCP`, on by default), and from the command line with
+`agents.run --mcp`. The
 diagram is generated by [docs/architecture.py](docs/architecture.py), and
 [tests/test_architecture.py](tests/test_architecture.py) fails when it drifts from the code.
 
