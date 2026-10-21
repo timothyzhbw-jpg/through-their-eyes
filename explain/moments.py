@@ -11,6 +11,14 @@
 - `blind_side_pass` (M4): a pass to the target of a blind-side alert (SPEC 4.4), played while the
   alert is on or at most `BLIND_SIDE_PASS_S` after it cleared. Run on its own with
   `detect_blind_side_passes`; not part of `detect_moments` yet, so existing cards are unchanged.
+- `marker_scan`: a defender's look over his shoulder at the man he marks, before a pass to that
+  man (a hero with no decision on the ball, `corner_blind_side`). All of these hold: the pass's
+  intended receiver R is in the defender's own third when it is played; the defender D is R's
+  nearest outfield opponent then, goal-side of him; D starts a scan at most `SCAN_JUST_BEFORE_S`
+  before the pass with R within `MARKED_M` (the lexicon's `unmarked` threshold: he is marking
+  him); R has been out of D's sight for the `MARKER_UNSEEN_S` before it (the blind-side alert's
+  own unseen time, SPEC 4.4) and is seen during it. The anchor is the pass's resolution, where
+  the look pays off or not.
 
 Cards that describe the same action (anchor "action", e.g. the hero's pass) are merged into one
 card: the primary kind is the first in `PRIORITY`, `tags` lists every detector that fired. Goal,
@@ -23,9 +31,11 @@ import numpy as np
 
 from analytics.blind_side import DEFAULT_PARAMS, BlindSideAlerts, BlindSideParams, detect_alerts
 from analytics.pressing import frame_pressing
+from analytics.vision import player_visibility
 from analytics.xt import xt_for
 from explain.cards import LensName, MomentCard, MomentKind, Scalar
 from explain.lexicon import TERMS
+from sim.config import HALF_LENGTH, SimParams
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
@@ -39,11 +49,16 @@ PRE_ROLL_S = 6.0  # replay window before the anchor
 POST_ROLL_S = 1.0  # and after the action is resolved
 BLIND_SIDE_PASS_S = 3.0  # a pass this soon after a blind-side alert cleared is its moment
 PRESSED_THRESHOLD = float(TERMS["under heavy pressure"].threshold)
+MARKED_M = float(TERMS["unmarked"].threshold)  # a defender this close to his man is marking him
+MARKER_UNSEEN_S = DEFAULT_PARAMS.min_unseen_s  # out of sight this long: on his blind side
+OWN_THIRD_X = 2 * HALF_LENGTH / 6  # 17.5 m from halfway, the edge of a team's own third
+SEEN = SimParams().perception_threshold  # visibility from which the sim counts a player as seen
 PRIORITY: tuple[MomentKind, ...] = (
     "pressed_decision",
     "decision_after_scan",
     "line_breaking_pass",
     "sprint",
+    "marker_scan",
 )
 ALL_LENSES: list[LensName] = ["scan", "space", "pressure"]
 
@@ -398,6 +413,70 @@ def detect_blind_side_passes(
     return cards
 
 
+# --- the marker's look (a hero with no decision on the ball) ---------------------------------
+
+
+def _sighted(run: MatchRun, observer: int, target: int, frames: range) -> list[bool]:
+    """Whether the observer saw the target on each frame (the sim's perception, SPEC 3.4)."""
+    speed = np.linalg.norm(run.vel, axis=-1)
+    return [
+        bool(player_visibility(run.pos[f], run.head_yaw[f], speed[f])[observer, target] >= SEEN)
+        for f in frames
+    ]
+
+
+def detect_marker_scans(run: MatchRun) -> list[MomentCard]:
+    team = _team(run)
+    scans = _sorted_events(run, "scan")
+    last = len(run.owner) - 1
+    cards = []
+    for action in _sorted_events(run, "pass"):
+        r, f = run.index(action.attrs["to"]), action.frame
+        defend = 1 if team[r] == 1 else -1  # +1: the defenders' own goal is at x = -52.5
+        if -defend * run.pos[f, r, 0] < OWN_THIRD_X:
+            continue  # not in the defending team's own third
+        opp = [j for j in np.flatnonzero(team != team[r]) if run.players[j].role != "GK"]
+        d = opp[int(np.argmin(np.linalg.norm(run.pos[f, opp] - run.pos[f, r], axis=1)))]
+        if -defend * run.pos[f, d, 0] <= -defend * run.pos[f, r, 0]:
+            continue  # not goal-side of him
+        lo = f - _frames(run, SCAN_JUST_BEFORE_S)
+        for scan in scans:
+            if scan.player != run.ids[d] or not lo <= scan.frame <= f:
+                continue
+            g, end = scan.frame, min(int(scan.attrs["end"]), last)
+            unseen_from = g - _frames(run, MARKER_UNSEEN_S)
+            marked = float(np.linalg.norm(run.pos[g, d] - run.pos[g, r]))
+            if unseen_from < 1 or marked > MARKED_M:
+                continue
+            if any(_sighted(run, d, r, range(unseen_from, g))):
+                continue
+            if not any(_sighted(run, d, r, range(g, end + 1))):
+                continue
+            anchors, events, resolved_at = {"scan": scan.id, "pass": action.id}, [scan, action], f
+            resolved = _resolution(run, action)
+            if resolved:
+                anchors[resolved[0]] = resolved[1].id
+                events.append(resolved[1])
+                resolved_at = resolved[1].frame
+            anchor = resolved_at if resolved else min(int(action.attrs.get("end") or last), last)
+            sep = float(np.linalg.norm(run.pos[anchor, d] - run.pos[anchor, r]))
+            cards.append(
+                _card(
+                    run, "marker_scan", run.ids[d], anchor,
+                    (min(g, anchor - _frames(run, PRE_ROLL_S)), anchor + _frames(run, POST_ROLL_S)),
+                    receiver=run.ids[r], players=[run.ids[r], action.player], anchors=anchors,
+                    events=events,
+                    metrics={
+                        "marker_distance_at_scan_m": _r(marked, 2),
+                        "unseen_before_scan_s": MARKER_UNSEEN_S,
+                        "scan_to_pass_s": _r((f - g) * run.dt, 2),
+                        "separation_at_resolution_m": _r(sep, 2),
+                    },
+                )
+            )  # fmt: skip
+    return cards
+
+
 # --- all moments -------------------------------------------------------------------------
 
 
@@ -419,7 +498,7 @@ def _absorb(primary: MomentCard, other: MomentCard) -> None:
 def detect_moments(run: MatchRun) -> list[MomentCard]:
     """Every moment of a run, one card per action, sorted by anchor frame."""
     cards = detect_pressed_decisions(run) + detect_decisions_after_scan(run)
-    cards += detect_line_breaking_passes(run) + detect_sprints(run)
+    cards += detect_line_breaking_passes(run) + detect_sprints(run) + detect_marker_scans(run)
     by_action: dict[str, MomentCard] = {}
     merged: list[MomentCard] = []
     for card in sorted(cards, key=lambda c: PRIORITY.index(c.kind)):
@@ -431,3 +510,18 @@ def detect_moments(run: MatchRun) -> list[MomentCard]:
             by_action[action] = card
         merged.append(card)
     return sorted(merged, key=lambda c: (c.anchor_frame, c.id))
+
+
+def hero_card(run: MatchRun, cards: list[MomentCard] | dict[str, MomentCard]) -> MomentCard | None:
+    """The scenario hero's moment among `cards`: the card on his decision, or, for a hero with no
+    decision on the ball, his `marker_scan`. None when neither was detected."""
+    if run.hero is None:
+        return None
+    pool = [c for c in (cards.values() if isinstance(cards, dict) else cards) if not c.live_only]
+    decision = run.hero_decision()
+    if decision is not None:
+        return next(
+            (c for c in pool if (c.actor, c.anchor_frame) == (decision.player, decision.frame)),
+            None,
+        )
+    return next((c for c in pool if c.kind == "marker_scan" and c.actor == run.hero), None)
