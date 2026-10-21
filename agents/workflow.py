@@ -50,6 +50,7 @@ from agent_framework import (
 from pydantic import BaseModel, ValidationError
 
 from agents import fallbacks, prompts, schemas, telemetry
+from agents.budget import budget, replay_slot, slot_errors
 from agents.context import MomentContext
 from agents.delivery import DESCRIBED, VOICE_STYLES, delivery_tier, voice_cues, withheld
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, Outage, ask, describe
@@ -84,8 +85,9 @@ MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # Bump when code that shapes a breakdown changes without a prompt change: it is part of the
 # API's cache key, so cached breakdowns from the older code are not served again.
 # 2: tidy() keeps each connective once; 3: plan errors are reason codes; 4: audio-description
-# delivery; 5: rendered narration lines
-PIPELINE_VERSION = 5
+# delivery; 5: rendered narration lines; 6: the Director's priority sets the budget
+# (agents/budget.py)
+PIPELINE_VERSION = 6
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
 # lanes finish in either order, so the trace is sorted into this order before it is returned.
@@ -322,10 +324,15 @@ class Analyst(Step):
             attempt, notes, used = None, [BACK] if resumed else [], False
             if crew.mcp_error:
                 notes.append(f"MCP tools unavailable ({telemetry.error_class(crew.mcp_error)})")
+            tools = crew.analyst_tools if budget(msg.request.priority).analyst_tools else None
+            if crew.analyst_tools and tools is None:
+                notes.append(
+                    f"no MCP tools at {msg.request.priority} priority (the Director's budget)"
+                )
             if crew.uses_model("analyst"):
                 attempt = await crew.ask(
                     "analyst", prompts.ANALYST, prompts.analyst_prompt(mc, msg.request),
-                    analyst_model(list(mc.supported)), tools=crew.analyst_tools,
+                    analyst_model(list(mc.supported)), tools=tools,
                 )  # fmt: skip
                 if attempt.tools_called:
                     notes.append(f"MCP tools called: {', '.join(attempt.tools_called)}")
@@ -372,17 +379,19 @@ class Telestrator(Step):
         crew, mc = self.crew, self.crew.ctx
         with crew.step("telestrator", resumed=resumed or None) as span:
             template = template_plan(mc)
+            slot = replay_slot(mc, msg.request.priority)
             plan, source, errors, attempt, used = template, "template", [], None, False
             if crew.uses_model("telestrator"):
                 attempt = await crew.ask(
                     "telestrator", prompts.TELESTRATOR,
-                    prompts.telestrator_prompt(mc, msg.findings, template.to_web()), PlanDraft,
+                    prompts.telestrator_prompt(mc, msg.findings, template.to_web(), slot),
+                    PlanDraft,
                 )  # fmt: skip
                 if attempt.value is not None:
                     used = True
                     try:
                         candidate = attempt.value.to_plan()
-                        errors = validate_plan(candidate, mc)
+                        errors = validate_plan(candidate, mc) or slot_errors(candidate, slot)
                     except ValidationError as e:
                         candidate = None
                         errors = shape_errors(e)
