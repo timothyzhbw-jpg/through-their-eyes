@@ -26,8 +26,11 @@ reimplemented from its paper (`docs/REFERENCES.md`); no code is copied.
   velocities `(N, 2)` or `(F, N, 2)`, head yaw `(F, N)`, the ball, target points `(M, 2)`.
 - **Out:** arrays of times, probabilities, visibilities or detections; dataclasses for the scan
   detector and the alerts. No I/O, no global state.
-- The package imports only numpy, pydantic (for `KeypointFrame`) and itself. Nothing here imports
-  `sim/`, `explain/` or the rest of the repo, so the kernels can run on any tracking source.
+- The kernels import only numpy, pydantic (for `KeypointFrame`) and the package itself, so they
+  can run on any tracking source. Two readers of the live stream reach into `sim/` for names and
+  constants, never for sim state: `live_stats.py` (the roster's fictional names) and `tactics.py`
+  (which scenarios begin with a set piece, and the distance xG model). Nothing here imports
+  `explain/`.
 
 ## Invariants
 
