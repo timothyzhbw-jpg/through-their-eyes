@@ -49,7 +49,7 @@ tar -xzf out/score/assets/fluid/fluid-soundfont_3.1.orig.tar.gz -C out/score/ass
 Then render both variants (about 30 s each; the script checks the SoundFont's SHA-256):
 
 ```bash
-uv run video/score/score.py --cues video/score/cues/v7.json
+uv run video/score/score.py --cues video/score/cues/v8.json --out out/score/v8
 ```
 
 `--check` only resolves the cue sheet and prints it. The trailer spec comes from the cue sheet's
@@ -110,7 +110,7 @@ node video/score/preview.mjs --spec <trailer.json> --picture <cut.mp4> --vo <vo 
 | `check.py`, `analyze.py` | the acceptance checks and the band and section measurements |
 | `preview.mjs` | the score under a rendered cut, as a 720p MP4 |
 | `cues/v7.json` | the cue sheet for cut v7 |
-| `cues/academy_wip.json` | a draft for the academy cut (the edit's work in progress; `--trailer <snapshot>`) |
-| `report_v7.md` | the checks and measurements of both variants on cut v7 |
+| `cues/v8.json` | the cue sheet for the academy cut v8 (the story beats are placeholders until the Blender clips land) |
+| `report_v7.md`, `report_v8.md` | the checks and measurements of both variants on each cut |
 
 Licences are in [`../CREDITS.md`](../CREDITS.md).

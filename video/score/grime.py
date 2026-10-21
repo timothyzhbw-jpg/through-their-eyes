@@ -209,6 +209,7 @@ class Grime(Arranger):
     # --- the groove -----------------------------------------------------------------------
     def groove(self, s: Section, style: str) -> None:
         prev_bass = None
+        self.riff_clock = 0  # each section starts the motif on its downbeat
         for c in self.steps(s):
             m = c.moods
             if self.quiet(m):
