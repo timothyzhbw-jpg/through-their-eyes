@@ -69,6 +69,12 @@ REFUSAL: dict[Language, str] = {
     "en": "That is not something he could do from there.",
     "zh": "他当时没有这个选项。",
 }
+# A marker's moment (`marker_scan`): he never had the ball, so there is no option to force.
+NO_DECISION_REFUSAL: dict[Language, str] = {
+    "en": "He never had the ball here: this moment is about where he looked, not a choice to "
+    "replay.",
+    "zh": "他在这一刻没有拿球：这个时刻讲的是他往哪儿看，没有可以重来的选择。",
+}
 ROLE_NAMES = {
     "GK": "goalkeeper", "CB": "centre-back", "FB": "full-back", "DM": "defensive midfielder",
     "CM": "central midfielder", "AM": "attacking midfielder", "W": "winger", "ST": "striker",
@@ -478,8 +484,9 @@ async def answer_question(
     action, source = await map_question(ctx, question, client)
     factual = ctx.run.hero_decision()
     if action is None:
+        refusal = (REFUSAL if factual is not None else NO_DECISION_REFUSAL)[language]
         return WhatIfAnswer(question=question, language=language, action=None, source=source,
-                            refusal=REFUSAL[language], counterfactual=None,
+                            refusal=refusal, counterfactual=None,
                             factual_action=factual.chosen if factual else None, claims=[],
                             payload=None)  # fmt: skip
     cf_id = what_if_id(factual.player, factual.frame, action)

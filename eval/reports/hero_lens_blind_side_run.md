@@ -10,50 +10,50 @@ Seeds 100–139 (40). Intended lens `scan`; intervention `drop_scan` on `H8`, re
 | … factual action kept the ball | 40/40 | — |
 | … the ball is lost after the intervention | 1/40 | — |
 | Selected lens: scan · space · pressure | 40 · 0 · 0 | — |
-| Median margin of `scan` over the next lens (xT) | 0.0030 | — |
-| Mean realised ΔxT (factual − intervention) | +0.0826 | — |
+| Median margin of `scan` over the next lens (xT) | 0.0128 | — |
+| Mean realised ΔxT (factual − intervention) | +0.1091 | — |
 
 Δ per lens in xT of the hero's team (SPEC 5.2); — when the lens is unavailable (e.g. no scan before the decision). Result: `kept` or `lost` possession after the hero's action.
 
 | Seed | Selected | Δscan | Δspace | Δpressure | Factual | Result | Intervention | Result | ΔxT |
 |---|---|---|---|---|---|---|---|---|---|
-| 100 | scan | +0.0707 | +0.0684 | +0.0004 | `pass:H9` | kept | `pass:H7` | kept | +0.076 |
-| 101 | scan | +0.0883 | +0.0857 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.086 |
-| 102 | scan | +0.0926 | +0.0898 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.078 |
-| 103 | scan | +0.0780 | +0.0757 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.071 |
-| 104 | scan | +0.1003 | +0.0976 | +0.0000 | `pass:H9` | kept | `carry` | kept | +0.085 |
-| 105 | scan | +0.0883 | +0.0859 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.072 |
-| 106 | scan | +0.0995 | +0.0963 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.096 |
-| 107 | scan | +0.0741 | +0.0715 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.079 |
-| 108 | scan | +0.0861 | +0.0833 | +0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.077 |
-| 109 | scan | +0.0960 | +0.0928 | +0.0001 | `pass:H9` | kept | `pass:H4` | kept | +0.081 |
-| 110 | scan | +0.0916 | +0.0882 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.075 |
-| 111 | scan | +0.0729 | +0.0693 | +0.0001 | `pass:H9` | kept | `pass:H1` | kept | +0.069 |
-| 112 | scan | +0.0945 | +0.0920 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.105 |
-| 113 | scan | +0.0647 | +0.0634 | +0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.065 |
-| 114 | scan | +0.0808 | +0.0778 | +0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.064 |
-| 115 | scan | +0.0951 | +0.0921 | +0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.089 |
-| 116 | scan | +0.0762 | +0.0737 | +0.0002 | `pass:H9` | kept | `pass:H1` | kept | +0.090 |
-| 117 | scan | +0.0906 | +0.0883 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.084 |
-| 118 | scan | +0.0760 | +0.0727 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.070 |
-| 119 | scan | +0.1419 | +0.0990 | +0.0000 | `pass:H9` | kept | `pass:H9` | lost | +0.135 |
-| 120 | scan | +0.1049 | +0.1025 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.089 |
-| 121 | scan | +0.0881 | +0.0845 | +0.0001 | `pass:H9` | kept | `pass:H2` | kept | +0.082 |
-| 122 | scan | +0.1013 | +0.0994 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.096 |
-| 123 | scan | +0.0900 | +0.0870 | +0.0001 | `pass:H9` | kept | `pass:H4` | kept | +0.085 |
-| 124 | scan | +0.1009 | +0.0980 | +0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.099 |
-| 125 | scan | +0.0700 | +0.0674 | +0.0000 | `pass:H9` | kept | `carry` | kept | +0.082 |
-| 126 | scan | +0.0982 | +0.0951 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.088 |
-| 127 | scan | +0.1002 | +0.0975 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.090 |
-| 128 | scan | +0.0775 | +0.0743 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.084 |
-| 129 | scan | +0.0797 | +0.0758 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.068 |
-| 130 | scan | +0.0708 | +0.0671 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.067 |
-| 131 | scan | +0.0720 | +0.0685 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.070 |
-| 132 | scan | +0.0719 | +0.0695 | +0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.074 |
-| 133 | scan | +0.0861 | +0.0831 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.087 |
-| 134 | scan | +0.0698 | +0.0666 | +0.0000 | `pass:H9` | kept | `carry` | kept | +0.082 |
-| 135 | scan | +0.1170 | +0.0842 | +0.0001 | `pass:H9` | kept | `carry` | kept | +0.091 |
-| 136 | scan | +0.0946 | +0.0911 | +0.0000 | `pass:H9` | kept | `pass:H5` | kept | +0.093 |
-| 137 | scan | +0.0908 | +0.0873 | +0.0000 | `pass:H9` | kept | `pass:H3` | kept | +0.077 |
-| 138 | scan | +0.1153 | +0.0794 | +0.0001 | `pass:H9` | kept | `carry` | kept | +0.078 |
-| 139 | scan | +0.0800 | +0.0772 | +0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.078 |
+| 100 | scan | +0.0974 | +0.0869 | +0.0001 | `pass:H9` | kept | `pass:H7` | kept | +0.099 |
+| 101 | scan | +0.1116 | +0.0993 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.112 |
+| 102 | scan | +0.0977 | +0.0852 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.102 |
+| 103 | scan | +0.1059 | +0.0955 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.107 |
+| 104 | scan | +0.1007 | +0.0918 | -0.0000 | `pass:H9` | kept | `carry` | kept | +0.107 |
+| 105 | scan | +0.0962 | +0.0822 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.100 |
+| 106 | scan | +0.1315 | +0.1179 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.132 |
+| 107 | scan | +0.1075 | +0.0940 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.107 |
+| 108 | scan | +0.0974 | +0.0866 | -0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.099 |
+| 109 | scan | +0.1066 | +0.0928 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.113 |
+| 110 | scan | +0.0989 | +0.0851 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.102 |
+| 111 | scan | +0.1048 | +0.0916 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.105 |
+| 112 | scan | +0.1361 | +0.1201 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.133 |
+| 113 | scan | +0.0908 | +0.0846 | -0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.091 |
+| 114 | scan | +0.0917 | +0.0807 | +0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.094 |
+| 115 | scan | +0.1113 | +0.0990 | +0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.115 |
+| 116 | scan | +0.1222 | +0.1112 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.122 |
+| 117 | scan | +0.1061 | +0.0948 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.108 |
+| 118 | scan | +0.0937 | +0.0799 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.095 |
+| 119 | scan | +0.1181 | +0.0962 | -0.0000 | `pass:H9` | kept | `pass:H9` | lost | +0.121 |
+| 120 | scan | +0.1226 | +0.1115 | +0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.128 |
+| 121 | scan | +0.0949 | +0.0823 | +0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.097 |
+| 122 | scan | +0.1278 | +0.1178 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.129 |
+| 123 | scan | +0.1227 | +0.1097 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.122 |
+| 124 | scan | +0.1303 | +0.1187 | +0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.131 |
+| 125 | scan | +0.1057 | +0.0959 | +0.0000 | `pass:H9` | kept | `carry` | kept | +0.105 |
+| 126 | scan | +0.1202 | +0.1068 | +0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.123 |
+| 127 | scan | +0.1027 | +0.0874 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.105 |
+| 128 | scan | +0.1045 | +0.0910 | -0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.104 |
+| 129 | scan | +0.0907 | +0.0765 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.093 |
+| 130 | scan | +0.1011 | +0.0840 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.101 |
+| 131 | scan | +0.0996 | +0.0853 | -0.0000 | `pass:H9` | kept | `pass:H4` | kept | +0.099 |
+| 132 | scan | +0.0944 | +0.0872 | -0.0000 | `pass:H9` | kept | `pass:H7` | kept | +0.095 |
+| 133 | scan | +0.1070 | +0.0940 | -0.0000 | `pass:H9` | kept | `pass:H1` | kept | +0.107 |
+| 134 | scan | +0.1158 | +0.1046 | -0.0000 | `pass:H9` | kept | `carry` | kept | +0.118 |
+| 135 | scan | +0.1296 | +0.1119 | +0.0000 | `pass:H9` | kept | `carry` | kept | +0.124 |
+| 136 | scan | +0.1110 | +0.0967 | +0.0000 | `pass:H9` | kept | `pass:H5` | kept | +0.111 |
+| 137 | scan | +0.0958 | +0.0831 | +0.0000 | `pass:H9` | kept | `pass:H3` | kept | +0.100 |
+| 138 | scan | +0.1091 | +0.0905 | +0.0000 | `pass:H9` | kept | `carry` | kept | +0.103 |
+| 139 | scan | +0.1049 | +0.0944 | -0.0000 | `pass:H9` | kept | `pass:H2` | kept | +0.105 |

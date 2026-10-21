@@ -89,6 +89,11 @@ _Fill in as they come to exist._
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
   CI run on main.
+- `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
+  (SPEC 2, 8): every hero moment × persona × language, new ones paced to the per-client limit,
+  at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
+  cached on the replica's disk only). Run after the last deploy and after any later one: the
+  cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run --env-file .env python -m infra.voices` — check the narration voices and their speaking
@@ -100,7 +105,9 @@ _Fill in as they come to exist._
   (`Scenario.intervention`) change the outcome? Design seeds are 0–99. By default it runs the
   held-out seeds, 100–139, or 200–239 for `press_escape` (100–139 were seen while fixing the
   decision model), and writes `eval/reports/hero_lens_<scenario>.md`. With other `--seeds` it
-  writes `hero_lens_<scenario>_<first>-<last>.md` instead (`--out` for another path)
+  writes `hero_lens_<scenario>_<first>-<last>.md` instead (`--out` for another path). With
+  `--scenario corner_blind_side` it reads the marker's look (`marker_scan`, no decision on the
+  ball): the scan lens's Δ, whether its scan is the key scan, and `eval.hero_marking`'s gate
 - `uv run python -m eval.hero_marking` — set-piece hero eval (SPEC 3.6, `corner_blind_side`):
   without the marker's key scan, is the runner unmarked when the cutback arrives, and with it is
   the marker there? Held-out seeds 100–139 (design 0–39), about 15 s; writes
@@ -137,6 +144,10 @@ _Fill in as they come to exist._
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
+- `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
+  seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
+  and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
+  behaves as it did for the fit: re-run it, then regenerate the exports (web/README.md)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`

@@ -5,6 +5,9 @@ claim whose slots are bound into its predicate, with an English and a Chinese te
 the facts the Analyst can hand to the Narrator (SPEC 6), and the starting point of the
 corruption eval (`eval/corruption.py`).
 
+A hero with no decision on the ball (a marker, `marker_scan` moment) has his own builders
+(`MARKER_BUILDERS`): his look, whether he stayed with his man, and the run without the look.
+
 Numbers are rounded to the precision they are shown at, and `approx` tolerates exactly half a
 display unit: "41 metres" claims 40.5–41.5 m. With the moment's card in the context, claims anchor
 on `<card>.<anchor>` (SPEC 5.1); evidence always lists plain event ids, for the viewer to seek to.
@@ -19,6 +22,7 @@ from explain import lexicon
 from explain.cards import MomentCard
 from explain.claims import Claim, Predicate, Slot, event, fn, slot
 from explain.functions import EvalContext, Inconclusive, Refuted
+from explain.moments import hero_card
 from sim.config import SimParams
 from sim.counterfactual import CounterfactualResult, WhatIfResult
 from sim.model import Decision, Event
@@ -708,11 +712,359 @@ CF_BUILDERS: dict[str, Builder] = {
 }
 
 
+# --- a marker's look (`marker_scan`: no decision on the ball) -------------------------------
+
+
+@dataclass(frozen=True)
+class MarkerRefs:
+    """The events of a marker's moment: his look, the pass to his man, how it resolved."""
+
+    run: MatchRun
+    card: MomentCard
+    marker: str
+    man: str
+    scan: Event
+    played: Event  # the pass to his man
+    completion: Event | None  # his man's reception, if he received it
+
+    @classmethod
+    def of(cls, run: MatchRun, card: MomentCard) -> MarkerRefs:
+        done = card.anchors.get("completion")
+        return cls(
+            run=run,
+            card=card,
+            marker=card.actor,
+            man=card.receiver,
+            scan=run.event(card.anchors["scan"]),
+            played=run.event(card.anchors["pass"]),
+            completion=run.event(done) if done else None,
+        )
+
+    def at(self, name: str) -> str:
+        return f"{self.card.id}.{name}"
+
+    def cf_completion(self, cf: CounterfactualResult) -> Event | None:
+        """His man's reception of the same pass in the run without the look."""
+        played = next((e for e in cf.counterfactual.events if e.id == self.played.id), None)
+        if played is None or played.attrs.get("outcome") != "complete":
+            return None
+        return next(
+            (e for e in cf.counterfactual.events
+             if e.type == "reception" and e.player == played.attrs["receiver"]
+             and e.frame == played.attrs["end"]),
+            None,
+        )  # fmt: skip
+
+
+def _scan_by_player() -> list[Predicate]:
+    return [
+        _eq(fn("event_attr", event=slot("scan"), attr="type"), "scan"),
+        _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+    ]
+
+
+def marker_unseen(ctx: EvalContext, r: MarkerRefs) -> Claim:
+    unseen = fn("metric_at", metric="time_unseen", observer=slot("player"), target=slot("runner"),
+                anchor=slot("scan"))  # fmt: skip
+    values = {"player": r.marker, "runner": r.man, "scan": r.scan.id}
+    return Claim(
+        id="marker_unseen",
+        template="Before he looked, {player} had not seen {runner} for {secs|second|seconds}.",
+        templates={"zh": "回头之前，{player}已经有{secs}秒没看到{runner}了。"},
+        slots={"player": Slot(ref=r.marker), "runner": Slot(ref=r.man),
+               "scan": Slot(ref=r.scan.id), "secs": _num(ctx.value(unseen, values), 1)},
+        predicate=Predicate(op="all", args=[*_scan_by_player(),
+                                            _approx(unseen, slot("secs"), 1)]),
+        evidence=[r.scan.id],
+    )  # fmt: skip
+
+
+def marker_blind_side(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    pred = lexicon.blind_side(slot("player"), slot("runner"), anchor=r.at("scan"))
+    if not ctx.value(pred.lhs, {"player": r.marker, "runner": r.man}):
+        return None
+    return Claim(
+        id="blind_side",
+        template="{runner} was on {player}'s blind side when he looked.",
+        templates={"zh": "{player}回头时，{runner}在他的盲区。"},
+        slots={"runner": Slot(ref=r.man), "player": Slot(ref=r.marker)},
+        predicate=pred,
+        terms=["blind side"],
+        evidence=[r.scan.id],
+    )
+
+
+def marker_scan(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    lead = fn("seconds_between", a=slot("scan"), b=slot("pass"))
+    values = {"scan": r.scan.id, "pass": r.played.id}
+    secs = ctx.value(lead, values)
+    if round(secs, 1) <= 0.0:
+        return None  # the look did not come before the ball was played
+    return Claim(
+        id="marker_scan",
+        template="{player} looked over his shoulder {secs|second|seconds} before {passer} played "
+        "the ball to {runner}.",
+        templates={"zh": "{passer}把球传给{runner}之前{secs}秒，{player}回头看了一眼。"},
+        slots={"player": Slot(ref=r.marker), "passer": Slot(ref=r.played.player),
+               "runner": Slot(ref=r.man), "scan": Slot(ref=r.scan.id),
+               "pass": Slot(ref=r.played.id), "secs": _num(secs, 1)},
+        predicate=Predicate(op="all", args=[
+            *_scan_by_player(),
+            _eq(fn("event_attr", event=slot("pass"), attr="type"), "pass"),
+            _eq(fn("event_attr", event=slot("pass"), attr="player"), slot("passer")),
+            _eq(fn("event_attr", event=slot("pass"), attr="to"), slot("runner")),
+            _approx(lead, slot("secs"), 1),
+        ]),
+        evidence=[r.scan.id, r.played.id],
+    )  # fmt: skip
+
+
+def marker_seen_in_scan(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    seen = fn("max_visibility", observer=slot("player"), target=slot("runner"), event=slot("scan"))
+    values = {"player": r.marker, "runner": r.man, "scan": r.scan.id}
+    if ctx.value(seen, values) < SEEN:
+        return None
+    return Claim(
+        id="seen_in_scan",
+        template="When {player} looked over his shoulder, he saw {runner}.",
+        templates={"zh": "{player}回头的那一眼，看到了{runner}。"},
+        slots={"player": Slot(ref=r.marker), "runner": Slot(ref=r.man),
+               "scan": Slot(ref=r.scan.id)},
+        predicate=Predicate(op="all", args=[*_scan_by_player(),
+                                            Predicate(op="ge", lhs=seen, rhs=SEEN)]),
+        evidence=[r.scan.id],
+    )  # fmt: skip
+
+
+def marker_scan_side(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    side = fn("scan_side", scan=slot("scan"))
+    return Claim(
+        id="scan_side",
+        template="{player} looked over his {side:vocab} shoulder.",
+        templates={"zh": "{player}扭头看向了{side:vocab}后方。"},
+        slots={"player": Slot(ref=r.marker), "scan": Slot(ref=r.scan.id),
+               "side": Slot(value=ctx.value(side, {"scan": r.scan.id}))},
+        predicate=Predicate(op="all", args=[*_scan_by_player(), _eq(side, slot("side"))]),
+        evidence=[r.scan.id],
+    )  # fmt: skip
+
+
+def marker_runner_received(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    if r.completion is None:
+        return None
+    return Claim(
+        id="runner_received",
+        template="{runner} took the pass from {passer}.",
+        templates={"zh": "{runner}接到了{passer}的传球。"},
+        slots={"runner": Slot(ref=r.man), "passer": Slot(ref=r.played.player),
+               "reception": Slot(ref=r.completion.id)},
+        predicate=Predicate(op="all", args=[
+            Predicate(op="exists", lhs=event(slot("reception"))),
+            _eq(fn("event_attr", event=slot("reception"), attr="player"), slot("runner")),
+            _eq(fn("event_attr", event=r.at("pass"), attr="receiver"), slot("runner")),
+            _eq(fn("event_attr", event=r.at("pass"), attr="player"), slot("passer")),
+        ]),
+        evidence=[r.played.id, r.completion.id],
+    )  # fmt: skip
+
+
+def marker_reception_zone(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    """Where his man got the ball, from his man's side of the pitch (for listeners)."""
+    if r.completion is None:
+        return None
+    at = r.at("completion")
+    band, lane = (fn("metric_at", metric=m, player=slot("player"), anchor=at)
+                  for m in ("pitch_band", "pitch_lane"))  # fmt: skip
+    values = {"player": r.man}
+    return Claim(
+        id="reception_zone",
+        template="{player} received the ball {band:vocab}, {lane:vocab}.",
+        templates={"zh": "{player}在{band:vocab}{lane:vocab}接球。"},
+        slots={"player": Slot(ref=r.man), "band": Slot(value=ctx.value(band, values)),
+               "lane": Slot(value=ctx.value(lane, values))},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=at, attr="player"), slot("player")),
+            _eq(band, slot("band")), _eq(lane, slot("lane")),
+        ]),
+        evidence=[r.completion.id],
+    )  # fmt: skip
+
+
+def stayed_with_runner(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    if r.completion is None:
+        return None
+    at = r.at("completion")
+    gap = fn("distance", a=slot("player"), b=slot("runner"), anchor=at)
+    value = ctx.value(gap, {"player": r.marker, "runner": r.man})
+    return Claim(
+        id="stayed_with_runner",
+        template="{player} was {gap|metre|metres} from {runner} when the ball reached him.",
+        templates={"zh": "球到{runner}脚下时，{player}离他{gap}米。"},
+        slots={"player": Slot(ref=r.marker), "runner": Slot(ref=r.man), "gap": _num(value, 1)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=at, attr="player"), slot("runner")),
+            _approx(gap, slot("gap"), 1),
+        ]),
+        evidence=[r.completion.id],
+    )  # fmt: skip
+
+
+def runner_pressure(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
+    if r.completion is None:
+        return None
+    at = r.at("completion")
+    press = fn("metric_at", metric="pressing_intensity", player=slot("runner"), anchor=at)
+    value = 100.0 * ctx.value(press, {"runner": r.man})
+    return Claim(
+        id="runner_pressure",
+        template="When the ball reached {runner}, pressing intensity on him was {pressure}%.",
+        templates={"zh": "球到{runner}脚下时，他承受的逼抢强度为{pressure}%。"},
+        slots={"runner": Slot(ref=r.man), "pressure": _num(value, 0)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=at, attr="player"), slot("runner")),
+            _approx(press, slot("pressure", scale=0.01), 0, scale=0.01),
+        ]),
+        evidence=[r.completion.id],
+    )  # fmt: skip
+
+
+def cf_lost_runner(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -> Claim | None:
+    """Where the marker is when the ball reaches his man in the run without the look."""
+    if not isinstance(cf, CounterfactualResult) or r.completion is None:
+        return None
+    rec = r.cf_completion(cf)
+    if rec is None:
+        return None
+    gap = fn("distance", a=slot("player"), b=slot("runner"), anchor=rec.id, cf=cf.scan_id)
+    value = ctx.value(gap, {"player": r.marker, "runner": r.man})
+    lost = lexicon.lost_his_man(slot("player"), slot("runner"), anchor=rec.id, cf=cf.scan_id)
+    received = _eq(fn("event_attr", event=rec.id, attr="player", cf=cf.scan_id), slot("runner"))
+    shown = _num(value, 1)
+    if value > lexicon.TERMS["lost his man"].threshold and shown.value > 5:
+        return Claim(
+            id="cf_lost_runner",
+            template="Without the look, {player} loses his man: he is {gap|metre|metres} from "
+            "{runner} when the ball arrives.",
+            templates={"zh": "如果没有那一眼，{player}会跟丢{runner}：球到时他已在{gap}米开外。"},
+            slots={"player": Slot(ref=r.marker), "runner": Slot(ref=r.man), "gap": shown},
+            predicate=Predicate(op="all", args=[received, lost, _approx(gap, slot("gap"), 1)]),
+            terms=["lost his man"],
+            evidence=[r.scan.id],
+        )  # fmt: skip
+    return Claim(
+        id="cf_lost_runner",
+        template="Without the look, {player} is {gap|metre|metres} from {runner} when the ball "
+        "arrives.",
+        templates={"zh": "如果没有那一眼，球到时{player}离{runner}有{gap}米。"},
+        slots={"player": Slot(ref=r.marker), "runner": Slot(ref=r.man), "gap": shown},
+        predicate=Predicate(op="all", args=[received, _approx(gap, slot("gap"), 1)]),
+        evidence=[r.scan.id],
+    )  # fmt: skip
+
+
+def cf_unmarked(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -> Claim | None:
+    if not isinstance(cf, CounterfactualResult):
+        return None
+    rec = r.cf_completion(cf)
+    if rec is None:
+        return None
+    pred = lexicon.predicate("unmarked", rec.id, player=slot("runner"), cf=cf.scan_id)
+    if not ctx.value(pred.lhs, {"runner": r.man}) > pred.rhs:
+        return None
+    return Claim(
+        id="cf_unmarked",
+        template="Without the look, {runner} receives the ball unmarked.",
+        templates={"zh": "如果没有那一眼，{runner}接球时无人盯防。"},
+        slots={"runner": Slot(ref=r.man)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=rec.id, attr="player", cf=cf.scan_id), slot("runner")),
+            pred,
+        ]),
+        terms=["unmarked"],
+        evidence=[r.scan.id],
+    )  # fmt: skip
+
+
+def cf_belief_error(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -> Claim | None:
+    if not isinstance(cf, CounterfactualResult):
+        return None
+    err = fn("metric_at", metric="sighting_error", observer=slot("player"), target=slot("runner"),
+             anchor=r.played.id, cf=cf.scan_id)  # fmt: skip
+    value = ctx.value(err, {"player": r.marker, "runner": r.man})
+    return Claim(
+        id="cf_belief_error",
+        template="Without the look, {player}'s picture of {runner} is off by {err|metre|metres} "
+        "when the ball is played.",
+        templates={"zh": "如果没有那一眼，出球时{player}对{runner}位置的判断会偏差{err}米。"},
+        slots={"player": Slot(ref=r.marker), "runner": Slot(ref=r.man), "err": _num(value, 1)},
+        predicate=_approx(err, slot("err"), 1),
+        evidence=[r.scan.id, r.played.id],
+    )  # fmt: skip
+
+
+def marker_cf_value(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -> Claim | None:
+    """The look's worth: the expected turnover where the pass resolved, with it minus without
+    (the scan lens of a `marker_scan`, `explain.lenses.marker_scan_lens`)."""
+    if not isinstance(cf, CounterfactualResult):
+        return None
+    delta = fn("cf_delta", of=fn("turnover_at_resolution", event=r.played.id), scan=cf.scan_id)
+    return Claim(
+        id="cf_value",
+        template="That look was worth {dxt} in expected threat.",
+        templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
+        slots={"dxt": _num(ctx.value(delta), 2)},
+        predicate=_approx(delta, slot("dxt"), 2),
+        evidence=[cf.scan_id],
+    )
+
+
+MarkerBuilder = Callable[..., Claim | None]
+
+MARKER_BUILDERS: dict[str, MarkerBuilder] = {
+    "marker_unseen": marker_unseen,
+    "blind_side": marker_blind_side,
+    "marker_scan": marker_scan,
+    "seen_in_scan": marker_seen_in_scan,
+    "scan_side": marker_scan_side,
+    "runner_received": marker_runner_received,
+    "reception_zone": marker_reception_zone,
+    "stayed_with_runner": stayed_with_runner,
+    "runner_pressure": runner_pressure,
+}
+MARKER_CF_BUILDERS: dict[str, MarkerBuilder] = {
+    "cf_lost_runner": cf_lost_runner,
+    "cf_unmarked": cf_unmarked,
+    "cf_belief_error": cf_belief_error,
+    "cf_value": marker_cf_value,
+}
+
+
+def _built(
+    ctx: EvalContext, refs: object, builders: list[tuple[str, Builder, tuple]]
+) -> dict[str, Claim]:
+    out: dict[str, Claim] = {}
+    for kind, build, extra in builders:
+        try:
+            claim = build(ctx, refs, *extra)
+        except (Inconclusive, Refuted):
+            continue  # not measurable in this run
+        if claim is not None:
+            out[kind] = claim
+    return out
+
+
 def hero_claims(
     ctx: EvalContext, cf: CounterfactualResult | WhatIfResult | None = None
 ) -> dict[str, Claim]:
     """Every hero-moment fact that can be measured in this run, keyed by kind."""
     decision = ctx.run.hero_decision()
+    if decision is None:
+        card = hero_card(ctx.run, ctx.cards)
+        if card is not None and card.kind == "marker_scan":
+            builders = [(k, b, ()) for k, b in MARKER_BUILDERS.items()]
+            if cf is not None:
+                builders += [(k, b, (cf,)) for k, b in MARKER_CF_BUILDERS.items()]
+            return _built(ctx, MarkerRefs.of(ctx.run, card), builders)
     card = next(
         (c for c in ctx.cards.values()
          if decision is not None and not c.live_only

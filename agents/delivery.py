@@ -200,6 +200,7 @@ ANALYST_NUMBERS: frozenset[str] = frozenset(
         "observed_share",
         "pressure_at_pass",
         "receiver_pressure",
+        "runner_pressure",
     }
 )
 
