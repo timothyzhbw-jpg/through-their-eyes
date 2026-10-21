@@ -1,8 +1,9 @@
 // What the broadcast camera adds to the 3D view (SPEC 7): the camera itself (broadcast.ts gives
-// the shot, this puts the three.js camera there), the live tags over players (sprint speed, the
-// POV player's scans and blind-side alerts, marked `sim`), and on the grass rings under the hero
-// (white) and the runner (gold) as on the board, the blind-side lines and, around the decision,
-// the pass options as on the tactical board, and on request the skeleton (../skeleton/). Grass
+// the shot, this puts the three.js camera there), the live tags over players (measured stats on
+// the factual run, otherwise the sim's sprint; scans and blind-side alerts), and on the grass
+// rings under the hero (white) and the runner (gold) as on the board, the blind-side lines and,
+// around the decision, the pass options as on the tactical board, and on request the skeleton
+// (../skeleton/). Grass
 // layers are depth tested so players stand on top of them, like a broadcaster's ground graphics.
 
 import { Line } from "@react-three/drei";
@@ -21,17 +22,18 @@ import {
 } from "../options/passOptions";
 import { useView } from "../session";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
+import { statsStore } from "../stats/store";
 import { useStore } from "../store/store";
 import { cameraPose, shotAt, type BroadcastPath, type Shot } from "./broadcast";
-import { liveTags, type LiveTag } from "./broadcastTags";
-import { COLORS } from "./scene";
+import { liveTags, tagSource, type LiveTag } from "./broadcastTags";
+import { COLORS, teamColor } from "./scene";
 
 const NEAR = 1; // m: the camera is 40-110 m from the play; a far near plane keeps depth precise
 const FAR = 400;
 const GRASS = 0.05; // m above the pitch for ground graphics
 const TAG_PX = 26; // on-screen height of a live tag
 const TAG_LIFT = 2.3; // m above the grass where a tag sits
-const TAGS = 6; // sprites in the pool
+const TAGS = 10; // sprites in the pool
 
 /** Put the three.js camera on the broadcast shot at this frame. */
 export function filmBroadcast(
@@ -211,12 +213,30 @@ function GrassOptions() {
 
 const TAG_W = 768;
 const TAG_H = 96;
-const tagColor = { sprint: COLORS.gold, scan: COLORS.sight, blind: ALERT_COLOR };
 
-/** A tag as a texture: a dark pill with the label in colour, the text, and `sim`. */
+/** Label colour: the player's team for a name, gold for speed, sight for the measured events. */
+function tagFill(tag: LiveTag, hero: { players: { team: number }[] }): string {
+  switch (tag.kind) {
+    case "name":
+      return teamColor(hero.players[tag.player]?.team ?? 0);
+    case "speed":
+    case "sprint":
+      return COLORS.gold;
+    case "distance":
+    case "pass":
+    case "shot":
+    case "scan":
+      return COLORS.sight;
+    case "blind":
+      return ALERT_COLOR;
+  }
+}
+
+/** A tag as a texture: a dark pill with the label in colour, the text, and where it was measured. */
 const tagTextures = new Map<string, THREE.CanvasTexture>();
-function tagTexture(tag: LiveTag): THREE.CanvasTexture {
-  const key = `${tag.kind}|${tag.label}|${tag.text}`;
+function tagTexture(tag: LiveTag, color: string): THREE.CanvasTexture {
+  const source = tagSource(tag.kind);
+  const key = `${color}|${source}|${tag.kind}|${tag.label}|${tag.text}`;
   const hit = tagTextures.get(key);
   if (hit) return hit;
   const cv = document.createElement("canvas");
@@ -230,16 +250,16 @@ function tagTexture(tag: LiveTag): THREE.CanvasTexture {
   const label = c.measureText(tag.label).width;
   const text = c.measureText(tag.text).width;
   c.font = small;
-  const sim = c.measureText("sim").width;
+  const mark = c.measureText(source).width;
   const gap = 16;
   const pad = 22;
-  const width = Math.min(TAG_W - 4, pad + label + gap + text + gap + sim + pad);
+  const width = Math.min(TAG_W - 4, pad + label + gap + text + gap + mark + pad);
   const x0 = (TAG_W - width) / 2;
   c.fillStyle = "rgba(8, 14, 12, 0.86)";
   c.beginPath();
   c.roundRect(x0, 8, width, TAG_H - 16, 14);
   c.fill();
-  c.fillStyle = tagColor[tag.kind];
+  c.fillStyle = color;
   c.fillRect(x0, 8, 7, TAG_H - 16);
   let x = x0 + pad;
   c.font = big;
@@ -250,7 +270,7 @@ function tagTexture(tag: LiveTag): THREE.CanvasTexture {
   x += text + gap;
   c.font = small;
   c.fillStyle = COLORS.muted;
-  c.fillText("sim", x, TAG_H / 2 + 2);
+  c.fillText(source, x, TAG_H / 2 + 2);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tagTextures.set(key, tex);
@@ -258,15 +278,25 @@ function tagTexture(tag: LiveTag): THREE.CanvasTexture {
 }
 
 function TagSprites({ sample }: { sample: Sample }) {
-  const { hero, playback } = useView();
+  const view = useView();
+  const { hero, playback } = view;
+  const statsState = statsStore(view);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const sprites = useRef<(THREE.Sprite | null)[]>([]);
   useFrame(({ size }) => {
     const s = playback.get();
+    const st = statsState.get();
     const run = hero.runs[s.mode];
     const tags =
       s.camera === "broadcast"
-        ? liveTags(hero, run, s.frame, hero.ids.indexOf(s.povPlayer), s.blindSide)
+        ? liveTags(
+            hero,
+            run,
+            s.frame,
+            hero.ids.indexOf(s.povPlayer),
+            s.blindSide,
+            st.status === "ready" ? st.stats : null,
+          )
         : [];
     // World height of TAG_PX on screen for a sprite that ignores distance (sizeAttenuation off).
     const h = (2 * TAG_PX * Math.tan(((camera.fov / 2) * Math.PI) / 180)) / size.height;
@@ -280,7 +310,7 @@ function TagSprites({ sample }: { sample: Sample }) {
       const level = stacked.get(tag.player) ?? 0;
       stacked.set(tag.player, level + 1);
       const material = sprite.material;
-      const map = tagTexture(tag);
+      const map = tagTexture(tag, tagFill(tag, hero));
       if (material.map !== map) {
         material.map = map;
         material.needsUpdate = true;

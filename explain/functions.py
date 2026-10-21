@@ -1,8 +1,9 @@
 """Predicate functions (SPEC 5.3), evaluated against a sim run and its counterfactuals.
 
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
-observed_share, scan_side, max_visibility, cf_delta. Every function accepts `cf: <scan id>` to
-evaluate on the counterfactual run without that scan instead of the factual run, or
+observed_share, scan_side, max_visibility, seconds_between, turnover_at_resolution,
+opponents_bypassed, cf_delta. Every function accepts `cf: <scan id>` to evaluate on the
+counterfactual run without that scan instead of the factual run, or
 `cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7).
 
 Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
@@ -33,7 +34,7 @@ from analytics.pressing import aggregate, frame_pressing
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from analytics.xt import xt_for
 from explain.cards import MomentCard
-from sim.config import HALF_LENGTH, HALF_WIDTH
+from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
 from sim.counterfactual import (
     WHAT_IF_PREFIX,
     CounterfactualResult,
@@ -266,15 +267,23 @@ def count_events(
     ctx: EvalContext,
     run: MatchRun,
     type: str,
-    anchor: str,
+    anchor: str | None = None,
     from_: float = 0.0,
     to: float = 0.0,
     player: str | None = None,
     team: int | None = None,
     where: dict | None = None,
 ) -> int:
-    """Events of a type (optionally by player / team / attributes) with anchor+from ≤ t ≤ to."""
-    lo, hi = ctx.frame(run, anchor, from_), ctx.frame(run, anchor, to)
+    """Events of a type (optionally by player / team / attributes) with anchor+from ≤ t ≤ to.
+
+    `where` maps an attribute to the value it must have, or to a list of the values it may have.
+    Without an anchor, the whole recorded run: a stitched match's totals (SPEC 3.1, the recap)."""
+    if anchor is None:
+        if from_ or to:
+            raise Inconclusive("a window from/to needs an anchor")
+        lo, hi = 0, len(run.owner) - 1
+    else:
+        lo, hi = ctx.frame(run, anchor, from_), ctx.frame(run, anchor, to)
     if lo > hi:
         raise Inconclusive(f"empty window: from {from_} s is after to {to} s")
     if player is not None:
@@ -285,9 +294,25 @@ def count_events(
         and lo <= e.frame <= hi
         and (player is None or e.player == player)
         and (team is None or e.team == team)
-        and all(e.attrs.get(k) == v for k, v in where.items())
+        and all(_matches(e.attrs.get(k), v) for k, v in where.items())
         for e in run.events
     )
+
+
+def _matches(value: Any, wanted: Any) -> bool:
+    return value in wanted if isinstance(wanted, list) else value == wanted
+
+
+def opponents_bypassed(ctx: EvalContext, run: MatchRun, event: str) -> int:
+    """Outfield opponents a pass went past (`explain.moments.bypassed_opponents`, SPEC 5.1)."""
+    from explain.moments import bypassed_opponents  # moments builds on the lexicon, not on this
+
+    e = ctx.event(run, event)
+    if e.type != "pass":
+        raise Refuted(f"{e.id} is not a pass")
+    if e.attrs.get("end") is None:
+        raise Inconclusive(f"{e.id} was never received or lost")
+    return len(bypassed_opponents(run, e))
 
 
 def scans_in_window(
@@ -403,6 +428,25 @@ def max_visibility(
     return max(float(ctx.visibility_matrix(run, f)[i, j]) for f in range(e.frame, int(end) + 1))
 
 
+def seconds_between(ctx: EvalContext, run: MatchRun, a: str, b: str) -> float:
+    """Seconds from event `a` to event `b` (negative when `b` came first)."""
+    return float(ctx.event(run, b).t - ctx.event(run, a).t)
+
+
+def turnover_at_resolution(ctx: EvalContext, run: MatchRun, event: str) -> float:
+    """Expected turnover where a pass resolved, in xT (`explain.lenses.turnover_at_resolution`:
+    pressing intensity on the receiver times the stake at the ball, 1 x stake if it was lost)."""
+    from explain.lenses import turnover_at_resolution as resolve
+
+    e = ctx.event(run, event)
+    if e.type != "pass":
+        raise Refuted(f"{e.id} is not a pass")
+    out = resolve(run, e.id)
+    if out is None:
+        raise Inconclusive(f"{e.id} was not resolved before the run ended")
+    return float(out["cost"])
+
+
 _GRID: list[np.ndarray] = []
 
 
@@ -422,6 +466,9 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "observed_share": observed_share,
     "scan_side": scan_side,
     "max_visibility": max_visibility,
+    "opponents_bypassed": opponents_bypassed,
+    "seconds_between": seconds_between,
+    "turnover_at_resolution": turnover_at_resolution,
     # "cf_delta" is evaluated lazily by `Evaluator.cf_delta`: its `of` runs on two runs.
 }
 
@@ -479,6 +526,26 @@ def _time_since_last_scan(ctx: EvalContext, run: MatchRun, f: int, player: str) 
 def _visibility(ctx: EvalContext, run: MatchRun, f: int, observer: str, target: str) -> float:
     i, j = ctx.player(run, observer), ctx.player(run, target)
     return float(ctx.visibility_matrix(run, f)[i, j])
+
+
+def _time_unseen(ctx: EvalContext, run: MatchRun, f: int, observer: str, target: str) -> float:
+    """Seconds since the observer last saw the target before frame f: the sim's own test
+    (visibility ≥ `perception_threshold`, SPEC 3.4), with everyone known at frame 0."""
+    i, j = ctx.player(run, observer), ctx.player(run, target)
+    seen = SimParams().perception_threshold
+    last = next((g for g in range(f - 1, 0, -1) if ctx.visibility_matrix(run, g)[i, j] >= seen), 0)
+    return (f - last) * run.dt
+
+
+def _sighting_error(ctx: EvalContext, run: MatchRun, f: int, observer: str, target: str) -> float:
+    """Metres between where the target is and where the observer believes he is: his last
+    sighting, extrapolated at most `belief_horizon_s` (the sim's belief, SPEC 3.4, rebuilt from
+    sightings by `explain.lenses.believed_position`). For players without a recorded decision."""
+    from explain.lenses import believed_position
+
+    ctx.player(run, observer)
+    j = ctx.player(run, target)
+    return float(np.linalg.norm(believed_position(run, observer, target, f) - run.pos[f, j]))
 
 
 def _blind_side(ctx: EvalContext, run: MatchRun, f: int, observer: str, target: str) -> bool:
@@ -693,4 +760,6 @@ METRICS: dict[str, Callable[..., Any]] = {
     "xt": _xt,
     "pressing_intensity": _pressing_intensity,
     "observed_share": _observed_share,
+    "time_unseen": _time_unseen,
+    "sighting_error": _sighting_error,
 }
