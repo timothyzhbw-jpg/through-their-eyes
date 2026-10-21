@@ -10,10 +10,10 @@
   },
   "site": "https://ttesite1ff906.z14.web.core.windows.net",
   "voice": {
-    "name": "en-US-ChristopherNeural",
+    "name": "en-US-GuyNeural",
     "lang": "en-US",
-    "rate": "-3%",
-    "pitch": "-4%",
+    "rate": "-5%",
+    "pitch": "-12%",
     "fx": "trailer"
   },
   "voices": {
@@ -906,7 +906,7 @@
     },
     "crew": {
       "template": "lineup",
-      "dur": 9.0,
+      "dur": 8.25,
       "alpha": false,
       "params": {
         "header": "THE CREW",
@@ -1145,6 +1145,15 @@
         "out": "fade",
         "backdrop": true
       }
+    },
+    "tag-eyes": {
+      "template": "tag",
+      "dur": 2.4,
+      "alpha": true,
+      "params": {
+        "text": "TAKE HIS EYES",
+        "sub": "YOU CHOOSE THE LOOK"
+      }
     }
   },
   "beats": [
@@ -1196,7 +1205,9 @@
         {
           "id": "vo01",
           "at": 0.3,
-          "text": "Before the ball arrives…"
+          "text": "Before the ball arrives…",
+          "style": "whispering",
+          "degree": 1.0
         }
       ],
       "sfx": [
@@ -1225,7 +1236,9 @@
         {
           "id": "vo02",
           "at": 0.25,
-          "text": "the great ones look."
+          "text": "the great ones look.",
+          "style": "whispering",
+          "degree": 1.0
         }
       ],
       "sfx": [
@@ -1459,7 +1472,9 @@
         {
           "id": "vo07",
           "at": 0.35,
-          "text": "See what they saw."
+          "text": "See what they saw.",
+          "style": "excited",
+          "degree": 0.6
         }
       ],
       "sfx": [
@@ -1605,7 +1620,7 @@
     },
     {
       "id": "b14-crew",
-      "dur": 9.0,
+      "dur": 8.25,
       "picture": {
         "src": "title",
         "id": "crew"
@@ -1618,7 +1633,7 @@
         },
         {
           "id": "vo13",
-          "at": 3.4,
+          "at": 3.25,
           "text": "Director, Analyst, Telestrator, Narrator, Verifier, Voice."
         }
       ],
@@ -1706,7 +1721,7 @@
     },
     {
       "id": "b16-bringback",
-      "dur": 4.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
@@ -1725,7 +1740,7 @@
       "overlays": [
         {
           "title": "subboard",
-          "at": 1.4
+          "at": 0.75
         }
       ],
       "vo": [
@@ -1738,12 +1753,12 @@
       "sfx": [
         {
           "name": "tick",
-          "at": 1.52,
+          "at": 0.87,
           "gain_db": -6
         },
         {
           "name": "tick",
-          "at": 1.92,
+          "at": 1.27,
           "gain_db": -6
         }
       ],
@@ -1835,28 +1850,45 @@
       }
     },
     {
-      "id": "b20-whatif",
-      "dur": 3.75,
+      "id": "b20-eyes",
+      "dur": 6.0,
       "picture": {
         "src": "capture",
-        "shot": "08-what-if",
-        "in": 4.0,
-        "crop": [
-          300,
-          200,
-          1340,
-          754
-        ],
+        "shot": "13-take-his-eyes",
+        "in": 0.9,
         "push": [
           1.0,
           1.05
         ]
       },
+      "overlays": [
+        {
+          "title": "tag-eyes",
+          "at": 0.1
+        }
+      ],
       "vo": [
         {
           "id": "vo18",
-          "at": 0.7,
-          "text": "Ask what if, and the simulation answers."
+          "at": 0.3,
+          "text": "Take his eyes: choose the look, and the match plays it out."
+        },
+        {
+          "id": "vo18b",
+          "at": 4.1,
+          "text": "Look the other way… he plays it safe."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.35,
+          "gain_db": -9
+        },
+        {
+          "name": "whoosh",
+          "at": 1.85,
+          "gain_db": -6
         }
       ],
       "out": {
@@ -1866,7 +1898,7 @@
     },
     {
       "id": "b21-live",
-      "dur": 4.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "02-live-stream",
@@ -2130,7 +2162,9 @@
         {
           "id": "vo27",
           "at": 0.4,
-          "text": "Through Their Eyes. [pause 500] See what they saw."
+          "text": "Through Their Eyes. [pause 500] See what they saw.",
+          "style": "excited",
+          "degree": 0.6
         }
       ],
       "sfx": [

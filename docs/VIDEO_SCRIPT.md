@@ -22,8 +22,10 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
 - **Rights.** Synthetic match, fictional clubs and players, no real footage anywhere. Original
   title design (no league, club or game-publisher look); CC0 music, sound effects synthesized in
   the repo, OFL fonts: [video/CREDITS.md](../video/CREDITS.md).
-- **Audio.** Voice: Azure AI Speech, `en-US-ChristopherNeural` (deep, slowed 3%, pitched down 4%,
-  then lowered another 4% and compressed for a trailer read); the one Chinese line is the app's
+- **Audio.** Voice: Azure AI Speech, `en-US-GuyNeural` (the app's play-by-play voice, PR #83), in a
+  lower register for the trailer (slowed 5%, pitched down 12%, then another 4% and compressed), whispering
+  on the two cold-open lines; `en-US-ChristopherNeural` is the deeper alternative (one line in
+  `trailer.json`); the one Chinese line is the app's
   own verified narration in the app's play-by-play voice, `zh-CN-YunjianNeural` with the
   sports-commentary style. Music enters on the "See what they saw" hit and is ducked under the
   voice; the whole mix is normalised to −14 LUFS with the true peak held under −1.5 dBTP.
@@ -51,14 +53,14 @@ Times are in the finished film. **Picture**: `cine` = filmed in the web app's ci
 | 0:28.5 | 3.75 | The replay | app `03-breakdown` | The crew's replay on the stage with its verified captions; "THROUGH THEIR EYES — THE AI MATCH STUDIO". | Football, replayed through the player's eyes. |
 | 0:32.25 | 5.25 | Every line checked | app `07-evidence` | Over the evidence card: four lines stamped ✓ in turn — he saw H9 in the scan, H9's run was on his blind side, nearest opponent `{gap}` m, that look was worth `{dxt}` xT. | Every line is checked against the simulation before it airs. |
 | 0:37.5 | 4.5 | A wrong number | app `09-verifier` | "Try a wrong number": the verifier refutes it; a red ✗ slams "WRONG NUMBER — WOULD NOT AIR". | Try a wrong number… and it never airs. |
-| 0:42 | 9.0 | The crew | card | Six cards dealt like a squad line-up: Director, Analyst (asks the MCP tools), Telestrator, Narrator, Verifier, Voice. | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
-| 0:51 | 3.75 | Red card | app `10-drill` | The failure drill: the Telestrator row reads TEMPLATE, AgentDown; a red card rises, whistle: "TELESTRATOR DOWN — THE TEMPLATE AIRS. THE REPLAY PLAYS ON." | Take an agent down… |
-| 0:54.75 | 4.5 | Substitution | app `10-drill` | Bring back: the row turns back to MODEL from its checkpoint; an LED board flips OFF TEMPLATE → ON TELESTRATOR. | …bring it back, and it picks up where it left off. |
-| 0:59.25 | 2.25 | Casual fan | app `03-breakdown` | The replay with the casual captions; tag "CASUAL FAN". | The same moment, for every fan, in every language. |
-| 1:01.5 | 2.25 | Analyst | app `05-personas` | The analyst's captions; tag "ANALYST". | — |
-| 1:03.75 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, the caption on screen: 出球时，H9离最近的对手有11.0米。 |
-| 1:08.25 | 3.75 | What if | app `08-what-if` | A free question typed, the simulator's verified answer. | Ask what if, and the simulation answers. |
-| 1:12 | 4.5 | Live | app `02-live-stream` | The stitched match on the broadcast camera, live from the API, with the camera director's chip; "A WHOLE MATCH — LIVE". | A whole match, live, with a camera director. |
+| 0:42 | 8.25 | The crew | card | Six cards dealt like a squad line-up: Director, Analyst (asks the MCP tools), Telestrator, Narrator, Verifier, Voice. | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
+| 0:50.25 | 3.75 | Red card | app `10-drill` | The failure drill: the Telestrator row reads TEMPLATE, AgentDown; a red card rises, whistle: "TELESTRATOR DOWN — THE TEMPLATE AIRS. THE REPLAY PLAYS ON." | Take an agent down… |
+| 0:54 | 3.75 | Substitution | app `10-drill` | Bring back: the row turns back to MODEL from its checkpoint; an LED board flips OFF TEMPLATE → ON TELESTRATOR. | …bring it back, and it picks up where it left off. |
+| 0:57.75 | 2.25 | Casual fan | app `03-breakdown` | The replay with the casual captions; tag "CASUAL FAN". | The same moment, for every fan, in every language. |
+| 1:00 | 2.25 | Analyst | app `05-personas` | The analyst's captions; tag "ANALYST". | — |
+| 1:02.25 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, the caption on screen: 出球时，H9离最近的对手有11.0米。 |
+| 1:06.75 | 6.0 | Take his eyes | app `13-take-his-eyes` | The viewer turns his look to his left on the dial, picks the moment, presses Look: first person with that look, then the board — "Your look changes his call", the gold path back to H4. Tag "TAKE HIS EYES". | Take his eyes: choose the look, and the match plays it out. Look the other way… he plays it safe. |
+| 1:12.75 | 3.75 | Live | app `02-live-stream` | The stitched match on the broadcast camera, live from the API, with the camera director's chip; "A WHOLE MATCH — LIVE". | A whole match, live, with a camera director. |
 | **Your call** (the music drops out) | | | | | |
 | 1:16.5 | 4.5 | Decide | app `12-your-call` | His picture only; a draining ring "YOUR CALL — YOU ONLY KNOW WHAT HE KNEW". The pick: the safe ball to H4. Clock ticks. | Your call. You only know what he knew. |
 | 1:21 | 4.5 | Reveal | app `12-your-call` | Your call plays out in the sim, then the true picture: H9's run was on his blind side. The music returns. | Then see what really happened. |

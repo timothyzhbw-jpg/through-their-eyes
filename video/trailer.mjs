@@ -707,6 +707,14 @@ function reportWarnings(ctx, timeline, lines, titles, modePath) {
       duration: wavSeconds(wav),
     });
   }
+  // Measured lengths replace the spec check's estimates ("may not fit") for the lines that have audio.
+  if (timed.length) {
+    const measured = new Set(timed.map((t) => `vo "${t.id}"`));
+    for (let i = warnings.length - 1; i >= 0; i--) {
+      const w = warnings[i];
+      if (w.includes("may not fit") && [...measured].some((id) => w.startsWith(id))) warnings.splice(i, 1);
+    }
+  }
   warnings.push(...voRoomWarnings(timed));
   if (existsSync(modePath) && readFileSync(modePath, "utf8").trim() === "silent") {
     warnings.push(
