@@ -1,11 +1,20 @@
 // "Your call" (SPEC 7): decide at the hero's decision with only what he knew, then see what your
 // call led to, the true picture, what he did and why, and the two compared. The 3D view is his
 // picture from behind him (YourCallScene); over it, a label identifies the carrier, one marker per
-// option (buttons: tap, or arrow keys and Enter) and a dotted path to the option aimed at; a swipe
-// from the carrier picks the option it points at. The card tells each beat with verified lines only.
+// option (buttons: tap, or arrow keys and Enter; the card's "Pick with the keyboard" focuses the
+// first) and a dotted path to the option aimed at; a swipe from the carrier picks the option it
+// points at. The card tells each beat with verified lines only.
 
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type RefObject,
+} from "react";
 import type { Vec2 } from "../data/types";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
@@ -79,6 +88,8 @@ function useSize(fallback: { w: number; h: number }) {
 export function YourCallStage({ scene = true }: { scene?: boolean }) {
   const yc = useYourCall();
   const step = useStore(yc.state, (s) => s.step);
+  // The marker buttons, left to right: the card's keyboard button focuses the first.
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   useEffect(() => startYourCallClock(yc), [yc]);
   if (step === "closed") return null;
   return (
@@ -89,16 +100,18 @@ export function YourCallStage({ scene = true }: { scene?: boolean }) {
         if (e.key === "Escape") yc.close();
       }}
     >
-      <CallView yc={yc} scene={scene} />
-      <Card yc={yc} />
+      <CallView yc={yc} scene={scene} buttons={buttons} />
+      <Card yc={yc} pickByKeyboard={() => buttons.current[0]?.focus()} />
     </section>
   );
 }
 
+type Buttons = RefObject<(HTMLButtonElement | null)[]>;
+
 // ---------- the view: his picture, the markers, the dotted path, the swipe ----------
 
-function CallView({ yc, scene }: { yc: YourCall; scene: boolean }) {
-  const { session, options, picture } = yc;
+function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; buttons: Buttons }) {
+  const { options, picture } = yc;
   const step = useStore(yc.state, (s) => s.step);
   const aim = useStore(yc.state, (s) => s.aim);
   const tried = useStore(yc.state, (s) => s.tried);
@@ -121,7 +134,6 @@ function CallView({ yc, scene }: { yc: YourCall; scene: boolean }) {
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
   }, [options, camera, w, h]);
   const aimed = options.find((o) => o.action === aim) ?? null;
-  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const stale = new Set(picture!.players.filter((p) => p.stale).map((p) => p.id));
   const deciding = step === "deciding";
@@ -245,18 +257,19 @@ function CallView({ yc, scene }: { yc: YourCall; scene: boolean }) {
           </div>
         )}
         <p className="yc-tag" aria-hidden="true">
-          {viewTag(step, session.hero.heroId ?? "")}
+          {viewTag(step)}
         </p>
       </div>
     </figure>
   );
 }
 
-function viewTag(step: string, hero: string): string {
-  if (step === "deciding") return `His picture · you are ${hero}`;
-  if (step === "outcome") return "Re-simulated: your call";
-  if (step === "truth") return "The truth at the decision";
-  return "What happened";
+function viewTag(step: string): string {
+  if (step === "deciding") return "His picture"; // the view labels the carrier "you"
+  if (step === "outcome") return "Your call in the sim";
+  if (step === "truth") return "The truth";
+  if (step === "actual") return "What he did";
+  return "Compared";
 }
 
 /** The dotted path of an option on screen: along the grass from the carrier to its target. */
@@ -280,7 +293,7 @@ function pathPoints(
 
 // ---------- the card: the prompt, then each beat of the reveal ----------
 
-function Card({ yc }: { yc: YourCall }) {
+function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void }) {
   const { session, options } = yc;
   const state = useStore(yc.state, (s) => s);
   const { narration, language, status } = useBreakdown();
@@ -321,16 +334,23 @@ function Card({ yc }: { yc: YourCall }) {
           Your call
         </h2>
         <p className="yc-lead">
-          You are {heroId}. You know only what he knew: everyone stands where he pictured them, and
+          You are {heroId}. This is only his picture: everyone stands where he pictured them, and
           the players he had not seen lately are grey.
         </p>
         <p className="yc-hint">
-          Tap a teammate, or swipe from {heroId} toward one. Keyboard: arrow keys, then Enter.
+          Tap a teammate, or swipe from {heroId} toward one. Keyboard: Pick with the keyboard, then
+          the arrow keys and Enter.
         </p>
         {state.tried.length > 0 && (
           <p className="yc-hint">Tried: {state.tried.map(labelOf(options)).join(", ")}</p>
         )}
-        <div className="yc-actions">{back}</div>
+        <div className="yc-actions">
+          {/* The markers come before the card: this is the keyboard's way back to them. */}
+          <button type="button" className="yc-secondary" onClick={pickByKeyboard}>
+            Pick with the keyboard
+          </button>
+          {back}
+        </div>
       </aside>
     );
   }
@@ -340,7 +360,7 @@ function Card({ yc }: { yc: YourCall }) {
     outcome: "See the truth",
     truth: "What he did",
     actual: "Compare",
-    compare: "Try another option",
+    compare: "Try another call",
   };
   const fixture = [reveal.outcome, reveal.truth, reveal.actual, reveal.compare]
     .flatMap((b) => b.lines)
@@ -365,12 +385,10 @@ function Card({ yc }: { yc: YourCall }) {
             </h2>
             {!reveal.same && (
               <p className="yc-lead">
-                Re-simulated from the decision with your call forced; everything else plays as the
-                sim would. Causal inside the sim only.
+                The sim plays on from the decision with your call. Causal inside the sim only.
               </p>
             )}
             <Lines lines={reveal.outcome.lines} />
-            {playing && <p className="yc-hint">Playing…</p>}
           </>
         )}
         {beat === "truth" && (
@@ -380,13 +398,12 @@ function Card({ yc }: { yc: YourCall }) {
             </h2>
             {reveal.truth.moved.length > 0 ? (
               <p className="yc-lead">
-                Not where he pictured them: {reveal.truth.moved.join(", ")}.{" "}
-                <span className="source" title="Read from the sim export, not a verified claim">
-                  sim
-                </span>
+                Not where he pictured them: {reveal.truth.moved.join(", ")}. <SimTag />
               </p>
             ) : (
-              <p className="yc-lead">Everyone was where he pictured them.</p>
+              <p className="yc-lead">
+                Everyone was where he pictured them. <SimTag />
+              </p>
             )}
             <Lines lines={reveal.truth.lines} />
           </>
@@ -397,7 +414,6 @@ function Card({ yc }: { yc: YourCall }) {
               {reveal.actual.title}
             </h2>
             <Lines lines={reveal.actual.lines} />
-            {playing && <p className="yc-hint">Playing…</p>}
           </>
         )}
         {beat === "compare" && (
@@ -418,15 +434,18 @@ function Card({ yc }: { yc: YourCall }) {
             <Lines lines={reveal.compare.lines} />
           </>
         )}
-        {waiting && beat !== "outcome" && (
+        {/* His own call's outcome tells it with the breakdown's lines too. */}
+        {waiting && (beat !== "outcome" || reveal.same) && (
           <p className="yc-hint">The breakdown's verified lines are on their way…</p>
         )}
         {fixture && (
           <p className="yc-hint">
-            Offline fixture: lines marked “fixture” were not checked by the verifier.
+            Sample data: lines marked “fixture” were not checked by the verifier.
           </p>
         )}
       </div>
+      {/* Outside the live region: it comes and goes with every clip. */}
+      {playing && (beat === "outcome" || beat === "actual") && <p className="yc-hint">Playing…</p>}
       <div className="yc-actions">
         <button
           ref={primary}
@@ -449,6 +468,15 @@ function Card({ yc }: { yc: YourCall }) {
 
 const labelOf = (options: CallOption[]) => (action: string) =>
   options.find((o) => o.action === action)?.label ?? action;
+
+/** Marks a statement read from the sim export rather than a verified claim, for screen readers too. */
+function SimTag() {
+  return (
+    <span className="source" title="Read from the sim export, not a verified claim">
+      sim<span className="sr-only"> (read from the sim export, not a verified claim)</span>
+    </span>
+  );
+}
 
 function Lines({ lines }: { lines: RevealLine[] }) {
   if (!lines.length) return null;

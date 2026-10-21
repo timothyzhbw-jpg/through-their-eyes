@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 // "Your call" (SPEC 7) on the page: the deep link, the option markers (focusable, named, no
-// numbers before the choice), keyboard and swipe, every beat of the reveal with its verified
-// lines, reduced motion, the live breakdown arriving, and a hero moment of the stitched match.
+// numbers before the choice), keyboard (with its way in from the card) and swipe, every beat of
+// the reveal with its verified lines and sim tag, reduced motion, the live breakdown arriving, and
+// a hero moment of the stitched match.
 // The 3D view is left out (no WebGL here); markers, path and card are DOM.
 
 import { act, type ReactNode } from "react";
@@ -169,6 +170,17 @@ describe("Your call: deciding", () => {
     expect(yc.state.get().step).toBe("closed");
   });
 
+  it("keyboard: Pick with the keyboard focuses the left-most marker, and so aims it", () => {
+    const { session, yc } = open();
+    const el = mount(session);
+    expect(document.activeElement).toBe(el.querySelector(".yc-card h2"));
+    click(button(el, "Pick with the keyboard"));
+    const [first] = markers(el);
+    expect(document.activeElement).toBe(first);
+    const aimed = yc.options.find((o) => o.action === yc.state.get().aim);
+    expect(first.getAttribute("aria-label")?.split(", ")[0]).toBe(aimed?.label);
+  });
+
   it("swipe: a drag from the carrier toward a teammate passes to him", () => {
     const { session, yc } = open();
     const el = mount(session);
@@ -216,6 +228,9 @@ describe("Your call: the reveal", () => {
     expect(textOf(el.querySelector(".yc-card h2"))).toBe("Your call: Pass to H4");
     expect(textOf(el)).toContain("If H8 had passed to H4, H4 would have received it.");
     expect(textOf(el.querySelector(".yc-lines .kind"))).toMatch(/^Counterfactual/);
+    // "Playing…" is shown, but outside the live region: it is not announced with every clip.
+    expect(textOf(el.querySelector(".yc-card"))).toContain("Playing…");
+    expect(textOf(el.querySelector(".yc-beat"))).not.toContain("Playing…");
     act(() => {
       for (let k = 0; k < 60; k++) yc.tick(0.1);
     });
@@ -225,6 +240,11 @@ describe("Your call: the reveal", () => {
     click(button(el, "See the truth"));
     expect(textOf(el.querySelector(".yc-card h2"))).toBe("The true picture");
     expect(textOf(el)).toContain("Not where he pictured them: A3, A4, H10, H7.");
+    const sim = el.querySelector(".yc-lead .source")!;
+    expect(textOf(sim)).toBe("sim (read from the sim export, not a verified claim)");
+    expect(textOf(sim.querySelector(".sr-only"))).toBe(
+      "(read from the sim export, not a verified claim)",
+    );
     expect(textOf(el)).toContain("H8 thought the pass to H9 had a 0.80 chance of arriving");
 
     click(button(el, "What he did"));
@@ -245,7 +265,7 @@ describe("Your call: the reveal", () => {
       "That option would have been worth 0.10 less in expected threat than what he did.",
     );
 
-    click(button(el, "Try another option"));
+    click(button(el, "Try another call"));
     expect(yc.state.get().step).toBe("deciding");
     expect(markers(el).some((m) => m.getAttribute("aria-label") === "Pass to H4, tried")).toBe(
       true,
@@ -324,6 +344,24 @@ describe("Your call: online and in the match", () => {
     act(() => yc.next());
     expect(textOf(el)).toContain("Without that look, H8 would have passed to H4.");
     expect(el.querySelector(".yc-lines .source")).toBeNull(); // verified: no fixture tag
+  });
+
+  it("his own call's outcome waits for the breakdown's lines too", async () => {
+    const fetch = fakeFetch({
+      "POST /api/breakdowns": (body) => {
+        const { personas, languages } = body as { personas: string[]; languages: string[] };
+        return json(breakdownResponse({}, { persona: personas[0], language: languages[0] }));
+      },
+    });
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+      api: createApi(API, "blind_side_run-3", fetch),
+    });
+    const { yc } = open(session);
+    const el = mount(session);
+    act(() => yc.choose("pass:H9"));
+    expect(textOf(el)).toContain("The breakdown's verified lines are on their way");
+    await act(settle);
+    expect(textOf(el)).not.toContain("on their way");
   });
 
   it("opens a hero moment of the stitched match in Your call, from the Moments panel too", async () => {
