@@ -4,7 +4,7 @@
 //
 // Each generator is a function of `dur` seconds (the default is in SFX_DEFAULT_DUR). The
 // recipes are the ones in the trailer brief: heartbeat, hum, whoosh, riser, boom, stamp,
-// slam, whistle, tick, rewind, glitch, shutter, sting.
+// slam, whistle, tick, rewind, glitch, shutter, sting, and a ball touch.
 
 import { writeFileSync } from "node:fs";
 import { encodeWav24 } from "./wav.mjs";
@@ -27,6 +27,7 @@ export const SFX_DEFAULT_DUR = {
   glitch: 0.4,
   shutter: 0.12,
   sting: 3,
+  touch: 0.3,
 };
 
 export const SFX_NAMES = Object.keys(SFX_DEFAULT_DUR);
@@ -438,6 +439,15 @@ const GENERATORS = {
     const burstN = Math.min(n, Math.round(0.05 * SR));
     const burst = applyBiquad(white(rng, burstN), biquad("hp", 1200, 0.707));
     for (let i = 0; i < burstN; i++) buf[i] += burst[i] * Math.exp(-i / (0.01 * SR)) * 0.8;
+    return stereoMono(buf);
+  },
+  // A ball meeting a boot: a low thump falling 150 → 65 Hz with a soft leather click on top.
+  touch(n, dur, rng) {
+    const buf = zeros(n);
+    addSweep(buf, 150, 65, 0.06, 0.07, 1);
+    const clickN = Math.min(n, Math.round(0.012 * SR));
+    const click = applyBiquad(white(rng, clickN), biquad("lp", 2400, 0.707));
+    for (let i = 0; i < clickN; i++) buf[i] += click[i] * Math.exp(-i / (0.003 * SR)) * 0.5;
     return stereoMono(buf);
   },
   sting(n, dur, rng) {
