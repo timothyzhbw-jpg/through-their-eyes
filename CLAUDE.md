@@ -197,6 +197,12 @@ _Fill in as they come to exist._
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
   video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
   `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)
+- `cd video && npm run trailer` — the < 2:00 demo video as a trailer edit (SPEC 10): records the app
+  shots (`capture.mjs`), films the cold open in cinematic mode (`?cine=1`), renders the titles, the
+  Azure voice-over and the synthesized sound, cuts with ffmpeg into `out/video/trailer.mp4` plus a
+  contact sheet and a report. `-- --check` validates `video/trailer.json` (CI); `-- --base-url
+  http://localhost:5173` films a local build; from a worktree `uv run --env-file <.env> node
+  video/trailer.mjs`
 - `python3 docs/architecture.py` — regenerate the architecture diagram (SPEC 2, 10):
   `docs/architecture.svg` and `-dark.svg`, standard library only. `--png --chrome <path to
   chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full

@@ -1899,6 +1899,9 @@ Framework, live deployment, the video.
 
 Shot list and capture kit: [video/](../video/README.md). `shots.json` holds each beat's URL,
 scripted actions, target length and voice-over; `capture.mjs` records them from the live site.
+The cut as made (2026-10-21): a game-trailer edit rendered by `cd video && npm run trailer` from
+[video/trailer.json](../video/trailer.json); its treatment and the beats it changes from the storyboard
+above are in [VIDEO_SCRIPT.md](VIDEO_SCRIPT.md).
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
