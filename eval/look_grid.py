@@ -143,8 +143,10 @@ def report(scenario: str, demo: dict, grids: list[dict]) -> str:
         f"- What he really did: `{demo['factual'][0]}` ({demo['factual'][1]}); his own looks in "
         f"the window: {', '.join(f'`{s}`' for s in demo['own']) or 'none'}.",
         f"- With no look at all: `{demo['none'][0]}` ({demo['none'][1]}).",
-        f"- Looks available: {_share(d['available'], d['cells'])} (a look waits for one under way).",
-        f"- Looks that change his decision against no look: {_share(d['vs_none'], d['available'])}.",
+        f"- Looks available: {_share(d['available'], d['cells'])} "
+        "(a look waits for one under way).",
+        "- Looks that change his decision against no look: "
+        f"{_share(d['vs_none'], d['available'])}.",
         f"- Looks that change what he really did: {_share(d['vs_factual'], d['available'])}; "
         f"the possession result changes in {_share(d['outcome_vs_factual'], d['available'])}.",
         "",
@@ -153,7 +155,8 @@ def report(scenario: str, demo: dict, grids: list[dict]) -> str:
         f"## Held-out seeds {seeds[0]}–{seeds[-1]}",
         "",
         f"- Looks available: {_share(h['available'], h['cells'])}.",
-        f"- Looks that change his decision against no look: {_share(h['vs_none'], h['available'])}; "
+        "- Looks that change his decision against no look: "
+        f"{_share(h['vs_none'], h['available'])}; "
         f"seeds where at least one look does: {_share(h['seeds_mattered'], len(grids))}.",
         f"- Looks that change what he really did: {_share(h['vs_factual'], h['available'])}.",
         f"- Seeds where no look at all gives his real decision: "
