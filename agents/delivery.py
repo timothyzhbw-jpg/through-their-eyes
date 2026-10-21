@@ -59,8 +59,11 @@ ANALYST_NUMBERS: frozenset[str] = frozenset(
 
 
 def withheld(persona: str, claims: list[str]) -> list[str]:
-    """The claims of a line that `persona` must not hear."""
-    return [c for c in claims if c in ANALYST_NUMBERS] if persona in DESCRIBED else []
+    """The claims of a line that `persona` must not hear. A recap claim `k2.cf_value` is
+    withheld like `cf_value` (agents/recap_context.py)."""
+    if persona not in DESCRIBED:
+        return []
+    return [c for c in claims if c.rpartition(".")[2] in ANALYST_NUMBERS]
 
 
 # Tier rules on the selected lens's |delta| in xT, and the moment's tags.

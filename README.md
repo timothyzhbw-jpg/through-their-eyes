@@ -106,14 +106,22 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    plan replaces the template. The trace id is the run's operation_Id in Application Insights.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   six possessions on one 132.6 s clock, opened where the scan hero's possession starts. Press
-   **Play**. The chip above the views is the camera director: it suggests a camera and says
+   18 possessions on one clock of about 11½ minutes, opened where the scan hero's possession
+   starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
    to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
    ([pressure](eval/reports/hero_lens_press_escape.md)). **View options** → **Skeleton** on the
    broadcast camera or the board draws each player's torso and head direction, the way
    limb-tracking data is shown.
+
+8. **The match recap, at full time.** [Match recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap):
+   the crew recaps the whole stitched match, as it does when the live stream reaches full time.
+   The Director picks the key moments by counterfactual impact, the Analyst reads the match
+   stats through our MCP tools, the Telestrator cuts the reel, and every sentence and number on
+   the card is verified. **Play the recap reel** plays the moments in order with the camera
+   director, and **Overlay cues (JSON)** is the timed, machine-readable cue sheet a broadcast
+   graphics engine would render.
 
 Then the [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
 tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
@@ -131,6 +139,13 @@ yet in the app.
     curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
       -H 'content-type: application/json' \
       -d '{"match": "blind_side_run-3", "personas": ["analyst"], "languages": ["en"]}'
+    ```
+  - the end-of-match recap of the stitched match, and its overlay cue sheet
+    (`GET /api/recaps/<key>/cues?persona=analyst&language=en`, with the `key` it answers):
+    ```bash
+    curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/recaps \
+      -H 'content-type: application/json' \
+      -d '{"match": "match-1", "personas": ["analyst"], "languages": ["en"]}'
     ```
   - a wrong number, checked by the verifier (not audited; no model call):
     ```bash
@@ -223,10 +238,10 @@ uv run ruff check .
 uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
-"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): six possessions on
-one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), then open
-play twice —
-with moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
+"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 18 possessions,
+about 11½ minutes on one clock — 15 open-play passages and three heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 4:33 and the short corner (`corner_blind_side`) at 8:21 — with
+moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
 The container image for Azure Container Apps (main dependencies only, runs as a non-root user):
