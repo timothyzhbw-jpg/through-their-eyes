@@ -408,7 +408,7 @@ def counterfactual_value(
         id="cf_value",
         template=f"What {{player}} did was worth {{dxt}} {'more' if more else 'less'} in "
         f"expected threat than {instead[0]}.",
-        templates={"zh": f"{{player}}的处理比{instead[1]}{'多出' if more else '少'}{{dxt}}的预期"
+        templates={"zh": f"{{player}}的处理比{instead[1]}{'多' if more else '少'}{{dxt}}的预期"
                          "威胁（xT）。"},
         slots={"player": Slot(ref=r.hero), "dxt": _num(abs(value), 2)},
         predicate=Predicate(op="all", args=[

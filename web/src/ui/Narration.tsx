@@ -155,7 +155,7 @@ export function EvidenceCard() {
       <div className="evidence-head">
         <h2>Evidence</h2>
         {narration.fixture && (
-          <span className="plan-badge fallback" title={narration.payload.note}>
+          <span className="plan-badge fallback" data-fixture="true" title={narration.payload.note}>
             Sample data · not checked by the verifier
           </span>
         )}
@@ -626,7 +626,11 @@ export function NarrationPanel() {
               </span>
             )}
             {narration?.fixture && (
-              <span className="plan-badge fallback" title={narration.payload.note}>
+              <span
+                className="plan-badge fallback"
+                data-fixture="true"
+                title={narration.payload.note}
+              >
                 Sample
               </span>
             )}

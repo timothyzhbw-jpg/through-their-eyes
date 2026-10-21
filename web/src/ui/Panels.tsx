@@ -32,9 +32,13 @@ function scanBeats(hero: Hero, run: Run, key: Scan): Beat[] {
   const passer = run.firstPass?.player ?? "The centre-back";
   const outcome = !act
     ? ""
-    : act.outcome === "complete"
-      ? `Completed to ${act.receiver}.`
-      : `Lost: ${act.outcome ?? "incomplete"}${act.receiver ? ` by ${act.receiver}` : ""}.`;
+    : run.decision?.chosen === "shot"
+      ? "He shoots."
+      : act.outcome === "complete"
+        ? `Completed to ${act.receiver}.`
+        : act.outcome == null
+          ? "The pass is still running when the clip ends."
+          : `Lost: ${act.outcome}${act.receiver ? ` by ${act.receiver}` : ""}.`;
   const s = (f: number) => (f * hero.dt).toFixed(2);
   return [
     {
@@ -90,9 +94,13 @@ function pressureBeats(hero: Hero, run: Run): Beat[] {
       ? {
           from: act.end ?? run.frames - 1,
           text:
-            act.outcome === "complete"
-              ? `Completed to ${act.receiver}: out of the press.`
-              : `Lost: ${act.outcome ?? "incomplete"}${act.receiver ? ` by ${act.receiver}` : ""}.`,
+            run.decision?.chosen === "shot"
+              ? "He shoots."
+              : act.outcome === "complete"
+                ? `Completed to ${act.receiver}: out of the press.`
+                : act.outcome == null
+                  ? "The pass is still running when the clip ends."
+                  : `Lost: ${act.outcome}${act.receiver ? ` by ${act.receiver}` : ""}.`,
         }
       : { from: run.frames - 1, text: "He keeps the ball." };
   const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
