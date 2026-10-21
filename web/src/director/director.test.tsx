@@ -160,9 +160,8 @@ describe("on the live screen", () => {
     const page = mount(session, <App autoplay={false} />);
     onBroadcast(session);
     at(session, 15);
-    const strip = page.querySelector<HTMLElement>(".stage + section.director")!;
-    expect(strip).not.toBeNull();
-    expect(getComputedStyle(strip).backgroundColor).toBe("#0f1513");
+    // The live screen carries the director over the picture (.stage-director), in both layouts.
+    expect(page.querySelector(".stage-director section.director")).not.toBeNull();
     const suggestion = chip(page)!;
     expect(suggestion.type).toBe("button");
     expect(suggestion.tabIndex).toBe(0);
@@ -388,13 +387,13 @@ describe("in a stitched match", () => {
     expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him.");
   });
 
-  it("keeps the chip after the stitched live screen, with a working camera switch", () => {
+  it("keeps the chip on the stitched live screen, with a working camera switch", () => {
     withFloodlitStyles(390);
     const session = match();
     const page = mount(session, <MatchApp session={session} autoplay={false} />);
     onBroadcast(session);
     at(session, 15);
-    expect(page.querySelector(".stage + section.director")).not.toBeNull();
+    expect(page.querySelector(".stage-director section.director")).not.toBeNull();
     const suggestion = chip(page)!;
     expect(text(suggestion)).toBe("Switch to H8's eyes: the ball is coming to him.");
     expect(suggestion.tabIndex).toBe(0);
