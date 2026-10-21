@@ -995,11 +995,12 @@ Application Insights.
     recap's own prompt version (`RECAP_PROMPT_VERSION`, so breakdown keys never move with it),
     `PIPELINE_VERSION` and the model; the same per-client limit and daily model cap as
     breakdowns, then the cached model recap or the offline template. Speech speaks its lines like
-    a breakdown's.
-  - *Web* (`web/src/recap/`): the recap card (the score, one verified sentence per key moment with
-    Watch and Breakdown, the stats), persona and language switches, the reel on the match's own
-    playback with the auto director on, its captions and spoken lines, and a link to the cue
-    sheet. Every response is checked against the match before it shows (claims supported,
+    a breakdown's. `infra/prewarm.py` warms each stitched match's recap for every persona and
+    language after the breakdowns, as the web app asks for it.
+  - *Web* (`web/src/recap/`; deep link `?match=match-1&play=recap`): the recap card (the score,
+    one verified sentence per key moment with Watch and Breakdown, the stats), persona and
+    language switches, the reel on the match's own playback with the auto director on, its
+    captions and spoken lines, and a link to the cue sheet. Every response is checked against the match before it shows (claims supported,
     evidence in the match, captions verified lines, clips on the clock).
   - *Tests:* `tests/test_recap_evidence.py`, `tests/test_recap.py`, `tests/test_api_recap.py`,
     `web/src/recap/recap.test.ts`, `web/src/recap/RecapPanel.test.tsx`.

@@ -64,6 +64,7 @@ const PAGES = [
     check: (p, shoot) => lineup(p, shoot, "Start watching", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
@@ -133,6 +134,20 @@ async function tamper(page) {
     page.getByRole("button", { name: "Try a wrong number", expanded: true }),
     '"Try a wrong number" open',
   );
+}
+
+/** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
+ * full-time card on the live screen, the recap card with a Watch per key moment, and the reel's
+ * captions once it plays. */
+async function recap(page, shoot) {
+  await match(page);
+  await see(page.getByRole("region", { name: "Full time", exact: true }), "the full-time card");
+  const card = page.getByRole("region", { name: "Full time · the recap" });
+  await see(card.getByRole("button", { name: "Watch", exact: true }), "a key moment's Watch");
+  await shoot("card");
+  await page.getByRole("button", { name: "Play the recap reel" }).first().click();
+  await see(page.locator(".recap-caption").filter({ hasText: /\S/ }), "a caption of the reel");
+  await page.waitForTimeout(SETTLE);
 }
 
 /** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
