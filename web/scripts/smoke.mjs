@@ -60,6 +60,7 @@ const PAGES = [
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
     path: "?match=match-1",
@@ -174,6 +175,25 @@ async function recap(page, shoot) {
   await page.getByRole("button", { name: "Play the recap reel" }).first().click();
   await see(page.locator(".recap-caption").filter({ hasText: /\S/ }), "a caption of the reel");
   await page.waitForTimeout(SETTLE);
+}
+
+/** A cold load with no click (SPEC 2, 7): the lineup card closes by itself, the stream plays, and
+ * within about 20 s of opening the page the run without the look is on screen with its line. */
+async function coldLoad(page, shoot) {
+  const opened = Date.now();
+  const without = page
+    .getByRole("group", { name: "Run" })
+    .getByRole("button", { name: "Without the look", pressed: true });
+  try {
+    await without.waitFor({ timeout: 22_000 });
+  } catch {
+    throw new Error("expected the run without the look on screen within 22 s of a cold load");
+  }
+  await see(
+    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
+    'the "Without that look" line',
+  );
+  await shoot(`at-${Math.round((Date.now() - opened) / 1000)}s`);
 }
 
 /** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
