@@ -26,6 +26,7 @@ export const BEAT = {
   accentS: 0.35, // wall seconds the freeze accent adds as the runner comes into sight
   accentFrames: 1, // width of the accent, frames, starting at the sighting frame
   ringS: 1.2, // match seconds the runner's ring stays after the sighting
+  pushTailS: 0.9, // match seconds the camera takes to let go after the scan (at least to the release)
 };
 
 const TABLE_RES = 32; // table points per frame
@@ -236,11 +237,24 @@ export function beatStep(
   return x + left - frame;
 }
 
-/** The camera's push-in at frame `f`: 0..1, with the slow motion; 0 under reduced motion. */
+/**
+ * The camera's push-in at frame `f` and the beat it belongs to: in with the slow motion, and out
+ * more slowly than the playback speeds up (BEAT.pushTailS after the scan), so the camera never
+ * snaps back. Null outside every beat's push and under reduced motion.
+ */
+export function pushedBy(hero: Hero, run: Run, f: number): { beat: Beat; push: number } | null {
+  if (motion.get().reduced) return null;
+  for (const b of beatsOf(hero, run)) {
+    const tail = Math.max(b.end - b.slowTo, Math.round(BEAT.pushTailS / b.dt));
+    if (f <= b.start || f >= b.slowTo + tail) continue;
+    return { beat: b, push: f <= b.slowTo ? beatWeight(b, f) : 1 - smooth((f - b.slowTo) / tail) };
+  }
+  return null;
+}
+
+/** The camera's push-in at frame `f`: 0..1 (pushedBy). */
 export function pushAt(hero: Hero, run: Run, f: number): number {
-  if (motion.get().reduced) return 0;
-  const b = beatAt(beatsOf(hero, run), f);
-  return b ? beatWeight(b, f) : 0;
+  return pushedBy(hero, run, f)?.push ?? 0;
 }
 
 /**

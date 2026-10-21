@@ -29,7 +29,7 @@ import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { MotionBlur } from "./PovMotionBlur";
 import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
-import { beatAt, beatsOf, motion, pushAt } from "../beat/beat";
+import { motion, pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { CameraBlend } from "../beat/cameraBlend";
 import { Grade } from "../beat/Grade";
@@ -182,15 +182,16 @@ function PovScene() {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
       // and the vignette closes in instead (beat/Grade.tsx).
-      const look = beatAt(beatsOf(hero, run), s.frame);
-      const push = look && look.observer >= 0 ? pushAt(hero, run, s.frame) : 0;
+      const look = pushedBy(hero, run, s.frame);
       filmBroadcast(
         camera,
         pathFor(run, hero.dt),
         s.frame,
         aspect,
         shot,
-        look && push > 0 ? beatFraming(look, sample, s.frame, push) : undefined,
+        look && look.beat.observer >= 0
+          ? beatFraming(look.beat, sample, s.frame, look.push)
+          : undefined,
       );
     } else {
       // Keep the horizontal field of view fixed whatever the aspect ratio.

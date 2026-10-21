@@ -126,11 +126,16 @@ describe("the key-moment beat", () => {
     expect(pushAt(hero, factual, 60)).toBe(0);
   });
 
-  it("pushes in with the slow motion and lets go by the release", () => {
+  it("pushes in with the slow motion and lets go smoothly after the release", () => {
     const b = beatsOf(hero, factual)[0];
     expect(pushAt(hero, factual, b.start - 1)).toBe(0);
     expect(pushAt(hero, factual, (b.slowFrom + b.slowTo) / 2)).toBe(1);
-    expect(pushAt(hero, factual, b.end)).toBe(0);
+    const tail = Math.round(BEAT.pushTailS / hero.dt);
+    expect(pushAt(hero, factual, b.end)).toBeGreaterThan(0.5); // still letting go at the pass
+    expect(pushAt(hero, factual, b.slowTo + tail)).toBe(0);
+    for (let f = b.slowTo; f < b.slowTo + tail; f += 0.5) {
+      expect(pushAt(hero, factual, f + 0.5)).toBeLessThanOrEqual(pushAt(hero, factual, f));
+    }
     expect(beatWeight(b, b.slowFrom)).toBe(1);
     expect(beatAt(beatsOf(hero, factual), b.end + 1)).toBeNull();
   });
