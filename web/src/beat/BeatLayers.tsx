@@ -11,7 +11,7 @@ import { type Hero, type Run, type Sample, wrapAngle } from "../data/hero";
 import { useView } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { COLORS } from "../views/scene";
-import { beatAt, beatsOf, motion, popAt, ringAt, type Beat } from "./beat";
+import { beatAt, beatsOf, motion, popAt, pushAt, ringAt, type Beat } from "./beat";
 
 const SWEEP_RADIUS = 30; // m drawn
 const SWEEP_FADE_S = 1.0; // match seconds the swept arc stays after the scan
@@ -179,13 +179,18 @@ export function BeatLayer3D({ sample, half }: { sample: Sample; half: number }) 
     [],
   );
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, gl }) => {
     const { beat, run, s } = current(hero, playback.get());
     const r = ring.current;
     const g = glow.current;
     const w = sweep.current;
     if (!r || !g || !w) return;
     const shown = beat && beat.target >= 0 ? ringAt(beat, s.frame) : 0;
+    // For checks (the smoke test): the beat's push and the target's ring on screen.
+    const data = gl.domElement.dataset;
+    const push = pushAt(hero, run, s.frame).toFixed(2);
+    if (data.beatPush !== push) data.beatPush = push;
+    if (data.beatRing !== shown.toFixed(2)) data.beatRing = shown.toFixed(2);
     r.visible = g.visible = shown > 0;
     if (beat && shown > 0) {
       const x = sample.pos[2 * beat.target];

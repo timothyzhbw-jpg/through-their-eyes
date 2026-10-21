@@ -67,6 +67,15 @@ const PAGES = [
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
+  // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
+  { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
+  { name: "beat-broadcast", path: "?at=66&camera=broadcast", check: (p) => beat(p, { push: 1 }) },
+  {
+    name: "beat-reduced-motion",
+    path: "?at=60",
+    device: { ...DESKTOP, reducedMotion: "reduce" },
+    check: (p) => beat(p, { push: 0 }),
+  },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
@@ -150,6 +159,24 @@ async function match(page) {
   await see(score.filter({ hasText: /Possession \d+ of \d+/ }), "the score bug with a possession");
   await mainView(page, "eyes");
   await see(page.getByRole("region", { name: "Possession 1" }), "the Moments panel", "attached");
+}
+
+/** The key-moment beat on the 3D view: pushed in (or not, under reduced motion) and the runner
+ * ringed; the canvas says so in data-beat-push and data-beat-ring (beat/BeatLayers.tsx). */
+async function beat(page, { push }) {
+  await hero(page);
+  const canvas = page
+    .getByRole("figure", { name: /^(First-person|Broadcast) view$/ })
+    .locator("canvas");
+  try {
+    await page.waitForFunction(
+      ([el, want]) => Number(el.dataset.beatRing) > 0 && Number(el.dataset.beatPush) === want,
+      [await canvas.elementHandle(), push],
+    );
+  } catch {
+    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
+    throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
 }
 
 /** `?persona=analyst&tamper=cf_value`: the evidence card with "Try a wrong number" open. */
