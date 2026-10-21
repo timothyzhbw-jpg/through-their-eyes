@@ -208,7 +208,7 @@
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 8,
+      "target_s": 5,
       "crop": null,
       "setup": [
         { "do": "wait", "for": "assets" },
@@ -373,6 +373,29 @@
         { "do": "click", "role": "button", "name": "Compare", "hold": 3 }
       ],
       "vo": "Your call: decide with only what he knew, then see what really happened."
+    },
+    {
+      "id": "13-take-his-eyes",
+      "spec_beat": "trailer 1:08",
+      "title": "Take his eyes: the viewer turns his look to his left, the sim re-runs the moment, and he passes back to H4",
+      "status": "pending feature",
+      "pending": "Take his eyes (#99) is not merged or deployed yet; flip to ready once ?play=eyes is live.",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?play=eyes",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 3,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": ".te-dial", "timeout_s": 40 },
+        { "do": "hold", "s": 1.5 }
+      ],
+      "actions": [
+        { "do": "hold", "s": 1.2, "still": true },
+        { "do": "click", "role": "radio", "name": "To his left", "hold": 0.8 },
+        { "do": "click", "role": "radio", "name": "0.8 s before the ball arrives", "hold": 0.5 },
+        { "do": "click", "role": "button", "name": "Look", "hold": 3.5 },
+        { "do": "click", "role": "button", "name": "See what he does", "hold": 3, "still": true }
+      ],
+      "vo": "Take his eyes: you choose the look, and the simulation plays it out."
     }
   ]
 }
