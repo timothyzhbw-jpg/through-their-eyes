@@ -43,7 +43,7 @@ export interface Run {
   scans: Scan[];
   decision: ExportDecision | null;
   action: ExportAction | null;
-  possessionValue: number;
+  possessionValue: number | null; // null without a decision on the ball
   firstPass: ExportEvent | null; // the pass that starts the moment
   blindSide: ExportBlindSide;
   detector: DetectorRun | null; // null in a match (the match export has no detector run)
@@ -102,11 +102,83 @@ export interface Hero {
   counterfactual: ExportCounterfactual | null; // null in a match
   vision: Vision | null; // null in a match (the match export has no vision model)
   detector: DetectorParams | null; // the scan detector's settings; null in a match
-  deltaXt: number;
+  // What the look or the forced action was worth, in xT; null when nothing has measured it yet
+  // (a marker's look: the export has no possession value without a decision on the ball).
+  deltaXt: number | null;
+  deltaSource: "sim" | "lens"; // the sim export's possession values, or the moment's scan lens
   runs: Record<RunName, Run>;
-  reception: number; // frame the hero receives the ball (the moment's anchor)
+  // The moment's anchor: the frame the hero receives the ball; for a marker, the frame the pass
+  // to his man resolves (the service's MomentCard anchor).
+  reception: number;
+  marker: Marker | null; // a marker's look: a key scan and no decision on the ball
   match: MatchInfo | null; // possessions, score and moments of a stitched match
 }
+
+/**
+ * A marker's look (SPEC 5.1 `marker_scan`, e.g. corner_blind_side): the hero defends, has a key
+ * scan and no decision on the ball. The moment is the pass to the man he marks, and the question
+ * is how close he was to him when it resolved, with the look and without it.
+ */
+export interface Marker {
+  man: string; // the runner he marks
+  pass: ExportEvent; // the pass to his man, after the key scan (its id is the same in both runs)
+  resolved: Record<RunName, Resolution>;
+  separation: Record<RunName, number>; // m, marker to his man at the resolution
+}
+
+/** How a pass ended: the reception, interception or out at its end frame, like
+ * explain.moments._resolution; `type` "running" when the clip ends first. */
+export interface Resolution {
+  frame: number;
+  type: "reception" | "interception" | "out" | "running";
+  player: string | null;
+}
+
+const RESOLVING = new Set(["reception", "interception", "out"]);
+
+function resolution(run: Run, pass: ExportEvent): Resolution {
+  const last = run.frames - 1;
+  const end = typeof pass.attrs.end === "number" ? pass.attrs.end : null;
+  const e =
+    end === null ? undefined : run.events.find((x) => x.frame === end && RESOLVING.has(x.type));
+  if (!e) return { frame: Math.min(end ?? last, last), type: "running", player: null };
+  return { frame: e.frame, type: e.type as Resolution["type"], player: e.player };
+}
+
+/** The hero as a marker, or null when he has a decision, no key scan, no runner or no pass. */
+function markerOf(
+  runs: Record<RunName, Run>,
+  n: number,
+  hero: number,
+  runner: string | null,
+  runnerIndex: number,
+  keyScan: Scan | null,
+): Marker | null {
+  if (!keyScan || !runner || runs.factual.decision) return null;
+  const pass = runs.factual.events.find(
+    (e) => e.type === "pass" && e.attrs.to === runner && e.frame >= keyScan.start,
+  );
+  if (!pass) return null;
+  const at = (run: Run): [Resolution, number] => {
+    const own = run.events.find((e) => e.id === pass.id) ?? pass;
+    const r = resolution(run, own);
+    const a = (r.frame * n + hero) * 2;
+    const b = (r.frame * n + runnerIndex) * 2;
+    return [r, Math.hypot(run.pos[a] - run.pos[b], run.pos[a + 1] - run.pos[b + 1])];
+  };
+  const [f, fs] = at(runs.factual);
+  const [c, cs] = at(runs.counterfactual);
+  return {
+    man: runner,
+    pass,
+    resolved: { factual: f, counterfactual: c },
+    separation: { factual: fs, counterfactual: cs },
+  };
+}
+
+/** A number the export may carry as null (the sim's NaN), or not at all. */
+const finite = (x: number | null | undefined): number | null =>
+  typeof x === "number" && Number.isFinite(x) ? x : null;
 
 function flatten(rows: number[][], scale: number): Float32Array {
   const width = rows.length ? rows[0].length : 0;
@@ -177,6 +249,8 @@ export function parseHero(json: unknown): Hero {
   const reception = runs.factual.events.find(
     (e) => e.type === "reception" && e.player === raw.hero,
   );
+  const runnerIndex = raw.runner ? ids.indexOf(raw.runner) : -1;
+  const marker = markerOf(runs, n, ids.indexOf(raw.hero), raw.runner, runnerIndex, keyScan ?? null);
   const v = raw.vision;
   const d = raw.scan_detector;
   return {
@@ -207,9 +281,15 @@ export function parseHero(json: unknown): Hero {
       onsetFrames: d.onset_frames,
       maxDurationS: d.max_duration_s,
     },
-    deltaXt: raw.delta_xt,
+    deltaXt: finite(raw.delta_xt),
+    deltaSource: "sim",
     runs,
-    reception: reception ? reception.frame : (runs.factual.decision?.frame ?? 0),
+    reception: marker
+      ? marker.resolved.factual.frame
+      : reception
+        ? reception.frame
+        : (runs.factual.decision?.frame ?? 0),
+    marker,
     match: null,
   };
 }
@@ -244,8 +324,10 @@ function parseMatchExport(raw: MatchExport): Hero {
     vision: null,
     detector: null,
     deltaXt: 0,
+    deltaSource: "sim",
     runs: { factual, counterfactual: factual },
     reception: 0,
+    marker: null,
     match: parseMatch(raw),
   };
 }
@@ -279,7 +361,8 @@ export function runLabels(hero: Hero): RunLabels {
     ghostOfFactual: "Ghost: with the look",
     ghostOfCounterfactual: "Ghost: no look",
     tag: { factual: "with the look", counterfactual: "without the look" },
-    gain: "Gained by looking", // the verdict reads "…, in expected threat (xT)."
+    // The verdict reads "…, in expected threat (xT)." A marker's look is worth a turnover chance.
+    gain: hero.marker ? "Worth of the look to his side" : "Gained by looking",
   };
 }
 
