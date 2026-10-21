@@ -46,6 +46,8 @@ describe("the step list", () => {
       "yourcall",
       "language",
       "producer",
+      "match",
+      "recap",
       "end",
     ]);
     expect(STEPS.at(-1)!.target).toBeNull();
@@ -86,8 +88,8 @@ describe("the steps a page can show", () => {
     expect(ids(envOf(offline()))).toEqual(["pov", "without", "evidence", "yourcall", "end"]);
   });
 
-  it("on the hero moment with the live service: every step", () => {
-    expect(ids(envOf(online()))).toEqual(STEP_IDS);
+  it("on the hero moment with the live service: every step but the match's own", () => {
+    expect(ids(envOf(online()))).toEqual(STEP_IDS.filter((id) => id !== "recap"));
   });
 
   it("on the pressure hero: no key scan, so the replay step says so; its own run name", () => {
@@ -104,16 +106,20 @@ describe("the steps a page can show", () => {
       "tamper",
       "language",
       "producer",
+      "match",
       "end",
     ]);
   });
 
-  it("on a stitched match: no hero steps until a hero moment's breakdown opens", () => {
+  it("on a stitched match: its recap, then the end", () => {
     const match = createMatchSession(parseHero(matchExport()), {
       api: createApi(API, MATCH, fakeFetch({})),
       dataUrl: "/data/",
     });
-    expect(ids(envOf(match))).toEqual(["end"]);
+    expect(ids(envOf(match))).toEqual(["recap", "end"]);
+    // ?match=…&tour=1 lands on the match's first step.
+    const steps = resolveSteps(envOf(match));
+    expect(steps[indexOf(steps, "pov")].id).toBe("recap");
   });
 
   it("lands on the asked step, or the next one this page shows", () => {

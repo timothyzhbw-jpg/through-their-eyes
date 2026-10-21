@@ -74,6 +74,11 @@ const PAGES = [
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   {
+    name: "tour-recap",
+    path: "?match=match-1&play=recap&tour=recap",
+    check: (p, shoot) => tour(p, shoot, match),
+  },
+  {
     name: "phone-tour",
     path: "?tour=1",
     device: PHONE,
@@ -169,11 +174,12 @@ async function tamper(page) {
   );
 }
 
-/** `?tour=1`, the judges' tour (SPEC 7, web/src/tour/): its card on screen at every step and no
- * sideways scroll, Next through to the end without pressing the steps' own buttons (the drill
- * would run the crew), then Done closes it and the hero moment works as before. A tour link opens
+/** `?tour=1`, the judges' tour (SPEC 7, web/src/tour/), or its match steps (the recap): its card
+ * on screen at every step and no sideways scroll, Next through to the end without pressing the
+ * steps' own buttons (the drill would run the crew), then Done closes it and the page works as
+ * before. A tour link opens
  * paused (no stream), so the phone's header check, which wants the stream running, is not run. */
-async function tour(page, shoot) {
+async function tour(page, shoot, after = hero) {
   const card = page.getByRole("dialog").filter({ hasText: /^Tour · \d+ of \d+/ });
   for (let k = 1; ; k++) {
     await see(card.filter({ hasText: new RegExp(`^Tour · ${k} of `) }), `the tour's step ${k}`);
@@ -201,7 +207,7 @@ async function tour(page, shoot) {
     throw new Error('expected "Done" to close the tour');
   }
   await page.evaluate(() => window.scrollTo(0, 0));
-  await hero(page);
+  await after(page);
 }
 
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the

@@ -28,9 +28,10 @@ export const ENTERS = [
   "yourCall",
   "audience",
   "producer",
+  "recap",
 ] as const;
 /** The tour card's own button for a step, for anything that calls the service (TourActs.tsx). */
-export const ACTS = ["checkWrongNumber", "sound", "drill"] as const;
+export const ACTS = ["checkWrongNumber", "sound", "drill", "openMatch"] as const;
 
 export type Condition = (typeof CONDITIONS)[number];
 export type EnterName = (typeof ENTERS)[number];

@@ -6,7 +6,8 @@
 
 import type { Agent, Persona } from "../api/client";
 import type { Narration } from "../narration/payload";
-import type { Session } from "../session";
+import type { MatchSession } from "../match/matchSession";
+import type { Session, ViewSession } from "../session";
 import { numericValues } from "../tamper/tamper";
 import type { Language } from "../whatif/whatif";
 import { yourCallOf } from "../yourcall/controller";
@@ -93,7 +94,22 @@ function openTourLine(s: Session): ReturnType<typeof tourClaim> {
   return pick;
 }
 
-export const ENTER: Record<EnterName, Enter> = {
+/** Set a step up on whichever page shows it: the hero moment's, or the stitched match's (its
+ * recap). A step meant for the other page does nothing here. */
+export function enterStep(name: EnterName, s: ViewSession): Cleanup | void {
+  if (name === "recap") return s.kind === "match" ? openRecap(s) : undefined;
+  if (s.kind === "hero") return ENTER[name](s);
+}
+
+/** The match's recap as at full time, unless it is on screen already (the `?play=recap` link
+ * the hero page's step opens has asked for it): the card on the live screen, the reel to play. */
+function openRecap(s: MatchSession): void {
+  const { fullTime, status } = s.recap.state.get();
+  if (fullTime && (status === "ready" || status === "loading")) return;
+  s.recap.openAtFullTime(null, null);
+}
+
+const ENTER: Record<Exclude<EnterName, "recap">, Enter> = {
   none: (s) => clear(s),
 
   /** The Telestrator's breakdown with the Analyst's commentary: the first-person replay with its

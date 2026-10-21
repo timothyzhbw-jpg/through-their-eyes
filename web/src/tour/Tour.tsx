@@ -14,7 +14,7 @@ import { useView, type ViewSession } from "../session";
 import { useStore } from "../store/store";
 import { intro } from "../ui/intro";
 import { prefersReducedMotion } from "../yourcall/controller";
-import { ENTER } from "./actions";
+import { enterStep } from "./actions";
 import { onScreen, PHONE_MAX, placeCard, type Box, type Keep, type Size } from "./layout";
 import { envOf, indexOf, resolveSteps, targetOf, wordsOf, type TourStep } from "./steps";
 import { closeTour, goToStep, startTour, tour } from "./tourState";
@@ -38,7 +38,7 @@ function arrive(session: ViewSession, step: TourStep, seq: number) {
   arrived = { seq, session };
   cancel?.();
   cancel = null;
-  if (session.kind === "hero") cancel = ENTER[step.enter](session) ?? null;
+  cancel = enterStep(step.enter, session) ?? null;
 }
 
 const viewport = (): Size => ({ w: window.innerWidth, h: window.innerHeight });
@@ -113,16 +113,20 @@ function visibleBox(el: Element, clips: Element[]): Box | null {
     : null;
 }
 
-/** The tour over the page, while it is open. Its steps are a hero moment's: back on a stitched
- * match (from one of its breakdowns), a tour still open closes. */
+/** The tour over the page, while it is open: the hero moment's steps, or a stitched match's (its
+ * recap, reached by the hero page's link). A tour still open when the view switches between a
+ * match and one of its hero moments' breakdowns closes: its steps belong to the other view. */
 export function Tour() {
   const session = useView();
   const open = useStore(tour, (s) => s.open);
-  const hero = session.kind === "hero";
+  const seq = useStore(tour, (s) => s.seq);
+  // The step on screen was set up in the other view (a start or a move since then is new).
+  const switched =
+    open && arrived !== null && arrived.seq === seq && arrived.session.kind !== session.kind;
   useEffect(() => {
-    if (open && !hero) closeTour();
-  }, [open, hero]);
-  return open && hero ? createPortal(<TourOverlay session={session} />, document.body) : null;
+    if (switched) closeTour();
+  }, [switched]);
+  return open && !switched ? createPortal(<TourOverlay session={session} />, document.body) : null;
 }
 
 function TourOverlay({ session }: { session: ViewSession }) {

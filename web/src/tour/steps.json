@@ -82,9 +82,36 @@
       "hold": 12
     },
     {
+      "id": "match",
+      "title": "The whole match",
+      "caption": "The same studio runs a whole synthetic match, every moment on one clock. At full time the agent crew writes its recap.",
+      "target": null,
+      "dim": false,
+      "enter": "none",
+      "act": "openMatch",
+      "needs": ["hero", "api"],
+      "hold": 6
+    },
+    {
+      "id": "recap",
+      "title": "The match recap",
+      "caption": "At the final whistle the crew picks the moments that changed the match and writes them up, every number checked. Play the reel to see them in order.",
+      "target": [".recap-card.full-time", ".recap-card.intro", "#recap"],
+      "dim": false,
+      "enter": "recap",
+      "needs": ["match", "api"],
+      "hold": 10
+    },
+    {
       "id": "end",
       "title": "That's the tour",
       "caption": "Everything you saw runs live. The moment's full story continues below the picture.",
+      "variants": [
+        {
+          "when": "match",
+          "caption": "Everything you saw runs live. Every moment of the match is listed below the picture."
+        }
+      ],
       "target": null,
       "dim": false,
       "enter": "none",

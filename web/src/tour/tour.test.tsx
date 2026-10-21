@@ -34,6 +34,7 @@ import { intro } from "../ui/intro";
 import { LineupCard } from "../ui/LineupCard";
 import { yourCallOf } from "../yourcall/controller";
 import { resolveSteps, envOf, targetOf, STEPS } from "./steps";
+import { recapFixture } from "../recap/fixture";
 import { closeTour, startTour, tour } from "./tourState";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
@@ -395,10 +396,45 @@ describe("on a phone", () => {
 describe("a stitched match", () => {
   const match = () =>
     createMatchSession(parseHero(matchExport()), {
-      api: createApi(API, MATCH, fakeFetch({})),
+      api: createApi(
+        API,
+        MATCH,
+        fakeFetch({ "POST /api/recaps": () => json(recapFixture(matchExport())) }),
+      ),
       dataUrl: "/data/",
       socket: fakeSockets(),
     });
+
+  it("the hero page's last feature step opens the match at its recap, and the tour goes on there", async () => {
+    const { session } = online();
+    mount(session);
+    await start("match");
+    expect(stepId()).toBe("match");
+    const link = [...card()!.querySelectorAll("a")].find(
+      (a) => textOf(a) === "Open the match recap",
+    )!;
+    const url = new URL(link.getAttribute("href")!, "https://site.test/");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      match: "match-1",
+      play: "recap",
+      tour: "recap",
+    });
+  });
+
+  it("on the match page, rings the full-time recap card, then ends", async () => {
+    const m = match();
+    const container = mount(m, <MatchApp session={m} autoplay={false} />);
+    await start("recap");
+    expect(stepId()).toBe("recap");
+    expect(m.recap.state.get()).toMatchObject({ fullTime: true, status: "ready" });
+    expect(targetOf(STEPS.find((s) => s.id === "recap")!)).toBe(
+      container.querySelector(".recap-card.full-time"),
+    );
+    expect(textOf(card())).toContain("of 2");
+    await next();
+    expect(stepId()).toBe("end");
+    expect(textOf(card())).toContain("Every moment of the match is listed below the picture.");
+  });
 
   it("offers no tour on its lineup card: the tour's steps are a hero moment's", () => {
     intro.set({ open: true });
@@ -420,6 +456,10 @@ describe("a stitched match", () => {
     });
     expect(tour.get().open).toBe(false);
     expect(document.querySelector(".tour")).toBeNull();
+    // A tour started again in a breakdown opens there: the closed one does not shut it.
+    act(() => m.screen.set({ hero: offline() }));
+    await start();
+    expect(stepId()).toBe("pov");
   });
 });
 

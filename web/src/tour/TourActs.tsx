@@ -91,8 +91,20 @@ function Drill() {
   );
 }
 
+/** The whole match at full time, its recap asked for (`?play=recap`), the tour going on there. */
+export const MATCH_RECAP_LINK = "?match=match-1&play=recap&tour=recap";
+
+function OpenMatch() {
+  return (
+    <a className="btn" href={MATCH_RECAP_LINK}>
+      Open the match recap
+    </a>
+  );
+}
+
 export const ACT_VIEW: Record<ActName, ComponentType> = {
   checkWrongNumber: CheckWrongNumber,
   sound: Sound,
   drill: Drill,
+  openMatch: OpenMatch,
 };

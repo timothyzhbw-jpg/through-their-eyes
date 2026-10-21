@@ -70,6 +70,7 @@ async function main() {
         return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
       });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
+      if (link.tour) startTour(link.tour); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
       broadcast(session.controls);

@@ -1325,8 +1325,11 @@ original visual identity.
   - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
     captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
     number; Your call; another audience in another language (a casual fan, in Chinese); the
-    Producer's failure drill and bring-back. A step the page cannot show (no live service, no
-    counterfactual, no Your call) is left out, not shown broken.
+    Producer's failure drill and bring-back; then the whole match, whose card links to
+    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
+    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
+    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
+    main.
   - *It never takes over.* It only calls the app's own controls, and never presses anything that
     spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
     with the card's button. The overlay lets every click through, the card is a non-modal dialog,
@@ -1395,7 +1398,7 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
       [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
 - [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
-      live service, and runs only the app's own controls; Next, Back, Skip, Done and Escape work,
+      live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
       and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
       fold; the card stays on screen at desktop and phone width; its words carry no number.
       — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
