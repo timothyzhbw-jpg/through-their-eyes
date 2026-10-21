@@ -70,7 +70,7 @@ The brief's pipeline, end to end, on a synthetic match:
   original plan's checks, reported in the same file, are not met. Live in the app, as the
   stitched match's third hero.
 
-The live heroes play inside a stitched match: 18 possessions on one clock, about 11½ minutes,
+The live heroes play inside a stitched match: 18 possessions on one clock, about 12 minutes,
 with the set-piece hero's corner as its third hero moment.[^match]
 
 ## The multi-agent design
@@ -118,7 +118,7 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 | Forced to keep the ball, the pressure hero loses it; the possession outcome changes | 40/40 lost; 32/40 changed | [^press] |
 | Set-piece hero: unmarked without the look, marked within 5 m with it | 37/40 (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.993 | [^detector] |
-| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.920, recall 0.985 | [^blind] |
+| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.917, recall 0.984 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
 | Simulator statistics against published values | 10 inside the published range, 6 outside, 10 with no published value | [^realism] |
@@ -213,7 +213,7 @@ Multi-Agent System (SPEC §0).
   hero's scenario alone.[^matchstats]
 - **xT is our own grid, not fitted to real football.** A gain such as "That look was worth … in
   expected threat" is a value inside the simulation.
-- **The stitched match has no goal yet:** 18 possessions and about 11½ minutes, inside the
+- **The stitched match has no goal yet:** 18 possessions and about 12 minutes, inside the
   spec's 15–25 and 10–15 min, but it stays 0–0 until the shot hero joins it.[^match]
 - **Not yet measured:** no single-agent baseline (the narration ablation is the closest
   comparison), no viewer study, and no frame-rate run on a laptop's integrated GPU.
@@ -248,7 +248,7 @@ Multi-Agent System (SPEC §0).
 [^marking]: [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md):
     seeds 100–139, 37/40; median separation 3.3 m with the look, 8.5 m without.
 [^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 18
-    possessions and "691.4 s, 0-0" on a Mac (2026-10-21 CT, #88). Where open play goes out
+    possessions and "742.2 s, 0-0" on a Mac (2026-10-21 CT, with players kept on the pitch). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).
@@ -260,7 +260,7 @@ Multi-Agent System (SPEC §0).
 [^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.993
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
-    0.920, recall 0.985, and the upper-bound note.
+    0.917, recall 0.984, and the upper-bound note.
 [^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): 90/90 false
     perturbations refuted; 468/468 generated claims supported.
 [^parity]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md) §1;

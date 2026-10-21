@@ -108,8 +108,8 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 18 possessions: 15 open-play
-  passages and three heroes. On this Mac it lasts 691.4 s (11:31), and the heroes start at 0:30
-  (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0) and 8:21 (the
+  passages and three heroes. On this Mac it lasts 742.2 s (12:22), and the heroes start at 0:30
+  (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0) and 8:41 (the
   set-piece hero `corner_blind_side` seed 0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
@@ -118,7 +118,8 @@ on an LLM.
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
     for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
     puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 4 of 15 end in a throw-in.
+    passages reach their cap: on this Mac 2 of 15 end in a throw-in. (The rate was measured
+    before players were kept on the pitch, §3.2; then 4 of 15 ended in a throw-in.)
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -129,7 +130,7 @@ on an LLM.
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
-    1 kick-off, 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
+    1 kick-off, 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
     possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
@@ -161,6 +162,17 @@ on an LLM.
   line height are team-style knobs.
 - Steering toward targets with limits — *tunable*: max speed by role 8.0–9.5 m/s, max accel
   ≈ 3.5 m/s², max decel ≈ 5 m/s², turn-rate limit.
+- Pitch bounds (2026-10-21, `sim/engine.py`, `sim/movement.py`): every movement target and
+  every setup position is clamped to the pitch, and a player brakes for the line ahead (the
+  exact discrete stopping envelope at the max decel, sharing the frame's accel/decel limit with
+  the rest of his step), so keepers stay at or in front of their goal line and nobody crosses a
+  touchline (`tests/test_on_pitch.py`: every frame, 0.3 m tolerance; the measured worst is 0).
+  Clamping targets alone was not enough: a player who turns along a line keeps drifting over it.
+  Before, the formation shift and a free ball's predicted path, which runs on past the lines, put
+  the away keeper up to 8 m behind his goal line in `blind_side_run` (1.7 m on the demo seed) and
+  full-backs and wingers past the touchline in open play. No restart is simulated (§3.1), so no
+  player ever needs to stand outside. Fewer balls go out as a result: 1.0 per stitched match
+  instead of 2.4 ([match_stats](../eval/reports/match_stats.md)).
 - Separation steering to avoid overlaps (Python-RVO2 optional, see REFERENCES).
 - Pressing: the nearest 1–2 defenders converge on the ball carrier when a team pressing trigger fires.
 - Marking (`possession_play`): every other outfield defender takes an attacker in his zone and stays
@@ -638,13 +650,13 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,855 passes attempted (79.4% of resolved ones completed), 371 possession changes
-      (354 interceptions, 18 out of play, no tackles), 485 team possessions of 11.1 s on average,
+      of play, 1,853 passes attempted (80.2% of resolved ones completed), 355 possession changes
+      (348 interceptions, 7 out of play, no tackles), 473 team possessions of 11.4 s on average,
       and no shots: no scenario of the default plan has the shot model on, so shot outcomes are
       pending module A. None of these has a target to check: no range is configured, and no paper
       in REFERENCES.md is recorded as printing one. The two rows that have a target are SPEC 3.1's,
-      and both are inside: 18 scenario possessions per match (target 15–25) and 12.31 min of play
-      (target 10–15). 340 of 360 scenario possessions start with the home team, which has 56.1% of
+      and both are inside: 18 scenario possessions per match (target 15–25) and 12.99 min of play
+      (target 10–15). 340 of 360 scenario possessions start with the home team, which has 55.9% of
       the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
@@ -927,7 +939,7 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.920, recall 0.985);
+      0.917, recall 0.984);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
