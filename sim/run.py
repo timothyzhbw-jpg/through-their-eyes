@@ -59,6 +59,9 @@ class MatchRun:
     def key_scan(self) -> Event:
         return next(e for e in self.events if e.type == "scan" and e.attrs.get("key"))
 
+    def key_step(self) -> Event:
+        return next(e for e in self.events if e.type == "step" and e.attrs.get("key"))
+
     def hero_decision(self) -> Decision | None:
         return next((d for d in self.decisions if d.player == self.hero), None)
 
