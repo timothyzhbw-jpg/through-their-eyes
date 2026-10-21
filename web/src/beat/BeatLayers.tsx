@@ -11,7 +11,6 @@ import { type Hero, type Run, type Sample, wrapAngle } from "../data/hero";
 import { useView } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { COLORS } from "../views/scene";
-import { featuresOf, quality } from "../quality/quality";
 import { beatAt, beatsOf, motion, popAt, pushAt, ringAt, type Beat } from "./beat";
 
 const SWEEP_RADIUS = 30; // m drawn
@@ -215,10 +214,7 @@ export function BeatLayer3D({ sample, half }: { sample: Sample; half: number }) 
       u.uFrom.value = arc.from;
       u.uSpan.value = arc.span;
       u.uLead.value = arc.lead;
-      // The post tiers add it as light in linear space and encode after (quality/): the same
-      // look on screen takes about a third of the light.
-      const post = featuresOf(quality.get().tier, false).post ? 0.3 : 1;
-      u.uAlpha.value = arc.alpha * (s.camera === "broadcast" ? 0.34 : 0.12) * post;
+      u.uAlpha.value = arc.alpha * (s.camera === "broadcast" ? 0.34 : 0.12);
     }
   });
 

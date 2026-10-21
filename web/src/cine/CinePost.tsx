@@ -24,7 +24,7 @@ import {
   type BlurPlan,
 } from "../views/motionBlur";
 import { blurFragmentShader, blurVertexShader } from "../views/PovMotionBlur";
-import { LOOK } from "../quality/look";
+import { LOOK, lookOutput } from "../quality/look";
 import { featuresOf, quality } from "../quality/quality";
 import { anchorPoint } from "./anchors";
 import { cineRuntime } from "./runtime";
@@ -154,6 +154,7 @@ function buildChain(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.C
   });
   for (const pass of [blurA, blurB, periphery]) asQuad(pass.material);
   const output = new OutputPass();
+  if (featuresOf(quality.get().tier, false).look) lookOutput(output); // the look's curve
   bokeh.enabled = false;
   bloom.enabled = false;
   blurA.enabled = false;

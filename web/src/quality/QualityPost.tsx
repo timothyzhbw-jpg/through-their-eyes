@@ -1,12 +1,14 @@
 // The low, medium and high render tiers of the 3D view (quality.ts), loaded only when one is
 // chosen. LookRig draws the shared look (look.ts): the AgX curve and the players' rim light.
 //
-// QualityPost takes over drawing at priority 1, as PovMotionBlur does at the standard tier. The
-// scene lands in a half-float buffer (linear HDR, nothing tone-mapped yet), then: ambient
-// occlusion (GTAO, high), bloom on whatever is brighter than white (the floodlights' lamps),
-// depth of field through the key-moment slow motion only, the first-person head-whip blur (the
-// same maths and shader as PovMotionBlur), OutputPass (the one tone mapping and sRGB encode),
-// and SMAA on the encoded image. three.js's own addons, MIT, no new dependency.
+// QualityPost takes over drawing at priority 1, as PovMotionBlur does at the other tiers. The
+// scene lands in a half-float buffer that three.js treats like the canvas (the trick
+// PovMotionBlur uses): the look's curve, the sRGB encoding and the fog are applied exactly as
+// when the scene is drawn straight to the screen, so the low tier and the post tiers start from
+// the same picture and the passes only add fidelity: ambient occlusion (GTAO, high), bloom on
+// the lamp heads (high), depth of field through the key-moment slow motion, the first-person
+// head-whip blur (PovMotionBlur's maths and shader, decoding and encoding around its sum), and
+// SMAA on the way to the screen. three.js's own addons, MIT, no new dependency.
 //
 // QualityEnvironment gives the scene image-based lighting: a prefiltered (PMREM) environment
 // rendered once from a small procedural night stadium (sky, stands, four lamp banks, the pitch's
@@ -19,7 +21,6 @@ import * as THREE from "three";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
@@ -52,7 +53,7 @@ import {
 
 const TAPS = 2 * TAPS_PER_SIDE + 1;
 /** Bloom: only what is brighter than white in linear light blooms (the lamps, not the kits). */
-const BLOOM = LOOK.bloom;
+const BLOOM = LOOK.bloomDisplay;
 /**
  * Depth of field at full strength, in BokehPass units (blur = metres off focus × aperture, in
  * screen units, at most maxBlur). The broadcast camera sees 40–110 m of depth, so it gets far
@@ -90,7 +91,7 @@ function blurShader() {
       uTexel: { value: 1 },
       uOffsets: { value: new Array<number>(TAPS).fill(0) },
       uWeights: { value: new Array<number>(TAPS).fill(0) },
-      uDecode: { value: false }, // the chain's buffers hold linear light
+      uDecode: { value: true }, // the chain's buffers hold the encoded picture
       uVignette: { value: 0 },
     },
     vertexShader: blurVertexShader,
@@ -150,8 +151,17 @@ function buildChain(
   camera: THREE.Camera,
   f: Features,
 ): Chain {
-  const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 0 });
+  const target = new THREE.WebGLRenderTarget(1, 1, {
+    type: THREE.HalfFloatType,
+    colorSpace: THREE.SRGBColorSpace,
+    samples: 0,
+  });
   const composer = new EffectComposer(gl, target);
+  // Flagged as an XR target, three.js applies the curve and the encoding in every material as it
+  // does for the canvas (the clone does not keep the flag: set it on both).
+  for (const t of [composer.renderTarget1, composer.renderTarget2]) {
+    (t as unknown as { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  }
   composer.addPass(new RenderPass(scene, camera));
   const ao = f.ao ? withoutOverlays(scene, new GTAOPass(scene, camera, 1, 1)) : null;
   if (ao) {
@@ -185,10 +195,9 @@ function buildChain(
     pass.material.toneMapped = false;
     composer.addPass(pass);
   }
-  const output = new OutputPass();
-  composer.addPass(output);
-  const smaa = f.smaa ? new SMAAPass() : null;
-  if (smaa) composer.addPass(smaa);
+  // SMAA last, on the encoded picture, onto the screen (no OutputPass: nothing left to convert).
+  const smaa = new SMAAPass();
+  composer.addPass(smaa);
   return {
     composer,
     ao,
@@ -201,7 +210,7 @@ function buildChain(
     height: 0,
     pixelRatio: 0,
     dispose() {
-      for (const p of [ao, bloom, bokeh, blurA, blurB, output, smaa]) p?.dispose();
+      for (const p of [ao, bloom, bokeh, blurA, blurB, smaa]) p?.dispose();
       composer.dispose();
       target.dispose();
     },

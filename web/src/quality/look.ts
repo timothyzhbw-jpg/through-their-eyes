@@ -7,11 +7,52 @@
 import * as THREE from "three";
 import { FLOODLIGHTS } from "../views/stadiumGeometry";
 
+// The look's tone curve: AgX (Blender renders with AgX, look None: one curve for both), then a
+// lift to the shared black floor (5, 8, 6), so no channel ever reaches 0. three.js calls it as its
+// custom tone mapping, in every material when the scene is drawn straight to the canvas and in
+// the post chain's OutputPass (lookOutput below), so every tier gets the same curve.
+const LOOK_CORAL = 0.45; // extra saturation on coral hues, before the curve
+const FLOOR = [5, 8, 6].map((v) => {
+  const c = v / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+});
+THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+  "vec3 CustomToneMapping( vec3 color ) { return color; }",
+  `// AgX desaturates the coral kits towards orange: a little more saturation on coral hues only,
+  // before the curve (as the Blender side does for the greens); gold, skin and green untouched.
+  vec3 lookCoral( vec3 c ) {
+    float hi = max( c.r, max( c.g, c.b ) );
+    float lo = min( c.r, min( c.g, c.b ) );
+    if ( hi <= 0.0 || c.r < hi || hi - lo < 1e-5 ) return c;
+    float hue = 60.0 * ( c.g - c.b ) / ( hi - lo ); // degrees, red is 0
+    float w = 1.0 - smoothstep( 4.0, 14.0, abs( hue - 6.0 ) );
+    float y = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+    return max( vec3( 0.0 ), mix( vec3( y ), c, 1.0 + ${LOOK_CORAL.toFixed(2)} * w ) );
+  }
+  vec3 CustomToneMapping( vec3 color ) {
+    const vec3 lookFloor = vec3( ${FLOOR.map((v) => v.toFixed(6)).join(", ")} );
+    return lookFloor + AgXToneMapping( lookCoral( color ) ) * ( 1.0 - lookFloor );
+  }`,
+);
+
+/** Make an OutputPass apply the look's curve (it sets no define for a custom curve itself). */
+export function lookOutput(pass: { material: THREE.ShaderMaterial }): void {
+  const p = pass as unknown as { _toneMapping: number; _outputColorSpace: string };
+  p._toneMapping = THREE.CustomToneMapping;
+  p._outputColorSpace = THREE.SRGBColorSpace;
+  pass.material.defines = { CUSTOM_TONE_MAPPING: "", SRGB_TRANSFER: "" };
+  pass.material.needsUpdate = true;
+}
+
 export const LOOK = {
-  toneMapping: THREE.AgXToneMapping, // Blender renders with AgX, look None: one curve for both
-  exposure: 1.25,
+  toneMapping: THREE.CustomToneMapping, // AgX and the black floor, above
+  exposure: 0.8,
+  grassSpecular: 0.06, // a hint of sheen: matte grass reads too saturated from above
   rim: { color: "#fff2d8", strength: 0.55, power: 2.5 }, // the floodlights' warm white
   crowdTint: "#b4bcc8", // multiplies the crowd's shirts: neutral-cool, no team-colour flashes
+  crowdGrey: 0.75, // how far every shirt is pulled to the crowd grey (classic: 0.45 for colours)
+  // The night sky as authored before the curve: AgX's toe would crush the classic #04070c.
+  sky: { zenith: "#0d131b", horizon: "#202c36" },
   starShadow: 0.27, // each of the three fill masts' shadows (25–35 %)
   keyShadow: 0.34, // the key mast's (+x, +y): the fills are at 0.75 of the key
   shadowTipWidth: 0.9, // m at the tip; 0.5 m (the shoulders) at the feet
@@ -21,7 +62,8 @@ export const LOOK = {
   environment: 0.3, // image-based light, never seen as a background
   // Bloom where a tier or a cine shot has one: only the lamp heads are this bright in linear
   // light, and a tight radius keeps the halo within about three lamp heads.
-  bloom: { strength: 0.35, radius: 0.25, threshold: 2.0 },
+  bloom: { strength: 0.25, radius: 0.08, threshold: 2.0 }, // cine's linear chain
+  bloomDisplay: { strength: 0.25, radius: 0.08, threshold: 0.96 }, // the live chain: encoded values
 };
 
 /** The key floodlight (the +x, +y mast), seen from the centre spot, in three.js world axes. */

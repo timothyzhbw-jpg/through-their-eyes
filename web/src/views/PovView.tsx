@@ -35,6 +35,7 @@ import { BeatLayer3D } from "../beat/BeatLayers";
 import { CameraBlend } from "../beat/cameraBlend";
 import { Grade } from "../beat/Grade";
 import { featuresOf, quality } from "../quality/quality";
+import { LOOK } from "../quality/look";
 
 // The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
 const QualityLayer = lazy(() => import("../quality/QualityPost"));
@@ -349,16 +350,36 @@ function PovScene() {
 
 /** The apron, the marked pitch and the goals. The capture renderer films the same ground. */
 export function Ground() {
+  // With the shared look (quality/) the grass is matte: a low camera would otherwise see mostly
+  // its sheen, which greys the stripes. It never takes image-based light.
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   return (
     <>
       <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
         <planeGeometry args={[130, 92]} />
-        {/* The grass keeps its colour at every render tier: no image-based light on it. */}
-        <meshStandardMaterial color="#173826" envMapIntensity={0} />
+        {look ? (
+          <meshPhysicalMaterial
+            color="#173826"
+            roughness={0.9}
+            specularIntensity={LOOK.grassSpecular}
+            envMapIntensity={0}
+          />
+        ) : (
+          <meshStandardMaterial color="#173826" envMapIntensity={0} />
+        )}
       </mesh>
       <mesh rotation-x={-Math.PI / 2}>
         <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} envMapIntensity={0} />
+        {look ? (
+          <meshPhysicalMaterial
+            map={getPitchTexture()}
+            roughness={0.9}
+            specularIntensity={LOOK.grassSpecular}
+            envMapIntensity={0}
+          />
+        ) : (
+          <meshStandardMaterial map={getPitchTexture()} envMapIntensity={0} />
+        )}
       </mesh>
       <Goals />
     </>

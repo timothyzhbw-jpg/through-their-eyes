@@ -62,27 +62,31 @@ const skyFragment = /* glsl */ `
   void main() {
     float up = smoothstep(-0.02, 0.45, vDir.y);
     gl_FragColor = vec4(mix(uHorizon, uZenith, up), 1.0);
+    #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
 
 function Sky() {
   const mesh = useRef<THREE.Mesh>(null);
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
         vertexShader: skyVertex,
         fragmentShader: skyFragment,
         uniforms: {
-          uZenith: { value: new THREE.Color(NIGHT.zenith) },
-          uHorizon: { value: new THREE.Color(NIGHT.horizon) },
+          uZenith: { value: new THREE.Color(look ? LOOK.sky.zenith : NIGHT.zenith) },
+          uHorizon: { value: new THREE.Color(look ? LOOK.sky.horizon : NIGHT.horizon) },
         },
         side: THREE.BackSide,
         depthWrite: false,
         depthTest: false,
         fog: false,
+        // With the look the sky goes through the curve like everything else (classic: as authored).
+        toneMapped: look,
       }),
-    [],
+    [look],
   );
   useFrame(({ camera }) => mesh.current?.position.copy(camera.position));
   return (
@@ -183,8 +187,13 @@ function silhouette(): THREE.CanvasTexture {
  * away section in one half of the right end. Dim on purpose: the crowd is background. */
 const DARK_SHIRTS = ["#2b3036", "#383d44", "#3b342e", "#2c3832", "#46484c", "#25292f"];
 const CROWD_GREY = new THREE.Color("#30353a");
-function shirtColor(k: number, x: number, y: number, out: THREE.Color): THREE.Color {
+function shirtColor(k: number, x: number, y: number, out: THREE.Color, look = false): THREE.Color {
   const r = hash01(k);
+  if (look) {
+    // The shared look: the same shirts, mostly greyed, so the stands read neutral-cool.
+    shirtColor(k, x, y, out, false);
+    return out.lerp(CROWD_GREY, LOOK.crowdGrey);
+  }
   const homeEnd = x < -BOWL.halfX + 4 && r < 0.5;
   const awaySection = x > BOWL.halfX - 4 && y > 0 && r < 0.5;
   if (homeEnd || (!awaySection && r < 0.07)) out.set(COLORS.home).lerp(CROWD_GREY, 0.45);
@@ -243,11 +252,11 @@ function Crowd() {
       at.scale.setScalar(0.9 + 0.2 * hash01(k + 5));
       at.updateMatrix();
       m.setMatrixAt(k, at.matrix);
-      m.setColorAt(k, shirtColor(k, seat.x, seat.y, color));
+      m.setColorAt(k, shirtColor(k, seat.x, seat.y, color, look));
     });
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [placed]);
+  }, [placed, look]);
   return (
     <instancedMesh ref={mesh} args={[geometry, material, placed.length]} frustumCulled={false} />
   );
