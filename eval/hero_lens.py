@@ -18,6 +18,13 @@ least 60% (SPEC 3.6: otherwise the moment is not that lens's story). Held-out se
 and 200-239 for `press_escape` (100-139 were seen while its decision-model fix was made). Writes
 eval/reports/hero_lens_<scenario>.md on the held-out seeds, hero_lens_<scenario>_<seeds>.md on any
 others, or the file `--out` names.
+
+A hero with no decision on the ball (a marker, `corner_blind_side`) is read through his
+`marker_scan` moment instead: only the scan lens applies (the expected turnover where the pass to
+his man resolves, with the look minus without), and the outcome is `eval.hero_marking`'s gate
+(without the look his man receives unmarked; with it he is within 5 m). Its report adds whether
+the lens's Δ is positive and whether the lens's scan, the most informative one, is the key scan
+(targets: moment detected ≥ 95%, scan lens ≥ 60%, Δ > 0 ≥ 60%, key scan ≥ 90%, outcome ≥ 60%).
 """
 
 from __future__ import annotations
@@ -29,7 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from explain.lenses import explain_moment
-from explain.moments import detect_moments
+from explain.moments import detect_moments, hero_card
 from sim.counterfactual import hero_counterfactual, possession_result
 from sim.scenarios import SCENARIOS
 
@@ -159,7 +166,107 @@ def report(scenario: str, rows: list[Row]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def evaluate(scenario: str, seeds: list[int]) -> tuple[list[Row], str]:
+# --- a hero with no decision on the ball (a marker's look) --------------------------------------
+
+
+@dataclass
+class MarkerRow:
+    seed: int
+    moment: str | None  # the hero's marker_scan card id
+    selected: str | None
+    delta: float | None  # the scan lens's Δ, xT of the hero's (defending) team
+    key_scan: bool  # the lens's scan (the most informative) is the scenario's key scan
+    # Where the pass to his man resolved, with the look and without it: the marker's distance to
+    # his man (m), and pressing intensity on his man.
+    separation: tuple[float, float] | None
+    pressure: tuple[float, float] | None
+    outcome_changed: bool  # eval.hero_marking's gate
+
+
+def is_marker_hero(scenario: str) -> bool:
+    """Whether the scenario's hero has no decision on the ball (judged on its first seed, 0)."""
+    from sim.engine import Simulation
+
+    return Simulation.from_scenario(scenario, 0).run().hero_decision() is None
+
+
+def evaluate_marker_seed(scenario: str, seed: int) -> MarkerRow:
+    from eval.hero_marking import evaluate_seed as marking
+
+    run = hero_counterfactual(scenario, seed).factual
+    card = hero_card(run, detect_moments(run))
+    selected, delta, key, sep, press = None, None, False, None, None
+    if card is not None:
+        explained = explain_moment(card, run)
+        selected = explained.selected_lens
+        lens = explained.lens("scan")
+        if lens is not None and lens.available:
+            m = lens.metrics
+            delta, key = lens.delta_xt, bool(m["key_scan"])
+            sep = (float(m["separation_with_scan_m"]), float(m["separation_without_scan_m"]))
+            press = (float(m["pressure_with_scan"]), float(m["pressure_without_scan"]))
+    return MarkerRow(seed=seed, moment=card.id if card else None, selected=selected, delta=delta,
+                     key_scan=key, separation=sep, pressure=press,
+                     outcome_changed=bool(marking(scenario, seed)["gate"]))  # fmt: skip
+
+
+def marker_report(scenario: str, rows: list[MarkerRow]) -> str:
+    cls = SCENARIOS[scenario]
+    n = len(rows)
+
+    def share(k: int) -> str:
+        return f"{k}/{n} ({k / max(n, 1):.0%})"
+
+    detected = sum(r.moment is not None for r in rows)
+    picked = sum(r.selected == cls.lens for r in rows)
+    positive = sum(r.delta is not None and r.delta > 0 for r in rows)
+    key = sum(r.key_scan for r in rows)
+    changed = sum(r.outcome_changed for r in rows)
+    deltas = [r.delta for r in rows if r.delta is not None]
+    seeds = f"{rows[0].seed}–{rows[-1].seed}" if n else "none"
+    lines = [
+        f"# Hero lens — `{scenario}`",
+        "",
+        f"Seeds {seeds} ({n}). `{cls.hero}` has no decision on the ball: his moment is his look "
+        "at the man he marks (`marker_scan`, `explain.moments`). Intended lens "
+        f"`{cls.lens}`; intervention `{cls.intervention}`, re-simulated from the frame it applies "
+        "(keyed randomness). The scan lens's Δ is the expected turnover where the pass to his man "
+        "resolved (pressing intensity × stake, the pressure lens's cost), with the look minus "
+        "without it; the space and pressure lenses need a decision on the ball and are "
+        "unavailable. The outcome counts as changed when `eval.hero_marking`'s gate holds: "
+        "without the look his man receives unmarked, with it he is within 5 m.",
+        "",
+        "| Metric | Value | Target |",
+        "|---|---|---|",
+        f"| Hero's look detected as a `marker_scan` moment | {share(detected)} | ≥ 95% |",
+        f"| `{cls.lens}` lens selected | {share(picked)} | ≥ 60% |",
+        f"| Scan lens Δ > 0 (the look raised the defence's expected turnover) | {share(positive)} "
+        "| ≥ 60% |",
+        f"| The lens's scan (the most informative) is the key scan | {share(key)} | ≥ 90% |",
+        f"| Intervention changes the outcome | {share(changed)} | ≥ 60% |",
+        f"| Median scan lens Δ (xT) | {np.median(deltas) if deltas else float('nan'):+.4f} | — |",
+        "",
+        "Separation: the marker to his man where the pass resolved (m). Pressure: pressing "
+        "intensity on his man there. With the look / without it.",
+        "",
+        "| Seed | Selected | Δscan | Key scan | Separation | Pressure | Outcome changed |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for r in rows:
+        sep = "—" if r.separation is None else f"{r.separation[0]:.1f} / {r.separation[1]:.1f}"
+        press = "—" if r.pressure is None else f"{r.pressure[0]:.2f} / {r.pressure[1]:.2f}"
+        lines.append(
+            f"| {r.seed} | {r.selected or '—'} | {_fmt(r.delta)} | "
+            f"{'yes' if r.key_scan else 'no'} | {sep} | {press} | "
+            f"{'yes' if r.outcome_changed else 'no'} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def evaluate(scenario: str, seeds: list[int]) -> tuple[list[Row] | list[MarkerRow], str]:
+    if is_marker_hero(scenario):
+        marker_rows = [evaluate_marker_seed(scenario, s) for s in seeds]
+        return marker_rows, marker_report(scenario, marker_rows)
     rows = [evaluate_seed(scenario, s) for s in seeds]
     return rows, report(scenario, rows)
 
@@ -195,7 +302,7 @@ def main() -> None:
     path = report_path(args.scenario, seeds, args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
-    print(text.split("\n\nΔ per lens")[0])
+    print(text.split("\n\nΔ per lens")[0].split("\n\nSeparation:")[0])
     print(f"\nwrote {path}")
 
 

@@ -24,6 +24,13 @@ target (a shot keeps its xG: pitch control at the goal mouth says nothing).
   decision minus cost after the action (on the receiver at reception; 1 x stake where possession
   was lost; 0 after a shot).
 
+A `marker_scan` (a defender's look at the man he marks, no decision on the ball) has only the scan
+lens. Its value is the pressure lens's currency from the defending side: the expected turnover
+when the pass to his man resolves, pressing intensity on whoever has the ball then times the stake
+at the ball (a ball the defence wins counts 1 x stake). delta = that with the look minus that
+without it (the marker's most informative scan before the pass dropped and re-simulated). The
+space and pressure lenses need a decision on the ball and are unavailable.
+
 Consequence of the shared value function: if dropping the scan makes the player pick one of his
 other options, delta_scan >= delta_space up to small belief-driven shifts of the option targets,
 so the scan lens wins exactly when the scan was decisive; if the decision does not change,
@@ -44,7 +51,7 @@ from analytics.pressing import frame_pressing
 from analytics.vision import player_visibility
 from analytics.xt import xt_for
 from explain.cards import LensName, LensResult, MomentCard
-from explain.moments import detect_moments
+from explain.moments import detect_moments, hero_card
 from sim.config import SimParams
 from sim.counterfactual import drop_scan_counterfactual
 from sim.decision import DecisionParams, OptionEval
@@ -260,6 +267,111 @@ def space_lens(run: MatchRun, decision: Decision | None) -> LensResult:
     )
 
 
+NO_BALL_DECISION = "no decision on the ball in this moment (a marker's look)"
+
+
+def marker_candidates(run: MatchRun, card: MomentCard) -> list[dict]:
+    """The marker's scans before the pass to his man, with how far each one's sightings move his
+    belief about the man at the moment the ball is played (m)."""
+    played = run.event(card.anchors["pass"])
+    f = played.frame
+    lo = f - round(SCAN_LOOKBACK_S / run.dt)
+    scans = sorted(
+        (e for e in run.events
+         if e.type == "scan" and e.player == card.actor and lo <= e.frame <= f),
+        key=lambda e: (e.frame, e.id),
+    )  # fmt: skip
+    seen = sightings(run, card.actor)
+    out = []
+    for s in scans:
+        window = (s.frame, min(int(s.attrs["end"]), f))
+        move = np.linalg.norm(
+            believed_position(run, card.actor, card.receiver, f, seen=seen)
+            - believed_position(run, card.actor, card.receiver, f, window, seen)
+        )
+        out.append(
+            {"scan_id": s.id, "start_frame": s.frame, "end_frame": int(s.attrs["end"]),
+             "belief_update_m": _r(move, 3)}
+        )  # fmt: skip
+    return out
+
+
+def turnover_at_resolution(run: MatchRun, pass_id: str) -> dict | None:
+    """Expected turnover where a pass resolved, from the passing team's side (the pressure lens's
+    cost): pressing intensity on the receiver times the stake at the ball, or 1 x stake when the
+    pass was lost. None when this run has no such pass or it was still rolling at the end."""
+    played = next((e for e in run.events if e.id == pass_id), None)
+    if played is None or played.attrs.get("outcome") is None:
+        return None
+    sign = _sign(run, played.player)
+    after = min(int(played.attrs["end"]), len(run.owner) - 1)
+    if played.attrs["outcome"] == "complete":
+        receiver = run.index(played.attrs["receiver"])
+        pressure, stake, presser = _pressure_cost(run, after, receiver, sign)
+    else:
+        end_at = np.array(played.attrs["end_at"])
+        pressure, stake = 1.0, float(xt_for(end_at, sign) + xt_for(end_at, -sign))
+        presser = played.attrs.get("receiver")
+    return {"frame": after, "outcome": played.attrs["outcome"],
+            "receiver": played.attrs.get("receiver"), "pressure": pressure, "stake": stake,
+            "cost": pressure * stake, "presser": presser}  # fmt: skip
+
+
+def marker_scan_lens(run: MatchRun, card: MomentCard, scan_id: str | None = None) -> LensResult:
+    """The scan lens for a `marker_scan`; `scan_id` overrides the most informative scan."""
+    candidates = marker_candidates(run, card)
+    if not candidates:
+        return _unavailable("scan", f"no scan by {card.actor} before the pass")
+    best = max(candidates, key=lambda c: (c["belief_update_m"], c["start_frame"]))
+    if scan_id is not None:
+        best = next((c for c in candidates if c["scan_id"] == scan_id), None)
+        if best is None:
+            raise ValueError(f"{scan_id} is not a scan of {card.actor} before the pass")
+    cf = drop_scan_counterfactual(run.scenario, run.seed, best["scan_id"])
+    pass_id = card.anchors["pass"]
+    f, c = (
+        turnover_at_resolution(cf.factual, pass_id),
+        turnover_at_resolution(cf.counterfactual, pass_id),
+    )
+    if f is None or c is None:
+        return _unavailable("scan", f"{pass_id} is not resolved in both runs")
+    played = run.event(pass_id).frame
+    marker, man = card.actor, card.receiver
+
+    def separation(r: MatchRun, frame: int) -> float:
+        return float(np.linalg.norm(r.pos[frame, r.index(marker)] - r.pos[frame, r.index(man)]))
+
+    def belief_error(r: MatchRun) -> float:
+        believed = believed_position(r, marker, man, played)
+        return float(np.linalg.norm(believed - r.pos[played, r.index(man)]))
+
+    return LensResult(
+        lens="scan",
+        available=True,
+        delta_xt=_r(round(f["cost"], DIGITS) - round(c["cost"], DIGITS)),
+        metrics={
+            "scan_id": best["scan_id"],
+            "key_scan": bool(run.event(best["scan_id"]).attrs.get("key")),
+            "belief_update_m": best["belief_update_m"],
+            "pass": pass_id,
+            "outcome_with_scan": f["outcome"],
+            "outcome_without_scan": c["outcome"],
+            "separation_with_scan_m": _r(separation(cf.factual, f["frame"]), 3),
+            "separation_without_scan_m": _r(separation(cf.counterfactual, c["frame"]), 3),
+            "pressure_with_scan": _r(f["pressure"]),
+            "pressure_without_scan": _r(c["pressure"]),
+            "stake_with_scan_xt": _r(f["stake"]),
+            "stake_without_scan_xt": _r(c["stake"]),
+            "belief_error_with_scan_m": _r(belief_error(cf.factual), 3),
+            "belief_error_without_scan_m": _r(belief_error(cf.counterfactual), 3),
+        },
+        rows=candidates,
+        evidence=[best["scan_id"], pass_id],
+        note="expected turnover where the pass to his man resolved (pressing intensity x stake, "
+        "the pressure lens's cost) with this scan minus without it",
+    )
+
+
 def _pressure_cost(run: MatchRun, frame: int, carrier: int, sign: int) -> tuple[float, float, str]:
     """(pressure on the carrier, stake at the ball, main presser) at one frame."""
     ball = run.ball_pos[frame, :2]
@@ -358,6 +470,12 @@ def explain_moment(card: MomentCard, run: MatchRun) -> MomentCard:
         "space": lambda: space_lens(run, decision),
         "pressure": lambda: pressure_lens(run, card),
     }
+    if card.kind == "marker_scan":
+        compute = {
+            "scan": lambda: marker_scan_lens(run, card),
+            "space": lambda: _unavailable("space", NO_BALL_DECISION),
+            "pressure": lambda: _unavailable("pressure", NO_BALL_DECISION),
+        }
     out.lenses = [compute[name]() for name in LENS_ORDER if name in card.candidate_lenses]
     out.selected_lens = pick_lens(out.lenses)
     return out
@@ -376,10 +494,9 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=3)
     args = parser.parse_args()
     run = Simulation.from_scenario(args.scenario, args.seed).run()
-    hero = run.hero_decision()
-    for card in detect_moments(run):
-        if hero is not None and (card.actor, card.anchor_frame) == (hero.player, hero.frame):
-            print(explain_moment(card, run).model_dump_json(indent=2))
+    card = hero_card(run, detect_moments(run))
+    if card is not None:
+        print(explain_moment(card, run).model_dump_json(indent=2))
 
 
 if __name__ == "__main__":
