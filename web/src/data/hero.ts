@@ -276,7 +276,7 @@ export function runLabels(hero: Hero): RunLabels {
   return {
     factual: "With the look",
     counterfactual: "Without the look",
-    ghostOfFactual: "Ghost: with look",
+    ghostOfFactual: "Ghost: with the look",
     ghostOfCounterfactual: "Ghost: no look",
     tag: { factual: "with the look", counterfactual: "without the look" },
     gain: "Expected threat gained by looking",

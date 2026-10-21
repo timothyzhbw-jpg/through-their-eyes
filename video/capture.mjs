@@ -268,6 +268,7 @@ const pageState = (page) =>
       narration: texts(
         ".panel.narration .breakdown-head .meta, .panel.narration .breakdown-head .plan-badge",
       ),
+      fixture: !!document.querySelector(".panel.narration .plan-badge[data-fixture]"),
       plan: texts(".panel.breakdown .breakdown-head .plan-badge"),
       live: document.querySelector(".live-status")?.textContent?.trim() ?? null,
       crop: {
@@ -282,7 +283,7 @@ function warningsOf(state) {
   const w = [];
   if (state.offline)
     w.push("Offline data: the site did not reach the API and played its bundled files");
-  if (state.narration.includes("Fixture")) w.push("narration is the unverified fixture");
+  if (state.fixture) w.push("narration is the unverified fixture");
   for (const b of ["Template", "Rate-limited", "Daily cap reached"])
     if (state.narration.includes(b)) w.push(`narration badge: ${b}`);
   for (const b of ["Server template", "Template plan (fallback)"])
@@ -293,7 +294,7 @@ function warningsOf(state) {
 /** Open every narration line and read the claims its evidence card shows (SPEC 7). */
 async function readClaims(page, persona, language) {
   const state = await pageState(page);
-  const verified = !state.offline && !state.narration.includes("Fixture");
+  const verified = !state.offline && !state.fixture;
   const buttons = page.locator(".panel.narration ol.lines li:not(.withheld) > button");
   const lines = [];
   for (let k = 0; k < (await buttons.count()); k++) {

@@ -128,7 +128,7 @@
         { "do": "click", "role": "button", "name": "With the look", "hold": 1.5 },
         { "do": "click", "role": "button", "name": "Without the look", "hold": 0.5 },
         { "do": "click", "role": "button", "name": "View options", "hold": 0.4 },
-        { "do": "click", "role": "button", "name": "Ghost: with look", "hold": 0.5 },
+        { "do": "click", "role": "button", "name": "Ghost: with the look", "hold": 0.5 },
         { "do": "click", "role": "button", "name": "Play", "exact": true, "hold": 3 }
       ],
       "vo": "Now take that look away and re-run the simulation. Without it, he plays it safe and passes back. That look was worth {cf_value.dxt} in expected threat.",
@@ -292,21 +292,6 @@
       "notes": "Candidates once built: a producer-console view of a rejected draft with its verdict and the banned-word hit."
     },
     {
-      "id": "10-real-footage",
-      "spec_beat": "1:40-2:00",
-      "title": "Optional: the overlays on a real camera (at most ten seconds; demo/realfeed)",
-      "status": "external",
-      "pending": "Not from the app and not captured by this kit: made by demo/realfeed under the rules of SPEC 7 and cut first if any of them fails (SPEC 9).",
-      "url": null,
-      "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 8,
-      "crop": null,
-      "setup": [],
-      "actions": [],
-      "vo": "The same graphics on a real camera, as a short test. Everything in the app itself is synthetic.",
-      "notes": "Label and attribution stay on screen for the whole segment (SPEC 7). No numbers, captions or narration on the real footage."
-    },
-    {
       "id": "11-architecture",
       "spec_beat": "1:40-2:00",
       "title": "Architecture (Microsoft stack) and eval numbers",
@@ -318,8 +303,7 @@
       "crop": null,
       "setup": [],
       "actions": [],
-      "vo": "Built on Microsoft Foundry and Agent Framework, with our own MCP tool server, Azure AI Speech, Container Apps, Cosmos DB and Application Insights, shipped with GitHub Actions.",
-      "notes": "If the real-footage segment is cut, this slide takes its time."
+      "vo": "Built on Microsoft Foundry and Agent Framework, with our own MCP tool server, Azure AI Speech, Container Apps, Cosmos DB and Application Insights, shipped with GitHub Actions."
     }
   ]
 }

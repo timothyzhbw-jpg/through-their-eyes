@@ -104,6 +104,7 @@ export function TelemetryPanel() {
           value={`${now.headToBall.toFixed(0)}°`}
           detail="0–180° · sim scans"
           note={SIM_NOTE}
+          source="sim"
           {...row}
         >
           <Spans t={t} />
@@ -131,6 +132,7 @@ export function TelemetryPanel() {
           value={`${now.headSpeed.toFixed(0)}°/s`}
           detail={`detector · threshold ${threshold}°/s`}
           note={DETECTOR_NOTE}
+          source="detector"
           {...row}
         >
           <Detector t={t} />
@@ -148,6 +150,7 @@ export function TelemetryPanel() {
           value={String(now.inSight)}
           detail="players he can see"
           note={SIM_NOTE}
+          source="sim"
           {...row}
         >
           <path
@@ -164,10 +167,11 @@ export function TelemetryPanel() {
           value={now.belief === null ? "n/a" : `${now.belief.toFixed(1)} m`}
           detail={
             t.belief
-              ? "his ghost to the true position"
+              ? "how far his belief is from where the player really is"
               : `beliefs are recorded for ${hero.heroId} only`
           }
           note={SIM_NOTE}
+          source="sim"
           {...row}
         >
           {o?.belief && (
@@ -265,6 +269,7 @@ function Row(props: {
   value: string;
   detail: string;
   note: string;
+  source: "sim" | "detector";
   cursor: number;
   guides: number[];
   axis: number;
@@ -277,7 +282,7 @@ function Row(props: {
         <span className="tread">
           <b className="tvalue">{props.value}</b>
           <span className="source" title={props.note}>
-            sim
+            {props.source}
           </span>
         </span>
         <span className="tdetail">{props.detail}</span>

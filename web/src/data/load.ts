@@ -67,7 +67,7 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
   let hero: Hero | null = null;
   let api: Api | null = null;
   let momentId: string | null = null;
-  let offline: string | null = "no live service configured (VITE_API_URL is not set)";
+  let offline: string | null = "no live service is configured";
   if (opts.apiBase) {
     const candidate = createApi(opts.apiBase, match, fetchImpl);
     try {
