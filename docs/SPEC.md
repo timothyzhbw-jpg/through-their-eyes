@@ -210,7 +210,9 @@ on an LLM.
   standing 1.2 m beside a 5 m carry, 3 m along it, gets P(keep) 0.64, while the sim's tackle rule
   takes the ball from anyone who gets within 1 m of it.
 - Each teammate is evaluated at several targets along his believed run (lead 0–2 s); the best one
-  is his option. Until the fitted xT grid exists (§4.5), decisions use a smooth xT prior.
+  is his option. Decisions value options with a smooth xT prior, not the fitted grid (§4.5): the
+  grid is fitted on play this model drives, so valuing options with it would change its own
+  training data. Analytics and explain read the fitted grid.
 - Softmax with a per-player temperature. Receiver body orientation affects completion (facing play
   vs back to goal) — not yet in M1.
 - **Sampling is Gumbel-max** with keyed noise per (player, frame, option): argmax(value/T + g) is
@@ -431,6 +433,21 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
 16 × 12 grid fitted on synthetic event data with our own Markov implementation (value iteration,
 about 100 lines). socceraction is not used: it is no longer maintained and would be a dependency
 for a few lines of maths. Cache the grid per sim version.
+*Implemented (2026-10-20):* `analytics/xt.py`, fitted by `eval/xt_fit.py`.
+- Data: `open_play` tuning seeds 0–999 — `possession_play`'s shape, pressing and marking, but
+  every ball carrier decides with the decision model (§3.5), so play reaches the box and ends in
+  shots. The scripted scenarios cannot carry the fit: `possession_play` and `blind_side_run` have
+  no shots at all. A shot scores its expected goals under the sim's shot model (the decision
+  model's xG; the engine has no shot outcome model); a lost ball is worth 0. Open play is
+  symmetric across the long axis, so each action also counts mirrored.
+- Fallback: a cell with fewer than 20 actions keeps the smooth prior, moved down to the lowest
+  fitted value (the prior's floor is a guess, the fit measures it); with fewer than 30 shots in
+  all, the whole grid is the prior.
+- Cache: `analytics/xt_grid.json` records the sim version, a hash of what open play does on
+  probe seeds; `tests/test_xt.py` fails when the sim no longer matches. `xt_for` reads the grid,
+  bilinear between cell centres, so a millimetre never jumps a cell boundary.
+- Decisions keep the prior (§3.5); possession value, the lenses, moments and the Analyst's
+  `get_xt` read the grid.
 
 ### 4.6 Pass metrics and speeds
 - Pass distance, completion, and difficulty ∈ [0, 1] from: distance, interception risk along the
@@ -505,10 +522,14 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       That is equal by construction at matched noise, a consistency check, not evidence. The
       0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
-- [ ] xT grid increases toward goal (sanity plot saved).
-      — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
-      [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
-      no fitted 16 × 12 grid and no plot.
+- [x] xT grid increases toward goal (sanity plot saved).
+      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.136, central
+      lanes ≥ 0.27 above the wings in the last three columns; plot
+      [xt_fit.svg](../eval/reports/xt_fit.svg));
+      [tests/test_xt.py](../tests/test_xt.py)::`test_fitted_grid_increases_toward_the_attacked_goal`,
+      `test_central_lanes_are_worth_at_least_the_wings_near_goal`,
+      `test_fitted_grid_is_16_by_12_and_probability_like`,
+      `test_a_fixed_seed_set_gives_a_byte_identical_grid`
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
@@ -1191,12 +1212,12 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
 | §3 sim | 8 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
+| §4 analytics | 7 | 0 | — |
 | §5 explain | 6 | 0 | — |
 | §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **26** | **10** | |
+| **Total** | **27** | **9** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer

@@ -1,0 +1,354 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 798 852" width="798" height="852" role="img" aria-labelledby="title desc">
+<title id="title">xT grid fitted on synthetic open play</title>
+<desc id="desc">16 by 12 expected-threat grid for a team attacking to the right, and its column means against the smooth prior. Values are listed in xt_fit.md.</desc>
+<style>svg{font-family:system-ui,-apple-system,'Segoe UI',sans-serif}.bg{fill:#fcfcfb}.t1{fill:#0b0b0b}.t2{fill:#52514e}.ln{stroke:#c3c2b7}.grid{stroke:#e4e3df}.hatch{stroke:#52514e}.s1{stroke:#2a78d6}.s2{stroke:#eb6834}.s3{stroke:#1baf7a}.sp{stroke:#52514e}.f1{fill:#2a78d6}.f2{fill:#eb6834}.f3{fill:#1baf7a}.fp{fill:#52514e}.b0{fill:#cde2fb}.b1{fill:#9ec5f4}.b2{fill:#6da7ec}.b3{fill:#5598e7}.b4{fill:#3987e5}.b5{fill:#256abf}.b6{fill:#184f95}.b7{fill:#0d366b}@media (prefers-color-scheme: dark){.bg{fill:#1a1a19}.t1{fill:#f0efec}.t2{fill:#c3c2b7}.ln{stroke:#6b6a64}.grid{stroke:#383835}.hatch{stroke:#c3c2b7}.s1{stroke:#3987e5}.s2{stroke:#d95926}.s3{stroke:#199e70}.sp{stroke:#c3c2b7}.f1{fill:#3987e5}.f2{fill:#d95926}.f3{fill:#199e70}.fp{fill:#c3c2b7}.b0{fill:#0d366b}.b1{fill:#184f95}.b2{fill:#256abf}.b3{fill:#3987e5}.b4{fill:#5598e7}.b5{fill:#6da7ec}.b6{fill:#9ec5f4}.b7{fill:#cde2fb}}</style>
+<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" class="hatch" stroke-width="1.2" stroke-opacity="0.55"/></pattern></defs>
+<rect class="bg" width="798" height="852"/>
+<text class="t1" x="48.0" y="26" font-size="16" font-weight="600">Fitted xT, open_play seeds 0–999</text>
+<text class="t2" x="48.0" y="46" font-size="12">Attacking left to right. Hatched cells have fewer than 20 actions: the prior at the fitted floor.</text>
+<rect class="b0" x="48.0" y="438.0" width="38.4" height="33.0"><title>column 0, lane 0: 0.001 (prior, 2 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="438.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="404.0" width="38.4" height="33.0"><title>column 0, lane 1: 0.001 (prior, 3 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="404.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="370.0" width="38.4" height="33.0"><title>column 0, lane 2: 0.001 (prior, 2 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="370.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="336.0" width="38.4" height="33.0"><title>column 0, lane 3: 0.001 (prior, 9 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="336.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="302.0" width="38.4" height="33.0"><title>column 0, lane 4: 0.002 (fitted, 104 actions)</title></rect>
+<rect class="b0" x="48.0" y="268.0" width="38.4" height="33.0"><title>column 0, lane 5: 0.002 (fitted, 345 actions)</title></rect>
+<rect class="b0" x="48.0" y="234.0" width="38.4" height="33.0"><title>column 0, lane 6: 0.002 (fitted, 345 actions)</title></rect>
+<rect class="b0" x="48.0" y="200.0" width="38.4" height="33.0"><title>column 0, lane 7: 0.002 (fitted, 104 actions)</title></rect>
+<rect class="b0" x="48.0" y="166.0" width="38.4" height="33.0"><title>column 0, lane 8: 0.001 (prior, 9 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="166.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="132.0" width="38.4" height="33.0"><title>column 0, lane 9: 0.001 (prior, 2 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="132.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="98.0" width="38.4" height="33.0"><title>column 0, lane 10: 0.001 (prior, 3 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="98.0" width="38.4" height="33.0"/>
+<rect class="b0" x="48.0" y="64.0" width="38.4" height="33.0"><title>column 0, lane 11: 0.001 (prior, 2 actions)</title></rect>
+<rect fill="url(#hatch)" x="48.0" y="64.0" width="38.4" height="33.0"/>
+<rect class="b0" x="87.4" y="438.0" width="38.4" height="33.0"><title>column 1, lane 0: 0.001 (prior, 2 actions)</title></rect>
+<rect fill="url(#hatch)" x="87.4" y="438.0" width="38.4" height="33.0"/>
+<rect class="b0" x="87.4" y="404.0" width="38.4" height="33.0"><title>column 1, lane 1: 0.001 (prior, 1 actions)</title></rect>
+<rect fill="url(#hatch)" x="87.4" y="404.0" width="38.4" height="33.0"/>
+<rect class="b0" x="87.4" y="370.0" width="38.4" height="33.0"><title>column 1, lane 2: 0.001 (prior, 3 actions)</title></rect>
+<rect fill="url(#hatch)" x="87.4" y="370.0" width="38.4" height="33.0"/>
+<rect class="b0" x="87.4" y="336.0" width="38.4" height="33.0"><title>column 1, lane 3: 0.002 (fitted, 80 actions)</title></rect>
+<rect class="b0" x="87.4" y="302.0" width="38.4" height="33.0"><title>column 1, lane 4: 0.002 (fitted, 393 actions)</title></rect>
+<rect class="b0" x="87.4" y="268.0" width="38.4" height="33.0"><title>column 1, lane 5: 0.002 (fitted, 590 actions)</title></rect>
+<rect class="b0" x="87.4" y="234.0" width="38.4" height="33.0"><title>column 1, lane 6: 0.002 (fitted, 590 actions)</title></rect>
+<rect class="b0" x="87.4" y="200.0" width="38.4" height="33.0"><title>column 1, lane 7: 0.002 (fitted, 393 actions)</title></rect>
+<rect class="b0" x="87.4" y="166.0" width="38.4" height="33.0"><title>column 1, lane 8: 0.002 (fitted, 80 actions)</title></rect>
+<rect class="b0" x="87.4" y="132.0" width="38.4" height="33.0"><title>column 1, lane 9: 0.001 (prior, 3 actions)</title></rect>
+<rect fill="url(#hatch)" x="87.4" y="132.0" width="38.4" height="33.0"/>
+<rect class="b0" x="87.4" y="98.0" width="38.4" height="33.0"><title>column 1, lane 10: 0.001 (prior, 1 actions)</title></rect>
+<rect fill="url(#hatch)" x="87.4" y="98.0" width="38.4" height="33.0"/>
+<rect class="b0" x="87.4" y="64.0" width="38.4" height="33.0"><title>column 1, lane 11: 0.001 (prior, 2 actions)</title></rect>
+<rect fill="url(#hatch)" x="87.4" y="64.0" width="38.4" height="33.0"/>
+<rect class="b0" x="126.8" y="438.0" width="38.4" height="33.0"><title>column 2, lane 0: 0.001 (prior, 5 actions)</title></rect>
+<rect fill="url(#hatch)" x="126.8" y="438.0" width="38.4" height="33.0"/>
+<rect class="b0" x="126.8" y="404.0" width="38.4" height="33.0"><title>column 2, lane 1: 0.001 (fitted, 24 actions)</title></rect>
+<rect class="b0" x="126.8" y="370.0" width="38.4" height="33.0"><title>column 2, lane 2: 0.002 (fitted, 35 actions)</title></rect>
+<rect class="b0" x="126.8" y="336.0" width="38.4" height="33.0"><title>column 2, lane 3: 0.002 (fitted, 166 actions)</title></rect>
+<rect class="b0" x="126.8" y="302.0" width="38.4" height="33.0"><title>column 2, lane 4: 0.002 (fitted, 503 actions)</title></rect>
+<rect class="b0" x="126.8" y="268.0" width="38.4" height="33.0"><title>column 2, lane 5: 0.002 (fitted, 341 actions)</title></rect>
+<rect class="b0" x="126.8" y="234.0" width="38.4" height="33.0"><title>column 2, lane 6: 0.002 (fitted, 341 actions)</title></rect>
+<rect class="b0" x="126.8" y="200.0" width="38.4" height="33.0"><title>column 2, lane 7: 0.002 (fitted, 503 actions)</title></rect>
+<rect class="b0" x="126.8" y="166.0" width="38.4" height="33.0"><title>column 2, lane 8: 0.002 (fitted, 166 actions)</title></rect>
+<rect class="b0" x="126.8" y="132.0" width="38.4" height="33.0"><title>column 2, lane 9: 0.002 (fitted, 35 actions)</title></rect>
+<rect class="b0" x="126.8" y="98.0" width="38.4" height="33.0"><title>column 2, lane 10: 0.001 (fitted, 24 actions)</title></rect>
+<rect class="b0" x="126.8" y="64.0" width="38.4" height="33.0"><title>column 2, lane 11: 0.001 (prior, 5 actions)</title></rect>
+<rect fill="url(#hatch)" x="126.8" y="64.0" width="38.4" height="33.0"/>
+<rect class="b0" x="166.1" y="438.0" width="38.4" height="33.0"><title>column 3, lane 0: 0.001 (prior, 17 actions)</title></rect>
+<rect fill="url(#hatch)" x="166.1" y="438.0" width="38.4" height="33.0"/>
+<rect class="b0" x="166.1" y="404.0" width="38.4" height="33.0"><title>column 3, lane 1: 0.002 (fitted, 95 actions)</title></rect>
+<rect class="b0" x="166.1" y="370.0" width="38.4" height="33.0"><title>column 3, lane 2: 0.002 (fitted, 297 actions)</title></rect>
+<rect class="b0" x="166.1" y="336.0" width="38.4" height="33.0"><title>column 3, lane 3: 0.002 (fitted, 659 actions)</title></rect>
+<rect class="b0" x="166.1" y="302.0" width="38.4" height="33.0"><title>column 3, lane 4: 0.002 (fitted, 1617 actions)</title></rect>
+<rect class="b0" x="166.1" y="268.0" width="38.4" height="33.0"><title>column 3, lane 5: 0.002 (fitted, 1031 actions)</title></rect>
+<rect class="b0" x="166.1" y="234.0" width="38.4" height="33.0"><title>column 3, lane 6: 0.002 (fitted, 1031 actions)</title></rect>
+<rect class="b0" x="166.1" y="200.0" width="38.4" height="33.0"><title>column 3, lane 7: 0.002 (fitted, 1617 actions)</title></rect>
+<rect class="b0" x="166.1" y="166.0" width="38.4" height="33.0"><title>column 3, lane 8: 0.002 (fitted, 659 actions)</title></rect>
+<rect class="b0" x="166.1" y="132.0" width="38.4" height="33.0"><title>column 3, lane 9: 0.002 (fitted, 297 actions)</title></rect>
+<rect class="b0" x="166.1" y="98.0" width="38.4" height="33.0"><title>column 3, lane 10: 0.002 (fitted, 95 actions)</title></rect>
+<rect class="b0" x="166.1" y="64.0" width="38.4" height="33.0"><title>column 3, lane 11: 0.001 (prior, 17 actions)</title></rect>
+<rect fill="url(#hatch)" x="166.1" y="64.0" width="38.4" height="33.0"/>
+<rect class="b0" x="205.5" y="438.0" width="38.4" height="33.0"><title>column 4, lane 0: 0.002 (fitted, 164 actions)</title></rect>
+<rect class="b0" x="205.5" y="404.0" width="38.4" height="33.0"><title>column 4, lane 1: 0.002 (fitted, 590 actions)</title></rect>
+<rect class="b0" x="205.5" y="370.0" width="38.4" height="33.0"><title>column 4, lane 2: 0.002 (fitted, 744 actions)</title></rect>
+<rect class="b0" x="205.5" y="336.0" width="38.4" height="33.0"><title>column 4, lane 3: 0.002 (fitted, 507 actions)</title></rect>
+<rect class="b0" x="205.5" y="302.0" width="38.4" height="33.0"><title>column 4, lane 4: 0.002 (fitted, 368 actions)</title></rect>
+<rect class="b0" x="205.5" y="268.0" width="38.4" height="33.0"><title>column 4, lane 5: 0.002 (fitted, 582 actions)</title></rect>
+<rect class="b0" x="205.5" y="234.0" width="38.4" height="33.0"><title>column 4, lane 6: 0.002 (fitted, 582 actions)</title></rect>
+<rect class="b0" x="205.5" y="200.0" width="38.4" height="33.0"><title>column 4, lane 7: 0.002 (fitted, 368 actions)</title></rect>
+<rect class="b0" x="205.5" y="166.0" width="38.4" height="33.0"><title>column 4, lane 8: 0.002 (fitted, 507 actions)</title></rect>
+<rect class="b0" x="205.5" y="132.0" width="38.4" height="33.0"><title>column 4, lane 9: 0.002 (fitted, 744 actions)</title></rect>
+<rect class="b0" x="205.5" y="98.0" width="38.4" height="33.0"><title>column 4, lane 10: 0.002 (fitted, 590 actions)</title></rect>
+<rect class="b0" x="205.5" y="64.0" width="38.4" height="33.0"><title>column 4, lane 11: 0.002 (fitted, 164 actions)</title></rect>
+<rect class="b0" x="244.9" y="438.0" width="38.4" height="33.0"><title>column 5, lane 0: 0.002 (fitted, 371 actions)</title></rect>
+<rect class="b0" x="244.9" y="404.0" width="38.4" height="33.0"><title>column 5, lane 1: 0.002 (fitted, 1127 actions)</title></rect>
+<rect class="b0" x="244.9" y="370.0" width="38.4" height="33.0"><title>column 5, lane 2: 0.002 (fitted, 815 actions)</title></rect>
+<rect class="b0" x="244.9" y="336.0" width="38.4" height="33.0"><title>column 5, lane 3: 0.002 (fitted, 384 actions)</title></rect>
+<rect class="b0" x="244.9" y="302.0" width="38.4" height="33.0"><title>column 5, lane 4: 0.002 (fitted, 319 actions)</title></rect>
+<rect class="b0" x="244.9" y="268.0" width="38.4" height="33.0"><title>column 5, lane 5: 0.002 (fitted, 682 actions)</title></rect>
+<rect class="b0" x="244.9" y="234.0" width="38.4" height="33.0"><title>column 5, lane 6: 0.002 (fitted, 682 actions)</title></rect>
+<rect class="b0" x="244.9" y="200.0" width="38.4" height="33.0"><title>column 5, lane 7: 0.002 (fitted, 319 actions)</title></rect>
+<rect class="b0" x="244.9" y="166.0" width="38.4" height="33.0"><title>column 5, lane 8: 0.002 (fitted, 384 actions)</title></rect>
+<rect class="b0" x="244.9" y="132.0" width="38.4" height="33.0"><title>column 5, lane 9: 0.002 (fitted, 815 actions)</title></rect>
+<rect class="b0" x="244.9" y="98.0" width="38.4" height="33.0"><title>column 5, lane 10: 0.002 (fitted, 1127 actions)</title></rect>
+<rect class="b0" x="244.9" y="64.0" width="38.4" height="33.0"><title>column 5, lane 11: 0.002 (fitted, 371 actions)</title></rect>
+<rect class="b0" x="284.2" y="438.0" width="38.4" height="33.0"><title>column 6, lane 0: 0.002 (fitted, 245 actions)</title></rect>
+<rect class="b0" x="284.2" y="404.0" width="38.4" height="33.0"><title>column 6, lane 1: 0.002 (fitted, 275 actions)</title></rect>
+<rect class="b0" x="284.2" y="370.0" width="38.4" height="33.0"><title>column 6, lane 2: 0.002 (fitted, 276 actions)</title></rect>
+<rect class="b0" x="284.2" y="336.0" width="38.4" height="33.0"><title>column 6, lane 3: 0.002 (fitted, 322 actions)</title></rect>
+<rect class="b0" x="284.2" y="302.0" width="38.4" height="33.0"><title>column 6, lane 4: 0.002 (fitted, 258 actions)</title></rect>
+<rect class="b0" x="284.2" y="268.0" width="38.4" height="33.0"><title>column 6, lane 5: 0.002 (fitted, 270 actions)</title></rect>
+<rect class="b0" x="284.2" y="234.0" width="38.4" height="33.0"><title>column 6, lane 6: 0.002 (fitted, 270 actions)</title></rect>
+<rect class="b0" x="284.2" y="200.0" width="38.4" height="33.0"><title>column 6, lane 7: 0.002 (fitted, 258 actions)</title></rect>
+<rect class="b0" x="284.2" y="166.0" width="38.4" height="33.0"><title>column 6, lane 8: 0.002 (fitted, 322 actions)</title></rect>
+<rect class="b0" x="284.2" y="132.0" width="38.4" height="33.0"><title>column 6, lane 9: 0.002 (fitted, 276 actions)</title></rect>
+<rect class="b0" x="284.2" y="98.0" width="38.4" height="33.0"><title>column 6, lane 10: 0.002 (fitted, 275 actions)</title></rect>
+<rect class="b0" x="284.2" y="64.0" width="38.4" height="33.0"><title>column 6, lane 11: 0.002 (fitted, 245 actions)</title></rect>
+<rect class="b0" x="323.6" y="438.0" width="38.4" height="33.0"><title>column 7, lane 0: 0.003 (fitted, 117 actions)</title></rect>
+<rect class="b0" x="323.6" y="404.0" width="38.4" height="33.0"><title>column 7, lane 1: 0.003 (fitted, 166 actions)</title></rect>
+<rect class="b0" x="323.6" y="370.0" width="38.4" height="33.0"><title>column 7, lane 2: 0.003 (fitted, 228 actions)</title></rect>
+<rect class="b0" x="323.6" y="336.0" width="38.4" height="33.0"><title>column 7, lane 3: 0.003 (fitted, 265 actions)</title></rect>
+<rect class="b0" x="323.6" y="302.0" width="38.4" height="33.0"><title>column 7, lane 4: 0.002 (fitted, 186 actions)</title></rect>
+<rect class="b0" x="323.6" y="268.0" width="38.4" height="33.0"><title>column 7, lane 5: 0.002 (fitted, 165 actions)</title></rect>
+<rect class="b0" x="323.6" y="234.0" width="38.4" height="33.0"><title>column 7, lane 6: 0.002 (fitted, 165 actions)</title></rect>
+<rect class="b0" x="323.6" y="200.0" width="38.4" height="33.0"><title>column 7, lane 7: 0.002 (fitted, 186 actions)</title></rect>
+<rect class="b0" x="323.6" y="166.0" width="38.4" height="33.0"><title>column 7, lane 8: 0.003 (fitted, 265 actions)</title></rect>
+<rect class="b0" x="323.6" y="132.0" width="38.4" height="33.0"><title>column 7, lane 9: 0.003 (fitted, 228 actions)</title></rect>
+<rect class="b0" x="323.6" y="98.0" width="38.4" height="33.0"><title>column 7, lane 10: 0.003 (fitted, 166 actions)</title></rect>
+<rect class="b0" x="323.6" y="64.0" width="38.4" height="33.0"><title>column 7, lane 11: 0.003 (fitted, 117 actions)</title></rect>
+<rect class="b0" x="363.0" y="438.0" width="38.4" height="33.0"><title>column 8, lane 0: 0.003 (fitted, 101 actions)</title></rect>
+<rect class="b0" x="363.0" y="404.0" width="38.4" height="33.0"><title>column 8, lane 1: 0.003 (fitted, 108 actions)</title></rect>
+<rect class="b0" x="363.0" y="370.0" width="38.4" height="33.0"><title>column 8, lane 2: 0.003 (fitted, 100 actions)</title></rect>
+<rect class="b0" x="363.0" y="336.0" width="38.4" height="33.0"><title>column 8, lane 3: 0.005 (fitted, 66 actions)</title></rect>
+<rect class="b0" x="363.0" y="302.0" width="38.4" height="33.0"><title>column 8, lane 4: 0.007 (fitted, 77 actions)</title></rect>
+<rect class="b0" x="363.0" y="268.0" width="38.4" height="33.0"><title>column 8, lane 5: 0.003 (fitted, 115 actions)</title></rect>
+<rect class="b0" x="363.0" y="234.0" width="38.4" height="33.0"><title>column 8, lane 6: 0.003 (fitted, 115 actions)</title></rect>
+<rect class="b0" x="363.0" y="200.0" width="38.4" height="33.0"><title>column 8, lane 7: 0.007 (fitted, 77 actions)</title></rect>
+<rect class="b0" x="363.0" y="166.0" width="38.4" height="33.0"><title>column 8, lane 8: 0.005 (fitted, 66 actions)</title></rect>
+<rect class="b0" x="363.0" y="132.0" width="38.4" height="33.0"><title>column 8, lane 9: 0.003 (fitted, 100 actions)</title></rect>
+<rect class="b0" x="363.0" y="98.0" width="38.4" height="33.0"><title>column 8, lane 10: 0.003 (fitted, 108 actions)</title></rect>
+<rect class="b0" x="363.0" y="64.0" width="38.4" height="33.0"><title>column 8, lane 11: 0.003 (fitted, 101 actions)</title></rect>
+<rect class="b0" x="402.4" y="438.0" width="38.4" height="33.0"><title>column 9, lane 0: 0.003 (fitted, 167 actions)</title></rect>
+<rect class="b0" x="402.4" y="404.0" width="38.4" height="33.0"><title>column 9, lane 1: 0.004 (fitted, 108 actions)</title></rect>
+<rect class="b0" x="402.4" y="370.0" width="38.4" height="33.0"><title>column 9, lane 2: 0.008 (fitted, 62 actions)</title></rect>
+<rect class="b0" x="402.4" y="336.0" width="38.4" height="33.0"><title>column 9, lane 3: 0.007 (fitted, 57 actions)</title></rect>
+<rect class="b0" x="402.4" y="302.0" width="38.4" height="33.0"><title>column 9, lane 4: 0.007 (fitted, 101 actions)</title></rect>
+<rect class="b0" x="402.4" y="268.0" width="38.4" height="33.0"><title>column 9, lane 5: 0.005 (fitted, 116 actions)</title></rect>
+<rect class="b0" x="402.4" y="234.0" width="38.4" height="33.0"><title>column 9, lane 6: 0.005 (fitted, 116 actions)</title></rect>
+<rect class="b0" x="402.4" y="200.0" width="38.4" height="33.0"><title>column 9, lane 7: 0.007 (fitted, 101 actions)</title></rect>
+<rect class="b0" x="402.4" y="166.0" width="38.4" height="33.0"><title>column 9, lane 8: 0.007 (fitted, 57 actions)</title></rect>
+<rect class="b0" x="402.4" y="132.0" width="38.4" height="33.0"><title>column 9, lane 9: 0.008 (fitted, 62 actions)</title></rect>
+<rect class="b0" x="402.4" y="98.0" width="38.4" height="33.0"><title>column 9, lane 10: 0.004 (fitted, 108 actions)</title></rect>
+<rect class="b0" x="402.4" y="64.0" width="38.4" height="33.0"><title>column 9, lane 11: 0.003 (fitted, 167 actions)</title></rect>
+<rect class="b0" x="441.8" y="438.0" width="38.4" height="33.0"><title>column 10, lane 0: 0.004 (fitted, 78 actions)</title></rect>
+<rect class="b0" x="441.8" y="404.0" width="38.4" height="33.0"><title>column 10, lane 1: 0.005 (fitted, 45 actions)</title></rect>
+<rect class="b0" x="441.8" y="370.0" width="38.4" height="33.0"><title>column 10, lane 2: 0.011 (fitted, 49 actions)</title></rect>
+<rect class="b0" x="441.8" y="336.0" width="38.4" height="33.0"><title>column 10, lane 3: 0.020 (fitted, 44 actions)</title></rect>
+<rect class="b0" x="441.8" y="302.0" width="38.4" height="33.0"><title>column 10, lane 4: 0.023 (fitted, 68 actions)</title></rect>
+<rect class="b0" x="441.8" y="268.0" width="38.4" height="33.0"><title>column 10, lane 5: 0.024 (fitted, 95 actions)</title></rect>
+<rect class="b0" x="441.8" y="234.0" width="38.4" height="33.0"><title>column 10, lane 6: 0.024 (fitted, 95 actions)</title></rect>
+<rect class="b0" x="441.8" y="200.0" width="38.4" height="33.0"><title>column 10, lane 7: 0.023 (fitted, 68 actions)</title></rect>
+<rect class="b0" x="441.8" y="166.0" width="38.4" height="33.0"><title>column 10, lane 8: 0.020 (fitted, 44 actions)</title></rect>
+<rect class="b0" x="441.8" y="132.0" width="38.4" height="33.0"><title>column 10, lane 9: 0.011 (fitted, 49 actions)</title></rect>
+<rect class="b0" x="441.8" y="98.0" width="38.4" height="33.0"><title>column 10, lane 10: 0.005 (fitted, 45 actions)</title></rect>
+<rect class="b0" x="441.8" y="64.0" width="38.4" height="33.0"><title>column 10, lane 11: 0.004 (fitted, 78 actions)</title></rect>
+<rect class="b0" x="481.1" y="438.0" width="38.4" height="33.0"><title>column 11, lane 0: 0.004 (fitted, 30 actions)</title></rect>
+<rect class="b0" x="481.1" y="404.0" width="38.4" height="33.0"><title>column 11, lane 1: 0.011 (fitted, 20 actions)</title></rect>
+<rect class="b0" x="481.1" y="370.0" width="38.4" height="33.0"><title>column 11, lane 2: 0.007 (prior, 18 actions)</title></rect>
+<rect fill="url(#hatch)" x="481.1" y="370.0" width="38.4" height="33.0"/>
+<rect class="b0" x="481.1" y="336.0" width="38.4" height="33.0"><title>column 11, lane 3: 0.046 (fitted, 38 actions)</title></rect>
+<rect class="b1" x="481.1" y="302.0" width="38.4" height="33.0"><title>column 11, lane 4: 0.081 (fitted, 58 actions)</title></rect>
+<rect class="b1" x="481.1" y="268.0" width="38.4" height="33.0"><title>column 11, lane 5: 0.093 (fitted, 68 actions)</title></rect>
+<rect class="b1" x="481.1" y="234.0" width="38.4" height="33.0"><title>column 11, lane 6: 0.093 (fitted, 68 actions)</title></rect>
+<rect class="b1" x="481.1" y="200.0" width="38.4" height="33.0"><title>column 11, lane 7: 0.081 (fitted, 58 actions)</title></rect>
+<rect class="b0" x="481.1" y="166.0" width="38.4" height="33.0"><title>column 11, lane 8: 0.046 (fitted, 38 actions)</title></rect>
+<rect class="b0" x="481.1" y="132.0" width="38.4" height="33.0"><title>column 11, lane 9: 0.007 (prior, 18 actions)</title></rect>
+<rect fill="url(#hatch)" x="481.1" y="132.0" width="38.4" height="33.0"/>
+<rect class="b0" x="481.1" y="98.0" width="38.4" height="33.0"><title>column 11, lane 10: 0.011 (fitted, 20 actions)</title></rect>
+<rect class="b0" x="481.1" y="64.0" width="38.4" height="33.0"><title>column 11, lane 11: 0.004 (fitted, 30 actions)</title></rect>
+<rect class="b0" x="520.5" y="438.0" width="38.4" height="33.0"><title>column 12, lane 0: 0.005 (fitted, 22 actions)</title></rect>
+<rect class="b0" x="520.5" y="404.0" width="38.4" height="33.0"><title>column 12, lane 1: 0.008 (prior, 19 actions)</title></rect>
+<rect fill="url(#hatch)" x="520.5" y="404.0" width="38.4" height="33.0"/>
+<rect class="b0" x="520.5" y="370.0" width="38.4" height="33.0"><title>column 12, lane 2: 0.024 (fitted, 20 actions)</title></rect>
+<rect class="b1" x="520.5" y="336.0" width="38.4" height="33.0"><title>column 12, lane 3: 0.078 (fitted, 26 actions)</title></rect>
+<rect class="b2" x="520.5" y="302.0" width="38.4" height="33.0"><title>column 12, lane 4: 0.149 (fitted, 56 actions)</title></rect>
+<rect class="b4" x="520.5" y="268.0" width="38.4" height="33.0"><title>column 12, lane 5: 0.203 (fitted, 47 actions)</title></rect>
+<rect class="b4" x="520.5" y="234.0" width="38.4" height="33.0"><title>column 12, lane 6: 0.203 (fitted, 47 actions)</title></rect>
+<rect class="b2" x="520.5" y="200.0" width="38.4" height="33.0"><title>column 12, lane 7: 0.149 (fitted, 56 actions)</title></rect>
+<rect class="b1" x="520.5" y="166.0" width="38.4" height="33.0"><title>column 12, lane 8: 0.078 (fitted, 26 actions)</title></rect>
+<rect class="b0" x="520.5" y="132.0" width="38.4" height="33.0"><title>column 12, lane 9: 0.024 (fitted, 20 actions)</title></rect>
+<rect class="b0" x="520.5" y="98.0" width="38.4" height="33.0"><title>column 12, lane 10: 0.008 (prior, 19 actions)</title></rect>
+<rect fill="url(#hatch)" x="520.5" y="98.0" width="38.4" height="33.0"/>
+<rect class="b0" x="520.5" y="64.0" width="38.4" height="33.0"><title>column 12, lane 11: 0.005 (fitted, 22 actions)</title></rect>
+<rect class="b0" x="559.9" y="438.0" width="38.4" height="33.0"><title>column 13, lane 0: 0.007 (prior, 11 actions)</title></rect>
+<rect fill="url(#hatch)" x="559.9" y="438.0" width="38.4" height="33.0"/>
+<rect class="b0" x="559.9" y="404.0" width="38.4" height="33.0"><title>column 13, lane 1: 0.015 (prior, 15 actions)</title></rect>
+<rect fill="url(#hatch)" x="559.9" y="404.0" width="38.4" height="33.0"/>
+<rect class="b0" x="559.9" y="370.0" width="38.4" height="33.0"><title>column 13, lane 2: 0.028 (prior, 19 actions)</title></rect>
+<rect fill="url(#hatch)" x="559.9" y="370.0" width="38.4" height="33.0"/>
+<rect class="b1" x="559.9" y="336.0" width="38.4" height="33.0"><title>column 13, lane 3: 0.099 (fitted, 27 actions)</title></rect>
+<rect class="b4" x="559.9" y="302.0" width="38.4" height="33.0"><title>column 13, lane 4: 0.206 (fitted, 57 actions)</title></rect>
+<rect class="b4" x="559.9" y="268.0" width="38.4" height="33.0"><title>column 13, lane 5: 0.245 (fitted, 51 actions)</title></rect>
+<rect class="b4" x="559.9" y="234.0" width="38.4" height="33.0"><title>column 13, lane 6: 0.245 (fitted, 51 actions)</title></rect>
+<rect class="b4" x="559.9" y="200.0" width="38.4" height="33.0"><title>column 13, lane 7: 0.206 (fitted, 57 actions)</title></rect>
+<rect class="b1" x="559.9" y="166.0" width="38.4" height="33.0"><title>column 13, lane 8: 0.099 (fitted, 27 actions)</title></rect>
+<rect class="b0" x="559.9" y="132.0" width="38.4" height="33.0"><title>column 13, lane 9: 0.028 (prior, 19 actions)</title></rect>
+<rect fill="url(#hatch)" x="559.9" y="132.0" width="38.4" height="33.0"/>
+<rect class="b0" x="559.9" y="98.0" width="38.4" height="33.0"><title>column 13, lane 10: 0.015 (prior, 15 actions)</title></rect>
+<rect fill="url(#hatch)" x="559.9" y="98.0" width="38.4" height="33.0"/>
+<rect class="b0" x="559.9" y="64.0" width="38.4" height="33.0"><title>column 13, lane 11: 0.007 (prior, 11 actions)</title></rect>
+<rect fill="url(#hatch)" x="559.9" y="64.0" width="38.4" height="33.0"/>
+<rect class="b0" x="599.2" y="438.0" width="38.4" height="33.0"><title>column 14, lane 0: 0.010 (prior, 13 actions)</title></rect>
+<rect fill="url(#hatch)" x="599.2" y="438.0" width="38.4" height="33.0"/>
+<rect class="b0" x="599.2" y="404.0" width="38.4" height="33.0"><title>column 14, lane 1: 0.023 (prior, 11 actions)</title></rect>
+<rect fill="url(#hatch)" x="599.2" y="404.0" width="38.4" height="33.0"/>
+<rect class="b0" x="599.2" y="370.0" width="38.4" height="33.0"><title>column 14, lane 2: 0.046 (prior, 16 actions)</title></rect>
+<rect fill="url(#hatch)" x="599.2" y="370.0" width="38.4" height="33.0"/>
+<rect class="b1" x="599.2" y="336.0" width="38.4" height="33.0"><title>column 14, lane 3: 0.099 (fitted, 21 actions)</title></rect>
+<rect class="b4" x="599.2" y="302.0" width="38.4" height="33.0"><title>column 14, lane 4: 0.234 (fitted, 47 actions)</title></rect>
+<rect class="b5" x="599.2" y="268.0" width="38.4" height="33.0"><title>column 14, lane 5: 0.257 (fitted, 38 actions)</title></rect>
+<rect class="b5" x="599.2" y="234.0" width="38.4" height="33.0"><title>column 14, lane 6: 0.257 (fitted, 38 actions)</title></rect>
+<rect class="b4" x="599.2" y="200.0" width="38.4" height="33.0"><title>column 14, lane 7: 0.234 (fitted, 47 actions)</title></rect>
+<rect class="b1" x="599.2" y="166.0" width="38.4" height="33.0"><title>column 14, lane 8: 0.099 (fitted, 21 actions)</title></rect>
+<rect class="b0" x="599.2" y="132.0" width="38.4" height="33.0"><title>column 14, lane 9: 0.046 (prior, 16 actions)</title></rect>
+<rect fill="url(#hatch)" x="599.2" y="132.0" width="38.4" height="33.0"/>
+<rect class="b0" x="599.2" y="98.0" width="38.4" height="33.0"><title>column 14, lane 10: 0.023 (prior, 11 actions)</title></rect>
+<rect fill="url(#hatch)" x="599.2" y="98.0" width="38.4" height="33.0"/>
+<rect class="b0" x="599.2" y="64.0" width="38.4" height="33.0"><title>column 14, lane 11: 0.010 (prior, 13 actions)</title></rect>
+<rect fill="url(#hatch)" x="599.2" y="64.0" width="38.4" height="33.0"/>
+<rect class="b0" x="638.6" y="438.0" width="38.4" height="33.0"><title>column 15, lane 0: 0.008 (fitted, 87 actions)</title></rect>
+<rect class="b0" x="638.6" y="404.0" width="38.4" height="33.0"><title>column 15, lane 1: 0.019 (fitted, 27 actions)</title></rect>
+<rect class="b1" x="638.6" y="370.0" width="38.4" height="33.0"><title>column 15, lane 2: 0.058 (fitted, 51 actions)</title></rect>
+<rect class="b1" x="638.6" y="336.0" width="38.4" height="33.0"><title>column 15, lane 3: 0.099 (fitted, 50 actions)</title></rect>
+<rect class="b4" x="638.6" y="302.0" width="38.4" height="33.0"><title>column 15, lane 4: 0.237 (fitted, 48 actions)</title></rect>
+<rect class="b5" x="638.6" y="268.0" width="38.4" height="33.0"><title>column 15, lane 5: 0.279 (prior, 16 actions)</title></rect>
+<rect fill="url(#hatch)" x="638.6" y="268.0" width="38.4" height="33.0"/>
+<rect class="b5" x="638.6" y="234.0" width="38.4" height="33.0"><title>column 15, lane 6: 0.279 (prior, 16 actions)</title></rect>
+<rect fill="url(#hatch)" x="638.6" y="234.0" width="38.4" height="33.0"/>
+<rect class="b4" x="638.6" y="200.0" width="38.4" height="33.0"><title>column 15, lane 7: 0.237 (fitted, 48 actions)</title></rect>
+<rect class="b1" x="638.6" y="166.0" width="38.4" height="33.0"><title>column 15, lane 8: 0.099 (fitted, 50 actions)</title></rect>
+<rect class="b1" x="638.6" y="132.0" width="38.4" height="33.0"><title>column 15, lane 9: 0.058 (fitted, 51 actions)</title></rect>
+<rect class="b0" x="638.6" y="98.0" width="38.4" height="33.0"><title>column 15, lane 10: 0.019 (fitted, 27 actions)</title></rect>
+<rect class="b0" x="638.6" y="64.0" width="38.4" height="33.0"><title>column 15, lane 11: 0.008 (fitted, 87 actions)</title></rect>
+<rect class="ln" fill="none" stroke-width="1.5" x="48.0" y="64.0" width="630.0" height="408.0"/>
+<line class="ln" stroke-width="1.5" x1="363.0" y1="472.0" x2="363.0" y2="64.0"/>
+<line class="ln" stroke-width="1.5" x1="579.0" y1="389.0" x2="678.0" y2="389.0"/>
+<line class="ln" stroke-width="1.5" x1="579.0" y1="147.0" x2="678.0" y2="147.0"/>
+<line class="ln" stroke-width="1.5" x1="579.0" y1="389.0" x2="579.0" y2="147.0"/>
+<line class="ln" stroke-width="1.5" x1="147.0" y1="389.0" x2="48.0" y2="389.0"/>
+<line class="ln" stroke-width="1.5" x1="147.0" y1="147.0" x2="48.0" y2="147.0"/>
+<line class="ln" stroke-width="1.5" x1="147.0" y1="389.0" x2="147.0" y2="147.0"/>
+<circle class="ln" fill="none" stroke-width="1.5" cx="363.0" cy="268.0" r="54.9"/>
+<text class="t2" x="48.0" y="505.0" font-size="12">xT</text>
+<rect class="b0" x="76.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="76.0" y="524.0" font-size="11">0</text>
+<rect class="b1" x="120.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="120.0" y="524.0" font-size="11">0.05</text>
+<rect class="b2" x="164.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="164.0" y="524.0" font-size="11">0.10</text>
+<rect class="b3" x="208.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="208.0" y="524.0" font-size="11">0.15</text>
+<rect class="b4" x="252.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="252.0" y="524.0" font-size="11">0.20</text>
+<rect class="b5" x="296.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="296.0" y="524.0" font-size="11">0.25</text>
+<rect class="b6" x="340.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="340.0" y="524.0" font-size="11">0.30</text>
+<rect class="b7" x="384.0" y="494.0" width="42" height="14" rx="2"/>
+<text class="t2" x="384.0" y="524.0" font-size="11">0.35</text>
+<text class="t2" x="420.0" y="524.0" font-size="11">0.40+</text>
+<rect fill="url(#hatch)" class="ln" stroke-width="1" x="468.0" y="494.0" width="42" height="14"/>
+<text class="t2" x="518.0" y="505.0" font-size="12">prior (too little data)</text>
+<text class="t1" x="48.0" y="550.0" font-size="14" font-weight="600">Mean xT per column, toward the attacked goal</text>
+<line class="grid" stroke-width="1" x1="48.0" x2="678.0" y1="814.0" y2="814.0"/>
+<text class="t2" x="40.0" y="818.0" font-size="11" text-anchor="end">0.0</text>
+<line class="grid" stroke-width="1" x1="48.0" x2="678.0" y1="751.5" y2="751.5"/>
+<text class="t2" x="40.0" y="755.5" font-size="11" text-anchor="end">0.1</text>
+<line class="grid" stroke-width="1" x1="48.0" x2="678.0" y1="689.0" y2="689.0"/>
+<text class="t2" x="40.0" y="693.0" font-size="11" text-anchor="end">0.2</text>
+<line class="grid" stroke-width="1" x1="48.0" x2="678.0" y1="626.5" y2="626.5"/>
+<text class="t2" x="40.0" y="630.5" font-size="11" text-anchor="end">0.3</text>
+<line class="grid" stroke-width="1" x1="48.0" x2="678.0" y1="564.0" y2="564.0"/>
+<text class="t2" x="40.0" y="568.0" font-size="11" text-anchor="end">0.4</text>
+<text class="t2" x="67.7" y="832.0" font-size="11" text-anchor="middle">-49 m</text>
+<text class="t2" x="225.2" y="832.0" font-size="11" text-anchor="middle">-23 m</text>
+<text class="t2" x="382.7" y="832.0" font-size="11" text-anchor="middle">+3 m</text>
+<text class="t2" x="540.2" y="832.0" font-size="11" text-anchor="middle">+30 m</text>
+<text class="t2" x="658.3" y="832.0" font-size="11" text-anchor="middle">+49 m</text>
+<polyline class="s1" fill="none" stroke-width="2" stroke-linejoin="round" points="67.7,812.8 107.1,812.8 146.4,812.8 185.8,812.7 225.2,812.7 264.6,812.7 303.9,812.6 343.3,812.5 382.7,810.9 422.1,810.1 461.4,799.4 500.8,759.6 540.2,703.9 579.6,673.2 618.9,660.6 658.3,652.8"/>
+<circle class="f1" cx="67.7" cy="812.8" r="3"><title>central lanes, column 0: 0.002</title></circle>
+<circle class="f1" cx="107.1" cy="812.8" r="3"><title>central lanes, column 1: 0.002</title></circle>
+<circle class="f1" cx="146.4" cy="812.8" r="3"><title>central lanes, column 2: 0.002</title></circle>
+<circle class="f1" cx="185.8" cy="812.7" r="3"><title>central lanes, column 3: 0.002</title></circle>
+<circle class="f1" cx="225.2" cy="812.7" r="3"><title>central lanes, column 4: 0.002</title></circle>
+<circle class="f1" cx="264.6" cy="812.7" r="3"><title>central lanes, column 5: 0.002</title></circle>
+<circle class="f1" cx="303.9" cy="812.6" r="3"><title>central lanes, column 6: 0.002</title></circle>
+<circle class="f1" cx="343.3" cy="812.5" r="3"><title>central lanes, column 7: 0.002</title></circle>
+<circle class="f1" cx="382.7" cy="810.9" r="3"><title>central lanes, column 8: 0.005</title></circle>
+<circle class="f1" cx="422.1" cy="810.1" r="3"><title>central lanes, column 9: 0.006</title></circle>
+<circle class="f1" cx="461.4" cy="799.4" r="3"><title>central lanes, column 10: 0.023</title></circle>
+<circle class="f1" cx="500.8" cy="759.6" r="3"><title>central lanes, column 11: 0.087</title></circle>
+<circle class="f1" cx="540.2" cy="703.9" r="3"><title>central lanes, column 12: 0.176</title></circle>
+<circle class="f1" cx="579.6" cy="673.2" r="3"><title>central lanes, column 13: 0.225</title></circle>
+<circle class="f1" cx="618.9" cy="660.6" r="3"><title>central lanes, column 14: 0.245</title></circle>
+<circle class="f1" cx="658.3" cy="652.8" r="3"><title>central lanes, column 15: 0.258</title></circle>
+<text class="t1" x="666.3" y="656.8" font-size="11">central lanes</text>
+<polyline class="s3" fill="none" stroke-width="2" stroke-linejoin="round" points="67.7,813.2 107.1,813.1 146.4,813.0 185.8,812.8 225.2,812.7 264.6,812.7 303.9,812.6 343.3,812.4 382.7,811.6 422.1,810.4 461.4,804.9 500.8,788.8 540.2,765.3 579.6,751.5 618.9,744.3 658.3,741.2"/>
+<circle class="f3" cx="67.7" cy="813.2" r="3"><title>all lanes, column 0: 0.001</title></circle>
+<circle class="f3" cx="107.1" cy="813.1" r="3"><title>all lanes, column 1: 0.001</title></circle>
+<circle class="f3" cx="146.4" cy="813.0" r="3"><title>all lanes, column 2: 0.002</title></circle>
+<circle class="f3" cx="185.8" cy="812.8" r="3"><title>all lanes, column 3: 0.002</title></circle>
+<circle class="f3" cx="225.2" cy="812.7" r="3"><title>all lanes, column 4: 0.002</title></circle>
+<circle class="f3" cx="264.6" cy="812.7" r="3"><title>all lanes, column 5: 0.002</title></circle>
+<circle class="f3" cx="303.9" cy="812.6" r="3"><title>all lanes, column 6: 0.002</title></circle>
+<circle class="f3" cx="343.3" cy="812.4" r="3"><title>all lanes, column 7: 0.003</title></circle>
+<circle class="f3" cx="382.7" cy="811.6" r="3"><title>all lanes, column 8: 0.004</title></circle>
+<circle class="f3" cx="422.1" cy="810.4" r="3"><title>all lanes, column 9: 0.006</title></circle>
+<circle class="f3" cx="461.4" cy="804.9" r="3"><title>all lanes, column 10: 0.015</title></circle>
+<circle class="f3" cx="500.8" cy="788.8" r="3"><title>all lanes, column 11: 0.040</title></circle>
+<circle class="f3" cx="540.2" cy="765.3" r="3"><title>all lanes, column 12: 0.078</title></circle>
+<circle class="f3" cx="579.6" cy="751.5" r="3"><title>all lanes, column 13: 0.100</title></circle>
+<circle class="f3" cx="618.9" cy="744.3" r="3"><title>all lanes, column 14: 0.111</title></circle>
+<circle class="f3" cx="658.3" cy="741.2" r="3"><title>all lanes, column 15: 0.117</title></circle>
+<text class="t1" x="666.3" y="745.2" font-size="11">all lanes</text>
+<polyline class="s2" fill="none" stroke-width="2" stroke-linejoin="round" points="67.7,813.4 107.1,813.4 146.4,813.3 185.8,813.1 225.2,812.7 264.6,812.6 303.9,812.6 343.3,812.2 382.7,812.3 422.1,811.8 461.4,810.9 500.8,809.4 540.2,809.8 579.6,807.2 618.9,803.7 658.3,805.5"/>
+<circle class="f2" cx="67.7" cy="813.4" r="3"><title>wings, column 0: 0.001</title></circle>
+<circle class="f2" cx="107.1" cy="813.4" r="3"><title>wings, column 1: 0.001</title></circle>
+<circle class="f2" cx="146.4" cy="813.3" r="3"><title>wings, column 2: 0.001</title></circle>
+<circle class="f2" cx="185.8" cy="813.1" r="3"><title>wings, column 3: 0.001</title></circle>
+<circle class="f2" cx="225.2" cy="812.7" r="3"><title>wings, column 4: 0.002</title></circle>
+<circle class="f2" cx="264.6" cy="812.6" r="3"><title>wings, column 5: 0.002</title></circle>
+<circle class="f2" cx="303.9" cy="812.6" r="3"><title>wings, column 6: 0.002</title></circle>
+<circle class="f2" cx="343.3" cy="812.2" r="3"><title>wings, column 7: 0.003</title></circle>
+<circle class="f2" cx="382.7" cy="812.3" r="3"><title>wings, column 8: 0.003</title></circle>
+<circle class="f2" cx="422.1" cy="811.8" r="3"><title>wings, column 9: 0.004</title></circle>
+<circle class="f2" cx="461.4" cy="810.9" r="3"><title>wings, column 10: 0.005</title></circle>
+<circle class="f2" cx="500.8" cy="809.4" r="3"><title>wings, column 11: 0.007</title></circle>
+<circle class="f2" cx="540.2" cy="809.8" r="3"><title>wings, column 12: 0.007</title></circle>
+<circle class="f2" cx="579.6" cy="807.2" r="3"><title>wings, column 13: 0.011</title></circle>
+<circle class="f2" cx="618.9" cy="803.7" r="3"><title>wings, column 14: 0.016</title></circle>
+<circle class="f2" cx="658.3" cy="805.5" r="3"><title>wings, column 15: 0.014</title></circle>
+<text class="t1" x="666.3" y="809.5" font-size="11">wings</text>
+<polyline class="sp" fill="none" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4" points="67.7,801.5 107.1,801.5 146.4,801.5 185.8,801.5 225.2,801.5 264.6,801.5 303.9,801.5 343.3,801.4 382.7,801.2 422.1,800.5 461.4,798.2 500.8,791.9 540.2,776.3 579.6,743.5 618.9,687.1 658.3,617.4"/>
+<circle class="fp" cx="67.7" cy="801.5" r="3"><title>prior, long axis, column 0: 0.020</title></circle>
+<circle class="fp" cx="107.1" cy="801.5" r="3"><title>prior, long axis, column 1: 0.020</title></circle>
+<circle class="fp" cx="146.4" cy="801.5" r="3"><title>prior, long axis, column 2: 0.020</title></circle>
+<circle class="fp" cx="185.8" cy="801.5" r="3"><title>prior, long axis, column 3: 0.020</title></circle>
+<circle class="fp" cx="225.2" cy="801.5" r="3"><title>prior, long axis, column 4: 0.020</title></circle>
+<circle class="fp" cx="264.6" cy="801.5" r="3"><title>prior, long axis, column 5: 0.020</title></circle>
+<circle class="fp" cx="303.9" cy="801.5" r="3"><title>prior, long axis, column 6: 0.020</title></circle>
+<circle class="fp" cx="343.3" cy="801.4" r="3"><title>prior, long axis, column 7: 0.020</title></circle>
+<circle class="fp" cx="382.7" cy="801.2" r="3"><title>prior, long axis, column 8: 0.020</title></circle>
+<circle class="fp" cx="422.1" cy="800.5" r="3"><title>prior, long axis, column 9: 0.022</title></circle>
+<circle class="fp" cx="461.4" cy="798.2" r="3"><title>prior, long axis, column 10: 0.025</title></circle>
+<circle class="fp" cx="500.8" cy="791.9" r="3"><title>prior, long axis, column 11: 0.035</title></circle>
+<circle class="fp" cx="540.2" cy="776.3" r="3"><title>prior, long axis, column 12: 0.060</title></circle>
+<circle class="fp" cx="579.6" cy="743.5" r="3"><title>prior, long axis, column 13: 0.113</title></circle>
+<circle class="fp" cx="618.9" cy="687.1" r="3"><title>prior, long axis, column 14: 0.203</title></circle>
+<circle class="fp" cx="658.3" cy="617.4" r="3"><title>prior, long axis, column 15: 0.315</title></circle>
+<text class="t1" x="666.3" y="621.4" font-size="11">prior, long axis</text>
+</svg>
