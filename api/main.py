@@ -296,6 +296,14 @@ def create_app(
             raise HTTPException(503, f"no stats for {mid}")
         return m.stats.snapshot(frame, tracks=tracks).model_dump(mode="json")
 
+    @app.get("/api/matches/{mid}/tactics")
+    async def match_tactics(mid: str) -> dict[str, Any]:
+        """The tactics cards (SPEC 4.8): build-up under pressure and set pieces, measured from
+        the tracking and events this service streams, with one verified sentence per card."""
+        m = await match_or_404(mid)
+        view = await asyncio.to_thread(m.tactics)
+        return view.model_dump(mode="json")
+
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:
         m = await match_or_404(mid)

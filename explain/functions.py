@@ -2,8 +2,8 @@
 
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
 observed_share, scan_side, max_visibility, seconds_between, turnover_at_resolution,
-opponents_bypassed, cf_delta. Every function accepts `cf: <scan id>` to evaluate on the
-counterfactual run without that scan instead of the factual run,
+opponents_bypassed, tactics_stat, cf_delta. Every function accepts `cf: <scan id>` to evaluate
+on the counterfactual run without that scan instead of the factual run,
 `cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7), or
 `cf: look:<player>:<frame>:<degrees>` for the run where he looks only there (SPEC 3.7, 7).
 
@@ -32,6 +32,8 @@ import numpy as np
 
 from analytics.pitch_control import pitch_control, pitch_grid
 from analytics.pressing import aggregate, frame_pressing
+from analytics.tactics import Passage, TacticsCards, tactics_from_run
+from analytics.tactics import stat as tactics_value
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from analytics.xt import xt_for
 from explain.cards import MomentCard
@@ -79,6 +81,8 @@ class EvalContext:
 
     Counterfactuals not supplied are re-simulated on demand from the run's scenario and seed
     (deterministic, SPEC 3.7) unless `resimulate` is False. `cards` resolve moment anchors.
+    `passages` are a stitched run's possessions (`explain.recap.stitched_run`), for the tactics
+    cards (SPEC 4.8); empty for one scenario's run.
     """
 
     run: MatchRun
@@ -86,8 +90,10 @@ class EvalContext:
     cards: dict[str, MomentCard] = field(default_factory=dict)
     resimulate: bool = True
     vision: VisionParams = VisionParams()
+    passages: tuple[Passage, ...] = ()
     _events: dict[int, dict[str, Event]] = field(default_factory=dict, repr=False)
     _vis: dict[tuple, np.ndarray] = field(default_factory=dict, repr=False)
+    _tactics: dict[int, TacticsCards] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         for scan_id, result in self.counterfactuals.items():
@@ -170,6 +176,12 @@ class EvalContext:
             result = drop_scan_counterfactual(self.run.scenario, self.run.seed, scan.id)
             self.counterfactuals[scan.id] = result
         return self.counterfactuals[scan.id]
+
+    def tactics(self, run: MatchRun) -> TacticsCards:
+        """The tactics cards measured on `run` (SPEC 4.8), once per run."""
+        if id(run) not in self._tactics:
+            self._tactics[id(run)] = tactics_from_run(run, self.match, self.passages or None)
+        return self._tactics[id(run)]
 
     def visibility_matrix(self, run: MatchRun, f: int) -> np.ndarray:
         key = ("players", id(run), f)
@@ -322,6 +334,18 @@ def opponents_bypassed(ctx: EvalContext, run: MatchRun, event: str) -> int:
     if e.attrs.get("end") is None:
         raise Inconclusive(f"{e.id} was never received or lost")
     return len(bypassed_opponents(run, e))
+
+
+def tactics_stat(ctx: EvalContext, run: MatchRun, stat: str, team: int | None = None) -> Any:
+    """A value of the tactics cards (`analytics.tactics.stat`, SPEC 4.8), measured on the run's
+    tracking and events through the live stats timeline, as the cards a viewer sees."""
+    try:
+        value = tactics_value(ctx.tactics(run), stat, team)
+    except KeyError as e:
+        raise Inconclusive(str(e)) from None
+    if value is None:
+        raise Inconclusive(f"{stat} is undefined on this run")
+    return value
 
 
 def scans_in_window(
@@ -499,6 +523,7 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "opponents_bypassed": opponents_bypassed,
     "seconds_between": seconds_between,
     "turnover_at_resolution": turnover_at_resolution,
+    "tactics_stat": tactics_stat,
     # "cf_delta" is evaluated lazily by `Evaluator.cf_delta`: its `of` runs on two runs.
 }
 

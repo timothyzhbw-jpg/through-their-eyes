@@ -37,6 +37,7 @@ from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
 from explain.lenses import explain_moments
 from explain.match import match_moments
 from explain.moments import hero_card
+from explain.tactics import TacticsView, view_for_match, view_for_run
 from sim.export import export_hero, export_match
 from sim.match import StitchedMatch, build_match, match_heroes
 
@@ -74,6 +75,7 @@ class Match:
     stitched: StitchedMatch | None = None  # a stitched match's possessions (SPEC 3.1)
     audit: AuditSink | None = None  # where a stitched match's verdicts go, the recap's too
     _recap: RecapContext | None = field(default=None, repr=False)
+    _tactics: TacticsView | None = field(default=None, repr=False)
     # GET /api/matches/<id>/export, serialised and compressed once: match-1's export is about
     # 12 MB of JSON and 4 MB gzipped, too much to encode per request on 0.5 vCPU.
     export_json: bytes = field(init=False, repr=False)
@@ -105,6 +107,16 @@ class Match:
             self._recap = RecapContext.build(self.id, self.stitched, self.cards, heroes,
                                              self.audit)  # fmt: skip
         return self._recap
+
+    def tactics(self) -> TacticsView:
+        """The tactics cards and their verified sentences (explain/tactics.py, SPEC 4.8), built
+        on first use from the runs this service streams (no simulation) and kept."""
+        if self._tactics is None:
+            if self.stitched is not None:
+                self._tactics = view_for_match(self.stitched, self.id, self.audit)
+            else:
+                self._tactics = view_for_run(self.ctx.run, self.id, self.audit)
+        return self._tactics
 
     @classmethod
     def load(cls, scenario: str, seed: int, audit: AuditSink | None = None) -> Match:

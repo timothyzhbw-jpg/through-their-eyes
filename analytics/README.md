@@ -18,6 +18,7 @@ reimplemented from its paper (`docs/REFERENCES.md`); no code is copied.
 | [`scan_detector.py`](scan_detector.py) | `detect_scans`, `trace_scans`, `detect_all`: an onset faster than 200°/s that turns away from the ball, an excursion of at least 55°, a return | `sim.export` (the telemetry panel), the evals |
 | [`blind_side.py`](blind_side.py) | `detect_alerts`: an observer has lost sight of a target on the move (unseen for 1.2 s, 3 m from where he was expected, running at 4 m/s or more, within 35 m) | `explain.moments` (blind-side moments), `sim.export` (the alerts the live stream and the views show) |
 | [`keypoints.py`](keypoints.py) | `pose_from_keypoints`, `KeypointFrame`: position, head yaw and torso yaw from a COCO keypoint subset | `eval/keypoint_ingest.py`; nothing in the API or the app calls it yet |
+| [`tactics.py`](tactics.py) | `tactics_cards`, `tactics_from_run`: the "why build from the back?" card (own-half passes with and without pressure on the passer, short and long, line-breaking, xT added and handed over, the decision model's recorded options) and the "why focus on set pieces?" card (corners, shots and distance xG after them, the best corner reception's xT against open play), from the live stats timeline | `explain.tactics` (the cards' verified sentences), `GET /api/matches/<id>/tactics`, the stats panel and the recap |
 
 ## Data flow
 
