@@ -60,8 +60,10 @@ function heroOf(run: Run, dt = 1): Hero {
     vision: null,
     detector: null,
     deltaXt: 0,
+    deltaSource: "sim",
     runs: { factual: run, counterfactual: cf },
     reception: 0,
+    marker: null,
     match: null,
   };
 }
