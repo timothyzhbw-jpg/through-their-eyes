@@ -830,7 +830,8 @@ a pass at its reception, interception or out; a sprint at its first frame back b
     and the app's own chips and labels (the lineup, the eyes picker, the HUD, moments, Your call,
     the director).
   - Narration renders his short name ("J. Ferriday") as a slot value (agents/context.py
-    `names`). The Verifier keeps names, and the raw ids, out of free text.
+    `names`). The Verifier keeps names, surnames and the raw ids out of free text, with ASCII-only
+    word boundaries so a name next to a Chinese character is caught too.
   - The two clubs are named too: Kestrel Bay (home) and Corvane Vale (away), both invented. The
     recap's claims still say Home and Away (its cache key holds their templates); the API names
     the clubs when it serves a recap.
@@ -1752,8 +1753,9 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
 - [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
-      no player id appears in a caption, a chip or a label; a name or an id outside a slot is a
-      render violation; values cached with ids are renamed when read, with new voice keys.
+      no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
+      slot is a render violation, in en and zh; values cached with ids are renamed when read, with
+      new voice keys.
       — [tests/test_names.py](../tests/test_names.py),
       [tests/test_roster_web.py](../tests/test_roster_web.py),
       [web/src/ui/names.test.tsx](../web/src/ui/names.test.tsx), `tests/test_whatif.py` (names in
