@@ -1387,3 +1387,93 @@ html.spec #stage {
   font-size: 26px;
   letter-spacing: 0.22em;
 }
+
+/* --- namecard: freeze-frame player intro ------------------------------------ */
+
+.nc-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.nc-card {
+  position: absolute;
+  left: 120px;
+  bottom: 200px; /* above the bottom letterbox bar and the captions */
+  transform-origin: left bottom;
+}
+
+.nc-card.nc-right {
+  left: auto;
+  right: 120px;
+  text-align: right;
+  transform-origin: right bottom;
+}
+
+.nc-head {
+  font-size: 112px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--chalk);
+}
+
+.nc-name {
+  color: var(--gold);
+}
+
+.nc-rule {
+  display: block;
+  height: 6px;
+  margin: 14px 0 16px;
+  background: var(--gold);
+}
+
+.nc-sub {
+  font-size: 54px;
+  letter-spacing: 0.06em;
+  color: var(--chalk);
+}
+
+/* --- chapter card ---------------------------------------------------------- */
+
+html.opaque .chapter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--night);
+}
+
+.chapter-label {
+  font-size: 56px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin-bottom: 18px;
+}
+
+.chapter-title {
+  font-size: 200px;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: var(--chalk);
+}
+
+/* --- duo: split-screen labels ------------------------------------------------ */
+
+.duo {
+  position: absolute;
+  top: 170px; /* under the top letterbox bar */
+  font-size: 64px;
+  letter-spacing: 0.12em;
+}
+
+.duo-left {
+  left: 72px;
+  color: var(--gold);
+}
+
+.duo-right {
+  right: 72px;
+  color: var(--dusk);
+}

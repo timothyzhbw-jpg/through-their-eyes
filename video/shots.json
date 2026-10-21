@@ -463,6 +463,25 @@
         }
       ],
       "vo": "At the final whistle, the crew writes the recap."
+    },
+    {
+      "id": "16-corner",
+      "spec_beat": "trailer, chapter III",
+      "title": "The corner: the stitched match paused before the short corner, then the centre-back's hero moment in his eyes, with its verified caption",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&intro=0&at=14150",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 5,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": "text=The corner", "timeout_s": 60 },
+        { "do": "hold", "s": 1.5 }
+      ],
+      "actions": [
+        { "do": "hold", "s": 1.2, "still": true },
+        { "do": "click", "role": "button", "name": "hero moment", "exact": false, "hold": 7 }
+      ],
+      "vo": "At a corner, it is the marker who has to look."
     }
   ]
 }

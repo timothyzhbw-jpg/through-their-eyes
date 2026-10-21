@@ -297,7 +297,7 @@ async function stepVo(ctx) {
       console.log(`  ${line.id}: dropped`);
       continue;
     }
-    const voice = voiceFor(ctx.spec, line.lang);
+    const voice = voiceFor(ctx.spec, line.lang, line.speaker);
     const ssml = buildSsml({ text: line.text, voice, style: line.style, degree: line.degree });
     const out = path.join(dir, `${line.id}.wav`);
     const ssmlPath = path.join(dir, `${line.id}.ssml`);
@@ -398,6 +398,7 @@ async function stepEdit(ctx) {
       built.env.cropBox ?? null,
       built.env.sourceDuration ?? null,
       fileStamp(built.env.file),
+      ...(built.env.files ?? []).map(fileStamp),
       ...(built.env.overlays ?? []).map((overlay) => fileStamp(overlay.file)), // a re-rendered title re-renders its beats
       ctx.spec.output,
     ]);
@@ -714,6 +715,8 @@ async function beatEnv(ctx, beat, titles, manifest) {
   let file;
   let sourceDuration;
   let cropBox = null;
+  let files;
+  let sourceDurations;
   if (picture.src === "cine") {
     file = path.join(ctx.outDir, "cine", `${picture.id}.mp4`);
     sourceDuration = await probe(ctx.ffmpeg, file);
@@ -730,6 +733,13 @@ async function beatEnv(ctx, beat, titles, manifest) {
     }
   } else if (picture.src === "image") {
     file = path.resolve(ctx.root, picture.path);
+  } else if (picture.src === "split") {
+    const sideFile = (part) =>
+      part.src === "clip" ? path.resolve(ctx.root, part.path) : path.join(ctx.finalsDir, `${part.shot}.webm`);
+    files = [sideFile(picture.left), sideFile(picture.right)];
+    for (const f of files) if (!existsSync(f)) throw new Error(`beat ${beat.id}: missing ${path.relative(ctx.root, f)}`);
+    sourceDurations = [await probe(ctx.ffmpeg, files[0]), await probe(ctx.ffmpeg, files[1])];
+    file = files[0];
   } else if (picture.src === "clip") {
     file = path.resolve(ctx.root, picture.path);
     if (!existsSync(file)) throw new Error(`beat ${beat.id}: missing clip ${picture.path} (rendered outside the repo; see video/README.md)`);
@@ -742,10 +752,22 @@ async function beatEnv(ctx, beat, titles, manifest) {
     if (!existsSync(title.file)) throw new Error(`missing ${title.file}; run the titles step`);
     overlays.push({ file: title.file, at: overlay.at });
   }
-  return { picture, env: { file, sourceDuration, cropBox, overlays } };
+  return { picture, env: { file, files, sourceDuration, sourceDurations, cropBox, overlays } };
 }
 
 /** Voice, effects and music, in the order mixGraph numbers its inputs. */
+/** A beat's `muffle` windows (beat time) as absolute seconds. */
+function muffleWindows(spec, timeline) {
+  const out = [];
+  spec.beats.forEach((beat, i) => {
+    for (const w of beat.muffle ?? []) {
+      const start = timeline.beats[i].start + w.at;
+      out.push({ start, end: start + w.dur });
+    }
+  });
+  return out;
+}
+
 async function mixPlan(ctx, timeline) {
   const { table, doc } = loadClaims(ctx);
   const lines = resolveLines(ctx.spec, table, doc).filter((line) => !line.drop);
@@ -753,7 +775,7 @@ async function mixPlan(ctx, timeline) {
   for (const line of lines) {
     const file = path.join(ctx.outDir, "vo", `${line.id}.wav`);
     if (!existsSync(file)) throw new Error(`missing ${file}; run the vo step`);
-    vo.push({ start: line.beatStart + line.at, file });
+    vo.push({ start: line.beatStart + line.at, file, fx: voiceFor(ctx.spec, line.lang, line.speaker).fx ?? null });
   }
   const sfx = [];
   for (const row of timeline.beats) {
@@ -761,7 +783,7 @@ async function mixPlan(ctx, timeline) {
     for (const effect of beat.sfx ?? []) {
       const file = path.join(ctx.outDir, "sfx", `${effect.name}.wav`);
       if (!existsSync(file)) throw new Error(`missing ${file}; run the sfx step`);
-      sfx.push({ start: row.start + effect.at, gainDb: effect.gain_db ?? 0, file });
+      sfx.push({ start: row.start + effect.at, gainDb: effect.gain_db ?? 0, file, bed: effect.name === "hum" });
     }
   }
   const music = [];
@@ -783,7 +805,7 @@ async function mixPlan(ctx, timeline) {
   const files = [...vo.map((c) => c.file), ...sfx.map((c) => c.file), ...music.map((c) => c.file)];
   return {
     files,
-    graph: mixGraph({ videoDuration: timeline.duration, voiceFx: ctx.spec.voice?.fx, vo, sfx, music }),
+    graph: mixGraph({ videoDuration: timeline.duration, voiceFx: ctx.spec.voice?.fx, vo, sfx, music, muffle: muffleWindows(ctx.spec, timeline) }),
   };
 }
 

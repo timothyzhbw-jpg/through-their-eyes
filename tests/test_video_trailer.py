@@ -11,6 +11,7 @@ VIDEO = ROOT / "video"
 SLOT = re.compile(r"\{[a-z_]+\.[a-z_]+\}")
 PAUSE = re.compile(r"\[pause \d+\]")
 PLAYER_ID = re.compile(r"\b[HA]\d{1,2}\b")
+SHIRT = re.compile(r"\bNo\.\s?\d{1,2}\b")  # a shirt number ("No. 14") is a name too
 NUMBER_WORDS = re.compile(
     r"\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|"
     r"forty|fifty|hundred|thousand|once|twice|half|dozen|percent)\b",
@@ -35,8 +36,8 @@ def _strings(value):
 
 
 def _bare(text: str) -> str:
-    """The text without slots, pause marks and player ids: what may not hold a number."""
-    return PLAYER_ID.sub("", PAUSE.sub("", SLOT.sub("", text)))
+    """The text without slots, pause marks, player ids and shirt numbers: what may not hold one."""
+    return SHIRT.sub("", PLAYER_ID.sub("", PAUSE.sub("", SLOT.sub("", text))))
 
 
 def test_the_trailer_is_under_two_minutes():

@@ -207,7 +207,8 @@ function checkBeats(spec, ctx, errors, warnings) {
       if (!(beat.freeze.at >= 0) || !(beat.dur > 0) || beat.freeze.at >= beat.dur) {
         errors.push(`${where}: freeze.at must be inside the beat`);
       }
-      if (!(beat.freeze.punch > 0)) errors.push(`${where}: freeze.punch must be positive`);
+      // No punch is a plain hold: the sharp frame, unscaled (a freeze-frame name card).
+      if (beat.freeze.punch != null && !(beat.freeze.punch > 0)) errors.push(`${where}: freeze.punch must be positive`);
     }
     checkOverlays(beat, i, where, titles, warnings, errors);
     checkVo(beat, where, spec, ctx, voIds, cursor, planned, errors, warnings);
@@ -263,6 +264,21 @@ function checkPicture(beat, i, where, cine, titles, ctx, errors) {
     if (picture.reverse != null && typeof picture.reverse !== "boolean") errors.push(`${where}: reverse must be true or false`);
     if (picture.fit != null && !FITS.has(picture.fit)) errors.push(`${where}: fit must be one of ${[...FITS].join(", ")}`);
     checkPush(picture.push, where, errors);
+    return;
+  }
+  if (picture.src === "split") {
+    // Two sources side by side, each cropped at its native size (no scaling), with a divider.
+    for (const side of ["left", "right"]) {
+      const part = picture[side];
+      if (!part || (part.src !== "clip" && part.src !== "capture")) {
+        errors.push(`${where}: split.${side} must be a clip or a capture`);
+        continue;
+      }
+      if (part.src === "clip" && !repoFile(ctx.root, part.path)) errors.push(`${where}: split.${side} clip path "${part.path}" must stay inside the repo`);
+      if (part.src === "capture" && !ctx.shotIds.has(part.shot)) errors.push(`${where}: split.${side}: unknown capture shot "${part.shot}"`);
+      if (part.in != null && !(part.in >= 0)) errors.push(`${where}: split.${side}.in must be >= 0`);
+      if (!Array.isArray(part.crop) || part.crop.length !== 4) errors.push(`${where}: split.${side}.crop must be [x, y, w, h]`);
+    }
     return;
   }
   if (picture.src === "image") {
@@ -478,6 +494,7 @@ export function spokenIssues(text, { allowPause }) {
   let bare = text.replace(/\{[a-z_]+\.[a-z_]+\}/g, "");
   if (allowPause) bare = bare.replace(/\[pause\s+\d+\]/g, "");
   bare = bare.replace(/\b[HA]\d{1,2}\b/g, "");
+  bare = bare.replace(/\bNo\.\s?\d{1,2}\b/g, ""); // a shirt number ("No. 14") is a name too
   if (/\d/.test(bare)) issues.push("a digit outside a slot");
   if (NUMBER_WORD.test(bare)) issues.push("a number word");
   return issues;

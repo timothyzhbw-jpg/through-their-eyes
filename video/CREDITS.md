@@ -14,9 +14,15 @@ below and checks its SHA-256 (`assets.json`) before using it.
 | Unsolicited trailer music (loop edit) | Emma_MA | CC0 1.0 | https://opengameart.org/content/unsolicited-trailer-music | yes (default) |
 | Generic trailer music | Emma_MA | CC0 1.0 | https://opengameart.org/content/generic-trailer-music | candidate |
 | Digital Acid (glitch hop) | Xenocity (Deva) | CC0 1.0 | https://opengameart.org/content/xenocity-digital-acid-glitch-hop | candidate |
+| Skill Test (album After Dark) | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/after-dark/skill-test/ | candidate |
+| Pantheon (album PHONK - AURA FARMING) | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/phonk-aura-farming/pantheon/ | candidate |
+| Shortcuts | Zane Little Music | CC0 1.0 | https://opengameart.org/content/shortcuts | candidate |
+| Sirens in Darkness | cynicmusic (The Cynic Project) | CC0 1.0 | https://opengameart.org/content/sirens-in-darkness | candidate (story opening) |
 
 CC0 needs no attribution; the end card credits the track anyway. Licences checked on each
-page on 2026-10-21.
+page on 2026-10-21: the OpenGameArt pages list "CC0" under License(s); the Free Music Archive
+track pages carry the CC0 1.0 Universal mark (creativecommons.org/publicdomain/zero/1.0/) and
+their albums state "The songs in this album are licensed under: CC0 1.0 Universal".
 
 ## Sound effects
 
