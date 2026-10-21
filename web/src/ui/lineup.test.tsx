@@ -220,6 +220,18 @@ describe("the pre-match line-up", () => {
     expect(INTRO_MS).toBe(5000);
   });
 
+  it("tells a screen reader that it closes by itself and that Tab keeps it open", () => {
+    const page = mount(offline());
+    const dialog = page.querySelector<HTMLElement>('[role="dialog"]')!;
+    const note = document.getElementById(dialog.getAttribute("aria-describedby") ?? "");
+    expect(note?.textContent).toMatch(/closes by itself/);
+    expect(note?.textContent).toMatch(/Tab/);
+    expect(note?.classList.contains("sr-only")).toBe(true); // the countdown line shows it
+    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    expect(intro.get().open).toBe(true);
+    expect(dialog.hasAttribute("aria-describedby")).toBe(false); // it no longer closes by itself
+  });
+
   it("closes on a click anywhere that is not a button", () => {
     const page = mount(offline());
     click(page.querySelector<HTMLElement>("h2")!);

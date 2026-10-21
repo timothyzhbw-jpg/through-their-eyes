@@ -22,6 +22,11 @@
   --hairline: rgba(239, 237, 229, 0.1);
   --hairline-strong: rgba(239, 237, 229, 0.18);
   --glass: rgba(11, 17, 14, 0.8);
+  /* small text over the picture: a dense Night halo keeps 4.5:1 over floodlights and white lines
+     (WCAG counts a halo that wide as the text's background) */
+  --halo:
+    0 0 1px var(--night), 0 0 1px var(--night), 0 0 2px var(--night), 0 0 2px var(--night),
+    0 0 6px rgba(8, 14, 11, 0.9);
   /* data colours of the views (shared with the 3D scene, views/scene.ts) */
   --home: #ff7a5c;
   --away: #5b86ff;
@@ -238,6 +243,10 @@ button.link {
   text-underline-offset: 0.2em;
   cursor: pointer;
 }
+button.link:focus-visible {
+  outline: 2px solid var(--floodlight); /* all: unset drops the global ring */
+  outline-offset: 3px;
+}
 
 /* chips: overlay toggles */
 .chip {
@@ -284,7 +293,6 @@ button.link {
   background: rgba(8, 14, 11, 0.6);
   box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 .seg-thumb {
   position: absolute;
@@ -369,7 +377,6 @@ optgroup {
   border-radius: var(--r-card);
   background: var(--glass);
   backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
   box-shadow:
     inset 0 0 0 1px var(--hairline),
     0 40px 80px -40px rgba(0, 0, 0, 0.9);
@@ -385,7 +392,6 @@ optgroup {
   border-radius: var(--r-board);
   background: rgba(15, 21, 19, 0.96);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow:
     inset 0 0 0 1px rgba(239, 237, 229, 0.12),
     0 30px 60px -20px rgba(0, 0, 0, 0.8);
@@ -405,11 +411,11 @@ optgroup {
   z-index: 30;
   overflow: auto;
   overscroll-behavior: contain;
+  /* 0.92: the stream still shows through, and Chalk 3 labels keep 4.5:1 over a white pill behind */
   background:
     radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%),
-    rgba(8, 14, 11, 0.88);
+    rgba(8, 14, 11, 0.92);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   color: var(--chalk);
 }
 .lineup-inner {
@@ -807,7 +813,6 @@ optgroup {
   background: rgba(8, 14, 11, 0.62);
   box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.38);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition: box-shadow var(--t-quick);
 }
 .eyes-picker:hover {
@@ -881,6 +886,10 @@ optgroup {
 .hud .blind-hud .source {
   padding: 2px 6px;
 }
+.stage-hud .hud .source {
+  color: var(--chalk-2); /* over the picture, as .brand .sub (beats the shared .hud .source) */
+  text-shadow: var(--halo);
+}
 
 /* the header over the picture: the brand and the live pill, sound and who is watching */
 .stage-head {
@@ -913,12 +922,16 @@ optgroup {
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
+.brand h1:focus {
+  outline: none; /* focused from code when the lineup card closes, never by Tab */
+}
 .brand .sub {
   margin: 0;
   font: 500 11px/1 var(--font-data);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--chalk-3);
+  color: var(--chalk-2); /* over the picture: Chalk 3 fell to 3.2:1 by the floodlights */
+  text-shadow: var(--halo);
 }
 .header-start,
 .header-end {
@@ -965,7 +978,6 @@ optgroup {
   background: rgba(8, 14, 11, 0.72);
   box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.5);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   font: 400 15px/1.3 var(--font-display);
 }
 .stage-director .director-chip b {
@@ -1042,8 +1054,15 @@ optgroup {
   color: var(--ink);
   font: italic 500 17px/1 var(--font-display);
 }
+.avatar::before {
+  content: attr(data-initial); /* drawn, not text: the button's name is its label (Stage.tsx) */
+}
 .hide-sm {
   color: var(--chalk-3);
+}
+.viewer-toggle .hide-sm {
+  color: var(--chalk-2); /* over the picture, as .brand .sub */
+  text-shadow: var(--halo);
 }
 .viewer-panel {
   top: 54px;
@@ -1092,6 +1111,9 @@ optgroup {
 .persona-note {
   font-size: 13px;
   color: var(--chalk-3);
+}
+.persona[aria-pressed="true"] .persona-note {
+  color: var(--chalk-2); /* Chalk 3 on the chosen option's Floodlight tint was 4.3:1 */
 }
 .viewer-lang {
   display: flex;
@@ -1330,9 +1352,10 @@ optgroup {
 .clock {
   flex: none;
   font: 500 13px/1.2 var(--font-data);
-  color: var(--chalk-3);
+  color: var(--chalk-2); /* over the picture, as .brand .sub */
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-shadow: var(--halo);
 }
 .clock b {
   color: var(--chalk);
@@ -1375,7 +1398,8 @@ optgroup {
   font: 500 10px/1 var(--font-data);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--chalk-3);
+  color: var(--chalk-2); /* over the picture, as .brand .sub */
+  text-shadow: var(--halo);
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--t-quick);
@@ -1385,6 +1409,13 @@ optgroup {
 }
 .mark:not(.key) {
   transform: translateX(-50%);
+}
+.mark.key.before {
+  transform: translateX(-100%);
+  padding-right: 6px;
+}
+.mark.after {
+  transform: none;
 }
 .mark:hover {
   color: var(--chalk);
@@ -1514,6 +1545,13 @@ optgroup {
   background: var(--night-3);
   box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.38);
 }
+/* Over the picture the chip needs its glass: .chip.director-chip above overrides the live
+   screen's own rule, which left it on 4 % white (3:1 where it crosses the ad boards). */
+.stage-director .chip.director-chip:not(:hover) {
+  background: rgba(8, 14, 11, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
 .chip.director-chip.rule-breakdown,
 .chip.director-chip.rule-replay {
   box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.4);
@@ -1527,6 +1565,11 @@ optgroup {
   width: 44px;
   height: 44px;
   font-size: 20px;
+}
+.stage-director .director-dismiss:not(:hover) {
+  background: rgba(8, 14, 11, 0.72); /* the × sits on the picture: the chip's glass */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .director-idle {
   color: var(--chalk-3);
@@ -1774,7 +1817,6 @@ optgroup {
   border-radius: var(--r-card);
   background: rgba(15, 21, 19, 0.95);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow:
     inset 0 0 0 1px rgba(239, 237, 229, 0.12),
     0 30px 60px -20px rgba(0, 0, 0, 0.85);
@@ -2256,7 +2298,7 @@ optgroup {
   gap: 14px;
   padding: 26px 0 0;
   border-top: 2px solid rgba(239, 237, 229, 0.14);
-  opacity: 0.5;
+  opacity: 0.75; /* dimmed, and its Dusk kicker still 4.8:1 on Night */
   transition:
     opacity var(--t-base) var(--glide),
     border-color var(--t-base) var(--glide);
@@ -2738,7 +2780,6 @@ optgroup {
   background: rgba(8, 14, 11, 0.85);
   box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.5);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   font: 500 13px/1.2 var(--font-body);
   white-space: nowrap;
   pointer-events: none;
@@ -2825,11 +2866,13 @@ optgroup {
   position: absolute;
   left: 12px;
   bottom: 10px;
-  right: 12px;
+  max-width: calc(100% - 24px);
   margin: 0;
+  padding: 2px 8px;
+  border-radius: var(--r-tag);
+  background: rgba(8, 14, 11, 0.72); /* it sits on the touchline: Chalk 3 alone was 1.6:1 there */
   font-size: 12px;
-  color: var(--chalk-3);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  color: var(--chalk-2);
   pointer-events: none;
 }
 .blind-tag {
@@ -2856,7 +2899,6 @@ optgroup {
   border-radius: var(--r-media);
   background: rgba(11, 17, 14, 0.82);
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   box-shadow: inset 0 0 0 1px var(--hairline);
   font: 500 12px/1.4 var(--font-body);
 }
@@ -3129,7 +3171,8 @@ optgroup {
     border-radius: var(--r-control);
     font-size: 10px;
   }
-  .mark:not(.key) {
+  .mark:not(.key),
+  .mark.key.before {
     transform: none;
   }
   .mark:hover {
@@ -3198,7 +3241,6 @@ optgroup {
     background: transparent;
     box-shadow: none;
     backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
   .moment-card h2 {
     font-size: 34px;
@@ -3295,17 +3337,41 @@ optgroup {
   }
 }
 
-/* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
-   the stream label goes (the pill already says live), then the brand tightens, then the sound
-   button goes (the commentary panel keeps one). The way back, the match picker or the Your call
-   pill replaces the brand. */
+/* The phone header: the brand takes a short line of its own, the name and "A synthetic match"
+   (the rest of the note waits for a wider screen), so the controls get the whole row under it:
+   the live pill (its stream label goes, the pill already says live), the way back or the match
+   picker, Your call, sound and who is watching. The picture's badges and the viewer menu move
+   down by the brand's line. */
 @media (max-width: 480px) {
-  .stage-head .live-status {
+  .stage-head {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding-top: 8px;
+  }
+  .stage-head .brand {
+    flex: 1 0 100%;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+  }
+  .stage-head .brand h1 {
+    font-size: 17px;
+  }
+  .stage-head .brand .sub {
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .brand .sub-more {
     display: none;
   }
-  .stage:has(.live-chip.back) .stage-head .brand,
-  .stage:has(.header-start .match-picker) .stage-head .brand,
-  .stage:has(.header-end .yc-open) .stage-head .brand {
+  .stage-hud,
+  .viewer-panel {
+    top: 84px;
+  }
+  .stage-head .live-status {
     display: none;
   }
   /* the story's big numbers shrink with the screen instead of running off it */

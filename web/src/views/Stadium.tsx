@@ -18,6 +18,14 @@ import { COLORS } from "./scene";
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
 
+/**
+ * Seconds the crowd animation reads. The live view uses the wall clock; capture replaces
+ * `now` while it is mounted, so a filmed frame does not depend on when it was drawn.
+ */
+export const sceneClock: { now: () => number } = {
+  now: () => performance.now() / 1000,
+};
+
 export function Stadium() {
   return (
     <>
@@ -213,7 +221,7 @@ function Crowd() {
   }, [time]);
 
   useFrame(() => {
-    time.value = performance.now() / 1000;
+    time.value = sceneClock.now();
   });
   useLayoutEffect(() => {
     const m = mesh.current;

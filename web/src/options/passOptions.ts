@@ -3,7 +3,7 @@
 // it, colour = its value, the chosen one highlighted; a dashed line to the target the same option
 // had on the true state. Numbers shown come from claims when the payload has one (SPEC 5.3).
 
-import type { Hero, Run } from "../data/hero";
+import { isShot, shotPost, type Hero, type Run } from "../data/hero";
 import type { Vec2 } from "../data/types";
 import type { ClaimKind, Narration, PayloadClaim } from "../narration/payload";
 
@@ -31,6 +31,8 @@ export interface PassOption {
 
 export function optionLabel(action: string): string {
   if (action.startsWith("pass:")) return `Pass to ${action.slice(5)}`;
+  const post = shotPost(action); // a placed shot (Module A): "shot:near" / "shot:far"
+  if (post) return `${post === "near" ? "Near" : "Far"}-post shot`;
   return action === "carry" ? "Carry" : action === "shot" ? "Shot" : action;
 }
 
@@ -46,7 +48,7 @@ export function passOptions(hero: Hero, run: Run): PassOption[] {
     .filter((o, rank) => rank < TOP_OPTIONS || o.action === d.chosen || o.action === runner)
     .map((o) => ({
       action: o.action,
-      kind: o.action.startsWith("pass:") ? "pass" : o.action === "shot" ? "shot" : "carry",
+      kind: o.action.startsWith("pass:") ? "pass" : isShot(o.action) ? "shot" : "carry",
       label: optionLabel(o.action),
       receiver: o.receiver,
       from,
