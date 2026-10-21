@@ -53,11 +53,20 @@ def test_the_defaults_serve_the_match_and_each_hero_possession(tmp_path, monkeyp
     settings.cache_dir = tmp_path
     with TestClient(create_app(settings)) as c:
         ids = [m["id"] for m in c.get("/api/matches").json()]
-        assert ids == ["blind_side_run-3", CORNER, MATCH, PRESS]
+        assert ids == ["blind_side_run-3", CORNER, MATCH, "match-2", PRESS]
         possessions = c.get(f"/api/matches/{MATCH}").json()["possessions"]
         heroes = [f"{p['scenario']}-{p['seed']}" for p in possessions if p["hero_moment"]]
         assert heroes == ["blind_side_run-3", PRESS, CORNER]
         for hero in heroes:
+            assert c.get(f"/api/matches/{hero}/export").status_code == 200
+        # match-2: the same heroes on other gated seeds, in another order (sim/match.py MATCH_2).
+        two = c.get("/api/matches/match-2").json()
+        assert [h.split(":")[1:3] for h in two["hero_moments"]] == [
+            ["pressed_decision", "H4"], ["marker_scan", "H5"], ["decision_after_scan", "H8"]
+        ]  # fmt: skip
+        heroes = [f"{p['scenario']}-{p['seed']}" for p in two["possessions"] if p["hero_moment"]]
+        assert heroes == ["press_escape-1", "corner_blind_side-2", "blind_side_run-11"]
+        for hero in heroes:  # served, though TTE_MATCHES does not list them
             assert c.get(f"/api/matches/{hero}/export").status_code == 200
 
 

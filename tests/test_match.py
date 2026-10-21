@@ -8,11 +8,14 @@ from sim.config import DT
 from sim.export import export_match
 from sim.match import (
     DEFAULT_PLAN,
+    MATCH_2,
     SET_PIECES,
     PossessionSpec,
     build_match,
     global_id,
+    match_heroes,
     open_play_seed,
+    plan_for,
     restart_after,
     score_after,
 )
@@ -211,3 +214,25 @@ def test_shot_frame_attrs_and_the_save_shot_id_move_to_match_time():
     shot = by_id[save["attrs"]["shot"]]
     assert shot["type"] == "shot"
     assert shot["attrs"]["outcome"] == "saved"
+
+
+def test_match_2_plays_the_same_heroes_on_other_gated_seeds_in_another_order():
+    # The seeds passed the demo seeds' per-seed gates (SPEC 3.1): hero moment and lens, the
+    # intervention changes the outcome, every claim supported, an offline breakdown.
+    assert plan_for(2) is MATCH_2 and plan_for(1) is DEFAULT_PLAN and plan_for(7) is DEFAULT_PLAN
+    assert match_heroes(2) == [
+        ("press_escape", 1),
+        ("corner_blind_side", 2),
+        ("blind_side_run", 11),
+    ]
+    assert match_heroes(1) == [("blind_side_run", 3), ("press_escape", 0), ("corner_blind_side", 0)]
+    assert 15 <= len(MATCH_2) <= 25
+    longest = sum(spec.max_s or 0.0 for spec in MATCH_2 if spec.seed is None)
+    assert longest + 3 * 7.0 <= 900  # a hero possession lasts about 6 s
+    m2 = build_match(2)
+    assert 600 <= m2.duration_s <= 900
+    assert [p.scenario for p in m2.possessions] == [s.scenario for s in MATCH_2]
+    first = next(p for p in m2.possessions if p.scenario != "possession_play")
+    assert first.start * DT <= 30
+    seeds1 = {open_play_seed(1, n) for n in range(len(DEFAULT_PLAN))}
+    assert seeds1.isdisjoint(p.seed for p in m2.possessions if p.scenario == "possession_play")

@@ -69,8 +69,22 @@ DEFAULT_PLAN: tuple[PossessionSpec, ...] = (
 )
 
 
+# match-2: the same heroes on other design seeds, in another order, each gated like its demo seed
+# (hero moment and lens, the intervention changes the outcome, every claim supported, an offline
+# breakdown with no render violation): the pressure hero first, then the short corner, then the
+# blind-side run. 17 possessions, at most 12:23 of play.
+MATCH_2: tuple[PossessionSpec, ...] = (
+    _open(25.0),  # kick-off
+    PossessionSpec("press_escape", 1),  # without carrying it he finds the full-back H3, by 0:25
+    *map(_open, (55.0, 40.0, 65.0, 50.0)),
+    PossessionSpec("corner_blind_side", 2),  # separation 3.0 m with the look, 8.1 m without
+    *map(_open, (60.0, 45.0, 70.0, 40.0, 55.0)),
+    PossessionSpec("blind_side_run", 11),  # without the look he plays it wide to H7
+    *map(_open, (50.0, 65.0, 45.0, 60.0)),
+)
+
 # Other matches' plans, by match seed; any other seed plays DEFAULT_PLAN.
-PLANS: dict[int, tuple[PossessionSpec, ...]] = {}
+PLANS: dict[int, tuple[PossessionSpec, ...]] = {2: MATCH_2}
 
 
 def plan_for(seed: int) -> tuple[PossessionSpec, ...]:
