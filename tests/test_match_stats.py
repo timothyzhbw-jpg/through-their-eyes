@@ -83,6 +83,17 @@ def _match_a() -> StitchedMatch:
     return StitchedMatch(1, PLAYERS, [_open_play(), out_of_play, tackled], DT)
 
 
+def test_a_set_piece_scenario_declares_its_own_restart_and_is_no_restart_after_an_out():
+    """match-1's corner hero starts with a corner whatever the possession before it did."""
+    corner = _possession(1, "corner", _owner(20, [(0, 20, 0)]), [])
+    corner = Possession(1, "corner_blind_side", 0, 100, "corner", (0, 0), corner.run)
+    m = {
+        k: float(v[0])
+        for k, v in measure(StitchedMatch(3, PLAYERS, [_open_play(), corner], DT))["match"].items()
+    }
+    assert (m["cuts"], m["out_restarts"], m["out_restarts_kept"]) == (0, 0, 0)
+
+
 def _match_b() -> StitchedMatch:
     return StitchedMatch(2, PLAYERS, [_open_play()], DT)
 
@@ -185,7 +196,7 @@ def test_the_report_has_one_line_per_row_and_is_deterministic():
 
 
 def test_a_real_stitched_match_is_fully_accounted_for():
-    plan = (PossessionSpec("possession_play", max_duration_s=5.0),) * 2
+    plan = (PossessionSpec("possession_play", max_s=5.0),) * 2
     match = build_match(7, plan)
     tables = measure(match)
     m = {k: float(v[0]) for k, v in tables["match"].items()}

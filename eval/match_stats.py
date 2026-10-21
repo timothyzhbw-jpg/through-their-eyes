@@ -7,8 +7,9 @@ match and per 90 min of play (SPEC 3.1: rates are normalised per 90 min), the pa
 ended, the possession changes and how they happened (interception, tackle, out of play), the team
 possessions and their length, and the shots. A row has a target only when SPEC 3 sets one or a
 paper cited in docs/REFERENCES.md prints one; every other row is marked "no published reference",
-never filled in. Shot outcomes are "pending module A" (the shot outcome model, `Scenario.shots`),
-never invented. Nothing here tunes the sim. Writes eval/reports/match_stats.md.
+never filled in. Shot outcomes are "pending module A" (the shot model, `Scenario.shots`, is on
+main but no scenario of the default plan turns it on), never invented. Nothing here tunes the
+sim. Writes eval/reports/match_stats.md.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ from eval.realism import (
     _wmean,
     _wsd,
 )
-from sim.match import DEFAULT_PLAN, Possession, StitchedMatch, build_match
+from sim.match import DEFAULT_PLAN, SET_PIECES, Possession, StitchedMatch, build_match
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -145,7 +146,8 @@ def measure(match: StitchedMatch) -> dict[str, dict[str, np.ndarray]]:
             if p.restart == "cut":
                 counts["cuts"] += 1
                 counts["cut_switches"] += previous[-1].team != own[0].team
-            elif p.restart in OUT_RESTARTS:
+            elif p.restart in OUT_RESTARTS and p.scenario not in SET_PIECES:
+                # (a set-piece scenario declares its own restart: no `out` need precede it)
                 out = next(e for e in live_events(match.possessions[k - 1].run) if e.type == "out")
                 counts["out_restarts"] += 1
                 counts["out_restarts_kept"] += own[0].team == out.team
@@ -267,20 +269,21 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
     # The stitched match against SPEC 3.1.
     names = list(dict.fromkeys(sc["name"]))
     lengths = {s: sc["length"][sc["name"] == s] for s in names}
+    caps = [s.max_s for s in DEFAULT_PLAN if s.scenario == "possession_play" and s.max_s]
     target_row(
         "Play per match (min)", "duration", ".2f", *SPEC_PLAY_MIN,
         "Length of the stitched clock: possession k starts on the frame after possession k − 1 "
         "ended, with no stoppages. Mean scenario possession: "
         + ", ".join(f"{s} {np.mean(v):.1f} s (n = {len(v)})" for s, v in lengths.items())
-        + "; possession_play runs to 30 s (sim/match.py POSSESSION_S) unless the ball goes out.",
+        + f"; possession_play runs until the ball goes out or the plan's cap ({min(caps):.0f}–"
+        f"{max(caps):.0f} s, sim/match.py DEFAULT_PLAN).",
         scale=1.0 / 60.0,
     )  # fmt: skip
     plan = ", ".join(s.scenario if s.seed is None else f"{s.scenario} seed {s.seed}"
                      for s in DEFAULT_PLAN)  # fmt: skip
     target_row(
         "Scenario possessions per match", "possessions", ".1f", *SPEC_POSSESSIONS,
-        f"The plan (sim/match.py DEFAULT_PLAN) has {len(DEFAULT_PLAN)}: {plan}. SPEC 3.1 records "
-        "it as 5–8 possessions for now.",
+        f"The plan (sim/match.py DEFAULT_PLAN) has {len(DEFAULT_PLAN)}: {plan}.",
     )  # fmt: skip
 
     # Passes.
@@ -350,7 +353,7 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
         "Home team's share of possession time (%)", "home_time", "spell_time",
         "s of team possession",
         f"{int(np.sum(sc['home_start']))} of {len(sc['name'])} scenario possessions start with the "
-        "home team: possession_play gives the ball to H4, H5 or H6, and both hero scenarios are "
+        "home team: possession_play gives the ball to H4, H5 or H6, and the hero scenarios are "
         "built around a home player. So the away team has the ball only after winning it, and "
         f"at {int(np.sum(m['cut_switches']))} of the {int(np.sum(m['cuts']))} cuts the cut "
         "itself took the ball from the away team.",
@@ -360,8 +363,8 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
     count_row(
         "Shots per 90 min", "shots",
         "Shot events (engine `shot`, an option of the decision model). The hero possessions keep "
-        "their demo seeds, so they decide the same in every match, and possession_play never "
-        "shoots.",
+        "their demo seeds, so they decide the same in every match, and neither they nor "
+        "possession_play have the shot model on (`Scenario.shots`), so no shot is taken.",
     )  # fmt: skip
     goals = int(np.sum(m["goals"]))
     rows.append(
@@ -369,10 +372,11 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
             "Shot outcomes (goals, saves, misses)",
             PENDING,
             "—",
-            note="The shot outcome model (`Scenario.shots`, module A) is not on main, so no "
-            f"outcome is counted or invented. The score counts goal events ({goals} here) and "
-            "stays 0–0 without them (sim/match.py). SPEC 3.3's shot speed, roughly 80–130 km/h, "
-            "is module A's as well and is not checked here.",
+            note="The shot model (`sim/shots.py`, `Scenario.shots`, module A) is on main, but no "
+            "scenario of the default plan turns it on, so no outcome is counted or invented. The "
+            f"score counts goal events ({goals} here) and stays 0–0 without them (sim/match.py). "
+            "SPEC 3.3's shot speed, roughly 80–130 km/h, is module A's as well and is not checked "
+            "here.",
         )
     )
     return rows
@@ -432,13 +436,13 @@ def render(rows: list[Row], seeds: list[int]) -> str:
         f"- Rows marked *{NO_REFERENCE}* have no target: SPEC 3 sets none and no paper cited in "
         "docs/REFERENCES.md is recorded there as printing one. They show the sim's distribution "
         "only. Nothing was filled in from memory or from datasets.",
-        f"- *{PENDING}*: shot outcomes come with the shot outcome model being built as module A "
-        "(`Scenario.shots`); until then none is counted or invented.",
+        f"- *{PENDING}*: shot outcomes need a possession with the shot model on (`Scenario.shots`, "
+        "module A); the default plan has none, so none is counted or invented.",
         "- Held-out seeds: the plan was built on match 1, the demo match (SPEC 3.1). Open-play "
         "possessions take seeds keyed off the match seed, from 1,000,000 up, so they are never "
-        "design or eval seeds. The two hero possessions keep their demo seeds (blind_side_run 3, "
-        "press_escape 0) and are the same in every match: only the open play varies between "
-        "matches.",
+        "design or eval seeds. The hero possessions keep their demo seeds ("
+        + ", ".join(f"{s.scenario} {s.seed}" for s in DEFAULT_PLAN if s.seed is not None)
+        + ") and are the same in every match: only the open play varies between matches.",
         "",
         "## Notes per row",
         "",
