@@ -132,9 +132,11 @@ on an LLM.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
     possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
-    per possession and are lifted to match time (`explain/match.py`). The corner hero has no ball
-    decision, so it has no hero moment or breakdown yet; its possession plays with the live
-    overlays only. The API serves the match as `match-1` (`TTE_MATCHES=…,match:1`). The export is
+    per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
+    is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
+    decision, the marker's look (`marker_scan`, §5.1). The API serves the match as `match-1`
+    (`TTE_MATCHES=…,match:1`), and every hero possession of a served match on its own as well,
+    listed or not: the web app opens a hero moment's breakdown from that export. The export is
     the hero export's run schema over the whole clock plus a `match` block: 11.6 MB of JSON,
     4.0 MB gzipped, compressed once when the match loads.
 - Pitch 105 × 68 m, origin at the centre spot; the home team attacks +x in the first half. 25 Hz.

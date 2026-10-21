@@ -69,8 +69,8 @@ The brief's pipeline, end to end, on a synthetic match:
   original plan's checks, reported in the same file, are not met. It is in the simulator and its
   eval, not yet in the live app.
 
-Both live heroes play inside a stitched match: 18 possessions on one clock, about 11½ minutes,
-with the set-piece hero's corner too (no breakdown there yet).[^match]
+The live heroes play inside a stitched match: 18 possessions on one clock, about 11½ minutes,
+with the set-piece hero's corner as its third hero moment.[^match]
 
 ## The multi-agent design
 
