@@ -97,6 +97,8 @@ _Fill in as they come to exist._
   cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
+- `uv run --env-file .env python -m infra.voices` — check the narration voices and their speaking
+  styles against the Azure Speech voices list for `AZURE_SPEECH_REGION`
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
 - `uv run python -m eval.hero_lens --scenario press_escape` — hero lens eval (SPEC 3.6, 5.2):
@@ -122,9 +124,20 @@ _Fill in as they come to exist._
 - `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
   moments, breakdowns, the Verifier, interventions, determinism and the realism rows at season
   scale, on all cores (15–30 min); writes `eval/reports/season.md` (`--from-cache` re-renders)
+- `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
+  distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
+  only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
+  rewrites the viewer's parity fixture (a test fails when it is stale). The API serves them at
+  `GET /api/matches/<id>/stats` and as `stat` messages on the live stream
+- `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
+  passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
+  `eval/reports/pass_difficulty.md`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
+- `uv run python -m eval.match_stats` — match statistics (SPEC 3.1, 9): passes, possession
+  changes, team possessions and shots per stitched match and per 90 min of play, on held-out
+  match seeds 100–119, about 30 s on all cores; writes `eval/reports/match_stats.md`
 - `uv run --group eval --env-file .env python -m eval.narration_ablation --seeds 3,100-103`
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in

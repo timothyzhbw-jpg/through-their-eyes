@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 
 from agents.context import MomentContext
+from analytics.live_stats import StatsTimeline, stats_from_run
 from analytics.pitch_control import pitch_control
 from analytics.pressing import frame_pressing
 from analytics.vision import player_visibility
@@ -25,6 +26,10 @@ NO_DECISION = (
 
 def _dump(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+# One timeline per context. The context is held so its id cannot be reused for another object.
+_MATCH_STATS: dict[int, tuple[MomentContext, StatsTimeline]] = {}
 
 
 def _frame(ctx: MomentContext, frame: int) -> int:
@@ -146,6 +151,32 @@ def list_options(ctx: MomentContext) -> str:
     ])  # fmt: skip
 
 
+def get_live_stats(
+    ctx: MomentContext,
+    player: str | None = None,
+    frame: int | None = None,
+    stats: StatsTimeline | None = None,
+    limit: int = 20,
+) -> str:
+    """Live match stats measured from tracking, not verified claims (SPEC 4.6)."""
+    timeline = stats
+    if timeline is None:
+        cached = _MATCH_STATS.get(id(ctx))
+        if cached is None or cached[0] is not ctx:
+            timeline = stats_from_run(ctx.run, f"{ctx.scenario}-{ctx.seed}")
+            _MATCH_STATS[id(ctx)] = (ctx, timeline)
+        else:
+            timeline = cached[1]
+    data = timeline.snapshot(frame).model_dump(mode="json")
+    if player is not None:
+        data["players"] = [p for p in data["players"] if p["id"] == player]
+        data["cues"] = [
+            c for c in data["cues"] if c.get("player") == player or c.get("receiver") == player
+        ]
+    data["cues"] = data["cues"][-limit:]
+    return _dump(data)
+
+
 def what_if(ctx: MomentContext, action: str) -> str:
     """Re-simulate the hero's decision with `action` forced (SPEC 3.7)."""
     decision = ctx.run.hero_decision()
@@ -207,6 +238,7 @@ TOOLS = {
     "get_pitch_control": get_pitch_control,
     "get_xt": get_xt,
     "get_pressing": get_pressing,
+    "get_live_stats": get_live_stats,
     "run_counterfactual": run_counterfactual,
     "list_options": list_options,
     "what_if": what_if,

@@ -229,8 +229,8 @@ def workflow(c: Canvas) -> None:
     c.wire("M495,664 V624")
     c.rect(330, 664, 290, 140, "code", rx=12)
     c.text(348, 694, "MCP tool server", 22, "b")
-    c.text(348, 722, ["9 tools: moment, claims,", "vision, pitch control, xT,",
-                      "pressing, re-sim, what-if"], 19, "muted", lh=24)  # fmt: skip
+    c.text(348, 722, ["10 tools: moment, claims,", "stats, vision, pitch control,",
+                      "xT, pressing, re-sim, what-if"], 19, "muted", lh=24)  # fmt: skip
     c.text(348, 792, "TTE_ANALYST_MCP", 18, "mono c-code")
     c.close()
 

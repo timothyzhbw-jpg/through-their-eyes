@@ -417,14 +417,18 @@ def test_delivery_tier_is_rule_based(ctx):
 
 def test_ssml_is_well_formed_and_uses_a_style_only_when_the_voice_has_it():
     line = ScriptLine(id="L1", speaker="pbp", text="<H8> & 'H9'", claims=[])
-    with_style = ssml_for_line(line, "en", "excited", styles={"excited"})
+    # An open line asks for sports-commentary, then cheerful. Prosody wraps the words either way.
+    with_style = ssml_for_line(line, "en", "excited", styles={"sports-commentary"})
     without = ssml_for_line(line, "en", "excited", styles=set())
-    for ssml in (with_style, without):
+    refused = ssml_for_line(line, "en", "excited", styles={"excited"})
+    for ssml in (with_style, without, refused):
         root = ET.fromstring(ssml)
         assert root.tag.endswith("speak")
+        assert "".join(root.itertext()) == line.text
         assert "&lt;H8&gt; &amp;" in ssml
-    assert "express-as" in with_style and 'style="excited"' in with_style
-    assert "express-as" not in without and "<prosody" in without
+        assert "<prosody" in ssml
+    assert "express-as" in with_style and 'style="sports-commentary"' in with_style
+    assert "express-as" not in without and "express-as" not in refused
     calm = ssml_for_line(line, "zh", "calm", styles=set())
     assert "zh-CN" in calm
 
@@ -500,9 +504,10 @@ DESCRIBING = {"reception_zone", "blind_side", "scan_side", "scan_before_receptio
 NUMBERS_FOR_ANALYSTS = {"cf_value", "pass_success", "cf_pass_success", "observed_share",
                         "pressure_at_pass"}  # fmt: skip
 # Every speaking style a voice might offer; audio description must pick only a calm one.
-ALL_STYLES = {"sports_commentary", "sports_commentary_excited", "excited", "cheerful", "shouting",
-              "narration-relaxed", "calm", "newscast", "chat"}  # fmt: skip
-EXCITED_STYLES = {"sports_commentary", "sports_commentary_excited", "excited", "cheerful",
+ALL_STYLES = {"sports-commentary", "sports-commentary-excited", "excited", "cheerful", "shouting",
+              "narration-professional", "documentary-narration", "narration-relaxed", "calm",
+              "newscast", "chat"}  # fmt: skip
+EXCITED_STYLES = {"sports-commentary", "sports-commentary-excited", "excited", "cheerful",
                   "shouting"}  # fmt: skip
 
 
@@ -659,23 +664,23 @@ def test_the_verifier_refuses_xt_or_probabilities_for_audio_description_after_a_
 @pytest.mark.parametrize("tier", ["calm", "excited", "clutch"])
 @pytest.mark.parametrize("language", ["en", "zh"])
 def test_audio_description_is_voiced_calm_and_slower_whatever_the_tier(tier, language):
-    from agents.delivery import PROSODY
-
     line = ScriptLine(id="L1", speaker="pbp", text="H8 looked over his right shoulder.", claims=[])
     for styles in (ALL_STYLES, EXCITED_STYLES, set()):
-        ssml = ssml_for_line(line, language, tier, styles, persona=AD)
+        ssml = ssml_for_line(line, language, tier, styles, persona=AD, role="peak",
+                             counterfactual=True)  # fmt: skip
         root = ET.fromstring(ssml)
         (prosody,) = [e for e in root.iter() if e.tag.endswith("prosody")]
-        assert float(prosody.get("rate").rstrip("%")) < 0  # slower than the voice's default
-        assert float(prosody.get("pitch").rstrip("%")) == 0
+        assert prosody.get("rate") == "-10%" and prosody.get("pitch") == "+0%"
+        assert prosody.get("volume") is None  # no emphasis, even on "looked over his shoulder"
+        assert "<break" not in ssml and "styledegree" not in ssml
         assert not any(f'style="{s}"' in ssml for s in EXCITED_STYLES)
         if styles == ALL_STYLES:
             assert 'style="narration-relaxed"' in ssml
         else:
             assert "express-as" not in ssml  # no calm style on offer: prosody only
-    rate = float(PROSODY[tier][0].rstrip("%"))
     other = ssml_for_line(line, language, tier, set(), persona="casual")
-    assert f'rate="{PROSODY[tier][0]}"' in other and rate >= 0  # other personas keep the tier
+    assert 'rate="+6%"' in other and 'pitch="+3%"' in other  # open, not the AD rate
+    assert 'rate="-10%"' not in other
 
 
 def _with_delta(ctx, delta: float):
@@ -692,7 +697,7 @@ def _with_delta(ctx, delta: float):
 
 @pytest.mark.parametrize("delta, tier", [(0.001, "calm"), (0.2, "clutch")])
 def test_the_voice_step_reads_audio_description_calmly_on_any_moment(ctx, delta, tier):
-    from agents.delivery import STYLE_PREFERENCE, VOICES
+    from agents.delivery import VOICES
 
     moment = _with_delta(ctx, delta)
     styles = {voice: ALL_STYLES for voice in VOICES.values()}
@@ -701,11 +706,322 @@ def test_the_voice_step_reads_audio_description_calmly_on_any_moment(ctx, delta,
     assert r.tier == tier
     for language in ("en", "zh"):
         casual, ad = _script(r, "casual", language), _script(r, AD, language)
-        assert {cue.style for cue in casual.voice} == {STYLE_PREFERENCE[tier][0]}
         assert {cue.style for cue in ad.voice} == {"narration-relaxed"}
+        assert {cue.style for cue in casual.voice} != {"narration-relaxed"}
         for cue in ad.voice:
             ET.fromstring(cue.ssml)
             assert 'rate="-' in cue.ssml and cue.voice == VOICES[(language, cue.speaker)]
+            assert cue.style not in EXCITED_STYLES
     assert len({cue.cache_key for s in r.scripts for cue in s.voice}) == sum(
         len(s.voice) for s in r.scripts
     )  # an audio-description clip is never the commentary clip of the same line
+
+
+# --- broadcast delivery: roles, emphasis, the reveal break (SPEC 6) ------------------------------
+
+# Styles best first, styledegree or none, then rate and pitch, at tier excited.
+_LINE = {
+    "open": (("sports-commentary", "cheerful"), None, "+6%", "+3%"),
+    "build": (("sports-commentary-excited", "excited", "cheerful"), None, "+8%", "+3%"),
+    "peak": (("sports-commentary-excited", "excited", "cheerful"), "1.5", "+10%", "+4%"),
+    "why": (("cheerful", "excited"), None, "+2%", "+2%"),
+}
+_AD_LINE = (("narration-relaxed", "narration-professional", "calm", "newscast"), "-10%", "+0%")
+_EMPH = {"pbp": ("+0%", "+8%", "+15%"), "color": ("-10%", "+5%", "+10%")}
+# persona, language, text, role, emphasis span (audio description: none), counterfactual
+_SNAPSHOT_LINES = (
+    ("casual", "en", "What did he see?", "open", None, False),
+    ("casual", "en", "H8 checked his shoulder before the ball reached him.", "build",
+     "checked his shoulder", False),
+    ("casual", "en", "H9's run was on H8's blind side.", "why", "blind side", False),
+    ("casual", "en", "Without that look, H8 would have passed to H4.", "why", "that look", True),
+    ("analyst", "en", "H8 found H9 with a 42-metre pass.", "peak", None, False),
+    ("casual", "zh", "他看到了什么？", "open", None, False),
+    ("casual", "zh", "球到之前，H8先回头看了一眼。", "build", "回头看了一眼", False),
+    ("casual", "zh", "H9的跑位在H8的盲区。", "why", "盲区", False),
+    ("casual", "zh", "如果没有那一眼，H8会把球传给H4。", "why", "那一眼", True),
+    ("analyst", "zh", "H8一脚42米的传球找到了H9。", "peak", None, False),
+    (AD, "en", "H9's run was on H8's blind side.", "why", None, False),
+    (AD, "zh", "H9的跑位在H8的盲区。", "why", None, False),
+)  # fmt: skip
+_PERSONAS = ("casual", "analyst", "player_fan", "coach", AD)
+_SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",
+                "time_since_last_scan"}  # fmt: skip
+_PEAK_CLAIMS = {"pass_to_runner", "runner_received", "pressure_at_pass"}
+_PEAK_LINES = (
+    "found H9 with a 42-metre pass",
+    "took the pass",
+    "Pressing intensity on H4 was 95% when he released the ball",
+)
+
+
+def _spoken(ssml):
+    """(voice name, style, styledegree, [(kind, text, attrib), ...]) under the voice element."""
+    root = ET.fromstring(ssml)
+    voice = next(e for e in root if e.tag.endswith("voice"))
+    nodes = list(voice)
+    style = degree = None
+    if len(nodes) == 1 and nodes[0].tag.endswith("express-as"):
+        style, degree = nodes[0].get("style"), nodes[0].get("styledegree")
+        nodes = list(nodes[0])
+    events = []
+    for node in nodes:
+        if node.tag.endswith("break"):
+            events.append(("break", "", dict(node.attrib)))
+        else:
+            assert node.tag.endswith("prosody")
+            events.append(("prosody", "".join(node.itertext()), dict(node.attrib)))
+    return voice.get("name"), style, degree, events
+
+
+def _assert_spoken(ssml, voice, speaker, text, role, emphasis, counterfactual, persona):
+    from agents.delivery import VOICE_STYLES
+
+    name, style, degree, events = _spoken(ssml)
+    assert name == voice
+    assert "".join(piece for kind, piece, _ in events if kind == "prosody") == text
+    if persona == AD:
+        prefs, rate, pitch = _AD_LINE
+        want_degree = None
+    else:
+        prefs, want_degree, rate, pitch = _LINE[role]
+    assert style == next((s for s in prefs if s in VOICE_STYLES[voice]), None)
+    assert degree == (want_degree if style else None)
+    if persona == AD:
+        assert style not in EXCITED_STYLES
+    emph = [piece for kind, piece, attrs in events if kind == "prosody" and "volume" in attrs]
+    plain = [attrs for kind, _, attrs in events if kind == "prosody" and "volume" not in attrs]
+    assert emph == ([emphasis] if emphasis else [])
+    assert plain and all(a.get("rate") == rate and a.get("pitch") == pitch for a in plain)
+    er, ep, ev = _EMPH[speaker]
+    for kind, _, attrs in events:
+        if kind == "prosody" and "volume" in attrs:
+            assert (attrs.get("rate"), attrs.get("pitch"), attrs.get("volume")) == (er, ep, ev)
+    sep = None
+    for index, _token in ((text.find(", "), ", "), (text.find("，"), "，")):
+        if index != -1 and (sep is None or index < sep[0]):
+            sep = (index, _token)
+    breaks = [i for i, (kind, _, _) in enumerate(events) if kind == "break"]
+    if persona == AD or not counterfactual or sep is None:
+        assert breaks == []
+        return
+    (at,) = breaks
+    before = "".join(piece for kind, piece, _ in events[:at] if kind == "prosody")
+    after = "".join(piece for kind, piece, _ in events[at + 1 :] if kind == "prosody")
+    assert before == text[: sep[0] + 1] and after == text[sep[0] + 1 :]
+    assert events[at][2]["time"] == "250ms"
+
+
+@pytest.fixture(scope="module")
+def booth():
+    return {
+        (scenario, seed): breakdown(
+            MomentContext.load(scenario, seed), client=None, personas=_PERSONAS,
+            languages=("en", "zh"),
+        )
+        for scenario, seed in (("blind_side_run", 3), ("press_escape", 0))
+    }  # fmt: skip
+
+
+def _cue_for(result, persona, language, text):
+    script = _script(result, persona, language)
+    line = next((line for line in script.payload.lines if line.text == text), None)
+    assert line is not None, (persona, language, [line.text for line in script.payload.lines])
+    cue = next(cue for cue in script.voice if cue.line == line.id)
+    return line, cue
+
+
+def test_line_role_matches_the_decision_event_by_player_and_frame():
+    from agents.delivery import line_role
+
+    moment = "m:decision_after_scan:H8:0075"
+    evidence = {
+        "pass_to_runner": ["pass:H8:0075"],
+        "scan": ["scan:H8:0060", "reception:H8:0057"],
+        "other": ["pass:H9:0075"],
+        "unpadded": ["pass:H8:75"],
+    }
+    assert line_role("color", ["pass_to_runner"], evidence, moment) == "why"
+    assert line_role("pbp", [], evidence, moment) == "open"
+    assert line_role("pbp", ["scan"], evidence, moment) == "build"
+    assert line_role("pbp", ["other"], evidence, moment) == "build"
+    assert line_role("pbp", ["pass_to_runner"], evidence, moment) == "peak"
+    assert line_role("pbp", ["unpadded"], evidence, moment) == "peak"
+    assert line_role("pbp", ["scan", "unpadded"], evidence, moment) == "peak"
+
+
+def test_peak_prosody_follows_the_tier():
+    """Calm peak uses the build style. Excited and clutch add styledegree when a style fits."""
+    from agents.delivery import VOICE_STYLES, VOICES
+
+    line = ScriptLine(id="L1", speaker="pbp", text="H8 found H9 with a 42-metre pass.",
+                      claims=["pass_to_runner"])  # fmt: skip
+    for language in ("en", "zh"):
+        styles = VOICE_STYLES[VOICES[(language, "pbp")]]
+        calm = ssml_for_line(line, language, "calm", styles, role="peak")
+        build = ssml_for_line(line, language, "excited", styles, role="build")
+        _, calm_style, calm_degree, calm_events = _spoken(calm)
+        _, build_style, _, _ = _spoken(build)
+        assert calm_style == build_style and calm_degree is None
+        assert all(
+            attrs.get("rate") == "+8%" and attrs.get("pitch") == "+3%"
+            for _, _, attrs in calm_events
+        )
+        _, _, degree, events = _spoken(
+            ssml_for_line(line, language, "excited", styles, role="peak")
+        )
+        assert degree == "1.5"
+        assert all(
+            attrs.get("rate") == "+10%" and attrs.get("pitch") == "+4%" for _, _, attrs in events
+        )
+        _, _, degree, events = _spoken(ssml_for_line(line, language, "clutch", styles, role="peak"))
+        assert degree == "2"
+        assert all(
+            attrs.get("rate") == "+14%" and attrs.get("pitch") == "+6%" for _, _, attrs in events
+        )
+    bare = ssml_for_line(line, "en", "clutch", styles=set(), role="peak")
+    assert "express-as" not in bare and "styledegree" not in bare and 'rate="+14%"' in bare
+
+
+def test_the_reveal_break_follows_the_first_comma_only():
+    none = ScriptLine(id="L1", speaker="color", text="No comma here at all.", claims=["cf"])
+    assert "<break" not in ssml_for_line(none, "en", "excited", role="why", counterfactual=True)
+    both = ScriptLine(id="L2", speaker="color", text="First, pause, then more.", claims=["cf"])
+    _, _, _, events = _spoken(ssml_for_line(both, "en", "excited", role="why", counterfactual=True))
+    (at,) = [i for i, (kind, _, _) in enumerate(events) if kind == "break"]
+    before = "".join(piece for kind, piece, _ in events[:at] if kind == "prosody")
+    after = "".join(piece for kind, piece, _ in events[at + 1 :] if kind == "prosody")
+    assert before == "First," and after == " pause, then more." and events[at][2]["time"] == "250ms"
+    zh = ScriptLine(id="L3", speaker="color", text="先说，再, 说。", claims=["cf"])
+    _, _, _, events = _spoken(ssml_for_line(zh, "zh", "excited", role="why", counterfactual=True))
+    (at,) = [i for i, (kind, _, _) in enumerate(events) if kind == "break"]
+    before = "".join(piece for kind, piece, _ in events[:at] if kind == "prosody")
+    assert before == "先说，"
+
+
+def test_broadcast_lines_follow_the_role_table(booth):
+    from agents.delivery import VOICES
+
+    hero = booth[("blind_side_run", 3)]
+    for persona, language, text, role, emphasis, counterfactual in _SNAPSHOT_LINES:
+        line, cue = _cue_for(hero, persona, language, text)
+        _assert_spoken(
+            cue.ssml, VOICES[(language, cue.speaker)], cue.speaker, line.text, role, emphasis,
+            counterfactual, persona,
+        )  # fmt: skip
+
+
+def test_voice_ssml_snapshots(booth):
+    """Exact SSML for the broadcast lines. Regenerate with UPDATE_SNAPSHOTS=1."""
+    import os
+    from pathlib import Path
+
+    hero = booth[("blind_side_run", 3)]
+    got = {}
+    for persona, language, text, _, _, _ in _SNAPSHOT_LINES:
+        line, cue = _cue_for(hero, persona, language, text)
+        got[f"{persona}/{language}/{line.id}"] = cue.ssml
+    assert len(got) == len(_SNAPSHOT_LINES)
+    path = Path(__file__).parent / "snapshots" / "voice_ssml.json"
+    if os.environ.get("UPDATE_SNAPSHOTS") == "1":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(got, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+    assert json.loads(path.read_text()) == got
+
+
+def test_every_cue_speaks_the_payload_line(booth):
+    from agents.delivery import VOICE_STYLES, VOICES
+
+    for result in booth.values():
+        for script in result.scripts:
+            payload = {line.id: line.text for line in script.payload.lines}
+            speakers = {line.id: line.speaker for line in script.lines}
+            for cue in script.voice:
+                assert cue.speaker == speakers[cue.line]
+                assert cue.voice == VOICES[(script.language, cue.speaker)]
+                assert "".join(ET.fromstring(cue.ssml).itertext()) == payload[cue.line]
+                if cue.style is None:
+                    assert "express-as" not in cue.ssml
+                else:
+                    assert cue.style in VOICE_STYLES[cue.voice]
+                if script.persona != AD:
+                    continue
+                assert "<break" not in cue.ssml and "volume=" not in cue.ssml
+                assert cue.style not in EXCITED_STYLES
+                prosody = [e for e in ET.fromstring(cue.ssml).iter() if e.tag.endswith("prosody")]
+                assert prosody and all(
+                    e.get("rate") == "-10%" and e.get("pitch") == "+0%" and e.get("volume") is None
+                    for e in prosody
+                )  # fmt: skip
+
+
+def test_line_roles_on_the_offline_breakdowns(booth):
+    from agents.delivery import line_role
+
+    seen, opens, scans = set(), 0, 0
+    for result in booth.values():
+        for script in result.scripts:
+            evidence = {c.id: c.evidence for c in script.payload.claims}
+            speakers = {line.id: line.speaker for line in script.lines}
+            for line in script.payload.lines:
+                speaker = speakers[line.id]
+                role = line_role(speaker, line.claims, evidence, script.payload.moment)
+                if speaker == "color":
+                    assert role == "why", line.text
+                elif not line.claims:
+                    assert role == "open" and speaker == "pbp", line.text
+                    opens += 1
+                elif set(line.claims) & _PEAK_CLAIMS:
+                    assert role == "peak", line.text
+                elif set(line.claims) & _SCAN_CLAIMS:
+                    assert role == "build", line.text
+                    scans += 1
+                for marker in _PEAK_LINES:
+                    if marker in line.text:
+                        assert role == "peak" and speaker == "pbp", line.text
+                        seen.add(marker)
+    assert seen == set(_PEAK_LINES) and opens > 0 and scans > 0
+
+
+def test_revoice_agrees_with_the_voice_step_and_repairs_old_cues(offline):
+    from copy import deepcopy
+
+    from agents.delivery import revoice
+
+    fresh = offline.model_dump(mode="json", by_alias=True)
+    assert revoice(fresh) == fresh
+    bare = {"tier": "excited"}
+    assert revoice(bare) is bare
+    novoice = {"source": "offline", "result": {"tier": "calm", "scripts": [{"voice": None}]}}
+    assert revoice(novoice) is novoice
+    old = deepcopy(fresh)
+    for script in old["scripts"]:
+        for cue in script["voice"]:
+            cue["ssml"] = "<speak>old prosody only</speak>"
+            cue["style"] = None
+            cue["cache_key"] = "0123456789abcdef"
+    repaired = revoice(old)
+    assert repaired["plan"] == old["plan"] == fresh["plan"]
+    assert repaired["trace"] == old["trace"] and repaired["findings"] == fresh["findings"]
+    for before, after, original in zip(old["scripts"], repaired["scripts"], fresh["scripts"],
+                                       strict=True):  # fmt: skip
+        assert after["payload"] == before["payload"] == original["payload"]
+        assert [c["t"] for c in after["voice"]] == [c["t"] for c in before["voice"]]
+        assert after["voice"] == original["voice"] != before["voice"]
+    again = revoice(repaired)
+    assert again["scripts"] == repaired["scripts"]
+
+
+def test_known_voices_use_the_table_and_a_given_map_overrides_it(ctx):
+    from agents.delivery import VOICES
+
+    plain = breakdown(ctx, client=None, personas=("casual",), languages=("en",))
+    assert next(s.notes for s in plain.trace if s.step == "voice") == ["tier excited"]
+    assert any(cue.style for script in plain.scripts for cue in script.voice)
+    styles = {voice: set() for voice in VOICES.values()}
+    forced = breakdown(ctx, client=None, personas=("casual",), languages=("en",),
+                       voice_styles=styles)  # fmt: skip
+    notes = next(s.notes for s in forced.trace if s.step == "voice")
+    assert "voice styles unknown: prosody only" not in notes
+    assert all(cue.style is None and "<prosody" in cue.ssml
+               for script in forced.scripts for cue in script.voice)  # fmt: skip
