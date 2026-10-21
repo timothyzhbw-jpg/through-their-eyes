@@ -447,12 +447,13 @@ with no new mechanism.
 - **Acceptance** (`eval/hero_flip.py --scenario keeper_switch`; designed on seeds 0–39, held-out
   100–139): dropping the key scan changes H1's pass in 26/40 (65%, target ≥ 60%: met; 29/40 on the
   design seeds). With the look he plays the switch to H3 in 32/40, and all 32 are completed; mean
-  ΔxT +0.043. Report: [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md).
+  ΔxT +0.034 on the fitted xT grid (§4; +0.043 on the prior). Report:
+  [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md).
   Tests ([tests/test_keeper_switch.py](../tests/test_keeper_switch.py), design seeds): the design
   rule, role speed and acceleration limits, and every pair of players at least 0.7 m apart until
   H1 plays.
 - **Not a scan story by the lens rule.** On the same held-out seeds `eval/hero_lens.py` selects
-  `pressure` 40/40 and `scan` 0/40
+  `pressure` 37/40, `space` 3/40 and `scan` 0/40 (`pressure` 40/40 on the prior xT grid)
   ([hero_lens_keeper_switch.md](../eval/reports/hero_lens_keeper_switch.md)). The look decides the
   pass (without it the ball is lost in 30/40), but in xT the moment is the keeper escaping A9's
   press next to his own goal, and that delta is larger than the look's. By the rule above (the
