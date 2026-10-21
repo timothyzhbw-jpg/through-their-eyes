@@ -109,13 +109,15 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 ## The stitched match (`?match=match-1`, SPEC 3.1)
 
-`match-1` is six scenario possessions on one 132.6 s clock (`sim/match.py`). It exists only on the
-live service: offline, the bundled hero moment plays and the badge says why.
+`match-1` is 20 scenario possessions on one 12-minute clock (`sim/match.py`, SPEC 3.1): open-play
+passages that each end out of play, and three heroes (the blind-side run at 0:19, escaping the press
+at 4:28, the short corner at 10:40). It exists only on the live service: offline, the bundled hero
+moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
-  possession on screen (n of 6, its scenario) and how play restarted (kick-off, throw-in, …, or a
+  possession on screen (n of 20, its scenario) and how play restarted (kick-off, throw-in, …, or a
   cut). The timeline is banded by possession, numbered, hero possessions in gold, the two hero
-  moments as gold diamonds; ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
+  moments as gold diamonds (the short corner has no hero moment yet); ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
   has no beliefs, sight or vision model, so belief ghosts, "in his sight" and the vision cone are
   off until a hero moment is opened.
 - **Moments.** Every moment of every possession, in match time, with its lens (`scan lens`,

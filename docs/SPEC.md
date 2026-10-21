@@ -105,17 +105,38 @@ on an LLM.
   (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
-  *Implemented (2026-10-20, `sim/match.py`), 5–8 possessions for now:* `match-1` has six — open
-  play, `blind_side_run` seed 3, open play, `press_escape` seed 0, open play twice — 132.6 s on one
-  clock. Hero possessions keep their demo seeds; open-play seeds are keyed off the match seed and
-  start at 1,000,000, so they are never design or eval seeds. A restart follows how the previous
-  possession stopped (throw-in, goal kick, corner), or is a `cut` when it ended in play: in
-  `match-1` all five are cuts, as no open-play possession put the ball out within its 30 s (with
-  60 s, 7 of 30 ended in a throw-in). The score counts `goal` events; with no shot outcomes yet
-  (M4) it stays 0–0. Each possession stays its own `MatchRun`: moments, lenses, counterfactuals
-  and breakdowns run per possession and are lifted to match time (`explain/match.py`). The API
-  serves it as `match-1` (`TTE_MATCHES=…,match:1`); the export is the hero export's run schema
-  over the whole clock plus a `match` block.
+  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 20 possessions, 724.8 s (12:05) on
+  one clock: 17 open-play passages and three heroes. `blind_side_run` seed 3 starts at 0:19 (its
+  hero moment at 0:22), `press_escape` seed 0 at 4:28, and the set-piece hero `corner_blind_side`
+  seed 0 at 10:40.
+  - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
+    n, attempt), where n counts open-play passages only, so a hero inserted later changes no
+    open-play seed. They start at 1,000,000 and are never design or eval seeds.
+  - *The edit.* Each open-play passage is the first keyed candidate (attempt 0, 1, …) that ends
+    with the ball out of play after 25–60 s of play; the kick-off passage after 15–30 s, so the
+    first hero comes early. `possession_play` rarely puts the ball out, about once per 285 s of
+    play: 32 of 160 candidates within 60 s, 54 within 120 s. Without the edit about four stitches
+    in five would be cuts in mid-play; with it, every possession after open play restarts from a
+    stoppage.
+    Match 1's attempts are pinned in `EDITS`; `build_match` checks that each passage still ends
+    that way and fails if not, and `python -m sim.match --seed 1 --search` finds them again
+    (23 s on 8 cores). Other match seeds are unedited: attempt 0, ending however it ends.
+  - *Restarts.* A restart is how a possession begins. The first kicks off, and so does one after
+    a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
+    corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
+    kick or corner when the ball went out, a `cut` when it ended in play (the heroes do). In
+    `match-1`: the kick-off, 15 throw-ins, three cuts after the heroes, and one corner. The
+    passage before the corner hero ends with H9 putting the ball over his own goal line, so the
+    away corner the hero takes is the one that passage gave away. Otherwise the next scenario
+    sets up its own situation: the stitch is an edit, not a simulated restart, so a passage may
+    open with the home team on the ball after an away throw-in.
+  - *Score.* Goals are `goal` events; with no shot outcomes on main yet (M4) it stays 0–0.
+  - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
+    per possession and are lifted to match time (`explain/match.py`). The corner hero has no ball
+    decision, so it has no hero moment or breakdown yet; its possession plays with the live
+    overlays only. The API serves the match as `match-1` (`TTE_MATCHES=…,match:1`); the export is
+    the hero export's run schema over the whole clock plus a `match` block: 12.1 MB of JSON,
+    4.2 MB gzipped, compressed once when the match loads.
 - Pitch 105 × 68 m, origin at the centre spot; the home team attacks +x in the first half. 25 Hz.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
@@ -1111,7 +1132,10 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
     0, false or off turns it off). In single revision mode, with the default TCP startup probe,
     Container Apps should then route traffic to a new revision only once it is warm; not yet
     measured there. Locally the port opens after 6.0 s and the first `match-1` export takes
-    7 ms (3.5 s without).
+    7 ms (3.5 s without). With the 20-possession `match-1` (2026-10-21), loading it takes about
+    17 s locally (about half simulating, most of the rest the blind-side alerts); its export is
+    serialised and gzipped once at load (12.1 MB, 4.2 MB sent to a client that accepts gzip), and
+    a live stream may last 20 min (`TTE_LIVE_MAX_S`, was 10 min, shorter than the match).
 - **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account

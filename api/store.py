@@ -10,6 +10,7 @@ POST /api/tts may speak are kept the same way (kind `voice`, api/tts.py).
 from __future__ import annotations
 
 import asyncio
+import gzip
 import hashlib
 import json
 import logging
@@ -59,6 +60,16 @@ class Match:
     cards: list[dict[str, Any]]
     sprint: list[list[str]]  # per frame: players above sprint speed (live overlay)
     where: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # GET /api/matches/<id>/export, serialised and compressed once: match-1's export is about
+    # 12 MB of JSON and 4 MB gzipped, too much to encode per request on 0.5 vCPU.
+    export_json: bytes = field(init=False, repr=False)
+    export_gzip: bytes = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.export_json = json.dumps(
+            self.export, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        ).encode()
+        self.export_gzip = gzip.compress(self.export_json, compresslevel=6, mtime=0)
 
     @property
     def ctx(self) -> MomentContext:
@@ -85,10 +96,13 @@ class Match:
     def _load_match(cls, seed: int, audit: AuditSink | None) -> Match:
         match = build_match(seed)
         sink = audit or MemoryAuditSink()  # one audit trail for every hero of the match
+        # The corner hero (corner_blind_side) has no ball decision and no breakdown yet, so its
+        # possession plays without one.
         heroes = {
             p.index: MomentContext.load(p.scenario, p.seed, audit=sink)
-            for p in match.possessions if p.run.hero is not None
-        }  # fmt: skip
+            for p in match.possessions
+            if p.run.hero_decision() is not None
+        }
         cards = match_moments(match, {k: list(c.cards.values()) for k, c in heroes.items()})
         export = export_match(seed, match, cards)
         contexts, where = {}, {}

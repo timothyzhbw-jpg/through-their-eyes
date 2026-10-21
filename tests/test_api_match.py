@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from api.main import create_app
 from api.settings import DEFAULT_MATCHES, Settings, _matches
+from sim.match import DEFAULT_PLAN
 
 MATCH = "match-1"
 PRESS = "press_escape-0"
@@ -30,11 +31,8 @@ def info(client):
     return client.get(f"/api/matches/{MATCH}").json()
 
 
-def _drain(ws):
-    messages = []
-    while (m := ws.receive_json())["type"] != "end":
-        messages.append(m)
-    return messages
+def _possession(info, scenario):
+    return next(p for p in info["possessions"] if p["scenario"] == scenario)
 
 
 def test_tte_matches_names_a_stitched_match():
@@ -94,7 +92,7 @@ def test_the_match_is_listed_with_its_possessions_and_both_hero_moments(client, 
     ids = [m["id"] for m in client.get("/api/matches").json()]
     assert ids == [MATCH, PRESS]
     assert info["kind"] == "match" and info["hero"] is None
-    assert len(info["possessions"]) == 6
+    assert len(info["possessions"]) == len(DEFAULT_PLAN)
     assert info["score"] == {"home": 0, "away": 0}
     heroes = info["hero_moments"]
     assert [h.split(":")[1:3] for h in heroes] == [
@@ -102,25 +100,52 @@ def test_the_match_is_listed_with_its_possessions_and_both_hero_moments(client, 
     ]  # fmt: skip
 
 
+def test_the_export_is_served_compressed_when_the_client_accepts_it(client, info):
+    # About 12 MB of JSON for the whole match; the web app's export request gives up at 15 s.
+    url = f"/api/matches/{MATCH}/export"
+    gz = client.get(url, headers={"Accept-Encoding": "gzip"})
+    plain = client.get(url, headers={"Accept-Encoding": "identity"})
+    assert gz.headers["content-encoding"] == "gzip"
+    assert "content-encoding" not in plain.headers
+    assert int(gz.headers["content-length"]) < len(plain.content) / 2
+    assert gz.json() == plain.json()
+    assert plain.json()["runs"]["factual"]["frames"] == info["frames"]
+
+
 def test_moments_are_detected_across_the_match(client, info):
     cards = client.get(f"/api/matches/{MATCH}/moments").json()
     hero = {c["id"]: c for c in cards if c["hero"]}
     assert list(hero) == info["hero_moments"]
     assert [c["selected_lens"] for c in hero.values()] == ["scan", "pressure"]
-    assert {c["possession"] for c in cards} >= {1, 3}
+    played = {p["index"] for p in info["possessions"] if p["hero_moment"]}
+    assert played <= {c["possession"] for c in cards}
     assert [c["anchor_frame"] for c in cards] == sorted(c["anchor_frame"] for c in cards)
 
 
 def test_the_live_stream_replays_the_match_across_possessions(client, info):
-    boundary = info["possessions"][3]["start"]
-    start = boundary - 30
+    possessions = info["possessions"]
+    i = next(i for i, p in enumerate(possessions) if p["scenario"] == "press_escape")
+    pressure, following = possessions[i], possessions[i + 1]
+    start = pressure["start"] - 30
+    moment_id = pressure["hero_moment"]
+    assert moment_id
     with client.websocket_connect(f"/ws/matches/{MATCH}/live?speed=1000&start={start}") as ws:
         hello = ws.receive_json()
-        messages = _drain(ws)
+        messages = []
+        seen_moment = seen_next = stopped = False
+        while (m := ws.receive_json())["type"] != "end":
+            messages.append(m)
+            if m["type"] == "moment" and m["card"]["id"] == moment_id:
+                seen_moment = True
+            elif m["type"] == "event" and m["event"]["possession"] == following["index"]:
+                seen_next = True
+            if seen_moment and seen_next and not stopped:
+                ws.send_json({"type": "stop"})
+                stopped = True
     assert hello["type"] == "hello" and hello["frames"] == info["frames"]
     assert hello["kind"] == "match"
     frames = [m["f"] for m in messages if m["type"] == "frame"]
-    assert frames == list(range(start, info["frames"]))
+    assert frames and frames == list(range(start, start + len(frames)))
     seen = -1
     for m in messages:
         if m["type"] == "frame":
@@ -130,20 +155,21 @@ def test_the_live_stream_replays_the_match_across_possessions(client, info):
         elif m["type"] == "moment":
             assert m["card"]["frame_end"] <= seen
     events = [m["event"] for m in messages if m["type"] == "event"]
-    assert {e["possession"] for e in events} >= {3, 4, 5}
+    assert {pressure["index"], following["index"]} <= {e["possession"] for e in events}
     moments = [m["card"]["id"] for m in messages if m["type"] == "moment"]
-    assert info["hero_moments"][1] in moments
+    assert moment_id in moments
 
 
 def test_a_breakdown_of_the_pressure_moment_inside_the_match(client, info):
-    moment = info["hero_moments"][1]
+    pressure = _possession(info, "press_escape")
+    moment = pressure["hero_moment"]
     body = {"match": MATCH, "moment": moment, "personas": ["analyst"], "languages": ["en"]}
     out = client.post("/api/breakdowns", json=body).json()
     result = out["result"]
     assert result["findings"]["lens"] == "pressure"
     assert result["request"]["moment"] == out["possession"]["local_moment"]
-    assert out["possession"]["index"] == 3
-    assert out["possession"]["start"] == info["possessions"][3]["start"]
+    assert out["possession"]["index"] == pressure["index"]
+    assert out["possession"]["start"] == pressure["start"]
     claims = {c for line in result["scripts"][0]["payload"]["lines"] for c in line["claims"]}
     assert {"pressure_at_pass", "cf_carry_lost"} <= claims
     again = client.post("/api/breakdowns", json=body).json()
@@ -159,7 +185,8 @@ def test_a_breakdown_needs_a_hero_moment_of_the_match(client):
 
 
 def test_what_if_he_had_kept_the_ball(client, info):
-    body = {"match": MATCH, "moment": info["hero_moments"][1], "question": "What if he carried it?"}
+    moment = _possession(info, "press_escape")["hero_moment"]
+    body = {"match": MATCH, "moment": moment, "question": "What if he carried it?"}
     answer = client.post("/api/whatif", json=body).json()["answer"]
     assert answer["action"] == "carry"
     assert all(c["verdict"] == "supported" for c in answer["payload"]["claims"])
@@ -182,7 +209,7 @@ def test_the_pressure_hero_on_its_own(client):
 
 def test_a_wrong_number_is_checked_against_the_hero_moment_it_belongs_to(client, info):
     # Inside the stitched match the evidence card asks about its possession's hero (SPEC 3.1, 7).
-    second = info["hero_moments"][1]
+    second = _possession(info, "press_escape")["hero_moment"]
     body = {"match": MATCH, "claim": "pressure_at_pass", "slot": "pressure", "value": 50}
     own = client.post("/api/verify", json={**body, "match": PRESS}).json()
     assert own["verified_value"] == 95 and own["status"] == "refuted"
