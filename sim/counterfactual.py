@@ -18,6 +18,8 @@ from sim.model import Decision
 from sim.overrides import DropScan, ForceAction
 from sim.run import MatchRun
 
+SHOT_OUTCOMES = ("goal", "saved", "wide", "blocked")
+
 
 @dataclass
 class CounterfactualResult:
@@ -68,6 +70,8 @@ def possession_value(run: MatchRun) -> float:
         if tackle is not None:
             return -float(xt_for(np.array(tackle.attrs["at"]), -sign))
         return float(xt_for(run.pos[-1, run.index(decision.player)], sign))
+    if action.type == "shot" and action.attrs.get("outcome") == "goal":
+        return 1.0  # a goal is worth one goal (xT and xG are both goal probabilities)
     end = np.array(action.attrs.get("end_at") or run.ball_pos[-1, :2])
     if action.attrs.get("outcome") == "complete":
         return float(xt_for(end, sign))
@@ -79,7 +83,8 @@ def possession_value(run: MatchRun) -> float:
 def possession_result(run: MatchRun) -> str:
     """What the hero's action did with the ball: "kept" (a completed pass, or a carry nobody won
     off him), "lost" (intercepted, out of play, or tackled during the carry), "open" (a pass still
-    rolling when the run ended), "shot", or "none" without a decision."""
+    rolling when the run ended), "shot", or "none" without a decision. With `Scenario.shots` a
+    shot ends "goal", "saved", "wide" or "blocked" instead."""
     decision = run.hero_decision()
     if decision is None:
         return "none"
@@ -95,8 +100,9 @@ def possession_result(run: MatchRun) -> str:
             for e in run.events
         )  # fmt: skip
         return "lost" if tackled else "kept"
-    if action.type == "shot":
-        return "shot"
+    if action.type == "shot":  # with `Scenario.shots`, how the shot ended
+        outcome = action.attrs.get("outcome")
+        return outcome if outcome in SHOT_OUTCOMES else "shot"
     outcome = action.attrs.get("outcome")
     return "open" if outcome is None else "kept" if outcome == "complete" else "lost"
 
