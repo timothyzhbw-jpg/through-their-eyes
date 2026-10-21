@@ -17,7 +17,8 @@
     "fps": "node scripts/fps.mjs",
     "smoke": "node scripts/smoke.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "a11y": "node scripts/a11y.mjs"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",
@@ -32,6 +33,7 @@
     "@types/react-dom": "19.3.0",
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "6.1.1",
+    "axe-core": "4.14.0",
     "happy-dom": "20.14.5",
     "playwright-core": "1.63.0",
     "prettier": "3.9.9",
