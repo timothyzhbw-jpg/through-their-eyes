@@ -118,6 +118,9 @@ _Fill in as they come to exist._
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
+  moments, breakdowns, the Verifier, interventions, determinism and the realism rows at season
+  scale, on all cores (about 15 min); writes `eval/reports/season.md`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`

@@ -27,6 +27,7 @@ from analytics.vision import wrap_angle
 from sim.config import ROLES, SimParams
 from sim.engine import Simulation
 from sim.perception import longest_scan_s
+from sim.run import MatchRun
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -177,7 +178,12 @@ def out_of_frame_s(
 
 def simulate(seed: int, params: SimParams = PARAMS) -> dict[str, dict[str, np.ndarray]]:
     """Per-observation tables of one run: receptions, scans, player peaks, passes."""
-    run = Simulation.from_scenario(SCENARIO, seed, params=params).run()
+    return tables(Simulation.from_scenario(SCENARIO, seed, params=params).run())
+
+
+def tables(run: MatchRun) -> dict[str, dict[str, np.ndarray]]:
+    """Per-observation tables of one `possession_play` run (also a stitched match's open-play
+    passage, eval/season.py): receptions, scans, player peaks, passes."""
     dt, frames = run.dt, len(run.owner)
     roles = [p.role for p in run.players]
     team = np.array([p.team for p in run.players])
@@ -344,8 +350,15 @@ def _cite(key: str, where: str) -> str:
 # --- rows ------------------------------------------------------------------------------------
 
 
-def evaluate(seeds: list[int]) -> list[Row]:
-    pool = Pool([simulate(s) for s in seeds])
+def evaluate(
+    seeds: list[int],
+    observed: list[dict[str, dict[str, np.ndarray]]] | None = None,
+    ablation: list[dict[str, np.ndarray]] | None = None,
+) -> list[Row]:
+    """The rows for `seeds`. `observed` (one set of tables per bootstrap unit) and `ablation`
+    (their receptions with the pressure term off) stand in for simulating them: eval/season.py
+    passes a season's open play, one unit per match."""
+    pool = Pool(observed if observed is not None else [simulate(s) for s in seeds])
     rec, scans = pool.tables["receptions"], pool.tables["scans"]
     rate = rec["scans"] / rec["window"]
     group = np.array([GROUPS[r] for r in rec["role"]])
@@ -503,7 +516,11 @@ def evaluate(seeds: list[int]) -> list[Row]:
     back_free = int(np.sum(free & np.isin(group, ["central defenders", "side defenders"])))
     # Ablation: the same seeds without the pressure term. Nothing in possession_play depends on
     # perception, so the players move the same and the bins hold the same receptions.
-    off = [simulate(s, replace(PARAMS, pressure_scan_factor=1.0))["receptions"] for s in seeds]
+    if ablation is None:
+        ablation = [
+            simulate(s, replace(PARAMS, pressure_scan_factor=1.0))["receptions"] for s in seeds
+        ]
+    off = ablation
     off_rate = np.concatenate([t["scans"] / t["window"] for t in off])
     d_on, d_off = cohens_d(rate[free], rate[close]), cohens_d(off_rate[free], off_rate[close])
     d_row(
