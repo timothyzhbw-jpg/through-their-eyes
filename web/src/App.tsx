@@ -30,7 +30,7 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
-import { bindSound } from "./sound/bind";
+import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
@@ -298,6 +298,10 @@ function MatchView() {
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
   useEffect(() => startClock(session), [session]);
+  useEffect(
+    () => (session.kind === "match" ? bindMatchSound(session.recap.voice, soundEngine) : undefined),
+    [session],
+  ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
@@ -308,6 +312,7 @@ function MatchView() {
             <MatchPicker />
           </>
         }
+        end={<SoundToggle icon />}
         card={
           <>
             <Scoreboard />
