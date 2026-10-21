@@ -1454,17 +1454,24 @@ original visual identity.
     procedural scripts on the same numbers (stepped terraces, 15,171 flat spectators, lattice
     masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
     dugouts; no imported models or textures). Cycles bakes the four masts' floodlights, the roof
-    lamps, a hidden fill under the roof for the stands, the sky and the ambient occlusion into a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a
-    light map for the grass. The floodlight spots' powers are fitted by least squares so the pitch
+    lamps, a hidden fill under the roof for the stands, the sky and the ambient occlusion into
+    a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a light map
+    for the grass. The floodlight spots' powers are fitted by least squares so the pitch
     is evenly lit (5th percentile 0.73 of the median). Everything but the grass is unlit; the
     grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
     geometry, WebP textures.
   - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of
     memory (the browser's hints; Safari gives none). It is fetched at low priority a second
     after the first frame, once the page is idle, and swapped in when ready; if it fails to load,
-    the procedural stadium stays. `?stadium=procedural` or `?stadium=baked` decides. Capture (`?cine=1`) is ready only once the
-    stadium has settled, so a shot never cuts between the two. The bpy scripts stay outside the repo (Blender is
-    GPL); only their output is committed (`web/public/models/README.md`).
+    the procedural stadium stays. `?stadium=procedural` or `?stadium=baked` decides. Capture
+    (`?cine=1`) is ready only once the stadium has settled, so a shot never cuts between the
+    two. The bpy scripts stay outside the repo (Blender is GPL); only their output is committed
+    (`web/public/models/README.md`).
+  - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
+    `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
+    and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
+    fallback, Your call). On the tactical board a keeper's token keeps its team colour, which
+    the board's other layers (pitch control) also use, with a band in his kit colour.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
