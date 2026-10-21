@@ -15,6 +15,7 @@ npm run build        # -> web/dist (static files for the Azure Storage static we
 npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 npm run fps          # after a build: fps with pitch control and the skeleton off and on (below)
+npm run smoke        # end to end: a local API, the build, every page in headless Chromium (below)
 ```
 
 ## URL parameters
@@ -357,7 +358,7 @@ checks the whole tree in CI.
 | @types/react, @types/react-dom 19.3.0, @types/three 0.186.0 (dev) | MIT        | type definitions                                                       |
 | vitest 5.0.3 (dev)                                                | MIT        | unit tests, reusing the Vite config                                    |
 | prettier 3.9.9 (dev)                                              | MIT        | formatting, checked in CI like `ruff format`                           |
-| playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests and `npm run fps`; no browser download     |
+| playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests, `fps` and `smoke`; no browser download    |
 
 Transitive exceptions, reviewed by hand: `lightningcss` (Vite's CSS minifier) is MPL-2.0, used
 unmodified at build time only (allowed by CLAUDE.md); `webgl-constants` (via drei → detect-gpu)
@@ -374,3 +375,38 @@ Chromium under `$PLAYWRIGHT_BROWSERS_PATH`, else the system's Google Chrome (Git
 runners have one). Without a GPU, Chrome draws WebGL with SwiftShader, its software rasteriser;
 on CI (`CI` set) the tests always use SwiftShader so runs are reproducible, elsewhere they use the
 GPU when there is one. The test fails, rather than skips, when no browser is found.
+
+## Smoke test (end to end)
+
+`npm run smoke` (`scripts/smoke.mjs`, SPEC 7, 8) loads the whole app as a visitor gets it, which
+the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on the live site
+("useSession needs a hero moment, not a match") although every unit test passed. It
+
+1. starts the API from the repo root (`uv run uvicorn api.main:app --port 8765`, after `uv sync`)
+   offline whatever the shell has set: no model, Speech, Cosmos DB or telemetry, a fresh cache,
+   and `TTE_MATCHES=blind_side_run:3,match:1,press_escape:0`; it waits for `/health`;
+2. builds web/ with `VITE_API_URL=http://localhost:8765` into a temporary directory and serves
+   it with `vite preview`;
+3. opens each page in headless Chromium, found as for the GPU tests (below), on SwiftShader on CI:
+
+| Page                                    | Its main view                                                      |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `?autoplay=0`                           | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
+| `?match=press_escape-0&autoplay=0`      | the pressure hero, the same                                        |
+| `?match=match-1&autoplay=0`             | the score bug, the 3D view, the Moments panel                      |
+| `?match=match-1`                        | live; each hero moment's **Breakdown**, then **Back to the match** |
+| `?persona=analyst&tamper=cf_value`      | the evidence card with "Try a wrong number" open                   |
+| `?at=decision&view=tactical`            | the tactical board                                                 |
+| `/` and `?match=match-1`, 375 px, touch | the phone width, live                                              |
+
+A page passes when its main view shows (with its WebGL canvas) and it logs no console error and
+throws no uncaught exception; an uncaught exception fails it at once. The checks find controls by
+role and accessible name, as a screen reader does, so a new layout or style does not break them;
+a renamed control does, and the test changes with it. Requests to other hosts (the web fonts) are
+answered empty, so a run needs no network. A screenshot of each page, and the API's log, go to
+`out/smoke/`. About 2 minutes, a quarter of it the API's warm start.
+
+`-- --api http://localhost:8765` uses an API that is already running, `-- --only match` runs the
+pages whose name contains `match`, `-- --headed` shows the window. CI runs it in the `smoke` job,
+with playwright-core's own Chromium (`npx playwright-core install --no-shell chromium`, cached
+per playwright-core version), and keeps `out/smoke/` as the `web-smoke` artifact.
