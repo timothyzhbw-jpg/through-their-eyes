@@ -32,9 +32,11 @@ from pydantic_core import to_json
 from agents.context import MomentContext
 from api.settings import Settings, match_id
 from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
+from explain.lenses import explain_moments
 from explain.match import match_moments
+from explain.moments import hero_card
 from sim.export import export_hero, export_match
-from sim.match import build_match
+from sim.match import build_match, match_heroes
 
 log = logging.getLogger(__name__)
 CACHE_CONTAINER = "cache"  # partition key /kind
@@ -97,12 +99,12 @@ class Match:
     def _load_match(cls, seed: int, audit: AuditSink | None) -> Match:
         match = build_match(seed)
         sink = audit or MemoryAuditSink()  # one audit trail for every hero of the match
-        # The corner hero (corner_blind_side) has no ball decision and no breakdown yet, so its
-        # possession plays without one.
+        # A hero possession whose hero moment (`hero_card`: his decision, or a marker's look) was
+        # not detected plays without a breakdown, instead of failing the service.
         heroes = {
             p.index: MomentContext.load(p.scenario, p.seed, audit=sink)
             for p in match.possessions
-            if p.run.hero_decision() is not None
+            if p.run.hero is not None and hero_card(p.run, explain_moments(p.run)) is not None
         }
         cards = match_moments(match, {k: list(c.cards.values()) for k, c in heroes.items()})
         export = export_match(seed, match, cards)
@@ -123,8 +125,19 @@ def _sprint(ids: list[str], vel: np.ndarray) -> list[list[str]]:
 
 
 class MatchStore:
+    """The matches the service lists (`listed`, TTE_MATCHES) and serves (`known`).
+
+    A stitched match's hero possessions are served on their own as well, listed or not: the web
+    app opens a hero moment's breakdown from its possession's export (`<scenario>-<seed>`).
+    """
+
     def __init__(self, settings: Settings, audit: AuditSink | None = None) -> None:
+        self.listed = [match_id(s, seed) for s, seed in settings.matches]
         self.known = {match_id(s, seed): (s, seed) for s, seed in settings.matches}
+        for scenario, seed in settings.matches:
+            if scenario == "match":
+                for hero in match_heroes(seed):
+                    self.known.setdefault(match_id(*hero), hero)
         self.audit = audit  # None: each match keeps its verdicts in memory
         self._loaded: dict[str, Match] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -139,7 +152,8 @@ class MatchStore:
         return self._loaded[mid]
 
     async def warm(self) -> None:
-        """Load every match now, one at a time, so no request waits for a simulation."""
+        """Load every match now, one at a time, so no request waits for a simulation: the listed
+        ones first, then the hero possessions served with them."""
         for mid in self.known:
             await self.get(mid)
 

@@ -15,6 +15,7 @@ from sim.match import DEFAULT_PLAN
 
 MATCH = "match-1"
 PRESS = "press_escape-0"
+CORNER = "corner_blind_side-0"
 
 
 @pytest.fixture(scope="module")
@@ -52,11 +53,12 @@ def test_the_defaults_serve_the_match_and_each_hero_possession(tmp_path, monkeyp
     settings.cache_dir = tmp_path
     with TestClient(create_app(settings)) as c:
         ids = [m["id"] for m in c.get("/api/matches").json()]
-        assert ids == ["blind_side_run-3", MATCH, PRESS]
+        assert ids == ["blind_side_run-3", CORNER, MATCH, PRESS]
         possessions = c.get(f"/api/matches/{MATCH}").json()["possessions"]
         heroes = [f"{p['scenario']}-{p['seed']}" for p in possessions if p["hero_moment"]]
-        assert heroes == ["blind_side_run-3", PRESS]
-        assert c.get(f"/api/matches/{PRESS}/export").status_code == 200
+        assert heroes == ["blind_side_run-3", PRESS, CORNER]
+        for hero in heroes:
+            assert c.get(f"/api/matches/{hero}/export").status_code == 200
 
 
 def test_a_service_from_the_environment_loads_its_matches_before_the_first_request(
@@ -98,7 +100,18 @@ def test_an_export_is_serialised_once_with_nan_as_null():
     assert gzip.decompress(m.export_gzip) == m.export_json
 
 
-def test_the_match_is_listed_with_its_possessions_and_both_hero_moments(client, info):
+def test_a_matchs_hero_possessions_are_served_without_being_listed(client, info):
+    # The web app opens a hero moment from its possession's own export, so the service serves it
+    # even when TTE_MATCHES does not list it (here: only match-1 and the pressure hero).
+    assert [m["id"] for m in client.get("/api/matches").json()] == [MATCH, PRESS]
+    for p in info["possessions"]:
+        if p["hero_moment"]:
+            r = client.get(f"/api/matches/{p['scenario']}-{p['seed']}/export")
+            assert r.status_code == 200 and r.json()["hero"] == p["hero"]
+    assert client.get("/api/matches/blind_side_run-4/export").status_code == 404
+
+
+def test_the_match_is_listed_with_its_possessions_and_its_hero_moments(client, info):
     ids = [m["id"] for m in client.get("/api/matches").json()]
     assert ids == [MATCH, PRESS]
     assert info["kind"] == "match" and info["hero"] is None
@@ -106,7 +119,7 @@ def test_the_match_is_listed_with_its_possessions_and_both_hero_moments(client, 
     assert info["score"] == {"home": 0, "away": 0}
     heroes = info["hero_moments"]
     assert [h.split(":")[1:3] for h in heroes] == [
-        ["decision_after_scan", "H8"], ["pressed_decision", "H4"]
+        ["decision_after_scan", "H8"], ["pressed_decision", "H4"], ["marker_scan", "H5"]
     ]  # fmt: skip
 
 
@@ -126,7 +139,7 @@ def test_moments_are_detected_across_the_match(client, info):
     cards = client.get(f"/api/matches/{MATCH}/moments").json()
     hero = {c["id"]: c for c in cards if c["hero"]}
     assert list(hero) == info["hero_moments"]
-    assert [c["selected_lens"] for c in hero.values()] == ["scan", "pressure"]
+    assert [c["selected_lens"] for c in hero.values()] == ["scan", "pressure", "scan"]
     played = {p["index"] for p in info["possessions"] if p["hero_moment"]}
     assert played <= {c["possession"] for c in cards}
     assert [c["anchor_frame"] for c in cards] == sorted(c["anchor_frame"] for c in cards)

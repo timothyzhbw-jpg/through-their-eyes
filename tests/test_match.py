@@ -145,7 +145,7 @@ def test_moments_are_detected_in_every_possession_and_lifted_to_match_time(match
     ids = [m["id"] for m in moments]
     assert len(ids) == len(set(ids))
     by_possession = {m["possession"] for m in moments}
-    hero = [p.index for p in match.possessions if p.run.hero_decision() is not None]
+    hero = [p.index for p in match.possessions if p.run.hero is not None]
     assert set(hero) <= by_possession
     for m in moments:
         p = match.possessions[m["possession"]]
@@ -153,7 +153,7 @@ def test_moments_are_detected_in_every_possession_and_lifted_to_match_time(match
         assert m["anchor_t"] == pytest.approx(m["anchor_frame"] * DT, abs=1e-4)
         assert m["id"] == global_id(m["local_id"], p.start)
     lenses = {m["actor"]: m["selected_lens"] for m in moments if m["hero"]}
-    assert lenses == {"H8": "scan", "H4": "pressure"}
+    assert lenses == {"H8": "scan", "H4": "pressure", "H5": "scan"}
 
 
 def test_the_match_export_is_the_hero_run_schema_plus_a_match_block(match, export):

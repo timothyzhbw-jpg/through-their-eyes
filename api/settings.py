@@ -7,8 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # "match" is a stitched match (sim.match, SPEC 3.1); the number is its match seed. Its hero
-# possessions are served on their own too: the web app opens their breakdowns from those exports.
-DEFAULT_MATCHES = [("blind_side_run", 3), ("match", 1), ("press_escape", 0)]
+# possessions are served on their own too, listed here or not (api/store.py MatchStore): the web
+# app opens their breakdowns from those exports.
+DEFAULT_MATCHES = [
+    ("blind_side_run", 3), ("corner_blind_side", 0), ("match", 1), ("press_escape", 0)
+]  # fmt: skip
 
 
 def match_id(scenario: str, seed: int) -> str:

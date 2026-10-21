@@ -69,6 +69,20 @@ DEFAULT_PLAN: tuple[PossessionSpec, ...] = (
 )
 
 
+# Other matches' plans, by match seed; any other seed plays DEFAULT_PLAN.
+PLANS: dict[int, tuple[PossessionSpec, ...]] = {}
+
+
+def plan_for(seed: int) -> tuple[PossessionSpec, ...]:
+    return PLANS.get(seed, DEFAULT_PLAN)
+
+
+def match_heroes(seed: int) -> list[tuple[str, int]]:
+    """(scenario, seed) of every hero possession in match `seed`'s plan, in order, once each."""
+    heroes = [(s.scenario, s.seed) for s in plan_for(seed) if s.seed is not None]
+    return list(dict.fromkeys(heroes))
+
+
 @dataclass
 class Possession:
     index: int
@@ -161,7 +175,9 @@ def score_after(score: tuple[int, int], events: list[Event]) -> tuple[int, int]:
     return home, away
 
 
-def build_match(seed: int, plan: tuple[PossessionSpec, ...] = DEFAULT_PLAN) -> StitchedMatch:
+def build_match(seed: int, plan: tuple[PossessionSpec, ...] | None = None) -> StitchedMatch:
+    """Match `seed`, played to `plan` (default: `plan_for(seed)`)."""
+    plan = plan_for(seed) if plan is None else plan
     possessions: list[Possession] = []
     players: list[PlayerInfo] | None = None
     start, score, n = 0, (0, 0), 0
