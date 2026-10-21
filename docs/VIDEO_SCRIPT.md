@@ -73,7 +73,7 @@ there are no digits or number words, so every line can go into `shots.json` as i
 | 6 | Every line opens its evidence: the claim, its verdict, and the frame that proves it. *(shortened)* |
 | 7 | Ask what if. The simulator forces that choice and replays the moment. *(shortened)* |
 | 8 | Under a high press, the lens changes. Make the centre-back keep the ball, and the press wins it. |
-| 9 | Before anything airs, a verifier checks every number the crew says against the simulation. Type in a wrong number, and the line won't air. |
+| 9 | Before anything airs, a verifier checks every number against the simulation. Type in a wrong number, and the line won't air. |
 | 10 | Take an agent down, and its template airs: the breakdown still plays. Bring it back, and the workflow resumes from its checkpoint. Only that agent runs again. |
 | 11 | Built on Microsoft Foundry, Agent Framework and our own MCP server, with Azure AI Speech, Container Apps, Cosmos DB and Application Insights. Through Their Eyes: see what they saw. |
 
@@ -96,7 +96,7 @@ rule asks:
 | Without the look, he decides differently: **39 / 40** held-out seeds | `eval/reports/hero_flip_blind_side_run.md` |
 | Pressure hero forced to keep the ball: **loses it 40 / 40** | `eval/reports/hero_lens_press_escape.md` |
 | False claims refuted by the verifier: **90 / 90** | `eval/reports/corruption.md` |
-| Narration lines naming a player or number no claim holds, free text vs anchored: **34 of 66 vs 0 of 111** | `eval/reports/narration_ablation.md` |
+| Narration failing the verifier, free text vs anchored: **88% vs 0%** | `eval/reports/narration_ablation.md` |
 
 The corner hero is not on the slide: its headline uses a gate revised during design, and the
 original plan's checks, reported in the same file, are not met. A slide line can't carry that

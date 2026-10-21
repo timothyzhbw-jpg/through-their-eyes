@@ -129,7 +129,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
    plan replaces the template. The trace id is the run's operation_Id in Application Insights.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
-7. **A whole match, three heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
+7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
    18 possessions on one clock of about 11½ minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
