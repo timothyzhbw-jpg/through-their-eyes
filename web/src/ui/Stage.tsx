@@ -31,6 +31,8 @@ export const BLURB: Record<string, string> = {
     "See what the midfielder saw, and what he would have done without one look over his shoulder.",
   press_escape:
     "See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
+  corner_blind_side:
+    "A short corner. See what the centre-back saw of the man he marks, and where that man would have been without one look over his shoulder.",
 };
 
 export const blurbOf = (hero: Hero): string =>
@@ -59,6 +61,7 @@ function didPhrase(action: string): string {
  * changed the decision, or the press he played out of. The last words are set in italic.
  */
 export function momentTitle(hero: Hero): [string, string] {
+  if (hero.marker) return markerTitle(hero, hero.marker);
   const did = hero.runs.factual.decision?.chosen;
   const without = hero.counterfactual ? hero.runs.counterfactual.decision?.chosen : undefined;
   if (hero.keyScan) {
@@ -68,6 +71,18 @@ export function momentTitle(hero: Hero): [string, string] {
   }
   if (did) return ["Under pressure, he", `${didPhrase(did)}.`];
   return ["The", "moment."];
+}
+
+const KEPT_MARGIN_M = 1; // closer to his man by more than this with the look: the look kept him
+
+/** A marker's look: did it keep him with his man (or win him the ball)? No numbers. */
+function markerTitle(hero: Hero, m: NonNullable<Hero["marker"]>): [string, string] {
+  const won = m.resolved.factual;
+  if (won.type === "interception" && won.player === hero.heroId)
+    return ["One look, and he", "won the ball."];
+  if (m.separation.counterfactual - m.separation.factual > KEPT_MARGIN_M)
+    return ["One look kept him", "with his man."];
+  return ["One look, and", "the same outcome."];
 }
 
 export function MomentTitle({ hero }: { hero: Hero }) {
