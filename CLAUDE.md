@@ -131,6 +131,9 @@ _Fill in as they come to exist._
   out/dataset` reads it back
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
+  moments, breakdowns, the Verifier, interventions, determinism and the realism rows at season
+  scale, on all cores (15–30 min); writes `eval/reports/season.md` (`--from-cache` re-renders)
 - `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
   distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
   only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
