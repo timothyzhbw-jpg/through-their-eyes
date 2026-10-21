@@ -1025,6 +1025,25 @@ original visual identity.
   verdicts, audit trail, latency).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
+- **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
+  `?play=yourcall`, with `?match=` on the match's first hero moment): the replay freezes at the
+  hero's decision and the viewer decides with only what he knew, then sees what really happened.
+  - *Deciding.* A camera behind the ball carrier, framed so every option fits. Everyone stands
+    where he *believed* they were (the belief ghosts, §3.4); players he had not seen for ≥ 1.5 s
+    are grey ghosts. One marker per option over the receiver as he pictured him, plus carry or
+    shot. No numbers on screen, and the options are listed across the pitch, not by how likely he
+    was to pick them. The viewer taps a marker, swipes from the carrier toward one (a dotted path
+    follows), or uses the arrow keys and Enter. The telemetry, story, decision and director
+    panels are hidden until the call is made: they would give his decision away.
+  - *Reveal, four beats.* (1) The call's re-simulated run (§3.7 `force_action`, precomputed per
+    option in `whatif_*.json`) plays with a gold ball: it never happened. (2) The truth: everyone
+    moves from where he pictured them to where they were. (3) What he did and why. (4) The two
+    calls compared. One tap tries another option or goes back to the replay.
+  - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
+    against his), and the breakdown's narration sorted by claim (state at the decision → truth;
+    the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
+    it is loaded; a hero with no decision on the ball (`corner_blind_side`) has no Your call.
+  - Reduced motion: every clip and move cuts to its end. No model call.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -1081,6 +1100,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       — [web/src/director/rules.test.ts](../web/src/director/rules.test.ts) ("every pass
       suggestion shows at least half a second before its reception", "are plain words", "the
       auto director"); [web/src/director/director.test.tsx](../web/src/director/director.test.tsx)
+- [x] Your call: the flow goes deciding → outcome → truth → what he did → compared, and one step
+      tries another option or closes; the reveal shows no number outside a verified line, each line
+      once; the camera frames every option on desktop and phone; markers are focusable named
+      buttons (arrow keys, Enter, Escape) and a swipe picks the option it points at; reduced
+      motion cuts to the end; it works on both heroes with a decision and inside `?match=`.
+      — [web/src/yourcall/flow.test.ts](../web/src/yourcall/flow.test.ts),
+      [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
+      [camera.test.ts](../web/src/yourcall/camera.test.ts),
+      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
@@ -1273,10 +1301,10 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 | §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
-| §7 render | 3 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **27** | **10** | |
+| **Total** | **28** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1302,15 +1330,17 @@ pilot only, never generalised.
 1. rigged GRF players: back to tokens in POV and broadcast (§7)
 2. Foundry evaluation ablation, free text vs anchored narration (§6)
 3. shareable clip export (stretch)
-4. viewer pilot
-5. end-of-match recap reel
-6. "What if…?" free text → suggested questions only
-7. two voices → one narrator
-8. `coach` persona
-9. `es` language
-10. Cosmos DB → file store
-11. occlusion model → FOV only
-12. pitch-control shader and pass value surface → precomputed textures (the pitch-control
+4. Your call (§7): remove its header button, the Moments buttons and `?play=yourcall`; nothing
+   else depends on it (the bundled press_escape what-ifs stay for the "What if…?" box)
+5. viewer pilot
+6. end-of-match recap reel
+7. "What if…?" free text → suggested questions only
+8. two voices → one narrator
+9. `coach` persona
+10. `es` language
+11. Cosmos DB → file store
+12. occlusion model → FOV only
+13. pitch-control shader and pass value surface → precomputed textures (the pitch-control
     shader exists and stays per pixel until a laptop measurement says otherwise, §7 render)
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent

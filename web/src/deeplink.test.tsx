@@ -53,6 +53,19 @@ describe("parsing the address", () => {
     expect(parseDeepLink("?view=tactical&autoplay=0").intro).toBe(true);
   });
 
+  it("a Your call link skips the lineup card: no intro, no autoplay", () => {
+    expect(parseDeepLink("?play=yourcall")).toMatchObject({
+      play: "yourcall",
+      intro: false,
+      autoplay: false,
+    });
+    // A link to a spot wins over intro=1: main.tsx opens the app without the lineup card.
+    expect(parseDeepLink("?play=yourcall&intro=1")).toMatchObject({
+      intro: false,
+      autoplay: false,
+    });
+  });
+
   it("keeps the existing testing parameters", () => {
     expect(parseDeepLink("?autoplay=0")).toMatchObject({ autoplay: false });
     expect(parseDeepLink("?offline=1")).toMatchObject({ offline: true, autoplay: true });
