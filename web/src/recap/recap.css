@@ -283,6 +283,16 @@
   width: 16px;
   height: 16px;
 }
+/* "Sound off" / "Sound on": the button's text and name is "Sound"; the state is drawn from
+   aria-pressed and left out of the accessibility tree (WCAG 2.5.3, as the header's toggle). */
+.recap-sound::after {
+  content: " off";
+  content: " off" / "";
+}
+.recap-sound[aria-pressed="true"]::after {
+  content: " on";
+  content: " on" / "";
+}
 .stage-card .recap-actions .btn {
   height: 34px;
   padding: 0 14px;
