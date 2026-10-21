@@ -415,27 +415,29 @@ the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on t
    it with `vite preview`;
 3. opens each page in headless Chromium, found as for the GPU tests (below), on SwiftShader on CI:
 
-| Page                                    | Its main view                                                      |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| `?autoplay=0`                           | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
-| `?match=press_escape-0&autoplay=0`      | the pressure hero, the same                                        |
-| `?match=match-1&autoplay=0`             | the score bug, the 3D view, the Moments panel                      |
-| `?match=match-1`                        | live; each **Breakdown**, then **Back to the match**               |
-| `/`                                     | the lineup card, **Skip**, then the hero                           |
-| `?match=match-1`                        | the lineup card, **Start watching**, then the match                |
-| `?persona=analyst&tamper=cf_value`      | the evidence card with "Try a wrong number" open                   |
-| `?at=decision&view=tactical`            | the tactical board                                                 |
-| `/` and `?match=match-1`, 375 px, touch | the phone width, live; a sideways scroll is noted (below)          |
+| Page                                     | Its main view                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| `?autoplay=0`                            | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
+| `?match=press_escape-0&autoplay=0`       | the pressure hero, the same                                        |
+| `?match=match-1&autoplay=0`              | the score bug, the 3D view, the Moments panel                      |
+| `?match=match-1`                         | live; each **Breakdown**, then **Back to the match**               |
+| `/`                                      | the lineup card, **Skip**, then the hero                           |
+| `?match=match-1`                         | the lineup card, **Start watching**, then the match                |
+| `?persona=analyst&tamper=cf_value`       | the evidence card with "Try a wrong number" open                   |
+| `?at=decision&view=tactical`             | the tactical board                                                 |
+| `/` and `?match=match-1` on an iPhone 17 | the phone width, live; a sideways scroll is noted (below)          |
 
 Every page but the two lineup ones adds `intro=0`. A page passes when its main view shows (with
 its WebGL canvas) and it logs no console error and throws no uncaught exception; an uncaught
-exception fails it at once. At 375 px the run notes a page wider than the screen without failing
-it: on main the live screen's header is (436 px for the hero, 594 px for match-1 while streaming),
-and the check becomes a failure once that layout is fixed. The checks find controls by
-role and accessible name, as a screen reader does, so a new layout or style does not break them;
-a renamed control does, and the test changes with it. Requests to other hosts (the web fonts) are
-answered empty, so a run needs no network. A screenshot of each page, and the API's log, go to
-`out/smoke/`. About 2 minutes, a quarter of it the API's warm start.
+exception fails it at once. The phone is Playwright's iPhone 17 profile (402 px wide, touch,
+Safari's user agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering. On it
+the run notes a page wider than the screen without failing it: on main the live screen's header
+is (436 px for the hero, 595 px for match-1 while streaming), and the check becomes a failure once
+that layout is fixed. The checks find controls by role and accessible name, as a screen reader
+does, so a new layout or style does not break them; a renamed control does, and the test changes
+with it. Requests to other hosts (the web fonts) are answered empty, so a run needs no network. A
+screenshot of each page, and the API's log, go to `out/smoke/`. About 3 minutes, a quarter of it
+the API's warm start.
 
 `-- --api http://localhost:8765` uses an API that is already running, `-- --only match` runs the
 pages whose name contains `match`, `-- --headed` shows the window. CI runs it in the `smoke` job,

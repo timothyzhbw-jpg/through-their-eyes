@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { devices } from "playwright-core";
 import { build, preview } from "vite";
 import { launchChrome } from "./gpu.mjs";
 
@@ -41,12 +42,9 @@ const { values: opt } = parseArgs({
 });
 
 const DESKTOP = { viewport: { width: 1440, height: 900 } };
-const PHONE = {
-  viewport: { width: 375, height: 812 },
-  deviceScaleFactor: 2,
-  isMobile: true,
-  hasTouch: true,
-};
+// The phone is an iPhone as Playwright describes it (viewport, pixel ratio, touch, Safari's user
+// agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering.
+const { defaultBrowserType: _, ...PHONE } = devices["iPhone 17"];
 
 /** The README's tour for judges, and the pages around it. `intro=0` skips the lineup card, which
  * the two lineup pages open and close as a visitor does. */
@@ -153,9 +151,9 @@ async function lineup(page, shoot, button, then) {
   await then(page);
 }
 
-/** At 375 px the page should scroll only up and down. On main it does not yet (the live screen's
- * header is wider than a phone), so a sideways scroll is a note, not a failure, until the layout
- * is fixed; then it should fail the page. */
+/** On the phone the page should scroll only up and down. On main it does not yet (the live
+ * screen's header is wider than a phone), so a sideways scroll is a note, not a failure, until the
+ * layout is fixed; then it should fail the page. */
 async function phone(page, check, note) {
   await check(page);
   const [wide, width] = await page.evaluate(() => [
