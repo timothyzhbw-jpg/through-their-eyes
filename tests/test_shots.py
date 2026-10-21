@@ -477,3 +477,17 @@ def test_eval_design_rule_includes_the_counterfactual_decision_frame(monkeypatch
     assert hero_shot._not_seen(run, "H9", "A1", stop=2)
     assert not hero_shot._not_seen(run, "H9", "A1", stop=3)
     assert not hero_shot.evaluate_seed(sim.scenario.name, 0)["design_rule"]
+
+
+@pytest.mark.parametrize("seed", DESIGN_SEEDS)
+def test_c1_defends_in_the_box_and_every_pass_of_the_routine_is_completed(seed):
+    """A believable cutback defence: at H9's reception at least four away outfielders are inside
+    the penalty area, and none of them cut out a pass of the routine."""
+    run = Simulation.from_scenario(SCENARIO, seed).run()
+    passes = [e for e in run.events if e.type == "pass"]
+    assert [e.attrs["outcome"] for e in passes] == ["complete"] * 3, seed
+    reception = next(e for e in run.events if e.type == "reception" and e.player == "H9")
+    away = [j for j, p in enumerate(run.players) if p.team == 1 and p.role != "GK"]
+    x, y = run.pos[reception.frame, away, 0], run.pos[reception.frame, away, 1]
+    in_box = (x >= HALF_LENGTH - 16.5) & (np.abs(y) <= 20.16)
+    assert int(in_box.sum()) >= 4, seed

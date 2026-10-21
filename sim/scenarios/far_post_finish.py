@@ -1,10 +1,14 @@
 """The striker reads the keeper before meeting a cutback (hero expansion C1).
 
 H3 switches play through H6 and H7, behind H9's run. His gaze follows the ball away from the
-goal, and only the key scan shows him that A1 has crossed to the near side. A1 sets at the
-bisector of H7's strike position while the cutback travels. Without the look, H9's last sighting
-is the keeper on the opposite side at frame zero. Both shot choices and their outcomes come
-from the normal belief decision and save models.
+goal, and only the key scan shows him that A1 has crossed to the near side. Without the look,
+H9's last sighting is the keeper on the opposite side at frame zero. Both shot choices and their
+outcomes come from the normal belief decision and save models.
+
+Scripted choice: while the cutback travels, A1 stays set at the bisector of H7's strike position.
+He is set for the near post against the wide player and caught by the cutback, rather than
+re-tracking the ball. The away defence stands as against a cutback from the right: five
+outfielders in the box, none between H9's run and the goal or on a pass lane.
 """
 
 from __future__ import annotations
@@ -26,8 +30,7 @@ if TYPE_CHECKING:
     from sim.engine import Simulation
 
 
-# Home attacks +x. Outfield players away from the routine hold their spots: the defenders have
-# followed the wide players, leaving both the passing lanes and the striker's view of A1 clear.
+# Home attacks +x. Outfield players away from the routine hold their spots.
 HOME = [
     ("H1", "GK", -46.0, 0.0),
     ("H2", "FB", -2.0, -29.0),
@@ -35,24 +38,28 @@ HOME = [
     ("H4", "CB", -4.0, -8.0),
     ("H5", "CB", -4.0, 8.0),
     ("H6", "DM", 22.0, 4.0),
-    ("H8", "CM", 13.0, -15.0),
-    ("H10", "CM", 30.0, 17.0),
+    ("H8", "CM", 24.0, -12.0),
+    ("H10", "CM", 42.5, 16.0),  # late runner toward the far post
     ("H7", "W", 34.0, -20.0),
-    ("H11", "W", 23.0, 31.0),
+    ("H11", "W", 39.0, 23.0),
     ("H9", "ST", 35.0, 2.0),
 ]
+# A cutback defence: the right back inside, between H7 and the goal, a centre-back holding the
+# near-post zone, the other centre-back and the left back with the runners on the far side, a
+# midfielder screening the edge of the box. Nobody stands between H9's run and the goal or on a
+# pass lane.
 AWAY = [
     ("A1", "GK", 51.0, 1.3),
-    ("A2", "FB", 48.0, 29.0),
-    ("A3", "FB", 50.0, -32.0),
-    ("A4", "CB", 47.0, 22.0),
-    ("A5", "CB", 49.0, -25.0),
-    ("A6", "DM", 4.0, -8.0),
-    ("A8", "DM", 2.0, 15.0),
-    ("A10", "AM", -8.0, 0.0),
-    ("A7", "AM", -7.0, 22.0),
-    ("A11", "AM", -9.0, -22.0),
-    ("A9", "ST", -20.0, -1.0),
+    ("A2", "FB", 46.0, 19.0),
+    ("A3", "FB", 42.0, -14.0),
+    ("A4", "CB", 44.5, 14.5),
+    ("A5", "CB", 48.5, -10.0),
+    ("A6", "DM", 37.0, 9.0),
+    ("A8", "DM", 28.0, 10.0),
+    ("A10", "AM", 20.0, -5.0),
+    ("A7", "AM", 12.0, 20.0),
+    ("A11", "AM", 14.0, -12.0),
+    ("A9", "ST", -5.0, 0.0),
 ]
 
 RUN_TARGET = np.array([41.0, -4.0])

@@ -1,9 +1,12 @@
 """Shot hero eval: does reading the keeper change the striker's placement?
 
-    .venv/bin/python -m eval.hero_shot --seeds 100-139
+    uv run python -m eval.hero_shot
 
-Design seeds are 0-99; use --out outside eval/reports while tuning. The default command writes
-eval/reports/hero_shot_far_post_finish.md, including the keeper reach-speed sensitivity sweep.
+Design seeds are 0-99; use --out outside eval/reports while tuning. The default command runs the
+held-out seeds 200-239 and writes eval/reports/hero_shot_far_post_finish.md, including the keeper
+reach-speed sensitivity sweep. Seeds 100-139 are no longer fresh: they were run once with an
+earlier layout of the scene (the away defence out by the byline corners, the box empty), before
+the defence was moved into the box. Their report is kept as ..._100-139.md, labelled as seen.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from sim.run import MatchRun
 from sim.scenarios import SCENARIOS
 
 REPORTS = Path(__file__).parent / "reports"
+HELD_OUT = range(200, 240)  # fresh: see the module docstring
 SEEN = SimParams().perception_threshold
 
 
@@ -137,6 +141,16 @@ def report(scenario: str, seeds: list[int]) -> str:
         f"`{SCENARIOS[scenario].hero}` and re-simulate from its start with keyed randomness. "
         f"Default keeper reach speed: {default_speed:g} m/s.",
         "",
+        *(
+            [
+                "**Seen seeds, not a held-out gate:** 100–139 were run once with an earlier "
+                "layout of the scene (the away defence out by the byline corners), before the "
+                "defence was moved into the box. The held-out gate is seeds 200–239.",
+                "",
+            ]
+            if set(seeds) & set(range(100, 140))
+            else []
+        ),
         "P_goal re-scores each run's chosen placement using `_placed_shot` on the true positions, "
         "velocities and ball at that run's decision frame, with belief age zero and keeper A1. "
         "The last incoming pass determines the near side exactly as in the engine. A pass or "
@@ -191,13 +205,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     candidates = [name for name, cls in SCENARIOS.items() if cls.shots and cls.lens == "scan"]
     parser.add_argument("--scenario", default="far_post_finish", choices=candidates)
-    parser.add_argument("--seeds", default="100-139")
+    parser.add_argument("--seeds", default=f"{HELD_OUT[0]}-{HELD_OUT[-1]}")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args()
     seeds = _parse_seeds(args.seeds)
     text = report(args.scenario, seeds)
     name = f"hero_shot_{args.scenario}"
-    if seeds != list(range(100, 140)):
+    if seeds != list(HELD_OUT):
         name += f"_{seeds[0]}-{seeds[-1]}"
     path = args.out or REPORTS / f"{name}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
