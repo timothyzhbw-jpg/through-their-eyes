@@ -16,6 +16,9 @@ Writes eval/reports/hero_marking_<scenario>.md (with other seeds, ..._<first>-<l
 - Reported: separation and pressing intensity on the runner as the ball arrives, interceptions,
   and the blind-side alert (SPEC 4.4) for the marker and the runner: on before the cutback
   arrives without the look; on before the look and cleared during it with the look.
+- Also reported: the checks of the design plan (docs/drafts/hero_expansion.md, section 5.4), which
+  the gate above replaced, and how the two differ (the report's "Deviations" section). Bowen
+  decided on 2026-10-20 to keep the gate above and report the plan's checks beside it.
 """
 
 from __future__ import annotations
@@ -26,6 +29,8 @@ from statistics import median
 
 import numpy as np
 
+from analytics.blind_side import DEFAULT_PARAMS as ALERT
+from analytics.blind_side import observer_roles, watch_pairs
 from analytics.pressing import frame_pressing
 from analytics.vision import player_visibility
 from explain.lenses import believed_position
@@ -42,6 +47,10 @@ WITH_HIM = 5.0  # m, the marker this close as the ball arrives
 BELIEF_ERROR = 3.0  # m
 BELIEF_LAG_S = 0.5  # after the cutback is played
 SEEN = SimParams().perception_threshold
+# The design plan's checks (docs/drafts/hero_expansion.md, section 5.4), reported beside the gate.
+PLAN_WITH = 1.5  # m, separation as the ball arrives, with the look
+PLAN_WITHOUT = 3.0  # m, and without it
+PLAN_DESIGN_SEEDS = "0–99"
 
 
 def _cutback(run, passer: str):
@@ -101,6 +110,46 @@ def _alert_before(run, marker: str, runner: str, start: int, stop: int) -> bool:
     return any(a.start < stop and a.end >= start for a in _alerts(run, marker, runner))
 
 
+def _before_look(run, marker: str, runner: str, look: int) -> dict:
+    """The blind-side alert's conditions (SPEC 4.4, `analytics.blind_side.detect_alerts`) for the
+    marker watching the runner, before the look. Sight is the alert's own test on tracking (the
+    observed head yaw; everyone seen at frame 0). The alert can only come on in the window where
+    the runner has been unseen for `min_unseen_s`: from then until the look. For each other
+    condition, whether it holds on any frame of that window."""
+    m, r = run.index(marker), run.index(runner)
+    dt = run.dt
+    speed = np.linalg.norm(run.vel, axis=-1)
+    last = 0
+    for f in range(look):
+        if player_visibility(run.pos[f], run.head_yaw_observed[f], speed[f])[m, r] >= ALERT.visible:
+            last = f
+    window = range(last + round(ALERT.min_unseen_s / dt), look)
+    team = np.array([p.team for p in run.players])
+    roles = observer_roles(run.pos, run.ball_pos, run.ball_vel, run.owner, team, ALERT, dt)
+    seen_at, seen_vel = run.pos[last, r], run.vel[last, r]
+
+    def moved(f: int) -> float:
+        ahead = min((f - last) * dt, ALERT.expect_s)
+        return float(np.linalg.norm(run.pos[f, r] - (seen_at + seen_vel * ahead)))
+
+    def near(f: int) -> bool:
+        return float(np.linalg.norm(run.pos[f, r] - run.pos[f, m])) <= ALERT.max_distance
+
+    fast = [f for f in window if speed[f, r] >= ALERT.min_speed]
+    away = [f for f in window if moved(f) >= ALERT.min_moved_m]
+    watching = [f for f in window if watch_pairs(roles, f, team)[m, r]]
+    return {
+        "unseen": (look - last) * dt,
+        "window": len(window) * dt,
+        "max_speed": max((float(speed[f, r]) for f in window), default=float("nan")),
+        "fast": bool(fast),
+        "away": bool(away),
+        "watching": bool(watching),
+        "near": any(near(f) for f in window),
+        "all": bool(set(fast) & set(away) & set(watching) & {f for f in window if near(f)}),
+    }
+
+
 def evaluate_seed(scenario: str, seed: int) -> dict:
     cls = SCENARIOS[scenario]
     marker, runner, passer = cls.hero, cls.runner, cls.short
@@ -115,6 +164,8 @@ def evaluate_seed(scenario: str, seed: int) -> dict:
     at = min(cc.frame + round(BELIEF_LAG_S / run.dt), _arrival(run, cc) - 1)
     belief = believed_position(run, marker, runner, at)
     belief_error = float(np.linalg.norm(belief - run.pos[at, run.index(runner)]))
+    at_cut = believed_position(run, marker, runner, cc.frame)
+    belief_error_at_cut = float(np.linalg.norm(at_cut - run.pos[cc.frame, run.index(runner)]))
     free_without = c["received"] and c["nearest"] > UNMARKED
     with_him = f["marker_won"] or (f["received"] and f["separation"] <= WITH_HIM)
     return {
@@ -123,6 +174,12 @@ def evaluate_seed(scenario: str, seed: int) -> dict:
         "c": c,
         "gate": bool(free_without and with_him),
         "belief_error": belief_error,
+        "belief_error_at_cut": belief_error_at_cut,
+        "plan_gate": f["separation"] <= PLAN_WITH
+        and c["received"]
+        and c["separation"] >= PLAN_WITHOUT,
+        "before_look": _before_look(r.factual, marker, runner, key.frame),
+        "dart_to_look": (key.frame - dart) * r.factual.dt,
         "design_rule": _not_seen(r.factual, marker, runner, dart, key.frame)
         and _not_seen(r.counterfactual, marker, runner, dart, cc.frame),
         "alert": _alert_clears_in_scan(r.factual, marker, runner, key),
@@ -153,6 +210,21 @@ def report(scenario: str, seeds: list[int]) -> str:
     c_sep = median(x["c"]["separation"] for x in rows)
     heavy = count(lambda x: x["f"]["pressing"] >= TERMS["under heavy pressure"].threshold)
     won = count(lambda x: x["f"]["marker_won"])
+    plan_gate = count(lambda x: x["plan_gate"])
+    belief_at_cut = count(lambda x: x["belief_error_at_cut"] >= BELIEF_ERROR)
+    before = [x["before_look"] for x in rows]
+    unseen = sorted(b["unseen"] for b in before)
+    window = sorted(b["window"] for b in before)
+    max_speed = sorted(b["max_speed"] for b in before)
+    gap = sorted(x["dart_to_look"] for x in rows)
+    never = {k: sum(1 for b in before if not b[k]) for k in ("fast", "away", "watching", "near")}
+    together = sum(1 for b in before if b["all"])
+    held_out = seeds == list(range(100, 140))
+    seeds_text = f"seeds {seeds[0]}–{seeds[-1]}"
+
+    def met(k: int, target: float) -> str:
+        return "met" if k / n >= target else "not met"
+
     m, rn = cls.hero, cls.runner
     lines = [
         f"# Set-piece hero — `{scenario}`",
@@ -178,14 +250,60 @@ def report(scenario: str, seeds: list[int]) -> str:
         f"before the look and cleared during it, with the look | {alert_without}/{n} · "
         f"{alert}/{n} | reported |",
         "",
+        "## Deviations from the design plan (docs/drafts/hero_expansion.md, section 5.4)",
+        "",
+        "The plan's checks were changed while the routine was built on design seeds 0–39, before "
+        'the held-out run on seeds 100–139 (the plan\'s own "As built" note, section 5). Bowen '
+        "decided on 2026-10-20 to keep the gate above and to report the plan's checks here, "
+        f"beside it, on the same {seeds_text}"
+        + ("" if held_out else " (not the held-out seeds)")
+        + ".",
+        "",
+        "| Plan (section 5.4) | As built (table above) | Plan's check on these seeds | Plan's "
+        "target |",
+        "|---|---|---|---|",
+        f"| Hard gate: dropping the look raises the separation as the ball arrives from "
+        f"≤ {PLAN_WITH:g} m to ≥ {PLAN_WITHOUT:g} m (`{rn}` receives), ≥ 60% | `{rn}` unmarked "
+        f"(> {UNMARKED:g} m) without the look, `{m}` within {WITH_HIM:g} m or winning the ball "
+        f"with it, ≥ 60% | {plan_gate}/{n} ({plan_gate / n:.0%}) | {met(plan_gate, 0.6)} |",
+        f"| Belief error ≥ {BELIEF_ERROR:g} m at the cutback, ≥ 90% | the same, "
+        f"{BELIEF_LAG_S:g} s after the cutback is played | {belief_at_cut}/{n} "
+        f"({belief_at_cut / n:.0%}) | {met(belief_at_cut, 0.9)} |",
+        f"| Blind-side alert `{m}` → `{rn}` on before the look and cleared during it, ≥ 90% "
+        f"| reported only | {alert}/{n} ({alert / n:.0%}) | {met(alert, 0.9)} |",
+        "| With marking on belief off, `possession_play` marking stays byte-identical | no flag: "
+        "only this scenario calls `marking_target_on_belief`; the other scenarios' committed "
+        "exports and eval reports are unchanged (`tests/test_committed_exports.py`) | — | — |",
+        f"| Design seeds {PLAN_DESIGN_SEEDS}, held out 100–139 | design seeds 0–39, held out "
+        "100–139 | — | — |",
+        "",
+        f"- **Separation.** With the look `{m}` closes to {f_sep:.1f} m (median), not "
+        f"{PLAN_WITH:g} m, so the plan's gate holds on {plan_gate}/{n} seeds (plan target ≥ 60%: "
+        f"{met(plan_gate, 0.6)}); without it `{rn}` is {c_sep:.1f} m away. The gate uses the "
+        f"lexicon's `unmarked` (SPEC 5.3) instead.",
+        "- **Alert.** The alert (SPEC 4.4, from tracking) can come on only once the runner has "
+        f"been out of sight for {ALERT.min_unseen_s:g} s, and then needs, on one frame, the "
+        f"runner at {ALERT.min_speed:g} m/s or more, {ALERT.min_moved_m:g} m or more from where "
+        f"`{m}` expects him, within {ALERT.max_distance:g} m, and `{m}` watching him (one of the "
+        f"{ALERT.defenders} defenders nearest the ball). The look comes "
+        f"{gap[0]:.2f}–{gap[-1]:.2f} s after `{rn}` starts his dart, when he has been out of "
+        f"sight for {unseen[0]:.2f}–{unseen[-1]:.2f} s: a window of "
+        f"{window[0]:.2f}–{window[-1]:.2f} s in which the alert could come on. In that window "
+        f"his top speed is {max_speed[0]:.1f}–{max_speed[-1]:.1f} m/s. Conditions that hold on "
+        f"no frame of the window: speed on {never['fast']}/{n} seeds, distance moved on "
+        f"{never['away']}/{n}, `{m}` watching on {never['watching']}/{n}, range on "
+        f"{never['near']}/{n}. All of them hold together on a frame in {together}/{n}.",
+        "",
         "| Seed | With the look: outcome | sep. (m) | nearest (m) | pressing | Without: outcome "
-        "| sep. (m) | nearest (m) | pressing | belief error (m) | gate |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "| sep. (m) | nearest (m) | pressing | belief error (m) | at the cutback (m) | gate "
+        "| plan's gate |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for x in rows:
         lines.append(
             f"| {x['seed']} | {_fmt(x['f'])} | {_fmt(x['c'])} | {x['belief_error']:.1f} "
-            f"| {'yes' if x['gate'] else 'no'} |"
+            f"| {x['belief_error_at_cut']:.1f} | {'yes' if x['gate'] else 'no'} "
+            f"| {'yes' if x['plan_gate'] else 'no'} |"
         )
     return "\n".join(lines) + "\n"
 

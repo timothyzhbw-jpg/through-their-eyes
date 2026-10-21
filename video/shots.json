@@ -19,6 +19,7 @@
       "crop": "pov",
       "setup": [
         { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "View options" },
         { "do": "select", "label": "Playback speed", "value": "0.5" },
         { "do": "click", "role": "button", "name": "Key scan" }
       ],
@@ -110,6 +111,7 @@
         { "do": "click", "role": "button", "name": "Without the look", "hold": 2.5, "still": true },
         { "do": "click", "role": "button", "name": "With the look", "hold": 1.5 },
         { "do": "click", "role": "button", "name": "Without the look", "hold": 0.5 },
+        { "do": "click", "role": "button", "name": "View options", "hold": 0.4 },
         { "do": "click", "role": "button", "name": "Ghost: with look", "hold": 0.5 },
         { "do": "click", "role": "button", "name": "Play", "exact": true, "hold": 3 }
       ],

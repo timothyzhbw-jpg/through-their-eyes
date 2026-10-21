@@ -5,6 +5,19 @@ or from a broadcast camera, and a tactical board from above — and plays a `Tel
 (SPEC 6) over them. Everything is synthetic: the
 match comes from `sim/`, the clubs and players are fictional.
 
+The look is "Floodlit" (the design canvas Bowen approved on 2026-10-20): a night pitch set like a
+magazine. Floodlight `#F6D566` is the one accent (what he saw, the look, verified numbers, the
+primary action), Dusk `#95A7BA` is always the other match, Flare `#EF774B` is for errors only;
+Newsreader is the voice, Geist the instrument, Geist Mono the labels (tokens at the top of
+`src/styles.css`). The first screen is the live screen: the main view fills it (his eyes, the
+broadcast camera or the tactical board, from the camera switch in the bar) and the other view
+rides along as a picture in picture; the header, the player picker, the moment card, the caption
+and the playback bar sit over the picture, and every overlay toggle is behind **View options**.
+Below it the moment is told as a story, chapter by chapter: what happened, his look (the
+telemetry), what he believed, the re-simulated match, ask the replay, the call, behind the replay
+and the moments. In a verified line every number has a dotted Floodlight underline and the line
+ends in a check that opens its evidence; the unchecked bundled fixture shows its numbers plain.
+
 ```bash
 cd web
 npm ci
@@ -29,7 +42,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page |
 | `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                         |
 | `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                 |
-| `view`     | `pov`, `tactical`, `split`                                      | which view gets the space; a breakdown resets it to `split` when it starts                                                                                                                                                 |
+| `view`     | `pov`, `tactical`, `split`                                      | the main view: `pov` the 3D view alone, `split` the 3D view with the board as a picture in picture, `tactical` the board with the 3D view small; a breakdown resets it to `split` when it starts                           |
 | `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                               |
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
@@ -167,11 +180,12 @@ src/
   match/      a stitched match: possessions, score, moments; its session (live, opens breakdowns)
   tamper/     "Try a wrong number": a claim re-checked by the service's verifier, POST /api/verify
   telemetry/  perception telemetry for the POV player: curves, detector marks, readouts
-  views/      PovView (first person and broadcast) and TacticalView (React Three Fiber), their
-              toolbars and HUD, the broadcast camera and the stadium
+  views/      PovView (first person and broadcast) with its motion blur pass, TacticalView (React
+              Three Fiber), the HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
   skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
-  ui/         transport + timeline, caption + evidence card + narration list, panels, console
+  ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
+              transport + timeline, caption + evidence card, the story's chapters, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
               the transport and live controls a match shares; useView() for the shared views
   deeplink.ts URL parameters: parsed once, applied to the session before the first render
@@ -196,8 +210,17 @@ src/
   is kept — what the player saw stays on screen. Playback also slows while the head turns faster
   than 120°/s on screen; during a plan the plan clock slows with it, so captions stay in sync.
   Plan POV clips always use comfort mode.
+- **Motion blur in first person** (the Floodlit design). When the head whips round the picture
+  smears sideways, as a camera's would, and it is sharp the instant the head stops: a horizontal
+  Gaussian whose sigma is 0.3 × the angle the head sweeps while a 25 Hz, 180° shutter is open,
+  in pixels at the image centre (sigma = 0.3 · |ω| · 1/50 s · px per degree), capped at 3% of the
+  width, from the measured head yaw rate in match time (`views/motionBlur.ts`). The scene is drawn
+  into a half-float target that three.js treats like the canvas, so the blur converges on the
+  sharp frame; one pass of 17 taps up to 3 px, two passes beyond (`views/PovMotionBlur.tsx`).
+  Under half a pixel, on the broadcast camera and under `prefers-reduced-motion` the scene is
+  drawn straight to the canvas. The canvas carries the current sigma in `data-blur-sigma`.
 - **Broadcast camera** (SPEC 7: high side angle, follows the ball, smoothed). The **Broadcast**
-  switch in the 3D view's toolbar, or a plan's `camera` step with mode `broadcast`, films the same
+  button of the camera switch, or a plan's `camera` step with mode `broadcast`, films the same
   scene from a fixed camera 21 m up, 26 m behind the near touchline at the halfway line, which
   pans, tilts and zooms (`views/broadcast.ts`). Critically damped springs follow the ball and
   widen the frame with its speed; while a pass is in flight the aim follows an S-curve from where
@@ -250,11 +273,13 @@ src/
     values are in `src/pitchControl/snapshots.json`, written by
     `uv run python -m eval.pitch_control_parity` (repo root); `tests/test_pitch_control_parity.py`
     checks them against the kernel.
-  - _Frame rate:_ `npm run build && npm run fps` plays the hero moment in Chrome and prints fps
-    with the overlay off and on, then the shader's own cost per draw; `npm run fps -- --headed`
-    measures on this machine's GPU.
-- **Skeleton data** (SPEC 7, optional; first in the SPEC 9 cut order). Toggle "Skeleton", off by
-  default, on the broadcast camera and the tactical board; one state for both. Per player it
+  - _Frame rate:_ `npm run build && npm run fps` plays the hero moment in Chrome through the key
+    scan and prints fps with the overlay off and on (with the widest first-person blur of each
+    run), then the shader's own cost per draw, and checks that `prefers-reduced-motion` turns the
+    blur off; `npm run fps -- --headed` measures on this machine's GPU.
+- **Skeleton data** (SPEC 7, optional; first in the SPEC 9 cut order). Toggle "Skeleton" in View
+  options, off by default; it draws on the broadcast camera and the tactical board, one state for
+  both. Per player it
   draws only sim data: the position, the torso line (shoulders, across `body`), a head ray from
   the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. The ray
   lights up (detector green) while the scan detector marks a scan. The key's switch picks the
@@ -264,7 +289,7 @@ src/
   and the ray lights up during the sim's own scans (sight blue). No limbs: the sim has none.
   `npm run fps` also measures it, over the broadcast camera.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
-  voice steps name its line ids. Click a caption (or any line in the Narration panel) and the
+  voice steps name its line ids. Click a caption (or any line of the call) and the
   evidence card under the views lists each claim with its kind (observed / computed /
   counterfactual), verdict, values and evidence events, and the replay seeks to the claim's
   `seek_frame`. Counterfactual claims are shown in the re-simulated run and always carry the
@@ -294,7 +319,7 @@ src/
   the tactical board a short white tick shows each player's head direction. `views/tokens.ts`
   holds the pose maths; its test checks the rendered world yaw against the export (< 1e-3 rad).
   In the first-person view the animated players are the default (Bowen chose them by eye over
-  the tokens); **Animated players** in the toolbar switches back to the tokens. They are an
+  the tokens); **Animated players** in View options switches back to the tokens. They are an
   animated footballer converted from Gameplay Football (`src/players/`,
   `public/models/README.md`, SPEC 7): gait blended by sim speed with the playback rate
   matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
