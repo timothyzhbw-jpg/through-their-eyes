@@ -233,6 +233,26 @@ printed range, or a shape only. It also says how far the source was read.
 - **Bekkers. *Pressing Intensity: An Intuitive Measure for Pressing in Soccer.*** arXiv:2501.04712 —
   https://arxiv.org/abs/2501.04712
 - **Singh (2019). *Expected Threat (xT)*** (blog) — implemented in socceraction.
+
+### Live match stats (SPEC 4.6)
+- **Gualtieri, Rampinini, Dello Iacono & Beato (2023). *High-speed running and sprinting in
+  professional adult soccer: current thresholds definition, match demands and training
+  strategies. A systematic review.*** Frontiers in Sports and Active Living 5:1116293 —
+  https://doi.org/10.3389/fspor.2023.1116293 (full text read, 2026-10-21).
+  → Our thresholds: across the 30 studies, the most common entry speeds for male professionals are
+  19.8 km/h for high-speed running and 25.2 km/h for sprinting (§ "Defining 'absolute'
+  thresholds"); it finds no consensus and lists entry speeds from 14.4 to 21.1 and 19.8 to
+  30 km/h. It gives no minimum sprint duration; our 0.4 s is our own choice.
+- **Spearman, Basye, Dick, Hotovy & Pop (2017). *Physics-Based Modeling of Pass Probabilities in
+  Soccer.*** MIT Sloan Sports Analytics Conference (11th) —
+  https://www.researchgate.net/publication/315166647_Physics-Based_Modeling_of_Pass_Probabilities_in_Soccer
+  (the PDF was not reachable; read through a secondary summary,
+  https://thexgfootballclub.substack.com/p/the-perfect-pass-formula-can-physics , 2026-10-21).
+  → The lane term of our pass difficulty: per player, the ball's flight time to a point against
+  his time to intercept, with logistic temporal uncertainty (σ = 0.45 s, the value fitted there
+  and the pitch-control default). We do not use its control term or its fitted pass model; ours
+  is not fitted to anything.
+- Bekkers' pressing intensity (above) gives the pressure on the passer and the receiver.
 - **Choi (2026). *Training-Free Off-Screen Player Imputation for Broadcast-Based Spatial Football
   Analytics.*** arXiv:2607.11548 — https://arxiv.org/abs/2607.11548
   → Production-path caveat: a broadcast camera shows only 10–16 players at a time.

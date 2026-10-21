@@ -2,8 +2,8 @@
 
 The API is public, so it speaks only SSML its own crew wrote. Every breakdown it computes or reads
 from its cache records the script's voice cues (`VoiceCue.cache_key` -> SSML) in a store next to
-that cache, and POST /api/tts takes a key, never SSML. Audio is cached by key under
-`TTE_CACHE_DIR/tts/`.
+that cache, and POST /api/tts takes a key, never SSML. A cached breakdown is re-voiced on read, so
+those keys match today's delivery rules. Audio is cached by key under `TTE_CACHE_DIR/tts/`.
 """
 
 from __future__ import annotations
@@ -19,6 +19,8 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
+from agents.delivery import revoice
+
 log = logging.getLogger(__name__)
 KEY = re.compile(r"[0-9a-f]{16}")  # agents.delivery.cache_key
 DRILL_CUES_KEPT = 2000  # voice cues of failure drills, in memory (about 50 drills of 40 lines)
@@ -30,6 +32,29 @@ class SpeechUnavailable(RuntimeError):
 
 def configured() -> bool:
     return bool(os.environ.get("AZURE_SPEECH_KEY") and os.environ.get("AZURE_SPEECH_REGION"))
+
+
+class Revoiced:
+    """A breakdown cache that re-voices each value on read (`agents.delivery.revoice`).
+
+    `put` stores the value as given. If re-voicing raises, the stored value is served unchanged.
+    """
+
+    def __init__(self, cache: Any) -> None:
+        self.cache = cache
+
+    def get(self, key: str) -> dict[str, Any] | None:
+        value = self.cache.get(key)
+        if value is None:
+            return None
+        try:
+            return revoice(value)
+        except Exception:
+            log.exception("revoicing breakdown %s failed", key)
+            return value
+
+    def put(self, key: str, value: dict[str, Any]) -> None:
+        self.cache.put(key, value)
 
 
 class Cues:

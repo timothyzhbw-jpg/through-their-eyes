@@ -197,6 +197,8 @@ export interface Api {
   info(timeoutMs?: number): Promise<MatchInfoResponse>;
   exportJson(timeoutMs?: number): Promise<unknown>;
   moments(timeoutMs?: number): Promise<MomentCards>;
+  /** Live match stats with tracks (GET /api/matches/<id>/stats?tracks=true, SPEC 4.6). */
+  stats(timeoutMs?: number): Promise<unknown>;
   /** `moment`: a hero moment id (in match time for a stitched match). `fail`: agents taken down
    * for this one run (the failure drill). */
   breakdown(req: {
@@ -306,6 +308,7 @@ export function createApi(
     exportJson: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/export`, {}, ms, json()),
     moments: (ms = EXPORT_TIMEOUT_MS) =>
       call(`/api/matches/${id}/moments`, {}, ms, json(MomentCards)) as Promise<MomentCards>,
+    stats: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/stats?tracks=true`, {}, ms, json()),
     breakdown: ({ moment, persona, language, fail = [] }) =>
       call(
         "/api/breakdowns",
