@@ -27,7 +27,7 @@ import { launchChrome } from "./gpu.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const MATCHES = "blind_side_run:3,match:1,press_escape:0";
+const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,press_escape:0";
 const TIMEOUT = 45_000; // per step: the first load fetches the export, fonts and models
 const SETTLE = 2_500; // after the checks, so late errors (models, stream, breakdown) surface
 const BLANK = 20_000; // bytes: a screenshot of the page's background alone; a drawn page is ~400K

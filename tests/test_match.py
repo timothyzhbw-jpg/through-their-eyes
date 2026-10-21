@@ -8,10 +8,11 @@ from sim.config import DT
 from sim.export import export_match
 from sim.match import (
     DEFAULT_PLAN,
+    SET_PIECES,
     PossessionSpec,
     build_match,
     global_id,
-    possession_seed,
+    open_play_seed,
     restart_after,
     score_after,
 )
@@ -35,11 +36,22 @@ def export(match, moments):
     return export_match(SEED, match, moments)
 
 
-def test_the_default_match_stitches_5_to_8_possessions_of_every_scenario(match):
-    assert 5 <= len(DEFAULT_PLAN) <= 8
+def test_the_default_match_has_15_to_25_possessions_and_10_to_15_min_of_play(match):
+    assert 15 <= len(DEFAULT_PLAN) <= 25
     assert len(match.possessions) == len(DEFAULT_PLAN)
+    assert 600 <= match.duration_s <= 900
+    # A passage stops at its cap, so the match can be no longer than this on any platform.
+    longest = sum(spec.max_s or 0.0 for spec in DEFAULT_PLAN if spec.seed is None)
+    heroes = sum(p.frames * DT for p in match.possessions if p.scenario != "possession_play")
+    assert longest + heroes <= 900
+    for spec, p in zip(DEFAULT_PLAN, match.possessions, strict=True):
+        if spec.seed is None:
+            assert p.frames * DT <= spec.max_s + DT
+
+
+def test_the_default_match_includes_every_scenario_on_main(match):
     scenarios = {p.scenario for p in match.possessions}
-    assert {"possession_play", "blind_side_run", "press_escape"} <= scenarios
+    assert {"possession_play", "blind_side_run", "press_escape", "corner_blind_side"} <= scenarios
 
 
 def test_time_is_continuous_across_possessions(match):
@@ -51,26 +63,30 @@ def test_time_is_continuous_across_possessions(match):
     assert match.duration_s == pytest.approx(start * DT)
 
 
-def test_hero_possessions_keep_their_seeds_and_the_rest_are_keyed_off_the_match_seed(match):
+def test_hero_possessions_keep_their_seeds_and_open_play_is_keyed_by_the_match(match):
     heroes = {p.scenario: p.seed for p in match.possessions if p.scenario != "possession_play"}
-    assert heroes == {"blind_side_run": 3, "press_escape": 0}
-    play = [p.seed for p in match.possessions if p.scenario == "possession_play"]
-    assert len(set(play)) == len(play)
-    assert all(s >= 1_000_000 for s in play)  # never a design or eval seed
-    assert possession_seed(SEED, 0) == possession_seed(SEED, 0)
-    assert possession_seed(SEED, 0) != possession_seed(SEED + 1, 0)
+    assert heroes == {"blind_side_run": 3, "press_escape": 0, "corner_blind_side": 0}
+    play = [p for p in match.possessions if p.scenario == "possession_play"]
+    assert len({p.seed for p in play}) == len(play)
+    assert all(p.seed >= 1_000_000 for p in play)  # never a design or eval seed
+    # n counts open-play passages only: a hero inserted into the plan moves no open-play seed.
+    assert [p.seed for p in play] == [open_play_seed(SEED, n) for n in range(len(play))]
+    assert open_play_seed(1, 0) != open_play_seed(2, 0)
 
 
 def test_same_match_seed_is_byte_identical(match):
     assert build_match(SEED).to_bytes() == match.to_bytes()
-    plan = (PossessionSpec("possession_play", max_duration_s=5.0),) * 2
+    plan = (PossessionSpec("possession_play", max_s=5.0),) * 2
     assert build_match(2, plan).to_bytes() != build_match(3, plan).to_bytes()
 
 
-def test_the_first_possession_kicks_off_and_the_rest_restart_from_how_play_stopped(match):
+def test_restarts_follow_the_stoppage_except_a_set_piece_declares_its_own(match):
     assert match.possessions[0].restart == "kick_off"
     for prev, cur in zip(match.possessions, match.possessions[1:], strict=False):
-        assert cur.restart == restart_after(prev.run)
+        if cur.scenario in SET_PIECES:
+            assert cur.restart == SET_PIECES[cur.scenario]
+        else:
+            assert cur.restart == restart_after(prev.run)
 
 
 def _out(x: float, y: float, team: int) -> Event:
@@ -97,6 +113,13 @@ def test_a_possession_that_ends_in_play_is_a_cut():
     assert restart_after(Run) == "cut"
 
 
+def test_a_goal_is_followed_by_a_kick_off():
+    class Run:
+        events = [Event("goal:H9:0100", "goal", 100, 4.0, "H9", 0, {})]
+
+    assert restart_after(Run) == "kick_off"
+
+
 def test_the_score_counts_goals_and_carries_over(match):
     goal = Event("goal:H9:0100", "goal", 100, 4.0, "H9", 0, {})
     assert score_after((0, 0), [goal]) == (1, 0)
@@ -105,7 +128,7 @@ def test_the_score_counts_goals_and_carries_over(match):
     for p in match.possessions:
         assert p.score_before == score
         score = score_after(score, p.run.events)
-    assert match.score == score
+    assert match.score == score == (0, 0)
 
 
 def test_event_ids_move_to_match_time():
@@ -113,11 +136,16 @@ def test_event_ids_move_to_match_time():
     assert global_id("m:decision_after_scan:H8:0075", 1000) == "m:decision_after_scan:H8:1075"
 
 
+def test_the_first_hero_moment_comes_within_40_s_of_kick_off(moments):
+    hero = next(m for m in moments if m["hero"])
+    assert hero["anchor_t"] <= 40
+
+
 def test_moments_are_detected_in_every_possession_and_lifted_to_match_time(match, moments):
     ids = [m["id"] for m in moments]
     assert len(ids) == len(set(ids))
     by_possession = {m["possession"] for m in moments}
-    hero = [p.index for p in match.possessions if p.scenario != "possession_play"]
+    hero = [p.index for p in match.possessions if p.run.hero is not None]
     assert set(hero) <= by_possession
     for m in moments:
         p = match.possessions[m["possession"]]
@@ -125,7 +153,7 @@ def test_moments_are_detected_in_every_possession_and_lifted_to_match_time(match
         assert m["anchor_t"] == pytest.approx(m["anchor_frame"] * DT, abs=1e-4)
         assert m["id"] == global_id(m["local_id"], p.start)
     lenses = {m["actor"]: m["selected_lens"] for m in moments if m["hero"]}
-    assert lenses == {"H8": "scan", "H4": "pressure"}
+    assert lenses == {"H8": "scan", "H4": "pressure", "H5": "scan"}
 
 
 def test_the_match_export_is_the_hero_run_schema_plus_a_match_block(match, export):
@@ -140,13 +168,14 @@ def test_the_match_export_is_the_hero_run_schema_plus_a_match_block(match, expor
     assert len({e["id"] for e in f["events"]}) == len(f["events"])
     blocks = export["match"]["possessions"]
     assert [b["start"] for b in blocks] == [p.start for p in match.possessions]
+    assert [b["restart"] for b in blocks] == [p.restart for p in match.possessions]
     assert export["match"]["score"] == {"home": match.score[0], "away": match.score[1]}
     assert [m["id"] for m in export["moments"]] == [m["id"] for m in match_moments(match)]
 
 
 def test_the_match_export_keeps_the_tracking_of_each_possession(match, export):
     f = export["runs"]["factual"]
-    p = match.possessions[1]
+    p = next(p for p in match.possessions if p.scenario == "blind_side_run")
     k = p.start + 10
     np.testing.assert_array_equal(
         np.array(f["pos"][k]).reshape(-1, 2), np.rint(p.run.pos[10] * 1000).astype(int)
@@ -156,12 +185,12 @@ def test_the_match_export_keeps_the_tracking_of_each_possession(match, export):
     lifted = events[global_id(local.id, p.start)]
     assert lifted["frame"] == local.frame + p.start
     assert lifted["attrs"]["end"] == local.attrs["end"] + p.start
-    assert lifted["possession"] == 1
+    assert lifted["possession"] == p.index
 
 
 def test_shot_frame_attrs_and_the_save_shot_id_move_to_match_time():
     plan = (
-        PossessionSpec("possession_play", max_duration_s=5.0),
+        PossessionSpec("possession_play", max_s=5.0),
         PossessionSpec("far_post_finish", 40),  # the first seed 0-399 that ends in a save
     )
     m = build_match(1, plan)

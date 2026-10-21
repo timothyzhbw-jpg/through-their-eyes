@@ -7,8 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # "match" is a stitched match (sim.match, SPEC 3.1); the number is its match seed. Its hero
-# possessions are served on their own too: the web app opens their breakdowns from those exports.
-DEFAULT_MATCHES = [("blind_side_run", 3), ("match", 1), ("press_escape", 0)]
+# possessions are served on their own too, listed here or not (api/store.py MatchStore): the web
+# app opens their breakdowns from those exports.
+DEFAULT_MATCHES = [
+    ("blind_side_run", 3), ("corner_blind_side", 0), ("match", 1), ("press_escape", 0)
+]  # fmt: skip
 
 
 def match_id(scenario: str, seed: int) -> str:
@@ -51,7 +54,7 @@ class Settings:
     tts_concurrency: int = 4  # Azure Speech calls in flight at once, this process
     live_per_client: int = 4  # live streams open at once per client address
     live_max_total: int = 64  # live streams open at once, all clients, this process
-    live_max_s: float = 600.0  # longest live stream, paused time included
+    live_max_s: float = 1200.0  # longest live stream, paused time included
     analyst_mcp: bool = True  # the Analyst inspects the moment through our MCP server (SPEC 6, 8)
     warm: bool = False  # load every match before the port opens (from the environment: on)
 
@@ -71,7 +74,7 @@ class Settings:
             tts_concurrency=int(os.environ.get("TTE_TTS_CONCURRENCY") or 4),
             live_per_client=int(os.environ.get("TTE_LIVE_PER_CLIENT") or 4),
             live_max_total=int(os.environ.get("TTE_LIVE_MAX_TOTAL") or 64),
-            live_max_s=float(os.environ.get("TTE_LIVE_MAX_S") or 600),
+            live_max_s=float(os.environ.get("TTE_LIVE_MAX_S") or 1200),
             analyst_mcp=_flag(os.environ.get("TTE_ANALYST_MCP"), True),
             warm=_flag(os.environ.get("TTE_WARM"), True),
         )

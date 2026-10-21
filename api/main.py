@@ -235,7 +235,8 @@ def create_app(
 
     @app.get("/api/matches")
     async def matches() -> list[dict[str, Any]]:
-        return [{"id": mid, "scenario": s, "seed": seed} for mid, (s, seed) in store.known.items()]
+        return [{"id": mid, "scenario": s, "seed": seed}
+                for mid in store.listed for s, seed in [store.known[mid]]]  # fmt: skip
 
     @app.get("/api/matches/{mid}")
     async def match_info(mid: str) -> dict[str, Any]:
@@ -252,8 +253,13 @@ def create_app(
         return info
 
     @app.get("/api/matches/{mid}/export")
-    async def match_export(mid: str) -> dict[str, Any]:
-        return (await match_or_404(mid)).export
+    async def match_export(mid: str, request: Request) -> Response:
+        m = await match_or_404(mid)
+        headers = {"Vary": "Accept-Encoding"}
+        if "gzip" in request.headers.get("accept-encoding", "").lower():
+            headers["Content-Encoding"] = "gzip"
+            return Response(m.export_gzip, media_type="application/json", headers=headers)
+        return Response(m.export_json, media_type="application/json", headers=headers)
 
     @app.get("/api/matches/{mid}/moments")
     async def match_moments(mid: str) -> list[dict[str, Any]]:

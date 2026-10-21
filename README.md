@@ -106,8 +106,8 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    plan replaces the template. The trace id is the run's operation_Id in Application Insights.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   six possessions on one 132.6 s clock, opened where the scan hero's possession starts. Press
-   **Play**. The chip above the views is the camera director: it suggests a camera and says
+   18 possessions on one clock of about 11½ minutes, opened where the scan hero's possession
+   starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
    to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
@@ -223,10 +223,10 @@ uv run ruff check .
 uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
-"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): six possessions on
-one clock — open play, the scan hero, open play, the pressure hero (`press_escape`), then open
-play twice —
-with moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
+"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 18 possessions,
+about 11½ minutes on one clock — 15 open-play passages and three heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 4:33 and the short corner (`corner_blind_side`) at 8:21 — with
+moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
 The container image for Azure Container Apps (main dependencies only, runs as a non-root user):
