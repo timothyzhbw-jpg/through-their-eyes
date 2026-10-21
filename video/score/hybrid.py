@@ -74,8 +74,11 @@ class Hybrid(Grime):
         if dark:
             for p in (notes[0] - 12, notes[1] - 12, notes[2] - 12):
                 self.score.note("music", "trombone", p, t, length * 1.5, 70, gain_db=g - 2)
-            self.score.note("music", "timpani", bass_for(chord, key) + 12, t, 0.5, 80, gain_db=g)
-            self._drum("taiko_hi", t, gain_db - 2.0)
+            self.score.note(
+                "music", "timpani", bass_for(chord, key) + 12, t, 0.5, 96, gain_db=g + 2
+            )
+            self._drum("taiko", t, gain_db + 3.0)
+            self._drum("rim", t, gain_db - 2.0)
             return
         for p in (*notes, notes[0] + 12):
             self.score.note("music", "brass", p, t, length, 118, gain_db=g)
@@ -114,17 +117,18 @@ class Hybrid(Grime):
             if self.quiet(c.moods):
                 continue
             after = c.t >= hit
-            if c.pos % 2 == 0 or (after and c.t > hit + 0.8):
-                lift = min(6.0, max(0.0, (c.t - s.start) * 0.8))
+            hush = "hush" in c.moods
+            if c.pos % 2 == 0 or (after and c.t > hit + 0.8 and not hush):
+                lift = min(6.0, max(0.0, (c.t - s.start) * 0.8)) - (8.0 if hush else 0.0)
                 self._drum(
                     "tick",
                     c.t,
                     -24.0 + lift - (1.5 if c.pos % 4 == 0 else 0),
                     0.25 if c.pos % 4 else -0.15,
                 )
-            if c.pos == 0 and c.t > s.start + 1.0 and "scan" not in c.moods:
+            if c.pos == 0 and c.t > s.start + 1.0 and not (c.moods & {"scan", "hush"}):
                 self._drum("taiko", c.t, -10.0 if not after else -5.0)
-            if after and c.pos == 8 and "scan" not in c.moods:
+            if after and c.pos == 8 and not (c.moods & {"scan", "hush"}):
                 self._drum("taiko_hi", c.t, -12.0)
 
     def section_drop(self, s: Section) -> None:
@@ -163,6 +167,8 @@ class Hybrid(Grime):
                 continue
             if style == "look" and c.pos % 2 and c.pos not in (3, 7, 11):
                 continue
+            if self.masks_cue(c.t):
+                continue
             chord = self.chord(s, c.bar)
             tones = (*notes_for(chord, s.key, -1), notes_for(chord, s.key, -1)[0] + 12)
             pitch = tones[OSTINATO[c.pos]]
@@ -178,6 +184,8 @@ class Hybrid(Grime):
             if "build" in m and c.pos % 4 == 0:
                 self._drum("taiko", c.t, -6.0)
             return
+        if c.pos and self.crowds_accent(c.t):
+            return  # leave an off-grid cue its own attack
         accents = {
             "look": (0, 10),
             "pressure": (0, 3, 6, 10, 12),
@@ -203,7 +211,9 @@ class Hybrid(Grime):
             if step == phase:
                 pitch = F4 + semis + s.key
                 dur = self.note_len(s, length)
-                if brass:  # THE CORNER: trumpets over horns
+                if self.masks_cue(c.t):
+                    pass
+                elif brass:  # THE CORNER: trumpets over horns
                     self.score.note("music", "trumpet", pitch, c.t, dur * 0.9, 110, gain_db=0.0)
                     self.score.note("music", "horn", pitch - 12, c.t, dur * 0.9, 104, gain_db=2.0)
                 else:

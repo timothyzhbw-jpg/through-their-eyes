@@ -305,7 +305,8 @@ def mix(score: Score, plan: Plan, arr) -> dict[str, np.ndarray]:
     for stem, t, sig, gain_db, pan in score.post:
         place(out[stem], t, sig, gain_db, pan)
     for e in plan.of("button"):  # a clean button: the tail is gone well before the film ends
-        hold, end = e.t0 + 0.7, min(e.t0 + 1.5, plan.length - 0.1)
+        end = min(e.t0 + 1.4, plan.length - 0.3)
+        hold = min(e.t0 + 0.6, end - 0.15)
         i0, i1 = int(hold * SR), int(end * SR)
         for name in STEMS:
             if i1 > i0:
@@ -391,7 +392,7 @@ def write_report(out: Path, plan: Plan, cues_path: Path) -> None:
 
     row("integrated loudness (LUFS)", lambda i: i["lufs"])
     row("true peak (dBTP)", lambda i: i["true_peak_db"])
-    row("hits on picture (within 10 ms)", lambda i: i["checks"]["hits_ok"])
+    row("attacks on their cues", lambda i: i["checks"]["hits_ok"])
     row(
         "scan: top end down / back (dB)",
         lambda i: ", ".join(f"{s['drop_db']}/{s['slam_db']}" for s in i["checks"]["scans"]),
@@ -415,13 +416,22 @@ def write_report(out: Path, plan: Plan, cues_path: Path) -> None:
         "",
         "## Hits",
         "",
-        "| cue | t (s) | " + " | ".join(f"{i['variant']} (ms)" for i in infos) + " | note |",
-        "|---|---|" + "---|" * len(infos) + "---|",
+        "Per variant: where the strongest onset near the cue falls (ms) / its strength over the "
+        "75th percentile of the onsets within 1 s around it. A cue passes at 1.0 or more: it is "
+        "among the strongest quarter of accents around it. "
+        "Snap: the cue moved onto the 16th grid (never more than one frame).",
+        "",
+        "| cue | t (s) | snap (ms) | "
+        + " | ".join(f"{i['variant']} (ms)" for i in infos)
+        + " | note |",
+        "|---|---|---|" + "---|" * len(infos) + "---|",
     ]
     if infos:
         for k, h in enumerate(infos[0]["checks"]["hits"]):
-            offs = " | ".join(f"{i['checks']['hits'][k]['offset_ms']:+.1f}" for i in infos)
-            lines.append(f"| {h['cue']} | {h['t']:.3f} | {offs} | {h['note']} |")
+            cells = [i["checks"]["hits"][k] for i in infos]
+            offs = " | ".join(f"{c['offset_ms']:+.0f} / {c['salience']:.2f}" for c in cells)
+            snap = h.get("snap_ms", 0.0)
+            lines.append(f"| {h['cue']} | {h['t']:.3f} | {snap:+.0f} | {offs} | {h['note']} |")
     lines += ["", "## Cue sheet as resolved", "", "```", *plan.describe(), "```", ""]
     (out / "report.md").write_text("\n".join(lines))
 
@@ -436,6 +446,9 @@ def main(argv=None) -> int:
     ap.add_argument("--cues", type=Path, default=HERE / "cues" / "v7.json")
     ap.add_argument("--variant", choices=(*VARIANTS, "all"), default="all")
     ap.add_argument("--out", type=Path, default=REPO / "out" / "score")
+    ap.add_argument(
+        "--assets", type=Path, default=REPO / "out" / "score", help="SoundFont and render cache"
+    )
     ap.add_argument("--lufs", type=float, default=-14.0)
     ap.add_argument("--ceiling", type=float, default=-1.0, help="true-peak ceiling, dBTP")
     ap.add_argument("--check", action="store_true", help="resolve the cue sheet and print it")
@@ -446,8 +459,8 @@ def main(argv=None) -> int:
     print("\n".join(plan.describe()))
     if args.check:
         return 0
-    sf_path, sf_sha = load_assets(args.out)
-    renderer = FluidRenderer(sf_path, args.out / "cache", sf_sha)
+    sf_path, sf_sha = load_assets(args.assets)
+    renderer = FluidRenderer(sf_path, args.assets / "cache", sf_sha)
     ok = True
     for variant in VARIANTS if args.variant == "all" else (args.variant,):
         info = render_variant(variant, plan, renderer, args.out, args.lufs, args.ceiling)
@@ -455,7 +468,7 @@ def main(argv=None) -> int:
         ok = ok and c["pass"]
         print(
             f"{variant}: {info['length_s']} s, {info['lufs']} LUFS, {info['true_peak_db']} dBTP, "
-            f"hits {c['hits_ok']} within {c['hits_within_ms']:g} ms, "
+            f"attacks on cue {c['hits_ok']}, "
             f"scans {[s['drop_db'] for s in c['scans']]} dB down "
             f"-> {'PASS' if c['pass'] else 'FAIL'} ({info['seconds']} s)"
         )

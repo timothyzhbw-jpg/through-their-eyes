@@ -29,7 +29,7 @@ The cue sheet (`cues/<cut>.json`) names musical events by the trailer's beat ids
   its lead, and on its return it picks up the riff where it left off) and `hold` (the end card).
 
 A reference is a number of seconds, `"<beat>"`, `"<beat>:+0.3"`, `"<beat>:-0.43"` or
-`"<beat>:end"`. Cues within 25 ms of a 16th note snap to it; `"snap": false` keeps the
+`"<beat>:end"`. Cues within one frame (1/30 s) of a 16th note snap to it; `"snap": false` keeps the
 picture's time. At 140 BPM a 16th is 0.1071 s, and the edit's 0.75 s unit is exactly seven
 16ths, so cuts made on that unit from a section's start land on the grid.
 
@@ -73,8 +73,11 @@ is not: the edit ducks the music under it (`duck_db` in `trailer.json`).
 Every render reads its own WAVs back and checks (`check.py`, in the report):
 
 - integrated loudness −14 ± 0.5 LUFS and true peak ≤ −1.0 dBTP;
-- every hit, card, stamp, drop, button and scan release has an attack within 10 ms of its cue
-  (a third of a frame at 30 fps);
+- every hit, card, stamp, drop, button and scan release is an accent on its frame: the score's
+  onset strength (spectral flux) within -4..+12 ms of the cue is at least the 75th percentile
+  of the onsets within a second around it. A counterexample run with the card and stamp stabs
+  removed fails it on 10 of 38 cues (every off-grid one), so it measures the stabs, not the
+  groove;
 - inside each scan the band's top end (> 1 kHz) is at least 12 dB down, and it comes back at
   least 12 dB on the action;
 - the gap and the cut-out are silent (below −60 dBFS), and the button's tail is gone before
@@ -107,6 +110,7 @@ node video/score/preview.mjs --spec <trailer.json> --picture <cut.mp4> --vo <vo 
 | `check.py`, `analyze.py` | the acceptance checks and the band and section measurements |
 | `preview.mjs` | the score under a rendered cut, as a 720p MP4 |
 | `cues/v7.json` | the cue sheet for cut v7 |
+| `cues/academy_wip.json` | a draft for the academy cut (the edit's work in progress; `--trailer <snapshot>`) |
 | `report_v7.md` | the checks and measurements of both variants on cut v7 |
 
 Licences are in [`../CREDITS.md`](../CREDITS.md).

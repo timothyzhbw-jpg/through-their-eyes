@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 STEPS_PER_BAR = 16
-SNAP_S = 0.025  # a cue within 25 ms of a 16th note lands on the 16th
+SNAP_S = 1 / 30  # a cue within one frame (30 fps) of a 16th note lands on the 16th
 
 
 @dataclass(frozen=True)
@@ -148,14 +148,13 @@ class Plan:
         self.events: list[Event] = []
         for row in cues.get("events", []):
             if "at" in row:
-                t0 = t1 = cut.time(row["at"])
+                picture = t0 = t1 = cut.time(row["at"])
                 if row.get("snap", True):
                     t0 = t1 = self.snap(t0)
             else:
-                t0, t1 = cut.time(row["from"]), cut.time(row["to"])
-                if row.get("snap", True):
-                    t1 = self.snap(t1)
-            self.events.append(Event(row["type"], t0, t1, row))
+                t0, picture = cut.time(row["from"]), cut.time(row["to"])
+                t1 = self.snap(picture) if row.get("snap", True) else picture
+            self.events.append(Event(row["type"], t0, t1, {**row, "picture": picture}))
         self.events.sort(key=lambda e: e.t0)
         self.check()
 

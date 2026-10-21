@@ -12,7 +12,7 @@ from scipy import signal
 from timeline import Plan
 
 ONSET_EVENTS = ("hit", "card", "drop", "button", "stamp")
-MAX_OFFSET_MS = 10.0  # a third of a 30 fps frame
+MIN_SALIENCE = 1.0  # the cue's onset against the strongest quarter of accents around it
 SCAN_MIN_DROP_DB = 12.0
 
 
@@ -22,33 +22,38 @@ def _hf_energy(x: np.ndarray, cutoff: float = 1000.0) -> np.ndarray:
     return hp**2
 
 
-def onsets(x: np.ndarray, times: list[float], search_ms: float = 40.0) -> list[float]:
-    """For each cue time, the offset (ms) of the sharpest energy rise within +-search_ms."""
+def onset_strength(x: np.ndarray) -> tuple[np.ndarray, float]:
+    """Spectral-flux onset strength (log-compressed magnitudes, positive differences summed over
+    bins), one value per 128-sample hop, and the hop in seconds."""
     mono = stereo(x).mean(axis=1)
-    hp = signal.sosfilt(signal.butter(2, 150.0, "highpass", fs=SR, output="sos"), mono)
-    hop = int(0.001 * SR)
-    frames = len(hp) // hop
-    e = (hp[: frames * hop] ** 2).reshape(frames, hop).mean(axis=1)
-    loge = 10 * np.log10(e + 1e-12)
-    smooth = np.convolve(loge, np.ones(2) / 2, mode="same")
-    flux = np.diff(smooth, prepend=smooth[0])
+    hop = 128
+    _, _, z = signal.stft(mono, SR, nperseg=1024, noverlap=1024 - hop, boundary=None, padded=False)
+    mag = np.log1p(100.0 * np.abs(z))
+    flux = np.maximum(0.0, np.diff(mag, axis=1)).sum(axis=0)
+    # stft frame k is centred at k*hop + 512; the difference k-1 -> k belongs to frame k
+    return np.concatenate([[0.0], flux]), hop / SR
+
+
+def salience(x: np.ndarray, times: list[float], around: float = 1.0) -> list[tuple[float, float]]:
+    """For each cue: (offset in ms of the strongest onset within -4..+12 ms, its strength over the
+    75th percentile of the onset peaks within +-`around` s). 1.0 or more means the cue is among
+    the strongest quarter of accents around it."""
+    o, hop = onset_strength(x)
+    centre = 512 / SR
+    peaks = np.where((o[1:-1] > o[:-2]) & (o[1:-1] >= o[2:]))[0] + 1
     out = []
-    span = int(search_ms)
     for t in times:
-        c = int(round(t * 1000))
-        lo, hi = max(1, c - span), min(len(flux) - 1, c + span)
-        if hi <= lo:
-            out.append(float("nan"))
+        k0 = int(np.floor((t - 0.004 - centre) / hop))
+        k1 = int(np.ceil((t + 0.012 - centre) / hop)) + 1
+        if k0 < 1 or k1 >= len(o):
+            out.append((float("nan"), 0.0))
             continue
-        w = flux[lo:hi]
-        # strong attacks: local maxima at least half as sharp as the sharpest in the window
-        peaks = [
-            k
-            for k in range(1, len(w) - 1)
-            if w[k] >= w[k - 1] and w[k] >= w[k + 1] and w[k] >= 0.5 * w.max()
+        k = k0 + int(np.argmax(o[k0:k1]))
+        near = peaks[
+            (np.abs(peaks * hop + centre - t) <= around) & (np.abs(peaks * hop + centre - t) > 0.03)
         ]
-        k = min(peaks, key=lambda k: abs(lo + k - t * 1000)) if peaks else int(np.argmax(w))
-        out.append(float(lo + k - t * 1000))
+        ref = np.percentile(o[near], 75) if len(near) else 1e-9
+        out.append(((k * hop + centre - t) * 1000.0, float(o[k] / max(ref, 1e-9))))
     return out
 
 
@@ -68,19 +73,38 @@ def run(plan: Plan, mastered: np.ndarray, stems: dict[str, np.ndarray]) -> dict:
         fail(f"true peak {tp:.2f} dBTP over -1.0")
 
     # 2. Hits on picture: the score's sharpest attack sits on each cue.
-    cues = [(e.type, e.t0, e.data.get("note", "")) for e in plan.events if e.type in ONSET_EVENTS]
-    cues += [("scan-release", e.t1, e.data.get("note", "")) for e in plan.of("scan")]
+    cues = [
+        (e.type, e.t0, e.data["picture"], e.data.get("note", ""))
+        for e in plan.events
+        if e.type in ONSET_EVENTS
+    ]
+    cues += [
+        ("scan-release", e.t1, e.data["picture"], e.data.get("note", "")) for e in plan.of("scan")
+    ]
     cues.sort(key=lambda c: c[1])
-    offsets = onsets(mastered, [c[1] for c in cues])
+    offsets = salience(mastered, [c[1] for c in cues])
     rows = []
-    for (kind, t, note), off in zip(cues, offsets, strict=True):
-        rows.append({"cue": kind, "t": round(t, 3), "offset_ms": round(off, 1), "note": note})
+    for (kind, t, picture, note), (off, sal) in zip(cues, offsets, strict=True):
+        rows.append(
+            {
+                "cue": kind,
+                "t": round(t, 3),
+                "offset_ms": round(off, 1),
+                "salience": round(sal, 2),
+                "snap_ms": round((t - picture) * 1000, 1),
+                "note": note,
+            }
+        )
     result["hits"] = rows
-    bad = [r for r in rows if not abs(r["offset_ms"]) <= MAX_OFFSET_MS]
-    result["hits_within_ms"] = MAX_OFFSET_MS
+    # An accent on the cue: its onset is as strong as the top quarter of accents around it.
+    bad = [r for r in rows if not r["salience"] >= MIN_SALIENCE]
+    result["hits_salience"] = MIN_SALIENCE
     result["hits_ok"] = f"{len(rows) - len(bad)}/{len(rows)}"
     for r in bad:
-        fail(f"{r['cue']} at {r['t']:.3f} s: attack {r['offset_ms']:+.1f} ms off")
+        fail(
+            f"{r['cue']} at {r['t']:.3f} s: onset {r['offset_ms']:+.1f} ms, "
+            f"salience {r['salience']}"
+        )
 
     # 3. The perception device: inside a scan the band loses its top end, then slams back.
     band = sum(stems[k] for k in ("drums", "bass", "music"))

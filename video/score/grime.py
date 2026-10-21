@@ -159,11 +159,12 @@ class Grime(Arranger):
             if self.quiet(c.moods):
                 continue
             after = c.t >= hit
-            if c.pos % 2 == 0 or (after and c.t > hit + 0.8):
+            hush = "hush" in c.moods
+            if c.pos % 2 == 0 or (after and c.t > hit + 0.8 and not hush):
                 accent = -1.5 if c.pos % 4 == 0 else 0.0
-                lift = min(6.0, max(0.0, (c.t - s.start) * 0.8))
+                lift = min(6.0, max(0.0, (c.t - s.start) * 0.8)) - (8.0 if hush else 0.0)
                 self._drum("tick", c.t, -24.0 + lift + accent, 0.25 if c.pos % 4 else -0.15)
-            if c.pos == 0 and c.t > s.start + 1.0 and "scan" not in c.moods:
+            if c.pos == 0 and c.t > s.start + 1.0 and not (c.moods & {"scan", "hush"}):
                 self.kick(c.t, -9.0 if not after else -5.0)
                 self.sub_note(c.t, 29, 0.35, -8.0)
 
@@ -238,7 +239,7 @@ class Grime(Arranger):
         if self.crowds_accent(c.t):
             m = m | {"scan"}  # keep kick and snare, drop the hats and clicks around the cue
         if "without" in m:
-            if pos in (0, 10):
+            if pos == 0 or (pos == 10 and not self.crowds_accent(c.t, 0.045)):
                 self.kick(c.t, -5.0)
             if pos == 8:
                 self._drum("rim", c.t, -12.0)
@@ -276,7 +277,7 @@ class Grime(Arranger):
             hats = range(0, 16, 2)
             rims = (3,)
             open_hats = ()
-        if pos in kicks:
+        if pos in kicks and (pos == 0 or "scan" not in m or not self.crowds_accent(c.t, 0.045)):
             self.kick(c.t, 0.0 if pos == 0 else -2.0)
         if pos in snares:
             self._drum("snare", c.t, -3.0 if style != "close" else -6.0)
@@ -329,7 +330,8 @@ class Grime(Arranger):
             if step == phase:
                 pitch = F4 + semis + s.key
                 dur = self.note_len(s, length)
-                self.lead_note(c.t, pitch, dur, -14.0 if brass else -13.0)
+                if not self.masks_cue(c.t):
+                    self.lead_note(c.t, pitch, dur, -14.0 if brass else -13.0)
                 if brass:
                     self.score.note("music", "brass", pitch, c.t, dur * 0.9, 100, gain_db=-4.0)
                     self.score.note("music", "brass", pitch - 12, c.t, dur * 0.9, 92, gain_db=-4.0)
@@ -338,7 +340,7 @@ class Grime(Arranger):
         shift = ROOT_SHIFT[chord] + s.key
         if on:
             for step, semis, length in PRESSURE_RIFF:
-                if step == c.pos:
+                if step == c.pos and not self.masks_cue(c.t):
                     self.lead_note(c.t, F4 + semis + shift, self.note_len(s, length), -15.0, -0.2)
         if c.pos in (0, 3, 6) and on and c.bar % 2 == 0:
             self.stab(
@@ -387,9 +389,10 @@ class Grime(Arranger):
         big = e.data.get("size") == "big"
         chord, key = self.chord_at(e.t0 + 0.01)
         self.kick(e.t0, 0.0, big=big)
-        self._drum("crash", e.t0, -9.0 if big else -14.0, 0.15)
+        self._drum("crash", e.t0, -9.0 if big else -10.0, 0.15)
+        self._drum("clap", e.t0, -9.0, -0.1)
         self.stab(
-            e.t0, chord, key, -7.0 if big else -11.0, 0.3 if big else 0.18, orch=True, brass=big
+            e.t0, chord, key, -6.0 if big else -7.0, 0.3 if big else 0.18, orch=True, brass=big
         )
         if big:
             self.score.add("fx", e.t0, sy.impact(self.rng("impact", e.t0), 2.0), -6.0)
@@ -423,18 +426,20 @@ class Grime(Arranger):
     def event_card(self, e: Event) -> None:
         chord, key = self.chord_at(e.t0 + 0.01)
         if e.data.get("dusk"):
-            self.stab(e.t0, chord, key, -8.0, 0.4, dark=True)
-            self._drum("rim", e.t0, -12.0)
+            self.stab(e.t0, chord, key, -4.0, 0.4, dark=True)
+            self._drum("rim", e.t0, -8.0)
+            self._drum("tom", e.t0, -6.0)
             return
-        self.stab(e.t0, chord, key, -10.0, 0.16, orch=True, octave=1 if key else 0)
-        self._drum("hat", e.t0, -14.0, 0.3)
+        self.stab(e.t0, chord, key, -4.0, 0.16, orch=True, octave=1 if key else 0)
+        self._drum("clap", e.t0, -8.0, 0.1)
+        self._drum("hat", e.t0, -11.0, 0.3)
 
     def event_stamp(self, e: Event) -> None:
         chord, key = self.chord_at(e.t0)
         top = notes_for(chord, key, 1)
         x = sy.pluck(top[-1], 0.18, self.rng("stamp", e.t0), 5000.0)
-        self.score.add("music", e.t0, x, -14.0, 0.2)
-        self._drum("rim", e.t0, -13.0, -0.2)
+        self.score.add("music", e.t0, x, -9.0, 0.2)
+        self._drum("rim", e.t0, -9.0, -0.2)
 
     def event_riser(self, e: Event) -> None:
         length = e.t1 - e.t0

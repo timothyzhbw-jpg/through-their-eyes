@@ -168,6 +168,15 @@ class Arranger:
             i += 1
         return False
 
+    def masks_cue(self, t: float, before: float = 0.09, after: float = 0.035) -> bool:
+        """A note starting here would blur a cue's attack (just before it, or on its heels)."""
+        i = bisect.bisect_left(self.accents, t - after)
+        while i < len(self.accents) and self.accents[i] <= t + before:
+            if abs(self.accents[i] - t) > 0.004:
+                return True
+            i += 1
+        return False
+
     def has_kick(self, t: float, within: float = 0.02) -> bool:
         i = bisect.bisect_left(self.kicks, t - within)
         return i < len(self.kicks) and self.kicks[i] <= t + within
