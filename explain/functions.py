@@ -1,9 +1,9 @@
 """Predicate functions (SPEC 5.3), evaluated against a sim run and its counterfactuals.
 
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
-observed_share, scan_side, max_visibility, cf_delta. Every function accepts `cf: <scan id>` to
-evaluate on the counterfactual run without that scan instead of the factual run, or
-`cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7).
+observed_share, scan_side, max_visibility, opponents_bypassed, cf_delta. Every function accepts
+`cf: <scan id>` to evaluate on the counterfactual run without that scan instead of the factual run,
+or `cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7).
 
 Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
 anchor "<card id>.<name>" (SPEC 5.1, e.g. "m:decision_after_scan:H8:0075.reception"), and offsets
@@ -265,15 +265,22 @@ def count_events(
     ctx: EvalContext,
     run: MatchRun,
     type: str,
-    anchor: str,
+    anchor: str | None = None,
     from_: float = 0.0,
     to: float = 0.0,
     player: str | None = None,
     team: int | None = None,
     where: dict | None = None,
 ) -> int:
-    """Events of a type (optionally by player / team / attributes) with anchor+from ≤ t ≤ to."""
-    lo, hi = ctx.frame(run, anchor, from_), ctx.frame(run, anchor, to)
+    """Events of a type (optionally by player / team / attributes) with anchor+from ≤ t ≤ to.
+
+    Without an anchor, the whole recorded run: a stitched match's totals (SPEC 3.1, the recap)."""
+    if anchor is None:
+        if from_ or to:
+            raise Inconclusive("a window from/to needs an anchor")
+        lo, hi = 0, len(run.owner) - 1
+    else:
+        lo, hi = ctx.frame(run, anchor, from_), ctx.frame(run, anchor, to)
     if lo > hi:
         raise Inconclusive(f"empty window: from {from_} s is after to {to} s")
     if player is not None:
@@ -287,6 +294,18 @@ def count_events(
         and all(e.attrs.get(k) == v for k, v in where.items())
         for e in run.events
     )
+
+
+def opponents_bypassed(ctx: EvalContext, run: MatchRun, event: str) -> int:
+    """Outfield opponents a pass went past (`explain.moments.bypassed_opponents`, SPEC 5.1)."""
+    from explain.moments import bypassed_opponents  # moments builds on the lexicon, not on this
+
+    e = ctx.event(run, event)
+    if e.type != "pass":
+        raise Refuted(f"{e.id} is not a pass")
+    if e.attrs.get("end") is None:
+        raise Inconclusive(f"{e.id} was never received or lost")
+    return len(bypassed_opponents(run, e))
 
 
 def scans_in_window(
@@ -421,6 +440,7 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "observed_share": observed_share,
     "scan_side": scan_side,
     "max_visibility": max_visibility,
+    "opponents_bypassed": opponents_bypassed,
     # "cf_delta" is evaluated lazily by `Evaluator.cf_delta`: its `of` runs on two runs.
 }
 
