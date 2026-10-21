@@ -121,7 +121,7 @@ def scans_before_reception(ctx: EvalContext, r: HeroRefs, window_s: int = 2) -> 
     return Claim(
         id="scans_before_reception",
         template="{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
-        templates={"zh": "接球前{window_s}秒内，{player}扫视了{n:times}。"},
+        templates={"zh": "接球前{window_s}秒内，{player}回头观察了{n:times}。"},
         slots={"player": Slot(ref=r.hero), "n": Slot(value=n), "window_s": Slot(value=window_s)},
         predicate=_eq(count, slot("n")),
         evidence=_scans(r, window_s) or [r.reception.id],
@@ -151,7 +151,7 @@ def key_scan_duration(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="key_scan_duration",
         template="{player}'s look over his shoulder lasted {dur|second|seconds}.",
-        templates={"zh": "{player}这一眼回头持续了{dur}秒。"},
+        templates={"zh": "{player}这次回头观察持续了{dur}秒。"},
         slots={"player": Slot(ref=r.hero), "scan": Slot(ref=r.key_scan.id), "dur": _num(value, 2)},
         predicate=Predicate(op="all", args=[
             _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
@@ -240,7 +240,7 @@ def gap_to_nearest_opponent(ctx: EvalContext, r: HeroRefs) -> Claim | None:
              anchor=r.at_action)  # fmt: skip
     return Claim(
         id="gap_to_nearest_opponent",
-        template="{runner} had {gap|metre|metres} to the nearest opponent when the pass was "
+        template="{runner} was {gap|metre|metres} from the nearest opponent when the pass was "
         "played.",
         templates={"zh": "出球时，{runner}离最近的对手有{gap}米。"},
         slots={"runner": Slot(ref=r.runner), "gap": _num(ctx.value(gap, {"runner": r.runner}), 1)},
@@ -296,7 +296,7 @@ def belief_error_at_pass(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         id="belief_error",
         template="When he played the pass, {player}'s picture of {runner} was off by "
         "{err|metre|metres}.",
-        templates={"zh": "出球时，{player}对{runner}位置的判断只差{err}米。"},
+        templates={"zh": "出球时，{player}对{runner}位置的判断偏差为{err}米。"},
         slots={"player": Slot(ref=r.hero), "runner": Slot(ref=r.runner), "err": _num(value, 1)},
         predicate=_approx(err, slot("err"), 1),
         evidence=[r.hero_pass.id],
@@ -325,7 +325,7 @@ def pass_success(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         id="pass_success",
         template="{player} thought the pass to {receiver} had a {p_belief} chance of arriving; "
         "it was {p_true}.",
-        templates={"zh": "{player}以为传给{receiver}的球到达的概率是{p_belief}，实际是{p_true}。"},
+        templates={"zh": "{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=receiver),
                "p_belief": _num(ctx.value(belief, values), 2),
                "p_true": _num(ctx.value(truth, values), 2)},
@@ -350,7 +350,7 @@ def counterfactual_pass_success(
         id="cf_pass_success",
         template="Without that look, {player} thought the pass to {receiver} had a {p_belief} "
         "chance of arriving; it was {p_true}.",
-        templates={"zh": "如果没有那一眼，{player}以为传给{receiver}的球到达的概率是{p_belief}，"
+        templates={"zh": "如果没有那一眼，{player}会以为传给{receiver}的球能到的概率是{p_belief}，"
                          "实际是{p_true}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=r.runner),
                "p_belief": _num(ctx.value(belief, values), 2),

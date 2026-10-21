@@ -94,8 +94,8 @@ MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # Bump when code that shapes a breakdown changes without a prompt change: it is part of the
 # API's cache key, so cached breakdowns from the older code are not served again.
 # 2: tidy() keeps each connective once; 3: plan errors are reason codes; 4: audio-description
-# delivery
-PIPELINE_VERSION = 4
+# delivery; 5: rendered narration lines
+PIPELINE_VERSION = 5
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
 # lanes finish in either order, so the trace is sorted into this order before it is returned.

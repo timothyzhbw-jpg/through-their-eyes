@@ -150,7 +150,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   marked `"fixture": true`. Its claim values are computed from the replay by
   `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
   evidence) and `explain.render` (seek frame = earliest evidence event), but no verifier has
-  checked them. The UI labels it "Fixture · not checked by the verifier". With the live service
+  checked them. The UI labels it "Sample data · not checked by the verifier". With the live service
   the verified payload from `POST /api/breakdowns` replaces it; the fixture stays as the offline
   fallback.
 
@@ -331,7 +331,7 @@ src/
   his scans from the sim (the key scan highlighted; without the look, a dashed box where it
   was), head angular speed with the scan detector at work (its threshold, candidate onsets, the
   onsets its excursion gate rejected, and the scans it accepted), players in his sight, and, for
-  the hero only, belief error on the runner (his ghost to the true position; "n/a" for anyone
+  the hero only, belief error on the runner (how far his belief is from where the player really is; "n/a" for anyone
   else, as beliefs are recorded for the hero only). As in motorsport telemetry, the other run is
   overlaid dashed on the head-angle and belief rows (with the look cyan, without it gold, as
   elsewhere), both runs on one time axis so the curves coincide until the key scan and split
