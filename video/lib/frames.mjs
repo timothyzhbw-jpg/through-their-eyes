@@ -84,14 +84,23 @@ export async function recordFrames({
   // The loop may throw before `done` is awaited; swallow the late rejection here.
   done.catch(() => {});
 
+  // A generous timeout and one retry: on a busy machine a frame can take a while to come back.
   const shot = alpha
-    ? { type: "png", omitBackground: true, animations: "allow" }
-    : { type: "jpeg", quality, animations: "allow" };
+    ? { type: "png", omitBackground: true, animations: "allow", timeout: 120000 }
+    : { type: "jpeg", quality, animations: "allow", timeout: 120000 };
+  const grab = async () => {
+    try {
+      return await page.screenshot(shot);
+    } catch (err) {
+      if (!/Timeout/.test(String(err))) throw err;
+      return await page.screenshot(shot);
+    }
+  };
 
   try {
     for (let k = 0; k < frames; k++) {
       await draw(k / fps);
-      const image = await page.screenshot(shot);
+      const image = await grab();
       if (!proc.stdin.write(image)) await Promise.race([once(proc.stdin, "drain"), done]);
       if ((k + 1) % 30 === 0 || k + 1 === frames) log(`frame ${k + 1}/${frames}`);
     }

@@ -2,7 +2,7 @@
 
 The submission video is a football video-game-style launch trailer: a 28-second cold open filmed
 inside the synthetic match, the product told in the same visual grammar, then the stack and the
-end card. It runs **1:50** and is rendered end to end by code from
+end card. It runs **1:54** and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -17,8 +17,9 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
   from the verified claims read off the live page (`out/video/claims.json`, the capture kit's
   harvest). Without the claim, the card or line uses its fallback, which has no number, or is
   dropped; the report (`out/video/trailer_report.md`) lists every number and the claim it came
-  from. The cut shows two: the runner's distance to the nearest opponent
-  (`gap_to_nearest_opponent.gap`) and the look's value (`cf_value.dxt`).
+  from. The cut shows two, from the current build's claims: how far off his picture of the runner
+  was when he passed (`belief_error.err`, 0.3 m) and the look's value (`cf_value.dxt`, 0.13 xT, at the
+  precision the claim states).
 - **Rights.** Synthetic match, fictional clubs and players, no real footage anywhere. Original
   title design (no league, club or game-publisher look); CC0 music, sound effects synthesized in
   the repo, OFL fonts: [video/CREDITS.md](../video/CREDITS.md).
@@ -45,32 +46,37 @@ Times are in the finished film. **Picture**: `cine` = filmed in the web app's ci
 | 0:07.8 | 1.8 | The look, over the shoulder | cine `look-ots` | From behind him toward the runner H9 (gold ring), H8's head soft in the foreground. | — |
 | 0:09.6 | 2.6 | The look, wide | cine `look-wide` | High wide: his vision cone sweeps the pitch as he scans and catches H9. A hit. | — |
 | 0:12.2 | 3.0 | His eyes | cine `pov-look` | Snap to first person: the head whip blurs the frame, the periphery softens, H9 comes into sight. | He found the runner. |
-| 0:15.2 | 4.5 | Freeze | cine `pov-pass` | At the pass the frame freezes with a punch-in: "H9 · UNMARKED — NEAREST OPPONENT `{gap}` M". | Unmarked. |
+| 0:15.2 | 4.5 | Freeze | cine `pov-pass` | At the pass the frame freezes with a punch-in: "HIS PICTURE OF H9 — OFF BY `{err}` M". | And he knew where he was. |
 | 0:19.7 | 1.8 | Rewind | cine `rewind` | The move runs backwards: "WITHOUT THAT LOOK…". Tape-rewind sound. | Take that look away… |
 | 0:21.5 | 4.5 | The run without it | cine `without` | The re-simulated run with no look: he turns and plays it back, the runner left alone. "HE PLAYS IT BACK TO H4." | …and he never sees him. |
 | 0:26 | 2.5 | Title | card | "SEE WHAT / THEY SAW." on a hit. | See what they saw. |
 | **The product** (cut on the music's 80 bpm beat) | | | | | |
 | 0:28.5 | 3.75 | The replay | app `03-breakdown` | The crew's replay on the stage with its verified captions; "THROUGH THEIR EYES — THE AI MATCH STUDIO". | Football, replayed through the player's eyes. |
-| 0:32.25 | 5.25 | Every line checked | app `07-evidence` | Over the evidence card: four lines stamped ✓ in turn — he saw H9 in the scan, H9's run was on his blind side, nearest opponent `{gap}` m, that look was worth `{dxt}` xT. | Every line is checked against the simulation before it airs. |
+| 0:32.25 | 5.25 | Every line checked | app `07-evidence` | Over the evidence card: four lines stamped ✓ in turn — H8 checked his shoulder before the ball, H9's run was on his blind side, his picture of H9 off by `{err}` m, that look was worth `{dxt}` xT. | Every line is checked against the simulation before it airs. |
 | 0:37.5 | 4.5 | A wrong number | app `09-verifier` | "Try a wrong number": the verifier refutes it; a red ✗ slams "WRONG NUMBER — WOULD NOT AIR". | Try a wrong number… and it never airs. |
 | 0:42 | 8.25 | The crew | card | Six cards dealt like a squad line-up: Director, Analyst (asks the MCP tools), Telestrator, Narrator, Verifier, Voice. | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
-| 0:50.25 | 3.75 | Red card | app `10-drill` | The failure drill: the Telestrator row reads TEMPLATE, AgentDown; a red card rises, whistle: "TELESTRATOR DOWN — THE TEMPLATE AIRS. THE REPLAY PLAYS ON." | Take an agent down… |
-| 0:54 | 3.75 | Substitution | app `10-drill` | Bring back: the row turns back to MODEL from its checkpoint; an LED board flips OFF TEMPLATE → ON TELESTRATOR. | …bring it back, and it picks up where it left off. |
-| 0:57.75 | 2.25 | Casual fan | app `03-breakdown` | The replay with the casual captions; tag "CASUAL FAN". | The same moment, for every fan, in every language. |
-| 1:00 | 2.25 | Analyst | app `05-personas` | The analyst's captions; tag "ANALYST". | — |
-| 1:02.25 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, the caption on screen: 出球时，H9离最近的对手有11.0米。 |
-| 1:06.75 | 6.0 | Take his eyes | app `13-take-his-eyes` | The viewer turns his look to his left on the dial, picks the moment, presses Look: first person with that look, then the board — "Your look changes his call", the gold path back to H4. Tag "TAKE HIS EYES". | Take his eyes: choose the look, and the match plays it out. Look the other way… he plays it safe. |
-| 1:12.75 | 3.75 | Live | app `02-live-stream` | The stitched match on the broadcast camera, live from the API, with the camera director's chip; "A WHOLE MATCH — LIVE". | A whole match, live, with a camera director. |
+| 0:50.25 | 3.0 | Red card | app `10-drill` | The failure drill: the Telestrator row reads TEMPLATE, AgentDown, the others MODEL; a red card rises, whistle: "TELESTRATOR DOWN — THE TEMPLATE AIRS. THE REPLAY PLAYS ON." | Take an agent down… |
+| 0:53.25 | 4.5 | Substitution | app `10-drill` | Bring back: the row turns back to MODEL from its checkpoint; an LED board flips OFF TEMPLATE → ON TELESTRATOR. | …bring it back, and it picks up where it left off. |
+| 0:57.75 | 1.5 | Casual fan | app `03-breakdown` | The replay with the casual captions; tag "CASUAL FAN". | The same moment, for every fan, in every language. |
+| 0:59.25 | 1.5 | Analyst | app `05-personas` | The analyst's captions; tag "ANALYST". | — |
+| 1:00.75 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, the caption on screen: H9的跑位在H8的盲区。 |
+| 1:05.25 | 2.25 | Take his eyes: the look | app `13-take-his-eyes` | Close on the dial: the viewer drags H8's cone round him, over his shoulder to his left. Tag "TAKE HIS EYES". | Take his eyes: choose the look, and the match plays it out. |
+| 1:07.5 | 2.25 | Take his eyes: his eyes | app `13-take-his-eyes` | First person, with the viewer's look. | — |
+| 1:09.75 | 2.25 | Take his eyes: the call | app `13-take-his-eyes` | Close on the result card: "Your look changes his call" — with your look, pass to H4; what he did, pass to H9. | Look the other way… he plays it safe. |
+| 1:12 | 4.5 | Live | app `02-live-stream` | The stitched match on the broadcast camera, live from the API, with the camera director's chip and the live stats tags; "A WHOLE MATCH — LIVE". | A whole match, live, with a camera director. |
 | **Your call** (the music drops out) | | | | | |
 | 1:16.5 | 4.5 | Decide | app `12-your-call` | His picture only; a draining ring "YOUR CALL — YOU ONLY KNOW WHAT HE KNEW". The pick: the safe ball to H4. Clock ticks. | Your call. You only know what he knew. |
 | 1:21 | 4.5 | Reveal | app `12-your-call` | Your call plays out in the sim, then the true picture: H9's run was on his blind side. The music returns. | Then see what really happened. |
 | 1:25.5 | 3.75 | What he did | app `12-your-call` | What he did: the pass to H9, and why. | He saw the run. Would you? |
 | **Another lens** | | | | | |
 | 1:29.25 | 3.0 | Under press | cine `press-low` | The centre-back H4 receives as the presser closes; "ANOTHER MOMENT, ANOTHER LENS — UNDER PRESS". | Under a high press… |
-| 1:32.25 | 3.75 | The press wins | cine `press-cf` | Inside the sim, forced to keep the ball: the tackle, frozen — "THE PRESS WINS IT." | …make him keep the ball, and the press wins it. |
+| 1:32.25 | 3.0 | The press wins | cine `press-cf` | Inside the sim, forced to keep the ball: the tackle, frozen — "THE PRESS WINS IT." | …make him keep the ball, and the press wins it. |
+| **Full time and who it is for** | | | | | |
+| 1:35.25 | 3.0 | The recap | app `15-recap` | Full time: the crew's recap — "The match, in moments.", the score, the moments that changed it; tag "FULL TIME". | At the final whistle, the crew writes the recap. |
+| 1:38.25 | 3.75 | Who it is for | app `14-stats` | The live stats table, every named player's runs and passes (labelled in the app as tracking measurements, not claims); "WHO IT'S FOR — BROADCASTERS. COACHES." | Timecoded cues for broadcasters, every player's numbers for coaches. |
 | **Close** | | | | | |
-| 1:36 | 7.5 | Under the hood | card | The stack as a spec sheet: Microsoft Foundry, Microsoft Agent Framework, our MCP server, Azure AI Speech, Azure Container Apps, Azure Storage static website, Azure Cosmos DB, Application Insights, GitHub Actions. | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
-| 1:43.5 | 6.5 | End card | card | THROUGH THEIR EYES — SEE WHAT THEY SAW., the site URL, "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS", the music, font and voice credits. Sting. | Through Their Eyes. See what they saw. |
+| 1:42 | 6.0 | Under the hood | card | The stack as a spec sheet: Microsoft Foundry, Microsoft Agent Framework, our MCP server, Azure AI Speech, Azure Container Apps, Azure Storage static website, Azure Cosmos DB, Application Insights, GitHub Actions. | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
+| 1:48 | 6.0 | End card | card | THROUGH THEIR EYES — SEE WHAT THEY SAW., the site URL, "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS", the music, font and voice credits. Sting. | Through Their Eyes. See what they saw. |
 
 `video/trailer.json` holds each beat's exact in-points, crops, push-ins, grades, transitions,
 overlay and sound timings; `out/video/trailer_contact.jpg` shows one frame per beat.
@@ -89,7 +95,7 @@ Filmed frame by frame through `window.__cine` (`web/src/cine/`), from the bundle
 | `pov-look`, `pov-pass` | factual 50 → 76 | his eyes (95° horizontal field of view) | head-whip motion blur, peripheral softening, shirt numbers |
 | `rewind` | factual 80 → 50 | side, mid-height | — |
 | `without` | counterfactual 50 → 108 | side, panning back to the ball | faint cone, rings |
-| `press-low`, `press-cf` | press_escape factual 48 → 70, counterfactual 58 → 86 | over H4's shoulder at the presser; low side on the tackle | depth of field, rings |
+| `press-low`, `press-cf` | press_escape factual 48 → 70, counterfactual 62 → 84 (the tackle at 81) | over H4's shoulder at the presser; low side on the tackle | depth of field, rings |
 
 ## Choices made against the brief
 
@@ -99,7 +105,7 @@ the data:
   50–70; the verified line is "H8 checked his shoulder before the ball reached him"). The cold
   open shows that one look from three angles, not three scans.
 - **"He saw 4. He missed 1." is not a claim** the service verifies, so the freeze shows a verified
-  one instead: H9 unmarked, `{gap}` m from the nearest opponent.
+  one instead: his picture of H9 was off by `{err}` m when he passed.
 - **Without the look he does not lose the ball** in this moment: he plays it safe to H4 (verified:
   "Without that look, H8 would have passed to H4"). The cold open says so; "he loses the ball" is
   told by the pressure hero, where the re-simulated carry is tackled.
@@ -111,6 +117,7 @@ the data:
 Default: "Unsolicited trailer music (loop edit)" by Emma_MA, CC0 — energetic electronic at 80
 bpm. It enters at the track's phrase boundary (18.34 s) on the "See what they saw" hit, the
 product cuts land on its beats, and its breakdown (66.3–72.3 s in the track) falls on Your call.
+It fades out under the end card.
 Alternatives in [video/assets.json](../video/assets.json) (switch `music[0].asset` in
 `trailer.json`; their sections differ, so re-time `from`):
 [Generic trailer music](https://opengameart.org/content/generic-trailer-music) (Emma_MA, CC0,
@@ -124,5 +131,7 @@ https://opengameart.org/content/unsolicited-trailer-music
   the first cut (Christopher, Onyx HD, Guy whispering).
 - TODO(Bowen): the public repository URL on the end card once the repo is public (by 10/26):
   add a line to `titles.end.params.lines`.
-- The final render films `?cine=1` on the live site, so it needs the cinematic mode deployed
-  (#90); until then `npm run trailer -- --base-url http://localhost:5173` films a local build.
+- The final render films the live site, so it needs the cinematic mode (#90) and Take his eyes
+  (#99) deployed. The v4 cut was filmed from a local build of main + #90 + #93 + #99 with a local
+  API (`--base-url`), which writes template narration; the live service's model narration replaces
+  it in the final render. The drill shot is the live site's, where the other agents read MODEL.

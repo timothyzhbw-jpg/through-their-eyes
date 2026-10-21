@@ -79,12 +79,17 @@ on network idle, never a sleep:
 | `caption`, `caption-with-evidence` | a caption is over the first-person view (one with claims behind it) |
 | `evidence` | the evidence card is open |
 | `whatif-answer` | a what-if answer or refusal is shown (with `question`: the answer to that question) |
+| `selector` | any element by CSS selector (`selector`), visible, or gone with `state: "detached"` |
 
 Other actions: `click` (`role` + `name`, or `selector`; `within` scopes it), `select` (`label`,
 `value`), `fill` (`label`, `text`; typed key by key so it shows), `scroll` (`to` a selector, or
-`y` in pixels), `hold` (`s`). The URLs use only the app's own parameters: `?autoplay=0` (start
-nothing on load, so each shot starts from a known state), `?offline=1`, `?plan=invalid`,
-`?rigged=0`; there are no other deep links on main.
+`y` in pixels), `hold` (`s`), `drag` (the mouse from the centre of `from` to the centre of `to`,
+each a `click`-style target, over `duration_s`; with `around` a selector, on an arc round that
+element, `radius_scale` < 1 keeping inside the targets' ring — Take his eyes' dial). The URLs use
+the app's own parameters: `?autoplay=0` (start nothing on load, so each shot starts from a known
+state), `?offline=1`, `?plan=invalid`, `?rigged=0`, and the deep links of `web/src/deeplink.ts`
+(`persona`, `lang`, `tamper`, `match`, `camera`, `play`, `at`). The claim harvest reads each value
+by its machine name (the evidence card's `dt` title, e.g. `dxt`), which is what a slot names.
 
 Frames come from the browser's screencast, each with the time it was drawn. After the shot they
 are written at a constant 60 fps (each output frame shows the latest frame drawn by then), so

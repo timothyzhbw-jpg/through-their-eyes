@@ -27,7 +27,7 @@
       "asset": "music-unsolicited",
       "at": 28.5,
       "from": 18.344,
-      "until": 106.5,
+      "until": 114.0,
       "gain_db": -2,
       "fade_in": 0.02,
       "fade_out": 3.0,
@@ -672,19 +672,19 @@
       "shot": {
         "id": "press-cf",
         "run": "counterfactual",
-        "duration": 4.6,
+        "duration": 3.0,
         "time": [
           {
             "t": 0,
-            "frame": 58
+            "frame": 62
           },
           {
-            "t": 2.4,
-            "frame": 76
+            "t": 2.0,
+            "frame": 81
           },
           {
-            "t": 4.6,
-            "frame": 86,
+            "t": 3.0,
+            "frame": 84,
             "ease": "out"
           }
         ],
@@ -711,7 +711,7 @@
             "fov": 36
           },
           {
-            "t": 4.6,
+            "t": 3.0,
             "eye": {
               "at": "world",
               "p": [
@@ -780,18 +780,18 @@
       "dur": 2.9,
       "alpha": true,
       "params": {
-        "title": "H9 · UNMARKED",
+        "title": "HIS PICTURE OF H9",
         "items": [
           {
-            "label": "NEAREST OPPONENT",
-            "value": "{gap_to_nearest_opponent.gap}",
+            "label": "OFF BY",
+            "value": "{belief_error.err}",
             "unit": "M",
             "color": "gold"
           }
         ]
       },
       "fallback": {
-        "title": "H9 · UNMARKED",
+        "title": "THE LOOK",
         "items": []
       }
     },
@@ -852,9 +852,10 @@
       "alpha": true,
       "params": {
         "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
+        "backdrop": true,
         "items": [
           {
-            "before": "HE SAW H9 IN THE SCAN",
+            "before": "H8 CHECKED HIS SHOULDER BEFORE THE BALL",
             "value": "",
             "after": ""
           },
@@ -864,8 +865,8 @@
             "after": ""
           },
           {
-            "before": "NEAREST OPPONENT:",
-            "value": "{gap_to_nearest_opponent.gap}",
+            "before": "HIS PICTURE OF H9: OFF BY",
+            "value": "{belief_error.err}",
             "after": "M"
           },
           {
@@ -873,14 +874,14 @@
             "value": "{cf_value.dxt}",
             "after": "xT"
           }
-        ],
-        "backdrop": true
+        ]
       },
       "fallback": {
         "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
+        "backdrop": true,
         "items": [
           {
-            "before": "HE SAW H9 IN THE SCAN",
+            "before": "H8 CHECKED HIS SHOULDER BEFORE THE BALL",
             "value": "",
             "after": ""
           },
@@ -889,8 +890,7 @@
             "value": "",
             "after": ""
           }
-        ],
-        "backdrop": true
+        ]
       }
     },
     "refuted": {
@@ -947,7 +947,7 @@
     },
     "redcard": {
       "template": "redcard",
-      "dur": 3.0,
+      "dur": 2.8,
       "alpha": true,
       "params": {
         "title": "TELESTRATOR DOWN",
@@ -966,7 +966,7 @@
     },
     "tag-casual": {
       "template": "tag",
-      "dur": 1.8,
+      "dur": 1.4,
       "alpha": true,
       "params": {
         "text": "CASUAL FAN"
@@ -974,7 +974,7 @@
     },
     "tag-analyst": {
       "template": "tag",
-      "dur": 1.8,
+      "dur": 1.4,
       "alpha": true,
       "params": {
         "text": "ANALYST"
@@ -1024,7 +1024,7 @@
     },
     "spec": {
       "template": "spec",
-      "dur": 7.5,
+      "dur": 6.0,
       "alpha": false,
       "params": {
         "header": "UNDER THE HOOD",
@@ -1071,7 +1071,7 @@
     },
     "end": {
       "template": "end",
-      "dur": 6.5,
+      "dur": 6.0,
       "alpha": false,
       "params": {
         "name": "THROUGH THEIR EYES",
@@ -1087,7 +1087,7 @@
     },
     "press-wins": {
       "template": "slam",
-      "dur": 0.85,
+      "dur": 1.0,
       "alpha": true,
       "params": {
         "lines": [
@@ -1129,7 +1129,7 @@
     },
     "if-kept": {
       "template": "slam",
-      "dur": 2.6,
+      "dur": 2.0,
       "alpha": true,
       "params": {
         "kicker": "INSIDE THE SIM",
@@ -1141,18 +1141,48 @@
           }
         ],
         "align": "lower-left",
-        "hold": 2.0,
+        "hold": 1.5,
         "out": "fade",
         "backdrop": true
       }
     },
     "tag-eyes": {
       "template": "tag",
-      "dur": 2.4,
+      "dur": 2.1,
       "alpha": true,
       "params": {
         "text": "TAKE HIS EYES",
         "sub": "YOU CHOOSE THE LOOK"
+      }
+    },
+    "impact": {
+      "template": "slam",
+      "dur": 3.6,
+      "alpha": true,
+      "params": {
+        "kicker": "WHO IT'S FOR",
+        "lines": [
+          {
+            "text": "BROADCASTERS.",
+            "size": 104
+          },
+          {
+            "text": "COACHES.",
+            "color": "gold",
+            "size": 104
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "recap-tag": {
+      "template": "tag",
+      "dur": 2.8,
+      "alpha": true,
+      "params": {
+        "text": "FULL TIME",
+        "sub": "THE CREW WRITES THE RECAP"
       }
     }
   },
@@ -1358,7 +1388,7 @@
         {
           "id": "vo04",
           "at": 2.0,
-          "text": "Unmarked."
+          "text": "And he knew where he was."
         }
       ],
       "sfx": [
@@ -1676,7 +1706,7 @@
     },
     {
       "id": "b15-redcard",
-      "dur": 3.75,
+      "dur": 3.0,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
@@ -1721,7 +1751,7 @@
     },
     {
       "id": "b16-bringback",
-      "dur": 3.75,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
@@ -1740,7 +1770,7 @@
       "overlays": [
         {
           "title": "subboard",
-          "at": 0.75
+          "at": 0.6
         }
       ],
       "vo": [
@@ -1753,12 +1783,12 @@
       "sfx": [
         {
           "name": "tick",
-          "at": 0.87,
+          "at": 0.72,
           "gain_db": -6
         },
         {
           "name": "tick",
-          "at": 1.27,
+          "at": 1.12,
           "gain_db": -6
         }
       ],
@@ -1769,7 +1799,7 @@
     },
     {
       "id": "b17-casual",
-      "dur": 2.25,
+      "dur": 1.5,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
@@ -1795,7 +1825,7 @@
     },
     {
       "id": "b18-analyst",
-      "dur": 2.25,
+      "dur": 1.5,
       "picture": {
         "src": "capture",
         "shot": "05-personas",
@@ -1818,7 +1848,7 @@
       "picture": {
         "src": "capture",
         "shot": "06-language",
-        "in": 4.9,
+        "in": 3.6,
         "push": [
           1.0,
           1.04
@@ -1838,7 +1868,7 @@
           "line": {
             "persona": "casual",
             "language": "zh",
-            "index": 3
+            "index": 2
           },
           "style": "sports-commentary",
           "degree": 1.3
@@ -1850,45 +1880,100 @@
       }
     },
     {
-      "id": "b20-eyes",
-      "dur": 6.0,
+      "id": "b20a-eyes-drag",
+      "dur": 2.25,
       "picture": {
         "src": "capture",
         "shot": "13-take-his-eyes",
-        "in": 0.9,
+        "in": 0.8,
+        "crop": [
+          295,
+          300,
+          1040,
+          585
+        ],
         "push": [
           1.0,
-          1.05
+          1.06
         ]
       },
       "overlays": [
         {
           "title": "tag-eyes",
-          "at": 0.1
+          "at": 0.05
         }
       ],
       "vo": [
         {
           "id": "vo18",
-          "at": 0.3,
+          "at": 0.2,
           "text": "Take his eyes: choose the look, and the match plays it out."
-        },
-        {
-          "id": "vo18b",
-          "at": 4.1,
-          "text": "Look the other way… he plays it safe."
         }
       ],
       "sfx": [
         {
           "name": "whoosh",
-          "at": 0.35,
-          "gain_db": -9
-        },
+          "at": 0.3,
+          "gain_db": -7
+        }
+      ]
+    },
+    {
+      "id": "b20b-eyes-pov",
+      "dur": 2.25,
+      "picture": {
+        "src": "capture",
+        "shot": "13-take-his-eyes",
+        "in": 4.3,
+        "crop": [
+          32,
+          96,
+          1440,
+          810
+        ],
+        "push": [
+          1.0,
+          1.04
+        ]
+      },
+      "sfx": [
         {
           "name": "whoosh",
-          "at": 1.85,
-          "gain_db": -6
+          "at": 0.0,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
+      "id": "b20c-eyes-result",
+      "dur": 2.25,
+      "picture": {
+        "src": "capture",
+        "shot": "13-take-his-eyes",
+        "in": 7.6,
+        "crop": [
+          1180,
+          90,
+          720,
+          405
+        ],
+        "push": [
+          1.0,
+          1.03
+        ]
+      },
+      "vo": [
+        {
+          "id": "vo18b",
+          "at": 0.1,
+          "text": "Look the other way… he plays it safe."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "stamp",
+          "at": 0.1,
+          "gain_db": -7
         }
       ],
       "out": {
@@ -1898,7 +1983,7 @@
     },
     {
       "id": "b21-live",
-      "dur": 3.75,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "02-live-stream",
@@ -2075,7 +2160,7 @@
     },
     {
       "id": "b26-press-cf",
-      "dur": 3.75,
+      "dur": 3.0,
       "picture": {
         "src": "cine",
         "id": "press-cf",
@@ -2087,7 +2172,7 @@
         "grain"
       ],
       "freeze": {
-        "at": 2.9,
+        "at": 2.0,
         "punch": 1.05
       },
       "overlays": [
@@ -2097,25 +2182,25 @@
         },
         {
           "title": "press-wins",
-          "at": 2.9
+          "at": 2.0
         }
       ],
       "vo": [
         {
           "id": "vo25",
-          "at": 0.2,
+          "at": 0.15,
           "text": "make him keep the ball, and the press wins it."
         }
       ],
       "sfx": [
         {
           "name": "boom",
-          "at": 2.9,
+          "at": 2.0,
           "gain_db": -4
         },
         {
           "name": "shutter",
-          "at": 2.9,
+          "at": 2.0,
           "gain_db": -6
         }
       ],
@@ -2125,8 +2210,77 @@
       }
     },
     {
-      "id": "b27-spec",
-      "dur": 7.5,
+      "id": "b27-recap",
+      "dur": 3.0,
+      "picture": {
+        "src": "capture",
+        "shot": "15-recap",
+        "in": 0.9,
+        "push": [
+          1.0,
+          1.08
+        ]
+      },
+      "overlays": [
+        {
+          "title": "recap-tag",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo26r",
+          "at": 0.15,
+          "text": "At the final whistle, the crew writes the recap."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whistle",
+          "at": 0.0,
+          "gain_db": -12
+        }
+      ]
+    },
+    {
+      "id": "b28-impact",
+      "dur": 3.75,
+      "picture": {
+        "src": "capture",
+        "shot": "14-stats",
+        "in": 0.3,
+        "crop": [
+          300,
+          170,
+          1320,
+          742
+        ],
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "overlays": [
+        {
+          "title": "impact",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo26i",
+          "at": 0.1,
+          "text": "Timecoded cues for broadcasters, every player's numbers for coaches."
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      }
+    },
+    {
+      "id": "b29-spec",
+      "dur": 6.0,
       "picture": {
         "src": "title",
         "id": "spec"
@@ -2134,14 +2288,14 @@
       "vo": [
         {
           "id": "vo26",
-          "at": 0.5,
+          "at": 0.8,
           "text": "Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech."
         }
       ],
       "sfx": [
         {
           "name": "riser",
-          "at": 4.5,
+          "at": 3.0,
           "gain_db": -10,
           "dur": 3.0
         }
@@ -2152,8 +2306,8 @@
       }
     },
     {
-      "id": "b28-end",
-      "dur": 6.5,
+      "id": "b30-end",
+      "dur": 6.0,
       "picture": {
         "src": "title",
         "id": "end"

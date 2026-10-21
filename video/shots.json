@@ -61,7 +61,7 @@
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 10,
+      "target_s": 5,
       "crop": "stage",
       "setup": [{ "do": "wait", "for": "assets", "views": ["pov"], "timeout_s": 40 }],
       "actions": [
@@ -78,7 +78,7 @@
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 12,
+      "target_s": 8,
       "crop": "stage",
       "setup": [
         { "do": "wait", "for": "assets" },
@@ -377,7 +377,7 @@
     {
       "id": "13-take-his-eyes",
       "spec_beat": "trailer 1:08",
-      "title": "Take his eyes: the viewer turns his look to his left, the sim re-runs the moment, and he passes back to H4",
+      "title": "Take his eyes: the viewer drags the cone round him to his left, presses Look, sees through his eyes with that look, and the sim re-runs: he passes back to H4",
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?play=eyes",
       "viewport": { "width": 1920, "height": 1080 },
@@ -388,20 +388,85 @@
         { "do": "hold", "s": 1.5 }
       ],
       "actions": [
-        { "do": "hold", "s": 1.2, "still": true },
-        { "do": "click", "role": "radio", "name": "To his left", "hold": 0.8 },
-        { "do": "click", "role": "radio", "name": "0.8 s before the ball arrives", "hold": 0.5 },
+        { "do": "hold", "s": 1.0, "still": true },
+        {
+          "do": "drag",
+          "from": { "role": "radio", "name": "Over his right shoulder" },
+          "to": { "role": "radio", "name": "To his left" },
+          "around": ".te-me",
+          "clockwise": true,
+          "duration_s": 1.4,
+          "hold": 0.3,
+          "radius_scale": 0.72
+        },
+        { "do": "click", "role": "radio", "name": "To his left", "hold": 0.5 },
+        { "do": "click", "role": "radio", "name": "0.8 s before the ball arrives", "hold": 0.4 },
         { "do": "click", "role": "button", "name": "Look" },
         {
           "do": "wait",
           "for": "selector",
           "selector": "text=Try another look",
           "timeout_s": 30,
-          "hold": 3,
+          "hold": 3.5,
           "still": true
         }
       ],
       "vo": "Take his eyes: you choose the look, and the simulation plays it out."
+    },
+    {
+      "id": "14-stats",
+      "spec_beat": "trailer 1:35",
+      "title": "Live match stats: every named player's distance, sprints, passes and pass difficulty, from tracking alone",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&intro=0&at=4000",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 3,
+      "crop": null,
+      "setup": [
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "section.panel.stats table",
+          "timeout_s": 40
+        },
+        { "do": "hold", "s": 5 },
+        { "do": "scroll", "to": "section.panel.stats", "block": "start" },
+        { "do": "hold", "s": 1 }
+      ],
+      "actions": [{ "do": "hold", "s": 3.5, "still": true }],
+      "vo": "Every player's numbers, live, from tracking alone."
+    },
+    {
+      "id": "15-recap",
+      "spec_beat": "trailer 1:32",
+      "title": "Full time: the crew writes the match recap — the moments that changed it, checked stats, a reel and machine-readable overlay cues",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&intro=0&autoplay=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 3,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": "section.panel.recap", "timeout_s": 40 },
+        { "do": "scroll", "to": "section.panel.recap", "block": "start" }
+      ],
+      "actions": [
+        { "do": "hold", "s": 0.8 },
+        {
+          "do": "click",
+          "within": "section.panel.recap",
+          "role": "button",
+          "name": "Write the match recap"
+        },
+        {
+          "do": "wait",
+          "for": "selector",
+          "selector": "text=Play the recap reel",
+          "timeout_s": 90,
+          "hold": 3,
+          "still": true
+        }
+      ],
+      "vo": "At the final whistle, the crew writes the recap."
     }
   ]
 }

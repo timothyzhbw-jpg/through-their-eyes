@@ -960,7 +960,7 @@ html.alpha #stage {
 .red-copy {
   position: absolute;
   left: 110px;
-  top: 330px;
+  top: 640px; /* the lower half: the row that went down stays readable above it */
   width: 1080px;
   z-index: 2;
 }

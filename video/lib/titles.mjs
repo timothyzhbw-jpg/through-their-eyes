@@ -46,7 +46,7 @@ export async function renderTitle({
       if (msg.type() === "error") errors.push(msg.text());
     });
     const file = path.join(TITLES_DIR, `${title.template}.html`);
-    await page.goto(pathToFileURL(file).href, { waitUntil: "load" });
+    await page.goto(pathToFileURL(file).href, { waitUntil: "load", timeout: 120000 });
     await page.evaluate((params) => window.__title.setup(params), title.params ?? {});
     try {
       await page.waitForFunction(() => window.__title?.ready === true, null, { timeout: 30_000 });

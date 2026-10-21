@@ -48,6 +48,7 @@ const ACTIONS = {
   fill: ["label", "text"],
   scroll: [],
   hold: ["s"],
+  drag: ["from", "to"],
 };
 
 const STATUSES = ["ready", "stand-in", "pending feature", "external"];
@@ -235,6 +236,43 @@ async function act(page, a) {
     case "hold":
       await page.waitForTimeout(a.s * 1000); // screen time, not synchronisation
       break;
+    case "drag": {
+      // From one element's centre to another's, by the mouse, so the viewer sees the drag.
+      // With `around` (a selector), the pointer travels on an arc about that element's centre
+      // instead of a straight line (a dial is dragged round, not through its middle).
+      const centre = async (target) => {
+        const box = await locate(page, target).boundingBox({ timeout });
+        if (!box) throw new Error(`drag: ${describe(target)} is not on screen`);
+        return [box.x + box.width / 2, box.y + box.height / 2];
+      };
+      const [x0, y0] = await centre(a.from);
+      const [x1, y1] = await centre(a.to);
+      const steps = a.steps ?? 30;
+      const ms = ((a.duration_s ?? 1) * 1000) / steps;
+      let path;
+      if (a.around) {
+        const [cx, cy] = await centre({ selector: a.around });
+        // radius_scale < 1 keeps the pointer inside the targets' ring, off the buttons that sit on it.
+        const k = a.radius_scale ?? 1;
+        const r0 = k * Math.hypot(x0 - cx, y0 - cy);
+        const r1 = k * Math.hypot(x1 - cx, y1 - cy);
+        const t0 = Math.atan2(y0 - cy, x0 - cx);
+        let dt = Math.atan2(y1 - cy, x1 - cx) - t0;
+        if (a.clockwise === true && dt < 0) dt += 2 * Math.PI;
+        if (a.clockwise === false && dt > 0) dt -= 2 * Math.PI;
+        path = (u) => [cx + (r0 + (r1 - r0) * u) * Math.cos(t0 + dt * u), cy + (r0 + (r1 - r0) * u) * Math.sin(t0 + dt * u)];
+      } else path = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u];
+      const [sx, sy] = path(0);
+      await page.mouse.move(sx, sy);
+      await page.mouse.down();
+      for (let k = 1; k <= steps; k++) {
+        const [x, y] = path(k / steps);
+        await page.mouse.move(x, y);
+        await page.waitForTimeout(ms);
+      }
+      await page.mouse.up();
+      break;
+    }
   }
   if (a.hold) await page.waitForTimeout(a.hold * 1000);
 }
@@ -250,7 +288,9 @@ const describe = (a) =>
           ? `type "${a.text}"`
           : a.do === "scroll"
             ? `scroll ${a.to ?? a.y}`
-            : `hold ${a.s} s`;
+            : a.do === "drag"
+              ? `drag ${a.from.name ?? a.from.selector} → ${a.to.name ?? a.to.selector}`
+              : `hold ${a.s} s`;
 
 // --- what the page shows -------------------------------------------------------------------------
 
@@ -321,7 +361,8 @@ async function readClaims(page, persona, language) {
         kind: [...el.classList].find((c) => c.startsWith("kind-"))?.slice(5),
         values: Object.fromEntries(
           [...el.querySelectorAll("dl.values > div")].map((d) => [
-            d.querySelector("dt").textContent.trim(),
+            // The machine name (e.g. dxt) is the dt's title; its text is a label for viewers.
+            (d.querySelector("dt").getAttribute("title") || d.querySelector("dt").textContent).trim(),
             d.querySelector("dd").textContent.trim(),
           ]),
         ),

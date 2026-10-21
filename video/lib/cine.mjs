@@ -39,7 +39,7 @@ export async function renderCine({
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
-    await page.goto(joinUrl(baseUrl, cine.url), { waitUntil: "load" });
+    await page.goto(joinUrl(baseUrl, cine.url), { waitUntil: "load", timeout: 120000 });
     try {
       await page.waitForFunction(() => window.__cine?.ready === true, null, { timeout: 60_000 });
     } catch (err) {

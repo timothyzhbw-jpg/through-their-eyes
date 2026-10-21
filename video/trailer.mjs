@@ -253,7 +253,11 @@ async function stepTitles(ctx) {
       continue;
     }
     const outFile = titlePath(ctx, title);
-    const hash = digest(["title-v1", title.render, ctx.spec.output]);
+    // The page that draws it is part of the key: a change to the template, its CSS or JS re-renders.
+    const page = ["titles.css", "titles.js", `${title.render.template}.html`].map((f) =>
+      fileStamp(path.join(HERE, "titles", f)),
+    );
+    const hash = digest(["title-v2", title.render, ctx.spec.output, ...page]);
     if (fresh(outFile, hash, ctx.force)) console.log(`  ${title.id}: cached`);
     else pending.push({ title, outFile, hash });
   }
