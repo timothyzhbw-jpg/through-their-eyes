@@ -1,0 +1,173 @@
+/* The judge tour (tour/Tour.tsx), in the Floodlit tokens of styles.css: a Floodlight ring around
+   what a step talks about, the page dimmed around it where the picture is not the point, and one
+   glass card. Nothing of it catches a click but the card: the app stays usable under it. Above
+   every layer of the app (its highest is 30). */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.tour-ring {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px var(--floodlight),
+    0 0 28px 2px rgba(246, 213, 102, 0.35);
+  transition:
+    top var(--t-base) var(--settle),
+    left var(--t-base) var(--settle),
+    width var(--t-base) var(--settle),
+    height var(--t-base) var(--settle);
+}
+.tour.dim .tour-ring {
+  box-shadow:
+    0 0 0 2px var(--floodlight),
+    0 0 0 200vmax rgba(5, 8, 6, 0.62);
+}
+/* A slow pulse outward, so the eye finds the ring on a moving picture. */
+.tour-ring::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--floodlight);
+  opacity: 0;
+  animation: tour-pulse 1.8s var(--glide) infinite;
+}
+@keyframes tour-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+.tour-card {
+  position: fixed;
+  pointer-events: auto;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 18px 20px 16px;
+  border-radius: 20px;
+  background: rgba(11, 17, 14, 0.92);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline-strong),
+    0 32px 72px -24px rgba(0, 0, 0, 0.9);
+}
+/* Each step's words come in quietly; the card itself cuts to its place (its height changes with
+   the words, so a slide would hang it off the screen on the way). */
+.tour-words {
+  animation: tour-in var(--t-quick) var(--glide) both;
+}
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.tour-title {
+  margin: 8px 0 6px;
+  font: 400 26px/1.15 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--chalk);
+}
+.tour-caption {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.tour-act {
+  margin-top: 14px;
+}
+.tour-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--chalk-3);
+}
+.tour-act .tour-note.error {
+  margin-top: 8px;
+  color: var(--flare);
+}
+.tour-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+}
+.tour-nav .btn-quiet {
+  margin-left: -14px; /* line its text up with the card's */
+}
+.tour-moves {
+  display: flex;
+  gap: 8px;
+}
+
+/* Folded (a phone, once the viewer touches the app): one bar, the step's name and Next. */
+.tour-card.folded {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+}
+.tour-card.folded .tour-say {
+  flex: 1;
+  min-width: 0;
+}
+.tour-card.folded .tour-title {
+  margin: 2px 0 0;
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tour-card.folded .tour-nav {
+  margin: 0;
+}
+.tour-card.folded .tour-nav .btn-quiet {
+  margin-left: 0;
+}
+
+/* The phone sheet: full width inside the 16 px gutter (placeCard), tighter. */
+@media (max-width: 639px) {
+  .tour-card {
+    padding: 14px 16px 12px;
+    border-radius: 18px;
+  }
+  .tour-title {
+    font-size: 22px;
+  }
+  .tour-caption {
+    font-size: 14px;
+  }
+  .tour-nav {
+    margin-top: 12px;
+  }
+}
+
+/* Reduced motion: the ring and the card cut to their places, and nothing pulses. */
+.tour.reduced .tour-ring {
+  transition: none;
+}
+.tour.reduced .tour-ring::after,
+.tour.reduced .tour-words {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-ring {
+    transition: none;
+  }
+  .tour-ring::after,
+  .tour-words {
+    animation: none;
+  }
+}

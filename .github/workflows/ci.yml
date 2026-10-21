@@ -57,6 +57,8 @@ jobs:
         run: npm run build
       - name: Video shot list
         run: node ../video/capture.mjs --list
+      - name: Video trailer spec and edit tests
+        run: node ../video/trailer.mjs --check && node --test ../video/test/*.test.mjs
 
   # SPEC 7, 8: the web app built against a local offline API and opened page by page in headless
   # Chromium (web/scripts/smoke.mjs). Any console error, uncaught exception or missing main view

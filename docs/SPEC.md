@@ -7,8 +7,8 @@
 ## 0. Pitch and judging alignment
 
 **One-liner:** See what they saw. An AI studio that explains key moments through the player's own
-perception — the scans before the ball arrived, what was visible, what he believed — and proves
-every on-screen number before it airs.
+perception — the scans before the ball arrived, what was visible, what he believed — and checks
+every number the crew says or captions before it airs.
 
 **Target prizes:** Grand Prize + Best Multi-Agent System (judges may reassign the category).
 
@@ -152,6 +152,9 @@ on an LLM.
   from tracking data only — `head_yaw` plus player and ball positions — with no access to sim
   scan events or other sim-internal state (§4.7).
 - Output: JSONL frames + JSON events. Optional kloppy-compatible export (stretch).
+- *Downloadable dataset (2026-10-21, `sim/dataset.py`):* stitched matches on fresh seeds as
+  events (CSV/Parquet), 25 Hz tracking (Parquet), metadata (JSON) and per-reception perception,
+  with a datasheet: [DATASET.md](DATASET.md).
 
 ### 3.2 Movement
 - Formation anchors (e.g. 4-3-3 vs 4-2-3-1) shifted by ball position and phase; compactness and
@@ -318,9 +321,34 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 
   the sim's tackle and control rules did not. One redesign, tried on design seeds only (pressing
   him 6 m deeper; the presser off the passing lanes), did not help (39/80 kept; or no press at
   all), so the scenario was not tuned further. The fix is in the decision model (§3.5, the run-in), not
-  in the scenario; on 100–139 it gives lens 39/40 and outcome 30/40, no carry lost
+  in the scenario; on 100–139 it gives lens 40/40 (39/40 before the fitted xT grid, §4) and
+  outcome 30/40, no carry lost
   ([hero_lens_press_escape_100-139.md](../eval/reports/hero_lens_press_escape_100-139.md)).
   `blind_side_run` is unchanged where it matters: 39/40 flips, its seed 3 byte for byte.
+
+**Cutback hero (`cutback_scan`, 2026-10-21).** A cheap extra of the hero expansion pack
+([drafts/hero_expansion.md](drafts/hero_expansion.md) §7): the scan story from the winger, with no
+new mechanism.
+- **The play.** The home team attacks +x down the right. H2 releases H7 at the byline, about
+  (47.8, −17.8). H9 attacks the near post, tightly marked by A5. H8 arrives late toward the
+  penalty spot, about (40.5, −2), because A8 has followed the ball instead of tracking him. The
+  rest of the away back line protects the goal and the far post; two home centre-backs and a
+  holding midfielder stay behind the attack.
+- **Key action and intervention.** H7's look into the box just before he decides is the key scan;
+  the intervention is `drop_scan`. Both passes are ground passes, and H7 chooses on his belief.
+- **Hero design rule.** An early look shows H8 beside A8 outside the box. H8's run then happens
+  behind H7's field of view, so only the key scan shows him free.
+- **Acceptance** (`eval/hero_flip.py --scenario cutback_scan`; designed on seeds 0–39, held-out
+  100–139): dropping the key scan changes H7's decision in 38/40 (95%, target ≥ 60%: met; 34/40
+  on the design seeds). With the look he cuts the ball back to H8 in 38/40, and all 38 are
+  completed; mean ΔxT +0.233 on the fitted xT grid (§4; +0.092 on the prior). Without it he
+  carries (32) or shoots from the angle (8): the near-post ball to the marked H9 that the design
+  expected never wins. Report: [hero_flip_cutback_scan.md](../eval/reports/hero_flip_cutback_scan.md).
+  On the same seeds `eval/hero_lens.py` selects `scan` 38/40 (median margin over the next lens
+  0.20 xT, 0.10 on the prior; [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
+  ([tests/test_cutback_scan.py](../tests/test_cutback_scan.py), design seeds): the design rule,
+  role speed and acceleration limits, and at least 0.7 m between every pair of players before H7
+  acts.
 
 **Set-piece hero (`corner_blind_side`, 2026-10-20).** The first moment of the hero expansion pack
 ([drafts/hero_expansion.md](drafts/hero_expansion.md), C4). It is the same perception story from
@@ -385,7 +413,8 @@ the defending side.
   0–39, run once on 100–139 ([hero_lens_corner_blind_side.md](../eval/reports/hero_lens_corner_blind_side.md)):
   the look is detected as the moment 40/40; the scan lens is selected 40/40, which is by
   construction, since the other two lenses need a decision on the ball; its Δ is positive in 39/40
-  (median +0.063 xT); the lens's most informative scan is the key scan 40/40; and the outcome
+  (median +0.1435 xT on the fitted grid, §4; +0.063 on the prior); the lens's most informative
+  scan is the key scan 40/40; and the outcome
   changes in 37/40 (the gate above). The one negative Δ, seed 103, is the gate's miss there:
   without the look another defender is 4.9 m from A9, so the pressure on him is higher.
   - Demo seed 0, a typical design seed: separation 2.9 m with the look and 7.9 m without (design
@@ -449,11 +478,98 @@ expansion pack, on Module A (§3.3).
     labelled as seen). The defence was then moved into the box, which needs fresh seeds.
   - *Eval.* `eval/hero_shot.py` instead of `eval/hero_flip.py`. A placed shot's value on the
     truth needs the save model.
-  - *Not reported yet: lens selection, and whether the key scan is the most informative.* Both
-    need the explain layer to score placed shots on the truth; that is the follow-up explain PR.
-    The demo seed is not chosen yet either.
+  - *Lens selection and the key scan* were not reported with the scene; the explain layer now
+    scores placed shots on the truth (§5.2) and they are in "In the app" below.
   - *Scripted keeper set.* Not in the plan; added so the cutback finds A1 where the wide player's
     angle put him.
+- **In the app (2026-10-21).** The hero card is the ordinary `decision_after_scan` card. A placed
+  shot is valued on the truth (§5.2), its claims and template narration tell the look at the
+  keeper (§6), and a "What if…?" on the near or far post is answered by re-simulation.
+  `eval/hero_lens.py`, built on design seeds 0–39, run once on 200–239
+  ([hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)): the scan lens is
+  selected in 38/40, its scan is the key scan in 40/40, and the decision changes in 38/40. In 38 of
+  the 40, Δscan equals Δspace (+0.50 to +0.54 on the truth) and the tie goes to `scan`. The two
+  `space` seeds, 200 and 233, are the gate's two misses: he sees the keeper during his first
+  touch, so the look changes nothing and Δscan is 0.
+  - Demo seed 11, a typical design seed: `shot:far`, a goal, chance 0.79 on the truth; without
+    the look `shot:near`, saved by A1, chance 0.26.
+
+**Keeper hero (`keeper_switch`, 2026-10-21).** A cheap extra of the hero expansion pack
+([drafts/hero_expansion.md](drafts/hero_expansion.md) §7): the same scan story from the keeper,
+with no new mechanism.
+- **The play.** The home team builds from the back against a high, man-oriented press. H4 plays
+  back to the keeper H1 at (−45, −8) while A9 curves his press across the return lane. The near
+  full-back and both centre-backs are covered. Across the pitch the far full-back H3 drops wide and
+  deep, toward (−37, 29), as his winger A7 gives up the press and drops off.
+- **Key action and intervention.** H1's look across the pitch about 0.8 s before the back pass
+  reaches him is the key scan; the intervention is `drop_scan`. Only the back pass is scripted:
+  H1's pass is the normal decision on his belief.
+- **Hero design rule.** An early look shows H1 that H3 is marked by A7. H3's release happens behind
+  H1's gaze, so only the key scan shows him free. Without it, H1's belief still has A7 beside him.
+- **Keepers' scan rates are not calibrated:** Jordet et al. (2020) excluded keepers. Both of H1's
+  looks are forced, and his spontaneous scans are suppressed until he plays.
+- **Acceptance** (`eval/hero_flip.py --scenario keeper_switch`; designed on seeds 0–39, held-out
+  100–139): dropping the key scan changes H1's pass in 26/40 (65%, target ≥ 60%: met; 29/40 on the
+  design seeds). With the look he plays the switch to H3 in 32/40, and all 32 are completed; mean
+  ΔxT +0.034 on the fitted xT grid (§4; +0.043 on the prior). Report:
+  [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md).
+  Tests ([tests/test_keeper_switch.py](../tests/test_keeper_switch.py), design seeds): the design
+  rule, role speed and acceleration limits, and every pair of players at least 0.7 m apart until
+  H1 plays.
+- **Not a scan story by the lens rule.** On the same held-out seeds `eval/hero_lens.py` selects
+  `pressure` 37/40, `space` 3/40 and `scan` 0/40 (`pressure` 40/40 on the prior xT grid)
+  ([hero_lens_keeper_switch.md](../eval/reports/hero_lens_keeper_switch.md)). The look decides the
+  pass (without it the ball is lost in 30/40), but in xT the moment is the keeper escaping A9's
+  press next to his own goal, and that delta is larger than the look's. By the rule above (the
+  intended lens in ≥ 60%), it is not served in the app as a scan hero. It stays in the sim, where
+  its gate holds. Its declared lens was not changed after this result.
+
+**Save hero (`screened_shot`, 2026-10-21).** The keeper finds a sightline through a crowded box;
+C2 of the hero expansion pack, on Module A (§3.3). Its lens is sight, not a scan: the key action
+is a step.
+- **The play.** The away team attacks −x. A8 lays the ball off to A10 at the edge of the box, and
+  A10 strikes low for the corner (a forced shot, the same path in both runs). Between him and the
+  goal, H4 stands goal-side of A9 in the six-yard box and H5 covers behind them; the full-backs
+  hold the width.
+- **Key action and intervention.** The keeper H1 steps 0.63–0.70 m sideways about 0.9 s before the
+  strike, so that he sees the ball past H4 and A9. The intervention is the new `drop_step`: the
+  run without that step.
+- **Physics.** Every player, the keeper's step included, moves through the scenario's movement
+  targets under the engine's normal speed and acceleration limits; the scenario never writes
+  positions or velocities. On design seeds (`tests/test_screened_shot.py`), no two players are
+  closer than 0.7 m before the strike, the screening players stand at least 1.5 m from the keeper,
+  and at the strike the keeper's visibility of the ball is < 0.5 from his starting spot and ≥ 0.5
+  after the step.
+- **New hooks, all off by default** (every other run is unchanged byte for byte):
+  `Scenario.forced_shot` (`ForcedShot`), `Scenario.ends_on_shot` (defaults to `ends_on_pass`),
+  the `DropStep` override with `drop_step_counterfactual` and `MatchRun.key_step`, and
+  `SightAt`, an analysis-only override that sets when the keeper first sees the ball.
+- **Acceptance** (`eval/hero_save.py`; designed on seeds 0–39, held out on fresh seeds 300–339):
+  - hard gate: P_save(step) − P_save(no step) ≥ 0.4 in 28/40 (target ≥ 60%: met);
+  - the same at v_dive = 2.5 and 4.0 m/s: 28/40 and 29/40 (target ≥ 60% at both: met);
+  - without the step, first sight comes ≥ 0.25 s later in 35/40 (target ≥ 90%: **not met**);
+  - the effect is mostly sight, Δ_sight > Δ_position, in 30/40 (target ≥ 80%: **not met**).
+    Δ_sight = P_save(step) − P_save(step, sight forced as late as without it); Δ_position =
+    that − P_save(no step).
+  - Reported only: the realised result goes from saved to goal without the step in 17/40.
+  - Report: [hero_save_screened_shot.md](../eval/reports/hero_save_screened_shot.md).
+- **Where the two misses come from** (the report's rows marked …; Bowen decided on 2026-10-21 to
+  ship the moment with them stated):
+  - Five shots (309, 312, 316, 320, 329) are blocked by H4, who moves across to cover the corner
+    after the strike, before the save model runs, in both runs. They fail every check that needs
+    P_save. Among the 35 that reach the keeper, first sight is ≥ 0.25 s later in 35/35.
+  - The other three decomposition misses are ties at 0: a shot beyond the keeper's reach with or
+    without the step. Among the 32 that are not blocked and not both 0, Δ_sight > Δ_position in
+    30/32 (302 and 303 are the two where position matters more).
+  - A wide shot still has a P_save, the save model at the point where it crosses the goal line
+    outside the posts, so it counts in the hard gate as reach although no save was needed. Five of
+    the 28 passes are such shots. Among the shots on target with the step, the gate holds in 23/23.
+- **How the held-out run went.** A first scene (frozen players, a teleported step, overlapping
+  bodies) was rejected in review after it had run on 200–239, so those seeds are seen. The scene
+  was rebuilt on design seeds 0–39 (there: 38, 29, 32, 28 and 30 of 40 on the five checks above),
+  then run once on 300–339. Nothing in the scene changed after that. The reported-only rows were
+  added to the eval afterwards; the report regenerates with every earlier value unchanged.
+- **Not done yet:** the `sight` lens, its claims and narration (the explain PR for this moment).
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
@@ -468,11 +584,23 @@ expansion pack, on Module A (§3.3).
   transcendental functions can differ in the last bits between ARM and x86, and a multi-agent sim
   amplifies that. CI compares runs inside CI, never against hashes made on a laptop.
 - `snapshot(t)` / `resume(snapshot, overrides)` re-simulate from t with overrides such as
-  `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`, and
+  `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`,
+  `drop_step(step_id)` (a scripted step not taken; `screened_shot`, §3.6), and
   `force_action(player, frame, action)` (*M4*): at that decision the player takes `action` — any
   option he evaluated, e.g. `pass:H4` — instead of sampling; everything else re-simulates as
   usual. It answers "what if he had passed to H4?" with a re-simulation, not a statistic.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
+- **Seed registry.** Scenario seeds and match seeds are separate inputs, but no range below is
+  reused for another purpose.
+
+  | Seeds | What | Where |
+  |---|---|---|
+  | 0–1999 | scenario seeds: each scenario's design seeds and its held-out eval seeds | §3.6, §4, `eval/` reports |
+  | 0, 3, 11 | demo hero seeds (`press_escape`/`corner_blind_side` 0, `blind_side_run` 3, `far_post_finish` 11) | `sim/match.py` |
+  | 1, 2 | match seeds of the served matches | `sim/match.py`, `api/` |
+  | 100–119 | held-out match seeds | `eval/match_stats.py` |
+  | 5001–5100 | match seeds of the downloadable dataset; v1 uses 5001–5010 | `sim/dataset.py`, [DATASET.md](DATASET.md) |
+  | ≥ 1,000,000 | scenario seeds keyed off a match seed: open-play passages (`open_play`), the dataset's heroes (`dataset_hero`) | `sim/match.py`, `sim/dataset.py` |
 
 ### Acceptance checks — sim
 - [x] Same seed twice in the same environment ⇒ identical output hashes.
@@ -511,9 +639,10 @@ expansion pack, on Module A (§3.3).
 - [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
       — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
-      (39/40 seeds, 98%; `blind_side_run` is the only scan hero; the pressure hero `press_escape`
-      is tested by its own intervention, `force:carry`, in
-      [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md), §3.6);
+      (39/40 seeds, 98%) and [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md)
+      (26/40 held-out seeds, 65%). The pressure hero `press_escape` is tested by its own
+      intervention, `force:carry`, in
+      [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md) (§3.6);
       [tests/test_sim_m1.py](../tests/test_sim_m1.py)::`test_dropping_the_key_scan_changes_the_chosen_action_in_most_held_out_seeds`
 - [x] Set-piece hero: without the marker's key scan, the runner receives the cutback `unmarked`
       (the lexicon's nearest opponent > 5 m), and with it the marker is within 5 m of him as it
@@ -530,6 +659,14 @@ expansion pack, on Module A (§3.3).
       — [eval/reports/hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md)
       (38/40, +0.524, 38/40 at both ends, on seeds 200–239; §3.6);
       [tests/test_shots.py](../tests/test_shots.py) (design seeds)
+- [x] Save hero: without the keeper's key step, his save probability drops by ≥ 0.4 in ≥ 60% of
+      fresh held-out seeds, at both ends of the uncited v_dive range too. The secondary targets
+      (first sight ≥ 0.25 s later in ≥ 90%, Δ_sight > Δ_position in ≥ 80%) are not met and are
+      reported with their causes (§3.6).
+      — [eval/reports/hero_save_screened_shot.md](../eval/reports/hero_save_screened_shot.md)
+      (28/40; 28/40 and 29/40 at 2.5 and 4.0 m/s; secondary 35/40 and 30/40; seeds 300–339);
+      [tests/test_screened_shot.py](../tests/test_screened_shot.py) (design seeds: physics,
+      separation, sightline, `DropStep`, `SightAt`)
 - [x] Placed shots and the keeper's save model behind `Scenario.shots`: P_save matches the cited
       piecewise model; the keeper cannot react before he sees the ball; with the flag off every
       run is byte-identical.
@@ -825,6 +962,13 @@ For each moment, compute candidate explanations. All three deltas are in xT of t
 Pick the lens with the largest absolute delta; exact ties go `scan > space > pressure`. Record all
 three in the MomentCard.
 
+A placed shot (`shot:near` / `shot:far`, Module A) is worth its chance of a goal on the truth:
+P(on target) × (1 − E[P(save)]) with the keeper where he really is, the decision model's own value
+re-scored on the true state. Its xG-like value on his belief would make the look worth less than
+nothing whenever his stale picture flattered the near post. Without the look the striker picks
+the other placement, which is also the space lens's best alternative, so on `far_post_finish`
+Δscan equals Δspace and the tie goes to `scan`.
+
 A marker's look (`marker_scan`) has no decision on the ball, so only `scan` applies; `space` and
 `pressure` are recorded as unavailable. Its value is the pressure lens's currency from the
 defending side: the expected turnover where the pass to his man resolves, pressing intensity on
@@ -887,7 +1031,9 @@ Every factual sentence on screen comes from a `Claim`:
 - Functions: `count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
   observed_share, cf_delta`, and for a marker's look `seconds_between` and
   `turnover_at_resolution`, with the metrics `time_unseen` (since he last saw his man) and
-  `sighting_error` (his belief rebuilt from sightings, for a player with no recorded decision).
+  `sighting_error` (his belief rebuilt from sightings, for a player with no recorded decision);
+  for a placed shot the metrics `shot_success` (his chance of a goal, on his belief or the truth)
+  and `near_side_offset` (the keeper's offset toward the shooter's near post).
 - Every verdict is written to the claims audit log (Cosmos DB) with inputs and timestamps.
 - **Claim kinds, shown on screen.** Every claim is one of:
   - `observed`: an event or tracking fact (a scan count, a pass outcome);
@@ -946,6 +1092,12 @@ Every factual sentence on screen comes from a `Claim`:
       (40/40, 39/40 and 40/40 on seeds 100–139, §3.6);
       [tests/test_corner_breakdown.py](../tests/test_corner_breakdown.py) (design seeds, the API,
       and `test_no_other_moment_is_a_markers_look`)
+- [x] A placed shot is explained on the truth: on `far_post_finish` the scan lens is selected in
+      ≥ 60% of held-out seeds and its scan is the key scan in ≥ 90%; every claim verifies and every
+      persona's template script airs in en and zh; heroes without placed shots are unchanged.
+      — [eval/reports/hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)
+      (38/40 and 40/40 on seeds 200–239, §3.6);
+      [tests/test_finish_breakdown.py](../tests/test_finish_breakdown.py)
 - [x] Lens selection is deterministic for a given seed.
       — [tests/test_lenses.py](../tests/test_lenses.py)::`test_lens_selection_is_deterministic_for_a_seed`
 
@@ -1051,6 +1203,18 @@ Application Insights.
   Every persona has its template sequence in en and zh. The template plan's POV is his, with the
   scan marker on his look. "What if…?" refuses with its own sentence (he had no option to
   replay), and `list_options` and `what_if` say there is no decision on the ball.
+- *A placed shot (2026-10-21, `far_post_finish`).* Claims: the look before the ball arrived
+  (`scan_at_goal`), the keeper it showed him (`keeper_seen_in_scan`) and where he stood
+  (`keeper_near_side`), the placement (`shot_placement`), its result (`shot_scored`, `shot_saved`
+  or `shot_wide`; the recap keeps `goal`, `saved` and `wide` for its own per-moment claims),
+  `shot_speed`, and he thought vs it was (`shot_thought_vs_was`); from the run without the look,
+  `cf_shot` (the other post, and the save when there is one), `cf_keeper_age` and `cf_shot_value`
+  (his chance of a goal with and without the look, the scan lens's Δ). The generic `cf_value` is
+  not built for a placed shot: a goal's possession value is an outcome, not a chance. Every
+  persona has its sequence in en and zh. "What if…?" understands "near post" and "far post"
+  (近角, 远角); its answer is where the shot would have ended and both placements' chance on the
+  truth. A what-if pass from a striker who shot cites the decision as its evidence, since the
+  re-simulated pass is not an event of the real run.
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid. The reasons are public (`trace[].notes`, `plan_errors`), so each is a
@@ -1289,6 +1453,15 @@ original visual identity.
   minimum shot length and never mid-scan ([web/src/director/](../web/src/director/)).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
+  - The persona and language menu stays open across picks until Escape or a press outside.
+  - A stitched match's Moments panel pins its hero moments (Breakdown, Your call) at the top. Every
+    other moment folds into one row per kind and lens, lensed groups first, and groups of up to
+    five start open. match-1's 149 sprints are one row.
+  - On a phone the header keeps the name and "A synthetic match" on a line of their own above the
+    controls.
+  - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
+    another is lifted one label up, else hidden; the runner's gold number always shows
+    ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1316,7 +1489,56 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
+- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the lineup card,
+  the moment card and the story, and the link `?tour=1`, or `?tour=<step id>`): an optional walk
+  of about ninety seconds, so a judge with three minutes sees every signature feature without
+  exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
+  at (CSS selectors), one plain line, the app control it runs on arrival, an optional button in
+  the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
+  - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
+    captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
+    number; Your call; another audience in another language (a casual fan, in Chinese); the
+    Producer's failure drill and bring-back; then the whole match, whose card links to
+    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
+    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
+    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
+    main.
+  - *It never takes over.* It only calls the app's own controls, and never presses anything that
+    spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
+    with the card's button. The overlay lets every click through, the card is a non-modal dialog,
+    and closing it at any step (Skip tour, Done, Escape) leaves the app as that step left it. Its
+    words carry no number; the numbers on screen are the app's own verified values.
+  - Next, Back, Skip; arrow keys and Escape in the card. Reduced motion: no animated ring, no
+    smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
+    the viewer touches the app, so Your call and the evidence stay usable.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
+- **Key-moment beat** ([web/src/beat/](../web/src/beat/)): each key scan plays like a broadcast
+  highlight. Free play and the live stream ease into slow motion (about 0.4×) as the scan begins,
+  hold for a beat (≈ 0.35 s) when the player the look is for first comes into the hero's sight,
+  and are back at 1× by the release (his pass); the run without the look slows at the same frames
+  with no hold. Plans and the recap reel keep their own speeds. The broadcast camera pushes in on
+  the hero, then opens to both players once he has seen the runner, and eases back after the
+  pass; in first person the 95° view stays and the vignette closes in instead. The arc his look
+  swept fills in gold on the board and the grass; the runner gets a ring and a glow from the
+  sighting; while he is in the sim's sight but outside the camera, the picture's edge glows on his
+  side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
+  by what the beats added and catches up at the next possession's cut. Timing is a function of
+  the frame only: no position, event or number changes.
+  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
+    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
+    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
+    with the playhead.
+  - Verified numbers in a caption count up from zero the first time they come up and take a
+    check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
+    page's text is the verified value throughout.
+  - Sound ([web/src/sound/](../web/src/sound/), synthesized in code, [CREDITS](CREDITS.md)): a
+    low crowd bed that muffles through the beat, a whoosh as each scan of the POV player begins,
+    a sting at the "without the look" reveal; all ducked under the narration voice, all off with
+    the Sound switch.
+  - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
+    and a CSS grade and first-person vignette over the canvas.
+  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+    the ring, the sweep and the stamp still show.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1342,6 +1564,14 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
+- [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
+      moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
+      the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt
+      numbers are lifted or hidden, nearest first.
+      — [web/src/ui/moments.test.tsx](../web/src/ui/moments.test.tsx),
+      [stage.test.tsx](../web/src/ui/stage.test.tsx) ("stays open after each pick"),
+      [web/src/views/declutter.test.ts](../web/src/views/declutter.test.ts); `npm run smoke`
+      phone pages (header name, note and overlaps)
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
       — *Open:* not measured on a laptop GPU yet. The shader exists (per pixel,
       [web/src/pitchControl/](../web/src/pitchControl/), toggle off by default), and
@@ -1375,6 +1605,14 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
       [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+- [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
+      live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
+      and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
+      fold; the card stays on screen at desktop and phone width; its words carry no number.
+      — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
+      [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
+      `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
+      no sideways scroll
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
@@ -1395,6 +1633,18 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Key-moment beat:* slow motion starts as the key scan begins and ends by the release, the
+      accent holds at the sighting, the run without the look slows with no accent, plans and the
+      recap keep their speeds, reduced motion turns it off, the live playhead never jumps inside a
+      beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
+      and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
+      — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
+      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
+      [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
+      `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
+      pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
+      1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
@@ -1584,13 +1834,13 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §3 sim | 11 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
 | §4 analytics | 8 | 0 | — |
-| §5 explain | 7 | 0 | — |
+| §5 explain | 8 | 0 | — |
 | §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **33** | **9** | |
+| **Total** | **35** | **9** |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1649,6 +1899,9 @@ Framework, live deployment, the video.
 
 Shot list and capture kit: [video/](../video/README.md). `shots.json` holds each beat's URL,
 scripted actions, target length and voice-over; `capture.mjs` records them from the live site.
+The cut as made (2026-10-21): a game-trailer edit rendered by `cd video && npm run trailer` from
+[video/trailer.json](../video/trailer.json); its treatment and the beats it changes from the storyboard
+above are in [VIDEO_SCRIPT.md](VIDEO_SCRIPT.md).
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)

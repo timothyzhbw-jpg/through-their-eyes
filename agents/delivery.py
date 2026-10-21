@@ -201,6 +201,8 @@ ANALYST_NUMBERS: frozenset[str] = frozenset(
         "pressure_at_pass",
         "receiver_pressure",
         "runner_pressure",
+        "shot_thought_vs_was",
+        "cf_shot_value",
     }
 )
 

@@ -48,7 +48,7 @@ cd video && npm ci && npx playwright install chromium   # only for recording the
 |---|---|
 | `python` | `uv sync --locked`; `ruff check .`; `ruff format --check .`; `bash -n infra/*.sh`; `pytest -q` |
 | `web` | `npm ci`; `npm run licenses`; `typecheck`; `format:check` (prettier, which also checks `web/README.md`); `npm test` (vitest, with the GPU parity test on SwiftShader); `build`; `node ../video/capture.mjs --list` |
-| `smoke` | `npm run smoke`: the built app against a local offline API, every page in headless Chromium; any console error, uncaught exception or missing main view fails it |
+| `smoke` | `npm run smoke`: the built app against a local offline API, every page in headless Chromium; any console error, uncaught exception, missing main view or serious WCAG violation (axe-core, [ACCESSIBILITY.md](ACCESSIBILITY.md)) fails it |
 
 The same locally:
 

@@ -8,6 +8,7 @@ import { useStore } from "../store/store";
 import { ArrowIcon } from "./icons";
 import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
+import { TourButton } from "../tour/Tour";
 
 export const INTRO_MS = 5000; // the card closes by itself after this long
 
@@ -24,7 +25,7 @@ export function LineupCard() {
 }
 
 function OpenLineupCard() {
-  const { hero, playback } = useView();
+  const { hero, playback, kind } = useView();
   // Not controls.setPovPlayer: its viewer take-over would cancel the autoplay behind the card.
   const teams = lineup(hero);
   const options = watchOptions(hero);
@@ -46,6 +47,9 @@ function OpenLineupCard() {
 
   useEffect(() => {
     const previous = document.activeElement;
+    // With nothing focused before (a fresh load), the focus goes to the live screen's title on
+    // close: left on <body>, the next Tab would start after the card, past the whole live screen.
+    const title = dialog.current?.closest(".stage")?.querySelector<HTMLElement>(".stage-head h1");
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     start.current?.focus({ preventScroll: true });
@@ -90,8 +94,11 @@ function OpenLineupCard() {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
-      if (previous instanceof HTMLElement && previous.isConnected)
-        previous.focus({ preventScroll: true });
+      const back =
+        previous instanceof HTMLElement && previous !== document.body && previous.isConnected
+          ? previous
+          : title;
+      back?.focus({ preventScroll: true });
     };
   }, []);
 
@@ -101,6 +108,7 @@ function OpenLineupCard() {
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      aria-describedby={counting ? `${titleId}-auto` : undefined}
       ref={dialog}
       onClick={(event) => {
         if ((event.target as Element).closest("button, a, input, select, textarea, label")) return;
@@ -114,6 +122,12 @@ function OpenLineupCard() {
           aria-hidden="true"
         />
       )}
+      {/* What the countdown line shows, for a screen reader (WCAG 2.2.1): it can be stopped. */}
+      {counting && (
+        <p className="sr-only" id={`${titleId}-auto`}>
+          This card closes by itself in {INTRO_MS / 1000} seconds. Press Tab to keep it open.
+        </p>
+      )}
       <div className="lineup-inner">
         <header className="lineup-head">
           <p className="kicker">A synthetic match · every player fictional</p>
@@ -123,7 +137,7 @@ function OpenLineupCard() {
           <p className="lineup-pitch">
             <em>See what they saw.</em> An AI studio that explains key moments through the player's
             own perception — the scans before the ball arrived, what was visible, what he believed —
-            and proves every on-screen number before it airs.
+            and checks every number the crew says or captions before it airs.
           </p>
         </header>
 
@@ -219,6 +233,7 @@ function OpenLineupCard() {
             Start watching
             <ArrowIcon />
           </button>
+          {kind === "hero" && <TourButton /> /* its steps are a hero moment's */}
           <button
             type="button"
             className="btn btn-quiet"
