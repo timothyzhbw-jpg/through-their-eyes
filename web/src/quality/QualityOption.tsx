@@ -6,7 +6,12 @@ import { useStore } from "../store/store";
 import { Segmented } from "../ui/Segmented";
 import { autoTier, quality, setTier, type Tier } from "./quality";
 
-const LABEL: Record<Tier, string> = { standard: "Standard", medium: "Medium", high: "High" };
+const LABEL: Record<Tier, string> = {
+  standard: "Classic",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
 
 export function QualityOption() {
   const tier = useStore(quality, (s) => s.tier);
@@ -19,15 +24,12 @@ export function QualityOption() {
         className="quality"
         value={tier}
         onPick={(t) => setTier(t, "viewer")}
-        title="Medium: bloom, depth of field in the slow motion, image-based light. High: also ambient occlusion and soft shadows"
+        title="Low, medium and high share one look and differ in sharpness and effects; classic is the earlier picture"
         options={[
-          { value: "standard", label: LABEL.standard, title: "Drawn straight to the screen" },
-          {
-            value: "medium",
-            label: LABEL.medium,
-            title: "Bloom, depth of field, image-based light",
-          },
-          { value: "high", label: LABEL.high, title: "Also ambient occlusion and soft shadows" },
+          { value: "standard", label: LABEL.standard, title: "The earlier picture" },
+          { value: "low", label: LABEL.low, title: "The look, drawn straight to the screen" },
+          { value: "medium", label: LABEL.medium, title: "Also smoothing and depth of field" },
+          { value: "high", label: LABEL.high, title: "Also ambient occlusion and lamp bloom" },
         ]}
       />
       <p className="note">This device: {LABEL[device].toLowerCase()}</p>

@@ -2,6 +2,9 @@
 // Optional pieces (rings, labels, ghosts, the vision cone) read the shot from cineRuntime
 // inside the frame, so load() does not have to wait for React to render them.
 
+import { useStore } from "../store/store";
+import { featuresOf, quality } from "../quality/quality";
+import { LookRig } from "../quality/QualityPost";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -337,6 +340,10 @@ function Cone() {
       fan.visible = false;
       return;
     }
+    // With the shared look the cone is the live view's look-sweep gold.
+    material.uniforms.uColor.value.set(
+      featuresOf(quality.get().tier, false).look ? COLORS.gold : COLORS.sight,
+    );
     const s = playback.get();
     const run = hero.runs[s.mode];
     const j = hero.ids.indexOf(shot.cone.id);
@@ -414,8 +421,10 @@ function CameraRig() {
 }
 
 export function CineScene() {
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   return (
     <>
+      {look && <LookRig />}
       <CrowdClock />
       <Stage />
       <Stadium />

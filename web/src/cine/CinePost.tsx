@@ -24,6 +24,8 @@ import {
   type BlurPlan,
 } from "../views/motionBlur";
 import { blurFragmentShader, blurVertexShader } from "../views/PovMotionBlur";
+import { LOOK } from "../quality/look";
+import { featuresOf, quality } from "../quality/quality";
 import { anchorPoint } from "./anchors";
 import { cineRuntime } from "./runtime";
 import { horizontalFovDeg, pitchToWorld } from "./shot";
@@ -221,9 +223,12 @@ export function CinePost() {
     }
 
     const shot = cineRuntime.shot;
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
+    // With the shared look (`&quality=` low, medium or high: quality/look.ts) the curve and
+    // exposure of the live view and the Blender shots; a shot's exposure is relative to it.
+    const look = featuresOf(quality.get().tier, false).look;
+    gl.toneMapping = look ? LOOK.toneMapping : THREE.ACESFilmicToneMapping;
     gl.outputColorSpace = THREE.SRGBColorSpace;
-    gl.toneMappingExposure = shot?.exposure ?? 1;
+    gl.toneMappingExposure = (shot?.exposure ?? 1) * (look ? LOOK.exposure : 1);
 
     const dof = shot?.dof ?? null;
     chain.bokeh.enabled = dof !== null;

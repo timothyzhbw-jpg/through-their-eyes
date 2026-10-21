@@ -1,4 +1,5 @@
-// The medium and high render tiers of the 3D view (quality.ts), loaded only when one is chosen.
+// The low, medium and high render tiers of the 3D view (quality.ts), loaded only when one is
+// chosen. LookRig draws the shared look (look.ts): the AgX curve and the players' rim light.
 //
 // QualityPost takes over drawing at priority 1, as PovMotionBlur does at the standard tier. The
 // scene lands in a half-float buffer (linear HDR, nothing tone-mapped yet), then: ambient
@@ -10,8 +11,7 @@
 // QualityEnvironment gives the scene image-based lighting: a prefiltered (PMREM) environment
 // rendered once from a small procedural night stadium (sky, stands, four lamp banks, the pitch's
 // bounce), so kits and skin pick up the floodlights; no HDRI is downloaded. It adds to the
-// stadium's lights; the grass takes none of it (PovView), so the pitch keeps its colour. QualityShadows (high)
-// turns on one soft shadow map from a floodlight for the players.
+// stadium's lights; the grass takes none of it (PovView), so the pitch keeps its colour.
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
@@ -39,6 +39,7 @@ import {
 import { blurFragmentShader, blurVertexShader } from "../views/PovMotionBlur";
 import { FLOODLIGHTS } from "../views/stadiumGeometry";
 import { NIGHT } from "../views/Stadium";
+import { addRim, aimRim, LOOK, playerMaterials, removeRim } from "./look";
 import {
   dofAt,
   featuresOf,
@@ -51,7 +52,9 @@ import {
 
 const TAPS = 2 * TAPS_PER_SIDE + 1;
 /** Bloom: only what is brighter than white in linear light blooms (the lamps, not the kits). */
-export const BLOOM = { strength: 0.36, radius: 0.4, threshold: 1.0 };
+/** Bloom (high tier): only the lamp heads are this bright in linear light, so only they bloom;
+ * a tight radius keeps the halo within about three lamp heads. */
+export const BLOOM = { strength: 0.35, radius: 0.25, threshold: 2.0 };
 /**
  * Depth of field at full strength, in BokehPass units (blur = metres off focus × aperture, in
  * screen units, at most maxBlur). The broadcast camera sees 40–110 m of depth, so it gets far
@@ -66,7 +69,7 @@ const DOF = {
 const AO = { radius: 0.5, distanceExponent: 1.5, thickness: 1, scale: 1.1, samples: 8 };
 /** Ambient occlusion is soft by nature: computed at this share of the resolution, upsampled. */
 const AO_RESOLUTION = 0.5;
-export const ENVIRONMENT_INTENSITY = 0.4;
+export const ENVIRONMENT_INTENSITY = LOOK.environment;
 
 interface Chain {
   composer: EffectComposer;
@@ -384,82 +387,53 @@ export function QualityEnvironment() {
   return null;
 }
 
-const SHADOW = { mapSize: 2048, halfX: 62, halfY: 42, bias: -0.0004, normalBias: 0.03 };
-
 /**
- * One soft shadow map for the players, from the stadium's key floodlight (its strongest
- * directional light): the players cast, the pitch receives. The decal shadows of the standard
- * tier step aside (Stadium.tsx reads the tier).
+ * The shared look on the live view: the AgX curve at the look's exposure, and the rim light on
+ * every player material (the rigged GLB loads late: looked for twice a second). Put back as it
+ * was on the way out.
  */
-export function QualityShadows() {
+export function LookRig() {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
+  const rimmed = useMemo(() => new Set<THREE.Material>(), []);
+  const tick = useMemo(() => ({ n: 0 }), []);
   useEffect(() => {
-    const before = { enabled: gl.shadowMap.enabled, type: gl.shadowMap.type };
-    gl.shadowMap.enabled = true;
-    gl.shadowMap.type = THREE.PCFSoftShadowMap;
-    let key: THREE.DirectionalLight | null = null;
-    scene.traverse((o) => {
-      const light = o as THREE.DirectionalLight;
-      if (light.isDirectionalLight && (!key || light.intensity > key.intensity)) key = light;
-    });
-    const light = key as THREE.DirectionalLight | null;
-    if (light) {
-      light.castShadow = true;
-      const cam = light.shadow.camera;
-      cam.left = -SHADOW.halfX;
-      cam.right = SHADOW.halfX;
-      cam.top = SHADOW.halfY;
-      cam.bottom = -SHADOW.halfY;
-      cam.near = 1;
-      cam.far = 260;
-      cam.updateProjectionMatrix();
-      light.shadow.mapSize.set(SHADOW.mapSize, SHADOW.mapSize);
-      light.shadow.bias = SHADOW.bias;
-      light.shadow.normalBias = SHADOW.normalBias;
-    }
-    const recompile = () =>
-      scene.traverse((o) => {
-        const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
-        for (const mat of Array.isArray(m) ? m : m ? [m] : []) mat.needsUpdate = true;
-      });
-    recompile();
+    const before = { toneMapping: gl.toneMapping, exposure: gl.toneMappingExposure };
+    gl.toneMapping = LOOK.toneMapping;
+    gl.toneMappingExposure = LOOK.exposure;
     invalidate();
     return () => {
-      gl.shadowMap.enabled = before.enabled;
-      gl.shadowMap.type = before.type;
-      if (light) {
-        light.castShadow = false;
-        light.shadow.map?.dispose();
-        light.shadow.map = null;
-      }
-      recompile();
+      gl.toneMapping = before.toneMapping;
+      gl.toneMappingExposure = before.exposure;
+      for (const m of rimmed) removeRim(m);
+      rimmed.clear();
       invalidate();
     };
-  }, [gl, scene, invalidate]);
-  // Players load late (the rigged GLB): mark the skinned meshes as casters as they arrive,
-  // looking twice a second at most.
-  const tick = useMemo(() => ({ n: 0 }), []);
-  useFrame(() => {
+  }, [gl, invalidate, rimmed]);
+  useFrame(({ camera }) => {
+    aimRim(camera);
     if (tick.n++ % 30) return;
-    scene.traverse((o) => {
-      if ((o as THREE.SkinnedMesh).isSkinnedMesh) o.castShadow = true;
-    });
+    for (const m of playerMaterials(scene)) {
+      if (rimmed.has(m)) continue;
+      addRim(m);
+      rimmed.add(m);
+      invalidate();
+    }
   });
   return null;
 }
 
-/** Everything the tier draws beyond the standard: the post chain, the environment, shadows. */
+/** Everything a tier draws beyond the standard picture: the look, the environment, the post. */
 export default function QualityLayer({ sample, hfov }: { sample: Sample; hfov: number }) {
   const tier = useStore(quality, (s) => s.tier);
   const reduced = useStore(motion, (s) => s.reduced);
   const f = featuresOf(tier, reduced);
   return (
     <>
-      <QualityPost sample={sample} hfov={hfov} />
+      {f.look && <LookRig />}
       {f.environment && <QualityEnvironment />}
-      {f.shadows && <QualityShadows />}
+      {f.post && <QualityPost sample={sample} hfov={hfov} />}
     </>
   );
 }

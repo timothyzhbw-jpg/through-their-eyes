@@ -7,7 +7,7 @@
 // maps, to keep 60 fps on integrated GPUs.
 
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
@@ -16,6 +16,7 @@ import { BOARDS, BOWL, FLOODLIGHTS, hash01, loopAt, PROFILE, ROOF, seats } from 
 import { COLORS } from "./scene";
 import { useStore } from "../store/store";
 import { featuresOf, quality } from "../quality/quality";
+import { LOOK } from "../quality/look";
 
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
@@ -200,6 +201,8 @@ function Crowd() {
   const placed = useMemo(() => seats().filter((_, k) => hash01(k + 11) < OCCUPANCY), []);
   const geometry = useMemo(() => new THREE.PlaneGeometry(0.5, 0.8).translate(0, 0.4, 0), []);
   const time = useMemo(() => ({ value: 0 }), []);
+  // The shared look tints the crowd neutral-cool (quality/look.ts).
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const material = useMemo(() => {
     const m = new THREE.MeshLambertMaterial({
       map: silhouette(),
@@ -221,6 +224,9 @@ function Crowd() {
     m.customProgramCacheKey = () => "crowd";
     return m;
   }, [time]);
+  useEffect(() => {
+    material.color.set(look ? LOOK.crowdTint : "#ffffff");
+  }, [look, material]);
 
   useFrame(() => {
     time.value = sceneClock.now();
@@ -357,10 +363,14 @@ function flareTexture(): THREE.CanvasTexture {
 function Floodlights() {
   const glow = useMemo(glowTexture, []);
   const flare = useMemo(flareTexture, []);
-  // With a bloom pass (medium and high tiers) the lamps are brighter than white and bloom by
-  // themselves; the faked halo and flare step aside.
-  const bloom = useStore(quality, (s) => featuresOf(s.tier, false).bloom);
-  const lamp = useMemo(() => new THREE.Color(NIGHT.lamp).multiplyScalar(bloom ? 4 : 2.5), [bloom]);
+  // The shared look (quality/look.ts): brighter lamp faces (the high tier blooms them), the glow
+  // capped at about three lamp heads, no wide halo and no flare streak.
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  const lamp = useMemo(
+    () => new THREE.Color(NIGHT.lamp).multiplyScalar(look ? LOOK.lamp : 2.5),
+    [look],
+  );
+  const glowSize = look ? LOOK.glowScale : 34;
   return (
     <>
       {FLOODLIGHTS.map((m, k) => {
@@ -383,11 +393,11 @@ function Floodlights() {
                 </mesh>
               </group>
             </group>
-            <sprite position-y={m.height} scale={[34, 34, 1]}>
+            <sprite position-y={m.height} scale={[glowSize, glowSize, 1]}>
               <spriteMaterial
                 map={glow}
                 transparent
-                opacity={bloom ? 0.25 : 0.5}
+                opacity={look ? LOOK.glowOpacity : 0.5}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 fog={false}
@@ -395,7 +405,7 @@ function Floodlights() {
               />
             </sprite>
             {/* The bloom: a wide, faint halo in the night air, and the lens's flare. */}
-            <sprite position-y={m.height} scale={[96, 96, 1]} visible={!bloom}>
+            <sprite position-y={m.height} scale={[96, 96, 1]} visible={!look}>
               <spriteMaterial
                 map={glow}
                 transparent
@@ -406,7 +416,7 @@ function Floodlights() {
                 toneMapped={false}
               />
             </sprite>
-            <sprite position-y={m.height} scale={[70, 2.6, 1]} visible={!bloom}>
+            <sprite position-y={m.height} scale={[70, 2.6, 1]} visible={!look}>
               <spriteMaterial
                 map={flare}
                 transparent
@@ -457,8 +467,8 @@ function blobTexture(): THREE.CanvasTexture {
  * person the POV player's own are left out, like his body. */
 export function PlayerShadows() {
   const { hero, playback } = useView();
-  // At the high tier the key floodlight casts real shadows: the faked ones step aside.
-  const shadowMapped = useStore(quality, (s) => featuresOf(s.tier, false).shadows);
+  // The shared look: each of the four mast shadows a little darker (25–35 %).
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
@@ -477,8 +487,8 @@ export function PlayerShadows() {
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
       });
-    return { star: make(0.2), contact: make(0.42), core: make(0.4) };
-  }, []);
+    return { star: make(look ? LOOK.starShadow : 0.2), contact: make(0.42), core: make(0.4) };
+  }, [look]);
   const at = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(() => {
@@ -519,7 +529,6 @@ export function PlayerShadows() {
     <>
       <instancedMesh
         ref={star}
-        visible={!shadowMapped}
         args={[geometry, materials.star, 4 * hero.n]}
         frustumCulled={false}
         renderOrder={1}

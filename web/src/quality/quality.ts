@@ -1,20 +1,22 @@
-// Render quality of the 3D view (SPEC 7). Three tiers:
-// - standard: the scene drawn straight to the canvas (sprites for glow, decals for shadows), as
-//   it has been; the fallback, and what a software renderer gets;
-// - medium (phones, older integrated GPUs): a post chain with bloom, depth of field through the
-//   key-moment slow motion, SMAA and image-based lighting, without ambient occlusion or shadows;
-// - high (desktop GPUs): the above plus ambient occlusion (GTAO) and soft shadow-mapped players.
+// Render quality of the 3D view (SPEC 7).
+// - standard: the scene drawn straight to the canvas as it has been (ACES, sprite glows, decal
+//   shadows). Today's default, unchanged until the new look is approved.
+// - low / medium / high: one look, shared with the Blender trailer shots (the art director's
+//   targets, LOOKDEV §2a): AgX tone curve, a rim light on the players from the key floodlight,
+//   a neutral-cool crowd, capped lamp halos, four faint decal shadows per player, a faint
+//   image-based light. The tiers differ in fidelity only: medium adds a post chain (SMAA, depth
+//   of field through the key-moment beat on the broadcast camera, the head-whip blur in it);
+//   high adds ambient occlusion and bloom on the lamp heads.
 // The tier comes from the device (renderer string, memory, phone or not), a link
-// (`?quality=high|medium|standard|auto`) or the viewer's choice in View options, in that order of
-// precedence from last to first. Until the high tier has proven itself on fps the default is
-// standard: `?quality=auto` (or the switch) opts in.
+// (`?quality=standard|low|medium|high|auto`) or the viewer's choice in View options, in that order
+// of precedence from last to first. Without a link or a choice it is standard for now.
 
 import { beatAt, beatsOf, beatWeight, motion, type Beat } from "../beat/beat";
 import type { Hero, Run } from "../data/hero";
 import { createStore } from "../store/store";
 
-export type Tier = "standard" | "medium" | "high";
-export const TIERS: readonly Tier[] = ["standard", "medium", "high"];
+export type Tier = "standard" | "low" | "medium" | "high";
+export const TIERS: readonly Tier[] = ["standard", "low", "medium", "high"];
 export type QualitySource = "default" | "auto" | "link" | "viewer";
 
 /** Whether the device's tier is used when neither a link nor the viewer chose one. */
@@ -27,16 +29,16 @@ export interface Device {
   deviceMemory: number | undefined; // GB, Chrome only
 }
 
-/** The tier a device can carry at 60 fps. */
+/** The tier of the new look a device can carry at 60 fps (low at the least). */
 export function detectTier(d: Device): Tier {
   const r = d.renderer.toLowerCase();
-  if (/swiftshader|llvmpipe|software|basic render/.test(r)) return "standard";
-  if (d.mobile) return d.deviceMemory !== undefined && d.deviceMemory <= 3 ? "standard" : "medium";
+  if (/swiftshader|llvmpipe|software|basic render/.test(r)) return "low";
+  if (d.mobile) return d.deviceMemory !== undefined && d.deviceMemory <= 3 ? "low" : "medium";
   if (d.deviceMemory !== undefined && d.deviceMemory <= 2) return "medium";
   // Integrated PC graphics. On an Apple M4 Pro at 1080p the high tier runs at about 128 fps
   // uncapped (medium 140–160, standard 200–300); an Iris Xe or an AMD APU is several times
   // slower, so it gets medium, and older Intel UHD / HD graphics the standard pipeline.
-  if (/intel/.test(r)) return /iris|arc/.test(r) ? "medium" : "standard";
+  if (/intel/.test(r)) return /iris|arc/.test(r) ? "medium" : "low";
   if (/radeon\(tm\) graphics|radeon graphics|vega/.test(r)) return "medium";
   return "high";
 }
@@ -49,36 +51,37 @@ export function parseQuality(search: string): Tier | "auto" | null {
 }
 
 export interface Features {
+  look: boolean; // the shared look (all but standard)
   post: boolean; // the post chain at all (HDR buffer, tone mapping at the end)
   ao: boolean;
   bloom: boolean;
   dof: boolean;
   smaa: boolean;
-  environment: boolean; // image-based lighting
-  shadows: boolean;
+  environment: boolean; // image-based lighting (part of the look)
 }
 
 const NONE: Features = {
+  look: false,
   post: false,
   ao: false,
   bloom: false,
   dof: false,
   smaa: false,
   environment: false,
-  shadows: false,
 };
 
 export function featuresOf(tier: Tier, reduced: boolean): Features {
   if (tier === "standard") return NONE;
+  const post = tier !== "low";
   const high = tier === "high";
   return {
-    post: true,
+    look: true,
+    post,
     ao: high,
-    bloom: true,
-    dof: !reduced,
-    smaa: true,
+    bloom: high,
+    dof: post && !reduced,
+    smaa: post,
     environment: true,
-    shadows: high,
   };
 }
 
@@ -131,11 +134,12 @@ export class FrameMeter {
   }
 }
 
-/** One tier down, for an automatic tier only: a link's or the viewer's choice stands. */
+/** One tier down, for an automatic tier only (a link's or the viewer's choice stands); low is
+ * the floor: the look stays, only fidelity goes. */
 export function stepDown(): void {
   const { tier, source } = quality.get();
-  if (source !== "auto" && source !== "default") return;
-  const lower = TIERS[Math.max(0, TIERS.indexOf(tier) - 1)];
+  if ((source !== "auto" && source !== "default") || tier === "standard") return;
+  const lower = TIERS[Math.max(1, TIERS.indexOf(tier) - 1)];
   if (lower !== tier) quality.set({ tier: lower, source: "auto" });
 }
 
@@ -159,10 +163,10 @@ export function browserDevice(): Device | null {
   return { renderer, mobile, dpr: window.devicePixelRatio || 1, deviceMemory: nav.deviceMemory };
 }
 
-/** The tier the device gets by itself (standard where it cannot be told). */
+/** The tier the device gets by itself (low where it cannot be told). */
 export function autoTier(): Tier {
   const device = browserDevice();
-  return device ? detectTier(device) : "standard";
+  return device ? detectTier(device) : "low";
 }
 
 function initial(): { tier: Tier; source: QualitySource } {

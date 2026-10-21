@@ -33,11 +33,11 @@ describe("render quality tiers", () => {
     ["ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0)", desktop, "high"],
     ["ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)", desktop, "medium"],
     ["ANGLE (Intel, Intel(R) Arc(TM) A370M Graphics Direct3D11 vs_5_0 ps_5_0)", desktop, "medium"],
-    ["ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0)", desktop, "standard"],
+    ["ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0)", desktop, "low"],
     ["ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0)", desktop, "medium"],
     ["Apple GPU", { mobile: true, dpr: 3, deviceMemory: undefined }, "medium"],
     ["Adreno (TM) 740", { mobile: true, dpr: 3, deviceMemory: 8 }, "medium"],
-    ["Mali-G57", { mobile: true, dpr: 2, deviceMemory: 3 }, "standard"],
+    ["Mali-G57", { mobile: true, dpr: 2, deviceMemory: 3 }, "low"],
     [
       "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)",
       { ...desktop, deviceMemory: 2 },
@@ -46,9 +46,9 @@ describe("render quality tiers", () => {
     [
       "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)",
       desktop,
-      "standard",
+      "low",
     ],
-    ["llvmpipe (LLVM 15.0.7, 256 bits)", desktop, "standard"],
+    ["llvmpipe (LLVM 15.0.7, 256 bits)", desktop, "low"],
   ] as const)("%s → %s", (renderer, device, tier) => {
     expect(detectTier({ renderer, ...device })).toBe(tier);
   });
@@ -57,6 +57,7 @@ describe("render quality tiers", () => {
     expect(parseQuality("?quality=high")).toBe("high");
     expect(parseQuality("?at=60&quality=medium")).toBe("medium");
     expect(parseQuality("?quality=standard")).toBe("standard");
+    expect(parseQuality("?quality=low")).toBe("low");
     expect(parseQuality("?quality=auto")).toBe("auto");
     expect(parseQuality("?quality=ultra")).toBeNull();
     expect(parseQuality("")).toBeNull();
@@ -67,31 +68,27 @@ describe("render quality tiers", () => {
     expect(quality.get()).toEqual({ tier: "high", source: "viewer" });
   });
 
-  it("draws everything at high, no ambient occlusion or shadows at medium, nothing extra at standard", () => {
-    expect(featuresOf("high", false)).toEqual({
-      post: true,
-      ao: true,
-      bloom: true,
-      dof: true,
-      smaa: true,
-      environment: true,
-      shadows: true,
-    });
-    expect(featuresOf("medium", false)).toMatchObject({
-      post: true,
-      ao: false,
-      shadows: false,
-      bloom: true,
-      dof: true,
-      smaa: true,
-      environment: true,
-    });
+  it("changes fidelity between low, medium and high, never the look", () => {
+    const low = featuresOf("low", false);
+    const medium = featuresOf("medium", false);
+    const high = featuresOf("high", false);
+    for (const f of [low, medium, high]) {
+      expect(f.look).toBe(true); // tone curve, rim, crowd, halos, shadows, environment
+      expect(f.environment).toBe(true);
+    }
+    expect(low).toMatchObject({ post: false, smaa: false, dof: false, ao: false, bloom: false });
+    expect(medium).toMatchObject({ post: true, smaa: true, dof: true, ao: false, bloom: false });
+    expect(high).toMatchObject({ post: true, smaa: true, dof: true, ao: true, bloom: true });
+  });
+
+  it("leaves the standard picture exactly as it was", () => {
     expect(Object.values(featuresOf("standard", false)).some(Boolean)).toBe(false);
   });
 
   it("turns depth of field off under reduced motion", () => {
     expect(featuresOf("high", true).dof).toBe(false);
     expect(featuresOf("medium", true).dof).toBe(false);
+    expect(featuresOf("low", true).look).toBe(true); // the look is not motion
   });
 });
 
@@ -143,12 +140,14 @@ describe("the safety net on auto", () => {
     expect(feed(new FrameMeter(), 2, 30, false)).toBe("keep");
   });
 
-  it("steps high to medium to standard, and only a tier the device was given", () => {
+  it("steps high to medium to low, and only a tier the device was given", () => {
     quality.set({ tier: "high", source: "auto" });
     stepDown();
     expect(quality.get()).toEqual({ tier: "medium", source: "auto" });
     stepDown();
-    expect(quality.get().tier).toBe("standard");
+    expect(quality.get().tier).toBe("low");
+    stepDown();
+    expect(quality.get().tier).toBe("low"); // the look stays: low is the floor
     quality.set({ tier: "high", source: "viewer" });
     stepDown();
     expect(quality.get().tier).toBe("high"); // the viewer's choice stands

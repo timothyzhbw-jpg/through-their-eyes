@@ -108,7 +108,7 @@ function PovScene() {
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
   const tier = useStore(quality, (s) => s.tier);
-  const post = featuresOf(tier, false).post;
+  const { look, post } = featuresOf(tier, false);
   useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
@@ -263,7 +263,7 @@ function PovScene() {
         >
           <mesh
             position-y={BODY_CENTRE}
-            castShadow
+            userData={{ player: true }}
             geometry={capsule}
             material={materials.teams[p.team]}
             visible={!rigged}
@@ -286,7 +286,11 @@ function PovScene() {
             }}
             visible={!rigged}
           >
-            <mesh geometry={headGeometry} material={materials.teams[p.team]} />
+            <mesh
+              geometry={headGeometry}
+              material={materials.teams[p.team]}
+              userData={{ player: true }}
+            />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
           </group>
           <sprite
@@ -331,12 +335,13 @@ function PovScene() {
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
-      {post ? (
-        <Suspense fallback={<MotionBlur hfov={POV_HFOV} />}>
+      {/* The post chain draws the frame itself at medium and high; until its chunk is here,
+          and at the other tiers, the motion-blur pass does. */}
+      {!post && <MotionBlur hfov={POV_HFOV} />}
+      {look && (
+        <Suspense fallback={post ? <MotionBlur hfov={POV_HFOV} /> : null}>
           <QualityLayer sample={sample} hfov={POV_HFOV} />
         </Suspense>
-      ) : (
-        <MotionBlur hfov={POV_HFOV} />
       )}
     </>
   );
@@ -346,12 +351,12 @@ function PovScene() {
 export function Ground() {
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
         <planeGeometry args={[130, 92]} />
         {/* The grass keeps its colour at every render tier: no image-based light on it. */}
         <meshStandardMaterial color="#173826" envMapIntensity={0} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2}>
         <planeGeometry args={[PITCH.length, PITCH.width]} />
         <meshStandardMaterial map={getPitchTexture()} envMapIntensity={0} />
       </mesh>
