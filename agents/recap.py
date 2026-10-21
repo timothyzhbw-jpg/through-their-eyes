@@ -310,21 +310,23 @@ RECAP_SEQUENCES: dict[Persona, list[tuple[Speaker, str | None]]] = {
                           ("color", "passes_away")],
 }  # fmt: skip
 # How one key moment is told: (speaker, claim kinds best first); the first supported kind speaks.
+# A shot is told by how it ended first (explain/recap.py `_shot_claim`).
+SHOT = ("goal", "saved", "blocked", "wide")
 MOMENT_LINES: dict[Persona, list[tuple[Speaker, tuple[str, ...]]]] = {
-    "casual": [("pbp", ("goal", "saved", "wide", "seen_in_scan", "heavy_pressure", "bypassed",
-                        "runner_received", "pass_to")),
+    "casual": [("pbp", (*SHOT, "seen_in_scan", "heavy_pressure", "bypassed", "runner_received",
+                        "pass_to")),
                ("color", ("cf_pass", "cf_carry_lost"))],
-    "analyst": [("pbp", ("goal", "saved", "wide", "scans_before_reception", "pressure_at_pass",
-                         "bypassed", "pass_to_runner", "pass_to")),
+    "analyst": [("pbp", (*SHOT, "scans_before_reception", "pressure_at_pass", "bypassed",
+                         "pass_to_runner", "pass_to")),
                 ("color", ("cf_value", "cf_pass", "cf_carry_lost"))],
-    "player_fan": [("pbp", ("goal", "saved", "wide", "seen_in_scan", "heavy_pressure",
-                            "bypassed", "pass_to_runner", "pass_to")),
+    "player_fan": [("pbp", (*SHOT, "seen_in_scan", "heavy_pressure", "bypassed",
+                            "pass_to_runner", "pass_to")),
                    ("color", ("cf_pass", "cf_carry_lost"))],
-    "coach": [("pbp", ("goal", "saved", "wide", "scans_before_reception", "presser_distance",
-                       "bypassed", "pass_to")),
+    "coach": [("pbp", (*SHOT, "scans_before_reception", "presser_distance", "bypassed",
+                       "pass_to")),
               ("color", ("cf_pass", "cf_carry_lost"))],
-    "audio_description": [("pbp", ("goal", "saved", "wide", "reception_zone", "bypassed",
-                                   "pass_to_runner", "pass_to")),
+    "audio_description": [("pbp", (*SHOT, "reception_zone", "bypassed", "pass_to_runner",
+                                   "pass_to")),
                           ("color", ("seen_in_scan", "heavy_pressure", "cf_pass",
                                      "cf_carry_lost"))],
 }  # fmt: skip

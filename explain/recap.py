@@ -284,7 +284,7 @@ def moment_claims(ctx: EvalContext, card: Mapping[str, Any], start: int) -> list
 
 
 def _shot_claim(ctx: EvalContext, shot: Event) -> Claim | None:
-    """How the moment's shot ended: in the goal, saved by the keeper, or wide (SPEC 3.3)."""
+    """How the moment's shot ended: scored, saved, blocked or wide (SPEC 3.3)."""
     a = shot.id
     by = _eq(fn("event_attr", event=a, attr="player"), slot("shooter"))
     outcome = shot.attrs["outcome"]
@@ -321,6 +321,25 @@ def _shot_claim(ctx: EvalContext, shot: Event) -> Claim | None:
                 _eq(fn("event_attr", event=slot("save"), attr="shot"), a),
             ]),
             evidence=[a, save.id],
+        )  # fmt: skip
+    if outcome == "blocked":  # a player took the ball off the shot's path (sim.engine)
+        end = shot.attrs.get("end")
+        block = next((e for e in after if e.frame == end and e.player != shot.player
+                      and e.type in ("interception", "reception")), None)  # fmt: skip
+        if block is None:
+            return None
+        return Claim(
+            id="blocked",
+            template="{blocker} blocked {shooter}'s shot.",
+            templates={"zh": "{blocker}挡出了{shooter}的射门。"},
+            slots={**slots, "blocker": Slot(ref=block.player), "block": Slot(ref=block.id)},
+            predicate=Predicate(op="all", args=[
+                by, ended,
+                _eq(fn("event_attr", event=slot("block"), attr="player"), slot("blocker")),
+                _eq(fn("event_attr", event=slot("block"), attr="frame"),
+                    fn("event_attr", event=a, attr="end")),
+            ]),
+            evidence=[a, block.id],
         )  # fmt: skip
     if outcome == "wide":
         return Claim(

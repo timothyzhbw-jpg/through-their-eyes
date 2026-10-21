@@ -987,7 +987,7 @@ Application Insights.
     every renamed claim has its own fingerprint and audit record. Other moments get observed
     claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
     the line-breaking detector's own count), scans before the reception, heavy pressure, and how
-    its shot ended (scored, saved by the keeper, wide; §3.3).
+    its shot ended (scored, saved by the keeper, blocked, wide; §3.3).
     Payload evidence and seek frames are lifted to the match clock.
   - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
     (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken

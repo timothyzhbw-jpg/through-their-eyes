@@ -247,3 +247,29 @@ def test_a_saved_or_wide_shot_is_told_as_it_ended():
             seen[shot.attrs["outcome"]] = render_claim(claim, verdict, "en", names).text
     assert seen["goal"] == "H9 scored." and seen["wide"] == "H9's shot went wide."
     assert seen["saved"].endswith(" saved H9's shot.") and seen["saved"].startswith("A")
+
+
+def test_a_blocked_shot_names_the_player_who_took_the_ball():
+    """No far_post_finish seed in 0-399 has a block, so the run is edited to hold one: the shot
+    ends `blocked` on the frame an away defender intercepts it (as sim.engine records a block)."""
+    import copy
+
+    from explain.recap import _shot_claim
+    from sim.engine import Simulation
+    from sim.model import Event
+
+    run = copy.deepcopy(Simulation.from_scenario("far_post_finish", 3).run())  # a wide shot
+    shot = next(e for e in run.events if e.type == "shot")
+    end = shot.frame + 5
+    shot.attrs.update(outcome="blocked", end=end)
+    run.events.append(Event(f"interception:A4:{end:04d}", "interception", end, end * run.dt,
+                            "A4", 1, {"at": [0.0, 0.0]}))  # fmt: skip
+    ctx = EvalContext(run, resimulate=False)
+    claim = _shot_claim(ctx, shot)
+    verdict = Verifier(ctx).verify(claim)
+    assert verdict.status == "supported"
+    names = {pid: pid for pid in run.ids}
+    assert render_claim(claim, verdict, "en", names).text == "A4 blocked H9's shot."
+    assert render_claim(claim, verdict, "zh", names).text == "A4挡出了H9的射门。"
+    wrong = claim.model_copy(update={"slots": {**claim.slots, "blocker": Slot(ref="A5")}})
+    assert Verifier(ctx).verify(wrong).status == "refuted"
