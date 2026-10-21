@@ -406,7 +406,10 @@ optgroup {
   overflow: auto;
   overscroll-behavior: contain;
   background:
-    radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%), var(--night);
+    radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%),
+    rgba(8, 14, 11, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--chalk);
 }
 .lineup-inner {
@@ -423,13 +426,42 @@ optgroup {
   animation: tt-rise 560ms var(--settle) both;
 }
 .lineup-head h2 {
-  margin: 14px 0 28px;
+  margin: 14px 0 18px;
   font: 300 clamp(64px, 7vw, 92px)/1 var(--font-display);
   letter-spacing: -0.04em;
 }
 .lineup-head em {
   color: var(--floodlight);
   padding: 0 0.12em;
+}
+.lineup-pitch {
+  max-width: 620px;
+  margin: 0 auto 32px;
+  font: 400 clamp(17px, 1.5vw, 20px)/1.45 var(--font-display);
+  color: var(--chalk-2);
+  text-wrap: balance;
+}
+.lineup-pitch em {
+  color: var(--chalk);
+}
+.lineup-countdown {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--floodlight);
+  transform-origin: left center;
+  animation: tt-countdown linear both;
+  pointer-events: none;
+}
+@keyframes tt-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 .lineup-teams {
   display: grid;
@@ -866,6 +898,10 @@ optgroup {
 .stage-head > * {
   pointer-events: auto;
 }
+/* an open viewer menu sits above the transport and the run switch (same layer, later in the page) */
+.stage-head:has(.viewer-panel) {
+  z-index: 7;
+}
 .brand {
   display: flex;
   flex-direction: column;
@@ -951,6 +987,33 @@ optgroup {
 }
 .stage-run .seg button {
   min-width: 132px;
+}
+.seg button[aria-disabled="true"]:not([aria-pressed="true"]) {
+  color: var(--chalk-3);
+  cursor: not-allowed;
+}
+.run-hint {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 7px 12px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-quick);
+}
+.stage-run:has(button[aria-disabled="true"]:hover) .run-hint,
+.stage-run:has(button[aria-disabled="true"]:focus-visible) .run-hint,
+.run-hint[data-nudge] {
+  opacity: 1;
 }
 
 .sound[aria-pressed="true"] {
@@ -3206,6 +3269,74 @@ optgroup {
   }
 }
 
+/* On a phone the match picker gives way before it pushes the header off the screen. */
+@media (max-width: 760px) {
+  .header-start,
+  .header-start .match-picker {
+    min-width: 0;
+  }
+  .header-start .match-picker select {
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+}
+
+/* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
+   the stream label goes (the pill already says live), then the brand tightens, then the sound
+   button goes (the commentary panel keeps one). Inside a match the way back or the match picker
+   replaces the brand. */
+@media (max-width: 480px) {
+  .stage-head .live-status {
+    display: none;
+  }
+  .stage:has(.live-chip.back) .stage-head .brand,
+  .stage:has(.header-start .match-picker) .stage-head .brand {
+    display: none;
+  }
+  /* the story's big numbers shrink with the screen instead of running off it */
+  .numeral {
+    font-size: clamp(72px, 26vw, 120px);
+  }
+  /* a long claim tag wraps rather than widening the page */
+  .kind {
+    height: auto;
+    min-height: 22px;
+    padding-block: 3px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+}
+@media (max-width: 400px) {
+  .stage-head {
+    gap: 6px;
+  }
+  .brand h1 {
+    font-size: 18px;
+  }
+  .stage-head .live-chip {
+    padding: 0 10px;
+  }
+}
+@media (max-width: 359px) {
+  .header-end .sound {
+    display: none;
+  }
+}
+
+/* From 1181 px the run switch sits centred in the header row: the stream status takes its own line
+   under the Live pill, between the header row and the eyes row, so the two never meet. */
+@media (min-width: 1181px) {
+  .stage-head .live {
+    position: relative;
+  }
+  .stage-head .live-status {
+    position: absolute;
+    top: calc(100% + 13px);
+    left: 0;
+    white-space: nowrap;
+  }
+}
+
 /* ---------- motion ---------- */
 @keyframes tt-rise {
   from {
@@ -3271,6 +3402,9 @@ optgroup {
     animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001s !important;
+  }
+  .lineup-countdown {
+    display: none;
   }
 }
 

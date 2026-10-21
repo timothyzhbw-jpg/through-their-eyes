@@ -14,8 +14,8 @@ match seed gives the same match byte for byte and never coincides with a design 
   when the ball went out, or a cut when it ended in play. A set-piece scenario declares its own
   restart and begins with it. The next scenario then sets up its own situation: the stitch is an
   edit, not a simulated restart.
-- **Score.** Goals are `goal` events. The sim has no shot outcomes yet (M4), so a match stays 0–0
-  unless a possession produces one; the score is carried, never invented.
+- **Score.** Goals are `goal` events from scenarios with shots enabled; the score is carried,
+  never invented.
 
 Each possession is simulated on its own and stays a plain `MatchRun`, so the explain layer, the
 counterfactuals and the agents keep working on (scenario, seed) with local frames;
