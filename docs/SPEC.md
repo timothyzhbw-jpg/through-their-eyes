@@ -704,8 +704,10 @@ involved players, key metrics, candidate lenses.
     marking him); the receiver has been out of the defender's sight for the 1.2 s before it (the
     blind-side alert's unseen time, §4.4) and is seen during it. The anchor is the pass's
     resolution, where the look pays off or not. It fires once on every `corner_blind_side` design
-    seed, on the key scan, and never on 60 seeds of the other scenarios or on match 1
-    (`tests/test_corner_breakdown.py`); 300 seeds were checked while it was built.
+    seed, on the key scan, and never on 60 seeds of `blind_side_run`, `press_escape` and
+    `possession_play` (`tests/test_corner_breakdown.py`; 300 were checked while it was built).
+    Open play can have one, as it should: a defender checking the man he marks before a pass to
+    him. It is then an ordinary moment, never a hero card.
     `explain.moments.hero_card` returns a scenario hero's moment: the card on his decision, or
     his `marker_scan`.
 - Detections about the same action merge into one card with several tags. Card ids look like
