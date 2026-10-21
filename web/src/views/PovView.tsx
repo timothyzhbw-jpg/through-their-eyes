@@ -190,15 +190,7 @@ function PovScene() {
       <color attach="background" args={[NIGHT.horizon]} />
       <fog attach="fog" args={[NIGHT.horizon, ...FOG.pov]} />
       <Stadium />
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <planeGeometry args={[130, 92]} />
-        <meshStandardMaterial color="#173826" />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} />
-      </mesh>
-      <Goals />
+      <Ground />
       <PlayerShadows />
       {hero.players.map((p, j) => (
         <group
@@ -270,6 +262,23 @@ function PovScene() {
       </mesh>
       <BroadcastLayers sample={sample} />
       <MotionBlur hfov={POV_HFOV} />
+    </>
+  );
+}
+
+/** The apron, the marked pitch and the goals. The capture renderer films the same ground. */
+export function Ground() {
+  return (
+    <>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
+        <planeGeometry args={[130, 92]} />
+        <meshStandardMaterial color="#173826" />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[PITCH.length, PITCH.width]} />
+        <meshStandardMaterial map={getPitchTexture()} />
+      </mesh>
+      <Goals />
     </>
   );
 }

@@ -21,6 +21,8 @@
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
 // (at, run, ask, tamper or play) skips the lineup card and opens paused: no live stream, and no
 // breakdown on load unless tamper needs one. Unknown values are ignored and logged.
+// ?cine=1 is for filming the demo video only (cine/, SPEC 10), never linked from the app; main.tsx
+// reads it, this parser does not.
 
 import { createContext, useContext } from "react";
 import { PERSONAS, type Persona } from "./api/client";

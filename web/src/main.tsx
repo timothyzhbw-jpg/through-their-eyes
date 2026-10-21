@@ -7,6 +7,7 @@
 // URL parameters (deep links for judges, testing and filming): see deeplink.ts and the README.
 // ?match=match-1 plays another match the service serves (data/load.ts matchFromUrl).
 // ?camera=broadcast starts on the broadcast camera, focused (for filming).
+// ?cine=1 is a full-screen capture view for filming the demo (SPEC 10), never linked from the app.
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -17,13 +18,14 @@ import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
-import { SessionContext, createSession, type ViewControls } from "./session";
+import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
 import { intro } from "./ui/intro";
 import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
   const link = parseDeepLink(window.location.search);
+  const filming = new URLSearchParams(window.location.search).get("cine") === "1";
   intro.set({ open: link.intro });
   if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
   const forcedOffline = link.offline;
@@ -49,6 +51,14 @@ async function main() {
     };
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const autoplay = link.autoplay && !reducedMotion;
+    const showCine = async (session: ViewSession) => {
+      const { CineApp } = await import("./cine/CineApp");
+      root.render(
+        <SessionContext.Provider value={session}>
+          <CineApp />
+        </SessionContext.Provider>,
+      );
+    };
 
     if (loaded.hero.kind === "match") {
       const session = createMatchSession(loaded.hero, {
@@ -72,6 +82,10 @@ async function main() {
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
       broadcast(session.controls);
+      if (filming) {
+        await showCine(session);
+        return;
+      }
       root.render(
         <StrictMode>
           <DeepLinkContext.Provider value={link}>
@@ -93,6 +107,10 @@ async function main() {
     );
     applyDeepLink(session, link);
     broadcast(session.controls);
+    if (filming) {
+      await showCine(session);
+      return;
+    }
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>
