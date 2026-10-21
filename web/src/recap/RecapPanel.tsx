@@ -11,6 +11,7 @@ import { SoundOffIcon, SoundOnIcon } from "../ui/icons";
 import { LANG_LABEL, PERSONA_LABEL } from "../ui/labels";
 import { momentLabel } from "../ui/Live";
 import { Segmented } from "../ui/Segmented";
+import { TacticsCards } from "../tactics/TacticsCards";
 import { LANGUAGES } from "../whatif/whatif";
 import type { Cue } from "./recap";
 import "./recap.css";
@@ -162,6 +163,8 @@ function Panel({ session }: { session: MatchSession }) {
                 ))}
               </ul>
             )}
+
+            <TacticsCards where="recap" language={state.language} />
 
             <div className="recap-actions">
               <button

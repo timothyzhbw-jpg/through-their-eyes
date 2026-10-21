@@ -20,6 +20,7 @@ import {
 } from "../stats/stats";
 import { useStats } from "../stats/store";
 import { createStore, useStore, type Store } from "../store/store";
+import { TacticsCards } from "../tactics/TacticsCards";
 import { Segmented } from "./Segmented";
 import "./stats.css";
 
@@ -384,6 +385,7 @@ export function StatsPanel() {
         {status === "ready" && stats && audience === "table" && (
           <Table stats={stats} frame={snap.frame} />
         )}
+        {audience === "table" && <TacticsCards where="stats" />}
         {status === "ready" && stats && audience === "headlines" && (
           <Headlines stats={stats} frame={snap.frame} ratings={ratings} />
         )}
