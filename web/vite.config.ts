@@ -1,6 +1,25 @@
 import react from "@vitejs/plugin-react";
-import { loadEnv } from "vite";
+import { loadEnv, type Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+
+/** index.html: open the API's connection while the scripts download; the health probe that
+ * decides live or offline data gets 3 s, and a new connection on 3G takes about 2 s of it. */
+function preconnectApi(api: string | undefined): Plugin {
+  const origin = URL.canParse(api ?? "") ? new URL(api!).origin : null;
+  return {
+    name: "tte-preconnect-api",
+    transformIndexHtml: () =>
+      origin
+        ? [
+            {
+              tag: "link",
+              attrs: { rel: "preconnect", href: origin, crossorigin: true },
+              injectTo: "head",
+            },
+          ]
+        : [],
+  };
+}
 
 export default defineConfig(({ mode }) => {
   // Dev only: forward the API's paths to a deployed service, whose CORS allows only the site.
@@ -8,7 +27,7 @@ export default defineConfig(({ mode }) => {
   const target = loadEnv(mode, ".", "TTE_").TTE_API_PROXY;
   const forward = { target, changeOrigin: true, secure: true };
   return {
-    plugins: [react()],
+    plugins: [react(), preconnectApi(loadEnv(mode, ".", "VITE_").VITE_API_URL)],
     server: target
       ? {
           proxy: {

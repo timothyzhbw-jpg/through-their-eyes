@@ -84,7 +84,5 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Upload to the static website
-        run: |
-          az storage blob upload-batch --account-name "${{ vars.TTE_SITE_ACCOUNT }}" \
-            --auth-mode login -d '$web' -s web/dist --overwrite \
-            --content-cache-control "public, max-age=300" -o none
+        # Gzipped batches, hashed assets cached for a year, index.html last (web/scripts/stage.mjs).
+        run: infra/upload_web.sh "${{ vars.TTE_SITE_ACCOUNT }}"
