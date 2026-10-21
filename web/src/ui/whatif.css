@@ -1,108 +1,134 @@
-/* The "What if…?" box (SPEC 6, 7). Answers are counterfactual: gold, like the run without the
-   look, so a what-if never reads as something that happened. */
-.lang {
-  display: inline-flex;
-  margin-left: auto;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  overflow: hidden;
-}
-.lang button {
-  font: 600 12px/1 var(--font-body);
-  color: var(--muted);
-  background: var(--surface);
-  border: 0;
-  padding: 6px 9px;
-  cursor: pointer;
-}
-.lang button[aria-pressed="true"] {
-  color: var(--bg);
-  background: var(--fg);
+/* "Ask the replay" (SPEC 6, 7). Answers are counterfactual: Dusk, like the run without the look,
+   so a what-if never reads as something that happened. */
+.panel .seg.lang button {
+  height: 32px;
+  padding: 0 12px;
 }
 .questions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 40px;
+}
+.questions .try {
+  margin-right: 6px;
+  font-size: 14px;
+  color: var(--chalk-3);
 }
 .question {
-  font: 500 13px/1.2 var(--font-body);
-  color: var(--fg);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 7px 11px;
-  cursor: pointer;
+  appearance: none;
+  border: 0;
   display: inline-flex;
-  gap: 6px;
   align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: var(--r-control);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.2);
+  color: var(--chalk);
+  font: 500 14px/1.25 var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--t-quick),
+    box-shadow var(--t-quick),
+    transform 450ms var(--spring);
+}
+.question:hover {
+  background: rgba(239, 237, 229, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.38);
+}
+.question:active {
+  transform: scale(0.96);
 }
 .question[aria-pressed="true"] {
-  border-color: var(--gold);
-  color: var(--bg);
-  background: var(--gold);
+  background: rgba(149, 167, 186, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(149, 167, 186, 0.7);
+  color: var(--chalk);
 }
 .question:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 .question.factual {
-  border-style: dashed;
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.2);
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(239, 237, 229, 0.05) 0 4px,
+    transparent 4px 8px
+  );
 }
 .question .did {
-  font: 600 10px/1 var(--font-data);
-  letter-spacing: 0.05em;
+  font: 500 10px/1 var(--font-data);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--sight);
+  color: var(--floodlight);
 }
 .free {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 10px;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(239, 237, 229, 0.3);
+  transition: border-color var(--t-base);
+}
+.free:focus-within {
+  border-bottom-color: var(--floodlight);
 }
 .free-question {
   flex: 1;
   min-width: 0;
-  font: 14px/1.2 var(--font-body);
-  color: var(--muted);
-  background: var(--bg);
-  border: 1px dashed var(--line);
-  border-radius: 6px;
-  padding: 9px 11px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: var(--chalk);
+  caret-color: var(--floodlight);
+  font: italic 300 clamp(24px, 2.6vw, 40px) / 1.15 var(--font-display);
+  letter-spacing: -0.025em;
 }
-.free-question:enabled {
-  color: var(--fg);
-  border-style: solid;
+.free-question::placeholder {
+  color: var(--chalk-3);
+}
+.free-question:disabled {
+  color: var(--chalk-3);
+}
+.free .btn {
+  flex: none;
+  height: 56px;
+  padding: 0 24px;
+  background: var(--floodlight);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 12px 32px -14px rgba(246, 213, 102, 0.6);
+}
+.free .btn:hover {
+  background: var(--floodlight-hi);
 }
 .answer {
-  border-left: 3px solid var(--sight);
-  background: var(--surface-2);
-  border-radius: 6px;
-  padding: 10px 12px;
+  max-width: 920px;
+  padding-left: 28px;
+  box-shadow: inset 2px 0 0 var(--floodlight);
+  animation: tt-rise var(--t-slow) var(--settle) both;
 }
 .answer.cf {
-  border-left-color: var(--gold);
+  box-shadow: inset 2px 0 0 var(--dusk);
 }
 .answer-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .answer-head .asked {
-  font: 600 15px/1.3 var(--font-body);
-}
-.answer-head .close {
-  margin-left: auto;
-  font: 600 18px/1 var(--font-body);
-  color: var(--muted);
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
+  font: 500 11px/1.4 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
 }
 .answer-lines {
   list-style: none;
@@ -115,26 +141,29 @@
   all: unset;
   box-sizing: border-box;
   width: 100%;
-  padding: 6px 4px;
-  border-radius: 5px;
+  padding: 6px 0;
   cursor: pointer;
-  line-height: 1.45;
+  font: 400 clamp(24px, 2.4vw, 34px) / 1.28 var(--font-display);
+  letter-spacing: -0.012em;
+  color: var(--chalk-2);
+  transition: color var(--t-quick);
 }
 .answer-lines > li > button:hover,
 .answer-lines > li.open > button {
-  background: var(--surface);
+  color: var(--chalk);
 }
 .answer-lines > li > button:focus-visible {
-  outline: 2px solid var(--sight);
+  outline: 2px solid var(--floodlight);
 }
 .answer-lines .claims {
-  margin: 6px 0 4px;
+  margin: 8px 0 4px;
   grid-template-columns: 1fr;
 }
 .answer.refused {
-  border-left-color: var(--muted);
+  box-shadow: inset 2px 0 0 var(--chalk-3);
 }
 .answer.refused p {
   margin: 0;
-  color: var(--muted);
+  font: 400 22px/1.35 var(--font-display);
+  color: var(--chalk-2);
 }

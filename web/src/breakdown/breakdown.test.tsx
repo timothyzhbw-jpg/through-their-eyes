@@ -95,6 +95,15 @@ describe("the service's breakdown, checked like the bundled one", () => {
 });
 
 describe("asking the service for a breakdown", () => {
+  it("describes a pending breakdown without promising a fixed wait", () => {
+    const { session } = online();
+    session.controls.requestBreakdown();
+    expect(session.breakdown.get().status).toBe("loading");
+    const html = render(session, <NarrationPanel />);
+    expect(html).toContain("a new one takes longer to generate");
+    expect(html).not.toMatch(/takes about \d+ s/);
+  });
+
   it("asks for the chosen persona and language and renders the verified payload", async () => {
     const { session, fetch } = online();
     expect(session.breakdown.get().status).toBe("waiting");
