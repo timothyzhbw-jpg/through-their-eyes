@@ -1335,6 +1335,188 @@ def marker_cf_value(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -
     )
 
 
+# --- a keeper's step for a sightline (`keeper_step`, `screened_shot`) -----------------------
+
+
+@dataclass(frozen=True)
+class KeeperRefs:
+    """The events of a keeper's moment: his step, the shot, how it ended."""
+
+    run: MatchRun
+    card: MomentCard
+    keeper: str
+    shooter: str
+    step: Event
+    shot: Event
+
+    @classmethod
+    def of(cls, run: MatchRun, card: MomentCard) -> KeeperRefs:
+        shot = run.event(card.anchors["shot"])
+        return cls(run=run, card=card, keeper=card.actor, shooter=shot.player,
+                   step=run.event(card.anchors["step"]), shot=shot)  # fmt: skip
+
+
+def keeper_step(ctx: EvalContext, r: KeeperRefs) -> Claim | None:
+    lead = fn("seconds_between", a=slot("step"), b=slot("shot"))
+    lateral = fn("event_attr", event=slot("step"), attr="lateral_m")
+    values = {"step": r.step.id, "shot": r.shot.id}
+    secs = ctx.value(lead, values)
+    if round(secs, 1) <= 0.0:
+        return None
+    return Claim(
+        id="keeper_step",
+        template="{keeper} stepped {m|metre|metres} across {secs|second|seconds} before {shooter} "
+        "struck the ball.",
+        templates={"zh": "{shooter}射门前{secs}秒，{keeper}横向移动了{m}米。"},
+        slots={"keeper": Slot(ref=r.keeper), "shooter": Slot(ref=r.shooter),
+               "step": Slot(ref=r.step.id), "shot": Slot(ref=r.shot.id),
+               "m": _num(ctx.value(lateral, values), 1), "secs": _num(secs, 1)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=slot("step"), attr="player"), slot("keeper")),
+            _eq(fn("event_attr", event=slot("shot"), attr="player"), slot("shooter")),
+            _approx(lateral, slot("m"), 1), _approx(lead, slot("secs"), 1),
+        ]),
+        evidence=[r.step.id, r.shot.id],
+    )  # fmt: skip
+
+
+def first_sight(ctx: EvalContext, r: KeeperRefs) -> Claim | None:
+    delay = fn("sight_delay", shot=slot("shot"))
+    value = ctx.value(delay, {"shot": r.shot.id})
+    slots = {"keeper": Slot(ref=r.keeper), "shooter": Slot(ref=r.shooter),
+             "shot": Slot(ref=r.shot.id)}  # fmt: skip
+    who = [_eq(fn("event_attr", event=slot("shot"), attr="keeper"), slot("keeper")),
+           _eq(fn("event_attr", event=slot("shot"), attr="player"), slot("shooter"))]  # fmt: skip
+    if round(value, 2) == 0.0:
+        return Claim(
+            id="first_sight",
+            template="{keeper} saw the ball as {shooter} struck it.",
+            templates={"zh": "{shooter}起脚的瞬间，{keeper}就看到了球。"},
+            slots=slots,
+            predicate=Predicate(op="all", args=[*who, _eq(delay, 0.0)]),
+            evidence=[r.shot.id],
+        )
+    return Claim(
+        id="first_sight",
+        template="{keeper} first saw the ball {secs|second|seconds} after {shooter} struck it.",
+        templates={"zh": "{shooter}起脚{secs}秒后，{keeper}才看到球。"},
+        slots={**slots, "secs": _num(value, 1)},
+        predicate=Predicate(op="all", args=[*who, _approx(delay, slot("secs"), 1)]),
+        evidence=[r.shot.id],
+    )
+
+
+SHOT_END = {
+    "saved": ("{keeper} saved it.", "{keeper}把球扑了出来。"),
+    "goal": ("{shooter} scored.", "{shooter}破门得分。"),
+    "wide": ("{shooter}'s shot went wide.", "{shooter}的射门偏出了。"),
+}
+
+
+def shot_end(ctx: EvalContext, r: KeeperRefs) -> Claim | None:
+    outcome = r.shot.attrs.get("outcome")
+    if outcome not in SHOT_END:
+        return None
+    template, zh = SHOT_END[outcome]
+    return Claim(
+        id="shot_end",
+        template=template,
+        templates={"zh": zh},
+        slots={"keeper": Slot(ref=r.keeper), "shooter": Slot(ref=r.shooter)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=r.shot.id, attr="outcome"), outcome),
+            _eq(fn("event_attr", event=r.shot.id, attr="keeper"), slot("keeper")),
+            _eq(fn("event_attr", event=r.shot.id, attr="player"), slot("shooter")),
+        ]),
+        evidence=[r.shot.id],
+    )  # fmt: skip
+
+
+def cf_first_sight(ctx: EvalContext, r: KeeperRefs, cf: CounterfactualResult) -> Claim | None:
+    if not isinstance(cf, CounterfactualResult):
+        return None
+    delay = fn("sight_delay", shot=r.shot.id, cf=cf.scan_id)
+    value = ctx.value(delay)
+    if round(value, 1) <= 0.0:
+        return None
+    return Claim(
+        id="cf_first_sight",
+        template="Without the step, {keeper} first sees the ball {secs|second|seconds} after it is "
+        "struck.",
+        templates={"zh": "如果没有这次横移，{keeper}要到起脚{secs}秒后才看到球。"},
+        slots={"keeper": Slot(ref=r.keeper), "secs": _num(value, 1)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=r.shot.id, attr="keeper", cf=cf.scan_id), slot("keeper")),
+            _approx(delay, slot("secs"), 1),
+        ]),
+        evidence=[cf.scan_id],
+    )  # fmt: skip
+
+
+CF_SHOT_END = {
+    "saved": ("Without the step, {keeper} still saves it.",
+              "如果没有这次横移，{keeper}依然能扑出。"),
+    "goal": ("Without the step, {shooter} scores.", "如果没有这次横移，{shooter}就进球了。"),
+    "wide": ("Without the step, the shot goes wide.", "如果没有这次横移，这脚射门会偏出。"),
+}  # fmt: skip
+
+
+def cf_shot_end(ctx: EvalContext, r: KeeperRefs, cf: CounterfactualResult) -> Claim | None:
+    if not isinstance(cf, CounterfactualResult):
+        return None
+    shot = next((e for e in cf.counterfactual.events if e.id == r.shot.id), None)
+    outcome = None if shot is None else shot.attrs.get("outcome")
+    if outcome not in CF_SHOT_END:
+        return None
+    template, zh = CF_SHOT_END[outcome]
+    at = {"event": r.shot.id, "cf": cf.scan_id}
+    return Claim(
+        id="cf_shot_end",
+        template=template,
+        templates={"zh": zh},
+        slots={"keeper": Slot(ref=r.keeper), "shooter": Slot(ref=r.shooter)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", attr="outcome", **at), outcome),
+            _eq(fn("event_attr", attr="keeper", **at), slot("keeper")),
+            _eq(fn("event_attr", attr="player", **at), slot("shooter")),
+        ]),
+        evidence=[cf.scan_id],
+    )  # fmt: skip
+
+
+def cf_save_chance(ctx: EvalContext, r: KeeperRefs, cf: CounterfactualResult) -> Claim | None:
+    """The sight lens in words: P(save) with the step and without it (the save model)."""
+    if not isinstance(cf, CounterfactualResult):
+        return None
+    p1 = fn("event_attr", event=r.shot.id, attr="p_save")
+    p0 = fn("event_attr", event=r.shot.id, attr="p_save", cf=cf.scan_id)
+    v1, v0 = ctx.value(p1), ctx.value(p0)
+    if v1 is None or v0 is None or round(v1, 2) <= round(v0, 2):
+        return None
+    return Claim(
+        id="cf_save_chance",
+        template="The step raised {keeper}'s chance of saving it from {p0} to {p1}.",
+        templates={"zh": "这次横移把{keeper}扑出这脚球的概率从{p0}提高到了{p1}。"},
+        slots={"keeper": Slot(ref=r.keeper), "p0": _num(v0, 2), "p1": _num(v1, 2)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=r.shot.id, attr="keeper"), slot("keeper")),
+            _approx(p1, slot("p1"), 2), _approx(p0, slot("p0"), 2),
+        ]),
+        evidence=[cf.scan_id, r.shot.id],
+    )  # fmt: skip
+
+
+KEEPER_BUILDERS: dict[str, Callable[..., Claim | None]] = {
+    "keeper_step": keeper_step,
+    "first_sight": first_sight,
+    "shot_end": shot_end,
+}
+KEEPER_CF_BUILDERS: dict[str, Callable[..., Claim | None]] = {
+    "cf_first_sight": cf_first_sight,
+    "cf_shot_end": cf_shot_end,
+    "cf_save_chance": cf_save_chance,
+}
+
 MarkerBuilder = Callable[..., Claim | None]
 
 MARKER_BUILDERS: dict[str, MarkerBuilder] = {
@@ -1377,6 +1559,11 @@ def hero_claims(
     decision = ctx.run.hero_decision()
     if decision is None:
         card = hero_card(ctx.run, ctx.cards)
+        if card is not None and card.kind == "keeper_step":
+            builders = [(k, b, ()) for k, b in KEEPER_BUILDERS.items()]
+            if cf is not None:
+                builders += [(k, b, (cf,)) for k, b in KEEPER_CF_BUILDERS.items()]
+            return _built(ctx, KeeperRefs.of(ctx.run, card), builders)
         if card is not None and card.kind == "marker_scan":
             builders = [(k, b, ()) for k, b in MARKER_BUILDERS.items()]
             if cf is not None:

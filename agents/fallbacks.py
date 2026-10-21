@@ -121,6 +121,27 @@ SHOT_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]
                           ("pbp", ("goal", "saved", "wide")), ("color", "cf_shot")],
 }  # fmt: skip
 
+# A keeper's step for a sightline (`keeper_step`, lens `sight`): the step, what it let him see,
+# how the shot ended, and the shot without the step.
+KEEPER_HEADLINE = ["keeper_step", "first_sight", "cf_shot_end"]
+KEEPER_SUPPORTING = ["shot_end", "cf_first_sight", "cf_save_chance"]
+KEEPER_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
+    "casual": [("pbp", None), ("pbp", "keeper_step"), ("color", "first_sight"),
+               ("pbp", "shot_end"), ("color", "cf_shot_end")],
+    "analyst": [("pbp", None), ("pbp", "keeper_step"), ("color", "first_sight"),
+                ("color", "cf_first_sight"), ("color", "cf_save_chance"), ("pbp", "shot_end"),
+                ("color", "cf_shot_end")],
+    "player_fan": [("pbp", None), ("pbp", "keeper_step"), ("color", "first_sight"),
+                   ("pbp", "shot_end"), ("color", "cf_shot_end")],
+    "coach": [("pbp", "keeper_step"), ("color", "cf_first_sight"),
+              ("color", "cf_save_chance")],
+    # For listeners, in the order it happened: the step, the sight it gave him, the end of the
+    # shot, and the shot without the step. No probabilities.
+    "audio_description": [("pbp", "keeper_step"), ("color", "first_sight"),
+                          ("pbp", "shot_end"), ("color", "cf_first_sight"),
+                          ("color", "cf_shot_end")],
+}  # fmt: skip
+
 
 def _placed_shot_moment(ctx: MomentContext) -> bool:
     action = ctx.card.anchors.get("action")
@@ -151,6 +172,12 @@ def director(
 def analyst(ctx: MomentContext) -> Findings:
     lens = ctx.card.selected_lens or "scan"
     supported = ctx.supported
+    if ctx.card.kind == "keeper_step":
+        headline = [c for c in KEEPER_HEADLINE if c in supported]
+        supporting = [c for c in KEEPER_SUPPORTING if c in supported and c not in headline]
+        angle = "One step across cleared his view of the ball; without it he sees it too late."
+        return Findings(moment=ctx.card.id, lens=lens, headline=headline, supporting=supporting,
+                        angle=angle)  # fmt: skip
     if ctx.card.kind == "marker_scan":
         headline = [c for c in MARKER_HEADLINE if c in supported]
         supporting = [c for c in MARKER_SUPPORTING if c in supported and c not in headline]
@@ -180,7 +207,9 @@ def narration(
     """Template lines in speaking order; only one speaker's lines when `speaker` is given."""
     pressure = ctx.card.selected_lens == "pressure"
     sequence = (PRESSURE_SEQUENCES if pressure else SEQUENCES)[persona]
-    if ctx.card.kind == "marker_scan":
+    if ctx.card.kind == "keeper_step":
+        sequence = KEEPER_SEQUENCES[persona]
+    elif ctx.card.kind == "marker_scan":
         sequence = MARKER_SEQUENCES[persona]
     elif not pressure and _placed_shot_moment(ctx):
         sequence = SHOT_SEQUENCES[persona]

@@ -54,6 +54,7 @@ ANALYST_NUMBERS: frozenset[str] = frozenset(
         "runner_pressure",
         "shot_thought_vs_was",
         "cf_shot_value",
+        "cf_save_chance",
     }
 )
 

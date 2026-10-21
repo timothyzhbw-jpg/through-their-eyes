@@ -39,6 +39,7 @@ from sim.counterfactual import (
     CounterfactualResult,
     WhatIfResult,
     drop_scan_counterfactual,
+    drop_step_counterfactual,
     what_if_from_id,
 )
 from sim.decision import (
@@ -158,13 +159,13 @@ class EvalContext:
                 self.counterfactuals[scan_ref] = result
             return self.counterfactuals[scan_ref]
         scan = self.event(self.run, scan_ref)
-        if scan.type != "scan":
+        if scan.type not in ("scan", "step"):  # a keeper's step is dropped the same way
             raise Refuted(f"{scan.id} is not a scan; counterfactuals drop scans")
         if scan.id not in self.counterfactuals:
             if not self.resimulate:
                 raise Inconclusive(f"no counterfactual without {scan.id} was supplied")
-            result = drop_scan_counterfactual(self.run.scenario, self.run.seed, scan.id)
-            self.counterfactuals[scan.id] = result
+            drop = drop_scan_counterfactual if scan.type == "scan" else drop_step_counterfactual
+            self.counterfactuals[scan.id] = drop(self.run.scenario, self.run.seed, scan.id)
         return self.counterfactuals[scan.id]
 
     def visibility_matrix(self, run: MatchRun, f: int) -> np.ndarray:
@@ -414,6 +415,18 @@ def seconds_between(ctx: EvalContext, run: MatchRun, a: str, b: str) -> float:
     return float(ctx.event(run, b).t - ctx.event(run, a).t)
 
 
+def sight_delay(ctx: EvalContext, run: MatchRun, shot: str) -> float:
+    """Seconds from a shot's strike to the keeper's first sight of the ball (Module A, SPEC 3.3);
+    0 when he saw it as it was struck."""
+    e = ctx.event(run, shot)
+    if e.type != "shot":
+        raise Refuted(f"{e.id} is not a shot")
+    seen = e.attrs.get("seen")
+    if seen is None:
+        raise Inconclusive(f"the keeper never saw {e.id}")
+    return (int(seen) - e.frame) * run.dt
+
+
 def turnover_at_resolution(ctx: EvalContext, run: MatchRun, event: str) -> float:
     """Expected turnover where a pass resolved, in xT (`explain.lenses.turnover_at_resolution`:
     pressing intensity on the receiver times the stake at the ball, 1 x stake if it was lost)."""
@@ -448,6 +461,7 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "scan_side": scan_side,
     "max_visibility": max_visibility,
     "seconds_between": seconds_between,
+    "sight_delay": sight_delay,
     "turnover_at_resolution": turnover_at_resolution,
     # "cf_delta" is evaluated lazily by `Evaluator.cf_delta`: its `of` runs on two runs.
 }

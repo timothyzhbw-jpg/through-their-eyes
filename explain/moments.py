@@ -19,6 +19,9 @@
   him); R has been out of D's sight for the `MARKER_UNSEEN_S` before it (the blind-side alert's
   own unseen time, SPEC 4.4) and is seen during it. The anchor is the pass's resolution, where
   the look pays off or not.
+- `keeper_step`: a keeper's step for a sightline (`step` events, `screened_shot`) followed within
+  `STEP_TO_SHOT_S` by an opponent's shot at his goal. The anchor is the shot's resolution (a save,
+  a goal, wide or blocked). Its only lens is `sight` (`explain.lenses.sight_lens`).
 
 Cards that describe the same action (anchor "action", e.g. the hero's pass) are merged into one
 card: the primary kind is the first in `PRIORITY`, `tags` lists every detector that fired. Goal,
@@ -53,12 +56,14 @@ MARKED_M = float(TERMS["unmarked"].threshold)  # a defender this close to his ma
 MARKER_UNSEEN_S = DEFAULT_PARAMS.min_unseen_s  # out of sight this long: on his blind side
 OWN_THIRD_X = 2 * HALF_LENGTH / 6  # 17.5 m from halfway, the edge of a team's own third
 SEEN = SimParams().perception_threshold  # visibility from which the sim counts a player as seen
+STEP_TO_SHOT_S = 3.0  # a keeper's step this long before a shot is his moment
 PRIORITY: tuple[MomentKind, ...] = (
     "pressed_decision",
     "decision_after_scan",
     "line_breaking_pass",
     "sprint",
     "marker_scan",
+    "keeper_step",
 )
 ALL_LENSES: list[LensName] = ["scan", "space", "pressure"]
 
@@ -477,6 +482,46 @@ def detect_marker_scans(run: MatchRun) -> list[MomentCard]:
     return cards
 
 
+# --- the keeper's step for a sightline ------------------------------------------------------
+
+
+def detect_keeper_steps(run: MatchRun) -> list[MomentCard]:
+    team = _team(run)
+    last = len(run.owner) - 1
+    shots = _sorted_events(run, "shot")
+    cards = []
+    for step in _sorted_events(run, "step"):
+        k = run.index(step.player)
+        if run.players[k].role != "GK":
+            continue
+        lo, hi = step.frame, step.frame + _frames(run, STEP_TO_SHOT_S)
+        shot = next((e for e in shots if lo <= e.frame <= hi and team[run.index(e.player)]
+                     != team[k]), None)  # fmt: skip
+        if shot is None:
+            continue
+        end = min(int(shot.attrs.get("end") or last), last)
+        outcome = next((e for e in _sorted_events(run) if e.frame == end
+                        and e.type in ("save", "goal", "out")), None)  # fmt: skip
+        anchors = {"step": step.id, "shot": shot.id}
+        events = [step, shot]
+        if outcome is not None:
+            anchors["outcome"] = outcome.id
+            events.append(outcome)
+        card = _card(
+            run, "keeper_step", step.player, end,
+            (min(step.frame, end - _frames(run, PRE_ROLL_S)), end + _frames(run, POST_ROLL_S)),
+            receiver=None, players=[shot.player], anchors=anchors, events=events,
+            metrics={
+                "step_m": _r(step.attrs["lateral_m"], 2),
+                "step_to_shot_s": _r((shot.frame - step.frame) * run.dt, 2),
+                "outcome": shot.attrs.get("outcome"),
+            },
+        )  # fmt: skip
+        card.candidate_lenses = ["sight"]
+        cards.append(card)
+    return cards
+
+
 # --- all moments -------------------------------------------------------------------------
 
 
@@ -499,6 +544,7 @@ def detect_moments(run: MatchRun) -> list[MomentCard]:
     """Every moment of a run, one card per action, sorted by anchor frame."""
     cards = detect_pressed_decisions(run) + detect_decisions_after_scan(run)
     cards += detect_line_breaking_passes(run) + detect_sprints(run) + detect_marker_scans(run)
+    cards += detect_keeper_steps(run)
     by_action: dict[str, MomentCard] = {}
     merged: list[MomentCard] = []
     for card in sorted(cards, key=lambda c: PRIORITY.index(c.kind)):
@@ -514,7 +560,7 @@ def detect_moments(run: MatchRun) -> list[MomentCard]:
 
 def hero_card(run: MatchRun, cards: list[MomentCard] | dict[str, MomentCard]) -> MomentCard | None:
     """The scenario hero's moment among `cards`: the card on his decision, or, for a hero with no
-    decision on the ball, his `marker_scan`. None when neither was detected."""
+    decision on the ball, his `marker_scan` or `keeper_step`. None when none was detected."""
     if run.hero is None:
         return None
     pool = [c for c in (cards.values() if isinstance(cards, dict) else cards) if not c.live_only]
@@ -524,4 +570,6 @@ def hero_card(run: MatchRun, cards: list[MomentCard] | dict[str, MomentCard]) ->
             (c for c in pool if (c.actor, c.anchor_frame) == (decision.player, decision.frame)),
             None,
         )
-    return next((c for c in pool if c.kind == "marker_scan" and c.actor == run.hero), None)
+    return next(
+        (c for c in pool if c.kind in ("marker_scan", "keeper_step") and c.actor == run.hero), None
+    )

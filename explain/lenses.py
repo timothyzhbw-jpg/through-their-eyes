@@ -34,6 +34,11 @@ at the ball (a ball the defence wins counts 1 x stake). delta = that with the lo
 without it (the marker's most informative scan before the pass dropped and re-simulated). The
 space and pressure lenses need a decision on the ball and are unavailable.
 
+A keeper's step for a sightline (`keeper_step`) has only the `sight` lens: the goals his step
+prevents in expectation, P(save) with the step minus P(save) with it dropped and re-simulated
+(`sim.counterfactual.drop_step_counterfactual`), both from the save model on the shot's crossing
+(Module A). A goal is worth 1 in xT units, so the delta is in the same unit as the others.
+
 Consequence of the shared value function: if dropping the scan makes the player pick one of his
 other options, delta_scan >= delta_space up to small belief-driven shifts of the option targets,
 so the scan lens wins exactly when the scan was decisive; if the decision does not change,
@@ -56,12 +61,12 @@ from analytics.xt import xt_for
 from explain.cards import LensName, LensResult, MomentCard
 from explain.moments import detect_moments, hero_card
 from sim.config import SimParams
-from sim.counterfactual import drop_scan_counterfactual
+from sim.counterfactual import drop_scan_counterfactual, drop_step_counterfactual
 from sim.decision import DecisionParams, OptionEval, placed_shot_value
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
-LENS_ORDER: tuple[LensName, ...] = ("scan", "space", "pressure")
+LENS_ORDER: tuple[LensName, ...] = ("scan", "space", "pressure", "sight")
 SCAN_LOOKBACK_S = 10.0  # scans considered before the decision
 DIGITS = 6
 
@@ -380,6 +385,44 @@ def marker_scan_lens(run: MatchRun, card: MomentCard, scan_id: str | None = None
     )
 
 
+def sight_lens(run: MatchRun, card: MomentCard) -> LensResult:
+    """The `sight` lens of a keeper's step: P(save) with the step minus without it."""
+    step_id, shot_id = card.anchors["step"], card.anchors["shot"]
+    cf = drop_step_counterfactual(run.scenario, run.seed, step_id)
+    shots = [next((e for e in r.events if e.id == shot_id), None)
+             for r in (cf.factual, cf.counterfactual)]  # fmt: skip
+    if any(e is None or e.attrs.get("p_save") is None for e in shots):
+        return _unavailable("sight", f"{shot_id} did not reach the save model in both runs")
+    with_step, without = shots
+
+    def delay(e: Event) -> float | None:
+        seen = e.attrs.get("seen")
+        return None if seen is None else _r((int(seen) - e.frame) * run.dt, 3)
+
+    p1, p0 = float(with_step.attrs["p_save"]), float(without.attrs["p_save"])
+    return LensResult(
+        lens="sight",
+        available=True,
+        delta_xt=_r(round(p1, DIGITS) - round(p0, DIGITS)),
+        metrics={
+            "step_id": step_id,
+            "step_m": _r(run.event(step_id).attrs["lateral_m"], 3),
+            "shot": shot_id,
+            "p_save_with_step": _r(p1),
+            "p_save_without_step": _r(p0),
+            "first_sight_with_step_s": delay(with_step),
+            "first_sight_without_step_s": delay(without),
+            "reach_with_step_m": _r(with_step.attrs.get("reach", 0.0), 3),
+            "reach_without_step_m": _r(without.attrs.get("reach", 0.0), 3),
+            "outcome_with_step": with_step.attrs.get("outcome"),
+            "outcome_without_step": without.attrs.get("outcome"),
+        },
+        evidence=[step_id, shot_id],
+        note="P(save) of the shot with the keeper's step minus without it (the save model on "
+        "the shot's crossing, Module A): the goals the step prevents in expectation",
+    )
+
+
 def _pressure_cost(run: MatchRun, frame: int, carrier: int, sign: int) -> tuple[float, float, str]:
     """(pressure on the carrier, stake at the ball, main presser) at one frame."""
     ball = run.ball_pos[frame, :2]
@@ -478,6 +521,8 @@ def explain_moment(card: MomentCard, run: MatchRun) -> MomentCard:
         "space": lambda: space_lens(run, decision),
         "pressure": lambda: pressure_lens(run, card),
     }
+    if card.kind == "keeper_step":
+        compute = {"sight": lambda: sight_lens(run, card)}
     if card.kind == "marker_scan":
         compute = {
             "scan": lambda: marker_scan_lens(run, card),

@@ -12,7 +12,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-LensName = Literal["scan", "space", "pressure"]
+LensName = Literal["scan", "space", "pressure", "sight"]
 MomentKind = Literal[
     "pressed_decision",
     "decision_after_scan",
@@ -20,6 +20,7 @@ MomentKind = Literal[
     "sprint",
     "blind_side_pass",
     "marker_scan",
+    "keeper_step",
 ]
 Scalar = bool | int | float | str | None
 

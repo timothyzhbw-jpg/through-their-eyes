@@ -79,12 +79,23 @@ class MomentContext:
         """The scan the counterfactual drops; None when the intervention is not a dropped scan."""
         if not isinstance(self.cf, CounterfactualResult):
             return None
-        return self.run.event(self.cf.scan_id)
+        event = self.run.event(self.cf.scan_id)
+        return event if event.type == "scan" else None
+
+    @property
+    def key_step(self) -> Event | None:
+        """The keeper's step the counterfactual drops (`drop_step`); None otherwise."""
+        if not isinstance(self.cf, CounterfactualResult):
+            return None
+        event = self.run.event(self.cf.scan_id)
+        return event if event.type == "step" else None
 
     @property
     def intervention(self) -> str:
-        """What the counterfactual run changed: "drop_scan" or "force:<action>"."""
-        return "drop_scan" if self.key_scan is not None else f"force:{self.cf.action}"
+        """What the counterfactual run changed: "drop_scan", "drop_step" or "force:<action>"."""
+        if self.key_scan is not None:
+            return "drop_scan"
+        return "drop_step" if self.key_step is not None else f"force:{self.cf.action}"
 
     @property
     def counterfactual_id(self) -> str:

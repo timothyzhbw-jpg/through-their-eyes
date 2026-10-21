@@ -509,7 +509,13 @@ is a step.
   was rebuilt on design seeds 0–39 (there: 38, 29, 32, 28 and 30 of 40 on the five checks above),
   then run once on 300–339. Nothing in the scene changed after that. The reported-only rows were
   added to the eval afterwards; the report regenerates with every earlier value unchanged.
-- **Not done yet:** the `sight` lens, its claims and narration (the explain PR for this moment).
+- **In the app (2026-10-21).** H1's step is a `keeper_step` moment (§5.1) explained by the `sight`
+  lens: P(save) with the step minus without it (§5.2). It has its own claims and template narration
+  (§6), and the hero export carries `key_step` with a `drop_step` counterfactual. `eval/hero_lens.py`,
+  built on design seeds 0–39, run once on 300–339
+  ([hero_lens_screened_shot.md](../eval/reports/hero_lens_screened_shot.md)): SAVE_HELDOUT
+  - Demo seed 0, a design seed: the step is 0.64 m; with it H1 sees the ball as it is struck and
+    saves (P(save) 0.70); without it he sees it 0.6 s later and A10 scores (P(save) 0).
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
@@ -763,7 +769,10 @@ involved players, key metrics, candidate lenses.
     seed, on the key scan, and never on 60 seeds of the other scenarios or on match 1
     (`tests/test_corner_breakdown.py`); 300 seeds were checked while it was built.
     `explain.moments.hero_card` returns a scenario hero's moment: the card on his decision, or
-    his `marker_scan`.
+    his `marker_scan` or `keeper_step`.
+  - a keeper's step (`keeper_step`, 2026-10-21, `screened_shot`): a keeper's `step` event followed
+    within 3 s by an opponent's shot at his goal, anchored on the shot's resolution. Only
+    `screened_shot` records steps, so no other run has one (`tests/test_save_breakdown.py`).
 - Detections about the same action merge into one card with several tags. Card ids look like
   `m:decision_after_scan:H8:0075`.
 - **He thought vs it was.** For a decision moment, the card records P(success) of the chosen
@@ -792,6 +801,11 @@ For each moment, compute candidate explanations. All three deltas are in xT of t
 
 Pick the lens with the largest absolute delta; exact ties go `scan > space > pressure`. Record all
 three in the MomentCard.
+
+A keeper's step (`keeper_step`) has only the `sight` lens: P(save) with the step minus P(save)
+with the step dropped and re-simulated (`drop_step`), both from the save model on the shot's
+crossing. A goal is worth 1 in xT units, so this is the goals the step prevents in expectation. A
+shot blocked before the save model has no value, and the moment then has no lens.
 
 A placed shot (`shot:near` / `shot:far`, Module A) is worth its chance of a goal on the truth:
 P(on target) × (1 − E[P(save)]) with the keeper where he really is, the decision model's own value
@@ -927,6 +941,11 @@ Every factual sentence on screen comes from a `Claim`:
       — [eval/reports/hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)
       (38/40 and 40/40 on seeds 200–239, §3.6);
       [tests/test_finish_breakdown.py](../tests/test_finish_breakdown.py)
+- [x] The keeper's step is explained by the `sight` lens: on `screened_shot` the step is detected
+      as the moment in ≥ 95% of held-out seeds and the sight lens's Δ is positive in ≥ 60%; every
+      claim verifies and every persona's template script airs in en and zh.
+      — [eval/reports/hero_lens_screened_shot.md](../eval/reports/hero_lens_screened_shot.md)
+      (SAVE_SHORT on seeds 300–339, §3.6); [tests/test_save_breakdown.py](../tests/test_save_breakdown.py)
 - [x] Lens selection is deterministic for a given seed.
       — [tests/test_lenses.py](../tests/test_lenses.py)::`test_lens_selection_is_deterministic_for_a_seed`
 
@@ -1009,6 +1028,13 @@ Application Insights.
   Every persona has its template sequence in en and zh. The template plan's POV is his, with the
   scan marker on his look. "What if…?" refuses with its own sentence (he had no option to
   replay), and `list_options` and `what_if` say there is no decision on the ball.
+- *A keeper's step (2026-10-21, `screened_shot`).* Claims: `keeper_step` (how far and how long
+  before the strike), `first_sight` (as it was struck, or how long after), `shot_end`, and from the
+  run without the step `cf_first_sight`, `cf_shot_end` and `cf_save_chance` (the sight lens in
+  words, withheld from listeners). Every persona has its sequence in en and zh; the template
+  plan's POV is the keeper's and has no scan marker. Counterfactual claims may name a step as
+  their run (`EvalContext.counterfactual` drops steps as it drops scans). "What if…?" refuses: he
+  has no decision on the ball.
 - *Keeping the ball without the look (2026-10-21, `cutback_scan`).* When the run without the key
   scan carries or shoots instead of passing, `cf_carry` says so ("Without that look, H7 would have
   carried the ball"). The scan sequences take it where they take `cf_pass`, so heroes whose
@@ -1478,11 +1504,11 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 |---|---:|---:|---|
 | §3 sim | 11 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
-| §5 explain | 8 | 0 | — |
+| §5 explain | 9 | 0 | — |
 | §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **31** | **10** | |
+| **Total** | **32** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer

@@ -46,6 +46,7 @@ OBSERVED_FUNCTIONS = {
     "scans_in_window",
     "scan_side",
     "seconds_between",
+    "sight_delay",
 }
 OBSERVED_METRICS = {
     "distance",

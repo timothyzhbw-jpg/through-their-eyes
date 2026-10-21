@@ -25,6 +25,11 @@ his man resolves, with the look minus without), and the outcome is `eval.hero_ma
 (without the look his man receives unmarked; with it he is within 5 m). Its report adds whether
 the lens's Δ is positive and whether the lens's scan, the most informative one, is the key scan
 (targets: moment detected ≥ 95%, scan lens ≥ 60%, Δ > 0 ≥ 60%, key scan ≥ 90%, outcome ≥ 60%).
+
+A keeper's step (`screened_shot`, intervention `drop_step`) is read through his `keeper_step`
+moment and the `sight` lens: P(save) with the step minus without it. Its report counts the
+moment, the lens, Δ > 0 and Δ ≥ 0.4 (the hero gate of `eval/hero_save.py`), and the realised
+save → goal flips (targets: moment ≥ 95%, sight lens ≥ 60%, Δ > 0 ≥ 60%).
 """
 
 from __future__ import annotations
@@ -44,7 +49,11 @@ REPORTS = Path(__file__).parent / "reports"
 TARGET = 0.6
 HELD_OUT = "100-139"
 # 100-139 were seen while the decision model was fixed for this scenario (SPEC 3.5, 3.6).
-HELD_OUT_BY_SCENARIO = {"press_escape": "200-239", "far_post_finish": "200-239"}
+HELD_OUT_BY_SCENARIO = {
+    "press_escape": "200-239",
+    "far_post_finish": "200-239",
+    "screened_shot": "300-339",  # 200-239 were used by a rejected first scene (SPEC 3.6)
+}
 
 
 @dataclass
@@ -285,7 +294,87 @@ def _shot_rows(cls, rows: list[Row]) -> list[str]:
     ]
 
 
-def evaluate(scenario: str, seeds: list[int]) -> tuple[list[Row] | list[MarkerRow], str]:
+# --- a keeper's step for a sightline (`drop_step`) ------------------------------------------
+
+
+@dataclass
+class KeeperRow:
+    seed: int
+    moment: str | None
+    selected: str | None
+    delta: float | None  # P(save) with the step minus without
+    p_save: tuple[float, float] | None  # with, without
+    outcome: tuple[str, str] | None  # with, without
+
+
+def evaluate_keeper_seed(scenario: str, seed: int) -> KeeperRow:
+    run = hero_counterfactual(scenario, seed).factual
+    card = hero_card(run, detect_moments(run))
+    selected, delta, p, outcome = None, None, None, None
+    if card is not None:
+        explained = explain_moment(card, run)
+        selected = explained.selected_lens
+        lens = explained.lens("sight")
+        if lens is not None and lens.available:
+            m = lens.metrics
+            delta = lens.delta_xt
+            p = (float(m["p_save_with_step"]), float(m["p_save_without_step"]))
+            outcome = (str(m["outcome_with_step"]), str(m["outcome_without_step"]))
+    return KeeperRow(seed=seed, moment=card.id if card else None, selected=selected, delta=delta,
+                     p_save=p, outcome=outcome)  # fmt: skip
+
+
+def keeper_report(scenario: str, rows: list[KeeperRow]) -> str:
+    cls = SCENARIOS[scenario]
+    n = len(rows)
+
+    def share(k: int) -> str:
+        return f"{k}/{n} ({k / max(n, 1):.0%})"
+
+    detected = sum(r.moment is not None for r in rows)
+    picked = sum(r.selected == cls.lens for r in rows)
+    positive = sum(r.delta is not None and r.delta > 0 for r in rows)
+    gate = sum(r.delta is not None and r.delta >= 0.4 for r in rows)
+    flips = sum(r.outcome == ("saved", "goal") for r in rows)
+    blocked = sum(r.moment is not None and r.delta is None for r in rows)
+    deltas = [r.delta for r in rows if r.delta is not None]
+    seeds = f"{rows[0].seed}–{rows[-1].seed}" if n else "none"
+    lines = [
+        f"# Hero lens — `{scenario}`",
+        "",
+        f"Seeds {seeds} ({n}). `{cls.hero}` has no decision on the ball: his moment is his step "
+        "for a sightline before the shot (`keeper_step`, `explain.moments`). Intended lens "
+        f"`{cls.lens}`; intervention `{cls.intervention}`, re-simulated from the step (keyed "
+        "randomness). The `sight` lens's Δ is P(save) with the step minus without it (the save "
+        "model, Module A); the scan, space and pressure lenses do not apply. A shot blocked "
+        "before the save model has no Δ.",
+        "",
+        "| Metric | Value | Target |",
+        "|---|---|---|",
+        f"| Hero's step detected as a `keeper_step` moment | {share(detected)} | ≥ 95% |",
+        f"| `{cls.lens}` lens selected | {share(picked)} | ≥ 60% |",
+        f"| Sight lens Δ > 0 | {share(positive)} | ≥ 60% |",
+        f"| … Δ ≥ 0.4 (the hero gate of `eval/hero_save.py`) | {share(gate)} | — |",
+        f"| … shots blocked before the save model (no Δ) | {blocked}/{n} | — |",
+        f"| Realised save → goal without the step | {share(flips)} | — |",
+        f"| Median sight lens Δ | {np.median(deltas) if deltas else float('nan'):+.3f} | — |",
+        "",
+        "| Seed | Selected | Δsight | P(save) with / without | Outcome with / without |",
+        "|---|---|---|---|---|",
+    ]
+    for r in rows:
+        p = "—" if r.p_save is None else f"{r.p_save[0]:.3f} / {r.p_save[1]:.3f}"
+        o = "—" if r.outcome is None else f"{r.outcome[0]} / {r.outcome[1]}"
+        lines.append(f"| {r.seed} | {r.selected or '—'} | {_fmt(r.delta)} | {p} | {o} |")
+    return "\n".join(lines) + "\n"
+
+
+def evaluate(
+    scenario: str, seeds: list[int]
+) -> tuple[list[Row] | list[MarkerRow] | list[KeeperRow], str]:
+    if SCENARIOS[scenario].intervention == "drop_step":
+        keeper_rows = [evaluate_keeper_seed(scenario, s) for s in seeds]
+        return keeper_rows, keeper_report(scenario, keeper_rows)
     if is_marker_hero(scenario):
         marker_rows = [evaluate_marker_seed(scenario, s) for s in seeds]
         return marker_rows, marker_report(scenario, marker_rows)
@@ -324,7 +413,7 @@ def main() -> None:
     path = report_path(args.scenario, seeds, args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
-    print(text.split("\n\nΔ per lens")[0].split("\n\nSeparation:")[0])
+    print(text.split("\n\nΔ per lens")[0].split("\n\nSeparation:")[0].split("\n\n| Seed")[0])
     print(f"\nwrote {path}")
 
 

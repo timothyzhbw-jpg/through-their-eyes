@@ -52,7 +52,7 @@ from sim.counterfactual import possession_value
 from sim.engine import Simulation
 from sim.match import Possession, StitchedMatch, build_match, global_id
 from sim.model import Decision, Event
-from sim.overrides import DropScan, ForceAction
+from sim.overrides import DropScan, DropStep, ForceAction
 from sim.run import MatchRun, _plain
 
 VERSION = 5
@@ -270,11 +270,18 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
     probe = Simulation.from_scenario(scenario, seed)
     intervention = probe.scenario.intervention or "drop_scan"
     factual = probe.run()
+    key_step = None
     if intervention == "drop_scan":
         key = factual.key_scan()
         at, override = key.frame, DropScan(key.id)
         key_scan = {"id": key.id, "start": key.frame, "end": key.attrs["end"]}
         counterfactual = {"id": "cf1", "intervention": "drop_scan", "scan": key.id}
+    elif intervention == "drop_step":  # the keeper's step is not taken (`screened_shot`)
+        step = factual.key_step()
+        at, override = step.frame, DropStep(step.id)
+        key_scan = None
+        key_step = {"id": step.id, "frame": step.frame, **_plain(step.attrs)}
+        counterfactual = {"id": "cf1", "intervention": "drop_step", "step": step.id}
     else:  # "force:<action>": the hero takes that action at his decision (SPEC 3.7)
         action = intervention.removeprefix("force:")
         decision = factual.hero_decision()
@@ -308,6 +315,7 @@ def export_hero(scenario: str, seed: int) -> dict[str, Any]:
             {"id": p.id, "team": p.team, "role": p.role, "number": p.number} for p in sim.players
         ],
         "key_scan": key_scan,
+        **({"key_step": key_step} if key_step is not None else {}),
         "counterfactual": counterfactual,
         "vision": _vision_params(),
         "scan_detector": _detector_params(),
