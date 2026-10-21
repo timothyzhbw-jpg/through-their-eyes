@@ -52,6 +52,64 @@ code is copied (CLAUDE.md rule 1).
 - **StudioLens** — https://github.com/Josephjbassey/inside-the-game — narrative, tactics and
   recaps; Azure Translator for languages.
 
+### Related products judges may know: FIFA AI Pro and Referee View (World Cup 2026)
+Checked 2026-10-21. Our build environment could not open these pages (the proxy refused them), so
+the facts below come from search-engine excerpts of the releases and of press coverage; re-read a
+release before quoting a detail from it. Every figure is company-reported. Related work only:
+FIFA, Lenovo and Referee View are named in this file, the README and docs/SUBMISSION.md, never in
+the app, the video, docs/VIDEO_SCRIPT.md, assets or code (CLAUDE.md rule 2, read
+conservatively), and no logos anywhere.
+- **FIFA AI Pro** (announced as "Football AI Pro" at Lenovo Tech World @ CES, January 2026): a
+  generative-AI knowledge assistant that Lenovo built with FIFA for the national teams' analysts
+  and coaches. Staff ask questions in natural language over official match data and footage,
+  described in FIFA's Football Language (FIFA's standard vocabulary for football data). Lenovo
+  reports that it orchestrates several agents over more than 2,000 metrics. Answers come as
+  text, graphs, video clips and 3D recreations with player avatars. It is for pre- and
+  post-match analysis and is not used during live play. FIFA calls its output "validated
+  insights" and Lenovo "data-validated"; in the excerpts we read, neither says how a figure is
+  checked. Lenovo reports that all 48 teams at the 2026 World Cup used it, in 16 languages, with
+  thousands of queries from over 300 individual users.
+- **Referee View**: the referee's body camera as a first-person broadcast feed, its footage
+  smoothed in real time by Lenovo's AI stabilisation. Lenovo reports that the feed's footage of
+  the tournament's opening goal generated over 20 billion impressions.
+- Sources (press releases, except the last):
+  - FIFA, "FIFA and Lenovo unveil multiple AI-powered innovations ahead of FIFA World Cup 2026"
+    (January 2026) —
+    https://inside.fifa.com/media-releases/lenovo-tech-world-ai-powered-innovations-world-cup-2026
+  - Lenovo, "Leveling the Playing Field: Football AI Pro Powers Intelligence Across the Game"
+    (agents, 2,000+ metrics, outputs) —
+    https://news.lenovo.com/pressroom/press-releases/football-ai-pro-powers-intelligence-across-the-game/
+  - Lenovo, "All 48 Teams Use FIFA AI Pro at FIFA World Cup 2026" —
+    https://news.lenovo.com/pressroom/press-releases/all-48-teams-use-fifa-ai-pro-world-cup-2026/
+  - Lenovo, "FIFA World Cup Fans Embrace Referee View as Lenovo AI Brings Viewers Closer to the
+    Pitch" —
+    https://news.lenovo.com/pressroom/press-releases/referee-view-as-lenovo-ai-brings-viewers-closer-to-the-pitch/
+  - Lenovo, "Lenovo Successfully Delivers Technology at Biggest Ever FIFA World Cup 2026" (16
+    languages, over 300 users, 20 billion impressions) —
+    https://news.lenovo.com/pressroom/press-releases/lenovo-successfully-delivers-technology-at-biggest-ever-fifa-world-cup-2026/
+  - Computer Weekly, "Lenovo taps AI and digital twins to power World Cup 2026" (news,
+    2026-01-07) —
+    https://www.computerweekly.com/news/366636909/Lenovo-taps-AI-and-digital-twins-to-power-World-Cup-2026
+→ How we differ (README, docs/SUBMISSION.md). Each point was checked against main on 2026-10-21:
+  - FIFA AI Pro answers *what happened*, from statistics, before and after a match, behind a
+    "validated" label. We answer *what he saw and what he believed*, on the live stream:
+    `api/live.py` streams the synthetic match at 25 Hz with every player's head yaw and the
+    blind-side alerts and announces each moment as its window closes; the web app then plays
+    the moment's breakdown.
+  - Every number in the captions and narration is a verified claim: the narration agents pick
+    claim ids and never write a digit. A viewer can open each claim's evidence card and, on any
+    claim with a number, **Try a wrong number**: `TamperControl` (`web/src/ui/Narration.tsx`)
+    sends the value to `POST /api/verify`, and `api/tamper.py` runs the real verifier on it.
+  - What-ifs are re-simulated, not estimated: `agents/whatif.py` maps the question to one of the
+    options the player evaluated, and `force_action_counterfactual` (`sim/counterfactual.py`)
+    re-runs the moment with that option forced. The scan hero's counterfactual re-runs it
+    without the key scan (`drop_scan_counterfactual`).
+  - Referee View's reach, by Lenovo's figures, shows that fans want first person. It shows what
+    a camera captured; we show what the player perceived: his vision cone, where he believed the
+    others were, and the decision he took on that belief.
+  - What it has that we don't: real data, at a real tournament, used by real teams. Ours runs on
+    synthetic matches only (README, "Related work").
+
 ### Real-world precedents for the impact pitch (check each detail before quoting it)
 - **ReSpo.Vision: first-person replay already exists commercially.** Checked 2026-10-20. Its
   computer vision extracts 3D tracking, with body keypoints, from single-camera video such as a
