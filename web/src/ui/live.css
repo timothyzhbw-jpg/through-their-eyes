@@ -86,11 +86,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .moment-list li > button:first-child {
   all: unset;
   box-sizing: border-box;
-  flex: 1;
+  flex: 1 1 14rem;
+  min-width: 0;
   display: grid;
   grid-template-columns: 62px 1fr;
   gap: 12px;
