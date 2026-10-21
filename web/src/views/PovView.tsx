@@ -6,7 +6,7 @@
 // shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { lazy, Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
@@ -28,10 +28,6 @@ import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
-import { featuresOf, quality } from "../quality/quality";
-
-// The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
-const QualityLayer = lazy(() => import("../quality/QualityPost"));
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -101,9 +97,6 @@ function PovScene() {
   useRedrawOn(playback);
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
-  const tier = useStore(quality, (s) => s.tier);
-  const post = featuresOf(tier, false).post;
-  useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
@@ -251,7 +244,6 @@ function PovScene() {
         >
           <mesh
             position-y={BODY_CENTRE}
-            castShadow
             geometry={capsule}
             material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
@@ -319,13 +311,7 @@ function PovScene() {
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
-      {post ? (
-        <Suspense fallback={<MotionBlur hfov={POV_HFOV} />}>
-          <QualityLayer sample={sample} hfov={POV_HFOV} />
-        </Suspense>
-      ) : (
-        <MotionBlur hfov={POV_HFOV} />
-      )}
+      <MotionBlur hfov={POV_HFOV} />
     </>
   );
 }
@@ -334,14 +320,13 @@ function PovScene() {
 export function Ground() {
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
         <planeGeometry args={[130, 92]} />
-        {/* The grass keeps its colour at every render tier: no image-based light on it. */}
-        <meshStandardMaterial color="#173826" envMapIntensity={0} />
+        <meshStandardMaterial color="#173826" />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2}>
         <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} envMapIntensity={0} />
+        <meshStandardMaterial map={getPitchTexture()} />
       </mesh>
       <Goals />
     </>
