@@ -92,6 +92,30 @@ export const MatchInfoResponse = z.object({
   hero_moments: z.array(z.string()),
 });
 export type MatchInfoResponse = z.infer<typeof MatchInfoResponse>;
+
+/** GET /api/matches/<id>/moments: the MomentCards (explain/cards.py); only what the viewer reads. */
+export const MomentCards = z.array(
+  z.object({
+    id: z.string(),
+    kind: z.string(),
+    lenses: z
+      .array(
+        z.object({
+          lens: z.string(),
+          available: z.boolean(),
+          delta_xt: z.number().nullable(), // in xT; null when the lens is unavailable
+        }),
+      )
+      .default([]),
+  }),
+);
+export type MomentCards = z.infer<typeof MomentCards>;
+
+/** The scan lens's delta (xT) of one moment's card; null when it has none. */
+export function scanLensDelta(cards: MomentCards, moment: string): number | null {
+  const lens = cards.find((c) => c.id === moment)?.lenses.find((l) => l.lens === "scan");
+  return lens?.available && typeof lens.delta_xt === "number" ? lens.delta_xt : null;
+}
 /** One step of the crew run (agents/schemas.py StepTrace): who answered, the model or a template. */
 export const StepTrace = z.object({
   step: z.string(),
@@ -172,6 +196,7 @@ export interface Api {
   matches(): Promise<MatchList>;
   info(timeoutMs?: number): Promise<MatchInfoResponse>;
   exportJson(timeoutMs?: number): Promise<unknown>;
+  moments(timeoutMs?: number): Promise<MomentCards>;
   /** `moment`: a hero moment id (in match time for a stitched match). `fail`: agents taken down
    * for this one run (the failure drill). */
   breakdown(req: {
@@ -279,6 +304,8 @@ export function createApi(
     info: (ms = EXPORT_TIMEOUT_MS) =>
       call(`/api/matches/${id}`, {}, ms, json(MatchInfoResponse)) as Promise<MatchInfoResponse>,
     exportJson: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/export`, {}, ms, json()),
+    moments: (ms = EXPORT_TIMEOUT_MS) =>
+      call(`/api/matches/${id}/moments`, {}, ms, json(MomentCards)) as Promise<MomentCards>,
     breakdown: ({ moment, persona, language, fail = [] }) =>
       call(
         "/api/breakdowns",
