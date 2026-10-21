@@ -30,32 +30,38 @@ GENERATED_ON = ("Darwin", "arm64")
 # Quantised measurements: integer mm, 1e-4 rad and 1e-4 rad/s.
 TRACKING = {"pos", "ghost", "head", "body", "ball", "omega", "amplitude"}
 FLOAT_TOL = 2e-4
+# Placed shots (`Scenario.shots`: the keeper's positioning and save model) amplify last-bit
+# differences between platforms. Measured 2026-10-21 for whatif_far_post_finish_seed11.json on
+# Linux x86_64 against the Darwin arm64 file: positions up to 19 mm, the ball up to 2 mm, event
+# floats up to 1.6e-3; keys, lengths, strings and event types identical.
+SHOT_MM, SHOT_FLOAT_TOL = 30, 3e-3
 
 
-def _assert_close(fresh, committed, where="", tracking=False):
+def _assert_close(fresh, committed, where="", tracking=False, mm=1, tol=FLOAT_TOL):
     if isinstance(fresh, dict):
         assert isinstance(committed, dict) and set(fresh) == set(committed), where
         for k in fresh:
-            _assert_close(fresh[k], committed[k], f"{where}/{k}", tracking or k in TRACKING)
+            track = tracking or k in TRACKING
+            _assert_close(fresh[k], committed[k], f"{where}/{k}", track, mm, tol)
     elif isinstance(fresh, list):
         assert isinstance(committed, list) and len(fresh) == len(committed), where
         for i, (a, b) in enumerate(zip(fresh, committed, strict=True)):
-            _assert_close(a, b, f"{where}[{i}]", tracking)
+            _assert_close(a, b, f"{where}[{i}]", tracking, mm, tol)
     elif isinstance(fresh, bool) or fresh is None or isinstance(fresh, str):
         assert fresh == committed, where
     elif isinstance(fresh, int) and isinstance(committed, int):
-        assert abs(fresh - committed) <= (1 if tracking else 0), f"{where}: {fresh} != {committed}"
+        assert abs(fresh - committed) <= (mm if tracking else 0), f"{where}: {fresh} != {committed}"
     else:
-        assert abs(fresh - committed) <= FLOAT_TOL, f"{where}: {fresh} != {committed}"
+        assert abs(fresh - committed) <= tol, f"{where}: {fresh} != {committed}"
 
 
-def _assert_current(fresh_text: str, name: str) -> None:
+def _assert_current(fresh_text: str, name: str, mm: int = 1, tol: float = FLOAT_TOL) -> None:
     committed = (DATA / name).read_text()
     stale = f"web/public/data/{name} is stale: regenerate it (web/README.md)"
     if (platform.system(), platform.machine()) == GENERATED_ON:
         assert fresh_text == committed, stale
     else:
-        _assert_close(json.loads(fresh_text), json.loads(committed), name)
+        _assert_close(json.loads(fresh_text), json.loads(committed), name, mm=mm, tol=tol)
 
 
 @pytest.fixture(scope="module")
@@ -83,9 +89,8 @@ def test_press_escape_what_ifs_are_current():
 
 
 def test_far_post_finish_what_ifs_are_current():
-    _assert_current(
-        what_ifs_json(export_what_ifs("far_post_finish", 11)), "whatif_far_post_finish_seed11.json"
-    )
+    fresh = what_ifs_json(export_what_ifs("far_post_finish", 11))
+    _assert_current(fresh, "whatif_far_post_finish_seed11.json", SHOT_MM, SHOT_FLOAT_TOL)
 
 
 def test_the_structural_check_catches_stale_alerts_but_not_last_unit_noise(hero):
