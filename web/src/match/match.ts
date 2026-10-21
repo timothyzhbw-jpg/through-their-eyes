@@ -65,7 +65,7 @@ export const RESTART_LABEL: Record<string, string> = {
   throw_in: "Throw-in",
   goal_kick: "Goal kick",
   corner: "Corner",
-  cut: "Cut from play", // the possession ended in play: the broadcast cuts to the next passage
+  cut: "In play", // the possession ended in play: the broadcast cuts to the next passage
 };
 
 export const scenarioLabel = (s: string) => SCENARIO_LABEL[s] ?? s.replaceAll("_", " ");

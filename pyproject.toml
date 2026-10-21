@@ -37,15 +37,9 @@ dev = [
 eval = [
     "azure-ai-evaluation>=1.18.9,<2",
 ]
-# Real-footage overlay demo only (demo/realfeed): optical flow, homographies, image ops.
-# Apache-2.0; kept out of the main dependencies so the API image does not carry it. Below 5:
-# 5.x dropped the Haar cascades that the face check (demo/realfeed/check.py) relies on.
-realfeed = [
-    "opencv-python-headless>=4.10,<5",
-]
 
 [tool.uv]
-default-groups = ["dev", "realfeed"]
+default-groups = ["dev"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -63,8 +57,9 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 # Frozen parameter dataclasses are immutable, so they are safe as argument defaults.
 extend-immutable-calls = [
     "analytics.vision.VisionParams",
-    "demo.realfeed.camera.TrackerParams",
     "sim.ball.BallParams",
     "sim.config.SimParams",
     "sim.decision.DecisionParams",
+    "sim.shots.KeeperParams",
+    "sim.shots.ShotParams",
 ]

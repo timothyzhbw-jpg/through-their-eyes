@@ -59,6 +59,9 @@ class Scenario:
     # Whether an opponent who gets to a carried ball wins it (`Simulation._check_tackle`). Off
     # unless a scenario needs it, so scenarios without it keep their runs byte for byte.
     tackles: bool = False
+    # Placed shots, keepers on the bisector who react when they see the ball, and the save model
+    # (`sim.shots`, Module A). Off unless a scenario needs it, so the others keep their runs.
+    shots: bool = False
 
     def setup(self, gen: np.random.Generator) -> Setup:
         raise NotImplementedError

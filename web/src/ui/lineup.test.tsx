@@ -87,6 +87,8 @@ describe("the pre-match line-up", () => {
     expect(source.textContent).toBe("sim");
     expect(source.getAttribute("title")).toBe("Read from the sim export, not a verified claim");
     const minutes = (hero.runs.factual.frames * hero.dt) / 60;
+    // A judge who never heard the word reads what a scan is before the numbers.
+    expect(dialog.textContent).toContain("A scan is a quick look away from the ball");
     // A hero moment is seconds long: its scans are counted, not turned into a rate.
     expect(dialog.textContent).toContain(
       `Scans counted from the scan events of this run (${(minutes * 60).toFixed(1)} seconds of play).`,

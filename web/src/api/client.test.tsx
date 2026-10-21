@@ -62,7 +62,7 @@ describe("fallback to the bundled data", () => {
     const { fetch, loaded } = load({}, null);
     const data = await loaded;
     expect(data.api).toBeNull();
-    expect(data.offline).toMatch(/VITE_API_URL is not set/);
+    expect(data.offline).toMatch(/no live service is configured/);
     expect(apiCalls(fetch.calls)).toEqual([]);
     expect(data.hero.heroId).toBe("H8");
     expect(data.payload).toEqual(payloadJson);

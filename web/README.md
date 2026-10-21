@@ -39,7 +39,7 @@ Deep links for the README's tour for judges, and for testing and filming
 
 | Parameter  | Values                                                          | Effect                                                                                                                                                                                                                     |
 | ---------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at` and `camera`                                                             |
+| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at`, `camera` and `play`                                                     |
 | `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page |
 | `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                         |
 | `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                 |
@@ -47,6 +47,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                               |
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
+| `play`     | `yourcall`                                                      | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused                                                                                         |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                    |
 | `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                          |
@@ -55,7 +56,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                               |
 | `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                    |
 
-A link that points at a spot (`at`, `run`, `ask` or `tamper`) opens paused: no live stream, and
+A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
 claim, the first claim with a number opens instead (`analyst` narrations carry the most).
 Without them, the app watches live and then plays the breakdown, in the linked `persona` and
@@ -141,6 +142,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --out web/public/data/hero_seed3.json \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -150,7 +152,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   marked `"fixture": true`. Its claim values are computed from the replay by
   `sim.export.render_payload_fixture`, following `explain.builders` (claim ids, value slots,
   evidence) and `explain.render` (seek frame = earliest evidence event), but no verifier has
-  checked them. The UI labels it "Fixture · not checked by the verifier". With the live service
+  checked them. The UI labels it "Sample data · not checked by the verifier". With the live service
   the verified payload from `POST /api/breakdowns` replaces it; the fixture stays as the offline
   fallback.
 
@@ -331,7 +333,7 @@ src/
   his scans from the sim (the key scan highlighted; without the look, a dashed box where it
   was), head angular speed with the scan detector at work (its threshold, candidate onsets, the
   onsets its excursion gate rejected, and the scans it accepted), players in his sight, and, for
-  the hero only, belief error on the runner (his ghost to the true position; "n/a" for anyone
+  the hero only, belief error on the runner (how far his belief is from where the player really is; "n/a" for anyone
   else, as beliefs are recorded for the hero only). As in motorsport telemetry, the other run is
   overlaid dashed on the head-angle and belief rows (with the look cyan, without it gold, as
   elsewhere), both runs on one time axis so the curves coincide until the key scan and split
@@ -415,22 +417,29 @@ the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on t
    it with `vite preview`;
 3. opens each page in headless Chromium, found as for the GPU tests (below), on SwiftShader on CI:
 
-| Page                                    | Its main view                                                      |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| `?autoplay=0`                           | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
-| `?match=press_escape-0&autoplay=0`      | the pressure hero, the same                                        |
-| `?match=match-1&autoplay=0`             | the score bug, the 3D view, the Moments panel                      |
-| `?match=match-1`                        | lineup card, live; each **Breakdown**, then **Back to the match**  |
-| `?persona=analyst&tamper=cf_value`      | the evidence card with "Try a wrong number" open                   |
-| `?at=decision&view=tactical`            | the tactical board                                                 |
-| `/` and `?match=match-1`, 375 px, touch | the phone width, live                                              |
+| Page                                     | Its main view                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| `?autoplay=0`                            | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
+| `?match=press_escape-0&autoplay=0`       | the pressure hero, the same                                        |
+| `?match=match-1&autoplay=0`              | the score bug, the 3D view, the Moments panel                      |
+| `?match=match-1`                         | live; each **Breakdown**, then **Back to the match**               |
+| `/`                                      | the lineup card, **Skip**, then the hero                           |
+| `?match=match-1`                         | the lineup card, **Start watching**, then the match                |
+| `?persona=analyst&tamper=cf_value`       | the evidence card with "Try a wrong number" open                   |
+| `?at=decision&view=tactical`             | the tactical board                                                 |
+| `/` and `?match=match-1` on an iPhone 17 | the phone width, live; a sideways scroll is noted (below)          |
 
-A page passes when its main view shows (with its WebGL canvas) and it logs no console error and
-throws no uncaught exception; an uncaught exception fails it at once. The checks find controls by
-role and accessible name, as a screen reader does, so a new layout or style does not break them;
-a renamed control does, and the test changes with it. Requests to other hosts (the web fonts) are
-answered empty, so a run needs no network. A screenshot of each page, and the API's log, go to
-`out/smoke/`. About 2 minutes, a quarter of it the API's warm start.
+Every page but the two lineup ones adds `intro=0`. A page passes when its main view shows (with
+its WebGL canvas) and it logs no console error and throws no uncaught exception; an uncaught
+exception fails it at once. The phone is Playwright's iPhone 17 profile (402 px wide, touch,
+Safari's user agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering. On it
+the run notes a page wider than the screen without failing it: on main the live screen's header
+is (436 px for the hero, 595 px for match-1 while streaming), and the check becomes a failure once
+that layout is fixed. The checks find controls by role and accessible name, as a screen reader
+does, so a new layout or style does not break them; a renamed control does, and the test changes
+with it. Requests to other hosts (the web fonts) are answered empty, so a run needs no network. A
+screenshot of each page, and the API's log, go to `out/smoke/`. About 3 minutes, a quarter of it
+the API's warm start.
 
 `-- --api http://localhost:8765` uses an API that is already running, `-- --only match` runs the
 pages whose name contains `match`, `-- --headed` shows the window. CI runs it in the `smoke` job,

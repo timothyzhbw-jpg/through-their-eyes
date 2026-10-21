@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE = {"agents", "analytics", "api", "explain", "sim", "pyproject.toml", "uv.lock"}
-NEVER = [".env", ".env.local", "out/cache/x.json", "demo/realfeed/check.py", "web/src/main.tsx",
+NEVER = [".env", ".env.local", "out/cache/x.json", "demo/build.py", "web/src/main.tsx",
          "tests/test_api.py", "eval/reports/blind_side.md", ".git/config"]  # fmt: skip
 
 
@@ -88,7 +88,6 @@ def test_dependencies_are_the_locked_main_group_only():
         flags = shlex.split(args)
         assert {"--locked", "--no-default-groups", "--no-dev"} <= set(flags)
         assert not {"--group", "--all-groups", "--only-group"} & set(flags)
-        assert "realfeed" not in args
 
 
 def test_service_runs_as_a_non_root_user():

@@ -3,10 +3,18 @@
 // the stream has detected, in the order they arrived; for a stitched match, every moment of every
 // possession with its lens, the hero moments opening their breakdowns.
 
+import { WHAT_IF_FILES } from "../data/load";
 import type { LiveFeed, LiveMoment, LiveState, LiveStatus } from "../live/feed";
-import { restartLabel, scenarioLabel, type MatchMoment } from "../match/match";
+import {
+  restartLabel,
+  scenarioLabel,
+  scenarioMatchId,
+  type MatchMoment,
+  type Possession,
+} from "../match/match";
 import type { MatchSession } from "../match/matchSession";
 import { useSession, useView } from "../session";
+import { MISSING_RUNS } from "../yourcall/controller";
 import { createStore, useStore, type Store } from "../store/store";
 import { Chapter } from "./Chapter";
 import "./live.css";
@@ -27,17 +35,18 @@ export function LiveBar() {
   return <LiveControl feed={feed} />;
 }
 
+// Short enough to sit beside the Live pill; the tooltip says where the frames come from.
 const STATUS: Record<LiveStatus, string> = {
   off: "replay",
   connecting: "connecting…",
-  streaming: "streaming from the API",
+  streaming: "streaming",
   paused: "paused",
   ended: "match over",
   lost: "connection lost",
 };
 
 function LiveControl({ feed }: { feed: LiveFeed }) {
-  const { playback, controls } = useView();
+  const { playback, controls, kind } = useView();
   const live = useStore(playback, (s) => s.live);
   const status = useStore(feed.state, (s) => s.status);
   const sprint = useStore(feed.state, (s) => s.sprint);
@@ -61,8 +70,12 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
         Live
       </button>
       {(live || status === "ended" || status === "lost") && (
-        <span className={`live-status ${status}`} title={error ?? undefined}>
-          {STATUS[status]}
+        <span
+          className={`live-status ${status}`}
+          title={error ?? "Frames arrive live from the API over a WebSocket"}
+        >
+          {/* a hero moment streams one possession: "match over" would oversell it */}
+          {status === "ended" && kind === "hero" ? "stream ended" : STATUS[status]}
           {live && sprint.length > 0 && (
             <span className="sprint"> · sprinting {sprint.join(", ")}</span>
           )}
@@ -79,9 +92,13 @@ const KIND: Record<string, string> = {
   sprint: "Sprint",
 };
 
-export function momentLabel(m: LiveMoment): string {
+/** A moment's label: kind · actor, then the receiver unless the row would give his answer away. */
+export function momentLabel(
+  m: Pick<LiveMoment, "kind" | "actor" | "receiver">,
+  { receiver = true }: { receiver?: boolean } = {},
+): string {
   const kind = KIND[m.kind] ?? m.kind.replaceAll("_", " ");
-  return `${kind} · ${m.actor ?? "?"}${m.receiver ? ` → ${m.receiver}` : ""}`;
+  return `${kind} · ${m.actor ?? "?"}${receiver && m.receiver ? ` → ${m.receiver}` : ""}`;
 }
 
 /** Which lens explains a moment (SPEC 5.2); sprints and the like are live overlays only. */
@@ -197,6 +214,8 @@ function MatchMoments({ session }: { session: MatchSession }) {
                     opening={opening === m.id}
                     onReplay={() => controls.replayMoment(m)}
                     onBreakdown={() => controls.openBreakdown(m)}
+                    onYourCall={() => controls.openBreakdown(m, "yourcall")}
+                    yourCallReason={yourCallReason(p)}
                   />
                 ))}
             </ol>
@@ -207,27 +226,49 @@ function MatchMoments({ session }: { session: MatchSession }) {
   );
 }
 
+/** Your call needs every option re-simulated, and those runs are bundled with the what-ifs. */
+function yourCallReason(p: Possession): string | null {
+  return WHAT_IF_FILES[scenarioMatchId(p)] ? null : MISSING_RUNS;
+}
+
 function MatchMomentRow(props: {
   m: MatchMoment;
   ahead: boolean;
   opening: boolean;
   onReplay: () => void;
   onBreakdown: () => void;
+  onYourCall: () => void;
+  yourCallReason: string | null;
 }) {
   const { m } = props;
   const classes = [m.hero ? "hero" : "", props.ahead ? "ahead" : ""].filter(Boolean).join(" ");
+  // A hero row that can open Your call must not name his receiver: that is his answer.
+  const label = momentLabel(m, { receiver: !(m.hero && props.yourCallReason === null) });
   return (
     <li className={classes || undefined}>
       <button type="button" onClick={props.onReplay} title="Replay from this moment">
         <span className="t">{m.anchor_t.toFixed(2)} s</span>
         <span>
-          {momentLabel(m)}{" "}
-          <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>
+          {label} <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>
         </span>
       </button>
       {m.hero && (
         <button type="button" className="btn" onClick={props.onBreakdown} disabled={props.opening}>
           {props.opening ? "Loading…" : "Breakdown"}
+        </button>
+      )}
+      {m.hero && (
+        <button
+          type="button"
+          className="btn"
+          onClick={props.onYourCall}
+          disabled={props.opening || props.yourCallReason !== null}
+          aria-label={`Your call: ${label}`}
+          title={
+            props.yourCallReason ?? "Decide with only what he knew, then see what really happened"
+          }
+        >
+          Your call
         </button>
       )}
     </li>

@@ -172,6 +172,7 @@ function OpenLineupCard() {
         </div>
 
         <p className="lineup-note">
+          A scan is a quick look away from the ball to check the space around him.{" "}
           {measured === "count" ? "Scans counted" : "Scans per minute, counted"} from the scan
           events of this run ({playLength(runMinutes(hero))}).{" "}
           <span className="source" title="Read from the sim export, not a verified claim">

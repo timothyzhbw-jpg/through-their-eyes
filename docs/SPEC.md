@@ -151,6 +151,43 @@ on an LLM.
   both for frame stepping and for the decision model's predictions. Longer passes are played to
   arrive faster (arrival speed 0.35 × distance, clipped to 6–12 m/s). Lofted passes, bounce, Magnus
   and shot outcomes are M4.
+- *Shots and keepers (Module A of the hero expansion pack, 2026-10-21; `sim/shots.py`).* Only in
+  scenarios with `Scenario.shots`. With the flag off nothing changes.
+  - The committed `blind_side_run` seed 3 export is byte-identical
+    (`tests/test_committed_exports.py`, the only export it pins).
+  - The `hero_flip` (blind_side_run), `hero_lens` (press_escape) and `hero_marking` reports
+    regenerate with an empty diff.
+  - Every other eval report is re-run on the merge by the core review desk.
+  - Sources, and how far each was read: `docs/REFERENCES.md`, "Shots and goalkeepers".
+  - **The shot.** Low and driven, on the ground, using the rolling physics above.
+    - Speed is U(24, 30) m/s per shot (a keyed draw), inside the 18–35 m/s of maximal instep kicks
+      (Kellis & Katis 2007).
+    - It is aimed 0.5 m inside the near or far post, with a lateral aim error of N(0, 2.5°).
+      That value is *tunable*: Hunter et al. (2018) give the shape (error variance grows with
+      speed), not our number.
+    - The decision model offers `shot:near` and `shot:far` instead of `shot`. Each is valued on
+      the shooter's belief as P(on target) × (1 − E[P_save]), the expectation taken over where he
+      believes the keeper is, with the belief's position uncertainty.
+  - **The keeper.**
+    - He stands on the bisector of the ball's angle to his posts, 1.5 m off his line. This is a
+      convention, not a cited model.
+    - He reacts from his first sight of the ball, the first frame with visibility ≥ 0.5, using the
+      same field of view and occlusion as every player (§3.4).
+    - During a shot he holds his set position until then. Behind the flag, keepers do not chase
+      passing lanes.
+  - **The save model** is Bransen, Janssen & Davis (2025), eq. 2, fitted on real penalties with
+    the keeper in the correct corner. It is an arXiv preprint.
+    - P_save = ρ inside r − µ, falling linearly to 0 at r + µ, with ρ = 0.7 and µ = 0.7 m.
+    - The reach is r(T) = clip(2.8 + v_dive · (T − 0.55 s), 0.3, 3.1) m. T runs from his first
+      sight of the ball to its reaching his line. 2.8 and 3.1 m are the fitted late and early dive
+      ranges; 0.55 s is the 500–600 ms penalty flight time they cite.
+    - v_dive has no verified source. Ibrahim et al. (2019) print the legs' contributions to the
+      centre of mass's velocity, not a take-off speed, and a literature check found no primary
+      number. So every keeper gate is re-run at v_dive = 2.5 and 4.0 m/s.
+  - **Events.** `shot` (placement, speed, error, crossing points, first sight, reach, P_save,
+    outcome), `dive`, `save`, `goal`. Shot outcomes are goal, saved, wide or blocked.
+    - A goal is worth 1.0 in possession value.
+    - A stitched match restarts with a kick-off after a goal.
 
 ### 3.4 Perception (the hero feature)
 - **Head yaw dynamics.** Baseline gaze tracks the ball. A **scan** is a rapid turn away from the
@@ -316,6 +353,65 @@ the defending side.
   - *Design seeds.* The plan said 0–99; the routine was designed on 0–39. Held out: 100–139, as
     planned.
 
+**Shot hero (`far_post_finish`, 2026-10-21).** The striker reads the keeper; C1 of the hero
+expansion pack, on Module A (§3.3).
+- **The routine.** The home side switches play H3 → H6 → H7. Every pass travels behind the striker
+  H9's run, so his gaze, following the ball, never meets the goal. H7 cuts the ball back to H9 at
+  about (41, −4).
+- **Key action and intervention.** H9's one look at the goal before the ball arrives is the key
+  scan; the intervention is `drop_scan`.
+- **Hero design rule.** The away keeper A1 is visible to H9 only during the key scan. His last
+  sighting before it is frame 0, when everyone is known, with A1 on the far-post side. A1 then
+  slides across with the ball. So with the look H9 sees him at the near post and picks
+  `shot:far`. Without it, his belief (about five seconds old) favours `shot:near`, and A1 is
+  there.
+- **Scripted choices.**
+  - While the cutback travels, A1 stays set at the bisector of H7's strike position: set for the
+    near post against the wide player and caught by the cutback.
+  - The away defence stands as against a cutback from the right. Five outfielders are in the box
+    when H9 receives (`tests/test_shots.py`), none between his run and the goal or on a pass lane,
+    and every pass of the routine completes.
+- **Acceptance** (`eval/hero_shot.py`; designed on seeds 0–39; held out on fresh seeds 200–239):
+  - without the look the placement changes in 38/40 (target ≥ 60%: met);
+  - the median gain in scoring chance on the truth, P_goal(factual choice) − P_goal(choice
+    without the look), is +0.524 (target ≥ 0.30: met);
+  - the design rule holds in 38/40 (target ≥ 90%: met);
+  - the placement change holds at v_dive = 2.5 and 4.0 m/s: 38/40 at both;
+  - Reported only: the goal status (a goal with the look, none without, or the reverse)
+    changes in 23/40. Without the look 20 goals are lost and 3 gained.
+  - Also reported only: the shot's outcome label (goal, saved, wide, blocked) changes in 32/40,
+    which counts wide → saved too.
+  - ρ = 0.7 and the aim error are real randomness, so the look raises the scoring chance (the
+    gate) rather than deciding every goal.
+  - The two misses (seeds 200, 233) are one case. As H9 takes the ball, his gaze follows his body,
+    which faces within about 75° of A1, so he sees the keeper during his first touch without the
+    look and shoots far post in both runs. The held-out seeds were not tuned on after this.
+  - Report: [hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md).
+- **How the held-out run went.** All of this landed in one commit:
+  - The layout was built on design seeds: probes on 0–19, then the eval on 0–39.
+  - The gate was then run once on 200–239 with the final layout, then once on 100–139.
+  - After that, nothing in the scene changed. Only the two misses were inspected, and this text
+    was written.
+  - The fix round after review moved no number: the 200–239 report regenerates with the same
+    values, with only the reported rows renamed and added.
+- **Deviations from the design plan** (`docs/drafts/hero_expansion.md` §2.4), each with its
+  reason:
+  - *Design seeds.* 0–39, not the plan's 0–99. Tuning stopped once they passed.
+  - *Byte-identity evidence.* The plan's §1.7 asked for six reports to regenerate with an empty
+    diff. The author regenerated three: `hero_flip`, `hero_lens` and `hero_marking`. The rest are
+    run on the merge by the core review desk.
+  - *Held-out seeds.* 200–239 instead of 100–139. The scene was first built with the away defence
+    out by the byline corners, so the box was empty. 100–139 were run once on that layout (40/40,
+    kept as [hero_shot_far_post_finish_100-139.md](../eval/reports/hero_shot_far_post_finish_100-139.md),
+    labelled as seen). The defence was then moved into the box, which needs fresh seeds.
+  - *Eval.* `eval/hero_shot.py` instead of `eval/hero_flip.py`. A placed shot's value on the
+    truth needs the save model.
+  - *Not reported yet: lens selection, and whether the key scan is the most informative.* Both
+    need the explain layer to score placed shots on the truth; that is the follow-up explain PR.
+    The demo seed is not chosen yet either.
+  - *Scripted keeper set.* Not in the plan; added so the cutback finds A1 where the wide player's
+    angle put him.
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -375,6 +471,18 @@ the defending side.
       §3.6 "Deviations from the design plan");
       [tests/test_corner_blind_side.py](../tests/test_corner_blind_side.py) (design seeds, and
       `test_a_marker_marks_where_he_believes_his_man_is`)
+- [x] Shot hero: without the striker's key scan, the shot's placement changes in ≥ 60% of fresh
+      held-out seeds, the median gain in scoring chance on the truth is ≥ 0.30, and the placement
+      change holds at both ends of the uncited v_dive range (2.5 and 4.0 m/s).
+      — [eval/reports/hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md)
+      (38/40, +0.524, 38/40 at both ends, on seeds 200–239; §3.6);
+      [tests/test_shots.py](../tests/test_shots.py) (design seeds)
+- [x] Placed shots and the keeper's save model behind `Scenario.shots`: P_save matches the cited
+      piecewise model; the keeper cannot react before he sees the ball; with the flag off every
+      run is byte-identical.
+      — [tests/test_shots.py](../tests/test_shots.py)::`test_save_probability_matches_the_cited_piecewise_model`,
+      `test_occluded_keeper_cannot_start_a_dive_before_he_first_sees_the_ball`;
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py)
 - [x] `force_action` with the action actually chosen reproduces the factual run byte for byte;
       with an action that was not an option, it is refused (not silently mapped).
       — [tests/test_whatif.py](../tests/test_whatif.py)::`test_forcing_the_action_actually_chosen_reproduces_the_factual_run`,
@@ -917,6 +1025,25 @@ original visual identity.
   verdicts, audit trail, latency).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
+- **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
+  `?play=yourcall`, with `?match=` on the match's first hero moment): the replay freezes at the
+  hero's decision and the viewer decides with only what he knew, then sees what really happened.
+  - *Deciding.* A camera behind the ball carrier, framed so every option fits. Everyone stands
+    where he *believed* they were (the belief ghosts, §3.4); players he had not seen for ≥ 1.5 s
+    are grey ghosts. One marker per option over the receiver as he pictured him, plus carry or
+    shot. No numbers on screen, and the options are listed across the pitch, not by how likely he
+    was to pick them. The viewer taps a marker, swipes from the carrier toward one (a dotted path
+    follows), or uses the arrow keys and Enter. The telemetry, story, decision and director
+    panels are hidden until the call is made: they would give his decision away.
+  - *Reveal, four beats.* (1) The call's re-simulated run (§3.7 `force_action`, precomputed per
+    option in `whatif_*.json`) plays with a gold ball: it never happened. (2) The truth: everyone
+    moves from where he pictured them to where they were. (3) What he did and why. (4) The two
+    calls compared. One tap tries another option or goes back to the replay.
+  - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
+    against his), and the breakdown's narration sorted by claim (state at the decision → truth;
+    the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
+    it is loaded; a hero with no decision on the ball (`corner_blind_side`) has no Your call.
+  - Reduced motion: every clip and move cuts to its end. No model call.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -945,62 +1072,8 @@ original visual identity.
     shoulder height and the ray at eye height; heights and the shoulder width are a drawing
     choice, not data.
 
-### Real-footage overlay (demo video only; the one exception to synthetic data)
-Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
-segment of **≤ 10 s in the demo video**, showing the ground graphics drawn on a real camera, the
-way the app draws them on the synthetic pitch: it backs the claim that the overlays would transfer
-to a real broadcast.
-- **Source:** the Wikimedia Commons file "Битва Корпораций - 2019-10-06 - Нова Пошта. - Мини-футбол.
-  Финал." by savinkins, licensed CC BY 3.0. Checked on Commons on 2026-10-19: the license was
-  reviewed by YouTubeReviewBot, and the SHA-1 matches `demo/realfeed/download.py`. It is a
-  corporate-league futsal final (Атлант vs Нова Пошта).
-- **Code:** `demo/realfeed/`, with OpenCV in its own dependency group.
-  - It does classical computer vision only: pitch calibration, camera tracking, background
-    subtraction for the players' foot points, and the turf key for the graphics.
-  - It is never imported by `sim/`, `analytics/`, `explain/`, `agents/`, `api/` or `web/`, and the
-    public app never shows or loads it.
-  - The footage is downloaded into `out/` and never committed. Only camera calibration (pixel ↔
-    pitch correspondences) is committed: no frames, no player positions.
-- **Masking:** everything outside the pitch outline is blurred and darkened; every face is blurred;
-  any legible logo, sponsor or club text on kit is blurred too. Kit matters because the teams are
-  companies and the video rules ban third-party trademarks.
-- **Graphics only:** no numbers, captions or narration on the real footage. Every on-screen number
-  in the app is a verified claim about the synthetic match, and nothing in this segment is
-  verified.
-- **On screen:** a label saying "real footage, overlay demo only; the app uses synthetic data",
-  plus the attribution "savinkins, Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". The
-  same attribution goes in `demo/realfeed/README.md` and the repo README. CC BY requires author,
-  source, license and a note of changes.
-- **Never used** to train, tune or calibrate anything in the app.
-
-**Risks:**
-1. *Rules.* The official rules say "Projects must use synthetic, football-realistic data". The
-   app and all its data stay synthetic, but a judge or the Stage One viability check may still
-   read real footage in the video as using real data, and that could cost the entry.
-   - Mitigation: keep the segment short, clearly labelled and cuttable.
-   - Bowen may ask the organisers first; if they object, cut it.
-2. *Privacy.* The players are private individuals in an amateur corporate league. Faces are
-   blurred, and no names or identities are shown or tracked beyond the 10 s.
-3. *Trademarks.* Kit, boards and banners may carry company logos. Before upload, review every
-   frame of the exported segment for logos and faces, not only the automated masks.
-4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
-   endorsement. Keep the attribution on screen for the whole segment.
-5. *Time.* It is near the top of the cut order (§9), after the optional skeleton view; it never
-   takes time from the "never cut" list.
-
-**Acceptance checks:**
-- [x] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
-      imports `demo.realfeed`, and that `web/` has no reference to it.
-      — [tests/test_realfeed.py](../tests/test_realfeed.py)::`test_the_app_never_imports_or_references_the_real_footage_demo`
-- [x] No video or image frames are tracked under `demo/` (test on `git ls-files`).
-      — [tests/test_realfeed.py](../tests/test_realfeed.py)::`test_no_video_or_image_frames_are_tracked_under_demo`
-- [ ] Every exported frame: off-pitch pixels are masked; a face detector finds no unblurred face;
-      the label and the attribution are visible.
-      — *Open:* no export has passed `demo/realfeed/check.py` yet; the latest one (2026-10-19, on
-      an unmerged branch) reports faces not blurred.
-- [ ] Bowen has reviewed the exported segment frame by frame (faces, kit logos, boards) before it
-      goes into the video.
-      — *Open:* Bowen's review; there is no final export to review yet.
+### Real-footage overlay (cut)
+Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
@@ -1027,6 +1100,15 @@ to a real broadcast.
       — [web/src/director/rules.test.ts](../web/src/director/rules.test.ts) ("every pass
       suggestion shows at least half a second before its reception", "are plain words", "the
       auto director"); [web/src/director/director.test.tsx](../web/src/director/director.test.tsx)
+- [x] Your call: the flow goes deciding → outcome → truth → what he did → compared, and one step
+      tries another option or closes; the reveal shows no number outside a verified line, each line
+      once; the camera frames every option on desktop and phone; markers are focusable named
+      buttons (arrow keys, Enter, Escape) and a swipe picks the option it points at; reduced
+      motion cuts to the end; it works on both heroes with a decision and inside `?match=`.
+      — [web/src/yourcall/flow.test.ts](../web/src/yourcall/flow.test.ts),
+      [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
+      [camera.test.ts](../web/src/yourcall/camera.test.ts),
+      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
@@ -1216,14 +1298,13 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 8 | 1 | passes, shots and possession changes per match vs targets |
+| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
-| §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
-| §7 render | 3 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **27** | **12** | |
+| **Total** | **28** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1246,11 +1327,11 @@ pilot only, never generalised.
 **Cut order when behind:**
 0. skeleton data view (§7, optional) and the limb-tracking ingest (§4.7, optional): remove the
    toggle and the adapter; nothing else depends on them
-1. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
-   or the organisers object)
-2. rigged GRF players: back to tokens in POV and broadcast (§7)
-3. Foundry evaluation ablation, free text vs anchored narration (§6)
-4. shareable clip export (stretch)
+1. rigged GRF players: back to tokens in POV and broadcast (§7)
+2. Foundry evaluation ablation, free text vs anchored narration (§6)
+3. shareable clip export (stretch)
+4. Your call (§7): remove its header button, the Moments buttons and `?play=yourcall`; nothing
+   else depends on it (the bundled press_escape what-ifs stay for the "What if…?" box)
 5. viewer pilot
 6. end-of-match recap reel
 7. "What if…?" free text → suggested questions only
@@ -1277,8 +1358,7 @@ Framework, live deployment, the video.
 - **0:55–1:25** The same moment for casual / analyst / player-fan; `en` ↔ `zh`; open one caption's
   evidence.
 - **1:25–1:40** The verifier blocks a wrong number and a banned judgement word.
-- **1:40–2:00** Architecture (Microsoft stack) + eval numbers. *If kept:* the ≤ 10 s real-footage
-  overlay segment (§7) sits here, labelled and attributed on screen, before the architecture.
+- **1:40–2:00** Architecture (Microsoft stack) + eval numbers.
 
 Shot list and capture kit: [video/](../video/README.md). `shots.json` holds each beat's URL,
 scripted actions, target length and voice-over; `capture.mjs` records them from the live site.
@@ -1298,9 +1378,8 @@ scripted actions, target length and voice-over; `capture.mjs` records them from 
       `speech: true`; a cached breakdown in 0.04 s; live WebSocket at 25.0 fps; the site loads and
       streams from the API), and the README's "Try it" has the instructions; staying up until
       2026-11-10 can only be checked then.
-- [x] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
-      and its attribution), architecture, how to run, eval results, related work
-      — [README.md](../README.md) has the statement, the attribution, how to run, the eval
+- [x] README: synthetic-data statement, architecture, how to run, eval results, related work
+      — [README.md](../README.md) has the statement, how to run, the eval
       results, related work (first-person replay exists: ReSpo.Vision) and the architecture
       diagram ([architecture.svg](architecture.svg)).
 - [ ] All materials in English

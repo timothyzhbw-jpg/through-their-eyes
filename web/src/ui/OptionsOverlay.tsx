@@ -84,8 +84,7 @@ export function OptionsOverlay() {
       {visible && hover && <HoverCard hover={hover} width={w} height={h} verified={verified} />}
       {visible && (
         <p className="options-legend">
-          Pass options: width = chance he picked it · brighter = more threat · dashed = on the true
-          state
+          Pass options: width = chance he picked it · brighter = more threat · dashed = on the truth
         </p>
       )}
     </div>

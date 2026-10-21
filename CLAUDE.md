@@ -16,25 +16,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
 ## Hard constraints (hackathon rules — never violate)
 1. **New project only.** Don't copy code from any pre-existing repo of the user. Third-party libraries are fine.
 2. **Synthetic data only.** No real match data or footage in the app or the repo, and none in the
-   demo except the one exception below. Fictional clubs and players. No Premier League or club
+   demo. Fictional clubs and players. No Premier League or club
    logos, real player names, broadcaster branding, or copyrighted music — in code, assets, or video.
-   - **The one exception** (Bowen approved it himself on 2026-10-19): a single real-footage
-     segment of **≤ 10 s in the demo video**. It shows the ground overlays drawn on a real camera.
-     The source is the Wikimedia Commons futsal final of 2019-10-06 by savinkins, CC BY 3.0.
-     Conditions:
-     - **Blurred:** everything off the pitch, every face, and any legible logo, sponsor or club
-       text on kit.
-     - **Attributed:** on screen and in `demo/realfeed/README.md` — author, title, source,
-       license, and "blurred and overlaid by us".
-     - **Decoupled from the app:**
-       - the footage is downloaded into `out/` and never committed;
-       - only camera calibration is committed (no frames, no player positions);
-       - `demo/realfeed/` is never imported by `sim/`, `analytics/`, `explain/`, `agents/`,
-         `api/` or `web/`;
-       - the public app never shows or loads it.
-     - **Never used** to train, tune or calibrate anything.
-     - **Cut it** if any of this can't be met; the risks and cut rule are in `docs/SPEC.md` §7, §9.
-     No other real data or footage goes in under this exception.
+   - The real-footage exception (approved 2026-10-19) was cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video.
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
@@ -119,6 +103,10 @@ _Fill in as they come to exist._
   without the marker's key scan, is the runner unmarked when the cutback arrives, and with it is
   the marker there? Held-out seeds 100–139 (design 0–39), about 15 s; writes
   `eval/reports/hero_marking_corner_blind_side.md`
+- `uv run python -m eval.hero_shot` — shot hero eval (SPEC 3.3, 3.6, `far_post_finish`): without
+  the striker's key scan, does his placement change, and by how much does his scoring chance on
+  the truth drop? Includes the v_dive sweep. Held-out seeds 200–239 (design 0–39), about a minute;
+  writes `eval/reports/hero_shot_far_post_finish.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
