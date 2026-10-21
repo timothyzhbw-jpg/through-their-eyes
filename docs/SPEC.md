@@ -1446,6 +1446,11 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
+    `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
+    and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
+    fallback, Your call). On the tactical board a keeper's token keeps its team colour, which
+    the board's other layers (pitch control) also use, with a band in his kit colour.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
