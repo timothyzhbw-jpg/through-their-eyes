@@ -1,5 +1,5 @@
-"""The API service (SPEC 2): live match stream, moments, cached breakdowns, what-if, TTS, and
-tamper checks (the verifier on a claim with one number changed, SPEC 7).
+"""The API service (SPEC 2): live match stream, moments, stats, cached breakdowns, what-if, TTS,
+and tamper checks (the verifier on a claim with one number changed, SPEC 7).
 
     uv run uvicorn api.main:app --reload
 
@@ -11,8 +11,9 @@ regeneration is rate-limited per client and capped per UTC day across all client
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
 tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
 
-Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream, request
-bodies and response headers are bounded for a public service (api/live.py, api/guard.py).
+Speech speaks only voice cues the crew wrote, by key (api/tts.py); a cached breakdown is re-voiced
+on read before those cues are recorded. The live stream, request bodies and response headers are
+bounded for a public service (api/live.py, api/guard.py).
 
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
@@ -53,7 +54,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from agent_framework import FileCheckpointStorage
-from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import HTTPConnection
 from fastapi.responses import Response
@@ -174,7 +175,7 @@ def create_app(
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
     cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
-    breakdowns, answers = cues.recording(storage.breakdowns), storage.answers
+    breakdowns, answers = cues.recording(tts.Revoiced(storage.breakdowns)), storage.answers
     recaps = cues.recording(storage.recaps)  # a recap's lines may be spoken too
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
@@ -281,6 +282,19 @@ def create_app(
     @app.get("/api/matches/{mid}/moments")
     async def match_moments(mid: str) -> list[dict[str, Any]]:
         return (await match_or_404(mid)).cards
+
+    @app.get("/api/matches/{mid}/stats")
+    async def match_stats(
+        mid: str,
+        frame: Annotated[int | None, Query(ge=0)] = None,
+        tracks: bool = False,
+    ) -> dict[str, Any]:
+        """Live match stats (SPEC 4.6): the snapshot at `frame` (default: the last), measured
+        from the tracking and events this service streams. `tracks` adds what viewers draw."""
+        m = await match_or_404(mid)
+        if m.stats is None:
+            raise HTTPException(503, f"no stats for {mid}")
+        return m.stats.snapshot(frame, tracks=tracks).model_dump(mode="json")
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:

@@ -488,8 +488,18 @@ expansion pack, on Module A (§3.3).
       at the 3.5 and 5.0 m/s² caps over 100 seeds)
 - [ ] Realism report on 20 seeds: passes, shots, possession changes per match fall inside configured
       target ranges (table written to `eval/`).
-      — *Open:* [eval/reports/realism.md](../eval/reports/realism.md) covers scans, head turns and
-      speeds, not passes, shots or possession changes per match; shots and stitched matches are M4.
+      — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
+      (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
+      of play, 1,855 passes attempted (79.4% of resolved ones completed), 371 possession changes
+      (354 interceptions, 18 out of play, no tackles), 485 team possessions of 11.1 s on average,
+      and no shots: no scenario of the default plan has the shot model on, so shot outcomes are
+      pending module A. None of these has a target to check: no range is configured, and no paper
+      in REFERENCES.md is recorded as printing one. The two rows that have a target are SPEC 3.1's,
+      and both are inside: 18 scenario possessions per match (target 15–25) and 12.31 min of play
+      (target 10–15). 340 of 360 scenario possessions start with the home team, which has 56.1% of
+      the possession time.
+      [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
+      hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
       — [tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`
@@ -598,12 +608,63 @@ for a few lines of maths. Cache the grid per sim version.
 - Decisions keep the prior (§3.5); possession value, the lenses, moments and the Analyst's
   `get_xt` read the grid.
 
-### 4.6 Pass metrics and speeds
-- Pass distance, completion, and difficulty ∈ [0, 1] from: distance, interception risk along the
-  path, pressure on passer and receiver, progression (ΔxT), line-breaking.
-- Player speed from smoothed velocity. Sprint > 7.0 m/s (25.2 km/h); high-speed running > 5.5 m/s
-  (19.8 km/h).
-- Ball speed and shot speed from the ball trajectory.
+### 4.6 Pass metrics and speeds (live match stats)
+The challenge's real-time match intelligence list: players named on screen with speed and
+distance indicators at thresholds; pass distance, accuracy and difficulty; ball and shot speed.
+Kernels in [analytics/stats.py](../analytics/stats.py) (numpy reference), the timeline in
+[analytics/live_stats.py](../analytics/live_stats.py).
+
+**Inputs: only what the live stream carries** (§2): positions and the ball in mm, the owner, and
+the event feed (`pass`, `reception`, `interception`, `out`, `shot`). No sim velocities, beliefs
+or pass outcomes from the sim's own attributes. A stitched match's possessions are tracking
+segments: positions jump at a possession's first frame, so no speed, distance or pass spans one.
+
+**Causal.** Every value at frame f uses frames ≤ f only (tested by truncating the input), so it
+could run frame by frame on a live feed. Each cue carries the frame at which its value is final:
+a pass at its reception, interception or out; a sprint at its first frame back below the threshold.
+
+- **Speed.** Smoothed over the last 0.2 s: v(f) = |p(f) − p(f − k)| / (k·dt), k = min(5, frames
+  since the segment began); 0 on a segment's first frame. The same for the ball. *Tunable.*
+- **Thresholds.** High-speed running > 5.5 m/s (19.8 km/h), sprint > 7.0 m/s (25.2 km/h): the most
+  common entry speeds for male professionals in the 30 studies of Gualtieri et al. (2023). A sprint
+  is a run above 7.0 m/s lasting at least 0.4 s (10 frames), as the sprint moment (§5.1); that
+  duration is ours, not a published value.
+- **Distance covered.** The sum of frame-to-frame steps within a segment (the sim's tracking has
+  no position noise; a real feed would be smoothed first). High-speed and sprint distance count
+  the steps that end above each threshold. Milestones every 250 m (*tunable*).
+- **Passes.** A pass event starts one; the first `reception`, `interception` or `out` after it
+  resolves it. Attempted = resolved; completed = resolved by a teammate's reception (accuracy =
+  completed / attempted). A pass still in flight when its segment ends, or when another kick
+  follows, is not counted. Distance: from the ball at the kick to the ball at the resolution.
+- **Ball and shot speed.** Release speed: the mean ball speed over the first 0.2 s after the kick
+  (|b(k + m) − b(k)| / (m·dt), m = min(5, frames to the resolution)); shots too, once shot events
+  exist (§3.3). The live ball speed is the smoothed speed above.
+- **Pass difficulty** ∈ [0, 1], a fixed formula from our kernels, set before any check of it and
+  not fitted to our outcomes:
+  `difficulty = 0.4·lane + 0.2·passer + 0.2·receiver + 0.2·min(d / 50 m, 1)`.
+  - *lane*: interception risk along the ball's path, after the physics-based pass model of
+    Spearman et al. (2017), as the decision model's P(win ball) (§3.5) on the tracked state. Per
+    opponent, the larger of two chances: he reacts and reaches a point of the path before the ball,
+    `logistic(π/(√3·σ)·(τ − TTI))` maximised over the path (τ the ball's time to the point, TTI
+    from his position and smoothed velocity at the kick, §4.1, σ = 0.45 s); or, before he reacts,
+    the ball comes within the control radius (1 m) of his run, with 0.3 m of position spread (the
+    run-in). Then `1 − Π (1 − p)` over opponents. The path is the one the ball travelled, so the
+    rating describes the pass as played.
+  - *passer*: pressing intensity on the passer at the kick (§4.3, the carrier's value).
+  - *receiver*: pressing intensity on the receiver's body when the ball arrives (§4.3, without
+    the ball term): the reception's player, or for a failed pass the pass event's intended
+    receiver (0 when the feed names none).
+  - *distance*: a 50 m pass scores 1 (*tunable*). The weights are a design choice: the lane, the
+    direct way a pass fails, counts twice each other factor. Progression and line-breaking (ΔxT)
+    are a pass's value, not its difficulty, and stay out.
+  - Bands for viewers: < 0.25 routine, < 0.5 moderate, < 0.75 hard, else very hard.
+- **Names.** Fictional names by player id ([sim/roster.py](../sim/roster.py)), never real
+  players'; the export is unchanged.
+- **Serving.** `GET /api/matches/<id>/stats` (pydantic `MatchStats`: player and team totals, cues,
+  definitions); `?frame=F` is the snapshot at frame F, `?tracks=true` adds per-frame ball speed,
+  speeds above 19.8 km/h and per-second distance checkpoints for viewers. The live stream sends each
+  cue as a `stat` message on its frame (§2), timecoded for a graphics engine. The Analyst's MCP
+  tool `get_live_stats` serves the same numbers (§6).
 
 ### 4.7 Scan detector
 Input: the `head_yaw` time series plus the player's and the ball's positions (needed for the ball
@@ -679,6 +740,21 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       `test_central_lanes_are_worth_at_least_the_wings_near_goal`,
       `test_fitted_grid_is_16_by_12_and_probability_like`,
       `test_a_fixed_seed_set_gives_a_byte_identical_grid`
+- [x] *Live match stats (§4.6):* the kernels give the known answers on hand-built tracks (speed,
+      distance, sprints, milestones, release speed, lane risk equal to the decision model's run-in,
+      the difficulty formula); the timeline is causal (truncating the stream at a frame changes
+      nothing up to it, on a hero and on the stitched match); pass outcomes read from the feed equal
+      the sim's own; totals add up; same seed ⇒ byte-identical; the REST snapshot, the stream's
+      `stat` messages and the MCP tool give the same numbers; difficulty separates failed from
+      completed passes on fresh seeds (AUC interval above 0.5, criterion set before the run).
+      — [tests/test_stats_kernels.py](../tests/test_stats_kernels.py),
+      [tests/test_live_stats.py](../tests/test_live_stats.py),
+      [tests/test_stats_api.py](../tests/test_stats_api.py);
+      [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-21,
+      `possession_play` seeds 300–399: 1 439 passes, AUC 0.737, 95% interval 0.712–0.763,
+      supported). Reported, not tuned: the distance part alone ranks the other way (AUC 0.257),
+      because an intercepted pass is measured to where it was won, and the "very hard" band (50
+      passes) completes more often than "hard".
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
@@ -888,12 +964,35 @@ tools exposed by our own MCP server.
 | Voice | approved Script + TelestrationPlan | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
 
 **Two voices.** The two narration agents write one interleaved `Script`, each line tagged with its
-`speaker`. If either fails, a single-narrator template takes over (failure policy below).
+`speaker`. Both voices in a language are male: play-by-play `en-US-GuyNeural` and
+`zh-CN-YunjianNeural`, colour `en-US-DavisNeural` and `zh-CN-YunyeNeural`. If either fails, a
+single-narrator template takes over (failure policy below).
 
 **Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
-MomentCard (lens |Δ|, outcome, phase), never from an LLM. Voice maps the tier to an SSML speaking
-style (`mstts:express-as`) where the chosen voice supports one, otherwise to prosody (rate, pitch).
-Check which styles the `en` and `zh` voices support during M3.
+MomentCard (lens |Δ|, outcome, phase), never from an LLM. Each line also has a role. `open` is a
+play-by-play connective (no claim). `build` is any other play-by-play line. `peak` is play-by-play
+that cites the moment's decision event — an evidence id whose player and frame are the last two
+`:` fields of the moment id (`m:<kind>:<actor>:<anchor frame>`, frames as ints). `why` is every
+co-commentator line. Role and tier pick a speaking style, best first, the first the voice has;
+otherwise prosody only. `styledegree` is set only when a style is used. Prosody (rate, pitch)
+always wraps the words.
+
+| role | tier | styles, best first | styledegree | rate | pitch |
+|---|---|---|---|---|---|
+| open | any | sports-commentary, cheerful | – | +6% | +3% |
+| build | any | sports-commentary-excited, excited, cheerful | – | +8% | +3% |
+| peak | calm | as build | – | +8% | +3% |
+| peak | excited | sports-commentary-excited, excited, cheerful | 1.5 | +10% | +4% |
+| peak | clutch | sports-commentary-excited, excited, cheerful | 2 | +14% | +6% |
+| why | any | cheerful, excited | – | +2% | +2% |
+
+Decisive words (the lexicon terms, "that look", the shoulder checks, 那一眼, 回头看了一眼) are
+their own louder prosody span, and a counterfactual line takes a 250 ms break after the first
+comma. Audio description ignores the role: neutral styles only (`narration-relaxed`,
+`narration-professional`, `calm`, `newscast`), rate −10%, no emphasis and no break, never
+`excited` or `cheerful`. Styles are the static table `VOICE_STYLES`;
+`python -m infra.voices` checks it against Azure Speech. A cached breakdown is re-voiced on read:
+cue keys change, the breakdown key does not.
 
 **Failure policy.** Per-step timeout (≈ 8 s, *tunable*), one retry, then a template fallback for
 that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
@@ -1016,8 +1115,14 @@ Application Insights.
   `force_action` (§3.7). Its answer becomes `counterfactual` claims (the outcome, ΔxT), narrated and
   verified like any other line, plus a ghost path in the plan. Questions that map to no option are
   answered with a fixed "not something he could do here" line. Latency as a breakdown (§2).
-- Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
-  every tier is rendered as prosody.
+- Voice speaks four roles (`open`, `build`, `peak`, `why`) on two male voices per language
+  (play-by-play `en-US-GuyNeural` / `zh-CN-YunjianNeural`, colour `en-US-DavisNeural` /
+  `zh-CN-YunyeNeural`). Styles come from `VOICE_STYLES` (`python -m infra.voices` checks it
+  against Azure Speech); the first style the voice has is used, otherwise prosody only, and
+  `styledegree` only when a style is used. Prosody always wraps the words; emphasis and a 250 ms
+  break mark the decisive words and a counterfactual reveal. Audio description stays on neutral
+  styles only, slower, with no emphasis, no break, and never `excited` or `cheerful`. A cached
+  breakdown is re-voiced on read (cue keys change, the breakdown key does not).
 - *After deployment:* **Foundry evaluation as an ablation** (`eval/narration_ablation.py`).
   Anchored lines are verified templates, so a groundedness score on them alone proves little.
   Instead, compare two narration modes on the same moments and seeds:
@@ -1274,6 +1379,22 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
       caption line opens its claims and seeks the replay to their evidence", one case per line)
+- [x] *Live match stats panel and tags (§4.6):* the panel shows the analyst the full table, a casual
+      viewer two or three headlines and a player fan his player; every number carries the
+      `tracking` chip and the note that it is measured, not verified; nothing after the playhead;
+      it works in a hero moment and in a stitched match; the viewer's totals at a checkpoint equal
+      the API's snapshot; the broadcast camera names the ball carrier and tags sprints, passes,
+      distance milestones and shots; the ticker shows them on every camera; 375 px with no
+      horizontal scroll; fps unchanged.
+      — [web/src/stats/stats.test.ts](../web/src/stats/stats.test.ts) (parity with the Python
+      snapshots), [store.test.ts](../web/src/stats/store.test.ts),
+      [web/src/ui/StatsPanel.test.tsx](../web/src/ui/StatsPanel.test.tsx),
+      [StatsTicker.test.tsx](../web/src/ui/StatsTicker.test.tsx),
+      [web/src/views/statTags.test.ts](../web/src/views/statTags.test.ts). At 375 px nothing in the
+      panel or the ticker overflows (the table scrolls inside its frame, the player column stays).
+      `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
+      stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
+      16.7–16.8 ms, as offline.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
@@ -1458,17 +1579,18 @@ or a live check. Ticked only when verified that day: `uv run pytest` 464 passed,
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
 check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
-`uv run pytest` 1015 passed (merged with main, after the review fixes).
+`uv run pytest` 1015 passed (merged with main, after the review fixes). The live match stats
+checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 568 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 7 | 0 | — |
+| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §4 analytics | 8 | 0 | — |
 | §5 explain | 7 | 0 | — |
-| §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **30** | **9** | |
+| **Total** | **33** | **9** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
