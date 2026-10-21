@@ -8,7 +8,7 @@
 // his belief spliced in over the window (`lookRun`); from the decision on it is its own run,
 // stored for the players on the ball only (`after`, the what-ifs' ghost-path format).
 
-import type { Hero, Run, Scan } from "../data/hero";
+import { actionLabel, type Hero, type Run, type Scan } from "../data/hero";
 import type { ExportAction, ExportDecision, ExportEvent } from "../data/types";
 import { checkPayload, claimRun, type Narration } from "../narration/payload";
 import type { MomentContext } from "../plan/moment";
@@ -303,6 +303,13 @@ export function snapFrame(looks: Looks, frame: number): number {
 export function snapOffset(looks: Looks, deg: number): number {
   const gap = (a: number) => Math.abs(((((a - deg) % 360) + 540) % 360) - 180);
   return looks.offsets.reduce((best, o) => (gap(o) < gap(best) ? o : best));
+}
+
+/** A call in words, placed shots included (near or far post, as the shooter sees it). */
+export function callLabel(action: string): string {
+  if (action === "shot:near") return "Shoot at the near post";
+  if (action === "shot:far") return "Shoot at the far post";
+  return actionLabel(action);
 }
 
 /** Where a look goes, in words: no numbers. */

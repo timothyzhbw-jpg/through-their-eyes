@@ -258,3 +258,71 @@ def test_a_wrong_name_in_a_look_line_is_refuted(ctx):
         swapped = choice.model_copy(deep=True)
         swapped.slots[name] = Slot(ref=wrong)
         assert verifier.verify(swapped).status == "refuted", name
+
+
+# --- a placed shot (far_post_finish seed 11, SPEC 3.3): the look that matters finds the keeper -
+
+
+FINISH = ("far_post_finish", 11)
+
+
+@pytest.fixture(scope="module")
+def finish_ctx():
+    from agents.context import MomentContext
+
+    return MomentContext.load(*FINISH)
+
+
+@pytest.mark.parametrize(
+    ("offset", "lines"),
+    [
+        (
+            90,
+            [
+                "You make H9 look to his left 0.4 s before the ball reaches him.",
+                "His head is still turning when he has to decide.",
+                "Before he decides, that look brings A1 and H6 into his sight.",
+                "When he decides, he pictures A1 0.0 m from where he really is; with no look at"
+                " all, 3.0 m.",
+                "He still shoots at the far post, as he really did.",
+                "It goes in.",
+            ],
+        ),
+        (
+            -150,
+            [
+                "You make H9 look over his right shoulder 0.4 s before the ball reaches him.",
+                "Before he decides, that look brings H10 and H6 into his sight.",
+                "So he shoots at the near post; he really shot at the far post.",
+                "A1 saves it.",
+                "That is worth 1.02 less in expected threat than what he really did.",
+            ],
+        ),
+    ],
+)
+def test_a_look_at_the_keeper_decides_the_placement_in_verified_lines(finish_ctx, offset, lines):
+    from agents.look import answer_look
+    from explain.render import check_payload
+
+    look = look_counterfactual(*FINISH, frame=183, offset_deg=offset)
+    none = look_counterfactual(*FINISH, frame=None, offset_deg=None)
+    assert (look.factual_action, none.counterfactual_action) == ("shot:far", "shot:near")
+    answer = answer_look(finish_ctx, look, none)
+    assert [line.text for line in answer.payloads["en"].lines] == lines
+    for lang, payload in answer.payloads.items():
+        assert len(payload.lines) == len(answer.claims), lang
+        assert check_payload(payload, finish_ctx.names) == [], lang
+
+
+def test_a_look_as_the_ball_reaches_him_is_sided_from_the_ball_not_his_head(finish_ctx):
+    """As he takes the ball his head is not on it: the look's side is measured from the ball, as
+    the dial and the grid place it."""
+    from agents.look import look_claims
+    from explain.verifier import Verifier
+
+    look = look_counterfactual(*FINISH, frame=193, offset_deg=90)
+    none = look_counterfactual(*FINISH, frame=None, offset_deg=None)
+    finish_ctx.evaluator.counterfactuals.update({look.id: look, none.id: none})
+    when = next(c for c in look_claims(finish_ctx, look, none) if c.id == "look_when")
+    assert when.template == "You make {player} look to his left as the ball reaches him."
+    assert Verifier(finish_ctx.evaluator).verify(when).status == "supported"

@@ -17,7 +17,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { actionLabel, wrapAngle, type Hero } from "../data/hero";
+import { wrapAngle, type Hero } from "../data/hero";
 import type { Vec2 } from "../data/types";
 import type { Narration } from "../narration/payload";
 import { toPitch, toScreen } from "../options/passOptions";
@@ -33,6 +33,7 @@ import { startTakeEyesClock, takeEyesOf, type TakeEyes } from "./controller";
 import type { ResultView } from "./flow";
 import {
   aroundHim,
+  callLabel,
   cellAt,
   secondsBefore,
   snapOffset,
@@ -479,15 +480,15 @@ function Card({ te }: { te: TakeEyes }) {
       <dl className="te-versus">
         <div className="yours">
           <dt>With your look</dt>
-          <dd>{actionLabel(entry.decision.chosen)}</dd>
+          <dd>{callLabel(entry.decision.chosen)}</dd>
         </div>
         <div>
           <dt>What he did</dt>
-          <dd>{actionLabel(looks.factual.chosen)}</dd>
+          <dd>{callLabel(looks.factual.chosen)}</dd>
         </div>
         <div>
           <dt>With no look</dt>
-          <dd>{actionLabel(looks.noLook.decision.chosen)}</dd>
+          <dd>{callLabel(looks.noLook.decision.chosen)}</dd>
         </div>
       </dl>
       <Lines narration={entry.answers[lang] ?? entry.answers.en} />

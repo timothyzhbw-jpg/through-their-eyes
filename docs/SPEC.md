@@ -1098,8 +1098,14 @@ original visual identity.
     Verifier on the look's run and the no-look run): when and where he looked, that his head was
     still turning when he decided, which teammates the look brought into his sight, how far off
     his picture of the one that mattered was with the look and with none, what he did against what
-    he really did, what came of it, and its value in expected threat. No count or rate is shown
-    outside a verified line.
+    he really did, what came of it, and its value in expected threat. With a placed shot (§3.3)
+    the keeper counts among those he may need to see, and the lines say which post he picks and
+    whether it goes in or the keeper saves it. A look's side is checked from the ball, as the
+    grid places it (`scan_side(…, against="ball")`). No count or rate is shown outside a verified
+    line.
+  - *Next heroes.* `far_post_finish` seed 11 already gives a grid on main (24 looks, 9 change his
+    placement; with no look he goes near post and is saved): it is bundled once the app serves
+    that hero.
   - *What the grid shows, honestly* ([look_grid_blind_side_run.md](../eval/reports/look_grid_blind_side_run.md),
     [look_grid_press_escape.md](../eval/reports/look_grid_press_escape.md)): on `blind_side_run`
     seed 3, 10 of 24 looks change his decision against no look (looking behind him 0.4–1.6 s

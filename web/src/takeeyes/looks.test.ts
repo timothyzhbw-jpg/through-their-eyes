@@ -19,6 +19,7 @@ import {
   snapOffset,
   startingCell,
   whereLabel,
+  callLabel,
 } from "./looks";
 
 const hero = parseHero(raw);
@@ -70,6 +71,8 @@ describe("the look grid", () => {
     expect(aroundHim(looks)).toEqual([90, 150, -150, -90]);
     expect(whereLabel(-150)).toBe("Over his right shoulder");
     expect(whereLabel(90)).toBe("To his left");
+    expect(callLabel("shot:far")).toBe("Shoot at the far post");
+    expect(callLabel("pass:H9")).toBe("Pass to H9");
   });
 
   it("starts from his own look: over his right shoulder, when he really looked", () => {

@@ -373,18 +373,29 @@ def observed_share(
     return _observed_share(ctx, run, ctx.frame(run, anchor, at), player, window_s)
 
 
-def scan_side(ctx: EvalContext, run: MatchRun, scan: str) -> str:
+def scan_side(ctx: EvalContext, run: MatchRun, scan: str, against: str = "head") -> str:
     """Which way a scan turned the head away from the ball: "left" (anticlockwise) or "right".
 
     When a scan begins the head still points at the ball (baseline gaze, SPEC 3.4) and the scan's
     `direction` is the yaw it turned to, so for a player facing the ball a turn to the right is a
-    look over his right shoulder.
+    look over his right shoulder. `against="ball"` measures the turn from the direction of the
+    ball at the scan's first frame instead, as a look of Take his eyes is placed (SPEC 3.7
+    `add_scan`): his head need not be on the ball then, e.g. as it reaches him.
     """
     e = ctx.event(run, scan)
     if e.type != "scan":
         raise Refuted(f"{e.id} is not a scan")
     i = ctx.player(run, e.player)
-    turn = float(wrap_angle(float(e.attrs["direction"]) - run.head_yaw[e.frame, i]))
+    if against == "head":
+        reference = float(run.head_yaw[e.frame, i])
+    elif against == "ball":
+        to_ball = run.ball_pos[e.frame, :2] - run.pos[e.frame, i]
+        if float(np.hypot(*to_ball)) < 1e-6:
+            raise Inconclusive(f"{e.player} is on the ball at {e.frame}: no direction to it")
+        reference = float(np.arctan2(to_ball[1], to_ball[0]))
+    else:
+        raise Inconclusive(f"scan_side measures against the head or the ball, not {against!r}")
+    turn = float(wrap_angle(float(e.attrs["direction"]) - reference))
     if abs(turn) < 1e-3:
         raise Inconclusive(f"{e.id} turned neither left nor right")
     return "left" if turn > 0 else "right"

@@ -38,6 +38,25 @@ from sim.run import MatchRun
 OVER_THE_SHOULDER = 2.09  # rad (120 deg): a look this far from the ball goes over his shoulder
 MOVED_M = 1.0  # m: a belief that moved less than this between the two runs is not worth a line
 SEEN = SimParams().perception_threshold
+# Actions other than a pass, in words: present, past, Chinese. A placed shot's post is as the
+# shooter sees it (`sim.shots`).
+ACTION_WORDS = {
+    "carry": ("carries the ball", "carried the ball", "带球"),
+    "shot": ("shoots", "shot", "射门"),
+    "shot:near": ("shoots at the near post", "shot at the near post", "射向近角"),
+    "shot:far": ("shoots at the far post", "shot at the far post", "射向远角"),
+}
+# A look that brings no one into his sight: zh, with the keeper among them or not.
+NONE_ZH = {
+    True: "在他做决定之前，这一眼既没有让他看到门将，也没有看到原本看不到的队友。",
+    False: "在他做决定之前，这一眼没有让他看到任何原本看不到的队友。",
+}
+# What came of a placed shot (`Scenario.shots`): en and zh.
+SHOT_WORDS = {
+    "goal": ("It goes in.", "球进了。"),
+    "wide": ("It goes wide.", "射偏了。"),
+    "blocked": ("It is blocked.", "射门被挡出。"),
+}
 
 
 @dataclass(frozen=True)
@@ -63,12 +82,35 @@ def _reception(run: MatchRun, player: str, before: int) -> Event:
     )  # fmt: skip
 
 
-def _teammates(look: LookResult) -> list[str]:
-    """His pass options' receivers, in option order."""
-    return [o.target_player for o in look.factual_decision.options if o.target_player]
+def _keeper(run: MatchRun, player: str) -> str | None:
+    """The opposing goalkeeper."""
+    team = run.players[run.index(player)].team
+    return next((p.id for p in run.players if p.team != team and p.role == "GK"), None)
 
 
-def _when(look: LookResult, ctx: MomentContext) -> Claim:
+def _matters(look: LookResult) -> list[str]:
+    """Whom his decision turns on: his pass options' receivers, in option order, and the keeper
+    when a shot is one of his options."""
+    options = look.factual_decision.options
+    out = [o.target_player for o in options if o.target_player]
+    keeper = _keeper(look.factual, look.player)
+    if keeper and any(o.kind == "shot" for o in options):
+        out.append(keeper)
+    return out
+
+
+def _picked(look: LookResult) -> str | None:
+    """Whom his choice with the look turned on: the receiver of his pass, the keeper of his
+    shot."""
+    action = look.counterfactual_action or ""
+    if action.startswith("pass:"):
+        return action.removeprefix("pass:")
+    if action.startswith("shot"):
+        return _keeper(look.factual, look.player)
+    return None
+
+
+def _when(look: LookResult, ctx: MomentContext, until: Event) -> Claim | None:
     hero, e, cf = look.player, look.look, look.id
     reception = _reception(look.counterfactual, hero, look.factual_decision.frame)
     turn = float(look.offset or 0.0)
@@ -81,7 +123,7 @@ def _when(look: LookResult, ctx: MomentContext) -> Claim:
     }[(side, over)]  # fmt: skip
     since = fn("metric_at", metric="time_since_last_scan", anchor=reception.id, player=hero, cf=cf)
     checks = [
-        Predicate(op="eq", lhs=fn("scan_side", scan=e.id, cf=cf), rhs=side),
+        Predicate(op="eq", lhs=fn("scan_side", scan=e.id, against="ball", cf=cf), rhs=side),
         Predicate(op="ge" if over else "lt",
                   lhs=fn("event_attr", event=e.id, attr="amplitude", cf=cf),
                   rhs=OVER_THE_SHOULDER),
@@ -90,7 +132,17 @@ def _when(look: LookResult, ctx: MomentContext) -> Claim:
     ]  # fmt: skip
     seconds = round((reception.frame - e.frame) * look.counterfactual.dt, 1)
     slots = {"player": Slot(ref=hero)}
-    if e.frame >= reception.frame:  # the look starts as the ball reaches him
+    if e.frame > reception.frame:  # after the ball reached him: timed against his decision
+        if until.frame <= reception.frame:
+            return None  # no event marks the decision (a carry): no clock to read it on
+        since = fn("metric_at", metric="time_since_last_scan", anchor=until.id, player=hero,
+                   cf=cf)  # fmt: skip
+        checks.append(Predicate(op="approx", lhs=since, rhs=slot("s"), abs_tol=0.05))
+        slots["s"] = Slot(value=round((until.frame - e.frame) * look.counterfactual.dt, 1),
+                          decimals=1)  # fmt: skip
+        template = f"You make {{player}} look {where_en} {{s}} s before he has to decide."
+        zh = f"你让{{player}}在做决定前{{s}}秒{where_zh}。"
+    elif e.frame == reception.frame:  # the look starts as the ball reaches him
         checks.append(Predicate(op="approx", lhs=since, rhs=0.0, abs_tol=0.001))
         template = f"You make {{player}} look {where_en} as the ball reaches him."
         zh = f"你让{{player}}在球到脚下的那一刻{where_zh}。"
@@ -119,9 +171,10 @@ def _too_late(look: LookResult, until: Event) -> Claim | None:
 
 
 def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
-    """The teammates the look brought into his sight before he decided: out of it as the look
-    began (his head still on the ball), in it at some frame of the look up to his decision. Up to
-    two, the one he chose first; or that it brought none."""
+    """Whom of those his decision turns on (`_matters`: teammates, and the keeper when he could
+    shoot) the look brought into his sight before he decided: out of it as the look began (his
+    head still on the ball), in it at some frame of the look up to his decision. Up to two, the
+    one his choice turned on first; or that it brought none."""
     hero, e, cf = look.player, look.look, look.id
     reception = _reception(look.counterfactual, hero, look.factual_decision.frame)
     at = round((e.frame - reception.frame) * look.counterfactual.dt, 4)
@@ -133,19 +186,20 @@ def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
         return fn("metric_at", metric="visibility", anchor=reception.id, at=at, observer=hero,
                   target=m, cf=cf)  # fmt: skip
 
-    mates = _teammates(look)
+    mates = _matters(look)
     value = ctx.evaluator.value
     new = {m: value(peak(m)) for m in mates if value(first(m)) < SEEN}
-    chosen = look.counterfactual_decision.options if look.counterfactual_decision else []
-    picked = next((o.target_player for o in chosen
-                   if o.action == look.counterfactual_action), None)  # fmt: skip
+    picked = _picked(look)
     seen = sorted((m for m, v in new.items() if v >= SEEN),
                   key=lambda m: (m != picked, -new[m]))[:2]  # fmt: skip
-    if not seen:  # each teammate: in sight as the look began, or never in it until he decided
+    if not seen:  # each of them: in sight as the look began, or never in it until he decided
+        keeper = _keeper(look.factual, hero) in mates
         return Claim(
             id="look_saw",
-            template="Before he decides, that look brings none of his teammates into his sight.",
-            templates={"zh": "在他做决定之前，这一眼没有让他看到任何原本看不到的队友。"},
+            template="Before he decides, that look brings neither the keeper nor a teammate into "
+                     "his sight." if keeper else
+                     "Before he decides, that look brings none of his teammates into his sight.",
+            templates={"zh": NONE_ZH[keeper]},
             predicate=Predicate(op="all", args=[
                 Predicate(op="ge", lhs=first(m), rhs=SEEN) if m not in new
                 else Predicate(op="lt", lhs=peak(m), rhs=SEEN)
@@ -170,17 +224,18 @@ def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
 
 
 def _belief(look: LookResult, none: LookResult) -> Claim | None:
-    """How far off his picture of one teammate was when he decided, with the look and with none:
-    the receiver he chose if the look moved his picture of him, else the teammate it moved most."""
+    """How far off his picture of one player was when he decided, with the look and with none:
+    the one his choice turned on (`_picked`) if the look moved his picture of him, else the one of
+    `_matters` it moved most."""
     if look.counterfactual_decision is None or none.counterfactual_decision is None:
         return None
     after = look.counterfactual_decision.belief_error
     before = none.counterfactual_decision.belief_error
-    mates = _teammates(look)
+    mates = _matters(look)
     if not mates:
         return None
     moved = {m: abs(before[m] - after[m]) for m in mates}
-    picked = (look.counterfactual_action or "").removeprefix("pass:")
+    picked = _picked(look) or ""
     mate = picked if moved.get(picked, 0.0) >= MOVED_M else max(mates, key=moved.__getitem__)
     if moved[mate] < MOVED_M:
         return None
@@ -208,7 +263,7 @@ def _choice(look: LookResult) -> Claim | None:
     """What he did with the look, against what he really did (passes and carries)."""
     hero, frame = look.player, look.factual_decision.frame
     mine, his = look.counterfactual_action, look.factual_action
-    if mine is None or not all(a.startswith("pass:") or a == "carry" for a in (mine, his)):
+    if mine is None or not all(a.startswith("pass:") or a in ACTION_WORDS for a in (mine, his)):
         return None
     reception = _reception(look.counterfactual, hero, frame)
     at = round((frame - reception.frame) * look.counterfactual.dt, 4)
@@ -217,8 +272,9 @@ def _choice(look: LookResult) -> Claim | None:
     slots: dict[str, Slot] = {}
     words: dict[str, dict[str, str]] = {}
     for key, action in (("mine", mine), ("his", his)):
-        if action == "carry":
-            words[key] = {"en": "carries the ball", "past": "carried the ball", "zh": "带球"}
+        if action in ACTION_WORDS:
+            en, past, zh = ACTION_WORDS[action]
+            words[key] = {"en": en, "past": past, "zh": zh}
         else:
             slots[key] = Slot(ref=action.removeprefix("pass:"))
             words[key] = {"en": f"passes to {{{key}}}", "past": f"passed to {{{key}}}",
@@ -280,6 +336,28 @@ def _outcome(look: LookResult) -> Claim | None:
                 evidence=[action.id],
             )  # fmt: skip
         return None
+    if action is not None and action.type == "shot":
+        outcome = action.attrs.get("outcome")
+        at = {"event": action.id, "cf": cf}
+        is_outcome = Predicate(op="eq", lhs=fn("event_attr", attr="outcome", **at), rhs=outcome)
+        if outcome == "saved" and action.attrs.get("keeper"):
+            return Claim(
+                id="look_outcome",
+                template="{keeper} saves it.",
+                templates={"zh": "{keeper}扑出了这脚射门。"},
+                slots={"keeper": Slot(ref=action.attrs["keeper"])},
+                predicate=Predicate(op="all", args=[
+                    is_outcome,
+                    Predicate(op="eq", lhs=fn("event_attr", attr="keeper", **at),
+                              rhs=slot("keeper")),
+                ]),
+                evidence=[action.id],
+            )  # fmt: skip
+        if outcome in SHOT_WORDS:
+            en, zh = SHOT_WORDS[outcome]
+            return Claim(id="look_outcome", template=en, templates={"zh": zh},
+                         predicate=is_outcome, evidence=[action.id])  # fmt: skip
+        return None
     if look.counterfactual_action == "carry":
         tackle = next((e for e in look.counterfactual.events
                        if e.type == "tackle" and e.attrs.get("won_from") == hero
@@ -326,7 +404,7 @@ def look_claims(ctx: MomentContext, look: LookResult, none: LookResult) -> list[
     action = _action_event(look.counterfactual, look.player, look.factual_decision.frame)
     until = action or _reception(look.counterfactual, look.player, look.factual_decision.frame)
     if look.look is not None:
-        out += [_when(look, ctx), _too_late(look, until), _saw(look, ctx, until)]
+        out += [_when(look, ctx, until), _too_late(look, until), _saw(look, ctx, until)]
     out += [_belief(look, none) if look.look is not None else None, _choice(look), _outcome(look),
             _value(look)]  # fmt: skip
     return [c for c in out if c is not None]

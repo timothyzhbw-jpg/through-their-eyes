@@ -16,6 +16,7 @@ import {
   LOOK_FILES,
   NO_GRID,
   aroundHim,
+  callLabel,
   cellAt,
   lookRun,
   parseLooks,
@@ -23,6 +24,8 @@ import {
   type LookEntry,
   type Looks,
 } from "./looks";
+
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 /** Frames of the moment shown before the look starts, so the turn is seen from the ball. */
 export const LEAD_IN = 8;
@@ -145,9 +148,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): TakeEyes {
           run: entry.after,
           answers: {},
           errors: [],
-          tag: entry.look
-            ? `your look: ${entry.decision.chosen.replace("pass:", "pass to ")}`
-            : "no look",
+          tag: `${entry.look ? "your look" : "no look"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
         },
       ],
     };
