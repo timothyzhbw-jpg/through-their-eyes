@@ -13,6 +13,7 @@ from sim.engine import Simulation
 from sim.overrides import FreezeBelief
 from sim.scenarios import SCENARIOS
 from sim.scenarios.base import Scenario, marking_target_on_belief
+from sim.scenarios.corner_blind_side import MARK_GAP
 
 SCENARIO = "corner_blind_side"
 DESIGN_SEEDS = [0, 1, 2, 3]
@@ -77,6 +78,33 @@ def test_a_marker_marks_where_he_believes_his_man_is():
     true = frozen.pos[a9]
     side = np.array([-52.5, 0.0]) - true
     assert np.linalg.norm(after - (true + 0.9 * side / np.linalg.norm(side))) > 1.0
+
+
+def test_the_scenario_really_steers_the_marker_on_his_belief():
+    """H5's movement target is `marking_target_on_belief`, on the routine's own frames."""
+    sim = Simulation.from_scenario(SCENARIO, seed=0)
+    h5, a9 = sim.index("H5"), sim.index("A9")
+    scenario = sim.scenario
+    scripted = scenario.scripted_targets
+    targets: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+
+    # `scripted_targets` runs inside the step, after that frame's belief update, so wrap it and
+    # compare on the same state rather than on a state rebuilt afterwards.
+    def spy(s, frame):
+        out = scripted(s, frame)
+        if h5 in out:
+            targets[frame] = (out[h5][0].copy(), marking_target_on_belief(s, h5, a9, MARK_GAP))
+        return out
+
+    scenario.scripted_targets = spy
+    sim.run()
+
+    frames = [0, scenario.received, scenario.dart_frame, scenario.scan_frame,
+              scenario.cutback_frame - 1]  # fmt: skip
+    for frame in frames:
+        assert frame in targets, frame
+        target, on_belief = targets[frame]
+        assert np.array_equal(target, on_belief), frame
 
 
 def test_only_the_look_shows_him_the_dart_on_design_seeds(results):
