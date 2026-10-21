@@ -429,7 +429,11 @@ expansion pack, on Module A (§3.3).
   shot is valued on the truth (§5.2), its claims and template narration tell the look at the
   keeper (§6), and a "What if…?" on the near or far post is answered by re-simulation.
   `eval/hero_lens.py`, built on design seeds 0–39, run once on 200–239
-  ([hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)): HELDOUT_NUMBERS
+  ([hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)): the scan lens is
+  selected in 38/40, its scan is the key scan in 40/40, and the decision changes in 38/40. In 38 of
+  the 40, Δscan equals Δspace (+0.50 to +0.54 on the truth) and the tie goes to `scan`. The two
+  `space` seeds, 200 and 233, are the gate's two misses: he sees the keeper during his first
+  touch, so the look changes nothing and Δscan is 0.
   - Demo seed 11, a typical design seed: `shot:far`, a goal, chance 0.79 on the truth; without
     the look `shot:near`, saved by A1, chance 0.26.
 
@@ -838,7 +842,7 @@ Every factual sentence on screen comes from a `Claim`:
       ≥ 60% of held-out seeds and its scan is the key scan in ≥ 90%; every claim verifies and every
       persona's template script airs in en and zh; heroes without placed shots are unchanged.
       — [eval/reports/hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)
-      (HELDOUT_SHORT on seeds 200–239, §3.6);
+      (38/40 and 40/40 on seeds 200–239, §3.6);
       [tests/test_finish_breakdown.py](../tests/test_finish_breakdown.py)
 - [x] Lens selection is deterministic for a given seed.
       — [tests/test_lenses.py](../tests/test_lenses.py)::`test_lens_selection_is_deterministic_for_a_seed`
