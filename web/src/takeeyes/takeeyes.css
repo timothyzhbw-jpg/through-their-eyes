@@ -1,0 +1,411 @@
+/* "Take his eyes" (SPEC 7): the board and his eyes with the dial and the timeline, and the card, in
+   the live screen's place (Floodlit: Floodlight is the look and what he saw, Dusk what never
+   happened). Laid out like Your call (yourcall.css). */
+
+.te-open[aria-pressed="true"] {
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
+}
+.stage-head .te-open {
+  background: rgba(8, 14, 11, 0.55);
+}
+/* a phone's live screen header has no room for a third pill: the moment's own button below opens
+   it; inside the mode the pressed pill is the header's only control and stays */
+@media (max-width: 880px) {
+  .stage-head .te-open[aria-pressed="false"] {
+    display: none;
+  }
+}
+/* a narrow desktop: with the pill there the viewer button shows its avatar only, as it does from
+   761 to 900 px (styles.css), so the header fits up to the width where its full label returns */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .stage-head:has(.te-open) .viewer-toggle > span:not(.avatar),
+  .stage-head:has(.te-open) .viewer-toggle > svg {
+    display: none;
+  }
+  .stage-head:has(.te-open) .viewer-toggle {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+.takeeyes {
+  position: absolute;
+  inset: var(--head-h) var(--gutter) var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--card-w);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--gutter);
+}
+.te-view {
+  position: relative;
+  margin: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--night-2);
+  border-radius: var(--r-board);
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 24px 48px -20px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.te-stage {
+  position: relative;
+  min-height: 0;
+}
+.te-slot {
+  position: absolute;
+  overflow: hidden;
+}
+.te-slot.main {
+  inset: 0;
+}
+.te-slot.pip {
+  top: 12px;
+  right: 12px;
+  width: 30%;
+  aspect-ratio: 16 / 10;
+  z-index: 2;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 16px 32px -12px rgba(0, 0, 0, 0.9);
+}
+.te-slot .view,
+.te-slot .canvas-wrap {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+.te-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* the dial: the cone where he will look, the arc a scan reaches, a handle per direction */
+.te-dial {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+.te-dial:active {
+  cursor: grabbing;
+}
+.te-cone {
+  fill: rgba(246, 213, 102, 0.26);
+  stroke: var(--floodlight);
+  stroke-width: 1.5;
+  transition: d var(--t-quick) var(--settle);
+}
+.te-now {
+  fill: rgba(239, 237, 229, 0.06);
+  stroke: var(--hairline-strong);
+  stroke-dasharray: 3 5;
+}
+.te-reach {
+  fill: none;
+  stroke: rgba(246, 213, 102, 0.35);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.te-ray {
+  stroke: var(--floodlight);
+  stroke-width: 2;
+}
+.te-me {
+  fill: var(--floodlight);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.te-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.te-handle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--floodlight);
+  background: var(--glass);
+  color: var(--chalk);
+  font: 500 18px/1 var(--font-data);
+  cursor: pointer;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.8);
+  transition:
+    transform var(--t-quick) var(--settle),
+    background-color var(--t-quick) var(--settle),
+    color var(--t-quick);
+}
+.te-arrow {
+  display: inline-block;
+  line-height: 1;
+}
+.te-handle.on,
+.te-handle:hover,
+.te-handle:focus-visible {
+  background: var(--floodlight);
+  color: var(--ink);
+  transform: translate(-50%, -50%) scale(1.12);
+}
+.te-tag {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 3;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-tag);
+  background: var(--floodlight);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  pointer-events: none;
+}
+.te-view.step-result .te-tag {
+  background: var(--glass);
+  color: var(--chalk);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+
+/* the timeline: from the pass to him to his decision */
+.te-timeline {
+  position: relative;
+  padding: 56px 34px 16px;
+  border-top: 1px solid var(--hairline);
+}
+.te-track {
+  position: relative;
+  height: 2px;
+  background: var(--hairline-strong);
+}
+.te-track > span {
+  position: absolute;
+  bottom: 8px;
+  transform: translateX(-50%);
+  font: 500 10px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+  white-space: nowrap;
+}
+.te-track > span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 1px;
+  height: 10px;
+  background: currentColor;
+}
+.te-track .te-own {
+  color: var(--floodlight);
+}
+/* three rows, so close marks never collide: his own looks, the ball's arrival, his decision (a few
+   frames after it). The last two end at their ticks. */
+.te-track .te-mark {
+  transform: translateX(-100%);
+}
+.te-track .te-mark::after {
+  left: 100%;
+}
+.te-track .te-mark.arrive {
+  bottom: 22px;
+}
+.te-track .te-mark.arrive::after {
+  height: 24px;
+}
+.te-track .te-mark.decide {
+  bottom: 36px;
+}
+.te-track .te-mark.decide::after {
+  height: 38px;
+}
+.te-times {
+  position: relative;
+  height: 40px;
+  margin-top: 6px;
+}
+.te-time {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  min-width: 44px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--hairline-strong);
+  background: var(--night-3);
+  color: var(--chalk-2);
+  font: 500 13px/1 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.te-time.on {
+  border-color: var(--floodlight);
+  background: var(--floodlight);
+  color: var(--ink);
+}
+.te-time:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* the card: a glass card, like Your call's */
+.te-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: start;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  padding: 22px 22px 22px 24px;
+  border-radius: var(--r-card);
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  color: var(--chalk);
+  animation: tt-rise 800ms var(--settle) both;
+}
+.te-card h2 {
+  font: 400 28px/1.1 var(--font-display);
+  letter-spacing: -0.01em;
+  margin: 0;
+  outline: none;
+  text-wrap: balance;
+}
+.te-lead {
+  margin: 0;
+  font: 400 15px/1.5 var(--font-body);
+  color: var(--chalk-2);
+}
+.te-choice {
+  margin: 0;
+  font: italic 400 19px/1.25 var(--font-display);
+  color: var(--floodlight);
+}
+.te-hint {
+  margin: 0;
+  color: var(--chalk-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.te-versus {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.te-versus div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--night-3);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.te-versus .yours {
+  box-shadow: inset 0 0 0 1px var(--floodlight);
+}
+.te-versus dt {
+  font: 500 10px/1.2 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.te-versus .yours dt {
+  color: var(--floodlight);
+}
+.te-versus dd {
+  margin: 6px 0 0;
+  font: italic 400 16px/1.2 var(--font-display);
+}
+.te-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.te-lines li {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--night-3);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.te-line {
+  font: 400 16px/1.35 var(--font-display);
+}
+.te-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* a phone or a narrow tablet: the header, the views and the timeline, then the card */
+@media (max-width: 880px) {
+  .stage.te-screen {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .te-screen .stage-head {
+    position: relative;
+  }
+  .takeeyes {
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 0 var(--gutter) var(--gutter);
+  }
+  .te-stage {
+    aspect-ratio: 4 / 5;
+    max-height: 72vh;
+  }
+  .te-slot.pip {
+    width: 42%;
+  }
+  .te-timeline {
+    padding: 56px 26px 12px;
+  }
+  .te-time {
+    min-width: 40px;
+    font-size: 12px;
+  }
+  .te-card {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .te-cone,
+  .te-handle {
+    transition: none;
+  }
+  .te-card {
+    animation: none;
+  }
+}

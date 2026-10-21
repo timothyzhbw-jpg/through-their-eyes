@@ -14,6 +14,7 @@ import { createRoot } from "react-dom/client";
 import { App, MatchApp } from "./App";
 import { apiBase, MATCH_ID } from "./api/client";
 import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
+import { LOOK_FILES } from "./takeeyes/looks";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
@@ -83,6 +84,13 @@ async function main() {
       if (link.tour) startTour(link.tour); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
+      // play=eyes: the first hero moment whose possession has a bundled look grid.
+      const eyes = session.match.moments.find((m) => {
+        if (!m.hero) return false;
+        const p = session.match.possessions.find((x) => x.index === m.possession);
+        return !!p && !!LOOK_FILES[scenarioMatchId(p)];
+      });
+      if (link.play === "eyes" && eyes) session.controls.openBreakdown(eyes, "eyes");
       broadcast(session.controls);
       if (filming) {
         await showCine(session);

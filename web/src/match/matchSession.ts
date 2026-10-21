@@ -16,6 +16,7 @@ import { createPlayback, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { createRecap, type Recap } from "../recap/recap";
 import type { MakeAudio } from "../voice/voice";
+import { takeEyesOf } from "../takeeyes/controller";
 import { yourCallOf } from "../yourcall/controller";
 import { scenarioMatchId, type MatchInfo, type MatchMoment } from "./match";
 
@@ -44,10 +45,11 @@ export interface MatchScreen {
 export interface MatchControls extends ViewControls {
   startLive(): void;
   /** Open a hero moment's breakdown (the moment's card, in match time); with "yourcall", open it
-   * in Your call instead of playing the breakdown. If Your call cannot open, the match stays up. */
+   * in Your call instead of playing the breakdown, with "eyes" in Take his eyes. If that cannot
+   * open, the match stays up. */
   openBreakdown(
     card: Pick<MatchMoment, "id" | "hero" | "possession" | "local_id">,
-    play?: "breakdown" | "yourcall",
+    play?: "breakdown" | "yourcall" | "eyes",
   ): void;
   backToMatch(): void;
 }
@@ -105,8 +107,19 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     if (status === "ended" && latest >= hero.runs.factual.frames - 1) recap.fullTime();
   });
 
-  const show = (session: Session, cardId: string, play: "breakdown" | "yourcall") => {
+  const show = (session: Session, cardId: string, play: "breakdown" | "yourcall" | "eyes") => {
     const yc = yourCallOf(session);
+    if (play === "eyes") {
+      const te = takeEyesOf(session);
+      if (te.unavailable) {
+        screen.set({ hero: null, opening: null, error: `${cardId}: ${te.unavailable}` });
+        return;
+      }
+      screen.set({ hero: session, opening: null, error: null });
+      yc.close();
+      te.open();
+      return;
+    }
     if (play === "yourcall") {
       if (yc.unavailable) {
         // Not the hero screen, and not the breakdown: that replay would show what he picked.
@@ -124,7 +137,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
 
   async function openBreakdown(
     card: Parameters<MatchControls["openBreakdown"]>[0],
-    play: "breakdown" | "yourcall" = "breakdown",
+    play: "breakdown" | "yourcall" | "eyes" = "breakdown",
   ) {
     const p = match!.possessions.find((x) => x.index === card.possession);
     if (!card.hero || !p) return;
