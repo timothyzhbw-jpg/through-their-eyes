@@ -48,9 +48,20 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    checkpoint and re-runs only the Telestrator; its plan replaces the template. The trace id is
    the run's operation_Id in Application Insights. Each run counts against the rate limit;
    a drill lasts until the API's next restart or deploy.
-7. **The evidence.** The [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
-   tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
-   tests, reports and pull requests, and marks what is missing.
+7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
+   six possessions on one 132.6 s clock, opened where the scan hero's possession starts. Press
+   **Play**. The chip above the views is the camera director: it suggests a camera and says
+   why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
+   has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
+   to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
+   ([pressure](eval/reports/hero_lens_press_escape.md)). **Skeleton** on the broadcast camera or
+   the board draws each player's torso and head direction, the way limb-tracking data is shown.
+
+Then the [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
+tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
+tests, reports and pull requests, and marks what is missing. A third hero, a corner where a
+defender marks the striker where he believes him to be, is in the simulator and its eval, not
+yet in the app.
 
 ## Try it
 - **Web app:** https://ttesite1ff906.z14.web.core.windows.net — the hero moment in first person and
@@ -87,6 +98,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 | Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 38/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
+| Set-piece hero (a corner; in the sim and its eval, not yet in the app): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
 | Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | False claims refuted by the verifier | 100% of perturbations | [corruption](eval/reports/corruption.md) |
