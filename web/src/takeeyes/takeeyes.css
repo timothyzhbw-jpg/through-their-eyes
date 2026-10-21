@@ -127,6 +127,10 @@
     background-color var(--t-quick) var(--settle),
     color var(--t-quick);
 }
+.te-arrow {
+  display: inline-block;
+  line-height: 1;
+}
 .te-handle.on,
 .te-handle:hover,
 .te-handle:focus-visible {
@@ -158,7 +162,7 @@
 /* the timeline: from the pass to him to his decision */
 .te-timeline {
   position: relative;
-  padding: 26px 34px 16px;
+  padding: 40px 34px 16px;
   border-top: 1px solid var(--hairline);
 }
 .te-track {
@@ -187,6 +191,16 @@
 }
 .te-track .te-own {
   color: var(--floodlight);
+}
+/* the ball arrives a few frames before he decides: the decision's label goes on a row of its own,
+   ending at its tick */
+.te-track .te-mark.decide {
+  bottom: 20px;
+  transform: translateX(-100%);
+}
+.te-track .te-mark.decide::after {
+  left: 100%;
+  height: 22px;
 }
 .te-times {
   position: relative;

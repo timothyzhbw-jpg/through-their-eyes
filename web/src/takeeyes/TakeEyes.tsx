@@ -33,7 +33,6 @@ import { startTakeEyesClock, takeEyesOf, type TakeEyes } from "./controller";
 import type { ResultView } from "./flow";
 import {
   aroundHim,
-  broughtIntoSight,
   cellAt,
   secondsBefore,
   snapOffset,
@@ -292,7 +291,13 @@ function Dial(props: { te: TakeEyes; hero: Hero; looks: Looks; w: number; h: num
               onClick={() => te.pick({ offset: o })}
               onKeyDown={(e) => onKey(e, k)}
             >
-              <span aria-hidden="true">{arrowFor(o)}</span>
+              <span
+                aria-hidden="true"
+                className="te-arrow"
+                style={{ transform: `rotate(${(-dirOf(o) * 180) / Math.PI}deg)` }}
+              >
+                →
+              </span>
             </button>
           );
         })}
@@ -300,8 +305,6 @@ function Dial(props: { te: TakeEyes; hero: Hero; looks: Looks; w: number; h: num
     </>
   );
 }
-
-const arrowFor = (o: number) => (o > 0 ? (o >= 120 ? "↰" : "←") : o <= -120 ? "↱" : "→");
 
 /** The timeline of the window, from the pass to him to his decision: the grid's times to pick,
  * his own looks, the ball's arrival and his decision. */
@@ -467,7 +470,6 @@ function Card({ te }: { te: TakeEyes }) {
       </aside>
     );
   }
-  const brought = broughtIntoSight(te.session.hero, looks, entry);
   const same = entry.decision.chosen === looks.factual.chosen;
   return (
     <aside className="te-card" aria-labelledby="te-title">
@@ -488,11 +490,6 @@ function Card({ te }: { te: TakeEyes }) {
           <dd>{actionLabel(looks.noLook.decision.chosen)}</dd>
         </div>
       </dl>
-      {brought.length > 0 && (
-        <p className="te-hint">
-          New in his sight: {brought.join(", ")} <SimTag />
-        </p>
-      )}
       <Lines narration={entry.answers[lang] ?? entry.answers.en} />
       <Segmented<ResultView>
         label="What the board shows"
@@ -511,15 +508,6 @@ function Card({ te }: { te: TakeEyes }) {
         {back}
       </div>
     </aside>
-  );
-}
-
-/** Marks a statement read from the sim export rather than a verified claim. */
-function SimTag() {
-  return (
-    <span className="source" title="Read from the sim export, not a verified claim">
-      sim<span className="sr-only"> (read from the sim export, not a verified claim)</span>
-    </span>
   );
 }
 
