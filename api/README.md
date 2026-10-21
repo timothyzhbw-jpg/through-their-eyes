@@ -17,6 +17,7 @@ Speech. It is public with no login, so every expensive path is bounded.
 | `WS /ws/matches/{id}/live` | the live stream: `hello`, then per frame a `frame` with its `event`s and the `moment`s whose window closes, then `end`; the client may `pause`, `resume`, `seek`, `speed` or `stop` |
 | `POST /api/breakdowns` | a breakdown for a moment, personas and languages; `fail` runs the failure drill |
 | `POST /api/breakdowns/{key}/bring-back` | resume a drill from its checkpoint with one step back |
+| `GET /api/breakdowns/{key}/trace`, `GET /api/recaps/{key}/trace` | the crew trace stored with a breakdown, drill or recap (`recorded: false` for one cached before traces were recorded) |
 | `POST /api/whatif` | a question mapped to one option, re-simulated, answered with verified lines |
 | `POST /api/verify` | one claim with one numeric slot changed, re-checked by the Verifier (no model, not audited) |
 | `POST /api/tts` | WAV for a voice cue key the crew wrote (never SSML from the client) |

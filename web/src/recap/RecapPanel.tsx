@@ -1,8 +1,11 @@
 // The end-of-match recap in the page (SPEC 6, 7): the chapter below the match with the verified
 // card, the caption and the reel's overlays over the live screen, and the button that asks for it
 // from the Moments panel. Every sentence and number here is a verified line or a verified value.
+// "Crew trace" opens the timeline of the crew run that wrote the recap (SPEC 6).
 
+import { useState } from "react";
 import { PERSONAS, type Persona } from "../api/client";
+import { CrewTracePanel, TraceButton } from "../crewtrace/CrewTrace";
 import type { MatchSession } from "../match/matchSession";
 import { useView } from "../session";
 import { useStore } from "../store/store";
@@ -39,6 +42,7 @@ function Panel({ session }: { session: MatchSession }) {
   const home = final?.values.home;
   const away = final?.values.away;
   const stats = card?.lines.filter((line) => line.id.startsWith("T")) ?? [];
+  const [tracing, setTracing] = useState(false);
   const moments = response?.result.moments ?? [];
   const source =
     response?.source === "model"
@@ -184,11 +188,13 @@ function Panel({ session }: { session: MatchSession }) {
                   Overlay cues (JSON)
                 </a>
               )}
+              <TraceButton open={tracing} onClick={() => setTracing((open) => !open)} />
               <p className="written">
                 {source}
                 {response.cached ? " · cached" : ""}
               </p>
             </div>
+            {tracing && <CrewTracePanel kind="recaps" traceKey={response.key} />}
           </>
         )}
       </Chapter>

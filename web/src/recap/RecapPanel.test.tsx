@@ -239,3 +239,32 @@ describe("the recap button", () => {
     expect(session.recap.state.get().status).toBe("ready");
   });
 });
+
+describe("the recap's crew trace", () => {
+  it("opens the trace of the crew run that wrote the recap, or says it was not recorded", async () => {
+    const key = fixture.key;
+    const { session, fetch } = online({
+      [`GET /api/recaps/${key}/trace`]: () =>
+        json({
+          key,
+          recorded: false,
+          trace: null,
+          detail: "trace not recorded for this cached run",
+        }),
+    });
+    await ready(session);
+    const page = mount(session, <RecapPanel />);
+    const open = button(page, "Crew trace")!;
+    expect(open.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => {
+      open.click();
+      await settle();
+    });
+    expect(fetch.calls.at(-1)).toMatchObject({ method: "GET", path: `/api/recaps/${key}/trace` });
+    expect(open.getAttribute("aria-expanded")).toBe("true");
+    expect(page.querySelector(".crew-trace")!.textContent).toContain(
+      "Trace not recorded for this cached run",
+    );
+    expect(page.querySelector(".trace-bar")).toBeNull(); // nothing made up
+  });
+});
