@@ -13,6 +13,7 @@ import {
   type Possession,
 } from "../match/match";
 import type { MatchSession } from "../match/matchSession";
+import { RecapButton } from "../recap/RecapButton";
 import { useSession, useView } from "../session";
 import { MISSING_RUNS } from "../yourcall/controller";
 import { createStore, useStore, type Store } from "../store/store";
@@ -192,6 +193,7 @@ function MatchMoments({ session }: { session: MatchSession }) {
         </>
       }
       lede={`Every possession's moments, detected and explained on its own run and lifted to match time. ${breakdowns}`}
+      aside={<RecapButton />}
     >
       <div className="possessions">
         {match.possessions.map((p) => (

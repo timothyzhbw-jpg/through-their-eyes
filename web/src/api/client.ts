@@ -22,6 +22,7 @@ export const BREAKDOWN_TIMEOUT_MS = 60000; // a model-backed breakdown takes ≈
 export const WHAT_IF_TIMEOUT_MS = 30000;
 export const TTS_TIMEOUT_MS = 30000;
 export const VERIFY_TIMEOUT_MS = 10000; // the verifier alone, no model: well under a second
+export const RECAP_TIMEOUT_MS = 90000; // a model-backed recap makes about a dozen calls
 
 /** `fetch`, or a stand-in for tests. */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -190,6 +191,8 @@ export interface Api {
   }): Promise<WhatIfResponse>;
   /** WAV of one voice cue, by its `cache_key`: the service speaks only SSML its crew wrote. */
   tts(key: string): Promise<Blob>;
+  /** The end-of-match recap of this (stitched) match, for one audience; checked by recap/. */
+  recap(req: { persona: Persona; language: Language }): Promise<unknown>;
   verify(req: {
     claim: string;
     slot: string;
@@ -304,6 +307,13 @@ export function createApi(
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
     tts: (key) => call("/api/tts", post({ key }), TTS_TIMEOUT_MS, (res) => res.blob()),
+    recap: ({ persona, language }) =>
+      call(
+        "/api/recaps",
+        post({ match, personas: [persona], languages: [language] }),
+        RECAP_TIMEOUT_MS,
+        json(),
+      ),
     verify: ({ claim, slot, value, language, moment }) =>
       call(
         "/api/verify",

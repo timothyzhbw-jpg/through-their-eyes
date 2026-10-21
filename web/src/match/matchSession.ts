@@ -5,6 +5,7 @@
 // the moment's id in match time; its clock shows local frame + the possession's start. Back to
 // the match puts the match playhead where the breakdown left off. Your call opens the same hero
 // when every option has a re-simulated run; otherwise the match stays up and nothing plays.
+// At full time on the live stream the end-of-match recap is asked for (recap/recap.ts).
 
 import { MATCH_ID, type Api, type Fetch } from "../api/client";
 import type { Hero } from "../data/hero";
@@ -13,6 +14,7 @@ import { LiveFeed, type SocketFactory } from "../live/feed";
 import { createSession, transportControls, type Session, type ViewControls } from "../session";
 import { createPlayback, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
+import { createRecap, type Recap } from "../recap/recap";
 import type { MakeAudio } from "../voice/voice";
 import { yourCallOf } from "../yourcall/controller";
 import { scenarioMatchId, type MatchInfo, type MatchMoment } from "./match";
@@ -59,6 +61,7 @@ export interface MatchSession {
   api: Api | null;
   offline: string | null;
   screen: Store<MatchScreen>;
+  recap: Recap; // the end-of-match recap: its card and its reel
   controls: MatchControls;
 }
 
@@ -76,15 +79,30 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     hero,
     playback,
     feed,
-    takeOver: () => screen.set({ error: null }),
+    takeOver: () => {
+      screen.set({ error: null });
+      recap.stopReel(); // the viewer took the controls
+    },
     beforeLive: () => {},
+  });
+  const recap = createRecap({
+    api,
+    hero,
+    playback,
+    takeOver: () => {
+      endLive();
+      screen.set({ error: null });
+    },
+    makeAudio: options.makeAudio,
   });
 
   // The stream ended (or broke): the viewer is left in the replay at the last frame received.
+  // It ended on the match's last frame: full time, the recap is asked for.
   feed?.state.subscribe(() => {
     const { status, latest } = feed.state.get();
     if (!playback.get().live || (status !== "ended" && status !== "lost")) return;
     playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
+    if (status === "ended" && latest >= hero.runs.factual.frames - 1) recap.fullTime();
   });
 
   const show = (session: Session, cardId: string, play: "breakdown" | "yourcall") => {
@@ -187,6 +205,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     api,
     offline: api ? null : (options.offline ?? "no live service"),
     screen,
+    recap,
     controls,
   };
 }
