@@ -58,7 +58,7 @@ function HeroShortcut({
   return (
     <button
       type="button"
-      className="play small"
+      className="btn btn-primary"
       onClick={() => onOpen(card)}
       title={`${card.actor}'s decision, through his eyes`}
     >

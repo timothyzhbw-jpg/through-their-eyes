@@ -37,7 +37,33 @@ function online() {
 describe("parsing the address", () => {
   it("opens as before with no parameters: autoplay, live service, the example plan", () => {
     expect(parseDeepLink("")).toEqual(NO_LINK);
-    expect(NO_LINK).toMatchObject({ autoplay: true, offline: false, invalidPlan: false });
+    expect(NO_LINK).toMatchObject({
+      autoplay: true,
+      intro: true,
+      offline: false,
+      invalidPlan: false,
+    });
+  });
+
+  it("shows the lineup card by default and skips it for testing or a linked spot", () => {
+    expect(parseDeepLink("").intro).toBe(true);
+    expect(parseDeepLink("?intro=0").intro).toBe(false);
+    for (const spot of ["at=decision", "run=factual", "ask=What+if%3F", "tamper=cf_value"])
+      expect(parseDeepLink(`?${spot}`).intro).toBe(false);
+    expect(parseDeepLink("?view=tactical&autoplay=0").intro).toBe(true);
+  });
+
+  it("a Your call link skips the lineup card: no intro, no autoplay", () => {
+    expect(parseDeepLink("?play=yourcall")).toMatchObject({
+      play: "yourcall",
+      intro: false,
+      autoplay: false,
+    });
+    // A link to a spot wins over intro=1: main.tsx opens the app without the lineup card.
+    expect(parseDeepLink("?play=yourcall&intro=1")).toMatchObject({
+      intro: false,
+      autoplay: false,
+    });
   });
 
   it("keeps the existing testing parameters", () => {

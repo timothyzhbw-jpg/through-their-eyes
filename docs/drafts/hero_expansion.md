@@ -198,6 +198,10 @@ height is ignored).
 
 ## 2. C1 — the striker reads the keeper (`far_post_finish`)
 
+> **As built (2026-10-21): SPEC §3.3 (Module A) and §3.6 ("Shot hero") are authoritative,
+> including their "Deviations from the design plan".** Held out on fresh seeds 200–239: the
+> placement changes in 38/40, the median ΔP_goal is +0.524, and both v_dive ends give 38/40.
+
 ### 2.1 Setup (home attacks +x; hero H9, ST)
 - **Before the switch.** The ball starts with the left back H3 at (18, 24). The away keeper A1
   stands on the bisector, toward the post on that side: y ≈ +1.6…+2.2 (keyed jitter).
@@ -461,7 +465,8 @@ Only partly.
      or jump-reach numbers.
 - **The cheapest version needs only (1).**
   - A short-corner routine with a low cutback, all on the ground.
-  - Marking on belief behind a flag, and the house intervention `drop_scan`.
+  - Marking on belief in this scenario's own movement targets (a helper, not a flag), and the
+    house intervention `drop_scan`.
   - The outcome is the runner's separation from his marker when the ball reaches him.
   - No Module A, no lofted ball, no duel. It ends at the reception, as `blind_side_run` ends at
     its pass.
@@ -488,12 +493,13 @@ Only partly.
   loses him.
   - Variant: make the goal the factual run (he never looks) and the look the counterfactual. That
     needs a new `AddScan` override and its claims, about +0.25 d. Not recommended.
-- **Marking on belief** (`Scenario.marking_on_belief`, off elsewhere):
+- **Marking on belief** (`sim.scenarios.base.marking_target_on_belief`, called in this scenario's
+  movement targets; no flag, and the other scenarios mark the true position):
   - A marker's target is the goal-side point of his man's *believed* position, from
     `BeliefStore.estimate` on his own perception: `target = ŷ_a + gap · unit(own_goal − ŷ_a)`.
   - Same speed caps as now.
-  - This is the only new sim mechanism. No new random draw: the noise is keyed per frame and
-    entity, and the belief comes from existing perception.
+  - As built this is a helper in the scenario, not a flag or an engine change. No new random draw:
+    the noise is keyed per frame and entity, and the belief comes from existing perception.
 - **Outcome.** Separation at the reception, d_sep = |pos(H5) − pos(A9)|.
   - If H5 is within the control radius of the ball first, `_check_control` gives him an
     interception.
@@ -618,10 +624,13 @@ It adds the missing mechanism, but it does not rescue the index.
 - The eval reports for `hero_flip`, `hero_lens` (press_escape), `realism`, `scan_calibration`,
   `blind_side` and `scan_detector` regenerate with no diff. Every sim PR pastes the commands and
   an empty `git diff --stat`.
-- Every new mechanism sits behind a Scenario flag or hook: `marking_on_belief`, `shots`,
-  `forced_shot`, ForcedStep, `first_touch`, `defender_decides`. Option sets change only under
-  `shots` or `first_touch`. New keyed purposes (`shot_error`, `save`, `shot_speed`) are drawn
-  only under their flag.
+- Every new mechanism sits behind a Scenario flag or hook: `shots`, `forced_shot`, ForcedStep,
+  `first_touch`, `defender_decides`, and the `ends_on_pass` hook (C4's only engine change).
+  Marking on belief is not a flag: it is a helper,
+  `sim.scenarios.base.marking_target_on_belief`, called in `corner_blind_side`'s movement
+  targets, and the other scenarios mark the true position. Option sets change only under `shots`
+  or `first_touch`. New keyed purposes (`shot_error`, `save`, `shot_speed`) are drawn only under
+  their flag.
 - **Cache keys.** Explain and agents changes bump `PROMPT_VERSION`, so the cache keys of the
   existing heroes change too. After each deploy, pre-warm every hero (personas × en/zh) before
   any video capture.
@@ -664,7 +673,8 @@ reported as a counterexample and cut, as with reception difficulty (AUC 0.59, 20
 ## 11. Integration plan
 - **PRs, in merge order** (each through the PR desk; sim PRs merge only with their gate met, the
   invariants proven and no explain changes):
-  1. C4 sim (`marking_on_belief`) + `eval/reports/hero_flip_corner_blind_side.md`.
+  1. C4 sim (`corner_blind_side` and the `ends_on_pass` hook) +
+     `eval/reports/hero_flip_corner_blind_side.md`.
   2. C4 explain, agents and API.
      - The plumbing for a hero without a ball decision (H), and the scan lens for such a hero.
      - Claims and sequences; `DEFAULT_MATCHES` gets `corner_blind_side:<seed>`.

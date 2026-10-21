@@ -458,8 +458,8 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
         id="whatif_value",
         template=f"That option would have been worth {{dxt}} {'less' if better else 'more'} in "
                  "expected threat than what he did.",
-        templates={"zh": "这样处理比他实际的选择少{dxt}的预期威胁（xT）。" if better
-                   else "这样处理比他实际的选择多{dxt}的预期威胁（xT）。"},
+        templates={"zh": "这个选择比他实际的选择少{dxt}的预期威胁（xT）。" if better
+                   else "这个选择比他实际的选择多{dxt}的预期威胁（xT）。"},
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=delta, rhs=slot("dxt", scale=1.0 if better else -1.0),
                             abs_tol=0.005),

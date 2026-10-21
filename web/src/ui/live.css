@@ -1,74 +1,77 @@
-/* The live service in the page: the header's Live control or "Offline data" badge, the moments
+/* The live service in the page: the header's Live pill or "Offline data" badge, the moments
    detected on the stream, and the breakdown's audience, language, voice and source. */
-.header-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-}
 .data-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
   font: 500 11px/1 var(--font-data);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
-  border: 1px dashed var(--line);
-  border-radius: 3px;
-  padding: 6px 8px;
+  color: var(--chalk-2);
+  white-space: nowrap;
   cursor: help;
 }
 .live {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .live-chip {
-  font: 700 13px/1 var(--font-display);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 10px 12px;
+  appearance: none;
+  border: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
+  font: 500 12px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-2);
   cursor: pointer;
+  transition:
+    background-color var(--t-quick),
+    color var(--t-quick);
+}
+.live-chip:hover {
+  background: rgba(239, 237, 229, 0.1);
+  color: var(--chalk);
 }
 .live-chip i {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--chalk-3);
 }
 .live-chip[aria-pressed="true"] {
-  color: var(--fg);
-  border-color: var(--home);
+  color: var(--chalk);
 }
 .live-chip[aria-pressed="true"] i {
-  background: var(--home);
-  animation: live-pulse 1.2s ease-in-out infinite;
+  background: var(--floodlight);
+  animation: tt-beat 1.6s ease-out infinite;
 }
-@keyframes live-pulse {
-  50% {
-    opacity: 0.3;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .live-chip[aria-pressed="true"] i {
-    animation: none;
-  }
+.live-chip.back {
+  color: var(--chalk);
 }
 .live-status {
-  font: 500 12px/1.2 var(--font-data);
-  color: var(--muted);
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
   font-variant-numeric: tabular-nums;
 }
 .live-status.lost {
-  color: var(--gold);
+  color: var(--flare);
 }
 .live-status .sprint {
-  color: var(--home);
+  color: var(--chalk-2);
 }
 
 /* moments detected on the stream */
@@ -89,29 +92,29 @@
   box-sizing: border-box;
   flex: 1;
   display: grid;
-  grid-template-columns: 58px 1fr;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: 5px;
-  border-left: 3px solid transparent;
+  grid-template-columns: 62px 1fr;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
   cursor: pointer;
+  transition: background-color var(--t-quick);
 }
 .moment-list li > button:first-child:hover {
-  background: var(--surface-2);
+  background: rgba(239, 237, 229, 0.05);
 }
 .moment-list li > button:first-child:focus-visible {
-  outline: 2px solid var(--sight);
+  outline: 2px solid var(--floodlight);
 }
 .moment-list li.hero > button:first-child {
-  border-left-color: var(--sight);
+  box-shadow: inset 2px 0 0 var(--floodlight);
 }
 .moment-list .t {
-  font: 500 12px/1.7 var(--font-data);
-  color: var(--muted);
+  font: 500 12px/1.75 var(--font-data);
+  color: var(--chalk-3);
   font-variant-numeric: tabular-nums;
 }
 .moment-list small {
-  color: var(--muted);
+  color: var(--chalk-3);
 }
 
 /* audience, language and voice of the breakdown */
@@ -119,68 +122,35 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  margin-bottom: 10px;
+  gap: 10px 12px;
+  margin-bottom: 14px;
 }
 .choice label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--chalk-3);
 }
-.choice select {
-  color: var(--fg);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 5px 6px;
+.choice .sound {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--r-control);
+  border: 0;
+  background: rgba(239, 237, 229, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.16);
+  color: var(--chalk-2);
+  font: 500 13px/1 var(--font-body);
+  cursor: pointer;
 }
-.choice .lang {
-  margin-left: 0;
+.choice .sound[aria-pressed="true"] {
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
 }
-.lang button:disabled,
-.choice select:disabled,
 .sound:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
-.sound {
-  font: 600 12px/1 var(--font-body);
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-.sound[aria-pressed="true"] {
-  color: var(--bg);
-  background: var(--sight);
-  border-color: var(--sight);
-}
-.sound.failed {
-  border-color: var(--gold);
-}
-.plan-badge.fresh {
-  color: var(--bg);
-  background: var(--sight);
-  border-color: var(--sight);
-}
 .note.waiting {
-  margin: 0 0 10px;
-}
-button.link {
-  all: unset;
-  color: var(--sight);
-  text-decoration: underline;
-  cursor: pointer;
-}
-button.link:focus-visible {
-  outline: 2px solid var(--sight);
-}
-.loading {
-  margin: 0;
-  padding: 24px;
-  color: var(--muted);
+  margin: 0 0 12px;
 }
