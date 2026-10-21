@@ -1060,7 +1060,7 @@
     },
     {
       "id": "b09-toggle",
-      "dur": 6.0,
+      "dur": 5.8,
       "picture": {
         "src": "capture",
         "shot": "04-with-without",
@@ -1098,6 +1098,32 @@
       ]
     },
     {
+      "id": "b09r-board-rewind",
+      "dur": 0.2,
+      "picture": {
+        "src": "capture",
+        "shot": "04-with-without",
+        "in": 5.6,
+        "speed": 3,
+        "reverse": true,
+        "crop": "tactical",
+        "push": [
+          1.05,
+          1.05
+        ]
+      },
+      "fx": [
+        "rewind"
+      ],
+      "sfx": [
+        {
+          "name": "rewind",
+          "at": 0.0,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
       "id": "b10a-rewind",
       "dur": 1.15,
       "picture": {
@@ -1113,13 +1139,7 @@
         "rewind",
         "glue"
       ],
-      "sfx": [
-        {
-          "name": "rewind",
-          "at": 0.0,
-          "gain_db": -8
-        }
-      ],
+      "sfx": [],
       "overlays": [
         {
           "title": "label-bl-1p15",

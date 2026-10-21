@@ -245,6 +245,7 @@ function checkPicture(beat, i, where, cine, titles, ctx, errors) {
     if (!ctx.shotIds.has(picture.shot)) errors.push(`${where}: unknown capture shot "${picture.shot}"`);
     if (picture.in != null && !(picture.in >= 0)) errors.push(`${where}: in must be >= 0`);
     if (picture.speed != null && !(picture.speed > 0)) errors.push(`${where}: speed must be positive`);
+    if (picture.reverse != null && typeof picture.reverse !== "boolean") errors.push(`${where}: reverse must be true or false`);
     checkCrop(picture.crop, where, errors);
     checkPush(picture.push, where, errors);
     return;
