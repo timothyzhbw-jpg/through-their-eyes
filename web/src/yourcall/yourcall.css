@@ -1,0 +1,277 @@
+/* "Your call" (SPEC 7): the view from behind the carrier with its markers, and the card. */
+
+.yc-open {
+  font: 700 13px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--gold);
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+.yc-open[aria-pressed="true"] {
+  background: var(--fg);
+}
+.yc-open:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.yourcall {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 1fr);
+  grid-template-rows: var(--stage-h);
+  gap: 12px;
+}
+.yc-view {
+  position: relative;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.yc-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.yc-path {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.yc-path polyline {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 9;
+  animation: yc-march 0.9s linear infinite;
+}
+@keyframes yc-march {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+.yc-swipe {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+.yc-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.yc-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 2px solid var(--gold);
+  background: rgba(11, 18, 16, 0.82);
+  color: var(--fg);
+  font: 700 15px/1 var(--font-data);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+.yc-marker::after {
+  /* a short stem down to the player */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 2px;
+  height: 8px;
+  margin-left: -1px;
+  background: var(--gold);
+}
+.yc-marker.kind-carry,
+.yc-marker.kind-shot {
+  font: 700 12px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.yc-marker.unseen {
+  border-style: dashed;
+  color: var(--muted);
+}
+.yc-marker.tried {
+  background: rgba(255, 211, 107, 0.22);
+}
+.yc-marker.aimed,
+.yc-marker:hover,
+.yc-marker:focus-visible {
+  background: var(--gold);
+  color: var(--bg);
+  transform: translate(-50%, -50%) scale(1.14);
+}
+.yc-tag {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(11, 18, 16, 0.78);
+  font: 600 12px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  pointer-events: none;
+}
+.yc-view.step-truth .yc-tag {
+  color: var(--sight);
+}
+.yc-view.step-actual .yc-tag,
+.yc-view.step-compare .yc-tag {
+  color: var(--fg);
+}
+
+.yc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.yc-card h2 {
+  font: 700 22px/1.15 var(--font-display);
+  margin: 0;
+  outline: none;
+  text-wrap: balance;
+}
+.yc-lead {
+  margin: 0;
+}
+.yc-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.yc-beat {
+  display: grid;
+  gap: 10px;
+}
+.yc-steps {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.yc-steps li {
+  flex: 1;
+  padding-top: 6px;
+  border-top: 3px solid var(--line);
+}
+.yc-steps li[aria-current="step"] {
+  color: var(--fg);
+  border-top-color: var(--gold);
+}
+.yc-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.yc-lines li {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--gold);
+  background: var(--surface-2);
+  border-radius: 0 6px 6px 0;
+}
+.yc-line {
+  font-size: 15px;
+}
+.yc-versus {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+.yc-versus div {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.yc-versus .yours {
+  border: 1px solid var(--gold);
+}
+.yc-versus dt {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.yc-versus dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+.yc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.yc-secondary {
+  font: 500 13px/1 var(--font-body);
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 880px) {
+  .yourcall {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+  .yc-canvas {
+    height: auto;
+    aspect-ratio: 4 / 5;
+    max-height: 72vh;
+  }
+  .yc-card {
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yc-path polyline {
+    animation: none;
+  }
+  .yc-marker {
+    transition: none;
+  }
+}
+.yc-open.small {
+  font-size: 12px;
+  padding: 7px 10px;
+}

@@ -270,7 +270,7 @@ function PovScene() {
   );
 }
 
-function Goals() {
+export function Goals() {
   const posts = [];
   for (const g of [-1, 1]) {
     for (const y of [-3.66, 3.66]) {
