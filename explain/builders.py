@@ -784,7 +784,8 @@ def shot_placement(ctx: EvalContext, r: HeroRefs) -> Claim | None:
 
 
 def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
-    """A goal, a save, or a shot wide (the shot's recorded outcome)."""
+    """A goal, a save, or a shot wide (the shot's recorded outcome). The ids are `shot_*`: the
+    match recap has its own per-moment `goal`, `saved` and `wide` claims (`explain.recap`)."""
     shot = _placed_shot(r)
     if shot is None or shot.attrs.get("outcome") not in ("goal", "saved", "wide"):
         return None
@@ -793,7 +794,7 @@ def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
                _eq(fn("event_attr", event=r.at_action, attr="outcome"), outcome)]  # fmt: skip
     if outcome == "wide":
         return Claim(
-            id="wide",
+            id="shot_wide",
             template="{player}'s shot went wide.",
             templates={"zh": "{player}的射门偏出了。"},
             slots={"player": Slot(ref=r.hero)},
@@ -802,7 +803,7 @@ def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         )
     if outcome == "goal":
         return Claim(
-            id="goal",
+            id="shot_scored",
             template="{player} scored.",
             templates={"zh": "{player}破门得分。"},
             slots={"player": Slot(ref=r.hero)},
@@ -810,7 +811,7 @@ def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
             evidence=[shot.id],
         )
     return Claim(
-        id="saved",
+        id="shot_saved",
         template="{keeper} saved {player}'s shot.",
         templates={"zh": "{keeper}扑出了{player}的射门。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=shot.attrs["keeper"])},

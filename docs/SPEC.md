@@ -981,7 +981,8 @@ Application Insights.
   replay), and `list_options` and `what_if` say there is no decision on the ball.
 - *A placed shot (2026-10-21, `far_post_finish`).* Claims: the look before the ball arrived
   (`scan_at_goal`), the keeper it showed him (`keeper_seen_in_scan`) and where he stood
-  (`keeper_near_side`), the placement (`shot_placement`), its result (`goal`, `saved` or `wide`),
+  (`keeper_near_side`), the placement (`shot_placement`), its result (`shot_scored`, `shot_saved`
+  or `shot_wide`; the recap keeps `goal`, `saved` and `wide` for its own per-moment claims),
   `shot_speed`, and he thought vs it was (`shot_thought_vs_was`); from the run without the look,
   `cf_shot` (the other post, and the save when there is one), `cf_keeper_age` and `cf_shot_value`
   (his chance of a goal with and without the look, the scan lens's Δ). The generic `cf_value` is
