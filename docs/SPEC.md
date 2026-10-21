@@ -1392,7 +1392,9 @@ Application Insights.
     the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
     - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
       ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
-      pressure; a moment whose shot went in first; live-only overlays never), at most 8. The
+      pressure; a moment whose shot went in first, then the scenario heroes' moments, so the
+      moments a match is built around lead whatever its open play does; live-only overlays
+      never), at most 8. The
       model may name only candidates (an enum); the template takes the largest impacts (at least
       3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
       on those moments only.

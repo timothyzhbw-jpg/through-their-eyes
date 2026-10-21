@@ -27,10 +27,10 @@ def rc():
     return RecapContext.for_match(1)
 
 
-def _card(id_, lens, delta, frame, tags=(), live_only=False):
+def _card(id_, lens, delta, frame, tags=(), live_only=False, hero=False):
     lenses = [{"lens": lens, "delta_xt": delta}] if lens else []
     return {"id": id_, "selected_lens": lens, "lenses": lenses, "anchor_frame": frame,
-            "tags": list(tags), "live_only": live_only}  # fmt: skip
+            "tags": list(tags), "live_only": live_only, "hero": hero}  # fmt: skip
 
 
 def test_the_stitched_run_puts_every_possession_on_the_match_clock(match):
@@ -83,6 +83,26 @@ def test_candidates_rank_by_counterfactual_impact_then_lens_then_match_order():
     ]
     assert [c["id"] for c in rank_moments(cards)] == ["g", "d", "b", "c", "a", "e"]
     assert impact(cards[0]) == pytest.approx(0.04) and impact(cards[4]) == 0.0
+
+
+def test_the_scenario_heroes_follow_the_goals_and_lead_open_play_whatever_its_impact():
+    cards = [
+        _card("open", "pressure", 0.22, 100),
+        _card("hero_scan", "scan", 0.13, 800, hero=True),
+        _card("hero_press", "pressure", 0.14, 7000, hero=True),
+        _card("goal", "pressure", 0.001, 2000, tags=["goal"]),
+    ]
+    assert [c["id"] for c in rank_moments(cards)] == ["goal", "hero_press", "hero_scan", "open"]
+
+
+def test_match_1s_three_heroes_lead_its_candidates(rc):
+    assert [c.hero for c in rc.candidates[:3]] == [True] * 3
+    assert {c.kind for c in rc.candidates[:3]} == {
+        "decision_after_scan",
+        "pressed_decision",
+        "marker_scan",
+    }
+    assert not any(c.hero for c in rc.candidates[3:])
 
 
 def test_every_match_claim_is_supported_and_holds_the_true_totals(rc, match):

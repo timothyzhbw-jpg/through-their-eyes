@@ -10,7 +10,9 @@ recap needs both views:
 `rank_moments` orders the candidates for the Director: by counterfactual impact, the |Δ| of the
 selected lens in xT (SPEC 5.2), exact ties scan > space > pressure, then match order. A moment
 that scored (`scored_moments`: its action is a shot whose outcome is a goal, or it is tagged
-`goal`) ranks first. Live-only overlays (sprints) are never key moments.
+`goal`) ranks first, then the scenario heroes' moments (a match card's `hero`), so the moments
+the match was built around lead the recap whatever open play around them does. Live-only
+overlays (sprints) are never key moments.
 
 Nothing here calls a model, and nothing here is new verification logic: the claims are `Claim`s,
 checked by the same `Verifier` as every breakdown.
@@ -106,10 +108,11 @@ def rank_moments(
     """Key-moment candidates, most important first (see the module docstring)."""
 
     def key(c: Mapping[str, Any]):
-        first = 0 if set(FIRST_TAGS) & set(c.get("tags", ())) or c["id"] in scored else 1
+        goal = set(FIRST_TAGS) & set(c.get("tags", ())) or c["id"] in scored
+        tier = 0 if goal else 1 if c.get("hero") else 2
         lens = c.get("selected_lens")
         order = LENS_ORDER.index(lens) if lens in LENS_ORDER else len(LENS_ORDER)
-        return (first, -round(impact(c), 9), order, c["anchor_frame"], c["id"])
+        return (tier, -round(impact(c), 9), order, c["anchor_frame"], c["id"])
 
     return sorted((c for c in cards if not c.get("live_only")), key=key)
 
