@@ -1,4 +1,4 @@
-/* "Your call" (SPEC 7): the view from behind the carrier with its markers, and the card. */
+/* "Your call" (SPEC 7): the view from behind the carrier with its label, markers, and card. */
 
 .yc-open {
   font: 700 13px/1 var(--font-display);
@@ -138,6 +138,19 @@
 .yc-view.step-actual .yc-tag,
 .yc-view.step-compare .yc-tag {
   color: var(--fg);
+}
+.yc-you {
+  position: absolute;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(11, 18, 16, 0.78);
+  font: 600 12px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  color: var(--fg);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .yc-card {

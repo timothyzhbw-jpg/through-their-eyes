@@ -1,8 +1,8 @@
 // "Your call" (SPEC 7): decide at the hero's decision with only what he knew, then see what your
 // call led to, the true picture, what he did and why, and the two compared. The 3D view is his
-// picture from behind him (YourCallScene); over it, one marker per option (buttons: tap, or
-// arrow keys and Enter) and a dotted path to the option aimed at; a swipe from the carrier picks
-// the option it points at. The card beside it tells each beat with verified lines only.
+// picture from behind him (YourCallScene); over it, a label identifies the carrier, one marker per
+// option (buttons: tap, or arrow keys and Enter) and a dotted path to the option aimed at; a swipe
+// from the carrier picks the option it points at. The card tells each beat with verified lines only.
 
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
@@ -193,6 +193,16 @@ function CallView({ yc, scene }: { yc: YourCall; scene: boolean }) {
               yc.aim(null);
             }}
           />
+        )}
+        {/* Under the markers: it never hides one. */}
+        {deciding && (
+          <p
+            className="yc-you"
+            aria-hidden="true"
+            style={{ left: carrierPx[0], top: carrierPx[1] + 18 }}
+          >
+            {carrier.id} · you
+          </p>
         )}
         {deciding && (
           <div className="yc-markers" role="group" aria-label={`Options of ${carrier.id}`}>
