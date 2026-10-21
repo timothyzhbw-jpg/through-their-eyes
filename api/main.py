@@ -1,5 +1,5 @@
-"""The API service (SPEC 2): live match stream, moments, cached breakdowns, what-if, TTS, and
-tamper checks (the verifier on a claim with one number changed, SPEC 7).
+"""The API service (SPEC 2): live match stream, moments, stats, cached breakdowns, what-if, TTS,
+and tamper checks (the verifier on a claim with one number changed, SPEC 7).
 
     uv run uvicorn api.main:app --reload
 
@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from agent_framework import FileCheckpointStorage
-from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import HTTPConnection
 from fastapi.responses import Response
@@ -258,6 +258,19 @@ def create_app(
     @app.get("/api/matches/{mid}/moments")
     async def match_moments(mid: str) -> list[dict[str, Any]]:
         return (await match_or_404(mid)).cards
+
+    @app.get("/api/matches/{mid}/stats")
+    async def match_stats(
+        mid: str,
+        frame: Annotated[int | None, Query(ge=0)] = None,
+        tracks: bool = False,
+    ) -> dict[str, Any]:
+        """Live match stats (SPEC 4.6): the snapshot at `frame` (default: the last), measured
+        from the tracking and events this service streams. `tracks` adds what viewers draw."""
+        m = await match_or_404(mid)
+        if m.stats is None:
+            raise HTTPException(503, f"no stats for {mid}")
+        return m.stats.snapshot(frame, tracks=tracks).model_dump(mode="json")
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:

@@ -28,6 +28,7 @@ from agent_framework import FileCheckpointStorage
 from azure.core.exceptions import AzureError, ResourceNotFoundError
 
 from agents.context import MomentContext
+from analytics.live_stats import StatsTimeline, compute_stats
 from api.settings import Settings, match_id
 from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
 from explain.match import match_moments
@@ -49,6 +50,7 @@ class Match:
     time; `where` says, for a stitched match, which possession each one is in (its index, first
     match frame and the moment's id inside it). Breakdowns and what-ifs work on the possession's
     own run, so their frames are local: add `start` to place them on the match clock.
+    `stats` is the live timeline of the export this service streams (SPEC 4.6).
     """
 
     id: str
@@ -59,6 +61,7 @@ class Match:
     cards: list[dict[str, Any]]
     sprint: list[list[str]]  # per frame: players above sprint speed (live overlay)
     where: dict[str, dict[str, Any]] = field(default_factory=dict)
+    stats: StatsTimeline | None = None
 
     @property
     def ctx(self) -> MomentContext:
@@ -79,7 +82,16 @@ class Match:
         cards = [c.model_dump(mode="json") for c in ctx.cards.values()]
         mid = match_id(scenario, seed)
         sprint = _sprint(ctx.run.ids, ctx.run.vel)
-        return cls(mid, scenario, seed, {ctx.card.id: ctx}, export, cards, sprint)
+        return cls(
+            mid,
+            scenario,
+            seed,
+            {ctx.card.id: ctx},
+            export,
+            cards,
+            sprint,
+            stats=compute_stats(export, mid),
+        )
 
     @classmethod
     def _load_match(cls, seed: int, audit: AuditSink | None) -> Match:
@@ -99,7 +111,10 @@ class Match:
                                      "local_moment": card["local_id"]}  # fmt: skip
         vel = np.concatenate([p.run.vel for p in match.possessions])
         sprint = _sprint([p.id for p in match.players], vel)
-        return cls(match_id("match", seed), "match", seed, contexts, export, cards, sprint, where)
+        mid = match_id("match", seed)
+        return cls(
+            mid, "match", seed, contexts, export, cards, sprint, where, compute_stats(export, mid)
+        )
 
 
 def _sprint(ids: list[str], vel: np.ndarray) -> list[list[str]]:

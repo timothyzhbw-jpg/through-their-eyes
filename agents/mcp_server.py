@@ -13,9 +13,10 @@ from mcp.server.fastmcp import FastMCP
 
 from agents import tools
 from agents.context import MomentContext
+from analytics.live_stats import StatsTimeline
 
 
-def build_server(ctx: MomentContext) -> FastMCP:
+def build_server(ctx: MomentContext, stats: StatsTimeline | None = None) -> FastMCP:
     # WARNING: at INFO every request is logged to stderr, which the API's container logs inherit.
     server = FastMCP("through-their-eyes", log_level="WARNING")
 
@@ -48,6 +49,14 @@ def build_server(ctx: MomentContext) -> FastMCP:
     def get_pressing(frame: int) -> str:
         """Pressing intensity on the ball carrier at `frame`."""
         return tools.get_pressing(ctx, frame)
+
+    @server.tool()
+    def get_match_stats(player: str | None = None, frame: int | None = None) -> str:
+        """Live match stats measured from tracking and events (SPEC 4.6): per player distance,
+        top speed, sprints, passes (accuracy, difficulty 0-1) and shots, plus timecoded cues.
+        `player` filters to one player; `frame` is the snapshot frame (default: the last).
+        Metrics, not verified claims."""
+        return tools.get_match_stats(ctx, player, frame, stats)
 
     @server.tool()
     def run_counterfactual(scan_id: str | None = None) -> str:
