@@ -3029,6 +3029,17 @@ optgroup {
     top: 140px;
   }
 }
+/* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
+   to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
+   call". The switch drops under the header row there too. */
+@media (max-width: 1760px) and (min-width: 1181px) {
+  .stage-run {
+    top: 84px;
+  }
+  .stage:has(.stage-run) .stage-top {
+    top: 140px;
+  }
+}
 
 /* ---------- a phone: the picture, the bar, then the card, in that order ---------- */
 @media (max-width: 760px) {
