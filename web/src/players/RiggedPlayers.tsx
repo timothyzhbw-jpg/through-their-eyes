@@ -8,6 +8,9 @@
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
+// `?look=v2` (trial.ts) loads the re-skinned model instead (grf_player_look.glb, same skeleton and
+// clips byte for byte): kit designs from models/kit_mask.webp, a cloth normal map, and baked
+// occlusion plus the keepers' sleeves and gloves from its `_LOOK` attribute (shading.ts).
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
 import { useFrame, useLoader } from "@react-three/fiber";
@@ -17,8 +20,10 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Sample, sampleInto } from "../data/hero";
 import type { ExportPlayer, RunName } from "../data/types";
 import { useView } from "../session";
+import { useStore } from "../store/store";
 import { trial } from "./trial";
-import { BOOTS, hairColour, kitTexture, skinTone } from "./kit";
+import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
+import { withLook } from "./shading";
 import {
   type ModelMeta,
   type Motion,
@@ -31,6 +36,9 @@ import {
 } from "./rig";
 
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player.glb`;
+export const LOOK_MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player_look.glb`;
+export const KIT_MASK_URL = `${import.meta.env.BASE_URL}models/kit_mask.webp`;
+const NORMAL_STRENGTH = 1;
 
 /** Kit in the club's colours (the keeper's own kit) with the shirt number; flat skin, hair and
  * boots. */
@@ -44,6 +52,42 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
     hair: new THREE.MeshStandardMaterial({ color: hairColour(j), roughness: 0.9 }),
     boots: new THREE.MeshStandardMaterial({ color: BOOTS, roughness: 0.5 }),
   };
+  return assign(rig, byName);
+}
+
+/** The v2 look: the kit's design and cloth normals, occlusion everywhere, the keeper's long
+ * sleeves and gloves, a light sole edge on the boots. */
+function dressLook(
+  rig: Rig,
+  player: ExportPlayer,
+  j: number,
+  mask: HTMLImageElement,
+  normalMap: THREE.Texture | null,
+): THREE.Material[] {
+  const kit = kitOf(player);
+  const byName: Record<string, THREE.Material> = {
+    kit: withLook(
+      new THREE.MeshStandardMaterial({
+        map: kitTexture(player, mask),
+        normalMap,
+        // glTF's normal maps with three.js's derivative tangents: y flips, as GLTFLoader does.
+        normalScale: new THREE.Vector2(NORMAL_STRENGTH, -NORMAL_STRENGTH),
+        roughness: 0.8,
+      }),
+    ),
+    skin: withLook(new THREE.MeshStandardMaterial({ color: skinTone(j), roughness: 0.6 }), {
+      g: kit.sleeve,
+      b: kit.glove,
+    }),
+    hair: withLook(new THREE.MeshStandardMaterial({ color: hairColour(j), roughness: 0.9 })),
+    boots: withLook(new THREE.MeshStandardMaterial({ color: BOOTS, roughness: 0.45 }), {
+      g: SOLE,
+    }),
+  };
+  return assign(rig, byName);
+}
+
+function assign(rig: Rig, byName: Record<string, THREE.Material>): THREE.Material[] {
   rig.model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
     if (!mesh.isSkinnedMesh) return;
@@ -54,8 +98,28 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
 }
 
 export function RiggedPlayers() {
+  const look = useStore(trial, (s) => s.look);
+  return look === "v2" ? <LookPlayers /> : <Players url={MODEL_URL} />;
+}
+
+function LookPlayers() {
+  const mask = useLoader(THREE.ImageLoader, KIT_MASK_URL);
+  return <Players url={LOOK_MODEL_URL} mask={mask} />;
+}
+
+/** The kit material's normal map in the loaded model, if it has one. */
+function kitNormalMap(gltf: { scene: THREE.Object3D }): THREE.Texture | null {
+  let found: THREE.Texture | null = null;
+  gltf.scene.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (m?.name === "kit" && m.normalMap) found = m.normalMap;
+  });
+  return found;
+}
+
+function Players({ url, mask }: { url: string; mask?: HTMLImageElement }) {
   const { hero, playback } = useView();
-  const gltf = useLoader(GLTFLoader, MODEL_URL);
+  const gltf = useLoader(GLTFLoader, url);
   const meta = gltf.scene.userData as ModelMeta;
   const clips = useMemo(() => modelClips(meta), [meta]);
   const motion = useMemo<Record<RunName, Motion>>(() => {
@@ -71,9 +135,10 @@ export function RiggedPlayers() {
     () =>
       hero.players.map((p, j) => {
         const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m);
-        return { rig, materials: dress(rig, p, j) };
+        const materials = mask ? dressLook(rig, p, j, mask, kitNormalMap(gltf)) : dress(rig, p, j);
+        return { rig, materials };
       }),
-    [gltf, hero, meta],
+    [gltf, hero, meta, mask],
   );
   useEffect(
     () => () => {
