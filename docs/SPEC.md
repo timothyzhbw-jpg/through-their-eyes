@@ -1496,6 +1496,15 @@ original visual identity.
   - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
     another is lifted one label up, else hidden; the runner's gold number always shows
     ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
+- **The run without the look, told** ([web/src/without/](../web/src/without/),
+  [explain/look_cost.py](../explain/look_cost.py); teammates' feedback, 2026-10-21): in the run
+  without the look, verified lines say which look was removed (which shoulder, how long before
+  the ball reached him), what losing it cost (played back instead of forward, or the ball lost),
+  and where each run's pass reached its receiver with the xT there. The removed look is marked on
+  the timeline, in the HUD and at the edge of his eyes on that shoulder's side; "How xT works"
+  draws the 16 × 12 grid with both passes' ends, valued by the verified line, and says how the
+  grid is fitted (§4.5). Bundled per scan hero by `sim.export --without-look`; not part of the
+  crew's evidence, so breakdown cache keys do not move.
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1763,6 +1772,14 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
+- [x] *The run without the look, told:* which look was removed, what it cost and where each pass
+      went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
+      tampered with), rendered in en and zh with every number in a slot; the web shows only the
+      lines that pass `checkPayload`, in the caption's place in that run, on the timeline, in the
+      HUD and at the edge of his eyes; the explainer's two values are the verified line's.
+      — [tests/test_without_look.py](../tests/test_without_look.py) (16 cases),
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py),
+      [web/src/without/without.test.tsx](../web/src/without/without.test.tsx) (8).
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs

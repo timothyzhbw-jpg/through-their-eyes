@@ -25,6 +25,7 @@ import { useStore } from "../store/store";
 import { Chapter, Title } from "./Chapter";
 import { CheckIcon } from "./icons";
 import { LineText } from "./Narration";
+import { WithoutLookLines } from "../without/WithoutLook";
 
 interface Beat {
   from: number; // frame
@@ -582,6 +583,7 @@ export function VerdictPanel() {
               " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
             Causal inside the simulation; not a claim about real football.
           </p>
+          <WithoutLookLines />
         </div>
       </div>
     </Chapter>

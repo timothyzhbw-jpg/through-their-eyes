@@ -178,6 +178,10 @@ _Fill in as they come to exist._
   `uv run python -m sim.export --scenario blind_side_run --seed 3 --looks
   web/public/data/look_seed3.json` (and `press_escape` seed 0) rewrites the grid the web ships;
   `uv run python -m agents.look --seed 3 --frame 50 --offset -150` prints one look's verified lines
+- `uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look
+  web/public/data/without_look_seed3.json` (and `far_post_finish` seed 11) — the run without the
+  look, told (SPEC 7): which look was removed, what it cost, where the pass went in xT, verified
+  in en and zh (`explain/look_cost.py`); a test fails when a committed file is stale
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or

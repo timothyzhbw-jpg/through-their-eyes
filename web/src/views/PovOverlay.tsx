@@ -7,6 +7,7 @@ import { Sample, headOffBall, isSeen, sampleInto, type Hero } from "../data/hero
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
+import { RemovedLookEdge } from "../without/WithoutLook";
 
 /** The Skeleton chip's tooltip, on the broadcast camera and the tactical board (SPEC 7). */
 export const SKELETON_TITLE =
@@ -23,7 +24,12 @@ export function PovOverlay() {
   const { playback } = useView();
   const comfort = useStore(playback, (s) => s.comfort);
   const pov = useStore(playback, (s) => s.camera === "pov");
-  return <>{pov && comfort && <div className="vignette" aria-hidden="true" />}</>;
+  return (
+    <>
+      {pov && comfort && <div className="vignette" aria-hidden="true" />}
+      <RemovedLookEdge />
+    </>
+  );
 }
 
 /** What he sees right now: head to ball, players in sight, the scan, blind-side alerts. */
@@ -66,7 +72,7 @@ export function Hud() {
       {scan && (
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
       )}
-      {droppedLook && <span className="badge cf">no look in this run</span>}
+      {droppedLook && <span className="badge cf">removed look</span>}
       {blind.map((a) => (
         <span key={a.target} className="blind-hud">
           <span className="badge blind">BLIND SIDE</span> {hero.ids[a.target]}{" "}

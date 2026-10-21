@@ -40,6 +40,7 @@ import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
+import { WithoutLookNote } from "./without/WithoutLook";
 import { takeEyesOf } from "./takeeyes/controller";
 import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
 import { yourCallOf } from "./yourcall/controller";
@@ -111,7 +112,12 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           }
           run={<RunToggle />}
           card={evidence ? <EvidenceCard /> : <MomentCard />}
-          caption={<Caption />}
+          caption={
+            <>
+              <Caption />
+              <WithoutLookNote />
+            </>
+          }
         />
       )}
 

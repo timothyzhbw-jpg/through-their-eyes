@@ -24,6 +24,7 @@ import { createRecap, type Recap } from "../recap/recap";
 import type { MakeAudio } from "../voice/voice";
 import { takeEyesOf } from "../takeeyes/controller";
 import { yourCallOf } from "../yourcall/controller";
+import { withoutLookOf } from "../without/without";
 import { scenarioMatchId, type MatchInfo, type MatchMoment } from "./match";
 
 export interface MatchSessionOptions {
@@ -184,6 +185,8 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
         },
       );
       heroes.set(p.index, session);
+      // "Without the look", told (without/): the possession hero's bundled lines, if it has any.
+      void withoutLookOf(session, options.fetch, options.dataUrl).load();
       if (screen.get().opening === card.id) show(session, card.id, play);
     } catch (err) {
       if (screen.get().opening === card.id) {
