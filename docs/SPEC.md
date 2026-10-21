@@ -1425,7 +1425,8 @@ original visual identity.
     a shoulder check turns the trunk with the look, as an additive layer timed to the head's
     turn (out, hold, back) and sized by how far the head turns from the body; it counts towards
     the trunk's share of the look, so a look past 80° turns the trunk no further than before.
-    The head still points exactly along `head_yaw`. On by default; `?anims=base` turns it off;
+    The head still points exactly along `head_yaw`. On by default (Bowen kept it on after the
+    before/after video, 2026-10-21); `?anims=base` turns it off;
     under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
     and not used.
 - **Cameras:**
