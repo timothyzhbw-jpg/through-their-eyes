@@ -587,18 +587,14 @@ function Card({ st }: { st: StepThrough }) {
         ]}
       />
       <div className="ss-actions">
-        <button type="button" className="btn" disabled={s.index === 0} onClick={st.back}>
+        {/* One element each, so focus stays on them from step to step: Back is only marked
+            unavailable on the first step, and Next becomes Done on the last. */}
+        <button type="button" className="btn" aria-disabled={s.index === 0} onClick={st.back}>
           Back
         </button>
-        {last ? (
-          <button type="button" className="btn btn-primary" onClick={st.close}>
-            Done
-          </button>
-        ) : (
-          <button type="button" className="btn btn-primary" onClick={st.next}>
-            Next
-          </button>
-        )}
+        <button type="button" className="btn btn-primary" onClick={last ? st.close : st.next}>
+          {last ? "Done" : "Next"}
+        </button>
         {!last && exit}
       </div>
       <p className="ss-hint">Keyboard: ← and → step, Esc leaves. On a phone, swipe the picture.</p>

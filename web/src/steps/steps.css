@@ -391,6 +391,10 @@
 .ss-actions .btn {
   min-height: 44px;
 }
+.ss-actions .btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
 
 /* a phone or a narrow tablet: the header, the views and the steps, then the card */
 @media (max-width: 880px) {

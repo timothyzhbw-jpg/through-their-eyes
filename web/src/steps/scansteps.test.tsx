@@ -127,8 +127,11 @@ describe("His looks: opening", () => {
 describe("His looks: stepping", () => {
   it("Next and Back by button, then Done at his decision", async () => {
     const { st, el } = await opened();
-    expect(button(el, "Back").disabled).toBe(true);
-    click(button(el, "Next"));
+    expect(button(el, "Back").getAttribute("aria-disabled")).toBe("true");
+    const next = button(el, "Next");
+    next.focus();
+    click(next);
+    expect(document.activeElement).toBe(button(el, "Done")); // the same button: focus stays
     expect(st.state.get().index).toBe(1);
     expect(textOf(el.querySelector(".ss-card h2"))).toBe("His decision");
     expect(st.playback.get()).toMatchObject({ frame: 75, focus: "tactical" });
