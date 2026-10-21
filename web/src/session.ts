@@ -235,6 +235,12 @@ export interface TransportDeps {
   beforeLive: () => void; // going live: a hero Session stops the voice and the what-if
 }
 
+/** Live, before the stream has detected the hero moment: the run switch is locked so the
+ * stream is never interrupted (the counterfactual run is not on the stream). */
+export function runLocked(live: boolean, moments: readonly LiveMoment[], momentId: string) {
+  return live && !moments.some((m) => m.id === momentId);
+}
+
 /**
  * Play, seek, speed, run, POV and overlays, and the live stream: the controls a hero moment and
  * a stitched match share. `endLive` stops the stream and leaves the replay where it is.
@@ -383,10 +389,12 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   let tamperLink: string | null = null; // ?tamper=<claim id>: open its card once a breakdown is here
   let soundByAudience = false; // the voice is on because audio description was chosen
 
-  /** Any viewer action ends a running breakdown and the autoplay. */
+  /** Any viewer action ends a running breakdown and a play still waiting on the breakdown, as it
+   * ends the autoplay. */
   const takeOver = () => {
     runner.stop();
     auto = false;
+    playWhenReady = false;
   };
   const { controls: transport, endLive: leaveLive } = transportControls({
     hero,
@@ -567,6 +575,11 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   };
   return {
     ...transport,
+    setMode(mode: RunName) {
+      // Any mode, including the pressed factual button: take-over would cancel the autoplay.
+      if (s.feed && runLocked(playback.get().live, s.feed.state.get().moments, moment.id)) return;
+      transport.setMode(mode);
+    },
 
     /** Play the breakdown; online and not here yet, ask for it and play it when it arrives. */
     playBreakdown() {

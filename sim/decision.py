@@ -27,6 +27,7 @@ import numpy as np
 from analytics.pitch_control import control_from_times, logistic
 from analytics.tti import REACTION_S, V_MAX, time_to_intercept
 from analytics.xt import GOAL_X, xt_for
+from sim import shots
 from sim.ball import BallParams, flight_time, launch_speed, path_distances
 from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
 
@@ -68,6 +69,10 @@ class DecisionContext:
     temperature: float | None = None
     params: DecisionParams = field(default_factory=DecisionParams)
     ball_params: BallParams = field(default_factory=BallParams)
+    # Placed shots and the keeper's save model (`sim.shots`, scenarios with `Scenario.shots`).
+    shots: bool = False
+    keeper: int = -1  # the opponents' keeper
+    from_y: float = 0.0  # where the last pass came from: the near post when he is central
 
 
 @dataclass(frozen=True)
@@ -272,7 +277,9 @@ def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
 
     goal = np.array([sign * GOAL_X, 0.0])
     d_goal = float(np.linalg.norm(goal - ball))
-    if d_goal <= p.shot_range:
+    if d_goal <= p.shot_range and ctx.shots and ctx.keeper >= 0:
+        options.extend(_placed_shot(ctx, ball, placement) for placement in PLACEMENTS)
+    elif d_goal <= p.shot_range:
         xg = float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
         options.append(OptionEval("shot", "shot", None, (float(goal[0]), 0.0), xg, xg))
 
@@ -308,7 +315,41 @@ def option_success(ctx: DecisionContext, action: str, target: tuple[float, float
     if action == "shot":
         d_goal = float(np.linalg.norm(point - ball))
         return float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
+    if action.startswith("shot:") and ctx.keeper >= 0:
+        return _placed_shot(ctx, ball, action[5:]).p_success
     raise ValueError(f"unknown action {action!r}")
+
+
+PLACEMENTS = ("near", "far")
+
+
+def placed_shot_value(ctx: DecisionContext, placement: str) -> float:
+    """P(success) of `shot:near` or `shot:far` with `placement`, on the state `ctx` holds.
+
+    The public counterpart of `_placed_shot` for re-scoring a chosen placement on another state,
+    e.g. the truth (`explain.functions.true_decision_context`). `ctx.keeper` must be the opposing
+    keeper's index.
+    """
+    ball = ctx.pos[ctx.carrier] if ctx.ball is None else np.asarray(ctx.ball, dtype=float)
+    return _placed_shot(ctx, ball, placement).p_success
+
+
+def _placed_shot(ctx: DecisionContext, ball: np.ndarray, placement: str) -> OptionEval:
+    """`shot:near` or `shot:far`, valued on the shooter's belief (SPEC 3.3, Module A):
+    P(on target) x (1 - E[P(save)]) over where he believes the keeper is, with the belief's
+    position uncertainty (`_sigma`'s 0.3 m + 1 m per second of age). He assumes the keeper sees
+    the strike, so the keeper's reach is for the ball's flight time to the keeper's line."""
+    p, sp, kp = ctx.params, shots.SHOT, shots.KEEPER
+    gx = shots.goal_x(ctx.attack_sign)
+    y_aim = shots.aim_y(placement, shots.near_post_sign(float(ball[1]), ctx.from_y), sp)
+    target = np.array([gx, y_aim])
+    k = ctx.keeper
+    y_cross, t_cross = shots.crossing(ball, target, float(ctx.pos[k][0]), float(np.mean(sp.speed)),
+                                      ctx.ball_params)  # fmt: skip
+    spread = p.uncertainty0 + p.uncertainty_growth * float(ctx.age_s[k])
+    saved = shots.expected_p_save(y_cross, float(ctx.pos[k][1]), spread, shots.reach(t_cross, kp))
+    value = shots.p_on_target(y_aim, float(np.linalg.norm(target - ball)), sp) * (1.0 - saved)
+    return OptionEval(f"shot:{placement}", "shot", None, (float(gx), float(y_aim)), value, value)
 
 
 def gumbel(u: float) -> float:
