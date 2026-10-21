@@ -12,6 +12,7 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { ALERT_COLOR, alertsAt } from "../alerts/blindSide";
 import type { Sample } from "../data/hero";
+import type { Beat } from "../beat/beat";
 import type { Vec2 } from "../data/types";
 import {
   colorFor,
@@ -35,15 +36,68 @@ const TAG_PX = 26; // on-screen height of a live tag
 const TAG_LIFT = 2.3; // m above the grass where a tag sits
 const TAGS = 10; // sprites in the pool
 
-/** Put the three.js camera on the broadcast shot at this frame. */
+/** The key-moment beat's framing at full push: the hero alone, this much tighter; once he has
+ * seen the player the look is for, both of them with this margin (m), at most this much wider
+ * than the shot was, and a little left of centre, clear of the moment card on the right. */
+const PUSH = { tighten: 0.36, margin: 9, maxWiden: 1.25, left: 0.05, revealFrames: 8 };
+
+export interface Framing {
+  hero: Vec2; // pitch m
+  target: Vec2 | null; // the player he sees, once he has seen him
+  reveal: number; // 0..1: from the hero alone to both
+  amount: number; // 0..1: the beat's push
+}
+
+/** The beat's framing at this frame (beat/beat.ts): `sample` holds the frame's positions. */
+export function beatFraming(b: Beat, sample: Sample, frame: number, amount: number): Framing {
+  const at = (j: number): Vec2 => [sample.pos[2 * j], sample.pos[2 * j + 1]];
+  const seen = b.sighted !== null && b.target >= 0 && frame >= b.sighted;
+  const t = seen ? Math.min(1, (frame - b.sighted!) / PUSH.revealFrames) : 0;
+  return {
+    hero: at(b.observer),
+    target: seen ? at(b.target) : null,
+    reveal: t * t * (3 - 2 * t),
+    amount,
+  };
+}
+
+/** Move `shot` towards the beat's framing: in on the hero, then out to both. */
+export function pushShot(shot: Shot, f: Framing): void {
+  const tight = { x: f.hero[0], y: f.hero[1], width: shot.width * (1 - PUSH.tighten) };
+  let goal = tight;
+  if (f.target && f.reveal > 0) {
+    const [tx, ty] = f.target;
+    const width = Math.min(
+      shot.width * PUSH.maxWiden,
+      Math.max(tight.width, Math.abs(tx - f.hero[0]) + 2 * PUSH.margin),
+    );
+    const both = { x: (f.hero[0] + tx) / 2 + PUSH.left * width, y: (f.hero[1] + ty) / 2, width };
+    goal = {
+      x: tight.x + (both.x - tight.x) * f.reveal,
+      y: tight.y + (both.y - tight.y) * f.reveal,
+      width: tight.width + (both.width - tight.width) * f.reveal,
+    };
+  }
+  shot.x += (goal.x - shot.x) * f.amount;
+  shot.y += (goal.y - shot.y) * f.amount;
+  shot.width += (goal.width - shot.width) * f.amount;
+}
+
+/**
+ * Put the three.js camera on the broadcast shot at this frame; `framing` moves it for the
+ * key-moment beat.
+ */
 export function filmBroadcast(
   camera: THREE.PerspectiveCamera,
   path: BroadcastPath,
   frame: number,
   aspect: number,
   shot: Shot,
+  framing?: Framing,
 ): void {
-  const pose = cameraPose(shotAt(path, frame, shot), aspect);
+  shotAt(path, frame, shot);
+  if (framing && framing.amount > 0) pushShot(shot, framing);
+  const pose = cameraPose(shot, aspect);
   camera.position.set(...pose.position);
   camera.lookAt(...pose.target);
   if (camera.fov !== pose.fov || camera.near !== NEAR || camera.aspect !== aspect) {

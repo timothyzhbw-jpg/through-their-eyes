@@ -25,10 +25,14 @@ import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
-import { BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
+import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { MotionBlur } from "./PovMotionBlur";
 import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
+import { beatAt, beatsOf, motion, pushAt } from "../beat/beat";
+import { BeatLayer3D } from "../beat/BeatLayers";
+import { CameraBlend } from "../beat/cameraBlend";
+import { Grade } from "../beat/Grade";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -65,6 +69,7 @@ export function PovView() {
         >
           <PovScene />
         </Canvas>
+        <Grade />
         <PovOverlay />
         {broadcast && <SkeletonLegend />}
       </div>
@@ -100,6 +105,7 @@ function PovScene() {
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
   const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
+  const blend = useMemo(() => new CameraBlend(), []);
 
   const materials = useMemo(
     () => ({
@@ -164,9 +170,29 @@ function PovScene() {
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
+    const now = performance.now() / 1000;
+    blend.begin(camera, fog, {
+      camera: s.camera,
+      frame: s.frame,
+      now,
+      reduced: motion.get().reduced,
+    });
     [fog.near, fog.far] = FOG[s.camera];
-    if (broadcast) filmBroadcast(camera, pathFor(run, hero.dt), s.frame, aspect, shot);
-    else {
+    if (broadcast) {
+      // The key-moment beat pushes in on whoever looks, then opens to the player he sees
+      // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
+      // and the vignette closes in instead (beat/Grade.tsx).
+      const look = beatAt(beatsOf(hero, run), s.frame);
+      const push = look && look.observer >= 0 ? pushAt(hero, run, s.frame) : 0;
+      filmBroadcast(
+        camera,
+        pathFor(run, hero.dt),
+        s.frame,
+        aspect,
+        shot,
+        look && push > 0 ? beatFraming(look, sample, s.frame, push) : undefined,
+      );
+    } else {
       // Keep the horizontal field of view fixed whatever the aspect ratio.
       const fov = (2 * Math.atan(Math.tan(POV_HFOV / 2) / aspect) * 180) / Math.PI;
       if (camera.fov !== fov || camera.near !== POV_NEAR || camera.aspect !== aspect) {
@@ -182,6 +208,7 @@ function PovScene() {
       camera.position.set(hx, EYE_HEIGHT, -hy);
       camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
     }
+    if (blend.apply(camera, fog, now)) invalidate(); // a camera move between the two cameras
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
 
@@ -268,6 +295,7 @@ function PovScene() {
         <sphereGeometry args={[0.11, 20, 14]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
+      <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
       <MotionBlur hfov={POV_HFOV} />
     </>
