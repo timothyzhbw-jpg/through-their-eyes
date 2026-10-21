@@ -13,15 +13,15 @@ than one that spends the credit.
 
 | # | Sev | Finding | Status |
 |---|---|---|---|
-| 1 | P1 | **Egress was unbounded.** Match-1's export is 4.0 MB gzipped, 11.6 MB raw; its live stream is 13.5 MB, and played at 1000x it arrived in 2 s. Nothing limited either per client or per day. Azure bills internet egress past 100 GB a month ($0.087/GB), so one script looping on either could spend the credit in hours. | Fixed: `api/egress.py`. Every response body and live message is charged to the client (bucket of 500 MB, refilled per hour) and to the UTC day across clients (20 GB). Past either: 429, or 4429 for a new stream. `/health` is exempt. Worst case 20 GB × 20 days ≈ $26 of egress. |
-| 2 | P2 | **The live stream took up to 1000x.** Four such streams raised the frame lag of 50 1x viewers from p95 14 ms to 294 ms (max 1.7 s) on 0.5 vCPU. | Fixed: speed clamped to 0.1–8 (the web app offers at most 4x). |
+| 1 | P1 | **Egress was unbounded.** Match-1's export is 4.0 MB gzipped, 11.6 MB raw; its live stream is 13.5 MB, and played at 1000x it arrived in 2 s. Nothing limited either per client or per day. Azure bills internet egress past 100 GB a month ($0.087/GB), so one script looping on either could spend the credit in hours. | Fixed: `api/egress.py`. Every response body and live message is charged to the client (bucket of 500 MB, refilled per hour) and to the UTC day across clients (20 GB). Past either: 429, or 4429 for a new stream. `/health` is exempt. Worst case, the cap every day to 11/10: ≈ 400 GB, $20–26 past the free 100 GB a month. |
+| 2 | P2 | **The live stream took up to 1000x.** Four such streams each pulled the whole match in seconds and pushed the frame lag of 50 1x viewers from p95 3 ms to 294 ms (max 1.7 s) on 0.5 vCPU. | Fixed: speed clamped to 0.1–8 (the web app offers at most 4x). Paired runs: p95 90 / 412 ms before, 47 / 190 ms after. |
 | 3 | P2 | **Every what-if question spent a unit of the 40/day cap and a model call**, even when its answer was cached; on a miss the question was mapped twice (two model calls for one unit). | Fixed: the model's mapping is kept by the normalised question (case, spacing, closing `?!.`) in the answers store, so it survives a restart; the answer reuses that mapping. A failed mapping is not kept. |
-| 4 | P2 | **Crew runs with a model were not bounded across clients.** Each starts an MCP server subprocess (87 MB measured); the replica idles at 250–340 MB of 1 GiB, so about seven uncached breakdowns at once (three clients at the per-client limit) could OOM it. A restart also refills the in-memory daily caps and drops every drill. | Fixed: `TTE_CREW_CONCURRENCY` (2) runs with a model at once; others wait. Runs without a model are not held back. |
+| 4 | P2 | **Crew runs with a model were not bounded across clients.** Each starts an MCP server subprocess (87 MB measured); the replica idles at 250–340 MB of 1 GiB, so about eight uncached breakdowns at once could OOM it (three clients at their per-client limit start nine). A restart also refills the in-memory daily caps and drops every drill. | Fixed: `TTE_CREW_CONCURRENCY` (2) runs with a model at once; others wait. Runs without a model are not held back. |
 | 5 | P2 | **Model errors reach the public trace** (`trace[].error`) as the SDK wrote them; a message could carry an endpoint URL, a file path, a tenant or client id, or a configured secret. | Fixed: `agents.llm.describe` replaces secret settings' values, URLs, absolute paths and GUIDs. |
 | 6 | P3 | Match and moment ids in bodies had no length limit (echoed in a 404). | Fixed: 100 characters, else 422. |
 | 7 | P3 | The daily caps (model 40, speech 200, drills 200, egress) are counted in memory: every restart or redeploy starts the day again. | Open. Bounded by the deploy freeze (10/26) and finding 4; the token alert proposed below watches it. |
 | 8 | P3 | A model breakdown whose steps fell back to templates (Foundry outage or 429) is cached under the model key and served until regenerated; `regenerate: true` during an outage can replace a clean one. | Open. After an outage: `uv run python -m infra.prewarm --api <API URL> --regenerate-degraded`. |
-| 9 | P3 | 50 viewers at 1x use about 80% of 0.5 vCPU, so `TTE_LIVE_MAX_TOTAL` (64) is about the CPU's capacity, and the first computation of a breakdown or what-if holds the event loop: a burst of 40 new ones delayed frames by about 1 s. | Open. Fine for judging traffic (cached keys cost nothing). For more, 1 vCPU / 2 GiB (+$0.39–1.30 a day). |
+| 9 | P3 | 50 viewers at 1x use about 80% of 0.5 vCPU, so `TTE_LIVE_MAX_TOTAL` (64) is about the CPU's capacity, and the first computation of a breakdown or what-if holds the event loop: a burst of 40 new ones delayed frames by 1–2 s. | Open. Fine for judging traffic (cached keys cost nothing). For more, 1 vCPU / 2 GiB (+$0.39–1.30 a day). |
 | 10 | P3 | Per-client limits key on the address; an IPv6 client could rotate inside its /64. Request floods are not rate-limited in the app (Container Apps has no WAF). | Open. The day-wide caps bound the cost; a flood can only degrade the demo. |
 | 11 | P3 | The web app's Storage static website has no limit of its own (2 MB per page load). | Open. Covered by the egress alert proposed below. |
 
@@ -61,10 +61,21 @@ each with its own `X-Forwarded-For`, then a burst of 20 breakdowns (new persona 
 combinations) and 20 what-ifs. arm64 on an M4 Pro whose other cores were busy (load average
 100–150), so latencies are pessimistic.
 
-LOAD_TEST_RESULTS
+| Run | Frame lag of the 1x viewers | Requests | Memory peak | CPU |
+|---|---|---|---|---|
+| Before, 50 viewers + burst (quieter host) | p95 3 ms; during the burst p95 979 ms, max 1.1 s | 20 breakdowns 200, p95 2.4 s; 20 what-ifs 200, p95 1.0 s; a small GET p95 46 ms | 337 MiB | 41% of a core |
+| After, the same (load 100–115) | p95 146 ms; during the burst p95 2.0 s, max 2.1 s | 20 + 20 × 200, p95 4.8 s / 2.0 s; small GET p95 172 ms | 337 MiB | 48% |
+| Paired, 50 viewers, two rounds (load 100–155) | before p95 14 / 80 ms, after 4 / 18 ms | — | 320 / 334 MiB | 40–42% both |
+| Paired, + 4 viewers asking 1000x (load 150–195) | before p95 90 / 412 ms, after (8x) 47 / 190 ms | small GET p95 ≤ 171 ms | 326 / 336 MiB | 40–45% |
 
-The container holds: memory peaks at about 340 MiB of 1 GiB, nothing is refused or dropped,
-and every request is answered. The constraint is CPU: 50 viewers take about 80% of the 0.5 vCPU.
+The paired runs, back to back under the same host load, show the guards cost nothing
+measurable; the unpaired after-run was slower because the host was. No viewer was refused or
+dropped and every request was answered.
+
+The container holds 50 viewers plus the burst: memory peaks at about 340 MiB of 1 GiB (idle
+250 MiB; warm start 65 s). The constraint is CPU: 50 viewers take about 80% of the 0.5 vCPU, and
+first-time computations stall frames for one to two seconds (finding 9). With a model, each
+uncached breakdown adds an MCP subprocess (87 MB), two at a time (finding 4).
 
 ## When a quota runs out
 
@@ -75,7 +86,7 @@ and every request is answered. The constraint is CPU: 50 viewers take about 80% 
 - **Foundry throttles (429) or is down.** Each agent step retries once, then falls back to its
   template: the breakdown is served, its trace shows `template` steps (finding 8). The what-if
   mapper falls back to the rules. No request fails.
-- **Speech F0 quota (500K characters a month, 20 requests a minute).** A synthesis fails: 502,
+- **Speech F0 quota (500K characters a month) or its throttling.** A synthesis fails: 502,
   the cap unit is returned, captions continue without voice; audio already on the replica's disk
   still plays. F0 cannot bill.
 - **Egress budget.** Past a client's bucket or the day's 20 GB: 429 (`/health` still answers).
@@ -100,8 +111,9 @@ The token alert below watches it instead.
    6 h; 2.05M tokens on 10/20 (development included). A metric alert costs about $0.10 a month.
 
    ```bash
+   EMAIL=you@example.com   # where the alerts go
    az monitor action-group create -g rg-through-their-eyes -n tte-owner --short-name tteowner \
-     --action email owner <your email>
+     --action email owner "$EMAIL"
    az monitor metrics alert create -g rg-through-their-eyes -n tte-api-egress \
      --scopes "$(az containerapp show -g rg-through-their-eyes -n tte-api --query id -o tsv)" \
      --condition "total TxBytes > 5000000000" --window-size 6h --evaluation-frequency 1h \
