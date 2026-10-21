@@ -58,17 +58,23 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasYourCall.current = yourCall;
   }, [yourCall]);
-  // Online: play behind the card. Not `introOpen`: closing the card must not restart the stream.
+  // The autoplay waits for the lineup card: the key scan comes in the stream's first seconds and
+  // must not play under it. Behind the card the picture rests on the first frame. Online: watch
+  // live, then the show (the look, then the run without it) and the breakdown once the moment is
+  // detected. Offline: the show and the bundled breakdown at once. Once per session: the card
+  // never opens again.
+  const started = useRef(false);
   useEffect(() => {
-    if (!autoplay || !session.feed) return;
-    controls.startLive();
-    return () => session.feed?.stop();
-  }, [autoplay, controls, session]);
-  // The bundled breakdown still waits for the card so the viewer sees it from its first line.
-  useEffect(() => {
-    if (!autoplay || session.feed || introOpen) return;
-    controls.playBreakdown();
-  }, [autoplay, controls, introOpen, session]);
+    if (!autoplay || started.current) return;
+    if (introOpen) {
+      if (playback.get().frame !== 0) playback.set({ frame: 0 });
+      return;
+    }
+    started.current = true;
+    if (session.feed) controls.startLive();
+    else controls.autoplay();
+  }, [autoplay, controls, introOpen, playback, session]);
+  useEffect(() => () => session.feed?.stop(), [session]);
 
   return (
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
