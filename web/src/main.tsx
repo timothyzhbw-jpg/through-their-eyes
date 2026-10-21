@@ -70,6 +70,8 @@ async function main() {
         return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
       });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
+      // play=recap: the end-of-match recap for the link's audience, offered as at full time.
+      if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
       // play=eyes: the first hero moment whose possession has a bundled look grid.
       const eyes = session.match.moments.find((m) => {
         if (!m.hero) return false;

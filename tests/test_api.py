@@ -226,7 +226,7 @@ def test_live_limits_come_from_the_environment(monkeypatch):
     for name in ("TTE_LIVE_PER_CLIENT", "TTE_LIVE_MAX_S", "TTE_LIVE_MAX_TOTAL"):
         monkeypatch.delenv(name, raising=False)
     s = Settings.from_env()
-    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (4, 600.0, 64)
+    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (4, 1200.0, 64)
     monkeypatch.setenv("TTE_LIVE_PER_CLIENT", "2")
     monkeypatch.setenv("TTE_LIVE_MAX_S", "90")
     monkeypatch.setenv("TTE_LIVE_MAX_TOTAL", "16")
@@ -881,6 +881,64 @@ def test_audio_files_are_written_whole_by_concurrent_writers(tmp_path, monkeypat
 
 
 # --- the voice cues a breakdown records never fail the breakdown (SPEC 6 Voice) -----------------
+
+
+def test_a_cached_breakdown_is_revoiced_on_read(settings, tmp_path, speech):
+    """A breakdown cached with the old prosody-only SSML is spoken with today's cues, and those
+    new keys are recorded before anyone asks /api/tts."""
+    from agents.delivery import revoice
+
+    body = {"match": MATCH, "personas": ["casual"], "languages": ["en"]}
+    with TestClient(_app(settings, tmp_path)) as c:
+        key = c.post("/api/breakdowns", json=body).json()["key"]
+    path = tmp_path / "breakdowns" / f"{key}.json"
+    stored = json.loads(path.read_text())
+    texts = [line["text"] for s in stored["result"]["scripts"] for line in s["payload"]["lines"]]
+    claims = [s["payload"]["claims"] for s in stored["result"]["scripts"]]
+    for script in stored["result"]["scripts"]:
+        for cue in script["voice"]:
+            cue["ssml"] = "<speak>old prosody only</speak>"
+            cue["style"] = None
+            cue["cache_key"] = "aaaaaaaaaaaaaaaa"
+    path.write_text(json.dumps(stored))
+    for folder in ("voice", "tts"):  # the first run's cue keys must not answer the second
+        cache = tmp_path / folder
+        if cache.exists():
+            for child in cache.iterdir():
+                child.unlink()
+    expected = revoice(stored)
+    with TestClient(_app(settings, tmp_path)) as c:
+        served = c.post("/api/breakdowns", json=body).json()
+        assert served["cached"] is True and served["key"] == key
+        assert served["result"]["scripts"] == expected["result"]["scripts"]
+        got = served["result"]["scripts"]
+        assert [line["text"] for s in got for line in s["payload"]["lines"]] == texts
+        assert [s["payload"]["claims"] for s in got] == claims
+        cue = got[0]["voice"][0]
+        assert cue["cache_key"] != "aaaaaaaaaaaaaaaa"
+        assert cue["ssml"] != "<speak>old prosody only</speak>"
+        assert c.post("/api/tts", json={"key": "aaaaaaaaaaaaaaaa"}).status_code == 404
+        spoken = c.post("/api/tts", json={"key": cue["cache_key"]})
+    assert spoken.status_code == 200 and speech == [cue["ssml"]]
+
+
+def test_a_revoice_error_serves_the_stored_breakdown(monkeypatch):
+    stored = {"source": "offline", "result": {"tier": "calm", "scripts": [{"voice": None}]}}
+    cache = {"k": stored}
+
+    class Store:
+        def get(self, key):
+            return cache.get(key)
+
+        def put(self, key, value):
+            cache[key] = value
+
+    monkeypatch.setattr(tts, "revoice", lambda _value: (_ for _ in ()).throw(RuntimeError("bad")))
+    wrapped = tts.Revoiced(Store())
+    assert wrapped.get("missing") is None
+    assert wrapped.get("k") is stored
+    wrapped.put("k2", {"a": 1})
+    assert cache["k2"] == {"a": 1}
 
 
 def test_a_cached_breakdown_with_null_voice_is_served(settings, tmp_path):

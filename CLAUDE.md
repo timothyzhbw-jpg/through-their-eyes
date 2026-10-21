@@ -90,12 +90,15 @@ _Fill in as they come to exist._
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
   CI run on main.
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
-  (SPEC 2, 8): every hero moment × persona × language, new ones paced to the per-client limit,
+  (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
+  persona × language (SPEC 6), new ones paced to the per-client limit,
   at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
   cached on the replica's disk only). Run after the last deploy and after any later one: the
   cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
+- `uv run --env-file .env python -m infra.voices` — check the narration voices and their speaking
+  styles against the Azure Speech voices list for `AZURE_SPEECH_REGION`
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
 - `uv run python -m eval.hero_lens --scenario press_escape` — hero lens eval (SPEC 3.6, 5.2):
@@ -118,9 +121,20 @@ _Fill in as they come to exist._
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
+  distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
+  only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
+  rewrites the viewer's parity fixture (a test fails when it is stale). The API serves them at
+  `GET /api/matches/<id>/stats` and as `stat` messages on the live stream
+- `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
+  passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
+  `eval/reports/pass_difficulty.md`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
+- `uv run python -m eval.match_stats` — match statistics (SPEC 3.1, 9): passes, possession
+  changes, team possessions and shots per stitched match and per 90 min of play, on held-out
+  match seeds 100–119, about 30 s on all cores; writes `eval/reports/match_stats.md`
 - `uv run --group eval --env-file .env python -m eval.narration_ablation --seeds 3,100-103`
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
@@ -155,13 +169,19 @@ _Fill in as they come to exist._
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
-- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
+- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio); `--match 1` or
+  `--recap <evidence file>` serves the end-of-match recap's tools instead
+- `uv run python -m agents.recap --seed 1 --offline` — the end-of-match recap of stitched match 1
+  (SPEC 6): the crew on the whole match, written to `out/recap_match1.json`; without
+  `--offline` it uses Foundry, `--mcp` gives the Analyst the recap's MCP tools, `--down
+  narration` takes steps down (no model calls for them)
 - `uv run --env-file .env python -m agents.whatif --seed 3 "What if he had played it back to the
   centre-back?"` — answer a what-if question by re-simulating with `force_action` (SPEC 3.7, 6);
   Foundry maps the question when `FOUNDRY_*` is set, `--offline` uses the rule parser only
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
-  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`
+  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo

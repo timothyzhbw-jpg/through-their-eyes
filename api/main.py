@@ -1,5 +1,5 @@
-"""The API service (SPEC 2): live match stream, moments, cached breakdowns, what-if, TTS, and
-tamper checks (the verifier on a claim with one number changed, SPEC 7).
+"""The API service (SPEC 2): live match stream, moments, stats, cached breakdowns, what-if, TTS,
+and tamper checks (the verifier on a claim with one number changed, SPEC 7).
 
     uv run uvicorn api.main:app --reload
 
@@ -11,8 +11,9 @@ regeneration is rate-limited per client and capped per UTC day across all client
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
 tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
 
-Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream, request
-bodies and response headers are bounded for a public service (api/live.py, api/guard.py).
+Speech speaks only voice cues the crew wrote, by key (api/tts.py); a cached breakdown is re-voiced
+on read before those cues are recorded. The live stream, request bodies and response headers are
+bounded for a public service (api/live.py, api/guard.py).
 
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
@@ -20,6 +21,12 @@ the per-client limit and, with a model, the daily model cap; offline, drills hav
 cap (`DAILY_OFFLINE_DRILLS`). Past any of them: 429. No model is called for a downed step.
 `POST /api/breakdowns/{key}/bring-back` re-runs one downed step from the run's checkpoint, at most
 `MAX_BRING_BACKS` times per drill.
+
+End-of-match recap (SPEC 6): `POST /api/recaps` runs the crew on a whole stitched match, cached
+and limited exactly like a breakdown (the same per-client limit and daily model cap; past them,
+the cached model recap or the offline template). `GET /api/recaps/{key}/cues` serves one script's
+overlay cue sheet, the machine-readable cues a graphics engine renders. The live stream's `end`
+says `full_time` when it reached the last frame: the web app opens the recap then.
 
 Every crew run checkpoints to files under the cache directory (`checkpoints/`), so a normal
 breakdown interrupted mid-workflow, by a restart too, resumes from its last completed step. Its
@@ -36,7 +43,9 @@ a restart is answered at once.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import hashlib
+import json
 import re
 import shutil
 import uuid
@@ -45,7 +54,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from agent_framework import FileCheckpointStorage
-from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import HTTPConnection
 from fastapi.responses import Response
@@ -55,6 +64,7 @@ from agents import whatif
 from agents.context import MomentContext
 from agents.llm import client_from_env, sync_credential_from_env
 from agents.prompts import PROMPT_VERSION
+from agents.recap import RECAP_PROMPT_VERSION, run_recap
 from agents.schemas import AgentStep, Language, Persona
 from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
@@ -105,6 +115,13 @@ class BreakdownBody(BaseModel):
 
 class BringBackBody(BaseModel):
     step: AgentStep
+
+
+class RecapBody(BaseModel):
+    match: str
+    personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
+    languages: Languages = Field(default_factory=lambda: ["en", "zh"])
+    regenerate: bool = False
 
 
 class WhatIfBody(BaseModel):
@@ -158,7 +175,8 @@ def create_app(
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
     cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
-    breakdowns, answers = cues.recording(storage.breakdowns), storage.answers
+    breakdowns, answers = cues.recording(tts.Revoiced(storage.breakdowns)), storage.answers
+    recaps = cues.recording(storage.recaps)  # a recap's lines may be spoken too
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
@@ -235,7 +253,8 @@ def create_app(
 
     @app.get("/api/matches")
     async def matches() -> list[dict[str, Any]]:
-        return [{"id": mid, "scenario": s, "seed": seed} for mid, (s, seed) in store.known.items()]
+        return [{"id": mid, "scenario": s, "seed": seed}
+                for mid in store.listed for s, seed in [store.known[mid]]]  # fmt: skip
 
     @app.get("/api/matches/{mid}")
     async def match_info(mid: str) -> dict[str, Any]:
@@ -252,12 +271,30 @@ def create_app(
         return info
 
     @app.get("/api/matches/{mid}/export")
-    async def match_export(mid: str) -> dict[str, Any]:
-        return (await match_or_404(mid)).export
+    async def match_export(mid: str, request: Request) -> Response:
+        m = await match_or_404(mid)
+        headers = {"Vary": "Accept-Encoding"}
+        if "gzip" in request.headers.get("accept-encoding", "").lower():
+            headers["Content-Encoding"] = "gzip"
+            return Response(m.export_gzip, media_type="application/json", headers=headers)
+        return Response(m.export_json, media_type="application/json", headers=headers)
 
     @app.get("/api/matches/{mid}/moments")
     async def match_moments(mid: str) -> list[dict[str, Any]]:
         return (await match_or_404(mid)).cards
+
+    @app.get("/api/matches/{mid}/stats")
+    async def match_stats(
+        mid: str,
+        frame: Annotated[int | None, Query(ge=0)] = None,
+        tracks: bool = False,
+    ) -> dict[str, Any]:
+        """Live match stats (SPEC 4.6): the snapshot at `frame` (default: the last), measured
+        from the tracking and events this service streams. `tracks` adds what viewers draw."""
+        m = await match_or_404(mid)
+        if m.stats is None:
+            raise HTTPException(503, f"no stats for {mid}")
+        return m.stats.snapshot(frame, tracks=tracks).model_dump(mode="json")
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:
@@ -410,6 +447,68 @@ def create_app(
                       "bring_backs": record["bring_backs"] + 1}  # fmt: skip
             drills.put(key, record)
         return _drill_response(key, record)
+
+    @app.post("/api/recaps")
+    async def recap(body: RecapBody, request: Request) -> dict[str, Any]:
+        """The end-of-match recap of a stitched match (agents/recap.py), cached by the content
+        hash of its evidence, personas, languages, prompt version and model."""
+        m = await match_or_404(body.match)
+        if m.stitched is None:
+            raise HTTPException(404, f"recaps are for stitched matches, not {m.id}")
+        async with locks.hold(f"recap-evidence:{m.id}"):
+            rc = await asyncio.to_thread(m.recap)
+
+        def key(model_name: str, **extra: Any) -> str:
+            return content_key(kind="recap", match=rc.content_hash(),
+                               personas=sorted(body.personas), languages=sorted(body.languages),
+                               prompts=RECAP_PROMPT_VERSION, pipeline=PIPELINE_VERSION,
+                               model=model_name, **extra)  # fmt: skip
+
+        model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
+        offline_key = key("offline")
+        candidates = ([model_key] if client is not None else []) + [offline_key]
+        if not body.regenerate and (hit := recaps.get(candidates[0])) is not None:
+            return {"key": candidates[0], "cached": True, "rate_limited": False, "capped": False,
+                    **hit}  # fmt: skip
+        limits = {"rate_limited": False, "capped": False}
+        if client is not None:
+            verdict = regeneration(request)
+            if verdict == "model":
+                return await _compute_recap(rc, body, client, "model", model_key)
+            limits[verdict] = True
+            for k in candidates:
+                if (hit := recaps.get(k)) is not None:
+                    return {"key": k, "cached": True, **limits, **hit}
+        return {**await _compute_recap(rc, body, None, "offline", offline_key), **limits}
+
+    async def _compute_recap(rc, body: RecapBody, llm, source: str, k: str) -> dict[str, Any]:
+        async with locks.hold(k):
+            if (hit := recaps.get(k)) is not None and not body.regenerate:  # made while waiting
+                return {"key": k, "cached": True, "rate_limited": False, "capped": False, **hit}
+            if llm is not None and settings.analyst_mcp:  # the MCP server reads the evidence
+                folder = Path(settings.cache_dir) / "recap_evidence"
+                folder.mkdir(parents=True, exist_ok=True)
+                path = folder / f"{rc.content_hash()[:32]}.json"
+                if not path.exists():
+                    path.write_text(json.dumps(rc.evidence(), ensure_ascii=False))
+                rc = dataclasses.replace(rc, evidence_path=str(path))
+            result = await run_recap(rc, client=llm, personas=tuple(body.personas),
+                                     languages=tuple(body.languages),
+                                     use_mcp=settings.analyst_mcp)  # fmt: skip
+            value = {"source": source, "result": result.model_dump(mode="json")}
+            recaps.put(k, value)
+        return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
+
+    @app.get("/api/recaps/{key}/cues")
+    async def recap_cues(key: str, persona: Persona, language: Language) -> dict[str, Any]:
+        """One script's overlay cue sheet: timed, machine-readable cues (agents/recap.py)."""
+        hit = recaps.get(key) if KEY.fullmatch(key) else None
+        if hit is None:
+            raise HTTPException(404, "no recap with this key: request it with POST /api/recaps")
+        for script in hit["result"]["scripts"]:
+            if (script["persona"], script["language"]) == (persona, language):
+                return script["cues"]
+        raise HTTPException(404, f"this recap has no {persona} script in {language}")
 
     @app.post("/api/whatif")
     async def what_if(body: WhatIfBody, request: Request) -> dict[str, Any]:

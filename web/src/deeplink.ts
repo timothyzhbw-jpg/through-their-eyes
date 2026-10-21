@@ -14,6 +14,9 @@
 //   ?play=yourcall                             open "Your call" at the decision (yourcall/); with
 //                                              ?match=, on its first hero moment that has bundled
 //                                              what-ifs
+//   ?play=recap                                with ?match= (a stitched match): its end-of-match
+//                                              recap, asked for at once for ?persona and ?lang,
+//                                              with the full-time card on the live screen
 //   ?play=eyes                                 open "Take his eyes" (takeeyes/) on his own look;
 //                                              with ?match=, on its first hero moment that has
 //                                              a bundled look grid
@@ -37,7 +40,7 @@ import { yourCallOf } from "./yourcall/controller";
 const RUNS = ["factual", "counterfactual"] as const satisfies readonly RunName[];
 const VIEWS = ["pov", "tactical", "split"] as const satisfies readonly Focus[];
 const NAMED_FRAMES = ["key-scan", "decision"] as const;
-const PLAYS = ["yourcall", "eyes"] as const;
+const PLAYS = ["yourcall", "recap", "eyes"] as const;
 const CLAIM_ID = /^[a-z][a-z0-9_]{0,63}$/; // explain/builders.py ids, e.g. cf_value
 
 export type View = (typeof VIEWS)[number];
@@ -56,7 +59,7 @@ export interface DeepLink {
   at: At | null;
   ask: string | null;
   tamper: string | null; // a claim id
-  play: Play | null; // yourcall: open "Your call" at the decision; eyes: "Take his eyes"
+  play: Play | null; // yourcall: "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
 
