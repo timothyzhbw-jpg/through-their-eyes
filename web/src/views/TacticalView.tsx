@@ -15,6 +15,7 @@ import {
   runLabels,
   Sample,
   sampleInto,
+  actionTarget,
   speedAt,
   type Hero,
   type Run,
@@ -284,7 +285,7 @@ function PassLine({ run, mode, shared }: { run: Run; mode: RunName; shared: Shar
   const points = useMemo(() => {
     if (!action) return null;
     const [sx, sy] = action.start;
-    const [tx, ty] = action.target;
+    const [tx, ty] = actionTarget(action); // a pass's target, a shot's aim
     return {
       line: [
         [sx, 0, -sy],
