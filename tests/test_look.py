@@ -295,7 +295,7 @@ def finish_ctx():
                 "Before he decides, that look brings H10 and H6 into his sight.",
                 "So he shoots at the near post; he really shot at the far post.",
                 "A1 saves it.",
-                "That is worth 1.02 less in expected threat than what he really did.",
+                "That is worth 1.00 less in expected threat than what he really did.",
             ],
         ),
     ],
