@@ -2,9 +2,9 @@
 // his belief), and the other match (the counterfactual and what the look was worth). Numbers here
 // are read straight from the sim export and say so, in Chalk; only a value the verifier checked is
 // set in Floodlight with its check (SPEC 5.3). The beats follow the hero's lens: the look over the
-// shoulder (blind_side_run), a striker's look at the keeper before a placed shot (far_post_finish),
-// a marker's look at the man he marks (corner_blind_side), or the press he plays out of
-// (press_escape).
+// shoulder (blind_side_run, hand-written), any other look before a decision told from the runs
+// (cutback_scan; far_post_finish, where the look is at the keeper), a marker's look at the man he
+// marks (corner_blind_side), or the press he plays out of (press_escape).
 
 import {
   actionLabel,
@@ -31,10 +31,11 @@ interface Beat {
 
 function beats(hero: Hero, run: Run): Beat[] {
   if (hero.marker && hero.keyScan) return markerBeats(hero, run, hero.keyScan, hero.marker);
-  if (hero.keyScan && isShot(hero.runs.factual.decision?.chosen)) {
-    return shotBeats(hero, run, hero.keyScan);
+  // The bundled hero keeps its hand-written story: the judges' tour and the video quote it.
+  if (hero.keyScan && hero.scenario === "blind_side_run") {
+    return scanBeats(hero, run, hero.keyScan);
   }
-  return hero.keyScan ? scanBeats(hero, run, hero.keyScan) : pressureBeats(hero, run);
+  return hero.keyScan ? lookBeats(hero, run, hero.keyScan) : pressureBeats(hero, run);
 }
 
 const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
@@ -53,28 +54,45 @@ export function shotEnd(run: Run): { from: number; text: string; short: string }
   return { from, text: "He shoots.", short: "" };
 }
 
+/** How the run's pass or carry ended; null without a decision. */
+function passEnd(run: Run): Beat | null {
+  const act = run.action;
+  if (!run.decision) return null;
+  if (!act) return { from: run.frames - 1, text: "He keeps the ball." }; // a carry: no pass
+  const from = act.end ?? run.frames - 1;
+  if (act.outcome === "complete") return { from, text: `Completed to ${act.receiver}.` };
+  if (act.outcome == null) return { from, text: "The pass is still running when the clip ends." };
+  return { from, text: `Lost: ${act.outcome}${act.receiver ? ` by ${act.receiver}` : ""}.` };
+}
+
 /**
- * A striker's look before a placed shot (far_post_finish): the build-up passes, the look (or,
- * without it, eyes on the ball), whether he saw the keeper in it, the shot he chose on his belief
- * and how it ended. Sight is the sim's perception (seen_by); a beat it cannot back is left out.
+ * A look before the decision, told from the runs (cutback_scan, far_post_finish): the build-up
+ * passes, the player the look is about going out of his sight, the look (or, without it, eyes on
+ * the ball), whether he saw that player in it, the decision on his belief and how it ended. The
+ * look is about the keeper before a shot, else the runner. Sight is the sim's perception
+ * (seen_by); a beat it cannot back is left out.
  */
-function shotBeats(hero: Hero, run: Run, key: Scan): Beat[] {
+function lookBeats(hero: Hero, run: Run, key: Scan): Beat[] {
   const factual = run.name === "factual";
   const heroId = hero.heroId ?? "He";
   const dec = run.decision;
   const decided = dec ? dec.frame : run.frames - 1;
-  const keeper = run.action?.keeper ?? null;
-  const k = keeper ? hero.ids.indexOf(keeper) : -1;
-  let seenAt = -1; // the first frame of the look in which he sees the keeper
-  for (let f = key.start; f <= key.end && seenAt < 0 && k >= 0 && run.sight; f++) {
-    if (isSeen(hero, run, f, hero.hero, k)) seenAt = f;
-  }
+  const shot = isShot(hero.runs.factual.decision?.chosen);
+  const target = shot ? (run.action?.keeper ?? null) : hero.runnerId;
+  const t = target ? hero.ids.indexOf(target) : -1;
+  const sees = (f: number) => t >= 0 && run.sight && isSeen(hero, run, f, hero.hero, t);
+  let lastSeen = -1; // his last sighting of a teammate's run before the look
+  for (let f = key.start - 1; f >= 0 && lastSeen < 0 && !shot; f--) if (sees(f)) lastSeen = f;
+  const gone = lastSeen >= 0 && (key.start - lastSeen - 1) * hero.dt >= SIGHT_GAP_S;
+  let seenAt = -1; // the first frame of the look in which he sees that player
+  for (let f = key.start; f <= key.end && seenAt < 0; f++) if (sees(f)) seenAt = f;
   const p = dec ? (dec.options.find((o) => o.action === dec.chosen)?.prob ?? 0) : 0;
   const passes = run.events.filter(
     (e) => e.type === "pass" && e.player !== heroId && e.frame < decided,
   );
   const list: (Beat | null)[] = [
     ...passes.map((e) => ({ from: e.frame, text: `${e.player} plays it to ${e.attrs.to}.` })),
+    gone ? { from: lastSeen + 1, text: `${target} moves out of ${heroId}'s sight.` } : null,
     factual
       ? {
           from: key.start,
@@ -84,14 +102,14 @@ function shotBeats(hero: Hero, run: Run, key: Scan): Beat[] {
           from: key.start,
           text: `Same moment, but ${heroId} keeps his eyes on the ball. No look.`,
         },
-    k < 0 || !run.sight
+    t < 0 || !run.sight
       ? null
       : factual && seenAt >= 0
-        ? { from: seenAt, text: `He sees ${keeper} in that look.` }
+        ? { from: seenAt, text: `He sees ${target} in that look.` }
         : !factual && seenAt < 0
           ? {
               from: key.end,
-              text: `He does not see ${keeper}: he pictures him where he last saw him.`,
+              text: `He does not see ${target}: he pictures him where he last saw him.`,
             }
           : null,
     dec
@@ -100,7 +118,7 @@ function shotBeats(hero: Hero, run: Run, key: Scan): Beat[] {
           text: `Decision: ${lower(actionLabel(dec.chosen))} (chosen with probability ${p.toFixed(2)}).`,
         }
       : null,
-    shotEnd(run),
+    shotEnd(run) ?? passEnd(run),
   ];
   return list
     .filter((b): b is Beat => b !== null)

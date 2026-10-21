@@ -30,6 +30,7 @@ export const WHAT_IF_FILES: Record<string, string> = {
   [MATCH_ID]: WHAT_IF_FILE,
   "press_escape-0": "whatif_press_escape_seed0.json",
   "far_post_finish-11": "whatif_far_post_finish_seed11.json",
+  "cutback_scan-7": "whatif_cutback_scan_seed7.json",
 };
 
 export interface LoadOptions {

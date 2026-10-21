@@ -31,6 +31,8 @@ export const BLURB: Record<string, string> = {
     "See what the midfielder saw, and what he would have done without one look over his shoulder.",
   press_escape:
     "See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
+  cutback_scan:
+    "See what the winger saw when he looked into the box, and what he would have done without that one look.",
   far_post_finish:
     "See what the striker saw of the keeper as the cutback came, and where he would have shot without one look at the goal.",
   corner_blind_side:

@@ -536,6 +536,37 @@ attrs: { placement, outcome, end } },
   return { ...e, scenario: "far_post_finish", seed: 11, runner: null };
 }
 
+export const CUTBACK_MOMENT = "m:decision_after_scan:H8:0075";
+
+/**
+ * Like cutback_scan-7: an ordinary scan hero that is not blind_side_run. With the look he passes
+ * to the runner; without it he carries the ball, so the counterfactual run has no action (a carry
+ * is not a pass), as sim.export writes it. The bundled runs, renamed.
+ */
+export function cutbackExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  const cf = e.runs.counterfactual;
+  const [first, ...rest] = cf.decision!.options;
+  const carry = rest.find((o) => o.action === "carry") ?? { ...first, action: "carry" };
+  cf.decision = {
+    ...cf.decision!,
+    chosen: "carry",
+    options: [
+      { ...carry, prob: 0.76 },
+      ...cf.decision!.options.filter((o) => o.action !== "carry"),
+    ],
+  };
+  const passFrame = cf.decision.frame;
+  const ends = cf.events.find((ev) => ev.type === "pass" && ev.frame === passFrame)?.attrs.end;
+  cf.events = cf.events.filter(
+    (ev) =>
+      !(ev.type === "pass" && ev.frame === passFrame) &&
+      !(ev.type === "reception" && ev.frame === ends),
+  );
+  cf.action = null;
+  return { ...e, scenario: "cutback_scan", seed: 7 };
+}
+
 export const MATCH = "match-1";
 export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled run's first 60 frames
 export const BLIND_START = OPEN_FRAMES; // possession 1: blind_side_run 3
