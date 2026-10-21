@@ -25,6 +25,7 @@ parameters come from published papers (`docs/REFERENCES.md`).
 | [`run.py`](run.py), [`model.py`](model.py) | `MatchRun` (a finished run as arrays plus events and decisions) and its canonical bytes; `PlayerInfo`, `Event`, `Decision` |
 | [`match.py`](match.py) | a stitched match: scenario possessions back to back on one clock, with restarts and the score |
 | [`export.py`](export.py) | the JSON the viewer reads: both runs of a hero moment, sight, beliefs, options, blind-side alerts, the scan detector's output; also the render-payload fixture and the precomputed what-ifs |
+| [`dataset.py`](dataset.py) | the downloadable dataset: stitched matches on fresh seeds as events (CSV/Parquet), 25 Hz tracking (Parquet), metadata (JSON), per-reception scans and beliefs; datasheet [docs/DATASET.md](../docs/DATASET.md) |
 | [`keypoints.py`](keypoints.py) | a synthetic limb-tracking stream for `analytics/keypoints.py` |
 | [`scenarios/`](scenarios/) | `Scenario` (the hooks a template may override) and the templates, registered in `SCENARIOS` |
 
@@ -49,7 +50,7 @@ authority; each class names its hero, lens and intervention):
   the decisions with every option's value and its keyed noise.
 - `analytics/` kernels are called inside the loop (vision for perception; time to intercept,
   pitch control and the xT prior for decisions). `explain/` and `agents/` read finished runs.
-  `export.py` is the one module that reaches up into them, to write the viewer's files.
+  `export.py` and `dataset.py` reach up into them, to write the viewer's files and the dataset.
 - Scan events are ground truth. The analytics scan detector must find them from tracking alone
   (SPEC 4.7); partial turns are `head_turn` events, never `scan` events.
 
@@ -97,7 +98,7 @@ print(cf.factual_action, cf.counterfactual_action)
 
 ```bash
 uv run pytest tests/test_sim_m1.py tests/test_ball.py tests/test_match.py tests/test_export.py \
-  tests/test_committed_exports.py tests/test_whatif.py tests/test_shots.py
+  tests/test_committed_exports.py tests/test_whatif.py tests/test_shots.py tests/test_dataset.py
 ```
 
 - [`test_sim_m1.py`](../tests/test_sim_m1.py): determinism (same seed twice, resume without

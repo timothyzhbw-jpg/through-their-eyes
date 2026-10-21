@@ -8,7 +8,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "capture": "node capture.mjs"
+    "capture": "node capture.mjs",
+    "trailer": "node trailer.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0"

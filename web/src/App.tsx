@@ -29,6 +29,8 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
+import { bindSound } from "./sound/bind";
+import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -52,6 +54,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const introOpen = useStore(intro, (s) => s.open);
 
   useEffect(() => startClock(session), [session]);
+  useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
   // Closing Your call (Back, Escape, the header pill) returns focus to the live screen's pill.
   useEffect(() => {
     if (wasYourCall.current && !yourCall) {
