@@ -24,6 +24,14 @@ export function runMinutes(hero: Hero): number {
   return (hero.runs.factual.frames * hero.dt) / 60;
 }
 
+/**
+ * How to measure a player's scanning: a run shorter than a minute has too few scans for a rate (a
+ * hero moment's one scan would read as nine a minute), so the card counts them instead.
+ */
+export function measure(hero: Hero): "count" | "rate" {
+  return runMinutes(hero) < 1 ? "count" : "rate";
+}
+
 /** Each hero once, keeping his first possession's place in the match. */
 export function watchOptions(hero: Hero): WatchOption[] {
   const options: WatchOption[] = [];

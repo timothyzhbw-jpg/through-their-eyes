@@ -119,8 +119,10 @@ const WAITS = {
     await page.locator("header .brand h1, .load-error").first().waitFor({ timeout });
     const error = page.locator(".load-error");
     if (await error.count()) throw new Error(await error.innerText());
-    await page.locator(".view.pov canvas").waitFor({ state: "attached", timeout });
-    await page.locator(".view.tac canvas").waitFor({ state: "attached", timeout });
+    // A shot that opens on the lineup card (covered: true) waits for the canvases behind it.
+    const state = a.covered ? "attached" : "visible";
+    await page.locator(".view.pov canvas").waitFor({ state, timeout });
+    await page.locator(".view.tac canvas").waitFor({ state, timeout });
     await page.waitForLoadState("networkidle", { timeout });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     // Animated players unless the address asks for the tokens (players/trial.ts).

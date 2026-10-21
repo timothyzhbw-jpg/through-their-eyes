@@ -6,7 +6,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { ArrowIcon } from "./icons";
 import { intro } from "./intro";
-import { lineup, runMinutes, watchOptions } from "./lineup";
+import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
 export function playLength(minutes: number): string {
@@ -28,7 +28,9 @@ function OpenLineupCard() {
   const titleId = useId();
   const dialog = useRef<HTMLDivElement>(null);
   const start = useRef<HTMLButtonElement>(null);
-  const highest = Math.max(0, ...teams.home.concat(teams.away).map((row) => row.scansPerMinute));
+  const measured = measure(hero);
+  const size = (row: LineupRow) => (measured === "count" ? row.scans : row.scansPerMinute);
+  const highest = Math.max(0, ...teams.home.concat(teams.away).map(size));
 
   useEffect(() => {
     const previous = document.activeElement;
@@ -42,10 +44,12 @@ function OpenLineupCard() {
         intro.set({ open: false });
       }
       if (event.key !== "Tab") return;
-      const buttons = dialog.current?.querySelectorAll<HTMLButtonElement>("button");
-      if (!buttons?.length) return;
-      const first = buttons[0];
-      const last = buttons[buttons.length - 1];
+      const focusable = dialog.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
@@ -89,7 +93,7 @@ function OpenLineupCard() {
                     <i style={{ background: `var(--${team})` }} aria-hidden="true" />
                     {name}
                   </h3>
-                  <span>Scans / min</span>
+                  <span>{measured === "count" ? "Scans" : "Scans / min"}</span>
                 </header>
                 <ol aria-label={`${name} line-up`}>
                   {teams[team].map((row) => (
@@ -107,15 +111,13 @@ function OpenLineupCard() {
                         <span className="lineup-role">{row.role}</span>
                       </span>
                       <span className="lineup-bar" aria-hidden="true">
-                        <i
-                          style={{
-                            width: `${highest > 0 ? (row.scansPerMinute / highest) * 100 : 0}%`,
-                          }}
-                        />
+                        <i style={{ width: `${highest > 0 ? (size(row) / highest) * 100 : 0}%` }} />
                       </span>
                       <span className="lineup-rate">
-                        {row.scansPerMinute.toFixed(1)}
-                        <span className="sr-only"> scans per minute</span>
+                        {measured === "count" ? row.scans : row.scansPerMinute.toFixed(1)}
+                        <span className="sr-only">
+                          {measured === "count" ? " scans" : " scans per minute"}
+                        </span>
                       </span>
                     </li>
                   ))}
@@ -126,8 +128,8 @@ function OpenLineupCard() {
         </div>
 
         <p className="lineup-note">
-          Scans per minute, counted from the scan events of this run ({playLength(runMinutes(hero))}
-          ).{" "}
+          {measured === "count" ? "Scans counted" : "Scans per minute, counted"} from the scan
+          events of this run ({playLength(runMinutes(hero))}).{" "}
           <span className="source" title="Read from the sim export, not a verified claim">
             sim
           </span>

@@ -744,6 +744,27 @@ optgroup {
 .stage-hud > * {
   pointer-events: auto;
 }
+/* top left of the picture: whose eyes and his readouts, then the director's suggestion,
+   stacked so a wrapped row pushes the next one down instead of sliding under it */
+.stage-top {
+  position: absolute;
+  z-index: 5;
+  top: var(--head-h);
+  left: var(--gutter);
+  right: calc(var(--card-w) + 2 * var(--gutter));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+@media (min-width: 761px) {
+  .stage-top .stage-hud,
+  .stage-top .stage-director {
+    position: static;
+    inset: auto;
+  }
+}
 .eyes-picker {
   position: relative;
   display: inline-flex;
@@ -885,6 +906,9 @@ optgroup {
   pointer-events: none;
 }
 .stage-director .director {
+  background: transparent;
+  border: 0;
+  padding: 0;
   min-height: 0;
   gap: 8px;
 }
@@ -2838,11 +2862,21 @@ optgroup {
     display: none;
   }
 }
-@media (max-width: 980px) and (min-width: 761px) {
+/* Inside a match the header also holds "Back to the match": up to 1400 px the run switch would
+   meet it, so it drops under the header row there too. */
+@media (max-width: 1400px) and (min-width: 1181px) {
+  .stage:has(.live-chip.back) .stage-run {
+    top: 84px;
+  }
+  .stage:has(.live-chip.back) .stage-top {
+    top: 140px;
+  }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
   .stage-run {
     top: 84px;
   }
-  .stage-hud {
+  .stage-top {
     top: 140px;
   }
 }
@@ -2927,6 +2961,9 @@ optgroup {
     left: 16px;
     right: 16px;
     width: auto;
+  }
+  .stage-top {
+    display: contents;
   }
   .stage-hud {
     position: relative;

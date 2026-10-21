@@ -147,6 +147,7 @@ function LiveScreen(props: {
   const pip = focus === "split" || board;
   return (
     <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
+      {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
       <div className="stage-content" inert={introOpen} style={{ display: "contents" }}>
         <div className="views">
           <div className={board ? "slot pip" : "slot main"}>
@@ -167,9 +168,11 @@ function LiveScreen(props: {
           <div className="header-start">{props.start}</div>
           <div className="header-end">{props.end}</div>
         </header>
-        <StageHud />
-        <div className="stage-director">
-          <DirectorBar />
+        <div className="stage-top">
+          <StageHud />
+          <div className="stage-director">
+            <DirectorBar />
+          </div>
         </div>
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}

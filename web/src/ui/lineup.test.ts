@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import { parseHero } from "../data/hero";
+import type { ExportEvent } from "../data/types";
 import { matchExport } from "../testing";
-import { lineup, runMinutes, watchOptions } from "./lineup";
+import { lineup, measure, runMinutes, watchOptions } from "./lineup";
 import { playLength } from "./LineupCard";
 
 describe("the pre-match line-up", () => {
@@ -48,6 +49,37 @@ describe("the pre-match line-up", () => {
       expect(player.scans).toBe(0);
       expect(player.scansPerMinute).toBe(0);
     }
+  });
+
+  it("counts only the factual run, never the counterfactual's scans", () => {
+    const both = structuredClone(raw);
+    const extra = both.runs.factual.events.find(
+      (event) => event.type === "scan" && event.player === "H8",
+    )!;
+    const counterfactual = both.runs.counterfactual.events as ExportEvent[];
+    counterfactual.push(
+      ...Array.from({ length: 4 }, (_, k): ExportEvent => ({
+        ...extra,
+        id: `scan:H8:cf${k}`,
+        frame: extra.frame + k,
+      })),
+    );
+    const h8 = lineup(parseHero(both)).home.find((player) => player.id === "H8")!;
+    const factual = lineup(hero).home.find((player) => player.id === "H8")!;
+    expect(h8.scans).toBe(factual.scans);
+    expect(h8.scansPerMinute).toBe(factual.scansPerMinute);
+  });
+
+  it("measures a hero moment in scans and a match of a minute or more in rates", () => {
+    expect(runMinutes(hero)).toBeLessThan(1);
+    expect(measure(hero)).toBe("count");
+    // The test match stitches three short possessions; match-1, the stitched match the card opens
+    // on, is 132.6 s on one clock (SPEC 3.1), so give the fixture that run length.
+    const match = matchExport();
+    match.runs.factual.frames = Math.round(132.6 / match.dt);
+    const stitched = parseHero(match);
+    expect(runMinutes(stitched)).toBeGreaterThanOrEqual(1);
+    expect(measure(stitched)).toBe("rate");
   });
 
   it("offers the hero of a single moment", () => {

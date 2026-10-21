@@ -1228,7 +1228,9 @@ pilot only, never generalised.
 Framework, live deployment, the video.
 
 ## 10. Demo video storyboard (≤ 2:00)
-- **0:00–0:08** Cold open in first person: the look over the shoulder, a runner appears.
+- **0:00–0:04** Before kick-off: the lineup card, every player and every look over his shoulder in
+  this move.
+- **0:04–0:08** Cold open in first person: the look over the shoulder, a runner appears.
   "What did he see?"
 - **0:08–0:20** Broadcast camera; live overlays (sprint tag, pass speed); the move plays out.
 - **0:20–0:55** Breakdown, two voices: freeze → POV through the scans → the key scan lights up the

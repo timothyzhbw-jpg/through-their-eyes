@@ -9,6 +9,7 @@ import { possessionAt } from "../match/match";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { PauseIcon, PlayIcon } from "./icons";
+import { intro } from "./intro";
 import { CameraSwitch, ViewOptions } from "./Stage";
 
 export function Transport() {
@@ -21,6 +22,8 @@ export function Transport() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" && e.target === document.body) {
+        // The pre-match card has the page: Space must not play the picture behind it.
+        if (intro.get().open) return;
         e.preventDefault();
         controls.togglePlay();
       }

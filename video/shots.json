@@ -17,21 +17,21 @@
       "viewport": { "width": 1920, "height": 1080 },
       "target_s": 4,
       "crop": "stage",
-      "setup": [{ "do": "wait", "for": "assets" }],
+      "setup": [{ "do": "wait", "for": "assets", "covered": true }],
       "actions": [
         { "do": "hold", "s": 4, "still": true },
         { "do": "click", "role": "button", "name": "Start watching" }
       ],
-      "vo": "Before kick-off: every player, and how often he checks over his shoulder."
+      "vo": "Before kick-off: every player, and every look over his shoulder in this move."
     },
     {
       "id": "01-cold-open",
-      "spec_beat": "0:00-0:08",
+      "spec_beat": "0:04-0:08",
       "title": "Cold open in first person: the look over the shoulder, a runner appears",
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 8,
+      "target_s": 4,
       "crop": "pov",
       "setup": [
         { "do": "wait", "for": "assets" },
@@ -45,10 +45,10 @@
           "role": "button",
           "name": "Play",
           "exact": true,
-          "hold": 4,
+          "hold": 2,
           "still": true
         },
-        { "do": "hold", "s": 4 }
+        { "do": "hold", "s": 2 }
       ],
       "vo": "What did he see?",
       "notes": "Free play at 0.5x from just before the key scan; the app slows further around the scan. Crop to the first-person view (manifest.json gives the box)."

@@ -56,7 +56,7 @@ function button(page: Element, name: string): HTMLButtonElement {
 const click = (el: HTMLElement) => act(() => el.click());
 
 describe("the pre-match line-up", () => {
-  it("names its modal, lists both teams and labels the run's scan rates as sim data", () => {
+  it("names its modal, lists both teams and labels the run's scan counts as sim data", () => {
     const page = mount(offline());
     const dialog = page.querySelector<HTMLElement>('[role="dialog"]')!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
@@ -71,13 +71,18 @@ describe("the pre-match line-up", () => {
     expect(source.textContent).toBe("sim");
     expect(source.getAttribute("title")).toBe("Read from the sim export, not a verified claim");
     const minutes = (hero.runs.factual.frames * hero.dt) / 60;
-    // A hero moment is seconds long: its length is given in seconds.
+    // A hero moment is seconds long: its scans are counted, not turned into a rate.
     expect(dialog.textContent).toContain(
-      `Scans per minute, counted from the scan events of this run (${(minutes * 60).toFixed(1)} seconds of play).`,
+      `Scans counted from the scan events of this run (${(minutes * 60).toFixed(1)} seconds of play).`,
     );
+    expect(
+      [...dialog.querySelectorAll(".lineup-team-head > span")].map((s) => s.textContent),
+    ).toEqual(["Scans", "Scans"]);
     const h8 = dialog.querySelector('[data-player="H8"]')!;
     const scans = hero.runs.factual.scans.filter((s) => s.player === "H8").length;
-    expect(h8.textContent).toContain((scans / minutes).toFixed(1));
+    const shown = h8.querySelector(".lineup-rate")!;
+    expect(shown.textContent).toBe(`${scans} scans`);
+    expect(shown.textContent).not.toContain((scans / minutes).toFixed(1));
     expect(h8.classList.contains("lineup-hero")).toBe(true);
     expect(document.activeElement).toBe(button(page, "Start watching"));
   });
