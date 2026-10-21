@@ -13,7 +13,7 @@ import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
 import { validatePayload, type RenderPayload } from "../narration/payload";
 import { EXAMPLE_PLAN } from "../plan/example";
-import { createSession, SessionContext, type Session } from "../session";
+import { createSession, SessionContext, tickSession, type Session } from "../session";
 import { trial } from "../players/trial";
 import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
 import { Caption } from "./Narration";
@@ -230,13 +230,26 @@ describe("moment card", () => {
     expect(text(page)).not.toContain("every number checked");
   });
 
+  it("on a link that opens paused, names the moment instead of a stream that is not there", () => {
+    // ?at=key-scan and the other spot links: online, never live, nothing streamed (latest -1)
+    const session = online();
+    const page = mount(session, <MomentCard />);
+    const card = page.querySelector("aside.moment-card")!;
+    expect(text(card.querySelector(".kicker"))).toBe("Moment · 3.00 s · Perception");
+    expect(text(card.querySelector("h2"))).toBe("One look changed his pass.");
+    expect(text(page)).not.toContain("Watching the stream");
+    expect(text(page)).not.toContain("waiting for the moment");
+    expect(text(page)).not.toContain("You left the stream");
+    expect(text(page.querySelector(".btn-primary"))).toBe("Get breakdown");
+  });
+
   it("stops saying it is watching once the viewer has left the stream before the moment", () => {
     const session = online();
     const page = mount(session, <MomentCard />);
-    expect(text(page)).toContain("Live · waiting for the moment");
     // live, frames came in, then the Live pill left the stream (the run switch is locked until
     // the moment, so it can no longer do that)
     act(() => session.playback.set({ live: true }));
+    expect(text(page)).toContain("Live · waiting for the moment");
     act(() => session.feed!.state.set({ latest: 40 }));
     expect(text(page)).toContain("Live · waiting for the moment");
     act(() => session.controls.leaveLive());
@@ -249,6 +262,7 @@ describe("moment card", () => {
   it("waits for the stream, shows the crew at work, then each crew step's source", async () => {
     const session = online();
     const page = mount(session, <MomentCard />);
+    act(() => session.playback.set({ live: true }));
     expect(text(page)).toContain("Watching the stream");
 
     const slow = online(true);
@@ -279,6 +293,31 @@ describe("moment card", () => {
       "code",
       "code",
     ]);
+  });
+
+  it("pauses the breakdown instead of ending it; play resumes it, other controls take over", () => {
+    const session = offline();
+    const page = mount(session, <MomentCard />);
+    click(button(page, "Play breakdown"));
+    act(() => {
+      for (let k = 0; k < 6 * 60; k++) tickSession(session, 1 / 60);
+    });
+    const caption = session.playback.get().captionLine;
+    expect(caption).not.toBeNull();
+    act(() => session.controls.togglePlay());
+    expect(session.runner.status.get()).toMatchObject({ status: "running", paused: true });
+    expect(session.playback.get().playing).toBe(false);
+    expect(session.playback.get().captionLine).toBe(caption);
+    expect(text(page)).not.toContain("Replay breakdown");
+    const t = session.runner.time;
+    act(() => {
+      for (let k = 0; k < 60; k++) tickSession(session, 1 / 60);
+    });
+    expect(session.runner.time).toBe(t);
+    act(() => session.controls.togglePlay());
+    expect(session.runner.status.get()).toMatchObject({ status: "running", paused: false });
+    act(() => session.controls.seek(10));
+    expect(session.runner.status.get().status).toBe("stopped");
   });
 
   it("plays and stops the breakdown, and can be dismissed", async () => {
