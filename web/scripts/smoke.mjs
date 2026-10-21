@@ -116,9 +116,20 @@ async function tamper(page) {
   );
 }
 
+/** The pre-match lineup card (SPEC 10) opens first on a link that is not to a spot, over the
+ * whole page: it is shown as a visitor sees it, and "Start watching" closes it. */
+async function startWatching(page, shoot) {
+  const card = page.getByRole("dialog");
+  await see(card, "the lineup card");
+  await shoot("lineup");
+  await page.getByRole("button", { name: "Start watching" }).click();
+  await card.first().waitFor({ state: "detached" });
+}
+
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */
 async function breakdownsAndBack(page, shoot) {
   await match(page);
+  await startWatching(page, shoot);
   await shoot("live");
   const open = page.getByRole("button", { name: "Breakdown", exact: true });
   const n = await open.count();
@@ -148,20 +159,40 @@ function startApi(url, cache) {
     TTE_MATCHES: MATCHES,
     TTE_CACHE_DIR: cache,
   };
-  const args = ["run", "uvicorn", "api.main:app", "--port", new URL(url).port];
+  // --no-env-file: a UV_ENV_FILE in the shell must not bring the removed settings back.
+  const args = ["run", "--no-env-file", "uvicorn", "api.main:app", "--port", new URL(url).port];
   const child = spawn("uv", args, { cwd: ROOT, env, detached: true, stdio: "pipe" });
   const log = createWriteStream(join(opt.out, "api.log"));
-  child.stdout.pipe(log);
-  child.stderr.pipe(log);
+  // Two pipes into one file: neither may end it, or the other's last lines would be lost (or
+  // written after the end). It is closed once the child has.
+  child.stdout.pipe(log, { end: false });
+  child.stderr.pipe(log, { end: false });
   child.on("error", (err) => log.write(`could not start uv: ${err.message}\n`));
-  const exited = new Promise((resolve) => child.on("close", () => resolve("exited")));
+  const exited = new Promise((resolve) =>
+    child.on("close", () => {
+      log.end();
+      resolve("exited");
+    }),
+  );
+  // The group may already be gone (uv killed by a signal): then there is nothing to signal.
+  const signal = (name) => {
+    try {
+      process.kill(-child.pid, name);
+    } catch (err) {
+      if (err.code !== "ESRCH") throw err;
+    }
+  };
   return {
+    /** Last resort, synchronous (for an exit handler): kill the group at once. */
+    kill() {
+      if (child.pid && child.exitCode === null && child.signalCode === null) signal("SIGKILL");
+    },
     // The whole process group (uv and uvicorn). Uvicorn heeds SIGTERM only once it is warm.
     async stop() {
-      if (child.exitCode !== null || !child.pid) return;
-      process.kill(-child.pid, "SIGTERM");
+      if (child.exitCode !== null || child.signalCode !== null || !child.pid) return;
+      signal("SIGTERM");
       const late = await Promise.race([exited, new Promise((r) => setTimeout(r, 5_000, "late"))]);
-      if (late === "late") process.kill(-child.pid, "SIGKILL");
+      if (late === "late") signal("SIGKILL");
       await exited;
     },
     async ready() {
@@ -258,11 +289,25 @@ if (!opt.api && (await health(apiUrl))) {
 }
 const tmp = mkdtempSync(join(tmpdir(), "tte-smoke-"));
 const api = opt.api ? null : startApi(apiUrl, join(tmp, "cache"));
-process.on("SIGINT", async () => {
-  await api?.stop();
+// Whoever ends this process (a signal handler of ours, Playwright's own, an uncaught error), the
+// API's process group is killed and the temporary directory removed.
+process.on("exit", () => {
+  api?.kill();
   rmSync(tmp, { recursive: true, force: true });
-  process.exit(130);
 });
+for (const [name, code] of [
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+]) {
+  process.on(name, async () => {
+    try {
+      await api?.stop();
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+      process.exit(code);
+    }
+  });
+}
 let server, browser;
 let failed = 0;
 try {
@@ -295,8 +340,11 @@ try {
 } finally {
   await browser?.close();
   await server?.close();
-  await api?.stop();
-  rmSync(tmp, { recursive: true, force: true });
+  try {
+    await api?.stop();
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 }
 const total = ((performance.now() - t0) / 1000).toFixed(0);
 console.log(

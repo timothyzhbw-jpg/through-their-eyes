@@ -419,7 +419,7 @@ the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on t
 | `?autoplay=0`                           | hero `blind_side_run-3`: the Live control, the run switch, 3D view |
 | `?match=press_escape-0&autoplay=0`      | the pressure hero, the same                                        |
 | `?match=match-1&autoplay=0`             | the score bug, the 3D view, the Moments panel                      |
-| `?match=match-1`                        | live; each hero moment's **Breakdown**, then **Back to the match** |
+| `?match=match-1`                        | lineup card, live; each **Breakdown**, then **Back to the match**  |
 | `?persona=analyst&tamper=cf_value`      | the evidence card with "Try a wrong number" open                   |
 | `?at=decision&view=tactical`            | the tactical board                                                 |
 | `/` and `?match=match-1`, 375 px, touch | the phone width, live                                              |
