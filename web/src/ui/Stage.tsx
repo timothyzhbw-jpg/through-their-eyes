@@ -539,13 +539,15 @@ export function MomentCard() {
   const { status } = useBreakdown();
   const run = useStore(runner.status, (s) => s.status);
   const live = useStore(playback, (s) => s.live);
-  // Frames came in, then the viewer left the stream before the moment was detected (the run
-  // switch and every transport action do): the card must not keep saying it is watching.
-  // `latest` only matters once `live` drops, and that change re-renders the card.
-  const left = !live && (feed?.state.get().latest ?? -1) >= 0;
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   const waiting = status === "waiting";
+  // Waiting for the moment, the card says what is really going on: watching only while the
+  // stream is live; "left" once frames came in and the viewer left before the moment (the Live
+  // pill and the transport do). A link that opens paused never streamed: it names the moment.
+  // `latest` only matters once `live` drops, and that change re-renders the card.
+  const watching = waiting && live;
+  const left = waiting && !live && (feed?.state.get().latest ?? -1) >= 0;
   const running = run === "running";
   const label = running
     ? "Stop"
@@ -561,11 +563,11 @@ export function MomentCard() {
       <div className="card-head">
         <span className="kicker accent">
           <i className="dot" aria-hidden="true" />
-          {waiting
-            ? left
+          {watching
+            ? "Live · waiting for the moment"
+            : left
               ? "Off the stream · moment not reached"
-              : "Live · waiting for the moment"
-            : momentKicker(hero, moment.decisionFrame, offset)}
+              : momentKicker(hero, moment.decisionFrame, offset)}
         </span>
         <button
           type="button"
@@ -576,7 +578,7 @@ export function MomentCard() {
           <CloseIcon />
         </button>
       </div>
-      {waiting && left ? (
+      {left ? (
         <>
           <h2>You left the stream.</h2>
           <p className="card-body">
@@ -584,7 +586,7 @@ export function MomentCard() {
             the breakdown now.
           </p>
         </>
-      ) : waiting ? (
+      ) : watching ? (
         <>
           <h2>Watching the stream.</h2>
           <p className="card-body">
