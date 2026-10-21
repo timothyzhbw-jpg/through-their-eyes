@@ -14,7 +14,7 @@ than one that spends the credit.
 | # | Sev | Finding | Status |
 |---|---|---|---|
 | 1 | P1 | **Egress was unbounded.** Match-1's export is 4.0 MB gzipped, 11.6 MB raw; its live stream is 13.5 MB, and played at 1000x it arrived in 2 s. Nothing limited either per client or per day. Azure bills internet egress past 100 GB a month ($0.087/GB), so one script looping on either could spend the credit in hours. | Fixed: `api/egress.py`. Every response body and live message is charged to the client (bucket of 500 MB, refilled per hour) and to the UTC day across clients (10 GB). Past either: 429, or 4429 for a new stream. `/health` is exempt. Worst case, the cap every day to 11/10: 10 GB over the free 100 GB in October, ≈ $1. |
-| 2 | P2 | **The live stream took up to 1000x.** Four such streams each pulled the whole match in seconds and pushed the frame lag of 50 1x viewers from p95 3 ms to 294 ms (max 1.7 s) on 0.5 vCPU. | Fixed: speed clamped to 0.1–8 (the web app offers at most 4x). Paired runs: p95 90 / 412 ms before, 47 / 190 ms after. |
+| 2 | P2 | **The live stream took up to 1000x.** Four such streams each pulled the whole match in seconds and pushed the frame lag of 50 1x viewers from p95 3 ms to 43–294 ms (max 1.7 s) on 0.5 vCPU. | Fixed: speed clamped to 0.1–8 (the web app offers at most 4x): p95 3 ms with the four streams. |
 | 3 | P2 | **Every what-if question spent a unit of the 40/day cap and a model call**, even when its answer was cached; on a miss the question was mapped twice (two model calls for one unit). | Fixed: the model's mapping is kept by the normalised question (case, spacing, closing `?!.`) in the answers store, so it survives a restart; the answer reuses that mapping. A failed mapping is not kept. |
 | 4 | P2 | **Crew runs with a model were not bounded across clients.** Each starts an MCP server subprocess (87 MB measured); the replica idles at 250–340 MB of 1 GiB, so about eight uncached breakdowns at once could OOM it (three clients at their per-client limit start nine). A restart also refills the in-memory daily caps and drops every drill. | Fixed: `TTE_CREW_CONCURRENCY` (2) runs with a model at once; others wait. Runs without a model are not held back. |
 | 5 | P2 | **A limited drill or bring-back was a dead end** (red team): 429 with nothing to show. A judge's tour (what-if, drill, bring-back, recap) needs 4 model runs against a per-client limit of 3 per 10 min, and judges behind one NAT share it. | Fixed: every drill and bring-back is recorded on the replica's disk (`api/recorded.py`). Limited, the recording of the same drill in the same state is replayed, labelled "Recorded run · <time> UTC" in the web app; with none, the crew runs without the model, flagged. 429 only past the offline drills' cap (200 a day) too. |
@@ -58,25 +58,26 @@ All are environment variables (`.env.example`); the defaults are what the deploy
 ## Load test (local, never the live service)
 
 `infra/loadtest.py` against the API image under `docker run --cpus 0.5 --memory 1g`, offline
-(no Foundry, Speech, Cosmos or Application Insights): 50 viewers on match-1's live stream at 1x,
-each with its own `X-Forwarded-For`, then a burst of 20 breakdowns (new persona and language
-combinations) and 20 what-ifs. arm64 on an M4 Pro whose other cores were busy (load average
-100–150), so latencies are pessimistic.
+(no Foundry, Speech, Cosmos or Application Insights): 50 viewers on match-1's live stream at 1x
+(19,645 frames), each with its own `X-Forwarded-For`, then a burst of 20 breakdowns (new persona
+and language combinations) and 20 what-ifs. arm64 on an M4 Pro, one container at a time, on a
+quiet host (load average 7–9) on 10/21 at 16:50 CDT. "Before" is main at 44c0bb5, "after" this
+branch at 2f605a6.
 
 | Run | Frame lag of the 1x viewers | Requests | Memory peak | CPU |
 |---|---|---|---|---|
-| Before, 50 viewers + burst (quieter host) | p95 3 ms; during the burst p95 979 ms, max 1.1 s | 20 breakdowns 200, p95 2.4 s; 20 what-ifs 200, p95 1.0 s; a small GET p95 46 ms | 337 MiB | 41% of a core |
-| After, the same (load 100–115) | p95 146 ms; during the burst p95 2.0 s, max 2.1 s | 20 + 20 × 200, p95 4.8 s / 2.0 s; small GET p95 172 ms | 337 MiB | 48% |
-| Paired, 50 viewers, two rounds (load 100–155) | before p95 14 / 80 ms, after 4 / 18 ms | — | 320 / 334 MiB | 40–42% both |
-| Paired, + 4 viewers asking 1000x (load 150–195) | before p95 90 / 412 ms, after (8x) 47 / 190 ms | small GET p95 ≤ 171 ms | 326 / 336 MiB | 40–45% |
+| Before, 50 viewers + burst | p95 3 ms; during the burst p95 981 ms, max 1.1 s | 20 breakdowns all 200, p95 2.3 s; 20 what-ifs all 200, p95 1.1 s; a small GET p95 30 ms | 336 MiB | 41% of a core |
+| After, the same | p95 13 ms; during the burst p95 1.15 s, max 1.2 s | all 200, p95 2.4 s / 1.3 s; small GET p95 10 ms | 331 MiB | 40% |
+| Before, 50 viewers + 4 asking 1000x | p95 43 ms, max 1.1 s; the 4 pulled 78,580 frames (the whole match each) | — | 337 MiB | 40% |
+| After, the same (played at 8x) | p95 3 ms, max 0.9 s; the 4 got 47,577 frames (8x) | — | 332 MiB | 42% |
 
-The paired runs, back to back under the same host load, show the guards cost nothing
-measurable; the unpaired after-run was slower because the host was. No viewer was refused or
-dropped and every request was answered.
+No viewer was refused or dropped and every request was answered. The 1 s maximum before any
+burst is the 50 connections opening at once. Busy-host runs earlier that day (load 100–195,
+before and after back to back) agreed: the guards cost nothing measurable.
 
 The container holds 50 viewers plus the burst: memory peaks at about 340 MiB of 1 GiB (idle
-250 MiB; warm start 65 s). The constraint is CPU: 50 viewers take about 80% of the 0.5 vCPU, and
-first-time computations stall frames for one to two seconds (finding 11). With a model, each
+253 MiB; warm start 59–83 s). The constraint is CPU: 50 viewers take about 80% of the 0.5 vCPU,
+and first-time computations stall frames for about a second (finding 11). With a model, each
 uncached breakdown adds an MCP subprocess (87 MB), two at a time (finding 4).
 
 ## When a quota runs out
