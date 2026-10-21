@@ -6,7 +6,7 @@ Seeds 100–139 (40). Counterfactual: drop the key scan of the marker `H5` and r
 |---|---|---|
 | Without the look `A9` receives unmarked (nearest opponent > 5 m), and with it `H5` is within 5 m or wins the ball | 37/40 (92%) | ≥ 60% |
 | Without the look, `H5`'s belief error about `A9` 0.5 s after the cutback is played ≥ 3 m | 37/40 (92%) | ≥ 90% |
-| Design rule: `A9` unseen by `H5` from the dart to the look (factual) or to the cutback (without the look) | 40/40 (100%) | ≥ 90% |
+| Design rule: `A9` unseen by `H5` from the dart to the look (factual) or to the cutback (without the look), and seen by `H5` during the key scan (factual; visibility ≥ 0.5 on at least one frame) | 40/40 (100%) | ≥ 90% |
 | Median separation as the ball arrives: with the look / without | 3.3 m / 8.5 m | — |
 | With the look: `A9` under heavy pressure (pressing ≥ 0.7) · `H5` wins the ball | 23/40 · 0/40 | — |
 | Blind-side alert `H5` → `A9`: on before the ball arrives, without the look · on before the look and cleared during it, with the look | 40/40 · 0/40 | reported |
