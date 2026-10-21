@@ -39,7 +39,7 @@ const TAGS = 10; // sprites in the pool
 /** The key-moment beat's framing at full push: the hero alone, this much tighter; once he has
  * seen the player the look is for, both of them with this margin (m), at most this much wider
  * than the shot was, and a little left of centre, clear of the moment card on the right. */
-const PUSH = { tighten: 0.36, margin: 9, maxWiden: 1.25, left: 0.05, revealFrames: 8 };
+const PUSH = { tighten: 0.36, margin: 12, maxWiden: 1.35, left: 0.1, revealFrames: 8 };
 
 export interface Framing {
   hero: Vec2; // pitch m
