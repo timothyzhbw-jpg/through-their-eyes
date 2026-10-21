@@ -89,6 +89,11 @@ _Fill in as they come to exist._
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
   CI run on main.
+- `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
+  (SPEC 2, 8): every hero moment × persona × language, new ones paced to the per-client limit,
+  at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
+  cached on the replica's disk only). Run after the last deploy and after any later one: the
+  cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
@@ -103,6 +108,10 @@ _Fill in as they come to exist._
   without the marker's key scan, is the runner unmarked when the cutback arrives, and with it is
   the marker there? Held-out seeds 100–139 (design 0–39), about 15 s; writes
   `eval/reports/hero_marking_corner_blind_side.md`
+- `uv run python -m eval.hero_shot` — shot hero eval (SPEC 3.3, 3.6, `far_post_finish`): without
+  the striker's key scan, does his placement change, and by how much does his scoring chance on
+  the truth drop? Includes the v_dive sweep. Held-out seeds 200–239 (design 0–39), about a minute;
+  writes `eval/reports/hero_shot_far_post_finish.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's

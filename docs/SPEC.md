@@ -151,6 +151,43 @@ on an LLM.
   both for frame stepping and for the decision model's predictions. Longer passes are played to
   arrive faster (arrival speed 0.35 × distance, clipped to 6–12 m/s). Lofted passes, bounce, Magnus
   and shot outcomes are M4.
+- *Shots and keepers (Module A of the hero expansion pack, 2026-10-21; `sim/shots.py`).* Only in
+  scenarios with `Scenario.shots`. With the flag off nothing changes.
+  - The committed `blind_side_run` seed 3 export is byte-identical
+    (`tests/test_committed_exports.py`, the only export it pins).
+  - The `hero_flip` (blind_side_run), `hero_lens` (press_escape) and `hero_marking` reports
+    regenerate with an empty diff.
+  - Every other eval report is re-run on the merge by the core review desk.
+  - Sources, and how far each was read: `docs/REFERENCES.md`, "Shots and goalkeepers".
+  - **The shot.** Low and driven, on the ground, using the rolling physics above.
+    - Speed is U(24, 30) m/s per shot (a keyed draw), inside the 18–35 m/s of maximal instep kicks
+      (Kellis & Katis 2007).
+    - It is aimed 0.5 m inside the near or far post, with a lateral aim error of N(0, 2.5°).
+      That value is *tunable*: Hunter et al. (2018) give the shape (error variance grows with
+      speed), not our number.
+    - The decision model offers `shot:near` and `shot:far` instead of `shot`. Each is valued on
+      the shooter's belief as P(on target) × (1 − E[P_save]), the expectation taken over where he
+      believes the keeper is, with the belief's position uncertainty.
+  - **The keeper.**
+    - He stands on the bisector of the ball's angle to his posts, 1.5 m off his line. This is a
+      convention, not a cited model.
+    - He reacts from his first sight of the ball, the first frame with visibility ≥ 0.5, using the
+      same field of view and occlusion as every player (§3.4).
+    - During a shot he holds his set position until then. Behind the flag, keepers do not chase
+      passing lanes.
+  - **The save model** is Bransen, Janssen & Davis (2025), eq. 2, fitted on real penalties with
+    the keeper in the correct corner. It is an arXiv preprint.
+    - P_save = ρ inside r − µ, falling linearly to 0 at r + µ, with ρ = 0.7 and µ = 0.7 m.
+    - The reach is r(T) = clip(2.8 + v_dive · (T − 0.55 s), 0.3, 3.1) m. T runs from his first
+      sight of the ball to its reaching his line. 2.8 and 3.1 m are the fitted late and early dive
+      ranges; 0.55 s is the 500–600 ms penalty flight time they cite.
+    - v_dive has no verified source. Ibrahim et al. (2019) print the legs' contributions to the
+      centre of mass's velocity, not a take-off speed, and a literature check found no primary
+      number. So every keeper gate is re-run at v_dive = 2.5 and 4.0 m/s.
+  - **Events.** `shot` (placement, speed, error, crossing points, first sight, reach, P_save,
+    outcome), `dive`, `save`, `goal`. Shot outcomes are goal, saved, wide or blocked.
+    - A goal is worth 1.0 in possession value.
+    - A stitched match restarts with a kick-off after a goal.
 
 ### 3.4 Perception (the hero feature)
 - **Head yaw dynamics.** Baseline gaze tracks the ball. A **scan** is a rapid turn away from the
@@ -316,6 +353,65 @@ the defending side.
   - *Design seeds.* The plan said 0–99; the routine was designed on 0–39. Held out: 100–139, as
     planned.
 
+**Shot hero (`far_post_finish`, 2026-10-21).** The striker reads the keeper; C1 of the hero
+expansion pack, on Module A (§3.3).
+- **The routine.** The home side switches play H3 → H6 → H7. Every pass travels behind the striker
+  H9's run, so his gaze, following the ball, never meets the goal. H7 cuts the ball back to H9 at
+  about (41, −4).
+- **Key action and intervention.** H9's one look at the goal before the ball arrives is the key
+  scan; the intervention is `drop_scan`.
+- **Hero design rule.** The away keeper A1 is visible to H9 only during the key scan. His last
+  sighting before it is frame 0, when everyone is known, with A1 on the far-post side. A1 then
+  slides across with the ball. So with the look H9 sees him at the near post and picks
+  `shot:far`. Without it, his belief (about five seconds old) favours `shot:near`, and A1 is
+  there.
+- **Scripted choices.**
+  - While the cutback travels, A1 stays set at the bisector of H7's strike position: set for the
+    near post against the wide player and caught by the cutback.
+  - The away defence stands as against a cutback from the right. Five outfielders are in the box
+    when H9 receives (`tests/test_shots.py`), none between his run and the goal or on a pass lane,
+    and every pass of the routine completes.
+- **Acceptance** (`eval/hero_shot.py`; designed on seeds 0–39; held out on fresh seeds 200–239):
+  - without the look the placement changes in 38/40 (target ≥ 60%: met);
+  - the median gain in scoring chance on the truth, P_goal(factual choice) − P_goal(choice
+    without the look), is +0.524 (target ≥ 0.30: met);
+  - the design rule holds in 38/40 (target ≥ 90%: met);
+  - the placement change holds at v_dive = 2.5 and 4.0 m/s: 38/40 at both;
+  - Reported only: the goal status (a goal with the look, none without, or the reverse)
+    changes in 23/40. Without the look 20 goals are lost and 3 gained.
+  - Also reported only: the shot's outcome label (goal, saved, wide, blocked) changes in 32/40,
+    which counts wide → saved too.
+  - ρ = 0.7 and the aim error are real randomness, so the look raises the scoring chance (the
+    gate) rather than deciding every goal.
+  - The two misses (seeds 200, 233) are one case. As H9 takes the ball, his gaze follows his body,
+    which faces within about 75° of A1, so he sees the keeper during his first touch without the
+    look and shoots far post in both runs. The held-out seeds were not tuned on after this.
+  - Report: [hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md).
+- **How the held-out run went.** All of this landed in one commit:
+  - The layout was built on design seeds: probes on 0–19, then the eval on 0–39.
+  - The gate was then run once on 200–239 with the final layout, then once on 100–139.
+  - After that, nothing in the scene changed. Only the two misses were inspected, and this text
+    was written.
+  - The fix round after review moved no number: the 200–239 report regenerates with the same
+    values, with only the reported rows renamed and added.
+- **Deviations from the design plan** (`docs/drafts/hero_expansion.md` §2.4), each with its
+  reason:
+  - *Design seeds.* 0–39, not the plan's 0–99. Tuning stopped once they passed.
+  - *Byte-identity evidence.* The plan's §1.7 asked for six reports to regenerate with an empty
+    diff. The author regenerated three: `hero_flip`, `hero_lens` and `hero_marking`. The rest are
+    run on the merge by the core review desk.
+  - *Held-out seeds.* 200–239 instead of 100–139. The scene was first built with the away defence
+    out by the byline corners, so the box was empty. 100–139 were run once on that layout (40/40,
+    kept as [hero_shot_far_post_finish_100-139.md](../eval/reports/hero_shot_far_post_finish_100-139.md),
+    labelled as seen). The defence was then moved into the box, which needs fresh seeds.
+  - *Eval.* `eval/hero_shot.py` instead of `eval/hero_flip.py`. A placed shot's value on the
+    truth needs the save model.
+  - *Not reported yet: lens selection, and whether the key scan is the most informative.* Both
+    need the explain layer to score placed shots on the truth; that is the follow-up explain PR.
+    The demo seed is not chosen yet either.
+  - *Scripted keeper set.* Not in the plan; added so the cutback finds A1 where the wide player's
+    angle put him.
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -375,6 +471,18 @@ the defending side.
       §3.6 "Deviations from the design plan");
       [tests/test_corner_blind_side.py](../tests/test_corner_blind_side.py) (design seeds, and
       `test_a_marker_marks_where_he_believes_his_man_is`)
+- [x] Shot hero: without the striker's key scan, the shot's placement changes in ≥ 60% of fresh
+      held-out seeds, the median gain in scoring chance on the truth is ≥ 0.30, and the placement
+      change holds at both ends of the uncited v_dive range (2.5 and 4.0 m/s).
+      — [eval/reports/hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md)
+      (38/40, +0.524, 38/40 at both ends, on seeds 200–239; §3.6);
+      [tests/test_shots.py](../tests/test_shots.py) (design seeds)
+- [x] Placed shots and the keeper's save model behind `Scenario.shots`: P_save matches the cited
+      piecewise model; the keeper cannot react before he sees the ball; with the flag off every
+      run is byte-identical.
+      — [tests/test_shots.py](../tests/test_shots.py)::`test_save_probability_matches_the_cited_piecewise_model`,
+      `test_occluded_keeper_cannot_start_a_dive_before_he_first_sees_the_ball`;
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py)
 - [x] `force_action` with the action actually chosen reproduces the factual run byte for byte;
       with an action that was not an option, it is refused (not silently mapped).
       — [tests/test_whatif.py](../tests/test_whatif.py)::`test_forcing_the_action_actually_chosen_reproduces_the_factual_run`,
@@ -1273,13 +1381,13 @@ checks, 2026-10-21: `uv run pytest` 1054 passed, `npm test` 514 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 8 | 1 | passes, shots and possession changes per match vs targets |
+| §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 7 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 render | 5 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **28** | **10** | |
+| **Total** | **30** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer

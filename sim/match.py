@@ -8,11 +8,11 @@ the seed the plan gives them (the demo heroes); the others get a seed keyed off 
 - **Time is continuous.** Possession k starts on the frame after possession k − 1 ended; its
   frames, event ids and frame-valued attributes move to match time by adding its start frame.
 - **Restarts.** The first possession kicks off. After that, play restarts the way the previous
-  possession stopped: a throw-in, goal kick or corner when the ball went out, or a cut when it
-  ended in play (the broadcast cuts to the next passage of play). The next scenario then sets up
-  its own situation: the stitch is an edit, not a simulated restart.
-- **Score.** Goals are `goal` events. The sim has no shot outcomes yet (M4), so a match stays 0–0
-  unless a possession produces one; the score is carried, never invented.
+  possession stopped: a kick-off after a goal, a throw-in, goal kick or corner when the ball went
+  out, or a cut when it ended in play (the broadcast cuts to the next passage of play). The next
+  scenario then sets up its own situation: the stitch is an edit, not a simulated restart.
+- **Score.** Goals are `goal` events from scenarios with shots enabled; the score is carried,
+  never invented.
 
 Each possession is simulated on its own and stays a plain `MatchRun`, so the explain layer, the
 counterfactuals and the agents keep working on (scenario, seed) with local frames;
@@ -124,6 +124,8 @@ def global_id(local_id: str, start: int) -> str:
 
 def restart_after(run) -> str:
     """How play restarts after a possession: from where the ball went out, or a cut."""
+    if any(e.type == "goal" for e in run.events):
+        return "kick_off"
     outs = [e for e in run.events if e.type == "out"]
     if not outs:
         return "cut"

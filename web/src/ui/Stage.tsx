@@ -520,9 +520,14 @@ function CrewStatus() {
 
 /** The hero moment, top right of the live screen: what it is, the crew, and what to do next. */
 export function MomentCard() {
-  const { hero, moment, offset, runner, controls } = useSession();
+  const { hero, moment, offset, runner, controls, playback, feed } = useSession();
   const { status } = useBreakdown();
   const run = useStore(runner.status, (s) => s.status);
+  const live = useStore(playback, (s) => s.live);
+  // Frames came in, then the viewer left the stream before the moment was detected (the run
+  // switch and every transport action do): the card must not keep saying it is watching.
+  // `latest` only matters once `live` drops, and that change re-renders the card.
+  const left = !live && (feed?.state.get().latest ?? -1) >= 0;
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   const waiting = status === "waiting";
@@ -542,7 +547,9 @@ export function MomentCard() {
         <span className="kicker accent">
           <i className="dot" aria-hidden="true" />
           {waiting
-            ? "Live · waiting for the moment"
+            ? left
+              ? "Off the stream · moment not reached"
+              : "Live · waiting for the moment"
             : momentKicker(hero, moment.decisionFrame, offset)}
         </span>
         <button
@@ -554,7 +561,15 @@ export function MomentCard() {
           <CloseIcon />
         </button>
       </div>
-      {waiting ? (
+      {waiting && left ? (
+        <>
+          <h2>You left the stream.</h2>
+          <p className="card-body">
+            The stream stopped before it reached the moment. Press Live to pick it up again, or get
+            the breakdown now.
+          </p>
+        </>
+      ) : waiting ? (
         <>
           <h2>Watching the stream.</h2>
           <p className="card-body">
