@@ -244,6 +244,31 @@ describe("every step resolves on the hero moment", () => {
     expect(session.runner.status.get().status).toBe("running");
   });
 
+  it("started from the moment card while the stream is live, before the moment, it can still switch runs", async () => {
+    const fetch = fakeFetch({
+      "POST /api/breakdowns": (body) => {
+        const b = body as { personas: string[]; languages: string[] };
+        return json(breakdownResponse({}, { persona: b.personas[0], language: b.languages[0] }));
+      },
+    });
+    const sockets = fakeSockets();
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+      api: createApi(API, "blind_side_run-3", fetch),
+      socket: sockets,
+    });
+    const container = mount(session);
+    act(() => session.controls.startLive());
+    expect(session.playback.get().live).toBe(true);
+    // The run switch is locked until the stream detects the moment (it has not).
+    session.controls.setMode("counterfactual");
+    expect(session.playback.get().mode).toBe("factual");
+    await click(buttonIn(container.querySelector(".moment-card"), "Take the 90-second tour"));
+    expect(session.playback.get().live).toBe(false); // the tour's replay leaves the stream
+    await next();
+    expect(stepId()).toBe("without");
+    expect(session.playback.get().mode).toBe("counterfactual");
+  });
+
   it("shows the service's refusal of a drill in the card", async () => {
     const { session, fetch } = online();
     fetch.calls.length = 0;
