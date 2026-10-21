@@ -12,6 +12,7 @@ from eval.season import (
     match_seeds,
     play_match,
     render,
+    render_seasons,
     season_plan,
     wilson,
 )
@@ -72,3 +73,17 @@ def test_the_report_opens_with_the_framing_and_lists_every_section(small):
     for section in ("## 1. Moments", "## 2. Claims", "## 3.", "## 4. Determinism", "## 5."):
         assert section in report
     assert "1/1 byte-identical" in report
+
+
+def test_seasons_are_reported_side_by_side_and_pooled(small):
+    report = render_seasons([(7, [small], {0: True}), (8, [small, small], {0: True})])
+    title, blank, framing = report.splitlines()[:3]
+    assert title == "# Seasons — the pipeline on 2 independent seasons" and framing == FRAMING
+    assert "season seeds 7–8, 1 or 2 matches each, 3 in all" in report
+    flips = next(x for x in report.splitlines() if "`blind_side_run`: intervention" in x)
+    assert flips.startswith("| `blind_side_run`: intervention changes the outcome (decision) |")
+    assert "| 1/1 | 2/2 | 3/3 = 100.0% (" in flips  # each season, then pooled with Wilson
+    for section in ("## 1. Heroes", "## 2. Claims", "## 3.", "## 4.", "## 5. Determinism",
+                    "## 6. Realism"):  # fmt: skip
+        assert section in report
+    assert "2/2 byte-identical in all" in report

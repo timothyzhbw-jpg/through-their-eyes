@@ -2,6 +2,7 @@
 
     uv run python -m eval.season                  # 380 matches from season seed 2026, all cores
     uv run python -m eval.season --matches 38     # a quicker look (another report file)
+    uv run python -m eval.season --season-seed 2027 --seasons 5   # five seasons side by side
 
 These are properties of our simulator, whose perception and decision parameters come from
 published papers (docs/REFERENCES.md); they are not findings about real football.
@@ -26,6 +27,10 @@ Every 19th match is built again and byte-compared. Writes eval/reports/season.md
 season_<seed>_<n>.md for another season), and keeps the raw results in out/ so that
 `--from-cache` renders the report again without re-running the season. It prints the wall
 time; the report does not, so it regenerates byte for byte.
+
+`--seasons K` runs K independent seasons, season seeds `--season-seed` to `--season-seed` + K − 1,
+each exactly as above and cached on its own, and writes eval/reports/seasons_<first>-<last>.md:
+every season's counts side by side, and all of them pooled with 95% intervals.
 """
 
 from __future__ import annotations
@@ -482,29 +487,264 @@ def render(
     return "\n".join(lines)
 
 
+# --- several seasons ---------------------------------------------------------------------------
+
+Season = tuple[int, list[dict[str, Any]], dict[int, bool]]  # season seed, results, re-runs
+
+
+def render_seasons(seasons: list[Season]) -> str:
+    """Independent seasons side by side: each season's count or mean, and all of them pooled
+    with a 95% interval (Wilson for shares, a bootstrap over matches for per-match means)."""
+    seeds = [seed for seed, _, _ in seasons]
+    pooled = [r for _, results, _ in seasons for r in results]
+    k = len(seasons)
+    head = (
+        "| | " + " | ".join(str(s) for s in seeds) + " | All seasons (95% CI) | Seasons' range |",
+        "|---|" + "---|" * (k + 2),
+    )
+
+    def share_row(label: str, count) -> str:
+        """`count(results)` gives (k, n) for one season or the pooled matches."""
+        per = [count(results) for _, results, _ in seasons]
+        pct = [100 * a / b for a, b in per if b]
+        spread = f"{min(pct):.1f}–{max(pct):.1f}%" if pct else "—"
+        cells = [f"{a}/{b}" if b else "—" for a, b in per]
+        return f"| {label} | " + " | ".join(cells) + f" | {_share(*count(pooled))} | {spread} |"
+
+    def mean_row(label: str, value, fmt: str = ".2f") -> str:
+        """`value(match)` per match; each season's mean, the pooled mean and its interval."""
+        means = [float(np.mean([value(r) for r in results])) for _, results, _ in seasons]
+        cells = [f"{m:{fmt}}" for m in means]
+        spread = f"{min(means):{fmt}}–{max(means):{fmt}}"
+        pooled_mean = _mean([value(r) for r in pooled], fmt)
+        return f"| {label} | " + " | ".join(cells) + f" | {pooled_mean} | {spread} |"
+
+    def heroes(results, scenario: str) -> list[dict[str, Any]]:
+        return [h for r in results for h in r["heroes"] if h["scenario"] == scenario]
+
+    def detected(results, scenario):
+        hs = heroes(results, scenario)
+        return sum(h["detected"] for h in hs), len(hs)
+
+    def built(results, scenario):
+        hs = [h for h in heroes(results, scenario) if h["detected"]]
+        return sum(h["built"] for h in hs), len(hs)
+
+    def flipped(results, scenario):
+        hs = [h for h in heroes(results, scenario) if h["built"] and h["flip"] is not None]
+        return sum(bool(h["flip"]) for h in hs), len(hs)
+
+    def total(results, key: str) -> int:
+        return sum(h[key] for r in results for h in r["heroes"] if h["built"])
+
+    def supported(results):
+        verdicts: Counter = Counter()
+        for r in results:
+            for h in r["heroes"]:
+                if h["built"]:
+                    verdicts.update(h["verdicts"])
+        return verdicts["supported"], sum(verdicts.values())
+
+    span = f"{seeds[0]}–{seeds[-1]}" if seeds == list(range(seeds[0], seeds[0] + k)) else (
+        ", ".join(map(str, seeds))
+    )  # fmt: skip
+    sizes = sorted({len(results) for _, results, _ in seasons})
+    lines = [
+        f"# Seasons — the pipeline on {k} independent seasons",
+        "",
+        FRAMING,
+        "",
+        f"`uv run python -m eval.season --season-seed {seeds[0]} --seasons {k}`: season seeds "
+        f"{span}, {' or '.join(map(str, sizes))} matches each, {len(pooled)} in all. Each season "
+        "is built and measured exactly as in [season.md](season.md) (season seed "
+        f"{SEASON_SEED}, not one of these): match-1's plan with its own match seeds and fresh hero "
+        "seeds, offline. A season's column is its own count or per-match mean; *All seasons* "
+        "pools every match, with a 95% interval (Wilson for shares, a bootstrap over matches, "
+        f"{BOOTSTRAP} resamples, for per-match means); *Seasons' range* is the lowest and "
+        "highest season.",
+        "",
+        "## 1. Heroes",
+        "",
+        "The hero moment (the hero's decision or, for a marker, his look), its breakdown, and "
+        "whether the scenario's own intervention changes the outcome, measured as in season.md "
+        "§3.",
+        "",
+        *head,
+    ]
+    scenarios = list(dict.fromkeys(h["scenario"] for r in pooled for h in r["heroes"]))
+    for s in scenarios:
+        measure = ", ".join(
+            sorted({h["measure"] for r in pooled for h in r["heroes"]
+                    if h["scenario"] == s and h["measure"]})
+        ) or "—"  # fmt: skip
+        lines += [
+            share_row(f"`{s}`: hero moment detected", lambda rs, s=s: detected(rs, s)),
+            share_row(f"`{s}`: breakdown built", lambda rs, s=s: built(rs, s)),
+            share_row(f"`{s}`: intervention changes the outcome ({measure})",
+                      lambda rs, s=s: flipped(rs, s)),
+        ]  # fmt: skip
+    failures = [
+        (h["scenario"], h["error"], seed)
+        for seed, results, _ in seasons
+        for r in results
+        for h in r["heroes"]
+        if h["detected"] and not h["built"]
+    ]
+    lines += [""]
+    if failures:
+        causes: dict[tuple[str, str], Counter] = {}
+        for scenario, err, seed in failures:
+            causes.setdefault((scenario, err.rstrip(": ")), Counter())[seed] += 1
+        lines += ["Breakdowns that failed, by cause (per season):", ""]
+        for (scenario, err), by_season in causes.items():
+            per = ", ".join(f"{s}: {by_season[s]}" for s in seeds)
+            lines.append(f"- `{scenario}`, {sum(by_season.values())}×: {err} ({per}).")
+    else:
+        lines.append("Every detected hero moment's breakdown built without an error.")
+    lines += [
+        "",
+        "## 2. Claims and the Verifier",
+        "",
+        *head,
+        share_row("Claims the Verifier supports", supported),
+    ]
+    for key, label in (
+        ("scripts", "Scripts (persona × language)"),
+        ("unverified_on_screen", "Claims on a viewer's payload not supported (target 0)"),
+        ("violations", "Render violations, `check_payload` (target 0)"),
+        ("dropped", "Lines dropped before a payload was built"),
+        ("step_errors", "Crew steps with an error"),
+    ):
+        cells = [str(total(results, key)) for _, results, _ in seasons]
+        lines.append(f"| {label} | " + " | ".join(cells) + f" | {total(pooled, key)} | — |")
+    open_kinds = sorted(
+        {f["kind"] for r in pooled for f in r["open_flips"] if f["flip"] is not None}
+    )
+    lines += [
+        "",
+        "## 3. Open-play moments: does the selected lens's counterfactual change the outcome?",
+        "",
+        *(head if open_kinds else ["No open-play moment had such a counterfactual."]),
+    ]
+    for kind in open_kinds:
+        lines.append(share_row(
+            f"Open play `{kind}`",
+            lambda rs, kind=kind: (
+                sum(bool(f["flip"]) for r in rs for f in r["open_flips"]
+                    if f["kind"] == kind and f["flip"] is not None),
+                sum(1 for r in rs for f in r["open_flips"]
+                    if f["kind"] == kind and f["flip"] is not None),
+            ),
+        ))  # fmt: skip
+    lines += [
+        "",
+        "## 4. Matches and moments",
+        "",
+        *head,
+        mean_row("Possessions per match", lambda r: r["possessions"], ".1f"),
+        mean_row("Minutes of play per match", lambda r: r["duration_s"] / 60),
+        mean_row("Goals per match", lambda r: r["goals"]),
+        mean_row("Moments per match", lambda r: len(r["moments"])),
+    ]
+    for kind in sorted({m["kind"] for r in pooled for m in r["moments"]}):
+        lines.append(mean_row(
+            f"Moments per match: `{kind}`",
+            lambda r, kind=kind: sum(m["kind"] == kind for m in r["moments"]),
+        ))  # fmt: skip
+    for kind in sorted({k for r in pooled for k in r["restarts"]}):
+        lines.append(mean_row(
+            f"Restarts per match: {RESTART_NAMES.get(kind, kind)}",
+            lambda r, kind=kind: r["restarts"][kind],
+        ))  # fmt: skip
+    reruns = [sum(same.values()) for _, _, same in seasons]
+    lines += [
+        "",
+        "## 5. Determinism",
+        "",
+        f"Every {RERUN_EVERY}th match of each season built a second time: "
+        + ", ".join(f"{s}: {a}/{len(same)}" for (s, _, same), a in zip(seasons, reruns,
+                                                                         strict=True))
+        + f"; {sum(reruns)}/{sum(len(same) for _, _, same in seasons)} byte-identical in all "
+        "(`StitchedMatch.to_bytes`, SPEC 3.7).",
+        "",
+        "## 6. Realism over all seasons",
+        "",
+        "eval/realism.py's rows on every season's open play, pooled per match (the bootstrap "
+        "resamples matches), as in season.md §5; *inside per season* counts the seasons whose "
+        "own pooled value is inside the range checked.",
+        "",
+    ]  # fmt: skip
+    all_rows = realism.evaluate(
+        [], observed=[r["observed"] for r in pooled], ablation=[r["ablation"] for r in pooled]
+    )
+    per_season = [
+        {row.label: row.inside for row in realism.evaluate(
+            [], observed=[r["observed"] for r in results],
+            ablation=[r["ablation"] for r in results])}
+        for _, results, _ in seasons
+    ]  # fmt: skip
+    counts = Counter(r.inside for r in all_rows)
+    receptions = sum(len(r["observed"]["receptions"]["scans"]) for r in pooled if r["observed"])
+    lines += [
+        f"**{counts[realism.INSIDE]} inside, {counts[realism.OUTSIDE]} outside, "
+        f"{counts[realism.INCONCLUSIVE]} inconclusive, "
+        f"{sum(r.published == realism.NO_REFERENCE for r in all_rows)} with no published "
+        f"reference**, over {receptions} receptions.",
+        "",
+        "| Metric | Sim (pooled) | Sim, 90% over matches | Published | Range checked | Inside "
+        "| Inside per season |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for r in all_rows:
+        checked = r.inside in (realism.INSIDE, realism.OUTSIDE)
+        inside = sum(s.get(r.label) == realism.INSIDE for s in per_season)
+        cells = (r.label, r.sim, r.seeds, r.published, r.range, r.inside,
+                 f"{inside}/{k}" if checked else "—")  # fmt: skip
+        lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
+    lines += [""]
+    return "\n".join(lines)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--season-seed", type=int, default=SEASON_SEED)
     parser.add_argument("--matches", type=int, default=MATCHES)
     parser.add_argument("--workers", type=int, default=os.cpu_count())
     parser.add_argument(
+        "--seasons", type=int, default=1,
+        help="independent seasons from --season-seed on; more than one writes seasons_<seeds>.md",
+    )  # fmt: skip
+    parser.add_argument(
         "--from-cache", action="store_true", help="render the last run's results again (out/)"
     )
     args = parser.parse_args()
     t0 = time.time()
-    cache = Path("out") / f"season_{args.season_seed}_{args.matches}.pickle"
-    if args.from_cache:
-        results, same = pickle.loads(cache.read_bytes())
-    else:
-        results, same = run_season(args.season_seed, args.matches, args.workers)
-        cache.parent.mkdir(exist_ok=True)
-        cache.write_bytes(pickle.dumps((results, same)))
-    report = render(results, same, args.season_seed)
+    seasons: list[Season] = []
+    for seed in range(args.season_seed, args.season_seed + args.seasons):
+        cache = Path("out") / f"season_{seed}_{args.matches}.pickle"
+        if args.from_cache:
+            results, same = pickle.loads(cache.read_bytes())
+        else:
+            results, same = run_season(seed, args.matches, args.workers)
+            cache.parent.mkdir(exist_ok=True)
+            cache.write_bytes(pickle.dumps((results, same)))
+        seasons.append((seed, results, same))
     REPORTS.mkdir(exist_ok=True)
-    default = args.matches == MATCHES and args.season_seed == SEASON_SEED
-    path = REPORTS / ("season.md" if default else f"season_{args.season_seed}_{args.matches}.md")
+    if args.seasons > 1:
+        report = render_seasons(seasons)
+        last = args.season_seed + args.seasons - 1
+        size = "" if args.matches == MATCHES else f"_{args.matches}"
+        path = REPORTS / f"seasons_{args.season_seed}-{last}{size}.md"
+        shown = report.split("\n## 6.")[0]
+    else:
+        report = render(results, same, args.season_seed)
+        default = args.matches == MATCHES and args.season_seed == SEASON_SEED
+        path = REPORTS / (
+            "season.md" if default else f"season_{args.season_seed}_{args.matches}.md"
+        )  # fmt: skip
+        shown = report.split("\n## 5.")[0]
     path.write_text(report)
-    print(report.split("\n## 5.")[0])
+    print(shown)
     print(f"\nwrote {path} in {time.time() - t0:.0f} s on {args.workers} workers")
 
 
