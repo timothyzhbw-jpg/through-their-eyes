@@ -14,9 +14,11 @@
 //   ?play=yourcall                             open "Your call" at the decision (yourcall/); with
 //                                              ?match=, on its first hero moment that has bundled
 //                                              what-ifs
+//   ?tour=1|<step id>                          the judge tour (tour/), from its first step or
+//                                              from that one
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the lineup card), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
-// (at, run, ask, tamper or play) skips the lineup card and opens paused: no live stream, and no
+// (at, run, ask, tamper, play or tour) skips the lineup card and opens paused: no live stream, and no
 // breakdown on load unless tamper needs one. Unknown values are ignored and logged.
 
 import { createContext, useContext } from "react";
@@ -26,6 +28,7 @@ import type { RunName } from "./data/types";
 import type { MomentContext } from "./plan/moment";
 import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
+import { STEP_IDS } from "./tour/steps";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
 import { yourCallOf } from "./yourcall/controller";
@@ -53,6 +56,7 @@ export interface DeepLink {
   ask: string | null;
   tamper: string | null; // a claim id
   play: Play | null; // yourcall: open "Your call" at the decision
+  tour: string | null; // the judge tour's step to start at (tour=1: its first)
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
 
@@ -69,6 +73,7 @@ export const NO_LINK: DeepLink = {
   ask: null,
   tamper: null,
   play: null,
+  tour: null,
   warnings: [],
 };
 
@@ -100,7 +105,14 @@ export function parseDeepLink(search: string): DeepLink {
   const ask = params.get("ask")?.trim().slice(0, MAX_QUESTION) || null;
   const tamper = read("tamper", (v) => (CLAIM_ID.test(v) ? v : null));
   const play = read("play", (v) => oneOf(PLAYS, v));
-  const spot = at !== null || run !== null || ask !== null || tamper !== null || play !== null;
+  const tour = read("tour", (v) => (v === "1" ? STEP_IDS[0] : oneOf(STEP_IDS, v)));
+  const spot =
+    at !== null ||
+    run !== null ||
+    ask !== null ||
+    tamper !== null ||
+    play !== null ||
+    tour !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
     intro: params.get("intro") !== "0" && !spot,
@@ -114,6 +126,7 @@ export function parseDeepLink(search: string): DeepLink {
     ask,
     tamper,
     play,
+    tour,
     warnings,
   };
 }

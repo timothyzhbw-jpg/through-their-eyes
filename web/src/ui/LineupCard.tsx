@@ -7,6 +7,7 @@ import { useStore } from "../store/store";
 import { ArrowIcon } from "./icons";
 import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
+import { TourButton } from "../tour/Tour";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
 export function playLength(minutes: number): string {
@@ -21,7 +22,7 @@ export function LineupCard() {
 }
 
 function OpenLineupCard() {
-  const { hero, controls } = useView();
+  const { hero, controls, kind } = useView();
   const teams = lineup(hero);
   const options = watchOptions(hero);
   const [chosen, setChosen] = useState(options[0]?.id ?? null);
@@ -174,6 +175,7 @@ function OpenLineupCard() {
             Start watching
             <ArrowIcon />
           </button>
+          {kind === "hero" && <TourButton /> /* its steps are a hero moment's */}
           <button
             type="button"
             className="btn btn-quiet"

@@ -18,6 +18,7 @@ import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls } from "./session";
+import { startTour } from "./tour/tourState";
 import { intro } from "./ui/intro";
 import "./styles.css";
 
@@ -91,6 +92,7 @@ async function main() {
     );
     applyDeepLink(session, link);
     broadcast(session.controls);
+    if (link.tour) startTour(link.tour); // the judge tour: its steps are a hero moment's
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>

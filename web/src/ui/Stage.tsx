@@ -17,6 +17,7 @@ import { DESCRIBED, PERSONAS, type Persona } from "../api/client";
 import { runLabels, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
+import { TourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { useStore } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
@@ -602,6 +603,7 @@ export function MomentCard() {
           {label}
         </button>
       </div>
+      <TourButton />
     </aside>
   );
 }

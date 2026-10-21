@@ -69,6 +69,13 @@ const PAGES = [
     path: "?at=decision&view=tactical",
     check: (p) => hero(p, { main: "board" }),
   },
+  { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
+  {
+    name: "phone-tour",
+    path: "?tour=1",
+    device: PHONE,
+    check: (p, shoot, note) => phone(p, (q) => tour(q, shoot), note),
+  },
   {
     name: "phone-hero",
     path: "?intro=0",
@@ -133,6 +140,39 @@ async function tamper(page) {
     page.getByRole("button", { name: "Try a wrong number", expanded: true }),
     '"Try a wrong number" open',
   );
+}
+
+/** `?tour=1`, the judges' tour (SPEC 7, web/src/tour/): its card on screen at every step, Next
+ * through to the end without pressing the steps' own buttons (the drill would run the crew),
+ * then Done closes it and the hero moment works as before. */
+async function tour(page, shoot) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Tour · \d+ of \d+/ });
+  for (let k = 1; ; k++) {
+    await see(card.filter({ hasText: new RegExp(`^Tour · ${k} of `) }), `the tour's step ${k}`);
+    const [box, size] = await Promise.all([
+      card.boundingBox(),
+      page.evaluate(() => [innerWidth, innerHeight]),
+    ]);
+    const [w, h] = size;
+    if (!box || box.x < 0 || box.y < 0 || box.x + box.width > w || box.y + box.height > h) {
+      throw new Error(`expected the tour's step ${k} card on screen, got ${JSON.stringify(box)}`);
+    }
+    await shoot(`step-${k}`);
+    const done = card.getByRole("button", { name: "Done" });
+    if (await done.count()) {
+      await done.click();
+      break;
+    }
+    if (k > 12) throw new Error("expected the tour to end within 12 steps");
+    await card.getByRole("button", { name: "Next" }).click();
+  }
+  try {
+    await card.waitFor({ state: "detached" });
+  } catch {
+    throw new Error('expected "Done" to close the tour');
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await hero(page);
 }
 
 /** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a

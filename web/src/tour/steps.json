@@ -1,0 +1,95 @@
+{
+  "about": "The judge tour (SPEC 7): about ninety seconds through the signature features. Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title.",
+  "steps": [
+    {
+      "id": "pov",
+      "title": "Through his eyes",
+      "caption": "A first-person replay, cut by the Telestrator agent from what he could see. The marked moment is the key scan: one look over his shoulder.",
+      "variants": [
+        {
+          "when": "!keyScan",
+          "caption": "A first-person replay, cut by the Telestrator agent from what he could see, with every look he made marked on the timeline."
+        }
+      ],
+      "target": [".transport .mark.key", ".transport .timeline"],
+      "dim": false,
+      "enter": "replay",
+      "needs": ["hero"],
+      "hold": 16
+    },
+    {
+      "id": "without",
+      "title": "{cfTitle}",
+      "caption": "The same seconds re-simulated with one change, {cf}. Same seed, same players: the different decision comes from that change alone.",
+      "target": ".stage-run",
+      "dim": false,
+      "enter": "counterfactual",
+      "needs": ["hero", "counterfactual"],
+      "hold": 10
+    },
+    {
+      "id": "evidence",
+      "title": "Open the evidence",
+      "caption": "Every caption opens. Each claim behind it shows its kind, the Verifier's verdict and the match events it rests on.",
+      "target": "section.evidence",
+      "dim": true,
+      "enter": "openEvidence",
+      "needs": ["hero"],
+      "hold": 8
+    },
+    {
+      "id": "tamper",
+      "title": "Try a wrong number",
+      "caption": "Change a number and the Verifier checks the claim again against the match data. A wrong value is refuted, and the line would not air.",
+      "target": ["section.evidence .tamper-result", "section.evidence .tamper"],
+      "dim": true,
+      "enter": "openTamper",
+      "act": "checkWrongNumber",
+      "needs": ["hero", "api"],
+      "hold": 10
+    },
+    {
+      "id": "yourcall",
+      "title": "Your call",
+      "caption": "The replay stops at his decision. Choose with only what he knew, then see what really happened.",
+      "target": ".yc-view",
+      "dim": false,
+      "focus": "app",
+      "enter": "yourCall",
+      "needs": ["hero", "yourCall"],
+      "hold": 12
+    },
+    {
+      "id": "language",
+      "title": "Another audience, another language",
+      "caption": "Each audience gets its own commentary, in its own language. Here is the same moment told for a casual fan, in Chinese.",
+      "target": ".viewer-toggle",
+      "dim": false,
+      "enter": "audience",
+      "act": "sound",
+      "needs": ["hero", "api"],
+      "hold": 10
+    },
+    {
+      "id": "producer",
+      "title": "Failure drill",
+      "caption": "Take an agent down as in an outage: the crew falls back to its template and still airs. Then bring it back from the workflow checkpoint.",
+      "target": "section.producer",
+      "dim": true,
+      "enter": "producer",
+      "act": "drill",
+      "needs": ["hero", "api"],
+      "hold": 12
+    },
+    {
+      "id": "end",
+      "title": "That's the tour",
+      "caption": "Everything you saw runs live. The moment's full story continues below the picture.",
+      "target": null,
+      "dim": false,
+      "enter": "none",
+      "needs": [],
+      "hold": 4
+    }
+  ]
+}
