@@ -88,8 +88,21 @@ describe("CineShot schema", () => {
       { ...base, periphery: 2 },
       { ...base, smooth: -0.1 },
       { ...base, extra: true },
-      { ...base, duration: 2, time: [{ t: 0, frame: 0 }, { t: 4, frame: 1 }] },
-      { ...base, time: [{ t: 1, frame: 8 }, { t: 0, frame: 0 }] },
+      {
+        ...base,
+        duration: 2,
+        time: [
+          { t: 0, frame: 0 },
+          { t: 4, frame: 1 },
+        ],
+      },
+      {
+        ...base,
+        time: [
+          { t: 1, frame: 8 },
+          { t: 0, frame: 0 },
+        ],
+      },
       { ...base, time: [{ t: -0.2, frame: 0 }] },
     ];
     for (const input of bad) {
@@ -97,13 +110,26 @@ describe("CineShot schema", () => {
       expect(parsed.success, JSON.stringify(input)).toBe(false);
     }
     const outside = loadShot(
-      { ...base, duration: 2, time: [{ t: 0, frame: 0 }, { t: 4, frame: 9 }] },
+      {
+        ...base,
+        duration: 2,
+        time: [
+          { t: 0, frame: 0 },
+          { t: 4, frame: 9 },
+        ],
+      },
       { ids: ["H8"], heroId: "H8", hasVision: true },
     );
     expect(outside.ok).toBe(false);
     if (!outside.ok) expect(outside.errors.join(" ")).toMatch(/time\.1\.t/);
     const order = loadShot(
-      { ...base, time: [{ t: 1, frame: 3 }, { t: 1, frame: 4 }] },
+      {
+        ...base,
+        time: [
+          { t: 1, frame: 3 },
+          { t: 1, frame: 4 },
+        ],
+      },
       { ids: ["H8"], heroId: "H8", hasVision: true },
     );
     expect(order.ok).toBe(false);
@@ -251,7 +277,13 @@ describe("cameraAt", () => {
       ...base,
       duration: 2,
       camera: [
-        { t: 0, eye: { at: "world", p: [0, 0, 0] }, look: { at: "world", p: [0, 0, 1] }, fov: 20, roll: -4 },
+        {
+          t: 0,
+          eye: { at: "world", p: [0, 0, 0] },
+          look: { at: "world", p: [0, 0, 1] },
+          fov: 20,
+          roll: -4,
+        },
         { t: 2, eye: { at: "ball" }, look: { at: "world", p: [0, 0, 1] }, fov: 40, roll: 6 },
       ],
     });

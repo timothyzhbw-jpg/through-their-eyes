@@ -1,8 +1,8 @@
 // Motion blur of the first-person view as a post-process (SPEC 7, the Floodlit design): the
 // strength follows the measured head yaw rate of the player whose eyes these are (motionBlur.ts
-// has the maths and the tap plan). Off under prefers-reduced-motion, on the broadcast camera and
-// whenever the blur would be under half a pixel: then the scene is drawn straight to the canvas,
-// as without this pass.
+// has the maths and the tap plan). Off under prefers-reduced-motion, on the broadcast camera, while
+// paused and whenever the blur would be under half a pixel: then the scene is drawn straight to
+// the canvas, as without this pass.
 //
 // The scene is drawn into a half-float target that three.js treats like the canvas (tone mapping
 // and the sRGB encoding are applied, and fog is mixed after them, exactly as on screen), so the
@@ -187,6 +187,7 @@ export function MotionBlur({ hfov }: { hfov: number }) {
     const sigma = povBlurSigmaPx({
       reducedMotion: reduced.current,
       camera: s.camera,
+      playing: s.playing,
       yawRate,
       widthPx: size.x,
       hfovDeg,

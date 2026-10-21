@@ -58,10 +58,14 @@ beforeAll(async () => {
   url.search = "cine=1&intro=0&autoplay=0&offline=1";
   await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 120_000 });
   try {
-    await page.waitForFunction(() => window.__cine?.ready === true, undefined, { timeout: 120_000 });
+    await page.waitForFunction(() => window.__cine?.ready === true, undefined, {
+      timeout: 120_000,
+    });
   } catch (err) {
     const why = err instanceof Error ? err.message : String(err);
-    throw new Error(`cine did not become ready (${pageErrors.join(" | ") || "no page error"}): ${why}`);
+    throw new Error(
+      `cine did not become ready (${pageErrors.join(" | ") || "no page error"}): ${why}`,
+    );
   }
 }, 180_000);
 

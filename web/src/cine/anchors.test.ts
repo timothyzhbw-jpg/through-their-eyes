@@ -121,21 +121,19 @@ describe("player anchors", () => {
 
   it("points a head offset along the head yaw", () => {
     // Head yaw π turns (2, 0) onto -x, and keeps the height.
-    expect(at({ at: "player", id: "H1", offset: [2, 0, 0.5], axes: "head" })).toEqual([
-      3, 5, 0.5,
-    ]);
+    expect(at({ at: "player", id: "H1", offset: [2, 0, 0.5], axes: "head" })).toEqual([3, 5, 0.5]);
   });
 
   it("places an orbit from the axes' +x, counter-clockwise from above", () => {
     expect(at({ at: "player", id: "H1", orbit: { r: 10, az: 0, h: 2 } })).toEqual([15, 5, 2]);
     expect(at({ at: "player", id: "H1", orbit: { r: 10, az: 90, h: 2 } })).toEqual([5, 15, 2]);
     // Body yaw π/2: az 0 is in front (+y), az 90 is to his left (-x).
-    expect(
-      at({ at: "player", id: "A2", orbit: { r: 4, az: 0, h: 3 }, axes: "body" }),
-    ).toEqual([10, 24, 3]);
-    expect(
-      at({ at: "player", id: "A2", orbit: { r: 4, az: 90, h: 3 }, axes: "body" }),
-    ).toEqual([6, 20, 3]);
+    expect(at({ at: "player", id: "A2", orbit: { r: 4, az: 0, h: 3 }, axes: "body" })).toEqual([
+      10, 24, 3,
+    ]);
+    expect(at({ at: "player", id: "A2", orbit: { r: 4, az: 90, h: 3 }, axes: "body" })).toEqual([
+      6, 20, 3,
+    ]);
   });
 
   it("adds a local offset on top of the orbit", () => {

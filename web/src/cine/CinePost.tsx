@@ -37,26 +37,29 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
-// Eight taps walk toward the centre. The radius is in uv, and the edge darkens by up to 0.55.
+// Peripheral vision: a small disc blur (13 taps on a golden-angle spiral, so no rings) that grows
+// from the middle of the frame to the corners, up to 1.4% of the frame height, and darkens the
+// edges by up to 0.55.
 const PERIPHERY_FRAGMENT = /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform float uPeriphery;
+uniform float uAspect; // width / height
 varying vec2 vUv;
 
 void main() {
-  vec2 fromCentre = (vUv - 0.5) * vec2(2.0, 2.0);
-  float r = length(fromCentre);
-  float grow = smoothstep(0.35, 1.0, r);
-  float radius = uPeriphery * grow;
-  vec2 toCentre = vec2(0.5) - vUv;
-  float len = length(toCentre);
-  vec2 dir = len > 0.0001 ? toCentre / len : vec2(0.0);
-  vec3 sum = vec3(0.0);
-  for (int k = 0; k < 8; k++) {
-    float s = float(k) / 7.0;
-    sum += texture2D(tDiffuse, vUv + dir * radius * s).rgb;
+  vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
+  float r = length(p) / length(vec2(uAspect, 1.0) * 0.5); // 0 at the centre, 1 in a corner
+  float grow = smoothstep(0.45, 1.0, r);
+  float radius = 0.014 * uPeriphery * grow;
+  vec3 sum = texture2D(tDiffuse, vUv).rgb;
+  for (int k = 0; k < 12; k++) {
+    float a = float(k) * 2.39996;
+    float d = sqrt((float(k) + 0.5) / 12.0);
+    vec2 tap = vec2(cos(a), sin(a)) * d * radius;
+    sum += texture2D(tDiffuse, vUv + vec2(tap.x / uAspect, tap.y)).rgb;
   }
-  sum *= (1.0 - 0.55 * uPeriphery * grow) / 8.0;
+  sum /= 13.0;
+  sum *= 1.0 - 0.55 * uPeriphery * grow;
   gl_FragColor = vec4(sum, 1.0);
 }`;
 
@@ -76,6 +79,7 @@ interface BokehUniforms {
 
 interface PeriUniforms {
   uPeriphery: { value: number };
+  uAspect: { value: number };
 }
 
 function blurShader() {
@@ -141,6 +145,7 @@ function buildChain(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.C
     uniforms: {
       tDiffuse: { value: null as THREE.Texture | null },
       uPeriphery: { value: 0 },
+      uAspect: { value: 16 / 9 },
     },
     vertexShader: PERIPHERY_VERTEX,
     fragmentShader: PERIPHERY_FRAGMENT,
@@ -248,11 +253,15 @@ export function CinePost() {
     const whip = !!(shot?.pov && shot.motionBlur);
     const j = whip ? hero.ids.indexOf(shot.pov ?? "") : -1;
     const yawRate = j < 0 ? 0 : headYawRate(hero, run, j, s.frame, false);
-    const hfov = horizontalFovDeg((camera as THREE.PerspectiveCamera).fov, (camera as THREE.PerspectiveCamera).aspect || 1);
+    const hfov = horizontalFovDeg(
+      (camera as THREE.PerspectiveCamera).fov,
+      (camera as THREE.PerspectiveCamera).aspect || 1,
+    );
     const sigma = whip
       ? povBlurSigmaPx({
           reducedMotion: false,
           camera: "pov",
+          playing: true, // a film frame is motion: the playback store only pauses between frames
           yawRate,
           widthPx: width,
           hfovDeg: hfov,
@@ -270,7 +279,9 @@ export function CinePost() {
     const periphery = shot?.periphery ?? 0;
     chain.periphery.enabled = periphery > 0;
     if (periphery > 0) {
-      (chain.periphery.uniforms as unknown as PeriUniforms).uPeriphery.value = periphery;
+      const u = chain.periphery.uniforms as unknown as PeriUniforms;
+      u.uPeriphery.value = periphery;
+      u.uAspect.value = width / Math.max(1, buffer.y);
     }
 
     chain.composer.render(0);

@@ -85,7 +85,9 @@ function keyOrder(
   keys: { t: number }[],
   where: string,
   duration: number,
-  ctx: { addIssue: (issue: { code: "custom"; path: (string | number)[]; message: string }) => void },
+  ctx: {
+    addIssue: (issue: { code: "custom"; path: (string | number)[]; message: string }) => void;
+  },
 ) {
   for (let i = 0; i < keys.length; i++) {
     const t = keys[i].t;
@@ -209,7 +211,7 @@ export function ease(kind: Ease, u: number): number {
   if (kind === "linear") return x;
   if (kind === "in") return x * x * x;
   if (kind === "out") return 1 - (1 - x) ** 3;
-  return x < 0.5 ? 4 * x * x * x : 1 - ((-2 * x + 2) ** 3) / 2;
+  return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
 }
 
 interface Keyed {

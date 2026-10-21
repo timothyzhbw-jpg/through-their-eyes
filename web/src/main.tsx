@@ -13,8 +13,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App, MatchApp } from "./App";
 import { apiBase, MATCH_ID } from "./api/client";
-import { loadData, matchFromUrl } from "./data/load";
+import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
+import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
@@ -71,6 +72,13 @@ async function main() {
       // A match has no audience, run or named frames of its own: its view and a frame apply.
       if (link.view) session.controls.setFocus(link.view);
       if (typeof link.at === "number") session.controls.seek(link.at);
+      // play=yourcall: the first hero moment whose possession has bundled what-ifs, in Your call.
+      const hero = session.match.moments.find((m) => {
+        if (!m.hero) return false;
+        const p = session.match.possessions.find((x) => x.index === m.possession);
+        return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
+      });
+      if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
       broadcast(session.controls);
       if (filming) {
         await showCine(session);
@@ -85,13 +93,14 @@ async function main() {
       );
       return;
     }
-    // The bundled fixture, plan and what-ifs belong to the bundled hero moment only.
+    // The bundled fixture and plan belong to the bundled hero moment only; the what-ifs were
+    // loaded for this one.
     const bundled = `${loaded.hero.scenario}-${loaded.hero.seed}` === MATCH_ID;
     const session = createSession(
       loaded.hero,
       bundled ? plan : null,
       bundled ? loaded.payload : null,
-      bundled ? loaded.whatIfs : null,
+      loaded.whatIfs,
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
     applyDeepLink(session, link);

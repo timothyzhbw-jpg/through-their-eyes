@@ -101,7 +101,8 @@ function Tokens() {
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
   const materials = useMemo(
-    () => [0, 1].map((t) => new THREE.MeshStandardMaterial({ color: teamColor(t), roughness: 0.6 })),
+    () =>
+      [0, 1].map((t) => new THREE.MeshStandardMaterial({ color: teamColor(t), roughness: 0.6 })),
     [],
   );
   useEffect(() => () => materials.forEach((m) => m.dispose()), [materials]);

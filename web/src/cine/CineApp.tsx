@@ -153,7 +153,14 @@ const cineApi: CineApi = {
     advance(t * 1000);
     const drawn = cineRuntime.drawn as DrawnPose | null; // set by the camera rig inside advance()
     if (!drawn) throw new Error("cine drew no frame");
-    return { frame, run: shot.run, eye: drawn.eye, look: drawn.look, fov: drawn.fov, blurSigma: cineRuntime.blurSigma };
+    return {
+      frame,
+      run: shot.run,
+      eye: drawn.eye,
+      look: drawn.look,
+      fov: drawn.fov,
+      blurSigma: cineRuntime.blurSigma,
+    };
   },
 };
 
