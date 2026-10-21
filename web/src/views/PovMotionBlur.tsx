@@ -27,14 +27,14 @@ import {
 const TAPS = 2 * TAPS_PER_SIDE + 1;
 const MAX_RENDER_WIDTH = 1920;
 
-const vertexShader = /* glsl */ `
+export const blurVertexShader = /* glsl */ `
 varying vec2 vUv;
 void main() {
   vUv = uv;
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
-const fragmentShader = /* glsl */ `
+export const blurFragmentShader = /* glsl */ `
 uniform sampler2D tInput;
 uniform float uTexel; // 1 / canvas width: one drawing-buffer pixel in uv
 uniform float uOffsets[${TAPS}]; // drawing-buffer px, independent of the target resolution
@@ -93,8 +93,8 @@ class BlurPass {
         uDecode: { value: true },
         uVignette: { value: 0 },
       },
-      vertexShader,
-      fragmentShader,
+      vertexShader: blurVertexShader,
+      fragmentShader: blurFragmentShader,
       depthTest: false,
       depthWrite: false,
       toneMapped: false,

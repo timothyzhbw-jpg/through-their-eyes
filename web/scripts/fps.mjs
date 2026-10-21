@@ -10,7 +10,7 @@
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
 //   npm run fps -- --width 1440 --height 900 --dpr 2 --seconds 4 --runs 3
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { preview } from "vite";
@@ -25,11 +25,16 @@ const { values: opt } = parseArgs({
     dpr: { type: "string", default: "1" },
     seconds: { type: "string", default: "4" },
     runs: { type: "string", default: "3" },
+    cine: { type: "boolean", default: false },
   },
 });
 
 const web = fileURLToPath(new URL("..", import.meta.url));
 if (!existsSync(`${web}/dist/index.html`)) throw new Error("no build: run `npm run build` first");
+
+if (opt.cine) {
+  await measureCine(web, opt);
+} else {
 const server = await preview({
   root: web,
   configFile: false,
@@ -171,4 +176,91 @@ try {
   await browser.close();
   await server.close();
   await harness.close();
+}
+}
+
+/** The capture chunk is the only built file that may name the capture API. */
+function assertCineIsLazy(webRoot) {
+  const dir = `${webRoot}/dist/assets`;
+  const needle = Buffer.from("__cine");
+  const hits = readdirSync(dir).filter((name) => readFileSync(`${dir}/${name}`).includes(needle));
+  const html = readFileSync(`${webRoot}/dist/index.html`, "utf8");
+  const entries = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((match) =>
+    match[1].split("/").pop(),
+  );
+  if (hits.length !== 1 || entries.includes(hits[0])) {
+    throw new Error(
+      `cine must be one lazy chunk (found ${hits.join(", ") || "none"}; entry ${entries.join(", ") || "none"})`,
+    );
+  }
+}
+
+/** Average milliseconds for one render(t) plus a screenshot, over an orbit with bloom, DOF and a cone. */
+async function measureCine(webRoot, flags) {
+  assertCineIsLazy(webRoot);
+  const server = await preview({
+    root: webRoot,
+    configFile: false,
+    logLevel: "error",
+    preview: { port: 0 },
+  });
+  const base = server.resolvedUrls?.local[0];
+  if (!base) {
+    await server.close();
+    throw new Error("the preview server has no local URL");
+  }
+  const browser = await launchChrome({ headless: !flags.headed, software: flags.software });
+  try {
+    const context = await browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+      deviceScaleFactor: 1,
+    });
+    const page = await context.newPage();
+    const url = new URL("/", base);
+    url.search = "cine=1&intro=0&autoplay=0&offline=1";
+    await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    await page.waitForFunction(() => window.__cine?.ready === true, undefined, { timeout: 120_000 });
+    const ids = await page.evaluate(() => window.__cine.info().players.map((p) => p.id));
+    if (!ids.includes("H8")) throw new Error(`bundled data has no H8 (players: ${ids.join(", ")})`);
+    const shot = {
+      id: "fps-orbit",
+      duration: 3,
+      time: [
+        { t: 0, frame: 0 },
+        { t: 3, frame: 60 },
+      ],
+      camera: [
+        {
+          t: 0,
+          eye: { at: "player", id: "H8", orbit: { r: 8, az: 0, h: 3 }, axes: "body" },
+          look: { at: "player", id: "H8", offset: [0, 0, 1.4] },
+        },
+        {
+          t: 3,
+          eye: { at: "player", id: "H8", orbit: { r: 8, az: 180, h: 3 }, axes: "body" },
+          look: { at: "player", id: "H8", offset: [0, 0, 1.4] },
+        },
+      ],
+      cone: { id: "H8", opacity: 0.45, flash: 1.2 },
+      dof: { focus: { at: "player", id: "H8", offset: [0, 0, 1.4] }, aperture: 0.02, maxBlur: 0.02 },
+      bloom: { strength: 0.6, radius: 0.5, threshold: 0.85 },
+    };
+    const loaded = await page.evaluate((next) => window.__cine.load(next), shot);
+    if (!loaded.ok) throw new Error(loaded.errors.join("; "));
+    const renderer = await rendererOf(page);
+    let total = 0;
+    for (let i = 0; i < 60; i++) {
+      const t = (i / 59) * 3;
+      const started = performance.now();
+      await page.evaluate((time) => window.__cine.render(time), t);
+      await page.screenshot({ type: "png" });
+      total += performance.now() - started;
+    }
+    console.log(
+      `renderer: ${renderer}; cine 1920x1080: ${(total / 60).toFixed(2)} ms average over 60 frames (render + screenshot)`,
+    );
+  } finally {
+    await browser.close();
+    await server.close();
+  }
 }
