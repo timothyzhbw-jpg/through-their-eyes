@@ -540,6 +540,10 @@ def what_if_question(action: str, language: str) -> str:
         return "What if he carried it?" if language == "en" else "如果他带球呢？"
     if action == "shot":
         return "What if he shot?" if language == "en" else "如果他射门呢？"
+    if action in ("shot:near", "shot:far"):  # a placed shot (Module A)
+        post = action.removeprefix("shot:")
+        zh = {"near": "近角", "far": "远角"}[post]
+        return f"What if he shot at the {post} post?" if language == "en" else f"如果他射{zh}呢？"
     raise ValueError(f"no question for {action!r}")
 
 

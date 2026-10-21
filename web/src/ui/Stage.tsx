@@ -14,9 +14,10 @@ import {
   type RefObject,
 } from "react";
 import { DESCRIBED, PERSONAS, type Persona } from "../api/client";
-import { runLabels, type Hero } from "../data/hero";
+import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
+import { TourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { useStore } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
@@ -31,6 +32,12 @@ export const BLURB: Record<string, string> = {
     "See what the midfielder saw, and what he would have done without one look over his shoulder.",
   press_escape:
     "See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
+  screened_shot:
+    "See what the keeper saw past the players in front of him, and what one step across his goal changed.",
+  cutback_scan:
+    "See what the winger saw when he looked into the box, and what he would have done without that one look.",
+  far_post_finish:
+    "See what the striker saw of the keeper as the cutback came, and where he would have shot without one look at the goal.",
   corner_blind_side:
     "A short corner. See what the centre-back saw of the man he marks, and where that man would have been without one look over his shoulder.",
 };
@@ -53,6 +60,8 @@ function didPhrase(action: string): string {
   if (action.startsWith("pass:")) return `passed to ${action.slice(5)}`;
   if (action === "carry") return "carried it";
   if (action === "shot") return "shot";
+  const post = shotPost(action);
+  if (post) return `shot at the ${post} post`;
   return `chose ${action}`;
 }
 
@@ -62,11 +71,20 @@ function didPhrase(action: string): string {
  */
 export function momentTitle(hero: Hero): [string, string] {
   if (hero.marker) return markerTitle(hero, hero.marker);
+  if (hero.keeperStep) {
+    const { factual, counterfactual } = hero.keeperStep.resolved;
+    return factual.type === "save" && counterfactual.type !== "save"
+      ? ["One step, and", "he saves it."]
+      : ["One step, and", "the same outcome."];
+  }
   const did = hero.runs.factual.decision?.chosen;
   const without = hero.counterfactual ? hero.runs.counterfactual.decision?.chosen : undefined;
   if (hero.keyScan) {
     if (did && without && did !== without)
-      return ["One look changed his", did.startsWith("pass:") ? "pass." : "decision."];
+      return [
+        "One look changed his",
+        did.startsWith("pass:") ? "pass." : isShot(did) ? "shot." : "decision.",
+      ];
     return ["One look, and", "the same choice."];
   }
   if (did) return ["Under pressure, he", `${didPhrase(did)}.`];
@@ -96,7 +114,7 @@ export function MomentTitle({ hero }: { hero: Hero }) {
 
 /** "Moment · 3.00 s · Perception": when the decision falls on the clock, and the lens. */
 export function momentKicker(hero: Hero, decisionFrame: number, offset: number): string {
-  const lens = hero.keyScan ? "Perception" : "Pressure";
+  const lens = hero.keyScan || hero.keeperStep ? "Perception" : "Pressure"; // a step: his sight
   return `Moment · ${((decisionFrame + offset) * hero.dt).toFixed(2)} s · ${lens}`;
 }
 
@@ -409,7 +427,8 @@ export function ViewOptions() {
 
 // ---------- who is watching ----------
 
-/** The audience and language of the commentary, in the header (SPEC 1). */
+/** The audience and language of the commentary, in the header (SPEC 1). It stays open while the
+ * viewer picks, until Escape or a press outside. */
 export function ViewerMenu() {
   const { api, controls } = useSession();
   const { persona, language } = useBreakdown();
@@ -434,9 +453,12 @@ export function ViewerMenu() {
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <span className="avatar" aria-hidden="true">
-          {PERSONA_LABEL[persona].charAt(0)}
-        </span>
+        {/* The initial is drawn by CSS: as text it would be shown but not named (WCAG 2.5.3). */}
+        <span
+          className="avatar"
+          aria-hidden="true"
+          data-initial={PERSONA_LABEL[persona].charAt(0)}
+        />
         <span>
           <span className="hide-sm">Watching as </span>
           {PERSONA_LABEL[persona]} · {LANGUAGE_NAME[language]}
@@ -454,11 +476,9 @@ export function ViewerMenu() {
               className="persona"
               aria-pressed={p === persona}
               disabled={!online && p !== persona}
-              onClick={() => {
-                controls.setPersona(p);
-                close();
-                toggle.current?.focus();
-              }}
+              // The menu stays open: the language, or another audience, is one more pick. It
+              // closes on Escape or a press outside (usePopover), the keyboard back on the toggle.
+              onClick={() => controls.setPersona(p)}
             >
               <span className="persona-name">{PERSONA_LABEL[p]}</span>{" "}
               <span className="persona-note">{PERSONA_NOTE[p]}</span>
@@ -619,6 +639,7 @@ export function MomentCard() {
           {label}
         </button>
       </div>
+      <TourButton />
     </aside>
   );
 }

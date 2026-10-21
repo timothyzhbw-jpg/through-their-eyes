@@ -195,16 +195,20 @@ describe("Your call: deciding", () => {
     const group = el.querySelector('[role="group"]')!;
     expect(group.getAttribute("aria-label")).toBe("Options of H8");
     const names = markers(el).map((m) => m.getAttribute("aria-label"));
+    // The shirt number the marker shows is in its name too, so a speech user can say it.
+    const named = (o: (typeof yc.options)[number]) =>
+      o.receiver ? `${o.label}, number ${o.short}` : o.label;
     expect(names.sort()).toEqual(
       yc.options
         .map((o) =>
-          ["H7", "H10"].includes(o.receiver ?? "") ? `${o.label}, not seen lately` : o.label,
+          ["H7", "H10"].includes(o.receiver ?? "") ? `${named(o)}, not seen lately` : named(o),
         )
         .sort(),
     );
     for (const m of markers(el)) {
       expect(m.tagName).toBe("BUTTON");
       expect(m.type).toBe("button");
+      expect(m.getAttribute("aria-label")!.split(/\W+/)).toContain(textOf(m));
     }
     // Only shirt numbers and player ids: no probabilities, values or distances.
     expect(textOf(el)).not.toMatch(/\d+\.\d|%|\bm\b/);
@@ -251,7 +255,7 @@ describe("Your call: deciding", () => {
   it("swipe: a drag from the carrier toward a teammate passes to him", () => {
     const { session, yc } = open();
     const el = mount(session);
-    // A marker's name is the option's label, then ", not seen lately" or ", tried" if so.
+    // A marker's name is the option's label, its number, then ", not seen lately" or ", tried".
     const optionOf = (m: HTMLElement) =>
       yc.options.find((o) => m.getAttribute("aria-label")?.split(", ")[0] === o.label)!;
     const target = markers(el).find((m) => optionOf(m).action === "pass:H7")!;
@@ -315,7 +319,7 @@ describe("Your call: the reveal", () => {
   it("plays every beat with verified lines, then one tap tries another option or goes back", () => {
     const { session, yc } = open();
     const el = mount(session);
-    click(markers(el).find((m) => m.getAttribute("aria-label") === "Pass to H4")!);
+    click(markers(el).find((m) => m.getAttribute("aria-label") === "Pass to H4, number 4")!);
 
     // Outcome: the re-simulated run of the call plays, with its verified counterfactual line.
     expect(yc.state.get().clip).toMatchObject({ of: "pass:H4", playing: true });
@@ -366,9 +370,9 @@ describe("Your call: the reveal", () => {
 
     click(button(el, "Try another call"));
     expect(yc.state.get().step).toBe("deciding");
-    expect(markers(el).some((m) => m.getAttribute("aria-label") === "Pass to H4, tried")).toBe(
-      true,
-    );
+    expect(
+      markers(el).some((m) => m.getAttribute("aria-label") === "Pass to H4, number 4, tried"),
+    ).toBe(true);
     click(button(el, "Back to the replay"));
     expect(yc.state.get().step).toBe("closed");
     expect(session.playback.get()).toMatchObject({
@@ -550,7 +554,7 @@ describe("Your call: online and in the match", () => {
     host.innerHTML = panel;
     // The hero row of blind_side_run 3 (possession 2) leaves his receiver out; the other row keeps
     // it, and the Your call button names the same shortened label.
-    const scanRows = [...host.querySelectorAll('section[aria-label="Possession 2"] li')];
+    const scanRows = [...host.querySelectorAll('li[data-possession="2"]')];
     const heroRow = scanRows.find((li) => li.classList.contains("hero"))!;
     const passRow = scanRows.find((li) => !li.classList.contains("hero"))!;
     expect(textOf(heroRow)).not.toContain("→");
@@ -560,10 +564,10 @@ describe("Your call: online and in the match", () => {
     )!;
     expect(yourCallRow.getAttribute("aria-label")).toBe("Your call: Decision after a scan · H8");
     const yourCallIn = (possession: number) => {
-      const section = host.querySelector(`section[aria-label="Possession ${possession}"]`);
-      return [...(section?.querySelectorAll("button") ?? [])].find((b) =>
-        b.getAttribute("aria-label")?.startsWith("Your call"),
-      );
+      const rows = host.querySelectorAll(`li[data-possession="${possession}"]`);
+      return [...rows]
+        .flatMap((row) => [...row.querySelectorAll("button")])
+        .find((b) => b.getAttribute("aria-label")?.startsWith("Your call"));
     };
     // A button is on only when that possession's <scenario>-<seed> has bundled what-ifs.
     for (const p of session.match.possessions) {

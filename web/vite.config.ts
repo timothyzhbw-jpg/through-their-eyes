@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { loadEnv, type Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+import { dropWebkitBackdropFilter } from "./src/build/backdropFilter";
 
 /** index.html: open the API's connection while the scripts download; the health probe that
  * decides live or offline data gets 3 s, and a new connection on 3G takes about 2 s of it. */
@@ -28,6 +29,8 @@ export default defineConfig(({ mode }) => {
   const forward = { target, changeOrigin: true, secure: true };
   return {
     plugins: [react(), preconnectApi(loadEnv(mode, ".", "VITE_").VITE_API_URL)],
+    // Keeps backdrop blur in Chrome and Edge (src/build/backdropFilter.ts).
+    css: { postcss: { plugins: [dropWebkitBackdropFilter] } },
     server: target
       ? {
           proxy: {

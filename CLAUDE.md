@@ -110,7 +110,7 @@ _Fill in as they come to exist._
   does lens selection pick the lens the scenario is built for, and does its intervention
   (`Scenario.intervention`) change the outcome? Design seeds are 0–99. By default it runs the
   held-out seeds, 100–139, or 200–239 for `press_escape` (100–139 were seen while fixing the
-  decision model), and writes `eval/reports/hero_lens_<scenario>.md`. With other `--seeds` it
+  decision model) and for `far_post_finish` (its gate's seeds), and writes `eval/reports/hero_lens_<scenario>.md`. With other `--seeds` it
   writes `hero_lens_<scenario>_<first>-<last>.md` instead (`--out` for another path). With
   `--scenario corner_blind_side` it reads the marker's look (`marker_scan`, no decision on the
   ball): the scan lens's Δ, whether its scan is the key scan, and `eval.hero_marking`'s gate
@@ -122,6 +122,10 @@ _Fill in as they come to exist._
   the striker's key scan, does his placement change, and by how much does his scoring chance on
   the truth drop? Includes the v_dive sweep. Held-out seeds 200–239 (design 0–39), about a minute;
   writes `eval/reports/hero_shot_far_post_finish.md`
+- `uv run python -m eval.hero_save` — save hero eval (SPEC 3.3, 3.6, `screened_shot`): without
+  the keeper's key step, does his save probability drop by ≥ 0.4, and is that mostly from seeing
+  the ball later? Includes the v_dive sweep. Held-out seeds 300–339 (design 0–39), about 15 s;
+  writes `eval/reports/hero_save_screened_shot.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
@@ -160,7 +164,13 @@ _Fill in as they come to exist._
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
-- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
+- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
+  including axe-core's WCAG 2.2 A/AA rules
+- `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core
+  on every screen (menus, Your call, evidence, a match's breakdown) at 1440×900 and 375×812; on a
+  deployed site it asks only for the casual and analyst breakdowns in English. Writes `out/a11y/`.
+  `npm run contrast -- --url <site>`: the contrast of the text over the 3D views, by pixels (axe
+  cannot judge it), on 72 renders
 - `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
   seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
   and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
