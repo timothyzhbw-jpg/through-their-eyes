@@ -297,6 +297,20 @@ describe("keyboard and screen reader access", () => {
     expect(card()).toBeNull();
     expect(session.playback.get().evidenceLine).toBeNull();
     expect(document.activeElement).toBe(caption);
+
+    // Escape on the caption that opened it closes it too, and so does Escape with nothing focused
+    // (a ?tamper= link opens the card on load).
+    act(() => caption.click());
+    act(() => {
+      caption.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(card()).toBeNull();
+    act(() => session.controls.openLine("L1"));
+    caption.blur();
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(card()).toBeNull();
   });
 
   it("lets the keyboard reach and scroll the telestration steps", async () => {

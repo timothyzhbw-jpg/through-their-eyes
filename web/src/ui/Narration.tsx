@@ -151,29 +151,30 @@ export function EvidenceCard() {
   // What had the focus when the card opened (the caption, a narration line): it gets it back on
   // close, by Escape or the close button, instead of dropping it on <body>.
   const opener = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    const focused = document.activeElement;
-    opener.current =
-      isOpen && focused instanceof HTMLElement && focused !== document.body ? focused : null;
-  }, [isOpen]);
-  if (!narration || !line) return null;
   const close = () => {
     const back = opener.current;
     controls.closeEvidence();
     if (back?.isConnected) back.focus({ preventScroll: true });
   };
+  const closeNow = useRef(close);
+  closeNow.current = close;
+  useEffect(() => {
+    if (!isOpen) return;
+    const focused = document.activeElement;
+    opener.current = focused instanceof HTMLElement && focused !== document.body ? focused : null;
+    // Escape closes it wherever the focus is: in the card, on its caption, or nowhere (a ?tamper=
+    // link). A menu that handles its own Escape stops the event before it gets here.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNow.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+  if (!narration || !line) return null;
   const at = (f: number) => `${((f + offset) * hero.dt).toFixed(2)} s`; // the match clock
   const elsewhere = `, ${runLabels(hero).tag.counterfactual}`;
   return (
-    <section
-      className="evidence"
-      aria-label="Evidence for this line"
-      onKeyDown={(e) => {
-        if (e.key !== "Escape") return;
-        e.stopPropagation();
-        close();
-      }}
-    >
+    <section className="evidence" aria-label="Evidence for this line">
       <div className="evidence-head">
         <h2>Evidence</h2>
         {narration.fixture && (
