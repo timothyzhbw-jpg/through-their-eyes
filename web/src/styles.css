@@ -398,6 +398,192 @@ optgroup {
   color: var(--chalk-3);
 }
 
+/* ---------- the lineup card ---------- */
+.lineup-card {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%), var(--night);
+  color: var(--chalk);
+}
+.lineup-inner {
+  width: min(100%, 1080px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(28px, 4vh, 48px) 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.lineup-head {
+  text-align: center;
+  animation: tt-rise 560ms var(--settle) both;
+}
+.lineup-head h2 {
+  margin: 14px 0 28px;
+  font: 300 clamp(64px, 7vw, 92px)/1 var(--font-display);
+  letter-spacing: -0.04em;
+}
+.lineup-head em {
+  color: var(--floodlight);
+  padding: 0 0.12em;
+}
+.lineup-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+  animation: tt-rise 560ms 60ms var(--settle) both;
+}
+.lineup-team-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--hairline-strong);
+}
+.lineup-team-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 400 26px/1 var(--font-display);
+}
+.lineup-team-head i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.lineup-team-head > span {
+  color: var(--chalk-3);
+  font: 500 11px/1.2 var(--font-data);
+}
+.lineup-team ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lineup-team li {
+  display: grid;
+  grid-template-columns: 34px minmax(80px, 1fr) minmax(32px, 90px) 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--hairline);
+}
+.lineup-number {
+  color: var(--chalk-2);
+  font: 300 27px/1 var(--font-display);
+  text-align: center;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.lineup-player {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+.lineup-role {
+  color: var(--chalk-3);
+  font: 500 11px/1 var(--font-data);
+}
+.lineup-bar {
+  height: 2px;
+  background: var(--hairline);
+}
+.lineup-bar i {
+  display: block;
+  height: 100%;
+  background: var(--dusk);
+}
+.lineup-rate {
+  color: var(--chalk-2);
+  font: 400 12px/1 var(--font-data);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lineup-hero .lineup-number,
+.lineup-hero .lineup-player,
+.lineup-hero .lineup-rate {
+  color: var(--floodlight);
+}
+.lineup-hero .lineup-bar i {
+  background: var(--floodlight);
+}
+.lineup-note {
+  margin: 14px 0 24px;
+  color: var(--chalk-3);
+  font-size: 12px;
+  animation: tt-rise 560ms 100ms var(--settle) both;
+}
+.lineup-watch {
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline-strong);
+  animation: tt-rise 560ms 140ms var(--settle) both;
+}
+.lineup-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.lineup-options .persona {
+  width: auto;
+  min-width: 220px;
+  background-color: var(--night-2);
+}
+.lineup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  animation: tt-rise 560ms 180ms var(--settle) both;
+}
+@media (max-width: 760px) {
+  .lineup-inner {
+    padding: 32px 20px;
+  }
+  .lineup-head .kicker {
+    max-width: 260px;
+    margin-inline: auto;
+    line-height: 1.6;
+  }
+  .lineup-head h2 {
+    margin: 16px 0 28px;
+    font-size: clamp(48px, 12vw, 72px);
+  }
+  .lineup-teams {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .lineup-team li {
+    min-height: 38px;
+    gap: 10px;
+  }
+  .lineup-options,
+  .lineup-actions {
+    flex-direction: column;
+  }
+  .lineup-options .persona,
+  .lineup-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+  /* one tap away however far the line-ups scroll: the buttons stay at the bottom */
+  .lineup-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    gap: 8px;
+    margin: 24px -20px -32px;
+    padding: 20px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(8, 14, 11, 0), var(--night) 28%);
+  }
+}
+
 /* ---------- the live screen ---------- */
 .stage {
   position: relative;
@@ -558,6 +744,27 @@ optgroup {
 .stage-hud > * {
   pointer-events: auto;
 }
+/* top left of the picture: whose eyes and his readouts, then the director's suggestion,
+   stacked so a wrapped row pushes the next one down instead of sliding under it */
+.stage-top {
+  position: absolute;
+  z-index: 5;
+  top: var(--head-h);
+  left: var(--gutter);
+  right: calc(var(--card-w) + 2 * var(--gutter));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+@media (min-width: 761px) {
+  .stage-top .stage-hud,
+  .stage-top .stage-director {
+    position: static;
+    inset: auto;
+  }
+}
 .eyes-picker {
   position: relative;
   display: inline-flex;
@@ -699,6 +906,9 @@ optgroup {
   pointer-events: none;
 }
 .stage-director .director {
+  background: transparent;
+  border: 0;
+  padding: 0;
   min-height: 0;
   gap: 8px;
 }
@@ -2652,11 +2862,21 @@ optgroup {
     display: none;
   }
 }
-@media (max-width: 980px) and (min-width: 761px) {
+/* Inside a match the header also holds "Back to the match": up to 1400 px the run switch would
+   meet it, so it drops under the header row there too. */
+@media (max-width: 1400px) and (min-width: 1181px) {
+  .stage:has(.live-chip.back) .stage-run {
+    top: 84px;
+  }
+  .stage:has(.live-chip.back) .stage-top {
+    top: 140px;
+  }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
   .stage-run {
     top: 84px;
   }
-  .stage-hud {
+  .stage-top {
     top: 140px;
   }
 }
@@ -2741,6 +2961,9 @@ optgroup {
     left: 16px;
     right: 16px;
     width: auto;
+  }
+  .stage-top {
+    display: contents;
   }
   .stage-hud {
     position: relative;
