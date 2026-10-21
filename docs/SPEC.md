@@ -683,12 +683,35 @@ tools exposed by our own MCP server.
 | Voice | approved Script + TelestrationPlan | audio (Azure Speech TTS, SSML) | one voice per speaker and language; cached by content hash |
 
 **Two voices.** The two narration agents write one interleaved `Script`, each line tagged with its
-`speaker`. If either fails, a single-narrator template takes over (failure policy below).
+`speaker`. Both voices in a language are male: play-by-play `en-US-GuyNeural` and
+`zh-CN-YunjianNeural`, colour `en-US-DavisNeural` and `zh-CN-YunyeNeural`. If either fails, a
+single-narrator template takes over (failure policy below).
 
 **Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
-MomentCard (lens |Δ|, outcome, phase), never from an LLM. Voice maps the tier to an SSML speaking
-style (`mstts:express-as`) where the chosen voice supports one, otherwise to prosody (rate, pitch).
-Check which styles the `en` and `zh` voices support during M3.
+MomentCard (lens |Δ|, outcome, phase), never from an LLM. Each line also has a role. `open` is a
+play-by-play connective (no claim). `build` is any other play-by-play line. `peak` is play-by-play
+that cites the moment's decision event — an evidence id whose player and frame are the last two
+`:` fields of the moment id (`m:<kind>:<actor>:<anchor frame>`, frames as ints). `why` is every
+co-commentator line. Role and tier pick a speaking style, best first, the first the voice has;
+otherwise prosody only. `styledegree` is set only when a style is used. Prosody (rate, pitch)
+always wraps the words.
+
+| role | tier | styles, best first | styledegree | rate | pitch |
+|---|---|---|---|---|---|
+| open | any | sports-commentary, cheerful | – | +6% | +3% |
+| build | any | sports-commentary-excited, excited, cheerful | – | +8% | +3% |
+| peak | calm | as build | – | +8% | +3% |
+| peak | excited | sports-commentary-excited, excited, cheerful | 1.5 | +10% | +4% |
+| peak | clutch | sports-commentary-excited, excited, cheerful | 2 | +14% | +6% |
+| why | any | cheerful, excited | – | +2% | +2% |
+
+Decisive words (the lexicon terms, "that look", the shoulder checks, 那一眼, 回头看了一眼) are
+their own louder prosody span, and a counterfactual line takes a 250 ms break after the first
+comma. Audio description ignores the role: neutral styles only (`narration-relaxed`,
+`narration-professional`, `calm`, `newscast`), rate −10%, no emphasis and no break, never
+`excited` or `cheerful`. Styles are the static table `VOICE_STYLES`;
+`python -m infra.voices` checks it against Azure Speech. A cached breakdown is re-voiced on read:
+cue keys change, the breakdown key does not.
 
 **Failure policy.** Per-step timeout (≈ 8 s, *tunable*), one retry, then a template fallback for
 that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
@@ -802,8 +825,14 @@ Application Insights.
   `force_action` (§3.7). Its answer becomes `counterfactual` claims (the outcome, ΔxT), narrated and
   verified like any other line, plus a ghost path in the plan. Questions that map to no option are
   answered with a fixed "not something he could do here" line. Latency as a breakdown (§2).
-- Voice queries each voice's speaking styles from Azure Speech when it is configured; until then
-  every tier is rendered as prosody.
+- Voice speaks four roles (`open`, `build`, `peak`, `why`) on two male voices per language
+  (play-by-play `en-US-GuyNeural` / `zh-CN-YunjianNeural`, colour `en-US-DavisNeural` /
+  `zh-CN-YunyeNeural`). Styles come from `VOICE_STYLES` (`python -m infra.voices` checks it
+  against Azure Speech); the first style the voice has is used, otherwise prosody only, and
+  `styledegree` only when a style is used. Prosody always wraps the words; emphasis and a 250 ms
+  break mark the decisive words and a counterfactual reveal. Audio description stays on neutral
+  styles only, slower, with no emphasis, no break, and never `excited` or `cheerful`. A cached
+  breakdown is re-voiced on read (cue keys change, the breakdown key does not).
 - *After deployment:* **Foundry evaluation as an ablation** (`eval/narration_ablation.py`).
   Anchored lines are verified templates, so a groundedness score on them alone proves little.
   Instead, compare two narration modes on the same moments and seeds:
