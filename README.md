@@ -115,6 +115,14 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    broadcast camera or the board draws each player's torso and head direction, the way
    limb-tracking data is shown.
 
+8. **The match recap, at full time.** [Match recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap):
+   the crew recaps the whole stitched match, as it does when the live stream reaches full time.
+   The Director picks the key moments by counterfactual impact, the Analyst reads the match
+   stats through our MCP tools, the Telestrator cuts the reel, and every sentence and number on
+   the card is verified. **Play the recap reel** plays the moments in order with the camera
+   director, and **Overlay cues (JSON)** is the timed, machine-readable cue sheet a broadcast
+   graphics engine would render.
+
 Then the [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
 tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
 tests, reports and pull requests, and marks what is missing. A third hero, a corner where a
@@ -131,6 +139,13 @@ yet in the app.
     curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
       -H 'content-type: application/json' \
       -d '{"match": "blind_side_run-3", "personas": ["analyst"], "languages": ["en"]}'
+    ```
+  - the end-of-match recap of the stitched match, and its overlay cue sheet
+    (`GET /api/recaps/<key>/cues?persona=analyst&language=en`, with the `key` it answers):
+    ```bash
+    curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/recaps \
+      -H 'content-type: application/json' \
+      -d '{"match": "match-1", "personas": ["analyst"], "languages": ["en"]}'
     ```
   - a wrong number, checked by the verifier (not audited; no model call):
     ```bash
