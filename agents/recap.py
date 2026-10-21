@@ -802,7 +802,7 @@ class RecapNarration(Narration):
     def prompt(self, findings, persona, language, speaker, pbp=None) -> str:
         return narration_prompt(self.crew.ctx, findings, persona, language, speaker, pbp)
 
-    def schema(self, language: Language) -> type[BaseModel]:
+    def schema(self, language: Language, persona: Persona | None = None) -> type[BaseModel]:
         return draft_model(list(self.crew.ctx.supported), language)
 
     def to_lines(self, value: Any, language: Language) -> list[DraftLine]:
@@ -819,6 +819,14 @@ class RecapNarration(Narration):
 class RecapVerifier(Verifier):
     def payload(self, persona, language, kept):
         return self.crew.ctx.lift(super().payload(persona, language, kept))
+
+    # The persona rules (agents/persona_rules.py) are written for one moment's story; a recap
+    # tells several, and keeps only `withheld`.
+    def script_problems(self, key, lines):
+        return []
+
+    def repair(self, key, lines):
+        return list(lines), [], []
 
 
 class RecapVoice(Voice):

@@ -41,7 +41,9 @@ knew existed.
 | `coach` (stretch) | "Scanned vs didn't scan" side-by-side + one coaching cue | instructional |
 | `audio_description` | Blind and low-vision viewers: the moment told in the order it happened — where he got the ball, who he could not see, which way he looked, whom the look showed him, what he did — sound on by default, large-print captions | calm, slower voice at any tier; no xT or probabilities |
 
-All personas render the **same verified fact set**. Persona changes presentation, never facts.
+All personas render the **same verified fact set**. Persona changes presentation, never facts:
+which verified claims a script must cite and which it may not is fixed per persona in code (§6,
+"Persona rules").
 Languages: `en` and `zh` for the MVP; `es` is a stretch goal.
 
 ## 2. Architecture
@@ -1106,6 +1108,31 @@ tools exposed by our own MCP server.
 `zh-CN-YunjianNeural`, colour `en-US-DavisNeural` and `zh-CN-YunyeNeural`. If either fails, a
 single-narrator template takes over (failure policy below).
 
+**Persona rules** (`agents/persona_rules.py`). The red-team review found the cached model scripts
+of different personas were the same claims reordered (casual heard expected threat and no
+counterfactual; coach no counterfactual). Each persona now has claims it may not cite, groups of
+claims its script (both voices together) must cite one of, and a number budget:
+
+| Persona | Must cite (one of each group) | May not cite | Numbers |
+|---|---|---|---|
+| `casual` | the counterfactual (`cf_pass`, `cf_carry_lost`, `cf_lost_runner`, `cf_unmarked`, `cf_shot`) | xT and probabilities (`cf_value`, `cf_shot_value`, `pass_success`, `cf_pass_success`, `shot_thought_vs_was`) | ≤ 2 |
+| `analyst` | the look's value (`cf_value`, `cf_shot_value`); belief error; scan timing (scan lens) | – | – |
+| `player_fan` | his own look (scan lens); his decision (`pass_to_runner`, `runner_received`, `shot_placement`, `stayed_with_runner`) | – | – |
+| `coach` | the counterfactual; a coaching point (scan timing, `presser_distance`, `pressure_at_pass`, `keeper_near_side`) | – | – |
+| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`) | xT, probabilities, shares and pressing percentages | ≤ 2 |
+
+A group is required only when the moment has a supported claim in it, and a scan group only on
+the scan lens. Numbers are counted as the numeric slots of the cited claims (`{n:times}` counts;
+vocabulary slots do not). Enforcement, in order: the forbidden ids are not in that persona's
+schema enum, so the model cannot pick them; the prompt carries the rules (`must_include`,
+`max_numbers`, `start_with`, and for the co-commentator `still_missing`); tidy drops a forbidden
+line; the Verifier checks every script and sends one that breaks a rule back to both voices,
+whole, with the problems (a rewrite round, at most two); after the last round `repair` makes it
+comply with verified template lines (drops forbidden lines, adds the first supported claim of a
+missing group in story order, brings a spatial line first, trims numeric lines that cover no
+group). The templates go through the same `repair`. A recap tells several moments and keeps only
+the forbidden ids.
+
 **Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
 MomentCard (lens |Δ|, outcome, phase), never from an LLM. Each line also has a role. `open` is a
 play-by-play connective (no claim). `build` is any other play-by-play line. `peak` is play-by-play
@@ -1672,8 +1699,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   - Spans: one per breakdown, one child per workflow step (Director, Analyst with its MCP tool
     calls, Telestrator, each narration voice, Verifier rounds, Voice).
   - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
-    reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
-    ingestion.
+    reason, rewrites, dropped lines, scripts failing their persona rules and redrafts (§6), ms.
+    Ids and counts only, no prompt text, which also bounds ingestion.
   - Sampling: every span is kept (`sampling_ratio=1.0`). The distro's default, 5 spans/s decided
     span by span, dropped steps out of a breakdown's bursts: on 2026-10-20 two live traces lacked
     `voice`, one also `mcp`. The daily cap of the Log Analytics workspace bounds ingestion

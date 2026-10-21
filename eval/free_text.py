@@ -110,7 +110,7 @@ class FreeTextNarration(Narration):
     def rewrite_prompt(self, base: str, failed: list[tuple[ScriptLine, list[str]]]) -> str:
         return rewrite_prompt(base, failed)
 
-    def schema(self, language: Language) -> type[NarrationDraft]:
+    def schema(self, language: Language, persona: Persona | None = None) -> type[NarrationDraft]:
         return NarrationDraft
 
     def to_lines(self, value: Any, language: Language) -> list[DraftLine]:
