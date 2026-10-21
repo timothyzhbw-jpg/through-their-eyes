@@ -7,6 +7,7 @@ has a fictional name.
 """
 
 import copy
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -17,6 +18,7 @@ from sim.export import export_hero, export_match
 from sim.roster import ROSTER, full_name, short_name
 
 DT = 0.04
+WEB_FIXTURE = Path(__file__).resolve().parents[1] / "web/src/stats/fixture_seed3.json"
 
 
 @pytest.fixture(scope="module")
@@ -172,6 +174,19 @@ def test_stats_are_causal_truncating_the_stream_changes_nothing_up_to_that_frame
         assert _comparable(live) == _comparable(timeline.snapshot(frame=f)), f"frame {f}"
 
 
+@pytest.mark.parametrize("cut", [48, 52, 58])
+def test_a_shot_is_causal_whether_the_cut_comes_inside_or_after_its_release_window(cut):
+    """Shot at 45; its release window ends at 50. A cut at 48 ends it early (cued at 48)."""
+    possessions = [{"index": 0, "start": 0}, {"index": 1, "start": cut}]
+    export = tiny_export(possessions=possessions)
+    full = compute_stats(export, "tiny")
+    shots = [c for c in full.snapshot().cues if c.kind == "shot"]
+    assert [c.frame for c in shots] == [48 if cut == 48 else 50]
+    for f in range(40, 60):
+        live = compute_stats(truncate(export, f), "tiny").snapshot()
+        assert _comparable(live) == _comparable(full.snapshot(frame=f)), f"frame {f}"
+
+
 def test_a_snapshot_only_holds_cues_final_by_its_frame(match_stats):
     f = match_stats.frames // 3
     snap = match_stats.snapshot(frame=f)
@@ -290,10 +305,14 @@ def test_tracks_carry_checkpoints_ball_speed_and_runs_above_high_speed(match_sta
     assert len(tr.ball_kmh10) == frames
     assert tr.ball_kmh10 == np.rint(match_stats.ball_speed * 36).astype(int).tolist()
     above = np.zeros((frames, n), dtype=bool)
+    fast = np.zeros((frames, n), dtype=bool)
     for r in tr.speed:
         j = match_stats.ids.index(r.player)
         above[r.start : r.start + len(r.kmh10), j] = True
-        assert min(r.kmh10) > 198
+        assert min(r.kmh10) >= 198  # rounded to 0.1 km/h: 5.5 m/s is 198.0
+        for a, b in r.sprint:  # stretches above 25.2 km/h, compared in m/s as the cues are
+            assert r.start <= a < b <= r.start + len(r.kmh10)
+            fast[a:b, j] = True
         assert (
             r.kmh10
             == np.rint(match_stats.speed[r.start : r.start + len(r.kmh10), j] * 36)
@@ -301,6 +320,12 @@ def test_tracks_carry_checkpoints_ball_speed_and_runs_above_high_speed(match_sta
             .tolist()
         )
     assert np.array_equal(above, match_stats.speed > stats.HSR_MPS)
+    assert np.array_equal(fast, match_stats.speed > stats.SPRINT_MPS)
+    # Top speed so far at every checkpoint, for players who never pass 19.8 km/h too.
+    top = np.maximum.accumulate(match_stats.speed, axis=0)
+    assert len(tr.top_kmh10) == len(tr.distance_dm)
+    for c, row in enumerate(tr.top_kmh10):
+        assert row == np.rint(top[c * 25] * 36).astype(int).tolist()
     assert match_stats.snapshot().tracks is None  # only when asked for
 
 
@@ -331,4 +356,15 @@ def test_stats_from_a_sim_run_equal_the_stats_from_its_export(hero, hero_stats):
     run = Simulation.from_scenario("blind_side_run", 3).run()
     assert stats_from_run(run, "blind_side_run-3").snapshot().model_dump() == (
         hero_stats.snapshot().model_dump()
+    )
+
+
+def test_the_web_fixture_is_current(hero_stats):
+    """The viewer's parity test (web/src/stats/stats.test.ts) runs on this output."""
+    from analytics.live_stats import FIXTURE_FRAMES, web_fixture
+
+    assert all(f % 25 == 0 for f in FIXTURE_FRAMES)
+    assert WEB_FIXTURE.read_text() == web_fixture(hero_stats), (
+        "stale: uv run python -m analytics.live_stats --scenario blind_side_run --seed 3 "
+        "--web-fixture web/src/stats/fixture_seed3.json"
     )
