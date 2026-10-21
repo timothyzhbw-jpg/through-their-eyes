@@ -2,9 +2,19 @@
 // his belief), and the other match (the counterfactual and what the look was worth). Numbers here
 // are read straight from the sim export and say so, in Chalk; only a value the verifier checked is
 // set in Floodlight with its check (SPEC 5.3). The beats follow the hero's lens: the look over the
-// shoulder (blind_side_run), or the press he plays out of (press_escape).
+// shoulder (blind_side_run), a marker's look at the man he marks (corner_blind_side), or the press
+// he plays out of (press_escape).
 
-import { actionLabel, runLabels, type Hero, type Run, type Scan } from "../data/hero";
+import {
+  actionLabel,
+  isSeen,
+  runLabels,
+  type Hero,
+  type Marker,
+  type Run,
+  type Scan,
+} from "../data/hero";
+import type { RunName } from "../data/types";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { Chapter, Title } from "./Chapter";
@@ -17,7 +27,68 @@ interface Beat {
 }
 
 function beats(hero: Hero, run: Run): Beat[] {
+  if (hero.marker && hero.keyScan) return markerBeats(hero, run, hero.keyScan, hero.marker);
   return hero.keyScan ? scanBeats(hero, run, hero.keyScan) : pressureBeats(hero, run);
+}
+
+const SIGHT_GAP_S = 0.5; // out of sight at least this long before the look to be worth a beat
+
+/** Where a marker's man was when the pass to him ended, in words, with the separation. */
+export function markerOutcome(hero: Hero, m: Marker, run: RunName): string {
+  const heroId = hero.heroId ?? "He";
+  const r = m.resolved[run];
+  const sep = `${heroId} ${m.separation[run].toFixed(1)} m from`;
+  if (r.type === "reception") return `${m.man} receives it with ${sep} him.`;
+  if (r.type === "interception" && r.player === heroId) return `${heroId} intercepts it.`;
+  if (r.type === "interception") return `${r.player} intercepts it, ${sep} ${m.man}.`;
+  if (r.type === "out") return `The ball goes out, ${sep} ${m.man}.`;
+  return `The pass is still running when the clip ends, ${sep} ${m.man}.`;
+}
+
+/**
+ * A marker's look (no decision on the ball): his man goes out of his sight, the look over his
+ * shoulder (or, without it, eyes on the ball), the pass to his man and how close he was when it
+ * arrived. Sight is the sim's perception (seen_by); a beat it cannot back is left out.
+ */
+function markerBeats(hero: Hero, run: Run, key: Scan, m: Marker): Beat[] {
+  const factual = run.name === "factual";
+  const heroId = hero.heroId ?? "He";
+  const man = hero.runner;
+  const sees = (f: number) => run.sight && isSeen(hero, run, f, hero.hero, man);
+  let lastSeen = -1;
+  for (let f = key.start - 1; f >= 0 && lastSeen < 0; f--) if (sees(f)) lastSeen = f;
+  const gone = run.sight && lastSeen >= 0 && (key.start - lastSeen - 1) * hero.dt >= SIGHT_GAP_S;
+  let seenAt = -1; // the first frame of the look in which he sees his man
+  for (let f = key.start; f <= key.end && seenAt < 0; f++) if (sees(f)) seenAt = f;
+  const opening = run.firstPass && run.firstPass.id !== m.pass.id ? run.firstPass : null;
+  const list: (Beat | null)[] = [
+    { from: 0, text: `${heroId} marks ${m.man}.` },
+    opening && { from: opening.frame, text: `${opening.player} plays it to ${opening.attrs.to}.` },
+    gone ? { from: lastSeen + 1, text: `${m.man} moves out of ${heroId}'s sight.` } : null,
+    factual
+      ? {
+          from: key.start,
+          text: `${heroId} checks over his shoulder: a ${((key.end - key.start) * hero.dt).toFixed(2)} s look away from the ball.`,
+        }
+      : {
+          from: key.start,
+          text: `Same moment, but ${heroId} keeps his eyes on the ball. No look over the shoulder.`,
+        },
+    !run.sight
+      ? null
+      : factual && seenAt >= 0
+        ? { from: seenAt, text: `He sees ${m.man} in that look.` }
+        : !factual && seenAt < 0
+          ? {
+              from: key.end,
+              text: `He does not see ${m.man}: he pictures him where he last saw him.`,
+            }
+          : null,
+    { from: m.pass.frame, text: `${m.pass.player} plays it to ${m.man}.` },
+    { from: m.resolved[run.name].frame, text: markerOutcome(hero, m, run.name) },
+  ];
+  // In time order; beats on the same frame keep their order above.
+  return list.filter((b): b is Beat => b !== null).sort((a, b) => a.from - b.from);
 }
 
 function scanBeats(hero: Hero, run: Run, key: Scan): Beat[] {
@@ -251,8 +322,12 @@ export function VerdictPanel() {
   const mode = useStore(playback, (s) => s.mode);
   if (!hero.counterfactual) return null;
   const labels = runLabels(hero);
-  const did = hero.runs.factual.decision?.chosen ?? "";
-  const other = hero.runs.counterfactual.decision?.chosen ?? "";
+  const marker = hero.marker;
+  // What each run shows: his action, or for a marker how far he was from his man.
+  const cardText = (run: RunName) =>
+    marker
+      ? `${marker.separation[run].toFixed(1)} m from ${marker.man}`
+      : actionLabel(hero.runs[run].decision?.chosen ?? "");
   const claim =
     narration && !narration.fixture
       ? [...narration.claims.values()].find(
@@ -265,7 +340,10 @@ export function VerdictPanel() {
       : undefined;
   const line = claim ? narration?.lines.find((l) => l.claims.includes(claim.id)) : undefined;
   const value = claim ? (claim.values.dxt as number) : hero.deltaXt;
-  const shown = `${value >= 0 ? "+" : "\u2212"}${Math.abs(value).toFixed(claim ? 2 : 3)}`;
+  const shown =
+    value === null
+      ? "\u2014"
+      : `${value >= 0 ? "+" : "\u2212"}${Math.abs(value).toFixed(claim ? 2 : 3)}`;
   const look = !!hero.keyScan;
   return (
     <Chapter
@@ -275,19 +353,21 @@ export function VerdictPanel() {
         look ? <Title lead="Take the look" em="away." /> : <Title lead="The other" em="choice." />
       }
       lede={
-        look
-          ? "We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw."
-          : "We play the same match again with his choice forced. Everything else is held the same, so any difference comes from that choice."
+        marker
+          ? `We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw. Each card: how far he was from ${marker.man} when the pass to him ended.`
+          : look
+            ? "We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw."
+            : "We play the same match again with his choice forced. Everything else is held the same, so any difference comes from that choice."
       }
     >
       <div className="versus">
         <div className={mode === "factual" ? "run-card on" : "run-card"}>
           <span className="kicker">{labels.tag.factual}</span>
-          <span className="run-action">{actionLabel(did)}</span>
+          <span className="run-action">{cardText("factual")}</span>
         </div>
         <div className={mode === "counterfactual" ? "run-card cf on" : "run-card cf"}>
           <span className="kicker">{labels.tag.counterfactual}</span>
-          <span className="run-action">{actionLabel(other)}</span>
+          <span className="run-action">{cardText("counterfactual")}</span>
         </div>
       </div>
       <div className={claim ? "worth verified" : "worth"}>
@@ -297,6 +377,11 @@ export function VerdictPanel() {
             <p className="worth-line">
               <LineText text={line.text} verified />
             </p>
+          ) : value === null ? (
+            <p className="worth-line">
+              {labels.gain}, in expected threat (xT), comes with the breakdown when its narration
+              states it.
+            </p>
           ) : (
             <p className="worth-line">{labels.gain}, in expected threat (xT).</p>
           )}
@@ -305,6 +390,13 @@ export function VerdictPanel() {
               <span className="checked">
                 <CheckIcon size={12} /> Counterfactual · checked by the verifier, in code
               </span>
+            ) : value === null ? null : hero.deltaSource === "lens" ? (
+              <>
+                <span className="source" title="From the moment's scan lens, not a verified claim">
+                  lens
+                </span>{" "}
+                From the moment's scan lens, not a verified claim.
+              </>
             ) : (
               <>
                 <span className="source" title="Read from the sim export, not a verified claim">
@@ -313,8 +405,10 @@ export function VerdictPanel() {
                 Read from the sim export, not a verified claim.
               </>
             )}{" "}
-            Expected threat is how much a position raises the chance of scoring soon. Causal inside
-            the simulation; not a claim about real football.
+            Expected threat is how much a position raises the chance of scoring soon.
+            {marker &&
+              " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
+            Causal inside the simulation; not a claim about real football.
           </p>
         </div>
       </div>
