@@ -88,6 +88,14 @@ const PAGES = [
     check: (p) => hero(p, { main: "board" }),
   },
   {
+    // a narrow desktop: from 901 px the viewer button shows its full label, and the hero's header
+    // also carries Your call and Take his eyes; checked like a phone's (no overlap, on screen)
+    name: "desktop-960-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
+  },
+  {
     name: "phone-hero",
     path: "?intro=0",
     device: PHONE,

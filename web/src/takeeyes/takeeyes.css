@@ -16,6 +16,19 @@
     display: none;
   }
 }
+/* a narrow desktop: with the pill there the viewer button shows its avatar only, as it does from
+   761 to 900 px (styles.css), so the header fits up to the width where its full label returns */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .stage-head:has(.te-open) .viewer-toggle > span:not(.avatar),
+  .stage-head:has(.te-open) .viewer-toggle > svg {
+    display: none;
+  }
+  .stage-head:has(.te-open) .viewer-toggle {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
 
 .takeeyes {
   position: absolute;
