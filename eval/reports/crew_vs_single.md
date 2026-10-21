@@ -2,12 +2,12 @@
 
 Model: `gpt-4.1-mini` on Microsoft Foundry, for every agent and as the groundedness judge. Evaluator: `azure-ai-evaluation` `GroundednessEvaluator`. Date: 2026-10-21.
 Moments: 6 in the four-arm comparison, 3 in the failure drill, 1 with free-text lines (listed below). Audiences: casual, analyst × en, zh, the API's default: four scripts per breakdown.
-Model calls: 189 (126 by the agents, 63 by the groundedness judge), and 56 more spent on a pilot and on runs set aside (below). Agent tokens: 284,242 in (82,816 from the prompt cache), 13,318 out: $0.11 at the list price ($0.40 / $0.10 cached / $1.60 per million tokens in, cached and out); the judge's 80,323 in and 9,317 out: $0.05 more.
+Model calls: 194 (123 by the agents, 71 by the groundedness judge), and 73 more spent on a pilot and on runs set aside (below). Agent tokens: 297,059 in (74,240 from the prompt cache), 13,584 out: $0.12 at the list price ($0.40 / $0.10 cached / $1.60 per million tokens in, cached and out); the judge's 90,537 in and 10,447 out: $0.05 more.
 
 ## Headline
 
-- **Verification, as shipped (A→B, C→D): nothing measurable.** Wrong facts aired: 0 · 0 · 0 · 0 (A · B · C · D); lines the Verifier rejects: 0 of 102 without it in the single agent, 0 of 138 in the crew. Anchored lines are verified sentences, so the Verifier rejected no line and changed nothing that aired in either structure.
-- **Collaboration, as shipped (A→C, B→D): resilience, not quality.** Same output quality: no wrong facts in either, plans valid in both, groundedness 5.00 vs 5.00, headline claims spoken 78% vs 92% (single vs crew, per breakdown; the crew's scripts are longer, since each voice reads the persona's length for itself: 17 vs 23 lines per breakdown). Seconds to air 14.6 vs 13.9, no measurable difference. The crew costs more: 2.0 vs 12.3 model requests and $0.0040 vs $0.0082 per breakdown. Its steps are short: under the deployed 8 s step timeout, 0 of 67 crew agent runs would have timed out, and 6 of 7 of the single agent's. Without any fault, 0 single and 1 crew breakdowns had a role on its template.
+- **Verification, as shipped (A→B, C→D): nothing measurable.** Wrong facts aired: 0 · 0 · 0 · 0 (A · B · C · D); lines the Verifier rejects: 0 of 110 without it in the single agent, 0 of 141 in the crew. Anchored lines are verified sentences, so the Verifier rejected no line and changed nothing that aired in either structure.
+- **Collaboration, as shipped (A→C, B→D): resilience, not measurably better lines.** Single vs crew: wrong facts aired 0 vs 0, groundedness 5.00 vs 5.00, plans from the model that validate 5 of 6 vs 6 of 6, headline claims spoken 81% vs 92% (per breakdown; the crew's scripts are longer, since each voice reads the persona's length for itself: 18 vs 24 lines per breakdown). Seconds to air 14.4 vs 13.8, no measurable difference. The crew costs more: 1.8 vs 12.0 model requests and $0.0046 vs $0.0090 per breakdown. Its steps are short: under the deployed 8 s step timeout, 0 of 66 crew agent runs would have timed out, and 6 of 6 of the single agent's. Without any fault, 0 single and 0 crew breakdowns had a role on its template.
 - **Analyst down.** single: 3 of 3 aired a valid, verified breakdown with 0 of 4 roles from the model; bringing it back took 1.7 model requests; crew: 3 of 3 aired a valid, verified breakdown with 3 of 4 roles from the model; bringing it back took 11.0 model requests.
 - **Telestrator down.** single: 3 of 3 aired a valid, verified breakdown with 0 of 4 roles from the model; bringing it back took 1.7 model requests; crew: 3 of 3 aired a valid, verified breakdown with 3 of 4 roles from the model; bringing it back took 1.0 model requests.
 - **Free-text lines (sensitivity, 1 moment).** Without the Verifier the voices' own sentences air: wrong facts 3 (single) and 12 (crew); lines the Verifier rejects 16 of 18 and 18 of 18. With it, 0 and 0 wrong facts and 0 and 0 rejected lines air: that is due to verification. The crew's separate voices did not write fewer wrong facts than the single agent, so none of it is due to collaboration.
@@ -19,7 +19,7 @@ Model calls: 189 (126 by the agents, 63 by the groundedness judge), and 56 more 
 | `blind_side_run` seed 3 | `m:decision_after_scan:H8:0075` | scan | 24 of 24 | comparison, drill, free text | served by the deployed site; one of match-1's three hero possessions |
 | `press_escape` seed 0 | `m:pressed_decision:H4:0066` | pressure | 14 of 14 | comparison, drill | served by the deployed site; one of match-1's three hero possessions |
 | `corner_blind_side` seed 0 | `m:marker_scan:H5:0121` | scan | 13 of 13 | comparison, drill | served by the deployed site; one of match-1's three hero possessions |
-| `far_post_finish` seed 0 | `m:decision_after_scan:H9:0196` | space | 10 of 10 | comparison | the shot hero on main (space lens), not deployed |
+| `far_post_finish` seed 0 | `m:decision_after_scan:H9:0196` | scan | 19 of 19 | comparison | the shot hero on main, not deployed |
 | `blind_side_run` seed 100 | `m:decision_after_scan:H8:0075` | scan | 24 of 24 | comparison | a held-out seed of the same hero scenario |
 | `press_escape` seed 200 | `m:pressed_decision:H4:0067` | pressure | 14 of 14 | comparison | a held-out seed of the same hero scenario |
 
@@ -30,25 +30,25 @@ Means per breakdown with 95% bootstrap intervals over moments; rates pooled over
 | | A · single agent | B · single + Verifier | C · crew, no Verifier | D · crew (deployed) |
 |---|---:|---:|---:|---:|
 | breakdowns (moment × 4 audiences) | 6 | 6 | 6 | 6 |
-| replies that fit their schema | 6/7 (86%) [49, 97] | 6/7 (86%) [49, 97] | 65/67 (97%) [90, 99] | 65/67 (97%) [90, 99] |
-| agent roles from the model, of 4 | 4.00 | 4.00 | 3.83 [3.50, 4.00] | 3.83 [3.50, 4.00] |
-| plans from the model that validate | 6/6 (100%) [61, 100] | 6/6 (100%) [61, 100] | 6/6 (100%) [61, 100] | 6/6 (100%) [61, 100] |
-| plan error codes | none | none | none | none |
-| lines aired per breakdown | 17.0 [14.0, 20.3] | 17.0 [14.0, 20.3] | 23.0 [21.7, 23.8] | 23.0 [21.7, 23.8] |
-| lines per script: casual · analyst | 2.7 [2.2, 3.2] · 5.8 [5.2, 6.5] | 2.7 [2.2, 3.2] · 5.8 [5.2, 6.5] | 3.9 [3.7, 4.2] · 7.6 [7.0, 8.0] | 3.9 [3.7, 4.2] · 7.6 [7.0, 8.0] |
-| aired lines the Verifier rejects (a number, id or term outside a verified slot) | 0/102 (0%) [0, 4] | 0/102 (0%) [0, 4] | 0/138 (0%) [0, 3] | 0/138 (0%) [0, 3] |
+| replies that fit their schema | 6/6 (100%) [61, 100] | 6/6 (100%) [61, 100] | 66/66 (100%) [94, 100] | 66/66 (100%) [94, 100] |
+| agent roles from the model, of 4 | 4.00 | 4.00 | 4.00 | 4.00 |
+| plans from the model that validate | 5/6 (83%) [44, 97] | 5/6 (83%) [44, 97] | 6/6 (100%) [61, 100] | 6/6 (100%) [61, 100] |
+| plan error codes | unknown_scan ×1 | unknown_scan ×1 | none | none |
+| lines aired per breakdown | 18.3 [15.7, 21.3] | 18.3 [15.7, 21.3] | 23.5 [23.2, 23.8] | 23.5 [23.2, 23.8] |
+| lines per script: casual · analyst | 3.0 [2.5, 3.5] · 6.2 [5.8, 6.7] | 3.0 [2.5, 3.5] · 6.2 [5.8, 6.7] | 4.0 [3.7, 4.3] · 7.8 [7.3, 8.0] | 4.0 [3.7, 4.3] · 7.8 [7.3, 8.0] |
+| aired lines the Verifier rejects (a number, id or term outside a verified slot) | 0/110 (0%) [0, 3] | 0/110 (0%) [0, 3] | 0/141 (0%) [0, 3] | 0/141 (0%) [0, 3] |
 | **wrong facts aired**: ids and numbers no cited claim holds | 0 | 0 | 0 | 0 |
-| claims cited by aired lines: supported · refuted · inconclusive · unknown | 102 · 0 · 0 · 0 | 102 · 0 · 0 · 0 | 138 · 0 · 0 · 0 | 138 · 0 · 0 · 0 |
-| digits the model wrote in its own words: in replies · aired | 1 · 0 | 1 · 0 | 2 · 0 | 2 · 0 |
+| claims cited by aired lines: supported · refuted · inconclusive · unknown | 110 · 0 · 0 · 0 | 110 · 0 · 0 · 0 | 141 · 0 · 0 · 0 | 141 · 0 · 0 · 0 |
+| digits the model wrote in its own words: in replies · aired | 0 · 0 | 0 · 0 | 0 · 0 | 0 · 0 |
 | lines dropped · rewrite rounds | 0 · 0 | 0 · 0 | 0 · 0 | 0 · 0 |
-| headline claims spoken | 56/72 (78%) [67, 86] | 56/72 (78%) [67, 86] | 55/60 (92%) [82, 96] | 55/60 (92%) [82, 96] |
-| lines restating an earlier one (dropped by tidy), per breakdown | 0.0 | 0.0 | 0.0 | 0.0 |
+| headline claims spoken | 58/72 (81%) [70, 88] | 58/72 (81%) [70, 88] | 66/72 (92%) [83, 96] | 66/72 (92%) [83, 96] |
+| lines restating an earlier one (dropped by tidy), per breakdown | 0.0 | 0.0 | 0.3 [0.0, 1.0] | 0.3 [0.0, 1.0] |
 | groundedness (1–5), per script | 5.00 (min 5, 24 scripts) | 5.00 (min 5, 24 scripts) | 5.00 (min 5, 24 scripts) | 5.00 (min 5, 24 scripts) |
-| seconds to air | 14.1 [11.9, 17.5] | 14.6 [12.3, 18.0] | 13.5 [11.9, 15.0] | 13.9 [12.1, 15.5] |
-| model requests per breakdown (agent runs and tool rounds) | 2.0 [1.5, 2.5] | 2.0 [1.5, 2.5] | 12.3 [12.0, 13.0] | 12.3 [12.0, 13.0] |
-| tokens per breakdown, in · out | 12413 [9720, 14816] · 663 [632, 695] | 12413 [9720, 14816] · 663 [632, 695] | 20794 [17668, 23921] · 722 [695, 744] | 20794 [17668, 23921] · 722 [695, 744] |
-| cost per breakdown, USD | 0.0040 [0.0031, 0.0047] | 0.0040 [0.0031, 0.0047] | 0.0082 [0.0067, 0.0096] | 0.0082 [0.0067, 0.0096] |
-| agent runs (tool rounds included) slower than the deployed 8 s step timeout | 6 of 7 | 6 of 7 | 0 of 67 | 0 of 67 |
+| seconds to air | 13.9 [11.9, 16.9] | 14.4 [12.3, 17.4] | 13.5 [11.9, 14.8] | 13.8 [12.1, 15.3] |
+| model requests per breakdown (agent runs and tool rounds) | 1.8 [1.5, 2.0] | 1.8 [1.5, 2.0] | 12.0 | 12.0 |
+| tokens per breakdown, in · out | 13231 [10406, 15419] · 686 [651, 720] | 13231 [10406, 15419] · 686 [651, 720] | 22112 [19790, 24435] · 744 [723, 767] | 22112 [19790, 24435] · 744 [723, 767] |
+| cost per breakdown, USD | 0.0046 [0.0042, 0.0051] | 0.0046 [0.0042, 0.0051] | 0.0090 [0.0082, 0.0099] | 0.0090 [0.0082, 0.0099] |
+| agent runs (tool rounds included) slower than the deployed 8 s step timeout | 6 of 6 | 6 of 6 | 0 of 66 | 0 of 66 |
 
 ## What is due to verification, and what to collaboration
 
@@ -58,16 +58,16 @@ Paired differences per breakdown (the later arm minus the earlier), mean over mo
 |---|---:|---:|---:|---:|
 | aired lines the Verifier rejects | 0.00 | 0.00 | 0.00 | 0.00 |
 | wrong facts aired (ids and numbers no cited claim holds) | 0.00 | 0.00 | 0.00 | 0.00 |
-| lines aired | 0.00 | 0.00 | +6.00 [+3.17, +8.50] | +6.00 [+3.17, +8.50] |
-| headline claims spoken (share) | 0.00 | 0.00 | +0.15 [+0.03, +0.27] | +0.15 [+0.03, +0.27] |
+| lines aired | 0.00 | 0.00 | +5.17 [+2.50, +7.83] | +5.17 [+2.50, +7.83] |
+| headline claims spoken (share) | 0.00 | 0.00 | +0.11 [-0.00, +0.24] | +0.11 [-0.00, +0.24] |
 | groundedness, mean of the 4 scripts | 0.00 | 0.00 | 0.00 | 0.00 |
-| agent roles from the model, of 4 | 0.00 | 0.00 | -0.17 [-0.50, 0.00] | -0.17 [-0.50, 0.00] |
-| plan from the model and valid (0/1) | 0.00 | 0.00 | 0.00 | 0.00 |
-| replies that do not fit their schema | 0.00 | 0.00 | +0.17 [0.00, +0.50] | +0.17 [0.00, +0.50] |
-| seconds to air | +0.5 [+0.3, +0.8] | +0.4 [+0.2, +0.6] | -0.5 [-2.9, +1.2] | -0.7 [-2.8, +0.9] |
-| model requests | 0.0 | 0.0 | +10.3 [+10.0, +10.7] | +10.3 [+10.0, +10.7] |
-| tokens (in + out) | 0 | 0 | +8440 [+5427, +12969] | +8440 [+5427, +12969] |
-| cost, USD | 0.0000 | 0.0000 | +0.0042 [+0.0031, +0.0054] | +0.0042 [+0.0031, +0.0054] |
+| agent roles from the model, of 4 | 0.00 | 0.00 | 0.00 | 0.00 |
+| plan from the model and valid (0/1) | 0.00 | 0.00 | +0.17 [0.00, +0.50] | +0.17 [0.00, +0.50] |
+| replies that do not fit their schema | 0.00 | 0.00 | 0.00 | 0.00 |
+| seconds to air | +0.5 [+0.2, +0.8] | +0.4 [+0.2, +0.6] | -0.4 [-2.6, +1.2] | -0.6 [-2.5, +0.9] |
+| model requests | 0.0 | 0.0 | +10.2 [+10.0, +10.5] | +10.2 [+10.0, +10.5] |
+| tokens (in + out) | 0 | 0 | +8940 [+6112, +13182] | +8940 [+6112, +13182] |
+| cost, USD | 0.0000 | 0.0000 | +0.0044 [+0.0035, +0.0055] | +0.0044 [+0.0035, +0.0055] |
 
 ## Failure drill: one agent down, then brought back
 
@@ -136,10 +136,10 @@ The same four arms when the voices write their own sentences with slot placehold
 | corner_blind_side-0 | B | 4 | agent | 20 | 0 | 8/12 | 5.00 | 10.7 | 2 | 13417 |
 | corner_blind_side-0 | C | 4 | agent | 23 | 0 | 11/12 | 5.00 | 10.3 | 12 | 19108 |
 | corner_blind_side-0 | D | 4 | agent | 23 | 0 | 11/12 | 5.00 | 10.3 | 12 | 19108 |
-| far_post_finish-0 | A | 4 | agent | 12 | 0 | 10/12 | 5.00 | 22.0 | 3 | 10990 |
-| far_post_finish-0 | B | 4 | agent | 12 | 0 | 10/12 | 5.00 | 22.3 | 3 | 10990 |
-| far_post_finish-0 | C | 3 | agent | 20 | 0 | 0/0 | 5.00 | 15.9 | 14 | 15565 |
-| far_post_finish-0 | D | 3 | agent | 20 | 0 | 0/0 | 5.00 | 16.7 | 14 | 15565 |
+| far_post_finish-0 | A | 4 | template | 20 | 0 | 12/12 | 5.00 | 20.8 | 2 | 16033 |
+| far_post_finish-0 | B | 4 | template | 20 | 0 | 12/12 | 5.00 | 21.0 | 2 | 16033 |
+| far_post_finish-0 | C | 4 | agent | 23 | 0 | 11/12 | 5.00 | 15.5 | 12 | 23605 |
+| far_post_finish-0 | D | 4 | agent | 23 | 0 | 11/12 | 5.00 | 16.0 | 12 | 23605 |
 | press_escape-0 | A | 4 | agent | 16 | 0 | 8/12 | 5.00 | 12.6 | 2 | 14412 |
 | press_escape-0 | B | 4 | agent | 16 | 0 | 8/12 | 5.00 | 13.0 | 2 | 14412 |
 | press_escape-0 | C | 4 | agent | 24 | 0 | 10/12 | 5.00 | 11.7 | 12 | 20430 |
@@ -169,8 +169,17 @@ from a new sample instead of the normal run's. Tool rounds are now keyed by the 
 they continue; those drills (`out/crew_vs_single/discarded/drills/`) were run again. Their
 model calls are counted in the total above.
 
+`far_post_finish` seed 0 was run a third time after main gave the shot hero its own claims (the
+look at the goal, the keeper it showed him, the placement) and with them the scan lens; the runs
+on its earlier space-lens context are in `out/crew_vs_single/discarded/superseded/`. The other
+five moments' contexts and prompts are byte-identical on that main, so their runs stand.
+
+The set-aside runs of that moment, in order (first run, then the space-lens run):
+
 - `far_post_finish-0` crew: roles from the model director, telestrator, narration; on templates analyst; replies rejected: angle: value_error ×2; 13 model calls.
 - `far_post_finish-0` single: roles from the model none; on templates director, analyst, telestrator, narration; replies rejected: analyst.angle: value_error ×2; 3 model calls.
+- `far_post_finish-0` crew: roles from the model director, telestrator, narration; on templates analyst; replies rejected: angle: value_error ×2; 14 model calls.
+- `far_post_finish-0` single: roles from the model director, analyst, telestrator, narration; on templates none; replies rejected: analyst.angle: value_error ×1; 3 model calls.
 
 ## Method
 
@@ -235,10 +244,11 @@ model calls are counted in the total above.
   its findings, more than re-running the single agent. Short steps also fit the deployed
   8 s step timeout; the single agent's one long call does not, so it needs a
   longer one and a stuck call is noticed later.
-- It does not show that the crew writes better: wrong facts, groundedness and plan validity are
-  the same, and with free text its separate voices wrote more wrong facts, not fewer. The crew
-  speaks more of its headline claims, but its scripts are also longer. It is not faster, and it
-  makes about six times the model requests, 1.7 times the tokens and twice the cost.
+- It does not show that the crew writes better. Wrong facts and groundedness are the same; the
+  crew's plans validated a little more often and it spoke more of its headline claims, but on
+  six moments neither difference is clear of zero, and its scripts are also longer. With free
+  text its separate voices wrote more wrong facts, not fewer. It is not faster, and it makes
+  about six times the model requests, 1.7 times the tokens and twice the cost.
 
 ## Limitations
 
@@ -256,7 +266,8 @@ model calls are counted in the total above.
 - The moments are the hero moments: the crew breaks down only a scenario hero's moment (its
   claims are built for it), so match-1's other lensed moments have no breakdown to compare. The
   sample is the three hero moments the site serves (match-1's hero possessions), the shot hero
-  on main and held-out seeds of two of them.
+  on main and held-out seeds of two of them. The hero scenarios that reached main after the
+  sample was fixed (`cutback_scan`, `keeper_switch`, `screened_shot`) are not in it.
 - Anchored lines are the crew's design, and both structures use them here. They leave the
   Verifier little to catch; the free-text sensitivity and eval/narration_ablation.py show what it
   catches when the voices write their own words.

@@ -81,7 +81,7 @@ PERSONAS: tuple[Persona, ...] = ("casual", "analyst")  # the API's default audie
 LANGUAGES: tuple[Language, ...] = ("en", "zh")
 
 # The three hero moments the deployed site serves, which are also match-1's three hero
-# possessions (sim.match.match_heroes(1)); the shot hero on main (space lens), not deployed; and
+# possessions (sim.match.match_heroes(1)); the shot hero on main, not deployed; and
 # one held-out seed of the two open-play heroes (their design seeds are 0-99, SPEC 3.6).
 MOMENTS = "blind_side_run:3,press_escape:0,corner_blind_side:0,far_post_finish:0," \
           "blind_side_run:100,press_escape:200"  # fmt: skip
@@ -1043,7 +1043,7 @@ def _inputs(plan: Plan, ctxs: dict[str, MomentContext]) -> list[str]:
                  if (scenario, seed) in group]  # fmt: skip
         why = ("served by the deployed site; one of match-1's three hero possessions"
                if (scenario, seed) in DEPLOYED else
-               "the shot hero on main (space lens), not deployed" if scenario == "far_post_finish"
+               "the shot hero on main, not deployed" if scenario == "far_post_finish"
                else "a held-out seed of the same hero scenario")  # fmt: skip
         rows.append(
             f"| `{scenario}` seed {seed} | `{ctx.card.id}` | {ctx.card.selected_lens} | "
@@ -1077,6 +1077,10 @@ def _headline(
     def rejected(arms, arm: Arm) -> str:
         return f"{total(arms, arm, lambda b: b.errors)} of {total(arms, arm, lambda b: b.lines)}"
 
+    def plans(arm: Arm) -> str:
+        made = [b for b in by_arm[arm] if b.plan_model]
+        return f"{sum(not b.rec.result.plan_errors for b in made)} of {len(made)}"
+
     def slow(arm: Arm) -> str:
         return _over(by_arm[arm], DEPLOYED_STEP_S)
 
@@ -1098,11 +1102,12 @@ def _headline(
         + ("Anchored lines are verified sentences, so the Verifier rejected no line and changed "
            "nothing that aired in either structure." if changed == 0 else
            "See the attribution table for what it removed."),
-        f"- **Collaboration, as shipped (A→C, B→D): resilience, not quality.** Same output "
-        f"quality: no wrong facts in either, plans valid in both, groundedness "
-        f"{mean('B', grounded):.2f} vs {mean('D', grounded):.2f}, "
+        f"- **Collaboration, as shipped (A→C, B→D): resilience, not measurably better lines.** "
+        f"Single vs crew: wrong facts aired {wrong['B']} vs {wrong['D']}, groundedness "
+        f"{mean('B', grounded):.2f} vs {mean('D', grounded):.2f}, plans from the model that "
+        f"validate {plans('B')} vs {plans('D')}, "
         f"headline claims spoken {100 * mean('B', _share):.0f}% vs {100 * mean('D', _share):.0f}% "
-        f"(single vs crew, per breakdown; the crew's scripts are longer, since each voice reads "
+        f"(per breakdown; the crew's scripts are longer, since each voice reads "
         f"the persona's length for itself: {mean('B', lambda b: b.lines):.0f} vs "
         f"{mean('D', lambda b: b.lines):.0f} lines per breakdown). Seconds to air "
         f"{mean('B', lambda b: b.seconds):.1f} vs {mean('D', lambda b: b.seconds):.1f}, no "
@@ -1237,7 +1242,14 @@ The first drills hit a second bug: Agent Framework gives every tool result a ran
 drill's tool round did not match the normal run's and was asked again, and the drill went on
 from a new sample instead of the normal run's. Tool rounds are now keyed by the conversation
 they continue; those drills (`out/crew_vs_single/discarded/drills/`) were run again. Their
-model calls are counted in the total above."""
+model calls are counted in the total above.
+
+`far_post_finish` seed 0 was run a third time after main gave the shot hero its own claims (the
+look at the goal, the keeper it showed him, the placement) and with them the scan lens; the runs
+on its earlier space-lens context are in `out/crew_vs_single/discarded/superseded/`. The other
+five moments' contexts and prompts are byte-identical on that main, so their runs stand.
+
+The set-aside runs of that moment, in order (first run, then the space-lens run):"""
 
 
 def _discarded(records: list[RunRecord]) -> list[str]:
@@ -1319,10 +1331,11 @@ METHOD = f"""## Method
   its findings, more than re-running the single agent. Short steps also fit the deployed
   {DEPLOYED_STEP_S:.0f} s step timeout; the single agent's one long call does not, so it needs a
   longer one and a stuck call is noticed later.
-- It does not show that the crew writes better: wrong facts, groundedness and plan validity are
-  the same, and with free text its separate voices wrote more wrong facts, not fewer. The crew
-  speaks more of its headline claims, but its scripts are also longer. It is not faster, and it
-  makes about six times the model requests, 1.7 times the tokens and twice the cost.
+- It does not show that the crew writes better. Wrong facts and groundedness are the same; the
+  crew's plans validated a little more often and it spoke more of its headline claims, but on
+  six moments neither difference is clear of zero, and its scripts are also longer. With free
+  text its separate voices wrote more wrong facts, not fewer. It is not faster, and it makes
+  about six times the model requests, 1.7 times the tokens and twice the cost.
 
 ## Limitations
 
@@ -1340,7 +1353,8 @@ METHOD = f"""## Method
 - The moments are the hero moments: the crew breaks down only a scenario hero's moment (its
   claims are built for it), so match-1's other lensed moments have no breakdown to compare. The
   sample is the three hero moments the site serves (match-1's hero possessions), the shot hero
-  on main and held-out seeds of two of them.
+  on main and held-out seeds of two of them. The hero scenarios that reached main after the
+  sample was fixed (`cutback_scan`, `keeper_switch`, `screened_shot`) are not in it.
 - Anchored lines are the crew's design, and both structures use them here. They leave the
   Verifier little to catch; the free-text sensitivity and eval/narration_ablation.py show what it
   catches when the voices write their own words.
@@ -1393,8 +1407,9 @@ async def main_async(args: argparse.Namespace) -> Path:
         if close is not None:
             await close()
     records = [*runs, *(r for pair in drill_records for r in pair if r is not None)]
-    discarded = [RunRecord.model_validate_json(f.read_text())
-                 for f in sorted((cache / "discarded").glob("*.json"))]  # fmt: skip
+    listed = [*sorted((cache / "discarded").glob("*.json")),
+              *sorted((cache / "discarded" / "superseded").glob("*.json"))]  # fmt: skip
+    discarded = [RunRecord.model_validate_json(f.read_text()) for f in listed]
     set_aside = [RunRecord.model_validate_json(f.read_text())
                  for f in sorted((cache / "discarded").rglob("*.json"))
                  if f.parent.name != "requests"]  # fmt: skip
