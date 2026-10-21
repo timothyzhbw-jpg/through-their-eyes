@@ -64,6 +64,7 @@ function heroOf(run: Run, dt = 1): Hero {
     runs: { factual: run, counterfactual: cf },
     reception: 0,
     marker: null,
+    keeperStep: null,
     match: null,
   };
 }
