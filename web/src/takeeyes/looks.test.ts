@@ -72,7 +72,7 @@ describe("the look grid", () => {
     expect(whereLabel(-150)).toBe("Over his right shoulder");
     expect(whereLabel(90)).toBe("To his left");
     expect(callLabel("shot:far")).toBe("Shoot at the far post");
-    expect(callLabel("pass:H9")).toBe("Pass to H9");
+    expect(callLabel("pass:H9")).toBe("Pass to N. Varnhall");
   });
 
   it("starts from his own look: over his right shoulder, when he really looked", () => {

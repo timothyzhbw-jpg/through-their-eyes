@@ -46,7 +46,8 @@ A worked example that reads the files:
 - **Players.** The same 22 fictional players play every match: home H1–H11 (4-3-3) and away
   A1–A11 (4-2-3-1). Names come from `sim/roster.py`. Each player's sim parameters are in
   `metadata.json`.
-- **Teams.** "Home" and "Away". There are no club names, crests or kits in the data.
+- **Teams.** Kestrel Bay (team 0, home) and Corvane Vale (team 1, away), the invented clubs of
+  `sim/roster.py` that the app shows. There are no crests or kits in the data.
 - **Labels.** Scans are ground truth (`scan` events). Partial head turns that are not scans are
   `head_turn` events. Beliefs and decisions are the sim's own state, not annotations.
 - **Missing values.** These columns are null by design:
@@ -239,7 +240,7 @@ decisions per match.
 
 ### `metadata.json`
 
-- `teams`.
+- `teams`: id, invented club name, side (`home` or `away`) and the direction it attacks.
 - `players`: id, team, shirt number, role and fictional name. Also each player's sim parameters:
   - `v_max_mps`, `a_max_mps2`, `d_max_mps2`: speed, acceleration and deceleration limits;
   - `scan_rate_hz`: the spontaneous scan rate while his head is free and no opponent is within
