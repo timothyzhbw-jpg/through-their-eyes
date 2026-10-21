@@ -1451,6 +1451,14 @@ original visual identity.
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
     fallback, Your call). On the tactical board a keeper's token keeps its team colour, which
     the board's other layers (pitch control) also use, with a band in his kit colour.
+  - Upgraded look, approved by the art director on 2026-10-21 and shared with the trailer's
+    Blender shots (`web/public/models/README.md`; `?look=v1` shows the plain kits). The model
+    gains only appended data (`demo/grf/reskin.py`): baked occlusion and the keepers' sleeve and
+    glove masks per vertex, and a cloth normal map, so the skeleton and clips stay byte for byte
+    (`web/src/players/lookModel.test.ts` poses both and compares every bone). Kit designs come
+    from one mask defined on the body in 3D: home side panels, away raglan sleeves, keepers'
+    tonal raglan with long sleeves and gloves, trims at the collar, cuffs, hems and socks; the
+    kit colours above are unchanged. Cost: +17 KB (+22 %) for the players; fps unchanged.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;

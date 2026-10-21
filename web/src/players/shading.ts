@@ -1,4 +1,4 @@
-// The upgraded look's shading (SPEC 7, `?look=v2`). Every part of the rigged player reads the
+// The upgraded look's shading (SPEC 7; the default look, `?look=v1` turns it off). Every part of the rigged player reads the
 // model's `_LOOK` vertex attribute (demo/grf/reskin.py; three.js names it `_look`):
 // - R: ambient occlusion baked in Blender from the rest pose. It takes the whole of the
 //   hemisphere's and an environment map's light (the armpits, the neck, under the shorts) and half

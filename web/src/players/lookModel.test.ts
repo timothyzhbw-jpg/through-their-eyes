@@ -1,4 +1,4 @@
-// The re-skinned model (SPEC 7, `?look=v2`): demo/grf/reskin.py only adds to the converted
+// The re-skinned model (SPEC 7, the default look): demo/grf/reskin.py only adds to the converted
 // model, so the app's animation code must pose both exactly alike. Every bone of every rigged
 // player, posed as RiggedPlayers poses it on the seed-3 export (H8's key scan, H9's run, players
 // standing), has the same world matrix in both models; the clips are the same numbers; and the

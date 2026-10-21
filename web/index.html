@@ -10,6 +10,16 @@
     />
     <title>Through Their Eyes</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- The players' model and kit design, fetched after the scripts instead of after the first
+         frame (SPEC 7). three.js requests both with crossorigin="anonymous". -->
+    <link
+      rel="preload"
+      href="/models/grf_player_look.glb"
+      as="fetch"
+      crossorigin
+      fetchpriority="low"
+    />
+    <link rel="preload" href="/models/kit_mask.webp" as="image" crossorigin fetchpriority="low" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

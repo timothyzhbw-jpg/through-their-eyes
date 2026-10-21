@@ -2,8 +2,8 @@
 // canvas laid out like the model's kit UVs. The regions were read off the source kit template
 // (a UV guide with a grid, not used itself): shirt front left half, back right half, shorts
 // below each, socks bottom left. UV origin top left, as in glTF (texture.flipY = false).
-// The upgraded look (`?look=v2`; the trailer paints the same with ~/tte-blender/reskin/
-// kit_textures.py) adds a design: models/kit_mask.webp marks side panels (R), raglan sleeves (G)
+// The upgraded look (the default, `?look=v1` turns it off; the trailer paints the same with
+// ~/tte-blender/reskin/kit_textures.py) adds a design: models/kit_mask.webp marks side panels (R), raglan sleeves (G)
 // and trims (B) in these UVs, defined on the body in 3D so they line up across the UV seams, and
 // each kit colours them.
 

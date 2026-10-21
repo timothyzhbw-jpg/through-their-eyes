@@ -23,7 +23,8 @@ to the tokens.
 
 ## The upgraded look (`grf_player_look.glb`, `kit_mask.webp`)
 
-`?look=v2` dresses the players in the look shared with the trailer's Blender shots. The model is
+The app dresses the players in the look shared with the trailer's Blender shots (`?look=v1` shows
+the plain kits on `grf_player.glb` for comparison). The model is
 `grf_player.glb` with additions only (`demo/grf/reskin.py`): every node, skin, clip and accessor
 keeps its index and bytes, so the animation code poses both alike (`src/players/lookModel.test.ts`
 compares every bone's world matrix through H8's key scan, H9's run and standing players).

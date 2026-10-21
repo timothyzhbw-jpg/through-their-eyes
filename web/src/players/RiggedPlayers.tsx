@@ -8,9 +8,10 @@
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
-// `?look=v2` (trial.ts) loads the re-skinned model instead (grf_player_look.glb, same skeleton and
-// clips byte for byte): kit designs from models/kit_mask.webp, a cloth normal map, and baked
-// occlusion plus the keepers' sleeves and gloves from its `_LOOK` attribute (shading.ts).
+// By default (trial.ts; `?look=v1` for the plain kits) it loads the re-skinned copy,
+// grf_player_look.glb (same skeleton and clips byte for byte): kit designs from
+// models/kit_mask.webp, a cloth normal map, and baked occlusion plus the keepers' sleeves and
+// gloves from its `_LOOK` attribute (shading.ts). index.html preloads both files.
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
 import { useFrame, useLoader } from "@react-three/fiber";
