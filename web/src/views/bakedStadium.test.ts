@@ -236,7 +236,7 @@ describe("the baked stadium's file", () => {
       "crowd",
       "baked_vc",
       "lamp",
-      "strip",
+      "roof_lamp",
       "board",
       "ribbon",
       "pitch",

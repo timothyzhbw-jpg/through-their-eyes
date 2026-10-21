@@ -1452,11 +1452,11 @@ original visual identity.
   - *Baked* ([bakedStadium.ts](../web/src/views/bakedStadium.ts),
     `web/public/models/stadium_baked.glb`, about 0.8 MB): modelled in Blender from our own
     procedural scripts on the same numbers (stepped terraces, 15,171 flat spectators, lattice
-    masts, roof trusses and light strips, a players' tunnel and two dugouts; no imported models
-    or textures). Cycles bakes the four masts' floodlights, the strips, the sky and the ambient
-    occlusion into a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a
+    masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+    dugouts; no imported models or textures). Cycles bakes the four masts' floodlights, the roof
+    lamps, a hidden fill under the roof for the stands, the sky and the ambient occlusion into a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a
     light map for the grass. The floodlight spots' powers are fitted by least squares so the pitch
-    is evenly lit (5th percentile 0.75 of the median). Everything but the grass is unlit; the
+    is evenly lit (5th percentile 0.73 of the median). Everything but the grass is unlit; the
     grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
     geometry, WebP textures.
   - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of

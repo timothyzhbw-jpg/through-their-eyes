@@ -27,8 +27,9 @@ to the tokens.
 imported models, photos or textures, and no real stadium, club, sponsor or broadcaster. The
 scripts build the same bowl as the app's procedural stadium (`src/views/stadiumGeometry.ts`, same
 numbers, pitch coordinates) with a stepped terrace, a crowd of 15,171 flat spectators, lattice
-floodlight masts, roof trusses and light strips, a players' tunnel and two dugouts; Cycles bakes
-the floodlights, the light strips, the sky and the ambient occlusion into it. The words on its
+floodlight masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+dugouts; Cycles bakes the floodlights, the roof lamps, a hidden fill under the roof for the stands,
+the sky and the ambient occlusion into it. The words on its
 boards and ribbon ("Through Their Eyes", "Synthetic match", "All players fictional") are drawn by
 the app.
 

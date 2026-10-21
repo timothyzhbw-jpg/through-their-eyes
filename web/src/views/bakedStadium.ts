@@ -1,7 +1,7 @@
 // The baked stadium (SPEC 7): the same bowl as the procedural one (stadiumGeometry.ts), modelled
 // in Blender from our own procedural scripts with its floodlight lighting and ambient occlusion
-// baked in, plus a stepped terrace, a 3D crowd, lattice masts, roof trusses and light strips, a
-// players' tunnel and dugouts. One GLB, web/public/models/stadium_baked.glb: meshopt geometry
+// baked in, plus a stepped terrace, a 3D crowd, lattice masts, roof trusses, a row of lamps along
+// the roof's edge, a players' tunnel and dugouts. One GLB, web/public/models/stadium_baked.glb: meshopt geometry
 // (decoder: meshoptimizer, MIT, bundled with three) and WebP textures.
 //
 // It never delays the first frame: the procedural stadium draws first, the file is fetched at low
@@ -15,8 +15,10 @@
 // - stadium: stands and roof; map = albedo x baked light, in the scene's light units.
 // - crowd: a quad per spectator; COLOR_0 = the square root of its baked colour (8 bits keep the
 //   darks), alpha = its bob seed; TEXCOORD_0 picks one of four silhouettes drawn here.
-// - baked_vc: masts, trusses, board frames, tunnel and dugouts; COLOR_0 as for the crowd.
-// - lamp, strip, tunnel_glow: self-lit faces.
+// - baked_vc: masts, trusses and lamp housings, board frames, tunnel and dugouts; COLOR_0 as
+//   for the crowd.
+// - lamp, roof_lamp: the masts' and the roof edge's lamp faces (userData.lamp). tunnel_glow: the
+//   tunnel's far end and the dugouts' canopy lights, kept dark.
 // - board, ribbon: the boards and the upper tier's ribbon; our own words are drawn on them here.
 // - pitch, apron: the grass, only to carry the ground's light (no colour) and show where it lies;
 //   they are not drawn. The app's own grass (Ground in Stadium.tsx) keeps its markings, colour and
@@ -331,6 +333,7 @@ export function dress(scene: THREE.Group, textures: AppTextures): BakedModel {
   let groundLight: THREE.Texture | null = null;
   const grass: THREE.Mesh[] = [];
   const lamp = new THREE.Color(NIGHT_LAMP).multiplyScalar(2.5);
+  const roofLamp = new THREE.Color(NIGHT_LAMP).multiplyScalar(1.4);
   const cache = new Map<string, THREE.Material>();
   const crowdMaps = new Map<number, THREE.Material>();
   const shared = (name: string, make: () => THREE.Material) => {
@@ -368,28 +371,19 @@ export function dress(scene: THREE.Group, textures: AppTextures): BakedModel {
         mesh.material = shared(old.name, () => vertexColourMaterial({ side: THREE.DoubleSide }));
         break;
       case "lamp":
+      case "roof_lamp":
         mesh.material = shared(old.name, () => {
-          const m = new THREE.MeshBasicMaterial({ color: lamp });
-          m.userData.lamp = true; // the lamp faces: a high quality tier may scale them for bloom
+          const m = new THREE.MeshBasicMaterial({
+            color: old.name === "lamp" ? lamp : roofLamp,
+            side: THREE.DoubleSide,
+          });
+          m.userData.lamp = true; // lamp faces: a high quality tier may scale them for bloom
           return m;
         });
         break;
-      case "strip":
-        mesh.material = shared(
-          old.name,
-          () =>
-            new THREE.MeshBasicMaterial({
-              color: new THREE.Color("#eef2f6").multiplyScalar(0.6),
-              side: THREE.DoubleSide,
-            }),
-        );
-        break;
       case "tunnel_glow":
-        mesh.material = shared(
-          old.name,
-          () =>
-            new THREE.MeshBasicMaterial({ color: new THREE.Color("#ffd9a8").multiplyScalar(0.14) }),
-        );
+        // Dark like the stands: a lit opening would read as an object of interest.
+        mesh.material = shared(old.name, () => new THREE.MeshBasicMaterial({ color: "#23292d" }));
         break;
       case "board":
       case "ribbon":
