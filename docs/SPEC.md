@@ -1134,7 +1134,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       fold; the card stays on screen at desktop and phone width; its words carry no number.
       — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
       [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
-      `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen
+      `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
+      no sideways scroll
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every

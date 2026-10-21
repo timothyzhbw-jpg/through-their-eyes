@@ -76,7 +76,7 @@ const PAGES = [
     name: "phone-tour",
     path: "?tour=1",
     device: PHONE,
-    check: (p, shoot, note) => phone(p, (q) => tour(q, shoot), note),
+    check: (p, shoot) => tour(p, shoot),
   },
   {
     name: "phone-hero",
@@ -168,21 +168,23 @@ async function tamper(page) {
   );
 }
 
-/** `?tour=1`, the judges' tour (SPEC 7, web/src/tour/): its card on screen at every step, Next
- * through to the end without pressing the steps' own buttons (the drill would run the crew),
- * then Done closes it and the hero moment works as before. */
+/** `?tour=1`, the judges' tour (SPEC 7, web/src/tour/): its card on screen at every step and no
+ * sideways scroll, Next through to the end without pressing the steps' own buttons (the drill
+ * would run the crew), then Done closes it and the hero moment works as before. A tour link opens
+ * paused (no stream), so the phone's header check, which wants the stream running, is not run. */
 async function tour(page, shoot) {
   const card = page.getByRole("dialog").filter({ hasText: /^Tour · \d+ of \d+/ });
   for (let k = 1; ; k++) {
     await see(card.filter({ hasText: new RegExp(`^Tour · ${k} of `) }), `the tour's step ${k}`);
     const [box, size] = await Promise.all([
       card.boundingBox(),
-      page.evaluate(() => [innerWidth, innerHeight]),
+      page.evaluate(() => [innerWidth, innerHeight, document.documentElement.scrollWidth]),
     ]);
-    const [w, h] = size;
+    const [w, h, wide] = size;
     if (!box || box.x < 0 || box.y < 0 || box.x + box.width > w || box.y + box.height > h) {
       throw new Error(`expected the tour's step ${k} card on screen, got ${JSON.stringify(box)}`);
     }
+    if (wide > w) throw new Error(`expected no sideways scroll at step ${k}: ${wide} px in ${w}`);
     await shoot(`step-${k}`);
     const done = card.getByRole("button", { name: "Done" });
     if (await done.count()) {
