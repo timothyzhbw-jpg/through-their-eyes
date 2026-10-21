@@ -513,7 +513,10 @@ is a step.
   lens: P(save) with the step minus without it (§5.2). It has its own claims and template narration
   (§6), and the hero export carries `key_step` with a `drop_step` counterfactual. `eval/hero_lens.py`,
   built on design seeds 0–39, run once on 300–339
-  ([hero_lens_screened_shot.md](../eval/reports/hero_lens_screened_shot.md)): SAVE_HELDOUT
+  ([hero_lens_screened_shot.md](../eval/reports/hero_lens_screened_shot.md)): the step is the moment
+  40/40; the sight lens is selected 35/40 and its Δ is positive in 32/40 (median +0.68), with
+  Δ ≥ 0.4 in 28/40, the hero gate's own count. The 5 seeds with no lens are the 5 shots H4
+  blocks before the save model (§3.6 above).
   - Demo seed 0, a design seed: the step is 0.64 m; with it H1 sees the ball as it is struck and
     saves (P(save) 0.70); without it he sees it 0.6 s later and A10 scores (P(save) 0).
 
@@ -945,7 +948,7 @@ Every factual sentence on screen comes from a `Claim`:
       as the moment in ≥ 95% of held-out seeds and the sight lens's Δ is positive in ≥ 60%; every
       claim verifies and every persona's template script airs in en and zh.
       — [eval/reports/hero_lens_screened_shot.md](../eval/reports/hero_lens_screened_shot.md)
-      (SAVE_SHORT on seeds 300–339, §3.6); [tests/test_save_breakdown.py](../tests/test_save_breakdown.py)
+      (40/40 and 32/40 on seeds 300–339, §3.6); [tests/test_save_breakdown.py](../tests/test_save_breakdown.py)
 - [x] Lens selection is deterministic for a given seed.
       — [tests/test_lenses.py](../tests/test_lenses.py)::`test_lens_selection_is_deterministic_for_a_seed`
 

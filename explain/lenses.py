@@ -66,7 +66,9 @@ from sim.decision import DecisionParams, OptionEval, placed_shot_value
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
-LENS_ORDER: tuple[LensName, ...] = ("scan", "space", "pressure", "sight")
+LENS_ORDER: tuple[LensName, ...] = ("scan", "space", "pressure")
+# Every lens, in tie order: the three of a decision on the ball, then a keeper's `sight`.
+TIE_ORDER: tuple[LensName, ...] = (*LENS_ORDER, "sight")
 SCAN_LOOKBACK_S = 10.0  # scans considered before the decision
 DIGITS = 6
 
@@ -505,7 +507,7 @@ def pick_lens(lenses: list[LensResult]) -> LensName | None:
     usable = [lens for lens in lenses if lens.available and lens.delta_xt is not None]
     if not usable:
         return None
-    best = max(usable, key=lambda lens: (abs(lens.delta_xt), -LENS_ORDER.index(lens.lens)))
+    best = max(usable, key=lambda lens: (abs(lens.delta_xt), -TIE_ORDER.index(lens.lens)))
     return best.lens
 
 
@@ -529,7 +531,7 @@ def explain_moment(card: MomentCard, run: MatchRun) -> MomentCard:
             "space": lambda: _unavailable("space", NO_BALL_DECISION),
             "pressure": lambda: _unavailable("pressure", NO_BALL_DECISION),
         }
-    out.lenses = [compute[name]() for name in LENS_ORDER if name in card.candidate_lenses]
+    out.lenses = [compute[name]() for name in TIE_ORDER if name in card.candidate_lenses]
     out.selected_lens = pick_lens(out.lenses)
     return out
 
