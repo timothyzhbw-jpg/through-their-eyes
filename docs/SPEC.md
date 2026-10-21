@@ -293,7 +293,8 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 
   the sim's tackle and control rules did not. One redesign, tried on design seeds only (pressing
   him 6 m deeper; the presser off the passing lanes), did not help (39/80 kept; or no press at
   all), so the scenario was not tuned further. The fix is in the decision model (§3.5, the run-in), not
-  in the scenario; on 100–139 it gives lens 39/40 and outcome 30/40, no carry lost
+  in the scenario; on 100–139 it gives lens 40/40 (39/40 before the fitted xT grid, §4) and
+  outcome 30/40, no carry lost
   ([hero_lens_press_escape_100-139.md](../eval/reports/hero_lens_press_escape_100-139.md)).
   `blind_side_run` is unchanged where it matters: 39/40 flips, its seed 3 byte for byte.
 
@@ -360,7 +361,8 @@ the defending side.
   0–39, run once on 100–139 ([hero_lens_corner_blind_side.md](../eval/reports/hero_lens_corner_blind_side.md)):
   the look is detected as the moment 40/40; the scan lens is selected 40/40, which is by
   construction, since the other two lenses need a decision on the ball; its Δ is positive in 39/40
-  (median +0.063 xT); the lens's most informative scan is the key scan 40/40; and the outcome
+  (median +0.1435 xT on the fitted grid, §4; +0.063 on the prior); the lens's most informative
+  scan is the key scan 40/40; and the outcome
   changes in 37/40 (the gate above). The one negative Δ, seed 103, is the gate's miss there:
   without the look another defender is 4.9 m from A9, so the pressure on him is higher.
   - Demo seed 0, a typical design seed: separation 2.9 m with the look and 7.9 m without (design
