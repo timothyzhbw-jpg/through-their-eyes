@@ -10,7 +10,14 @@
 // match); the default is the bundled hero moment, blind_side_run-3. Only the default is bundled,
 // so any other match needs the live service.
 
-import { createApi, MATCH_ID, PROBE_TIMEOUT_MS, type Api, type Fetch } from "../api/client";
+import {
+  createApi,
+  MATCH_ID,
+  PROBE_TIMEOUT_MS,
+  scanLensDelta,
+  type Api,
+  type Fetch,
+} from "../api/client";
 import { parseHero, type Hero } from "./hero";
 
 export const HERO_FILE = "hero_seed3.json";
@@ -80,6 +87,9 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
       ]);
       hero = parseHero(exported);
       momentId = hero.kind === "hero" ? (info?.hero_moment ?? null) : null;
+      if (hero.marker && hero.deltaXt === null && momentId) {
+        hero = await withLensValue(hero, candidate, momentId);
+      }
       api = candidate;
       offline = null;
     } catch (err) {
@@ -99,6 +109,20 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
     bundledWhatIfs(fetchImpl, opts.dataUrl, id),
   ]);
   return { hero, payload: bundledPayload, whatIfs, api, offline, momentId };
+}
+
+/**
+ * A marker's look has no possession value in the export (no decision on the ball), so its worth
+ * is the scan lens's delta on its MomentCard (explain.lenses.marker_scan_lens). Without the card
+ * the value stays null and the verdict waits for the breakdown's verified claim.
+ */
+async function withLensValue(hero: Hero, api: Api, momentId: string): Promise<Hero> {
+  try {
+    const delta = scanLensDelta(await api.moments(), momentId);
+    return delta === null ? hero : { ...hero, deltaXt: delta, deltaSource: "lens" };
+  } catch {
+    return hero;
+  }
 }
 
 /** The bundled what-ifs of a hero moment (`<scenario>-<seed>`), or null if none are bundled. */

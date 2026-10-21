@@ -18,8 +18,8 @@ from sim.decision import placed_shot_value
 
 SCENARIO, DEMO, HERO, KEEPER = "far_post_finish", 11, "H9", "A1"
 PERSONAS = ("casual", "analyst", "player_fan", "coach", "audio_description")
-SHOT_CLAIMS = {"scan_at_goal", "keeper_seen_in_scan", "keeper_near_side", "shot_placement", "goal",
-               "shot_speed", "shot_thought_vs_was", "cf_shot", "cf_keeper_age",
+SHOT_CLAIMS = {"scan_at_goal", "keeper_seen_in_scan", "keeper_near_side", "shot_placement",
+               "shot_scored", "shot_speed", "shot_thought_vs_was", "cf_shot", "cf_keeper_age",
                "cf_shot_value"}  # fmt: skip
 
 
@@ -59,7 +59,8 @@ def test_every_shot_claim_is_built_and_supported(ctx):
     assert "cf_value" not in ctx.claims  # a goal's possession value is an outcome, not a chance
     assert all(v.status == "supported" for v in ctx.verdicts.values())
     kinds = {cid: ctx.claims[cid].kind for cid in SHOT_CLAIMS}
-    assert kinds["shot_placement"] == kinds["goal"] == kinds["keeper_near_side"] == "observed"
+    observed = ("shot_placement", "shot_scored", "keeper_near_side")
+    assert {kinds[c] for c in observed} == {"observed"}
     assert kinds["keeper_seen_in_scan"] == kinds["shot_thought_vs_was"] == "computed"
     assert {c for c, k in kinds.items() if k == "counterfactual"} == {
         "cf_shot", "cf_keeper_age", "cf_shot_value"
@@ -84,7 +85,7 @@ def test_every_persona_tells_the_finish_in_both_languages(breakdown):
         assert lines and not script.dropped, (script.persona, script.language)
         if script.persona == "audio_description":
             assert not claims & ANALYST_NUMBERS
-            assert {"shot_placement", "goal"} <= claims
+            assert {"shot_placement", "shot_scored"} <= claims
 
 
 @pytest.mark.parametrize(

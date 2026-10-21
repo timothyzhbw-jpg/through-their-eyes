@@ -226,7 +226,7 @@ def test_live_limits_come_from_the_environment(monkeypatch):
     for name in ("TTE_LIVE_PER_CLIENT", "TTE_LIVE_MAX_S", "TTE_LIVE_MAX_TOTAL"):
         monkeypatch.delenv(name, raising=False)
     s = Settings.from_env()
-    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (4, 600.0, 64)
+    assert (s.live_per_client, s.live_max_s, s.live_max_total) == (4, 1200.0, 64)
     monkeypatch.setenv("TTE_LIVE_PER_CLIENT", "2")
     monkeypatch.setenv("TTE_LIVE_MAX_S", "90")
     monkeypatch.setenv("TTE_LIVE_MAX_TOTAL", "16")

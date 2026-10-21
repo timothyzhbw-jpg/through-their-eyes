@@ -101,24 +101,26 @@ MARKER_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None
 # A placed shot (Module A, `far_post_finish`): the look at the goal, the keeper it showed him, the
 # placement and its result, and the shot without the look.
 SHOT_HEADLINE = ["keeper_seen_in_scan", "shot_placement", "cf_shot"]
-SHOT_SUPPORTING = ["scan_at_goal", "keeper_near_side", "goal", "saved", "wide",
+SHOT_SUPPORTING = ["scan_at_goal", "keeper_near_side", "shot_scored", "shot_saved", "shot_wide",
                    "shot_thought_vs_was", "cf_keeper_age", "cf_shot_value",
                    "shot_speed"]  # fmt: skip
 SHOT_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
     "casual": [("pbp", None), ("pbp", "scan_at_goal"), ("color", "keeper_seen_in_scan"),
-               ("pbp", "shot_placement"), ("pbp", ("goal", "saved", "wide")), ("color", "cf_shot")],
+               ("pbp", "shot_placement"), ("pbp", ("shot_scored", "shot_saved", "shot_wide")),
+               ("color", "cf_shot")],
     "analyst": [("pbp", None), ("pbp", "scans_before_reception"), ("color", "keeper_near_side"),
                 ("color", "shot_thought_vs_was"), ("pbp", "shot_speed"),
                 ("color", "cf_keeper_age"), ("color", "cf_shot"), ("color", "cf_shot_value")],
     "player_fan": [("pbp", None), ("pbp", "scan_at_goal"), ("color", "keeper_seen_in_scan"),
-                   ("pbp", ("goal", "saved", "wide")), ("color", "cf_shot")],
+                   ("pbp", ("shot_scored", "shot_saved", "shot_wide")), ("color", "cf_shot")],
     "coach": [("pbp", "scans_before_reception"), ("pbp", "time_since_last_scan"),
               ("color", "keeper_near_side"), ("color", "cf_shot_value")],
     # For listeners, in the order it happened: where he got it, which way he looked, whom he saw,
     # where he put it, what came of it, and the shot without the look. No probabilities.
     "audio_description": [("pbp", "reception_zone"), ("pbp", ("scan_side", "scan_at_goal")),
                           ("color", "keeper_seen_in_scan"), ("pbp", "shot_placement"),
-                          ("pbp", ("goal", "saved", "wide")), ("color", "cf_shot")],
+                          ("pbp", ("shot_scored", "shot_saved", "shot_wide")),
+                          ("color", "cf_shot")],
 }  # fmt: skip
 
 

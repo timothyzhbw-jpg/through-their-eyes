@@ -431,6 +431,56 @@ export function pressureExport(): HeroExport {
   };
 }
 
+export const MARKER_MOMENT = "m:marker_scan:H8:0139";
+export const MARKER_SHIFT_M = 6; // how much further from his man the marker is without the look
+
+/**
+ * Like corner_blind_side-0: a marker's look (SPEC 5.1 `marker_scan`), a hero with a key scan and
+ * no decision on the ball, so `decision`, `action`, `possession_value` and `delta_xt` are null (the
+ * sim's NaN, as the service sends it). The bundled factual run, where the pass to H9 is the pass
+ * to his man; in the counterfactual the key scan is dropped and H8 is MARKER_SHIFT_M m further
+ * towards −x from the scan on.
+ */
+export function markerExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  const key = e.key_scan!;
+  const h = e.players.findIndex((p) => p.id === e.hero);
+  const factual = e.runs.factual;
+  const cf = structuredClone(factual);
+  cf.events = cf.events.filter((ev) => ev.id !== key.id);
+  cf.pos = cf.pos.map((row, f) =>
+    f <= key.start ? row : row.map((v, k) => (k === 2 * h ? v - MARKER_SHIFT_M * 1000 : v)),
+  );
+  for (const run of [factual, cf]) {
+    run.decision = null;
+    run.action = null;
+    run.possession_value = null;
+  }
+  return {
+    ...e,
+    scenario: "corner_blind_side",
+    seed: 0,
+    delta_xt: null,
+    runs: { factual, counterfactual: cf },
+  };
+}
+
+/** GET /api/matches/<id>/moments for the marker: its card with the scan lens's delta. */
+export const markerCards = (delta: number | null = 0.09596) => [
+  {
+    id: MARKER_MOMENT,
+    kind: "marker_scan",
+    actor: "H8",
+    receiver: "H9",
+    anchor_frame: 139,
+    selected_lens: "scan",
+    lenses: [
+      { lens: "scan", available: delta !== null, delta_xt: delta, metrics: {} },
+      { lens: "space", available: false, delta_xt: null, metrics: {} },
+    ],
+  },
+];
+
 export const MATCH = "match-1";
 export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled run's first 60 frames
 export const BLIND_START = OPEN_FRAMES; // possession 1: blind_side_run 3

@@ -1,8 +1,9 @@
 // The bar along the bottom of the live screen: play / pause, the timeline with scan bars and the
-// decision marker (the key scan and the decision are labelled under it, and jump there), the
-// clock, the view options and the camera. In a stitched match the timeline also marks where each
-// possession starts (hero possessions shaded) and the hero moments, with jumps between
-// possessions; the clock is the match clock, also inside a hero moment's breakdown.
+// decision marker (the key scan and the decision, or where the ball reaches a marker's man, are
+// labelled under it, and jump there), the clock, the view options and the camera. In a stitched
+// match the timeline also marks where each possession starts (hero possessions shaded) and the
+// hero moments, with jumps between possessions; the clock is the match clock, also inside a hero
+// moment's breakdown.
 
 import { useEffect, useRef, useState } from "react";
 import { possessionAt } from "../match/match";
@@ -11,6 +12,22 @@ import { useStore } from "../store/store";
 import { PauseIcon, PlayIcon } from "./icons";
 import { intro } from "./intro";
 import { CameraSwitch, ViewOptions } from "./Stage";
+
+// Possession numbers on the match timeline are drawn only this far apart (px; a 9 px two-digit
+// number and its 4 px offset): a hero possession is about 6 s, and on a phone the whole match
+// clock is a few hundred pixels.
+const LABEL_GAP_PX = 16;
+
+/** Which of the possession starts at `xs` (px, in order) get their number: left to right, each
+ * at least `gap` px after the last one numbered. */
+export function numbered(xs: number[], gap = LABEL_GAP_PX): boolean[] {
+  let last = -Infinity;
+  return xs.map((x) => {
+    if (x - last < gap) return false;
+    last = x;
+    return true;
+  });
+}
 
 export function Transport() {
   const session = useView();
@@ -119,6 +136,7 @@ function Timeline() {
   const decision = run.decision ? run.decision.frame : hero.reception;
   // The same mapping as X, in CSS: the labels need no measured width.
   const at = (f: number) => ({ left: `calc(6px + (100% - 12px) * ${f / last})` });
+  const labels = numbered(possessions.map((p) => X(p.start)));
 
   return (
     <div
@@ -162,9 +180,11 @@ function Timeline() {
                   fill="rgba(239,237,229,0.45)"
                 />
               )}
-              <text x={X(p.start) + 4} y={10} className="possession-label">
-                {p.index + 1}
-              </text>
+              {labels[p.index] && (
+                <text x={X(p.start) + 4} y={10} className="possession-label">
+                  {p.index + 1}
+                </text>
+              )}
             </g>
           ))}
           <rect
@@ -269,9 +289,13 @@ function Timeline() {
             className="mark"
             style={at(decision)}
             onClick={() => controls.seek(decision)}
-            title="Jump to the decision"
+            title={
+              hero.marker
+                ? `Jump to where the pass to ${hero.marker.man} ends`
+                : "Jump to the decision"
+            }
           >
-            Decision
+            {hero.marker ? "Ball arrives" : "Decision"}
           </button>
         </div>
       )}

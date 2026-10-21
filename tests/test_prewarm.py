@@ -153,3 +153,25 @@ def test_tts_speaks_every_cue_once(tmp_path, replies, speech, clock):
 @pytest.mark.parametrize("text, rate", [("3/600", (3, 600.0)), ("5", (5, 600.0))])
 def test_the_rate_is_read_like_the_api_reads_it(text, rate):
     assert prewarm.parse_rate(text) == rate
+
+
+def test_a_stitched_match_adds_its_recap_for_every_persona_and_language():
+    """The web app asks for a match's recap one persona in one language at a time (SPEC 6)."""
+    infos = {
+        "/api/matches": [{"id": "blind_side_run-3"}, {"id": "match-1"}],
+        "/api/matches/blind_side_run-3": {"id": "blind_side_run-3", "kind": "hero",
+                                          "hero_moments": [MOMENT]},
+        "/api/matches/match-1": {"id": "match-1", "kind": "match", "hero_moments": ["m:a", "m:b"]},
+    }  # fmt: skip
+    found = prewarm.views(lambda method, path, body: (200, infos[path]))
+    recaps = [v for v in found if v.kind == "recap"]
+    assert len(found) == 3 * VIEWS + VIEWS and found[-len(recaps) :] == recaps
+    assert {v.match for v in recaps} == {"match-1"} and len(recaps) == VIEWS
+    assert recaps[0].path == "/api/recaps"
+    first = {"personas": [prewarm.PERSONAS[0]], "languages": [prewarm.LANGUAGES[0]]}
+    assert recaps[0].body() == {"match": "match-1", **first, "regenerate": False}
+    clean = {"source": "model", "result": {"reel_source": "agent", "trace": []}}
+    assert prewarm.problems(clean) == []
+    assert prewarm.problems({**clean, "result": {"reel_source": "template", "trace": []}}) == [
+        "plan from template"
+    ]
