@@ -5,6 +5,7 @@
 // hero layout with a way back (MatchApp).
 
 import { useEffect, type ReactNode } from "react";
+import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
@@ -162,6 +163,9 @@ function LiveScreen(props: {
         <div className="header-end">{props.end}</div>
       </header>
       <StageHud />
+      <div className="stage-director">
+        <DirectorBar />
+      </div>
       {props.run && <div className="stage-run">{props.run}</div>}
       {props.caption && <div className="stage-caption">{props.caption}</div>}
       <Transport />

@@ -377,7 +377,7 @@ class Simulation:
             "intended": intended,
             "target": np.asarray(target, dtype=float),
             "meet": meet,
-            "hero": self.ids[i] == self.scenario.hero,
+            "hero": self.scenario.ends_on_pass(self, i),
         }
 
     def _decide(self, i: int, f: int) -> None:
