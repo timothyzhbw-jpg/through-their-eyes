@@ -56,14 +56,20 @@ class ShotParams:
     m_in: float = 0.5  # m inside the post
 
 
-def reach(t: float, kp: KeeperParams = KeeperParams()) -> float:
+KEEPER = KeeperParams()
+SHOT = ShotParams()
+
+
+def reach(t: float, kp: KeeperParams | None = None) -> float:
     """How far (m) he can reach with `t` seconds from seeing the ball to its reaching his line."""
+    kp = KEEPER if kp is None else kp
     if not math.isfinite(t):
         return kp.r_early
     return float(np.clip(kp.r_late + kp.v_dive * (t - kp.t_pen), kp.r_body, kp.r_early))
 
 
-def p_save(d: float | np.ndarray, r: float, kp: KeeperParams = KeeperParams()) -> np.ndarray:
+def p_save(d: float | np.ndarray, r: float, kp: KeeperParams | None = None) -> np.ndarray:
+    kp = KEEPER if kp is None else kp
     d = np.asarray(d, dtype=float)
     band = kp.rho * (0.5 - (d - r) / (2.0 * kp.mu))
     return np.where(d <= r - kp.mu, kp.rho, np.where(d >= r + kp.mu, 0.0, band))
@@ -73,8 +79,9 @@ def _phi(z: float) -> float:
     return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
 
 
-def p_on_target(y_aim: float, distance: float, sp: ShotParams = ShotParams()) -> float:
+def p_on_target(y_aim: float, distance: float, sp: ShotParams | None = None) -> float:
     """P(the ball crosses the line between the posts), lateral aim error only."""
+    sp = SHOT if sp is None else sp
     s = max(distance * math.tan(sp.sigma_theta), 1e-6)
     return float(_phi((GOAL_HALF_WIDTH - y_aim) / s) - _phi((-GOAL_HALF_WIDTH - y_aim) / s))
 
@@ -83,7 +90,7 @@ _GH_X, _GH_W = np.polynomial.hermite_e.hermegauss(9)  # probabilists' Gauss-Herm
 
 
 def expected_p_save(y_aim: float, y_keeper: float, spread: float, r: float,
-                    kp: KeeperParams = KeeperParams()) -> float:  # fmt: skip
+                    kp: KeeperParams | None = None) -> float:  # fmt: skip
     """E[P_save] over the keeper's lateral position ~ N(y_keeper, spread^2)."""
     ys = y_keeper + spread * _GH_X
     return float(np.sum(_GH_W * p_save(np.abs(y_aim - ys), r, kp)) / np.sum(_GH_W))
@@ -96,7 +103,8 @@ def near_post_sign(shooter_y: float, from_y: float) -> float:
     return math.copysign(1.0, from_y) if from_y else 1.0
 
 
-def aim_y(placement: str, near_sign: float, sp: ShotParams = ShotParams()) -> float:
+def aim_y(placement: str, near_sign: float, sp: ShotParams | None = None) -> float:
+    sp = SHOT if sp is None else sp
     inside = GOAL_HALF_WIDTH - sp.m_in
     return near_sign * inside if placement == "near" else -near_sign * inside
 
@@ -121,9 +129,10 @@ def goal_x(attack_sign: int) -> float:
 
 
 def bisector_point(ball: np.ndarray, attack_sign_of_shooter: int,
-                   kp: KeeperParams = KeeperParams()) -> np.ndarray:  # fmt: skip
+                   kp: KeeperParams | None = None) -> np.ndarray:  # fmt: skip
     """Where the keeper of the goal at attack_sign * x stands: on the bisector of the angle the
     ball makes with the two posts, kp.depth off his line (a convention, not a cited model)."""
+    kp = KEEPER if kp is None else kp
     gx = goal_x(attack_sign_of_shooter)
     posts = np.array([[gx, GOAL_HALF_WIDTH], [gx, -GOAL_HALF_WIDTH]])
     u = posts - ball

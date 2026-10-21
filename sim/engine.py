@@ -98,6 +98,7 @@ class Simulation:
         # Scenarios with `shots` (Module A): the shot in flight, and each keeper's dive
         # (target, first frame, last frame).
         self.shot_in_flight: dict | None = None
+        self.ball_out = False
         self.dives: dict[int, tuple[np.ndarray, int, int]] = {}
         self.tackle_lockout: dict[int, int] = {}  # player -> first frame he may tackle again
         self.last_kicker = -1
@@ -341,15 +342,19 @@ class Simulation:
             margin = time_to_intercept(self.pos, self.vel, path) - times[None, :]
             passer_team = self.team[self.pass_in_flight["passer"]]
             defenders = np.flatnonzero(self.team != passer_team)
-            best = defenders[np.argmin(margin[defenders].min(axis=1))]
-            feasible = np.flatnonzero(margin[best] <= 0.0)
-            if feasible.size:
-                target[best], cap[best] = path[feasible[0]], self.v_max[best]
+            if self.scenario.shots:
+                # Keepers keep their bisector position rather than chasing a passing lane.
+                defenders = np.array([j for j in defenders if self.players[j].role != "GK"])
+            if defenders.size:
+                best = defenders[np.argmin(margin[defenders].min(axis=1))]
+                feasible = np.flatnonzero(margin[best] <= 0.0)
+                if feasible.size:
+                    target[best], cap[best] = path[feasible[0]], self.v_max[best]
             r = self.pass_in_flight["intended"]
             target[r], cap[r] = self.pass_in_flight["meet"], self.v_max[r]
         for k, (t, start, until) in self.dives.items():
             if start <= f <= until:
-                target[k], cap[k] = t, shots.KeeperParams().v_dive_max
+                target[k], cap[k] = t, shots.KEEPER.v_dive_max
         return target, cap
 
     def _kick_pass(self, i: int, target: np.ndarray, intended: int, f: int) -> None:
@@ -454,12 +459,14 @@ class Simulation:
         x, y = self.ball_pos[:2]
         if abs(x) <= HALF_LENGTH and abs(y) <= HALF_WIDTH:
             return False
+        if self.scenario.shots and self.ball_out:
+            return True
         self.ball_vel[:] = 0.0
         last = self.last_kicker
         goal = (
             self.shot_in_flight is not None
             and abs(x) > HALF_LENGTH
-            and abs(y) < shots.GOAL_HALF_WIDTH
+            and abs(self.shot_in_flight["event"].attrs["goal_line_y"]) < shots.GOAL_HALF_WIDTH
         )
         etype = "goal" if goal else "out"
         self.events.append(
@@ -467,6 +474,8 @@ class Simulation:
                   self.frame * DT, self.ids[last], int(self.team[last]),
                   {"at": [float(x), float(y)]})
         )  # fmt: skip
+        if self.scenario.shots:
+            self.ball_out = True
         if self.shot_in_flight is not None:
             self._finish_shot("goal" if goal else "wide")
         self._resolve_pass(None, "out")
@@ -570,7 +579,11 @@ class Simulation:
         for team, sign in ((0, -1), (1, 1)):  # the away keeper defends +x
             k = self._keeper(team)
             if k >= 0 and k != self.owner:
-                target[k] = shots.bisector_point(self.ball_pos[:2], sign)
+                if self.shot_in_flight is not None and k == self.shot_in_flight["keeper"]:
+                    # He stays set until he sees the strike and starts his dive.
+                    target[k] = self.shot_in_flight["set_position"]
+                else:
+                    target[k] = shots.bisector_point(self.ball_pos[:2], sign)
                 cap[k] = self.v_max[k]
 
     def _limits(self, f: int) -> tuple[np.ndarray, np.ndarray]:
@@ -579,16 +592,19 @@ class Simulation:
         if not active:
             return self.a_max, self.d_max
         a_max, d_max = self.a_max.copy(), self.d_max.copy()
-        a_max[active] = d_max[active] = shots.KeeperParams().a_dive_max
+        a_max[active] = d_max[active] = shots.KEEPER.a_dive_max
         return a_max, d_max
 
     def _kick_shot(self, i: int, option, f: int) -> None:
         """Strike `option` (shot:near | shot:far) at shot speed with an aim error, both keyed
         draws of the shooter at this frame, so a counterfactual elsewhere keeps them."""
-        sp, pid = shots.ShotParams(), self.ids[i]
+        sp, pid = shots.SHOT, self.ids[i]
         lo, hi = sp.speed
         speed = lo + (hi - lo) * self.rng.uniform_for("shot_speed", f, pid)
-        error = float(self.rng.generator("shot_error", f, pid).standard_normal()) * sp.sigma_theta
+        error_draw = float(self.rng.generator("shot_error", f, pid).standard_normal())
+        if self.rng.recorded is not None:
+            self.rng.recorded[(pid, "shot_error", f)] = (error_draw,)
+        error = error_draw * sp.sigma_theta
         ball = self.ball_pos[:2].copy()
         aim = np.asarray(option.target, dtype=float)
         u = (aim - ball) / float(np.linalg.norm(aim - ball))
@@ -631,6 +647,7 @@ class Simulation:
         self.shot_in_flight = {
             "event": event,
             "keeper": k,
+            "set_position": self.pos[k].copy(),
             "x_k": x_k,
             "y_c": y_k_line,
             "cross": f + round(t_k / DT) if math.isfinite(t_k) else None,
@@ -640,11 +657,12 @@ class Simulation:
             "u": self.rng.uniform_for("save", f, self.ids[k]),
             "hero": self.scenario.ends_on_pass(self, i),
         }
+        self._watch_shot()  # The first sighting can be the strike itself, before the ball rolls.
 
     def _watch_shot(self) -> bool:
         """The keeper's first sight of the ball, his dive, and the save model when the ball
         reaches his line (`sim.shots`). True when he holds it."""
-        s, kp, f = self.shot_in_flight, shots.KeeperParams(), self.frame
+        s, kp, f = self.shot_in_flight, shots.KEEPER, self.frame
         k = s["keeper"]
         if s["seen"] is None:
             others = np.delete(np.arange(len(self.ids)), k)

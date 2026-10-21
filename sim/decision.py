@@ -328,7 +328,7 @@ def _placed_shot(ctx: DecisionContext, ball: np.ndarray, placement: str) -> Opti
     P(on target) x (1 - E[P(save)]) over where he believes the keeper is, with the belief's
     position uncertainty (`_sigma`'s 0.3 m + 1 m per second of age). He assumes the keeper sees
     the strike, so the keeper's reach is for the ball's flight time to the keeper's line."""
-    p, sp, kp = ctx.params, shots.ShotParams(), shots.KeeperParams()
+    p, sp, kp = ctx.params, shots.SHOT, shots.KEEPER
     gx = shots.goal_x(ctx.attack_sign)
     y_aim = shots.aim_y(placement, shots.near_post_sign(float(ball[1]), ctx.from_y), sp)
     target = np.array([gx, y_aim])
