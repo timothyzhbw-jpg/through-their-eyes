@@ -1604,7 +1604,10 @@ original visual identity.
     his eyes, the broadcast camera, the tactical board and the director's cuts change the
     picture at once, with no camera move or morph between them, and for 0.3 s after a cut no
     blur pass runs (the head-whip blur, depth of field), easing back over 0.25 s
-    ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The other
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The
+    first-person head-whip blur itself is off by default and opt-in (View options, "Motion
+    blur"), and subtle when on (90° shutter, at most 0.3% of the width); text rises in by
+    opacity and position only, never a blur. The other
     run's ghost path draws itself on and its dashes march with the playhead.
   - Verified numbers in a caption count up from zero the first time they come up and take a
     check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the

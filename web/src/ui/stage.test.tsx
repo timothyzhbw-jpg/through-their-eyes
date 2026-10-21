@@ -120,6 +120,7 @@ describe("view options", () => {
     const names = [...panel.querySelectorAll("button")].map((b) => text(b));
     for (const n of [
       "Comfort",
+      "Motion blur",
       "Belief ghosts",
       "Animated players",
       "Vision cone",
@@ -143,6 +144,19 @@ describe("view options", () => {
     click(button(panel, "Animated players"));
     expect(trial.get().rigged).toBe(!rigged);
     act(() => trial.set({ rigged }));
+  });
+
+  it("leaves the head-turn blur off until the viewer turns it on (Bowen: blur is uncomfortable)", () => {
+    const session = offline();
+    expect(session.playback.get().motionBlur).toBe(false);
+    const page = mount(session, <ViewOptions />);
+    click(button(page, "View options"));
+    const panel = page.querySelector("[role=group][aria-label='View options']")!;
+    const blur = button(panel, "Motion blur");
+    expect(pressed(blur)).toBe("false");
+    click(blur);
+    expect(session.playback.get().motionBlur).toBe(true);
+    expect(pressed(button(panel, "Motion blur"))).toBe("true");
   });
 
   it("closes with Escape and gives focus back to its button", () => {

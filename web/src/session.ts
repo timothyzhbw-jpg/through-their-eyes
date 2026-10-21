@@ -70,6 +70,7 @@ export type Toggle =
   | "beliefGhosts"
   | "cfGhost"
   | "comfort"
+  | "motionBlur"
   | "options"
   | "blindSide"
   | "pitchControl"

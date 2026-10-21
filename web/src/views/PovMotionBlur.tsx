@@ -188,6 +188,7 @@ export function MotionBlur({ hfov }: { hfov: number }) {
     // No blur on the frames around a camera cut (beat/cut.ts): off, then easing back.
     const sigma =
       povBlurSigmaPx({
+        motionBlur: s.motionBlur,
         reducedMotion: reduced.current,
         camera: s.camera,
         playing: s.playing,

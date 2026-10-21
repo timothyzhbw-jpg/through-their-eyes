@@ -270,15 +270,17 @@ src/
   is kept — what the player saw stays on screen. Playback also slows while the head turns faster
   than 120°/s on screen; during a plan the plan clock slows with it, so captions stay in sync.
   Plan POV clips always use comfort mode.
-- **Motion blur in first person** (the Floodlit design). When the head whips round the picture
-  smears sideways, as a camera's would, and it is sharp the instant the head stops: a horizontal
-  Gaussian whose sigma is 0.3 × the angle the head sweeps while a 25 Hz, 180° shutter is open,
-  in pixels at the image centre (sigma = 0.3 · |ω| · 1/50 s · px per degree), capped at 3% of the
-  width, from the measured head yaw rate in match time (`views/motionBlur.ts`). The scene is drawn
+- **Motion blur in first person** (the Floodlit design), **off by default**: blur is
+  uncomfortable to watch (Bowen, 2026-10-21), so it is opt-in under View options → "Motion blur".
+  Turned on, when the head whips round the picture smears sideways, as a camera's would, and it is
+  sharp the instant the head stops: a horizontal Gaussian whose sigma is 0.3 × the angle the head
+  sweeps while a 25 Hz, 90° shutter is open, in pixels at the image centre (sigma = 0.3 · |ω| ·
+  1/100 s · px per degree), capped at 0.3% of the width (about 6 px at 1920: a trace, not a
+  streak), from the measured head yaw rate in match time (`views/motionBlur.ts`). The scene is drawn
   into a half-float target that three.js treats like the canvas, so the blur converges on the
   sharp frame; one pass of 17 taps up to 3 px, two passes beyond (`views/PovMotionBlur.tsx`).
-  Under half a pixel, on the broadcast camera and under `prefers-reduced-motion` the scene is
-  drawn straight to the canvas. The canvas carries the current sigma in `data-blur-sigma`.
+  With it off, under half a pixel, on the broadcast camera and under `prefers-reduced-motion`
+  the scene is drawn straight to the canvas. The canvas carries the current sigma in `data-blur-sigma`.
 - **Broadcast camera** (SPEC 7: high side angle, follows the ball, smoothed). The **Broadcast**
   button of the camera switch, or a plan's `camera` step with mode `broadcast`, films the same
   scene from a fixed camera 21 m up, 26 m behind the near touchline at the halfway line, which

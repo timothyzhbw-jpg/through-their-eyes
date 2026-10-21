@@ -1,8 +1,9 @@
 // First-person view: the camera sits in the chosen player's head (1.72 m) and turns with his head
-// yaw; 95 degrees of horizontal field of view (SPEC 7). A whipping head blurs the picture
-// sideways, as a camera's would (PovMotionBlur.tsx). Players are animated by default
-// (players/); the "Animated players" switch turns them off, back to capsule bodies turned to their
-// body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
+// yaw; 95 degrees of horizontal field of view (SPEC 7). With "Motion blur" on (off by default), a
+// whipping head blurs the picture sideways, as a camera's would (PovMotionBlur.tsx). Players are
+// animated by default (players/); the "Animated players" switch turns them off, back to capsule
+// bodies turned to their body yaw, with a head on top turned to their head yaw: a white visor
+// shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { lazy, Suspense, useMemo, useRef } from "react";

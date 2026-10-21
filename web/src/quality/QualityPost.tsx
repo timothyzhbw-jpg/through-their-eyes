@@ -301,6 +301,7 @@ export function QualityPost({ sample, hfov }: { sample: Sample; hfov: number }) 
     const sigma =
       cutScale *
       povBlurSigmaPx({
+        motionBlur: s.motionBlur,
         reducedMotion: reduced,
         camera: s.camera,
         playing: s.playing,

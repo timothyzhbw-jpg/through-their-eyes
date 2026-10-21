@@ -312,6 +312,11 @@ export function PovOptions() {
           title="Eased head turns and slower playback when the head whips round"
         />
         <Chip
+          name="motionBlur"
+          label="Motion blur"
+          title="A slight smear while his head whips round, as a camera's would (off by default)"
+        />
+        <Chip
           name="beliefGhosts"
           label="Belief ghosts"
           disabled={!ghostsAvailable}
