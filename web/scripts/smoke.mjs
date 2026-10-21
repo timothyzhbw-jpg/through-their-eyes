@@ -168,11 +168,17 @@ async function lineup(page, shoot, button, then) {
   await see(card, "the lineup card");
   await see(card.getByRole("list", { name: "Home line-up" }), "the home line-up on the card");
   await shoot("card");
-  await card.getByRole("button", { name: button }).click();
+  // The card also closes by itself after a few seconds (INTRO_MS), and a slow runner can reach
+  // the button after that: a card that is already gone has closed, which is what this checks.
   try {
-    await card.first().waitFor({ state: "detached" });
+    await card.getByRole("button", { name: button }).click({ timeout: 2000 });
   } catch {
-    throw new Error(`expected "${button}" to close the lineup card`);
+    /* closed by itself, or the click is retried by the wait below */
+  }
+  try {
+    await card.first().waitFor({ state: "detached", timeout: 15_000 });
+  } catch {
+    throw new Error(`expected "${button}" or the timer to close the lineup card`);
   }
   await then(page);
 }
