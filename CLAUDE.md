@@ -105,6 +105,11 @@ _Fill in as they come to exist._
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
   CI run on main.
+- `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
+  (SPEC 2, 8): every hero moment × persona × language, new ones paced to the per-client limit,
+  at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
+  cached on the replica's disk only). Run after the last deploy and after any later one: the
+  cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
