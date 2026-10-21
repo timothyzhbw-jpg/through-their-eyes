@@ -281,6 +281,7 @@ export function QualityPost({ sample, hfov }: { sample: Sample; hfov: number }) 
     const j = hero.ids.indexOf(s.povPlayer);
     const yawRate = j < 0 ? 0 : headYawRate(hero, run, j, s.frame, s.comfort);
     const sigma = povBlurSigmaPx({
+      motionBlur: s.motionBlur,
       reducedMotion: reduced,
       camera: s.camera,
       playing: s.playing,

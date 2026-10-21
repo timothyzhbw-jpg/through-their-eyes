@@ -107,7 +107,8 @@ const PAGES = [
     device: PHONE,
     check: (p) => phone(p, (q) => tier(q, "medium")),
   },
-  // Camera switches are clean cuts: no blur pass on the frames right after one (beat/cut.ts).
+  // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
+  // (beat/cut.ts).
   { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
   {
     name: "link-decision-tactical",
@@ -248,19 +249,50 @@ async function tier(page, want) {
   }
 }
 
-/** Play into the key scan (where the first-person head-whip blur runs), cut to the broadcast
- * camera and back, and read the blur on the frames right after each cut: it must be 0. */
+/** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable): play through
+ * the key scan, where his head whips round, and the canvas stays sharp. Then turn "Motion blur"
+ * on in View options, play into the scan again, cut to the broadcast camera and back, and read
+ * the blur on the frames right after each cut: it must be 0. */
 async function cutNoBlur(page) {
   await hero(page);
   await page.getByRole("button", { name: "Play", exact: true }).click();
+  // The replay opens inside the key scan (frames 50-70); play past its end.
+  const byDefault = await page.evaluate(async () => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+    const el = document.querySelector(".view.pov canvas");
+    const timeline = document.querySelector('input[aria-label="Timeline"]');
+    const t0 = performance.now();
+    let most = 0;
+    while (Number(timeline.value) < 72 && performance.now() - t0 < 20_000) {
+      await frame();
+      most = Math.max(most, Number(el.dataset.blurSigma ?? 0));
+    }
+    return { most, frame: Number(timeline.value) };
+  });
+  if (byDefault.frame < 72)
+    throw new Error(`play did not pass the key scan (frame ${byDefault.frame})`);
+  if (byDefault.most > 0) {
+    throw new Error(`expected no head-turn blur by default, got sigma ${byDefault.most} px`);
+  }
+
+  await page.goto(page.url());
+  await hero(page);
+  await page.getByRole("button", { name: "View options" }).click();
+  const blur = page.getByRole("button", { name: "Motion blur" });
+  await blur.click();
+  if ((await blur.getAttribute("aria-pressed")) !== "true")
+    throw new Error("Motion blur did not turn on");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Play", exact: true }).click();
   const canvas = page.locator(".view.pov canvas");
-  // The blur comes on as his head whips round (a few seconds in); without it the check below
-  // still holds, it just proves less.
-  await page
-    .waitForFunction((el) => Number(el.dataset.blurSigma) > 0, await canvas.elementHandle(), {
+  // Turned on, the blur comes on as his head whips round.
+  await page.waitForFunction(
+    (el) => Number(el.dataset.blurSigma) > 0,
+    await canvas.elementHandle(),
+    {
       timeout: 15_000,
-    })
-    .catch(() => {});
+    },
+  );
   const after = await page.evaluate(async () => {
     const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
     const el = document.querySelector(".view.pov canvas");

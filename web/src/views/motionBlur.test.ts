@@ -64,6 +64,7 @@ function blurFrame(width: number, height: number, dpr: number, reducedMotion = f
     comfort: false,
     camera: "pov",
     playing: true,
+    motionBlur: true, // opt-in (View options): these frames test the blur itself
   };
   const gl = {
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(width, height),
@@ -131,12 +132,26 @@ describe("blur strength", () => {
     expect(centrePxPerDeg(3200, 95)).toBeCloseTo(25.6, 1);
   });
 
+  it("is off unless the viewer turns it on (Bowen, 2026-10-21: blur is uncomfortable)", () => {
+    const turning = {
+      yawRate: (404 * Math.PI) / 180,
+      widthPx: 1600,
+      hfovDeg: 95,
+      playing: true,
+      camera: "pov",
+      reducedMotion: false,
+    } as const;
+    expect(povBlurSigmaPx({ ...turning, motionBlur: false })).toBe(0);
+    expect(povBlurSigmaPx({ ...turning, motionBlur: true })).toBeGreaterThan(MIN_SIGMA_PX);
+  });
+
   it("is off under prefers-reduced-motion, on the broadcast camera and while paused", () => {
     const turning = {
       yawRate: (404 * Math.PI) / 180,
       widthPx: 1600,
       hfovDeg: 95,
       playing: true,
+      motionBlur: true,
     };
     expect(povBlurSigmaPx({ ...turning, camera: "pov", reducedMotion: false })).toBeCloseTo(
       0.3 * 404 * 0.01 * centrePxPerDeg(1600, 95),
@@ -155,7 +170,14 @@ describe("blur plan", () => {
     const yawRate = headYawRate(hero, run, h8, 54.5, false);
     expect(Math.abs(deg(yawRate))).toBeGreaterThan(300);
     const widthPx = 1600;
-    const view = { reducedMotion: false, camera: "pov", yawRate, widthPx, hfovDeg: 95 } as const;
+    const view = {
+      reducedMotion: false,
+      motionBlur: true,
+      camera: "pov",
+      yawRate,
+      widthPx,
+      hfovDeg: 95,
+    } as const;
     expect(blurPlan(povBlurSigmaPx({ ...view, playing: false }), widthPx).passes).toBe(0);
     const playing = blurPlan(povBlurSigmaPx({ ...view, playing: true }), widthPx);
     expect(playing.passes).toBeGreaterThan(0);
@@ -198,7 +220,13 @@ describe("blur plan", () => {
     expect(blurPlan(5, 1920).sigma).toBe(5);
     // H8's look away at 404 degrees a second asks for more than the cap on a 1920 px frame.
     const yawRate = headYawRate(hero, run, h8, 54.5, false);
-    const view = { reducedMotion: false, camera: "pov", playing: true, yawRate } as const;
+    const view = {
+      reducedMotion: false,
+      motionBlur: true,
+      camera: "pov",
+      playing: true,
+      yawRate,
+    } as const;
     const asked = povBlurSigmaPx({ ...view, widthPx: 1920, hfovDeg: 95 });
     expect(asked).toBeGreaterThan(5.76);
     expect(blurPlan(asked, 1920).sigma).toBeCloseTo(5.76, 6);
@@ -275,17 +303,21 @@ describe("motion blur GPU budget", () => {
     expect(gl.render).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["reduced motion", "broadcast", "stationary head", "paused"])(
-    "draws straight to the canvas for %s",
-    (bypass) => {
-      const { gl, playback, draw } = blurFrame(3200, 1800, 2, bypass === "reduced motion");
-      if (bypass === "broadcast") playback.camera = "broadcast";
-      if (bypass === "stationary head") playback.frame = 60;
-      if (bypass === "paused") playback.playing = false;
-      draw();
-      expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
-      expect(gl.render).toHaveBeenCalledTimes(1);
-      expect(gl.domElement.dataset.blurSigma).toBe("0");
-    },
-  );
+  it.each([
+    "motion blur off (the default)",
+    "reduced motion",
+    "broadcast",
+    "stationary head",
+    "paused",
+  ])("draws straight to the canvas for %s", (bypass) => {
+    const { gl, playback, draw } = blurFrame(3200, 1800, 2, bypass === "reduced motion");
+    if (bypass.startsWith("motion blur off")) playback.motionBlur = false;
+    if (bypass === "broadcast") playback.camera = "broadcast";
+    if (bypass === "stationary head") playback.frame = 60;
+    if (bypass === "paused") playback.playing = false;
+    draw();
+    expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
+    expect(gl.render).toHaveBeenCalledTimes(1);
+    expect(gl.domElement.dataset.blurSigma).toBe("0");
+  });
 });
