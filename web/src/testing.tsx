@@ -533,7 +533,14 @@ export function matchExport(): MatchExport {
     run.blind_side.frames.push(...p.run.blind_side.frames.slice(0, n));
     const events: ExportEvent[] = p.run.events
       .filter((e) => e.frame < n)
-      .map((e) => ({ ...e, id: globalId(e.id, start), frame: e.frame + start, possession: index }));
+      .map((e) => ({
+        ...e,
+        id: globalId(e.id, start),
+        frame: e.frame + start,
+        // sim/export.py: pass, scan and head-turn ends are frames, moved to match time too.
+        attrs: typeof e.attrs.end === "number" ? { ...e.attrs, end: e.attrs.end + start } : e.attrs,
+        possession: index,
+      }));
     if (index === 1) {
       events.push({
         id: `goal:H9:${GOAL_FRAME}`,

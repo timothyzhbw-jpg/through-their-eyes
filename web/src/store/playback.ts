@@ -2,6 +2,7 @@
 // Views only read it. User controls, the TelestrationPlan executor and the camera director
 // (director/, the camera only) are the only writers.
 
+import { beatStep, motion } from "../beat/beat";
 import { easedHeadAt, wrapAngle, type Hero } from "../data/hero";
 import type { RunName } from "../data/types";
 import type { YawSource } from "../skeleton/skeleton";
@@ -39,7 +40,6 @@ export interface PlaybackState {
 
 export type PlaybackStore = Store<PlaybackState>;
 
-export const KEY_SCAN_SLOW = 0.4; // free-play slow motion around the key scan, as in demo/
 export const COMFORT_MAX_YAW = (120 * Math.PI) / 180; // rad per wall-clock second, on screen
 
 /** A frame inside the key scan, with the head already turned; null for a hero without one. */
@@ -90,17 +90,18 @@ export function createPlayback(hero: Hero): PlaybackStore {
 }
 
 /**
- * Frames to advance in one wall-clock step of `dtWall` seconds. Free play slows down around the
- * key scan. Comfort mode also shortens the step so the POV head turns at most COMFORT_MAX_YAW
- * on screen: playback slows while the head whips round, and every frame is still shown.
+ * Frames to advance in one wall-clock step of `dtWall` seconds. Free play eases into slow motion
+ * through each key scan (the key-moment beat, beat/beat.ts; off under reduced motion). Comfort
+ * mode also shortens the step so the POV head turns at most COMFORT_MAX_YAW on screen: playback
+ * slows while the head whips round, and every frame is still shown.
  */
 export function frameStep(hero: Hero, s: PlaybackState, dtWall: number): number {
-  const key = hero.keyScan;
-  const nearKey = !!key && s.frame >= key.start - 4 && s.frame <= key.end + 4;
-  const free = s.autoSlow && nearKey ? KEY_SCAN_SLOW : 1;
-  const step = (dtWall / hero.dt) * s.speed * free;
-  if (!s.comfort || step <= 0) return step;
   const run = hero.runs[s.mode];
+  const nominal = (dtWall / hero.dt) * s.speed;
+  const step = s.autoSlow
+    ? beatStep(hero, run, s.frame, nominal, s.speed, motion.get().reduced)
+    : nominal;
+  if (!s.comfort || step <= 0) return step;
   const j = hero.ids.indexOf(s.povPlayer);
   const limit = COMFORT_MAX_YAW * dtWall;
   const from = easedHeadAt(hero, run, j, s.frame);
