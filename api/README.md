@@ -15,7 +15,7 @@ Speech. It is public with no login, so every expensive path is bounded.
 | `GET /api/matches/{id}/export`, `/moments` | the viewer's export (`sim.export`) and the explained moment cards |
 | `GET /api/matches/{id}/audit` | the latest verdicts behind what the service aired |
 | `WS /ws/matches/{id}/live` | the live stream: `hello`, then per frame a `frame` with its `event`s and the `moment`s whose window closes, then `end`; the client may `pause`, `resume`, `seek`, `speed` or `stop` |
-| `POST /api/breakdowns` | a breakdown for a moment, personas and languages; `fail` runs the failure drill |
+| `POST /api/breakdowns` | a breakdown for a moment, personas and languages; `fail` runs the failure drill; every answer (and every recap's) carries `provenance`: `live`, `cached` with `ran_at`, or `template` with its reason |
 | `POST /api/breakdowns/{key}/bring-back` | resume a drill from its checkpoint with one step back |
 | `GET /api/breakdowns/{key}/trace`, `GET /api/recaps/{key}/trace` | the crew trace stored with a breakdown, drill or recap (`recorded: false` for one cached before traces were recorded) |
 | `POST /api/whatif` | a question mapped to one option, re-simulated, answered with verified lines |

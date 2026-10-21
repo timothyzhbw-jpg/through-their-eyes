@@ -81,6 +81,12 @@ on an LLM.
   audited, rate-limited per client, no model call), `POST /api/recaps` and
   `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6),
   `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, §6).
+- Every breakdown, drill and recap answer says where it came from (`provenance`): `live` (the
+  crew ran for this request), `cached` (a crew run from `ran_at`, UTC), or `template` (no model
+  call, with the reason: `rate_limited`, `capped` or `model_unavailable`). The web shows it as a
+  chip on the moment card, the narration, the recap and the crew trace, exactly as given: it is
+  never worked out from `cached` or `source`, so a cached or template answer never reads as a
+  fresh crew run. An answer from an older service without it makes no claim about who wrote it.
 - The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
   key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
   allows a few streams per client and a session length, and closes on a malformed control

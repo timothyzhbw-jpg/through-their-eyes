@@ -275,7 +275,9 @@ describe("moment card", () => {
 
     act(() => session.controls.requestBreakdown());
     await act(settle);
-    expect(text(page)).toContain("Written by the crew · every number checked in code");
+    // Who wrote it, as the service said it: the test service answers with a cached crew run.
+    expect(text(page)).toContain("Cached: a crew run from 21 Oct 2026, 19:31 UTC");
+    expect(text(page)).toContain("Every number checked in code");
     const steps = [...page.querySelectorAll(".crew-bar [data-step]")];
     expect(steps.map((s) => s.getAttribute("data-step"))).toEqual([
       "director",

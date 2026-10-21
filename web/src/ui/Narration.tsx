@@ -20,6 +20,7 @@ import {
   type PayloadClaim,
   type PayloadLine,
 } from "../narration/payload";
+import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
@@ -447,6 +448,31 @@ export function BreakdownSource() {
       <span className="plan-badge fallback" title="The bundled breakdown in public/data">
         Offline data
       </span>
+    );
+  }
+  if (origin.provenance) {
+    // As the service said it. A cached answer may also say why it was not made again.
+    const cached = origin.provenance.kind === "cached";
+    return (
+      <>
+        <ProvenanceChip provenance={origin.provenance} />
+        {cached && origin.rateLimited && (
+          <span
+            className="plan-badge fallback"
+            title="Too many new breakdowns from this address: the cached crew run was served"
+          >
+            Rate-limited
+          </span>
+        )}
+        {cached && origin.capped && (
+          <span
+            className="plan-badge fallback"
+            title="Today's model budget is used up: the cached crew run was served"
+          >
+            Daily cap reached
+          </span>
+        )}
+      </>
     );
   }
   const seconds = (origin.totalMs / 1000).toFixed(1);

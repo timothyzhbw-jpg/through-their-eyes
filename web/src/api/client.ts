@@ -4,6 +4,7 @@
 // Responses are checked with zod before use, like plans and payloads.
 
 import { z } from "zod";
+import { Provenance } from "../provenance/provenance";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 
 export const MATCH_ID = "blind_side_run-3"; // the default: api/settings.py match_id(scenario, seed)
@@ -139,6 +140,8 @@ export const BreakdownResponse = z.object({
   rate_limited: z.boolean(),
   capped: z.boolean(),
   source: z.enum(["model", "offline"]),
+  // Where it came from, as the service says it: shown as given, never worked out from the rest.
+  provenance: Provenance.nullish(),
   drill: Drill.nullish(), // a failure drill; absent or null for a normal breakdown
   result: z.object({
     plan: z.unknown(), // a TelestrationPlan, validated like any other before it plays

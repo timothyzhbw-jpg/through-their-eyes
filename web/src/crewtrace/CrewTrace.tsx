@@ -10,6 +10,9 @@
 // on it is telemetry (the server's wall clock), labelled as such; no number on it is a claim.
 
 import { useEffect, useState } from "react";
+import type { Provenance } from "../provenance/provenance";
+import { utcTime } from "../provenance/provenance";
+import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { useView } from "../session";
 import "./crewtrace.css";
 import {
@@ -63,10 +66,12 @@ export function CrewTracePanel({
   kind,
   traceKey,
   version = "",
+  provenance = null,
 }: {
   kind: TraceKind;
   traceKey: string;
   version?: string;
+  provenance?: Provenance | null; // as the service said it with the breakdown or recap
 }) {
   const { api } = useView();
   const [state, setState] = useState<TraceState>({ status: "loading" });
@@ -82,13 +87,20 @@ export function CrewTracePanel({
     };
   }, [api, kind, traceKey, version]);
   if (!api) return null;
-  return <CrewTraceView state={state} />;
+  return <CrewTraceView state={state} provenance={provenance} />;
 }
 
-export function CrewTraceView({ state }: { state: TraceState }) {
+export function CrewTraceView({
+  state,
+  provenance = null,
+}: {
+  state: TraceState;
+  provenance?: Provenance | null;
+}) {
   return (
     <section className="crew-trace" aria-label="Crew trace">
       <h3>Crew trace</h3>
+      <ProvenanceChip provenance={provenance} />
       {state.status === "loading" && <p className="note">Reading the crew's trace…</p>}
       {state.status === "missing" && (
         <p className="note trace-missing">
@@ -129,6 +141,7 @@ function Timeline({ trace }: { trace: CrewTrace }) {
           <header className="trace-run-head">
             <b>{runTitle(run)}</b>
             <span>
+              started {utcTime(run.started) ?? run.started} ·{" "}
               {run.total_ms == null ? "did not finish" : ms(run.total_ms)} ·{" "}
               {run.model === "offline" ? "offline templates" : run.model}
               {run.down.length > 0 &&

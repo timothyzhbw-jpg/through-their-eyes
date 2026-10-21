@@ -34,6 +34,11 @@ cached breakdown or recap (and a drill's record) and served by key from `GET
 one (`traced`) but does not carry it. One cached before traces were recorded answers
 `recorded: false`, "trace not recorded for this cached run".
 
+Every breakdown, drill and recap answer says where it came from (`provenance`): `live` (the crew
+ran for this request), `cached` (a crew run from `ran_at`), or `template` (no model call: this
+client is rate-limited, today's cap is reached, or the service has no model). The web shows it as
+given and never works it out from the other fields.
+
 Every crew run checkpoints to files under the cache directory (`checkpoints/`), so a normal
 breakdown interrupted mid-workflow, by a restart too, resumes from its last completed step. Its
 checkpoints are deleted once it is cached. A drill keeps its record and checkpoints on this
@@ -156,11 +161,39 @@ class VerifyBody(BaseModel):
     language: Language = "en"
 
 
-def _public(value: dict[str, Any]) -> dict[str, Any]:
-    """A cached crew result as a POST answers it: whether it has a crew trace, not the trace,
-    which has its own endpoint."""
-    return {**{k: v for k, v in value.items() if k != "trace"},
-            "traced": value.get("trace") is not None}  # fmt: skip
+NO_LIMITS = {"rate_limited": False, "capped": False}
+
+
+def _ran_at(value: dict[str, Any]) -> str | None:
+    """When the crew run that wrote a stored result started (UTC, ISO 8601): as stored with it,
+    else its trace's last run; None for one cached before either was recorded."""
+    if value.get("ran_at"):
+        return value["ran_at"]
+    runs = (value.get("trace") or {}).get("runs") or ()
+    return runs[-1].get("started") if runs else None
+
+
+def _provenance(value: dict[str, Any], cached: bool, limits: dict[str, bool]) -> dict[str, Any]:
+    """Where an answer came from, for the web to show as it is (SPEC 2, 6): `live`, the crew ran
+    for this request; `cached`, a crew run from `ran_at`; `template`, no model call, and why:
+    this client is rate-limited, today's cap is reached, or the service has no model."""
+    if value.get("source") == "offline":
+        reason = ("rate_limited" if limits.get("rate_limited") else
+                  "capped" if limits.get("capped") else "model_unavailable")  # fmt: skip
+        return {"kind": "template", "ran_at": _ran_at(value), "reason": reason}
+    return {"kind": "cached" if cached else "live", "ran_at": _ran_at(value), "reason": None}
+
+
+def _answer(
+    key: str, value: dict[str, Any], cached: bool, limits: dict[str, bool] = NO_LIMITS
+) -> dict[str, Any]:
+    """A stored crew result as a POST answers it: its key, whether it was cached and why a
+    regeneration did not run, where it came from, and whether it has a crew trace (not the trace,
+    which has its own endpoint)."""
+    public = {k: v for k, v in value.items() if k not in ("trace", "ran_at")}
+    return {"key": key, "cached": cached, **NO_LIMITS, **limits, **public,
+            "traced": value.get("trace") is not None,
+            "provenance": _provenance(value, cached, limits)}  # fmt: skip
 
 
 def _traced(key: str, value: dict[str, Any]) -> dict[str, Any]:
@@ -381,9 +414,8 @@ def create_app(
         # With a model, only a model result is a cache hit up front: a template served while a
         # client was limited must not stand in for the model on later requests.
         if not body.regenerate and (hit := breakdowns.get(candidates[0])) is not None:
-            return {"key": candidates[0], "cached": True, "rate_limited": False, "capped": False,
-                    "drill": None, **_public(hit), **where}  # fmt: skip
-        limits = {"rate_limited": False, "capped": False}
+            return {**_answer(candidates[0], hit, cached=True), "drill": None, **where}
+        limits = dict(NO_LIMITS)
         if client is not None:
             verdict = regeneration(request)
             if verdict == "model":
@@ -391,13 +423,16 @@ def create_app(
             limits[verdict] = True
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
-                    return {"key": k, "cached": True, **limits, "drill": None, **_public(hit),
-                            **where}  # fmt: skip
-        out = await _compute(ctx, body, None, "offline", offline_key)
-        return {**out, **limits, **where}
+                    return {**_answer(k, hit, cached=True, limits=limits), "drill": None, **where}
+        return {**await _compute(ctx, body, None, "offline", offline_key, limits), **where}
 
     async def _compute(
-        ctx: MomentContext, body: BreakdownBody, llm, source: str, k: str
+        ctx: MomentContext,
+        body: BreakdownBody,
+        llm,
+        source: str,
+        k: str,
+        limits: dict[str, bool] = NO_LIMITS,
     ) -> dict[str, Any]:
         """Run the crew and cache the result. A run of this key that was interrupted resumes from
         its checkpoint; once the result is cached, the checkpoints go."""
@@ -406,22 +441,21 @@ def create_app(
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
                                  checkpoints=FileCheckpointStorage(runs_dir / k))  # fmt: skip
             value = {"source": source, "result": run.result.model_dump(mode="json", by_alias=True),
-                     "trace": run.trace.model_dump(mode="json")}  # fmt: skip
+                     "trace": run.trace.model_dump(mode="json"),
+                     "ran_at": run.trace.runs[-1].started}  # fmt: skip
             breakdowns.put(k, value)
             shutil.rmtree(runs_dir / k, ignore_errors=True)
             for empty in (runs_dir, checkpoint_dir):  # a finished run leaves nothing on disk
                 with suppress(OSError):
                     empty.rmdir()
-        return {"key": k, "cached": False, "rate_limited": False, "capped": False, "drill": None,
-                **_public(value)}  # fmt: skip
+        return {**_answer(k, value, cached=False, limits=limits), "drill": None}
 
     def _drill_response(k: str, record: dict[str, Any]) -> dict[str, Any]:
         public = {name: record[name] for name in ("source", "result", "drill")}
         cues.add_drill(public)  # its voice cues may be spoken, like any served breakdown
-        public["traced"] = record.get("trace") is not None
         where = {"possession": record["possession"]} if "possession" in record else {}
-        return {"key": k, "cached": False, "rate_limited": False, "capped": False, **public,
-                **where}  # fmt: skip
+        stored = {**public, "trace": record.get("trace"), "ran_at": record.get("ran_at")}
+        return {**_answer(k, stored, cached=False), **where}  # every drill runs the crew afresh
 
     async def _drill(
         m: Match,
@@ -440,7 +474,8 @@ def create_app(
                       "result": run.result.model_dump(mode="json", by_alias=True),
                       "drill": {"down": down, "pending": run.pending}, "match": m.id,
                       "moment": body.moment, "bring_backs": 0,
-                      "trace": run.trace.model_dump(mode="json"), **where}  # fmt: skip
+                      "trace": run.trace.model_dump(mode="json"),
+                      "ran_at": run.trace.runs[-1].started, **where}  # fmt: skip
             drills.put(k, record)
         return _drill_response(k, record)
 
@@ -480,7 +515,8 @@ def create_app(
             record = {**record, "result": run.result.model_dump(mode="json", by_alias=True),
                       "drill": {"down": down, "pending": run.pending},
                       "bring_backs": record["bring_backs"] + 1,
-                      "trace": run.trace.model_dump(mode="json")}  # fmt: skip
+                      "trace": run.trace.model_dump(mode="json"),
+                      "ran_at": run.trace.runs[-1].started}  # fmt: skip
             drills.put(key, record)
         return _drill_response(key, record)
 
@@ -521,9 +557,8 @@ def create_app(
         offline_key = key("offline")
         candidates = ([model_key] if client is not None else []) + [offline_key]
         if not body.regenerate and (hit := recaps.get(candidates[0])) is not None:
-            return {"key": candidates[0], "cached": True, "rate_limited": False, "capped": False,
-                    **_public(hit)}  # fmt: skip
-        limits = {"rate_limited": False, "capped": False}
+            return _answer(candidates[0], hit, cached=True)
+        limits = dict(NO_LIMITS)
         if client is not None:
             verdict = regeneration(request)
             if verdict == "model":
@@ -531,14 +566,15 @@ def create_app(
             limits[verdict] = True
             for k in candidates:
                 if (hit := recaps.get(k)) is not None:
-                    return {"key": k, "cached": True, **limits, **_public(hit)}
-        return {**await _compute_recap(rc, body, None, "offline", offline_key), **limits}
+                    return _answer(k, hit, cached=True, limits=limits)
+        return await _compute_recap(rc, body, None, "offline", offline_key, limits)
 
-    async def _compute_recap(rc, body: RecapBody, llm, source: str, k: str) -> dict[str, Any]:
+    async def _compute_recap(
+        rc, body: RecapBody, llm, source: str, k: str, limits: dict[str, bool] = NO_LIMITS
+    ) -> dict[str, Any]:
         async with locks.hold(k):
             if (hit := recaps.get(k)) is not None and not body.regenerate:  # made while waiting
-                return {"key": k, "cached": True, "rate_limited": False, "capped": False,
-                        **_public(hit)}  # fmt: skip
+                return _answer(k, hit, cached=True, limits=limits)
             if llm is not None and settings.analyst_mcp:  # the MCP server reads the evidence
                 folder = Path(settings.cache_dir) / "recap_evidence"
                 folder.mkdir(parents=True, exist_ok=True)
@@ -550,10 +586,10 @@ def create_app(
                                        languages=tuple(body.languages),
                                        use_mcp=settings.analyst_mcp)  # fmt: skip
             value = {"source": source, "result": run.result.model_dump(mode="json"),
-                     "trace": run.trace.model_dump(mode="json")}  # fmt: skip
+                     "trace": run.trace.model_dump(mode="json"),
+                     "ran_at": run.trace.runs[-1].started}  # fmt: skip
             recaps.put(k, value)
-        return {"key": k, "cached": False, "rate_limited": False, "capped": False,
-                **_public(value)}  # fmt: skip
+        return _answer(k, value, cached=False, limits=limits)
 
     @app.get("/api/recaps/{key}/cues")
     async def recap_cues(key: str, persona: Persona, language: Language) -> dict[str, Any]:

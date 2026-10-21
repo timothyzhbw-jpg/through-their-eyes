@@ -268,3 +268,51 @@ describe("the recap's crew trace", () => {
     expect(page.querySelector(".trace-bar")).toBeNull(); // nothing made up
   });
 });
+
+describe("where the recap came from", () => {
+  const recapWith = (patch: Parameters<typeof recapFixture>[3]) =>
+    online({ "POST /api/recaps": () => json(recapFixture(raw, "casual", "en", patch)) });
+
+  async function page(patch: Parameters<typeof recapFixture>[3]) {
+    const { session } = recapWith(patch);
+    await ready(session);
+    return mount(session, <RecapPanel />).textContent!.replace(/\s+/g, " ");
+  }
+
+  it("a template recap says no model call and the API's reason, not who wrote it", async () => {
+    const text = await page({
+      source: "offline",
+      rate_limited: true,
+      provenance: { kind: "template", ran_at: null, reason: "rate_limited" },
+    });
+    expect(text).toContain(
+      "Offline template: no model call (rate-limited: too many new requests from this address)",
+    );
+    expect(text).not.toContain("budget");
+    expect(text).not.toMatch(/Written by the (agent )?crew/);
+  });
+
+  it("past the daily cap it says the budget is used up", async () => {
+    const text = await page({
+      source: "offline",
+      capped: true,
+      provenance: { kind: "template", ran_at: null, reason: "capped" },
+    });
+    expect(text).toContain("Offline template: no model call (today's model budget is used up)");
+  });
+
+  it("a crew run made now is live; a cached one shows its time", async () => {
+    const live = await page({
+      source: "model",
+      provenance: { kind: "live", ran_at: "2026-10-21T19:31:12+00:00", reason: null },
+    });
+    expect(live).toContain("Live: written by the crew just now");
+    const cached = await page({
+      source: "model",
+      cached: true,
+      provenance: { kind: "cached", ran_at: "2026-10-21T19:31:12+00:00", reason: null },
+    });
+    expect(cached).toContain("Cached: a crew run from 21 Oct 2026, 19:31 UTC");
+    expect(cached).not.toContain("just now");
+  });
+});

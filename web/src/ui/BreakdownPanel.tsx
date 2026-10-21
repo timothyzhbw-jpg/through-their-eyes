@@ -172,6 +172,7 @@ export function BreakdownPanel() {
         <CrewTracePanel
           kind="breakdowns"
           traceKey={api.key}
+          provenance={api.provenance}
           version={`${api.traceId ?? ""}:${api.totalMs}:${api.drill?.pending.join(",") ?? ""}`}
         />
       )}
