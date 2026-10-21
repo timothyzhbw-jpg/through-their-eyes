@@ -44,6 +44,7 @@ from sim.counterfactual import (
 from sim.decision import DecisionContext, OptionEval, evaluate_options, option_success
 from sim.model import Decision, Event
 from sim.run import MatchRun
+from sim.scenarios import SCENARIOS
 
 EVENT_ID = re.compile(r"^[a-z_]+:[A-Za-z]+\d+:\d+$")
 BALL = "ball"
@@ -576,6 +577,19 @@ def true_decision_context(run: MatchRun, player: int, frame: int) -> DecisionCon
     """The decision context of `player` at `frame` built from the truth: true positions and
     velocities, belief age 0. The recorded frame is the state the decision was made on."""
     team = np.array([p.team for p in run.players])
+    shot_fields = {}
+    if SCENARIOS[run.scenario].shots:
+        last_pass = [
+            e
+            for e in run.events
+            if e.type == "pass" and e.frame <= frame and e.attrs.get("to") == run.ids[player]
+        ]
+        from_y = float(last_pass[-1].attrs["start"][1]) if last_pass else 0.0
+        keeper = next(
+            (j for j, p in enumerate(run.players) if p.team != team[player] and p.role == "GK"),
+            -1,
+        )
+        shot_fields = {"shots": True, "keeper": keeper, "from_y": from_y}
     return DecisionContext(
         carrier=player,
         team=team,
@@ -585,6 +599,7 @@ def true_decision_context(run: MatchRun, player: int, frame: int) -> DecisionCon
         ids=run.ids,
         attack_sign=1 if team[player] == 0 else -1,
         ball=run.ball_pos[frame, :2].copy(),
+        **shot_fields,
     )
 
 
