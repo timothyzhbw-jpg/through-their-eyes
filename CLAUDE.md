@@ -99,6 +99,10 @@ _Fill in as they come to exist._
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run --env-file .env python -m infra.voices` — check the narration voices and their speaking
   styles against the Azure Speech voices list for `AZURE_SPEECH_REGION`
+- `uv run python -m eval.hero_gates --run --jobs 4` — large-sample check (SPEC 3.6): every hero's
+  held-out gate re-run unchanged on fresh seeds 1000–1199 (only the missing reports, under `nice`),
+  then the summary with 95% Wilson intervals, `eval/reports/hero_gates_1000-1199.md`. Without
+  `--run` it only rewrites the summary from the committed reports
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
 - `uv run python -m eval.hero_lens --scenario press_escape` — hero lens eval (SPEC 3.6, 5.2):
