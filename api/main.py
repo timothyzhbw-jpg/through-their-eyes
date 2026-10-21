@@ -27,6 +27,10 @@ checkpoints are deleted once it is cached. A drill keeps its record and checkpoi
 replica's disk (`DrillStore`), the most recent `DRILLS_KEPT` only. A restart onto a new disk
 (every redeploy) drops them: bring-back then answers 404, "run the drill again". One crew run
 per key at a time.
+
+Started from the environment, the service loads every match before it opens its port
+(`TTE_WARM`, default on; 0, false or off turns it off), so the first export after a redeploy or
+a restart is answered at once.
 """
 
 from __future__ import annotations
@@ -171,6 +175,10 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # uvicorn opens the port after this: a new revision gets no traffic until its matches
+        # are loaded, which takes longer than the web app waits for the first export.
+        if settings.warm:
+            await store.warm()
         yield
         storage.close()
         if close is not None:

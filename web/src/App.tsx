@@ -3,6 +3,7 @@
 // moment; a hero moment's breakdown opens over it as the hero layout with a way back (MatchApp).
 
 import { useEffect } from "react";
+import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { SessionContext, startClock, useSession, useView } from "./session";
 import { useStore } from "./store/store";
@@ -67,6 +68,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
         </div>
       </header>
 
+      <DirectorBar />
       <section className={`stage focus-${focus}`}>
         <PovView />
         <TacticalView />
@@ -145,6 +147,7 @@ function MatchView() {
       <Scoreboard />
       <OpeningNotice />
 
+      <DirectorBar />
       <section className={`stage focus-${focus}`}>
         <PovView />
         <TacticalView />

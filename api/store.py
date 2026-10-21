@@ -123,6 +123,11 @@ class MatchStore:
                 self._loaded[mid] = await asyncio.to_thread(Match.load, scenario, seed, self.audit)
         return self._loaded[mid]
 
+    async def warm(self) -> None:
+        """Load every match now, one at a time, so no request waits for a simulation."""
+        for mid in self.known:
+            await self.get(mid)
+
 
 class KeyedLocks:
     """One asyncio.Lock per key, held only while someone holds or waits for it: the table is as

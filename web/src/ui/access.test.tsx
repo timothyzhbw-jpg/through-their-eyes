@@ -11,6 +11,7 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { createApi, DESCRIBED, PERSONAS } from "../api/client";
 import { parseHero } from "../data/hero";
+import { DirectorBar } from "../director/DirectorBar";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
@@ -231,6 +232,25 @@ describe("keyboard and screen reader access", () => {
       "zh",
     ]);
     expect(accessibleName(page.querySelector("section.transport")!)).toBe("Playback");
+  });
+
+  it("names the camera director's chip, its dismiss button and the Auto director switch", () => {
+    const { session } = online();
+    const page = mount(session, <DirectorBar />);
+    act(() => {
+      session.controls.setCamera("broadcast");
+      session.playback.set({ frame: 20 });
+    });
+    const chip = page.querySelector<HTMLButtonElement>("button.director-chip")!;
+    expect(accessibleName(chip)).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(accessibleName(page.querySelector("button.director-dismiss")!)).toBe(
+      "Dismiss the suggestion",
+    );
+    const auto = page.querySelector<HTMLButtonElement>("button.director-auto")!;
+    expect(accessibleName(auto)).toBe("Auto director");
+    expect(auto.getAttribute("aria-pressed")).toBe("false");
+    expect(accessibleName(page.querySelector("section.director")!)).toBe("Camera director");
+    expect(problems(page)).toEqual([]);
   });
 
   it("announces captions to screen readers while the voice is off, and not over it", async () => {

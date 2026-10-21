@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from sim.config import A_MAX, D_MAX, ROLES
+from sim.config import A_MAX, D_MAX, DT, HALF_LENGTH, ROLES
 from sim.model import PlayerInfo
 from sim.perception import ForcedScan
 
@@ -80,3 +80,21 @@ class Scenario:
     def decides(self, sim: Simulation, player: int) -> bool:
         """Whether a player who just took control of the ball makes a decision."""
         return False
+
+    def ends_on_pass(self, sim: Simulation, passer: int) -> bool:
+        """Whether this pass, played by `passer` now, is the moment's pass: the run ends
+        `SimParams.tail_s` after it is resolved. By default, any pass by the hero."""
+        return sim.ids[passer] == self.hero
+
+
+def marking_target_on_belief(sim: Simulation, marker: int, man: int, gap: float) -> np.ndarray:
+    """Goal-side of where `marker` believes his man is (SPEC 3.4 belief, 3.6 set piece).
+
+    A marker who has not seen his man for a while marks the extrapolated last sighting, so he can
+    lose a man who moved out of his field of view. The other scenarios mark the true position.
+    """
+    pos, _, _ = sim.beliefs.estimate(marker, sim.frame, DT, sim.params.belief_horizon_s)
+    believed = pos[man]
+    own_goal = np.array([HALF_LENGTH if sim.team[marker] == 1 else -HALF_LENGTH, 0.0])
+    side = own_goal - believed
+    return believed + gap * side / max(float(np.linalg.norm(side)), 1e-6)

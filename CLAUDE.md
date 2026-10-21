@@ -115,6 +115,10 @@ _Fill in as they come to exist._
   held-out seeds, 100–139, or 200–239 for `press_escape` (100–139 were seen while fixing the
   decision model), and writes `eval/reports/hero_lens_<scenario>.md`. With other `--seeds` it
   writes `hero_lens_<scenario>_<first>-<last>.md` instead (`--out` for another path)
+- `uv run python -m eval.hero_marking` — set-piece hero eval (SPEC 3.6, `corner_blind_side`):
+  without the marker's key scan, is the runner unmarked when the cutback arrives, and with it is
+  the marker there? Held-out seeds 100–139 (design 0–39), about 15 s; writes
+  `eval/reports/hero_marking_corner_blind_side.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
