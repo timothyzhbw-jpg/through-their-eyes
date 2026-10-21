@@ -1,137 +1,126 @@
 # Demo video script (≤ 2:00)
 
-Built from the storyboard in [SPEC §10](SPEC.md#10-demo-video-storyboard--200), updated for
-what has landed on `main` since: the stitched match, the pressure hero, the corner set-piece
-hero (in the simulator and its eval only), the camera director, the optional skeleton view,
-**Try a wrong number** and the failure drill. Open questions are marked `TODO(Bowen)`.
+The submission video is a football video-game-style launch trailer: a 28-second cold open filmed
+inside the synthetic match, the product told in the same visual grammar, then the stack and the
+end card. It runs **1:50** and is rendered end to end by code from
+[video/trailer.json](../video/trailer.json):
 
-- **Length:** the timeline ends at 1:56, inside the rules' "under 2:00" with 4 s spare.
-  **Len** is the slot in the edit. The capture kit records each shot for its `target_s` in
-  `video/shots.json`; the edit trims the clip to its slot.
-- **First cut, due 10/23:** record every shot from the live site.
-- **Numbers:** the voice-over speaks a number only through a slot such as `{cf_value.dxt}`
-  (claim id and value name). The capture kit fills the slot from the verified claims the page
-  shows ([video/README.md](../video/README.md), "Numbers"), so the number spoken is the number
-  on screen. Without the claim, the line falls back to the version with no number. The eval
-  numbers on the closing slide come from `eval/reports/`, each with its file named on the slide.
-- **Rights:** synthetic match, fictional clubs and players. No Premier League or club marks,
-  real player names, broadcaster branding or copyrighted music in the edit either (titles,
-  lower thirds, end card). No music by default ([video/README.md](../video/README.md), "Rights").
-  No real footage anywhere: the app and the video are synthetic end to end.
+```bash
+cd video && npm ci && npx playwright install chromium   # once
+npm run trailer                                          # → out/video/trailer.mp4
+```
 
-## Shot list
+How the edit is built (steps, options, caches) is in [video/README.md](../video/README.md),
+"Trailer edit". This page is the treatment: what is on screen, what is said, and why.
 
-The site is https://ttesite1ff906.z14.web.core.windows.net; links below start from it. A
-`shots.json` id means the capture kit records the shot (`cd video && npm run capture -- --only
-<id>`). **New** means [video/shots.json](../video/shots.json) has no entry for it yet: until
-one is added (see [Capture-kit follow-ups](#capture-kit-follow-ups)), record that shot by hand
-from the link, at 1920 × 1080.
+- **Numbers.** A number on screen or in the voice comes only through a `{claim.value}` slot filled
+  from the verified claims read off the live page (`out/video/claims.json`, the capture kit's
+  harvest). Without the claim, the card or line uses its fallback, which has no number, or is
+  dropped; the report (`out/video/trailer_report.md`) lists every number and the claim it came
+  from. The cut shows two: the runner's distance to the nearest opponent
+  (`gap_to_nearest_opponent.gap`) and the look's value (`cf_value.dxt`).
+- **Rights.** Synthetic match, fictional clubs and players, no real footage anywhere. Original
+  title design (no league, club or game-publisher look); CC0 music, sound effects synthesized in
+  the repo, OFL fonts: [video/CREDITS.md](../video/CREDITS.md).
+- **Audio.** Voice: Azure AI Speech, `en-US-ChristopherNeural` (deep, slowed 3%, pitched down 4%,
+  then lowered another 4% and compressed for a trailer read); the one Chinese line is the app's
+  own verified narration in the app's play-by-play voice, `zh-CN-YunjianNeural` with the
+  sports-commentary style. Music enters on the "See what they saw" hit and is ducked under the
+  voice; the whole mix is normalised to −14 LUFS with the true peak held under −1.5 dBTP.
 
-| # | Time | Len | Beat | On screen | Produced by |
-|---|---|---:|---|---|---|
-| 0 | 0:00–0:04 | 4 s | Before kick-off | The lineup card: both fictional teams, each player's scans in this move, the hero highlighted. | `00-lineup-card` (records 4 s) |
-| 1 | 0:04–0:08 | 4 s | Cold open | First person, at half speed: H8 looks over his shoulder, away from the ball; the runner H9 comes into sight; the **KEY SCAN** badge, with motion blur through the head turn. Title lower third: "Through Their Eyes". | `01-cold-open` (records 4 s) |
-| 2 | 0:08–0:17 | 9 s | A whole match, live | The stitched match on the broadcast camera, live from the API: score bug ("Possession 2 of 6"), sprint tags. The director's chip, for example "Switch to H8's eyes: he checks over his shoulder before the ball arrives." One tap, and we are in his eyes. | **New.** `/?match=match-1&camera=broadcast&intro=0`: the live stream starts at kick-off and the scan hero's possession starts at 30.0 s, so record about 45 s and keep the cut from about 0:28. The kit's `02-live-stream` (records 10 s) is a stand-in for this beat. |
-| 3 | 0:17–0:39 | 22 s | The breakdown | The crew's replay: freeze, rewind, first person through his scans, the key scan lights up the runner, freeze at the pass with "he thought / it was". Captions are the app's verified lines. | `03-breakdown` (records 24 s) |
-| 4 | 0:39–0:51 | 12 s | **With / Without the look** (the highlight) | After the breakdown, frozen at the decision on the tactical board: the run switch in the header flips the pass options between the two runs. Without the look, he plays it back to H4; the other run's ghost path plays on. | `04-with-without` (records 10 s; hold the last frame) |
-| 5 | 0:51–1:02 | 11 s | One moment, many audiences | The same breakdown for casual → analyst → player fan, then the captions switch to 中文. | `05-personas` + `06-language` (record 12 s + 6 s) |
-| 6 | 1:02–1:07 | 5 s | Evidence | Click a caption: the evidence card shows each claim, its kind (observed / computed / counterfactual), its verdict, and the replay seeks to the evidence frame. Verified numbers carry a dotted underline. | `07-evidence` (records 7 s) |
-| 7 | 1:07–1:13 | 6 s | What if…? | A suggested question, then a typed one; the forced run plays as a gold ghost with its verified answer. | `08-what-if` (records 8 s) |
-| 8 | 1:13–1:22 | 9 s | The pressure hero | Another moment, another lens: the centre-back H4 under a high press. Switch to **If he carried it** and play: the presser wins the ball. | **New.** `/?match=press_escape-0&run=counterfactual&at=decision&view=tactical`, then **Play**. Or, inside the match: `/?match=match-1&intro=0`, **Moments** → the pressure hero → **Breakdown**. |
-| 9 | 1:22–1:31 | 9 s | The verifier blocks a wrong number | The evidence card opens on "That look was worth … in expected threat." with a wrong value filled in. **Check** → "Refuted — this line would not air", with its reason; **Check the true value** → supported. | **New.** `/?persona=analyst&tamper=cf_value`. The kit's `09-verifier` is still marked "pending feature"; the control is live. |
-| 10 | 1:31–1:45 | 14 s | Take an agent down, bring it back | The Producer desk in the "Behind the replay" chapter: **Take down** on the Telestrator → **Run with Telestrator down**. Its row reads TEMPLATE, "AgentDown · 2 attempts", and the breakdown still plays. **Bring back** → the row reads MODEL, FROM CHECKPOINT: the workflow resumes from its checkpoint, re-runs the Telestrator and the step after it, and the new plan replaces the template. The run's trace id sits under the desk. | **New.** `/?persona=analyst&lang=en&intro=0`, scroll to **Behind the replay** → **Producer · failure drill**. Each run and each **Bring back** counts against the rate limit and the daily model cap; a drill lasts until the API's next restart or deploy. |
-| 11 | 1:45–1:56 | 11 s | Architecture and evidence | [docs/architecture.png](architecture.png) (the 1920 × 1080 frame), then the evidence lines below, then the end card. | `11-architecture` (external: a slide; records 10 s) |
+## Timeline
 
-**Optional insert, first to cut** (SPEC §9 cut order 0): 2 s of **Skeleton** on the broadcast
-camera in shot 2, showing every player's torso and head direction the way limb-tracking data
-is shown. If it goes in, take the 2 s from shot 2's live footage.
-Link: `/?match=match-1&camera=broadcast&at=751`, **View options** → **Skeleton**, **Play**.
-Frame 751 is where the scan hero's possession starts (`sim.match.build_match(1)`).
+Times are in the finished film. **Picture**: `cine` = filmed in the web app's cinematic mode
+(`?cine=1`); `app` = recorded from the live site by the capture kit (`video/shots.json` id);
+`card` = a title card from `video/titles/`.
 
-**Expected threat.** Shot 4's line "That look was worth … in expected threat" and shot 9's
-card fill from the verified claim that is deployed when they are recorded. #48 (the fitted xT
-grid, approved) changes that value, so record shots 4 and 9 after #48 is deployed.
+| Time | Len | Beat | Picture | On screen | Voice-over |
+|---|---:|---|---|---|---|
+| **Cold open** | | | | | |
+| 0:00 | 3.0 | Black | card | "EVERY TOUCH / STARTS WITH A LOOK." Stadium hum, heartbeat, a low hit. | — |
+| 0:03 | 2.8 | Establishing crane | cine `establish` | Down from the stands onto H8 as the pass from H4 rolls to him. Floodlights bloom, letterboxed 2.39:1. | Before the ball arrives… |
+| 0:05.8 | 2.0 | The look, low | cine `look-low` | Low angle behind H8, a floodlight over his shoulder, slow motion: his head turns. Whoosh. | …the great ones look. |
+| 0:07.8 | 1.8 | The look, over the shoulder | cine `look-ots` | From behind him toward the runner H9 (gold ring), H8's head soft in the foreground. | — |
+| 0:09.6 | 2.6 | The look, wide | cine `look-wide` | High wide: his vision cone sweeps the pitch as he scans and catches H9. A hit. | — |
+| 0:12.2 | 3.0 | His eyes | cine `pov-look` | Snap to first person: the head whip blurs the frame, the periphery softens, H9 comes into sight. | He found the runner. |
+| 0:15.2 | 4.5 | Freeze | cine `pov-pass` | At the pass the frame freezes with a punch-in: "H9 · UNMARKED — NEAREST OPPONENT `{gap}` M". | Unmarked. |
+| 0:19.7 | 1.8 | Rewind | cine `rewind` | The move runs backwards: "WITHOUT THAT LOOK…". Tape-rewind sound. | Take that look away… |
+| 0:21.5 | 4.5 | The run without it | cine `without` | The re-simulated run with no look: he turns and plays it back, the runner left alone. "HE PLAYS IT BACK TO H4." | …and he never sees him. |
+| 0:26 | 2.5 | Title | card | "SEE WHAT / THEY SAW." on a hit. | See what they saw. |
+| **The product** (cut on the music's 80 bpm beat) | | | | | |
+| 0:28.5 | 3.75 | The replay | app `03-breakdown` | The crew's replay on the stage with its verified captions; "THROUGH THEIR EYES — THE AI MATCH STUDIO". | Football, replayed through the player's eyes. |
+| 0:32.25 | 5.25 | Every line checked | app `07-evidence` | Over the evidence card: four lines stamped ✓ in turn — he saw H9 in the scan, H9's run was on his blind side, nearest opponent `{gap}` m, that look was worth `{dxt}` xT. | Every line is checked against the simulation before it airs. |
+| 0:37.5 | 4.5 | A wrong number | app `09-verifier` | "Try a wrong number": the verifier refutes it; a red ✗ slams "WRONG NUMBER — WOULD NOT AIR". | Try a wrong number… and it never airs. |
+| 0:42 | 9.0 | The crew | card | Six cards dealt like a squad line-up: Director, Analyst (asks the MCP tools), Telestrator, Narrator, Verifier, Voice. | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
+| 0:51 | 3.75 | Red card | app `10-drill` | The failure drill: the Telestrator row reads TEMPLATE, AgentDown; a red card rises, whistle: "TELESTRATOR DOWN — THE TEMPLATE AIRS. THE REPLAY PLAYS ON." | Take an agent down… |
+| 0:54.75 | 4.5 | Substitution | app `10-drill` | Bring back: the row turns back to MODEL from its checkpoint; an LED board flips OFF TEMPLATE → ON TELESTRATOR. | …bring it back, and it picks up where it left off. |
+| 0:59.25 | 2.25 | Casual fan | app `03-breakdown` | The replay with the casual captions; tag "CASUAL FAN". | The same moment, for every fan, in every language. |
+| 1:01.5 | 2.25 | Analyst | app `05-personas` | The analyst's captions; tag "ANALYST". | — |
+| 1:03.75 | 4.5 | 中文 | app `06-language` | The Chinese captions; tag "中文". | The app's own verified zh line, e.g. 关键在这里。球到之前回头的那一眼，H8看到了H9。 |
+| 1:08.25 | 3.75 | What if | app `08-what-if` | A free question typed, the simulator's verified answer. | Ask what if, and the simulation answers. |
+| 1:12 | 4.5 | Live | app `02-live-stream` | The stitched match on the broadcast camera, live from the API, with the camera director's chip; "A WHOLE MATCH — LIVE". | A whole match, live, with a camera director. |
+| **Your call** (the music drops out) | | | | | |
+| 1:16.5 | 4.5 | Decide | app `12-your-call` | His picture only; a draining ring "YOUR CALL — YOU ONLY KNOW WHAT HE KNEW". The pick: the safe ball to H4. Clock ticks. | Your call. You only know what he knew. |
+| 1:21 | 4.5 | Reveal | app `12-your-call` | Your call plays out in the sim, then the true picture: H9's run was on his blind side. The music returns. | Then see what really happened. |
+| 1:25.5 | 3.75 | What he did | app `12-your-call` | What he did: the pass to H9, and why. | He saw the run. Would you? |
+| **Another lens** | | | | | |
+| 1:29.25 | 3.0 | Under press | cine `press-low` | The centre-back H4 receives as the presser closes; "ANOTHER MOMENT, ANOTHER LENS — UNDER PRESS". | Under a high press… |
+| 1:32.25 | 3.75 | The press wins | cine `press-cf` | Inside the sim, forced to keep the ball: the tackle, frozen — "THE PRESS WINS IT." | …make him keep the ball, and the press wins it. |
+| **Close** | | | | | |
+| 1:36 | 7.5 | Under the hood | card | The stack as a spec sheet: Microsoft Foundry, Microsoft Agent Framework, our MCP server, Azure AI Speech, Azure Container Apps, Azure Storage static website, Azure Cosmos DB, Application Insights, GitHub Actions. | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
+| 1:43.5 | 6.5 | End card | card | THROUGH THEIR EYES — SEE WHAT THEY SAW., the site URL, "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS", the music, font and voice credits. Sting. | Through Their Eyes. See what they saw. |
 
-## Voice-over (English)
+`video/trailer.json` holds each beat's exact in-points, crops, push-ins, grades, transitions,
+overlay and sound timings; `out/video/trailer_contact.jpg` shows one frame per beat.
 
-247 words over 1:56, about 128 a minute: room for the app's own captions to be read. The lines for
-shots 0, 3, 4, 6 and 7 are those of `00-lineup-card`, `03-breakdown`, `04-with-without`,
-`07-evidence` and `08-what-if` in `shots.json`, shortened where marked.
-In a slot such as `{belief_error.err}`, the value comes from the page at capture time (see
-"Numbers" above); the line in brackets is its fallback without the number. Outside the slots
-there are no digits or number words, so every line can go into `shots.json` as it is
-(`tests/test_video_shots.py` checks that).
+## The cinematic shots
 
-| # | Voice-over |
-|---|---|
-| 0 | Before kick-off: every player, and every look over his shoulder in this move. |
-| 1 | What did he see? |
-| 2 | Replays show where the ball went. We show what the player saw, in a synthetic match streamed live from Azure. |
-| 3 | Our agent crew builds the replay. Back inside his head: the scans before the ball arrived, and the key look that showed him the runner. When he played the pass, his picture of the runner was off by `{belief_error.err}` metres. *[Fallback: drop the last sentence.]* |
-| 4 | Now take that look away and re-run the simulation. Without it, he plays it safe and passes back. That look was worth `{cf_value.dxt}` in expected threat. *[Fallback: drop the last sentence.]* |
-| 5 | The same verified facts, told for a casual fan, an analyst or a fan of the player. In English or in Chinese. |
-| 6 | Every line opens its evidence: the claim, its verdict, and the frame that proves it. *(shortened)* |
-| 7 | Ask what if. The simulator forces that choice and replays the moment. *(shortened)* |
-| 8 | Under a high press, the lens changes. Make the centre-back keep the ball, and the press wins it. |
-| 9 | Before anything airs, a verifier checks every number against the simulation. Type in a wrong number, and the line won't air. |
-| 10 | Take an agent down, and its template airs: the breakdown still plays. Bring it back, and the workflow resumes from its checkpoint. Only that agent runs again. |
-| 11 | Built on Microsoft Foundry, Agent Framework and our own MCP server, with Azure AI Speech, Container Apps, Cosmos DB and Application Insights. Through Their Eyes: see what they saw. |
+Filmed frame by frame through `window.__cine` (`web/src/cine/`), from the bundled hero moment
+(blind_side_run, seed 3) and, for the pressure hero, the service's `press_escape-0`:
 
-The app's own two voices (Azure AI Speech, **Sound on**) are not in the screen capture: the
-capture kit records no audio. To use them under shot 3 instead of the narrator, record the tab
-audio separately. TODO(Bowen): your voice, or the app's voices under shot 3?
+| Shot | Run, frames | Camera | Look |
+|---|---|---|---|
+| `establish` | factual 18 → 44 | crane from the stands to 4.5 m, onto H8 | bloom, depth of field |
+| `look-low` | factual 47 → 60 (slow) | low orbit behind H8, looking up past a floodlight | bloom, shallow focus, exposure up |
+| `look-ots` | factual 54 → 62 | behind H8 on the line to H9, aimed at H9 | focus on H9 |
+| `look-wide` | factual 58 → 71 | high wide behind the play | his vision cone flashing on the scan, rings |
+| `pov-look`, `pov-pass` | factual 50 → 76 | his eyes (95° horizontal field of view) | head-whip motion blur, peripheral softening, shirt numbers |
+| `rewind` | factual 80 → 50 | side, mid-height | — |
+| `without` | counterfactual 50 → 108 | side, panning back to the ball | faint cone, rings |
+| `press-low`, `press-cf` | press_escape factual 48 → 70, counterfactual 58 → 86 | over H4's shoulder at the presser; low side on the tackle | depth of field, rings |
 
-## Closing slide (shot 11)
+## Choices made against the brief
 
-**Left:** [docs/architecture.png](architecture.png), regenerated with `python3
-docs/architecture.py --png --chrome <path to chrome-headless-shell>` if the diagram changed. Its stack follows the README's technology
-table: Microsoft Foundry, Agent Framework, our MCP server, Azure AI Speech, Container Apps, the
-Storage static website, Cosmos DB, Application Insights and GitHub Actions.
+The treatment Bowen approved asked for some beats the data does not support; the cut follows
+the data:
+- **One look, three angles.** H8 makes one scan before the ball arrives (the key scan, frames
+  50–70; the verified line is "H8 checked his shoulder before the ball reached him"). The cold
+  open shows that one look from three angles, not three scans.
+- **"He saw 4. He missed 1." is not a claim** the service verifies, so the freeze shows a verified
+  one instead: H9 unmarked, `{gap}` m from the nearest opponent.
+- **Without the look he does not lose the ball** in this moment: he plays it safe to H4 (verified:
+  "Without that look, H8 would have passed to H4"). The cold open says so; "he loses the ball" is
+  told by the pressure hero, where the re-simulated carry is tackled.
+- **Your call** is live (#60), so it has its slot; the stitched-match beat is the live broadcast
+  shot.
 
-**Right:** the evidence lines, each with its report path in small type, as the capture-kit
-rule asks:
+## Music
 
-| On screen | Report |
-|---|---|
-| Without the look, he decides differently: **39 / 40** held-out seeds | `eval/reports/hero_flip_blind_side_run.md` |
-| Pressure hero forced to keep the ball: **loses it 40 / 40** | `eval/reports/hero_lens_press_escape.md` |
-| False claims refuted by the verifier: **90 / 90** | `eval/reports/corruption.md` |
-| Narration failing the verifier, free text vs anchored: **88% vs 0%** | `eval/reports/narration_ablation.md` |
+Default: "Unsolicited trailer music (loop edit)" by Emma_MA, CC0 — energetic electronic at 80
+bpm. It enters at the track's phrase boundary (18.34 s) on the "See what they saw" hit, the
+product cuts land on its beats, and its breakdown (66.3–72.3 s in the track) falls on Your call.
+Alternatives in [video/assets.json](../video/assets.json) (switch `music[0].asset` in
+`trailer.json`; their sections differ, so re-time `from`):
+[Generic trailer music](https://opengameart.org/content/generic-trailer-music) (Emma_MA, CC0,
+dramatic) and [Digital Acid](https://opengameart.org/content/xenocity-digital-acid-glitch-hop)
+(Xenocity, CC0, glitch hop). The default's page:
+https://opengameart.org/content/unsolicited-trailer-music
 
-The corner hero is not on the slide: its headline uses a gate revised during design, and the
-original plan's checks, reported in the same file, are not met. A slide line can't carry that
-caveat.
+## Open
 
-**End card:** "Synthetic match · fictional clubs and players", the live site URL and the
-repository URL. TODO(Bowen): the public repository URL, once the repo is public (by 10/26).
-
-## Capture-kit follow-ups
-
-This PR changes no code or capture data. These `video/shots.json` changes are for a
-follow-up PR on `video/`:
-- `02-live-stream`: no longer a stand-in. Record shot 2 from
-  `/?match=match-1&camera=broadcast&intro=0` with the director's chip.
-- `09-verifier`: no longer "pending feature". Record shot 9 from
-  `/?persona=analyst&tamper=cf_value` (**Check**, then **Check the true value**).
-- `10-real-footage` is already gone: #74 cut the real-footage segment.
-- New entries for shot 8 (pressure hero), shot 10 (failure drill) and the optional skeleton
-  insert. Every new URL without `at`, `run`, `ask` or `tamper` needs `&intro=0`, as the
-  existing entries have.
-- Rate limit: the API allows 3 new breakdowns per address every 10 minutes by default
-  ([video/README.md](../video/README.md)), and a failure drill or a **Bring back** also takes
-  one from the daily model cap. Record shot 10 last, and re-run a shot that got the template.
-
-## What changed from SPEC §10
-
-- 0:00–0:04, the lineup card, is in SPEC §10 and the capture kit; it is shot 0 here.
-- 0:08–0:20 was "broadcast camera with live overlays". It is now the stitched match on the
-  broadcast camera, with the camera director's suggestion.
-- 0:55–1:25 gains the pressure hero (shot 8): the same system on a second lens.
-- 1:25–1:40 was "the verifier blocks a wrong number and a banned judgement word". No view
-  shows a banned word being blocked, so shot 9 shows **Try a wrong number** only. The failure
-  drill and its bring-back (shot 10) are added, for the multi-agent category.
-- The real-footage segment is cut (#74): no real footage anywhere. Its time goes to the
-  failure drill.
-- The corner set-piece hero is not in the video: it is in the simulator and its eval only,
-  and its headline needs a caveat (see the closing slide).
-- The optional skeleton view is an insert, first to cut.
+- TODO(Bowen): the music and the voice are defaults; samples of the voice options were sent with
+  the first cut (Christopher, Onyx HD, Guy whispering).
+- TODO(Bowen): the public repository URL on the end card once the repo is public (by 10/26):
+  add a line to `titles.end.params.lines`.
+- The final render films `?cine=1` on the live site, so it needs the cinematic mode deployed
+  (#90); until then `npm run trailer -- --base-url http://localhost:5173` films a local build.
