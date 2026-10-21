@@ -1559,6 +1559,39 @@ original visual identity.
     95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
+- **His looks, step by step** (2026-10-21, a teammate's request: the scans go by too fast;
+  [web/src/steps/](../web/src/steps/); "His looks" in the header, "Step through his looks" on the
+  moment; deep link `?play=steps`, a hero moment's only): each look the hero takes before the ball
+  reaches him is a freeze frame the viewer steps through, and the last step explains his decision.
+  - *Steps.* One per `scan` event of the hero that starts before his reception, from the run's own
+    events: `blind_side_run` seed 3 has 1 (the key scan), `press_escape` seed 0 has 2. In the run
+    without the key scan that look stays as a missing step at the same time. A look freezes his eyes
+    at the middle of its dwell (the frames his head is within the sim's `scan_out_tolerance` of
+    where it turned), or at his decision if it is still under way then. Precomputed per run by
+    `sim.export --steps` (`agents/steps.py`): no model call.
+  - *On a look.* His eyes, with the board in the corner: who came into his sight on it (out of it as
+    the look began, in it on a frame of the look up to his decision) is ringed and listed; dashed
+    arrows in the team's colour project where each player within 30 m of him is heading, his sim
+    velocity at that frame kept for a second, and are labelled as a projection.
+  - *Potential passes.* The options of the run's decision record, as lanes from the ball at his
+    decision to each option's target on his belief: width how likely he was to pick it, gold his
+    pick, brighter a receiver this look brought into sight. The decision model runs only at his
+    decision (§3.5), so a look shows the options he went on to weigh, and says so. No pass type:
+    every pass in the sim is along the ground (lofted and curled balls are not modelled).
+  - *His decision.* On the board, blurred and dimmed but round exactly two players: a pass's
+    receiver and the opponent nearest him, a carrier and the opponent nearest him, a shooter and
+    the keeper.
+  - *Words.* Only verified lines in en and zh, slot-filled and checked by the Verifier on the run
+    they describe: how many looks he takes, where and when each one goes (the side from the ball,
+    over his shoulder from 120°, as Take his eyes says it), who it brings into his sight, that his
+    head is still turning when he decides, or that he takes no look then; at the decision, the look
+    that found the player who mattered (the runner, else his receiver), how far off his picture of
+    that player was and how old, what he did, and the pair the freeze keeps sharp with their
+    distance. Direction labels have no "behind": a scan turns at most 150° from the ball.
+  - *Controls.* Next, Back and Back to the replay; ← and → step, Escape leaves, a swipe on the
+    picture steps on a phone; the steps are buttons; the run switch keeps the same look. Reduced
+    motion: the blur appears without fading in.
+  - A hero with no decision on the ball (`corner_blind_side`, `screened_shot`) has no steps.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -1700,6 +1733,17 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
       [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
       [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
+- [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
+      scan events (a file whose looks are not the run's is refused), the dropped look missing in
+      the run without it; the freeze frame inside the dwell; movement arrows from the sim's
+      velocities; potential passes from the decision record; the decision's blur keeps exactly two
+      players sharp; every line verifies in en and zh; Next, Back, Exit, arrow keys, Escape, swipe
+      and the run switch.
+      — [web/src/steps/steps.test.ts](../web/src/steps/steps.test.ts),
+      [scansteps.test.tsx](../web/src/steps/scansteps.test.tsx);
+      [tests/test_steps.py](../tests/test_steps.py) (steps, dwell, velocities, every line verified,
+      the committed files current); `npm run smoke`, pages `link-steps`,
+      `link-steps-press-escape` and `phone-320-steps`
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
