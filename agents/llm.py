@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -19,6 +20,12 @@ from pydantic import BaseModel, ValidationError
 
 DEFAULT_TIMEOUT_S = 8.0
 RETRIES = 1
+# Settings whose values never appear in a public error (the trace): keys, endpoints, identities.
+SECRET_ENV = ("AZURE_SPEECH_KEY", "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "FOUNDRY_PROJECT_ENDPOINT", "TTE_COSMOS_ENDPOINT", "AZURE_CLIENT_ID")  # fmt: skip
+_URL = re.compile(r"\b(?:https?|wss?)://[^\s'\"<>]+")
+_PATH = re.compile(r"(?<![\w.:/<])/(?:[\w.@+-]+/)+[\w.@+-]*")  # an absolute file path
+_GUID = re.compile(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", re.IGNORECASE)
 
 
 @dataclass
@@ -105,11 +112,21 @@ def describe(e: BaseException) -> str:
     if inner is not None:
         parts = [_field(err) + err["type"] for err in inner.errors()]
         reduced = f"ValidationError: {'; '.join(parts)}"
-        return (reduced if inner is e else f"{type(e).__name__}: {reduced}")[:300]
+        return _scrub(reduced if inner is e else f"{type(e).__name__}: {reduced}")[:300]
     message = str(e)
     if "input_value" in message:
         message = "message withheld: it quotes a validation error"
-    return f"{type(e).__name__}: {message}"[:300]
+    return _scrub(f"{type(e).__name__}: {message}")[:300]
+
+
+def _scrub(message: str) -> str:
+    """The trace is public: no secret setting's value, URL, file path or GUID (a tenant or client
+    id) from an SDK's error message reaches it."""
+    for name in SECRET_ENV:
+        if value := os.environ.get(name, "").strip():
+            message = message.replace(value, f"<{name}>")
+    message = _URL.sub("<url>", message)
+    return _GUID.sub("<id>", _PATH.sub("<path>", message))
 
 
 def _validation_error(e: BaseException) -> ValidationError | None:
