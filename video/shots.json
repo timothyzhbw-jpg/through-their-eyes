@@ -489,7 +489,7 @@
       "title": "The crew's replay in his eyes, sharp: the key scan in first person with the head-turn blur off (reduced motion), finding H9",
       "status": "ready",
       "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
-      "viewport": { "width": 2560, "height": 1440 },
+      "viewport": { "width": 1920, "height": 1080 },
       "target_s": 4,
       "crop": "stage",
       "reduced_motion": true,
