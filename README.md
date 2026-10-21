@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml?query=branch%3Amain)
 [![deploy](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/deploy.yml?query=branch%3Amain)
-[![tests: 1053 Python, 491 web, 10 pages end to end](https://img.shields.io/badge/tests-1053%20Python%20%C2%B7%20491%20web%20%C2%B7%2010%20pages%20end%20to%20end-2b7a3d)](.github/workflows/ci.yml)
+[![tests: Python, web and end to end in CI](https://img.shields.io/badge/tests-Python%20%C2%B7%20web%20%C2%B7%20end%20to%20end-2b7a3d)](.github/workflows/ci.yml)
 [![data: synthetic only](https://img.shields.io/badge/data-synthetic%20only-555)](#synthetic-data-only)
 [![license: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
