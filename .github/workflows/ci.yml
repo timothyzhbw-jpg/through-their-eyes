@@ -57,3 +57,46 @@ jobs:
         run: npm run build
       - name: Video shot list
         run: node ../video/capture.mjs --list
+
+  # SPEC 7, 8: the web app built against a local offline API and opened page by page in headless
+  # Chromium (web/scripts/smoke.mjs). Any console error, uncaught exception or missing main view
+  # fails it; the screenshots are kept as an artifact.
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: |
+          uv sync --locked
+          npm ci --prefix web
+      - name: Chromium version
+        id: chromium
+        run: |
+          echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+          echo "playwright=$(node -p 'require("./web/node_modules/playwright-core/package.json").version')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-playwright-core-${{ steps.chromium.outputs.playwright }}
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright-core install --no-shell chromium
+      - name: Smoke test
+        working-directory: web
+        run: npm run smoke
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: web-smoke
+          path: out/smoke/
+          if-no-files-found: ignore
+          retention-days: 14
