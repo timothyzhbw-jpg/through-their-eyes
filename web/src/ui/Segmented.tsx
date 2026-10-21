@@ -9,6 +9,8 @@ export interface Segment<T extends string> {
   title?: string;
   lang?: string;
   disabled?: boolean;
+  locked?: boolean; // aria-disabled, still focusable, so its description is read
+  describedBy?: string;
   className?: string;
 }
 
@@ -17,6 +19,7 @@ export function Segmented<T extends string>(props: {
   options: Segment<T>[];
   value: T | null;
   onPick: (value: T) => void;
+  onLocked?: (value: T) => void;
   className?: string;
   title?: string;
 }) {
@@ -41,10 +44,12 @@ export function Segmented<T extends string>(props: {
           type="button"
           className={o.className}
           aria-pressed={o.value === value}
+          aria-disabled={o.locked ? true : undefined}
+          aria-describedby={o.describedBy}
           lang={o.lang}
           title={o.title}
           disabled={o.disabled}
-          onClick={() => props.onPick(o.value)}
+          onClick={() => (o.locked ? props.onLocked?.(o.value) : props.onPick(o.value))}
         >
           {o.label}
         </button>

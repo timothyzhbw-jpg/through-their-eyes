@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-// The pre-match card owns only the first page opening. Autoplay waits for its dismissal, and
-// switching between a stitched match and a hero breakdown never opens it again.
+// The pre-match card owns only the first page opening. An offline breakdown waits for its
+// dismissal; a live stream plays behind the card. Switching between a stitched match and a hero
+// breakdown never opens the card again.
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -13,7 +14,22 @@ import { parseHero } from "../data/hero";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext } from "../session";
-import { API, fakeFetch, fakeSockets, MATCH, matchExport } from "../testing";
+import {
+  API,
+  breakdownResponse,
+  fakeFetch,
+  fakeSockets,
+  frameMsg,
+  hello,
+  HERO_MOMENT,
+  json,
+  MATCH,
+  matchExport,
+  matchFrameMsg,
+  matchHello,
+  momentMsg,
+  settle,
+} from "../testing";
 import { intro } from "./intro";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <canvas /> }));
@@ -34,6 +50,7 @@ afterEach(() => {
     container.remove();
   }
   intro.set({ open: false });
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -61,6 +78,27 @@ function matchSession() {
   });
 }
 
+/** An online hero whose breakdown route answers, and the socket the test plays. */
+function onlineHero() {
+  const sockets = fakeSockets();
+  const fetch = fakeFetch({ "POST /api/breakdowns": () => json(breakdownResponse()) });
+  const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null, {
+    api: createApi(API, "blind_side_run-3", fetch),
+    socket: sockets,
+  });
+  return { session, sockets };
+}
+
+function button(page: Element, name: string): HTMLButtonElement {
+  const found = [...page.querySelectorAll<HTMLButtonElement>("button")].find(
+    (b) => b.textContent?.replace(/\s+/g, " ").trim() === name,
+  );
+  if (!found) throw new Error(`No button named ${name}`);
+  return found;
+}
+
+const click = (el: HTMLElement) => act(() => el.click());
+
 describe("the pre-match autoplay gate", () => {
   it("holds the offline hero breakdown until the card closes", () => {
     const session = heroSession();
@@ -78,34 +116,33 @@ describe("the pre-match autoplay gate", () => {
     expect(play).toHaveBeenCalledOnce();
   });
 
-  it("holds the online hero stream and keeps its existing unmount cleanup", () => {
+  it("plays the online hero stream behind the card and keeps its unmount cleanup", () => {
     const session = heroSession(true);
     const start = vi.spyOn(session.controls, "startLive").mockImplementation(() => {});
     const stop = vi.spyOn(session.feed!, "stop");
     intro.set({ open: true });
-    const { root } = mount(
+    const { root, container } = mount(
       <SessionContext.Provider value={session}>
         <App autoplay />
       </SessionContext.Provider>,
     );
-    expect(start).not.toHaveBeenCalled();
+    expect(container.querySelector("[role=dialog]")).not.toBeNull();
+    expect(start).toHaveBeenCalledOnce();
     expect(stop).not.toHaveBeenCalled();
 
     act(() => intro.set({ open: false }));
     expect(start).toHaveBeenCalledOnce();
+    expect(stop).not.toHaveBeenCalled();
     act(() => root.unmount());
     expect(stop).toHaveBeenCalledOnce();
   });
 
-  it("holds a stitched match's stream until the card closes", () => {
+  it("plays a stitched match's stream behind the card", () => {
     const session = matchSession();
     const start = vi.spyOn(session.controls, "startLive").mockImplementation(() => {});
     intro.set({ open: true });
-    mount(<MatchApp session={session} autoplay />);
-    expect(start).not.toHaveBeenCalled();
-    expect(session.playback.get().playing).toBe(false);
-
-    act(() => intro.set({ open: false }));
+    const { container } = mount(<MatchApp session={session} autoplay />);
+    expect(container.querySelector("[role=dialog]")).not.toBeNull();
     expect(start).toHaveBeenCalledOnce();
   });
 
@@ -163,5 +200,86 @@ describe("the pre-match autoplay gate", () => {
     expect(intro.get().open).toBe(false);
     expect(container.querySelector("[role=dialog]")).toBeNull();
     expect(start).toHaveBeenCalledOnce();
+  });
+
+  it("on a cold load with no input, the card is gone and the stream is playing by 6 s", () => {
+    vi.useFakeTimers();
+    const { session, sockets } = onlineHero();
+    intro.set({ open: true });
+    const { container } = mount(
+      <SessionContext.Provider value={session}>
+        <App autoplay />
+      </SessionContext.Provider>,
+    );
+    expect(sockets.sockets, "the live stream starts behind the open card").toHaveLength(1);
+    const ws = sockets.sockets[0];
+    act(() => {
+      ws.open();
+      ws.push(hello(), frameMsg(0), frameMsg(1), frameMsg(2));
+    });
+    act(() => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(container.querySelector("[role=dialog]")).toBeNull();
+    expect(intro.get().open).toBe(false);
+    expect(session.playback.get()).toMatchObject({ live: true, playing: true });
+    expect(session.feed!.state.get().status).toBe("streaming");
+  });
+
+  it("on a cold load of a stitched match, the card is gone and the stream plays by 6 s", () => {
+    vi.useFakeTimers();
+    const sockets = fakeSockets();
+    const exported = matchExport();
+    const fetch = fakeFetch({ "POST /api/breakdowns": () => json(breakdownResponse()) });
+    const session = createMatchSession(parseHero(exported), {
+      api: createApi(API, MATCH, fetch),
+      dataUrl: "/data/",
+      socket: sockets,
+    });
+    intro.set({ open: true });
+    const { container } = mount(<MatchApp session={session} autoplay />);
+    expect(sockets.sockets, "the live stream starts behind the open card").toHaveLength(1);
+    const ws = sockets.sockets[0];
+    act(() => {
+      ws.open();
+      ws.push(matchHello(exported), matchFrameMsg(exported, 0), matchFrameMsg(exported, 1));
+    });
+    act(() => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(container.querySelector("[role=dialog]")).toBeNull();
+    expect(intro.get().open).toBe(false);
+    expect(session.playback.get()).toMatchObject({ live: true, playing: true });
+    expect(session.feed!.state.get().status).toBe("streaming");
+  });
+
+  it("keeps the autoplay when eyes are picked and Start watching is pressed", async () => {
+    const { session, sockets } = onlineHero();
+    intro.set({ open: true });
+    const { container } = mount(
+      <SessionContext.Provider value={session}>
+        <App autoplay />
+      </SessionContext.Provider>,
+    );
+    expect(container.querySelector("[role=dialog]")).not.toBeNull();
+    expect(session.playback.get()).toMatchObject({ live: true, playing: true });
+    // Not the default eyes, so the pick has to land on H8 without taking over the autoplay.
+    act(() => session.playback.set({ povPlayer: "A5" }));
+    click(button(container, "H8 · CM The hero of this moment"));
+    expect(session.playback.get().povPlayer).toBe("H8");
+    expect(intro.get().open).toBe(true);
+    click(button(container, "Start watching"));
+    expect(intro.get().open).toBe(false);
+    expect(sockets.sockets).toHaveLength(1);
+    const ws = sockets.sockets[0];
+    act(() => {
+      ws.open();
+      ws.push(hello());
+      for (let f = 0; f <= 16; f++) ws.push(frameMsg(f));
+      ws.push(momentMsg(HERO_MOMENT, 16));
+    });
+    await act(settle);
+    expect(session.runner.status.get().status).toBe("running");
+    expect(session.playback.get().povPlayer).toBe("H8");
   });
 });
