@@ -13,17 +13,18 @@ Seeds 100–139 (40). Counterfactual: drop the key scan of the marker `H5` and r
 
 ## Deviations from the design plan (docs/drafts/hero_expansion.md, section 5.4)
 
-The plan's checks were changed while the routine was built on design seeds 0–39, before this held-out run. Bowen decided on 2026-10-20 to keep the gate above and to report the plan's checks here, beside it.
+The plan's checks were changed while the routine was built on design seeds 0–39, before the held-out run on seeds 100–139 (the plan's own "As built" note, section 5). Bowen decided on 2026-10-20 to keep the gate above and to report the plan's checks here, beside it, on the same seeds 100–139.
 
-| Plan (section 5.4) | As built (table above) | Plan's check on these seeds |
-|---|---|---|
-| Hard gate: dropping the look raises the separation as the ball arrives from ≤ 1.5 m to ≥ 3 m, ≥ 60% | `A9` unmarked (> 5 m) without the look, `H5` within 5 m or winning the ball with it, ≥ 60% | 0/40 (0%) |
-| Belief error ≥ 3 m at the cutback, ≥ 90% | the same, 0.5 s after the cutback is played | 30/40 (75%) |
-| Blind-side alert `H5` → `A9` on before the look and cleared during it, ≥ 90% | reported only | 0/40 (0%) |
-| Design seeds 0–99 | design seeds 0–39 (held out: 100–139, as planned) | — |
+| Plan (section 5.4) | As built (table above) | Plan's check on these seeds | Plan's target |
+|---|---|---|---|
+| Hard gate: dropping the look raises the separation as the ball arrives from ≤ 1.5 m to ≥ 3 m (`A9` receives), ≥ 60% | `A9` unmarked (> 5 m) without the look, `H5` within 5 m or winning the ball with it, ≥ 60% | 0/40 (0%) | not met |
+| Belief error ≥ 3 m at the cutback, ≥ 90% | the same, 0.5 s after the cutback is played | 30/40 (75%) | not met |
+| Blind-side alert `H5` → `A9` on before the look and cleared during it, ≥ 90% | reported only | 0/40 (0%) | not met |
+| With marking on belief off, `possession_play` marking stays byte-identical | no flag: only this scenario calls `marking_target_on_belief`; the other scenarios' committed exports and eval reports are unchanged (`tests/test_committed_exports.py`) | — | — |
+| Design seeds 0–99, held out 100–139 | design seeds 0–39, held out 100–139 | — | — |
 
-- **Separation.** With the look `H5` closes to 3.3 m (median), not 1.5 m, so the plan's gate holds on 0/40 seeds; without it `A9` is 8.5 m away. The gate uses the lexicon's `unmarked` (SPEC 5.3) instead.
-- **Alert.** The alert (SPEC 4.4, from tracking) needs the runner out of sight for 1.2 s and running at 4 m/s or more. The look comes 0.16–0.28 s after `A9` starts his dart. By then he has been out of `H5`'s sight for 1.40–2.04 s, but he runs at 0.7–2.7 m/s, under 4 m/s on 40/40 seeds: the dart has not reached alert speed when he is seen again.
+- **Separation.** With the look `H5` closes to 3.3 m (median), not 1.5 m, so the plan's gate holds on 0/40 seeds (plan target ≥ 60%: not met); without it `A9` is 8.5 m away. The gate uses the lexicon's `unmarked` (SPEC 5.3) instead.
+- **Alert.** The alert (SPEC 4.4, from tracking) can come on only once the runner has been out of sight for 1.2 s, and then needs, on one frame, the runner at 4 m/s or more, 3 m or more from where `H5` expects him, within 35 m, and `H5` watching him (one of the 4 defenders nearest the ball). The look comes 0.16–0.28 s after `A9` starts his dart, when he has been out of sight for 1.40–2.04 s: a window of 0.20–0.84 s in which the alert could come on. In that window his top speed is 1.2–2.7 m/s. Conditions that hold on no frame of the window: speed on 40/40 seeds, distance moved on 34/40, `H5` watching on 27/40, range on 0/40. All of them hold together on a frame in 0/40.
 
 | Seed | With the look: outcome | sep. (m) | nearest (m) | pressing | Without: outcome | sep. (m) | nearest (m) | pressing | belief error (m) | at the cutback (m) | gate | plan's gate |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
