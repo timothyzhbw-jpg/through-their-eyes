@@ -11,8 +11,9 @@ regeneration is rate-limited per client and capped per UTC day across all client
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
 tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
 
-Speech speaks only voice cues the crew wrote, by key (api/tts.py); the live stream, request
-bodies and response headers are bounded for a public service (api/live.py, api/guard.py).
+Speech speaks only voice cues the crew wrote, by key (api/tts.py); a cached breakdown is re-voiced
+on read before those cues are recorded. The live stream, request bodies and response headers are
+bounded for a public service (api/live.py, api/guard.py).
 
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
@@ -158,7 +159,7 @@ def create_app(
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
     cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
-    breakdowns, answers = cues.recording(storage.breakdowns), storage.answers
+    breakdowns, answers = cues.recording(tts.Revoiced(storage.breakdowns)), storage.answers
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
