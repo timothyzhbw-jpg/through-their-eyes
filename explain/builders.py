@@ -391,7 +391,9 @@ def counterfactual_pass(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult)
 
 def counterfactual_value(
     ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult | WhatIfResult
-) -> Claim:
+) -> Claim | None:
+    if _placed_shot(r) is not None:
+        return None  # a goal's possession value is an outcome; `cf_shot_value` gives the chance
     delta = fn("cf_delta", of="possession_value", scan=cf.scan_id)
     if isinstance(cf, CounterfactualResult):
         return Claim(
@@ -678,6 +680,286 @@ def seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     )  # fmt: skip
 
 
+# --- a placed shot (Module A: `shot:near` / `shot:far`) --------------------------------------
+
+
+def _placed_shot(r: HeroRefs) -> Event | None:
+    """The hero's shot when it is a placed one (it has a placement), else None."""
+    shot = r.hero_pass
+    return shot if shot is not None and shot.type == "shot" and "placement" in shot.attrs else None
+
+
+POST = {"near": ("near post", "近角"), "far": ("far post", "远角")}
+
+
+def scan_at_goal(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    if _placed_shot(r) is None or r.key_scan is None:
+        return None
+    lead = fn("seconds_between", a=slot("scan"), b=r.at_reception)
+    secs = ctx.value(lead, {"scan": r.key_scan.id})
+    if round(secs, 1) <= 0.0:
+        return None
+    return Claim(
+        id="scan_at_goal",
+        template="{player} looked up {secs|second|seconds} before the ball reached him.",
+        templates={"zh": "球到之前{secs}秒，{player}抬头看了一眼。"},
+        slots={"player": Slot(ref=r.hero), "scan": Slot(ref=r.key_scan.id), "secs": _num(secs, 1)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=slot("scan"), attr="type"), "scan"),
+            _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+            _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
+            _approx(lead, slot("secs"), 1),
+        ]),
+        evidence=[r.key_scan.id, r.reception.id],
+    )  # fmt: skip
+
+
+def keeper_seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    shot = _placed_shot(r)
+    if shot is None or r.key_scan is None:
+        return None
+    keeper = shot.attrs["keeper"]
+    seen = fn("max_visibility", observer=slot("player"), target=slot("keeper"), event=slot("scan"))
+    if ctx.value(seen, {"player": r.hero, "keeper": keeper, "scan": r.key_scan.id}) < SEEN:
+        return None
+    return Claim(
+        id="keeper_seen_in_scan",
+        template="When {player} looked up, he saw {keeper}.",
+        templates={"zh": "{player}抬头的那一眼，看到了{keeper}。"},
+        slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper),
+               "scan": Slot(ref=r.key_scan.id)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+            Predicate(op="ge", lhs=seen, rhs=SEEN),
+        ]),
+        evidence=[r.key_scan.id],
+    )  # fmt: skip
+
+
+def keeper_near_side(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """Where the look showed the keeper: toward the shooter's near post."""
+    shot = _placed_shot(r)
+    if shot is None or r.key_scan is None:
+        return None
+    keeper = shot.attrs["keeper"]
+    offset = fn("metric_at", metric="near_side_offset", keeper=slot("keeper"),
+                shooter=slot("player"), anchor=slot("scan"))  # fmt: skip
+    value = ctx.value(offset, {"keeper": keeper, "player": r.hero, "scan": r.key_scan.id})
+    if round(value, 1) < 1.0:
+        return None
+    return Claim(
+        id="keeper_near_side",
+        template="When {player} looked up, {keeper} stood {m|metre|metres} toward his near post.",
+        templates={"zh": "{player}抬头时，{keeper}站在偏向近门柱{m}米的位置。"},
+        slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper),
+               "scan": Slot(ref=r.key_scan.id), "m": _num(value, 1)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("player")),
+            _approx(offset, slot("m"), 1),
+        ]),
+        evidence=[r.key_scan.id],
+    )  # fmt: skip
+
+
+def shot_placement(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    shot = _placed_shot(r)
+    if shot is None:
+        return None
+    post, post_zh = POST[shot.attrs["placement"]]
+    return Claim(
+        id="shot_placement",
+        template=f"{{player}} went for the {post}.",
+        templates={"zh": f"{{player}}选择打{post_zh}。"},
+        slots={"player": Slot(ref=r.hero)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=r.at_action, attr="type"), "shot"),
+            _eq(fn("event_attr", event=r.at_action, attr="player"), slot("player")),
+            _eq(fn("event_attr", event=r.at_action, attr="placement"), shot.attrs["placement"]),
+        ]),
+        evidence=[shot.id],
+    )  # fmt: skip
+
+
+def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """A goal, a save, or a shot wide (the shot's recorded outcome)."""
+    shot = _placed_shot(r)
+    if shot is None or shot.attrs.get("outcome") not in ("goal", "saved", "wide"):
+        return None
+    outcome = shot.attrs["outcome"]
+    is_shot = [_eq(fn("event_attr", event=r.at_action, attr="player"), slot("player")),
+               _eq(fn("event_attr", event=r.at_action, attr="outcome"), outcome)]  # fmt: skip
+    if outcome == "wide":
+        return Claim(
+            id="wide",
+            template="{player}'s shot went wide.",
+            templates={"zh": "{player}的射门偏出了。"},
+            slots={"player": Slot(ref=r.hero)},
+            predicate=Predicate(op="all", args=is_shot),
+            evidence=[shot.id],
+        )
+    if outcome == "goal":
+        return Claim(
+            id="goal",
+            template="{player} scored.",
+            templates={"zh": "{player}破门得分。"},
+            slots={"player": Slot(ref=r.hero)},
+            predicate=Predicate(op="all", args=is_shot),
+            evidence=[shot.id],
+        )
+    return Claim(
+        id="saved",
+        template="{keeper} saved {player}'s shot.",
+        templates={"zh": "{keeper}扑出了{player}的射门。"},
+        slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=shot.attrs["keeper"])},
+        predicate=Predicate(op="all", args=[
+            *is_shot, _eq(fn("event_attr", event=r.at_action, attr="keeper"), slot("keeper")),
+        ]),
+        evidence=[shot.id],
+    )  # fmt: skip
+
+
+def shot_speed(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    shot = _placed_shot(r)
+    if shot is None:
+        return None
+    speed = fn("event_attr", event=r.at_action, attr="speed")
+    return Claim(
+        id="shot_speed",
+        template="{player} hit it at {kmh} km/h.",
+        templates={"zh": "{player}这脚射门的球速为每小时{kmh}公里。"},
+        slots={"player": Slot(ref=r.hero), "kmh": _num(ctx.value(speed) * 3.6, 0)},
+        predicate=Predicate(op="all", args=[
+            _eq(fn("event_attr", event=r.at_action, attr="player"), slot("player")),
+            _approx(speed, slot("kmh", scale=1 / 3.6), 0, scale=1 / 3.6),
+        ]),
+        evidence=[shot.id],
+    )  # fmt: skip
+
+
+def _shot_chance(placement: str, at: str, state: str, cf: str | None = None) -> dict:
+    extra = {} if cf is None else {"cf": cf}
+    return fn("metric_at", metric="shot_success", player=slot("player"), placement=placement,
+              state=state, anchor=at, **extra)  # fmt: skip
+
+
+def shot_thought_vs_was(ctx: EvalContext, r: HeroRefs) -> Claim | None:
+    """He thought vs it was (SPEC 5.1) for a placed shot: his chance of a goal on his belief and
+    on the truth."""
+    shot = _placed_shot(r)
+    if shot is None:
+        return None
+    placement = shot.attrs["placement"]
+    belief, truth = (_shot_chance(placement, r.at_action, s) for s in ("belief", "true"))
+    post, post_zh = POST[placement]
+    return Claim(
+        id="shot_thought_vs_was",
+        template=f"{{player}} gave the {post} a {{p_belief}} chance of going in; it was "
+        "{p_true}.",
+        templates={"zh": f"{{player}}以为打{post_zh}的进球概率是{{p_belief}}，实际是{{p_true}}。"},
+        slots={"player": Slot(ref=r.hero),
+               "p_belief": _num(ctx.value(belief, {"player": r.hero}), 2),
+               "p_true": _num(ctx.value(truth, {"player": r.hero}), 2)},
+        predicate=Predicate(op="all", args=[
+            _approx(belief, slot("p_belief"), 2), _approx(truth, slot("p_true"), 2),
+        ]),
+        evidence=[shot.id],
+    )  # fmt: skip
+
+
+def _cf_placed_shot(r: HeroRefs, cf: CounterfactualResult) -> Event | None:
+    d = cf.counterfactual_decision
+    if d is None or not d.chosen.startswith("shot:"):
+        return None
+    return next(
+        (e for e in cf.counterfactual.events
+         if e.type == "shot" and e.player == d.player and e.frame == d.frame
+         and "placement" in e.attrs),
+        None,
+    )  # fmt: skip
+
+
+def counterfactual_shot(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim | None:
+    if not isinstance(cf, CounterfactualResult) or _placed_shot(r) is None:
+        return None
+    alt = _cf_placed_shot(r, cf)
+    if alt is None:
+        return None
+    post, post_zh = POST[alt.attrs["placement"]]
+    at = {"event": alt.id, "cf": cf.scan_id}
+    args = [_eq(fn("event_attr", attr="player", **at), slot("player")),
+            _eq(fn("event_attr", attr="placement", **at), alt.attrs["placement"])]  # fmt: skip
+    slots = {"player": Slot(ref=r.hero)}
+    template, zh = (
+        f"Without the look, {{player}} goes for the {post}.",
+        (f"如果没有那一眼，{{player}}会选择打{post_zh}。"),
+    )
+    if alt.attrs.get("outcome") == "saved":
+        slots["keeper"] = Slot(ref=alt.attrs["keeper"])
+        args += [_eq(fn("event_attr", attr="outcome", **at), "saved"),
+                 _eq(fn("event_attr", attr="keeper", **at), slot("keeper"))]  # fmt: skip
+        template = f"Without the look, {{player}} goes for the {post}, and {{keeper}} saves it."
+        zh = f"如果没有那一眼，{{player}}会选择打{post_zh}，被{{keeper}}扑出。"
+    return Claim(
+        id="cf_shot",
+        template=template,
+        templates={"zh": zh},
+        slots=slots,
+        predicate=Predicate(op="all", args=args),
+        evidence=[cf.scan_id],
+    )
+
+
+def counterfactual_keeper_age(
+    ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult
+) -> Claim | None:
+    if not isinstance(cf, CounterfactualResult) or _placed_shot(r) is None:
+        return None
+    alt = _cf_placed_shot(r, cf)
+    if alt is None:
+        return None
+    keeper = alt.attrs["keeper"]
+    age = fn("metric_at", metric="belief_age", observer=slot("player"), target=slot("keeper"),
+             anchor=alt.id, cf=cf.scan_id)  # fmt: skip
+    value = ctx.value(age, {"player": r.hero, "keeper": keeper})
+    return Claim(
+        id="cf_keeper_age",
+        template="Without the look, his last sight of {keeper} is {secs|second|seconds} old when "
+        "{player} shoots.",
+        templates={"zh": "如果没有那一眼，{player}射门时距上次看到{keeper}已有{secs}秒。"},
+        slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper), "secs": _num(value, 1)},
+        predicate=_approx(age, slot("secs"), 1),
+        evidence=[cf.scan_id],
+    )
+
+
+def counterfactual_shot_value(
+    ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult
+) -> Claim | None:
+    """The look's worth for a placed shot: his chance of a goal on the truth, with the
+    placement he chose and with the one he chooses without the look (the scan lens's Δ)."""
+    shot = _placed_shot(r)
+    if not isinstance(cf, CounterfactualResult) or shot is None:
+        return None
+    alt = _cf_placed_shot(r, cf)
+    if alt is None:
+        return None
+    p1 = _shot_chance(shot.attrs["placement"], r.at_action, "true")
+    p0 = _shot_chance(alt.attrs["placement"], alt.id, "true", cf=cf.scan_id)
+    v1, v0 = (ctx.value(p, {"player": r.hero}) for p in (p1, p0))
+    if round(v1, 2) <= round(v0, 2):
+        return None
+    return Claim(
+        id="cf_shot_value",
+        template="The look raised his chance of scoring from {p0} to {p1}.",
+        templates={"zh": "那一眼把他的进球概率从{p0}提高到了{p1}。"},
+        slots={"player": Slot(ref=r.hero), "p0": _num(v0, 2), "p1": _num(v1, 2)},
+        predicate=Predicate(op="all", args=[
+            _approx(p1, slot("p1"), 2), _approx(p0, slot("p0"), 2),
+        ]),
+        evidence=[cf.scan_id, shot.id],
+    )  # fmt: skip
+
+
 Builder = Callable[..., Claim | None]
 
 BUILDERS: dict[str, Builder] = {
@@ -703,12 +985,22 @@ BUILDERS: dict[str, Builder] = {
     "reception_zone": reception_zone,
     "scan_side": scan_side,
     "seen_in_scan": seen_in_scan,
+    "scan_at_goal": scan_at_goal,
+    "keeper_seen_in_scan": keeper_seen_in_scan,
+    "keeper_near_side": keeper_near_side,
+    "shot_placement": shot_placement,
+    "shot_result": shot_result,
+    "shot_speed": shot_speed,
+    "shot_thought_vs_was": shot_thought_vs_was,
 }
 CF_BUILDERS: dict[str, Builder] = {
     "cf_pass": counterfactual_pass,
     "cf_value": counterfactual_value,
     "cf_pass_success": counterfactual_pass_success,
     "cf_carry_lost": counterfactual_carry_lost,
+    "cf_shot": counterfactual_shot,
+    "cf_keeper_age": counterfactual_keeper_age,
+    "cf_shot_value": counterfactual_shot_value,
 }
 
 

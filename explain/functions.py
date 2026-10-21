@@ -41,7 +41,13 @@ from sim.counterfactual import (
     drop_scan_counterfactual,
     what_if_from_id,
 )
-from sim.decision import DecisionContext, OptionEval, evaluate_options, option_success
+from sim.decision import (
+    DecisionContext,
+    OptionEval,
+    evaluate_options,
+    option_success,
+    placed_shot_value,
+)
 from sim.model import Decision, Event
 from sim.run import MatchRun
 from sim.scenarios import SCENARIOS
@@ -661,6 +667,34 @@ def _pass_success(
     raise Inconclusive(f"state must be 'belief' or 'true', got {state!r}")
 
 
+def _shot_success(
+    ctx: EvalContext, run: MatchRun, f: int, player: str, placement: str, state: str = "belief"
+) -> float:
+    """His chance of a goal with a placed shot (`shot:near` / `shot:far`, Module A) at decision
+    frame f: as he valued it on his belief, or re-scored on the true state (keeper where he is)."""
+    d = _decision(ctx, run, f, player)
+    action = f"shot:{placement}"
+    option = next((o for o in d.options if o.action == action), None)
+    if option is None:
+        raise Refuted(f"{player} did not consider {action!r} at frame {f}")
+    if state == "belief":
+        return float(option.p_success)
+    if state == "true":
+        truth = true_decision_context(run, run.index(player), f)
+        return float(placed_shot_value(truth, placement))
+    raise Inconclusive(f"state must be 'belief' or 'true', got {state!r}")
+
+
+def _near_side_offset(ctx: EvalContext, run: MatchRun, f: int, keeper: str, shooter: str) -> float:
+    """Metres the keeper stands from his goal's centre line toward the shooter's near post
+    (negative: toward the far post). The near post is on the shooter's side of the centre line."""
+    k, i = ctx.player(run, keeper), ctx.player(run, shooter)
+    side = float(run.pos[f, i, 1])
+    if abs(side) < 1.0:
+        raise Inconclusive(f"{shooter} is level with the goal's centre: no near post")
+    return float(run.pos[f, k, 1]) * float(np.sign(side))
+
+
 def _pitch_control(ctx: EvalContext, run: MatchRun, f: int, player: str) -> float:
     """His team's pitch control at his position (SPEC 4.2)."""
     i = ctx.player(run, player)
@@ -736,4 +770,6 @@ METRICS: dict[str, Callable[..., Any]] = {
     "observed_share": _observed_share,
     "time_unseen": _time_unseen,
     "sighting_error": _sighting_error,
+    "shot_success": _shot_success,
+    "near_side_offset": _near_side_offset,
 }

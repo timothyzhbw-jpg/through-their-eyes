@@ -56,6 +56,7 @@ OBSERVED_METRICS = {
     "pitch_band",
     "pitch_lane",
     "time_since_last_scan",
+    "near_side_offset",
 }
 _KIND_ORDER: tuple[ClaimKind, ...] = ("observed", "computed", "counterfactual")
 
