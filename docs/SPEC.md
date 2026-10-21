@@ -105,10 +105,11 @@ on an LLM.
   (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
-  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 18 possessions: 15 open-play
-  passages and three heroes. On this Mac it lasts 691.4 s (11:31), and the heroes start at 0:30
-  (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0) and 8:21 (the
-  set-piece hero `corner_blind_side` seed 0).
+  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
+  passages and four heroes. On this Mac it lasts 701.0 s (11:41) and ends 1–0. The heroes start
+  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0), 6:41 (the
+  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:30 (the set-piece hero
+  `corner_blind_side` seed 0, at 1–0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
@@ -127,10 +128,11 @@ on an LLM.
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
-    1 kick-off, 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
+    2 kick-offs (the start, and after the goal), 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
-  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
-    possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
+  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
+    never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
+    look; without it, the counterfactual goes near post and A1 saves it (§3.6).
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
     per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
     is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
