@@ -1,8 +1,10 @@
 # Demo video script (≤ 2:00)
 
-The submission video is a football video-game-style launch trailer: a 13-second hook filmed
-inside the synthetic match, the product told in the same visual grammar, then the stack and the
-end card. It runs **1:51** and is rendered end to end by code from
+The submission video is a fast, cheeky trailer told around a staged first-person story: an
+academy player who never checks his shoulder loses the ball, his coach shows him the replay on a
+tablet, and the tablet match-cuts into the real app. The app then runs as three chapters (the
+look, under pressure, the corner), the product is shown wider, and the story's callback closes
+it. It runs **1:55** and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -40,42 +42,64 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
 
 ## Timeline
 
-The arc follows the judges' view of the product: the problem and the insight (0:00), the player's
-eyes and the key look (0:13), the counterfactual (0:24), the agent crew and verification (0:57),
-every audience and who it is for (1:21), the close (1:39). The in-engine shots (filmed in the web
-app's cinematic mode) carry a corner label, "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA", and
-the three Blender shots "RENDERED IN BLENDER FROM OUR SIMULATION DATA"; the rest is the app
-itself. Every voice-over line is burned in as a caption (the Chinese line keeps the
-app's own caption). `video/trailer.json` holds each beat's exact in-points, crops, push-ins, grades,
-transitions, overlays and sounds; `out/video/trailer_contact.jpg` shows one frame per beat.
+Story beats are placeholders until the Blender story clips land (labelled "DRAMATISATION ·
+RENDERED IN BLENDER"); the hero shots from the simulation carry "RENDERED IN BLENDER FROM OUR
+SIMULATION DATA" and the cinematic-mode shots "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA".
+No frame is blurred: hard cuts, flashes or a plain fade only; the rewind is colour split,
+noise and scanlines; the cine shots render without motion blur or peripheral blur. Freeze-frame
+name cards hold a sharp frame under a one-stop scrim; ramps drop frames, slow motion comes only
+from rendered frames. While a player scans, music and crowd drop about 10 dB under an 800 Hz
+low-pass and flood back when he acts. The coach speaks with his own voice (`speakers.coach`).
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
-| 0:00 | 2.5 | "EVERY TOUCH STARTS WITH A LOOK." | card | — |
-| 0:02.5 | 3.9 | The look, in Blender: a low push-in on H8, his head swings over his shoulder, focus racks to H9 with the gold ring | Blender | Replays show where the ball went… never what the player saw. |
-| 0:06.4 | 3.5 | The reveal, in Blender: a crane from behind H8 as the pass finds H9's run | Blender | — |
-| 0:09.9 | 3.0 | "SEE WHAT THEY SAW." (the music comes in) | card | See what they saw. |
-| 0:12.9 | 4.5 | The crew's replay in his eyes, verified captions | app | Through Their Eyes replays the moment through the player's own eyes. |
-| 0:17.4 | 3.0 | First person through the look | in-engine | A look over his shoulder, and he finds the runner. |
-| 0:20.4 | 3.75 | Freeze at the pass: "HIS PICTURE OF H9 — OFF BY `{err}` M" | in-engine | And he knows where his man is. |
-| 0:24.15 | 6.0 | With / Without the look on the board: the pass flips from H9 to H4, H9 goes unseen | app | Take that look away, and re-run the match. Without it, he plays it back. |
-| 0:30.15 | 3.75 | Rewind (the look played backwards), then the run without the look in Blender, dusk: "HE PLAYS IT BACK TO H4." | Blender | — |
-| 0:33.9 | 6.75 | Take his eyes: the drag on the dial, his eyes with that look, "Your look changes his call" | app | Or take his eyes yourself: choose the look, and the match plays it out. Look the other way… he plays it safe. |
-| 0:40.65 | 10.5 | Your call: decide with his picture, the reveal, what he did (the music drops out) | app | Your call. You only know what he knew. Then see what really happened. He saw the run. Would you? |
-| 0:51.15 | 6.0 | The pressure hero, inside the sim: "THE PRESS WINS IT." | in-engine | Under a high press… make him keep the ball, and the press wins it. |
-| 0:57.15 | 7.5 | The crew as a line-up | card | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
-| 1:04.65 | 4.5 | Every line checked: four lines stamped ✓, `{err}` m and `{dxt}` xT | app + card | Every line is checked against the simulation before it airs. |
-| 1:09.15 | 4.5 | A wrong number refuted: "WOULD NOT AIR" | app | Try a wrong number… and it never airs. |
-| 1:13.65 | 7.5 | The failure drill as a red card, the bring-back as a substitution | app | Take an agent down… bring it back, and it picks up where it left off. |
-| 1:21.15 | 7.5 | Casual fan, analyst, 中文 | app | The same moment, for every fan, in every language. (Then the app's own zh line: 为什么？球到之前回头的那一眼，H8看到了H9。) |
-| 1:28.65 | 3.75 | The stitched match live on the broadcast camera | app | A whole match, live, with a camera director. |
-| 1:32.4 | 3.0 | Full time: the crew's recap | app | At the final whistle, the crew writes the recap. |
-| 1:35.4 | 3.75 | Who it is for: the live stats | app | Timecoded cues for broadcasters, every player's numbers for coaches. |
-| 1:39.15 | 6.0 | The stack as a spec sheet | card | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
-| 1:45.15 | 6.0 | End card: name, tagline, site, "ALL DATA SYNTHETIC", credits | card | Through Their Eyes. See what they saw. |
+| 0:00.00 | 2.25 | s1a-receive | story (placeholder) |  |
+| 0:02.25 | 1.0 | s1b-freeze · name card YOU | freeze card |  |
+| 0:03.25 | 2.25 | s1c-tackle | story (placeholder) |  |
+| 0:05.50 | 6.0 | s2-coach | story (placeholder) | See this? You know why you lost the ball? |
+| 0:11.50 | 3.0 | a1-pov | app | Replays show where the ball went… never what the player saw. |
+| 0:14.50 | 0.75 | ch1 | chapter card |  |
+| 0:15.25 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
+| 0:16.60 | 4.05 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
+| 0:20.65 | 0.3 | bl01c | Blender |  |
+| 0:20.95 | 0.45 | rw1 | Blender | Here's what he saw. |
+| 0:21.40 | 0.3 | bl02a | Blender |  |
+| 0:21.70 | 3.6 | bl02b | Blender |  |
+| 0:25.30 | 3.0 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
+| 0:28.30 | 3.75 | pov-pass | in-engine | And he knows where his man is. |
+| 0:32.05 | 3.6 | toggle | app | Take that look away, and re-run the match. |
+| 0:35.65 | 0.2 | board-rewind | app |  |
+| 0:35.85 | 1.15 | rw2 | Blender |  |
+| 0:37.00 | 2.6 | bl03 | Blender |  |
+| 0:39.60 | 1.5 | split | Blender split |  |
+| 0:41.10 | 2.25 | eyes-drag | app | Or take his eyes yourself. |
+| 0:43.35 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
+| 0:44.85 | 1.5 | eyes-result | app |  |
+| 0:46.35 | 3.0 | yc-decide | app | Your call. You only know what he knew. |
+| 0:49.35 | 3.0 | yc-truth | app | He saw the run. Would you? |
+| 0:52.35 | 0.75 | ch2 | chapter card |  |
+| 0:53.10 | 2.1 | press-a · name card A11 | in-engine |  |
+| 0:55.20 | 1.8 | press-b | in-engine | Under a high press… |
+| 0:57.00 | 3.0 | press-cf | in-engine | make him keep the ball, and the press wins it. |
+| 1:00.00 | 0.75 | ch3 | chapter card |  |
+| 1:00.75 | 1.5 | corner-a | app | At a corner, it's the marker who has to look. |
+| 1:02.25 | 3.0 | corner-b | app |  |
+| 1:05.25 | 6.75 | crew | card | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
+| 1:12.00 | 4.5 | verified | app | Every line is checked against the simulation before it airs. |
+| 1:16.50 | 3.75 | wrong | app | Try a wrong number… and it never airs. |
+| 1:20.25 | 3.0 | redcard | app | Take an agent down… |
+| 1:23.25 | 4.5 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:27.75 | 1.5 | casual | app | The same moment, for every fan, in every language. |
+| 1:29.25 | 1.5 | analyst | app |  |
+| 1:30.75 | 4.5 | zh | app | (the app's own zh line) |
+| 1:35.25 | 3.75 | impact | app | Timecoded cues for broadcasters, every player's numbers for coaches. |
+| 1:39.00 | 2.25 | s4-check | story (placeholder) |  |
+| 1:41.25 | 2.25 | s4-escape | story (placeholder) |  |
+| 1:43.50 | 1.5 | s4-nod | story (placeholder) |  |
+| 1:45.00 | 5.25 | spec | card | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
+| 1:50.25 | 5.25 | end | card | Through Their Eyes. [pause 500] See what they saw. |
 
-Total 1:51. The product section cuts on the music's 80 bpm grid from the title hit; the track's
-breakdown falls on Your call.
+Total 115.50 s. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 
@@ -103,40 +127,35 @@ two renderers sit together.
 
 ## Choices made against the brief
 
-The treatment Bowen approved asked for some beats the data does not support; the cut follows
-the data:
-- **One look, three angles.** H8 makes one scan before the ball arrives (the key scan, frames
-  50–70; the verified line is "H8 checked his shoulder before the ball reached him"). The hook
-  shows that one look from two angles and then through his eyes, not three scans.
+The cut follows the data where a requested beat does not hold:
+- **A single look.** H8 makes one scan before the ball arrives (the key scan, frames 50–70;
+  verified: "H8 checked his shoulder before the ball reached him"). His name card says so
+  without a number word: "A SINGLE LOOK. THAT'S ALL HE GETS."
 - **"He saw 4. He missed 1." is not a claim** the service verifies, so the freeze shows a verified
-  one instead: his picture of H9 was off by `{err}` m when he passed.
-- **Without the look he does not lose the ball** in this moment: he plays it safe to H4 (verified:
-  "Without that look, H8 would have passed to H4"). The cut says so; "he loses the ball" is
-  told by the pressure hero, where the re-simulated carry is tackled.
-- **Your call** is live (#60), so it has its slot; the stitched-match beat is the live broadcast
-  shot.
-- **In-engine shots past the hook.** The review asked for in-engine shots only in the opening
-  8–10 s. The hook is in Blender, from the same simulation data. The first-person shots and the
-  pressure hero are in-engine, because they are the app's own POV and broadcast views filmed in
-  its cinematic mode; the run without the look is Blender again. Each carries its label. The app itself
-  fills 62 s of the 111 s, the in-engine shots 24 s and the title cards 25 s.
+  one: his picture of H9 was off by `{err}` m when he passed.
+- **Without the look he does not lose the ball** here: he plays it safe to H4 (verified: "Without
+  that look, H8 would have passed to H4"). Losing the ball is told by the pressure chapter, where
+  the re-simulated carry is tackled, and by the staged story, which is labelled a dramatisation.
+- **The story is staged, not simulated**, so it carries "DRAMATISATION · RENDERED IN BLENDER";
+  the jokes and the second person ("YOU ARE No. 14.") stay on fictional players.
+- **Chapter numbers are Roman and shirt numbers are names** ("CH. II", "No. 14"): the cards may
+  hold no digit or number word that is not a verified claim.
 
 ## Music
 
-Default: "Unsolicited trailer music (loop edit)" by Emma_MA, CC0 — energetic electronic at 80
-bpm. It enters at a phrase boundary of the track (35.59 s) on the "See what they saw" hit, the
-product cuts land on its beats, and its breakdown (66.3–72.3 s in the track) falls on Your call.
-It fades out under the end card.
-Alternatives in [video/assets.json](../video/assets.json) (switch `music[0].asset` in
-`trailer.json`; their sections differ, so re-time `from`):
-[Generic trailer music](https://opengameart.org/content/generic-trailer-music) (Emma_MA, CC0,
-dramatic) and [Digital Acid](https://opengameart.org/content/xenocity-digital-acid-glitch-hop)
-(Xenocity, CC0, glitch hop). The default's page:
-https://opengameart.org/content/unsolicited-trailer-music
+To be picked by Bowen. Candidates, all CC0 1.0 with their pages in
+[video/CREDITS.md](../video/CREDITS.md) and files with SHA-256 in
+[video/assets.json](../video/assets.json): Skill Test and Pantheon (HoliznaCC0, dark trap and
+phonk), Shortcuts (Zane Little Music, breakbeat), Unsolicited trailer music and Generic trailer
+music (Emma_MA, trailer builds), and Sirens in Darkness (cynicmusic, tense pads for the story's
+opening). The spec allows several `music` entries, so the story can sit on one track and the
+chapters on another. An original score composed in code (the score session) may replace them.
+The cut today uses Unsolicited trailer music from the match-cut on; the story has only the
+stadium hum.
 
 ## Open
 
-- TODO(Bowen): the music is the default; the two alternatives are below.
+- TODO(Bowen): the music (candidates above) and the story player's placeholder name.
 - TODO(Bowen): the public repository URL on the end card once the repo is public (by 10/26):
   add a line to `titles.end.params.lines`.
 - The app shots are filmed from the live site (main 603e0a8: cinematic mode #90, Take his eyes
