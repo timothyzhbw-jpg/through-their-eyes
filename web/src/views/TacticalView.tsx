@@ -793,7 +793,7 @@ function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
   const tagH = Math.max(2.4, TAG_PX * px);
   const [ex, , ez] = path[path.length - 1];
   const what = actionLabel(option.action);
-  const label = getLabelTexture(`what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
+  const label = getLabelTexture(option.tag ?? `what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
     ...LABEL.tag,
     color: COLORS.gold,
   });

@@ -48,6 +48,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
 | `play`     | `yourcall`                                                      | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused                                                                                         |
+| `play`     | `eyes`                                                          | open "Take his eyes" on his own look (a hero moment's link only, not with `match`); counts as a spot: opens paused                                                                                                         |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                    |
 | `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                          |
@@ -143,6 +144,8 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -162,6 +165,14 @@ uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_es
   the decision on (players and ball, mm) for the ghost path. The suggested questions use it online
   and offline; free questions go to the api's live what-if, which uses its forced runs for the
   ghost.
+
+- `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
+  SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
+  only one between the pass and his decision: his head, sight and belief over the window (the
+  belief sparse against the no-look run), his decision as `hero_seed3.json` has it, its verified
+  lines in en and zh, and the run from the decision on for the players on the ball (each distinct
+  run once). `src/takeeyes/looks.ts` splices a look into the factual run; fetched when the mode
+  first opens.
 
 Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
 `tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
