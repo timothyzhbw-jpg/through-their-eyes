@@ -1869,6 +1869,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
   keys; the API allows the site's origin only.
+  - *Compression and caching (2026-10-21):* Storage sends each blob as stored and never
+    compresses, so the site sent 1.6 MB of JS raw. `infra/upload_web.sh` uploads a staged build
+    (`web/scripts/stage.mjs`): text gzipped (`Content-Encoding: gzip`), hashed assets
+    `max-age=31536000, immutable`, `data/` and `models/` `max-age=300`, `index.html` last with
+    `no-cache`. No Azure setting changes: these are blob properties set at upload. Cold loads
+    before and after, laptop and phone, plain and on Fast 3G with a 4× CPU slowdown:
+    [eval/reports/web_load.md](../eval/reports/web_load.md) (`cd web && npm run loadperf`).
   - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
     2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
     none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
