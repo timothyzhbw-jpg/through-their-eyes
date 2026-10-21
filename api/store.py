@@ -30,13 +30,14 @@ from azure.core.exceptions import AzureError, ResourceNotFoundError
 from pydantic_core import to_json
 
 from agents.context import MomentContext
+from agents.recap_context import RecapContext
 from api.settings import Settings, match_id
 from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
 from explain.lenses import explain_moments
 from explain.match import match_moments
 from explain.moments import hero_card
 from sim.export import export_hero, export_match
-from sim.match import build_match, match_heroes
+from sim.match import StitchedMatch, build_match, match_heroes
 
 log = logging.getLogger(__name__)
 CACHE_CONTAINER = "cache"  # partition key /kind
@@ -53,6 +54,9 @@ class Match:
     time; `where` says, for a stitched match, which possession each one is in (its index, first
     match frame and the moment's id inside it). Breakdowns and what-ifs work on the possession's
     own run, so their frames are local: add `start` to place them on the match clock.
+
+    A stitched match also keeps its possessions' runs (`stitched`), for the end-of-match recap's
+    evidence (`recap()`, built on the first recap request and kept).
     """
 
     id: str
@@ -63,6 +67,9 @@ class Match:
     cards: list[dict[str, Any]]
     sprint: list[list[str]]  # per frame: players above sprint speed (live overlay)
     where: dict[str, dict[str, Any]] = field(default_factory=dict)
+    stitched: StitchedMatch | None = None  # a stitched match's possessions (SPEC 3.1)
+    audit: AuditSink | None = None  # where a stitched match's verdicts go, the recap's too
+    _recap: RecapContext | None = field(default=None, repr=False)
     # GET /api/matches/<id>/export, serialised and compressed once: match-1's export is about
     # 12 MB of JSON and 4 MB gzipped, too much to encode per request on 0.5 vCPU.
     export_json: bytes = field(init=False, repr=False)
@@ -83,6 +90,17 @@ class Match:
         if moment is None:
             return self.ctx
         return self.contexts.get(moment)
+
+    def recap(self) -> RecapContext | None:
+        """The end-of-match recap's evidence (agents/recap_context.py); None for a hero scenario.
+        Built once, on first use: it verifies the match's claims (no simulation)."""
+        if self.stitched is None:
+            return None
+        if self._recap is None:
+            heroes = {self.where[mid]["index"]: ctx for mid, ctx in self.contexts.items()}
+            self._recap = RecapContext.build(self.id, self.stitched, self.cards, heroes,
+                                             self.audit)  # fmt: skip
+        return self._recap
 
     @classmethod
     def load(cls, scenario: str, seed: int, audit: AuditSink | None = None) -> Match:
@@ -116,7 +134,8 @@ class Match:
                                      "local_moment": card["local_id"]}  # fmt: skip
         vel = np.concatenate([p.run.vel for p in match.possessions])
         sprint = _sprint([p.id for p in match.players], vel)
-        return cls(match_id("match", seed), "match", seed, contexts, export, cards, sprint, where)
+        return cls(match_id("match", seed), "match", seed, contexts, export, cards, sprint, where,
+                   stitched=match, audit=sink)  # fmt: skip
 
 
 def _sprint(ids: list[str], vel: np.ndarray) -> list[list[str]]:
@@ -293,6 +312,7 @@ class Storage:
     answers: ResultCache | CosmosResultCache  # what-if answers
     audit: AuditSink | None  # None: each match keeps its verdicts in memory
     voice: ResultCache | CosmosResultCache  # voice cue key -> SSML (api/tts.py)
+    recaps: ResultCache | CosmosResultCache | None = None  # end-of-match recaps (SPEC 6)
     close: Callable[[], None] = field(default=lambda: None)
 
 
@@ -311,6 +331,7 @@ def open_storage(
             ResultCache(settings.cache_dir, "whatif"),
             None,
             ResultCache(settings.cache_dir, "voice"),
+            ResultCache(settings.cache_dir, "recaps"),
         )
     owned = cosmos_client is None
     if owned:
@@ -326,6 +347,7 @@ def open_storage(
         CosmosResultCache(cache, "whatif"),
         CosmosAuditSink(database.get_container_client(AUDIT_CONTAINER)),
         CosmosResultCache(cache, "voice"),
+        CosmosResultCache(cache, "recaps"),  # same container, its own partition (kind)
         cosmos_client.close if owned else (lambda: None),
     )
 
