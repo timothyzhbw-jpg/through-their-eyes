@@ -68,6 +68,22 @@ const PAGES = [
     check: (p, shoot) => lineup(p, shoot, "Start watching", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  { name: "link-eyes", path: "?play=eyes", check: takeEyes },
+  { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
+  {
+    name: "link-eyes-match-1",
+    path: "?match=match-1&play=eyes",
+    check: async (p) => {
+      await see(p.getByRole("button", { name: /Back to the match/ }), "Back to the match");
+      await takeEyes(p);
+    },
+  },
+  {
+    name: "phone-320-eyes",
+    path: "?play=eyes",
+    device: PHONE_320,
+    check: (p) => phone(p, takeEyes, { live: false }),
+  },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
   { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
@@ -94,6 +110,14 @@ const PAGES = [
     path: "?tour=1",
     device: PHONE,
     check: (p, shoot) => tour(p, shoot),
+  },
+  {
+    // a narrow desktop: from 901 px the viewer button shows its full label, and the hero's header
+    // also carries Your call and Take his eyes; checked like a phone's (no overlap, on screen)
+    name: "desktop-960-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
   },
   {
     name: "phone-hero",
@@ -239,6 +263,21 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
+/** `?play=eyes`: Take his eyes (SPEC 7) in the live screen's place: the board with the dial, the
+ * times and the directions to look; a look plays through his eyes, and the result airs its
+ * verified lines. */
+async function takeEyes(page) {
+  await see(page.getByRole("region", { name: "Take his eyes" }), "Take his eyes");
+  await see(page.getByRole("radiogroup", { name: "When he looks" }), "the times to look");
+  await see(page.getByRole("radiogroup", { name: /^Where [HA]\d+ looks$/ }), "the directions");
+  await mainView(page, "board");
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const play = page.getByRole("button", { name: "See what he does" });
+  await see(play, "the look playing through his eyes");
+  await play.click();
+  await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
  * full-time card on the live screen, the recap card with a Watch per key moment, and the reel's
  * captions once it plays. */
@@ -277,16 +316,21 @@ async function lineup(page, shoot, button, then) {
 
 /** On a phone the page should scroll only up and down, and no two header controls overlap or run
  * off screen, with the live stream running (its status and the header's buttons are then all
- * there). */
-async function phone(page, check) {
+ * there). `live: false` for a screen that takes the live screen's place (Take his eyes). */
+async function phone(page, check, { live = true } = {}) {
   await check(page);
-  await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
-  // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
-  await see(page.locator(".stage-head .brand h1"), "the product name in the header");
-  await see(
-    page.locator(".stage-head .brand .sub").filter({ hasText: /synthetic match/i }),
-    'the "synthetic match" note in the header',
-  );
+  if (live) {
+    await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+    // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
+    await see(page.locator(".stage-head .brand h1"), "the product name in the header");
+    // The note shows on a phone's header (up to 480 px); a tablet and a narrow desktop hide it.
+    if ((page.viewportSize()?.width ?? 0) <= 480) {
+      await see(
+        page.locator(".stage-head .brand .sub").filter({ hasText: /synthetic match/i }),
+        'the "synthetic match" note in the header',
+      );
+    }
+  }
   const { wide, width, overlaps, offscreen } = await page.evaluate(() => {
     const root = document.documentElement;
     const wide = root.scrollWidth;
