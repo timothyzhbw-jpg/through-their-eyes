@@ -1,24 +1,40 @@
-// The stadium around the pitch in the 3D view (first person and broadcast), all generated here:
-// a two-tier bowl under a roof, an instanced crowd (one draw call), four floodlight masts with a
-// glow, our own boards ("Through Their Eyes", "Synthetic match": no real brands), a night sky
-// gradient, and faint floodlight shadows under the players. It is background: dark, low
-// contrast and hazed by the fog, so the players and the look over the shoulder stay the subject.
-// Glow and shadows are faked (additive sprites, soft decals) instead of a bloom pass and shadow
-// maps, to keep 60 fps on integrated GPUs.
+// The stadium around the pitch in the 3D view (first person and broadcast): a two-tier bowl under
+// a roof, a crowd, four floodlight masts with a glow, our own boards ("Through Their Eyes",
+// "Synthetic match": no real brands), a night sky gradient, and faint floodlight shadows under
+// the players. It is background: dark, low contrast and hazed by the fog, so the players and the
+// look over the shoulder stay the subject. Glow and shadows are faked (additive sprites, soft
+// decals) instead of a bloom pass and shadow maps, to keep 60 fps on integrated GPUs.
+//
+// Two builds of the same bowl (stadiumGeometry.ts). The procedural one is generated here and
+// draws on the first frame. The baked one (bakedStadium.ts) is modelled in Blender with its
+// lighting baked in; it loads after the first frame and replaces the procedural bowl, crowd,
+// boards and masts when it is ready, and its baked light shapes the grass (Ground). The sky, the
+// lights for the players, the masts' glow and the gantry are shared.
 
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
+import { useStore } from "../store/store";
+import {
+  armBakedStadium,
+  grassMaterial,
+  groundLightFor,
+  setBoardWords,
+  stadium,
+} from "./bakedStadium";
 import { BROADCAST_CAMERA } from "./broadcast";
 import { BOARDS, BOWL, FLOODLIGHTS, hash01, loopAt, PROFILE, ROOF, seats } from "./stadiumGeometry";
-import { COLORS } from "./scene";
+import { COLORS, getPitchTexture, PITCH } from "./scene";
 
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
 
+setBoardWords(boardTexture);
+
 export function Stadium() {
+  const model = useStore(stadium, (s) => s.model);
   return (
     <>
       <Sky />
@@ -27,13 +43,81 @@ export function Stadium() {
         <planeGeometry args={[2 * BOWL.halfX + 70, 2 * BOWL.halfY + 70]} />
         <meshStandardMaterial color="#121a17" roughness={1} />
       </mesh>
-      <Bowl />
-      <Crowd />
-      <Boards />
-      <Floodlights />
+      {model ? (
+        <BakedStadium />
+      ) : (
+        <>
+          <Bowl />
+          <Crowd />
+          <Boards />
+          <Masts />
+        </>
+      )}
+      <FloodlightGlow />
       <Gantry />
     </>
   );
+}
+
+/** The grass: the apron round the pitch and the pitch with its markings, lit by the scene's
+ * lights. Once the baked stadium is in, its baked light shapes them too (bakedStadium.ts). */
+export function Ground() {
+  const light = useStore(stadium, (s) => s.model?.groundLight ?? null);
+  const baked = useMemo(
+    () =>
+      light && {
+        apron: grassMaterial({ color: "#173826" }, groundLightFor(light, 130, 92)),
+        pitch: grassMaterial(
+          { map: getPitchTexture() },
+          groundLightFor(light, PITCH.length, PITCH.width),
+        ),
+      },
+    [light],
+  );
+  if (baked)
+    return (
+      <>
+        <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={baked.apron}>
+          <planeGeometry args={[130, 92]} />
+        </mesh>
+        <mesh rotation-x={-Math.PI / 2} material={baked.pitch}>
+          <planeGeometry args={[PITCH.length, PITCH.width]} />
+        </mesh>
+      </>
+    );
+  return (
+    <>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
+        <planeGeometry args={[130, 92]} />
+        <meshStandardMaterial color="#173826" />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[PITCH.length, PITCH.width]} />
+        <meshStandardMaterial map={getPitchTexture()} />
+      </mesh>
+    </>
+  );
+}
+
+/** The baked stadium: this canvas's clone of the loaded scene, its crowd bobbing. Asks for the
+ * file on its first frame, so the procedural stadium always draws first. */
+function BakedStadium() {
+  const model = useStore(stadium, (s) => s.model)!;
+  const scene = useMemo(() => model.scene.clone(true), [model]);
+  useFrame(() => {
+    model.time.value = performance.now() / 1000;
+  });
+  return <primitive object={scene} />;
+}
+
+/** Arms the baked stadium's load on the canvas's first frame (see bakedStadium.ts). */
+export function useArmBakedStadium() {
+  const armed = useRef(false);
+  useFrame(() => {
+    if (armed.current) return;
+    armed.current = true;
+    armBakedStadium();
+  });
 }
 
 // ---------- sky: a gradient dome that moves with the camera ----------
@@ -320,8 +404,8 @@ function glowTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function Floodlights() {
-  const glow = useMemo(glowTexture, []);
+/** The procedural masts: a pole and a lamp bank facing the centre spot. */
+function Masts() {
   const lamp = useMemo(() => new THREE.Color(NIGHT.lamp).multiplyScalar(2.5), []);
   return (
     <>
@@ -345,20 +429,32 @@ function Floodlights() {
                 </mesh>
               </group>
             </group>
-            <sprite position-y={m.height} scale={[34, 34, 1]}>
-              <spriteMaterial
-                map={glow}
-                transparent
-                opacity={0.5}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
           </group>
         );
       })}
+    </>
+  );
+}
+
+/** The glow round each mast's lamps, for both stadiums. */
+function FloodlightGlow() {
+  const glow = useMemo(glowTexture, []);
+  useArmBakedStadium();
+  return (
+    <>
+      {FLOODLIGHTS.map((m, k) => (
+        <sprite key={k} position={[m.x, m.height, -m.y]} scale={[34, 34, 1]}>
+          <spriteMaterial
+            map={glow}
+            transparent
+            opacity={0.5}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            fog={false}
+            toneMapped={false}
+          />
+        </sprite>
+      ))}
     </>
   );
 }

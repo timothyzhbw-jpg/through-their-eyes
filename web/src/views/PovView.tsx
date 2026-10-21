@@ -12,22 +12,14 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
-import {
-  COLORS,
-  LABEL,
-  PITCH,
-  getLabelTexture,
-  getPitchTexture,
-  teamColor,
-  useRedrawOn,
-} from "./scene";
+import { COLORS, LABEL, PITCH, getLabelTexture, teamColor, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
 import { BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { MotionBlur } from "./PovMotionBlur";
-import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
+import { Ground, NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 
 export const EYE_HEIGHT = 1.72; // m
@@ -190,14 +182,7 @@ function PovScene() {
       <color attach="background" args={[NIGHT.horizon]} />
       <fog attach="fog" args={[NIGHT.horizon, ...FOG.pov]} />
       <Stadium />
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <planeGeometry args={[130, 92]} />
-        <meshStandardMaterial color="#173826" />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} />
-      </mesh>
+      <Ground />
       <Goals />
       <PlayerShadows />
       {hero.players.map((p, j) => (
