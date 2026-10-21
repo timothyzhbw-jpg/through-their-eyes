@@ -52,6 +52,7 @@ export interface WhatIfOption {
   run: WhatIfRun | null;
   answers: Partial<Record<Language, Narration>>; // only answers that passed the checks
   errors: string[];
+  tag?: string; // the ghost path's tag on the board; default "what if: <action>"
 }
 
 export interface WhatIfs {

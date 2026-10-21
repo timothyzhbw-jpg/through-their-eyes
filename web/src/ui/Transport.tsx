@@ -102,6 +102,8 @@ function PossessionJumps() {
   );
 }
 
+const TIGHT_LABELS_PX = 96; // "Key scan" (~56 px) plus half of "Decision" and a gap
+
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(0);
@@ -127,6 +129,7 @@ function Timeline() {
   const last = run.frames - 1;
   const X = (f: number) => 6 + ((width - 12) * f) / last;
   const key = hero.keyScan;
+  const step = hero.keeperStep; // a keeper's key step instead of a key scan (screened_shot)
   const scans = run.scans.filter((s) => s.player === povPlayer);
   const marked = marker ? hero.runs.factual.scans.find((s) => s.id === marker) : undefined;
   const possessions = hero.match?.possessions ?? [];
@@ -137,6 +140,11 @@ function Timeline() {
   // The same mapping as X, in CSS: the labels need no measured width.
   const at = (f: number) => ({ left: `calc(6px + (100% - 12px) * ${f / last})` });
   const labels = numbered(possessions.map((p) => X(p.start)));
+  // A decision inside or just after the key scan (a striker who looks while the ball comes): the
+  // two labels would overlap, so "Key scan" ends where the scan starts and "Decision" starts at
+  // its frame.
+  const tight =
+    !!key && width > 0 && X(decision) - X(key.start) < TIGHT_LABELS_PX && X(key.start) > 64;
 
   return (
     <div
@@ -213,6 +221,19 @@ function Timeline() {
               fill={s.key ? "var(--floodlight)" : "var(--chalk-3)"}
             />
           ))}
+          {step && povPlayer === hero.heroId && (
+            // A keeper's key step: a bar on its frame; without it, the step he did not take.
+            <rect
+              x={X(step.frame) - 1.5}
+              y={mode === "factual" ? 13 : 8}
+              width={3}
+              height={mode === "factual" ? height - 26 : height - 16}
+              fill={mode === "factual" ? "var(--floodlight)" : "none"}
+              stroke={mode === "factual" ? "none" : "var(--dusk)"}
+              strokeWidth={1.5}
+              strokeDasharray="3 3"
+            />
+          )}
           {mode === "counterfactual" && key && povPlayer === hero.heroId && (
             <rect
               x={X(key.start)}
@@ -273,10 +294,21 @@ function Timeline() {
       />
       {!hero.match && (
         <div className="marks">
-          {key && (
+          {step && (
             <button
               type="button"
               className="mark key"
+              style={at(step.frame)}
+              onClick={() => controls.seek(Math.max(0, step.frame - 8))}
+              title="Jump to just before the keeper's step"
+            >
+              Key step
+            </button>
+          )}
+          {key && (
+            <button
+              type="button"
+              className={tight ? "mark key before" : "mark key"}
               style={at(key.start)}
               onClick={() => controls.seek(Math.max(0, key.start - 8))}
               title="Jump to just before the key scan"
@@ -286,16 +318,18 @@ function Timeline() {
           )}
           <button
             type="button"
-            className="mark"
+            className={tight ? "mark after" : "mark"}
             style={at(decision)}
             onClick={() => controls.seek(decision)}
             title={
               hero.marker
                 ? `Jump to where the pass to ${hero.marker.man} ends`
-                : "Jump to the decision"
+                : step
+                  ? "Jump to where the shot ends"
+                  : "Jump to the decision"
             }
           >
-            {hero.marker ? "Ball arrives" : "Decision"}
+            {hero.marker || step ? "Ball arrives" : "Decision"}
           </button>
         </div>
       )}

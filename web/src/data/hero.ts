@@ -16,6 +16,7 @@ import type {
   HeroExport,
   MatchExport,
   RunName,
+  Vec2,
 } from "./types";
 
 export const SCHEMA_VERSION = 5;
@@ -111,7 +112,56 @@ export interface Hero {
   // to his man resolves (the service's MomentCard anchor).
   reception: number;
   marker: Marker | null; // a marker's look: a key scan and no decision on the ball
+  keeperStep: KeeperStep | null; // a keeper's step: no scan, no decision on the ball
   match: MatchInfo | null; // possessions, score and moments of a stitched match
+}
+
+/**
+ * A keeper's step (screened_shot, SPEC 3.6 C2): one step across his goal that clears his sight
+ * of the shot. No key scan and no decision on the ball; the counterfactual drops the step. The
+ * moment is the shot he faces, and how it ended with the step and without it.
+ */
+export interface KeeperStep {
+  id: string; // the step event
+  frame: number;
+  lateral: number; // m across his goal
+  shot: ExportEvent; // the shot he faces, after the step
+  shooter: string;
+  resolved: Record<RunName, ShotResolution>;
+}
+
+/** How a shot ended in a run: the save, goal or out event at its end frame. */
+export interface ShotResolution {
+  frame: number;
+  type: "save" | "goal" | "out" | "running";
+  player: string | null;
+}
+
+function keeperStepOf(raw: HeroExport, runs: Record<RunName, Run>): KeeperStep | null {
+  const step = raw.key_step;
+  if (!step || raw.counterfactual?.intervention !== "drop_step") return null;
+  const shot = runs.factual.events.find((e) => e.type === "shot" && e.frame >= step.frame);
+  if (!shot) return null;
+  const end = (run: Run): ShotResolution => {
+    const own = run.events.find((e) => e.id === shot.id) ?? shot;
+    const at = typeof own.attrs.end === "number" ? own.attrs.end : null;
+    const e = run.events.find((x) => x.frame === at && ["save", "goal", "out"].includes(x.type));
+    if (!e)
+      return {
+        frame: Math.min(at ?? run.frames - 1, run.frames - 1),
+        type: "running",
+        player: null,
+      };
+    return { frame: e.frame, type: e.type as ShotResolution["type"], player: e.player };
+  };
+  return {
+    id: step.id,
+    frame: step.frame,
+    lateral: step.lateral_m,
+    shot,
+    shooter: shot.player,
+    resolved: { factual: end(runs.factual), counterfactual: end(runs.counterfactual) },
+  };
 }
 
 /**
@@ -251,6 +301,7 @@ export function parseHero(json: unknown): Hero {
   );
   const runnerIndex = raw.runner ? ids.indexOf(raw.runner) : -1;
   const marker = markerOf(runs, n, ids.indexOf(raw.hero), raw.runner, runnerIndex, keyScan ?? null);
+  const keeperStep = keeperStepOf(raw, runs);
   const v = raw.vision;
   const d = raw.scan_detector;
   return {
@@ -281,15 +332,20 @@ export function parseHero(json: unknown): Hero {
       onsetFrames: d.onset_frames,
       maxDurationS: d.max_duration_s,
     },
-    deltaXt: finite(raw.delta_xt),
+    // A placed shot's possession value is its outcome (a goal counts 1), not a chance: its worth
+    // is the scan lens's gain in his chance of scoring on the truth (loaded with the cards).
+    deltaXt: shotPost(runs.factual.decision?.chosen) ? null : finite(raw.delta_xt),
     deltaSource: "sim",
     runs,
     reception: marker
       ? marker.resolved.factual.frame
-      : reception
-        ? reception.frame
-        : (runs.factual.decision?.frame ?? 0),
+      : keeperStep
+        ? keeperStep.resolved.factual.frame
+        : reception
+          ? reception.frame
+          : (runs.factual.decision?.frame ?? 0),
     marker,
+    keeperStep,
     match: null,
   };
 }
@@ -328,6 +384,7 @@ function parseMatchExport(raw: MatchExport): Hero {
     runs: { factual, counterfactual: factual },
     reception: 0,
     marker: null,
+    keeperStep: null,
     match: parseMatch(raw),
   };
 }
@@ -344,6 +401,16 @@ export interface RunLabels {
 
 export function runLabels(hero: Hero): RunLabels {
   const cf = hero.counterfactual;
+  if (cf?.intervention === "drop_step") {
+    return {
+      factual: "With the step",
+      counterfactual: "Without the step",
+      ghostOfFactual: "Ghost: with the step",
+      ghostOfCounterfactual: "Ghost: no step",
+      tag: { factual: "with the step", counterfactual: "without the step" },
+      gain: "Chance of saving it gained by the step",
+    };
+  }
   if (cf?.intervention === "force_action") {
     const [verb, gerund] = forced(cf.action);
     return {
@@ -362,7 +429,11 @@ export function runLabels(hero: Hero): RunLabels {
     ghostOfCounterfactual: "Ghost: no look",
     tag: { factual: "with the look", counterfactual: "without the look" },
     // The verdict reads "…, in expected threat (xT)." A marker's look is worth a turnover chance.
-    gain: hero.marker ? "Worth of the look to his side" : "Gained by looking",
+    gain: hero.marker
+      ? "Worth of the look to his side"
+      : placedShot(hero)
+        ? "Chance of scoring gained by looking"
+        : "Gained by looking",
   };
 }
 
@@ -372,6 +443,8 @@ function forced(action: string): [string, string] {
     return [`passed to ${action.slice(5)}`, `passing to ${action.slice(5)}`];
   if (action === "carry") return ["carried it", "carrying it"];
   if (action === "shot") return ["shot", "shooting"];
+  const post = shotPost(action);
+  if (post) return [`shot at the ${post} post`, `shooting at the ${post} post`];
   return [`chose ${action}`, action];
 }
 
@@ -527,5 +600,24 @@ export function actionLabel(action: string): string {
   if (action.startsWith("pass:")) return `Pass to ${action.slice(5)}`;
   if (action === "carry") return "Carry forward";
   if (action === "shot") return "Shoot";
+  const post = shotPost(action);
+  if (post) return `Shoot at the ${post} post`;
   return action;
+}
+
+/** A shot: "shot", or a placed shot "shot:near" / "shot:far" (Module A, SPEC 3.3). */
+export const isShot = (action: string | null | undefined): boolean =>
+  action === "shot" || !!action?.startsWith("shot:");
+
+/** The hero's decision is a placed shot (far_post_finish): its worth is a chance of scoring. */
+export const placedShot = (hero: Hero): boolean => !!shotPost(hero.runs.factual.decision?.chosen);
+
+/** "near" or "far" for a placed shot, else null. */
+export function shotPost(action: string | null | undefined): "near" | "far" | null {
+  return action === "shot:near" ? "near" : action === "shot:far" ? "far" : null;
+}
+
+/** Where the action was aimed: a pass's target, a shot's aim, else where it ended. */
+export function actionTarget(action: ExportAction): Vec2 {
+  return action.target ?? action.aim ?? action.end_at ?? action.start;
 }
