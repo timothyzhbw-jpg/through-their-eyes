@@ -5,22 +5,15 @@
 // body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
-import {
-  COLORS,
-  LABEL,
-  PITCH,
-  getLabelTexture,
-  getPitchTexture,
-  teamColor,
-  useRedrawOn,
-} from "./scene";
+import { ALL_KITS, kitSlot } from "../players/kit";
+import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
@@ -34,6 +27,10 @@ import { motion, pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { CameraBlend } from "../beat/cameraBlend";
 import { Grade } from "../beat/Grade";
+import { featuresOf, quality } from "../quality/quality";
+
+// The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
+const QualityLayer = lazy(() => import("../quality/QualityPost"));
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -103,6 +100,9 @@ function PovScene() {
   useRedrawOn(playback);
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
+  const tier = useStore(quality, (s) => s.tier);
+  const post = featuresOf(tier, false).post;
+  useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
@@ -117,8 +117,8 @@ function PovScene() {
 
   const materials = useMemo(
     () => ({
-      teams: [0, 1].map(
-        (t) => new THREE.MeshStandardMaterial({ color: teamColor(t), roughness: 0.6 }),
+      shirts: ALL_KITS.map(
+        (kit) => new THREE.MeshStandardMaterial({ color: kit.shirt, roughness: 0.6 }),
       ),
       visor: new THREE.MeshBasicMaterial({
         color: VISOR_COLOR,
@@ -256,8 +256,9 @@ function PovScene() {
         >
           <mesh
             position-y={BODY_CENTRE}
+            castShadow
             geometry={capsule}
-            material={materials.teams[p.team]}
+            material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
           />
           <mesh
@@ -278,7 +279,7 @@ function PovScene() {
             }}
             visible={!rigged}
           >
-            <mesh geometry={headGeometry} material={materials.teams[p.team]} />
+            <mesh geometry={headGeometry} material={materials.shirts[kitSlot(p)]} />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
           </group>
           <sprite
@@ -323,7 +324,13 @@ function PovScene() {
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
-      <MotionBlur hfov={POV_HFOV} />
+      {post ? (
+        <Suspense fallback={<MotionBlur hfov={POV_HFOV} />}>
+          <QualityLayer sample={sample} hfov={POV_HFOV} />
+        </Suspense>
+      ) : (
+        <MotionBlur hfov={POV_HFOV} />
+      )}
     </>
   );
 }
@@ -332,13 +339,14 @@ function PovScene() {
 export function Ground() {
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
         <planeGeometry args={[130, 92]} />
-        <meshStandardMaterial color="#173826" />
+        {/* The grass keeps its colour at every render tier: no image-based light on it. */}
+        <meshStandardMaterial color="#173826" envMapIntensity={0} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
+      <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} />
+        <meshStandardMaterial map={getPitchTexture()} envMapIntensity={0} />
       </mesh>
       <Goals />
     </>
