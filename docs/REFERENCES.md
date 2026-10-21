@@ -306,6 +306,8 @@ printed range, or a shape only. It also says how far the source was read.
 | unravelsports | MPL | optional, unmodified only; Python 3.11 only |
 | Python-RVO2 | Apache-2.0 | optional collision avoidance; only tested on old Python versions |
 | google-research/football | Apache-2.0; `third_party/gfootball_engine` (Gameplay Football, Bastiaan Konings Schuiling) is under the Unlicense, with no separate notice on its assets (checked 2026-10-19) | engine not used (C++ build risk). *Stretch trial (SPEC §7):* player models, skeleton, kit template and animations from `gfootball_engine/data/media`; not the ad-board or stadium textures; credit the original author anyway |
+| CMU Graphics Lab Motion Capture Database | free for all uses, acknowledgement requested | **not used**: motion capture of real people; the kick and shoulder checks are keyed by hand instead (`web/public/models/anims_extra.glb`) |
+| Quaternius Universal Animation Library 1 and 2, free packs | CC0 1.0 | **not used**: no kick or look over the shoulder in the free packs; UAL1's jog and sprint were compared and are no better than the engine's |
 | PitchAura | GPL-3.0 | **do not use** (copyleft) — ideas only |
 | LaurieOnTracking | no license found | **do not copy** — reimplement from papers |
 | SoccerMaster | weights Apache-2.0; code repo has no LICENSE file; bundles YOLOv8 (AGPL) | **not in submission** |

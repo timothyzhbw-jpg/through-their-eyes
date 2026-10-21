@@ -2,11 +2,17 @@
 // rigged players over the tokens by eye. `?rigged=0` starts with the tokens, for side-by-side
 // review; if the model cannot load, RiggedFallback switches back to the tokens.
 // Kept out of the playback store on purpose: the rigged players stay removable by deleting players/.
+// The extra clips (extra.ts: a kick at passes, a shoulder check at scans) are on by
+// default; `?anims=base` keeps the engine's clips only, for side-by-side review. If they cannot
+// load, the players fall back to the engine's clips.
 
 import { createStore } from "../store/store";
 
+export type Anims = "base" | "extra";
+
 export interface TrialState {
   rigged: boolean;
+  anims: Anims;
 }
 
 /** Rigged players unless the query string asks for the tokens with `rigged=0`. */
@@ -14,12 +20,18 @@ export function riggedFromSearch(search: string): boolean {
   return new URLSearchParams(search).get("rigged") !== "0";
 }
 
-function fromUrl(): boolean {
+/** The extra clips unless the query string asks for the engine's only with `anims=base`. */
+export function animsFromSearch(search: string): Anims {
+  return new URLSearchParams(search).get("anims") === "base" ? "base" : "extra";
+}
+
+function fromUrl(): TrialState {
   try {
-    return riggedFromSearch(window.location.search);
+    const search = window.location.search;
+    return { rigged: riggedFromSearch(search), anims: animsFromSearch(search) };
   } catch {
-    return true;
+    return { rigged: true, anims: "extra" };
   }
 }
 
-export const trial = createStore<TrialState>({ rigged: fromUrl() });
+export const trial = createStore<TrialState>(fromUrl());

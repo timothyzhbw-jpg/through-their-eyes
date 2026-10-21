@@ -1446,6 +1446,15 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - *Extra motion (2026-10-21):* clips keyed by hand on the same skeleton (which is unchanged),
+    shipped as an animations-only GLB (`web/public/models/anims_extra.glb`, ~15 KB; how they
+    were made in its README). No motion-capture data. A kick (`pass_short`) replaces the standing
+    pass, its ball contact on the pass event, in place, with the standing foot still. At every
+    sim `scan` a shoulder check turns the trunk with the look, as an additive layer timed to the
+    head's turn (out, hold, back) and sized by how far the head turns from the body; it counts
+    towards the trunk's share of the look, so a look past 80° turns the trunk no further than
+    before. The head still points exactly along `head_yaw`. On by default; `?anims=base` turns
+    it off; under reduced motion there are no shoulder checks.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -1727,6 +1736,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
+- [x] *Extra motion (kick, shoulder checks):* the GLB binds every track to a bone of the model
+      without changing its joint frames and holds no motion-capture data; the kick plays at each
+      pass event with its contact on the event's frame and the kick along the pass; the shoulder
+      check plays only during the sim's scans, on the side the head turns, phased by the head;
+      the head stays on `head_yaw` (< 1e-3 rad) for every player; the feet stay on the ground;
+      poses are history-free; reduced motion drops the checks.
+      — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts)
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.

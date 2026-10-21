@@ -20,3 +20,26 @@ Unlicense asks for no credit; we give it anyway.
 The source files are fetched into `out/` (git-ignored) and never committed; only this converted
 model is. The first-person view shows it by default; the "Animated players" toggle switches back
 to the tokens.
+
+# Extra player animations (SPEC 7)
+
+`anims_extra.glb` holds animations only: no mesh, no skin, no textures. Its nodes are the 14
+skeleton nodes of `grf_player.glb` with the same names and bind transforms, so its clips bind to
+the rigged players by bone name and the skeleton is unchanged. Rotations are int16-normalized
+quaternions with keys dropped where linear interpolation stays within 0.25°.
+
+Every clip is keyed by hand for this project. There is no motion-capture data in it.
+
+- `pass_short`: a right-foot kick with a plant step, 0.94 s, ball contact at 0.42 s, in place. Key
+  poses (ankle paths, hip and trunk turns, arms out for balance) are set by hand on a synthetic
+  body with this model's proportions; the legs are solved by two-bone IK, so the standing foot
+  stays still.
+- `shoulder_check_r`: the trunk turning about a fifth of the way with a 75° look over the right
+  shoulder, dipping slightly towards it, and settling after the head is back. Trunk joint
+  (`middle`) only; the head stays the sim's.
+- `shoulder_check_l`: the same, mirrored left to right.
+
+The keys and the script that writes this file live outside the repo in `tte-blender/anims/`
+(`handkey.py`, numpy only; it maps the keyed body onto this skeleton by bone directions). The
+scene extras record each clip's ball contact (`touch_s`), the kick's direction and the shoulder
+check's phases.

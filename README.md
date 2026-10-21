@@ -355,5 +355,10 @@ Built with Claude Code.
 (`api`), uploads the web app (`web`) and sets the deploy workflow's variables (`github`). It only
 accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subscription.
 
+## Credits
+- Rigged players: converted from Gameplay Football by Bastiaan Konings Schuiling, as shipped in
+  Google Research Football (Unlicense); see [web/public/models/README.md](web/public/models/README.md).
+  Their kick and shoulder checks are keyed by hand for this project.
+
 ## License
 MIT — see [LICENSE](LICENSE).
