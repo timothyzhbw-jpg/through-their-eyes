@@ -113,14 +113,15 @@ def crossing(
     ball: np.ndarray, target: np.ndarray, x_line: float, speed: float, bp: BallParams = BallParams()
 ) -> tuple[float, float]:
     """Where a ground shot from `ball` toward `target` crosses the line x = x_line (its y), and
-    when (s, rolling physics of `sim.ball`; inf if it stops first, 0 if it starts past it)."""
+    when (s, rolling physics of `sim.ball`; inf if it stops first or the line is behind the
+    ball in the shot's direction, so there is no crossing)."""
     ball, target = np.asarray(ball, dtype=float), np.asarray(target, dtype=float)
     u = (target - ball) / max(float(np.linalg.norm(target - ball)), 1e-9)
     if abs(u[0]) < 1e-9:
         return float(ball[1]), math.inf
     s = (x_line - ball[0]) / u[0]
     if s <= 0.0:
-        return float(ball[1]), 0.0
+        return float(ball[1]), math.inf
     return float(ball[1] + s * u[1]), float(flight_time(speed, s, bp))
 
 

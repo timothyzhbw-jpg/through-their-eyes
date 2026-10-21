@@ -122,6 +122,46 @@ code is copied (CLAUDE.md rule 1).
   feasibility. https://arxiv.org/abs/2004.07209 , https://repositori.upf.edu/handle/10230/57891
   → Receiver orientation in the decision model; production path for orientation from video.
 
+### Shots and goalkeepers (hero expansion pack, Module A; `sim/shots.py`)
+All read on 2026-10-20. Each entry says what we use: a fitted constant, a *tunable* choice inside a
+printed range, or a shape only. It also says how far the source was read.
+- **Bransen, Janssen & Davis (2025). *Stop Guessing: Optimizing Goalkeeper Policies for Soccer
+  Penalty Kicks.*** arXiv:2505.24629 (a preprint, not peer-reviewed) —
+  https://arxiv.org/abs/2505.24629
+  → **Fitted constants of the save model.** Eq. 2 and Appendix C, fitted by Brier score on real
+  penalties with the keeper in the correct corner:
+  - dive range 2.8 m on the kick (late dive) and 3.1 m going early;
+  - uncertainty band µ = 0.7 m;
+  - save rate within reach ρ = 0.7.
+  Using a model fitted on penalties for low open-play shots is our assumption (SPEC 3.3).
+  *Read:* full text.
+- **Dicks, Button & Davids (2010).** Attention, Perception & Psychophysics 72:706–720, and
+  **Zheng, de Reus & van der Kamp (2021).** Human Movement Science 76:102763.
+  → **Secondary only.** The 500–600 ms penalty flight time behind t_pen = 0.55 s is cited by
+  Bransen et al. *Read:* neither primary.
+- **Kellis & Katis (2007). *Biomechanical characteristics and determinants of instep soccer
+  kick.*** Journal of Sports Science and Medicine 6(2):154–165.
+  → **A tunable choice inside a printed range.** Shot speed U(24, 30) m/s lies within the
+  18–35 m/s of maximal instep kicks. *Read:* abstract and key points.
+- **Hunter, Angilletta, Pavlic, Lichtwark & Wilson (2018). *Modeling the two-dimensional
+  accuracy of soccer kicks.*** Journal of Biomechanics 72:159–166, doi:10.1016/j.jbiomech.2018.03.003.
+  → **Shape only.** Error variance grows as a power function of ball speed. The aim error of 2.5°
+  is ours (*tunable*); no number comes from the paper. *Read:* abstract.
+- **Ibrahim, Kingma, de Boode, Faber & van Dieën (2019).** Frontiers in Sports and Active
+  Living 1:15 (full text) and Journal of Sports Sciences 37(3):313–321 (abstract).
+  → **No value used.** A full dive takes about 1.0 s from signal to ball contact, a sanity check
+  only. The J Sports Sci abstract gives the legs' contributions to horizontal centre-of-mass
+  velocity (2.7 and 1.2 m/s), not a take-off speed.
+- **Kerwin & Bray (2006). *Measuring and modelling the goalkeeper's diving envelope in a penalty
+  kick.*** The Engineering of Sport 6, vol. 1, 321–326.
+  → **Context only.** 500–700 ms from boot to goal line. *Read:* catalogue abstract.
+- **Uncited, so swept or marked *tunable*.**
+  - v_dive (reach gained per extra second): no primary number found (the papers above, and a
+    literature check with another model), so every keeper gate is re-run at 2.5 and 4.0 m/s.
+  - The dive's tracking limits (4 m/s, 15 m/s²).
+  - The 0.2 s render delay before a dive.
+  - The bisector rule with the keeper 1.5 m off his line.
+
 ### Space and value
 - **Spearman (2018). *Beyond Expected Goals.*** MIT Sloan — pitch control, time to intercept.
 - **Shaw, Friends of Tracking (LaurieOnTracking)** — simplified TTI and default parameters

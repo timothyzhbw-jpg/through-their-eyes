@@ -323,6 +323,17 @@ def option_success(ctx: DecisionContext, action: str, target: tuple[float, float
 PLACEMENTS = ("near", "far")
 
 
+def placed_shot_value(ctx: DecisionContext, placement: str) -> float:
+    """P(success) of `shot:near` or `shot:far` with `placement`, on the state `ctx` holds.
+
+    The public counterpart of `_placed_shot` for re-scoring a chosen placement on another state,
+    e.g. the truth (`explain.functions.true_decision_context`). `ctx.keeper` must be the opposing
+    keeper's index.
+    """
+    ball = ctx.pos[ctx.carrier] if ctx.ball is None else np.asarray(ctx.ball, dtype=float)
+    return _placed_shot(ctx, ball, placement).p_success
+
+
 def _placed_shot(ctx: DecisionContext, ball: np.ndarray, placement: str) -> OptionEval:
     """`shot:near` or `shot:far`, valued on the shooter's belief (SPEC 3.3, Module A):
     P(on target) x (1 - E[P(save)]) over where he believes the keeper is, with the belief's

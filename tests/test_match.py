@@ -157,3 +157,28 @@ def test_the_match_export_keeps_the_tracking_of_each_possession(match, export):
     assert lifted["frame"] == local.frame + p.start
     assert lifted["attrs"]["end"] == local.attrs["end"] + p.start
     assert lifted["possession"] == 1
+
+
+def test_shot_frame_attrs_and_the_save_shot_id_move_to_match_time():
+    plan = (
+        PossessionSpec("possession_play", max_duration_s=5.0),
+        PossessionSpec("far_post_finish", 40),  # the first seed 0-399 that ends in a save
+    )
+    m = build_match(1, plan)
+    p = next(p for p in m.possessions if p.scenario == "far_post_finish")
+    assert p.start > 0
+    f = export_match(1, m, moments=[])["runs"]["factual"]
+    events = [e for e in f["events"] if e["possession"] == p.index]
+    by_id = {e["id"]: e for e in events}
+    local_by_id = {global_id(e.id, p.start): e for e in p.run.events}
+    assert {e["type"] for e in events} >= {"shot", "dive", "save"}
+    for e in events:
+        local = local_by_id[e["id"]]
+        for key in ("end", "seen"):
+            value = local.attrs.get(key)
+            if isinstance(value, int):
+                assert e["attrs"][key] == value + p.start, (e["id"], key)
+    save = next(e for e in events if e["type"] == "save")
+    shot = by_id[save["attrs"]["shot"]]
+    assert shot["type"] == "shot"
+    assert shot["attrs"]["outcome"] == "saved"

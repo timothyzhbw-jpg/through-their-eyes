@@ -152,8 +152,13 @@ on an LLM.
   arrive faster (arrival speed 0.35 × distance, clipped to 6–12 m/s). Lofted passes, bounce, Magnus
   and shot outcomes are M4.
 - *Shots and keepers (Module A of the hero expansion pack, 2026-10-21; `sim/shots.py`).* Only in
-  scenarios with `Scenario.shots`. With the flag off nothing changes: every committed export and
-  eval report is byte-identical (`tests/test_committed_exports.py`).
+  scenarios with `Scenario.shots`. With the flag off nothing changes.
+  - The committed `blind_side_run` seed 3 export is byte-identical
+    (`tests/test_committed_exports.py`, the only export it pins).
+  - The `hero_flip` (blind_side_run), `hero_lens` (press_escape) and `hero_marking` reports
+    regenerate with an empty diff.
+  - Every other eval report is re-run on the merge by the core review desk.
+  - Sources, and how far each was read: `docs/REFERENCES.md`, "Shots and goalkeepers".
   - **The shot.** Low and driven, on the ground, using the rolling physics above.
     - Speed is U(24, 30) m/s per shot (a keyed draw), inside the 18–35 m/s of maximal instep kicks
       (Kellis & Katis 2007).
@@ -372,14 +377,29 @@ expansion pack, on Module A (§3.3).
     without the look), is +0.524 (target ≥ 0.30: met);
   - the design rule holds in 38/40 (target ≥ 90%: met);
   - the placement change holds at v_dive = 2.5 and 4.0 m/s: 38/40 at both;
-  - the realised outcome changes in 32/40 (reported only). ρ = 0.7 and the aim error are real
-    randomness.
+  - Reported only: the goal status (a goal with the look, none without, or the reverse)
+    changes in 23/40. Without the look 20 goals are lost and 3 gained.
+  - Also reported only: the shot's outcome label (goal, saved, wide, blocked) changes in 32/40,
+    which counts wide → saved too.
+  - ρ = 0.7 and the aim error are real randomness, so the look raises the scoring chance (the
+    gate) rather than deciding every goal.
   - The two misses (seeds 200, 233) are one case. As H9 takes the ball, his gaze follows his body,
     which faces within about 75° of A1, so he sees the keeper during his first touch without the
     look and shoots far post in both runs. The held-out seeds were not tuned on after this.
   - Report: [hero_shot_far_post_finish.md](../eval/reports/hero_shot_far_post_finish.md).
+- **How the held-out run went.** All of this landed in one commit:
+  - The layout was built on design seeds: probes on 0–19, then the eval on 0–39.
+  - The gate was then run once on 200–239 with the final layout, then once on 100–139.
+  - After that, nothing in the scene changed. Only the two misses were inspected, and this text
+    was written.
+  - The fix round after review moved no number: the 200–239 report regenerates with the same
+    values, with only the reported rows renamed and added.
 - **Deviations from the design plan** (`docs/drafts/hero_expansion.md` §2.4), each with its
   reason:
+  - *Design seeds.* 0–39, not the plan's 0–99. Tuning stopped once they passed.
+  - *Byte-identity evidence.* The plan's §1.7 asked for six reports to regenerate with an empty
+    diff. The author regenerated three: `hero_flip`, `hero_lens` and `hero_marking`. The rest are
+    run on the merge by the core review desk.
   - *Held-out seeds.* 200–239 instead of 100–139. The scene was first built with the away defence
     out by the byline corners, so the box was empty. 100–139 were run once on that layout (40/40,
     kept as [hero_shot_far_post_finish_100-139.md](../eval/reports/hero_shot_far_post_finish_100-139.md),
