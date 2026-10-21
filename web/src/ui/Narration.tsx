@@ -29,6 +29,7 @@ import { LANG_LABEL, PERSONA_LABEL } from "./labels";
 import { Chapter } from "./Chapter";
 import { numberParts } from "./numbers";
 import { Segmented } from "./Segmented";
+import { formatSlot, plainReason, slotLabel } from "./tamperText";
 import "./live.css";
 import "./whatif.css";
 
@@ -261,8 +262,8 @@ export function ClaimCard({
         <dl className="values">
           {Object.entries(c.values).map(([k, v]) => (
             <div key={k}>
-              <dt>{k}</dt>
-              <dd>{String(v)}</dd>
+              <dt title={k}>{slotLabel(k)}</dt>
+              <dd>{typeof v === "number" ? formatSlot(k, v) : String(v)}</dd>
             </div>
           ))}
         </dl>
@@ -359,7 +360,7 @@ function TamperForm({
       }}
     >
       <label>
-        <span>{slot}</span>
+        <span title={slot}>{slotLabel(slot)}</span>
         <input
           name={slot}
           type="number"
@@ -382,7 +383,7 @@ function TamperForm({
           void controls.tryValue(claim, slot, value);
         }}
       >
-        Check the true value ({String(value)})
+        Check the true value ({formatSlot(slot, value)})
       </button>
     </form>
   );
@@ -399,7 +400,7 @@ function TamperResult({ state }: { state: TamperState }) {
   if (state.status === "checking") {
     return (
       <p className="tamper-note waiting" role="status">
-        Checking {state.slot} = {String(state.value)} …
+        Checking {slotLabel(state.slot ?? "")} = {String(state.value)} …
       </p>
     );
   }
@@ -412,26 +413,37 @@ function TamperResult({ state }: { state: TamperState }) {
   }
   const r = state.result;
   if (state.status !== "done" || !r) return null;
+  return <TamperVerdict r={r} />;
+}
+
+/** The verifier's answer, brought into view when it arrives: the evidence card scrolls on its own
+ * and at 1440 x 900 the verdict landed below its fold. */
+function TamperVerdict({ r }: { r: VerifyResponse }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    box.current?.scrollIntoView?.({ block: "nearest" });
+  }, [r]);
   const head =
     r.status === "supported" && !r.airs
       ? "Supported, but the line would not air"
       : VERDICT_HEAD[r.status];
   const changed = r.value !== r.verified_value;
+  const label = slotLabel(r.slot);
   return (
-    <div className={`tamper-result ${r.airs ? "airs" : "held"}`} role="status">
+    <div className={`tamper-result ${r.airs ? "airs" : "held"}`} role="status" ref={box}>
       <p className="tamper-verdict">
         <strong>{head}</strong>
       </p>
       {r.line && <p className="tamper-line">{r.airs ? r.line : <s>{r.line}</s>}</p>}
       <p className="tamper-why">
         {!changed
-          ? `${r.slot} = ${r.value}, the verified value.`
+          ? `${label} = ${formatSlot(r.slot, r.value)}, the verified value.`
           : r.status === "supported"
-            ? `This number is true as well: the claim still holds with ${r.slot} = ${r.value}.`
-            : `You set ${r.slot} to ${r.value}; the match data says ${r.verified_value}.`}
+            ? `This number is true as well: the claim still holds with ${label} = ${r.value}.`
+            : `You set ${label} to ${r.value}; the match data says ${formatSlot(r.slot, r.verified_value)}.`}
       </p>
       <p className="tamper-reason">
-        Verifier: <code>{r.reason}</code>
+        Verifier: <code title={r.reason}>{plainReason(r.reason)}</code>
       </p>
       {r.status === "supported" && !r.airs && (
         <ul className="tamper-violations">

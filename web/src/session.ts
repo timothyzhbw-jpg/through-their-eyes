@@ -580,6 +580,14 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       if (s.feed && runLocked(playback.get().live, s.feed.state.get().moments, moment.id)) return;
       transport.setMode(mode);
     },
+    /** Pause holds a running breakdown, caption and all, instead of ending it; play goes on. */
+    togglePlay() {
+      const { status, paused } = runner.status.get();
+      if (status !== "running") return transport.togglePlay();
+      if (paused) return runner.resume();
+      runner.pause();
+      voice.stop(); // the line's caption stays up; the next line speaks after play
+    },
 
     /** Play the breakdown; online and not here yet, ask for it and play it when it arrives. */
     playBreakdown() {
