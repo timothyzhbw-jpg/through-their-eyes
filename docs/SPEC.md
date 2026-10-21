@@ -611,16 +611,29 @@ is a step.
     them like `force:` ids.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
 - **Seed registry.** Scenario seeds and match seeds are separate inputs, but no range below is
-  reused for another purpose.
+  reused for another purpose. A scenario seed is per scenario: seed 5 of `blind_side_run` and
+  seed 5 of `open_play` are different runs. A new eval takes a range no row lists and adds its
+  row here.
 
   | Seeds | What | Where |
   |---|---|---|
-  | 0–1999 | scenario seeds: each scenario's design seeds and its held-out eval seeds | §3.6, §4, `eval/` reports |
+  | 0–99 | design and tuning seeds, never a reported result: every hero's design seeds; `scan_calibration` (`possession_play` 0–99), the scan detector and blind-side alert's tuning (`possession_play` 0–9, `blind_side_run` 0–19), `corruption` (`blind_side_run` 0–19) | §3.4, §3.6, §4.4, §4.7 |
+  | 100–139 | held-out seeds of the heroes (`hero_flip`, `hero_lens`, `hero_marking`, `look_grid`, the scan detector and `keypoint_ingest`; `possession_play` 100–119 there), `narration_ablation` (3, 100–104); `possession_play` 100–199: `realism` | `eval/` |
+  | 200–239 | fresh held-out seeds where 100–139 had been seen: `press_escape` and `far_post_finish` (`hero_lens`, `hero_shot`, `look_grid`), the blind-side alert's fresh check (`possession_play` 200–219, `blind_side_run` 200–239) | §3.6, §4.4 |
+  | 300–339 | C2's held-out seeds (`screened_shot`, `hero_save`); `possession_play` 300–399: `pass_difficulty` | §3.6, §4.6 |
+  | 1000–1199 | every hero's large-sample gate, run once (`hero_gates`) | §3.6 |
+  | 0–1999 of `open_play` | the fitted xT grid (`xt_fit`) | §4, `eval/xt_fit.py` |
   | 0, 3, 11 | demo hero seeds (`press_escape`/`corner_blind_side` 0, `blind_side_run` 3, `far_post_finish` 11) | `sim/match.py` |
   | 1, 2 | match seeds of the served matches | `sim/match.py`, `api/` |
   | 100–119 | held-out match seeds | `eval/match_stats.py` |
   | 5001–5100 | match seeds of the downloadable dataset; v1 uses 5001–5010 | `sim/dataset.py`, [DATASET.md](DATASET.md) |
-  | ≥ 1,000,000 | scenario seeds keyed off a match seed: open-play passages (`open_play`), the dataset's heroes (`dataset_hero`) | `sim/match.py`, `sim/dataset.py` |
+  | ≥ 1,000,000 | scenario seeds keyed off a match seed: open-play passages (`open_play`), the dataset's heroes (`dataset_hero`), a season's heroes (`season_hero`) | `sim/match.py`, `sim/dataset.py`, `eval/season.py` |
+  | ≥ 10,000,000 | season match seeds, keyed by (root, `season_match`): root 2026 is `season.md`'s season, roots 2027–2031 the five independent seasons | `eval/season.py`, `eval/seasons.py` |
+  | ≥ 1,000,000, root 20261022 | the archetypes' `open_play` runs (`archetype_eval`), their calibration (`archetype_tune`) and `blind_side_run` heroes (`archetype_hero`). Root 2026 was a 1,000-run trial during development and is retired | `eval/archetypes.py` |
+
+  A keyed seed is one draw from [1,000,000, 2³¹) by (root, purpose, index) (§3.7's keyed
+  randomness). Two purposes draw the same seed of the same scenario only by chance, about once in
+  two billion pairs of draws.
 
 ### Acceptance checks — sim
 - [x] Same seed twice in the same environment ⇒ identical output hashes.
