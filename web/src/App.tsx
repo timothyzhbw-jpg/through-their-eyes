@@ -7,6 +7,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
+import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
@@ -269,8 +270,10 @@ function MatchView() {
           <>
             <Scoreboard />
             <OpeningNotice />
+            <RecapStage />
           </>
         }
+        caption={<RecapCaption />}
       />
 
       <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
@@ -287,6 +290,7 @@ function MatchView() {
         </header>
         <div className="below">
           <StatsPanel />
+          <RecapPanel />
           <MomentsPanel />
         </div>
       </main>

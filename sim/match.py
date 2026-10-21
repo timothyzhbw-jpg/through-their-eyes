@@ -1,16 +1,20 @@
-"""A stitched match (SPEC 3.1): scenario possessions back to back on one clock.
+"""A stitched match (SPEC 3.1): 15–25 scenario possessions, 10–15 min, on one clock.
 
 A match is a plan of possessions, each one scenario run with its own seed. Hero possessions keep
-the seed the plan gives them (the demo heroes); the others get a seed keyed off the match seed
-(SPEC 3.7), so the same match seed gives the same match byte for byte. Derived seeds start at
-1,000,000 and never coincide with a design or eval seed.
+the seed the plan gives them (the demo heroes). An open-play passage gets a seed keyed by (match
+seed, n), where n counts open-play passages only, so inserting a hero moves no open-play seed;
+derived seeds start at 1,000,000 and never coincide with a design or eval seed (SPEC 3.7). It
+plays until the ball goes out or its cap: the caps are fixed in the plan, so how long the match
+can be does not depend on the platform, though where the ball goes out does (SPEC 3.7: byte for
+byte only within one platform). The same match seed gives the same match byte for byte.
 
 - **Time is continuous.** Possession k starts on the frame after possession k − 1 ended; its
   frames, event ids and frame-valued attributes move to match time by adding its start frame.
-- **Restarts.** The first possession kicks off. After that, play restarts the way the previous
-  possession stopped: a kick-off after a goal, a throw-in, goal kick or corner when the ball went
-  out, or a cut when it ended in play (the broadcast cuts to the next passage of play). The next
-  scenario then sets up its own situation: the stitch is an edit, not a simulated restart.
+- **Restarts.** The first possession kicks off. A goal is followed by a kick-off (the other team).
+  Otherwise play restarts the way the previous possession stopped: a throw-in, goal kick or corner
+  when the ball went out, or a cut when it ended in play. A set-piece scenario declares its own
+  restart and begins with it. The next scenario then sets up its own situation: the stitch is an
+  edit, not a simulated restart.
 - **Score.** Goals are `goal` events from scenarios with shots enabled; the score is carried,
   never invented.
 
@@ -33,28 +37,50 @@ from sim.model import Event, PlayerInfo
 from sim.rng import KeyedRng
 from sim.run import MatchRun
 
-POSSESSION_S = 30.0  # longest open-play possession in a match (possession_play runs on to it)
 SEED_BASE = 1_000_000
+# Scenarios that open with a set piece begin with it, whatever the previous possession did.
+SET_PIECES = {"corner_blind_side": "corner"}
 
 
 @dataclass(frozen=True)
 class PossessionSpec:
     scenario: str
-    seed: int | None = None  # None: keyed off the match seed
-    max_duration_s: float | None = None  # None: the scenario's default (SimParams)
+    seed: int | None = None  # None: an open-play passage keyed off the match seed
+    max_s: float | None = None  # its cap; None: the scenario's default (SimParams)
 
 
-# Six possessions: open play, the scan hero, open play, the pressure hero, open play twice.
-# Hero seeds are the demo seeds: blind_side_run 3 (the deployed hero), press_escape 0 (its first
-# design seed).
+def _open(max_s: float) -> PossessionSpec:
+    """An open-play passage (`possession_play`): until the ball goes out, at most `max_s`."""
+    return PossessionSpec("possession_play", max_s=max_s)
+
+
+# 15 open-play passages and 3 heroes; at most 13:18 of play. Hero seeds are the demo seeds:
+# blind_side_run 3 (the deployed hero), press_escape 0 and corner_blind_side 0 (each scenario's
+# first design seed). The kick-off passage is short, so the first hero comes within 35 s; the caps
+# vary so that open play has a rhythm, and a passage that puts the ball out ends there.
 DEFAULT_PLAN: tuple[PossessionSpec, ...] = (
-    PossessionSpec("possession_play", max_duration_s=POSSESSION_S),
-    PossessionSpec("blind_side_run", 3),
-    PossessionSpec("possession_play", max_duration_s=POSSESSION_S),
-    PossessionSpec("press_escape", 0),
-    PossessionSpec("possession_play", max_duration_s=POSSESSION_S),
-    PossessionSpec("possession_play", max_duration_s=POSSESSION_S),
+    _open(30.0),  # kick-off
+    PossessionSpec("blind_side_run", 3),  # the scan hero, by 0:30
+    *map(_open, (50.0, 65.0, 40.0, 60.0, 55.0)),
+    PossessionSpec("press_escape", 0),  # the pressure hero, about 4:30
+    *map(_open, (45.0, 70.0, 50.0, 60.0, 40.0)),
+    PossessionSpec("corner_blind_side", 0),  # the set-piece hero, about 8:30
+    *map(_open, (55.0, 65.0, 45.0, 50.0)),
 )
+
+
+# Other matches' plans, by match seed; any other seed plays DEFAULT_PLAN.
+PLANS: dict[int, tuple[PossessionSpec, ...]] = {}
+
+
+def plan_for(seed: int) -> tuple[PossessionSpec, ...]:
+    return PLANS.get(seed, DEFAULT_PLAN)
+
+
+def match_heroes(seed: int) -> list[tuple[str, int]]:
+    """(scenario, seed) of every hero possession in match `seed`'s plan, in order, once each."""
+    heroes = [(s.scenario, s.seed) for s in plan_for(seed) if s.seed is not None]
+    return list(dict.fromkeys(heroes))
 
 
 @dataclass
@@ -110,9 +136,10 @@ class StitchedMatch:
         return hashlib.sha256(self.to_bytes()).hexdigest()
 
 
-def possession_seed(match_seed: int, index: int) -> int:
-    """The seed of an open-play possession, keyed by (match seed, possession index)."""
-    gen = KeyedRng(match_seed).generator("possession_seed", index)
+def open_play_seed(match_seed: int, n: int) -> int:
+    """The seed of the n-th open-play passage, keyed by (match seed, n). `n` counts open-play
+    passages only, so inserting a hero possession does not move a seed."""
+    gen = KeyedRng(match_seed).generator("open_play", n)
     return SEED_BASE + int(gen.integers(0, 2**31 - SEED_BASE))
 
 
@@ -123,9 +150,10 @@ def global_id(local_id: str, start: int) -> str:
 
 
 def restart_after(run) -> str:
-    """How play restarts after a possession: from where the ball went out, or a cut."""
+    """How play restarts after a possession: a kick-off after a goal, else where the ball went
+    out, or a cut when it ended in play."""
     if any(e.type == "goal" for e in run.events):
-        return "kick_off"
+        return "kick_off"  # the other team kicks off
     outs = [e for e in run.events if e.type == "out"]
     if not outs:
         return "cut"
@@ -147,16 +175,23 @@ def score_after(score: tuple[int, int], events: list[Event]) -> tuple[int, int]:
     return home, away
 
 
-def build_match(seed: int, plan: tuple[PossessionSpec, ...] = DEFAULT_PLAN) -> StitchedMatch:
+def build_match(seed: int, plan: tuple[PossessionSpec, ...] | None = None) -> StitchedMatch:
+    """Match `seed`, played to `plan` (default: `plan_for(seed)`)."""
+    plan = plan_for(seed) if plan is None else plan
     possessions: list[Possession] = []
     players: list[PlayerInfo] | None = None
-    start, score, restart = 0, (0, 0), "kick_off"
+    start, score, n = 0, (0, 0), 0
     for k, spec in enumerate(plan):
-        pseed = spec.seed if spec.seed is not None else possession_seed(seed, k)
+        if spec.seed is None:
+            pseed, n = open_play_seed(seed, n), n + 1
+        else:
+            pseed = spec.seed
         params = SimParams()
-        if spec.max_duration_s is not None:
-            params = replace(params, max_duration_s=spec.max_duration_s)
+        if spec.max_s is not None:
+            params = replace(params, max_duration_s=spec.max_s)
         run = Simulation.from_scenario(spec.scenario, pseed, params=params).run()
+        restart = "kick_off" if k == 0 else restart_after(possessions[-1].run)
+        restart = SET_PIECES.get(spec.scenario, restart)
         if players is None:
             players = run.players
         elif [p.id for p in run.players] != [p.id for p in players]:
@@ -164,7 +199,6 @@ def build_match(seed: int, plan: tuple[PossessionSpec, ...] = DEFAULT_PLAN) -> S
         possessions.append(Possession(k, spec.scenario, pseed, start, restart, score, run))
         start += len(run.owner)
         score = score_after(score, run.events)
-        restart = restart_after(run)
     return StitchedMatch(seed=seed, players=players or [], possessions=possessions)
 
 
@@ -175,10 +209,11 @@ def main() -> None:
     match = build_match(args.seed)
     for p in match.possessions:
         home, away = p.score_before
-        print(f"{p.index}  {p.start * DT:6.1f} s  {p.restart:<9} {p.scenario:<16} "
+        print(f"{p.index:>2}  {p.start * DT:6.1f} s  {p.restart:<9} {p.scenario:<18} "
               f"seed {p.seed:<10} {p.frames * DT:5.1f} s  {home}-{away}")  # fmt: skip
     home, away = match.score
-    print(f"{match.duration_s:.1f} s, {home}-{away}, {match.output_hash()[:16]}")
+    print(f"{len(match.possessions)} possessions, {match.duration_s:.1f} s, {home}-{away}, "
+          f"{match.output_hash()[:16]}")  # fmt: skip
 
 
 if __name__ == "__main__":

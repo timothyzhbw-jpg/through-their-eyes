@@ -90,7 +90,8 @@ _Fill in as they come to exist._
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
   CI run on main.
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
-  (SPEC 2, 8): every hero moment × persona × language, new ones paced to the per-client limit,
+  (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
+  persona × language (SPEC 6), new ones paced to the per-client limit,
   at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
   cached on the replica's disk only). Run after the last deploy and after any later one: the
   cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
@@ -150,16 +151,26 @@ _Fill in as they come to exist._
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
+- `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
+  seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
+  and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
+  behaves as it did for the fit: re-run it, then regenerate the exports (web/README.md)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
-- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
+- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio); `--match 1` or
+  `--recap <evidence file>` serves the end-of-match recap's tools instead
+- `uv run python -m agents.recap --seed 1 --offline` — the end-of-match recap of stitched match 1
+  (SPEC 6): the crew on the whole match, written to `out/recap_match1.json`; without
+  `--offline` it uses Foundry, `--mcp` gives the Analyst the recap's MCP tools, `--down
+  narration` takes steps down (no model calls for them)
 - `uv run --env-file .env python -m agents.whatif --seed 3 "What if he had played it back to the
   centre-back?"` — answer a what-if question by re-simulating with `force_action` (SPEC 3.7, 6);
   Foundry maps the question when `FOUNDRY_*` is set, `--offline` uses the rule parser only
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
-  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`
+  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo

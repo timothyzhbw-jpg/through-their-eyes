@@ -73,7 +73,7 @@ export interface ExportRun {
   events: ExportEvent[];
   decision: ExportDecision | null;
   action: ExportAction | null;
-  possession_value: number;
+  possession_value: number | null; // null without a decision on the ball (the sim's NaN)
   blind_side: ExportBlindSide;
   scan_detector: ExportScanDetector;
 }
@@ -131,7 +131,7 @@ export interface HeroExport {
   counterfactual: ExportCounterfactual;
   vision: ExportVision;
   scan_detector: ExportScanDetectorParams;
-  delta_xt: number;
+  delta_xt: number | null; // null without a decision on the ball (a marker's look)
   runs: Record<RunName, ExportRun>;
 }
 

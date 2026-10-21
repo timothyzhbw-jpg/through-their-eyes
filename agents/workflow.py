@@ -441,12 +441,18 @@ class Narration(Step):
     def to_lines(self, value: Any, language: Language) -> list[DraftLine]:
         return compose(self.crew.ctx, value, language)
 
+    def template(
+        self, persona: Persona, language: Language, speaker: Speaker | None = None
+    ) -> list[tuple[Speaker, DraftLine]]:
+        """The deterministic lines in speaking order (one speaker's, when given)."""
+        return fallbacks.narration(self.crew.ctx, persona, language, speaker)
+
     async def _speaker(
         self, base: Briefing, key: Key, speaker: Speaker, pbp: list[ScriptLine] | None
     ) -> tuple[list[DraftLine], Attempt | None]:
-        crew, mc = self.crew, self.crew.ctx
+        crew = self.crew
         persona, language = key
-        template = [line for _, line in fallbacks.narration(mc, persona, language, speaker)]
+        template = [line for _, line in self.template(persona, language, speaker)]
         if not crew.uses_model("narration"):
             return template, None
         prompt = self.prompt(base.findings, persona, language, speaker, pbp)
@@ -469,7 +475,7 @@ class Narration(Step):
     ) -> tuple[list[ScriptLine], list[Attempt | None]]:
         persona, language = key
         if not self.crew.uses_model("narration"):  # the template already has the speaking order
-            ordered = fallbacks.narration(self.crew.ctx, persona, language)
+            ordered = self.template(persona, language)
             for speaker in ("pbp", "color"):
                 attrs = {"persona": persona, "language": language, "speaker": speaker}
                 with self.crew.step("narration", **attrs) as span:
@@ -647,6 +653,15 @@ class Verifier(Step):
     def __init__(self, crew: Crew) -> None:
         super().__init__(crew, "verifier")
 
+    def payload(self, persona: Persona, language: Language, kept: list[ScriptLine]):
+        """What a viewer receives for the approved lines (SPEC 5.3)."""
+        mc = self.crew.ctx
+        return build_payload(
+            mc.card.id, persona, language,
+            [RenderLine(id=line.id, text=line.text, claims=line.claims) for line in kept],
+            mc.claims, mc.verdicts, mc.names,
+        ).payload  # fmt: skip
+
     def _check(self, line: ScriptLine, key: Key) -> RenderResult:
         mc = self.crew.ctx
         persona, language = key
@@ -673,7 +688,6 @@ class Verifier(Step):
     def _round(self, drafts: Drafts) -> tuple[Rewrite | Approved, int]:
         """One round: the failing lines go back for a rewrite, or the rest airs. Also returns
         how many lines failed."""
-        mc = self.crew.ctx
         failed: dict[Key, list[tuple[ScriptLine, list[str]]]] = {}
         for key, lines in drafts.scripts.items():
             bad = [(line, res) for line in lines if not (res := self._check(line, key)).ok]
@@ -699,17 +713,12 @@ class Verifier(Step):
                     dropped.append(DroppedLine(id=line.id, speaker=line.speaker, text=line.text,
                                                reason=first.kind, detail=first.detail))  # fmt: skip
                     notes.append(f"{persona}/{language} {line.id} dropped: {first.kind}")
-            built = build_payload(
-                mc.card.id, persona, language,
-                [RenderLine(id=line.id, text=line.text, claims=line.claims) for line in kept],
-                mc.claims, mc.verdicts, mc.names,
-            )  # fmt: skip
             results.append(
                 ScriptResult(
                     persona=persona,
                     language=language,
                     lines=kept,
-                    payload=built.payload,
+                    payload=self.payload(persona, language, kept),
                     dropped=dropped,
                     rewrites=drafts.rewrites.get((persona, language), 0),
                     voice=[],
@@ -808,18 +817,40 @@ class Voice(Step):
 MAX_SUPERSTEPS = 60  # a first run takes at most 9; each bring-back adds at most 8
 
 
+@dataclass(frozen=True)
+class Story:
+    """What the crew's graph tells: the executor for each step, and the workflow's name (its
+    checkpoints and its trace's root span). A breakdown tells one moment; the end-of-match recap
+    (agents/recap.py) runs the same graph with its own steps."""
+
+    name: str
+    director: type[Director]
+    analyst: type[Analyst]
+    telestrator: type[Telestrator]
+    narration: type[Narration]
+    verifier: type[Verifier]
+    voice: type[Voice]
+
+
+BREAKDOWN = Story(NAME, Director, Analyst, Telestrator, Narration, Verifier, Voice)
+
+
 def build_workflow(
-    crew: Crew, narration: type[Narration] = Narration, checkpoints: CheckpointStorage | None = None
+    crew: Crew,
+    narration: type[Narration] | None = None,
+    checkpoints: CheckpointStorage | None = None,
+    story: Story = BREAKDOWN,
 ):
-    """The breakdown graph. `narration` is replaced only by the narration ablation's free-text
-    mode (eval/narration_ablation.py); `run_breakdown` always uses the default. With
+    """The crew's graph. `narration` is replaced only by the narration ablation's free-text
+    mode (eval/narration_ablation.py); `run_breakdown` always uses the story's. With
     `checkpoints`, the workflow checkpoints there at the end of every superstep."""
-    director, analyst, telestrator = Director(crew), Analyst(crew), Telestrator(crew)
-    narration, verifier, voice = narration(crew), Verifier(crew), Voice(crew)
+    director, analyst = story.director(crew), story.analyst(crew)
+    telestrator, narration = story.telestrator(crew), (narration or story.narration)(crew)
+    verifier, voice = story.verifier(crew), story.voice(crew)
     return (
         WorkflowBuilder(
             max_iterations=MAX_SUPERSTEPS,
-            name=NAME,
+            name=story.name,
             start_executor=director,
             checkpoint_storage=checkpoints,
         )  # fmt: skip
@@ -859,8 +890,9 @@ async def run_crew(
     down: Collection[str] = (),
     checkpoints: CheckpointStorage | None = None,
     bring_back: str | None = None,
+    story: Story = BREAKDOWN,
 ) -> CrewRun:
-    """Run the crew on the moment.
+    """Run the crew on the moment (`story`: on what the story tells, e.g. a whole match).
 
     - `down`: agent steps taken down for this run (the failure drill).
     - `checkpoints`: where the workflow checkpoints. If its latest checkpoint is from a run that
@@ -871,16 +903,16 @@ async def run_crew(
     crew = Crew(ctx, client, step_timeout_s, voice_styles=voice_styles or {},
                 down=frozenset(down))  # fmt: skip
     job = Job(tuple(personas), tuple(languages))
-    start = await _start(checkpoints, bring_back, job)
+    start = await _start(checkpoints, bring_back, job, story.name)
     attrs = {"moment": ctx.card.id, "personas": personas, "languages": languages,
              "model": crew.model, "down": sorted(down) or None, "bring_back": bring_back,
              "resumed": "checkpoint_id" in start or None}  # fmt: skip
-    with telemetry.span(NAME, **attrs) as span:
+    with telemetry.span(story.name, **attrs) as span:
         crew.span = span
         async with AsyncExitStack() as stack:
             if use_mcp and client is not None:
                 crew.analyst_tools = await _connect_mcp(crew, stack)
-            out = await _run(crew, start, job, checkpoints)
+            out = await _run(crew, start, job, checkpoints, story)
         result = out.result
         result.trace_id = _trace_id(span)
         telemetry.annotate(span, ms=result.total_ms,
@@ -896,10 +928,10 @@ async def _connect_mcp(crew: Crew, stack: AsyncExitStack) -> list[Any] | None:
     from agent_framework import MCPStdioTool
 
     ctx = crew.ctx
+    args = getattr(ctx, "mcp_args", None) or ["--scenario", ctx.scenario, "--seed", str(ctx.seed)]
     tool = MCPStdioTool(
-        name="moment", command=sys.executable,
-        args=["-m", "agents.mcp_server", "--scenario", ctx.scenario, "--seed", str(ctx.seed)],
-    )  # fmt: skip
+        name="moment", command=sys.executable, args=["-m", "agents.mcp_server", *args]
+    )
     with crew.step("mcp", llm=False) as span:
         started = time.perf_counter()
         try:
@@ -913,15 +945,15 @@ async def _connect_mcp(crew: Crew, stack: AsyncExitStack) -> list[Any] | None:
 
 
 async def _start(
-    checkpoints: CheckpointStorage | None, bring_back: str | None, job: Job
+    checkpoints: CheckpointStorage | None, bring_back: str | None, job: Job, name: str = NAME
 ) -> dict[str, Any]:
     """How `Workflow.run` starts: a new run, a resumed one, or one resumed with an answer."""
     try:
-        latest = await checkpoints.get_latest(workflow_name=NAME) if checkpoints else None
+        latest = await checkpoints.get_latest(workflow_name=name) if checkpoints else None
     except Exception as e:  # the checkpoints do not read: nothing to resume
         if bring_back is not None:
             raise NotWaiting(f"the {bring_back}'s checkpoints do not read") from e
-        await _discard(checkpoints)
+        await _discard(checkpoints, name)
         return {"message": job}
     if bring_back is not None:
         request = f"down:{bring_back}"
@@ -934,12 +966,16 @@ async def _start(
 
 
 async def _run(
-    crew: Crew, start: dict[str, Any], job: Job, checkpoints: CheckpointStorage | None
+    crew: Crew,
+    start: dict[str, Any],
+    job: Job,
+    checkpoints: CheckpointStorage | None,
+    story: Story = BREAKDOWN,
 ) -> CrewRun:
     started = time.perf_counter()
     resuming = "checkpoint_id" in start and "responses" not in start
     try:
-        result = await build_workflow(crew, checkpoints=checkpoints).run(**start)
+        result = await build_workflow(crew, checkpoints=checkpoints, story=story).run(**start)
         outputs = _outputs(result)
     except Exception as e:
         if "responses" in start and isinstance(e, WorkflowCheckpointException):
@@ -948,16 +984,16 @@ async def _run(
             raise
         # A checkpoint from older code may not restore, or restore and then fail (a message of
         # an older shape). Start over without it, so it cannot fail this key on every request.
-        await _discard(checkpoints)
+        await _discard(checkpoints, story.name)
         crew.trace = []
         if crew.span is not None:
             telemetry.annotate(crew.span, resumed=False)
-        result = await build_workflow(crew, checkpoints=checkpoints).run(job)
+        result = await build_workflow(crew, checkpoints=checkpoints, story=story).run(job)
         outputs = _outputs(result)
     out: BreakdownResult = outputs[-1]
     out.total_ms = round((time.perf_counter() - started) * 1000, 1)
     if checkpoints is not None:  # what still waits after this run, in its last checkpoint
-        latest = await checkpoints.get_latest(workflow_name=NAME)
+        latest = await checkpoints.get_latest(workflow_name=story.name)
         waiting = list(latest.pending_request_info_events.values()) if latest else []
     else:
         waiting = result.get_request_info_events()
@@ -967,18 +1003,18 @@ async def _run(
 def _outputs(result: Any) -> list[BreakdownResult]:
     outputs = result.get_outputs()
     if not outputs:
-        raise RuntimeError("the breakdown workflow produced no output")
+        raise RuntimeError("the crew's workflow produced no output")
     return outputs
 
 
-async def _discard(checkpoints: CheckpointStorage) -> None:
+async def _discard(checkpoints: CheckpointStorage, name: str = NAME) -> None:
     """Delete every checkpoint of the run, readable or not."""
     folder = getattr(checkpoints, "storage_path", None)
     if folder is not None:  # file storage: a file that does not decode is not even listed
         for path in Path(folder).glob("*.json"):
             path.unlink(missing_ok=True)
         return
-    for checkpoint_id in await checkpoints.list_checkpoint_ids(workflow_name=NAME):
+    for checkpoint_id in await checkpoints.list_checkpoint_ids(workflow_name=name):
         await checkpoints.delete(checkpoint_id)
 
 

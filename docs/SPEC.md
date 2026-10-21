@@ -72,12 +72,14 @@ on an LLM.
 
 *Implemented (`api/`, M3):* FastAPI.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
-  `moment` and `end` messages; clients can pause, resume, seek, change speed or stop.
+  `moment` and `end` messages (`full_time: true` when it reached the last frame); clients can
+  pause, resume, seek, change speed or stop.
 - REST: `/api/matches`, `/api/matches/<id>` (+ `/export`, `/moments`, `/audit`),
   `POST /api/breakdowns` (`fail` for the failure drill, §6),
   `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
   is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
-  audited, rate-limited per client, no model call).
+  audited, rate-limited per client, no model call), `POST /api/recaps` and
+  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6).
 - The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
   key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
   allows a few streams per client and a session length, and closes on a malformed control
@@ -105,17 +107,40 @@ on an LLM.
   (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
-  *Implemented (2026-10-20, `sim/match.py`), 5–8 possessions for now:* `match-1` has six — open
-  play, `blind_side_run` seed 3, open play, `press_escape` seed 0, open play twice — 132.6 s on one
-  clock. Hero possessions keep their demo seeds; open-play seeds are keyed off the match seed and
-  start at 1,000,000, so they are never design or eval seeds. A restart follows how the previous
-  possession stopped (throw-in, goal kick, corner), or is a `cut` when it ended in play: in
-  `match-1` all five are cuts, as no open-play possession put the ball out within its 30 s (with
-  60 s, 7 of 30 ended in a throw-in). The score counts `goal` events; with no shot outcomes yet
-  (M4) it stays 0–0. Each possession stays its own `MatchRun`: moments, lenses, counterfactuals
-  and breakdowns run per possession and are lifted to match time (`explain/match.py`). The API
-  serves it as `match-1` (`TTE_MATCHES=…,match:1`); the export is the hero export's run schema
-  over the whole clock plus a `match` block.
+  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 18 possessions: 15 open-play
+  passages and three heroes. On this Mac it lasts 691.4 s (11:31), and the heroes start at 0:30
+  (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0) and 8:21 (the
+  set-piece hero `corner_blind_side` seed 0).
+  - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
+    n), where n counts open-play passages only, so a hero inserted later changes no open-play
+    seed. Seeds start at 1,000,000 and are never design or eval seeds.
+  - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
+    the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
+    for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
+    puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
+    passages reach their cap: on this Mac 4 of 15 end in a throw-in.
+  - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
+    keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
+    seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
+    for byte only within one platform (§3.7), and on CI's Linux x86 runner the second passage
+    pinned on this Mac no longer ended out of play, so the service failed to start. Searching
+    at startup instead would simulate about 4,800 s of play, minutes on 0.5 vCPU.
+  - *Restarts.* A restart is how a possession begins. The first kicks off, and so does one after
+    a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
+    corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
+    kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
+    1 kick-off, 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
+    stitch is an edit, not a simulated restart.
+  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
+    possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
+  - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
+    per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
+    is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
+    decision, the marker's look (`marker_scan`, §5.1). The API serves the match as `match-1`
+    (`TTE_MATCHES=…,match:1`), and every hero possession of a served match on its own as well,
+    listed or not: the web app opens a hero moment's breakdown from that export. The export is
+    the hero export's run schema over the whole clock plus a `match` block: 11.6 MB of JSON,
+    4.0 MB gzipped, compressed once when the match loads.
 - Pitch 105 × 68 m, origin at the centre spot; the home team attacks +x in the first half. 25 Hz.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
@@ -247,7 +272,9 @@ on an LLM.
   standing 1.2 m beside a 5 m carry, 3 m along it, gets P(keep) 0.64, while the sim's tackle rule
   takes the ball from anyone who gets within 1 m of it.
 - Each teammate is evaluated at several targets along his believed run (lead 0–2 s); the best one
-  is his option. Until the fitted xT grid exists (§4.5), decisions use a smooth xT prior.
+  is his option. Decisions value options with a smooth xT prior, not the fitted grid (§4.5): the
+  grid is fitted on play this model drives, so valuing options with it would change its own
+  training data. Analytics and explain read the fitted grid.
 - Softmax with a per-player temperature. Receiver body orientation affects completion (facing play
   vs back to goal) — not yet in M1.
 - **Sampling is Gumbel-max** with keyed noise per (player, frame, option): argmax(value/T + g) is
@@ -277,7 +304,8 @@ within the control radius of a carried ball wins it), so the other scenarios kee
 for byte. Its intervention is `force:carry`: had he kept the ball, would the press have won it?
 Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 200–239, as
 100–139 were used to find the cause below):
-- the pressure lens is selected in 38/40 (target ≥ 60%: met; median margin 0.102 xT);
+- the pressure lens is selected in 40/40 (target ≥ 60%: met; median margin 0.132 xT with the
+  fitted grid; with the smooth prior it was 38/40 and 0.102);
 - forcing the carry loses the ball in 40/40, and the possession outcome changes in 32/40 (target
   ≥ 60%: met). In the other 8 H4's own pass was intercepted too, none by a carry: 6 long passes
   (32–46 m) he rated 0.24–0.75, cut out 1–2.3 s later by a defender 22–48 m away (the truth
@@ -554,6 +582,21 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
 16 × 12 grid fitted on synthetic event data with our own Markov implementation (value iteration,
 about 100 lines). socceraction is not used: it is no longer maintained and would be a dependency
 for a few lines of maths. Cache the grid per sim version.
+*Implemented (2026-10-20):* `analytics/xt.py`, fitted by `eval/xt_fit.py`.
+- Data: `open_play` tuning seeds 0–1999 — `possession_play`'s shape, pressing and marking, but
+  every ball carrier decides with the decision model (§3.5), so play reaches the box and ends in
+  shots. The scripted scenarios cannot carry the fit: `possession_play` and `blind_side_run` have
+  no shots at all. A shot scores its expected goals under the sim's shot model (the decision
+  model's xG; the engine has no shot outcome model); a lost ball is worth 0. Open play is
+  symmetric across the long axis, so each action also counts mirrored.
+- Fallback: a cell with fewer than 20 actions keeps the smooth prior, moved down to the lowest
+  fitted value (the prior's floor is a guess, the fit measures it); with fewer than 30 shots in
+  all, the whole grid is the prior.
+- Cache: `analytics/xt_grid.json` records the sim version, a hash of what open play does on
+  probe seeds; `tests/test_xt.py` fails when the sim no longer matches. `xt_for` reads the grid,
+  bilinear between cell centres, so a millimetre never jumps a cell boundary.
+- Decisions keep the prior (§3.5); possession value, the lenses, moments and the Analyst's
+  `get_xt` read the grid.
 
 ### 4.6 Pass metrics and speeds (live match stats)
 The challenge's real-time match intelligence list: players named on screen with speed and
@@ -694,10 +737,14 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       supported). Reported, not tuned: the distance part alone ranks the other way (AUC 0.257),
       because an intercepted pass is measured to where it was won, and the "very hard" band (50
       passes) completes more often than "hard".
-- [ ] xT grid increases toward goal (sanity plot saved).
-      — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
-      [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
-      no fitted 16 × 12 grid and no plot.
+- [x] xT grid increases toward goal (sanity plot saved).
+      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
+      lanes ≥ 0.22 above the wings in the last three columns; plot
+      [xt_fit.svg](../eval/reports/xt_fit.svg));
+      [tests/test_xt.py](../tests/test_xt.py)::`test_fitted_grid_increases_toward_the_attacked_goal`,
+      `test_central_lanes_are_worth_at_least_the_wings_near_goal`,
+      `test_fitted_grid_is_16_by_12_and_probability_like`,
+      `test_a_fixed_seed_set_gives_a_byte_identical_grid`
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
@@ -779,10 +826,12 @@ Without the scan, the player chooses one of the alternatives, so Δscan ≥ Δsp
 changed the decision. The scan lens therefore wins exactly when the scan was decisive. An
 uninformative scan scores 0, and then `space` wins (tested). On `blind_side_run`, 80 seeds
 (0–39 and 100–139): `scan` is selected every time, the key scan is the most informative scan every
-time, and the median margin over `space` is about 0.003 xT.
-On `press_escape`, fresh held-out seeds 200–239: `pressure` is selected in 38/40 and `space` in
-2/40 — the seeds where the softmax drew a poor long ball (probability 0.02) and the space lens
-measures what the best pass was worth instead; `scan` never (H4's own scans change nothing,
+time, and the median margin over `space` is about 0.013 xT with the fitted grid (0.003 with the
+smooth prior; [eval/reports/xt_fit.md](../eval/reports/xt_fit.md)).
+On `press_escape`, fresh held-out seeds 200–239: `pressure` is selected in 40/40 with the fitted
+grid. With the smooth prior it was 38/40 and `space` in 2/40 — the seeds where the softmax drew
+a poor long ball (probability 0.02) and the space lens measured what the best pass was worth
+instead; `scan` never (H4's own scans change nothing,
 Δscan ≈ 0). Before the decision model saw the presser's run-in (§3.5), H4 carried into the press
 in 7 of seeds 100–139 and `space` won 9/40 there (now 1/40). Report:
 `eval/reports/hero_lens_press_escape.md`.
@@ -1074,6 +1123,61 @@ Application Insights.
   player id next to a Chinese character (the digit is still rejected as a number), and rewritten
   lines are not tidied again, so a rewrite can air a line twice.
 
+- **End-of-match recap** (2026-10-21, §9 cut item 6). The challenge names "automated match recaps
+  suitable for studio, broadcast, or streaming scenarios". At full time on the live stream (its
+  `end` says `full_time: true`) or from the Moments panel ("Match recap"), the crew recaps a
+  stitched match: `POST /api/recaps`, `agents/recap.py`, `uv run python -m agents.recap --seed 1`.
+  - *The same graph, its own steps.* `build_workflow(story=RECAP)`: each step is a subclass of
+    the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
+    - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
+      ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
+      pressure; a moment whose shot went in first; live-only overlays never), at most 8. The
+      model may name only candidates (an enum); the template takes the largest impacts (at least
+      3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
+      on those moments only.
+    - Analyst: picks the headline claims, reading the match through our MCP tools
+      (`get_match_stats`, `list_key_moments`, `list_recap_claims`; `agents.mcp_server --recap
+      <evidence file>`, which the API writes so the server starts without simulating). The card
+      shows the match stats it picked.
+    - Telestrator: the reel, one clip per key moment: 4 s before its key instant to 2 s after (or
+      its end), inside its possession, at most 8 s; its speed (1 or 0.5, at most one slow clip)
+      and its opening camera (broadcast, or the tactical board for the space lens). The camera
+      director cuts inside each clip (§7). An invalid reel falls back to the template with reason
+      codes (`clips: not_the_key_moments_in_order`).
+    - Narration: anchored lines (above) whose claim enum holds only the match's claims and the
+      chosen moments'; templates `RECAP_SEQUENCES` and `MOMENT_LINES`, a row per persona.
+    - Verifier: unchanged. Voice: SSML per line on the reel's clock (a clip holds its last frame
+      while its lines still run), and the overlay cue sheet.
+  - *Evidence* (`agents/recap_context.py`, `explain/recap.py`). Match totals (score, passes
+    completed of those resolved, scans, balls won back, shots) are claims on one run over the
+    match clock (`count_events` without an anchor counts the whole run; a `where` value may be a
+    list of allowed values). A pass counts once received, intercepted or out, as the live stats
+    panel counts it: one still in flight when its possession ends does not. A hero moment's
+    claims are its MomentContext's, re-verified under `k<rank>.<id>` on the hero's evaluator, so
+    every renamed claim has its own fingerprint and audit record. Other moments get observed
+    claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
+    the line-breaking detector's own count), scans before the reception, heavy pressure, and how
+    its shot ended (scored, saved by the keeper, blocked, wide; §3.3).
+    Payload evidence and seek frames are lifted to the match clock.
+  - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
+    (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken
+    line) and `stat`, each with `t`/`until` on the reel's clock and SMPTE timecode at 25 fps. Text
+    is only ever a verified line and numbers only verified values: what a broadcast graphics
+    engine would render.
+  - *Cache and limits.* Keyed by the content hash of the evidence, personas, languages, the
+    recap's own prompt version (`RECAP_PROMPT_VERSION`, so breakdown keys never move with it),
+    `PIPELINE_VERSION` and the model; the same per-client limit and daily model cap as
+    breakdowns, then the cached model recap or the offline template. Speech speaks its lines like
+    a breakdown's. `infra/prewarm.py` warms each stitched match's recap for every persona and
+    language after the breakdowns, as the web app asks for it.
+  - *Web* (`web/src/recap/`; deep link `?match=match-1&play=recap`): the recap card (the score,
+    one verified sentence per key moment with Watch and Breakdown, the stats), persona and
+    language switches, the reel on the match's own playback with the auto director on, its
+    captions and spoken lines, and a link to the cue sheet. Every response is checked against the match before it shows (claims supported,
+    evidence in the match, captions verified lines, clips on the clock).
+  - *Tests:* `tests/test_recap_evidence.py`, `tests/test_recap.py`, `tests/test_api_recap.py`,
+    `web/src/recap/recap.test.ts`, `web/src/recap/RecapPanel.test.tsx`.
+
 `TelestrationPlan` sketch:
 
 ```json
@@ -1358,7 +1462,10 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
     0, false or off turns it off). In single revision mode, with the default TCP startup probe,
     Container Apps should then route traffic to a new revision only once it is warm; not yet
     measured there. Locally the port opens after 6.0 s and the first `match-1` export takes
-    7 ms (3.5 s without).
+    7 ms (3.5 s without). With the 18-possession `match-1` (2026-10-21), loading it takes about
+    17 s locally (about half simulating, most of the rest the blind-side alerts). Its export is
+    serialised and gzipped once at load (11.6 MB, 4.0 MB sent to a client that accepts gzip). A
+    live stream may last 20 min (`TTE_LIVE_MAX_S`, was 10 min, shorter than the match).
 - **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
@@ -1439,12 +1546,12 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1117 passed, `npm test` 5
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
 | §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 7 | 1 | fitted xT grid and its sanity plot |
+| §4 analytics | 8 | 0 | — |
 | §5 explain | 7 | 0 | — |
 | §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **32** | **10** | |
+| **Total** | **33** | **9** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1473,7 +1580,8 @@ pilot only, never generalised.
 4. Your call (§7): remove its header button, the Moments buttons and `?play=yourcall`; nothing
    else depends on it (the bundled press_escape what-ifs stay for the "What if…?" box)
 5. viewer pilot
-6. end-of-match recap reel
+6. end-of-match recap reel (built 2026-10-21, §6: drop `web/src/recap/`, the Moments panel's
+   button and `POST /api/recaps`; nothing else depends on them)
 7. "What if…?" free text → suggested questions only
 8. two voices → one narrator
 9. `coach` persona

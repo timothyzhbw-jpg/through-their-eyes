@@ -198,6 +198,39 @@ def what_if(ctx: MomentContext, action: str) -> str:
     )  # fmt: skip
 
 
+# --- the recap's tools (SPEC 6, recap): over its verified evidence, `RecapContext.evidence()` ----
+
+
+def get_match_stats(evidence: dict[str, Any]) -> str:
+    """The match's verified totals: the final score, then per team passes, scans, balls won back."""
+    return _dump({"match": evidence["match"], "score": evidence["score"],
+                  "duration_s": evidence["duration_s"], "stats": evidence["stats"]})  # fmt: skip
+
+
+def list_key_moments(evidence: dict[str, Any]) -> str:
+    """The key-moment candidates, most important first, without their claims' sentences."""
+    keys = ("moment", "rank", "kind", "tags", "actor", "receiver", "lens", "impact", "hero",
+            "possession")  # fmt: skip
+    moments = [{k: m[k] for k in keys} | {"claims": [c["id"] for c in m["claims"]]}
+               for m in evidence["moments"]]  # fmt: skip
+    return _dump(moments)
+
+
+def list_recap_claims(evidence: dict[str, Any]) -> str:
+    """Every claim the recap may air, already verified: the match's, then each moment's."""
+    claims = evidence["stats"] + [
+        {**c, "moment": m["moment"]} for m in evidence["moments"] for c in m["claims"]
+    ]
+    return _dump(claims)
+
+
+RECAP_TOOLS = {
+    "get_match_stats": get_match_stats,
+    "list_key_moments": list_key_moments,
+    "list_recap_claims": list_recap_claims,
+}
+
+
 TOOLS = {
     "get_moment": get_moment,
     "list_claims": list_claims,

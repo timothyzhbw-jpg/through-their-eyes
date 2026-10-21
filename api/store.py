@@ -10,6 +10,7 @@ POST /api/tts may speak are kept the same way (kind `voice`, api/tts.py).
 from __future__ import annotations
 
 import asyncio
+import gzip
 import hashlib
 import json
 import logging
@@ -26,14 +27,18 @@ from typing import Any
 import numpy as np
 from agent_framework import FileCheckpointStorage
 from azure.core.exceptions import AzureError, ResourceNotFoundError
+from pydantic_core import to_json
 
 from agents.context import MomentContext
+from agents.recap_context import RecapContext
 from analytics.live_stats import StatsTimeline, compute_stats
 from api.settings import Settings, match_id
 from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
+from explain.lenses import explain_moments
 from explain.match import match_moments
+from explain.moments import hero_card
 from sim.export import export_hero, export_match
-from sim.match import build_match
+from sim.match import StitchedMatch, build_match, match_heroes
 
 log = logging.getLogger(__name__)
 CACHE_CONTAINER = "cache"  # partition key /kind
@@ -51,6 +56,9 @@ class Match:
     match frame and the moment's id inside it). Breakdowns and what-ifs work on the possession's
     own run, so their frames are local: add `start` to place them on the match clock.
     `stats` is the live timeline of the export this service streams (SPEC 4.6).
+
+    A stitched match also keeps its possessions' runs (`stitched`), for the end-of-match recap's
+    evidence (`recap()`, built on the first recap request and kept).
     """
 
     id: str
@@ -62,6 +70,19 @@ class Match:
     sprint: list[list[str]]  # per frame: players above sprint speed (live overlay)
     where: dict[str, dict[str, Any]] = field(default_factory=dict)
     stats: StatsTimeline | None = None
+    stitched: StitchedMatch | None = None  # a stitched match's possessions (SPEC 3.1)
+    audit: AuditSink | None = None  # where a stitched match's verdicts go, the recap's too
+    _recap: RecapContext | None = field(default=None, repr=False)
+    # GET /api/matches/<id>/export, serialised and compressed once: match-1's export is about
+    # 12 MB of JSON and 4 MB gzipped, too much to encode per request on 0.5 vCPU.
+    export_json: bytes = field(init=False, repr=False)
+    export_gzip: bytes = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        # As FastAPI serialised it per request: NaN and infinities become null (a hero export has
+        # NaN where a value is undefined, e.g. corner_blind_side's).
+        self.export_json = to_json(self.export, inf_nan_mode="null")
+        self.export_gzip = gzip.compress(self.export_json, compresslevel=6, mtime=0)
 
     @property
     def ctx(self) -> MomentContext:
@@ -72,6 +93,17 @@ class Match:
         if moment is None:
             return self.ctx
         return self.contexts.get(moment)
+
+    def recap(self) -> RecapContext | None:
+        """The end-of-match recap's evidence (agents/recap_context.py); None for a hero scenario.
+        Built once, on first use: it verifies the match's claims (no simulation)."""
+        if self.stitched is None:
+            return None
+        if self._recap is None:
+            heroes = {self.where[mid]["index"]: ctx for mid, ctx in self.contexts.items()}
+            self._recap = RecapContext.build(self.id, self.stitched, self.cards, heroes,
+                                             self.audit)  # fmt: skip
+        return self._recap
 
     @classmethod
     def load(cls, scenario: str, seed: int, audit: AuditSink | None = None) -> Match:
@@ -97,10 +129,13 @@ class Match:
     def _load_match(cls, seed: int, audit: AuditSink | None) -> Match:
         match = build_match(seed)
         sink = audit or MemoryAuditSink()  # one audit trail for every hero of the match
+        # A hero possession whose hero moment (`hero_card`: his decision, or a marker's look) was
+        # not detected plays without a breakdown, instead of failing the service.
         heroes = {
             p.index: MomentContext.load(p.scenario, p.seed, audit=sink)
-            for p in match.possessions if p.run.hero is not None
-        }  # fmt: skip
+            for p in match.possessions
+            if p.run.hero is not None and hero_card(p.run, explain_moments(p.run)) is not None
+        }
         cards = match_moments(match, {k: list(c.cards.values()) for k, c in heroes.items()})
         export = export_match(seed, match, cards)
         contexts, where = {}, {}
@@ -112,9 +147,8 @@ class Match:
         vel = np.concatenate([p.run.vel for p in match.possessions])
         sprint = _sprint([p.id for p in match.players], vel)
         mid = match_id("match", seed)
-        return cls(
-            mid, "match", seed, contexts, export, cards, sprint, where, compute_stats(export, mid)
-        )
+        return cls(mid, "match", seed, contexts, export, cards, sprint, where,
+                   compute_stats(export, mid), stitched=match, audit=sink)  # fmt: skip
 
 
 def _sprint(ids: list[str], vel: np.ndarray) -> list[list[str]]:
@@ -123,8 +157,19 @@ def _sprint(ids: list[str], vel: np.ndarray) -> list[list[str]]:
 
 
 class MatchStore:
+    """The matches the service lists (`listed`, TTE_MATCHES) and serves (`known`).
+
+    A stitched match's hero possessions are served on their own as well, listed or not: the web
+    app opens a hero moment's breakdown from its possession's export (`<scenario>-<seed>`).
+    """
+
     def __init__(self, settings: Settings, audit: AuditSink | None = None) -> None:
+        self.listed = [match_id(s, seed) for s, seed in settings.matches]
         self.known = {match_id(s, seed): (s, seed) for s, seed in settings.matches}
+        for scenario, seed in settings.matches:
+            if scenario == "match":
+                for hero in match_heroes(seed):
+                    self.known.setdefault(match_id(*hero), hero)
         self.audit = audit  # None: each match keeps its verdicts in memory
         self._loaded: dict[str, Match] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -139,7 +184,8 @@ class MatchStore:
         return self._loaded[mid]
 
     async def warm(self) -> None:
-        """Load every match now, one at a time, so no request waits for a simulation."""
+        """Load every match now, one at a time, so no request waits for a simulation: the listed
+        ones first, then the hero possessions served with them."""
         for mid in self.known:
             await self.get(mid)
 
@@ -279,6 +325,7 @@ class Storage:
     answers: ResultCache | CosmosResultCache  # what-if answers
     audit: AuditSink | None  # None: each match keeps its verdicts in memory
     voice: ResultCache | CosmosResultCache  # voice cue key -> SSML (api/tts.py)
+    recaps: ResultCache | CosmosResultCache | None = None  # end-of-match recaps (SPEC 6)
     close: Callable[[], None] = field(default=lambda: None)
 
 
@@ -297,6 +344,7 @@ def open_storage(
             ResultCache(settings.cache_dir, "whatif"),
             None,
             ResultCache(settings.cache_dir, "voice"),
+            ResultCache(settings.cache_dir, "recaps"),
         )
     owned = cosmos_client is None
     if owned:
@@ -312,6 +360,7 @@ def open_storage(
         CosmosResultCache(cache, "whatif"),
         CosmosAuditSink(database.get_container_client(AUDIT_CONTAINER)),
         CosmosResultCache(cache, "voice"),
+        CosmosResultCache(cache, "recaps"),  # same container, its own partition (kind)
         cosmos_client.close if owned else (lambda: None),
     )
 

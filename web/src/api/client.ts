@@ -22,6 +22,7 @@ export const BREAKDOWN_TIMEOUT_MS = 60000; // a model-backed breakdown takes ≈
 export const WHAT_IF_TIMEOUT_MS = 30000;
 export const TTS_TIMEOUT_MS = 30000;
 export const VERIFY_TIMEOUT_MS = 10000; // the verifier alone, no model: well under a second
+export const RECAP_TIMEOUT_MS = 90000; // a model-backed recap makes about a dozen calls
 
 /** `fetch`, or a stand-in for tests. */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -91,6 +92,30 @@ export const MatchInfoResponse = z.object({
   hero_moments: z.array(z.string()),
 });
 export type MatchInfoResponse = z.infer<typeof MatchInfoResponse>;
+
+/** GET /api/matches/<id>/moments: the MomentCards (explain/cards.py); only what the viewer reads. */
+export const MomentCards = z.array(
+  z.object({
+    id: z.string(),
+    kind: z.string(),
+    lenses: z
+      .array(
+        z.object({
+          lens: z.string(),
+          available: z.boolean(),
+          delta_xt: z.number().nullable(), // in xT; null when the lens is unavailable
+        }),
+      )
+      .default([]),
+  }),
+);
+export type MomentCards = z.infer<typeof MomentCards>;
+
+/** The scan lens's delta (xT) of one moment's card; null when it has none. */
+export function scanLensDelta(cards: MomentCards, moment: string): number | null {
+  const lens = cards.find((c) => c.id === moment)?.lenses.find((l) => l.lens === "scan");
+  return lens?.available && typeof lens.delta_xt === "number" ? lens.delta_xt : null;
+}
 /** One step of the crew run (agents/schemas.py StepTrace): who answered, the model or a template. */
 export const StepTrace = z.object({
   step: z.string(),
@@ -171,6 +196,7 @@ export interface Api {
   matches(): Promise<MatchList>;
   info(timeoutMs?: number): Promise<MatchInfoResponse>;
   exportJson(timeoutMs?: number): Promise<unknown>;
+  moments(timeoutMs?: number): Promise<MomentCards>;
   /** Live match stats with tracks (GET /api/matches/<id>/stats?tracks=true, SPEC 4.6). */
   stats(timeoutMs?: number): Promise<unknown>;
   /** `moment`: a hero moment id (in match time for a stitched match). `fail`: agents taken down
@@ -192,6 +218,8 @@ export interface Api {
   }): Promise<WhatIfResponse>;
   /** WAV of one voice cue, by its `cache_key`: the service speaks only SSML its crew wrote. */
   tts(key: string): Promise<Blob>;
+  /** The end-of-match recap of this (stitched) match, for one audience; checked by recap/. */
+  recap(req: { persona: Persona; language: Language }): Promise<unknown>;
   verify(req: {
     claim: string;
     slot: string;
@@ -278,6 +306,8 @@ export function createApi(
     info: (ms = EXPORT_TIMEOUT_MS) =>
       call(`/api/matches/${id}`, {}, ms, json(MatchInfoResponse)) as Promise<MatchInfoResponse>,
     exportJson: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/export`, {}, ms, json()),
+    moments: (ms = EXPORT_TIMEOUT_MS) =>
+      call(`/api/matches/${id}/moments`, {}, ms, json(MomentCards)) as Promise<MomentCards>,
     stats: (ms = EXPORT_TIMEOUT_MS) => call(`/api/matches/${id}/stats?tracks=true`, {}, ms, json()),
     breakdown: ({ moment, persona, language, fail = [] }) =>
       call(
@@ -307,6 +337,13 @@ export function createApi(
         json(WhatIfResponse),
       ) as Promise<WhatIfResponse>,
     tts: (key) => call("/api/tts", post({ key }), TTS_TIMEOUT_MS, (res) => res.blob()),
+    recap: ({ persona, language }) =>
+      call(
+        "/api/recaps",
+        post({ match, personas: [persona], languages: [language] }),
+        RECAP_TIMEOUT_MS,
+        json(),
+      ),
     verify: ({ claim, slot, value, language, moment }) =>
       call(
         "/api/verify",

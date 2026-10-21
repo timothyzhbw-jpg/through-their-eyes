@@ -57,6 +57,8 @@ describe("a wrong number in the evidence card", () => {
     session.controls.openTamper("cf_value");
     html = render(session, <EvidenceCard />);
     expect(html).toMatch(/<input[^>]*name="dxt"[^>]*value="0.17"/);
+    expect(html).toContain('<span title="dxt">expected threat of the look</span>');
+    expect(html).toContain('<dt title="dxt">expected threat of the look</dt><dd>0.11</dd>');
     expect(html).toContain("Nothing you try is saved or aired");
     // Claims without numbers (scan_before_reception, cf_pass) get no control.
     session.controls.openLine("L1");
@@ -74,8 +76,12 @@ describe("a wrong number in the evidence card", () => {
     const html = render(session, <EvidenceCard />);
     expect(html).toContain("Refuted — this line would not air");
     expect(html).toContain("<s>That look was worth 0.50 in expected threat.</s>");
-    expect(html).toContain("approx(0.11074015198311513, 0.5) is false");
-    expect(html).toContain("the match data says 0.11");
+    // In words: the slot as the line names it, the match data as it airs, the predicate as a
+    // comparison (the raw predicate stays in the tooltip).
+    expect(html).toContain("You set expected threat of the look to 0.5; the match data says 0.11.");
+    expect(html).toContain("0.111 ≉ 0.5");
+    expect(html).toContain('title="approx(0.11074015198311513, 0.5) is false"');
+    expect(html).not.toContain(">approx(");
   });
 
   it("supports the verified value: that line would air", async () => {
