@@ -1,7 +1,7 @@
 // "Your call" (SPEC 7): the 3D view, filmed from behind the ball carrier (camera.ts). While the
 // viewer decides it shows his picture: everyone where he believed they were, those he had not
 // seen lately as grey ghosts, a ring on the grass under each option. The reveal plays the call's
-// re-simulated run (gold ball, grass ring and dashed trail: it never happened), moves everyone
+// re-simulated run (Dusk ball, grass ring and dashed trail: it never happened), moves everyone
 // from his picture to the truth, then plays what he did. Tokens, not the animated players: a
 // picture in his head.
 
@@ -30,6 +30,9 @@ const HEAD_CENTRE = 1.66;
 const BALL_R = 0.45; // drawn larger than a real ball: the camera is far back
 const TRAIL = 200; // points in the ball's trail
 const GREY = "#9aa39f";
+// Floodlit's tokens (styles.css): Floodlight marks the options, Dusk the run that never happened.
+const FLOODLIGHT = "#f6d566";
+const DUSK = "#95a7ba";
 
 const capsule = new THREE.CapsuleGeometry(0.3, 0.95, 6, 14);
 const headGeometry = new THREE.SphereGeometry(0.15, 18, 12);
@@ -111,7 +114,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
     const pos = work.a.pos;
     const looks: Look[] = new Array(hero.n).fill("solid");
     let ballAt: [number, number] = [picture.ball[0], picture.ball[1]];
-    let gold = false;
+    let forced = false;
     const lerp = s.step === "truth" ? ease(s.morph) : 0;
 
     if (s.step === "deciding" || s.step === "closed" || s.step === "truth") {
@@ -127,8 +130,8 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
       if (option) {
         poseAt(hero, option, s.clip.frame, work.a);
         ballAt = [work.a.ball[0], work.a.ball[1]];
-        gold = !option.factual;
-        if (gold) looks.fill("ghost");
+        forced = !option.factual;
+        if (forced) looks.fill("ghost");
       }
     }
 
@@ -160,8 +163,8 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
     links.attributes.position.needsUpdate = true;
 
     ball.current?.position.set(ballAt[0], 0, -ballAt[1]);
-    ballMaterial.current?.color.set(gold ? COLORS.gold : COLORS.white);
-    ballRingMaterial.current?.color.set(gold ? COLORS.gold : COLORS.white);
+    ballMaterial.current?.color.set(forced ? DUSK : COLORS.white);
+    ballRingMaterial.current?.color.set(forced ? DUSK : COLORS.white);
 
     // Compared: where the viewer's call left the ball, beside what he did.
     const pick = byAction(s.pick);
@@ -199,7 +202,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
             position={[o.anchor[0], 0.03, -o.anchor[1]]}
           >
             <meshBasicMaterial
-              color={COLORS.gold}
+              color={FLOODLIGHT}
               transparent
               opacity={aim === o.action ? 1 : 0.55}
               depthWrite={false}
@@ -256,16 +259,16 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
           rotation-x={-Math.PI / 2}
           visible={false}
         >
-          <meshBasicMaterial color={COLORS.sight} transparent opacity={0.8} depthWrite={false} />
+          <meshBasicMaterial color={COLORS.white} transparent opacity={0.8} depthWrite={false} />
         </mesh>
       ))}
       <lineSegments geometry={links}>
-        <lineBasicMaterial color={COLORS.sight} transparent opacity={0.7} depthWrite={false} />
+        <lineBasicMaterial color={COLORS.white} transparent opacity={0.7} depthWrite={false} />
       </lineSegments>
       {trailPoints.length > 1 && (
         <Line
           points={trailPoints}
-          color={trailOf?.factual ? COLORS.white : COLORS.gold}
+          color={trailOf?.factual ? COLORS.white : DUSK}
           lineWidth={3}
           dashed={!trailOf?.factual}
           dashSize={1.0}
@@ -288,10 +291,10 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
       <group ref={ghostBall} visible={false}>
         <mesh position-y={BALL_R}>
           <sphereGeometry args={[BALL_R, 20, 14]} />
-          <meshBasicMaterial color={COLORS.gold} transparent opacity={0.8} toneMapped={false} />
+          <meshBasicMaterial color={DUSK} transparent opacity={0.8} toneMapped={false} />
         </mesh>
         <mesh geometry={ballRingGeometry} rotation-x={-Math.PI / 2} position-y={0.04}>
-          <meshBasicMaterial color={COLORS.gold} depthWrite={false} toneMapped={false} />
+          <meshBasicMaterial color={DUSK} depthWrite={false} toneMapped={false} />
         </mesh>
       </group>
     </>

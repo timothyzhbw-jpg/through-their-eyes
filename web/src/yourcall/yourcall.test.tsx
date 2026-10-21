@@ -14,6 +14,7 @@ import whatIfJson from "../../public/data/whatif_seed3.json";
 import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
 import { HERO_FILE, PAYLOAD_FILE, WHAT_IF_FILE } from "../data/load";
+import { App } from "../App";
 import { applyDeepLink, parseDeepLink } from "../deeplink";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
@@ -40,6 +41,14 @@ import { MomentsPanel } from "../ui/Live";
 import { frameCall, project, swipePick, toWorld } from "./camera";
 import { yourCallOf } from "./controller";
 import { YourCallButton, YourCallStage } from "./YourCall";
+
+// Mounting App: the live screen's views and Your call's 3D view need WebGL; stub them.
+vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
+vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
+vi.mock("@react-three/fiber", async (original) => ({
+  ...(await original<typeof import("@react-three/fiber")>()),
+  Canvas: () => <div className="canvas-stub" />,
+}));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -118,6 +127,36 @@ describe("Your call: opening", () => {
     const off = mount(bare, <YourCallButton />).querySelector("button")!;
     expect(off.disabled).toBe(true);
     expect(off.title).toMatch(/No re-simulated runs/);
+  });
+
+  it("in App it takes the live screen's place and hides the moment below until closed", () => {
+    const session = offline();
+    const page = mount(session, <App autoplay={false} />);
+    const live = () => page.querySelector('section.stage[aria-label="Live screen"]');
+    const screen = () => page.querySelector('section.yc-screen[aria-label="Your call"]');
+    expect(live()).not.toBeNull();
+    expect(screen()).toBeNull();
+    expect(page.querySelector("main.moment")).not.toBeNull();
+    // The moment head's second action opens it, as does the header button.
+    click(button(page, "Make his call"));
+    expect(yourCallOf(session).state.get().step).toBe("deciding");
+    expect(live()).toBeNull();
+    expect(page.querySelector("main.moment")).toBeNull();
+    expect(page.querySelector(".stage-director, .stage-caption, .transport")).toBeNull();
+    // The same header as the live screen, with the pressed Your call button on the right.
+    const head = screen()!.querySelector("header.stage-head")!;
+    expect(textOf(head.querySelector(".brand h1"))).toBe("Through Their Eyes");
+    // No live pill: the stream would play unseen under Your call (in a match: the way back).
+    expect(head.querySelector(".header-start")!.childElementCount).toBe(0);
+    const pressed = head.querySelector<HTMLButtonElement>(".header-end button")!;
+    expect([textOf(pressed), pressed.getAttribute("aria-pressed")]).toEqual(["Your call", "true"]);
+    expect(screen()!.querySelector(".yc-card")).not.toBeNull();
+    click(button(page, "Back to the replay"));
+    expect(live()).not.toBeNull();
+    expect(page.querySelector("main.moment")).not.toBeNull();
+    expect(live()!.querySelector(".header-end .yc-open")!.getAttribute("aria-pressed")).toBe(
+      "false",
+    );
   });
 });
 

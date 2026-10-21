@@ -95,4 +95,18 @@ describe("Your call: markers", () => {
     expect(Math.hypot(out[0][0] - out[1][0], out[0][1] - out[1][1])).toBeGreaterThanOrEqual(29.9);
     expect(out[2]).toEqual([300, 300]);
   });
+
+  it("keeps markers out of a fixed label and leaves the label where it is", () => {
+    const label = { at: [200, 200] as [number, number], r: 50 };
+    const out = declutter(
+      [
+        [210, 205],
+        [400, 400],
+      ],
+      30,
+      [label],
+    );
+    expect(Math.hypot(out[0][0] - 200, out[0][1] - 200)).toBeGreaterThanOrEqual(50);
+    expect(out[1]).toEqual([400, 400]);
+  });
 });

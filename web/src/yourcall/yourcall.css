@@ -1,36 +1,32 @@
-/* "Your call" (SPEC 7): the view from behind the carrier with its label, markers, and card. */
+/* "Your call" (SPEC 7): the view from behind the carrier with its label, markers, and card, in the
+   live screen's place (Floodlit: Floodlight is the decision, Dusk the run that never happened). */
 
-.yc-open {
-  font: 700 13px/1 var(--font-display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--bg);
-  background: var(--gold);
-  border: 0;
-  border-radius: 6px;
-  padding: 9px 14px;
-  cursor: pointer;
-}
+/* the header button: a .btn pill; pressed while open, with a Floodlight ring */
 .yc-open[aria-pressed="true"] {
-  background: var(--fg);
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
 }
-.yc-open:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+.stage-head .yc-open {
+  background: rgba(8, 14, 11, 0.55);
 }
 
+/* the screen: the live screen's frame (.stage) with the view as a board and the glass card */
 .yourcall {
+  position: absolute;
+  inset: var(--head-h) var(--gutter) var(--gutter);
   display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 1fr);
-  grid-template-rows: var(--stage-h);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) var(--card-w);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--gutter);
 }
 .yc-view {
   position: relative;
   margin: 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: var(--night-2);
+  border-radius: var(--r-board);
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 24px 48px -20px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   min-width: 0;
   min-height: 0;
@@ -47,7 +43,7 @@
 }
 .yc-path polyline {
   fill: none;
-  stroke: var(--gold);
+  stroke: var(--floodlight);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 2 9;
@@ -73,19 +69,21 @@
   position: absolute;
   transform: translate(-50%, -50%);
   pointer-events: auto;
-  min-width: 34px;
-  height: 34px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 2px solid var(--gold);
-  background: rgba(11, 18, 16, 0.82);
-  color: var(--fg);
-  font: 700 15px/1 var(--font-data);
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-control);
+  border: 2px solid var(--floodlight);
+  background: var(--glass);
+  color: var(--chalk);
+  font: 500 15px/1 var(--font-data);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.8);
   transition:
-    transform 0.12s ease,
-    background 0.12s ease;
+    transform var(--t-quick) var(--settle),
+    background-color var(--t-quick) var(--settle),
+    color var(--t-quick);
 }
 .yc-marker::after {
   /* a short stem down to the player */
@@ -96,92 +94,114 @@
   width: 2px;
   height: 8px;
   margin-left: -1px;
-  background: var(--gold);
+  background: var(--floodlight);
 }
 .yc-marker.kind-carry,
 .yc-marker.kind-shot {
-  font: 700 12px/1 var(--font-display);
-  letter-spacing: 0.08em;
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 .yc-marker.unseen {
   border-style: dashed;
-  color: var(--muted);
+  color: var(--chalk-3);
 }
 .yc-marker.tried {
-  background: rgba(255, 211, 107, 0.22);
+  background: rgba(246, 213, 102, 0.2);
 }
 .yc-marker.aimed,
 .yc-marker:hover,
 .yc-marker:focus-visible {
-  background: var(--gold);
-  color: var(--bg);
+  background: var(--floodlight);
+  color: var(--ink);
   transform: translate(-50%, -50%) scale(1.14);
 }
 .yc-tag {
   position: absolute;
-  top: 8px;
-  left: 10px;
+  top: 12px;
+  left: 14px;
   margin: 0;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: rgba(11, 18, 16, 0.78);
-  font: 600 12px/1 var(--font-display);
+  padding: 6px 10px;
+  border-radius: var(--r-tag);
+  background: var(--floodlight);
+  font: 500 11px/1 var(--font-data);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--ink);
   pointer-events: none;
 }
+.yc-view.step-outcome .yc-tag {
+  background: var(--dusk);
+}
 .yc-view.step-truth .yc-tag {
-  color: var(--sight);
+  background: var(--chalk);
 }
 .yc-view.step-actual .yc-tag,
 .yc-view.step-compare .yc-tag {
-  color: var(--fg);
+  background: var(--glass);
+  color: var(--chalk);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
 }
 .yc-you {
   position: absolute;
   transform: translateX(-50%);
   margin: 0;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(11, 18, 16, 0.78);
-  font: 600 12px/1 var(--font-display);
-  letter-spacing: 0.1em;
-  color: var(--fg);
+  padding: 5px 10px;
+  border-radius: var(--r-control);
+  background: var(--glass);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk);
   white-space: nowrap;
   pointer-events: none;
 }
 
+/* the card: a glass card, like the live screen's .stage-card */
 .yc-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+  align-self: start;
+  max-height: 100%;
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 14px 16px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  padding: 22px 22px 22px 24px;
+  border-radius: var(--r-card);
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  color: var(--chalk);
+  animation: tt-rise 800ms var(--settle) both;
 }
 .yc-card h2 {
-  font: 700 22px/1.15 var(--font-display);
+  font: 400 28px/1.1 var(--font-display);
+  letter-spacing: -0.01em;
   margin: 0;
   outline: none;
   text-wrap: balance;
 }
 .yc-lead {
   margin: 0;
+  font: 400 15px/1.5 var(--font-body);
+  color: var(--chalk-2);
 }
 .yc-hint {
   margin: 0;
-  color: var(--muted);
+  color: var(--chalk-3);
   font-size: 13px;
+  line-height: 1.5;
 }
 .yc-beat {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 .yc-steps {
   display: flex;
@@ -189,19 +209,22 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font: 600 11px/1 var(--font-display);
+  font: 500 11px/1.2 var(--font-data);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--chalk-3);
 }
 .yc-steps li {
   flex: 1;
-  padding-top: 6px;
-  border-top: 3px solid var(--line);
+  padding-top: 8px;
+  border-top: 2px solid var(--hairline-strong);
+  transition:
+    color var(--t-quick),
+    border-color var(--t-quick) var(--settle);
 }
 .yc-steps li[aria-current="step"] {
-  color: var(--fg);
-  border-top-color: var(--gold);
+  color: var(--chalk);
+  border-top-color: var(--floodlight);
 }
 .yc-lines {
   list-style: none;
@@ -212,14 +235,14 @@
 }
 .yc-lines li {
   display: grid;
-  gap: 4px;
-  padding: 8px 10px;
-  border-left: 3px solid var(--gold);
-  background: var(--surface-2);
-  border-radius: 0 6px 6px 0;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--night-3);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 .yc-line {
-  font-size: 15px;
+  font: 400 17px/1.35 var(--font-display);
 }
 .yc-versus {
   display: grid;
@@ -228,22 +251,26 @@
   margin: 0;
 }
 .yc-versus div {
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: var(--surface-2);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--night-3);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 .yc-versus .yours {
-  border: 1px solid var(--gold);
+  box-shadow: inset 0 0 0 1px var(--floodlight);
 }
 .yc-versus dt {
-  font: 600 11px/1 var(--font-display);
+  font: 500 11px/1 var(--font-data);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--chalk-3);
+}
+.yc-versus .yours dt {
+  color: var(--floodlight);
 }
 .yc-versus dd {
-  margin: 4px 0 0;
-  font-weight: 600;
+  margin: 6px 0 0;
+  font: italic 400 18px/1.2 var(--font-display);
 }
 .yc-actions {
   display: flex;
@@ -251,20 +278,24 @@
   gap: 8px;
   margin-top: auto;
 }
-.yc-secondary {
-  font: 500 13px/1 var(--font-body);
-  color: var(--fg);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
 
+/* a phone or a narrow tablet: the header, the view, then the card, in that order */
 @media (max-width: 880px) {
+  .stage.yc-screen {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .yc-screen .stage-head {
+    position: relative;
+  }
   .yourcall {
-    grid-template-columns: 1fr;
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 0 var(--gutter) var(--gutter);
   }
   .yc-canvas {
     height: auto;
@@ -272,6 +303,7 @@
     max-height: 72vh;
   }
   .yc-card {
+    max-height: none;
     overflow: visible;
   }
 }
@@ -280,11 +312,11 @@
   .yc-path polyline {
     animation: none;
   }
-  .yc-marker {
+  .yc-marker,
+  .yc-steps li {
     transition: none;
   }
-}
-.yc-open.small {
-  font-size: 12px;
-  padding: 7px 10px;
+  .yc-card {
+    animation: none;
+  }
 }

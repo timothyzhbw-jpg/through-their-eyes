@@ -1,14 +1,13 @@
 // The camera director in the page: one suggestion at a time, a chip that switches with one tap
-// and says why, a way to dismiss it, and the Auto director switch. Above the views of a hero
+// and says why, a way to dismiss it, and the Auto director switch. Below the live screen of a hero
 // moment and of a stitched match alike, so it reads `useView()`.
 
 import { useEffect, useMemo } from "react";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { Director, directorPrefs } from "./director";
-import "./director.css";
 
-/** On a phone the views are stacked: show the board when the viewer asks for it. */
+/** On a phone, bring the live picture back into view when the viewer asks for the board. */
 function revealBoard(): void {
   if (typeof window === "undefined" || !window.matchMedia?.("(max-width: 880px)").matches) return;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -41,7 +40,7 @@ export function DirectorBar() {
           <>
             <button
               type="button"
-              className={`director-chip rule-${show.rule}`}
+              className={`chip director-chip rule-${show.rule}`}
               onClick={take}
               title="Switch now"
             >
@@ -49,7 +48,7 @@ export function DirectorBar() {
             </button>
             <button
               type="button"
-              className="director-dismiss"
+              className="icon-btn director-dismiss"
               aria-label="Dismiss the suggestion"
               title="Dismiss"
               onClick={director.dismiss}

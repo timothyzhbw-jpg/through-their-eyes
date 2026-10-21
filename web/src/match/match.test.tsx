@@ -209,6 +209,21 @@ describe("the live match", () => {
     expect(html.match(/>Breakdown</g)).toHaveLength(2);
     expect(html).toContain("Possession 2");
   });
+
+  it.each([
+    [0, "No hero moments are available for breakdowns; every moment replays only."],
+    [1, "The 1 hero moment opens its breakdown"],
+    [3, "The 3 hero moments open their breakdowns"],
+  ] as const)("describes the %i hero moments actually available", (count, copy) => {
+    const { session } = online();
+    session.match.moments = session.match.moments.map((m, index) => ({
+      ...m,
+      hero: index < count,
+    }));
+    const html = render(session, <MomentsPanel />);
+    expect(html).toContain(copy);
+    expect(html.match(/>Breakdown</g) ?? []).toHaveLength(count);
+  });
 });
 
 describe("hero breakdowns inside the match", () => {

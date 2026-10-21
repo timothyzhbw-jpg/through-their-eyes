@@ -290,9 +290,29 @@ the defending side.
     look. In one (103) another defender is 4.9 m from A9 without the look, while H5 is 7.5 m away.
   - With the look, A9 is under heavy pressure (pressing ≥ 0.7) in 23/40; H5 never wins the ball.
   - The live blind-side alert for H5 → A9 fires before the ball arrives in 40/40 runs without the
-    look. With the look it never comes on first: the look comes before A9 has been unseen for the
-    alert's 1 s.
+    look. With the look it never comes on first. The look comes 0.16–0.28 s after A9 starts his
+    dart, when he has been out of H5's sight for 1.40–2.04 s, so the alert could come on in the
+    last 0.20–0.84 s before it (§4.4: unseen for 1.2 s). In that window A9's top speed is
+    1.2–2.7 m/s, under the alert's 4 m/s, on 40/40 seeds; on some seeds other conditions fail too
+    (distance moved on 34/40, H5 not among the defenders watching on 27/40).
   - Report: [hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md).
+- **Deviations from the design plan** ([drafts/hero_expansion.md](drafts/hero_expansion.md) §5.4).
+  The checks changed while the routine was built on design seeds 0–39, before the held-out run
+  (the draft's own "As built" note). Bowen decided on 2026-10-20 to keep the gate above and to
+  report the plan's checks beside it (the report's "Deviations" table, on the same held-out seeds
+  100–139):
+  - *Gate.* The plan asked for a separation as the ball arrives of ≤ 1.5 m with the look and
+    ≥ 3 m without. With the look H5 closes to 3.3 m (median), so that holds in 0/40 (plan target
+    ≥ 60%: not met). The gate above uses the lexicon's `unmarked` (> 5 m, §5.3) instead.
+  - *Belief error.* The plan measured it at the cutback: ≥ 3 m in 30/40 (plan target ≥ 90%: not
+    met). The check above measures it half a second later, when H5 would have to set off.
+  - *Alert.* The plan made "on before the look and cleared during it" a ≥ 90% check; it is 0/40
+    (not met) for the reason above, so it is reported only.
+  - *possession_play unchanged.* There is no flag: only this scenario calls
+    `marking_target_on_belief`, and the other scenarios' committed exports and eval reports are
+    unchanged.
+  - *Design seeds.* The plan said 0–99; the routine was designed on 0–39. Held out: 100–139, as
+    planned.
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
@@ -349,7 +369,8 @@ the defending side.
       arrives, or wins the ball, in ≥ 60% of held-out seeds. Without the look, the marker's
       belief error about the runner half a second after the cutback is ≥ 3 m in ≥ 90%.
       — [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md)
-      (37/40 and 37/40 on seeds 100–139, §3.6);
+      (37/40 and 37/40 on seeds 100–139, §3.6; the plan's original checks and how they differ:
+      §3.6 "Deviations from the design plan");
       [tests/test_corner_blind_side.py](../tests/test_corner_blind_side.py) (design seeds, and
       `test_a_marker_marks_where_he_believes_his_man_is`)
 - [x] `force_action` with the action actually chosen reproduces the factual run byte for byte;

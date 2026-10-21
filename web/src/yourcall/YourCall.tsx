@@ -13,6 +13,7 @@ import {
   useState,
   type KeyboardEvent,
   type PointerEvent,
+  type ReactNode,
   type RefObject,
 } from "react";
 import type { Vec2 } from "../data/types";
@@ -29,6 +30,10 @@ import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
+const YOU_DROP_PX = 18; // the "you" label hangs this far under the carrier's feet
+const YOU_CLEAR_PX = 56; // and markers keep this far from its centre (half its width + a marker)
+/** Centre of the "you" label under the carrier. */
+const youAt = ([x, y]: Vec2): Vec2 => [x, y + YOU_DROP_PX + 11];
 const FALLBACK_SIZE = { w: 640, h: 400 }; // before the view is measured (and in tests)
 
 const BEAT_LABEL: Record<Beat, string> = {
@@ -48,14 +53,14 @@ export function useYourCallOpen(): boolean {
   return useStore(useYourCall().state, (s) => s.step !== "closed");
 }
 
-/** The header button that opens Your call. */
+/** The header button that opens Your call (pressed while it is open). */
 export function YourCallButton() {
   const yc = useYourCall();
   const open = useStore(yc.state, (s) => s.step !== "closed");
   return (
     <button
       type="button"
-      className="yc-open"
+      className="btn yc-open"
       aria-pressed={open}
       disabled={!!yc.unavailable}
       title={yc.unavailable ?? "Decide with only what he knew, then see what really happened"}
@@ -84,6 +89,29 @@ function useSize(fallback: { w: number; h: number }) {
   return [ref, size] as const;
 }
 
+/**
+ * The live screen's place while Your call is open: the same header (the brand, `start` beside it,
+ * the pressed Your call button on the right), then the view and the card. Nothing else of the
+ * live screen: the director, the caption and the playback bar would give his decision away.
+ */
+export function YourCallScreen({ start, scene = true }: { start: ReactNode; scene?: boolean }) {
+  return (
+    <section className="stage yc-screen" aria-label="Your call">
+      <header className="stage-head">
+        <div className="brand">
+          <h1>Through Their Eyes</h1>
+          <p className="sub">A synthetic match · every player fictional</p>
+        </div>
+        <div className="header-start">{start}</div>
+        <div className="header-end">
+          <YourCallButton />
+        </div>
+      </header>
+      <YourCallStage scene={scene} />
+    </section>
+  );
+}
+
 /** The stage while Your call is open: the view and the card. `scene`: draw the 3D view (WebGL). */
 export function YourCallStage({ scene = true }: { scene?: boolean }) {
   const yc = useYourCall();
@@ -93,16 +121,16 @@ export function YourCallStage({ scene = true }: { scene?: boolean }) {
   useEffect(() => startYourCallClock(yc), [yc]);
   if (step === "closed") return null;
   return (
-    <section
+    // Not a landmark of its own: YourCallScreen is the "Your call" region.
+    <div
       className="yourcall"
-      aria-label="Your call"
       onKeyDown={(e) => {
         if (e.key === "Escape") yc.close();
       }}
     >
       <CallView yc={yc} scene={scene} buttons={buttons} />
       <Card yc={yc} pickByKeyboard={() => buttons.current[0]?.focus()} />
-    </section>
+    </div>
   );
 }
 
@@ -128,11 +156,11 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
   );
   const markers = useMemo(() => {
     const raw = options.map((o) => markerAt(camera, o.anchor, w, h));
-    const placed = declutter(raw, MARKER_PX);
+    const placed = declutter(raw, MARKER_PX, [{ at: youAt(carrierPx), r: YOU_CLEAR_PX }]);
     return options
       .map((o, k) => ({ option: o, at: placed[k] }))
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
-  }, [options, camera, w, h]);
+  }, [options, camera, carrierPx, w, h]);
   const aimed = options.find((o) => o.action === aim) ?? null;
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const stale = new Set(picture!.players.filter((p) => p.stale).map((p) => p.id));
@@ -211,7 +239,7 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
           <p
             className="yc-you"
             aria-hidden="true"
-            style={{ left: carrierPx[0], top: carrierPx[1] + 18 }}
+            style={{ left: carrierPx[0], top: carrierPx[1] + YOU_DROP_PX }}
           >
             {carrier.id} · you
           </p>
@@ -322,7 +350,7 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
   const heroId = session.hero.heroId ?? "the player";
   const playing = !!state.clip?.playing;
   const back = (
-    <button type="button" className="yc-secondary" onClick={yc.close}>
+    <button type="button" className="btn btn-quiet" onClick={yc.close}>
       Back to the replay
     </button>
   );
@@ -346,7 +374,7 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
         )}
         <div className="yc-actions">
           {/* The markers come before the card: this is the keyboard's way back to them. */}
-          <button type="button" className="yc-secondary" onClick={pickByKeyboard}>
+          <button type="button" className="btn btn-quiet" onClick={pickByKeyboard}>
             Pick with the keyboard
           </button>
           {back}
@@ -450,13 +478,13 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
         <button
           ref={primary}
           type="button"
-          className="play small"
+          className="btn btn-primary"
           onClick={beat === "compare" ? yc.retry : yc.next}
         >
           {nextLabel[beat]}
         </button>
         {beat !== "compare" && (
-          <button type="button" className="yc-secondary" onClick={yc.skip}>
+          <button type="button" className="btn btn-quiet" onClick={yc.skip}>
             Skip to the comparison
           </button>
         )}

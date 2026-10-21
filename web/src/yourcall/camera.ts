@@ -127,8 +127,13 @@ export function swipePick(
   return best;
 }
 
-/** Push markers closer than `min` px apart until none overlap; the others stay put. */
-export function declutter(points: Vec2[], min: number): Vec2[] {
+/** Push markers closer than `min` px apart until none overlap, and out of each fixed obstacle
+ * (a circle of radius `r` px that does not move, such as a label); the others stay put. */
+export function declutter(
+  points: Vec2[],
+  min: number,
+  fixed: { at: Vec2; r: number }[] = [],
+): Vec2[] {
   const out = points.map((p) => [p[0], p[1]] as Vec2);
   for (let round = 0; round < 24; round++) {
     let moved = false;
@@ -142,6 +147,16 @@ export function declutter(points: Vec2[], min: number): Vec2[] {
         const push = (min - d) / 2 + 0.01;
         out[i] = [out[i][0] - ux * push, out[i][1] - uy * push];
         out[j] = [out[j][0] + ux * push, out[j][1] + uy * push];
+        moved = true;
+      }
+      for (const f of fixed) {
+        const dx = out[i][0] - f.at[0];
+        const dy = out[i][1] - f.at[1];
+        const d = Math.hypot(dx, dy);
+        if (d >= f.r) continue;
+        const [ux, uy] = d > 1e-6 ? [dx / d, dy / d] : [0, -1];
+        const push = f.r - d + 0.01;
+        out[i] = [out[i][0] + ux * push, out[i][1] + uy * push];
         moved = true;
       }
     }
