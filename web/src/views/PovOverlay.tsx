@@ -3,11 +3,11 @@
 // in its bar; the caption over the picture (ui/Narration.tsx).
 
 import { useMemo } from "react";
+import { RemovedLookEdge } from "../without/WithoutLook";
 import { Sample, headOffBall, isSeen, sampleInto, type Hero } from "../data/hero";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
-import { RemovedLookEdge } from "../without/WithoutLook";
 
 /** The Skeleton chip's tooltip, on the broadcast camera and the tactical board (SPEC 7). */
 export const SKELETON_TITLE =

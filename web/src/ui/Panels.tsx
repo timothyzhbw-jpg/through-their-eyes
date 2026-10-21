@@ -7,6 +7,7 @@
 // marks (corner_blind_side), or the press he plays out of (press_escape).
 
 import { CountUp } from "./CountUp";
+import { WithoutLookLines } from "../without/WithoutLook";
 import {
   actionLabel,
   isSeen,
@@ -25,7 +26,6 @@ import { useStore } from "../store/store";
 import { Chapter, Title } from "./Chapter";
 import { CheckIcon } from "./icons";
 import { LineText } from "./Narration";
-import { WithoutLookLines } from "../without/WithoutLook";
 
 interface Beat {
   from: number; // frame
