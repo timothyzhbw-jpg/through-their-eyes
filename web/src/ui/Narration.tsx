@@ -544,8 +544,8 @@ export function SoundToggle({ icon = false }: { icon?: boolean }) {
     : error
       ? `Speech failed: ${error}`
       : on
-        ? "Turn the commentary voice off"
-        : "Speak each narration line as it comes up";
+        ? "Turn the commentary voice and the crowd off"
+        : "Speak each narration line as it comes up, with the crowd";
   return (
     <button
       type="button"
