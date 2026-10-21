@@ -44,7 +44,7 @@ REPORTS = Path(__file__).parent / "reports"
 TARGET = 0.6
 HELD_OUT = "100-139"
 # 100-139 were seen while the decision model was fixed for this scenario (SPEC 3.5, 3.6).
-HELD_OUT_BY_SCENARIO = {"press_escape": "200-239"}
+HELD_OUT_BY_SCENARIO = {"press_escape": "200-239", "far_post_finish": "200-239"}
 
 
 @dataclass
@@ -60,6 +60,7 @@ class Row:
     decision_changed: bool
     outcome_changed: bool
     realized_delta_xt: float
+    key_scan: bool | None = None  # scan heroes with shots: the scan lens's scan is the key scan
 
     @property
     def margin(self) -> float | None:
@@ -83,12 +84,15 @@ def evaluate_seed(scenario: str, seed: int) -> Row:
             None,
         )  # fmt: skip
     deltas: dict[str, float | None] = {"scan": None, "space": None, "pressure": None}
-    selected = None
+    selected, key_scan = None, None
     if card is not None:
         explained = explain_moment(card, run)
         selected = explained.selected_lens
         for lens in explained.lenses:
             deltas[lens.lens] = lens.delta_xt if lens.available else None
+        scan = explained.lens("scan")
+        if SCENARIOS[scenario].shots and scan is not None and scan.available:
+            key_scan = scan.metrics["scan_id"] == run.key_scan().id
     if SCENARIOS[scenario].intervention == "drop_scan":
         outcome_changed = cf.factual_action != cf.counterfactual_action
     else:
@@ -105,6 +109,7 @@ def evaluate_seed(scenario: str, seed: int) -> Row:
         decision_changed=cf.factual_action != cf.counterfactual_action,
         outcome_changed=outcome_changed,
         realized_delta_xt=float(cf.delta_xt),
+        key_scan=key_scan,
     )
 
 
@@ -148,6 +153,7 @@ def report(scenario: str, rows: list[Row]) -> str:
         f"{np.median(margins) if margins else float('nan'):.4f} | — |",
         f"| Mean realised ΔxT (factual − intervention) | "
         f"{np.mean([r.realized_delta_xt for r in rows]) if rows else float('nan'):+.4f} | — |",
+        *_shot_rows(cls, rows),
         "",
         "Δ per lens in xT of the hero's team (SPEC 5.2); — when the lens is unavailable (e.g. no "
         "scan before the decision). Result: `kept` or `lost` possession after the hero's action.",
@@ -261,6 +267,22 @@ def marker_report(scenario: str, rows: list[MarkerRow]) -> str:
             f"{'yes' if r.outcome_changed else 'no'} |"
         )
     return "\n".join(lines) + "\n"
+
+
+def _shot_rows(cls, rows: list[Row]) -> list[str]:
+    """For a scan hero with shots (Module A): whether the scan lens's scan, the most informative
+    one, is the key scan, and how often the space lens ties it (a placed shot's best alternative
+    is the other placement, which is also what he picks without the look)."""
+    if not cls.shots:
+        return []
+    n = len(rows)
+    key = sum(bool(r.key_scan) for r in rows)
+    ties = sum(r.deltas["scan"] is not None and r.deltas["scan"] == r.deltas["space"] for r in rows)
+    return [
+        f"| The scan lens's scan (the most informative) is the key scan | {key}/{n} "
+        f"({key / max(n, 1):.0%}) | ≥ 90% |",
+        f"| … Δscan equals Δspace (the tie goes to `scan`, §5.2) | {ties}/{n} | — |",
+    ]
 
 
 def evaluate(scenario: str, seeds: list[int]) -> tuple[list[Row] | list[MarkerRow], str]:
