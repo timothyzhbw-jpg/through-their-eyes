@@ -433,6 +433,13 @@ with no new mechanism.
   Tests ([tests/test_keeper_switch.py](../tests/test_keeper_switch.py), design seeds): the design
   rule, role speed and acceleration limits, and every pair of players at least 0.7 m apart until
   H1 plays.
+- **Not a scan story by the lens rule.** On the same held-out seeds `eval/hero_lens.py` selects
+  `pressure` 40/40 and `scan` 0/40
+  ([hero_lens_keeper_switch.md](../eval/reports/hero_lens_keeper_switch.md)). The look decides the
+  pass (without it the ball is lost in 30/40), but in xT the moment is the keeper escaping A9's
+  press next to his own goal, and that delta is larger than the look's. By the rule above (the
+  intended lens in ≥ 60%), it is not served in the app as a scan hero. It stays in the sim, where
+  its gate holds. Its declared lens was not changed after this result.
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
