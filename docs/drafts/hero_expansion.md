@@ -300,6 +300,12 @@ The amplitude is about 125°, inside the calibrated 70–150°. This is the same
 
 ## 3. C2 — the keeper's sightline (`screened_shot`)
 
+> **As built (2026-10-21): SPEC §3.6 and `eval/reports/hero_save_screened_shot.md` are
+> authoritative.** The eval is `eval/hero_save.py`, not `eval/hero_lens.py`; the held-out seeds are
+> 300–339 (200–239 were used by a rejected first scene); the override is `SightAt`, not
+> `SightDelay`. The hard gate passed (28/40). The two secondary targets did not (35/40 and 30/40),
+> and Bowen decided on 2026-10-21 to ship with that stated; the causes are in SPEC §3.6.
+
 ### 3.1 Setup (the away team attacks −x; hero H1, GK)
 - **The shooter.** A8 plays A10 into the edge of the box at (−35, y0), y0 ~ U(−4, 4). A10 shoots
   first time after the 0.2 s touch. It is a forced shot (`Scenario.forced_shot`, the analogue of
@@ -683,6 +689,11 @@ reported as a counterexample and cut, as with reception difficulty (AUC 0.59, 20
        `DEFAULT_MATCHES` waits for the web to show a marker's moment (SPEC §3.6, "Not served yet").
   3. Module A + the C1 scenario + `eval/reports/hero_flip_far_post_finish.md`.
   4. C1 explain, agents and API: detectors, claims, `far_post_finish:<seed>`.
+     - *As built (2026-10-21, SPEC §3.6, §5.2, §6):* no new detector (the ordinary
+       `decision_after_scan` card); placed shots valued on the truth; the shot claims and
+       sequences of §2.5–2.6 (renamed: `scan_at_goal`, `shot_placement`, `cf_shot`,
+       `cf_shot_value`); near/far-post what-ifs. Serving `far_post_finish:11` waits, like the
+       corner, for the web.
   5. C2 sim + its eval report (with the decomposition and the sweep).
   6. C2 explain, agents and API (`sight` lens on H, `key_step` in the export).
   7. `match-2`, a new plan: open play, `blind_side_run` 3, open play, `corner_blind_side`,
