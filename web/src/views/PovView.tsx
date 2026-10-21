@@ -28,7 +28,7 @@ import { BeatLayer3D } from "../beat/BeatLayers";
 import { CameraBlend } from "../beat/cameraBlend";
 import { Grade } from "../beat/Grade";
 import { featuresOf, quality } from "../quality/quality";
-import { LOOK } from "../quality/look";
+import { grassTintAt, LOOK } from "../quality/look";
 
 // The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
 const QualityLayer = lazy(() => import("../quality/QualityPost"));
@@ -346,14 +346,13 @@ function PovScene() {
 
 /** The apron, the marked pitch and the goals. The capture renderer films the same ground. */
 export function Ground() {
-  // With the shared look (quality/) the grass is tinted towards the Blender shots' green, per
-  // camera (a multiplier on the stripes, so the kits and the rim are untouched), with a hint of
-  // sheen. It never takes image-based light.
-  const { playback } = useView();
+  // With the shared look (quality/) the grass is tinted towards the Blender shots' green by the
+  // camera's height (a multiplier on the stripes, so the kits and the rim are untouched), with a
+  // hint of sheen. It never takes image-based light.
   const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const pitch = useRef<THREE.MeshPhysicalMaterial>(null);
-  useFrame(() => {
-    if (look) pitch.current?.color.fromArray(LOOK.grassTint[playback.get().camera]);
+  useFrame(({ camera }) => {
+    if (look) pitch.current?.color.fromArray(grassTintAt(camera.position.y));
   });
   return (
     <>

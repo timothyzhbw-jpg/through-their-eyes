@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { addRim, playerMaterials, removeRim } from "./look";
+import { addRim, grassTintAt, LOOK, playerMaterials, removeRim } from "./look";
 
 const fakeShader = () => ({
   uniforms: {} as Record<string, unknown>,
@@ -57,5 +57,22 @@ describe("the rim light", () => {
     const pitch = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshStandardMaterial());
     root.add(body, skinned, pitch);
     expect(playerMaterials(root)).toEqual([body.material, skinned.material]);
+  });
+});
+
+describe("the grass tint", () => {
+  it("is the eye-height tint low down and the broadcast tint high up", () => {
+    expect(grassTintAt(1.72)).toEqual(LOOK.grassTint.pov);
+    expect(grassTintAt(21)).toEqual(LOOK.grassTint.broadcast);
+    expect(grassTintAt(40)).toEqual(LOOK.grassTint.broadcast);
+  });
+
+  it("blends continuously with the camera's height: no colour pop mid-move", () => {
+    let last = grassTintAt(0);
+    for (let h = 0; h <= 25; h += 0.05) {
+      const t = grassTintAt(h);
+      for (let k = 0; k < 3; k++) expect(Math.abs(t[k] - last[k])).toBeLessThan(0.002);
+      last = t;
+    }
   });
 });

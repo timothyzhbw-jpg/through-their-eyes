@@ -49,8 +49,8 @@ export const LOOK = {
   exposure: 0.8,
   // The grass: the stripes multiplied towards the Blender shots' lit stripe (32, 62, 42): G/R 1.8–2
   // and luma 50–56 from every camera. Grass only, so the kits and the rim stay where they are.
-  // A linear multiplier on the stripes, per camera: from above the lit grass reads about 1.2×
-  // greener than from eye height, so the broadcast camera's is a little stronger.
+  // A linear multiplier on the stripes: from above the lit grass reads about 1.2× greener than
+  // from eye height, so the tint follows the camera's height (grassTintAt).
   grassTint: {
     pov: [1.22, 0.86, 0.95],
     broadcast: [1.34, 0.82, 0.95],
@@ -75,6 +75,24 @@ export const LOOK = {
   bloom: { strength: 0.25, radius: 0.08, threshold: 2.0 }, // cine's linear chain
   bloomDisplay: { strength: 0.25, radius: 0.08, threshold: 0.96 }, // the live chain: encoded values
 };
+
+const GRASS_BLEND = { low: 2, high: 21 }; // m: eye height to the broadcast camera's
+
+/**
+ * The grass tint for a camera this high (m): the eye-height tint up to 2 m, the broadcast
+ * camera's from 21 m, blended smoothly in between, so a camera move between the two (or a cine
+ * crane) never pops the pitch's colour.
+ */
+export function grassTintAt(height: number): [number, number, number] {
+  const x = Math.min(
+    1,
+    Math.max(0, (height - GRASS_BLEND.low) / (GRASS_BLEND.high - GRASS_BLEND.low)),
+  );
+  const t = x * x * (3 - 2 * x);
+  const a = LOOK.grassTint.pov;
+  const b = LOOK.grassTint.broadcast;
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
 
 /** The key floodlight (the +x, +y mast), seen from the centre spot, in three.js world axes. */
 export const KEY_LIGHT = (() => {
