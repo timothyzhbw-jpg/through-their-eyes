@@ -1475,13 +1475,13 @@ check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the 
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 11 | 1 | passes, shots and possession changes per match vs targets |
+| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets |
 | §4 analytics | 7 | 0 | — |
 | §5 explain | 7 | 0 | — |
 | §7 render | 4 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **31** | **9** | |
+| **Total** | **32** | **9** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
