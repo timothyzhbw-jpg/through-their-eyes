@@ -1661,6 +1661,14 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
+- [x] *The run without the look, told:* which look was removed, what it cost and where each pass
+      went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
+      tampered with), rendered in en and zh with every number in a slot; the web shows only the
+      lines that pass `checkPayload`, in the caption's place in that run, on the timeline, in the
+      HUD and at the edge of his eyes; the explainer's two values are the verified line's.
+      — [tests/test_without_look.py](../tests/test_without_look.py) (16 cases),
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py),
+      [web/src/without/without.test.tsx](../web/src/without/without.test.tsx) (8).
 - [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
       moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
       the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt
@@ -1772,14 +1780,6 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
-- [x] *The run without the look, told:* which look was removed, what it cost and where each pass
-      went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
-      tampered with), rendered in en and zh with every number in a slot; the web shows only the
-      lines that pass `checkPayload`, in the caption's place in that run, on the timeline, in the
-      HUD and at the edge of his eyes; the explainer's two values are the verified line's.
-      — [tests/test_without_look.py](../tests/test_without_look.py) (16 cases),
-      [tests/test_committed_exports.py](../tests/test_committed_exports.py),
-      [web/src/without/without.test.tsx](../web/src/without/without.test.tsx) (8).
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
