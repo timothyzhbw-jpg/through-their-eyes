@@ -82,6 +82,12 @@ def test_press_escape_what_ifs_are_current():
     )
 
 
+def test_far_post_finish_what_ifs_are_current():
+    _assert_current(
+        what_ifs_json(export_what_ifs("far_post_finish", 11)), "whatif_far_post_finish_seed11.json"
+    )
+
+
 def test_the_structural_check_catches_stale_alerts_but_not_last_unit_noise(hero):
     """What CI relies on off the generating platform."""
     committed = json.loads(hero_json(hero))
