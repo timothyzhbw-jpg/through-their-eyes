@@ -29,6 +29,8 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
+import { bindSound } from "./sound/bind";
+import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -37,6 +39,8 @@ import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
+import { takeEyesOf } from "./takeeyes/controller";
+import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
@@ -48,11 +52,14 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const mode = useStore(playback, (s) => s.mode);
   const evidence = useStore(playback, (s) => s.evidenceLine);
   const yourCall = useYourCallOpen();
+  const takeEyes = useTakeEyesOpen();
   const start = onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />;
   const wasYourCall = useRef(false);
+  const wasTakeEyes = useRef(false);
   const introOpen = useStore(intro, (s) => s.open);
 
   useEffect(() => startClock(session), [session]);
+  useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
   // Closing Your call (Back, Escape, the header pill) returns focus to the live screen's pill.
   useEffect(() => {
     if (wasYourCall.current && !yourCall) {
@@ -60,6 +67,16 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasYourCall.current = yourCall;
   }, [yourCall]);
+  useEffect(() => {
+    if (wasTakeEyes.current && !takeEyes) {
+      // The header pill, or on a phone (no pill there) the moment's own button.
+      const pill = document.getElementById("take-eyes-open");
+      const shown = pill && getComputedStyle(pill).display !== "none";
+      const opener = shown ? pill : document.getElementById("take-eyes-story");
+      opener?.focus({ preventScroll: true });
+    }
+    wasTakeEyes.current = takeEyes;
+  }, [takeEyes]);
   // Online: play behind the card. Not `introOpen`: closing the card must not restart the stream.
   useEffect(() => {
     if (!autoplay || !session.feed) return;
@@ -79,12 +96,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       {yourCall ? (
         // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
         <YourCallScreen start={onBack ? start : null} />
+      ) : takeEyes ? (
+        <TakeEyesScreen start={onBack ? start : null} />
       ) : (
         <LiveScreen
           start={start}
           end={
             <>
               <YourCallButton />
+              <TakeEyesButton />
               <SoundToggle icon />
               <ViewerMenu />
             </>
@@ -95,7 +115,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
         />
       )}
 
-      {!yourCall && (
+      {!yourCall && !takeEyes && (
         <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
           <header className="moment-head">
             <p className="kicker accent">
@@ -132,6 +152,7 @@ function StoryCta() {
   const session = useSession();
   const { controls } = session;
   const yc = yourCallOf(session);
+  const te = takeEyesOf(session);
   const { narration, persona, status } = useBreakdown();
   const checked = narration && !narration.fixture;
   return (
@@ -161,6 +182,20 @@ function StoryCta() {
         </button>
       )}
       <TourButton className="btn" />
+      {!te.unavailable && (
+        <button
+          id="take-eyes-story"
+          type="button"
+          className="btn"
+          title="Choose when and where he looks; the sim re-runs the moment"
+          onClick={() => {
+            window.scrollTo({ top: 0 });
+            te.open();
+          }}
+        >
+          Take his eyes
+        </button>
+      )}
       {(status === "ready" || status === "failed") && (
         <span className="written">
           {checked && <CheckIcon />}

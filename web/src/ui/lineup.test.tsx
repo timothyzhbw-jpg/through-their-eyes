@@ -62,7 +62,7 @@ const click = (el: HTMLElement) => act(() => el.click());
 const PITCH =
   "See what they saw. An AI studio that explains key moments through the player's own " +
   "perception — the scans before the ball arrived, what was visible, what he believed — and " +
-  "proves every on-screen number before it airs.";
+  "checks every number the crew says or captions before it airs.";
 
 /** Two heroes, so the card offers two pairs of eyes. */
 function twoHeroes() {

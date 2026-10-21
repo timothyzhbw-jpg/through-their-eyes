@@ -30,6 +30,13 @@ so the viewer can be built before the verifier's payloads exist. It is marked as
         --what-if web/public/data/whatif_seed3.json
 
 `export_what_ifs` precomputes every option's "What if…?" answer (SPEC 6, 7) for the viewer.
+
+`export_looks` precomputes Take his eyes (SPEC 3.7, 7): every look of the grid re-simulated, with
+its verified lines. Its own schema (LOOK_VERSION):
+    uv run python -m sim.export --scenario blind_side_run --seed 3 \
+        --looks web/public/data/look_seed3.json
+    uv run python -m sim.export --scenario press_escape --seed 0 \
+        --looks web/public/data/look_press_escape_seed0.json
 """
 
 from __future__ import annotations
@@ -44,11 +51,16 @@ import numpy as np
 from analytics.blind_side import visible_mask
 from analytics.scan_detector import DEFAULT_PARAMS as DETECTOR
 from analytics.scan_detector import trace_scans
-from analytics.vision import VisionParams, player_visibility
+from analytics.vision import VisionParams, player_visibility, wrap_angle
 from explain.functions import same_target_on_truth, true_options
 from explain.moments import blind_side_alerts
 from sim.config import DT
-from sim.counterfactual import possession_value
+from sim.counterfactual import (
+    look_counterfactual,
+    look_overrides,
+    possession_result,
+    possession_value,
+)
 from sim.engine import Simulation
 from sim.match import Possession, StitchedMatch, build_match, global_id
 from sim.model import Decision, Event
@@ -613,6 +625,243 @@ def export_what_ifs(scenario: str, seed: int) -> dict[str, Any]:
     }
 
 
+LOOK_VERSION = 1
+# The look grid (SPEC 3.7, 7 "Take his eyes"): directions in whole degrees from the ball,
+# counter-clockwise positive: to his left, over his left shoulder, over his right shoulder, to his
+# right (150 deg is the widest a scan turns, SimParams.scan_amplitude). Times: every
+# LOOK_SPACING_S back from the reception while the ball is on its way to him.
+LOOK_OFFSETS = (90, 150, -150, -90)
+LOOK_SPACING_S = 0.4
+LOOK_MOVED_MM = 10  # a look's belief ghost lists the players it moved by more than this
+
+
+def look_grid_frames(start: int, reception: int) -> list[int]:
+    """The grid's look frames: the reception, then every LOOK_SPACING_S before it from `start`."""
+    step = round(LOOK_SPACING_S / DT)
+    return sorted(range(reception, start - 1, -step))
+
+
+def _traced_look(scenario: str, seed: int, hero: int, start: int, overrides: list):
+    """The run with these look overrides from `start`, and his belief and sight on every frame."""
+    sim = Simulation.from_scenario(scenario, seed)
+    trace = _Trace(hero)
+    while sim.frame < start:
+        trace.sample(sim)
+        trace.step(sim)
+    sim = Simulation.resume(sim, overrides)
+    while not sim.done:
+        trace.sample(sim)
+        trace.step(sim)
+    trace.sample(sim)
+    return sim.result(), trace
+
+
+def _look_entry(
+    result, run: MatchRun, trace: _Trace, factual: MatchRun, base: np.ndarray | None
+) -> dict:
+    """One look (or no look, `base` None) for the web: his head and sight over the window, his
+    belief (no look: on every frame of the window; a look: from its first frame, and only the
+    players it changes against `base`, the no-look belief), his events in the window, his
+    decision as the hero export has it, and what came of it."""
+    start, end = result.window
+    hero = run.index(result.player)
+    decision = run.hero_decision()
+    upto = end + 1
+    # The web draws a look over the factual run: nothing else may differ before the decision.
+    for name in ("pos", "ball_pos", "body_yaw", "owner"):
+        if not np.array_equal(getattr(run, name)[:upto], getattr(factual, name)[:upto]):
+            raise RuntimeError(f"{result.id}: {name} differs from the factual run before {end}")
+    others = lambda r: sorted((e.id, e.frame) for e in r.events  # noqa: E731
+                              if e.player != result.player and e.frame < end)  # fmt: skip
+    if others(run) != others(factual):
+        raise RuntimeError(f"{result.id}: another player's events differ before {end}")
+    ghost = np.rint(np.array(trace.ghosts[start:upto]) * 1000).astype(np.int64)  # (F, N, 2) mm
+    if base is None:
+        belief: Any = ghost.reshape(len(ghost), -1).tolist()
+    else:
+        first = result.frame - start
+        # Moved by more than a centimetre: a last-unit difference on another platform (SPEC 3.7)
+        # must not change which players are listed.
+        moved = np.any(np.abs(ghost[first:] - base[first:]) > LOOK_MOVED_MM, axis=(0, 2))
+        belief = {run.ids[j]: ghost[first:, j].tolist() for j in np.flatnonzero(moved)}
+    action = _action_of(run, decision)
+    return {
+        "id": result.id,
+        "head": _rad(run.head_yaw[start:upto, hero]),
+        "seen": trace.seen[start:upto],
+        "ghost": belief,
+        "events": [
+            _event(e)
+            for e in sorted(run.events, key=lambda e: (e.frame, e.id))
+            if e.player == result.player and start <= e.frame < end
+        ],  # fmt: skip
+        "decision": _plain(
+            {
+                "frame": decision.frame,
+                "player": decision.player,
+                "chosen": decision.chosen,
+                "options": _options(run, decision, trace.decided[decision.frame]),
+                "belief_error": decision.belief_error,
+                "belief_age": decision.belief_age,
+            }
+        ),
+        "action": None if action is None else _plain(action.attrs | {"frame": action.frame}),
+        "outcome": possession_result(run),
+        "possession_value": possession_value(run),
+        "delta_xt": result.delta_xt,
+        "changed": decision.chosen != result.factual_action,
+    }, ghost
+
+
+ON_THE_BALL = ("pass", "reception", "carry", "shot", "interception", "tackle")
+
+
+def _action_of(run: MatchRun, decision: Decision) -> Event | None:
+    return next(
+        (e for e in run.events if e.player == decision.player and e.frame == decision.frame
+         and e.type in ("pass", "shot")),
+        None,
+    )  # fmt: skip
+
+
+def _event(e: Event) -> dict[str, Any]:
+    return _plain({"id": e.id, "type": e.type, "frame": e.frame, "player": e.player,
+                   "attrs": e.attrs})  # fmt: skip
+
+
+def export_looks(scenario: str, seed: int) -> dict[str, Any]:
+    """Take his eyes (SPEC 3.7, 7): every look of the grid re-simulated, for the viewer.
+
+    The hero looks only where the viewer says, from the pass to him to his decision
+    (`sim.counterfactual.look_counterfactual`). Per look: his head yaw and his sight over the
+    window, his belief from the look on (before it, the no-look run's), his decision with its
+    options on his belief and on the truth (as `export_hero`), what came of it, and its verified
+    lines in en and zh (`agents.look.answer_look`). The runs after the decision go in `runs`, each
+    once, in the what-ifs' format (`export_what_ifs`). Before the decision every look's run is the
+    factual one but for his head and what he believes: the export refuses one that is not.
+    """
+    from agents.context import MomentContext  # the crew's evidence; heavy, so imported here
+    from agents.look import answer_look
+
+    ctx = MomentContext.load(scenario, seed)
+    factual = ctx.run
+    hero_id = factual.hero
+    hero = factual.index(hero_id)
+    decision = factual.hero_decision()
+    (start, end), own, _ = look_overrides(factual, hero_id, None, None)
+    reception = max(
+        e.frame for e in factual.events
+        if e.type == "reception" and e.player == hero_id and e.frame <= end
+    )  # fmt: skip
+    runs: list[dict[str, Any]] = []
+    keys: dict[str, int] = {}
+
+    def after(run: MatchRun) -> int:
+        """The run from the decision on, stored once: the ball, and the players on the ball in it
+        (passer, target, receiver or interceptor, tackler), the ghosts the board draws."""
+        events = [e for e in sorted(run.events, key=lambda e: (e.frame, e.id)) if e.frame >= end]
+        involved = {hero_id} | {e.player for e in events if e.type in ON_THE_BALL}
+        involved |= {e.attrs[k] for e in events if e.type in ON_THE_BALL
+                     for k in ("to", "receiver") if isinstance(e.attrs.get(k), str)}  # fmt: skip
+        players = [pid for pid in run.ids if pid in involved]
+        idx = [run.index(pid) for pid in players]
+        entry = {
+            "start": end,
+            "frames": len(run.owner) - end,
+            "players": players,
+            "pos": _mm(run.pos[end:, idx]),
+            "ball": _mm(run.ball_pos[end:, :2]),
+            "events": [_event(e) for e in events],
+        }
+        key = json.dumps(entry, separators=(",", ":"))
+        if key not in keys:
+            keys[key] = len(runs)
+            runs.append(entry)
+        return keys[key]
+
+    def entry(result, base: np.ndarray | None) -> tuple[dict[str, Any], np.ndarray]:
+        _, _, overrides = look_overrides(factual, hero_id, result.frame, _deg(result))
+        run, trace = _traced_look(scenario, seed, hero, start, overrides)
+        if run.to_bytes() != result.counterfactual.to_bytes():
+            raise RuntimeError(f"{result.id}: the traced run is not the look's run")
+        out, ghost = _look_entry(result, run, trace, factual, base)
+        out["run"] = after(run)
+        answer = answer_look(ctx, result, none)
+        out["answers"] = {lang: p.model_dump(mode="json") for lang, p in answer.payloads.items()}
+        if any(len(p.lines) != len(answer.claims) for p in answer.payloads.values()):
+            raise RuntimeError(f"{result.id}: a line did not verify")
+        return out, ghost
+
+    none = look_counterfactual(scenario, seed, None, None)
+    no_look, base = entry(none, None)
+    frames = look_grid_frames(start, reception)
+    cells = []
+    for f in frames:
+        for offset in LOOK_OFFSETS:
+            try:
+                result = look_counterfactual(scenario, seed, f, offset)
+            except ValueError as err:
+                cells.append({"id": None, "frame": f, "offset": offset, "unavailable": str(err)})
+                continue
+            look = result.look
+            cell = {"frame": f, "offset": offset, "unavailable": None}
+            cell["look"] = {"start": look.frame, "end": look.attrs["end"],
+                            "direction": round(look.attrs["direction"] * 1e4),
+                            "amplitude": round(look.attrs["amplitude"] * 1e4)}  # fmt: skip
+            cells.append(cell | entry(result, base)[0])
+
+    def off_ball(e: Event) -> int:
+        """Whole degrees his own scan turned from the ball, counter-clockwise positive."""
+        to_ball = factual.ball_pos[e.frame, :2] - factual.pos[e.frame, hero]
+        turn = wrap_angle(e.attrs["direction"] - np.arctan2(to_ball[1], to_ball[0]))
+        return round(float(np.rad2deg(turn)))
+
+    available = [c for c in cells if c["unavailable"] is None]
+    return {
+        "version": LOOK_VERSION,
+        "scenario": scenario,
+        "seed": seed,
+        "dt": DT,
+        "units": {"position": "mm", "angle": "1e-4 rad", "offset": "deg"},
+        "moment": ctx.card.id,
+        "hero": hero_id,
+        "window": [start, end],
+        "reception": reception,
+        "decision_frame": decision.frame,
+        "spacing_s": LOOK_SPACING_S,
+        "frames": frames,
+        "offsets": list(LOOK_OFFSETS),
+        "own_looks": [
+            {"id": e.id, "start": e.frame, "end": e.attrs["end"], "offset": off_ball(e)}
+            for e in own
+        ],  # fmt: skip
+        "factual": {
+            "chosen": decision.chosen,
+            "outcome": possession_result(factual),
+            "possession_value": possession_value(factual),
+        },  # fmt: skip
+        "no_look": no_look,
+        "cells": cells,
+        "runs": runs,
+        "summary": {
+            "cells": len(cells),
+            "available": len(available),
+            "changed": sum(c["changed"] for c in available),
+            "differ_from_no_look": sum(
+                c["decision"]["chosen"] != no_look["decision"]["chosen"] for c in available
+            ),
+        },
+    }
+
+
+def _deg(result) -> int | None:
+    return None if result.offset is None else round(float(np.rad2deg(result.offset)))
+
+
+def looks_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+
+
 # How each file is written, byte for byte: the tests compare the committed files with these.
 
 
@@ -633,10 +882,23 @@ def main() -> None:
     parser.add_argument("--scenario", default="blind_side_run")
     parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--match", type=int, help="export the stitched match with this seed")
-    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--out", type=Path, help="the hero (or match) export")
     parser.add_argument("--payload-fixture", type=Path, help="also write a render-payload fixture")
     parser.add_argument("--what-if", type=Path, help="also write every option's what-if answer")
+    parser.add_argument("--looks", type=Path, help="also write the Take his eyes look grid")
     args = parser.parse_args()
+    if args.looks:
+        looks = export_looks(args.scenario, args.seed)
+        args.looks.parent.mkdir(parents=True, exist_ok=True)
+        args.looks.write_text(looks_json(looks))
+        s = looks["summary"]
+        size = args.looks.stat().st_size / 1024
+        print(f"wrote {args.looks} ({size:.0f} KB): {s['available']}/{s['cells']} looks, "
+              f"{s['changed']} change his decision")  # fmt: skip
+    if args.out is None:
+        if not args.looks:
+            parser.error("--out is required, unless only --looks is written")
+        return
     if args.match is not None:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(hero_json(export_match(args.match)))

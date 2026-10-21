@@ -7,6 +7,7 @@
 // turns the voice on, and each claim with a number in the evidence card offers "Try a wrong
 // number": the service's verifier checks the claim again with the viewer's value (SPEC 7).
 
+import { CountUp } from "./CountUp";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DESCRIBED, PERSONAS, type VerifyResponse } from "../api/client";
 import { runLabels, type Hero } from "../data/hero";
@@ -68,7 +69,15 @@ export const isVerified = (narration: Narration, line: PayloadLine) =>
  * fictional names: the service names them already; the bundled example, written with ids, is
  * named here (data/roster.ts).
  */
-export function LineText({ text: raw, verified }: { text: string; verified: boolean }) {
+export function LineText({
+  text: raw,
+  verified,
+  countId,
+}: {
+  text: string;
+  verified: boolean;
+  countId?: string; // count each number up the first time this line comes up (CountUp.tsx)
+}) {
   const text = renameIds(raw);
   if (!verified) return <>{text}</>;
   return (
@@ -76,7 +85,7 @@ export function LineText({ text: raw, verified }: { text: string; verified: bool
       {numberParts(text).map((p, k) =>
         p.num ? (
           <span key={k} className="num">
-            {p.text}
+            {countId ? <CountUp text={p.text} id={`${countId}#${k}`} /> : p.text}
           </span>
         ) : (
           p.text
@@ -122,7 +131,7 @@ export function Caption() {
             <KindTags narration={narration} line={line} />
           </span>
           <span className="caption-text">
-            <LineText text={line.text} verified={verified} />
+            <LineText text={line.text} verified={verified} countId={`${line.id}|${line.text}`} />
             {line.claims.length > 0 &&
               (verified ? (
                 <span className="caption-more check">
@@ -568,8 +577,8 @@ export function SoundToggle({ icon = false }: { icon?: boolean }) {
     : error
       ? `Speech failed: ${error}`
       : on
-        ? "Turn the commentary voice off"
-        : "Speak each narration line as it comes up";
+        ? "Turn the commentary voice and the crowd off"
+        : "Speak each narration line as it comes up, with the crowd";
   return (
     <button
       type="button"

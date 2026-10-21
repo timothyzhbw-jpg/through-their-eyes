@@ -288,8 +288,8 @@ def azure(c: Canvas) -> None:
 
 def header(c: Canvas) -> None:
     c.text(48, 84, "Through Their Eyes  ·  architecture", 44, "b")
-    c.text(48, 120, "Synthetic matches only. Every number on screen is checked by code before "
-                    "it airs.", 22, "muted")  # fmt: skip
+    c.text(48, 120, "Synthetic matches only. Every number the crew says or captions is checked "
+                    "by code before it airs.", 22, "muted")  # fmt: skip
     # Legend, right-aligned to the panels.
     c.open("legend")
     c.rect(1290, 58, 34, 22, "model", rx=6)
