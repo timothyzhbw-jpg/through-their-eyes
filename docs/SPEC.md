@@ -722,6 +722,14 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       That is equal by construction at matched noise, a consistency check, not evidence. The
       0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
+- [x] xT grid increases toward goal (sanity plot saved).
+      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
+      lanes ≥ 0.22 above the wings in the last three columns; plot
+      [xt_fit.svg](../eval/reports/xt_fit.svg));
+      [tests/test_xt.py](../tests/test_xt.py)::`test_fitted_grid_increases_toward_the_attacked_goal`,
+      `test_central_lanes_are_worth_at_least_the_wings_near_goal`,
+      `test_fitted_grid_is_16_by_12_and_probability_like`,
+      `test_a_fixed_seed_set_gives_a_byte_identical_grid`
 - [x] *Live match stats (§4.6):* the kernels give the known answers on hand-built tracks (speed,
       distance, sprints, milestones, release speed, lane risk equal to the decision model's run-in,
       the difficulty formula); the timeline is causal (truncating the stream at a frame changes
@@ -737,14 +745,6 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       supported). Reported, not tuned: the distance part alone ranks the other way (AUC 0.257),
       because an intercepted pass is measured to where it was won, and the "very hard" band (50
       passes) completes more often than "hard".
-- [x] xT grid increases toward goal (sanity plot saved).
-      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
-      lanes ≥ 0.22 above the wings in the last three columns; plot
-      [xt_fit.svg](../eval/reports/xt_fit.svg));
-      [tests/test_xt.py](../tests/test_xt.py)::`test_fitted_grid_increases_toward_the_attacked_goal`,
-      `test_central_lanes_are_worth_at_least_the_wings_near_goal`,
-      `test_fitted_grid_is_16_by_12_and_probability_like`,
-      `test_a_fixed_seed_set_gives_a_byte_identical_grid`
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);

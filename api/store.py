@@ -55,6 +55,7 @@ class Match:
     time; `where` says, for a stitched match, which possession each one is in (its index, first
     match frame and the moment's id inside it). Breakdowns and what-ifs work on the possession's
     own run, so their frames are local: add `start` to place them on the match clock.
+
     `stats` is the live timeline of the export this service streams (SPEC 4.6).
 
     A stitched match also keeps its possessions' runs (`stitched`), for the end-of-match recap's
