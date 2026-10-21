@@ -22,7 +22,7 @@ CONNECTIVE: dict[Language, str] = {"en": "What did he see?", "zh": "他看到了
 PRESSURE_CONNECTIVE: dict[Language, str] = {"en": "Watch this.", "zh": "注意看。"}
 
 HEADLINE = {
-    "scan": ["scan_before_reception", "belief_error", "cf_pass"],
+    "scan": ["scan_before_reception", "belief_error", "cf_pass", "cf_carry"],
     "space": ["pass_to_runner", "gap_to_marker", "unmarked"],
     "pressure": ["heavy_pressure", "cf_carry_lost", "pressure_at_pass"],
 }
@@ -30,24 +30,26 @@ SUPPORTING = ["blind_side", "unmarked", "cf_value", "runner_received", "scans_be
               "gap_opened", "observed_share", "pass_to_runner", "presser_distance",
               "receiver_pressure", "pressure_at_pass"]  # fmt: skip
 
+# What he does without the look: a pass to someone else, or keeping the ball (a carry or a shot).
+CF_CHOICE = ("cf_pass", "cf_carry")
 # Per persona: the lines in speaking order, (speaker, claim id or None for the connective). A tuple
 # of ids is one line: the first of them that is supported.
 SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
     "casual": [("pbp", None), ("pbp", "scan_before_reception"), ("color", "blind_side"),
-               ("color", "cf_pass"), ("pbp", "runner_received")],
+               ("color", CF_CHOICE), ("pbp", "runner_received")],
     "analyst": [("pbp", None), ("pbp", "scans_before_reception"), ("color", "observed_share"),
-                ("color", "belief_error"), ("pbp", "pass_to_runner"), ("color", "cf_pass"),
+                ("color", "belief_error"), ("pbp", "pass_to_runner"), ("color", CF_CHOICE),
                 ("color", "cf_value")],
     "player_fan": [("pbp", None), ("pbp", "scan_before_reception"), ("color", "belief_error"),
-                   ("color", "cf_pass"), ("pbp", "runner_received")],
+                   ("color", CF_CHOICE), ("pbp", "runner_received")],
     "coach": [("pbp", "scans_before_reception"), ("pbp", "time_since_last_scan"),
-              ("color", "belief_error"), ("color", "cf_pass")],
+              ("color", "belief_error"), ("color", CF_CHOICE)],
     # Told for listeners, in the order it happened: where, who he could not see, which way he
     # looked, whom he saw, what he did with it. No connectives, no xT or probabilities.
     "audio_description": [("pbp", "reception_zone"), ("color", "blind_side"),
                           ("pbp", ("scan_side", "scan_before_reception")),
                           ("color", "seen_in_scan"), ("pbp", ("pass_to_runner", "runner_received")),
-                          ("color", "cf_pass")],
+                          ("color", CF_CHOICE)],
 }  # fmt: skip
 # The same for a moment the pressure lens explains (SPEC 5.2): the press, the escape, and what
 # keeping the ball would have cost.

@@ -389,6 +389,27 @@ def counterfactual_pass(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult)
     )  # fmt: skip
 
 
+def counterfactual_carry(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim | None:
+    """Without the look he keeps the ball instead: a carry or a legacy shot (placed shots have
+    `cf_shot`, passes `cf_pass`)."""
+    d = cf.counterfactual_decision
+    if not isinstance(cf, CounterfactualResult) or d is None or d.chosen not in ("carry", "shot"):
+        return None
+    at = (d.frame - r.reception.frame) * r.run.dt
+    chosen = fn("metric_at", metric="chosen", player=slot("player"), anchor=r.at_reception, at=at,
+                cf=cf.scan_id)  # fmt: skip
+    did, did_zh = {"carry": ("carried the ball", "自己带球"),
+                   "shot": ("shot", "直接射门")}[d.chosen]  # fmt: skip
+    return Claim(
+        id="cf_carry",
+        template=f"Without that look, {{player}} would have {did}.",
+        templates={"zh": f"如果没有那一眼，{{player}}会{did_zh}。"},
+        slots={"player": Slot(ref=r.hero)},
+        predicate=_eq(chosen, d.chosen),
+        evidence=[cf.scan_id],
+    )
+
+
 def counterfactual_value(
     ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult | WhatIfResult
 ) -> Claim | None:
@@ -1001,6 +1022,7 @@ CF_BUILDERS: dict[str, Builder] = {
     "cf_value": counterfactual_value,
     "cf_pass_success": counterfactual_pass_success,
     "cf_carry_lost": counterfactual_carry_lost,
+    "cf_carry": counterfactual_carry,
     "cf_shot": counterfactual_shot,
     "cf_keeper_age": counterfactual_keeper_age,
     "cf_shot_value": counterfactual_shot_value,

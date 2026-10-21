@@ -313,7 +313,10 @@ new mechanism.
   near-post ball to the marked H9 that the design expected never wins. Report:
   [hero_flip_cutback_scan.md](../eval/reports/hero_flip_cutback_scan.md). On the same seeds
   `eval/hero_lens.py` selects `scan` 38/40 (median margin over the next lens 0.10 xT;
-  [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
+  [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). In the app it is an
+  ordinary scan hero; its counterfactual line is `cf_carry` ("Without that look, H7 would have
+  carried the ball", or shot), §6. Demo seed 7, a typical design seed (`pass:H8` with the look,
+  a carry without, ΔxT +0.074). Tests
   ([tests/test_cutback_scan.py](../tests/test_cutback_scan.py), design seeds): the design rule,
   role speed and acceleration limits, and at least 0.7 m between every pair of players before H7
   acts.
@@ -950,6 +953,10 @@ Application Insights.
   Every persona has its template sequence in en and zh. The template plan's POV is his, with the
   scan marker on his look. "What if…?" refuses with its own sentence (he had no option to
   replay), and `list_options` and `what_if` say there is no decision on the ball.
+- *Keeping the ball without the look (2026-10-21, `cutback_scan`).* When the run without the key
+  scan carries or shoots instead of passing, `cf_carry` says so ("Without that look, H7 would have
+  carried the ball"). The scan sequences take it where they take `cf_pass`, so heroes whose
+  counterfactual is a pass are unchanged.
 - *A placed shot (2026-10-21, `far_post_finish`).* Claims: the look before the ball arrived
   (`scan_at_goal`), the keeper it showed him (`keeper_seen_in_scan`) and where he stood
   (`keeper_near_side`), the placement (`shot_placement`), its result (`goal`, `saved` or `wide`),
