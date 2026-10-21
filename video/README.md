@@ -86,10 +86,10 @@ about 12.
 | `ready` | recorded |
 | `stand-in` | the beat needs a feature that is not on main; something close is recorded instead (`pending` says what) |
 | `pending feature` | not recorded until the feature exists |
-| `external` | not from the app (the real-footage segment, the architecture slide) |
+| `external` | not from the app (the architecture slide) |
 
 On 2026-10-20: `02-live-stream` is a stand-in (no broadcast camera yet), `09-verifier` is pending
-(no view shows the verifier blocking a line), `10-real-footage` and `11-architecture` are external.
+(no view shows the verifier blocking a line), `11-architecture` is external.
 
 ### Things to check on the contact sheet
 
@@ -139,14 +139,6 @@ audio track.
   | Track | Author | Source | Licence | Checked on |
   |---|---|---|---|---|
   | (none) | | | | |
-
-- **Real footage is separate.** This kit never records it. The optional overlay segment is made by
-  `demo/realfeed` under SPEC §7: at most 10 s, blurred (off-pitch, faces, logos and sponsor or
-  club text on kit), labelled "real footage, overlay demo only; the app uses synthetic data",
-  attributed on screen for the whole segment (savinkins, Wikimedia Commons, CC BY 3.0; blurred
-  and overlaid by us), graphics only. You review every frame before it goes in, and it is the
-  first thing cut (SPEC §9) if any condition fails or the organisers object. The file stays in
-  `out/` and is never committed.
 
 ## Dependency
 

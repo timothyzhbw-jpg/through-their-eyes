@@ -76,7 +76,7 @@ Merged pull requests by area, newest first within each area.
 
 ## demo
 
-- #15 (2026-10-20): real-footage overlay segment (SPEC 7) — [#15](https://github.com/timothyzhbw-jpg/through-their-eyes/pull/15)
+- #15 (2026-10-20): real-footage overlay segment (SPEC 7) — [#15](https://github.com/timothyzhbw-jpg/through-their-eyes/pull/15); cut on 2026-10-20 (Bowen): no real footage in the demo
 
 ## Other
 

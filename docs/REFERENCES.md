@@ -230,5 +230,3 @@ printed range, or a shape only. It also says how far the source was read.
 | PitchAura | GPL-3.0 | **do not use** (copyleft) — ideas only |
 | LaurieOnTracking | no license found | **do not copy** — reimplement from papers |
 | SoccerMaster | weights Apache-2.0; code repo has no LICENSE file; bundles YOLOv8 (AGPL) | **not in submission** |
-| opencv-python-headless | Apache-2.0 | **use, `demo/realfeed/` only** (own dependency group): calibration, camera tracking, masking for the real-footage segment |
-| Futsal final 2019-10-06 (Wikimedia Commons, savinkins) | CC BY 3.0 (checked on Commons 2026-10-19) | **demo video only**, ≤ 10 s, blurred and attributed; never committed, never used by the app (SPEC §7) |

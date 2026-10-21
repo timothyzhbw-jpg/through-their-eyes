@@ -555,6 +555,28 @@ over-count versus video annotation, so sweep 125–300°/s and choose by F1 agai
 Report a precision / recall / F1 table in `eval/`, with and without the nuisance head motion
 of §3.4.
 
+*Ingest from limb tracking (optional; it goes with the skeleton view, item 0 of the §9 cut
+order).* An offline adapter shows that the Ingest stage could accept body keypoints, the kind of
+data limb tracking reports; nothing in the API or the app calls it yet.
+- **Schema:** a generic open one, a named subset of the COCO keypoints (nose, ears, shoulders,
+  hips), in metres in pitch coordinates. It travels one frame per message (pydantic
+  `KeypointFrame`).
+- **Adapter** ([analytics/keypoints.py](../analytics/keypoints.py), no sim state): recovers each
+  player's position (hip midpoint), head yaw and torso yaw.
+  - Head yaw: the ear axis and the nose's offset from the ear midpoint, combined with
+    inverse-variance weights.
+  - Torso yaw: the shoulder and hip axes, combined the same way.
+  - An untracked keypoint holds the last estimate. (Collapsed or infinite points count as
+    untracked.)
+  - The scan detector then runs on that head yaw unchanged.
+- **Synthetic stream** ([sim/keypoints.py](../sim/keypoints.py)): keypoints placed from a run's
+  truth.
+  - Noise is independent and Gaussian, keyed by (match seed, `keypoint_noise`, frame).
+  - Its size is the §3.4 sensor noise carried into keypoint space: 4.7 mm per axis makes the
+    recovered head yaw as noisy as the sim's tracked yaw (2°).
+  - Generating a stream changes no run and no export.
+  - Limbs beyond shoulders and hips are not generated: the sim has none.
+
 ### Acceptance checks — analytics
 - [x] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
       pitch flip.
@@ -579,6 +601,18 @@ of §3.4.
       — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.993 at
       200°/s, 125–300°/s table);
       [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
+- [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers position, head yaw and
+      torso yaw, and the scan detector runs on the adapter's output unchanged.
+      — Round trip: [tests/test_keypoints.py](../tests/test_keypoints.py). Exact without noise
+      (< 1e-9 rad); a hand-built frame (facing +x, rotated, mirrored) gives the expected yaws;
+      collapsed and infinite points count as untracked. With the sim's noise the head-yaw RMS
+      error must be within 15% of 2° and no frame may exceed 5 σ: blind_side_run seed 3 gives
+      1.99° RMS and 8.2° at most. Torso yaw 0.76° RMS, position 4.7 mm RMS.
+      Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
+      detector on the adapter's output on its held-out seeds: F1 0.993, as on the tracked yaw.
+      That is equal by construction at matched noise, a consistency check, not evidence. The
+      0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [ ] xT grid increases toward goal (sanity plot saved).
       — *Open:* only the smooth prior exists ([analytics/xt.py](../analytics/xt.py), tested by
       [tests/test_analytics_kernels.py](../tests/test_analytics_kernels.py)::`test_xt_prior_increases_toward_goal_and_is_symmetric_across_the_long_axis`);
@@ -1019,62 +1053,8 @@ original visual identity.
     shoulder height and the ray at eye height; heights and the shoulder width are a drawing
     choice, not data.
 
-### Real-footage overlay (demo video only; the one exception to synthetic data)
-Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
-segment of **≤ 10 s in the demo video**, showing the ground graphics drawn on a real camera, the
-way the app draws them on the synthetic pitch: it backs the claim that the overlays would transfer
-to a real broadcast.
-- **Source:** the Wikimedia Commons file "Битва Корпораций - 2019-10-06 - Нова Пошта. - Мини-футбол.
-  Финал." by savinkins, licensed CC BY 3.0. Checked on Commons on 2026-10-19: the license was
-  reviewed by YouTubeReviewBot, and the SHA-1 matches `demo/realfeed/download.py`. It is a
-  corporate-league futsal final (Атлант vs Нова Пошта).
-- **Code:** `demo/realfeed/`, with OpenCV in its own dependency group.
-  - It does classical computer vision only: pitch calibration, camera tracking, background
-    subtraction for the players' foot points, and the turf key for the graphics.
-  - It is never imported by `sim/`, `analytics/`, `explain/`, `agents/`, `api/` or `web/`, and the
-    public app never shows or loads it.
-  - The footage is downloaded into `out/` and never committed. Only camera calibration (pixel ↔
-    pitch correspondences) is committed: no frames, no player positions.
-- **Masking:** everything outside the pitch outline is blurred and darkened; every face is blurred;
-  any legible logo, sponsor or club text on kit is blurred too. Kit matters because the teams are
-  companies and the video rules ban third-party trademarks.
-- **Graphics only:** no numbers, captions or narration on the real footage. Every on-screen number
-  in the app is a verified claim about the synthetic match, and nothing in this segment is
-  verified.
-- **On screen:** a label saying "real footage, overlay demo only; the app uses synthetic data",
-  plus the attribution "savinkins, Wikimedia Commons, CC BY 3.0; blurred and overlaid by us". The
-  same attribution goes in `demo/realfeed/README.md` and the repo README. CC BY requires author,
-  source, license and a note of changes.
-- **Never used** to train, tune or calibrate anything in the app.
-
-**Risks:**
-1. *Rules.* The official rules say "Projects must use synthetic, football-realistic data". The
-   app and all its data stay synthetic, but a judge or the Stage One viability check may still
-   read real footage in the video as using real data, and that could cost the entry.
-   - Mitigation: keep the segment short, clearly labelled and cuttable.
-   - Bowen may ask the organisers first; if they object, cut it.
-2. *Privacy.* The players are private individuals in an amateur corporate league. Faces are
-   blurred, and no names or identities are shown or tracked beyond the 10 s.
-3. *Trademarks.* Kit, boards and banners may carry company logos. Before upload, review every
-   frame of the exported segment for logos and faces, not only the automated masks.
-4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
-   endorsement. Keep the attribution on screen for the whole segment.
-5. *Time.* It is near the top of the cut order (§9), after the optional skeleton view; it never
-   takes time from the "never cut" list.
-
-**Acceptance checks:**
-- [x] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
-      imports `demo.realfeed`, and that `web/` has no reference to it.
-      — [tests/test_realfeed.py](../tests/test_realfeed.py)::`test_the_app_never_imports_or_references_the_real_footage_demo`
-- [x] No video or image frames are tracked under `demo/` (test on `git ls-files`).
-      — [tests/test_realfeed.py](../tests/test_realfeed.py)::`test_no_video_or_image_frames_are_tracked_under_demo`
-- [ ] Every exported frame: off-pitch pixels are masked; a face detector finds no unblurred face;
-      the label and the attribution are visible.
-      — *Open:* no export has passed `demo/realfeed/check.py` yet; the latest one (2026-10-19, on
-      an unmerged branch) reports faces not blurred.
-- [ ] Bowen has reviewed the exported segment frame by frame (faces, kit logos, boards) before it
-      goes into the video.
-      — *Open:* Bowen's review; there is no final export to review yet.
+### Real-footage overlay (cut)
+Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
@@ -1285,18 +1265,18 @@ to a real broadcast.
 or a live check. Ticked only when verified that day: `uv run pytest` 464 passed, `npm test` in
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
 shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
-check, the same day: `npm test` 292 passed.
+check, the same day: `npm test` 292 passed. The limb-tracking ingest check, the same day:
+`uv run pytest` 1015 passed (merged with main, after the review fixes).
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
 | §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets |
-| §4 analytics | 5 | 1 | fitted xT grid and its sanity plot |
+| §4 analytics | 6 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
-| §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
 | §7 render | 3 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **27** | **12** | |
+| **Total** | **27** | **10** | |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1317,21 +1297,20 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
-0. skeleton data view (§7, optional): remove the toggle; nothing else depends on it
-1. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
-   or the organisers object)
-2. rigged GRF players: back to tokens in POV and broadcast (§7)
-3. Foundry evaluation ablation, free text vs anchored narration (§6)
-4. shareable clip export (stretch)
-5. viewer pilot
-6. end-of-match recap reel
-7. "What if…?" free text → suggested questions only
-8. two voices → one narrator
-9. `coach` persona
-10. `es` language
-11. Cosmos DB → file store
-12. occlusion model → FOV only
-13. pitch-control shader and pass value surface → precomputed textures (the pitch-control
+0. skeleton data view (§7, optional) and the limb-tracking ingest (§4.7, optional): remove the
+   toggle and the adapter; nothing else depends on them
+1. rigged GRF players: back to tokens in POV and broadcast (§7)
+2. Foundry evaluation ablation, free text vs anchored narration (§6)
+3. shareable clip export (stretch)
+4. viewer pilot
+5. end-of-match recap reel
+6. "What if…?" free text → suggested questions only
+7. two voices → one narrator
+8. `coach` persona
+9. `es` language
+10. Cosmos DB → file store
+11. occlusion model → FOV only
+12. pitch-control shader and pass value surface → precomputed textures (the pitch-control
     shader exists and stays per pixel until a laptop measurement says otherwise, §7 render)
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent
@@ -1349,8 +1328,7 @@ Framework, live deployment, the video.
 - **0:55–1:25** The same moment for casual / analyst / player-fan; `en` ↔ `zh`; open one caption's
   evidence.
 - **1:25–1:40** The verifier blocks a wrong number and a banned judgement word.
-- **1:40–2:00** Architecture (Microsoft stack) + eval numbers. *If kept:* the ≤ 10 s real-footage
-  overlay segment (§7) sits here, labelled and attributed on screen, before the architecture.
+- **1:40–2:00** Architecture (Microsoft stack) + eval numbers.
 
 Shot list and capture kit: [video/](../video/README.md). `shots.json` holds each beat's URL,
 scripted actions, target length and voice-over; `capture.mjs` records them from the live site.
@@ -1370,9 +1348,8 @@ scripted actions, target length and voice-over; `capture.mjs` records them from 
       `speech: true`; a cached breakdown in 0.04 s; live WebSocket at 25.0 fps; the site loads and
       streams from the API), and the README's "Try it" has the instructions; staying up until
       2026-11-10 can only be checked then.
-- [x] README: synthetic-data statement (plus the one real-footage segment in the video, if kept,
-      and its attribution), architecture, how to run, eval results, related work
-      — [README.md](../README.md) has the statement, the attribution, how to run, the eval
+- [x] README: synthetic-data statement, architecture, how to run, eval results, related work
+      — [README.md](../README.md) has the statement, how to run, the eval
       results, related work (first-person replay exists: ReSpo.Vision) and the architecture
       diagram ([architecture.svg](architecture.svg)).
 - [ ] All materials in English

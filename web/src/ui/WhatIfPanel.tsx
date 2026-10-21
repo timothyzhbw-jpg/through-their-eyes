@@ -119,7 +119,7 @@ function FreeQuestion({
         placeholder={
           online
             ? "Ask your own, e.g. what if he had played it back to the centre-back?"
-            : "Ask your own question: needs the live service (offline data)"
+            : "Ask your own question: needs the live service"
         }
         aria-label={
           online ? "Ask your own question" : "Ask your own question (needs the live service)"
