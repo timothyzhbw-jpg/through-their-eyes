@@ -181,10 +181,10 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
-uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
-uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look web/public/data/without_look_seed3.json
 uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look web/public/data/without_look_far_post_finish_seed11.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -205,14 +205,6 @@ uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look 
   and offline; free questions go to the api's live what-if, which uses its forced runs for the
   ghost.
 
-- `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
-  SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
-  only one between the pass and his decision: his head, sight and belief over the window (the
-  belief sparse against the no-look run), his decision as `hero_seed3.json` has it, its verified
-  lines in en and zh, and the run from the decision on for the players on the ball (each distinct
-  run once). `src/takeeyes/looks.ts` splices a look into the factual run; fetched when the mode
-  first opens.
-
 - `without_look_seed3.json`, `without_look_far_post_finish_seed11.json`: the run without the look,
   told (`sim.export.export_without_look`, `explain/look_cost.py`; teammates' feedback,
   2026-10-21). Verified lines in en and zh: which look was removed (which shoulder, how long
@@ -220,7 +212,15 @@ uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look 
   lost), and where each run's pass reached its receiver with the xT there; plus the 16 × 12 xT
   grid (1e-4) the explainer draws. Not part of the crew's evidence, so breakdown cache keys do
   not move. `src/without/` checks the payloads against the replay and shows them under "Without
-  the look", on the timeline, at the edge of his eyes and in the verdict; fetched on first use.
+  the look", on the timeline, at the edge of his eyes and in the verdict; fetched when the session is made.
+
+- `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
+  SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
+  only one between the pass and his decision: his head, sight and belief over the window (the
+  belief sparse against the no-look run), his decision as `hero_seed3.json` has it, its verified
+  lines in en and zh, and the run from the decision on for the players on the ball (each distinct
+  run once). `src/takeeyes/looks.ts` splices a look into the factual run; fetched when the mode
+  first opens.
 
 Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
 `tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
