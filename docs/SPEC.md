@@ -272,8 +272,9 @@ the defending side.
     other scenarios mark the true position, as before.
 - **Key action and intervention.** H5's one look over his shoulder as A9 darts is the key scan,
   and the intervention is `drop_scan`.
-- **Hero design rule.** A9 is visible to H5 only during the key scan once he darts. His previous
-  sighting shows him drifting slowly beside H5.
+- **Hero design rule.** A9 is visible to H5 only during the key scan once he darts, and the scan
+  does show him (`player_visibility` ≥ 0.5 on at least one of its frames); from the dart until
+  the look he is unseen. His previous sighting shows him drifting slowly beside H5.
 - **Nothing decides here.** The passes are scripted (as the passers' are in both other heroes),
   and the moment is where H5 runs.
 - **The one engine change.** The moment's pass is now a scenario hook,
@@ -285,7 +286,8 @@ the defending side.
   - the median separation as the ball arrives is 3.3 m with the look and 8.5 m without it;
   - without the look, H5's belief error about A9 half a second after the cutback is played is
     ≥ 3 m in 37/40 (target ≥ 90%: met; the other three are 2.6–2.8 m);
-  - the design rule holds in 40/40.
+  - the design rule holds in 40/40 on both halves: A9 unseen by H5 from the dart to the look (or,
+    without the look, to the cutback), and seen by him during the key scan.
   - The three misses are near the thresholds. In two (107, 109) H5 is 5.3 and 5.6 m away with the
     look. In one (103) another defender is 4.9 m from A9 without the look, while H5 is 7.5 m away.
   - With the look, A9 is under heavy pressure (pressing ≥ 0.7) in 23/40; H5 never wins the ball.
