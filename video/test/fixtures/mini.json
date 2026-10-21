@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "about": "Small valid spec: six beats so every picture kind and every transition can appear. The lead's real trailer replaces video/trailer.json.",
+  "output": { "fps": 30, "width": 1920, "height": 1080, "lufs": -14, "true_peak": -1.5 },
+  "site": "https://ttesite1ff906.z14.web.core.windows.net",
+  "voice": { "name": "en-US-DavisNeural", "lang": "en-US", "rate": "-6%", "pitch": "-6%", "fx": "trailer" },
+  "voices": { "zh": { "name": "zh-CN-YunxiNeural", "lang": "zh-CN" } },
+  "music": [],
+  "cine": {
+    "intro": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": { "duration": 4.0 }
+    }
+  },
+  "titles": {
+    "lower": {
+      "template": "tag",
+      "dur": 1.6,
+      "alpha": true,
+      "params": { "text": "Off by {belief_error.err}" },
+      "fallback": { "text": "The picture was off" }
+    },
+    "card": {
+      "template": "card",
+      "dur": 2,
+      "alpha": false,
+      "params": { "lines": ["What did he see"] }
+    }
+  },
+  "beats": [
+    {
+      "id": "b01-open",
+      "dur": 2.0,
+      "picture": { "src": "black" },
+      "overlays": [{ "title": "lower", "at": 0.2 }],
+      "vo": [
+        {
+          "id": "vo01",
+          "at": 0.3,
+          "text": "Off by {belief_error.err}.",
+          "style": "whispering",
+          "degree": 1.4,
+          "fallback": "The picture was off.",
+          "lang": "en"
+        }
+      ],
+      "sfx": [{ "name": "whoosh", "at": 0.0, "gain_db": -6, "dur": 0.6 }],
+      "out": { "type": "fade", "dur": 0.25 }
+    },
+    {
+      "id": "b02-cine",
+      "dur": 2.0,
+      "picture": { "src": "cine", "id": "intro", "in": 0 },
+      "sfx": [{ "name": "boom", "at": 0.1, "gain_db": -3, "dur": 2.5 }],
+      "out": { "type": "flash", "dur": 0.2 }
+    },
+    {
+      "id": "b03-capture",
+      "dur": 2.0,
+      "picture": {
+        "src": "capture",
+        "shot": "03-breakdown",
+        "in": 2.0,
+        "crop": "pov",
+        "push": [1.0, 1.06],
+        "speed": 1
+      },
+      "freeze": { "at": 1.2, "punch": 1.04 },
+      "grade": "night",
+      "fx": ["grain", "vignette"],
+      "letterbox": 2.39,
+      "out": { "type": "dip", "dur": 0.25 }
+    },
+    {
+      "id": "b04-title",
+      "dur": 2.0,
+      "picture": { "src": "title", "id": "card" },
+      "out": { "type": "whip", "dur": 0.3 }
+    },
+    {
+      "id": "b05-image",
+      "dur": 2.0,
+      "picture": { "src": "image", "path": "docs/architecture.png", "push": [1.0, 1.04] },
+      "out": { "type": "glitch", "dur": 0.25 }
+    },
+    {
+      "id": "b06-end",
+      "dur": 2.0,
+      "picture": { "src": "black" },
+      "out": { "type": "cut" }
+    }
+  ]
+}

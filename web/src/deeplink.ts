@@ -17,10 +17,17 @@
 //   ?play=recap                                with ?match= (a stitched match): its end-of-match
 //                                              recap, asked for at once for ?persona and ?lang,
 //                                              with the full-time card on the live screen
+//   ?tour=1|<step id>                          the judge tour (tour/), from its first step or
+//                                              from that one
+//   ?play=eyes                                 open "Take his eyes" (takeeyes/) on his own look;
+//                                              with ?match=, on its first hero moment that has
+//                                              a bundled look grid
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the lineup card), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
-// (at, run, ask, tamper or play) skips the lineup card and opens paused: no live stream, and no
-// breakdown on load unless tamper needs one. Unknown values are ignored and logged.
+// (at, run, ask, tamper, play or tour) skips the lineup card and opens paused: no live stream,
+// and no breakdown on load unless tamper needs one. Unknown values are ignored and logged.
+// ?cine=1 is for filming the demo video only (cine/, SPEC 10), never linked from the app; main.tsx
+// reads it, this parser does not.
 
 import { createContext, useContext } from "react";
 import { PERSONAS, type Persona } from "./api/client";
@@ -29,14 +36,16 @@ import type { RunName } from "./data/types";
 import type { MomentContext } from "./plan/moment";
 import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
+import { STEP_IDS } from "./tour/steps";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
+import { takeEyesOf } from "./takeeyes/controller";
 import { yourCallOf } from "./yourcall/controller";
 
 const RUNS = ["factual", "counterfactual"] as const satisfies readonly RunName[];
 const VIEWS = ["pov", "tactical", "split"] as const satisfies readonly Focus[];
 const NAMED_FRAMES = ["key-scan", "decision"] as const;
-const PLAYS = ["yourcall", "recap"] as const;
+const PLAYS = ["yourcall", "recap", "eyes"] as const;
 const CLAIM_ID = /^[a-z][a-z0-9_]{0,63}$/; // explain/builders.py ids, e.g. cf_value
 
 export type View = (typeof VIEWS)[number];
@@ -55,7 +64,8 @@ export interface DeepLink {
   at: At | null;
   ask: string | null;
   tamper: string | null; // a claim id
-  play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap
+  play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"
+  tour: string | null; // the judge tour's step to start at (tour=1: its first)
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
 
@@ -72,6 +82,7 @@ export const NO_LINK: DeepLink = {
   ask: null,
   tamper: null,
   play: null,
+  tour: null,
   warnings: [],
 };
 
@@ -103,7 +114,14 @@ export function parseDeepLink(search: string): DeepLink {
   const ask = params.get("ask")?.trim().slice(0, MAX_QUESTION) || null;
   const tamper = read("tamper", (v) => (CLAIM_ID.test(v) ? v : null));
   const play = read("play", (v) => oneOf(PLAYS, v));
-  const spot = at !== null || run !== null || ask !== null || tamper !== null || play !== null;
+  const tour = read("tour", (v) => (v === "1" ? STEP_IDS[0] : oneOf(STEP_IDS, v)));
+  const spot =
+    at !== null ||
+    run !== null ||
+    ask !== null ||
+    tamper !== null ||
+    play !== null ||
+    tour !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
     intro: params.get("intro") !== "0" && !spot,
@@ -117,6 +135,7 @@ export function parseDeepLink(search: string): DeepLink {
     ask,
     tamper,
     play,
+    tour,
     warnings,
   };
 }
@@ -144,6 +163,7 @@ export function applyDeepLink(session: Session, link: DeepLink): void {
   if (link.at !== null) controls.seek(atFrame(session.hero, session.moment, link.at));
   if (link.tamper) controls.openTamperLink(link.tamper);
   if (link.play === "yourcall") yourCallOf(session).open();
+  if (link.play === "eyes") takeEyesOf(session).open();
 }
 
 /** The link the page was opened with; components read prefills from it. */

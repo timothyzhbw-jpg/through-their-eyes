@@ -34,7 +34,14 @@ from sim.decision import (
 )
 from sim.model import Decision, Event
 from sim.movement import steer, turn_toward
-from sim.perception import BeliefStore, FinishedScan, HeadModel, head_turn_id, scan_id
+from sim.perception import (
+    BeliefStore,
+    FinishedScan,
+    ForcedScan,
+    HeadModel,
+    head_turn_id,
+    scan_id,
+)
 from sim.rng import KeyedRng
 from sim.run import MatchRun
 
@@ -88,8 +95,13 @@ class Simulation:
         self.beliefs = BeliefStore(n, 0, self.pos, self.vel)
         self.head = HeadModel(n)
         self.dropped_scans: set[str] = set()
+        self.dropped_steps: set[str] = set()
+        self.sight_at: dict[int, int] = {}  # keeper index -> frame of his first sight of this shot
         self.frozen_belief: dict[int, int] = {}
         self.forced_actions: dict[tuple[int, int], str] = {}  # (player, frame) -> action
+        # (player, frame) -> (offset from the ball in rad, dwell in s): looks added by `AddScan`.
+        self.added_scans: dict[tuple[int, int], tuple[float, float]] = {}
+        self.no_scans: dict[int, tuple[int, int]] = {}  # player -> [start, end): `NoScans`
         self.events: list[Event] = []
         self.decisions: list[Decision] = []
         self.pending_decision: tuple[int, int] | None = None
@@ -189,6 +201,11 @@ class Simulation:
         if forced is not None and self.owner == self.index(forced.passer):
             target = forced.target if forced.target is not None else self.pos[self.index(forced.to)]
             self._kick_pass(self.index(forced.passer), np.asarray(target), self.index(forced.to), f)
+        # A scripted strike before a pending decision, so that decision cannot also kick.
+        if self.scenario.shots:
+            forced_shot = self.scenario.forced_shot(self, f)
+            if forced_shot is not None and self.owner == self.index(forced_shot.shooter):
+                self._kick_shot(self.index(forced_shot.shooter), forced_shot, f)
         if self.pending_decision is not None and self.pending_decision[1] == f:
             i = self.pending_decision[0]
             self.pending_decision = None
@@ -208,17 +225,27 @@ class Simulation:
         drift_noise = self.rng.normal("head_drift", f, n, entities=self.ids)
         speed_noise = self.rng.normal("scan_speed", f, n, entities=self.ids)
         allowed = ~self.scenario.scan_suppressed(self, f)
+        for i, (start, end) in self.no_scans.items():  # a `NoScans` override (SPEC 3.7)
+            if start <= f < end:
+                allowed[i] = False
         p_scan = self.scan_rate * self._pressure_factor() * DT
         spontaneous = allowed & (trigger < p_scan)
         # The same trigger draw: just above the scan probability, a scan starts and is aborted.
         partial = allowed & ~spontaneous & (trigger < p_scan * (1 + p.partial_scan_ratio))
+        forced_scans = self.scenario.forced_scans(self, f)
+        if self.added_scans:  # an `AddScan` override (SPEC 3.7) goes the forced scans' way
+            forced_scans = forced_scans | {
+                i: ForcedScan(target_yaw=float(base[i] + offset), dwell_s=dwell)
+                for (i, at), (offset, dwell) in self.added_scans.items()
+                if at == f
+            }
         self.head_yaw, finished = self.head.step(
             f,
             self.head_yaw,
             base,
             spontaneous,
             draws,
-            self.scenario.forced_scans(self, f),
+            forced_scans,
             self.dropped_scans,
             self.ids,
             p,
@@ -660,7 +687,7 @@ class Simulation:
             "y_seen": None,
             "decided": False,
             "u": self.rng.uniform_for("save", f, self.ids[k]),
-            "hero": self.scenario.ends_on_pass(self, i),
+            "hero": self.scenario.ends_on_shot(self, i),
         }
         self._watch_shot()  # The first sighting can be the strike itself, before the ball rolls.
 
@@ -673,7 +700,13 @@ class Simulation:
             others = np.delete(np.arange(len(self.ids)), k)
             v = visibility(self.pos[k], float(self.head_yaw[k]), float(np.linalg.norm(self.vel[k])),
                            self.ball_pos[None, :2], self.pos[others])[0]  # fmt: skip
-            if v >= self.params.perception_threshold:
+            # Empty sight_at keeps the ordinary test. SightAt counts the ball as unseen before
+            # its frame and seen on it, whatever the line of sight says.
+            forced_sight = self.sight_at.get(k)
+            visible = (
+                v >= self.params.perception_threshold if forced_sight is None else f >= forced_sight
+            )
+            if visible:
                 s["seen"], s["y_seen"] = f, float(self.pos[k, 1])
                 cross = s["cross"] if s["cross"] is not None else f
                 d = s["y_c"] - s["y_seen"]
@@ -732,6 +765,8 @@ class Simulation:
             etype, eid, attrs["partial"] = "head_turn", head_turn_id(self.ids[i], scan.start), True
         else:
             etype, eid, attrs["key"] = "scan", scan_id(self.ids[i], scan.start), scan.key
+            if (i, scan.start) in self.added_scans:
+                attrs["added"] = True
         self.events.append(
             Event(eid, etype, scan.start, scan.start * DT, self.ids[i], int(self.team[i]), attrs)
         )

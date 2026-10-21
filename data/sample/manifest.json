@@ -1,0 +1,64 @@
+{
+  "dataset": "through-their-eyes-synthetic-matches",
+  "version": 1,
+  "matches": [
+    5001
+  ],
+  "generated_with": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "pyarrow": "26.0.0",
+    "platform": "Darwin-arm64"
+  },
+  "files": {
+    "ball.parquet": {
+      "bytes": 8780,
+      "sha256": "a75089c2d56daede55c03f36f990a2dc590422d3878ddf76b9433614e52c9097",
+      "rows": 235
+    },
+    "beliefs.parquet": {
+      "bytes": 6812,
+      "sha256": "d1dc588134fc310c438bfb3f22127d7d1224a0b6dfc8f8f799242822a7a43399",
+      "rows": 63
+    },
+    "decisions.csv": {
+      "bytes": 1045,
+      "sha256": "1bd06635052873930f3006d6a267833d25421eef26e409a1c052a71e77bf7ce9",
+      "rows": 12
+    },
+    "decisions.parquet": {
+      "bytes": 7022,
+      "sha256": "81f1a7b9058ed4a428f00662061d2ab4e460c320569aaa3e290fc63cd43d8f22",
+      "rows": 12
+    },
+    "events.csv": {
+      "bytes": 17519,
+      "sha256": "08f09bb4d65880f7803f9d47a57e8b1f4c14b501a3d2392b1dd68f4e1ed55332",
+      "rows": 114
+    },
+    "events.parquet": {
+      "bytes": 13257,
+      "sha256": "64cd5eed267c87f033a38fbe7912909854beb02fc48d002f8899c0ed16ff4259",
+      "rows": 114
+    },
+    "metadata.json": {
+      "bytes": 7005,
+      "sha256": "f249656298e6a5f57441ef27548f8b29599218fff5e474c32f187064c71cd003"
+    },
+    "receptions.csv": {
+      "bytes": 328,
+      "sha256": "d190d8126ebf5eeda44ef782834283e982745f0fd5ffbec1f4d63e28fd4443c7",
+      "rows": 3
+    },
+    "receptions.parquet": {
+      "bytes": 5971,
+      "sha256": "f1e0833debe4875a9cf0d5a359c959ff3562ee2bb9046f890fd3315e7c610280",
+      "rows": 3
+    },
+    "tracking.parquet": {
+      "bytes": 99556,
+      "sha256": "61e1e0f4acca143392986317bbd5fab69e40825f8c8de537e891667e9980f7b4",
+      "rows": 5170
+    }
+  }
+}
