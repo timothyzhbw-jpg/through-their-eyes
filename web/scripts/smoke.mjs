@@ -29,6 +29,7 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const MATCHES = "blind_side_run:3,match:1,press_escape:0";
 const TIMEOUT = 45_000; // per step: the first load fetches the export, fonts and models
 const SETTLE = 2_500; // after the checks, so late errors (models, stream, breakdown) surface
+const BLANK = 20_000; // bytes: a screenshot of the page's background alone; a drawn page is ~400K
 
 const { values: opt } = parseArgs({
   options: {
@@ -185,7 +186,8 @@ async function health(url) {
   }
 }
 
-/** Open one page in a fresh context; resolves to the console errors and uncaught exceptions. */
+/** Open one page in a fresh context; resolves to its console errors and uncaught exceptions, and
+ * notes on the screenshots. */
 async function visit(browser, base, page) {
   const context = await browser.newContext(page.device ?? DESKTOP);
   context.setDefaultTimeout(TIMEOUT);
@@ -198,6 +200,7 @@ async function visit(browser, base, page) {
   );
   const tab = await context.newPage();
   const errors = [];
+  const notes = [];
   tab.on("console", (msg) => {
     if (msg.type() !== "error") return;
     const where = msg.location().url;
@@ -215,8 +218,16 @@ async function visit(browser, base, page) {
     errors.push("the page crashed");
     fail(new Error("stopped at the crash"));
   });
-  const shoot = (suffix) =>
-    tab.screenshot({ path: join(opt.out, `${page.name}${suffix ? `-${suffix}` : ""}.png`) });
+  // Now and then, right after the app swaps screens, SwiftShader hands back a capture with only
+  // the page's background in it while every check on the page passes; it is retaken once. The
+  // screenshots are for people: no check looks at pixels.
+  const shoot = async (suffix) => {
+    const name = `${page.name}${suffix ? `-${suffix}` : ""}.png`;
+    if ((await tab.screenshot({ path: join(opt.out, name) })).length >= BLANK) return;
+    await tab.waitForTimeout(500);
+    const again = await tab.screenshot({ path: join(opt.out, name) });
+    notes.push(`${name}: a blank capture, retaken${again.length < BLANK ? ", blank again" : ""}`);
+  };
   try {
     await tab.goto(new URL(page.path, base).href);
     const checks = page.check(tab, shoot);
@@ -234,7 +245,7 @@ async function visit(browser, base, page) {
     await shoot("").catch(() => {});
     await context.close();
   }
-  return errors;
+  return { errors, notes };
 }
 
 mkdirSync(opt.out, { recursive: true });
@@ -274,11 +285,12 @@ try {
   browser = await launchChrome({ headless: !opt.headed });
   for (const page of pages) {
     const t = performance.now();
-    const errors = await visit(browser, base, page);
+    const { errors, notes } = await visit(browser, base, page);
     const s = ((performance.now() - t) / 1000).toFixed(1);
     if (errors.length) failed++;
     console.log(`${errors.length ? "FAIL" : "ok  "} ${page.name} /${page.path} (${s} s)`);
     for (const e of errors) console.log(`       ${e}`);
+    for (const n of notes) console.log(`       note: ${n}`);
   }
 } finally {
   await browser?.close();
