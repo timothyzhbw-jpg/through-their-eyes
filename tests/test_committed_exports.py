@@ -17,8 +17,10 @@ import pytest
 
 from sim.export import (
     export_hero,
+    export_looks,
     export_what_ifs,
     hero_json,
+    looks_json,
     payload_fixture_json,
     render_payload_fixture,
     what_ifs_json,
@@ -80,6 +82,14 @@ def test_press_escape_what_ifs_are_current():
     _assert_current(
         what_ifs_json(export_what_ifs("press_escape", 0)), "whatif_press_escape_seed0.json"
     )
+
+
+@pytest.mark.parametrize(
+    ("scenario", "seed", "name"),
+    [("blind_side_run", 3, "look_seed3.json"), ("press_escape", 0, "look_press_escape_seed0.json")],
+)
+def test_look_grids_are_current(scenario, seed, name):
+    _assert_current(looks_json(export_looks(scenario, seed)), name)
 
 
 def test_the_structural_check_catches_stale_alerts_but_not_last_unit_noise(hero):
