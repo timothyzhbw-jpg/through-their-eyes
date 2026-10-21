@@ -109,6 +109,7 @@ class HeadModel:
         partial_draws: np.ndarray | None = None,
         drift_noise: np.ndarray | None = None,
         speed_noise: np.ndarray | None = None,
+        omega_mean: np.ndarray | None = None,
     ) -> tuple[np.ndarray, list[FinishedScan]]:
         """Advance every head by one frame.
 
@@ -118,6 +119,7 @@ class HeadModel:
         its side from draws), partial_draws: (N,) uniforms for its amplitude, drift_noise: (N,)
         standard normals that drive the drift. speed_noise: (N,) standard normals for the peak
         head speed of a scan that starts now (None: every scan turns at the mean speed).
+        omega_mean: (N,) each player's own mean peak head speed (None: SimParams.scan_omega's).
         """
         if params.head_nuisance and drift_noise is not None:
             base = np.asarray(base, dtype=float) + self._advance_drift(drift_noise, params, dt)
@@ -131,7 +133,8 @@ class HeadModel:
         for i in range(len(head)):
             sid = scan_id(ids[i], frame)
             z = 0.0 if speed_noise is None else float(speed_noise[i])
-            omega = float(np.clip(mean_omega + sd_omega * z, lo_omega, params.head_omega_max))
+            mean_i = mean_omega if omega_mean is None else float(omega_mean[i])
+            omega = float(np.clip(mean_i + sd_omega * z, lo_omega, params.head_omega_max))
             if i in forced and sid not in dropped and self._free_for_forced(i, frame):
                 if self.active[i] is not None:  # a partial scan gives way to a forced one
                     finished.append(FinishedScan(i, self.active[i], frame))
