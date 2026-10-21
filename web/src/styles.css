@@ -3271,7 +3271,7 @@ optgroup {
 
 /* On a phone the match picker gives way before it pushes the header off the screen. */
 @media (max-width: 760px) {
-  .header-start,
+  .header-start:has(.match-picker),
   .header-start .match-picker {
     min-width: 0;
   }
@@ -3281,16 +3281,31 @@ optgroup {
   }
 }
 
+/* Between a phone and a laptop the viewer button shows its avatar alone: with the Your call pill
+   and the sound button, the full "Watching as …" label would push it off the right edge. */
+@media (min-width: 761px) and (max-width: 900px) {
+  .viewer-toggle > span:not(.avatar),
+  .viewer-toggle > svg {
+    display: none;
+  }
+  .viewer-toggle {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
 /* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
    the stream label goes (the pill already says live), then the brand tightens, then the sound
-   button goes (the commentary panel keeps one). Inside a match the way back or the match picker
-   replaces the brand. */
+   button goes (the commentary panel keeps one). The way back, the match picker or the Your call
+   pill replaces the brand. */
 @media (max-width: 480px) {
   .stage-head .live-status {
     display: none;
   }
   .stage:has(.live-chip.back) .stage-head .brand,
-  .stage:has(.header-start .match-picker) .stage-head .brand {
+  .stage:has(.header-start .match-picker) .stage-head .brand,
+  .stage:has(.header-end .yc-open) .stage-head .brand {
     display: none;
   }
   /* the story's big numbers shrink with the screen instead of running off it */

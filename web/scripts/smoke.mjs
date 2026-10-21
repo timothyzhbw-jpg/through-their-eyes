@@ -45,6 +45,8 @@ const DESKTOP = { viewport: { width: 1440, height: 900 } };
 // The phone is an iPhone as Playwright describes it (viewport, pixel ratio, touch, Safari's user
 // agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering.
 const { defaultBrowserType: _, ...PHONE } = devices["iPhone 17"];
+const { defaultBrowserType: _se, ...PHONE_320 } = devices["iPhone SE"]; // 320 px
+const { defaultBrowserType: _mini, ...PHONE_375 } = devices["iPhone 13 Mini"]; // 375 px
 
 /** The README's tour for judges, and the pages around it. `intro=0` skips the lineup card, which
  * the two lineup pages open and close as a visitor does. */
@@ -73,13 +75,37 @@ const PAGES = [
     name: "phone-hero",
     path: "?intro=0",
     device: PHONE,
-    check: (p, _, note) => phone(p, hero, note),
+    check: (p) => phone(p, hero),
   },
   {
     name: "phone-match-1",
     path: "?match=match-1&intro=0",
     device: PHONE,
-    check: (p, _, note) => phone(p, match, note),
+    check: (p) => phone(p, match),
+  },
+  {
+    name: "phone-320-hero",
+    path: "?intro=0",
+    device: PHONE_320,
+    check: (p) => phone(p, hero),
+  },
+  {
+    name: "phone-320-match-1",
+    path: "?match=match-1&intro=0",
+    device: PHONE_320,
+    check: (p) => phone(p, match),
+  },
+  {
+    name: "phone-375-hero",
+    path: "?intro=0",
+    device: PHONE_375,
+    check: (p) => phone(p, hero),
+  },
+  {
+    name: "phone-375-match-1",
+    path: "?match=match-1&intro=0",
+    device: PHONE_375,
+    check: (p) => phone(p, match),
   },
 ];
 
@@ -142,25 +168,69 @@ async function lineup(page, shoot, button, then) {
   await see(card, "the lineup card");
   await see(card.getByRole("list", { name: "Home line-up" }), "the home line-up on the card");
   await shoot("card");
-  await card.getByRole("button", { name: button }).click();
+  // The card also closes by itself after a few seconds (INTRO_MS), and a slow runner can reach
+  // the button after that: a card that is already gone has closed, which is what this checks.
   try {
-    await card.first().waitFor({ state: "detached" });
+    await card.getByRole("button", { name: button }).click({ timeout: 2000 });
   } catch {
-    throw new Error(`expected "${button}" to close the lineup card`);
+    /* closed by itself, or the click is retried by the wait below */
+  }
+  try {
+    await card.first().waitFor({ state: "detached", timeout: 15_000 });
+  } catch {
+    throw new Error(`expected "${button}" or the timer to close the lineup card`);
   }
   await then(page);
 }
 
-/** On the phone the page should scroll only up and down. On main it does not yet (the live
- * screen's header is wider than a phone), so a sideways scroll is a note, not a failure, until the
- * layout is fixed; then it should fail the page. */
-async function phone(page, check, note) {
+/** On a phone the page should scroll only up and down, and no two header controls overlap or run
+ * off screen, with the live stream running (its status and the header's buttons are then all
+ * there). */
+async function phone(page, check) {
   await check(page);
-  const [wide, width] = await page.evaluate(() => [
-    document.documentElement.scrollWidth,
-    document.documentElement.clientWidth,
-  ]);
-  if (wide > width) note(`scrolls sideways: ${wide} px wide in ${width} px`);
+  await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+  const { wide, width, overlaps, offscreen } = await page.evaluate(() => {
+    const root = document.documentElement;
+    const wide = root.scrollWidth;
+    const width = root.clientWidth;
+    const found = [
+      ...document.querySelectorAll(
+        ".stage-head :is(.brand, .live-chip, .live-status, button, select)",
+      ),
+    ].filter((el) => {
+      if (el.closest(".popover")) return false;
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && getComputedStyle(el).visibility !== "hidden";
+    });
+    // A control that holds another is the other's box, not its own: keep the leaves.
+    const controls = found.filter(
+      (el) => !found.some((other) => other !== el && el.contains(other)),
+    );
+    const name = (el) => {
+      const text = el.textContent.replace(/\s+/g, " ").trim();
+      const hint = (text || el.getAttribute("aria-label") || "").slice(0, 14);
+      return `${el.classList[0] ?? el.tagName.toLowerCase()} ${hint}`.trim();
+    };
+    const rects = controls.map((el) => el.getBoundingClientRect());
+    const overlaps = [];
+    for (let i = 0; i < controls.length; i++) {
+      for (let j = i + 1; j < controls.length; j++) {
+        const a = rects[i];
+        const b = rects[j];
+        const across = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const down = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (across > 0.5 && down > 0.5)
+          overlaps.push(`${name(controls[i])} x ${name(controls[j])}`);
+      }
+    }
+    const offscreen = controls
+      .filter((_, i) => rects[i].left < -0.5 || rects[i].right > width + 0.5)
+      .map(name);
+    return { wide, width, overlaps, offscreen };
+  });
+  if (wide > width) throw new Error(`scrolls sideways: ${wide} px wide in ${width} px`);
+  if (overlaps.length) throw new Error(`header controls overlap: ${overlaps.join(", ")}`);
+  if (offscreen.length) throw new Error(`header controls off screen: ${offscreen.join(", ")}`);
 }
 
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */

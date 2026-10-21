@@ -92,7 +92,7 @@ Player ids stand in for display names.
 | `blind_side` | H9's run was on H8's blind side. | H9的跑位在H8的盲区。 |
 | `cf_pass` | Without that look, H8 would have passed to H1. | 如果没有那一眼，H8会把球传给H1。 |
 | `cf_pass_success` | Without that look, H8 thought the pass to H9 had a 0.07 chance of arriving; it was 0.90. | 如果没有那一眼，H8会以为传给H9的球能到的概率是0.07，实际是0.90。 |
-| `cf_value` | That look was worth 0.09 in expected threat. | 那一眼带来了0.09的预期威胁（xT）。 |
+| `cf_value` | That look was worth 0.13 in expected threat. | 那一眼带来了0.13的预期威胁（xT）。 |
 | `gap_opened` | While the ball travelled to H8, H9 opened up 6.9 metres on A5. | 球传向H8的途中，H9把与A5的距离拉开了6.9米。 |
 | `gap_to_marker` | H9 was 10.5 metres clear of A5 when the pass was played. | 出球时，H9与A5相距10.5米。 |
 | `gap_to_nearest_opponent` | H9 was 10.5 metres from the nearest opponent when the pass was played. | 出球时，H9离最近的对手有10.5米。 |

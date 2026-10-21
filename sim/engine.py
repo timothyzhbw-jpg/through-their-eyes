@@ -108,6 +108,8 @@ class Simulation:
         self.hero_acted = False
         self.hero_resolved_frame: int | None = None
         self.done = False
+        if scenario.decides(self, self.owner):  # e.g. open play: the first carrier decides too
+            self.pending_decision = (self.owner, round(params.first_touch_s / DT))
         self.history: dict[str, list[np.ndarray]] = {
             k: []
             for k in ("pos", "vel", "body", "head", "head_obs", "ball_pos", "ball_vel", "owner")
@@ -455,6 +457,8 @@ class Simulation:
             self.carry[i] = (np.array(chosen.target), until)
             if hero:
                 self.hero_resolved_frame = until
+            if self.scenario.decides(self, i):  # he decides again when the carry ends
+                self.pending_decision = (i, until)
         elif chosen.kind == "shot" and chosen.action.startswith("shot:"):
             self._kick_shot(i, chosen, f)
         else:  # legacy `shot` (no placement): struck at goal and resolved like a pass
