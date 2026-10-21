@@ -488,8 +488,24 @@ export function BreakdownSource() {
           Daily cap reached
         </span>
       )}
+      {origin.recordedAt && (
+        <span
+          className="plan-badge fallback"
+          title={`A recording of the same drill, run at ${origin.recordedAt}`}
+        >
+          Recorded run · {recordedTime(origin.recordedAt)}
+        </span>
+      )}
     </>
   );
+}
+
+/** "10-21 15:04 UTC" from the service's ISO time. */
+export function recordedTime(at: string): string {
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return at;
+  const iso = d.toISOString();
+  return `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC`;
 }
 
 /** Persona and language of the breakdown, and the voice. Offline only the bundled one exists. */

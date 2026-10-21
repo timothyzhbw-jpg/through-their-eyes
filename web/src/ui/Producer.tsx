@@ -7,6 +7,7 @@ import { AGENTS, type Agent } from "../api/client";
 import { crewSteps, STEP_LABEL, type CrewStep } from "../producer/producer";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { recordedTime } from "./Narration";
 
 const SOURCE = { llm: "Model", template: "Template", code: "Code" } as const;
 
@@ -124,6 +125,21 @@ export function Producer() {
         )}
       </div>
       {error && <p className="note producer-error">{error}</p>}
+      {origin?.kind === "api" && origin.drill && origin.recordedAt && (
+        <p className="note producer-recorded">
+          Recorded run from {recordedTime(origin.recordedAt)}: new model runs are limited for now
+          (this address, or today&apos;s budget), so this is the same drill as it ran then.
+        </p>
+      )}
+      {origin?.kind === "api" &&
+        origin.drill &&
+        !origin.recordedAt &&
+        (origin.rateLimited || origin.capped) && (
+          <p className="note producer-recorded">
+            New model runs are limited for now, so this ran without the model: the steps it ran
+            aired their templates.
+          </p>
+        )}
       <p className="note">
         A downed agent's model calls fail as in an outage: the step retries once, then airs its
         template. Bring back resumes the workflow from its checkpoint and re-runs that step; only

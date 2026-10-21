@@ -42,7 +42,7 @@ def _model_app(tmp_path, replies, **changes):
     from agents.testing import FakeChatClient
 
     fake = FakeChatClient(replies)
-    settings = _settings(tmp_path, rate_limit=(100, 600.0), **changes)
+    settings = _settings(tmp_path, **{"rate_limit": (100, 600.0), **changes})
     return create_app(settings, client=fake, model_id="fake-model"), fake
 
 
@@ -125,7 +125,7 @@ def test_egress_limits_come_from_the_environment(monkeypatch):
     for name in ("TTE_EGRESS_PER_CLIENT", "TTE_DAILY_EGRESS_GB", "TTE_CREW_CONCURRENCY"):
         monkeypatch.delenv(name, raising=False)
     s = Settings.from_env()
-    assert (s.egress_per_client, s.daily_egress_gb, s.crew_concurrency) == ((500, 3600.0), 20, 2)
+    assert (s.egress_per_client, s.daily_egress_gb, s.crew_concurrency) == ((500, 3600.0), 10, 2)
     monkeypatch.setenv("TTE_EGRESS_PER_CLIENT", "50/600")
     monkeypatch.setenv("TTE_DAILY_EGRESS_GB", "2.5")
     monkeypatch.setenv("TTE_CREW_CONCURRENCY", "1")
@@ -275,3 +275,123 @@ def test_the_load_test_refuses_any_host_but_localhost():
     live = argparse.Namespace(api="https://tte-api.example.azurecontainerapps.io")
     with pytest.raises(SystemExit, match="local API only"):
         asyncio.run(loadtest.main_async(live))
+
+
+# --- a limited drill or bring-back is never a dead end (SPEC 6) ---------------------------------
+
+DRILL = {"match": MATCH, "personas": ["analyst"], "languages": ["en"], "fail": ["telestrator"]}
+
+
+def _steps(response):
+    return {s["step"]: s for s in response["result"]["trace"]}
+
+
+def test_a_limited_drill_replays_the_recorded_run_and_its_recorded_bring_back(tmp_path, replies):
+    app, fake = _model_app(tmp_path, replies, rate_limit=(1, 600.0))
+    with TestClient(app) as c:
+        first = c.post("/api/breakdowns", json=DRILL, headers=_ip(1)).json()
+        early = c.post("/api/breakdowns", json=DRILL, headers=_ip(1)).json()
+        back = c.post(f"/api/breakdowns/{first['key']}/bring-back", json={"step": "telestrator"},
+                      headers=_ip(2)).json()  # fmt: skip
+        calls = dict(fake.calls)
+        limited = c.post("/api/breakdowns", json=DRILL, headers=_ip(1)).json()
+        recorded_back = c.post(f"/api/breakdowns/{limited['key']}/bring-back",
+                               json={"step": "telestrator"}, headers=_ip(1)).json()  # fmt: skip
+        again = c.post(f"/api/breakdowns/{limited['key']}/bring-back",
+                       json={"step": "analyst"}, headers=_ip(1))  # fmt: skip
+    assert first["source"] == "model" and "recorded" not in first
+    assert early["recorded"]["at"] and early["rate_limited"] is True
+    assert early["drill"]["pending"] == []  # no bring-back recorded yet: no dead button
+    assert limited["recorded"]["at"] and limited["key"] == early["key"] != first["key"]
+    assert limited["result"] == first["result"] and limited["source"] == "model"
+    assert limited["drill"] == {"down": ["telestrator"], "pending": ["telestrator"]}
+    assert recorded_back["recorded"]["at"] and recorded_back["result"] == back["result"]
+    assert _steps(recorded_back)["telestrator"]["source"] == "llm"
+    assert again.status_code == 404  # the analyst was not down in that drill
+    assert fake.calls == calls  # the replays called no model
+
+
+def test_a_limited_bring_back_with_no_recording_comes_back_without_the_model(tmp_path, replies):
+    app, fake = _model_app(tmp_path, replies, rate_limit=(1, 600.0))
+    with TestClient(app) as c:
+        drill = c.post("/api/breakdowns", json=DRILL, headers=_ip(1)).json()
+        calls = dict(fake.calls)
+        back = c.post(f"/api/breakdowns/{drill['key']}/bring-back",
+                      json={"step": "telestrator"}, headers=_ip(1)).json()  # fmt: skip
+    assert back["rate_limited"] is True and "recorded" not in back
+    assert back["key"] == drill["key"] and back["source"] == "offline"
+    assert back["drill"] == {"down": [], "pending": []}
+    assert _steps(back)["telestrator"]["source"] == "template"
+    assert fake.calls == calls
+
+
+def test_past_every_limit_with_no_recording_a_drill_is_429(tmp_path, replies, monkeypatch):
+    monkeypatch.setattr(main, "DAILY_OFFLINE_DRILLS", 0)  # no offline runs left either
+    app, _ = _model_app(tmp_path, replies, rate_limit=(1, 600.0))
+    with TestClient(app) as c:
+        c.post("/api/breakdowns", json=DRILL, headers=_ip(1))
+        refused = c.post("/api/breakdowns", json={**DRILL, "fail": ["analyst"]}, headers=_ip(1))
+    assert refused.status_code == 429 and refused.json()["detail"].startswith("rate_limited")
+
+
+def test_recordings_are_bounded_and_an_offline_run_never_replaces_a_model_run(tmp_path):
+    from api.recorded import Recordings
+
+    recordings = Recordings(tmp_path, keep=3)
+
+    def rec(source):
+        return {"at": "2026-10-21T15:00:00+00:00", "parts": {}, "path": [],
+                "response": {"source": source}}  # fmt: skip
+
+    recordings.put("a", rec("model"))
+    recordings.put("a", rec("offline"))
+    assert recordings.get("a")["response"]["source"] == "model"
+    recordings.put("b", rec("offline"))
+    recordings.put("b", rec("model"))
+    assert recordings.get("b")["response"]["source"] == "model"
+    for key in "cdef":
+        recordings.put(key, rec("model"))
+    assert len(list(tmp_path.glob("*.json"))) == 3 and recordings.has("f")
+
+
+# --- the judging window: its own limits on its UTC days ------------------------------------------
+
+
+@pytest.mark.parametrize("during", [True, False])
+def test_the_judging_window_raises_the_limits_on_its_days(tmp_path, replies, during):
+    from datetime import timedelta
+
+    today = datetime.now(UTC).date()
+    window = (today, today) if during else (today - timedelta(days=2), today - timedelta(days=1))
+    app, fake = _model_app(tmp_path, replies, rate_limit=(1, 600.0), daily_model_cap=1,
+                           judging_window=window, judging_rate_limit=(3, 600.0),
+                           judging_daily_model_cap=3)  # fmt: skip
+    body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"], "regenerate": True}
+    with TestClient(app) as c:
+        out = [c.post("/api/breakdowns", json=body, headers=_ip(1)).json() for _ in range(4)]
+    sources = [o["source"] for o in out]
+    if during:  # a judge's tour of three model runs fits; the fourth meets the window's limits
+        assert sources[:3] == ["model"] * 3 and (out[3]["rate_limited"] or out[3]["capped"])
+        assert fake.calls["director"] == 3
+    else:
+        assert sources[0] == "model" and out[1]["capped"] and fake.calls["director"] == 1
+        assert out[1]["rate_limited"] is False  # the cap is checked first
+
+
+def test_the_judging_window_comes_from_the_environment(monkeypatch):
+    from datetime import date
+
+    for name in ("TTE_JUDGING_WINDOW", "TTE_JUDGING_RATE_LIMIT", "TTE_JUDGING_DAILY_MODEL_CAP"):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings.from_env()
+    assert s.judging_window == (date(2026, 10, 27), date(2026, 11, 10))
+    assert s.limits_on(date(2026, 10, 26)) == ((3, 600.0), 40)
+    assert s.limits_on(date(2026, 10, 27)) == s.limits_on(date(2026, 11, 10)) == ((8, 600.0), 100)
+    assert s.limits_on(date(2026, 11, 11)) == ((3, 600.0), 40)
+    monkeypatch.setenv("TTE_JUDGING_WINDOW", "off")
+    monkeypatch.setenv("TTE_JUDGING_RATE_LIMIT", "6/600")
+    monkeypatch.setenv("TTE_JUDGING_DAILY_MODEL_CAP", "60")
+    s = Settings.from_env()
+    assert s.judging_window is None and s.limits_on(date(2026, 10, 30)) == ((3, 600.0), 40)
+    assert (s.judging_rate_limit, s.judging_daily_model_cap) == ((6, 600.0), 60)
+    assert Settings().judging_window is None  # a Settings made in code has no window

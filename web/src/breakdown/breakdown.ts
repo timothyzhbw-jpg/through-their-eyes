@@ -34,6 +34,7 @@ export type BreakdownOrigin =
       trace: StepTrace[]; // each crew step: the model, its template, or code
       traceId: string | null; // operation_Id in Application Insights; null: tracing was off
       drill: Drill | null; // a failure drill (SPEC 6); null for a normal breakdown
+      recordedAt: string | null; // a recorded drill run, replayed while limited: when it ran
     };
 
 /** What the narration, the breakdown player and the voice read. */
@@ -114,6 +115,7 @@ export function apiBreakdown(
     trace: result.trace,
     traceId: result.trace_id ?? null,
     drill: res.drill ?? null,
+    recordedAt: res.recorded?.at ?? null,
   };
   const script = result.scripts.find((s) => s.persona === persona && s.language === language);
   const checked = script

@@ -21,9 +21,12 @@ message counts against a per-client and a daily egress budget (api/egress.py).
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
 the per-client limit and, with a model, the daily model cap; offline, drills have their own daily
-cap (`DAILY_OFFLINE_DRILLS`). Past any of them: 429. No model is called for a downed step.
+cap (`DAILY_OFFLINE_DRILLS`). No model is called for a downed step.
 `POST /api/breakdowns/{key}/bring-back` re-runs one downed step from the run's checkpoint, at most
-`MAX_BRING_BACKS` times per drill.
+`MAX_BRING_BACKS` times per drill. Every drill and bring-back is recorded (api/recorded.py). A
+limited one is never a dead end: the recording of the same drill in the same state is replayed,
+labelled with when it ran, else the crew runs without the model (counted against the offline
+drills' cap), flagged `rate_limited` or `capped`. Only past that cap too: 429.
 
 End-of-match recap (SPEC 6): `POST /api/recaps` runs the crew on a whole stitched match, cached
 and limited exactly like a breakdown (the same per-client limit and daily model cap; past them,
@@ -54,6 +57,7 @@ import shutil
 import unicodedata
 import uuid
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, nullcontext, suppress
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -75,6 +79,7 @@ from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
 from api import guard, tts
 from api.egress import MB, Egress, EgressLimit
 from api.live import Slots, stream
+from api.recorded import Recordings, now, recording_key
 from api.settings import Settings
 from api.store import (
     DailyCap,
@@ -92,6 +97,8 @@ VERSION = "0.5.0"
 DRILLS_KEPT = 50  # failure drills kept on disk for a bring-back
 MAX_BRING_BACKS = 5  # per drill; with at most 8 supersteps each, well under MAX_SUPERSTEPS
 DAILY_OFFLINE_DRILLS = 200  # drills and bring-backs per UTC day without a model, all clients
+RECORDINGS_KEPT = 200  # recorded drills and bring-backs, served when a viewer is limited
+LIMITED = ("rate_limited", "capped")
 KEY = re.compile(r"[0-9a-f]{32}")  # content_key()
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
 MAX_LIST = 8  # personas or languages in one request, before duplicates are dropped
@@ -197,6 +204,7 @@ def create_app(
     checkpoint_dir = Path(settings.cache_dir) / "checkpoints"
     runs_dir = checkpoint_dir / "runs"
     drills = DrillStore(checkpoint_dir / "drills", DRILLS_KEPT)
+    recordings = Recordings(checkpoint_dir / "recordings", RECORDINGS_KEPT)
     locks = KeyedLocks()  # one crew run per key at a time
     speech_limiter = RateLimiter(*settings.tts_rate_limit)  # POST /api/tts per client
     speech_cap = DailyCap(settings.daily_tts_cap)  # Azure Speech syntheses per UTC day
@@ -239,7 +247,9 @@ def create_app(
         """Whether a model-backed regeneration may run now: "model", "capped" or "rate_limited".
 
         The daily cap is checked first, so a capped request does not use up the client's quota.
+        On the judging window's UTC days, its limits apply (`Settings.limits_on`).
         """
+        (limiter.count, limiter.window_s), cap.count = settings.limits_on(datetime.now(UTC).date())
         if cap.left() <= 0:
             return "capped"
         if not limiter.allow(_client_ip(request)):
@@ -251,22 +261,64 @@ def create_app(
         """A slot for a crew run with a model (`crew_slots`); a run without one needs none."""
         return crew_slots if llm is not None else nullcontext()
 
-    def drill_allowed(request: Request) -> None:
-        """A drill or a bring-back runs the crew: it counts against the per-client limit and a
-        daily cap, the model's or, offline, the drills' own. Past any of them: 429."""
+    def drill_verdict(request: Request) -> str:
+        """Whether a drill or a bring-back may run the crew now: "model", "offline",
+        "rate_limited" or "capped". It counts against the per-client limit and a daily cap, the
+        model's or, offline, the drills' own."""
         if client is not None:
-            verdict = regeneration(request)
-        elif drill_cap.left() <= 0:
-            verdict = "capped"
-        elif not limiter.allow(_client_ip(request)):
-            verdict = "rate_limited"
-        else:
-            drill_cap.take()
-            verdict = "offline"
-        if verdict == "rate_limited":
-            raise HTTPException(429, "rate_limited: try again in a few minutes")
-        if verdict == "capped":
+            return regeneration(request)
+        if drill_cap.left() <= 0:
+            return "capped"
+        if not limiter.allow(_client_ip(request)):
+            return "rate_limited"
+        drill_cap.take()
+        return "offline"
+
+    def limited_run(verdict: str, rk: str) -> dict[str, Any] | None:
+        """A limited drill or bring-back is never a dead end: the recording of the same drill in
+        the same state if there is one, else None and the crew runs offline (no model, counted
+        against the offline drills' cap). Past that cap too: 429."""
+        if (shown := replay(rk, verdict)) is not None:
+            return shown
+        if not drill_cap.take():
+            if verdict == "rate_limited":
+                raise HTTPException(429, "rate_limited: try again in a few minutes")
             raise HTTPException(429, "capped: today's budget is used up; try again tomorrow (UTC)")
+        return None
+
+    def flags(verdict: str) -> dict[str, bool]:
+        return {"rate_limited": verdict == "rate_limited", "capped": verdict == "capped"}
+
+    def rec_parts(ctx: MomentContext, asked: dict[str, Any], down0: list[str]) -> dict[str, Any]:
+        """What shapes a drill's recordings, but for its path (api/recorded.py)."""
+        return {"card": ctx.card.content_hash(), "personas": asked["personas"],
+                "languages": asked["languages"], "prompts": PROMPT_VERSION,
+                "pipeline": PIPELINE_VERSION, "down": down0}  # fmt: skip
+
+    def replay(rk: str, verdict: str) -> dict[str, Any] | None:
+        """Recording `rk`, labelled with the time it ran. Its pending agents are the ones whose
+        bring-back was recorded too, so every button it offers leads somewhere."""
+        rec = recordings.get(rk)
+        if rec is None:
+            return None
+        response = rec["response"]
+        cues.add_drill(response)  # its voice cues may be spoken, like any served breakdown
+
+        def recorded(step: str) -> bool:
+            return recordings.has(recording_key(**rec["parts"], path=[*rec["path"], step]))
+
+        pending = [step for step in response["drill"]["pending"] if recorded(step)]
+        return {**response, "key": rk, "cached": True, **flags(verdict),
+                "drill": {**response["drill"], "pending": pending},
+                "recorded": {"at": rec["at"]}}  # fmt: skip
+
+    def record_run(ctx: MomentContext, record: dict[str, Any], response: dict[str, Any]) -> None:
+        """Record a drill or a bring-back that ran, under the drill's history."""
+        parts = rec_parts(ctx, record["result"]["request"], record["history"]["down0"])
+        path = record["history"]["path"]
+        public = {k: v for k, v in response.items() if k not in ("key", "rate_limited", "capped")}
+        recordings.put(recording_key(**parts, path=path),
+                       {"at": now(), "parts": parts, "path": path, "response": public})  # fmt: skip
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -362,10 +414,15 @@ def create_app(
                                **extra)  # fmt: skip
 
         if body.fail:  # a fresh run under its own key: never a cache hit, never cached for others
-            drill_allowed(request)
             down = sorted(set(body.fail))
-            k = key(model, fail=down, run=uuid.uuid4().hex)
-            return await _drill(m, ctx, body, down, k, where)
+            verdict = drill_verdict(request)
+            asked = {"personas": body.personas, "languages": body.languages}
+            rk = recording_key(**rec_parts(ctx, asked, down), path=[])
+            if verdict in LIMITED and (shown := limited_run(verdict, rk)) is not None:
+                return shown
+            llm = client if verdict == "model" else None
+            k = key(model if llm is not None else "offline", fail=down, run=uuid.uuid4().hex)
+            return {**await _drill(m, ctx, body, down, k, where, llm), **flags(verdict)}
         # The Analyst's tools shape a model breakdown, so they are part of its key.
         model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
         offline_key = key("offline")
@@ -419,22 +476,36 @@ def create_app(
         down: list[str],
         k: str,
         where: dict[str, Any],
+        llm: Any,
     ) -> dict[str, Any]:
-        """The crew with `down` taken down, checkpointed for a bring-back (SPEC 6)."""
-        async with locks.hold(k), crew_slot(client):
-            run = await run_crew(ctx, client=client, personas=tuple(body.personas),
+        """The crew with `down` taken down, checkpointed for a bring-back and recorded (SPEC 6).
+        `llm`: the model, or None for an offline run."""
+        async with locks.hold(k), crew_slot(llm):
+            run = await run_crew(ctx, client=llm, personas=tuple(body.personas),
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
                                  down=down, checkpoints=drills.checkpoints(k))  # fmt: skip
-            record = {"source": "model" if client is not None else "offline",
+            record = {"source": "model" if llm is not None else "offline",
                       "result": run.result.model_dump(mode="json", by_alias=True),
                       "drill": {"down": down, "pending": run.pending}, "match": m.id,
-                      "moment": body.moment, "bring_backs": 0, **where}  # fmt: skip
+                      "moment": body.moment, "bring_backs": 0,
+                      "history": {"down0": down, "path": []}, **where}  # fmt: skip
             drills.put(k, record)
-        return _drill_response(k, record)
+        response = _drill_response(k, record)
+        record_run(ctx, record, response)
+        return response
 
     @app.post("/api/breakdowns/{key}/bring-back")
     async def bring_back(key: str, body: BringBackBody, request: Request) -> dict[str, Any]:
-        """Re-run one downed step of a drill from its checkpoint; the rest is kept (SPEC 6)."""
+        """Re-run one downed step of a drill from its checkpoint; the rest is kept (SPEC 6).
+
+        Limited, it replays the recording of the same bring-back, else runs it offline. On a
+        recorded drill (its key is a recording's), it replays the recorded bring-back."""
+        if KEY.fullmatch(key) and drills.get(key) is None and (rec := recordings.get(key)):
+            child = recording_key(**rec["parts"], path=[*rec["path"], body.step])
+            if (shown := replay(child, "")) is None:
+                raise HTTPException(404, f"this recorded run has no bring-back of the "
+                                         f"{body.step}: run a new drill")  # fmt: skip
+            return shown
         if not KEY.fullmatch(key) or drills.get(key) is None:
             raise HTTPException(404, "no failure drill with this key (drills last until the API "
                                      "restarts or redeploys): run the drill again")  # fmt: skip
@@ -450,27 +521,38 @@ def create_app(
                                          "run a new drill")  # fmt: skip
             if not drills.has_checkpoints(key):
                 raise HTTPException(410, "this drill's checkpoints are gone: run the drill again")
-            drill_allowed(request)
+            verdict = drill_verdict(request)
             m = await match_or_404(record["match"])
             ctx = m.context(record.get("moment"))
             if ctx is None:
                 raise HTTPException(410, "this drill's moment is no longer served: run it again")
             asked = record["result"]["request"]
+            history = record.get("history") or {"down0": drill["down"], "path": []}
+            path = [*history["path"], body.step]
+            rk = recording_key(**rec_parts(ctx, asked, history["down0"]), path=path)
+            if verdict in LIMITED and (shown := limited_run(verdict, rk)) is not None:
+                return shown
+            llm = client if verdict == "model" else None  # limited: the step comes back offline
             down = [d for d in drill["down"] if d != body.step]
             try:
-                async with crew_slot(client):
-                    run = await run_crew(ctx, client=client, personas=tuple(asked["personas"]),
+                async with crew_slot(llm):
+                    run = await run_crew(ctx, client=llm, personas=tuple(asked["personas"]),
                                          languages=tuple(asked["languages"]),
                                          use_mcp=settings.analyst_mcp, down=down,
                                          checkpoints=drills.checkpoints(key),
                                          bring_back=body.step)  # fmt: skip
             except NotWaiting as e:
                 raise HTTPException(410, f"{e}: run the drill again") from e
+            on_model = llm is not None and record["source"] == "model"
             record = {**record, "result": run.result.model_dump(mode="json", by_alias=True),
+                      "source": "model" if on_model else "offline",
                       "drill": {"down": down, "pending": run.pending},
-                      "bring_backs": record["bring_backs"] + 1}  # fmt: skip
+                      "bring_backs": record["bring_backs"] + 1,
+                      "history": {"down0": history["down0"], "path": path}}  # fmt: skip
             drills.put(key, record)
-        return _drill_response(key, record)
+        response = _drill_response(key, record)
+        record_run(ctx, record, response)
+        return {**response, **flags(verdict)}
 
     @app.post("/api/recaps")
     async def recap(body: RecapBody, request: Request) -> dict[str, Any]:
