@@ -39,9 +39,8 @@ describe("count-up", () => {
 
   it("keeps the verified value as the page's text; the counting digits are drawn on top", () => {
     const html = renderToStaticMarkup(<CountUp text="0.3 metres" id="L3:0" />);
-    expect(html).toBe(
-      '<span class="count counting" data-count="0.0 metres">' +
-        '<span class="count-value">0.3 metres</span></span>',
+    expect(html).toMatch(
+      /^<span class="count counting" data-count="0\.0 metres"><span class="count-value">0\.3 metres<\/span><span class="stamp" aria-hidden="true">/,
     );
   });
 

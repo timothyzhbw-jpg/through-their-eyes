@@ -89,11 +89,10 @@ export function CountUp({
       data-count={done ? undefined : countText(text, progress)}
     >
       <span className="count-value">{text}</span>
-      {done && (
-        <span className="stamp" aria-hidden="true">
-          <CheckIcon />
-        </span>
-      )}
+      {/* There from the start, hidden while counting, so the line does not move when it lands. */}
+      <span className="stamp" aria-hidden="true">
+        <CheckIcon />
+      </span>
     </span>
   );
 }

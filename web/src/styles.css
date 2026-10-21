@@ -3491,6 +3491,10 @@ optgroup {
   color: var(--floodlight);
   animation: stamp-pop var(--t-base) var(--spring) both;
 }
+.count.counting .stamp {
+  opacity: 0;
+  animation: none;
+}
 .count .stamp svg {
   width: 100%;
   height: 100%;
