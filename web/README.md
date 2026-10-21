@@ -190,6 +190,12 @@ src/
               Three Fiber), the HUD, the broadcast camera and the stadium
   pitchControl/ the pitch-control shader and its board layer, GPU parity test and its harness
   skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
+  alerts/     blind-side alerts from the export, for the board, first person and the HUD
+  options/    pass options at the decision: believed and true targets, chance and value
+  players/    the rigged Gameplay Football players: rig, gait, look, kits
+  whatif/     "What if…?": the bundled what-ifs, and free questions to POST /api/whatif
+  yourcall/   "Your call": decide with what he knew, then the reveal (a pure reducer, its scene)
+  producer/   the Producer's failure drill: take agents down, bring them back, step sources
   ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
               transport + timeline, caption + evidence card, the story's chapters, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
@@ -368,6 +374,28 @@ src/
   runtime validator. The Python side can produce the same JSON shape for the Telestrator agent.
 - **TypeScript strict mode** is on; `npm run typecheck` is the compile step (Vite itself only
   strips types).
+
+### Invariants and tests
+
+- **Nothing unchecked looks checked.** Captions, the call and what-if answers come from render
+  payloads (SPEC 5.3) checked against the moment before use; a line with an unsupported claim is
+  withheld, and a counterfactual claim always says it is inside the sim. Numbers that are not
+  claims (telemetry, alerts, options other than the ones claims cover) are marked `sim`, and the
+  bundled fixture says it was not checked by the verifier.
+- **Plans are validated before they play**, by the same rules as `agents/plan.py`; an invalid
+  plan becomes the template plan.
+- **Shader parity.** The pitch-control shader must match `analytics/pitch_control.py` within 0.02
+  on fixed snapshots (`src/pitchControl/pitchControl.gpu.test.ts`, real GLSL in headless
+  Chrome). A change to the kernel regenerates `snapshots.json`
+  (`uv run python -m eval.pitch_control_parity`) in the same PR.
+- **Bundled data is generated, never edited** (`public/data/`, [Data](#data));
+  `tests/test_committed_exports.py` fails when it is stale.
+- **Views only read the store**, and anything a stitched match draws reads `useView()`;
+  `useSession()` is for hero-only panels and throws inside a match.
+- Tests sit next to the code (`*.test.ts`, `*.test.tsx`, with `testing.tsx` for fetch, WebSocket
+  and API stand-ins). CI's `web` job runs `npm ci`, `licenses`, `typecheck`, `format:check`,
+  `test`, `build` and `node ../video/capture.mjs --list`; its `smoke` job runs `npm run smoke`.
+  The whole flow: [docs/CONTRIBUTING.md](../docs/CONTRIBUTING.md).
 
 ## Dependencies
 
