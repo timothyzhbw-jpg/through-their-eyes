@@ -432,12 +432,63 @@ Per player: `V(x) = FOV(x; head_yaw, speed) × (1 − Occlusion(x))`. Metrics:
 about 100 lines). socceraction is not used: it is no longer maintained and would be a dependency
 for a few lines of maths. Cache the grid per sim version.
 
-### 4.6 Pass metrics and speeds
-- Pass distance, completion, and difficulty ∈ [0, 1] from: distance, interception risk along the
-  path, pressure on passer and receiver, progression (ΔxT), line-breaking.
-- Player speed from smoothed velocity. Sprint > 7.0 m/s (25.2 km/h); high-speed running > 5.5 m/s
-  (19.8 km/h).
-- Ball speed and shot speed from the ball trajectory.
+### 4.6 Pass metrics and speeds (live match stats)
+The challenge's real-time match intelligence list: players named on screen with speed and
+distance indicators at thresholds; pass distance, accuracy and difficulty; ball and shot speed.
+Kernels in [analytics/stats.py](../analytics/stats.py) (numpy reference), the timeline in
+[analytics/live_stats.py](../analytics/live_stats.py).
+
+**Inputs: only what the live stream carries** (§2): positions and the ball in mm, the owner, and
+the event feed (`pass`, `reception`, `interception`, `out`, `shot`). No sim velocities, beliefs
+or pass outcomes from the sim's own attributes. A stitched match's possessions are tracking
+segments: positions jump at a possession's first frame, so no speed, distance or pass spans one.
+
+**Causal.** Every value at frame f uses frames ≤ f only (tested by truncating the input), so it
+could run frame by frame on a live feed. Each cue carries the frame at which its value is final:
+a pass at its reception, interception or out; a sprint at its first frame back below the threshold.
+
+- **Speed.** Smoothed over the last 0.2 s: v(f) = |p(f) − p(f − k)| / (k·dt), k = min(5, frames
+  since the segment began); 0 on a segment's first frame. The same for the ball. *Tunable.*
+- **Thresholds.** High-speed running > 5.5 m/s (19.8 km/h), sprint > 7.0 m/s (25.2 km/h): the most
+  common entry speeds for male professionals in the 30 studies of Gualtieri et al. (2023). A sprint
+  is a run above 7.0 m/s lasting at least 0.4 s (10 frames), as the sprint moment (§5.1); that
+  duration is ours, not a published value.
+- **Distance covered.** The sum of frame-to-frame steps within a segment (the sim's tracking has
+  no position noise; a real feed would be smoothed first). High-speed and sprint distance count
+  the steps that end above each threshold. Milestones every 250 m (*tunable*).
+- **Passes.** A pass event starts one; the first `reception`, `interception` or `out` after it
+  resolves it. Attempted = resolved; completed = resolved by a teammate's reception (accuracy =
+  completed / attempted). A pass still in flight when its segment ends, or when another kick
+  follows, is not counted. Distance: from the ball at the kick to the ball at the resolution.
+- **Ball and shot speed.** Release speed: the mean ball speed over the first 0.2 s after the kick
+  (|b(k + m) − b(k)| / (m·dt), m = min(5, frames to the resolution)); shots too, once shot events
+  exist (§3.3). The live ball speed is the smoothed speed above.
+- **Pass difficulty** ∈ [0, 1], a fixed formula from our kernels, set before any check of it and
+  not fitted to our outcomes:
+  `difficulty = 0.4·lane + 0.2·passer + 0.2·receiver + 0.2·min(d / 50 m, 1)`.
+  - *lane*: interception risk along the ball's path, after the physics-based pass model of
+    Spearman et al. (2017), as the decision model's P(win ball) (§3.5) on the tracked state. Per
+    opponent, the larger of two chances: he reacts and reaches a point of the path before the ball,
+    `logistic(π/(√3·σ)·(τ − TTI))` maximised over the path (τ the ball's time to the point, TTI
+    from his position and smoothed velocity at the kick, §4.1, σ = 0.45 s); or, before he reacts,
+    the ball comes within the control radius (1 m) of his run, with 0.3 m of position spread (the
+    run-in). Then `1 − Π (1 − p)` over opponents. The path is the one the ball travelled, so the
+    rating describes the pass as played.
+  - *passer*: pressing intensity on the passer at the kick (§4.3, the carrier's value).
+  - *receiver*: pressing intensity on the receiver's body when the ball arrives (§4.3, without
+    the ball term): the reception's player, or for a failed pass the pass event's intended
+    receiver (0 when the feed names none).
+  - *distance*: a 50 m pass scores 1 (*tunable*). The weights are a design choice: the lane, the
+    direct way a pass fails, counts twice each other factor. Progression and line-breaking (ΔxT)
+    are a pass's value, not its difficulty, and stay out.
+  - Bands for viewers: < 0.25 routine, < 0.5 moderate, < 0.75 hard, else very hard.
+- **Names.** Fictional names by player id ([sim/roster.py](../sim/roster.py)), never real
+  players'; the export is unchanged.
+- **Serving.** `GET /api/matches/<id>/stats` (pydantic `MatchStats`: player and team totals, cues,
+  definitions); `?frame=F` is the snapshot at frame F, `?tracks=true` adds per-frame ball speed,
+  speeds above 19.8 km/h and per-second distance checkpoints for viewers. The live stream sends each
+  cue as a `stat` message on its frame (§2), timecoded for a graphics engine. The Analyst's MCP
+  tool `get_match_stats` serves the same numbers (§6).
 
 ### 4.7 Scan detector
 Input: the `head_yaw` time series plus the player's and the ball's positions (needed for the ball
