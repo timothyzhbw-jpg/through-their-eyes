@@ -82,3 +82,27 @@ class ForceAction:
 
     def apply(self, sim: Simulation) -> None:
         sim.forced_actions[(sim.index(self.player), self.frame)] = self.action
+
+
+@dataclass(frozen=True)
+class DropStep:
+    """The player does not make this step (id "step:<player>:<start frame>")."""
+
+    step_id: str
+
+    def apply(self, sim: Simulation) -> None:
+        sim.dropped_steps.add(self.step_id)
+
+
+@dataclass(frozen=True)
+class SightAt:
+    """In this run the player's first sight of the current shot is `frame`, seen or not.
+
+    Analysis only. With no override the keeper's sight is the ordinary visibility test.
+    """
+
+    player: str
+    frame: int
+
+    def apply(self, sim: Simulation) -> None:
+        sim.sight_at[sim.index(self.player)] = self.frame
