@@ -404,7 +404,12 @@ export function dress(scene: THREE.Group, textures: AppTextures): BakedModel {
       default:
         break;
     }
-    if (old !== mesh.material) old.dispose();
+    if (old !== mesh.material) {
+      // Which part of the file it dresses, so a look can tint the baked crowd or stands
+      // (MeshBasicMaterial.color multiplies the baked colour).
+      (mesh.material as THREE.Material).userData.part = old.name;
+      old.dispose();
+    }
   }
   for (const mesh of grass) mesh.removeFromParent();
   return { scene, time, groundLight };

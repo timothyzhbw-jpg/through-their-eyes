@@ -459,6 +459,13 @@ describe("loading the baked stadium", () => {
     expect(meshes[0].material).toMatchObject({ map: expect.any(THREE.Texture) }); // the stands
     expect(meshes[1].material).toMatchObject({ vertexColors: true, alphaTest: 0.5 }); // crowd
     expect((meshes[3].material as THREE.Material).userData.lamp).toBe(true); // the lamp faces
+    expect(meshes.map((m) => (m.material as THREE.Material).userData.part)).toEqual([
+      "stadium",
+      "crowd",
+      "baked_vc",
+      "lamp",
+      "board",
+    ]);
     expect(model.groundLight).toBe(light.map);
   });
 });
