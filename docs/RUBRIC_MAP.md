@@ -5,8 +5,8 @@ point of the Best Multi-Agent System category, with the evidence for it: files, 
 reports, pull requests, and a live trace. **Missing** marks what is not there; **Partial** marks
 evidence that covers less than the claim.
 
-State on 2026-10-20: `main` at `6136323` plus the judges' deep links (this file's PR).
-`uv run pytest`: 464 passed. `npm test` in `web/`: 137 passed. Live site:
+State on 2026-10-21: `main` at `febaa08`. CI on `main` at `44c0bb5` (run 39583678095): pytest
+1216 passed, `npm test` in `web/` 595 passed, the end-to-end smoke test 15 of 15 pages. Live site:
 https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 `timothyzhbw-jpg/through-their-eyes`; work committed straight to `main` is cited by commit.
 
@@ -29,8 +29,8 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 |---|---|---|
 | A production crew as an Agent Framework workflow | [agents/workflow.py](../agents/workflow.py): Director → Analyst → (Telestrator ∥ narration) → Verifier ⇄ narration → Voice, built with `WorkflowBuilder` (fan-out, fan-in, rewrite loop); commit `2fa870a`, parallel lanes PR #11 | ✅ |
 | Models choose, code states the facts | [agents/schemas.py](../agents/schemas.py): the Analyst and the narrators answer with structured outputs whose claim ids are an enum of verified claims, so a model cannot add a number; [tests/test_agents.py](../tests/test_agents.py) `test_a_model_cannot_add_its_own_words_or_unknown_claims`, `test_model_free_text_with_a_number_is_rejected` | ✅ |
-| Deterministic verification of every claim | [explain/verifier.py](../explain/verifier.py), [explain/claims.py](../explain/claims.py) (PR #6); [corruption](../eval/reports/corruption.md): 90/90 false perturbations refuted, 0 unsupported claims rendered | ✅ |
-| Anchoring beats free text | [narration_ablation](../eval/reports/narration_ablation.md) (PR #25): 58 of 66 (88%) free-text first-draft lines fail the Verifier, 47 with made-up ids or numbers; anchored 0 of 111; groundedness 4.90 vs 5.00 (Foundry `GroundednessEvaluator`) | ✅ |
+| Deterministic verification of every claim | [explain/verifier.py](../explain/verifier.py), [explain/claims.py](../explain/claims.py) (PR #6); [corruption](../eval/reports/corruption.md): 90/90 perturbed claims refuted (a number off by one unit or by 20%, a swapped player, a wrong order), 0 unsupported claims rendered | ✅ |
+| Anchoring beats free text | [narration_ablation](../eval/reports/narration_ablation.md) (PR #25): about half of the free-text first-draft lines (34 of 66) name a player or a number that no claim holds, and none passes the Verifier (counting format violations too, 58 of 66 fail it); anchored 0 of 111; groundedness of the scripts that aired 4.90 vs 5.00 (Foundry `GroundednessEvaluator`) | ✅ |
 | Moments chosen by counterfactual impact, perception first | [explain/moments.py](../explain/moments.py), [explain/lenses.py](../explain/lenses.py) (PR #1); the hero lens is perception | ✅ |
 | Tools over MCP | [agents/mcp_server.py](../agents/mcp_server.py), started by the deployed API for each uncached model breakdown (PR #41, `TTE_ANALYST_MCP`); [tests/test_api.py](../tests/test_api.py) `test_a_model_breakdown_gives_the_analyst_the_mcp_tools_when_on`; [tests/test_agents.py](../tests/test_agents.py) `test_the_analyst_calls_tools_over_mcp_and_its_trace_names_them` (a real stdio round trip); the live trace below: `execute_tool` and `tools/call` spans under `analyst` | ✅ |
 
@@ -50,13 +50,13 @@ https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
 |---|---|---|
 | First-person replay and a tactical board | [web/](../web/) (PR #5), head and body yaw on every player (PR #7), animated players (PRs #26, #27), comfort mode | ✅ |
 | Overlays | pass options with "he thought / it was" (PR #8), blind-side alerts (PR #12), What if… ghost paths (PR #9), pitch control on the tactical board (toggle, off by default) | ✅ |
-| Live, with persona and language switching | live WebSocket replay, breakdowns per persona (casual, analyst, player fan, coach) × language (en, zh), Azure AI Speech (PR #24); the first request per persona and language runs the crew (6–12 s), later ones come from the cache | ✅ |
+| Live, with persona and language switching | live WebSocket replay, breakdowns per persona (casual, analyst, player fan, coach) × language (en, zh), Azure AI Speech (PR #24); the first request per persona and language runs the crew (12.9 s on a warm replica, [SPEC §8](SPEC.md#8-platform-and-deploy)), later ones come from the cache | ✅ |
 | Every caption opens its evidence | [web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx): claims with kind, verdict, values and evidence events; seeks the replay | ✅ |
-| Three-minute tour with deep links | README ["Judge it in 3 minutes"](../README.md#judge-it-in-3-minutes) and ["The full tour"](../README.md#the-full-tour), [web/src/deeplink.ts](../web/src/deeplink.ts), [web/README.md](../web/README.md#url-parameters) | ✅ after this PR deploys |
-| Broadcast camera | — | **Missing** on `main` (in progress) |
+| Three-minute tour with deep links | README ["Judge it in 3 minutes"](../README.md#judge-it-in-3-minutes) and ["The full tour"](../README.md#the-full-tour), [web/src/deeplink.ts](../web/src/deeplink.ts), [web/README.md](../web/README.md#url-parameters) | ✅ |
+| Broadcast camera | [web/src/views/broadcast.ts](../web/src/views/broadcast.ts), `?camera=broadcast` (PR #32); the camera director that suggests and cuts cameras (PR #56) | ✅ |
 | A control to try a wrong number against the verifier | Evidence card **Try a wrong number** ([web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx), [web/src/tamper/](../web/src/tamper/)) → `POST /api/verify` ([api/tamper.py](../api/tamper.py)): the real Verifier on the claim with the viewer's number, not audited; tests in [tests/test_api.py](../tests/test_api.py) (every numeric slot of the hero claims of `blind_side_run` seed 3: true value supported, changed value not; nothing reaches the audit log or Cosmos DB) and [web/src/tamper/tamper.test.tsx](../web/src/tamper/tamper.test.tsx); deep link `?persona=analyst&tamper=cf_value` | ✅ after this PR deploys |
 | 60 fps on an integrated GPU with the pitch-control shader on | `cd web && npm run build && npm run fps -- --headed` measures it; so far run on SwiftShader only (no GPU), see SPEC §7 | **Missing:** no laptop GPU measured yet |
-| The 2-minute video | storyboard in [SPEC §10](SPEC.md#10-demo-video-storyboard--200) | **Missing:** not made yet |
+| The 2-minute video | storyboard in [SPEC §10](SPEC.md#10-demo-video-storyboard--200); the trailer edit in PR #93 | **Partial:** not merged or published yet |
 
 ## 5. Category adherence: Best Multi-Agent System
 

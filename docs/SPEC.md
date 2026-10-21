@@ -7,8 +7,8 @@
 ## 0. Pitch and judging alignment
 
 **One-liner:** See what they saw. An AI studio that explains key moments through the player's own
-perception — the scans before the ball arrived, what was visible, what he believed — and proves
-every on-screen number before it airs.
+perception — the scans before the ball arrived, what was visible, what he believed — and checks
+every number the crew says or captions before it airs.
 
 **Target prizes:** Grand Prize + Best Multi-Agent System (judges may reassign the category).
 
