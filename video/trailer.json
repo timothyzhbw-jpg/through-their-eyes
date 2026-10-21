@@ -6,7 +6,7 @@
     "width": 1920,
     "height": 1080,
     "lufs": -14,
-    "true_peak": -1.5
+    "true_peak": -2.0
   },
   "site": "https://ttesite1ff906.z14.web.core.windows.net",
   "voice": {
@@ -129,11 +129,11 @@
         "time": [
           {
             "t": 0,
-            "frame": 46
+            "frame": 47
           },
           {
             "t": 2.0,
-            "frame": 54
+            "frame": 60
           }
         ],
         "camera": [
@@ -143,31 +143,8 @@
               "at": "player",
               "id": "H8",
               "orbit": {
-                "r": 3.4,
-                "az": 160,
-                "h": 0.45
-              },
-              "axes": "body"
-            },
-            "look": {
-              "at": "player",
-              "id": "H8",
-              "offset": [
-                0,
-                0,
-                1.6
-              ]
-            },
-            "fov": 40
-          },
-          {
-            "t": 2.0,
-            "eye": {
-              "at": "player",
-              "id": "H8",
-              "orbit": {
-                "r": 3.0,
-                "az": 128,
+                "r": 2.9,
+                "az": 145,
                 "h": 0.5
               },
               "axes": "body"
@@ -178,10 +155,33 @@
               "offset": [
                 0,
                 0,
-                1.6
+                1.85
               ]
             },
-            "fov": 38,
+            "fov": 40
+          },
+          {
+            "t": 2.0,
+            "eye": {
+              "at": "player",
+              "id": "H8",
+              "orbit": {
+                "r": 2.5,
+                "az": 112,
+                "h": 0.55
+              },
+              "axes": "body"
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                0,
+                0,
+                1.8
+              ]
+            },
+            "fov": 37,
             "ease": "out"
           }
         ],
@@ -192,10 +192,10 @@
             "offset": [
               0,
               0,
-              1.5
+              1.6
             ]
           },
-          "aperture": 0.002,
+          "aperture": 0.0025,
           "maxBlur": 0.012
         },
         "bloom": {
@@ -207,7 +207,8 @@
           "id": "H8",
           "opacity": 0.0,
           "flash": 0.5
-        }
+        },
+        "exposure": 1.2
       }
     },
     "look-ots": {
@@ -234,11 +235,11 @@
               "at": "player",
               "id": "H8",
               "offset": [
-                -1.4,
-                -0.45,
-                1.95
+                -2.0,
+                -0.9,
+                1.9
               ],
-              "axes": "head"
+              "axes": "world"
             },
             "look": {
               "at": "player",
@@ -257,11 +258,11 @@
               "at": "player",
               "id": "H8",
               "offset": [
-                -1.2,
-                -0.35,
-                1.9
+                -1.7,
+                -0.75,
+                1.85
               ],
-              "axes": "head"
+              "axes": "world"
             },
             "look": {
               "at": "player",
@@ -272,7 +273,7 @@
                 1.0
               ]
             },
-            "fov": 26,
+            "fov": 25,
             "ease": "inOut"
           }
         ],
@@ -483,21 +484,21 @@
             "eye": {
               "at": "world",
               "p": [
-                2,
-                -31,
-                9
+                0,
+                -27,
+                6.5
               ]
             },
             "look": {
               "at": "player",
               "id": "H8",
               "offset": [
-                6,
+                5,
                 0,
                 1
               ]
             },
-            "fov": 38
+            "fov": 36
           }
         ],
         "bloom": {
@@ -1375,7 +1376,8 @@
       "grade": "cool",
       "letterbox": 2.39,
       "fx": [
-        "rewind"
+        "chroma",
+        "grain"
       ],
       "overlays": [
         {
@@ -1822,7 +1824,9 @@
             "persona": "casual",
             "language": "zh",
             "index": 2
-          }
+          },
+          "style": "sports-commentary",
+          "degree": 1.3
         }
       ],
       "out": {
