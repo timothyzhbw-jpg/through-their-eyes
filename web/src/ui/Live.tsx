@@ -160,6 +160,11 @@ function MatchMoments({ session }: { session: MatchSession }) {
   const opening = useStore(screen, (s) => s.opening);
   const seen = new Set(detected.map((m) => m.id));
   const at = (f: number) => `${(f * session.hero.dt).toFixed(2)} s`;
+  const heroCount = match.moments.filter((m) => m.hero).length;
+  const breakdowns =
+    heroCount === 0
+      ? "No hero moments are available for breakdowns; every moment replays only."
+      : `The ${heroCount} hero ${heroCount === 1 ? "moment opens its breakdown" : "moments open their breakdowns"}, played on each possession's own run; the others replay only.`;
   return (
     <Chapter
       className="moments match-moments"
@@ -169,7 +174,7 @@ function MatchMoments({ session }: { session: MatchSession }) {
           Every <em>moment.</em>
         </>
       }
-      lede="Every possession's moments, detected and explained on its own run and lifted to match time. The two hero moments open their breakdowns, played on the possession's own run; the others replay only."
+      lede={`Every possession's moments, detected and explained on its own run and lifted to match time. ${breakdowns}`}
     >
       <div className="possessions">
         {match.possessions.map((p) => (

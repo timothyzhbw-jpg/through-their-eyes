@@ -72,21 +72,41 @@ export function povBlurSigmaPx(o: {
 
 export interface Taps {
   offsets: number[]; // px, symmetric about 0
-  weights: number[]; // Gaussian, summing to 1
+  weights: readonly number[]; // Gaussian, summing to 1
+}
+
+const weightCache = new Map<number, readonly number[]>();
+
+/** Tap positions scale with sigma, so normalized Gaussian weights depend only on the tap count. */
+function gaussianWeights(perSide: number): readonly number[] {
+  const cached = weightCache.get(perSide);
+  if (cached) return cached;
+  const weights = new Array<number>(2 * perSide + 1);
+  let sum = 0;
+  for (let k = -perSide; k <= perSide; k++) {
+    const x = (k * TAP_SPAN) / perSide;
+    const weight = Math.exp(-(x * x) / 2);
+    weights[k + perSide] = weight;
+    sum += weight;
+  }
+  for (let k = 0; k < weights.length; k++) weights[k] /= sum;
+  weightCache.set(perSide, weights);
+  return weights;
+}
+
+function writeOffsets(sigma: number, perSide: number, offsets: number[]) {
+  const step = (TAP_SPAN * sigma) / perSide;
+  for (let k = -perSide; k <= perSide; k++) {
+    const x = k * step;
+    offsets[k + perSide] = x === 0 ? 0 : x; // no -0
+  }
 }
 
 /** 2 * perSide + 1 Gaussian taps spanning +-3 sigma. */
 export function gaussianTaps(sigma: number, perSide = TAPS_PER_SIDE): Taps {
-  const step = (TAP_SPAN * sigma) / perSide;
-  const offsets: number[] = [];
-  const raw: number[] = [];
-  for (let k = -perSide; k <= perSide; k++) {
-    const x = k * step;
-    offsets.push(x === 0 ? 0 : x); // no -0
-    raw.push(Math.exp(-(x * x) / (2 * sigma * sigma)));
-  }
-  const sum = raw.reduce((a, b) => a + b, 0);
-  return { offsets, weights: raw.map((w) => w / sum) };
+  const offsets = new Array<number>(2 * perSide + 1);
+  writeOffsets(sigma, perSide, offsets);
+  return { offsets, weights: gaussianWeights(perSide) };
 }
 
 export interface BlurPlan extends Taps {
@@ -98,12 +118,22 @@ export interface BlurPlan extends Taps {
 /**
  * How to draw a blur of `sigmaPx` on an image `widthPx` wide. Two passes of 17 taps each when
  * the taps of one would be more than ~1 px apart: the second pass smooths the comb of the first.
+ * Pass the previous plan to reuse its buffers in a frame loop.
  */
-export function blurPlan(sigmaPx: number, widthPx: number): BlurPlan {
+export function blurPlan(sigmaPx: number, widthPx: number, into?: BlurPlan): BlurPlan {
+  const plan: BlurPlan = into ?? { passes: 0, sigma: 0, perPass: 0, ...gaussianTaps(0) };
   const sigma = Math.min(sigmaPx, MAX_SIGMA_FRACTION * widthPx);
-  if (!(sigma >= MIN_SIGMA_PX))
-    return { passes: 0, sigma: 0, perPass: 0, offsets: [], weights: [] };
+  if (!(sigma >= MIN_SIGMA_PX)) {
+    plan.passes = 0;
+    plan.sigma = 0;
+    plan.perPass = 0;
+    return plan;
+  }
   const passes = sigma <= SINGLE_PASS_MAX_SIGMA ? 1 : 2;
   const perPass = sigma / Math.sqrt(passes);
-  return { passes, sigma, perPass, ...gaussianTaps(perPass) };
+  if (plan.perPass !== perPass) writeOffsets(perPass, TAPS_PER_SIDE, plan.offsets);
+  plan.passes = passes;
+  plan.sigma = sigma;
+  plan.perPass = perPass;
+  return plan;
 }

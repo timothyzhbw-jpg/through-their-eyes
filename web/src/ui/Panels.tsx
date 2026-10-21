@@ -126,6 +126,14 @@ export function StoryPanel() {
       kicker={`What happened · ${labels.tag[mode]}`}
       title={<Title lead="What" em="happened." />}
       lede="Every beat of the move on the match clock. Choose one to replay from there."
+      aside={
+        <p className="note">
+          <span className="source" title="Read from the sim export, not a verified claim">
+            sim
+          </span>{" "}
+          Timings, distances and probabilities read from the sim export.
+        </p>
+      }
     >
       <ol className="beats">
         {list.map((b, k) => (
@@ -177,7 +185,10 @@ export function DecisionPanel() {
         )}
         <div className="options-figure">
           <p className="kicker">
-            {hero.heroId}'s options at {at} s, on his belief
+            {hero.heroId}'s options at {at} s, on his belief{" "}
+            <span className="source" title="Read from the sim export, not a verified claim">
+              sim
+            </span>
           </p>
           <div className="options">
             {dec.options.slice(0, 6).map((o) => (
@@ -237,7 +248,11 @@ export function VerdictPanel() {
   const claim =
     narration && !narration.fixture
       ? [...narration.claims.values()].find(
-          (c) => c.kind === "counterfactual" && typeof c.values.dxt === "number",
+          (c) =>
+            c.kind === "counterfactual" &&
+            c.verdict === "supported" &&
+            typeof c.values.dxt === "number" &&
+            narration.lines.some((l) => l.claims.includes(c.id)),
         )
       : undefined;
   const line = claim ? narration?.lines.find((l) => l.claims.includes(claim.id)) : undefined;

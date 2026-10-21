@@ -11,11 +11,13 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
+import { validatePayload, type RenderPayload } from "../narration/payload";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { trial } from "../players/trial";
 import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
 import { Caption } from "./Narration";
+import { DecisionPanel, StoryPanel, VerdictPanel } from "./Panels";
 import { CameraSwitch, MomentCard, StageHud, SwapViews, ViewerMenu, ViewOptions } from "./Stage";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -174,6 +176,40 @@ describe("whose eyes", () => {
     expect(page.querySelector(".hud")).toBeNull();
     expect(page.querySelector("select[aria-label='Whose eyes']")).not.toBeNull();
   });
+
+  it("labels the head angle and players in sight together as sim readouts", () => {
+    const page = mount(offline(), <StageHud />);
+    const source = page.querySelector(".hud .source")!;
+    expect(text(source)).toBe("sim");
+    expect(source.getAttribute("title")).toContain("not a verified claim");
+    expect(text(source.parentElement)).toMatch(/head \d+° from the ball.*\d+ players in sight/);
+    expect(page.querySelectorAll(".hud .source")).toHaveLength(1);
+    expect(page.querySelector(".hud .verified")).toBeNull();
+  });
+});
+
+describe("sim numbers in the story and decision", () => {
+  it("labels story timings, distances and probabilities as a group from the sim", () => {
+    const page = mount(offline(), <StoryPanel />);
+    const source = page.querySelector(".story .chapter-head .source")!;
+    expect(text(source)).toBe("sim");
+    expect(source.getAttribute("title")).toContain("not a verified claim");
+    expect(text(source.parentElement)).toContain("Timings, distances and probabilities");
+    expect(text(page.querySelector(".beats"))).toContain("probability");
+    expect(page.querySelector(".verified")).toBeNull();
+  });
+
+  it("labels the options and belief facts together as sim values", () => {
+    const page = mount(offline(), <DecisionPanel />);
+    const figure = page.querySelector(".options-figure")!;
+    expect(text(figure.querySelector(".kicker .source"))).toBe("sim");
+    expect(figure.querySelector(".source")!.getAttribute("title")).toContain(
+      "not a verified claim",
+    );
+    expect(figure.querySelectorAll(".opt").length).toBeGreaterThan(0);
+    expect(text(figure.querySelector(".facts"))).toContain("Last saw");
+    expect(figure.querySelector(".verified")).toBeNull();
+  });
 });
 
 describe("moment card", () => {
@@ -309,5 +345,75 @@ describe("verified numbers in the caption", () => {
     const caption = page.querySelector("button.caption")!;
     expect(text(caption)).toContain("0.3 metres");
     expect(caption.querySelectorAll(".num")).toHaveLength(0);
+  });
+});
+
+describe("the counterfactual verdict", () => {
+  function verdictPayload(patch: Partial<RenderPayload> = {}) {
+    const session = offline();
+    const payload: RenderPayload = {
+      ...payloadJson,
+      fixture: false,
+      claims: payloadJson.claims.map((c) =>
+        c.id === "cf_value" ? { ...c, values: { dxt: 9.87 } } : c,
+      ),
+      ...patch,
+    } as RenderPayload;
+    const checked = validatePayload(payload, session.moment, hero);
+    if (!checked.ok) throw new Error(checked.errors.join("; "));
+    session.breakdown.set({ narration: checked.narration });
+    return mount(session, <VerdictPanel />);
+  }
+
+  function expectSim(page: HTMLElement) {
+    const worth = page.querySelector(".worth")!;
+    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt.toFixed(3)}`);
+    expect(text(worth)).not.toContain("9.87");
+    expect(worth.classList.contains("verified")).toBe(false);
+    expect(worth.querySelector(".checked")).toBeNull();
+    expect(text(worth)).not.toContain("checked by the verifier");
+    expect(text(worth.querySelector(".source"))).toBe("sim");
+  }
+
+  for (const verdict of ["refuted", "inconclusive"] as const) {
+    it(`uses the sim value when the counterfactual claim is ${verdict}`, () => {
+      expectSim(
+        verdictPayload({
+          claims: payloadJson.claims.map((c) =>
+            c.id === "cf_value" ? { ...c, verdict, values: { dxt: 9.87 } } : c,
+          ) as RenderPayload["claims"],
+        }),
+      );
+    });
+  }
+
+  it("uses the sim value when no shown narration line carries the supported claim", () => {
+    expectSim(
+      verdictPayload({ lines: payloadJson.lines.filter((l) => !l.claims.includes("cf_value")) }),
+    );
+  });
+
+  it("uses the sim value when another claim withholds the line carrying the supported value", () => {
+    expectSim(
+      verdictPayload({
+        claims: payloadJson.claims.map((c) =>
+          c.id === "cf_pass" ? { ...c, verdict: "inconclusive" } : c,
+        ) as RenderPayload["claims"],
+      }),
+    );
+  });
+
+  it("uses a supported value carried by a shown narration line and displays its check", () => {
+    const page = verdictPayload();
+    const worth = page.querySelector(".worth.verified")!;
+    expect(worth).not.toBeNull();
+    expect(text(worth.querySelector(".numeral"))).toBe("+9.87");
+    expect(text(worth.querySelector(".worth-line"))).toContain("Without that look");
+    expect(text(worth.querySelector(".checked"))).toContain("checked by the verifier");
+    expect(worth.querySelector(".source")).toBeNull();
+  });
+
+  it("keeps the bundled fixture in Chalk with its sim source", () => {
+    expectSim(mount(offline(), <VerdictPanel />));
   });
 });

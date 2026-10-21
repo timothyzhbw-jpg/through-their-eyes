@@ -25,6 +25,7 @@ import {
 } from "./motionBlur";
 
 const TAPS = 2 * TAPS_PER_SIDE + 1;
+const MAX_RENDER_WIDTH = 1920;
 
 const vertexShader = /* glsl */ `
 varying vec2 vUv;
@@ -35,8 +36,8 @@ void main() {
 
 const fragmentShader = /* glsl */ `
 uniform sampler2D tInput;
-uniform float uTexel; // 1 / width: one pixel in uv
-uniform float uOffsets[${TAPS}]; // px
+uniform float uTexel; // 1 / canvas width: one drawing-buffer pixel in uv
+uniform float uOffsets[${TAPS}]; // drawing-buffer px, independent of the target resolution
 uniform float uWeights[${TAPS}];
 uniform bool uDecode; // the input holds sRGB-encoded values (the scene target)
 uniform float uVignette; // 0..1: the edges darken while the head whips round
@@ -67,17 +68,22 @@ class BlurPass {
   private readonly quad: THREE.Mesh;
   private readonly quadScene = new THREE.Scene();
   private readonly quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private canvasWidth = 1;
 
   constructor() {
     this.scene = new THREE.WebGLRenderTarget(1, 1, {
       type: THREE.HalfFloatType,
       colorSpace: THREE.SRGBColorSpace,
-      samples: 4,
+      samples: 0,
     });
     // three.js applies tone mapping and the output encoding only for the canvas and XR targets:
     // flagged as one, this target holds exactly the frame the canvas would show.
     (this.scene as unknown as { isXRRenderTarget: boolean }).isXRRenderTarget = true;
-    this.mid = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+    this.mid = new THREE.WebGLRenderTarget(1, 1, {
+      type: THREE.HalfFloatType,
+      depthBuffer: false,
+      samples: 0,
+    });
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         tInput: { value: null },
@@ -98,10 +104,15 @@ class BlurPass {
     this.quadScene.add(this.quad);
   }
 
-  setSize(width: number, height: number) {
-    if (this.scene.width !== width || this.scene.height !== height) {
-      this.scene.setSize(width, height);
-      this.mid.setSize(width, height);
+  setSize(width: number, height: number, pixelRatio: number) {
+    this.canvasWidth = width;
+    // Bound the offscreen workload at DPR 1 and 1920 px wide, preserving the canvas aspect.
+    const scale = Math.min(1, 1 / pixelRatio, MAX_RENDER_WIDTH / width);
+    const renderWidth = Math.max(1, Math.floor(width * scale));
+    const renderHeight = Math.max(1, Math.floor(height * scale));
+    if (this.scene.width !== renderWidth || this.scene.height !== renderHeight) {
+      this.scene.setSize(renderWidth, renderHeight);
+      this.mid.setSize(renderWidth, renderHeight);
     }
   }
 
@@ -116,7 +127,7 @@ class BlurPass {
   ) {
     const u = this.material.uniforms;
     u.tInput.value = input;
-    u.uTexel.value = 1 / this.scene.width;
+    u.uTexel.value = 1 / this.canvasWidth;
     u.uOffsets.value = plan.offsets;
     u.uWeights.value = plan.weights;
     u.uDecode.value = decode;
@@ -156,6 +167,7 @@ export function MotionBlur({ hfov }: { hfov: number }) {
   const invalidate = useThree((s) => s.invalidate);
   const reduced = useReducedMotion(invalidate);
   const pass = useMemo(() => new BlurPass(), []);
+  const planBuffer = useMemo(() => blurPlan(0, 1), []);
   useEffect(() => () => pass.dispose(), [pass]);
   // Drawing into a half-float target needs a float colour buffer (nearly every WebGL2 GPU).
   const supported = useMemo(
@@ -179,7 +191,7 @@ export function MotionBlur({ hfov }: { hfov: number }) {
       widthPx: size.x,
       hfovDeg,
     });
-    const plan = blurPlan(supported ? sigma : 0, size.x);
+    const plan = blurPlan(supported ? sigma : 0, size.x, planBuffer);
     const shown = plan.passes ? plan.sigma.toFixed(1) : "0";
     if (gl.domElement.dataset.blurSigma !== shown) gl.domElement.dataset.blurSigma = shown;
     if (!plan.passes) {
@@ -187,7 +199,7 @@ export function MotionBlur({ hfov }: { hfov: number }) {
       gl.render(scene, camera);
       return;
     }
-    pass.setSize(size.x, size.y);
+    pass.setSize(size.x, size.y, gl.getPixelRatio());
     gl.setRenderTarget(pass.scene);
     gl.render(scene, camera);
     const vignette = Math.min(1, plan.sigma / (MAX_SIGMA_FRACTION * size.x));

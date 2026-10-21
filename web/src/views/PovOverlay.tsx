@@ -58,8 +58,11 @@ export function Hud() {
     <div className="hud" aria-live="off">
       <span>
         {povPlayer} · head {offBall.toFixed(0)}° from the ball
+        {run.sight && <> · {inSight} players in sight</>}{" "}
+        <span className="source" title="Live readouts from the sim, not a verified claim">
+          sim
+        </span>
       </span>
-      {run.sight && <span>{inSight} players in sight</span>}
       {scan && (
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
       )}

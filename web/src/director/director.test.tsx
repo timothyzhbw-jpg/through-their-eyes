@@ -3,17 +3,20 @@
 // match, live from the stream's own events, offline from the bundled run; one tap switches;
 // the auto director cuts by itself but never starts a breakdown, and keeps out of a running one.
 
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { createApi } from "../api/client";
+import { App, MatchApp } from "../App";
 import { parseHero } from "../data/hero";
 import type { ExportEvent } from "../data/types";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session, type ViewSession } from "../session";
+import { StageHud } from "../ui/Stage";
+import { Transport } from "../ui/Transport";
 import {
   API,
   breakdownResponse,
@@ -36,6 +39,18 @@ import {
 import { autoFromSearch, Director, directorPrefs } from "./director";
 import { DirectorBar } from "./DirectorBar";
 
+vi.mock("../views/PovView", () => ({ PovView: () => <div /> }));
+vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div /> }));
+
+// Vitest stubs CSS imports, including ?raw and ?inline, so read the stylesheet for CSSOM checks.
+type Fs = { readFileSync(path: string, encoding: "utf8"): string };
+const nodeProcess = (
+  globalThis as unknown as { process: { getBuiltinModule(id: string): Fs; cwd(): string } }
+).process;
+const floodlitStyles = nodeProcess
+  .getBuiltinModule("node:fs")
+  .readFileSync(`${nodeProcess.cwd()}/src/styles.css`, "utf8");
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const hero = () => parseHero(raw);
@@ -54,25 +69,22 @@ function online() {
 }
 
 const mounted: { root: Root; container: HTMLElement }[] = [];
+const styles: HTMLStyleElement[] = [];
 afterEach(() => {
   for (const { root, container } of mounted.splice(0)) {
     act(() => root.unmount());
     container.remove();
   }
+  for (const style of styles.splice(0)) style.remove();
+  window.innerWidth = 1024;
   directorPrefs.set({ auto: false });
 });
 
-function mount(session: ViewSession): HTMLElement {
+function mount(session: ViewSession, node: ReactNode = <DirectorBar />): HTMLElement {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
-  act(() =>
-    root.render(
-      <SessionContext.Provider value={session}>
-        <DirectorBar />
-      </SessionContext.Provider>,
-    ),
-  );
+  act(() => root.render(<SessionContext.Provider value={session}>{node}</SessionContext.Provider>));
   mounted.push({ root, container });
   return container;
 }
@@ -90,6 +102,76 @@ const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, " ").trim(
 const at = (session: ViewSession, frame: number) =>
   act(() => session.playback.set({ frame, playing: false }));
 const onBroadcast = (session: ViewSession) => act(() => session.controls.setCamera("broadcast"));
+
+function withFloodlitStyles(width: number): void {
+  window.innerWidth = width;
+  const style = document.createElement("style");
+  style.textContent = floodlitStyles;
+  document.head.append(style);
+  styles.push(style);
+}
+
+describe("on the live screen", () => {
+  it("keeps the sim label beside visible phone HUD numbers", () => {
+    withFloodlitStyles(390);
+    const session = offline();
+    at(session, session.hero.keyScan!.start - 1);
+    const page = mount(session, <StageHud />);
+    const alert = page.querySelector<HTMLElement>(".blind-hud")!;
+    expect(text(alert)).toContain("unseen");
+    expect(getComputedStyle(alert.querySelector(".source")!).display).not.toBe("none");
+    expect(getComputedStyle(page.querySelector(".hud > span")!).display).toBe("none");
+  });
+
+  it("keeps the phone's key-scan and decision shortcuts visible, focusable and working", () => {
+    withFloodlitStyles(390);
+    const session = offline();
+    const page = mount(session, <Transport />);
+    const marks = page.querySelector<HTMLElement>(".marks")!;
+    const [scan, decision] = [...marks.querySelectorAll<HTMLButtonElement>("button")];
+    expect(text(scan)).toBe("Key scan");
+    expect(text(decision)).toBe("Decision");
+    expect(getComputedStyle(marks).display).not.toBe("none");
+    expect(getComputedStyle(marks).position).toBe("static");
+    const timeline = page.querySelector<HTMLElement>(".timeline")!;
+    const timelineStyle = getComputedStyle(timeline);
+    const marksStyle = getComputedStyle(marks);
+    expect(parseFloat(marksStyle.marginTop)).toBeGreaterThanOrEqual(
+      parseFloat(timelineStyle.height),
+    );
+    expect(parseFloat(timelineStyle.marginBottom)).toBeGreaterThanOrEqual(
+      parseFloat(marksStyle.height),
+    );
+    for (const shortcut of [scan, decision]) {
+      expect(getComputedStyle(shortcut).position).toBe("static");
+      expect(parseFloat(getComputedStyle(shortcut).minHeight)).toBeGreaterThanOrEqual(44);
+      shortcut.focus();
+      expect(document.activeElement).toBe(shortcut);
+    }
+    act(() => scan.click());
+    expect(session.playback.get().frame).toBe(Math.max(0, session.hero.keyScan!.start - 8));
+    act(() => decision.click());
+    expect(session.playback.get().frame).toBe(session.hero.runs.factual.decision!.frame);
+  });
+
+  it("joins the hero screen with Floodlit colours and keeps the chip a named button", () => {
+    withFloodlitStyles(1280);
+    const session = offline();
+    const page = mount(session, <App autoplay={false} />);
+    onBroadcast(session);
+    at(session, 15);
+    // The live screen carries the director over the picture (.stage-director), in both layouts.
+    expect(page.querySelector(".stage-director section.director")).not.toBeNull();
+    const suggestion = chip(page)!;
+    expect(suggestion.type).toBe("button");
+    expect(suggestion.tabIndex).toBe(0);
+    expect(text(suggestion)).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(getComputedStyle(suggestion).color).toBe("#efede5");
+    expect(getComputedStyle(suggestion).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    suggestion.focus();
+    expect(document.activeElement).toBe(suggestion);
+  });
+});
 
 describe("the chip", () => {
   it("suggests the receiver's eyes as the pass is played; one tap switches", () => {
@@ -303,6 +385,23 @@ describe("in a stitched match", () => {
     onBroadcast(session);
     at(session, 15);
     expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him.");
+  });
+
+  it("keeps the chip on the stitched live screen, with a working camera switch", () => {
+    withFloodlitStyles(390);
+    const session = match();
+    const page = mount(session, <MatchApp session={session} autoplay={false} />);
+    onBroadcast(session);
+    at(session, 15);
+    expect(page.querySelector(".stage-director section.director")).not.toBeNull();
+    const suggestion = chip(page)!;
+    expect(text(suggestion)).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(suggestion.tabIndex).toBe(0);
+    suggestion.focus();
+    expect(document.activeElement).toBe(suggestion);
+    act(() => suggestion.click());
+    expect(session.playback.get()).toMatchObject({ camera: "pov", povPlayer: "H8" });
+    expect(chip(page)).toBeNull();
   });
 
   it("opens a hero moment's breakdown from the chip", async () => {

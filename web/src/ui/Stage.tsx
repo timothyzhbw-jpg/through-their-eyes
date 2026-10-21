@@ -414,6 +414,7 @@ export function ViewerMenu() {
         ref={toggle}
         type="button"
         className="btn viewer-toggle"
+        aria-label={`Watching as ${PERSONA_LABEL[persona]} · ${LANGUAGE_NAME[language]}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
