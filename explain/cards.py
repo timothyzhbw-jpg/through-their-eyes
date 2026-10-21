@@ -14,7 +14,12 @@ from pydantic import BaseModel, Field
 
 LensName = Literal["scan", "space", "pressure"]
 MomentKind = Literal[
-    "pressed_decision", "decision_after_scan", "line_breaking_pass", "sprint", "blind_side_pass"
+    "pressed_decision",
+    "decision_after_scan",
+    "line_breaking_pass",
+    "sprint",
+    "blind_side_pass",
+    "marker_scan",
 ]
 Scalar = bool | int | float | str | None
 
@@ -43,7 +48,8 @@ class MomentCard(BaseModel):
     live_only: bool = False  # overlay tag only, no breakdown (e.g. sprint)
     frame_start: int
     frame_end: int  # inclusive
-    anchor_frame: int  # the key instant: the decision, or the start of the action
+    anchor_frame: int  # the key instant: the decision, the start of the action, or (for a
+    # marker_scan) the moment the pass to his man is resolved
     t_start: float
     t_end: float
     anchor_t: float

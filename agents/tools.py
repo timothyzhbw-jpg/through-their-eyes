@@ -18,6 +18,10 @@ from analytics.vision import player_visibility
 from analytics.xt import xt_for
 from sim.counterfactual import drop_scan_counterfactual, what_if_id
 
+NO_DECISION = (
+    "no decision on the ball in this moment: the hero is a marker, and his look is the story"
+)
+
 
 def _dump(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
@@ -105,6 +109,23 @@ def run_counterfactual(ctx: MomentContext, scan_id: str | None = None) -> str:
                       "hero_scans": hero_scans})  # fmt: skip
     else:
         cf, intervention = drop_scan_counterfactual(ctx.scenario, ctx.seed, scan_id), "drop_scan"
+    if cf.factual_decision is None:  # a marker's look: no decision on the ball to compare
+        lens = ctx.card.lens("scan")
+        metrics = lens.metrics if lens is not None and lens.available else {}
+        keep = (
+            "separation_with_scan_m",
+            "separation_without_scan_m",
+            "pressure_with_scan",
+            "pressure_without_scan",
+            "outcome_with_scan",
+            "outcome_without_scan",
+        )
+        return _dump(
+            {"intervention": intervention, "dropped_scan": cf.scan_id,
+             "factual_action": None, "counterfactual_action": None,
+             "delta_xt": lens.delta_xt if metrics else None,
+             **{k: metrics[k] for k in keep if k in metrics and cf.scan_id == metrics["scan_id"]}}
+        )  # fmt: skip
     return _dump(
         {"intervention": intervention,
          "dropped_scan": cf.scan_id if intervention == "drop_scan" else None,
@@ -116,6 +137,8 @@ def run_counterfactual(ctx: MomentContext, scan_id: str | None = None) -> str:
 def list_options(ctx: MomentContext) -> str:
     """The options the hero evaluated at his decision, on his belief."""
     decision = ctx.run.hero_decision()
+    if decision is None:
+        return _dump({"error": NO_DECISION, "moment": ctx.card.kind})
     return _dump([
         {"action": o.action, "prob": round(o.prob, 3), "p_success": round(o.p_success, 3),
          "value": round(o.value, 4), "chosen": o.action == decision.chosen}
@@ -126,6 +149,8 @@ def list_options(ctx: MomentContext) -> str:
 def what_if(ctx: MomentContext, action: str) -> str:
     """Re-simulate the hero's decision with `action` forced (SPEC 3.7)."""
     decision = ctx.run.hero_decision()
+    if decision is None:
+        return _dump({"error": NO_DECISION, "action": action})
     if action not in {o.action for o in decision.options}:
         return _dump({"error": f"{action} is not one of his options", "action": action})
     result = ctx.evaluator.counterfactual(what_if_id(decision.player, decision.frame, action))
