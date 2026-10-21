@@ -206,12 +206,16 @@ describe("the live match", () => {
     expect(numbered([])).toEqual([]);
   });
 
-  it("lists every moment with its lens; the two hero moments open breakdowns", () => {
+  it("lists the key moments with their lens; the two hero moments open breakdowns", () => {
     const { session } = online();
     const html = render(session, <MomentsPanel />);
-    for (const m of raw.moments) expect(html).toContain(`${m.anchor_t.toFixed(2)} s`);
+    // Key moments in full; the sprint is folded into its group until opened (moments.test.tsx).
+    for (const m of raw.moments.filter((x) => x.selected_lens !== null)) {
+      expect(html).toContain(`${m.anchor_t.toFixed(2)} s`);
+    }
     expect(html).toContain("scan lens");
     expect(html).toContain("pressure lens");
+    expect(html).toContain("1 sprint");
     expect(html).toContain("live only");
     expect(html.match(/>Breakdown</g)).toHaveLength(2);
     expect(html).toContain("Possession 2");
@@ -239,12 +243,12 @@ describe("the live match", () => {
     ws.open();
     ws.push(matchHello(raw), matchFrameMsg(raw, 0), { type: "moment", card: card(MATCH_HERO) });
     const html = render(session, <MomentsPanel />);
-    const rows = html.match(/<li[^>]*>.*?<\/li>/gs)!;
-    const ahead = rows.filter((r) => /^<li class="[^"]*\bahead\b/.test(r));
-    expect(ahead).toHaveLength(raw.moments.length - 1);
-    for (const r of ahead)
-      expect(r).toContain('<span class="sr-only"> · not on the stream yet</span>');
-    expect(rows.filter((r) => r.includes("not on the stream yet"))).toHaveLength(ahead.length);
+    // The routine moments are folded by kind (#107), in lists inside lists: count the marks, not
+    // the outer rows. Every moment the stream has not reached says so in words, and only those.
+    const ahead = html.match(/<li class="[^"]*\bahead\b/g) ?? [];
+    const said = html.match(/<span class="sr-only"> · not on the stream yet<\/span>/g) ?? [];
+    expect(ahead.length).toBeGreaterThan(0);
+    expect(said).toHaveLength(ahead.length);
   });
 });
 
