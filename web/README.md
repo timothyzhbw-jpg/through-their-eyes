@@ -39,7 +39,7 @@ Deep links for the README's tour for judges, and for testing and filming
 
 | Parameter  | Values                                                          | Effect                                                                                                                                                                                                                     |
 | ---------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at` and `camera`                                                             |
+| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at`, `camera` and `play`                                                     |
 | `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page |
 | `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                         |
 | `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                 |
@@ -47,6 +47,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                               |
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                      |
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                            |
+| `play`     | `yourcall`                                                      | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused                                                                                         |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                    |
 | `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                          |
@@ -55,7 +56,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                               |
 | `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                    |
 
-A link that points at a spot (`at`, `run`, `ask` or `tamper`) opens paused: no live stream, and
+A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
 claim, the first claim with a number opens instead (`analyst` narrations carry the most).
 Without them, the app watches live and then plays the breakdown, in the linked `persona` and
@@ -141,6 +142,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --out web/public/data/hero_seed3.json \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
