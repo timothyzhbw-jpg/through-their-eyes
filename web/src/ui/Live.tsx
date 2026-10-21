@@ -182,6 +182,7 @@ function MatchMoments({ session }: { session: MatchSession }) {
                     opening={opening === m.id}
                     onReplay={() => controls.replayMoment(m)}
                     onBreakdown={() => controls.openBreakdown(m)}
+                    onYourCall={() => controls.openBreakdown(m, "yourcall")}
                   />
                 ))}
             </ol>
@@ -203,6 +204,7 @@ function MatchMomentRow(props: {
   opening: boolean;
   onReplay: () => void;
   onBreakdown: () => void;
+  onYourCall: () => void;
 }) {
   const { m } = props;
   const classes = [m.hero ? "hero" : "", props.ahead ? "ahead" : ""].filter(Boolean).join(" ");
@@ -223,6 +225,18 @@ function MatchMomentRow(props: {
           disabled={props.opening}
         >
           {props.opening ? "Loading…" : "Breakdown"}
+        </button>
+      )}
+      {m.hero && (
+        <button
+          type="button"
+          className="yc-open small"
+          onClick={props.onYourCall}
+          disabled={props.opening}
+          aria-label={`Your call: ${momentLabel(m)}`}
+          title="Decide with only what he knew, then see what really happened"
+        >
+          Your call
         </button>
       )}
     </li>

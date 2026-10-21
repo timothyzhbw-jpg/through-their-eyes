@@ -18,6 +18,7 @@ import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { TacticalView } from "./views/TacticalView";
+import { YourCallButton, YourCallStage, useYourCallOpen } from "./yourcall/YourCall";
 
 const BLURB: Record<string, string> = {
   blind_side_run:
@@ -32,6 +33,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const { hero, playback, controls } = session;
   const mode = useStore(playback, (s) => s.mode);
   const focus = useStore(playback, (s) => s.focus);
+  const yourCall = useYourCallOpen();
 
   useEffect(() => startClock(session), [session]);
   useEffect(() => {
@@ -61,33 +63,42 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           ) : (
             <>
               <MatchPicker />
-              <LiveBar />
+              {!yourCall && <LiveBar />}
             </>
           )}
-          <RunToggle />
+          <YourCallButton />
+          {!yourCall && <RunToggle />}
         </div>
       </header>
 
-      <DirectorBar />
-      <section className={`stage focus-${focus}`}>
-        <PovView />
-        <TacticalView />
-      </section>
+      {/* Your call takes the stage, and hides what would give his decision away until the
+          viewer has made theirs: the director, the telemetry, the story and the decision panels. */}
+      {yourCall ? (
+        <YourCallStage />
+      ) : (
+        <>
+          <DirectorBar />
+          <section className={`stage focus-${focus}`}>
+            <PovView />
+            <TacticalView />
+          </section>
 
-      <EvidenceCard />
+          <EvidenceCard />
 
-      <Transport />
+          <Transport />
 
-      <TelemetryPanel />
+          <TelemetryPanel />
 
-      <section className="below">
-        <NarrationPanel />
-        <MomentsPanel />
-        <WhatIfPanel />
-        <BreakdownPanel />
-        <StoryPanel />
-        <DecisionPanel />
-      </section>
+          <section className="below">
+            <NarrationPanel />
+            <MomentsPanel />
+            <WhatIfPanel />
+            <BreakdownPanel />
+            <StoryPanel />
+            <DecisionPanel />
+          </section>
+        </>
+      )}
 
       <Legend />
     </div>

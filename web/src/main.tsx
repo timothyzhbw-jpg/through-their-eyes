@@ -59,6 +59,9 @@ async function main() {
       // A match has no audience, run or named frames of its own: its view and a frame apply.
       if (link.view) session.controls.setFocus(link.view);
       if (typeof link.at === "number") session.controls.seek(link.at);
+      // play=yourcall: the first hero moment's breakdown, opened in Your call.
+      const hero = session.match.moments.find((m) => m.hero);
+      if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
       broadcast(session.controls);
       root.render(
         <StrictMode>
@@ -69,13 +72,14 @@ async function main() {
       );
       return;
     }
-    // The bundled fixture, plan and what-ifs belong to the bundled hero moment only.
+    // The bundled fixture and plan belong to the bundled hero moment only; the what-ifs were
+    // loaded for this one.
     const bundled = `${loaded.hero.scenario}-${loaded.hero.seed}` === MATCH_ID;
     const session = createSession(
       loaded.hero,
       bundled ? plan : null,
       bundled ? loaded.payload : null,
-      bundled ? loaded.whatIfs : null,
+      loaded.whatIfs,
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
     applyDeepLink(session, link);

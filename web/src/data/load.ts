@@ -3,7 +3,8 @@
 // from the bundled files in public/data, as before the API existed, and the header says
 // "Offline data". The bundled render payload (a fixture) and what-if answers are loaded either
 // way: the payload is the narration when the service cannot give one, the what-ifs carry the
-// forced runs the suggested questions replay.
+// forced runs the suggested questions and "Your call" replay. What-ifs are bundled per hero
+// moment (WHAT_IF_FILES); the hero export itself only for the default.
 //
 // Which match: `?match=<id>` in the address (an id the API serves, e.g. `match-1`, the stitched
 // match); the default is the bundled hero moment, blind_side_run-3. Only the default is bundled,
@@ -17,6 +18,11 @@ export const HERO_FILE = "hero_seed3.json";
 export const PAYLOAD_FILE = "fixture_payload_seed3.json";
 // Every option's "What if…?" answer, precomputed by sim.export.export_what_ifs.
 export const WHAT_IF_FILE = "whatif_seed3.json";
+/** The bundled what-ifs of each hero moment the service serves, by `<scenario>-<seed>`. */
+export const WHAT_IF_FILES: Record<string, string> = {
+  [MATCH_ID]: WHAT_IF_FILE,
+  "press_escape-0": "whatif_press_escape_seed0.json",
+};
 
 export interface LoadOptions {
   apiBase: string | null; // VITE_API_URL; null: offline data only
@@ -29,7 +35,7 @@ export interface LoadOptions {
 export interface Loaded {
   hero: Hero;
   payload: unknown; // bundled render payload, or null
-  whatIfs: unknown; // bundled what-ifs, or null
+  whatIfs: unknown; // bundled what-ifs of this hero moment (a match: of the default's), or null
   api: Api | null; // null: offline data
   offline: string | null; // why the app runs on offline data
   momentId: string | null; // the hero moment's id, as the service names it; null: the default
@@ -55,10 +61,7 @@ async function optional(fetchImpl: Fetch, url: string): Promise<unknown> {
 
 export async function loadData(opts: LoadOptions): Promise<Loaded> {
   const fetchImpl: Fetch = opts.fetch ?? ((url, init) => fetch(url, init));
-  const bundled = Promise.all([
-    optional(fetchImpl, opts.dataUrl + PAYLOAD_FILE),
-    optional(fetchImpl, opts.dataUrl + WHAT_IF_FILE),
-  ]);
+  const payload = optional(fetchImpl, opts.dataUrl + PAYLOAD_FILE);
 
   const match = opts.match ?? MATCH_ID;
   let hero: Hero | null = null;
@@ -89,8 +92,19 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
       offline = `${match} needs the live service, so the bundled ${MATCH_ID} plays: ${offline}`;
     }
   }
-  const [payload, whatIfs] = await bundled;
-  return { hero, payload, whatIfs, api, offline, momentId };
+  // A match's possessions load their own what-ifs when their breakdown opens (matchSession).
+  const id = hero.kind === "hero" ? `${hero.scenario}-${hero.seed}` : MATCH_ID;
+  const [bundledPayload, whatIfs] = await Promise.all([
+    payload,
+    bundledWhatIfs(fetchImpl, opts.dataUrl, id),
+  ]);
+  return { hero, payload: bundledPayload, whatIfs, api, offline, momentId };
+}
+
+/** The bundled what-ifs of a hero moment (`<scenario>-<seed>`), or null if none are bundled. */
+export async function bundledWhatIfs(fetchImpl: Fetch, dataUrl: string, id: string) {
+  const file = WHAT_IF_FILES[id];
+  return file ? optional(fetchImpl, dataUrl + file) : null;
 }
 
 /** The bundled hero moment (blind_side_run seed 3). */

@@ -11,8 +11,10 @@
 //   ?tamper=<claim id>                         open the evidence card on that claim with "Try a
 //                                              wrong number" open (online: the breakdown is
 //                                              asked for at once)
+//   ?play=yourcall                             open "Your call" at the decision (yourcall/); with
+//                                              ?match=, on the match's first hero moment
 // and the testing parameters ?autoplay=0, ?offline=1, ?plan=invalid (and ?rigged=0, read by
-// players/trial.ts). A link that points at a spot (at, run, ask or tamper) opens paused: no live
+// players/trial.ts). A link that points at a spot (at, run, ask, tamper or play) opens paused: no live
 // stream, and no breakdown on load unless tamper needs one. Unknown values are ignored and
 // logged.
 
@@ -25,14 +27,17 @@ import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
+import { yourCallOf } from "./yourcall/controller";
 
 const RUNS = ["factual", "counterfactual"] as const satisfies readonly RunName[];
 const VIEWS = ["pov", "tactical", "split"] as const satisfies readonly Focus[];
 const NAMED_FRAMES = ["key-scan", "decision"] as const;
+const PLAYS = ["yourcall"] as const;
 const CLAIM_ID = /^[a-z][a-z0-9_]{0,63}$/; // explain/builders.py ids, e.g. cf_value
 
 export type View = (typeof VIEWS)[number];
 export type At = number | (typeof NAMED_FRAMES)[number];
+export type Play = (typeof PLAYS)[number];
 
 export interface DeepLink {
   autoplay: boolean; // watch live, then the breakdown; false with autoplay=0 or at / run / ask
@@ -45,6 +50,7 @@ export interface DeepLink {
   at: At | null;
   ask: string | null;
   tamper: string | null; // a claim id
+  play: Play | null; // yourcall: open "Your call" at the decision
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
 
@@ -59,6 +65,7 @@ export const NO_LINK: DeepLink = {
   at: null,
   ask: null,
   tamper: null,
+  play: null,
   warnings: [],
 };
 
@@ -89,7 +96,8 @@ export function parseDeepLink(search: string): DeepLink {
   const at = read("at", parseAt);
   const ask = params.get("ask")?.trim().slice(0, MAX_QUESTION) || null;
   const tamper = read("tamper", (v) => (CLAIM_ID.test(v) ? v : null));
-  const spot = at !== null || run !== null || ask !== null || tamper !== null;
+  const play = read("play", (v) => oneOf(PLAYS, v));
+  const spot = at !== null || run !== null || ask !== null || tamper !== null || play !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
     offline: params.get("offline") === "1",
@@ -101,6 +109,7 @@ export function parseDeepLink(search: string): DeepLink {
     at,
     ask,
     tamper,
+    play,
     warnings,
   };
 }
@@ -116,7 +125,8 @@ export function atFrame(hero: Hero, moment: MomentContext, at: At): number {
 /**
  * Put the session where the link says, before the first render. Audience and language only
  * choose what the live service is asked for (offline the bundled breakdown is all there is);
- * only `tamper` requests anything here: the breakdown whose evidence card it opens.
+ * only `tamper` and `play` request anything here: the breakdown whose evidence card it opens,
+ * or whose lines Your call's reveal tells.
  */
 export function applyDeepLink(session: Session, link: DeepLink): void {
   const { controls } = session;
@@ -126,6 +136,7 @@ export function applyDeepLink(session: Session, link: DeepLink): void {
   if (link.view) controls.setFocus(link.view);
   if (link.at !== null) controls.seek(atFrame(session.hero, session.moment, link.at));
   if (link.tamper) controls.openTamperLink(link.tamper);
+  if (link.play === "yourcall") yourCallOf(session).open();
 }
 
 /** The link the page was opened with; components read prefills from it. */
