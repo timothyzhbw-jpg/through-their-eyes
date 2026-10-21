@@ -408,18 +408,19 @@ def max_visibility(
     target: str,
     event: str,
     until: str | None = None,
+    until_s: float = 0.0,
 ) -> float:
     """The most the observer saw of the target during an event with an end frame (a scan): the
     vision model with occlusion (`analytics.vision`) on each frame of it. The sim counts a player
-    as seen from `SimParams.perception_threshold` (SPEC 3.4). With `until` (an event id), frames
-    after that event do not count: what he saw of a look before he decided."""
+    as seen from `SimParams.perception_threshold` (SPEC 3.4). With `until` (an event id, plus
+    `until_s` seconds), later frames do not count: what he saw of a look before he decided."""
     e = ctx.event(run, event)
     end = e.attrs.get("end")
     if end is None:
         raise Inconclusive(f"{e.id} has no end frame")
     if int(end) >= len(run.owner):
         raise Inconclusive(f"{e.id} ends after the recorded run")
-    last = int(end) if until is None else min(int(end), ctx.event(run, until).frame)
+    last = int(end) if until is None else min(int(end), ctx.frame(run, until, until_s))
     if last < e.frame:
         raise Inconclusive(f"{e.id} starts after {until}")
     i, j = ctx.player(run, observer), ctx.player(run, target)

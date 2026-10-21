@@ -82,6 +82,34 @@ def _reception(run: MatchRun, player: str, before: int) -> Event:
     )  # fmt: skip
 
 
+@dataclass(frozen=True)
+class _Decided:
+    """His decision on an event's clock: `anchor` plus `at` seconds. The action played at the
+    decision frame, or for a carry, which has no event, the reception plus the first touch."""
+
+    anchor: str
+    at: float
+    frame: int
+
+
+def _decided(look: LookResult) -> _Decided:
+    decision = look.counterfactual_decision or look.factual_decision
+    action = _action_event(look.counterfactual, look.player, decision.frame)
+    if action is not None:
+        return _Decided(action.id, 0.0, decision.frame)
+    reception = _reception(look.counterfactual, look.player, decision.frame)
+    at = round((decision.frame - reception.frame) * look.counterfactual.dt, 4)
+    return _Decided(reception.id, at, decision.frame)
+
+
+def _pin(look: LookResult, d: _Decided) -> Predicate:
+    """That `d` is when he decided in the look's run: a window that ends there ends at his
+    decision."""
+    chose = fn("metric_at", metric="chosen", anchor=d.anchor, at=d.at, player=look.player,
+               cf=look.id)  # fmt: skip
+    return Predicate(op="eq", lhs=chose, rhs=look.counterfactual_action)
+
+
 def _keeper(run: MatchRun, player: str) -> str | None:
     """The opposing goalkeeper."""
     team = run.players[run.index(player)].team
@@ -110,7 +138,7 @@ def _picked(look: LookResult) -> str | None:
     return None
 
 
-def _when(look: LookResult, ctx: MomentContext, until: Event) -> Claim | None:
+def _when(look: LookResult, ctx: MomentContext, d: _Decided) -> Claim | None:
     hero, e, cf = look.player, look.look, look.id
     reception = _reception(look.counterfactual, hero, look.factual_decision.frame)
     turn = float(look.offset or 0.0)
@@ -133,12 +161,11 @@ def _when(look: LookResult, ctx: MomentContext, until: Event) -> Claim | None:
     seconds = round((reception.frame - e.frame) * look.counterfactual.dt, 1)
     slots = {"player": Slot(ref=hero)}
     if e.frame > reception.frame:  # after the ball reached him: timed against his decision
-        if until.frame <= reception.frame:
-            return None  # no event marks the decision (a carry): no clock to read it on
-        since = fn("metric_at", metric="time_since_last_scan", anchor=until.id, player=hero,
-                   cf=cf)  # fmt: skip
-        checks.append(Predicate(op="approx", lhs=since, rhs=slot("s"), abs_tol=0.05))
-        slots["s"] = Slot(value=round((until.frame - e.frame) * look.counterfactual.dt, 1),
+        since = fn("metric_at", metric="time_since_last_scan", anchor=d.anchor, at=d.at,
+                   player=hero, cf=cf)  # fmt: skip
+        checks += [_pin(look, d),
+                   Predicate(op="approx", lhs=since, rhs=slot("s"), abs_tol=0.05)]  # fmt: skip
+        slots["s"] = Slot(value=round((d.frame - e.frame) * look.counterfactual.dt, 1),
                           decimals=1)  # fmt: skip
         template = f"You make {{player}} look {where_en} {{s}} s before he has to decide."
         zh = f"你让{{player}}在做决定前{{s}}秒{where_zh}。"
@@ -155,22 +182,27 @@ def _when(look: LookResult, ctx: MomentContext, until: Event) -> Claim | None:
                  predicate=Predicate(op="all", args=checks), evidence=[reception.id])  # fmt: skip
 
 
-def _too_late(look: LookResult, until: Event) -> Claim | None:
+def _too_late(look: LookResult, d: _Decided) -> Claim | None:
+    """The look lasts past his decision: it began before it (the only scan he started since),
+    and it takes longer than the time from its start to his decision."""
     e = look.look
     reception = _reception(look.counterfactual, look.player, look.factual_decision.frame)
-    if int(e.attrs["end"]) <= until.frame:
+    if int(e.attrs["end"]) <= d.frame:
         return None
+    since = fn("metric_at", metric="time_since_last_scan", anchor=d.anchor, at=d.at,
+               player=look.player, cf=look.id)  # fmt: skip
+    lasts = fn("event_attr", event=e.id, attr="duration_s", cf=look.id)
     return Claim(
         id="look_late",
         template="His head is still turning when he has to decide.",
         templates={"zh": "他必须做决定时，头还在转。"},
-        predicate=Predicate(op="gt", lhs=fn("event_attr", event=e.id, attr="end", cf=look.id),
-                            rhs=fn("event_attr", event=until.id, attr="frame", cf=look.id)),
+        predicate=Predicate(op="all", args=[_pin(look, d),
+                                            Predicate(op="gt", lhs=lasts, rhs=since)]),
         evidence=[reception.id],
     )  # fmt: skip
 
 
-def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
+def _saw(look: LookResult, ctx: MomentContext, d: _Decided) -> Claim:
     """Whom of those his decision turns on (`_matters`: teammates, and the keeper when he could
     shoot) the look brought into his sight before he decided: out of it as the look began (his
     head still on the ball), in it at some frame of the look up to his decision. Up to two, the
@@ -180,7 +212,8 @@ def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
     at = round((e.frame - reception.frame) * look.counterfactual.dt, 4)
 
     def peak(m):
-        return fn("max_visibility", observer=hero, target=m, event=e.id, until=until.id, cf=cf)
+        return fn("max_visibility", observer=hero, target=m, event=e.id, until=d.anchor,
+                  until_s=d.at, cf=cf)  # fmt: skip
 
     def first(m):
         return fn("metric_at", metric="visibility", anchor=reception.id, at=at, observer=hero,
@@ -200,7 +233,7 @@ def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
                      "his sight." if keeper else
                      "Before he decides, that look brings none of his teammates into his sight.",
             templates={"zh": NONE_ZH[keeper]},
-            predicate=Predicate(op="all", args=[
+            predicate=Predicate(op="all", args=[_pin(look, d)] + [
                 Predicate(op="ge", lhs=first(m), rhs=SEEN) if m not in new
                 else Predicate(op="lt", lhs=peak(m), rhs=SEEN)
                 for m in mates
@@ -208,7 +241,7 @@ def _saw(look: LookResult, ctx: MomentContext, until: Event) -> Claim:
             evidence=[reception.id],
         )  # fmt: skip
     slots = {f"mate{k + 1}": Slot(ref=m) for k, m in enumerate(seen)}
-    checks = []
+    checks = [_pin(look, d)]
     for k in range(len(seen)):
         name = slot(f"mate{k + 1}")
         checks += [Predicate(op="lt", lhs=first(name), rhs=SEEN),
@@ -401,10 +434,9 @@ def _value(look: LookResult) -> Claim | None:
 def look_claims(ctx: MomentContext, look: LookResult, none: LookResult) -> list[Claim]:
     """The claims of one look, in line order; `none` is the run with no look at all."""
     out: list[Claim | None] = []
-    action = _action_event(look.counterfactual, look.player, look.factual_decision.frame)
-    until = action or _reception(look.counterfactual, look.player, look.factual_decision.frame)
     if look.look is not None:
-        out += [_when(look, ctx, until), _too_late(look, until), _saw(look, ctx, until)]
+        d = _decided(look)
+        out += [_when(look, ctx, d), _too_late(look, d), _saw(look, ctx, d)]
     out += [_belief(look, none) if look.look is not None else None, _choice(look), _outcome(look),
             _value(look)]  # fmt: skip
     return [c for c in out if c is not None]

@@ -326,3 +326,18 @@ def test_a_look_as_the_ball_reaches_him_is_sided_from_the_ball_not_his_head(fini
     when = next(c for c in look_claims(finish_ctx, look, none) if c.id == "look_when")
     assert when.template == "You make {player} look to his left as the ball reaches him."
     assert Verifier(finish_ctx.evaluator).verify(when).status == "supported"
+
+
+def test_what_he_saw_before_deciding_is_read_up_to_his_decision_not_the_reception(ctx):
+    """A look's "before he decides" lines read his sight up to the decision and pin that frame
+    with the decision model's own record (`chosen`), so a carry, which has no event at the
+    decision, is not read only up to the reception."""
+    from agents.look import look_claims
+
+    look = look_counterfactual(*BLIND, frame=70, offset_deg=-150)  # as the ball reaches him
+    none = look_counterfactual(*BLIND, frame=None, offset_deg=None)
+    ctx.evaluator.counterfactuals.update({look.id: look, none.id: none})
+    claims = {c.id: c for c in look_claims(ctx, look, none)}
+    for cid in ("look_saw", "look_late"):
+        text = claims[cid].predicate.model_dump_json()
+        assert '"metric":"chosen"' in text and '"anchor":"pass:H8:0075"' in text, cid
