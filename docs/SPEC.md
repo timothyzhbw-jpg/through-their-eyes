@@ -788,6 +788,8 @@ Kernels in [analytics/stats.py](../analytics/stats.py) (numpy reference), the ti
 the event feed (`pass`, `reception`, `interception`, `out`, `shot`). No sim velocities, beliefs
 or pass outcomes from the sim's own attributes. A stitched match's possessions are tracking
 segments: positions jump at a possession's first frame, so no speed, distance or pass spans one.
+**Tackles are not modelled yet** outside the pressure hero (`press_escape`): in a stitched match
+the ball changes hands only by interceptions and balls out of play, and the panel says so.
 
 **Causal.** Every value at frame f uses frames ≤ f only (tested by truncating the input), so it
 could run frame by frame on a live feed. Each cue carries the frame at which its value is final:
