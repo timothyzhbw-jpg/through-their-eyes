@@ -7,6 +7,7 @@
 // turns the voice on, and each claim with a number in the evidence card offers "Try a wrong
 // number": the service's verifier checks the claim again with the viewer's value (SPEC 7).
 
+import { CountUp } from "./CountUp";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DESCRIBED, PERSONAS, type VerifyResponse } from "../api/client";
 import { runLabels, type Hero } from "../data/hero";
@@ -65,14 +66,22 @@ export const isVerified = (narration: Narration, line: PayloadLine) =>
  * A line's text; in a verified line each number, with its unit, gets the dotted Floodlight
  * underline (every digit on air was slot-filled from a checked value).
  */
-export function LineText({ text, verified }: { text: string; verified: boolean }) {
+export function LineText({
+  text,
+  verified,
+  countId,
+}: {
+  text: string;
+  verified: boolean;
+  countId?: string; // count each number up the first time this line comes up (CountUp.tsx)
+}) {
   if (!verified) return <>{text}</>;
   return (
     <>
       {numberParts(text).map((p, k) =>
         p.num ? (
           <span key={k} className="num">
-            {p.text}
+            {countId ? <CountUp text={p.text} id={`${countId}#${k}`} /> : p.text}
           </span>
         ) : (
           p.text
@@ -118,7 +127,7 @@ export function Caption() {
             <KindTags narration={narration} line={line} />
           </span>
           <span className="caption-text">
-            <LineText text={line.text} verified={verified} />
+            <LineText text={line.text} verified={verified} countId={`${line.id}|${line.text}`} />
             {line.claims.length > 0 &&
               (verified ? (
                 <span className="caption-more check">
@@ -148,6 +157,29 @@ export function EvidenceCard() {
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
   const line = lineOf(narration, lineId);
+  const isOpen = !!narration && !!line;
+  // What had the focus when the card opened (the caption, a narration line): it gets it back on
+  // close, by Escape or the close button, instead of dropping it on <body>.
+  const opener = useRef<HTMLElement | null>(null);
+  const close = () => {
+    const back = opener.current;
+    controls.closeEvidence();
+    if (back?.isConnected) back.focus({ preventScroll: true });
+  };
+  const closeNow = useRef(close);
+  closeNow.current = close;
+  useEffect(() => {
+    if (!isOpen) return;
+    const focused = document.activeElement;
+    opener.current = focused instanceof HTMLElement && focused !== document.body ? focused : null;
+    // Escape closes it wherever the focus is: in the card, on its caption, or nowhere (a ?tamper=
+    // link). A menu that handles its own Escape stops the event before it gets here.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNow.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen]);
   if (!narration || !line) return null;
   const at = (f: number) => `${((f + offset) * hero.dt).toFixed(2)} s`; // the match clock
   const elsewhere = `, ${runLabels(hero).tag.counterfactual}`;
@@ -160,12 +192,7 @@ export function EvidenceCard() {
             Sample data · not checked by the verifier
           </span>
         )}
-        <button
-          type="button"
-          className="close"
-          onClick={controls.closeEvidence}
-          aria-label="Close evidence"
-        >
+        <button type="button" className="close" onClick={close} aria-label="Close evidence">
           ×
         </button>
       </div>
@@ -533,7 +560,9 @@ export function BreakdownChoice() {
 }
 
 /** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on or
- * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. */
+ * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. The text
+ * button shows "Sound" and draws "off" / "on" from aria-pressed (live.css), so what it shows
+ * is in its name (WCAG 2.5.3). */
 export function SoundToggle({ icon = false }: { icon?: boolean }) {
   const { voice, controls } = useSession();
   const on = useStore(voice.state, (s) => s.on);
@@ -544,8 +573,8 @@ export function SoundToggle({ icon = false }: { icon?: boolean }) {
     : error
       ? `Speech failed: ${error}`
       : on
-        ? "Turn the commentary voice off"
-        : "Speak each narration line as it comes up";
+        ? "Turn the commentary voice and the crowd off"
+        : "Speak each narration line as it comes up, with the crowd";
   return (
     <button
       type="button"
@@ -563,18 +592,7 @@ export function SoundToggle({ icon = false }: { icon?: boolean }) {
       title={title}
       onClick={() => controls.setSound(!on)}
     >
-      {icon ? (
-        on ? (
-          <SoundOnIcon />
-        ) : (
-          <SoundOffIcon />
-        )
-      ) : (
-        <>
-          {on ? "Sound on" : "Sound off"}
-          {on && status === "loading" && " …"}
-        </>
-      )}
+      {icon ? on ? <SoundOnIcon /> : <SoundOffIcon /> : "Sound"}
     </button>
   );
 }

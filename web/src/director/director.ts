@@ -8,6 +8,7 @@
 // store, like the camera switch: it never stops a breakdown or the autoplay. While a breakdown
 // runs, its plan chooses the cameras: the director shows nothing and does not cut.
 
+import { requestCut } from "../beat/cameraBlend";
 import type { ExportEvent } from "../data/types";
 import type { LiveFeed, LiveMoment } from "../live/feed";
 import type { MomentContext } from "../plan/moment";
@@ -230,7 +231,10 @@ export class Director {
     if (directorPrefs.get().auto) {
       const target = autoTarget(cands, s, this.dismissed);
       const shot = this.cutter.decide(target, f, k.dt, now, s, (p) => inScan(k, p, f));
-      if (shot) return this.cut(shot); // the cut updates again, with the new camera
+      if (shot) {
+        requestCut(); // the auto director cuts; a viewer's switch flies (beat/cameraBlend.ts)
+        return this.cut(shot); // the cut updates again, with the new camera
+      }
     }
     const shown = this.state.get().show;
     const previous = !jumped && shown && !this.dismissed.has(shown.id) ? shown : null;

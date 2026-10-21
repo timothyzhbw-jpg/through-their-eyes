@@ -1,6 +1,7 @@
 // End-to-end smoke test of the web app (SPEC 7, 8): the production build, talking to a local API
 // service, opened page by page in headless Chromium. Every page must show its main view with no
-// console error and no uncaught exception; a screenshot of each goes to out/smoke/. The unit tests
+// console error, no uncaught exception and no serious or critical WCAG violation (axe-core); a
+// screenshot of each goes to out/smoke/. The unit tests
 // render the app's pieces; this loads the whole app as a visitor gets it. On 2026-10-20
 // `?match=match-1` rendered a black page on the live site ("useSession needs a hero moment, not a
 // match") although every unit test passed.
@@ -23,6 +24,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { devices } from "playwright-core";
 import { build, preview } from "vite";
+import { axe, BLOCKING, describe, WCAG } from "./axe.mjs";
 import { launchChrome } from "./gpu.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
@@ -66,11 +68,56 @@ const PAGES = [
     check: (p, shoot) => lineup(p, shoot, "Start watching", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  { name: "link-eyes", path: "?play=eyes", check: takeEyes },
+  { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
+  {
+    name: "link-eyes-match-1",
+    path: "?match=match-1&play=eyes",
+    check: async (p) => {
+      await see(p.getByRole("button", { name: /Back to the match/ }), "Back to the match");
+      await takeEyes(p);
+    },
+  },
+  {
+    name: "phone-320-eyes",
+    path: "?play=eyes",
+    device: PHONE_320,
+    check: (p) => phone(p, takeEyes, { live: false }),
+  },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
+  // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
+  { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
+  { name: "beat-broadcast", path: "?at=66&camera=broadcast", check: (p) => beat(p, { push: 1 }) },
+  {
+    name: "beat-reduced-motion",
+    path: "?at=60",
+    device: { ...DESKTOP, reducedMotion: "reduce" },
+    check: (p) => beat(p, { push: 0 }),
+  },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
     check: (p) => hero(p, { main: "board" }),
+  },
+  { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
+  {
+    name: "tour-recap",
+    path: "?match=match-1&play=recap&tour=recap",
+    check: (p, shoot) => tour(p, shoot, match),
+  },
+  {
+    name: "phone-tour",
+    path: "?tour=1",
+    device: PHONE,
+    check: (p, shoot) => tour(p, shoot),
+  },
+  {
+    // a narrow desktop: from 901 px the viewer button shows its full label, and the hero's header
+    // also carries Your call and Take his eyes; checked like a phone's (no overlap, on screen)
+    name: "desktop-960-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
   },
   {
     name: "phone-hero",
@@ -149,7 +196,25 @@ async function match(page) {
   const score = page.getByRole("region", { name: "Score and possession" });
   await see(score.filter({ hasText: /Possession \d+ of \d+/ }), "the score bug with a possession");
   await mainView(page, "eyes");
-  await see(page.getByRole("region", { name: "Possession 1" }), "the Moments panel", "attached");
+  await see(page.getByRole("region", { name: "Key moments" }), "the Moments panel", "attached");
+}
+
+/** The key-moment beat on the 3D view: pushed in (or not, under reduced motion) and the runner
+ * ringed; the canvas says so in data-beat-push and data-beat-ring (beat/BeatLayers.tsx). */
+async function beat(page, { push }) {
+  await hero(page);
+  const canvas = page
+    .getByRole("figure", { name: /^(First-person|Broadcast) view$/ })
+    .locator("canvas");
+  try {
+    await page.waitForFunction(
+      ([el, want]) => Number(el.dataset.beatRing) > 0 && Number(el.dataset.beatPush) === want,
+      [await canvas.elementHandle(), push],
+    );
+  } catch {
+    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
+    throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
 }
 
 /** `?persona=analyst&tamper=cf_value`: the evidence card with "Try a wrong number" open. */
@@ -160,6 +225,57 @@ async function tamper(page) {
     page.getByRole("button", { name: "Try a wrong number", expanded: true }),
     '"Try a wrong number" open',
   );
+}
+
+/** `?tour=1`, the judges' tour (SPEC 7, web/src/tour/), or its match steps (the recap): its card
+ * on screen at every step and no sideways scroll, Next through to the end without pressing the
+ * steps' own buttons (the drill would run the crew), then Done closes it and the page works as
+ * before. A tour link opens
+ * paused (no stream), so the phone's header check, which wants the stream running, is not run. */
+async function tour(page, shoot, after = hero) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Tour · \d+ of \d+/ });
+  for (let k = 1; ; k++) {
+    await see(card.filter({ hasText: new RegExp(`^Tour · ${k} of `) }), `the tour's step ${k}`);
+    const [box, size] = await Promise.all([
+      card.boundingBox(),
+      page.evaluate(() => [innerWidth, innerHeight, document.documentElement.scrollWidth]),
+    ]);
+    const [w, h, wide] = size;
+    if (!box || box.x < 0 || box.y < 0 || box.x + box.width > w || box.y + box.height > h) {
+      throw new Error(`expected the tour's step ${k} card on screen, got ${JSON.stringify(box)}`);
+    }
+    if (wide > w) throw new Error(`expected no sideways scroll at step ${k}: ${wide} px in ${w}`);
+    await shoot(`step-${k}`);
+    const done = card.getByRole("button", { name: "Done" });
+    if (await done.count()) {
+      await done.click();
+      break;
+    }
+    if (k > 12) throw new Error("expected the tour to end within 12 steps");
+    await card.getByRole("button", { name: "Next" }).click();
+  }
+  try {
+    await card.waitFor({ state: "detached" });
+  } catch {
+    throw new Error('expected "Done" to close the tour');
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await after(page);
+}
+
+/** `?play=eyes`: Take his eyes (SPEC 7) in the live screen's place: the board with the dial, the
+ * times and the directions to look; a look plays through his eyes, and the result airs its
+ * verified lines. */
+async function takeEyes(page) {
+  await see(page.getByRole("region", { name: "Take his eyes" }), "Take his eyes");
+  await see(page.getByRole("radiogroup", { name: "When he looks" }), "the times to look");
+  await see(page.getByRole("radiogroup", { name: /^Where [HA]\d+ looks$/ }), "the directions");
+  await mainView(page, "board");
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const play = page.getByRole("button", { name: "See what he does" });
+  await see(play, "the look playing through his eyes");
+  await play.click();
+  await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
@@ -200,10 +316,21 @@ async function lineup(page, shoot, button, then) {
 
 /** On a phone the page should scroll only up and down, and no two header controls overlap or run
  * off screen, with the live stream running (its status and the header's buttons are then all
- * there). */
-async function phone(page, check) {
+ * there). `live: false` for a screen that takes the live screen's place (Take his eyes). */
+async function phone(page, check, { live = true } = {}) {
   await check(page);
-  await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+  if (live) {
+    await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+    // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
+    await see(page.locator(".stage-head .brand h1"), "the product name in the header");
+    // The note shows on a phone's header (up to 480 px); a tablet and a narrow desktop hide it.
+    if ((page.viewportSize()?.width ?? 0) <= 480) {
+      await see(
+        page.locator(".stage-head .brand .sub").filter({ hasText: /synthetic match/i }),
+        'the "synthetic match" note in the header',
+      );
+    }
+  }
   const { wide, width, overlaps, offscreen } = await page.evaluate(() => {
     const root = document.documentElement;
     const wide = root.scrollWidth;
@@ -215,7 +342,8 @@ async function phone(page, check) {
     ].filter((el) => {
       if (el.closest(".popover")) return false;
       const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && getComputedStyle(el).visibility !== "hidden";
+      // 1 px or less: visually hidden for screen readers (the brand on a phone), not on screen.
+      return rect.width > 1 && rect.height > 1 && getComputedStyle(el).visibility !== "hidden";
     });
     // A control that holds another is the other's box, not its own: keep the leaves.
     const controls = found.filter(
@@ -388,6 +516,14 @@ async function visit(browser, base, page) {
     checks.catch(() => {}); // left behind if the page throws first
     await Promise.race([checks, thrown]);
     await Promise.race([tab.waitForTimeout(SETTLE), thrown]);
+    // Accessibility (docs/ACCESSIBILITY.md): axe's WCAG 2.2 A/AA rules on the page as it is now.
+    // A serious or critical violation fails the page; a lesser one is a note.
+    const { violations } = await axe(tab, { tags: WCAG });
+    const blocking = violations.filter((v) => BLOCKING.has(v.impact));
+    for (const line of describe(blocking)) errors.push(`axe: ${line}`);
+    for (const line of describe(violations.filter((v) => !blocking.includes(v)))) {
+      notes.push(`axe: ${line}`);
+    }
   } catch (err) {
     const text = await tab
       .locator("#root")

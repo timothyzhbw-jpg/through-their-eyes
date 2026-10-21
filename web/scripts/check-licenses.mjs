@@ -16,8 +16,9 @@ const ALLOWED = new Set([
 const REVIEWED = {
   "webgl-constants": "", // no licence field; its LICENSE file is MIT (via drei -> detect-gpu)
 };
-// MPL-2.0 is allowed only as an unmodified dependency: Vite's CSS minifier and its binaries.
-const UNMODIFIED_MPL = /^lightningcss(-.+)?$/;
+// MPL-2.0 is allowed only as an unmodified dependency: Vite's CSS minifier and its binaries, and
+// axe-core (dev only: the accessibility audit injects its unmodified axe.min.js into the page).
+const UNMODIFIED_MPL = /^(lightningcss(-.+)?|axe-core)$/;
 
 function licenceOf(pkg) {
   const raw = pkg.license ?? pkg.licenses;

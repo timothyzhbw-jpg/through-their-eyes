@@ -7,8 +7,8 @@
 ## 0. Pitch and judging alignment
 
 **One-liner:** See what they saw. An AI studio that explains key moments through the player's own
-perception — the scans before the ball arrived, what was visible, what he believed — and proves
-every on-screen number before it airs.
+perception — the scans before the ball arrived, what was visible, what he believed — and checks
+every number the crew says or captions before it airs.
 
 **Target prizes:** Grand Prize + Best Multi-Agent System (judges may reassign the category).
 
@@ -152,6 +152,9 @@ on an LLM.
   from tracking data only — `head_yaw` plus player and ball positions — with no access to sim
   scan events or other sim-internal state (§4.7).
 - Output: JSONL frames + JSON events. Optional kloppy-compatible export (stretch).
+- *Downloadable dataset (2026-10-21, `sim/dataset.py`):* stitched matches on fresh seeds as
+  events (CSV/Parquet), 25 Hz tracking (Parquet), metadata (JSON) and per-reception perception,
+  with a datasheet: [DATASET.md](DATASET.md).
 
 ### 3.2 Movement
 - Formation anchors (e.g. 4-3-3 vs 4-2-3-1) shifted by ball position and phase; compactness and
@@ -586,7 +589,38 @@ is a step.
   `force_action(player, frame, action)` (*M4*): at that decision the player takes `action` — any
   option he evaluated, e.g. `pass:H4` — instead of sampling; everything else re-simulates as
   usual. It answers "what if he had passed to H4?" with a re-simulation, not a statistic.
+- **A look the viewer chooses** (2026-10-21, for Take his eyes, §7): `add_scan(player, frame,
+  offset)` (`sim.overrides.AddScan`) starts one scan at that frame, `offset` from the ball
+  (counter-clockwise positive). It takes the path of the scenario's forced scans, so it is as
+  physical as any scan: the amplitude must lie in `SimParams.scan_amplitude` (70–150°), the head
+  turns at the scan's keyed peak speed (404 ± 51°/s, §3.4), and the dwell is the median of
+  `SimParams.scan_dwell_s`. A turn outside that range is refused. `no_scans(player, start, end)`
+  (`NoScans`) stops his own spontaneous and partial scans in a window.
+  - `look_counterfactual` gives the hero **one look**, from the pass to him until his decision:
+    his own scans in that window (the key scan, spontaneous and partial ones) do not happen, and
+    the viewer's look is his only one. Looks added on top of his own would collide with them: a
+    forced scan waits for one under way, so an extra look before the key scan cancels it, and in
+    `press_escape` seed 0 his own looks fill the window so that additive looks could start only
+    in its first 0.9 s.
+  - With no look, the scan hero's run is the run without his key scan byte for byte.
+  - A look changes only his head and what he believes until he decides: positions, the ball,
+    every other player's head and events, and every random draw are unchanged
+    (`tests/test_look.py`; `sim.export.export_looks` refuses a look that breaks this).
+  - Ids: `look:H8:0050:-150` (a look at frame 50, 150° clockwise of the ball: over his right
+    shoulder as he faces it) and `look:H8:none`; `what_if_from_id` and the Verifier re-simulate
+    them like `force:` ids.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
+- **Seed registry.** Scenario seeds and match seeds are separate inputs, but no range below is
+  reused for another purpose.
+
+  | Seeds | What | Where |
+  |---|---|---|
+  | 0–1999 | scenario seeds: each scenario's design seeds and its held-out eval seeds | §3.6, §4, `eval/` reports |
+  | 0, 3, 11 | demo hero seeds (`press_escape`/`corner_blind_side` 0, `blind_side_run` 3, `far_post_finish` 11) | `sim/match.py` |
+  | 1, 2 | match seeds of the served matches | `sim/match.py`, `api/` |
+  | 100–119 | held-out match seeds | `eval/match_stats.py` |
+  | 5001–5100 | match seeds of the downloadable dataset; v1 uses 5001–5010 | `sim/dataset.py`, [DATASET.md](DATASET.md) |
+  | ≥ 1,000,000 | scenario seeds keyed off a match seed: open-play passages (`open_play`), the dataset's heroes (`dataset_hero`) | `sim/match.py`, `sim/dataset.py` |
 
 ### Acceptance checks — sim
 - [x] Same seed twice in the same environment ⇒ identical output hashes.
@@ -663,6 +697,15 @@ is a step.
       with an action that was not an option, it is refused (not silently mapped).
       — [tests/test_whatif.py](../tests/test_whatif.py)::`test_forcing_the_action_actually_chosen_reproduces_the_factual_run`,
       `test_an_action_that_was_not_an_option_is_refused`
+- [x] `add_scan`: a look turns where and when it is asked, no faster than a scan turns (its peak
+      within 3 SD of the published 404 ± 51°/s), and a turn or dwell no scan makes is refused, as
+      is a look outside the window from the pass to his decision. With no look, the scan hero's
+      run equals the run without his key scan byte for byte; a look leaves every random draw, and
+      until his decision every position and every other player's head, unchanged; the same look
+      twice is byte-identical.
+      — [tests/test_look.py](../tests/test_look.py) (23 sim cases); the factual runs, the
+      committed exports and every eval report regenerate unchanged with the override in the engine
+      (`git status -s eval/` after re-running every eval that calls no model, 2026-10-21)
 
 ## 4. Analytics kernels (`analytics/`)
 Every kernel: numpy reference + unit tests. GLSL versions in `web/` must match the numpy reference
@@ -1444,6 +1487,15 @@ original visual identity.
   minimum shot length and never mid-scan ([web/src/director/](../web/src/director/)).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
+  - The persona and language menu stays open across picks until Escape or a press outside.
+  - A stitched match's Moments panel pins its hero moments (Breakdown, Your call) at the top. Every
+    other moment folds into one row per kind and lens, lensed groups first, and groups of up to
+    five start open. match-1's 149 sprints are one row.
+  - On a phone the header keeps the name and "A synthetic match" on a line of their own above the
+    controls.
+  - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
+    another is lifted one label up, else hidden; the runner's gold number always shows
+    ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1465,13 +1517,104 @@ original visual identity.
     the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
     it is loaded; a hero with no decision on the ball (`corner_blind_side`) has no Your call.
   - Reduced motion: every clip and move cuts to its end. No model call.
+- **Take his eyes** (2026-10-21, [web/src/takeeyes/](../web/src/takeeyes/); deep link
+  `?play=eyes`, a hero moment's only): the viewer chooses when and where the hero looks, and the
+  sim re-runs the moment with that look as his only one between the pass and his decision
+  (§3.7 `add_scan`). Other entries' what-ifs estimate what might have happened; this one
+  re-simulates it.
+  - *The grid.* Every look is precomputed into `look_*.json` (`sim.export.export_looks`): no live
+    re-simulation, no model call. Times: every 0.4 s back from the reception while the ball is on
+    its way to him (`blind_side_run` seed 3: 2.0 s to 0; `press_escape` seed 0: 1.6 s to 0).
+    Directions: to his left, over his left shoulder, over his right shoulder, to his right (±90°,
+    ±150° from the ball; 150° is the widest a scan turns). It opens on the cell nearest his own
+    look.
+  - *Choosing.* The board shows his picture at the chosen time with no look yet (belief ghosts);
+    over it a dial: the cone where he will look and the arc a scan reaches. Drag or tap round him
+    and the cone snaps to the grid's directions; the directions and the times are also radio
+    groups (arrow keys, Enter to look). The timeline marks his own looks, the ball's arrival and
+    his decision.
+  - *Looking, then the result.* The moment plays through his eyes with the look (the first-person
+    view and the board play a derived session: the factual run with his head, sight and belief
+    spliced in, `takeeyes/looks.ts`). The result compares his call with the look, his real call
+    and his call with no look; the board shows both runs from the decision on (the look's run as
+    the gold ghost path of the What if box, over what he really did) or his picture at the
+    decision, with the look or with none.
+  - *Words.* Only verified lines (`agents/look.py`, slot-filled en and zh templates checked by the
+    Verifier on the look's run and the no-look run): when and where he looked, that his head was
+    still turning when he decided, which teammates the look brought into his sight, how far off
+    his picture of the one that mattered was with the look and with none, what he did against what
+    he really did, what came of it, and its value in expected threat. With a placed shot (§3.3)
+    the keeper counts among those he may need to see, and the lines say which post he picks and
+    whether it goes in or the keeper saves it. A look's side is checked from the ball, as the
+    grid places it (`scan_side(…, against="ball")`). No count or rate is shown outside a verified
+    line.
+  - *Next heroes.* `far_post_finish` seed 11 already gives a grid on main (24 looks, 9 change his
+    placement; with no look he goes near post and is saved): it is bundled once the app serves
+    that hero.
+  - *What the grid shows, honestly* ([look_grid_blind_side_run.md](../eval/reports/look_grid_blind_side_run.md),
+    [look_grid_press_escape.md](../eval/reports/look_grid_press_escape.md)): on `blind_side_run`
+    seed 3, 10 of 24 looks change his decision against no look (looking behind him 0.4–1.6 s
+    before the ball arrives finds the runner; 2 s is too early, at the reception too late), and
+    on held-out seeds 100–139 a look over either shoulder 0.4–1.6 s before finds the runner in
+    95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
+    held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
+    a close call.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
+- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the lineup card,
+  the moment card and the story, and the link `?tour=1`, or `?tour=<step id>`): an optional walk
+  of about ninety seconds, so a judge with three minutes sees every signature feature without
+  exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
+  at (CSS selectors), one plain line, the app control it runs on arrival, an optional button in
+  the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
+  - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
+    captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
+    number; Your call; another audience in another language (a casual fan, in Chinese); the
+    Producer's failure drill and bring-back; then the whole match, whose card links to
+    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
+    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
+    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
+    main.
+  - *It never takes over.* It only calls the app's own controls, and never presses anything that
+    spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
+    with the card's button. The overlay lets every click through, the card is a non-modal dialog,
+    and closing it at any step (Skip tour, Done, Escape) leaves the app as that step left it. Its
+    words carry no number; the numbers on screen are the app's own verified values.
+  - Next, Back, Skip; arrow keys and Escape in the card. Reduced motion: no animated ring, no
+    smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
+    the viewer touches the app, so Your call and the evidence stay usable.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
+- **Key-moment beat** ([web/src/beat/](../web/src/beat/)): each key scan plays like a broadcast
+  highlight. Free play and the live stream ease into slow motion (about 0.4×) as the scan begins,
+  hold for a beat (≈ 0.35 s) when the player the look is for first comes into the hero's sight,
+  and are back at 1× by the release (his pass); the run without the look slows at the same frames
+  with no hold. Plans and the recap reel keep their own speeds. The broadcast camera pushes in on
+  the hero, then opens to both players once he has seen the runner, and eases back after the
+  pass; in first person the 95° view stays and the vignette closes in instead. The arc his look
+  swept fills in gold on the board and the grass; the runner gets a ring and a glow from the
+  sighting; while he is in the sim's sight but outside the camera, the picture's edge glows on his
+  side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
+  by what the beats added and catches up at the next possession's cut. Timing is a function of
+  the frame only: no position, event or number changes.
+  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
+    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
+    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
+    with the playhead.
+  - Verified numbers in a caption count up from zero the first time they come up and take a
+    check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
+    page's text is the verified value throughout.
+  - Sound ([web/src/sound/](../web/src/sound/), synthesized in code, [CREDITS](CREDITS.md)): a
+    low crowd bed that muffles through the beat, a whoosh as each scan of the POV player begins,
+    a sting at the "without the look" reveal; all ducked under the narration voice, all off with
+    the Sound switch.
+  - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
+    and a CSS grade and first-person vignette over the canvas.
+  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+    the ring, the sweep and the stamp still show.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1497,6 +1640,14 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
+- [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
+      moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
+      the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt
+      numbers are lifted or hidden, nearest first.
+      — [web/src/ui/moments.test.tsx](../web/src/ui/moments.test.tsx),
+      [stage.test.tsx](../web/src/ui/stage.test.tsx) ("stays open after each pick"),
+      [web/src/views/declutter.test.ts](../web/src/views/declutter.test.ts); `npm run smoke`
+      phone pages (header name, note and overlaps)
 - [ ] 60 fps on a laptop integrated GPU with the pitch-control shader on (Chrome).
       — *Open:* not measured on a laptop GPU yet. The shader exists (per pixel,
       [web/src/pitchControl/](../web/src/pitchControl/), toggle off by default), and
@@ -1530,6 +1681,25 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
       [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+- [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
+      live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
+      and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
+      fold; the card stays on screen at desktop and phone width; its words carry no number.
+      — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
+      [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
+      `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
+      no sideways scroll
+- [x] Take his eyes: every look of the grid airs only lines that pass the checks, in en and zh;
+      a look's run is the factual run with only his head, sight, belief and own events spliced in
+      before his decision; times and directions are named radio groups with arrow keys and Enter,
+      and a drag or tap round him snaps to the nearest direction; looking plays to his decision
+      and the result shows the look's run as the board's ghost path; reduced motion cuts to the
+      end; a moment with no bundled grid says why.
+      — [web/src/takeeyes/looks.test.ts](../web/src/takeeyes/looks.test.ts),
+      [flow.test.ts](../web/src/takeeyes/flow.test.ts),
+      [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
+      [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
@@ -1550,6 +1720,18 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Key-moment beat:* slow motion starts as the key scan begins and ends by the release, the
+      accent holds at the sighting, the run without the look slows with no accent, plans and the
+      recap keep their speeds, reduced motion turns it off, the live playhead never jumps inside a
+      beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
+      and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
+      — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
+      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
+      [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
+      `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
+      pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
+      1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
@@ -1739,13 +1921,13 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 11 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
 | §4 analytics | 8 | 0 | — |
 | §5 explain | 8 | 0 | — |
-| §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 10 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **35** | **9** |
+| **Total** | **40** | **9** |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
@@ -1804,6 +1986,9 @@ Framework, live deployment, the video.
 
 Shot list and capture kit: [video/](../video/README.md). `shots.json` holds each beat's URL,
 scripted actions, target length and voice-over; `capture.mjs` records them from the live site.
+The cut as made (2026-10-21): a game-trailer edit rendered by `cd video && npm run trailer` from
+[video/trailer.json](../video/trailer.json); its treatment and the beats it changes from the storyboard
+above are in [VIDEO_SCRIPT.md](VIDEO_SCRIPT.md).
 
 ## 11. Submission checklist
 - [ ] Registered by 2026-10-20 12:00 PT (all team members, to be safe)
