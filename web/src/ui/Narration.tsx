@@ -7,7 +7,7 @@
 // turns the voice on, and each claim with a number in the evidence card offers "Try a wrong
 // number": the service's verifier checks the claim again with the viewer's value (SPEC 7).
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DESCRIBED, PERSONAS, type VerifyResponse } from "../api/client";
 import { runLabels, type Hero } from "../data/hero";
 import {
@@ -147,6 +147,29 @@ export function EvidenceCard() {
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
   const line = lineOf(narration, lineId);
+  const isOpen = !!narration && !!line;
+  // What had the focus when the card opened (the caption, a narration line): it gets it back on
+  // close, by Escape or the close button, instead of dropping it on <body>.
+  const opener = useRef<HTMLElement | null>(null);
+  const close = () => {
+    const back = opener.current;
+    controls.closeEvidence();
+    if (back?.isConnected) back.focus({ preventScroll: true });
+  };
+  const closeNow = useRef(close);
+  closeNow.current = close;
+  useEffect(() => {
+    if (!isOpen) return;
+    const focused = document.activeElement;
+    opener.current = focused instanceof HTMLElement && focused !== document.body ? focused : null;
+    // Escape closes it wherever the focus is: in the card, on its caption, or nowhere (a ?tamper=
+    // link). A menu that handles its own Escape stops the event before it gets here.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNow.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen]);
   if (!narration || !line) return null;
   const at = (f: number) => `${((f + offset) * hero.dt).toFixed(2)} s`; // the match clock
   const elsewhere = `, ${runLabels(hero).tag.counterfactual}`;
@@ -159,12 +182,7 @@ export function EvidenceCard() {
             Sample data · not checked by the verifier
           </span>
         )}
-        <button
-          type="button"
-          className="close"
-          onClick={controls.closeEvidence}
-          aria-label="Close evidence"
-        >
+        <button type="button" className="close" onClick={close} aria-label="Close evidence">
           ×
         </button>
       </div>
@@ -521,7 +539,9 @@ export function BreakdownChoice() {
 }
 
 /** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on or
- * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. */
+ * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. The text
+ * button shows "Sound" and draws "off" / "on" from aria-pressed (live.css), so what it shows
+ * is in its name (WCAG 2.5.3). */
 export function SoundToggle({ icon = false }: { icon?: boolean }) {
   const { voice, controls } = useSession();
   const on = useStore(voice.state, (s) => s.on);
@@ -551,18 +571,7 @@ export function SoundToggle({ icon = false }: { icon?: boolean }) {
       title={title}
       onClick={() => controls.setSound(!on)}
     >
-      {icon ? (
-        on ? (
-          <SoundOnIcon />
-        ) : (
-          <SoundOffIcon />
-        )
-      ) : (
-        <>
-          {on ? "Sound on" : "Sound off"}
-          {on && status === "loading" && " …"}
-        </>
-      )}
+      {icon ? on ? <SoundOnIcon /> : <SoundOffIcon /> : "Sound"}
     </button>
   );
 }
