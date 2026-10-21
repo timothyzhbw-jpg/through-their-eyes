@@ -198,7 +198,8 @@ describe("live mode in the session", () => {
     session.controls.goLive();
     const ws = sockets.sockets[0];
     ws.open();
-    ws.push(hello(), frameMsg(0));
+    // The other run may take the stream only once this hero moment is in.
+    ws.push(hello(), frameMsg(0), momentMsg(HERO_MOMENT, 0));
     session.controls.setMode("counterfactual");
     expect(ws.sent.at(-1)).toEqual({ type: "stop" });
     expect(session.playback.get()).toMatchObject({ live: false, mode: "counterfactual" });
@@ -211,6 +212,17 @@ describe("live mode in the session", () => {
     expect(session.playback.get()).toMatchObject({ live: false, playing: false, frame: 2 });
     session.controls.goLive(); // after the end: from the start
     expect(sockets.sockets[2].url).toContain("start=0");
+  });
+
+  it("sends no stop and stays live in the factual run before the hero moment", () => {
+    const { session, sockets } = online();
+    session.controls.goLive();
+    const ws = sockets.sockets[0];
+    ws.open();
+    ws.push(hello(), frameMsg(0));
+    session.controls.setMode("counterfactual");
+    expect(ws.sent).not.toContainEqual({ type: "stop" });
+    expect(session.playback.get()).toMatchObject({ live: true, mode: "factual" });
   });
 
   it("asks for the breakdown when the stream detects the moment, then plays it", async () => {
