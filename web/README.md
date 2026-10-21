@@ -29,6 +29,8 @@ npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 npm run fps          # after a build: fps with pitch control and the skeleton off and on (below)
 npm run smoke        # end to end: a local API, the build, every page in headless Chromium (below)
+npm run a11y -- --url <site>  # axe-core on every screen, desktop and phone (docs/ACCESSIBILITY.md)
+npm run contrast -- --url <site>  # contrast of the text over the 3D views, 72 renders (same doc)
 ```
 
 ## URL parameters
@@ -415,9 +417,11 @@ checks the whole tree in CI.
 | vitest 5.0.3 (dev)                                                | MIT        | unit tests, reusing the Vite config                                    |
 | prettier 3.9.9 (dev)                                              | MIT        | formatting, checked in CI like `ruff format`                           |
 | playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests, `fps` and `smoke`; no browser download    |
+| axe-core 4.14.0 (dev)                                             | MPL-2.0    | WCAG rules for `smoke` and `a11y`, injected unmodified into the page   |
 
-Transitive exceptions, reviewed by hand: `lightningcss` (Vite's CSS minifier) is MPL-2.0, used
-unmodified at build time only (allowed by CLAUDE.md); `webgl-constants` (via drei → detect-gpu)
+MPL-2.0 is allowed only unmodified (CLAUDE.md): `axe-core` is a dev dependency whose `axe.min.js`
+the scripts inject into the page as shipped, and `lightningcss` (Vite's CSS minifier, transitive)
+runs unmodified at build time only. Other transitive exceptions, reviewed by hand: `webgl-constants` (via drei → detect-gpu)
 has no licence field in its package.json, its LICENSE file is MIT.
 
 Fonts (Barlow, Saira Condensed, IBM Plex Mono) are loaded from Google Fonts at runtime, as in
@@ -458,8 +462,9 @@ the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on t
 | `/` and `?match=match-1` on an iPhone 17 | the phone width, live; a sideways scroll is noted (below)          |
 
 Every page but the two lineup ones adds `intro=0`. A page passes when its main view shows (with
-its WebGL canvas) and it logs no console error and throws no uncaught exception; an uncaught
-exception fails it at once. The phone is Playwright's iPhone 17 profile (402 px wide, touch,
+its WebGL canvas), it logs no console error, throws no uncaught exception and has no serious or
+critical violation of axe-core's WCAG 2.2 A/AA rules (`scripts/axe.mjs`; lesser ones are notes);
+an uncaught exception fails it at once. The phone is Playwright's iPhone 17 profile (402 px wide, touch,
 Safari's user agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering. On it
 the run notes a page wider than the screen without failing it: on main the live screen's header
 is (436 px for the hero, 595 px for match-1 while streaming), and the check becomes a failure once

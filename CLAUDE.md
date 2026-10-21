@@ -141,7 +141,13 @@ _Fill in as they come to exist._
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
-- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
+- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
+  including axe-core's WCAG 2.2 A/AA rules
+- `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core
+  on every screen (menus, Your call, evidence, a match's breakdown) at 1440×900 and 375×812; on a
+  deployed site it asks only for the casual and analyst breakdowns in English. Writes `out/a11y/`.
+  `npm run contrast -- --url <site>`: the contrast of the text over the 3D views, by pixels (axe
+  cannot judge it), on 72 renders
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
