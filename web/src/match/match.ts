@@ -59,6 +59,9 @@ export const SCENARIO_LABEL: Record<string, string> = {
   blind_side_run: "The blind-side run",
   press_escape: "Escaping the press",
   corner_blind_side: "The corner",
+  far_post_finish: "The far post",
+  cutback_scan: "The cutback",
+  screened_shot: "The save",
 };
 
 export const RESTART_LABEL: Record<string, string> = {

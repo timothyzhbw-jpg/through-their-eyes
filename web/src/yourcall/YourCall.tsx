@@ -30,6 +30,8 @@ import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
+// A text marker (carry, a shot) is a pill: its width from the label (11 px uppercase, tracked).
+const textMarkerPx = (text: string) => Math.max(MARKER_PX, 24 + 8 * text.length);
 const SWIPE_START_PX = 72; // the swipe layer's radius around the carrier: two marker sizes
 const YOU_DROP_PX = 18; // the "you" label hangs this far under the carrier's feet
 const YOU_CLEAR_PX = 56; // and markers keep this far from its centre (half its width + a marker)
@@ -165,7 +167,8 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
   );
   const markers = useMemo(() => {
     const raw = options.map((o) => markerAt(camera, o.anchor, w, h));
-    const placed = declutter(raw, MARKER_PX, [{ at: youAt(carrierPx), r: YOU_CLEAR_PX }]);
+    const widths = options.map((o) => (o.kind === "pass" ? MARKER_PX : textMarkerPx(o.short)));
+    const placed = declutter(raw, MARKER_PX, [{ at: youAt(carrierPx), r: YOU_CLEAR_PX }], widths);
     return options
       .map((o, k) => ({ option: o, at: placed[k] }))
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
@@ -389,8 +392,9 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
           the players he had not seen lately are grey.
         </p>
         <p className="yc-hint">
-          Tap a teammate, or swipe from {heroId} toward one. Keyboard: Pick with the keyboard, then
-          the arrow keys and Enter.
+          Tap {options.some((o) => o.kind === "shot") ? "a teammate or a shot" : "a teammate"}, or
+          swipe from {heroId} toward one. Keyboard: Pick with the keyboard, then the arrow keys and
+          Enter.
         </p>
         {state.tried.length > 0 && (
           <p className="yc-hint">Tried: {state.tried.map(labelOf(options)).join(", ")}</p>

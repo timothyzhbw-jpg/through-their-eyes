@@ -47,15 +47,21 @@ export interface ExportDecision {
   belief_age: Record<string, number>; // s
 }
 
+/** The hero's action: a pass, or a shot. A placed shot (Module A, `shot:near` / `shot:far`) has
+ * `aim`, `placement` and `keeper` instead of a pass's `to` and `target`. */
 export interface ExportAction {
   frame: number;
-  to: string;
+  to?: string; // a pass's intended receiver
   start: Vec2; // m
-  target: Vec2; // m
+  target?: Vec2; // m, a pass's target
+  aim?: Vec2; // m, a shot's aim on the goal line
+  placement?: "near" | "far";
+  keeper?: string; // the keeper the shot is placed against
   speed: number; // m/s
   distance: number; // m
-  outcome: string;
-  end?: number; // frame the pass was resolved
+  // A pass: complete / intercepted / out; a shot: goal / saved / wide; null while still running.
+  outcome: string | null;
+  end?: number; // frame the pass or shot was resolved
   end_at?: Vec2;
   receiver?: string | null;
 }
@@ -129,6 +135,7 @@ export interface HeroExport {
   // The look the counterfactual drops; null for a hero whose lens is not the scan (press_escape).
   key_scan: { id: string; start: number; end: number } | null;
   counterfactual: ExportCounterfactual;
+  key_step?: ExportKeyStep | null; // a keeper's step instead of a key scan (screened_shot)
   vision: ExportVision;
   scan_detector: ExportScanDetectorParams;
   delta_xt: number | null; // null without a decision on the ball (a marker's look)
@@ -138,7 +145,19 @@ export interface HeroExport {
 /** The hero's counterfactual run: the key scan dropped, or one action forced (SPEC 3.7). */
 export type ExportCounterfactual =
   | { id: string; intervention: "drop_scan"; scan: string }
-  | { id: string; intervention: "force_action"; action: string };
+  | { id: string; intervention: "force_action"; action: string }
+  | { id: string; intervention: "drop_step"; step: string }; // a keeper's step (screened_shot)
+
+/** A keeper's key step across his goal (screened_shot, SPEC 3.6 C2): the event id, its frame and
+ * where he moved from and to. */
+export interface ExportKeyStep {
+  id: string; // "step:H1:0013"
+  frame: number;
+  start: Vec2; // m
+  end: Vec2; // m
+  lateral_m: number;
+  key: boolean;
+}
 
 // ---------- a stitched match (sim.export.export_match, SPEC 3.1) ----------
 

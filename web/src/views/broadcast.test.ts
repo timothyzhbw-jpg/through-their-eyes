@@ -192,7 +192,7 @@ describe("broadcast camera: reading a pass", () => {
     const hero = parseHero(raw);
     const run = hero.runs.factual;
     const kick = run.action!;
-    const receiver = hero.ids.indexOf(kick.to);
+    const receiver = hero.ids.indexOf(kick.to!);
     const at = Math.round((kick.frame + kick.end!) / 2);
     const [u] = project(shotAt(pathFor(run, hero.dt), at), [
       run.pos[(at * hero.n + receiver) * 2],
