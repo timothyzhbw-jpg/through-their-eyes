@@ -1,14 +1,18 @@
 // The upgraded look's shading (SPEC 7, `?look=v2`). Every part of the rigged player reads the
 // model's `_LOOK` vertex attribute (demo/grf/reskin.py; three.js names it `_look`):
 // - R: ambient occlusion baked in Blender from the rest pose. It takes the whole of the
-//   hemisphere's light (the armpits, the neck, under the shorts) and half of the lamps', so the
-//   shapes read under the floodlights without the creases going black;
+//   hemisphere's and an environment map's light (the armpits, the neck, under the shorts) and half
+//   of the lamps', so the shapes read under the floodlights without the creases going black. A
+//   renderer with its own occlusion pass can lower the lamps' share at run time (lookUniforms);
+//   the occlusion is applied to the light, never baked into the colours;
 // - G: the keepers' long sleeves (skin) or the sole (boots), mixed to an accent colour;
 // - B: the keepers' gloves (skin).
 
 import * as THREE from "three";
 
-export const DIRECT_AO = 0.5;
+/** Shared by every look material. uLookDirectAO: the share of the lamps' light the baked
+ * occlusion takes (0 leaves direct light alone). */
+export const lookUniforms = { uLookDirectAO: { value: 0.5 } };
 
 export interface Accents {
   g?: string; // colour where the G mask is set
@@ -27,7 +31,7 @@ export function withLook<M extends THREE.MeshStandardMaterial>(
     uLookBOn: { value: accents.b ? 1 : 0 },
   };
   material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, uniforms);
+    Object.assign(shader.uniforms, uniforms, lookUniforms);
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nattribute vec4 _look;\nvarying vec4 vLook;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvLook = _look;");
@@ -39,7 +43,8 @@ varying vec4 vLook;
 uniform vec3 uLookG;
 uniform float uLookGOn;
 uniform vec3 uLookB;
-uniform float uLookBOn;`,
+uniform float uLookBOn;
+uniform float uLookDirectAO;`,
       )
       .replace(
         "#include <color_fragment>",
@@ -51,7 +56,8 @@ uniform float uLookBOn;`,
         "#include <aomap_fragment>",
         `#include <aomap_fragment>
 	reflectedLight.indirectDiffuse *= vLook.r;
-	reflectedLight.directDiffuse *= mix(1.0, vLook.r, ${DIRECT_AO.toFixed(2)});`,
+	reflectedLight.indirectSpecular *= vLook.r;
+	reflectedLight.directDiffuse *= mix(1.0, vLook.r, uLookDirectAO);`,
       );
   };
   material.customProgramCacheKey = () => "look-v2";

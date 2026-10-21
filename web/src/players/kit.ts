@@ -151,41 +151,63 @@ export function paintDesign(
 }
 
 const cache = new Map<string, THREE.CanvasTexture>();
+const designed = new Map<number, ImageData>(); // per kit slot: the garments with the design
+
+/** Shirt, shorts and socks in their colours (no trims) on a fresh canvas. */
+function garments(kit: Kit, willRead: boolean): CanvasRenderingContext2D {
+  const cv = document.createElement("canvas");
+  cv.width = KIT_SIZE;
+  cv.height = KIT_SIZE;
+  const c = cv.getContext("2d", { willReadFrequently: willRead })!;
+  const rect = (x0: number, y0: number, x1: number, y1: number) =>
+    c.fillRect(x0 * KIT_SIZE, y0 * KIT_SIZE, (x1 - x0) * KIT_SIZE, (y1 - y0) * KIT_SIZE);
+  c.fillStyle = kit.shirt;
+  c.fillRect(0, 0, KIT_SIZE, KIT_SIZE);
+  c.fillStyle = kit.shorts;
+  rect(0.09, 0.405, 0.41, 0.6);
+  rect(0.59, 0.405, 0.91, 0.6);
+  c.fillStyle = kit.socks;
+  rect(0, 0.57, 0.545, 0.76);
+  return c;
+}
+
+/** The kit's garments with its design painted from the mask, once per kit slot. */
+function designedKit(slot: number, kit: Kit, mask: CanvasImageSource): ImageData {
+  const hit = designed.get(slot);
+  if (hit) return hit;
+  const c = garments(kit, true);
+  const m = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+  m.canvas.width = KIT_SIZE;
+  m.canvas.height = KIT_SIZE;
+  m.drawImage(mask, 0, 0, KIT_SIZE, KIT_SIZE);
+  const img = c.getImageData(0, 0, KIT_SIZE, KIT_SIZE);
+  paintDesign(img.data, m.getImageData(0, 0, KIT_SIZE, KIT_SIZE).data, KIT_SIZE, kit);
+  designed.set(slot, img);
+  return img;
+}
 
 /** The player's kit texture with his shirt number; with `mask` (the v2 look), its design. */
 export function kitTexture(
   player: Wearer & Pick<ExportPlayer, "number">,
   mask?: CanvasImageSource,
 ): THREE.CanvasTexture {
-  const key = `${kitSlot(player)}:${player.number}:${mask ? "design" : "plain"}`;
+  const slot = kitSlot(player);
+  const key = `${slot}:${player.number}:${mask ? "design" : "plain"}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const kit = kitOf(player);
   const SIZE = KIT_SIZE;
-  const cv = document.createElement("canvas");
-  cv.width = SIZE;
-  cv.height = SIZE;
-  const c = cv.getContext("2d", { willReadFrequently: !!mask })!;
-  const rect = (x0: number, y0: number, x1: number, y1: number) =>
-    c.fillRect(x0 * SIZE, y0 * SIZE, (x1 - x0) * SIZE, (y1 - y0) * SIZE);
-  c.fillStyle = kit.shirt;
-  c.fillRect(0, 0, SIZE, SIZE);
-  c.fillStyle = kit.shorts;
-  rect(0.09, 0.405, 0.41, 0.6);
-  rect(0.59, 0.405, 0.91, 0.6);
-  c.fillStyle = kit.socks;
-  rect(0, 0.57, 0.545, 0.76);
+  let c: CanvasRenderingContext2D;
   if (mask) {
-    const mc = document.createElement("canvas");
-    mc.width = SIZE;
-    mc.height = SIZE;
-    const m = mc.getContext("2d", { willReadFrequently: true })!;
-    m.drawImage(mask, 0, 0, SIZE, SIZE);
-    const img = c.getImageData(0, 0, SIZE, SIZE);
-    paintDesign(img.data, m.getImageData(0, 0, SIZE, SIZE).data, SIZE, kit);
-    c.putImageData(img, 0, 0);
-    c.fillStyle = kit.trim;
+    const cv = document.createElement("canvas");
+    cv.width = SIZE;
+    cv.height = SIZE;
+    c = cv.getContext("2d")!;
+    c.putImageData(designedKit(slot, kit, mask), 0, 0);
   } else {
+    c = garments(kit, false);
+    const rect = (x0: number, y0: number, x1: number, y1: number) =>
+      c.fillRect(x0 * SIZE, y0 * SIZE, (x1 - x0) * SIZE, (y1 - y0) * SIZE);
     // Sock tops and collars in the trim colour.
     c.fillStyle = kit.trim;
     rect(0, 0.57, 0.545, 0.59);
@@ -198,11 +220,12 @@ export function kitTexture(
     rect(0.7, 0, 0.8, 0.02);
   }
   // Shirt number on the back.
+  c.fillStyle = kit.trim;
   c.font = `700 ${0.19 * SIZE}px "Saira Condensed", "Arial Narrow", sans-serif`;
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillText(String(player.number), 0.765 * SIZE, 0.23 * SIZE);
-  const tex = new THREE.CanvasTexture(cv);
+  const tex = new THREE.CanvasTexture(c.canvas);
   tex.flipY = false;
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
