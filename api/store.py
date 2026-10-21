@@ -27,6 +27,7 @@ from typing import Any
 import numpy as np
 from agent_framework import FileCheckpointStorage
 from azure.core.exceptions import AzureError, ResourceNotFoundError
+from pydantic_core import to_json
 
 from agents.context import MomentContext
 from api.settings import Settings, match_id
@@ -66,9 +67,9 @@ class Match:
     export_gzip: bytes = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.export_json = json.dumps(
-            self.export, separators=(",", ":"), ensure_ascii=False, allow_nan=False
-        ).encode()
+        # As FastAPI serialised it per request: NaN and infinities become null (a hero export has
+        # NaN where a value is undefined, e.g. corner_blind_side's).
+        self.export_json = to_json(self.export, inf_nan_mode="null")
         self.export_gzip = gzip.compress(self.export_json, compresslevel=6, mtime=0)
 
     @property

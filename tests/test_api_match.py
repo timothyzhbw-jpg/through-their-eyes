@@ -1,5 +1,7 @@
 """The API serves a stitched match and the pressure hero (SPEC 2, 3.1, 5.2, 6)."""
 
+import gzip
+import json
 import re
 from pathlib import Path
 
@@ -8,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from api.main import create_app
 from api.settings import DEFAULT_MATCHES, Settings, _matches
+from api.store import Match
 from sim.match import DEFAULT_PLAN
 
 MATCH = "match-1"
@@ -86,6 +89,13 @@ def test_deploy_and_env_example_default_to_the_same_matches():
     example = re.search(r"^TTE_MATCHES=(.*)$", (root / ".env.example").read_text(), re.MULTILINE)
     assert deploy and example
     assert _matches(deploy.group(1)) == _matches(example.group(1)) == DEFAULT_MATCHES
+
+
+def test_an_export_is_serialised_once_with_nan_as_null():
+    # As FastAPI serialised it per request: a hero export has NaN where a value is undefined.
+    m = Match("x", "x", 0, {}, {"a": float("nan"), "b": [1.5, float("inf")], "c": "é"}, [], [])
+    assert json.loads(m.export_json) == {"a": None, "b": [1.5, None], "c": "é"}
+    assert gzip.decompress(m.export_gzip) == m.export_json
 
 
 def test_the_match_is_listed_with_its_possessions_and_both_hero_moments(client, info):
