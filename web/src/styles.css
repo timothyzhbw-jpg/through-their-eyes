@@ -3206,6 +3206,46 @@ optgroup {
   }
 }
 
+/* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
+   the stream label goes (the pill already says live), then the brand tightens, then the sound
+   button goes (the commentary panel keeps one). Inside a match the way back replaces the brand. */
+@media (max-width: 480px) {
+  .stage-head .live-status {
+    display: none;
+  }
+  .stage:has(.live-chip.back) .stage-head .brand {
+    display: none;
+  }
+  /* the story's big numbers shrink with the screen instead of running off it */
+  .numeral {
+    font-size: clamp(72px, 26vw, 120px);
+  }
+  /* a long claim tag wraps rather than widening the page */
+  .kind {
+    height: auto;
+    min-height: 22px;
+    padding-block: 3px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+}
+@media (max-width: 400px) {
+  .stage-head {
+    gap: 6px;
+  }
+  .brand h1 {
+    font-size: 18px;
+  }
+  .stage-head .live-chip {
+    padding: 0 10px;
+  }
+}
+@media (max-width: 359px) {
+  .header-end .sound {
+    display: none;
+  }
+}
+
 /* ---------- motion ---------- */
 @keyframes tt-rise {
   from {
