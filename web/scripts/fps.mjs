@@ -1,8 +1,10 @@
 // Frames per second of the app with the tactical board's pitch-control overlay off and on, and
 // with the skeleton (every player's torso and head yaw) off and on over the broadcast camera and
 // the board (SPEC 7): plays the hero moment from the production build in Chrome and times its
-// animation frames while both views redraw. Then times the pitch-control shader alone, at the
-// board's canvas size and at full HD. Prints the WebGL renderer it measured on.
+// animation frames while both views redraw, through the key scan, where the first-person motion
+// blur is at its strongest (the widest blur of each run is printed). Then times the
+// pitch-control shader alone, at the board's canvas size and at full HD, and checks that
+// prefers-reduced-motion turns the blur off. Prints the WebGL renderer it measured on.
 //
 //   npm run build && npm run fps            headless; SwiftShader (software) where there is no GPU
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
@@ -50,13 +52,15 @@ try {
   await page.waitForTimeout(1500); // models and textures
   const renderer = await rendererOf(page);
   const board = await page.locator(".tac canvas").evaluate((c) => [c.width, c.height]);
-  const chips = {
-    "pitch control": button("Pitch control"),
-    skeleton: page.locator(".tac").getByRole("button", { name: "Skeleton", exact: true }),
-  };
+  const pov = await page.locator(".pov canvas").evaluate((c) => [c.width, c.height]);
+
+  /** An overlay on or off: the toggles are behind the bar's View options. */
+  const NAMES = { "pitch control": "Pitch control", skeleton: "Skeleton" };
   const set = async (overlay, on) => {
-    const chip = chips[overlay];
+    await button("View options").click();
+    const chip = button(NAMES[overlay]);
     if ((await chip.getAttribute("aria-pressed")) !== String(on)) await chip.click();
+    await page.keyboard.press("Escape");
   };
 
   /** Play from the key scan and time `seconds` of animation frames. */
@@ -64,14 +68,17 @@ try {
     await button("Key scan").click();
     await button("Play").click();
     await page.waitForTimeout(300);
-    const stamps = await page.evaluate(
+    const { stamps, blur } = await page.evaluate(
       (ms) =>
         new Promise((resolve) => {
           const t = [];
+          const canvas = document.querySelector(".pov canvas");
+          let blur = 0;
           const tick = (now) => {
             t.push(now);
+            blur = Math.max(blur, Number(canvas?.dataset.blurSigma ?? 0));
             if (now - t[0] < ms) requestAnimationFrame(tick);
-            else resolve(t);
+            else resolve({ stamps: t, blur });
           };
           requestAnimationFrame(tick);
         }),
@@ -87,16 +94,17 @@ try {
       fps: ((stamps.length - 1) * 1000) / span,
       median: gaps[Math.floor(gaps.length / 2)],
       p95: gaps[Math.floor(gaps.length * 0.95)],
+      blur,
     };
   }
 
   const rows = [];
   for (const [overlay, camera] of [
-    ["pitch control", "First person"],
+    ["pitch control", "His eyes"],
     ["skeleton", "Broadcast"], // the skeleton is drawn on the broadcast camera and the board
   ]) {
     await button(camera).click();
-    for (const other of Object.keys(chips)) await set(other, false);
+    for (const other of Object.keys(NAMES)) await set(other, false);
     for (let r = 0; r < Number(opt.runs); r++) {
       for (const on of [false, true]) {
         await set(overlay, on);
@@ -107,17 +115,37 @@ try {
   await set("skeleton", false);
   console.log(`renderer: ${renderer}`);
   console.log(
-    `viewport ${opt.width}x${opt.height} @ dpr ${opt.dpr}; tactical canvas ${board[0]}x${board[1]} px; ` +
-      `${opt.seconds} s per run, playing the hero moment at 1x`,
+    `viewport ${opt.width}x${opt.height} @ dpr ${opt.dpr}; first-person canvas ${pov[0]}x${pov[1]} px; ` +
+      `tactical canvas ${board[0]}x${board[1]} px; ${opt.seconds} s per run, playing the hero moment at 1x`,
   );
-  console.log("| overlay | 3D camera | | fps | median frame ms | p95 frame ms |");
-  console.log("|---|---|---|---:|---:|---:|");
+  console.log(
+    "| overlay | 3D camera | | fps | median frame ms | p95 frame ms | widest blur sigma px |",
+  );
+  console.log("|---|---|---|---:|---:|---:|---:|");
   for (const r of rows) {
     console.log(
       `| ${r.overlay} | ${r.camera.toLowerCase()} | ${r.on ? "on" : "off"} | ${r.fps.toFixed(1)} | ` +
-        `${r.median.toFixed(1)} | ${r.p95.toFixed(1)} |`,
+        `${r.median.toFixed(1)} | ${r.p95.toFixed(1)} | ${r.blur.toFixed(1)} |`,
     );
   }
+
+  // Reduced motion: the same frame inside the look, sharp.
+  const still = await browser.newContext({
+    viewport: { width: Number(opt.width), height: Number(opt.height) },
+    deviceScaleFactor: Number(opt.dpr),
+    reducedMotion: "reduce",
+  });
+  const reduced = await still.newPage();
+  await reduced.goto(`${base}?offline=1&autoplay=0&at=54`);
+  await reduced.waitForFunction(() => document.querySelector(".pov canvas")?.dataset.blurSigma);
+  const sharp = await reduced.locator(".pov canvas").evaluate((c) => c.dataset.blurSigma);
+  await page.goto(`${base}?offline=1&autoplay=0&at=54`);
+  await page.waitForFunction(() => document.querySelector(".pov canvas")?.dataset.blurSigma);
+  const whip = await page.locator(".pov canvas").evaluate((c) => c.dataset.blurSigma);
+  console.log(
+    `\nblur sigma at frame 54 (head turning): ${whip} px; with prefers-reduced-motion: ${sharp} px`,
+  );
+  await still.close();
 
   // The shader alone, on the decision snapshot of the parity test.
   const shot = (

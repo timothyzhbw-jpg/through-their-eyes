@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import type { PlanStep, Script } from "../plan/schema";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { Chapter } from "./Chapter";
 import { Producer } from "./Producer";
 
 const rel = (s: number) => `${s >= 0 ? "+" : "−"}${Math.abs(s).toFixed(2)} s`;
@@ -58,45 +59,56 @@ export function BreakdownPanel() {
     }
   }, [applied]);
   return (
-    <div className="panel breakdown">
-      <div className="breakdown-head">
-        <h2>Breakdown</h2>
-        {ready && (
-          <span className={source === "given" ? "plan-badge ok" : "plan-badge fallback"}>
-            {source === "given" ? "Plan validated" : "Template plan (fallback)"}
-          </span>
-        )}
-        {ready && origin?.kind === "api" && (
-          <span
-            className={origin.planSource === "agent" ? "plan-badge" : "plan-badge fallback"}
-            title={
-              origin.planSource === "agent"
-                ? "Written by the Telestrator agent"
-                : origin.planErrors.length
-                  ? "The Telestrator's plan failed the server's checks: the server sent its template"
-                  : "The Telestrator gave no plan: the server sent its template"
-            }
+    <Chapter
+      className="breakdown"
+      split
+      kicker="Behind the replay"
+      title={
+        <>
+          The crew writes. <em>Code</em> checks.
+        </>
+      }
+      lede="A TelestrationPlan is the cue list the Telestrator agent writes. Every plan is validated before it plays; an invalid one is replaced by a template plan built from the moment."
+      aside={
+        <div className="breakdown-head">
+          {ready && (
+            <span className={source === "given" ? "plan-badge ok" : "plan-badge fallback"}>
+              {source === "given" ? "Plan validated" : "Template plan (fallback)"}
+            </span>
+          )}
+          {ready && origin?.kind === "api" && (
+            <span
+              className={origin.planSource === "agent" ? "plan-badge" : "plan-badge fallback"}
+              title={
+                origin.planSource === "agent"
+                  ? "Written by the Telestrator agent"
+                  : origin.planErrors.length
+                    ? "The Telestrator's plan failed the server's checks: the server sent its template"
+                    : "The Telestrator gave no plan: the server sent its template"
+              }
+            >
+              {origin.planSource === "agent" ? "Telestrator agent" : "Server template"}
+            </span>
+          )}
+          <button
+            type="button"
+            className="btn"
+            disabled={!running && arrival === "loading"}
+            onClick={running ? controls.stopBreakdown : controls.playBreakdown}
           >
-            {origin.planSource === "agent" ? "Telestrator agent" : "Server template"}
-          </span>
-        )}
-        <button
-          type="button"
-          className="play small"
-          disabled={!running && arrival === "loading"}
-          onClick={running ? controls.stopBreakdown : controls.playBreakdown}
-        >
-          {running
-            ? "Stop"
-            : arrival === "waiting"
-              ? "Get breakdown"
-              : arrival === "loading"
-                ? "Loading…"
-                : status === "idle"
-                  ? "Play breakdown"
-                  : "Replay breakdown"}
-        </button>
-      </div>
+            {running
+              ? "Stop"
+              : arrival === "waiting"
+                ? "Get breakdown"
+                : arrival === "loading"
+                  ? "Loading…"
+                  : status === "idle"
+                    ? "Play breakdown"
+                    : "Replay breakdown"}
+          </button>
+        </div>
+      }
+    >
       {ready && origin?.kind === "api" && origin.planErrors.length > 0 && (
         <details className="plan-errors">
           <summary>The Telestrator's plan failed the server's checks</summary>
@@ -149,11 +161,7 @@ export function BreakdownPanel() {
           ))}
         </ol>
       )}
-      <p className="note">
-        A TelestrationPlan is the cue list the Telestrator agent writes. Every plan is validated
-        before it plays; an invalid one is replaced by a template plan built from the moment.
-      </p>
       <Producer />
-    </div>
+    </Chapter>
   );
 }
