@@ -12,7 +12,9 @@ export const LOOK = {
   exposure: 1.25,
   rim: { color: "#fff2d8", strength: 0.55, power: 2.5 }, // the floodlights' warm white
   crowdTint: "#b4bcc8", // multiplies the crowd's shirts: neutral-cool, no team-colour flashes
-  starShadow: 0.3, // each of the four mast shadows (25–35 %)
+  starShadow: 0.27, // each of the three fill masts' shadows (25–35 %)
+  keyShadow: 0.34, // the key mast's (+x, +y): the fills are at 0.75 of the key
+  shadowTipWidth: 0.9, // m at the tip; 0.5 m (the shoulders) at the feet
   glowOpacity: 0.32, // the lamp's own glow sprite, its halo and flare off
   glowScale: 22, // m across: about three lamp heads (a lamp face is 9.2 m)
   lamp: 4, // lamp face brightness (× the lamp colour): above the bloom threshold at high

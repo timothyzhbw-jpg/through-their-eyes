@@ -463,12 +463,151 @@ function blobTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(cv);
 }
 
+/** The players' floodlight shadows: the classic decals, or with the shared look (quality/) the
+ * art director's mast shadows. */
+export function PlayerShadows() {
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  return look ? <MastShadows /> : <ClassicShadows />;
+}
+
+/** A wedge for a mast shadow: dark at the feet (left), fading to nothing at the tip (right),
+ * 0.5 m wide at the feet and widening to the tip (the plane is 1 × 1, scaled per player). */
+function wedgeTexture(): THREE.CanvasTexture {
+  const cv = document.createElement("canvas");
+  cv.width = 128;
+  cv.height = 64;
+  const c = cv.getContext("2d")!;
+  const img = c.createImageData(128, 64);
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 128; x++) {
+      const u = x / 127; // 0 at the feet, 1 at the tip
+      const half = 0.5 * (0.55 + 0.45 * u); // of the plane's width (the plane is the tip's width)
+      const v = Math.abs(y / 63 - 0.5);
+      const across = Math.max(0, Math.min(1, (half - v) / (0.18 * half) + 0.5));
+      const along = Math.pow(1 - u, 1.4) * Math.min(1, u * 14 + 0.35); // soft start under the core
+      const a = Math.round(255 * along * across);
+      const k = 4 * (y * 128 + x);
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
+      img.data[k + 3] = a;
+    }
+  }
+  c.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(cv);
+  return tex;
+}
+
+/**
+ * Four shadows per player, as the Blender shots draw them (LOOKDEV §2a): each points from a
+ * mast's foot through the player's feet, 1.8 m × the horizontal distance to the mast ÷ its 46 m
+ * height long, about the shoulders' width at the feet and widening as it fades to the tip; the
+ * key mast's (+x, +y) a little darker than the fills', over the dark contact core.
+ */
+function MastShadows() {
+  const { hero, playback } = useView();
+  const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const key = useRef<THREE.InstancedMesh>(null);
+  const fill = useRef<THREE.InstancedMesh>(null);
+  const contact = useRef<THREE.InstancedMesh>(null);
+  const core = useRef<THREE.InstancedMesh>(null);
+  // The wedge's plane starts at its local origin (the feet) and runs along +x.
+  const wedge = useMemo(
+    () => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0.5, 0, 0),
+    [],
+  );
+  const blob = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), []);
+  const materials = useMemo(() => {
+    const make = (alphaMap: THREE.Texture, opacity: number) =>
+      new THREE.MeshBasicMaterial({
+        color: "#000000",
+        alphaMap,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      });
+    const w = wedgeTexture();
+    const b = blobTexture();
+    return {
+      key: make(w, LOOK.keyShadow),
+      fill: make(w, LOOK.starShadow),
+      contact: make(b, 0.42),
+      core: make(b, 0.4),
+    };
+  }, []);
+  const at = useMemo(() => new THREE.Object3D(), []);
+
+  useFrame(() => {
+    const s = playback.get();
+    sampleInto(sample, hero, hero.runs[s.mode], s.frame, s.comfort);
+    const me = s.camera === "pov" ? hero.ids.indexOf(s.povPlayer) : -1;
+    for (let j = 0; j < hero.n; j++) {
+      const x = sample.pos[2 * j];
+      const y = sample.pos[2 * j + 1];
+      const size = j === me ? 0 : 1;
+      FLOODLIGHTS.forEach((m, k) => {
+        const dx = x - m.x;
+        const dy = y - m.y;
+        const reach = Math.hypot(dx, dy);
+        const length = (PLAYER_H * reach) / m.height;
+        at.position.set(x, 0.02, -y);
+        at.rotation.set(0, Math.atan2(dy, dx), 0);
+        at.scale.set(length * size, 1, LOOK.shadowTipWidth * size);
+        at.updateMatrix();
+        if (k === 0) key.current?.setMatrixAt(j, at.matrix);
+        else fill.current?.setMatrixAt(3 * j + k - 1, at.matrix);
+      });
+      at.position.set(x, 0.021, -y);
+      at.rotation.set(0, 0, 0);
+      at.scale.set(size, 1, size);
+      at.updateMatrix();
+      contact.current?.setMatrixAt(j, at.matrix);
+      at.position.y = 0.022;
+      at.scale.set(0.5 * size, 1, 0.5 * size);
+      at.updateMatrix();
+      core.current?.setMatrixAt(j, at.matrix);
+    }
+    for (const r of [key, fill, contact, core]) {
+      if (r.current) r.current.instanceMatrix.needsUpdate = true;
+    }
+  });
+
+  return (
+    <>
+      <instancedMesh
+        ref={key}
+        args={[wedge, materials.key, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={fill}
+        args={[wedge, materials.fill, 3 * hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={contact}
+        args={[blob, materials.contact, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={core}
+        args={[blob, materials.core, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+    </>
+  );
+}
+
 /** One faint shadow per mast, pointing away from it, plus a darker contact blob. In first
  * person the POV player's own are left out, like his body. */
-export function PlayerShadows() {
+function ClassicShadows() {
   const { hero, playback } = useView();
-  // The shared look: each of the four mast shadows a little darker (25–35 %).
-  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
@@ -487,8 +626,8 @@ export function PlayerShadows() {
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
       });
-    return { star: make(look ? LOOK.starShadow : 0.2), contact: make(0.42), core: make(0.4) };
-  }, [look]);
+    return { star: make(0.2), contact: make(0.42), core: make(0.4) };
+  }, []);
   const at = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(() => {
