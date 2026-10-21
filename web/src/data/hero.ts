@@ -112,7 +112,56 @@ export interface Hero {
   // to his man resolves (the service's MomentCard anchor).
   reception: number;
   marker: Marker | null; // a marker's look: a key scan and no decision on the ball
+  keeperStep: KeeperStep | null; // a keeper's step: no scan, no decision on the ball
   match: MatchInfo | null; // possessions, score and moments of a stitched match
+}
+
+/**
+ * A keeper's step (screened_shot, SPEC 3.6 C2): one step across his goal that clears his sight
+ * of the shot. No key scan and no decision on the ball; the counterfactual drops the step. The
+ * moment is the shot he faces, and how it ended with the step and without it.
+ */
+export interface KeeperStep {
+  id: string; // the step event
+  frame: number;
+  lateral: number; // m across his goal
+  shot: ExportEvent; // the shot he faces, after the step
+  shooter: string;
+  resolved: Record<RunName, ShotResolution>;
+}
+
+/** How a shot ended in a run: the save, goal or out event at its end frame. */
+export interface ShotResolution {
+  frame: number;
+  type: "save" | "goal" | "out" | "running";
+  player: string | null;
+}
+
+function keeperStepOf(raw: HeroExport, runs: Record<RunName, Run>): KeeperStep | null {
+  const step = raw.key_step;
+  if (!step || raw.counterfactual?.intervention !== "drop_step") return null;
+  const shot = runs.factual.events.find((e) => e.type === "shot" && e.frame >= step.frame);
+  if (!shot) return null;
+  const end = (run: Run): ShotResolution => {
+    const own = run.events.find((e) => e.id === shot.id) ?? shot;
+    const at = typeof own.attrs.end === "number" ? own.attrs.end : null;
+    const e = run.events.find((x) => x.frame === at && ["save", "goal", "out"].includes(x.type));
+    if (!e)
+      return {
+        frame: Math.min(at ?? run.frames - 1, run.frames - 1),
+        type: "running",
+        player: null,
+      };
+    return { frame: e.frame, type: e.type as ShotResolution["type"], player: e.player };
+  };
+  return {
+    id: step.id,
+    frame: step.frame,
+    lateral: step.lateral_m,
+    shot,
+    shooter: shot.player,
+    resolved: { factual: end(runs.factual), counterfactual: end(runs.counterfactual) },
+  };
 }
 
 /**
@@ -252,6 +301,7 @@ export function parseHero(json: unknown): Hero {
   );
   const runnerIndex = raw.runner ? ids.indexOf(raw.runner) : -1;
   const marker = markerOf(runs, n, ids.indexOf(raw.hero), raw.runner, runnerIndex, keyScan ?? null);
+  const keeperStep = keeperStepOf(raw, runs);
   const v = raw.vision;
   const d = raw.scan_detector;
   return {
@@ -289,10 +339,13 @@ export function parseHero(json: unknown): Hero {
     runs,
     reception: marker
       ? marker.resolved.factual.frame
-      : reception
-        ? reception.frame
-        : (runs.factual.decision?.frame ?? 0),
+      : keeperStep
+        ? keeperStep.resolved.factual.frame
+        : reception
+          ? reception.frame
+          : (runs.factual.decision?.frame ?? 0),
     marker,
+    keeperStep,
     match: null,
   };
 }
@@ -331,6 +384,7 @@ function parseMatchExport(raw: MatchExport): Hero {
     runs: { factual, counterfactual: factual },
     reception: 0,
     marker: null,
+    keeperStep: null,
     match: parseMatch(raw),
   };
 }
@@ -347,6 +401,16 @@ export interface RunLabels {
 
 export function runLabels(hero: Hero): RunLabels {
   const cf = hero.counterfactual;
+  if (cf?.intervention === "drop_step") {
+    return {
+      factual: "With the step",
+      counterfactual: "Without the step",
+      ghostOfFactual: "Ghost: with the step",
+      ghostOfCounterfactual: "Ghost: no step",
+      tag: { factual: "with the step", counterfactual: "without the step" },
+      gain: "Chance of saving it gained by the step",
+    };
+  }
   if (cf?.intervention === "force_action") {
     const [verb, gerund] = forced(cf.action);
     return {

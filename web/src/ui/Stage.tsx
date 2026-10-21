@@ -31,6 +31,8 @@ export const BLURB: Record<string, string> = {
     "See what the midfielder saw, and what he would have done without one look over his shoulder.",
   press_escape:
     "See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
+  screened_shot:
+    "See what the keeper saw past the players in front of him, and what one step across his goal changed.",
   cutback_scan:
     "See what the winger saw when he looked into the box, and what he would have done without that one look.",
   far_post_finish:
@@ -68,6 +70,12 @@ function didPhrase(action: string): string {
  */
 export function momentTitle(hero: Hero): [string, string] {
   if (hero.marker) return markerTitle(hero, hero.marker);
+  if (hero.keeperStep) {
+    const { factual, counterfactual } = hero.keeperStep.resolved;
+    return factual.type === "save" && counterfactual.type !== "save"
+      ? ["One step, and", "he saves it."]
+      : ["One step, and", "the same outcome."];
+  }
   const did = hero.runs.factual.decision?.chosen;
   const without = hero.counterfactual ? hero.runs.counterfactual.decision?.chosen : undefined;
   if (hero.keyScan) {
@@ -105,7 +113,7 @@ export function MomentTitle({ hero }: { hero: Hero }) {
 
 /** "Moment · 3.00 s · Perception": when the decision falls on the clock, and the lens. */
 export function momentKicker(hero: Hero, decisionFrame: number, offset: number): string {
-  const lens = hero.keyScan ? "Perception" : "Pressure";
+  const lens = hero.keyScan || hero.keeperStep ? "Perception" : "Pressure"; // a step: his sight
   return `Moment · ${((decisionFrame + offset) * hero.dt).toFixed(2)} s · ${lens}`;
 }
 

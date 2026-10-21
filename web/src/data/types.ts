@@ -135,6 +135,7 @@ export interface HeroExport {
   // The look the counterfactual drops; null for a hero whose lens is not the scan (press_escape).
   key_scan: { id: string; start: number; end: number } | null;
   counterfactual: ExportCounterfactual;
+  key_step?: ExportKeyStep | null; // a keeper's step instead of a key scan (screened_shot)
   vision: ExportVision;
   scan_detector: ExportScanDetectorParams;
   delta_xt: number | null; // null without a decision on the ball (a marker's look)
@@ -144,7 +145,19 @@ export interface HeroExport {
 /** The hero's counterfactual run: the key scan dropped, or one action forced (SPEC 3.7). */
 export type ExportCounterfactual =
   | { id: string; intervention: "drop_scan"; scan: string }
-  | { id: string; intervention: "force_action"; action: string };
+  | { id: string; intervention: "force_action"; action: string }
+  | { id: string; intervention: "drop_step"; step: string }; // a keeper's step (screened_shot)
+
+/** A keeper's key step across his goal (screened_shot, SPEC 3.6 C2): the event id, its frame and
+ * where he moved from and to. */
+export interface ExportKeyStep {
+  id: string; // "step:H1:0013"
+  frame: number;
+  start: Vec2; // m
+  end: Vec2; // m
+  lateral_m: number;
+  key: boolean;
+}
 
 // ---------- a stitched match (sim.export.export_match, SPEC 3.1) ----------
 

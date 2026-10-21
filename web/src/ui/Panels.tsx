@@ -12,6 +12,7 @@ import {
   isShot,
   runLabels,
   type Hero,
+  type KeeperStep,
   type Marker,
   placedShot,
   type Run,
@@ -30,6 +31,7 @@ interface Beat {
 }
 
 function beats(hero: Hero, run: Run): Beat[] {
+  if (hero.keeperStep) return keeperBeats(hero, run, hero.keeperStep);
   if (hero.marker && hero.keyScan) return markerBeats(hero, run, hero.keyScan, hero.marker);
   // The bundled hero keeps its hand-written story: the judges' tour and the video quote it.
   if (hero.keyScan && hero.scenario === "blind_side_run") {
@@ -52,6 +54,52 @@ export function shotEnd(run: Run): { from: number; text: string; short: string }
     return { from, text: `${keeper} saves it.`, short: `saved by ${keeper}` };
   if (act.outcome === "wide") return { from, text: "Wide.", short: "wide" };
   return { from, text: "He shoots.", short: "" };
+}
+
+/** How the shot a keeper faced ended in a run, in words. */
+function keeperEnd(hero: Hero, k: KeeperStep, run: RunName): { text: string; short: string } {
+  const r = k.resolved[run];
+  const heroId = hero.heroId ?? "He";
+  if (r.type === "save") return { text: `${heroId} saves it.`, short: "He saves it" };
+  if (r.type === "goal") return { text: `${k.shooter} scores.`, short: `${k.shooter} scores` };
+  if (r.type === "out") return { text: "Wide.", short: "Wide" };
+  return { text: "The shot is still going when the clip ends.", short: "Still going" };
+}
+
+/**
+ * A keeper's step (screened_shot): the step across his goal (or, without it, standing still),
+ * the build-up, the shot, whether he saw the shooter strike it, his dive and how it ended. Sight
+ * is the sim's perception (seen_by); a beat it cannot back is left out.
+ */
+function keeperBeats(hero: Hero, run: Run, k: KeeperStep): Beat[] {
+  const factual = run.name === "factual";
+  const heroId = hero.heroId ?? "He";
+  const shot = run.events.find((e) => e.id === k.shot.id) ?? k.shot;
+  const s = hero.ids.indexOf(k.shooter);
+  const r = k.resolved[run.name];
+  const dive = run.events.find(
+    (e) => e.type === "dive" && e.player === heroId && e.frame >= shot.frame && e.frame < r.frame,
+  );
+  const list: (Beat | null)[] = [
+    factual
+      ? { from: k.frame, text: `${heroId} steps ${k.lateral.toFixed(1)} m across.` }
+      : { from: k.frame, text: `Same moment, but ${heroId} stays where he is. No step.` },
+    ...run.events
+      .filter((e) => e.type === "pass" && e.frame < shot.frame)
+      .map((e) => ({ from: e.frame, text: `${e.player} plays it to ${e.attrs.to}.` })),
+    { from: shot.frame, text: `${k.shooter} shoots.` },
+    run.sight && s >= 0
+      ? {
+          from: shot.frame,
+          text: isSeen(hero, run, shot.frame, hero.hero, s)
+            ? `He sees ${k.shooter} strike it.`
+            : `He does not see ${k.shooter} strike it.`,
+        }
+      : null,
+    dive ? { from: dive.frame, text: `${heroId} dives.` } : null,
+    { from: r.frame, text: keeperEnd(hero, k, run.name).text },
+  ];
+  return list.filter((b): b is Beat => b !== null).sort((a, b) => a.from - b.from);
 }
 
 /** How the run's pass or carry ended; null without a decision. */
@@ -417,8 +465,10 @@ export function VerdictPanel() {
   const labels = runLabels(hero);
   const marker = hero.marker;
   // What each run shows: his action, or for a marker how far he was from his man.
+  const step = hero.keeperStep;
   const cardText = (run: RunName) => {
     if (marker) return `${marker.separation[run].toFixed(1)} m from ${marker.man}`;
+    if (step) return keeperEnd(hero, step, run).short;
     const action = actionLabel(hero.runs[run].decision?.chosen ?? "");
     const end = shotEnd(hero.runs[run])?.short; // a shot: and how it ended
     return end ? `${action} · ${end}` : action;
@@ -449,21 +499,29 @@ export function VerdictPanel() {
         ? "\u2014"
         : signed(hero.deltaXt, 3);
   const pending = !claim && hero.deltaXt === null; // nothing measured yet
-  const unit = shot ? "on the true positions" : "in expected threat (xT)";
+  const unit = shot || step ? "on the true positions" : "in expected threat (xT)";
   const look = !!hero.keyScan;
   return (
     <Chapter
       className="verdict"
       kicker={`Re-simulated · ${labels.tag.counterfactual}`}
       title={
-        look ? <Title lead="Take the look" em="away." /> : <Title lead="The other" em="choice." />
+        step ? (
+          <Title lead="Take the step" em="away." />
+        ) : look ? (
+          <Title lead="Take the look" em="away." />
+        ) : (
+          <Title lead="The other" em="choice." />
+        )
       }
       lede={
-        marker
-          ? `We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw. Each card: how far he was from ${marker.man} when the pass to him ended.`
-          : look
-            ? "We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw."
-            : "We play the same match again with his choice forced. Everything else is held the same, so any difference comes from that choice."
+        step
+          ? "We play the same match again with only that step removed. Everything else is held the same, so any difference comes from where he stood."
+          : marker
+            ? `We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw. Each card: how far he was from ${marker.man} when the pass to him ended.`
+            : look
+              ? "We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw."
+              : "We play the same match again with his choice forced. Everything else is held the same, so any difference comes from that choice."
       }
     >
       <div className="versus">
@@ -512,9 +570,11 @@ export function VerdictPanel() {
                 Read from the sim export, not a verified claim.
               </>
             )}{" "}
-            {shot
-              ? "His chance of scoring is the chance the shot he chose goes in: on target and not saved, on the true positions."
-              : "Expected threat is how much a position raises the chance of scoring soon."}
+            {step
+              ? "His chance of saving it is the save model's, from when he first saw the ball and how far he could reach, on the true positions."
+              : shot
+                ? "His chance of scoring is the chance the shot he chose goes in: on target and not saved, on the true positions."
+                : "Expected threat is how much a position raises the chance of scoring soon."}
             {marker &&
               " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
             Causal inside the simulation; not a claim about real football.

@@ -14,7 +14,7 @@ import {
   createApi,
   MATCH_ID,
   PROBE_TIMEOUT_MS,
-  scanLensDelta,
+  lensDelta,
   type Api,
   type Fetch,
 } from "../api/client";
@@ -89,7 +89,11 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
       ]);
       hero = parseHero(exported);
       momentId = hero.kind === "hero" ? (info?.hero_moment ?? null) : null;
-      if ((hero.marker || placedShot(hero)) && hero.deltaXt === null && momentId) {
+      if (
+        (hero.marker || hero.keeperStep || placedShot(hero)) &&
+        hero.deltaXt === null &&
+        momentId
+      ) {
         hero = await withLensValue(hero, candidate, momentId);
       }
       api = candidate;
@@ -115,13 +119,16 @@ export async function loadData(opts: LoadOptions): Promise<Loaded> {
 
 /**
  * A marker's look has no possession value in the export (no decision on the ball), and a placed
- * shot's is its outcome, so their worth is the scan lens's delta on the MomentCard
- * (explain.lenses: the marker's expected turnover, the shot's chance of a goal on the truth).
+ * shot's and a keeper's step's are outcomes, so their worth is a lens's delta on the MomentCard
+ * (explain.lenses: the marker's expected turnover, the shot's chance of a goal on the truth, the
+ * step's chance of a save).
  * Without the card the value stays null and the verdict waits for the breakdown's claim.
  */
 async function withLensValue(hero: Hero, api: Api, momentId: string): Promise<Hero> {
   try {
-    const delta = scanLensDelta(await api.moments(), momentId);
+    // A keeper's step is told by the sight lens (his chance of saving it); the others by the scan.
+    const lens = hero.keeperStep ? "sight" : "scan";
+    const delta = lensDelta(await api.moments(), momentId, lens);
     return delta === null ? hero : { ...hero, deltaXt: delta, deltaSource: "lens" };
   } catch {
     return hero;

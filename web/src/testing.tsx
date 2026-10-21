@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import raw from "../public/data/hero_seed3.json";
 import type { Fetch } from "./api/client";
-import type { ExportEvent, ExportMatchMoment, HeroExport, MatchExport } from "./data/types";
+import type { ExportEvent, ExportMatchMoment, HeroExport, MatchExport, Vec2 } from "./data/types";
 import type { SocketFactory, SocketLike } from "./live/feed";
 import { SessionContext, type ViewSession } from "./session";
 
@@ -566,6 +566,65 @@ export function cutbackExport(): HeroExport {
   cf.action = null;
   return { ...e, scenario: "cutback_scan", seed: 7 };
 }
+
+export const STEP_MOMENT = "m:keeper_step:H1:0052";
+
+/**
+ * Like screened_shot-0 (SPEC 3.6, C2): the hero is the keeper H1, with no decision on the ball and
+ * no key scan but a key step across his goal (`key_step`, events `step`). The counterfactual drops
+ * the step (`drop_step`). A9 shoots at frame 35: with the step H1 dives and saves at 52; without
+ * it A9 scores at 55. `decision`, `action`, `possession_value` and `delta_xt` are null. The
+ * bundled runs, with those events, as sim.export writes them.
+ */
+export function stepExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  for (const run of Object.values(e.runs)) {
+    for (const ev of run.events) if (ev.type === "scan") ev.attrs = { ...ev.attrs, key: false };
+  }
+  const step = { id: "step:H1:0013", frame: 13, start: [-51, 0] as Vec2, end: [-51, -0.6436] as Vec2, lateral_m: 0.6436, key: true };
+  for (const [name, saved] of [["factual", true], ["counterfactual", false]] as const) {
+    const run = e.runs[name];
+    const end = saved ? 52 : 55;
+    run.decision = null;
+    run.action = null;
+    run.possession_value = null;
+    run.events = run.events.filter((ev) => ev.type !== "pass" && ev.type !== "reception");
+    if (saved) run.events.push({ id: step.id, type: "step", frame: 13, player: "H1", attrs: { end: step.end, lateral_m: step.lateral_m, key: true } });
+    run.events.push(
+      { id: "pass:A8:0025", type: "pass", frame: 25, player: "A8", attrs: { to: "A9", outcome: "complete", end: 30 } },
+      { id: "reception:A9:0030", type: "reception", frame: 30, player: "A9", attrs: {} },
+      { id: "shot:A9:0035", type: "shot", frame: 35, player: "A9", attrs: { placement: "corner", outcome: saved ? "saved" : "goal", end } },
+      { id: `dive:H1:${saved ? "0040" : "0055"}`, type: "dive", frame: saved ? 40 : 55, player: "H1", attrs: {} },
+      saved
+        ? { id: "save:H1:0052", type: "save", frame: 52, player: "H1", attrs: {} }
+        : { id: "goal:A9:0055", type: "goal", frame: 55, player: "A9", attrs: {} },
+    );
+    run.events.sort((a, b) => a.frame - b.frame || a.id.localeCompare(b.id));
+  }
+  return {
+    ...e,
+    scenario: "screened_shot",
+    seed: 0,
+    hero: "H1",
+    runner: null,
+    key_scan: null,
+    key_step: step,
+    counterfactual: { id: "cf1", intervention: "drop_step", step: step.id },
+    delta_xt: null,
+  };
+} // prettier-ignore
+
+/** GET /api/matches/<id>/moments for the keeper: his card with the sight lens's delta. */
+export const stepCards = () => [
+  {
+    id: STEP_MOMENT,
+    kind: "keeper_step",
+    actor: "H1",
+    anchor_frame: 52,
+    selected_lens: "sight",
+    lenses: [{ lens: "sight", available: true, delta_xt: 0.7, metrics: {} }],
+  },
+];
 
 export const MATCH = "match-1";
 export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled run's first 60 frames

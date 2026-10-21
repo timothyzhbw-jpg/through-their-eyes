@@ -113,6 +113,7 @@ function Timeline() {
   const last = run.frames - 1;
   const X = (f: number) => 6 + ((width - 12) * f) / last;
   const key = hero.keyScan;
+  const step = hero.keeperStep; // a keeper's key step instead of a key scan (screened_shot)
   const scans = run.scans.filter((s) => s.player === povPlayer);
   const marked = marker ? hero.runs.factual.scans.find((s) => s.id === marker) : undefined;
   const possessions = hero.match?.possessions ?? [];
@@ -201,6 +202,19 @@ function Timeline() {
               fill={s.key ? "var(--floodlight)" : "var(--chalk-3)"}
             />
           ))}
+          {step && povPlayer === hero.heroId && (
+            // A keeper's key step: a bar on its frame; without it, the step he did not take.
+            <rect
+              x={X(step.frame) - 1.5}
+              y={mode === "factual" ? 13 : 8}
+              width={3}
+              height={mode === "factual" ? height - 26 : height - 16}
+              fill={mode === "factual" ? "var(--floodlight)" : "none"}
+              stroke={mode === "factual" ? "none" : "var(--dusk)"}
+              strokeWidth={1.5}
+              strokeDasharray="3 3"
+            />
+          )}
           {mode === "counterfactual" && key && povPlayer === hero.heroId && (
             <rect
               x={X(key.start)}
@@ -261,6 +275,17 @@ function Timeline() {
       />
       {!hero.match && (
         <div className="marks">
+          {step && (
+            <button
+              type="button"
+              className="mark key"
+              style={at(step.frame)}
+              onClick={() => controls.seek(Math.max(0, step.frame - 8))}
+              title="Jump to just before the keeper's step"
+            >
+              Key step
+            </button>
+          )}
           {key && (
             <button
               type="button"
@@ -280,10 +305,12 @@ function Timeline() {
             title={
               hero.marker
                 ? `Jump to where the pass to ${hero.marker.man} ends`
-                : "Jump to the decision"
+                : step
+                  ? "Jump to where the shot ends"
+                  : "Jump to the decision"
             }
           >
-            {hero.marker ? "Ball arrives" : "Decision"}
+            {hero.marker || step ? "Ball arrives" : "Decision"}
           </button>
         </div>
       )}
