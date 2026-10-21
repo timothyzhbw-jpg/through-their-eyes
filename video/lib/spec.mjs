@@ -136,9 +136,13 @@ function checkTitles(titles, errors) {
     if (!title?.params || typeof title.params !== "object" || Array.isArray(title.params)) {
       errors.push(`${where}: params must be an object`);
     } else {
-      // `url` is the site's address (it may hold digits), not a number claim.
-      const { url, ...shown } = title.params;
+      // `url` is the site's address (it may hold digits), not a number claim; `legal` holds credit
+      // lines that a licence requires verbatim (a grant number, say), not claims either.
+      const { url, legal, ...shown } = title.params;
       if (url != null && typeof url !== "string") errors.push(`${where}: url must be a string`);
+      if (legal != null && !(Array.isArray(legal) && legal.every((line) => typeof line === "string"))) {
+        errors.push(`${where}: legal must be a list of strings`);
+      }
       for (const text of stringsIn(shown)) {
         for (const issue of spokenIssues(text, { allowPause: false })) errors.push(`${where}: ${issue} in params`);
       }

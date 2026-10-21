@@ -16,7 +16,7 @@ const TEMPLATES = [
   { name: "freeze", alpha: true, params: ["items", "title"] },
   { name: "verified", alpha: true, params: ["kicker", "items", "stagger"] },
   { name: "refuted", alpha: true, params: ["before", "value", "after", "stamp", "kicker"] },
-  { name: "lineup", alpha: false, params: ["header", "cards", "highlight", "stagger"] },
+  { name: "lineup", alpha: false, params: ["header", "cards", "highlight", "stagger", "start"] },
   { name: "redcard", alpha: true, params: ["title", "sub"] },
   { name: "subboard", alpha: true, params: ["off", "on", "caption"] },
   { name: "tag", alpha: true, params: ["text", "sub"] },
@@ -193,4 +193,10 @@ test("ffmpeg args for opaque H.264 and alpha ProRes", async () => {
   const { renderTitle } = await import("../lib/titles.mjs");
   assert.equal(typeof renderCine, "function");
   assert.equal(typeof renderTitle, "function");
+});
+
+test("no title animates a blur: sharp frames only", () => {
+  const css = read(path.join(TITLES, "titles.css"));
+  assert.doesNotMatch(css, /blur\(/, "titles.css uses blur()");
+  assert.doesNotMatch(read(path.join(TITLES, "titles.js")), /blur\(/, "titles.js uses blur()");
 });

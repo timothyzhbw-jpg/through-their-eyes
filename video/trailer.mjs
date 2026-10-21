@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { assetFileName, downloadAsset, validateAssets } from "./lib/assets.mjs";
+import { assetFileName, copyLocalAsset, downloadAsset, validateAssets } from "./lib/assets.mjs";
 import { digest, isCached, storeHash } from "./lib/cache.mjs";
 import { burnArgs, captionSides, captionTimeline } from "./lib/captions.mjs";
 import { claimTable, resolveTitle, resolveVo } from "./lib/claims.mjs";
@@ -174,13 +174,19 @@ async function stepAssets(ctx) {
   }
   for (const asset of ctx.assets) {
     const dest = path.join(dir, assetFileName(asset));
-    const hash = digest(["asset-v1", asset]);
+    const source = asset.local ? path.resolve(ctx.root, asset.local) : null;
+    const hash = digest(["asset-v1", asset, source ? fileStamp(source) : null]);
     if (fresh(dest, hash, ctx.force)) {
       console.log(`  ${asset.id}: cached`);
       continue;
     }
-    console.log(`  ${asset.id}: download`);
-    await downloadAsset(asset, dest);
+    if (source) {
+      console.log(`  ${asset.id}: copy ${asset.local}`);
+      copyLocalAsset(asset, ctx.root, dest);
+    } else {
+      console.log(`  ${asset.id}: download`);
+      await downloadAsset(asset, dest);
+    }
     storeHash(dest, hash);
   }
 }

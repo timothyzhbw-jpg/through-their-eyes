@@ -54,8 +54,13 @@ its cinematic mode (`?cine=1`) driven frame by frame, and three shots rendered i
 
 Shots bl01–bl03 were rendered in Blender 5.2 (EEVEE) from our own simulation data (`sim.export`,
 blind_side_run seed 3, factual and counterfactual runs). Players are the Gameplay Football model
-(Unlicense, Bastiaan Konings Schuiling), posed from the sim's positions and body/head yaw; the
-stadium is procedural; no third-party assets. The Blender scripts are kept outside the
+(Unlicense, Bastiaan Konings Schuiling), placed and turned by the sim's positions and body/head
+yaw and animated with CMU motion capture (Bowen approved it on 2026-10-21, as in the app, #118);
+the stadium is procedural; no other third-party assets.
+
+Motion capture, as its terms ask, word for word (also on the end card): "The data used in this
+project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF
+EIA-0196217."  The Blender scripts are kept outside the
 repository; only rendered frames are used. In the film these shots carry the label "RENDERED IN
 BLENDER FROM OUR SIMULATION DATA"; the cinematic-mode shots carry "IN-ENGINE · RENDERED FROM OUR
 SIMULATION DATA".

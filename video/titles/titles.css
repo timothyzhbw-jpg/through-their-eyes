@@ -116,19 +116,16 @@ html.alpha #stage {
 @keyframes slam-in {
   0% {
     transform: scale(1.25);
-    filter: blur(9px);
     opacity: 0;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   88% {
     transform: scale(0.965);
-    filter: blur(0);
     opacity: 1;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   100% {
     transform: scale(1);
-    filter: blur(0);
     opacity: 1;
   }
 }
@@ -209,12 +206,10 @@ html.alpha #stage {
 @keyframes slam-out {
   0% {
     transform: scale(1);
-    filter: blur(0);
     opacity: 1;
   }
   100% {
     transform: scale(1.2);
-    filter: blur(10px);
     opacity: 0;
   }
 }
@@ -223,12 +218,10 @@ html.alpha #stage {
   from {
     opacity: 0;
     transform: translateY(18px);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
@@ -247,19 +240,16 @@ html.alpha #stage {
   0% {
     transform: scale(2) rotate(-10deg);
     opacity: 0;
-    filter: blur(4px);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   86% {
     transform: scale(0.94) rotate(-4deg);
     opacity: 1;
-    filter: blur(0);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   100% {
     transform: scale(1) rotate(-4deg);
     opacity: 1;
-    filter: blur(0);
   }
 }
 
@@ -293,18 +283,15 @@ html.alpha #stage {
 @keyframes card-in {
   0% {
     opacity: 0;
-    filter: blur(8px);
     transform: translate(-240px, 70px) rotate(var(--tilt)) scale(0.96);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   92% {
     opacity: 1;
-    filter: blur(0);
     transform: translate(12px, var(--ty)) rotate(var(--tilt)) scale(var(--scale));
   }
   100% {
     opacity: 1;
-    filter: blur(0);
     transform: translate(0, var(--ty)) rotate(var(--tilt)) scale(var(--scale));
   }
 }
@@ -1463,7 +1450,7 @@ html.opaque .chapter {
 
 .duo {
   position: absolute;
-  top: 170px; /* under the top letterbox bar */
+  top: 214px; /* under the top letterbox bar and clear of the corner label */
   font-size: 64px;
   letter-spacing: 0.12em;
 }
@@ -1476,4 +1463,18 @@ html.opaque .chapter {
 .duo-right {
   right: 72px;
   color: var(--dusk);
+}
+
+/* --- end card: verbatim licence credits ------------------------------------- */
+
+.end-legal {
+  margin-top: 18px;
+  max-width: 1400px;
+  text-align: center;
+}
+
+.legal {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  color: rgba(239, 237, 229, 0.62);
 }

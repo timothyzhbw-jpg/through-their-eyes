@@ -361,12 +361,13 @@
     stage.append(header);
     const row = el("div", "crew-row");
     const stagger = num(params.stagger, 0.18);
+    const start = num(params.start, 0.16); // when the first card lands, s
     const highlight = params.highlight ? String(params.highlight).trim() : "";
     list(params.cards, 6).forEach((card, i) => {
       const name = card && card.name != null ? String(card.name) : "";
       const on = highlight !== "" && name.trim() === highlight;
       const node = el("article", on ? "crew-card highlight" : "crew-card");
-      const at = 0.16 + i * stagger;
+      const at = start + i * stagger;
       setAt(node, at);
       node.style.setProperty("--tilt", TILTS[i] || "-4deg");
       node.style.setProperty("--ty", on ? "-28px" : "0px");
@@ -509,6 +510,15 @@
         setAt(credit, 0.95 + i * 0.16);
         block.append(credit);
       });
+      wrap.append(block);
+    }
+    // Credit lines a licence requires word for word, in smaller type under the others.
+    const legal = list(params.legal, 4);
+    if (legal.length) {
+      const block = el("div", "end-legal");
+      legal.forEach((line) => block.append(el("div", "legal bebas fx-fade", line)));
+      setAt(block, 0.95 + lines.length * 0.16);
+      for (const node of block.children) setAt(node, 0.95 + lines.length * 0.16);
       wrap.append(block);
     }
     stage.append(wrap);

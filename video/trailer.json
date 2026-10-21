@@ -368,6 +368,50 @@
         "rings": true,
         "motionBlur": false
       }
+    },
+    "pov-match": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": {
+        "id": "pov-match",
+        "run": "factual",
+        "duration": 3.0,
+        "pov": "H8",
+        "time": [
+          {
+            "t": 0,
+            "frame": 46
+          },
+          {
+            "t": 3.0,
+            "frame": 62
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "eyes",
+              "id": "H8"
+            },
+            "look": {
+              "at": "eyes",
+              "id": "H8"
+            }
+          }
+        ],
+        "periphery": 0,
+        "labels": true,
+        "fog": [
+          45,
+          160
+        ],
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        },
+        "motionBlur": false
+      }
     }
   },
   "titles": {
@@ -409,7 +453,7 @@
     },
     "studio": {
       "template": "slam",
-      "dur": 2.85,
+      "dur": 1.25,
       "alpha": true,
       "params": {
         "kicker": "THROUGH THEIR EYES",
@@ -518,7 +562,8 @@
             "glyph": "voice"
           }
         ],
-        "stagger": 0.5
+        "stagger": 0.6429,
+        "start": 0.2143
       }
     },
     "redcard": {
@@ -625,6 +670,9 @@
           "MUSIC: “UNSOLICITED TRAILER MUSIC” BY EMMA_MA · PUBLIC DOMAIN DEDICATION",
           "FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE",
           "VOICE: AZURE AI SPEECH"
+        ],
+        "legal": [
+          "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217."
         ]
       }
     },
@@ -1146,13 +1194,9 @@
       "id": "b05-a1-pov",
       "dur": 3.0,
       "picture": {
-        "src": "capture",
-        "shot": "03-breakdown",
-        "in": 0.4,
-        "push": [
-          1.0,
-          1.04
-        ]
+        "src": "cine",
+        "id": "pov-match",
+        "in": 0
       },
       "vo": [
         {
@@ -1172,8 +1216,12 @@
       ],
       "overlays": [
         {
+          "title": "label-ie-3p0",
+          "at": 0.0
+        },
+        {
           "title": "studio",
-          "at": 0.1
+          "at": 1.7
         }
       ],
       "sfx": [
@@ -1182,6 +1230,10 @@
           "at": 0.0,
           "gain_db": -6
         }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
       ]
     },
     {
@@ -2565,7 +2617,7 @@
       "vo": [
         {
           "id": "vo27",
-          "at": 0.4,
+          "at": 0.2,
           "text": "Through Their Eyes. [pause 500] See what they saw.",
           "style": "excited",
           "degree": 0.6
