@@ -225,14 +225,18 @@ def _choice(look: LookResult) -> Claim | None:
                           "zh": f"传给{{{key}}}"}  # fmt: skip
     checks = [Predicate(op="eq", lhs=chose(look.id), rhs=mine),
               Predicate(op="eq", lhs=chose(None), rhs=his)]  # fmt: skip
-    for key, action in (("mine", mine), ("his", his)):
-        if key in slots:  # the slot is checked too: the name on screen is the receiver
-            checks.append(Predicate(op="eq", lhs={"slot": key}, rhs=action.removeprefix("pass:")))
+    for key, run, cf in (("mine", look.counterfactual, look.id), ("his", look.factual, None)):
+        if key in slots:  # the name on screen is the receiver of the pass in that run
+            event = _action_event(run, hero, frame)
+            if event is None:
+                return None
+            to = fn("event_attr", event=event.id, attr="to", **({"cf": cf} if cf else {}))
+            checks.append(Predicate(op="eq", lhs=to, rhs=slot(key)))
     if mine == his:
         template = f"He still {words['mine']['en']}, as he really did."
         zh = f"他仍然{words['mine']['zh']}，和实际一样。"
         slots.pop("his", None)
-        checks = [c for c in checks if c.lhs != {"slot": "his"}]
+        checks = [c for c in checks if c.rhs != slot("his")]
     else:
         template = f"So he {words['mine']['en']}; he really {words['his']['past']}."
         zh = f"于是他{words['mine']['zh']}；实际上他{words['his']['zh']}。"

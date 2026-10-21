@@ -240,3 +240,21 @@ def test_a_wrong_number_in_a_look_line_is_refuted(ctx):
         wrong = claim.model_copy(deep=True)
         wrong.slots[name] = Slot(value=claim.slots[name].value + 0.5, decimals=1)
         assert verifier.verify(wrong).status == "refuted", cid
+
+
+def test_a_wrong_name_in_a_look_line_is_refuted(ctx):
+    from agents.look import look_claims
+    from explain.claims import Slot
+    from explain.verifier import Verifier
+
+    look = look_counterfactual(*BLIND, frame=50, offset_deg=90)
+    none = look_counterfactual(*BLIND, frame=None, offset_deg=None)
+    ctx.evaluator.counterfactuals.update({look.id: look, none.id: none})
+    choice = next(c for c in look_claims(ctx, look, none) if c.id == "look_choice")
+    assert {k: s.ref for k, s in choice.slots.items()} == {"mine": "H4", "his": "H9"}
+    verifier = Verifier(ctx.evaluator)
+    assert verifier.verify(choice).status == "supported"
+    for name, wrong in (("mine", "H9"), ("his", "H4")):
+        swapped = choice.model_copy(deep=True)
+        swapped.slots[name] = Slot(ref=wrong)
+        assert verifier.verify(swapped).status == "refuted", name
