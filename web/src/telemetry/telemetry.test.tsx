@@ -10,7 +10,7 @@ import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, type Session } from "../session";
 import { API, exportJson, fakeFetch, fakeSockets, render } from "../testing";
 import { TelemetryPanel } from "../ui/TelemetryPanel";
-import { PovOverlay } from "../views/PovOverlay";
+import { Hud } from "../views/PovOverlay";
 import { DEG, frameX, keyPoints, telemetry } from "./telemetry";
 
 const hero = parseHero(raw);
@@ -66,7 +66,7 @@ describe("the cursor follows the playhead", () => {
     const s = offline();
     for (const f of [key.start - 5, key.start + 6.4, key.end + 3]) {
       const panel = at(s, { frame: f });
-      const hud = render(s, <PovOverlay />);
+      const hud = render(s, <Hud />);
       const head = /head (\d+)° from the ball/.exec(hud)![1];
       const sight = /(\d+) players in sight/.exec(hud)![1];
       expect(value(panel, "head")).toBe(`${head}°`);

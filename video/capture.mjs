@@ -123,8 +123,8 @@ const WAITS = {
     await page.locator(".view.tac canvas").waitFor({ timeout });
     await page.waitForLoadState("networkidle", { timeout });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
-    const rigged = page.locator(".view.pov").getByRole("button", { name: "Animated players" });
-    if ((await rigged.getAttribute("aria-pressed")) === "true") {
+    // Animated players unless the address asks for the tokens (players/trial.ts).
+    if (new URL(page.url()).searchParams.get("rigged") !== "0") {
       await page.waitForFunction(
         () => performance.getEntriesByType("resource").some((e) => /\.glb(\?|$)/.test(e.name)),
         null,

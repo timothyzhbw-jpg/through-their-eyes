@@ -18,7 +18,8 @@ import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
 import type { AudioLike } from "../voice/voice";
 import { BreakdownPanel } from "./BreakdownPanel";
 import { Caption, EvidenceCard, NarrationPanel } from "./Narration";
-import { PERSONA_LABEL } from "./labels";
+import { LANG_LABEL, PERSONA_LABEL } from "./labels";
+import { ViewerMenu } from "./Stage";
 import { Transport } from "./Transport";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -251,6 +252,28 @@ describe("keyboard and screen reader access", () => {
     expect(auto.getAttribute("aria-pressed")).toBe("false");
     expect(accessibleName(page.querySelector("section.director")!)).toBe("Camera director");
     expect(problems(page)).toEqual([]);
+  });
+
+  it("permanently names the phone audience and language button when its text is hidden", async () => {
+    const { session } = online();
+    session.controls.requestBreakdown();
+    await settle();
+    const page = mount(session, <ViewerMenu />);
+    const toggle = page.querySelector<HTMLButtonElement>("button.viewer-toggle")!;
+    const label = toggle.querySelectorAll<HTMLSpanElement>(":scope > span")[1];
+    label.style.display = "none"; // the phone layout hides this text, including its descendants
+    expect(toggle.getAttribute("aria-label")).toBe("Watching as Casual fan · English");
+    expect(accessibleName(toggle)).toBe("Watching as Casual fan · English");
+    expect(problems(page)).toEqual([]);
+    act(() => session.controls.setPersona("analyst"));
+    await act(settle);
+    act(() => session.controls.setLanguage("zh"));
+    await act(settle);
+    expect(accessibleName(toggle)).toBe(`Watching as Analyst · ${LANG_LABEL.zh}`);
+    toggle.focus();
+    expect(document.activeElement).toBe(toggle);
+    act(() => toggle.click());
+    expect(page.querySelector("[role=dialog][aria-label='Who is watching']")).not.toBeNull();
   });
 
   it("announces captions to screen readers while the voice is off, and not over it", async () => {

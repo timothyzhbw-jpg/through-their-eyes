@@ -14,8 +14,7 @@ import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, type Session, type ViewSession } from "../session";
 import { createPlayback } from "../store/playback";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport, render } from "../testing";
-import { PovToolbar } from "../views/PovOverlay";
-import { TacticalToolbar } from "../views/TacticalToolbar";
+import { PovOptions, TacticalOptions } from "../ui/Stage";
 import { SkeletonLayer } from "./SkeletonLayer";
 import { SkeletonLegend } from "./SkeletonLegend";
 import {
@@ -83,15 +82,15 @@ describe("the toggle", () => {
     }
   });
 
-  it("is one chip on the tactical board and one on the broadcast camera, not in first person", () => {
+  it("is one chip in the view options, for the board and the broadcast camera", () => {
+    // The live screen keeps every overlay toggle behind View options (ui/Stage.tsx): the board's
+    // group holds the skeleton's chip, the first person's group has none.
     for (const s of [heroSession(), matchSession()] as ViewSession[]) {
-      expect(button(render(s, <TacticalToolbar />), "Skeleton")?.pressed).toBe("false");
-      expect(button(render(s, <PovToolbar />), "Skeleton")).toBeUndefined(); // first person
+      expect(button(render(s, <TacticalOptions />), "Skeleton")?.pressed).toBe("false");
+      expect(button(render(s, <PovOptions />), "Skeleton")).toBeUndefined();
       s.controls.setCamera("broadcast");
-      expect(button(render(s, <PovToolbar />), "Skeleton")?.pressed).toBe("false");
-      s.controls.toggle("skeleton"); // one state: both chips show it
-      expect(button(render(s, <TacticalToolbar />), "Skeleton")?.pressed).toBe("true");
-      expect(button(render(s, <PovToolbar />), "Skeleton")?.pressed).toBe("true");
+      s.controls.toggle("skeleton");
+      expect(button(render(s, <TacticalOptions />), "Skeleton")?.pressed).toBe("true");
     }
   });
 });

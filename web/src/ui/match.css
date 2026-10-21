@@ -1,108 +1,119 @@
-/* A stitched match: the score bug, the possession on screen, the match picker, the moments of
-   every possession, and the way back from a hero moment's breakdown. */
+/* A stitched match: the score card on the live screen, the possession on screen, the match
+   picker, the moments of every possession, and the way back from a hero moment's breakdown. */
 .scoreboard {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 18px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 14px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 24px;
+  border-radius: var(--r-card);
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  animation: tt-rise 800ms var(--settle) both;
 }
 .scoreboard .score {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  font: 700 22px/1 var(--font-display);
-  letter-spacing: 0.04em;
+  gap: 12px;
+  font: 200 44px/1 var(--font-display);
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 .scoreboard .team {
-  font-size: 14px;
-  letter-spacing: 0.12em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 5px 8px;
-  border-radius: 4px;
-  color: var(--bg);
+  color: var(--chalk-2);
 }
-.scoreboard .team.home {
+.scoreboard .team::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.scoreboard .team.home::before {
   background: var(--home);
 }
-.scoreboard .team.away {
+.scoreboard .team.away::before {
   background: var(--away);
 }
 .scoreboard .dash {
-  color: var(--muted);
+  color: var(--chalk-3);
 }
 .scoreboard .possession {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
+  flex-direction: column;
+  gap: 4px;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--chalk-3);
 }
 .scoreboard .possession .count {
-  color: var(--fg);
-  font-weight: 600;
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--floodlight);
 }
 .scoreboard .possession .scenario {
-  color: var(--sight);
+  font: 400 24px/1.15 var(--font-display);
+  color: var(--chalk);
 }
-.scoreboard > .play {
-  margin-left: auto;
+.scoreboard > .btn {
+  align-self: flex-start;
 }
 .match-picker select {
-  background: var(--surface);
-  color: var(--fg);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 9px 10px;
   max-width: 100%;
+  background-color: rgba(8, 14, 11, 0.55);
 }
 .notice {
-  margin: 0;
+  margin: 12px 0 0;
+  padding: 0 4px;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--chalk-2);
 }
 .notice.error {
-  color: var(--gold);
+  color: var(--flare);
 }
 
-/* moments of every possession: the whole width, possessions in columns */
-.app.match .below {
-  grid-template-columns: 1fr;
-}
+/* moments of every possession: possessions in columns */
 .match-moments .possessions {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
-  gap: 4px 20px;
+  gap: 4px 24px;
   align-items: start;
 }
 .moments .possession-head {
-  margin: 12px 0 4px;
-  font: 600 13px/1.3 var(--font-body);
-  color: var(--muted);
+  margin: 16px 0 6px;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 10px;
+  gap: 2px 12px;
+  font: 500 11px/1.4 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
 }
 .moments .possession-head b {
-  color: var(--fg);
+  font-weight: 500;
+  color: var(--chalk);
 }
 .moment-list li.ahead > button:first-child {
   opacity: 0.45;
 }
 .moment-list .lens {
-  color: var(--muted);
+  color: var(--chalk-3);
 }
 .moment-list .lens.on {
-  color: var(--sight);
+  color: var(--floodlight);
 }
 
 /* the match timeline: possession bands, numbered */
 .timeline .possession-label {
-  font: 600 9px/1 var(--font-data);
-  fill: var(--muted);
+  font: 500 9px/1 var(--font-data);
+  fill: var(--chalk-3);
   pointer-events: none;
 }
