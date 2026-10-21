@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 // The opening card shares the hero and stitched-match view context, with keyboard access and
-// scanning habits read directly from the factual export.
+// scanning habits read directly from the factual export. It shows the pitch, counts itself down,
+// and closes on its own, on a click that is not a button, or on most keys.
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { parseHero } from "../data/hero";
@@ -28,6 +29,8 @@ afterEach(() => {
     container.remove();
   }
   intro.set({ open: false });
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 function mount(session: ViewSession): HTMLElement {
@@ -54,6 +57,19 @@ function button(page: Element, name: string): HTMLButtonElement {
 }
 
 const click = (el: HTMLElement) => act(() => el.click());
+
+/** SPEC §0, verbatim. */
+const PITCH =
+  "See what they saw. An AI studio that explains key moments through the player's own " +
+  "perception — the scans before the ball arrived, what was visible, what he believed — and " +
+  "proves every on-screen number before it airs.";
+
+/** Two heroes, so the card offers two pairs of eyes. */
+function twoHeroes() {
+  const exported = matchExport();
+  exported.match.possessions[2].hero = "A5";
+  return createMatchSession(parseHero(exported), { api: null, dataUrl: "/data/" });
+}
 
 describe("the pre-match line-up", () => {
   it("names its modal, lists both teams and labels the run's scan counts as sim data", () => {
@@ -176,5 +192,101 @@ describe("the pre-match line-up", () => {
     const session = createMatchSession(parseHero(matchExport()), { api: null, dataUrl: "/data/" });
     const matchPage = mount(session);
     expect(matchPage.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("shows the one-line pitch", () => {
+    const page = mount(offline());
+    expect(page.querySelector(".lineup-pitch")?.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      PITCH,
+    );
+  });
+
+  it("closes by itself about 5 s after it opens", async () => {
+    vi.useFakeTimers();
+    const page = mount(offline());
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(intro.get().open).toBe(true);
+    expect(page.querySelector('[role="dialog"]')).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(intro.get().open).toBe(false);
+    expect(page.querySelector('[role="dialog"]')).toBeNull();
+    const { INTRO_MS } = (await import("./LineupCard")) as { INTRO_MS?: number };
+    expect(INTRO_MS).toBe(5000);
+  });
+
+  it("closes on a click anywhere that is not a button", () => {
+    const page = mount(offline());
+    click(page.querySelector<HTMLElement>("h2")!);
+    expect(intro.get().open).toBe(false);
+    expect(page.querySelector('[role="dialog"]')).toBeNull();
+
+    act(() => intro.set({ open: true }));
+    click(page.querySelector<HTMLElement>(".lineup-card")!);
+    expect(intro.get().open).toBe(false);
+    expect(page.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("closes on any key except Tab, Enter, Space and the bare modifiers", () => {
+    const page = mount(offline());
+    const press = (key: string) =>
+      act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })));
+    // Space is the " " key. Shift, Control, Alt and Meta are the bare modifier keys.
+    for (const [name, key] of [
+      ["Tab", "Tab"],
+      ["Enter", "Enter"],
+      ["Space", " "],
+      ["Shift", "Shift"],
+      ["Control", "Control"],
+      ["Alt", "Alt"],
+      ["Meta", "Meta"],
+    ] as const) {
+      press(key);
+      expect(intro.get().open, name).toBe(true);
+      expect(page.querySelector('[role="dialog"]'), name).not.toBeNull();
+    }
+    press("a");
+    expect(intro.get().open).toBe(false);
+    expect(page.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("stays open long after an option is picked", () => {
+    vi.useFakeTimers();
+    const page = mount(twoHeroes());
+    click(button(page, "A5 · CB Hero of possession 3"));
+    expect(intro.get().open).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+    expect(intro.get().open).toBe(true);
+    expect(page.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it("shows a countdown line while it runs and removes it after a pick", () => {
+    const page = mount(twoHeroes());
+    expect(page.querySelector(".lineup-countdown")).not.toBeNull();
+    click(button(page, "A5 · CB Hero of possession 3"));
+    expect(intro.get().open).toBe(true);
+    expect(page.querySelector(".lineup-countdown")).toBeNull();
+  });
+
+  it("omits the countdown when motion is reduced", () => {
+    const matchMedia = vi.fn((query: string) => {
+      return {
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      } as unknown as MediaQueryList;
+    });
+    vi.stubGlobal("matchMedia", matchMedia);
+    const page = mount(offline());
+    expect(page.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(matchMedia).toHaveBeenCalledWith("(prefers-reduced-motion: reduce)");
+    expect(page.querySelector(".lineup-countdown")).toBeNull();
   });
 });
