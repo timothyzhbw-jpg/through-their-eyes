@@ -1,6 +1,6 @@
 """Archetypes: one fictional midfielder's perception traits, varied within published ranges.
 
-    uv run python -m eval.archetypes                # 1000 open_play runs per archetype, all cores
+    uv run python -m eval.archetypes                # 4500 open_play runs per archetype, all cores
     uv run python -m eval.archetypes --runs 100     # a quicker look (another report file)
 
 These are properties of our simulator under published parameter ranges; they are not findings
@@ -27,7 +27,9 @@ the same for all: no paper in docs/REFERENCES.md prints a range for it.
   typical archetype are paired over runs): scans in the 10 s before receiving; belief error about
   nearby opponents at his decision; pass completion; turnovers under heavy pressure; progressive
   passes; xT added per pass; and how often dropping his last scan before a decision changes that
-  decision (a counterfactual re-simulation from the scan, SPEC 3.7). The scan hero
+  decision (a counterfactual re-simulation from the scan, SPEC 3.7). The runs are sized for at
+  least 2,000 of his receptions per archetype, and the report says, for each step from one
+  archetype to the next, which metrics the runs separate and which they cannot. The scan hero
   (`blind_side_run`) scripts its hero's one look, so there only the head speed can matter.
 - **Validation, not discovery.** The relationships Jordet et al. (2020) print are set beside the
   same quantities in the sim's open play (the typical archetype's runs, every outfield player),
@@ -69,8 +71,9 @@ FRAMING = (
     "These are properties of our simulator under published parameter ranges; they are not "
     "findings about real players."
 )
-SEED = 2026
-RUNS = 1000  # open_play runs per archetype
+SEED = 20261022  # root of every seed here, keyed by purpose (SPEC 3.6, the seed registry)
+RUNS = 4500  # open_play runs per archetype: about 2,150 of his receptions each
+MIN_RECEPTIONS = 2000  # the report says so if an archetype has fewer
 TUNING_RUNS = 120  # per point of the calibration curve
 HERO_RUNS = 200  # blind_side_run seeds per archetype
 SCENARIO = "open_play"
@@ -84,6 +87,7 @@ HEAVY = float(TERMS["under heavy pressure"].threshold)  # pressing intensity of 
 BOOTSTRAP = 1000
 BOOTSTRAP_SEED = 20261021
 CURVE = (0.15, 0.25, 0.4, 0.6, 0.9, 1.3, 2.0, 3.0, 4.5, 7.0, 11.0, 16.0)  # configured scans/s
+ADJACENT = (("A", "B"), ("B", "C"), ("C", "D"), ("C", "E"))  # one step each: rate, or head speed
 
 # Printed values (docs/REFERENCES.md).
 JORDET_MEAN, JORDET_SD = 0.44, 0.30  # scans/s in the 10 s before receiving (Jordet et al. 2020)
@@ -374,12 +378,21 @@ class Paired:
         gen = np.random.default_rng(BOOTSTRAP_SEED)
         n = len(self.seeds)
         self.samples = [gen.integers(0, n, n) for _ in range(BOOTSTRAP)]
+        self._per_run: dict[tuple[str, Any], np.ndarray] = {}
+
+    def per_run(self, key: str, fn) -> np.ndarray:
+        """`fn` of each of this archetype's runs, in seed order (computed once per function)."""
+        if (key, fn) not in self._per_run:
+            values = [float(fn(self.by[(key, s)])) for s in self.seeds]
+            self._per_run[(key, fn)] = np.array(values)
+        return self._per_run[(key, fn)]
 
     def ratio(self, key: str, num, den, idx=None) -> float:
-        seeds = self.seeds if idx is None else [self.seeds[i] for i in idx]
-        top = sum(num(self.by[(key, s)]) for s in seeds)
-        bottom = sum(den(self.by[(key, s)]) for s in seeds)
-        return top / bottom if bottom else math.nan
+        top, bottom = self.per_run(key, num), self.per_run(key, den)
+        if idx is not None:
+            top, bottom = top[idx], bottom[idx]
+        total = bottom.sum()
+        return float(top.sum() / total) if total else math.nan
 
     def interval(self, fn) -> tuple[float, float]:
         values = np.array([fn(idx) for idx in self.samples])
@@ -390,32 +403,49 @@ class Paired:
         return float(lo), float(hi)
 
 
-def _metrics() -> list[tuple[str, str, Any, Any, float]]:
-    """(name, unit, numerator, denominator, scale) per run, for every metric."""
+@dataclass(frozen=True)
+class Metric:
+    name: str
+    short: str  # in the separation summary
+    unit: str
+    num: Any  # run -> numerator; the metric is sum(num) / sum(den) over runs, times scale
+    den: Any
+    scale: float
 
+
+def _metrics() -> tuple[Metric, ...]:
     def dec(r, cond):
         return [d for d in r["decisions"] if cond(d)]
 
-    return [
-        ("Scans in the 10 s before receiving, per second", "scans/s",
-         lambda r: sum(r["scan_rates"]), lambda r: len(r["scan_rates"]), 1.0),
-        (f"Belief error about opponents within {NEAR_M:.0f} m at his decision", "m",
-         lambda r: sum(d["belief_error"] for d in dec(r, lambda d: d["belief_error"] is not None)),
-         lambda r: len(dec(r, lambda d: d["belief_error"] is not None)), 1.0),
-        ("Pass completion", "%",
-         lambda r: sum(p["complete"] for p in r["passes"]), lambda r: len(r["passes"]), 100.0),
-        (f"Turnovers under heavy pressure (pressing ≥ {HEAVY:g}), share of those passes", "%",
-         lambda r: sum(bool(d["lost"]) for d in dec(r, lambda d: d["pressure"] >= HEAVY
-                                                       and d["lost"] is not None)),
-         lambda r: len(dec(r, lambda d: d["pressure"] >= HEAVY and d["lost"] is not None)), 100.0),
-        (f"Progressive passes (complete, ≥ {PROGRESSIVE_M:.0f} m toward goal), share of passes",
-         "%", lambda r: sum(p["complete"] and p["gain"] >= PROGRESSIVE_M for p in r["passes"]),
-         lambda r: len(r["passes"]), 100.0),
-        ("xT added per pass", "xT",
-         lambda r: sum(p["xt"] for p in r["passes"]), lambda r: len(r["passes"]), 1.0),
-        ("Decisions changed by dropping his last scan before them", "%",
-         lambda r: sum(r["flips"]), lambda r: len(r["flips"]), 100.0),
-    ]  # fmt: skip
+    return (
+        Metric("Scans in the 10 s before receiving, per second", "scans before receiving",
+               "scans/s", lambda r: sum(r["scan_rates"]), lambda r: len(r["scan_rates"]), 1.0),
+        Metric(f"Belief error about opponents within {NEAR_M:.0f} m at his decision",
+               "belief error", "m",
+               lambda r: sum(d["belief_error"]
+                             for d in dec(r, lambda d: d["belief_error"] is not None)),
+               lambda r: len(dec(r, lambda d: d["belief_error"] is not None)), 1.0),
+        Metric("Pass completion", "pass completion", "%",
+               lambda r: sum(p["complete"] for p in r["passes"]), lambda r: len(r["passes"]),
+               100.0),
+        Metric(f"Turnovers under heavy pressure (pressing ≥ {HEAVY:g}), share of those passes",
+               "turnovers under heavy pressure", "%",
+               lambda r: sum(bool(d["lost"]) for d in dec(r, lambda d: d["pressure"] >= HEAVY
+                                                             and d["lost"] is not None)),
+               lambda r: len(dec(r, lambda d: d["pressure"] >= HEAVY and d["lost"] is not None)),
+               100.0),
+        Metric(f"Progressive passes (complete, ≥ {PROGRESSIVE_M:.0f} m toward goal), share of "
+               "passes", "progressive passes", "%",
+               lambda r: sum(p["complete"] and p["gain"] >= PROGRESSIVE_M for p in r["passes"]),
+               lambda r: len(r["passes"]), 100.0),
+        Metric("xT added per pass", "xT added", "xT",
+               lambda r: sum(p["xt"] for p in r["passes"]), lambda r: len(r["passes"]), 1.0),
+        Metric("Decisions changed by dropping his last scan before them", "key-scan flips", "%",
+               lambda r: sum(r["flips"]), lambda r: len(r["flips"]), 100.0),
+    )  # fmt: skip
+
+
+METRICS = _metrics()  # built once, so Paired computes each metric's per-run values once
 
 
 def _fmt(x: float, unit: str) -> str:
@@ -461,15 +491,15 @@ def render(
         "(his receptions) |",
         "|---|---|---|---|---|---|",
     ]  # noqa: E501
-    sr = _metrics()[0]
+    sr = METRICS[0]
     for a in ARCHETYPES:
         rate, reached = calibration["rates"][a.key]
         target = "the sim's own" if a.target is None else f"{a.target:.2f} scans/s"
         if a.target is not None and not reached:
             target += " (not reached)"
         speed = f"{a.omega_deg_s:.1f}°/s" if a.omega_deg_s else f"{KOKUBU_MEAN:.1f}°/s (SimParams)"
-        value = paired.ratio(a.key, sr[2], sr[3])
-        lo, hi = paired.interval(lambda idx, k=a.key: paired.ratio(k, sr[2], sr[3], idx))
+        value = paired.ratio(a.key, sr.num, sr.den)
+        lo, hi = paired.interval(lambda idx, k=a.key: paired.ratio(k, sr.num, sr.den, idx))
         configured = f"{rate:.2f}" if rate is not None else "1.19 (sim/config.py CM)"
         lines.append(f"| {a.key}: {a.label} | {target} | {a.basis} | {configured} | {speed} | "
                      f"{value:.3f} ({lo:.3f}–{hi:.3f}) |")  # fmt: skip
@@ -488,40 +518,28 @@ def render(
         "| Metric | " + " | ".join(f"{a.key}" for a in ARCHETYPES) + " |",
         "|---|" + "---|" * len(ARCHETYPES),
     ]
-    for name, unit, num, den, scale in _metrics():
+    for m in METRICS:
         cells = []
         for k in keys:
-            v = paired.ratio(k, num, den) * scale
+            v = paired.ratio(k, m.num, m.den) * m.scale
             lo, hi = paired.interval(
-                lambda idx, k=k, num=num, den=den, scale=scale: (
-                    paired.ratio(k, num, den, idx) * scale
-                )
+                lambda idx, k=k, m=m: paired.ratio(k, m.num, m.den, idx) * m.scale
             )
-            n = sum(den(paired.by[(k, s)]) for s in paired.seeds)
-            cells.append(f"{_fmt(v, unit)} ({_fmt(lo, unit)} to {_fmt(hi, unit)}), n = {n:,}")
-        lines.append(f"| {name} | " + " | ".join(cells) + " |")
+            n = int(paired.per_run(k, m.den).sum())
+            cells.append(f"{_fmt(v, m.unit)} ({_fmt(lo, m.unit)} to {_fmt(hi, m.unit)}), n = {n:,}")
+        lines.append(f"| {m.name} | " + " | ".join(cells) + " |")
+    receptions = {k: int(paired.per_run(k, sr.den).sum()) for k in keys}
+    few = [k for k in keys if receptions[k] < MIN_RECEPTIONS]
     lines += [
         "",
-        f"Differences from {TYPICAL} (paired over runs; an interval that excludes 0 is a "
-        "difference the runs resolve):",
-        "",
-        "| Metric | " + " | ".join(f"{k} − {TYPICAL}" for k in keys if k != TYPICAL) + " |",
-        "|---|" + "---|" * (len(keys) - 1),
+        f"Every archetype has at least {MIN_RECEPTIONS:,} of his receptions (the first row's n), "
+        "the size this study is run at."
+        if not few
+        else f"Fewer than the {MIN_RECEPTIONS:,} receptions this study is sized for: "
+        + ", ".join(f"{k} ({receptions[k]:,})" for k in few)
+        + ".",
     ]
-    for name, unit, num, den, scale in _metrics():
-        cells = []
-        for k in keys:
-            if k == TYPICAL:
-                continue
-
-            def diff(idx, k=k, num=num, den=den, scale=scale):
-                return (
-                    paired.ratio(k, num, den, idx) - paired.ratio(TYPICAL, num, den, idx)
-                ) * scale
-
-            lo, hi = paired.interval(diff)
-            cells.append(f"{_diff(diff(None), unit)} ({_diff(lo, unit)} to {_diff(hi, unit)})")
-        lines.append(f"| {name} | " + " | ".join(cells) + " |")
+    lines += separation(paired)
     lines += [
         "",
         "- Belief error: the mean distance between where he believes each opponent within "
@@ -569,6 +587,49 @@ def render(
     return "\n".join(lines)
 
 
+def separation(paired: Paired) -> list[str]:
+    """Adjacent archetypes, paired over runs: which metrics the runs separate, and which not."""
+    label = {a.key: a.label for a in ARCHETYPES}
+    lines = [
+        "",
+        "## Adjacent archetypes",
+        "",
+        "Each step from one archetype to the next (paired over runs). A difference whose 95% "
+        "interval excludes 0 separates the two archetypes; one whose interval includes 0 does not, "
+        "at this many runs.",
+        "",
+        "| Metric | " + " | ".join(f"{b} − {a}" for a, b in ADJACENT) + " |",
+        "|---|" + "---|" * len(ADJACENT),
+    ]
+    apart: dict[tuple[str, str], list[str]] = {pair: [] for pair in ADJACENT}
+    for m in METRICS:
+        cells = []
+        for a, b in ADJACENT:
+
+            def diff(idx, a=a, b=b, m=m):
+                step = paired.ratio(b, m.num, m.den, idx) - paired.ratio(a, m.num, m.den, idx)
+                return step * m.scale
+
+            lo, hi = paired.interval(diff)
+            separated = math.isfinite(lo) and (lo > 0 or hi < 0)
+            if separated:
+                apart[(a, b)].append(m.short)
+            note = "" if separated else ", not separated"
+            cells.append(f"{_diff(diff(None), m.unit)} ({_diff(lo, m.unit)} to "
+                         f"{_diff(hi, m.unit)}){note}")  # fmt: skip
+        lines.append(f"| {m.name} | " + " | ".join(cells) + " |")
+    lines += ["", "In words:", ""]
+    for a, b in ADJACENT:
+        yes = apart[(a, b)]
+        no = [m.short for m in METRICS if m.short not in yes]
+        sep = ", ".join(yes) if yes else "none of the metrics"
+        rest = (
+            f"they cannot be separated on {', '.join(no)}" if no else "nothing is left unseparated"
+        )
+        lines.append(f"- **{a} and {b}** ({label[a]}, {label[b]}): separated on {sep}; {rest}.")
+    return lines
+
+
 def validation(results: list[dict[str, Any]]) -> list[str]:
     """Jordet et al. (2020)'s printed relationships beside the same quantities in the sim."""
     runs = [r for r in results if r["key"] == TYPICAL]
@@ -598,8 +659,9 @@ def validation(results: list[dict[str, Any]]) -> list[str]:
     beta_ci = boot(lambda w: logistic_slope(z, done.astype(float), w[unit].astype(float)))
     d_comp, d_comp_ci = d_of(done), boot(lambda w: d_of(done, w))
     d_fwd, d_fwd_ci = d_of(fwd), boot(lambda w: d_of(fwd, w))
-    arche = _archetype_slope(results)
-    arche_ci = boot(lambda w: _archetype_slope(results, w))
+    table = _slope_table(results)
+    arche = _archetype_slope(table)
+    arche_ci = boot(lambda w: _archetype_slope(table, w))
     pb, plo, phi = PUBLISHED["beta"]
     pd_comp = PUBLISHED["complete"][2]
 
@@ -655,20 +717,33 @@ def validation(results: list[dict[str, Any]]) -> list[str]:
     ]
 
 
-def _archetype_slope(results: list[dict[str, Any]], w: np.ndarray | None = None) -> float:
-    """H8's pass completion across archetypes against his measured scan rate, log-odds per
-    JORDET_SD. `w`: how many times each run (by its index among one archetype's runs) counts."""
-    xs, ys = [], []
+def _slope_table(results: list[dict[str, Any]]) -> dict[str, np.ndarray]:
+    """Per archetype, per run (in result order): scan rates summed, receptions, passes,
+    completions."""
+    table = {}
     for a in ARCHETYPES:
         runs = [r for r in results if r["key"] == a.key]
-        reps = np.ones(len(runs), dtype=int) if w is None else w
-        rates = [x for r, k in zip(runs, reps, strict=True) for x in r["scan_rates"] * int(k)]
-        passes = [p for r, k in zip(runs, reps, strict=True) for p in r["passes"] * int(k)]
-        if not rates or not passes:
+        table[a.key] = np.array([(sum(r["scan_rates"]), len(r["scan_rates"]), len(r["passes"]),
+                                  sum(p["complete"] for p in r["passes"])) for r in runs],
+                                dtype=float).reshape(-1, 4)  # fmt: skip
+    return table
+
+
+def _archetype_slope(table: dict[str, np.ndarray], w: np.ndarray | None = None) -> float:
+    """H8's pass completion across archetypes against his measured scan rate, log-odds per
+    JORDET_SD. `w`: how many times each run (by its index among one archetype's runs) counts.
+    Every pass of an archetype has its measured rate as x, so the fit is on counts."""
+    xs, ys, ws = [], [], []
+    for rows in table.values():
+        reps = np.ones(len(rows)) if w is None else np.asarray(w, dtype=float)
+        rate_sum, receptions, passes, done = (reps[:, None] * rows).sum(axis=0)
+        if receptions == 0 or passes == 0:
             continue
-        xs += [float(np.mean(rates)) / JORDET_SD] * len(passes)
-        ys += [p["complete"] for p in passes]
-    return logistic_slope(np.array(xs), np.array(ys, dtype=float))
+        x = rate_sum / receptions / JORDET_SD
+        xs += [x, x]
+        ys += [1.0, 0.0]
+        ws += [done, passes - done]
+    return logistic_slope(np.array(xs), np.array(ys), np.array(ws))
 
 
 # --- running it ---------------------------------------------------------------------------------

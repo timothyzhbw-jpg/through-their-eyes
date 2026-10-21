@@ -76,6 +76,45 @@ def test_statistics_helpers():
     assert 0.80 < lo < 0.81 and 0.97 < hi < 0.98
 
 
+def test_the_archetype_slope_on_counts_is_the_slope_on_every_pass():
+    gen = np.random.default_rng(1)
+    results = []
+    for k, a in enumerate(arch.ARCHETYPES):
+        for _ in range(30):
+            rates = list(gen.uniform(0.1, 0.3 + 0.15 * k, gen.integers(1, 4)))
+            passes = [{"complete": bool(gen.random() < 0.6 + 0.05 * k)}
+                      for _ in range(gen.integers(1, 6))]  # fmt: skip
+            results.append({"key": a.key, "scan_rates": rates, "passes": passes})
+    w = gen.integers(0, 3, 30)
+    xs, ys = [], []
+    for a in arch.ARCHETYPES:
+        runs = [r for r in results if r["key"] == a.key]
+        rates = [x for r, n in zip(runs, w, strict=True) for x in r["scan_rates"] * int(n)]
+        passes = [p for r, n in zip(runs, w, strict=True) for p in r["passes"] * int(n)]
+        xs += [np.mean(rates) / arch.JORDET_SD] * len(passes)
+        ys += [p["complete"] for p in passes]
+    every_pass = arch.logistic_slope(np.array(xs), np.array(ys, dtype=float))
+    assert arch._archetype_slope(arch._slope_table(results), w) == pytest.approx(every_pass)
+
+
+def test_adjacent_archetypes_say_which_steps_the_runs_separate():
+    results = []
+    for seed in range(40):
+        for a in arch.ARCHETYPES:
+            k = "ABCDE".index(a.key)
+            # Scans rise with the archetype; pass completion is the same coin for everyone.
+            rates = [0.1 + 0.2 * k + 0.01 * (seed % 3)]
+            passes = [{"complete": seed % 2 == 0, "gain": 0.0, "xt": 0.0}]
+            results.append({"key": a.key, "seed": seed, "scan_rates": rates, "passes": passes,
+                            "decisions": [], "flips": []})  # fmt: skip
+    lines = arch.separation(arch.Paired(results))
+    text = "\n".join(lines)
+    assert "## Adjacent archetypes" in text and "| Metric | B − A | C − B | D − C | E − C |" in text
+    ab = next(line for line in lines if line.startswith("- **A and B**"))
+    assert "separated on scans before receiving;" in ab
+    assert "they cannot be separated on belief error, pass completion" in ab
+
+
 def test_archetypes_are_fictional_and_placed_on_published_values():
     keys = [a.key for a in arch.ARCHETYPES]
     assert keys == ["A", "B", "C", "D", "E"] and arch.TYPICAL == "B"
@@ -103,6 +142,7 @@ def test_one_short_run_measures_everything_and_the_report_opens_with_the_framing
     sections = (
         "## The archetypes",
         "## Comparison",
+        "## Adjacent archetypes",
         "## The scan hero",
         "## Validation against Jordet et al. (2020)",
         "## What is held fixed",
