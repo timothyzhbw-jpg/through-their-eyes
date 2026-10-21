@@ -22,6 +22,7 @@ on play this model drives (SPEC 4.5), and valuing options with it would change i
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from dataclasses import dataclass, field
 
@@ -55,6 +56,13 @@ class DecisionParams:
     carry_time: float = 1.0
     shot_range: float = 30.0
     temperature: float = 0.01
+    # A defender's decision (scenarios with `Scenario.defender_decides`, hero expansion C3), all
+    # *tunable* on design seeds: he is valued as if he had run this long toward his option's
+    # point; he only cuts lanes that pass within this range of him; leaving his spot in the line
+    # costs this much threat (xT), so with nothing to read he holds.
+    defend_lookahead_s: float = 0.5
+    defend_range_m: float = 10.0
+    defend_cost: float = 0.02
 
 
 @dataclass
@@ -286,6 +294,55 @@ def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
         xg = float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
         options.append(OptionEval("shot", "shot", None, (float(goal[0]), 0.0), xg, xg))
 
+    temperature = ctx.temperature if ctx.temperature is not None else p.temperature
+    values = np.array([o.value for o in options])
+    z = (values - values.max()) / temperature
+    probs = np.exp(z) / np.exp(z).sum()
+    return [
+        OptionEval(o.action, o.kind, o.target_player, o.target, o.p_success, o.value, float(q))
+        for o, q in zip(options, probs, strict=True)
+    ]
+
+
+def evaluate_defender_options(ctx: DecisionContext, defender: int) -> list[OptionEval]:
+    """A defender's options against the carrier's passes, on the defender's belief (C3).
+
+    `ctx` is the carrier's decision as the defender believes it (carrier = the passer). Options:
+    `hold` (stay where he is) and `cut:<attacker>` for each pass of the carrier's whose believed
+    lane, from the ball to the pass's target, passes within `defend_range_m` of him between its
+    ends: its nearest point. Each is valued by moving the defender `defend_lookahead_s` toward
+    its point at his top speed and re-running the carrier's own model: V = -sum_k q_k V_k, the
+    expected threat of the carrier's pick, with a minus sign; a cut also pays `defend_cost`.
+    Softmax probabilities at the context's temperature.
+    """
+    p = ctx.params
+    passes = [o for o in evaluate_options(ctx) if o.kind == "pass"]
+    ball = ctx.pos[ctx.carrier] if ctx.ball is None else np.asarray(ctx.ball, dtype=float)
+    me = ctx.pos[defender].copy()
+
+    def threat(at: np.ndarray, vel: np.ndarray) -> float:
+        pos, vels = ctx.pos.copy(), ctx.vel.copy()
+        pos[defender], vels[defender] = at, vel
+        opts = evaluate_options(dataclasses.replace(ctx, pos=pos, vel=vels))
+        return float(sum(o.prob * o.value for o in opts))
+
+    reach = p.v_max * p.defend_lookahead_s
+    hold = OptionEval("hold", "defend", None, (float(me[0]), float(me[1])), 1.0,
+                      -threat(me, ctx.vel[defender]))  # fmt: skip
+    options = [hold]
+    for o in passes:
+        lane = np.asarray(o.target, dtype=float) - ball
+        t = float(np.dot(me - ball, lane) / max(float(np.dot(lane, lane)), 1e-9))
+        point = ball + t * lane
+        step = point - me
+        dist = float(np.linalg.norm(step))
+        if not 0.0 < t < 1.0 or dist > p.defend_range_m or dist < 1e-6:
+            continue
+        heading = step / dist
+        at = point if dist <= reach else me + heading * reach
+        value = -threat(at, heading * p.v_max) - p.defend_cost
+        options.append(OptionEval(f"cut:{o.target_player}", "defend", o.target_player,
+                                  (float(point[0]), float(point[1])), 1.0, value))  # fmt: skip
     temperature = ctx.temperature if ctx.temperature is not None else p.temperature
     values = np.array([o.value for o in options])
     z = (values - values.max()) / temperature

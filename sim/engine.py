@@ -28,6 +28,7 @@ from sim.decision import (
     DecisionContext,
     DecisionParams,
     choose,
+    evaluate_defender_options,
     evaluate_options,
     gumbel,
     pass_speed,
@@ -103,6 +104,7 @@ class Simulation:
         self.ball_out = False
         self.dives: dict[int, tuple[np.ndarray, int, int]] = {}
         self.tackle_lockout: dict[int, int] = {}  # player -> first frame he may tackle again
+        self.defending: dict[int, np.ndarray] = {}  # defender -> his chosen point (C3)
         self.last_kicker = -1
         self.kick_frame = -(10**9)
         self.hero_acted = False
@@ -187,6 +189,9 @@ class Simulation:
         self.beliefs.update(seen, f, self.pos, self.vel)
 
         # 2. Scripted actions, then decisions that are due.
+        defender = self.scenario.defender_decides(self, f)
+        if defender is not None and self.owner >= 0:
+            self._defend(defender, f)
         forced = self.scenario.forced_pass(self, f)
         if forced is not None and self.owner == self.index(forced.passer):
             target = forced.target if forced.target is not None else self.pos[self.index(forced.to)]
@@ -346,6 +351,10 @@ class Simulation:
         for i, (t, c) in self.scenario.scripted_targets(self, f).items():
             target[i], cap[i] = t, c
 
+        for j, point in self.defending.items():  # a defender's decision (C3): to his point
+            if j != self.owner:  # until he wins the ball
+                target[j], cap[j] = point, self.v_max[j]
+
         if self.owner < 0 and self.pass_in_flight is not None:
             times, path = self._predicted_path()
             margin = time_to_intercept(self.pos, self.vel, path) - times[None, :]
@@ -407,6 +416,51 @@ class Simulation:
             "meet": meet,
             "hero": self.scenario.ends_on_pass(self, i),
         }
+
+    def _defend(self, j: int, f: int) -> None:
+        """A defender's decision against the carrier's passes, on his belief (C3)."""
+        c = self.owner
+        pos, vel, age = self.beliefs.estimate(j, f, DT, self.params.belief_horizon_s)
+        pos[j], vel[j], age[j] = self.pos[j], self.vel[j], 0.0
+        ctx = DecisionContext(
+            carrier=c,
+            team=self.team,
+            pos=pos,
+            vel=vel,
+            age_s=age,
+            ids=self.ids,
+            attack_sign=1 if self.team[c] == 0 else -1,
+            ball=self.ball_pos[:2].copy(),
+            temperature=self.players[j].temperature,
+            params=self.decision_params,
+            ball_params=self.ball_params,
+        )
+        options = evaluate_defender_options(ctx, j)
+        noise = {
+            o.action: gumbel(self.rng.uniform_for("decision", f, f"{self.ids[j]}|{o.action}"))
+            for o in options
+        }
+        chosen = choose(options, noise, ctx.temperature)
+        forced = self.forced_actions.get((j, f))
+        if forced is not None:  # a what-if override (SPEC 3.7): the noise is still drawn
+            chosen = next((o for o in options if o.action == forced), None)
+            if chosen is None:
+                raise ValueError(f"{forced} is not an option of {self.ids[j]} at frame {f}")
+        error = np.linalg.norm(pos - self.pos, axis=-1)
+        self.decisions.append(
+            Decision(
+                frame=f,
+                player=self.ids[j],
+                options=options,
+                chosen=chosen.action,
+                noise=noise,
+                belief_error={pid: float(e) for pid, e in zip(self.ids, error, strict=True)},
+                belief_age={pid: float(a) for pid, a in zip(self.ids, age, strict=True)},
+            )
+        )
+        self.hero_acted = self.hero_acted or self.ids[j] == self.scenario.hero
+        if chosen.action != "hold":
+            self.defending[j] = np.array(chosen.target)
 
     def _decide(self, i: int, f: int) -> None:
         pos, vel, age = self.beliefs.estimate(i, f, DT, self.params.belief_horizon_s)

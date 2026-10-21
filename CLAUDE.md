@@ -100,7 +100,8 @@ _Fill in as they come to exist._
 - `uv run --env-file .env python -m infra.voices` — check the narration voices and their speaking
   styles against the Azure Speech voices list for `AZURE_SPEECH_REGION`
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
-  the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
+  the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`.
+  `--scenario read_the_run --seeds 200-239` is the defender's read (C3), held out on 200–239
 - `uv run python -m eval.hero_lens --scenario press_escape` — hero lens eval (SPEC 3.6, 5.2):
   does lens selection pick the lens the scenario is built for, and does its intervention
   (`Scenario.intervention`) change the outcome? Design seeds are 0–99. By default it runs the

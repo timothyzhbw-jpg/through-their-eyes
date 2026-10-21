@@ -568,6 +568,40 @@ is a step.
   added to the eval afterwards; the report regenerates with every earlier value unchanged.
 - **Not done yet:** the `sight` lens, its claims and narration (the explain PR for this moment).
 
+**Reading the run (`read_the_run`, 2026-10-21).** A defender anticipates a through ball; C3 of the
+hero expansion pack. The first hero who decides without the ball.
+- **The play.** The away team attacks −x. A8 has the ball on the left of midfield. The striker A9
+  starts beside the centre-back H4, who is goal-side of him, and curls behind the other centre-back H5 into
+  the channel between H5 and the left-back. H5 watches the ball. 0.2–0.3 s before A8 plays the
+  through ball into that channel (a forced pass, the same in both runs), H5 decides.
+- **The decision** (`Scenario.defender_decides` → `sim.decision.evaluate_defender_options`): hold
+  his spot, or cut the lane of one of A8's passes — the point of the believed lane, from the ball
+  to that pass's target, nearest to him, for lanes within `defend_range_m` (10 m). Each option is
+  valued on his belief with the carrier's own model (§3.5): H5 is moved `defend_lookahead_s`
+  (0.5 s) toward his point at top speed, and the value is minus the expected threat of the pass A8
+  would then pick. Leaving his spot costs `defend_cost` (0.02 xT), so with nothing to read he
+  holds. Keyed Gumbel noise at his temperature, as for a carrier. A cut is a movement target; the
+  existing interception rules decide whether he wins the ball. All three parameters are *tunable*,
+  set on design seeds.
+- **Key action and intervention.** H5's one look over his shoulder 0.45–0.70 s before he decides
+  (a forced key scan; spontaneous scans are suppressed until he acts, as in `blind_side_run`).
+  Without it, his last sighting of A9 is from the start, beside H4. Intervention `drop_scan`.
+- **New hooks, all off by default** (every other run is unchanged byte for byte):
+  `Scenario.defender_decides` and `Simulation.defending`; `possession_value` values a defender's
+  decision by the pass he read; `eval/hero_flip.py` reads the scenario's `key_action`.
+- **Acceptance** (`eval/hero_flip.py --scenario read_the_run --seeds 200-239`): without the key
+  scan the decision changes in 28/40 (target ≥ 60%: met). Reported only: the factual decision is
+  `cut:A9` in 34/40 and he wins the ball in 21 of those.
+  Report: [hero_flip_read_the_run.md](../eval/reports/hero_flip_read_the_run.md).
+- **How the held-out run went.** The first version (`defend_cost` 0.03, designed on seeds 0–19)
+  ran on 100–139 and **failed**: 22/40 (55%). Those seeds are seen. On design seeds 20–59, the
+  expected flip rate peaks at a cost of 0.02 (the softmax at T = 0.01 caps it: with the look, the
+  gain from cutting is 0.01–0.06 xT); there it was 30/40. Then one run on fresh seeds 200–239.
+  Nothing changed after that.
+- **Not done yet:** a moment card, lens, claims and narration for a defender's decision; the
+  scenario is not in any match. The demo seed would be 4 (design): he cuts it out with the look,
+  and without it A9 receives in behind. In some seeds without the look the keeper sweeps instead.
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -653,6 +687,12 @@ is a step.
       (28/40; 28/40 and 29/40 at 2.5 and 4.0 m/s; secondary 35/40 and 30/40; seeds 300–339);
       [tests/test_screened_shot.py](../tests/test_screened_shot.py) (design seeds: physics,
       separation, sightline, `DropStep`, `SightAt`)
+- [x] Reading the run: without the defender's key scan, his decision (hold or cut a lane)
+      changes in ≥ 60% of fresh held-out seeds. A first version failed on 100–139 (22/40) and is
+      reported (§3.6).
+      — [eval/reports/hero_flip_read_the_run.md](../eval/reports/hero_flip_read_the_run.md)
+      (28/40 on seeds 200–239); [tests/test_read_the_run.py](../tests/test_read_the_run.py)
+      (design seeds, the defender's options)
 - [x] Placed shots and the keeper's save model behind `Scenario.shots`: P_save matches the cited
       piecewise model; the keeper cannot react before he sees the ball; with the flag off every
       run is byte-identical.
@@ -1734,13 +1774,13 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 11 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
 | §4 analytics | 8 | 0 | — |
 | §5 explain | 8 | 0 | — |
 | §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **35** | **9** |
+| **Total** | **36** | **9** |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer

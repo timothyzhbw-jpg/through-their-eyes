@@ -97,6 +97,11 @@ class Scenario:
         """Players who may not start a spontaneous scan this frame."""
         return np.zeros(len(sim.ids), dtype=bool)
 
+    def defender_decides(self, sim: Simulation, frame: int) -> int | None:
+        """A defender who decides at this frame, against the carrier's passes (C3,
+        `sim.decision.evaluate_defender_options`). None by default, so no other scenario has one."""
+        return None
+
     def decides(self, sim: Simulation, player: int) -> bool:
         """Whether a player who just took control of the ball makes a decision."""
         return False
