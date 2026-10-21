@@ -52,9 +52,7 @@ import {
 
 const TAPS = 2 * TAPS_PER_SIDE + 1;
 /** Bloom: only what is brighter than white in linear light blooms (the lamps, not the kits). */
-/** Bloom (high tier): only the lamp heads are this bright in linear light, so only they bloom;
- * a tight radius keeps the halo within about three lamp heads. */
-export const BLOOM = { strength: 0.35, radius: 0.25, threshold: 2.0 };
+const BLOOM = LOOK.bloom;
 /**
  * Depth of field at full strength, in BokehPass units (blur = metres off focus × aperture, in
  * screen units, at most maxBlur). The broadcast camera sees 40–110 m of depth, so it gets far

@@ -243,7 +243,8 @@ export function CinePost() {
       u.maxblur.value = dof.maxBlur;
     }
 
-    const bloom = shot?.bloom ?? null;
+    // With the shared look a shot's bloom catches the lamp heads only (the halo cap).
+    const bloom = shot?.bloom ? (look ? LOOK.bloom : shot.bloom) : null;
     chain.bloom.enabled = bloom !== null;
     if (bloom) {
       chain.bloom.strength = bloom.strength;

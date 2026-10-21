@@ -1525,16 +1525,22 @@ original visual identity.
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
     the ring, the sweep and the stamp still show.
-- **Render tiers** ([web/src/quality/](../web/src/quality/), behind `?quality=` until they beat
-  the standard picture): *standard* draws the scene straight to the canvas as above; *medium* adds
-  a post chain (half-float HDR buffer, bloom on the lamps, depth of field through the beat on the
-  broadcast camera only, the head-whip blur, one tone mapping at the end, SMAA) and image-based
-  light from a procedural night-stadium environment (no HDRI download; the grass takes none of
-  it); *high* adds ambient occlusion (GTAO at half resolution) and a soft shadow map from the key
-  floodlight in place of the decal shadows. three.js's own addons (MIT), in a lazy chunk.
+- **Render tiers and one look** ([web/src/quality/](../web/src/quality/), behind `?quality=` until
+  the art director and Bowen approve): *classic* (`standard`) is the picture above, the default.
+  *low*, *medium* and *high* share one look with the Blender trailer shots, on the shared targets
+  of `~/tte-blender/LOOKDEV.md` §2a: AgX tone mapping, a Fresnel rim in the lamp colour from the
+  key floodlight on the players, the crowd tinted neutral-cool, the lamp glow capped at about three
+  lamp heads with no wide halo or flare streak, four decal shadows per player at 30 % each, and a
+  faint image-based light from a procedural night-stadium environment (≤ 0.3, never visible, not
+  on the grass; no HDRI download). The tiers differ in fidelity only: medium adds a post chain
+  (half-float HDR buffer, SMAA, depth of field through the beat on the broadcast camera, the
+  head-whip blur in it); high adds ambient occlusion (GTAO at half resolution) and bloom on the
+  lamp heads only. three.js's own addons (MIT), in a lazy chunk. Cine mode takes the look with
+  `&quality=` (AgX, the rim, the lamp-only bloom, the cone in `#ffd36b`), unchanged without it.
   - Tier from the device (renderer string, memory, phone or not; software renderers and older
-    Intel graphics get standard), `?quality=high|medium|standard|auto`, or the View options
-    switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s steps it down.
+    Intel graphics get low), `?quality=standard|low|medium|high|auto`, or the
+    View options switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s
+    steps it down (low is the floor).
   - First person gets no depth of field: the shirt numbers float in front of the stands, and a
     blur from the scene's depth would blur them with the stands.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
@@ -1643,10 +1649,12 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
-- [x] *Render tiers:* tier detection, link and viewer precedence, features per tier, depth of field
-      only through the beat on the broadcast camera and never under reduced motion, the
-      automatic step-down; each tier holds 60 fps; first load no heavier.
-      — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts) (24 cases);
+- [x] *Render tiers:* tier detection, link and viewer precedence, one look at every new tier with
+      fidelity-only differences, depth of field only through the beat on the broadcast camera and
+      never under reduced motion, the rim patch on and off, the automatic step-down; each tier
+      holds 60 fps; first load no heavier. *Open:* the art director's review of the look.
+      — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts),
+      [look.test.ts](../web/src/quality/look.test.ts);
       `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;
       `npm run fps -- --quality high|medium` (2026-10-21, Apple M4 Pro, Metal, headless):
       1920 × 1080 high 60.0 fps p95 16.7–16.8 ms in every row; medium on a 402 × 874 @ 3 phone

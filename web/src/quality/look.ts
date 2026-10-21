@@ -17,6 +17,9 @@ export const LOOK = {
   glowScale: 22, // m across: about three lamp heads (a lamp face is 9.2 m)
   lamp: 4, // lamp face brightness (× the lamp colour): above the bloom threshold at high
   environment: 0.3, // image-based light, never seen as a background
+  // Bloom where a tier or a cine shot has one: only the lamp heads are this bright in linear
+  // light, and a tight radius keeps the halo within about three lamp heads.
+  bloom: { strength: 0.35, radius: 0.25, threshold: 2.0 },
 };
 
 /** The key floodlight (the +x, +y mast), seen from the centre spot, in three.js world axes. */
