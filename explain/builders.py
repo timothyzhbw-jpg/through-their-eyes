@@ -513,9 +513,12 @@ def runner_received(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         return None
     receiver = r.hero_pass.attrs["receiver"]
     reception = next(
-        e for e in r.run.events
-        if e.type == "reception" and e.player == receiver and e.frame == r.hero_pass.attrs["end"]
+        (e for e in r.run.events
+         if e.type == "reception" and e.player == receiver and e.frame == r.hero_pass.attrs["end"]),
+        None,
     )  # fmt: skip
+    if reception is None:  # intercepted: the "receiver" is the opponent who won it
+        return None
     return Claim(
         id="runner_received",
         template="{runner} took the pass from {passer}.",

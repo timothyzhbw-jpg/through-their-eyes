@@ -100,3 +100,21 @@ def test_what_if_he_had_placed_it_elsewhere(ctx, question, action):
     if action == "shot:near":
         assert [line.claims for line in lines] == [["whatif_outcome"], ["whatif_chance"]]
         assert "would have saved it" in lines[0].text
+
+
+def test_an_intercepted_action_has_no_runner_received():
+    """A legacy shot is resolved like a pass: when it is intercepted its "receiver" is the
+    opponent who won it, and there is no reception to cite (seen on cutback_scan seed 3)."""
+    from dataclasses import replace
+
+    from explain.builders import HeroRefs, runner_received
+    from explain.functions import EvalContext
+    from sim.engine import Simulation
+    from sim.model import Event
+
+    run = Simulation.from_scenario("blind_side_run", 3).run()
+    refs = HeroRefs.of(run)
+    shot = Event(id="shot:H8:0075", type="shot", frame=refs.decision.frame, t=0.0, player="H8",
+                 team=0, attrs={"to": "H8", "outcome": "intercepted", "receiver": "A5",
+                                "end": refs.decision.frame + 10})  # fmt: skip
+    assert runner_received(EvalContext(run), replace(refs, hero_pass=shot)) is None
