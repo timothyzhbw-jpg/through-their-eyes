@@ -363,7 +363,7 @@
       ],
       "actions": [
         { "do": "hold", "s": 3, "still": true },
-        { "do": "click", "role": "button", "name": "Pass to H4", "hold": 3.5 },
+        { "do": "click", "role": "button", "name": "Pass to H4", "exact": false, "hold": 3.5 },
         { "do": "click", "role": "button", "name": "See the truth", "hold": 3.5, "still": true },
         { "do": "click", "role": "button", "name": "What he did", "hold": 3.5 },
         { "do": "click", "role": "button", "name": "Compare", "hold": 3 }

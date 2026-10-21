@@ -67,8 +67,8 @@ transitions, overlays and sounds; `out/video/trailer_contact.jpg` shows one fram
 | 1:04.65 | 4.5 | Every line checked: four lines stamped ✓, `{err}` m and `{dxt}` xT | app + card | Every line is checked against the simulation before it airs. |
 | 1:09.15 | 4.5 | A wrong number refuted: "WOULD NOT AIR" | app | Try a wrong number… and it never airs. |
 | 1:13.65 | 7.5 | The failure drill as a red card, the bring-back as a substitution | app | Take an agent down… bring it back, and it picks up where it left off. |
-| 1:21.15 | 6.75 | Casual fan, analyst, 中文 | app | The same moment, for every fan, in every language. (Then the app's own zh line.) |
-| 1:27.9 | 4.5 | The stitched match live on the broadcast camera | app | A whole match, live, with a camera director. |
+| 1:21.15 | 7.5 | Casual fan, analyst, 中文 | app | The same moment, for every fan, in every language. (Then the app's own zh line: 为什么？球到之前回头的那一眼，H8看到了H9。) |
+| 1:28.65 | 3.75 | The stitched match live on the broadcast camera | app | A whole match, live, with a camera director. |
 | 1:32.4 | 3.0 | Full time: the crew's recap | app | At the final whistle, the crew writes the recap. |
 | 1:35.4 | 3.75 | Who it is for: the live stats | app | Timecoded cues for broadcasters, every player's numbers for coaches. |
 | 1:39.15 | 6.0 | The stack as a spec sheet | card | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
@@ -139,7 +139,8 @@ https://opengameart.org/content/unsolicited-trailer-music
 - TODO(Bowen): the music is the default; the two alternatives are below.
 - TODO(Bowen): the public repository URL on the end card once the repo is public (by 10/26):
   add a line to `titles.end.params.lines`.
-- The final render films the live site, so it needs the cinematic mode (#90) and Take his eyes
-  (#99) deployed. The v5 cut was filmed from a local build of main + #90 + #93 + #99 with a local
-  API (`--base-url`), which writes template narration; the live service's model narration replaces
-  it in the final render. The drill shot is the live site's, where the other agents read MODEL.
+- The app shots are filmed from the live site (main 603e0a8: cinematic mode #90, Take his eyes
+  #99, the slow-mo key beat #110), with the service's cached model narration. Its narration does
+  not say how far off his picture of H9 was, so that one claim (`belief_error.err`, 0.3 m,
+  verified as supported) comes from a harvest of a local build of the same commit with template
+  narration; `out/video/claims.json` and the report say so.

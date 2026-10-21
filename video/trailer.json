@@ -19,7 +19,8 @@
   "voices": {
     "zh": {
       "name": "zh-CN-YunjianNeural",
-      "lang": "zh-CN"
+      "lang": "zh-CN",
+      "rate": "0%"
     }
   },
   "music": [
@@ -1676,12 +1677,12 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 15.6,
+        "in": 17.3,
         "crop": [
-          765,
-          270,
-          860,
-          484
+          700,
+          260,
+          1000,
+          562
         ],
         "push": [
           1.0,
@@ -1721,16 +1722,16 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 24.9,
+        "in": 28.2,
         "crop": [
-          765,
-          270,
-          860,
-          484
+          700,
+          260,
+          1000,
+          562
         ],
         "push": [
-          1.0,
-          1.04
+          1.04,
+          1.08
         ]
       },
       "overlays": [
@@ -1789,7 +1790,7 @@
       "vo": [
         {
           "id": "vo16",
-          "at": 0.2,
+          "at": 0.1,
           "text": "The same moment, for every fan, in every language."
         }
       ]
@@ -1815,15 +1816,16 @@
     },
     {
       "id": "b24-zh",
-      "dur": 3.75,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "06-language",
-        "in": 3.6,
+        "in": 4.45,
         "push": [
           1.0,
           1.04
-        ]
+        ],
+        "speed": 0.68
       },
       "overlays": [
         {
@@ -1834,7 +1836,7 @@
       "vo": [
         {
           "id": "vo17",
-          "at": 0.25,
+          "at": 0.2,
           "lang": "zh",
           "line": {
             "persona": "casual",
@@ -1852,14 +1854,14 @@
       "sfx": [
         {
           "name": "whoosh",
-          "at": 4.2,
+          "at": 4.95,
           "gain_db": -9
         }
       ]
     },
     {
       "id": "b25-live",
-      "dur": 4.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "02-live-stream",
