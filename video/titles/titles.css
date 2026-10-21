@@ -842,7 +842,7 @@ html.alpha #stage {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 110px;
+  bottom: 150px; /* clear of a one-line caption */
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -1350,11 +1350,19 @@ html.spec #stage {
   left: 50%;
   bottom: 34px; /* inside the bottom bar of a 2.39:1 letterbox, above the title-safe edge */
   transform: translateX(-50%);
+  width: max-content; /* a positioned box at left: 50% would otherwise wrap at half the frame */
   max-width: 1500px;
   padding: 10px 26px 8px;
   background: rgba(5, 8, 6, 0.72);
   border-radius: 6px;
   text-align: center;
+}
+
+.cap-right {
+  left: auto;
+  right: 64px;
+  transform: none;
+  max-width: 820px; /* clear of a lower-left title or the spec sheet's rows */
 }
 
 .cap-text {

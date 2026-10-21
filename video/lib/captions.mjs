@@ -25,6 +25,20 @@ export function captionTimeline(lines, { tail = 0.25, min = 1.0, gap = 0.05, tot
 }
 
 /**
+ * Where each caption sits: centred low in the frame, or on the right when a title holds the
+ * lower left (a lower-left slam, a tag, the spec sheet) at any moment the caption is up.
+ * @param {Array<{ start: number, dur: number }>} cues
+ * @param {Array<{ start: number, end: number }>} busy when the lower left is taken, s
+ * @returns {Array<{ start: number, dur: number, side: "center" | "right" }>}
+ */
+export function captionSides(cues, busy) {
+  return cues.map((cue) => ({
+    ...cue,
+    side: busy.some((b) => b.start < cue.start + cue.dur && cue.start < b.end) ? "right" : "center",
+  }));
+}
+
+/**
  * ffmpeg arguments that lay every caption clip (alpha) over `video` at its start.
  * @param {string} video
  * @param {Array<{ file: string, start: number }>} captions

@@ -564,10 +564,12 @@
   }
 
   // Burned-in caption of a voice-over line: one or two lines in a dark box low in the frame (in
-  // the 2.39:1 bar where there is one), numbers in gold. Fades in, and out at `dur`.
+  // the 2.39:1 bar where there is one), numbers in gold. Centred, or on the right with
+  // `side: "right"` when a title holds the lower left. Fades in, and out at `dur`.
   function caption(params) {
     const stage = prepare("free", null);
-    const box = el("div", "cap");
+    const right = params.side === "right";
+    const box = el("div", right ? "cap cap-right" : "cap");
     const line = el("p", "cap-text bebas");
     for (const part of String(params.text || "").split(/(\d+(?:[.,]\d+)?)/)) {
       if (!part) continue;
@@ -576,7 +578,13 @@
     box.append(line);
     stage.append(box);
     const dur = num(params.dur, 2);
-    box.animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], {
+    // The centred box is placed with translateX(-50%), so the rise keeps it.
+    const x = right ? "0" : "-50%";
+    const rise = [
+      { opacity: 0, transform: `translate(${x}, 10px)` },
+      { opacity: 1, transform: `translate(${x}, 0)` },
+    ];
+    box.animate(rise, {
       duration: 140,
       easing: "ease-out",
       fill: "both",

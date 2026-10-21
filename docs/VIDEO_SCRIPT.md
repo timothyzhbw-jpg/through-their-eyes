@@ -13,19 +13,23 @@ npm run trailer                                          # → out/video/trailer
 How the edit is built (steps, options, caches) is in [video/README.md](../video/README.md),
 "Trailer edit". This page is the treatment: what is on screen, what is said, and why.
 
-- **Numbers.** A number on screen or in the voice comes only through a `{claim.value}` slot filled
-  from the verified claims read off the live page (`out/video/claims.json`, the capture kit's
-  harvest). Without the claim, the card or line uses its fallback, which has no number, or is
-  dropped; the report (`out/video/trailer_report.md`) lists every number and the claim it came
-  from. The cut shows two, from the current build's claims: how far off his picture of the runner
-  was when he passed (`belief_error.err`, 0.3 m) and the look's value (`cf_value.dxt`, 0.13 xT, at the
-  precision the claim states).
+- **Numbers.** A number in the voice, the captions or our title cards comes only through a
+  `{claim.value}` slot filled from the verified claims read off the live page
+  (`out/video/claims.json`, the capture kit's harvest). Without the claim, the card or line uses
+  its fallback, which has no number, or is dropped; the report (`out/video/trailer_report.md`)
+  lists every number and the claim it came from. The cut says two, from the current build's
+  claims: how far off his picture of the runner was when he passed (`belief_error.err`, 0.3 m)
+  and the look's value (`cf_value.dxt`, 0.13 xT, at the precision the claim states). The app's
+  own panels in the footage (scan counts, live stats, the score) show what the app shows; the app
+  labels them as not claims, so the cut never says the verifier checks every number on screen,
+  only every line the crew says.
 - **Rights.** Synthetic match, fictional clubs and players, no real footage anywhere. Original
   title design (no league, club or game-publisher look); CC0 music, sound effects synthesized in
   the repo, OFL fonts: [video/CREDITS.md](../video/CREDITS.md).
 - **Captions.** Many judges watch muted, so every English voice-over line is burned in as a
   caption, word for word as spoken, numbers in gold: the same slot fills the caption and the
-  voice, so they cannot disagree. The Chinese line shows the app's own caption instead.
+  voice, so they cannot disagree. They sit centred in the bottom letterbox bar, and on the right
+  while a title holds the lower left. The Chinese line shows the app's own caption instead.
 - **Audio.** Voice: Azure AI Speech, `en-US-GuyNeural` (the app's play-by-play voice, PR #83; Bowen
   kept it as the narrator), in a
   lower register for the trailer (slowed 5%, pitched down 12%, then another 4% and compressed), whispering
@@ -39,23 +43,23 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
 The arc follows the judges' view of the product: the problem and the insight (0:00), the player's
 eyes and the key look (0:13), the counterfactual (0:24), the agent crew and verification (0:57),
 every audience and who it is for (1:21), the close (1:39). The in-engine shots (filmed in the web
-app's cinematic mode) carry a corner label, "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"; the
-rest is the app itself. Every voice-over line is burned in as a caption (the Chinese line keeps the
+app's cinematic mode) carry a corner label, "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA", and
+the three Blender shots "RENDERED IN BLENDER FROM OUR SIMULATION DATA"; the rest is the app
+itself. Every voice-over line is burned in as a caption (the Chinese line keeps the
 app's own caption). `video/trailer.json` holds each beat's exact in-points, crops, push-ins, grades,
 transitions, overlays and sounds; `out/video/trailer_contact.jpg` shows one frame per beat.
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
 | 0:00 | 2.5 | "EVERY TOUCH STARTS WITH A LOOK." | card | — |
-| 0:02.5 | 2.8 | Establishing crane onto H8 | in-engine | Replays show where the ball went… |
-| 0:05.3 | 2.0 | The look, low, under a floodlight | in-engine | …never what the player saw. |
-| 0:07.3 | 2.6 | The look, wide: his vision cone sweeps the pitch | in-engine | — |
+| 0:02.5 | 3.9 | The look, in Blender: a low push-in on H8, his head swings over his shoulder, focus racks to H9 with the gold ring | Blender | Replays show where the ball went… never what the player saw. |
+| 0:06.4 | 3.5 | The reveal, in Blender: a crane from behind H8 as the pass finds H9's run | Blender | — |
 | 0:09.9 | 3.0 | "SEE WHAT THEY SAW." (the music comes in) | card | See what they saw. |
 | 0:12.9 | 4.5 | The crew's replay in his eyes, verified captions | app | Through Their Eyes replays the moment through the player's own eyes. |
 | 0:17.4 | 3.0 | First person through the look | in-engine | A look over his shoulder, and he finds the runner. |
 | 0:20.4 | 3.75 | Freeze at the pass: "HIS PICTURE OF H9 — OFF BY `{err}` M" | in-engine | And he knows where his man is. |
 | 0:24.15 | 6.0 | With / Without the look on the board: the pass flips from H9 to H4, H9 goes unseen | app | Take that look away, and re-run the match. Without it, he plays it back. |
-| 0:30.15 | 3.75 | The run without the look: "HE PLAYS IT BACK TO H4." | in-engine | — |
+| 0:30.15 | 3.75 | Rewind (the look played backwards), then the run without the look in Blender, dusk: "HE PLAYS IT BACK TO H4." | Blender | — |
 | 0:33.9 | 6.75 | Take his eyes: the drag on the dial, his eyes with that look, "Your look changes his call" | app | Or take his eyes yourself: choose the look, and the match plays it out. Look the other way… he plays it safe. |
 | 0:40.65 | 10.5 | Your call: decide with his picture, the reveal, what he did (the music drops out) | app | Your call. You only know what he knew. Then see what really happened. He saw the run. Would you? |
 | 0:51.15 | 6.0 | The pressure hero, inside the sim: "THE PRESS WINS IT." | in-engine | Under a high press… make him keep the ball, and the press wins it. |
@@ -73,19 +77,29 @@ transitions, overlays and sounds; `out/video/trailer_contact.jpg` shows one fram
 Total 1:51. The product section cuts on the music's 80 bpm grid from the title hit; the track's
 breakdown falls on Your call.
 
-## The cinematic shots
+## The 3D shots
 
-Filmed frame by frame through `window.__cine` (`web/src/cine/`), from the bundled hero moment
-(blind_side_run, seed 3) and, for the pressure hero, the service's `press_escape-0`:
+**In-engine**, filmed frame by frame through `window.__cine` (`web/src/cine/`), from the bundled
+hero moment (blind_side_run, seed 3) and, for the pressure hero, the service's `press_escape-0`:
 
 | Shot | Run, frames | Camera | Look |
 |---|---|---|---|
-| `establish` | factual 18 → 44 | crane from the stands to 4.5 m, onto H8 | bloom, depth of field |
-| `look-low` | factual 47 → 60 (slow) | low orbit behind H8, looking up past a floodlight | bloom, shallow focus, exposure up |
-| `look-wide` | factual 58 → 71 | high wide behind the play | his vision cone flashing on the scan, rings |
 | `pov-look`, `pov-pass` | factual 50 → 76 | his eyes (95° horizontal field of view) | head-whip motion blur, peripheral softening, shirt numbers |
-| `without` | counterfactual 50 → 108 | side, panning back to the ball | faint cone, rings |
 | `press-low`, `press-cf` | press_escape factual 48 → 70, counterfactual 62 → 84 (the tackle at 81) | over H4's shoulder at the presser; low side on the tackle | depth of field, rings |
+
+**In Blender** (5.2, EEVEE), rendered by the blender-shots session from `sim.export` of the
+same moment; the scripts live outside the repository, the clips in `out/video/blender/`
+(git-ignored), 1920×804 at 30 fps, padded into the frame as rendered, never cropped:
+
+| Clip | Run, frames | Camera |
+|---|---|---|
+| `bl01_look` | factual 43 → 70 | low push-in on H8; his head turns over his right shoulder; focus racks to H9 at frame 61, with the app's gold ring |
+| `bl02_reveal` | factual 62 → 141 | crane from behind H8 as the pass goes into H9's run |
+| `bl03_without` | counterfactual, from `bl01`'s camera, dusk | he never turns and plays it back |
+
+`bl01` also plays reversed at 2.5× as the rewind into `bl03`. Every 3D shot gets the same finish
+in the edit (`fx: "glue"`: a light vignette, blacks lifted to about (5, 8, 6), fine grain) so the
+two renderers sit together.
 
 ## Choices made against the brief
 
@@ -102,9 +116,9 @@ the data:
 - **Your call** is live (#60), so it has its slot; the stitched-match beat is the live broadcast
   shot.
 - **In-engine shots past the hook.** The review asked for in-engine shots only in the opening
-  8–10 s. The first-person shots, the run without the look and the pressure hero are in-engine
-  too, because they are the app's own POV and broadcast views filmed in its cinematic mode and
-  nothing else shows the counterfactual run as clearly; each carries the label. The app itself
+  8–10 s. The hook is in Blender, from the same simulation data. The first-person shots and the
+  pressure hero are in-engine, because they are the app's own POV and broadcast views filmed in
+  its cinematic mode; the run without the look is Blender again. Each carries its label. The app itself
   fills 62 s of the 111 s, the in-engine shots 24 s and the title cards 25 s.
 
 ## Music

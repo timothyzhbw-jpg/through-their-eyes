@@ -1,7 +1,7 @@
 // Burned-in captions: timing and the overlay graph.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { burnArgs, captionTimeline } from "../lib/captions.mjs";
+import { burnArgs, captionSides, captionTimeline } from "../lib/captions.mjs";
 
 test("a caption lasts its line plus a tail, at least the minimum, and stops before the next", () => {
   const cues = captionTimeline(
@@ -37,4 +37,23 @@ test("the burn graph lays each caption at its start and keeps the film's fps", (
   assert.match(graph, /\[v0\]\[c1\]overlay=0:0:eof_action=pass/);
   assert.match(graph, /\[v1\]fps=30,format=yuv420p\[vout\]/);
   assert.equal(args.at(-1), "out.mp4");
+});
+
+test("a caption moves right while a title holds the lower left, and stays centred otherwise", () => {
+  const cues = captionSides(
+    [
+      { id: "a", start: 0, dur: 1 },
+      { id: "b", start: 2, dur: 1 },
+      { id: "c", start: 4, dur: 1 },
+    ],
+    [{ start: 2.9, end: 4 }],
+  );
+  assert.deepEqual(
+    cues.map((c) => [c.id, c.side]),
+    [
+      ["a", "center"],
+      ["b", "right"],
+      ["c", "center"],
+    ],
+  );
 });

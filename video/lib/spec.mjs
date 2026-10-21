@@ -10,7 +10,8 @@ import { SFX_NAMES } from "./sfx.mjs";
 import { estimateSpeechSeconds } from "./vo.mjs";
 
 const GRADES = new Set(["none", "night", "cool", "warm", "bleach", "mono", "danger"]);
-const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in"]);
+const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue"]);
+const FITS = new Set(["cover", "pad"]);
 const TRANSITIONS = new Set(["cut", "fade", "flash", "dip", "whip", "glitch"]);
 const CROPS = new Set(["pov", "tactical", "stage"]);
 const NUMBER_WORD =
@@ -250,6 +251,17 @@ function checkPicture(beat, i, where, cine, titles, ctx, errors) {
   }
   if (picture.src === "title") {
     if (!titles[picture.id]) errors.push(`${where}: unknown title id "${picture.id}"`);
+    return;
+  }
+  if (picture.src === "clip") {
+    // A video rendered outside the repo (out/video/blender/…, git-ignored): its file is checked
+    // when the edit runs, so --check passes in CI where it is absent.
+    if (!repoFile(ctx.root, picture.path)) errors.push(`${where}: clip path "${picture.path}" must stay inside the repo`);
+    if (picture.in != null && !(picture.in >= 0)) errors.push(`${where}: in must be >= 0`);
+    if (picture.speed != null && !(picture.speed > 0)) errors.push(`${where}: speed must be positive`);
+    if (picture.reverse != null && typeof picture.reverse !== "boolean") errors.push(`${where}: reverse must be true or false`);
+    if (picture.fit != null && !FITS.has(picture.fit)) errors.push(`${where}: fit must be one of ${[...FITS].join(", ")}`);
+    checkPush(picture.push, where, errors);
     return;
   }
   if (picture.src === "image") {

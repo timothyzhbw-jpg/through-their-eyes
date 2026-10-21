@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { assetFileName, downloadAsset, validateAssets } from "./lib/assets.mjs";
 import { digest, isCached, storeHash } from "./lib/cache.mjs";
-import { burnArgs, captionTimeline } from "./lib/captions.mjs";
+import { burnArgs, captionSides, captionTimeline } from "./lib/captions.mjs";
 import { claimTable, resolveTitle, resolveVo } from "./lib/claims.mjs";
 import {
   beatCommand,
@@ -520,7 +520,10 @@ async function burnCaptions(ctx, timeline, joined) {
         text: String(line.text ?? "").replace(/\s*\[pause \d+\]\s*/g, " ").trim(),
       };
     });
-  const cues = captionTimeline(lines, { tail: opts.tail ?? 0.25, min: opts.min ?? 1.0, total: timeline.duration });
+  const cues = captionSides(
+    captionTimeline(lines, { tail: opts.tail ?? 0.25, min: opts.min ?? 1.0, total: timeline.duration }),
+    lowerLeftWindows(ctx.spec, timeline),
+  );
   const dir = path.join(ctx.outDir, "captions");
   mkdirSync(dir, { recursive: true });
   const page = ["titles.css", "titles.js", "caption.html"].map((f) => fileStamp(path.join(HERE, "titles", f)));
@@ -528,17 +531,28 @@ async function burnCaptions(ctx, timeline, joined) {
   const todo = [];
   for (const cue of cues) {
     cue.file = path.join(dir, `${cue.id}.mov`);
-    cue.hash = digest(["caption-v1", cue.text, cue.dur, ctx.spec.output, ...page]);
+    cue.hash = digest(["caption-v2", cue.text, cue.dur, cue.side, ctx.spec.output, ...page]);
     if (!fresh(cue.file, cue.hash, ctx.force)) todo.push(cue);
   }
   if (todo.length) {
     const { renderTitle } = await import("./lib/titles.mjs");
     const { chromium } = await import("playwright");
-    const browser = await chromium.launch({ args: ["--hide-scrollbars"] });
+    const launch = () => chromium.launch({ args: ["--hide-scrollbars"] });
+    let browser = await launch();
     try {
       for (const cue of todo) {
-        const title = { template: "caption", dur: cue.dur, alpha: true, params: { text: cue.text, dur: cue.dur } };
-        await renderTitle({ browser, id: cue.id, title, fps, width, height, outFile: cue.file, ffmpeg: ctx.ffmpeg, log: () => {} });
+        const params = { text: cue.text, dur: cue.dur, side: cue.side };
+        const title = { template: "caption", dur: cue.dur, alpha: true, params };
+        const job = { id: cue.id, title, fps, width, height, outFile: cue.file, ffmpeg: ctx.ffmpeg, log: () => {} };
+        try {
+          await renderTitle({ browser, ...job });
+        } catch (err) {
+          // On a loaded machine Chromium is sometimes killed mid-render: relaunch once and retry.
+          if (!/closed|crash/i.test(String(err?.message))) throw err;
+          await browser.close().catch(() => {});
+          browser = await launch();
+          await renderTitle({ browser, ...job });
+        }
         storeHash(cue.file, cue.hash);
       }
     } finally {
@@ -553,6 +567,30 @@ async function burnCaptions(ctx, timeline, joined) {
     storeHash(out, hash);
   }
   writeFileSync(path.join(ctx.outDir, "captions.json"), `${JSON.stringify(cues.map(({ file, hash, ...c }) => c), null, 2)}\n`);
+  return out;
+}
+
+/**
+ * When a title holds the lower left of the frame (a lower-left slam, a tag, the spec sheet), so
+ * captions move right instead of covering it.
+ * @param {object} spec
+ * @param {{ beats: Array<{ id: string, start: number, dur: number }> }} timeline
+ */
+function lowerLeftWindows(spec, timeline) {
+  const holds = (id) => {
+    const t = spec.titles?.[id];
+    return Boolean(t) && (t.template === "tag" || t.template === "spec" || t.params?.align === "lower-left");
+  };
+  const out = [];
+  spec.beats.forEach((beat, i) => {
+    const { start, dur } = timeline.beats[i];
+    if (beat.picture?.src === "title" && holds(beat.picture.id)) out.push({ start, end: start + dur });
+    for (const o of beat.overlays ?? []) {
+      if (!holds(o.title)) continue;
+      const end = Math.min(o.at + spec.titles[o.title].dur, dur);
+      out.push({ start: start + o.at, end: start + end });
+    }
+  });
   return out;
 }
 
@@ -598,7 +636,7 @@ async function stepSheet(ctx) {
       .join(" ")
       .replace(/\[pause \d+\]/g, "…");
   const describe = (p) =>
-    p.src === "capture" ? `capture:${p.shot}` : p.src === "cine" ? `cine:${p.id}` : p.src === "title" ? `title:${p.id}` : p.src === "image" ? `image:${p.path}` : p.src;
+    p.src === "capture" ? `capture:${p.shot}` : p.src === "cine" ? `cine:${p.id}` : p.src === "title" ? `title:${p.id}` : p.src === "image" ? `image:${p.path}` : p.src === "clip" ? `clip:${p.path.split("/").pop()}` : p.src;
   const html = contactSheetHtml(
     timeline.beats.map((beat, i) => ({
       id: beat.id,
@@ -692,6 +730,10 @@ async function beatEnv(ctx, beat, titles, manifest) {
     }
   } else if (picture.src === "image") {
     file = path.resolve(ctx.root, picture.path);
+  } else if (picture.src === "clip") {
+    file = path.resolve(ctx.root, picture.path);
+    if (!existsSync(file)) throw new Error(`beat ${beat.id}: missing clip ${picture.path} (rendered outside the repo; see video/README.md)`);
+    sourceDuration = await probe(ctx.ffmpeg, file);
   }
   const overlays = [];
   for (const overlay of beat.overlays ?? []) {

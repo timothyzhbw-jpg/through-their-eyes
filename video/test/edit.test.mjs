@@ -209,6 +209,7 @@ test("loudnorm is two passes and the mux is the delivery encode", () => {
   );
   assert.match(second, /measured_I=-20\.1/);
   assert.match(second, /linear=true/);
+  assert.match(second, /aresample=192000,alimiter=limit=0\.7943.*,aresample=48000$/); // oversampled, half a dB under -1.5 dBTP
   const mux = muxArgs("joined.mp4", "mix.wav", "out/video/trailer.mp4", size).join(" ");
   assert.match(mux, /-profile:v high/);
   assert.match(mux, /-crf 18/);
@@ -249,4 +250,20 @@ test("every ffmpeg run is capped to a few threads", async () => {
   assert.equal(limitThreads(kept), kept);
   const probe = ["-hide_banner", "-i", "clip.mp4"];
   assert.equal(limitThreads(probe), probe);
+});
+
+test("a clip plays from its in-point, reversed on request, padded to the frame as rendered", () => {
+  const clip = beatGraph(
+    beat({
+      dur: 1.2,
+      picture: { src: "clip", path: "out/video/blender/bl01_look.mp4", in: 2.5, reverse: true, fit: "pad" },
+      fx: ["glue"],
+    }),
+    { ...size, file: "out/video/blender/bl01_look.mp4", sourceDuration: 4.23 },
+  ).filter;
+  assert.match(clip, /trim=start=2\.5:duration=1\.2/);
+  assert.match(clip, /setpts=PTS-STARTPTS,reverse/);
+  assert.match(clip, /scale=1920:-2,pad=1920:1080:\(ow-iw\)\/2:\(oh-ih\)\/2:color=black/);
+  assert.doesNotMatch(clip, /force_original_aspect_ratio=increase/); // never cropped to cover
+  assert.match(clip, /vignette=angle=PI\/7,colorlevels=romin=0\.020/);
 });
