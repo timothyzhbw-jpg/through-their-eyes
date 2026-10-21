@@ -1455,6 +1455,20 @@ original visual identity.
     towards the trunk's share of the look, so a look past 80° turns the trunk no further than
     before. The head still points exactly along `head_yaw`. On by default; `?anims=base` turns
     it off; under reduced motion there are no shoulder checks.
+  - *Walk (2026-10-21):* the engine has no walk (its slowest cycle is a 5.25 m/s jog, which
+    played walkers as a jog in miniature). A second animations-only GLB
+    (`web/public/models/anims_walk.glb`, ~12 KB, apart from the extra clips) holds a real walk,
+    Quaternius' `Walk_Loop` (Universal Animation Library 1, CC0), with its stride speed from the
+    pack's root-motion version and its left-foot strike lined up with the jog's. Players walk
+    below 1.7 m/s (idle to walk by speed, then the walk alone, its cadence rising) and keep the
+    engine's gait (idle and jog, then sprint) until they drop below 1.3 m/s; each change of gait
+    cross-fades over 0.25 s on one gait phase. A walk and a jog are not blended by speed: a
+    walking foot is down for 60% of the cycle and a jogging one for 30%, so a mix lets the
+    planted foot skate (measured 17–36 cm a step at 1.4–2.6 m/s). In the walking gait the model
+    is lifted by however far a blended pose would sink a boot into the ground. On with the extra
+    clips; `?walk=0` keeps the kick and the checks without the walk. Quaternius does not say how
+    the pack was made and Digital Production reports Xsens motion capture, so the walk shares
+    the synthetic-data question (hard rule 2) with motion capture.
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
@@ -1748,6 +1762,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       the head stays on `head_yaw` (< 1e-3 rad) for every player; the feet stay on the ground;
       poses are history-free; reduced motion drops the checks.
       — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts)
+- [x] *Walk:* the blend is a partition of one and the feet keep the sim speed (`footSpeed == v`)
+      at every speed, in either gait and through a change; the walk's left-foot strike lands on
+      the jog's (measured on the model: phase 0.155 vs 0.150); on the posed model the boot's
+      contact point moves back at 0.95–1.01 v from 0.3 to 1.65 m/s; the engine's gait poses the
+      body exactly as without the walk; walking players' heads stay on `head_yaw` (< 1e-3 rad),
+      their feet on the ground (none below it), and their poses are history-free; `?anims=base`
+      is unchanged (rig.test.ts untouched). — [web/src/players/players.test.ts](../web/src/players/players.test.ts),
+      [web/src/players/walk.test.ts](../web/src/players/walk.test.ts); posing 22 players costs
+      0.15 ms a frame against 0.11 ms with the engine's clips (match 1, a walking stretch).
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.

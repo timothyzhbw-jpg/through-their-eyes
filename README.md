@@ -358,7 +358,8 @@ accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subs
 ## Credits
 - Rigged players: converted from Gameplay Football by Bastiaan Konings Schuiling, as shipped in
   Google Research Football (Unlicense); see [web/public/models/README.md](web/public/models/README.md).
-  Their kick and shoulder checks are keyed by hand for this project.
+  Their kick and shoulder checks are keyed by hand for this project. Their walk: Universal
+  Animation Library by Quaternius (CC0), retargeted onto the same skeleton.
 
 ## License
 MIT — see [LICENSE](LICENSE).

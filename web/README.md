@@ -363,9 +363,12 @@ src/
   turned so the head points along `head_yaw`, kits in the fictional clubs' colours. On top, by
   default, hand-keyed clips (`src/players/extra.ts`, `public/models/anims_extra.glb`): a kick at
   every pass, its ball contact on the pass event and the standing foot still, and the trunk
-  joining every scan's look over the shoulder, timed to the head's turn out, hold and back. The
-  head stays exactly on `head_yaw`. `?anims=base` shows the engine's clips only; reduced motion
-  leaves the shoulder checks out.
+  joining every scan's look over the shoulder, timed to the head's turn out, hold and back. With
+  them, a real walk below 1.7 m/s instead of the engine's jog in miniature (`src/players/walk.ts`,
+  `public/models/anims_walk.glb`, Quaternius, CC0), cross-fading into the jog and back on one gait
+  phase (`src/players/gait.ts`). The head stays exactly on `head_yaw`. `?anims=base` shows the
+  engine's clips only, `?walk=0` the extra clips without the walk; reduced motion leaves the
+  shoulder checks out.
 - **Perception telemetry** (SPEC 4.7, 7). Under the timeline, curves for the player in the
   first-person view ("Whose eyes"), with a cursor on the playhead: head angle to the ball with
   his scans from the sim (the key scan highlighted; without the look, a dashed box where it
