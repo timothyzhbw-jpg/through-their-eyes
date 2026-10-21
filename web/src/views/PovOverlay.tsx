@@ -11,6 +11,10 @@ import { Caption } from "../ui/Narration";
 import { trial } from "../players/trial";
 import type { Camera3D } from "../store/playback";
 
+/** The Skeleton chip's tooltip, on the broadcast camera and the tactical board (SPEC 7). */
+export const SKELETON_TITLE =
+  "Skeleton data: every player's torso and head yaw, as limb tracking shows them (optional)";
+
 /** Why the belief ghosts are off for this player: beliefs are recorded for the hero only. */
 export function noBeliefs(hero: Hero): string {
   return hero.heroId
@@ -25,6 +29,7 @@ export function PovToolbar() {
   const ghosts = useStore(playback, (s) => s.beliefGhosts);
   const focus = useStore(playback, (s) => s.focus);
   const camera = useStore(playback, (s) => s.camera);
+  const skeleton = useStore(playback, (s) => s.skeleton);
   const rigged = useStore(trial, (s) => s.rigged);
   const player = hero.players[hero.ids.indexOf(povPlayer)];
   const ghostsAvailable = povPlayer === hero.heroId;
@@ -90,6 +95,17 @@ export function PovToolbar() {
         >
           Animated players
         </button>
+        {camera === "broadcast" && (
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={skeleton}
+            onClick={() => controls.toggle("skeleton")}
+            title={SKELETON_TITLE}
+          >
+            Skeleton
+          </button>
+        )}
       </div>
     </div>
   );

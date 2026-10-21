@@ -850,6 +850,12 @@ original visual identity.
     Fernández, Bornn and Cervone model trained on real tracking data (REFERENCES).
 - **Breakdown player:** executes a `TelestrationPlan`; timeline with scan ticks; split view
   (POV | tactical).
+- **Camera director:** the viewer picks the camera; a chip suggests which one to switch to and
+  why, from deterministic rules over the live stream's events (a pass toward a player: his eyes,
+  raised when he scans before the ball arrives; a defender's blind-side alert: the tactical board;
+  a turnover: broadcast; a detected moment: its breakdown, or a replay with its lens's camera).
+  Template reasons, no numbers, no model. An optional *Auto director* cuts by itself with a
+  minimum shot length and never mid-scan ([web/src/director/](../web/src/director/)).
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
@@ -863,6 +869,24 @@ original visual identity.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
+- *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
+  broadcast camera and the tactical board, off by default ([web/src/skeleton/](../web/src/skeleton/)).
+  It shows our perception signals the way limb-tracking data is shown, but draws only what the
+  sim records per frame:
+  - the position; the torso line from `body` (the shoulders, across the torso's facing); a head
+    ray from the head yaw; and a fan from torso to head that fills in as the head–torso angle
+    grows. The key reads out that angle for the player whose eyes the first-person view uses.
+  - The head ray lights up while the scan detector (§4.7) marks a scan.
+  - A switch picks the head yaw: **true**, or **as tracked**, with the §3.4 sensor noise (the
+    series the detector runs on). The export carries the tracked yaw only as the detector's
+    angular velocity, so the web app integrates that and pins the constant to the circular mean of
+    true minus integrated yaw. On blind_side_run seed 3 that is within 0.38° of the sim's
+    `head_yaw_observed`, every player and both runs (the noise itself reaches 7.5°).
+  - A stitched match's export has no detector run: there the head yaw is the true one and the ray
+    lights up during the sim's own scans, and the key says so.
+  - Limbs are not sim data and are not drawn. On the broadcast camera the torso line sits at
+    shoulder height and the ray at eye height; heights and the shoulder width are a drawing
+    choice, not data.
 
 ### Real-footage overlay (demo video only; the one exception to synthetic data)
 Bowen approved this exception himself on 2026-10-19 (CLAUDE.md hard rule 2). It is a single
@@ -904,8 +928,8 @@ to a real broadcast.
    frame of the exported segment for logos and faces, not only the automated masks.
 4. *License.* CC BY 3.0 allows adaptation with attribution and a note of changes, and implies no
    endorsement. Keep the attribution on screen for the whole segment.
-5. *Time.* It is the first item in the cut order (§9); it never takes time from the "never cut"
-   list.
+5. *Time.* It is near the top of the cut order (§9), after the optional skeleton view; it never
+   takes time from the "never cut" list.
 
 **Acceptance checks:**
 - [x] A test checks that no module in `sim/`, `analytics/`, `explain/`, `agents/` or `api/`
@@ -940,10 +964,24 @@ to a real broadcast.
       plan, with the reasons"); bundled and API plans both go through `resolvePlan`
       ([web/src/breakdown/breakdown.ts](../web/src/breakdown/breakdown.ts));
       [tests/test_agents.py](../tests/test_agents.py)::`test_an_invalid_agent_plan_is_replaced_by_the_template`
+- [x] Camera director: a pass suggestion shows at least 0.5 s before the reception at 1×,
+      reasons carry no number but player ids, and the auto director never cuts inside its
+      minimum shot length, mid-scan, or into a breakdown.
+      — [web/src/director/rules.test.ts](../web/src/director/rules.test.ts) ("every pass
+      suggestion shows at least half a second before its reception", "are plain words", "the
+      auto director"); [web/src/director/director.test.tsx](../web/src/director/director.test.tsx)
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
       caption line opens its claims and seeks the replay to their evidence", one case per line)
+- [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
+      draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
+      in a hero moment and in a stitched match; 60 fps with 22 players.
+      — [web/src/skeleton/skeleton.test.tsx](../web/src/skeleton/skeleton.test.tsx) (21 cases);
+      `npm run fps` (2026-10-20, Apple M4 Pro, headless Chrome, 1920 × 1080 at dpr 1 and 2):
+      60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
+      uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
+      integrated GPU.
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -1035,6 +1073,14 @@ to a real broadcast.
     load the match, 4.6 s for the server, and 14.0 s for the crew, whose Analyst needed a
     second attempt. `execute_tool` → `tools/call` spans sit under `analyst` in Application
     Insights ([RUBRIC_MAP](RUBRIC_MAP.md#the-live-trace)).
+  - *Warm start (2026-10-20):* a new revision used to simulate each match on its first request.
+    The stitched match took longer than the 15 s the web app waits for an export, so the first
+    visitor of `?match=match-1` after a deploy got the bundled offline hero instead. The API now
+    loads every match in its lifespan, before uvicorn opens the port (`TTE_WARM`, default on;
+    0, false or off turns it off). In single revision mode, with the default TCP startup probe,
+    Container Apps should then route traffic to a new revision only once it is warm; not yet
+    measured there. Locally the port opens after 6.0 s and the first `match-1` export takes
+    7 ms (3.5 s without).
 - **Azure Storage static website:** `web` (the `$web` container of a StorageV2 account in North
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
@@ -1065,9 +1111,11 @@ to a real broadcast.
     shows up as a `template` span with its reason.
     — [tests/test_telemetry.py](../tests/test_telemetry.py)::`test_an_offline_breakdown_is_one_trace_with_a_span_per_step`,
     `test_a_telestrator_timeout_is_a_template_span_with_the_error_class`,
-    `test_the_azure_monitor_distro_keeps_every_step_span_of_a_breakdown`; live, Application
-    Insights holds one trace per deployed breakdown with a span for each step from Director to
-    Voice (queried 2026-10-20).
+    `test_the_azure_monitor_distro_keeps_every_step_span_of_a_breakdown`; live, after PR #50: two
+    uncached model breakdowns (2026-10-20 21:34 and 21:35 UTC, revision `tte-api--0000017`) are
+    one trace each, with `mcp`, Director, Analyst (and its `execute_tool` spans), Telestrator, both
+    narration voices, Verifier and Voice, every span at `itemCount` 1
+    ([RUBRIC_MAP](RUBRIC_MAP.md#the-live-trace)).
 - **GitHub Actions:** lint, tests, eval suite, build and deploy.
 - **Infra as code:** azd + Bicep is a stretch goal; scripts are acceptable.
 - *Provisioned 2026-10-20 (`infra/deploy.sh provision`):*
@@ -1105,7 +1153,8 @@ to a real broadcast.
 **Acceptance status** (2026-10-20). Each check carries its evidence inline: a test, an eval report
 or a live check. Ticked only when verified that day: `uv run pytest` 464 passed, `npm test` in
 `web/` 121 passed, the live checks run against the deployed API and site. The pitch-control
-shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed.
+shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed. The skeleton view
+check, the same day: `npm test` 292 passed.
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
@@ -1113,7 +1162,7 @@ shader check, the same day: `uv run pytest` 472 passed, `npm test` 204 passed.
 | §4 analytics | 5 | 1 | fitted xT grid and its sanity plot |
 | §5 explain | 6 | 0 | — |
 | §7 real-footage overlay | 2 | 2 | checks on every exported frame; Bowen's frame-by-frame review |
-| §7 render | 2 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
+| §7 render | 3 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
 | **Total** | **25** | **12** | |
@@ -1137,20 +1186,21 @@ without the POV breakdown and ask each one question: "why did he play that pass?
 pilot only, never generalised.
 
 **Cut order when behind:**
-0. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
+0. skeleton data view (§7, optional): remove the toggle; nothing else depends on it
+1. real-footage overlay segment in the video (§7; also cut at once if any of its conditions fails
    or the organisers object)
-1. rigged GRF players: back to tokens in POV and broadcast (§7)
-2. Foundry evaluation ablation, free text vs anchored narration (§6)
-3. shareable clip export (stretch)
-4. viewer pilot
-5. end-of-match recap reel
-6. "What if…?" free text → suggested questions only
-7. two voices → one narrator
-8. `coach` persona
-9. `es` language
-10. Cosmos DB → file store
-11. occlusion model → FOV only
-12. pitch-control shader and pass value surface → precomputed textures (the pitch-control
+2. rigged GRF players: back to tokens in POV and broadcast (§7)
+3. Foundry evaluation ablation, free text vs anchored narration (§6)
+4. shareable clip export (stretch)
+5. viewer pilot
+6. end-of-match recap reel
+7. "What if…?" free text → suggested questions only
+8. two voices → one narrator
+9. `coach` persona
+10. `es` language
+11. Cosmos DB → file store
+12. occlusion model → FOV only
+13. pitch-control shader and pass value surface → precomputed textures (the pitch-control
     shader exists and stays per pixel until a laptop measurement says otherwise, §7 render)
 
 **Never cut:** perception layer, POV breakdown, verified narration, ≥ 2 personas, Foundry + Agent

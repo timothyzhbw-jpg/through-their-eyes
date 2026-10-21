@@ -3,7 +3,7 @@
 import { runLabels } from "../data/hero";
 import { useView, type Toggle } from "../session";
 import { useStore } from "../store/store";
-import { noBeliefs } from "./PovOverlay";
+import { noBeliefs, SKELETON_TITLE } from "./PovOverlay";
 
 export function TacticalToolbar() {
   const { hero, playback } = useView();
@@ -50,6 +50,7 @@ export function TacticalToolbar() {
           label="Pitch control"
           title="Which team gets to each point of the pitch first (home: coral, away: blue)"
         />
+        <Chip name="skeleton" label="Skeleton" title={SKELETON_TITLE} />
         {hero.counterfactual && (
           <Chip
             name="cfGhost"

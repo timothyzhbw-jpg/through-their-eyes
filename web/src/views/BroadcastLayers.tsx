@@ -2,8 +2,8 @@
 // the shot, this puts the three.js camera there), the live tags over players (sprint speed, the
 // POV player's scans and blind-side alerts, marked `sim`), and on the grass rings under the hero
 // (white) and the runner (gold) as on the board, the blind-side lines and, around the decision,
-// the pass options as on the tactical board. Grass layers are depth tested
-// so players stand on top of them, like a broadcaster's ground graphics.
+// the pass options as on the tactical board, and on request the skeleton (../skeleton/). Grass
+// layers are depth tested so players stand on top of them, like a broadcaster's ground graphics.
 
 import { Line } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -20,6 +20,7 @@ import {
   widthFor,
 } from "../options/passOptions";
 import { useView } from "../session";
+import { SkeletonLayer } from "../skeleton/SkeletonLayer";
 import { useStore } from "../store/store";
 import { cameraPose, shotAt, type BroadcastPath, type Shot } from "./broadcast";
 import { liveTags, type LiveTag } from "./broadcastTags";
@@ -62,6 +63,7 @@ export function BroadcastLayers({ sample }: { sample: Sample }) {
       <GrassBlindSide sample={sample} />
       <GrassOptions />
       <TagSprites sample={sample} />
+      <SkeletonLayer sample={sample} variant="broadcast" />
     </group>
   );
 }

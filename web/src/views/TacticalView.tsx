@@ -1,8 +1,8 @@
 // Tactical board: an orthographic camera straight down on the pitch. Shows the POV player's vision
 // cone (a shader of the sim's FOV model), who is in his sight, the hero's belief ghosts, the pass
 // he played, the ghost path of the other run, and on request both teams' pitch control (a shader
-// of analytics/pitch_control.py, ../pitchControl/). Everything is drawn flat, in layer order
-// (renderOrder) with depth testing off, like a 2D canvas.
+// of analytics/pitch_control.py, ../pitchControl/) and the skeleton (../skeleton/). Everything is
+// drawn flat, in layer order (renderOrder) with depth testing off, like a 2D canvas.
 
 import { Line } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -48,6 +48,8 @@ import {
 import { PitchControlLayer } from "../pitchControl/PitchControlLayer";
 import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { TacticalToolbar } from "./TacticalToolbar";
+import { SkeletonLayer } from "../skeleton/SkeletonLayer";
+import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 
 const TOKEN_R = 0.95; // m
@@ -102,6 +104,7 @@ export function TacticalView() {
         </Canvas>
         {kind === "hero" && <OptionsOverlay />}
         <BlindSideOverlay />
+        <SkeletonLegend />
       </div>
     </figure>
   );
@@ -153,6 +156,7 @@ function TacticalScene() {
       {hero.counterfactual && <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} />}
       <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} />
+      <SkeletonLayer sample={shared.current.sample} variant="board" scale={scale} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />
@@ -559,7 +563,10 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
     for (let j = 0; j < hero.n; j++) {
       groups.current[j]?.position.set(sample.pos[2 * j], 0, -sample.pos[2 * j + 1]);
       const tick = ticks.current[j];
-      if (tick) aimYaw(tick, sample.head[j]);
+      if (tick) {
+        aimYaw(tick, sample.head[j]);
+        tick.visible = !state.skeleton; // the skeleton draws its own head ray
+      }
       const halo = halos.current[j];
       if (halo) halo.visible = j !== me && isSeen(hero, run, state.frame, me, j);
     }

@@ -1,0 +1,93 @@
+/* The skeleton's key, bottom left over the broadcast camera or the tactical board (SPEC 7). */
+.skeleton-key {
+  position: absolute;
+  z-index: 1;
+  left: 8px;
+  bottom: 8px;
+  max-width: min(300px, calc(100% - 16px));
+  padding: 7px 9px;
+  border-radius: 4px;
+  background: rgba(11, 18, 16, 0.84);
+  font: 500 11px/1.35 var(--font-body);
+  color: var(--fg);
+}
+.skeleton-key .sk-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.skeleton-key .sk-title {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.skeleton-key .source {
+  font: 500 10px/1 var(--font-data);
+  color: var(--muted);
+}
+.skeleton-key .sk-source {
+  margin-left: auto;
+}
+.skeleton-key .sk-source button {
+  font: 600 10px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 7px;
+}
+.skeleton-key .sk-source button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.skeleton-key .sk-marks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.skeleton-key .sk-marks li {
+  white-space: nowrap;
+}
+.skeleton-key .sw {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+  background: var(--fg);
+}
+.skeleton-key .sw.ray {
+  height: 2px;
+}
+.skeleton-key .sw.fan {
+  height: 9px;
+  background: transparent;
+  border-left: 7px solid transparent;
+  border-bottom: 9px solid rgba(230, 238, 233, 0.45);
+  width: 0;
+}
+.skeleton-key .sw.lit.detector {
+  height: 4px;
+  background: var(--detector);
+}
+.skeleton-key .sw.lit.sim {
+  height: 4px;
+  background: var(--sight);
+}
+.skeleton-key .sk-readout {
+  margin: 4px 0 0;
+  font: 500 11px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.skeleton-key .sk-note {
+  margin: 3px 0 0;
+  color: var(--muted);
+}
+/* Phones: no key to the marks; the switch, the reading and what is not data stay. */
+@media (max-width: 600px) {
+  .skeleton-key .sk-marks {
+    display: none;
+  }
+}

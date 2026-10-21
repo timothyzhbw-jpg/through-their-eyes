@@ -141,8 +141,8 @@ _Fill in as they come to exist._
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
   the hero moment
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
-  it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay off and
-  on (`-- --headed` on a laptop's GPU)
+  it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
+  skeleton view off and on (`-- --headed` on a laptop's GPU)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`

@@ -1,8 +1,10 @@
 // Playback state: everything the views need to know about "what is on screen now".
-// Views only read it. User controls and the TelestrationPlan executor are the only writers.
+// Views only read it. User controls, the TelestrationPlan executor and the camera director
+// (director/, the camera only) are the only writers.
 
 import { easedHeadAt, wrapAngle, type Hero } from "../data/hero";
 import type { RunName } from "../data/types";
+import type { YawSource } from "../skeleton/skeleton";
 import { createStore, type Store } from "./store";
 
 export type Focus = "split" | "pov" | "tactical" | "broadcast";
@@ -24,6 +26,8 @@ export interface PlaybackState {
   options: boolean; // pass options at the decision (shown around the decision frame only)
   blindSide: boolean; // blind-side alerts, live (SPEC 4.4)
   pitchControl: boolean; // team pitch control on the tactical board (SPEC 4.2, 7)
+  skeleton: boolean; // skeleton data on the broadcast camera and the board (SPEC 7, optional)
+  skeletonSource: YawSource; // its head yaw: true, or as a tracking system reports it
   focus: Focus; // which view gets the space
   camera: Camera3D; // the 3D view's camera
   scanMarker: string | null; // scan id highlighted by a plan
@@ -73,6 +77,8 @@ export function createPlayback(hero: Hero): PlaybackStore {
     options: true,
     blindSide: true,
     pitchControl: false,
+    skeleton: false,
+    skeletonSource: "true",
     focus: "split",
     camera: "pov",
     scanMarker: null,
