@@ -1,10 +1,15 @@
+// @vitest-environment happy-dom
 // Motion blur in first person (SPEC 7, the Floodlit design): a horizontal blur whose strength
 // follows the measured head angular velocity, sharp the instant the head stops, never under
 // prefers-reduced-motion and never on the broadcast camera.
 
-import { describe, expect, it } from "vitest";
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import * as THREE from "three";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import { parseHero } from "../data/hero";
+import * as motionBlur from "./motionBlur";
 import {
   blurPlan,
   blurSigmaPx,
@@ -15,11 +20,67 @@ import {
   MIN_SIGMA_PX,
   povBlurSigmaPx,
 } from "./motionBlur";
+import { MotionBlur } from "./PovMotionBlur";
+
+const hooks = vi.hoisted(() => ({
+  state: null as unknown,
+  view: null as unknown,
+  frame: null as unknown,
+}));
+vi.mock("@react-three/fiber", () => ({
+  useThree: (select: (state: unknown) => unknown) => select(hooks.state),
+  useFrame: (draw: unknown) => {
+    hooks.frame = draw;
+  },
+}));
+vi.mock("../session", () => ({ useView: () => hooks.view }));
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const mounted: { root: Root; container: HTMLElement }[] = [];
+afterEach(() => {
+  for (const { root, container } of mounted.splice(0)) {
+    act(() => root.unmount());
+    container.remove();
+  }
+  vi.restoreAllMocks();
+});
 
 const hero = parseHero(raw);
 const run = hero.runs.factual;
 const h8 = hero.ids.indexOf("H8");
 const deg = (rad: number) => (rad * 180) / Math.PI;
+
+function blurFrame(width: number, height: number, dpr: number, reducedMotion = false) {
+  vi.spyOn(window, "matchMedia").mockReturnValue({
+    matches: reducedMotion,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  } as unknown as MediaQueryList);
+  const playback = { povPlayer: "H8", mode: "factual", frame: 54.5, comfort: false, camera: "pov" };
+  const gl = {
+    getDrawingBufferSize: (size: THREE.Vector2) => size.set(width, height),
+    getPixelRatio: () => dpr,
+    extensions: { has: () => true },
+    domElement: { dataset: {} as Record<string, string> },
+    setRenderTarget: vi.fn<(target: THREE.WebGLRenderTarget | null) => void>(),
+    render: vi.fn<(scene: THREE.Scene, camera: THREE.Camera) => void>(),
+  };
+  hooks.state = { gl, invalidate: vi.fn() };
+  hooks.view = { hero, playback: { get: () => playback } };
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  act(() => root.render(createElement(MotionBlur, { hfov: (95 * Math.PI) / 180 })));
+  mounted.push({ root, container });
+  const draw = () =>
+    (hooks.frame as (state: unknown) => void)({
+      gl,
+      scene: new THREE.Scene(),
+      camera: new THREE.PerspectiveCamera(),
+    });
+  return { gl, playback, draw };
+}
 
 /** Standard deviation of a tap set, px. */
 const spread = (t: { offsets: ArrayLike<number>; weights: ArrayLike<number> }) => {
@@ -74,6 +135,31 @@ describe("blur strength", () => {
 });
 
 describe("blur plan", () => {
+  it("reuses a caller's tap buffers while the blur changes, stops, and starts again", () => {
+    const plan = blurPlan(2, 1600);
+    const offsets = plan.offsets;
+    const weights = plan.weights;
+    expect(blurPlan(40, 1600, plan)).toBe(plan);
+    expect(plan.offsets).toBe(offsets);
+    expect(plan.weights).toBe(weights);
+    expect(plan.passes).toBe(2);
+    expect(Math.sqrt(2) * spread(plan)).toBeGreaterThan(0.97 * 40);
+    expect(blurPlan(0, 1600, plan)).toBe(plan);
+    expect(plan.passes).toBe(0);
+    expect(blurPlan(1, 1600, plan)).toBe(plan);
+    expect(plan.offsets).toBe(offsets);
+    expect(plan.weights).toBe(weights);
+    expect(spread(plan)).toBeCloseTo(1, 1);
+  });
+
+  it("shares the precomputed normalized Gaussian weights across sigma values", () => {
+    const narrow = gaussianTaps(1);
+    const wide = gaussianTaps(20);
+    expect(wide.weights).toBe(narrow.weights);
+    expect(spread(narrow)).toBeCloseTo(1, 1);
+    expect(spread(wide)).toBeGreaterThan(0.97 * 20);
+  });
+
   it("draws the frame sharp, without the pass, when the blur is under half a pixel", () => {
     expect(blurPlan(0, 1600).passes).toBe(0);
     expect(blurPlan(MIN_SIGMA_PX * 0.99, 1600).passes).toBe(0);
@@ -110,4 +196,58 @@ describe("blur plan", () => {
     expect(Math.max(...t.weights)).toBe(t.weights[(n - 1) / 2]);
     expect(spread(t)).toBeGreaterThan(9.7);
   });
+});
+
+describe("motion blur GPU budget", () => {
+  it.each([
+    [3200, 1800, 2, 1600, 900],
+    [5120, 2880, 2, 1920, 1080],
+    [2560, 1440, 1, 1920, 1080],
+    [900, 600, 0.75, 900, 600],
+  ])("caps a %s x %s canvas at DPR %s to %s x %s", (width, height, dpr, w, h) => {
+    const { gl, draw } = blurFrame(width, height, dpr);
+    draw();
+    const target = gl.setRenderTarget.mock.calls[0][0] as THREE.WebGLRenderTarget;
+    expect(target.width).toBe(w);
+    expect(target.height).toBe(h);
+    expect(target.samples).toBe(0);
+    expect(target.texture.type).toBe(THREE.HalfFloatType);
+    expect(target.texture.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect((target as unknown as { isXRRenderTarget: boolean }).isXRRenderTarget).toBe(true);
+    const mid = gl.setRenderTarget.mock.calls[1][0] as THREE.WebGLRenderTarget;
+    expect(mid.width).toBe(w);
+    expect(mid.height).toBe(h);
+    expect(mid.samples).toBe(0);
+    const quad = gl.render.mock.calls.at(-1)![0] as THREE.Scene;
+    const material = (quad.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
+    // Taps remain in canvas pixels, preserving the blur's apparent width after downsampling.
+    expect(material.uniforms.uTexel.value).toBe(1 / width);
+  });
+
+  it("keeps the original sub-pixel bypass threshold when the target is downsampled", () => {
+    const sigma = vi.spyOn(motionBlur, "povBlurSigmaPx").mockReturnValue(0.75);
+    const { gl, draw } = blurFrame(3200, 1800, 2);
+    draw();
+    expect(gl.setRenderTarget.mock.calls[0][0]).toBeInstanceOf(THREE.WebGLRenderTarget);
+    expect(gl.domElement.dataset.blurSigma).toBe("0.8");
+    sigma.mockReturnValue(MIN_SIGMA_PX * 0.99);
+    gl.setRenderTarget.mockClear();
+    gl.render.mockClear();
+    draw();
+    expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
+    expect(gl.render).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["reduced motion", "broadcast", "stationary head"])(
+    "draws straight to the canvas for %s",
+    (bypass) => {
+      const { gl, playback, draw } = blurFrame(3200, 1800, 2, bypass === "reduced motion");
+      if (bypass === "broadcast") playback.camera = "broadcast";
+      if (bypass === "stationary head") playback.frame = 60;
+      draw();
+      expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
+      expect(gl.render).toHaveBeenCalledTimes(1);
+      expect(gl.domElement.dataset.blurSigma).toBe("0");
+    },
+  );
 });

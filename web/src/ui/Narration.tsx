@@ -585,7 +585,7 @@ function BreakdownNote() {
     return (
       <p className="note waiting">
         Asking the agent crew for the {PERSONA_LABEL[persona].toLowerCase()} breakdown in{" "}
-        {LANG_LABEL[language]}: a cached one comes back at once, a new one takes about 10 s.
+        {LANG_LABEL[language]}: a cached one comes back at once, a new one takes longer to generate.
       </p>
     );
   }
