@@ -10,6 +10,8 @@
     />
     <title>Through Their Eyes</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- The players' model, fetched after the scripts instead of after the first frame (SPEC 7). -->
+    <link rel="preload" href="/models/grf_player.glb" as="fetch" crossorigin fetchpriority="low" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -18,7 +20,8 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Shown as soon as the page arrives; main.tsx replaces it. -->
+    <div id="root"><p class="loading">Loading the match…</p></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -9,6 +9,7 @@
 //   npm run build && npm run fps            headless; SwiftShader (software) where there is no GPU
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
 //   npm run fps -- --width 1440 --height 900 --dpr 2 --seconds 4 --runs 3
+//   npm run fps -- --quality high           the 3D view's render tier (standard | medium | high)
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
@@ -25,6 +26,7 @@ const { values: opt } = parseArgs({
     dpr: { type: "string", default: "1" },
     seconds: { type: "string", default: "4" },
     runs: { type: "string", default: "3" },
+    quality: { type: "string", default: "standard" }, // the 3D view's render tier (src/quality/)
     cine: { type: "boolean", default: false },
   },
 });
@@ -51,7 +53,7 @@ if (opt.cine) {
     });
     const page = await context.newPage();
     const button = (name) => page.getByRole("button", { name, exact: true });
-    await page.goto(`${base}?offline=1&autoplay=0&intro=0`);
+    await page.goto(`${base}?offline=1&autoplay=0&intro=0&quality=${opt.quality}`);
     await button("Play").waitFor();
     await page.waitForFunction(() => document.querySelectorAll("canvas").length >= 2);
     await page.waitForTimeout(1500); // models and textures
@@ -120,7 +122,7 @@ if (opt.cine) {
     await set("skeleton", false);
     console.log(`renderer: ${renderer}`);
     console.log(
-      `viewport ${opt.width}x${opt.height} @ dpr ${opt.dpr}; first-person canvas ${pov[0]}x${pov[1]} px; ` +
+      `quality ${opt.quality}; viewport ${opt.width}x${opt.height} @ dpr ${opt.dpr}; first-person canvas ${pov[0]}x${pov[1]} px; ` +
         `tactical canvas ${board[0]}x${board[1]} px; ${opt.seconds} s per run, playing the hero moment at 1x`,
     );
     console.log(

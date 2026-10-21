@@ -276,9 +276,8 @@ api() {
 web() {
   step "Build web/ (API: ${TTE_API_URL:-none, bundled data only})"
   (cd web && npm ci --no-audit --no-fund && VITE_API_URL="${TTE_API_URL:-}" npm run build)
-  step "Upload web/dist to $SITE"
-  az storage blob upload-batch --account-name "$SITE" --auth-mode login -d '$web' -s web/dist \
-    --overwrite --content-cache-control "public, max-age=300" -o none
+  step "Upload web/dist to $SITE (gzipped, hashed assets cached for a year)"
+  infra/upload_web.sh "$SITE"
   echo "${TTE_WEB_URL:-$(az storage account show -g "$RG" -n "$SITE" --query primaryEndpoints.web -o tsv)}"
 }
 
