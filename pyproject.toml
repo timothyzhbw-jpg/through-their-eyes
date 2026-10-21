@@ -28,6 +28,11 @@ dependencies = [
 ]
 
 [dependency-groups]
+# The downloadable dataset (sim/dataset.py, docs/DATASET.md): its Parquet writer. Apache-2.0;
+# a default group so tests and CI have it, kept out of the API image.
+dataset = [
+    "pyarrow>=21",
+]
 dev = [
     "pytest>=8.3",
     "ruff>=0.8",
@@ -39,7 +44,7 @@ eval = [
 ]
 
 [tool.uv]
-default-groups = ["dev"]
+default-groups = ["dev", "dataset"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

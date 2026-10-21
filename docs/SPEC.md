@@ -152,6 +152,9 @@ on an LLM.
   from tracking data only — `head_yaw` plus player and ball positions — with no access to sim
   scan events or other sim-internal state (§4.7).
 - Output: JSONL frames + JSON events. Optional kloppy-compatible export (stretch).
+- *Downloadable dataset (2026-10-21, `sim/dataset.py`):* stitched matches on fresh seeds as
+  events (CSV/Parquet), 25 Hz tracking (Parquet), metadata (JSON) and per-reception perception,
+  with a datasheet: [DATASET.md](DATASET.md).
 
 ### 3.2 Movement
 - Formation anchors (e.g. 4-3-3 vs 4-2-3-1) shifted by ball position and phase; compactness and
@@ -473,6 +476,17 @@ expansion pack, on Module A (§3.3).
   option he evaluated, e.g. `pass:H4` — instead of sampling; everything else re-simulates as
   usual. It answers "what if he had passed to H4?" with a re-simulation, not a statistic.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
+- **Seed registry.** Scenario seeds and match seeds are separate inputs, but no range below is
+  reused for another purpose.
+
+  | Seeds | What | Where |
+  |---|---|---|
+  | 0–1999 | scenario seeds: each scenario's design seeds and its held-out eval seeds | §3.6, §4, `eval/` reports |
+  | 0, 3, 11 | demo hero seeds (`press_escape`/`corner_blind_side` 0, `blind_side_run` 3, `far_post_finish` 11) | `sim/match.py` |
+  | 1, 2 | match seeds of the served matches | `sim/match.py`, `api/` |
+  | 100–119 | held-out match seeds | `eval/match_stats.py` |
+  | 5001–5100 | match seeds of the downloadable dataset; v1 uses 5001–5010 | `sim/dataset.py`, [DATASET.md](DATASET.md) |
+  | ≥ 1,000,000 | scenario seeds keyed off a match seed: open-play passages (`open_play`), the dataset's heroes (`dataset_hero`) | `sim/match.py`, `sim/dataset.py` |
 
 ### Acceptance checks — sim
 - [x] Same seed twice in the same environment ⇒ identical output hashes.
