@@ -39,7 +39,14 @@ PLACEHOLDER = re.compile(
 )
 
 
-OBSERVED_FUNCTIONS = {"count_events", "event_attr", "distance", "scans_in_window", "scan_side"}
+OBSERVED_FUNCTIONS = {
+    "count_events",
+    "event_attr",
+    "distance",
+    "scans_in_window",
+    "scan_side",
+    "seconds_between",
+}
 OBSERVED_METRICS = {
     "distance",
     "speed",
