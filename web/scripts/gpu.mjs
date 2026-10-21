@@ -31,18 +31,13 @@ function playwrightChromium() {
 }
 
 /**
- * @param {{ headless?: boolean, software?: boolean, args?: string[] }} [options] `software`
- *   forces SwiftShader even where a GPU exists; it is the default on CI, so CI runs are
- *   reproducible. `args`: more Chrome switches.
+ * @param {{ headless?: boolean, software?: boolean }} [options] `software` forces SwiftShader
+ *   even where a GPU exists; it is the default on CI, so CI runs are reproducible.
  * @returns {Promise<import("playwright-core").Browser>}
  */
-export async function launchChrome({
-  headless = true,
-  software = Boolean(process.env.CI),
-  args: extra = [],
-} = {}) {
+export async function launchChrome({ headless = true, software = Boolean(process.env.CI) } = {}) {
   const executablePath = process.env.TTE_CHROME || playwrightChromium();
-  const args = ["--ignore-gpu-blocklist", "--enable-unsafe-swiftshader", ...extra];
+  const args = ["--ignore-gpu-blocklist", "--enable-unsafe-swiftshader"];
   if (software) args.push("--use-angle=swiftshader");
   try {
     return await chromium.launch(

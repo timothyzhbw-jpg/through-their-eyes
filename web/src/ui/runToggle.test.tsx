@@ -12,7 +12,7 @@ import { App, MatchApp } from "../App";
 import { parseHero } from "../data/hero";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
-import { createSession, SessionContext } from "../session";
+import { createSession, SessionContext, tickSession } from "../session";
 import {
   API,
   breakdownResponse,
@@ -118,6 +118,11 @@ describe("the run without the look", () => {
 
     act(() => ws.push(frameMsg(16), momentMsg(HERO_MOMENT, 16)));
     await act(settle);
+    // The show first (the look, then the run without it: autoplay/), then the breakdown.
+    expect(session.comparison.status.get().phase).toBe("with");
+    for (let k = 0; k < 150 && session.runner.status.get().status !== "running"; k++) {
+      act(() => tickSession(session, 0.1));
+    }
     expect(session.runner.status.get().status).toBe("running");
   });
 

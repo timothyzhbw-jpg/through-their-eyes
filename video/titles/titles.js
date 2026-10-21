@@ -563,6 +563,47 @@
     });
   }
 
+  // Burned-in caption of a voice-over line: one or two lines in a dark box low in the frame (in
+  // the 2.39:1 bar where there is one), numbers in gold. Centred, or on the right with
+  // `side: "right"` when a title holds the lower left. Fades in, and out at `dur`.
+  function caption(params) {
+    const stage = prepare("free", null);
+    const right = params.side === "right";
+    const box = el("div", right ? "cap cap-right" : "cap");
+    const line = el("p", "cap-text bebas");
+    for (const part of String(params.text || "").split(/(\d+(?:[.,]\d+)?)/)) {
+      if (!part) continue;
+      line.append(/^\d/.test(part) ? el("span", "cap-num", part) : document.createTextNode(part));
+    }
+    box.append(line);
+    stage.append(box);
+    const dur = num(params.dur, 2);
+    // The centred box is placed with translateX(-50%), so the rise keeps it.
+    const x = right ? "0" : "-50%";
+    const rise = [
+      { opacity: 0, transform: `translate(${x}, 10px)` },
+      { opacity: 1, transform: `translate(${x}, 0)` },
+    ];
+    box.animate(rise, {
+      duration: 140,
+      easing: "ease-out",
+      fill: "both",
+    });
+    box.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 160,
+      delay: Math.max(0, dur * 1000 - 160),
+      easing: "linear",
+      fill: "forwards",
+    });
+  }
+
+  // A small, steady corner label, e.g. "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA" over the
+  // cinematic shots, so no one mistakes them for the app's screens.
+  function label(params) {
+    const stage = prepare("free", null);
+    stage.append(el("div", "corner-label bebas", params.text || ""));
+  }
+
   window.__titleBuild = {
     kinetic,
     freeze,
@@ -575,6 +616,8 @@
     spec,
     end,
     countdown,
+    caption,
+    label,
   };
 
   window.__title = {
