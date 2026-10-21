@@ -1175,6 +1175,22 @@ optgroup {
 .stage-card:empty {
   display: none;
 }
+/* the moment card, closed: a chip that opens it again, at the card's top right */
+.stage-card:has(> .moment-chip) {
+  width: auto;
+  overflow: visible;
+}
+.moment-chip {
+  background: rgba(8, 14, 11, 0.55);
+}
+.moment-chip .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--floodlight);
+}
 .moment-card {
   display: flex;
   flex-direction: column;

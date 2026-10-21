@@ -330,6 +330,38 @@ describe("moment card", () => {
     click(button(page, "Dismiss the moment"));
     expect(page.querySelector("aside.moment-card")).toBeNull();
   });
+
+  it("closes with Escape, stays closed when it comes back on screen, and reopens from its chip", () => {
+    const session = offline();
+    const first = mount(session, <MomentCard />);
+    const card = first.querySelector<HTMLElement>("aside.moment-card")!;
+    button(card, "Play breakdown").focus();
+    act(() => {
+      card.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(first.querySelector("aside.moment-card")).toBeNull();
+    const chip = button(first, "Show the moment");
+    expect(document.activeElement).toBe(chip); // focus is not lost with the card
+    expect(chip.getAttribute("aria-expanded")).toBe("false");
+
+    // The slot shows the evidence and comes back (a new MomentCard): still closed.
+    act(() =>
+      mounted.splice(0).forEach(({ root, container }) => (root.unmount(), container.remove())),
+    );
+    const again = mount(session, <MomentCard />);
+    expect(again.querySelector("aside.moment-card")).toBeNull();
+
+    click(button(again, "Show the moment"));
+    const back = again.querySelector<HTMLElement>("aside.moment-card")!;
+    expect(back).not.toBeNull();
+    expect(document.activeElement).toBe(button(back, "Dismiss the moment"));
+
+    // Escape from elsewhere on the page does not close it: only from inside the card.
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(again.querySelector("aside.moment-card")).not.toBeNull();
+  });
 });
 
 describe("who is watching", () => {
