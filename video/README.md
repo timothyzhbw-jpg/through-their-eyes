@@ -143,6 +143,20 @@ tests/test_video_shots.py` fails on a digit or a number word anywhere else in th
 The app's own two voices (Azure AI Speech, **Sound on**) are not recorded: the screencast has no
 audio track.
 
+## Checks
+
+```bash
+uv run pytest tests/test_video_shots.py   # repo root
+node video/capture.mjs --list             # the planned timeline, no browser
+```
+
+[`tests/test_video_shots.py`](../tests/test_video_shots.py) fails when the shot list does not
+parse or runs past two minutes, when a URL leaves the project's own site (the web app URL in the
+root README), when an action is not in `capture.mjs`'s vocabulary, or when the voice-over has a
+number outside a claim slot. CI runs both: the test in the `python` job, `--list` in the `web`
+job. Together they keep the footage to the app's own synthetic match and the voice-over to its
+verified numbers.
+
 ## Rights
 
 - **Synthetic only.** Everything this kit records is the app: a simulated match, fictional clubs
