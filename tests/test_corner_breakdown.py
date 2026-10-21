@@ -57,13 +57,20 @@ def test_the_markers_look_is_one_moment_on_the_key_scan(seed):
     assert hero_card(run, detect_moments(run)) is not None
 
 
-def test_no_other_moment_is_a_markers_look():
+def test_no_other_hero_moment_is_a_markers_look():
+    """The other heroes' runs have no marker's look. Open play can have one, as it should: a
+    defender checking the man he marks before a pass to him (the 20-possession match-1 has one)."""
     runs = [Simulation.from_scenario(s, seed).run()
             for s, seeds in (("blind_side_run", range(20)), ("press_escape", range(20)),
                              ("possession_play", range(20)))
             for seed in seeds]  # fmt: skip
-    runs += [p.run for p in build_match(1).possessions]
     assert not [c.id for run in runs for c in detect_marker_scans(run)]
+
+
+def test_a_markers_look_in_open_play_is_not_a_hero_card():
+    for p in build_match(1).possessions:
+        card = hero_card(p.run, detect_moments(p.run))
+        assert card is None or card.kind != "marker_scan" or p.scenario == SCENARIO
 
 
 def test_a_decision_hero_keeps_his_decision_card():
