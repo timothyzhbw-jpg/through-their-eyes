@@ -36,7 +36,7 @@ import {
   settle,
 } from "../testing";
 import { MomentsPanel } from "../ui/Live";
-import { frameCall, markerAt, project, toWorld } from "./camera";
+import { frameCall, project, swipePick, toWorld } from "./camera";
 import { yourCallOf } from "./controller";
 import { YourCallButton, YourCallStage } from "./YourCall";
 
@@ -172,11 +172,18 @@ describe("Your call: deciding", () => {
   it("swipe: a drag from the carrier toward a teammate passes to him", () => {
     const { session, yc } = open();
     const el = mount(session);
-    const target = yc.options.find((o) => o.action === "pass:H7")!;
+    // A marker's name is the option's label, then ", not seen lately" or ", tried" if so.
+    const optionOf = (m: HTMLElement) =>
+      yc.options.find((o) => m.getAttribute("aria-label")?.split(", ")[0] === o.label)!;
+    const target = markers(el).find((m) => optionOf(m).action === "pass:H7")!;
+    const screenMarkers = markers(el).map((m) => ({
+      action: optionOf(m).action,
+      at: [parseFloat(m.style.left), parseFloat(m.style.top)] as [number, number],
+    }));
     const carrier = yc.picture!.players[yc.picture!.carrier].truth;
     const cam = frameCall(carrier, yc.options, 0, 640, 400);
     const [cx, cy] = project(cam, toWorld(carrier), 640, 400);
-    const [tx, ty] = markerAt(cam, target.anchor, 640, 400);
+    const [tx, ty] = [parseFloat(target.style.left), parseFloat(target.style.top)];
     const layer = el.querySelector(".yc-swipe")!;
     const pointer = (type: string, x: number, y: number) =>
       act(() => {
@@ -186,6 +193,12 @@ describe("Your call: deciding", () => {
       });
     pointer("pointerdown", cx, cy);
     pointer("pointermove", cx + (tx - cx) * 0.5, cy + (ty - cy) * 0.5);
+    // At halfway, the nearest marker in the swipe cone can be another teammate.
+    expect(yc.state.get().aim).toBe(
+      swipePick([cx, cy], [(tx - cx) * 0.5, (ty - cy) * 0.5], screenMarkers),
+    );
+    pointer("pointermove", cx + (tx - cx) * 0.9, cy + (ty - cy) * 0.9);
+    pointer("pointermove", tx, ty);
     expect(yc.state.get().aim).toBe("pass:H7");
     pointer("pointerup", tx, ty);
     expect(yc.state.get()).toMatchObject({ step: "outcome", pick: "pass:H7" });

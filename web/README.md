@@ -126,6 +126,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --out web/public/data/hero_seed3.json \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
