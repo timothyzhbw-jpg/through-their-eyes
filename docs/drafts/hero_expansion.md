@@ -678,6 +678,9 @@ reported as a counterexample and cut, as with reception difficulty (AUC 0.59, 20
   2. C4 explain, agents and API.
      - The plumbing for a hero without a ball decision (H), and the scan lens for such a hero.
      - Claims and sequences; `DEFAULT_MATCHES` gets `corner_blind_side:<seed>`.
+     - *As built (2026-10-21, SPEC §3.6, §5, §6):* a `marker_scan` moment, the scan lens valued as
+       the expected turnover where the pass to his man resolves, and his own claims and sequences.
+       `DEFAULT_MATCHES` waits for the web to show a marker's moment (SPEC §3.6, "Not served yet").
   3. Module A + the C1 scenario + `eval/reports/hero_flip_far_post_finish.md`.
   4. C1 explain, agents and API: detectors, claims, `far_post_finish:<seed>`.
   5. C2 sim + its eval report (with the decomposition and the sweep).
