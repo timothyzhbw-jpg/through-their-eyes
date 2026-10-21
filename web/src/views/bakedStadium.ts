@@ -6,8 +6,8 @@
 //
 // It never delays the first frame: the procedural stadium draws first, the file is fetched at low
 // priority once the canvas has drawn and the page is idle, and the baked one is swapped in when it
-// is ready. If it fails to load, the procedural stadium stays. `?stadium=procedural` or
-// `?stadium=baked` picks one.
+// is ready. If it fails to load, the procedural stadium stays. It is the default;
+// `?stadium=procedural` keeps the procedural one.
 //
 // Everything in the file but the grass is unlit: the light is in its textures and vertex colours.
 // The players and the grass stay lit by the scene's lights. By material name:
@@ -28,8 +28,8 @@ import { createStore } from "../store/store";
 export const STADIUM_URL = `${import.meta.env.BASE_URL}models/stadium_baked.glb`;
 
 export type StadiumMode = "baked" | "procedural";
-/** Until the comparison decides otherwise, the procedural stadium is the default. */
-export const DEFAULT_STADIUM: StadiumMode = "procedural";
+/** The baked stadium is the default (compared 2026-10-21: richer, no slower to load, same fps). */
+export const DEFAULT_STADIUM: StadiumMode = "baked";
 
 export function stadiumFromSearch(search: string): StadiumMode {
   const v = new URLSearchParams(search).get("stadium");
@@ -108,6 +108,21 @@ export async function loadBakedStadium(deps: LoadDeps = defaultDeps()): Promise<
     console.warn("Baked stadium failed to load; keeping the procedural one.", error);
     stadium.set({ status: "failed", model: null });
   }
+}
+
+/** Call `done` once the stadium will not change any more: the baked one is in or has failed, or
+ * the procedural one was asked for. Capture waits for it, so a shot films one stadium. */
+export function whenStadiumSettled(done: () => void): void {
+  const settled = () => {
+    const s = stadium.get();
+    return s.mode !== "baked" || s.status === "ready" || s.status === "failed";
+  };
+  if (settled()) return done();
+  const off = stadium.subscribe(() => {
+    if (!settled()) return;
+    off();
+    done();
+  });
 }
 
 /** Start loading after the canvas has drawn and the page is idle (called on the first frame). */

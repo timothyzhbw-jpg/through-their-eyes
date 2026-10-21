@@ -27,6 +27,7 @@ import { CinePost } from "./CinePost";
 import { CineScene } from "./CineScene";
 import { bindView, cineRuntime, onShot, publishShot, requireView, type DrawnPose } from "./runtime";
 import { frameAt, loadShot, type Vec3 } from "./shot";
+import { whenStadiumSettled } from "../views/bakedStadium";
 
 export interface CineRunInfo {
   frames: number;
@@ -166,11 +167,18 @@ const cineApi: CineApi = {
 
 if (typeof window !== "undefined") window.__cine = cineApi;
 
-/** One warmup frame, then the capture script may drive. A second path must not draw again. */
+/** One warmup frame, then the capture script may drive. A second path must not draw again. The
+ * warmup frame also asks for the baked stadium: ready waits until it is in (or has failed), so a
+ * shot never cuts from one stadium to the other. */
+let warming = false;
 function markReady() {
-  if (cineApi.ready) return;
+  if (cineApi.ready || warming) return;
+  warming = true;
   advance(0);
-  cineApi.ready = true;
+  whenStadiumSettled(() => {
+    advance(0);
+    cineApi.ready = true;
+  });
 }
 
 function CineReady() {

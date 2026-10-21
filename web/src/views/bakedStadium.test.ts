@@ -16,6 +16,7 @@ import {
   stadium,
   stadiumFromSearch,
   STADIUM_URL,
+  whenStadiumSettled,
 } from "./bakedStadium";
 import { PITCH } from "./scene";
 import { BOARDS, FLOODLIGHTS, PROFILE, setback } from "./stadiumGeometry";
@@ -374,10 +375,10 @@ function fakeScene(): THREE.Group {
 describe("loading the baked stadium", () => {
   beforeEach(() => stadium.set({ mode: "baked", status: "off", model: null }));
 
-  it("is picked by ?stadium=, the procedural one being the default for now", () => {
-    expect(stadiumFromSearch("?stadium=baked")).toBe("baked");
+  it("is the default, and ?stadium=procedural keeps the procedural one", () => {
+    expect(stadiumFromSearch("")).toBe("baked");
     expect(stadiumFromSearch("?stadium=procedural")).toBe("procedural");
-    expect(stadiumFromSearch("?stadium=nonsense")).toBe(stadiumFromSearch(""));
+    expect(stadiumFromSearch("?stadium=nonsense")).toBe("baked");
   });
 
   it("waits for the first frame, then a second and an idle moment, at low priority", async () => {
@@ -403,6 +404,21 @@ describe("loading the baked stadium", () => {
     armBakedStadium({ fetch, parse: async () => fakeScene() });
     expect(stadium.get().status).toBe("off");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("tells capture when the stadium will not change any more", () => {
+    const done = vi.fn();
+    stadium.set({ mode: "procedural", status: "off" });
+    whenStadiumSettled(done);
+    expect(done).toHaveBeenCalledTimes(1); // the procedural one never changes
+    stadium.set({ mode: "baked", status: "waiting" });
+    whenStadiumSettled(done);
+    stadium.set({ status: "loading" });
+    expect(done).toHaveBeenCalledTimes(1);
+    stadium.set({ status: "ready" });
+    expect(done).toHaveBeenCalledTimes(2);
+    stadium.set({ status: "failed" });
+    expect(done).toHaveBeenCalledTimes(2); // once only
   });
 
   it("keeps the procedural stadium when the file is missing or broken", async () => {

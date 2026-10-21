@@ -1430,9 +1430,10 @@ original visual identity.
     is evenly lit (5th percentile 0.78 of the median). Everything but the grass is unlit; the
     grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
     geometry, WebP textures.
-  - It is fetched at low priority a second after the first frame, once the page is idle, and
-    swapped in when ready; if it fails to load, the procedural stadium stays.
-    `?stadium=procedural|baked` picks one. The bpy scripts stay outside the repo (Blender is
+  - It is the default. It is fetched at low priority a second after the first frame, once the
+    page is idle, and swapped in when ready; if it fails to load, the procedural stadium stays.
+    `?stadium=procedural` keeps the procedural one. Capture (`?cine=1`) is ready only once the
+    stadium has settled, so a shot never cuts between the two. The bpy scripts stay outside the repo (Blender is
     GPL); only their output is committed (`web/public/models/README.md`).
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
@@ -1662,6 +1663,23 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
+- [x] *Baked stadium:* the GLB is at most 3 MB on the wire, meshopt and WebP; its pitch, stands,
+      crowd, masts and boards sit on stadiumGeometry.ts's numbers (pitch coordinates as three.js
+      (x, height, -y)); the app's grass reads its light map with the file's own UVs; it is
+      fetched only after the first frame and never with `?stadium=procedural`; a missing or
+      broken file keeps the procedural stadium; capture waits until the stadium has settled.
+      — [web/src/views/bakedStadium.test.ts](../web/src/views/bakedStadium.test.ts) (the file
+      decoded with meshopt in Node: every one of the 30,342 crowd triangles stands 12 cm under a
+      rake of the app's profile; the lamps on FLOODLIGHTS; the boards on BOARDS),
+      [Stadium.test.tsx](../web/src/views/Stadium.test.tsx). 2026-10-21, production build,
+      Chrome on an Apple M4 Pro (loaded machine), median of 3 cold loads at Lighthouse's Slow 4G
+      (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
+      3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
+      (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
+      LCP is text in both (the moment card's heading at about 6.1 s; in some runs of both, the
+      heading's first paint is smaller and a 13 s caption becomes the LCP). `npm run fps` 60
+      capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
+      245–299 → 339–344 fps broadcast.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
