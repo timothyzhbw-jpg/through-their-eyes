@@ -204,6 +204,40 @@ describe("the pre-match autoplay gate", () => {
     expect(start).toHaveBeenCalledOnce();
   });
 
+  it("hands the focus to the live screen's title when the card closes", () => {
+    vi.useFakeTimers();
+    const closers: [string, (page: HTMLElement) => void][] = [
+      ["Skip", (page) => click(button(page, "Skip"))],
+      ["Start watching", (page) => click(button(page, "Start watching"))],
+      [
+        "Escape",
+        () =>
+          act(() => {
+            document.activeElement!.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+            );
+          }),
+      ],
+      ["the countdown", () => act(() => void vi.advanceTimersByTime(6000))],
+    ];
+    for (const [how, close] of closers) {
+      intro.set({ open: true });
+      const { container } = mount(
+        <SessionContext.Provider value={heroSession()}>
+          <App autoplay={false} />
+        </SessionContext.Provider>,
+      );
+      expect(document.activeElement?.textContent, how).toContain("Start watching");
+      close(container);
+      expect(container.querySelector("[role=dialog]"), how).toBeNull();
+      // Not <body>: the next Tab would skip the whole live screen.
+      const title = container.querySelector(".stage-head h1");
+      expect(document.activeElement, how).toBe(title);
+      act(() => mounted.pop()!.root.unmount());
+      container.remove();
+    }
+  });
+
   it("on a cold load with no input, the card is gone and the stream is playing by 6 s", () => {
     vi.useFakeTimers();
     const { session, sockets } = onlineHero();

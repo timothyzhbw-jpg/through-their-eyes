@@ -1,0 +1,34 @@
+
+> through-their-eyes-web@0.1.0 smoke
+> node scripts/smoke.mjs --api http://localhost:8802
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "./src/build/backdropFilter" without a file extension (vite.config.ts:4:42). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+API http://localhost:8802: {"status":"ok","version":"0.5.0","model":"offline","speech":false,"analyst_mcp":false}
+ok   hero /?autoplay=0&intro=0 (5.5 s)
+ok   press-escape /?match=press_escape-0&autoplay=0&intro=0 (3.8 s)
+ok   match-1 /?match=match-1&autoplay=0&intro=0 (5.1 s)
+ok   match-1-breakdowns /?match=match-1&intro=0 (17.5 s)
+ok   lineup-hero / (4.4 s)
+ok   lineup-match-1 /?match=match-1 (5.3 s)
+ok   link-tamper /?persona=analyst&tamper=cf_value (3.7 s)
+ok   link-eyes /?play=eyes (4.6 s)
+ok   link-eyes-press-escape /?match=press_escape-0&play=eyes (4.7 s)
+ok   link-eyes-match-1 /?match=match-1&play=eyes (4.7 s)
+ok   phone-320-eyes /?play=eyes (6.7 s)
+ok   link-recap /?match=match-1&play=recap (11.9 s)
+ok   link-decision-tactical /?at=decision&view=tactical (3.8 s)
+ok   tour /?tour=1 (8.9 s)
+ok   tour-recap /?match=match-1&play=recap&tour=recap (4.8 s)
+ok   phone-tour /?tour=1 (11.0 s)
+       note: phone-tour-step-8.png: a blank capture, retaken
+ok   desktop-960-hero /?intro=0 (4.8 s)
+ok   phone-hero /?intro=0 (4.0 s)
+ok   phone-match-1 /?match=match-1&intro=0 (4.9 s)
+ok   phone-320-hero /?intro=0 (3.8 s)
+ok   phone-320-match-1 /?match=match-1&intro=0 (4.6 s)
+ok   phone-375-hero /?intro=0 (4.1 s)
+ok   phone-375-match-1 /?match=match-1&intro=0 (6.3 s)
+23 of 23 pages passed in 151 s; screenshots in /private/tmp/claude-501/-Users-tzhbw-through-their-eyes--claude-worktrees-happy-ardinghelli-a1d0e9/537198d4-08c0-40ca-9dcb-1feaf4a3ab8d/scratchpad/w99/out/smoke
+smoke rc=0

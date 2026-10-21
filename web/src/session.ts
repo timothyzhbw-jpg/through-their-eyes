@@ -28,11 +28,13 @@ import {
   type BreakdownState,
   type BreakdownView,
 } from "./breakdown/breakdown";
+import { beatStep, liveLag, motion } from "./beat/beat";
 import { clampFrame, type Hero } from "./data/hero";
 import type { RunName } from "./data/types";
 import type { MatchSession } from "./match/matchSession";
 import {
   followLive,
+  LIVE_MAX_LAG,
   LiveFeed,
   type FeedHooks,
   type LiveMoment,
@@ -214,11 +216,10 @@ export function createSession(
   const controls = makeControls(parts, bundled);
   hooks.onMoment = controls.momentDetected;
 
-  // The stream ended (or broke): the viewer is left in the replay at the last frame received.
   feed?.state.subscribe(() => {
     const { status, latest } = feed.state.get();
     if (!playback.get().live || (status !== "ended" && status !== "lost")) return;
-    playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
+    leaveStream(playback, status, latest);
   });
   // Speak each caption as it comes up (only while sound is on). The runner's hold reads
   // `voice.busy`, so the plan waits out the clip instead of starting the next line over it.
@@ -230,6 +231,18 @@ export function createSession(
     if (line) void voice.say(breakdown.get().voice.find((c) => c.line === line));
   });
   return { ...parts, controls };
+}
+
+/**
+ * The stream ended (or broke): the viewer is left in the replay at the last frame received. A
+ * playhead that a key-moment beat left behind the stream plays out the frames it already has.
+ */
+export function leaveStream(playback: PlaybackStore, status: "ended" | "lost", latest: number) {
+  if (status === "ended" && latest - playback.get().frame > LIVE_MAX_LAG) {
+    playback.set({ live: false, playUntil: latest });
+    return;
+  }
+  playback.set({ live: false, playing: false, frame: Math.max(0, latest) });
 }
 
 export interface TransportDeps {
@@ -837,7 +850,17 @@ export function tickSession(session: ViewSession, dt: number): void {
   const s = playback.get();
   if (s.live && feed) {
     if (!s.playing) return;
-    const next = followLive(s.frame, feed.state.get().latest, hero.dt, s.speed, dt);
+    // The key-moment beat slows the live playhead too; it may fall behind the stream by what the
+    // beats added since the last cut (beat/beat.ts).
+    const run = hero.runs[s.mode];
+    const reduced = motion.get().reduced || !s.autoSlow;
+    const nominal = (dt / hero.dt) * s.speed;
+    const speed =
+      nominal > 0
+        ? s.speed * (beatStep(hero, run, s.frame, nominal, s.speed, reduced) / nominal)
+        : s.speed;
+    const lag = liveLag(hero, run, s.frame, s.speed, reduced);
+    const next = followLive(s.frame, feed.state.get().latest, hero.dt, speed, dt, lag);
     if (next !== s.frame) playback.set({ frame: next });
     return;
   }

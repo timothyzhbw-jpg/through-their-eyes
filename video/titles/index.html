@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Title cards</title>
+  <link rel="stylesheet" href="titles.css">
+  <style>
+    html,
+    body {
+      width: auto;
+      height: auto;
+      min-height: 100%;
+      overflow: auto;
+      background: #080e0b;
+    }
+    .bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 16px 24px;
+      background: #080e0b;
+      border-bottom: 1px solid rgba(239, 237, 229, 0.16);
+    }
+    .bar h1 {
+      margin: 0;
+      font-family: "Anton", sans-serif;
+      font-size: 32px;
+      font-weight: normal;
+      letter-spacing: 0.04em;
+    }
+    .bar label,
+    .bar button {
+      font-family: "Bebas Neue", sans-serif;
+      letter-spacing: 0.14em;
+      color: #efede5;
+    }
+    .bar input { width: 360px; }
+    .bar button {
+      background: none;
+      border: 1px solid rgba(246, 213, 102, 0.65);
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+    #readout {
+      display: inline-block;
+      min-width: 4em;
+      color: #f6d566;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 480px);
+      gap: 28px;
+      padding: 28px;
+    }
+    .cell h2 {
+      margin: 0 0 8px;
+      font-family: "Bebas Neue", sans-serif;
+      font-weight: normal;
+      font-size: 22px;
+      letter-spacing: 0.16em;
+      color: #f6d566;
+    }
+    .frame {
+      width: 480px;
+      height: 270px;
+      overflow: hidden;
+      background-color: #101614;
+      background-image:
+        linear-gradient(45deg, #1a221e 25%, transparent 25%),
+        linear-gradient(-45deg, #1a221e 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1a221e 75%),
+        linear-gradient(-45deg, transparent 75%, #1a221e 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
+    .frame iframe {
+      width: 1920px;
+      height: 1080px;
+      border: 0;
+      display: block;
+      transform: scale(0.25);
+      transform-origin: top left;
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <h1>Title cards</h1>
+    <label>Time <input id="scrub" type="range" min="0" max="8" step="0.01" value="0"> <span id="readout"></span></label>
+    <button id="replay" type="button">Replay</button>
+  </header>
+  <main id="grid" class="grid"></main>
+  <script type="application/json" id="samples">
+{
+  "slam": {
+    "lines": [
+      { "text": "THROUGH", "color": "chalk", "size": "160" },
+      { "text": "THEIR EYES", "color": "gold", "size": "160" }
+    ],
+    "kicker": "FIRST PERSON",
+    "stagger": "0.35",
+    "align": "center",
+    "hold": "1.5",
+    "out": "fade",
+    "backdrop": true
+  },
+  "card": {
+    "lines": [
+      { "text": "SEE WHAT THEY SAW", "color": "gold", "size": "120" }
+    ],
+    "kicker": "A MATCH STUDIO",
+    "sub": "EVERY TOUCH STARTS WITH A LOOK",
+    "stagger": "0.35",
+    "align": "center",
+    "hold": "1.8",
+    "out": "fade",
+    "backdrop": false
+  },
+  "freeze": {
+    "title": "HIS PICTURE OF THE RUNNER",
+    "items": [
+      { "label": "OFF BY", "value": "0.0", "unit": "M", "color": "gold" },
+      { "label": "LANE", "value": "0.0", "unit": "M", "color": "chalk" }
+    ]
+  },
+  "verified": {
+    "kicker": "EVERY NUMBER CHECKED",
+    "stagger": "0.45",
+    "items": [
+      { "before": "THE RUNNER WAS", "value": "0.0", "after": "METRES OFF HIS READ" },
+      { "before": "THE LANE WAS", "value": "0.0", "after": "METRES WIDE" },
+      { "before": "HE LAST LOOKED", "value": "0.0", "after": "SECONDS BEFORE THE BALL" }
+    ]
+  },
+  "refuted": {
+    "kicker": "TRY A WRONG NUMBER",
+    "before": "THE RUNNER WAS",
+    "value": "0.0",
+    "after": "METRES OFF",
+    "stamp": "WOULD NOT AIR"
+  },
+  "lineup": {
+    "header": "THE CREW",
+    "stagger": "0.18",
+    "highlight": "VERIFIER",
+    "cards": [
+      { "name": "DIRECTOR", "job": "CALLS THE CUT", "glyph": "director" },
+      { "name": "ANALYST", "job": "READS THE MOMENT", "glyph": "analyst" },
+      { "name": "TELESTRATOR", "job": "DRAWS THE LOOK", "glyph": "telestrator" },
+      { "name": "NARRATOR", "job": "CALLS THE PLAY", "glyph": "narrator" },
+      { "name": "VERIFIER", "job": "CHECKS THE LINE", "glyph": "verifier" },
+      { "name": "VOICE", "job": "SPEAKS IT", "glyph": "voice" }
+    ]
+  },
+  "redcard": {
+    "title": "TELESTRATOR DOWN",
+    "sub": "THE TEMPLATE AIRS. THE REPLAY PLAYS ON."
+  },
+  "subboard": {
+    "off": "TEMPLATE",
+    "on": "TELESTRATOR",
+    "caption": "BACK FROM ITS CHECKPOINT"
+  },
+  "tag": {
+    "text": "THE SWITCH",
+    "sub": "他看到的"
+  },
+  "spec": {
+    "header": "UNDER THE HOOD",
+    "footer": "SYNTHETIC MATCHES ONLY",
+    "rows": [
+      { "label": "MATCH", "value": "SYNTHETIC ENGINE", "note": "SEEDED POSSESSIONS" },
+      { "label": "READ", "value": "VISION AND BELIEF", "note": "WHAT HE COULD SEE" },
+      { "label": "EXPLAIN", "value": "LENSES AND CLAIMS" },
+      { "label": "CREW", "value": "AGENT FRAMEWORK" },
+      { "label": "MODELS", "value": "MICROSOFT FOUNDRY" },
+      { "label": "SPEECH", "value": "AZURE AI SPEECH" },
+      { "label": "MEMORY", "value": "AZURE COSMOS DB" },
+      { "label": "HOST", "value": "CONTAINER APPS" }
+    ]
+  },
+  "end": {
+    "name": "THROUGH THEIR EYES",
+    "tagline": "SEE THE GAME THROUGH THE PLAYER",
+    "url": "https://ttesite1ff906.z14.web.core.windows.net",
+    "lines": [
+      "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS",
+      "FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE"
+    ]
+  },
+  "countdown": {
+    "label": "YOUR CALL",
+    "sub": "DOES HE PLAY IT",
+    "secs": "4"
+  }
+}
+  </script>
+  <script>
+    const ORDER = [
+      "slam",
+      "card",
+      "freeze",
+      "verified",
+      "refuted",
+      "lineup",
+      "redcard",
+      "subboard",
+      "tag",
+      "spec",
+      "end",
+      "countdown",
+    ];
+
+    async function loadSamples() {
+      const embedded = JSON.parse(document.getElementById("samples").textContent);
+      try {
+        const res = await fetch("./samples.json");
+        if (res.ok) return await res.json();
+      } catch {
+        /* a file page cannot fetch its sibling; the embedded copy matches samples.json */
+      }
+      return embedded;
+    }
+
+    function send(iframe, msg) {
+      const win = iframe.contentWindow;
+      try {
+        if (msg.type === "setup" && win.__title) {
+          void win.__title.setup(msg.params);
+          return;
+        }
+        if (msg.type === "seek" && win.__title) {
+          win.__title.seek(msg.t);
+          return;
+        }
+      } catch {
+        /* file pages are cross-origin in Chrome; postMessage still reaches the frame */
+      }
+      win.postMessage(msg, "*");
+    }
+
+    const scrub = document.getElementById("scrub");
+    const readout = document.getElementById("readout");
+    const grid = document.getElementById("grid");
+    let time = 0;
+
+    scrub.addEventListener("input", () => {
+      time = Number(scrub.value);
+      readout.textContent = time.toFixed(2);
+      for (const iframe of grid.querySelectorAll("iframe")) {
+        send(iframe, { source: "tte-gallery", type: "seek", t: time });
+      }
+    });
+
+    document.getElementById("replay").addEventListener("click", () => {
+      scrub.value = "0";
+      time = 0;
+      readout.textContent = "";
+      for (const iframe of grid.querySelectorAll("iframe")) {
+        iframe.src = iframe.getAttribute("src");
+      }
+    });
+
+    loadSamples().then((samples) => {
+      for (const name of ORDER) {
+        const cell = document.createElement("section");
+        cell.className = "cell";
+        const heading = document.createElement("h2");
+        heading.textContent = name;
+        const frame = document.createElement("div");
+        frame.className = "frame";
+        const iframe = document.createElement("iframe");
+        iframe.src = name + ".html";
+        iframe.title = name;
+        iframe.setAttribute("scrolling", "no");
+        iframe.addEventListener("load", () => {
+          send(iframe, { source: "tte-gallery", type: "setup", params: samples[name] });
+          if (time) send(iframe, { source: "tte-gallery", type: "seek", t: time });
+        });
+        frame.append(iframe);
+        cell.append(heading, frame);
+        grid.append(cell);
+      }
+    });
+  </script>
+</body>
+</html>

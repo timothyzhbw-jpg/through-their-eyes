@@ -1,8 +1,21 @@
-# video/ — capture kit for the demo video (SPEC 10)
+# video/ — the demo video (SPEC 10)
 
-Records clean, repeatable raw footage of the public app for the < 2:00 submission video. The
-storyboard is SPEC §10; the shot list is data in [`shots.json`](shots.json); the recorder is
-[`capture.mjs`](capture.mjs) (Playwright). Output goes to `out/video/`, which git ignores.
+The < 2:00 submission video is a game-trailer edit made entirely by code, from two specs:
+[`trailer.json`](trailer.json) (the edit: beats, titles, voice-over, music, sound) and
+[`shots.json`](shots.json) (the app shots the edit cuts in). One command renders the film:
+
+```bash
+cd video && npm ci && npx playwright install chromium    # once
+npm run trailer                                           # out/video/trailer.mp4
+```
+
+It records the app shots from the live site with [`capture.mjs`](capture.mjs), films the cold
+open in the web app's cinematic mode (`?cine=1`, [`web/src/cine/`](../web/src/cine/)), renders
+the title cards ([`titles/`](titles/README.md)), synthesizes the voice-over with Azure AI Speech
+and the sound effects in code, and cuts it all with ffmpeg ("Trailer edit" below). Credits and
+licences: [`CREDITS.md`](CREDITS.md). Output goes to `out/video/`, which git ignores.
+
+The rest of this file is the capture kit first, then the edit.
 
 ## Run it
 
@@ -17,9 +30,9 @@ npx playwright install chromium   # Chromium, plus the ffmpeg that Playwright us
 Then each time:
 
 ```bash
-npm run capture                     # every shot from the live site (14 min on 4 cores, no GPU)
+npm run capture                     # every shot from the live site (a few minutes on a GPU)
 npm run capture -- --only 04        # one shot (ids or prefixes, comma-separated)
-npm run capture -- --headed         # visible browser on the GPU: smoother footage (see below)
+npm run capture -- --headed         # visible browser
 npm run capture -- --list           # the planned timeline, without a browser
 ```
 
@@ -31,6 +44,7 @@ npm run capture -- --list           # the planned timeline, without a browser
 | `--fps <n>` | 60 | frame rate of the WebM files, 30–60 |
 | `--quality <n>` | 90 | JPEG quality of the captured frames |
 | `--headed` | off | show the browser |
+| `--software-gl` | off | draw WebGL with SwiftShader (the CPU) instead of the GPU |
 | `--chromium <path>` | Playwright's | another Chromium build |
 | `--ffmpeg <path>` | Playwright's | another ffmpeg |
 | `--no-harvest` | off | don't read the verified claims; the voice-over uses its fallbacks |
@@ -65,19 +79,25 @@ on network idle, never a sleep:
 | `caption`, `caption-with-evidence` | a caption is over the first-person view (one with claims behind it) |
 | `evidence` | the evidence card is open |
 | `whatif-answer` | a what-if answer or refusal is shown (with `question`: the answer to that question) |
+| `selector` | any element by CSS selector (`selector`), visible, or gone with `state: "detached"` |
 
 Other actions: `click` (`role` + `name`, or `selector`; `within` scopes it), `select` (`label`,
 `value`), `fill` (`label`, `text`; typed key by key so it shows), `scroll` (`to` a selector, or
-`y` in pixels), `hold` (`s`). The URLs use only the app's own parameters: `?autoplay=0` (start
-nothing on load, so each shot starts from a known state), `?offline=1`, `?plan=invalid`,
-`?rigged=0`; there are no other deep links on main.
+`y` in pixels), `hold` (`s`), `drag` (the mouse from the centre of `from` to the centre of `to`,
+each a `click`-style target, over `duration_s`; with `around` a selector, on an arc round that
+element, `radius_scale` < 1 keeping inside the targets' ring — Take his eyes' dial). The URLs use
+the app's own parameters: `?autoplay=0` (start nothing on load, so each shot starts from a known
+state), `?offline=1`, `?plan=invalid`, `?rigged=0`, and the deep links of `web/src/deeplink.ts`
+(`persona`, `lang`, `tamper`, `match`, `camera`, `play`, `at`). The claim harvest reads each value
+by its machine name (the evidence card's `dt` title, e.g. `dxt`), which is what a slot names.
 
 Frames come from the browser's screencast, each with the time it was drawn. After the shot they
 are written at a constant 60 fps (each output frame shows the latest frame drawn by then), so
 encoding never slows the capture. **Captured fps** in the manifest and on the contact sheet is how
-many distinct frames the browser drew per second. Below 30 the motion looks choppy: run with
-`--headed` on a laptop with a GPU and close heavy apps. Without a GPU (software WebGL) expect
-about 12.
+many distinct frames the browser drew per second. WebGL runs on the GPU (ANGLE on Metal on
+macOS): headless Chromium otherwise falls back to SwiftShader, its CPU rasteriser, at about a
+dozen fps. A page that does not move (a panel of text) draws few frames by design; below 30 on a
+moving 3D view, close heavy apps.
 
 ### Shot status
 
@@ -147,12 +167,9 @@ verified numbers.
 - **Synthetic only.** Everything this kit records is the app: a simulated match, fictional clubs
   and players. Add no Premier League or club logos, real player names or broadcaster branding in
   the edit either (titles, lower thirds, end card).
-- **Fonts** on screen are Barlow, Saira Condensed and IBM Plex Mono (SIL Open Font License).
-- **Music.** None by default. If you add a track, use a CC0 one and list it here before upload:
-
-  | Track | Author | Source | Licence | Checked on |
-  |---|---|---|---|---|
-  | (none) | | | | |
+- **Music, sound, fonts and voice** are listed in [`CREDITS.md`](CREDITS.md): CC0 music only,
+  sound effects synthesized here, OFL fonts. `npm run trailer -- --check` (and CI) rejects an
+  asset that is not CC0 or public domain, or not in `CREDITS.md`.
 
 ## Dependency
 
@@ -163,3 +180,78 @@ verified numbers.
 `npx playwright install chromium` also downloads Playwright's ffmpeg build (LGPL-2.1), which
 `capture.mjs` runs as a separate program to write the WebM files. Nothing of it is in the repo or
 the app; `--ffmpeg` points at another ffmpeg instead.
+
+## Trailer edit
+
+`trailer.mjs` turns [`trailer.json`](trailer.json) into the < 2:00 film. From `video/`:
+
+```bash
+npm run trailer                         # every step
+npm run trailer -- --check              # validate and print the timeline; no browser, network or ffmpeg
+npm run trailer -- --list               # the timeline only
+npm run trailer -- --step edit --only b03-capture
+```
+
+From the repo root the same command is `node video/trailer.mjs`. `--spec <path>` points at another
+spec (the default is `video/trailer.json`). [`test/fixtures/mini.json`](test/fixtures/mini.json) is
+a small valid spec: six beats, so that every picture kind and every transition can appear.
+
+**The treatment** (`trailer.json`, about 1:51): a cold open filmed in cinematic mode (the hero's
+one look over the shoulder from three angles, then his eyes, a freeze on the verified distance
+to the nearest opponent, a rewind into the run without the look); "See what they saw"; the
+product in the same grammar (the replay, every line checked, a wrong number refuted, the agent
+crew as a line-up, the failure drill as a red card and its bring-back as a substitution, one
+moment per audience and in Chinese, what if, the live match, Your call); the pressure hero
+losing the ball inside the sim; the stack; the end card.
+
+**Cinematic mode.** The `cine` step opens `<site>/?cine=1…` and drives `window.__cine` frame by
+frame, so the site it films must have that mode deployed. Before that, or to try a shot, run the
+web app locally and pass `--base-url http://localhost:5173` (shots on `match=` need the API too).
+
+**Environment.** The voice-over needs `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`. From a
+checkout with `.env` at its root nothing else is needed; from a worktree without one, run
+`uv run --env-file <path to .env> node video/trailer.mjs`. ffmpeg must be the full build with
+libx264 (`brew install ffmpeg`); the edit uses no `drawtext`, so builds without freetype work.
+
+Each step skips its work when the output is already there and a hash of its inputs, stored beside
+it as `<file>.hash`, has not changed. `--force` ignores the hashes.
+
+| Step | Does | Output |
+|---|---|---|
+| `assets` | download each entry of `assets.json` and check its sha256 | `<out>/assets/<id>.<ext>` |
+| `capture` | record the capture shots the beats use, via `capture.mjs`, unless the WebM is already in `out/video/` | the capture kit's own files in `out/video/` |
+| `cine` | render each cine shot in one Chromium | `<out>/cine/<id>.mp4` |
+| `titles` | fill slots, then render each title card | `<out>/titles/<id>.mov` (alpha) or `.mp4` |
+| `vo` | build SSML and synthesize the lines whose SSML changed | `<out>/vo/<id>.wav` and `.ssml` |
+| `sfx` | synthesize each effect the beats name | `<out>/sfx/<name>.wav` |
+| `edit` | one silent intermediate per beat, then join, mix, normalise and mux | `<out>/beats/<id>.mp4`, `<out>/mix.wav`, and `out/video/trailer.mp4` |
+| `sheet` | one frame from the middle of each beat, four columns | `out/video/trailer_contact.jpg` |
+| `report` | the timeline, the spoken and shown lines, fallbacks, warnings, loudness | `out/video/trailer_report.md` |
+
+`<out>` is `--out`, default `out/video/trailer/` at the repo root. The finished film, the contact
+sheet and the report always land in `out/video/`, next to the capture kit. `--step a,b` runs only
+those steps, in the order above. `--only <ids>` (ids or prefixes, comma-separated) re-renders
+those beats' intermediates and reuses the others; the join and the mix still run. `--base-url`
+is passed to cine and to the capture kit. `--headed` shows the browser. `--ffmpeg <path>` is the
+full ffmpeg on PATH (libx264), not Playwright's build. `--no-vo` writes silent stand-ins of the
+planned lengths and records a warning in the report, instead of calling Azure.
+
+**Numbers.** A voice-over line and a title param may not contain a digit or a number word
+(`zero` through `twelve`, the tens, `hundred`, `thousand`, `once`, `twice`, `half`, `dozen`,
+`percent`). A number arrives only as a `{claim.value}` slot, filled from `out/video/claims.json`
+when that claim is usable. Anything missing uses the line's or the title's fallback, which has
+no slot; with no fallback the line or the card is dropped and the report says so. Player ids
+such as `H8` and `A10` are names. `[pause 400]` is the one markup whose digits are allowed, and
+it becomes a break in the SSML.
+
+**Voice-over.** Synthesis runs `video/tts.py` (Azure AI Speech). The key and region are
+`AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`, already named in `.env.example`. When `.env` is
+present the command is `uv run --env-file .env python video/tts.py <jobs.json>` from the repo
+root; otherwise `--env-file` is left off. `--check` does not call Azure.
+
+The spec is version 1: `output` (fps, size, LUFS, true peak), `site`, `voice` / `voices`,
+`music` (asset ids from `assets.json`), `cine`, `titles`, and `beats`. A beat's picture is
+`black`, `cine`, `capture`, `title` or `image`. Its `out` is `cut`, `fade`, `flash`, `dip`,
+`whip` or `glitch`. The validator names the beat when something does not resolve
+(`beats[3] (b04-pov): unknown cine id "pov2"`). The planned film must be under two minutes, and
+the last beat cuts so the length stays the sum of the beat lengths.

@@ -192,7 +192,13 @@ function Table({ stats, frame }: { stats: Stats; frame: number }) {
       {totals.teams.map((team) => (
         <TeamLine key={team.team} team={team} />
       ))}
-      <div className="stats-table-wrap">
+      {/* A scrolling box with no control inside: focusable, so the keyboard can scroll it. */}
+      <div
+        className="stats-table-wrap"
+        role="region"
+        tabIndex={0}
+        aria-label="Player statistics table"
+      >
         <table className="stats-table">
           <thead>
             <tr>
