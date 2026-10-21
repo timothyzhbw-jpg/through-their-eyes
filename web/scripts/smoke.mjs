@@ -84,6 +84,14 @@ const PAGES = [
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
   },
+  { name: "link-steps", path: "?play=steps", check: scanSteps },
+  { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
+  {
+    name: "phone-320-steps",
+    path: "?play=steps",
+    device: PHONE_320,
+    check: (p) => phone(p, scanSteps, { live: false }),
+  },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
   { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
@@ -276,6 +284,21 @@ async function takeEyes(page) {
   await see(play, "the look playing through his eyes");
   await play.click();
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
+/** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
+ * frozen with its verified lines, the potential passes, then his decision with everything but two
+ * players blurred. */
+async function scanSteps(page) {
+  await see(page.getByRole("region", { name: "His looks, step by step" }), "the step-through");
+  await see(page.getByRole("list", { name: "Steps" }), "the steps");
+  await see(page.getByRole("list", { name: "Verified lines" }), "a look's verified lines");
+  await page.getByRole("button", { name: "Potential passes" }).click();
+  await see(page.locator(".ss-board .ss-lane.chosen"), "his pick among the options", "attached");
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  while (await next.isVisible()) await next.click();
+  await see(page.getByRole("heading", { name: /His decision|The what-if/ }), "his decision");
+  await see(page.locator(".ss-focus[data-sharp]"), "the blur round two players", "attached");
 }
 
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the

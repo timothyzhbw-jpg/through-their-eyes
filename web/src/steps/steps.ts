@@ -393,8 +393,8 @@ export function project(pose: Pose, p: Vec2, w: number, h: number, height = 0): 
   return c[2] < NEAR ? null : toPixels(pose, c, w, h);
 }
 
-/** A segment on the grass in the view, clipped where it passes behind the eye; null if all of it
- * does. */
+/** A segment on the grass in the view, clipped where it comes nearer the eye than `near` m (it
+ * passes behind him, or under the picture); null if all of it does. */
 export function projectSegment(
   pose: Pose,
   a: Vec2,
@@ -402,16 +402,17 @@ export function projectSegment(
   w: number,
   h: number,
   height = 0,
+  near = NEAR,
 ): [Vec2, Vec2] | null {
   let ca = cameraPoint(pose, a, height);
   let cb = cameraPoint(pose, b, height);
-  if (ca[2] < NEAR && cb[2] < NEAR) return null;
+  if (ca[2] < near && cb[2] < near) return null;
   const clip = (p: number[], q: number[]): [number, number, number] => {
-    const t = (NEAR - p[2]) / (q[2] - p[2]);
-    return [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1]), NEAR];
+    const t = (near - p[2]) / (q[2] - p[2]);
+    return [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1]), near];
   };
-  if (ca[2] < NEAR) ca = clip(ca, cb);
-  else if (cb[2] < NEAR) cb = clip(cb, ca);
+  if (ca[2] < near) ca = clip(ca, cb);
+  else if (cb[2] < near) cb = clip(cb, ca);
   return [toPixels(pose, ca, w, h), toPixels(pose, cb, w, h)];
 }
 

@@ -49,6 +49,7 @@ const FALLBACK_SIZE = { w: 640, h: 400 }; // before the view is measured (and in
 const SWIPE_PX = 50;
 const SHARP_RADIUS_M = 4; // the clear circle round each of the two players on the board
 const SHARP_MIN_PX = 26;
+const LANE_NEAR_M = 3; // first-person lanes start this far in front of his eyes
 
 /** The hero moment's step-through. */
 export function useStepThrough(): StepThrough {
@@ -201,9 +202,11 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
         <p className="ss-tag" aria-hidden="true">
           {viewTag(step, runLabels(hero).tag[s.mode])}
         </p>
+      </div>
+      <div className="ss-foot">
+        <Strip st={st} />
         <Legend step={step} passes={s.passes} />
       </div>
-      <Strip st={st} />
     </figure>
   );
 }
@@ -246,8 +249,8 @@ function Defs() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="4"
+          markerHeight="4"
           orient="auto-start-reverse"
         >
           <path d="M0,0 L10,5 L0,10 z" className={`ss-head ${team}`} />
@@ -282,7 +285,8 @@ function PovMarks(props: {
     <svg className="ss-marks" width={w} height={h} aria-hidden="true">
       <Defs />
       {lanes.map((lane) => {
-        const seg = projectSegment(pose, lane.from, lane.to, w, h, 0.02);
+        // From a few metres out: under his feet a lane runs off the bottom of the picture.
+        const seg = projectSegment(pose, lane.from, lane.to, w, h, 0.02, LANE_NEAR_M);
         if (!seg) return null;
         return <LaneLine key={lane.action} lane={lane} a={seg[0]} b={seg[1]} w={w} h={h} />;
       })}
@@ -309,7 +313,7 @@ function PovMarks(props: {
         return (
           <g key={j} className="ss-seen">
             <ellipse cx={feet[0]} cy={(feet[1] + head[1]) / 2} rx={tall * 0.32} ry={tall * 0.62} />
-            <text x={feet[0]} y={head[1] - 6}>
+            <text x={feet[0]} y={feet[1] + 16}>
               {hero.ids[j]}
             </text>
           </g>
@@ -319,15 +323,26 @@ function PovMarks(props: {
   );
 }
 
-function LaneLine({ lane, a, b, w, h }: { lane: Lane; a: Vec2; b: Vec2; w: number; h: number }) {
+function LaneLine(props: {
+  lane: Lane;
+  a: Vec2;
+  b: Vec2;
+  w: number;
+  h: number;
+  small?: boolean; // in the corner view: only his pick and the receivers this look found named
+}) {
+  const { lane, a, b, w, h, small } = props;
   const cls = `ss-lane ${lane.chosen ? "chosen" : lane.seen ? "seen" : ""} ${lane.kind}`;
-  const width = 1.5 + 7 * Math.min(1, Math.max(0, lane.prob));
+  const width = (small ? 1 : 1.5) + (small ? 3 : 7) * Math.min(1, Math.max(0, lane.prob));
+  const named = !small || lane.chosen || lane.seen;
+  const end = inView(b, w, h, -8);
   return (
     <g className={cls}>
       <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth={width} />
-      {inView(b, w, h, -8) && (
+      {end && <circle cx={b[0]} cy={b[1]} r={small ? 2.5 : 4} />}
+      {end && named && (
         <text x={b[0]} y={b[1] - 8}>
-          {lane.receiver ?? lane.label}
+          {lane.receiver ?? (lane.kind === "carry" ? "Carry" : "Shot")}
         </text>
       )}
     </g>
@@ -351,12 +366,15 @@ function BoardMarks(props: {
   const at = (j: number): Vec2 =>
     toScreen([run.pos[(f * n + j) * 2], run.pos[(f * n + j) * 2 + 1]], w, h, zoom);
   const look = step.kind === "look" ? step : null;
-  const arrows = movementArrows(hero, run, f, step.vel);
+  const sharp = step.kind === "decision" ? sharpPlayers(hero, step) : null;
+  // At his decision only the two players it turns on keep their arrows: the rest is blurred.
+  const arrows = movementArrows(hero, run, f, step.vel).filter(
+    (a) => !sharp || sharp.includes(a.player),
+  );
   // At his decision the board always shows the lane he chose; "Potential passes" adds the rest.
   const all = potentialPasses(hero, run, look && !look.missing ? look.sight : []);
   const lanes = passes ? all : step.kind === "decision" ? all.filter((l) => l.chosen) : [];
   const rings = look && !look.missing ? look.sight.map((id) => hero.ids.indexOf(id)) : [];
-  const sharp = step.kind === "decision" ? sharpPlayers(hero, step) : null;
   return (
     <>
       {sharp && main && <FocusBlur hero={hero} step={step as DecisionStep} at={at} zoom={zoom} />}
@@ -365,7 +383,7 @@ function BoardMarks(props: {
         {lanes.map((lane) => {
           const a = toScreen(lane.from, w, h, zoom);
           const b = toScreen(lane.to, w, h, zoom);
-          return <LaneLine key={lane.action} lane={lane} a={a} b={b} w={w} h={h} />;
+          return <LaneLine key={lane.action} lane={lane} a={a} b={b} w={w} h={h} small={!main} />;
         })}
         {arrows.map((a) => {
           const p = toScreen(a.from, w, h, zoom);

@@ -13,6 +13,7 @@ import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import stepsJson from "../../public/data/steps_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
+import { applyDeepLink, parseDeepLink } from "../deeplink";
 import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
@@ -261,5 +262,17 @@ describe("His looks in the app", () => {
     click(button(el, "Back to the replay"));
     expect(el.querySelector(".ss-screen")).toBeNull();
     expect(el.querySelector("#scan-steps-open")!.getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+describe("His looks by link", () => {
+  it("?play=steps opens it on his first look, with no lineup card and no autoplay", async () => {
+    const link = parseDeepLink("?play=steps");
+    expect(link).toMatchObject({ play: "steps", intro: false, autoplay: false });
+    const session = offline();
+    const st = stepThroughOf(session, served, "/data/");
+    applyDeepLink(session, link);
+    await act(settle);
+    expect(st.state.get()).toMatchObject({ open: true, status: "ready", index: 0 });
   });
 });
