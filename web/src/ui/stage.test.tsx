@@ -382,7 +382,7 @@ describe("the counterfactual verdict", () => {
 
   function expectSim(page: HTMLElement) {
     const worth = page.querySelector(".worth")!;
-    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt.toFixed(3)}`);
+    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt!.toFixed(3)}`);
     expect(text(worth)).not.toContain("9.87");
     expect(worth.classList.contains("verified")).toBe(false);
     expect(worth.querySelector(".checked")).toBeNull();
