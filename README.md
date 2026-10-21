@@ -21,7 +21,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    and his pass options point backwards; he plays it back to H4. Click **With the look**: one
    thick line to H9. Over 40 held-out seeds, 39 decide differently without the look
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
-3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh):
+3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz; once the moment is detected, the agent crew's
    breakdown plays (Microsoft Foundry, cached after the first request). Click a caption to open
    its claims and the evidence frame; **Sound on** speaks it with Azure AI Speech.
@@ -30,32 +30,33 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
    are rate-limited per client.
 5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
-   the evidence card opens on "That look was worth 0.10 in expected threat." with a wrong value
+   the evidence card opens on "That look was worth … in expected threat." with a wrong value
    filled in. Press **Check**: the API runs the real verifier on that claim with your number,
-   against the match data, and answers "Refuted — this line would not air" with its reason
-   (`approx(0.1007…, 0.2) is false`); **Check the true value** is supported. Any claim with a
-   number can be tried this way; nothing you try is written to the audit log. Live breakdowns
-   never hand it a wrong number, because the narration agents pick verified claim ids and never
-   write a digit. Where a model writes free text, it blocks: 58 of 66 free-text first-draft lines
-   failed the Verifier, for example "off by 1.2 metres" where the claim holds 0.5
+   against the match data, and answers "Refuted — this line would not air" with its reason;
+   **Check the true value** is supported. Any claim with a number can be tried this way; nothing
+   you try is written to the audit log. Live breakdowns never hand it a wrong number, because the
+   narration agents pick verified claim ids and never write a digit. Where a model writes free
+   text, it blocks: 58 of 66 free-text first-draft lines failed the Verifier, for example "off by
+   1.2 metres" where the claim holds 0.5
    ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)), and 90
    of 90 false perturbations were refuted ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
-6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en):
-   in the Breakdown panel's **Producer** desk, press **Take down** on the Telestrator and run the
-   crew. It fails as in an outage: the call and one retry raise, it airs its template plan, and
-   the breakdown still plays. **Bring back** resumes the Agent Framework workflow from its
-   checkpoint and re-runs only the Telestrator; its plan replaces the template. The trace id is
-   the run's operation_Id in Application Insights. Each run counts against the rate limit;
-   a drill lasts until the API's next restart or deploy.
+6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0):
+   in the **Producer · failure drill** desk under **Behind the replay**, press **Take down** on
+   the Telestrator and run the crew. It fails as in an outage: the call and one retry raise, it
+   airs its template plan, and the breakdown still plays. **Bring back** resumes the Agent
+   Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
+   plan replaces the template. The trace id is the run's operation_Id in Application Insights.
+   Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
    six possessions on one 132.6 s clock, opened where the scan hero's possession starts. Press
    **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
    to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
-   ([pressure](eval/reports/hero_lens_press_escape.md)). **Skeleton** on the broadcast camera or
-   the board draws each player's torso and head direction, the way limb-tracking data is shown.
+   ([pressure](eval/reports/hero_lens_press_escape.md)). **View options** → **Skeleton** on the
+   broadcast camera or the board draws each player's torso and head direction, the way
+   limb-tracking data is shown.
 
 Then the [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
 tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
@@ -98,7 +99,7 @@ yet in the app.
 | Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 38/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
-| Set-piece hero (a corner; in the sim and its eval, not yet in the app): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
+| Set-piece hero (a corner; in the sim and its eval, not yet in the app): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
 | Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | False claims refuted by the verifier | 100% of perturbations | [corruption](eval/reports/corruption.md) |
