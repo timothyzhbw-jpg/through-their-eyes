@@ -1,8 +1,10 @@
 """The live ingest stream (SPEC 2): a recorded synthetic match replayed at wall-clock speed.
 
 Messages, in order: `hello`; then per frame a `frame`, followed by the `event`s of that frame and
-the `moment`s whose window ends on it; finally `end`. Live overlays (sprint tags, blind-side
-alerts) are computed ahead of time, so a frame costs no analytics at send time. A frame's
+the `moment`s whose window ends on it; finally `end`, with `full_time: true` when the stream
+reached the last frame (the web app's cue for the end-of-match recap). Live overlays (sprint
+tags, blind-side alerts) are computed ahead of time, so a frame costs no analytics at send
+time. A frame's
 `blind_side` lists the alerts on as [observer, target, frames unseen] (player indices,
 SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
 `{"type": "seek", "f": 120}` (a frame of the match) or `{"type": "speed", "x": 2.0}` (clamped to
@@ -186,7 +188,8 @@ async def stream(
         if control.refused:
             await ws.send_json({"type": "error", "detail": control.refused})
         else:
-            await ws.send_json({"type": "end", "f": f})
+            # Full time: the stream reached the match's last frame (not a stop or a seek).
+            await ws.send_json({"type": "end", "f": f, "full_time": f >= frames})
         await ws.close(code)
     except (WebSocketDisconnect, RuntimeError):
         pass  # the client is gone
