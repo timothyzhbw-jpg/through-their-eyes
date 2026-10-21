@@ -282,6 +282,33 @@ describe("Your call: deciding", () => {
     pointer("pointerup", tx, ty);
     expect(yc.state.get()).toMatchObject({ step: "outcome", pick: "pass:H7" });
   });
+
+  it("swipe: the layer is a circle of radius 72 around the carrier, not the whole view", () => {
+    const { session, yc } = open();
+    const el = mount(session);
+    const carrier = yc.picture!.players[yc.picture!.carrier].truth;
+    const [cx, cy] = project(
+      frameCall(carrier, yc.options, 0, 640, 400),
+      toWorld(carrier),
+      640,
+      400,
+    );
+    const layer = el.querySelector<HTMLElement>(".yc-swipe")!;
+    const [left, top, width, height] = [
+      parseFloat(layer.style.left),
+      parseFloat(layer.style.top),
+      parseFloat(layer.style.width),
+      parseFloat(layer.style.height),
+    ];
+    expect(left).toBeCloseTo(cx - 72, 5);
+    expect(top).toBeCloseTo(cy - 72, 5);
+    expect([width, height]).toEqual([144, 144]);
+    expect(layer.style.borderRadius).toBe("50%");
+    // A drag that starts far from the carrier is outside the layer, so it scrolls the page.
+    expect(left + width / 2).toBeCloseTo(cx, 4);
+    expect(top + height / 2).toBeCloseTo(cy, 4);
+    expect(Math.hypot(left + width / 2, top + height / 2)).toBeGreaterThan(width / 2);
+  });
 });
 
 describe("Your call: the reveal", () => {
@@ -318,6 +345,11 @@ describe("Your call: the reveal", () => {
     expect(textOf(el.querySelector(".yc-card h2"))).toBe("What he did: Pass to H9");
     expect(textOf(el)).toContain("H9 took the pass from H8.");
     expect(yc.state.get().clip).toMatchObject({ of: "pass:H9", playing: true });
+    // The bundled narration was not verified: its lines say "sample", not "fixture".
+    expect(textOf(el.querySelector(".yc-lines .source"))).toBe("sample");
+    expect(textOf(el)).toContain(
+      "Sample data: lines marked “sample” were not checked by the verifier.",
+    );
 
     click(button(el, "Compare"));
     const versus = [...el.querySelectorAll(".yc-versus div")].map((d) => [
@@ -493,6 +525,9 @@ describe("Your call: online and in the match", () => {
 
   it("opens a hero moment of the stitched match in Your call, from the Moments panel too", async () => {
     const m = matchExport();
+    // The scan hero's pass has a receiver: its row must not give his answer away next to the button.
+    m.moments.find((x) => x.id === MATCH_HERO)!.receiver = "H4";
+    m.moments.find((x) => x.local_id === "m:line_breaking_pass:H8:0090")!.receiver = "H4";
     const fetch = fakeFetch({
       [`GET /data/${HERO_FILE}`]: () => json(exportJson),
       [`GET /data/${PAYLOAD_FILE}`]: () => json(payloadJson),
@@ -513,6 +548,17 @@ describe("Your call: online and in the match", () => {
     const panel = render(session, <MomentsPanel />);
     const host = document.createElement("div");
     host.innerHTML = panel;
+    // The hero row of blind_side_run 3 (possession 2) leaves his receiver out; the other row keeps
+    // it, and the Your call button names the same shortened label.
+    const scanRows = [...host.querySelectorAll('section[aria-label="Possession 2"] li')];
+    const heroRow = scanRows.find((li) => li.classList.contains("hero"))!;
+    const passRow = scanRows.find((li) => !li.classList.contains("hero"))!;
+    expect(textOf(heroRow)).not.toContain("→");
+    expect(textOf(passRow)).toContain("→");
+    const yourCallRow = [...heroRow.querySelectorAll("button")].find((b) =>
+      b.getAttribute("aria-label")?.startsWith("Your call"),
+    )!;
+    expect(yourCallRow.getAttribute("aria-label")).toBe("Your call: Decision after a scan · H8");
     const yourCallIn = (possession: number) => {
       const section = host.querySelector(`section[aria-label="Possession ${possession}"]`);
       return [...(section?.querySelectorAll("button") ?? [])].find((b) =>

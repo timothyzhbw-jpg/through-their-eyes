@@ -56,7 +56,6 @@
 }
 .yc-swipe {
   position: absolute;
-  inset: 0;
   touch-action: none;
   cursor: crosshair;
 }

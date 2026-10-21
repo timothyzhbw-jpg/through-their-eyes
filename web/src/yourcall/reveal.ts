@@ -4,7 +4,7 @@
 // is labels without numbers. Lines are sorted into the beats by their claims:
 // - outcome: what the call led to (the what-if's outcome; for his own call, the narration line
 //   about how his action ended; for the export's forced action, its counterfactual line);
-// - truth: claims about the state at the decision, whatever he chose (his picture's error,
+// - truth: claims measured at or before his decision, whatever he chose (his picture's error,
 //   "he thought / it was", pressure, space);
 // - actual: the rest of the narration: what he did and why;
 // - compare: the value of the call against what he did.
@@ -15,7 +15,9 @@ import { optionOf, type Language, type WhatIfs } from "../whatif/whatif";
 import type { CallOption } from "./options";
 import { pictureOf } from "./picture";
 
-/** Claims (explain/builders.py ids) about the state at the decision: the truth beat. */
+/** Claims (explain/builders.py ids) measured at or before his decision: the truth beat.
+ * `blind_side` is measured before it and stays; `receiver_pressure` is measured when his pass
+ * reaches the receiver (anchor = the completion), so it is about what he did, not the decision. */
 export const TRUTH_CLAIMS: ReadonlySet<string> = new Set([
   "belief_error",
   "pass_success",
@@ -26,7 +28,6 @@ export const TRUTH_CLAIMS: ReadonlySet<string> = new Set([
   "pressure_at_pass",
   "heavy_pressure",
   "presser_distance",
-  "receiver_pressure",
 ]);
 const WHATIF_VALUE = "whatif_value"; // agents/whatif.py: the call's value against his
 const CF_OUTCOME: ReadonlySet<string> = new Set(["cf_carry_lost", "cf_pass"]);

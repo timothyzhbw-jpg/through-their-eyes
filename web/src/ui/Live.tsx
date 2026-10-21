@@ -87,9 +87,13 @@ const KIND: Record<string, string> = {
   sprint: "Sprint",
 };
 
-export function momentLabel(m: LiveMoment): string {
+/** A moment's label: kind · actor, then the receiver unless the row would give his answer away. */
+export function momentLabel(
+  m: Pick<LiveMoment, "kind" | "actor" | "receiver">,
+  { receiver = true }: { receiver?: boolean } = {},
+): string {
   const kind = KIND[m.kind] ?? m.kind.replaceAll("_", " ");
-  return `${kind} · ${m.actor ?? "?"}${m.receiver ? ` → ${m.receiver}` : ""}`;
+  return `${kind} · ${m.actor ?? "?"}${receiver && m.receiver ? ` → ${m.receiver}` : ""}`;
 }
 
 /** Which lens explains a moment (SPEC 5.2); sprints and the like are live overlays only. */
@@ -233,13 +237,14 @@ function MatchMomentRow(props: {
 }) {
   const { m } = props;
   const classes = [m.hero ? "hero" : "", props.ahead ? "ahead" : ""].filter(Boolean).join(" ");
+  // A hero row that can open Your call must not name his receiver: that is his answer.
+  const label = momentLabel(m, { receiver: !(m.hero && props.yourCallReason === null) });
   return (
     <li className={classes || undefined}>
       <button type="button" onClick={props.onReplay} title="Replay from this moment">
         <span className="t">{m.anchor_t.toFixed(2)} s</span>
         <span>
-          {momentLabel(m)}{" "}
-          <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>
+          {label} <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>
         </span>
       </button>
       {m.hero && (
@@ -253,7 +258,7 @@ function MatchMomentRow(props: {
           className="btn"
           onClick={props.onYourCall}
           disabled={props.opening || props.yourCallReason !== null}
-          aria-label={`Your call: ${momentLabel(m)}`}
+          aria-label={`Your call: ${label}`}
           title={
             props.yourCallReason ?? "Decide with only what he knew, then see what really happened"
           }

@@ -30,6 +30,7 @@ import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
+const SWIPE_START_PX = 72; // the swipe layer's radius around the carrier: two marker sizes
 const YOU_DROP_PX = 18; // the "you" label hangs this far under the carrier's feet
 const YOU_CLEAR_PX = 56; // and markers keep this far from its centre (half its width + a marker)
 /** Centre of the "you" label under the carrier. */
@@ -175,8 +176,9 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
   const deciding = step === "deciding";
 
   const local = (e: PointerEvent<HTMLElement>): Vec2 => {
-    const r = e.currentTarget.getBoundingClientRect();
-    return [e.clientX - r.left, e.clientY - r.top];
+    // Relative to the view, not the layer: the layer is a circle around the carrier.
+    const r = ref.current?.getBoundingClientRect();
+    return [e.clientX - (r?.left ?? 0), e.clientY - (r?.top ?? 0)];
   };
   const pickBySwipe = (e: PointerEvent<HTMLDivElement>) => {
     const start = swipe.current;
@@ -218,6 +220,13 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
           <div
             className="yc-swipe"
             aria-hidden="true"
+            style={{
+              left: carrierPx[0] - SWIPE_START_PX,
+              top: carrierPx[1] - SWIPE_START_PX,
+              width: 2 * SWIPE_START_PX,
+              height: 2 * SWIPE_START_PX,
+              borderRadius: "50%",
+            }}
             onPointerDown={(e) => {
               const [x, y] = local(e);
               swipe.current = { x, y };
@@ -476,7 +485,7 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
         )}
         {fixture && (
           <p className="yc-hint">
-            Sample data: lines marked “fixture” were not checked by the verifier.
+            Sample data: lines marked “sample” were not checked by the verifier.
           </p>
         )}
       </div>
@@ -526,7 +535,7 @@ function Lines({ lines }: { lines: RevealLine[] }) {
             ))}
           </span>
           <span className="yc-line">{l.text}</span>
-          {l.source === "fixture" && <span className="source">fixture</span>}
+          {l.source === "fixture" && <span className="source">sample</span>}
         </li>
       ))}
     </ul>

@@ -204,6 +204,58 @@ describe("Your call: the reveal", () => {
     ).toBeNull();
   });
 
+  it("sorts receiver pressure into what he did: it is measured after his decision", () => {
+    const event = hero.runs.factual.events[0].id;
+    const checked = checkPayload(
+      {
+        moment: moment.id,
+        persona: "analyst",
+        language: "en",
+        lines: [
+          {
+            id: "R1",
+            text: "H4 was under pressure when the ball reached him.",
+            claims: ["receiver_pressure"],
+          },
+          {
+            id: "R2",
+            text: "H8 was under heavy pressure when he released the ball.",
+            claims: ["heavy_pressure"],
+          },
+        ],
+        claims: [
+          {
+            id: "receiver_pressure",
+            kind: "computed",
+            verdict: "supported",
+            values: {},
+            evidence: [event],
+            seek_frame: 0,
+          },
+          {
+            id: "heavy_pressure",
+            kind: "computed",
+            verdict: "supported",
+            values: {},
+            evidence: [event],
+            seek_frame: 0,
+          },
+        ],
+      },
+      {
+        moment: moment.id,
+        events: new Set(hero.runs.factual.events.map((e) => e.id)),
+        frames: () => hero.runs.factual.frames,
+      },
+    );
+    if (!checked.ok) throw new Error(checked.errors.join("; "));
+    const r = reveal("pass:H4", checked.narration);
+    expect(r.truth.lines.map((l) => l.id)).toEqual(["R2"]);
+    expect(r.truth.lines.flatMap((l) => l.claims)).not.toContain("receiver_pressure");
+    expect(r.actual.lines.map((l) => l.id)).toEqual(["R1"]);
+    expect(r.actual.lines.flatMap((l) => l.claims)).toContain("receiver_pressure");
+  });
+
   it("the pressure hero: the forced carry's outcome is the breakdown's counterfactual line", () => {
     const press = parseHero(pressureExport());
     const pm = heroMoment(press, PRESS_MOMENT);
