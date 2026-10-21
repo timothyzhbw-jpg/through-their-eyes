@@ -9,7 +9,7 @@
 //   npm run trailer                         build (from video/)
 //   node video/trailer.mjs --step edit --only b03
 
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -32,7 +32,7 @@ import { renderReport } from "./lib/report.mjs";
 import { SFX_DEFAULT_DUR, conflictingSfx, writeSfx } from "./lib/sfx.mjs";
 import { validateTrailer } from "./lib/spec.mjs";
 import { buildSsml, estimateSpeechSeconds, voiceFor, voRoomWarnings, wavSeconds } from "./lib/vo.mjs";
-import { encodeWav16Mono } from "./lib/wav.mjs";
+import { encodeWav16Mono, readWav, trimSilence } from "./lib/wav.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -311,7 +311,18 @@ async function stepVo(ctx) {
     }
     jobs.push({ id: line.id, ssml, out: path.resolve(out), ssmlPath });
   }
-  if (!jobs.length) return;
+  if (jobs.length) await synthesize(ctx, dir, jobs);
+  // Azure pads each line with silence (about 0.15 s before, 0.9 s after): cut it, so timing,
+  // warnings and the ducking follow the speech. Idempotent, so every run trims every line.
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".wav"))) {
+    const wavPath = path.join(dir, file);
+    const wav = readWav(readFileSync(wavPath));
+    const [speech] = trimSilence(wav);
+    if (speech.length && speech.length < wav.frames) writeFileSync(wavPath, encodeWav16Mono(speech, wav.sampleRate));
+  }
+}
+
+async function synthesize(ctx, dir, jobs) {
   const jobsPath = path.join(dir, "jobs.json");
   writeFileSync(jobsPath, JSON.stringify(jobs.map(({ id, ssml, out }) => ({ id, ssml, out }))));
   try {
@@ -469,13 +480,21 @@ async function stepEdit(ctx) {
   }
 
   const finalMp4 = path.join(ctx.finalsDir, "trailer.mp4");
-  const muxHash = digest(["mux-v1", ENGINE, fileStamp(joined), fileStamp(mixWav), ctx.spec.output]);
+  const muxHash = digest(["mux-v2", ENGINE, fileStamp(joined), fileStamp(mixWav), ctx.spec.output]);
   if (fresh(finalMp4, muxHash, ctx.force)) console.log("  mux: cached");
   else {
-    await runFfmpeg(ctx.ffmpeg, muxArgs(joined, mixWav, finalMp4, { width, height, fps }));
+    const audioCodec = (await hasEncoder(ctx.ffmpeg, "aac_at")) ? "aac_at" : "aac";
+    await runFfmpeg(ctx.ffmpeg, muxArgs(joined, mixWav, finalMp4, { width, height, fps, audioCodec }));
     storeHash(finalMp4, muxHash);
     console.log(`  mux: ${path.relative(ctx.root, finalMp4)}`);
   }
+}
+
+/** Whether this ffmpeg build has an encoder (`ffmpeg -encoders`). */
+async function hasEncoder(ffmpeg, name) {
+  const { spawnSync } = await import("node:child_process");
+  const out = spawnSync(ffmpeg, ["-hide_banner", "-encoders"], { encoding: "utf8" });
+  return out.status === 0 && new RegExp(`\\s${name}\\s`).test(out.stdout);
 }
 
 async function stepSheet(ctx) {

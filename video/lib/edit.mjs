@@ -363,15 +363,21 @@ export function mixGraph(plan) {
 export function loudnormFilter(output, measured = null) {
   const base = `loudnorm=I=${output.lufs}:TP=${output.true_peak}:LRA=11`;
   if (!measured) return `${base}:print_format=json`;
+  // loudnorm's linear pass cannot hold the true peak on its own; a limiter at the target (sample
+  // peaks) keeps the final AAC, which overshoots a little, near it.
+  const ceiling = Math.pow(10, output.true_peak / 20).toFixed(4);
   return (
     `${base}:measured_I=${measured.input_i}:measured_LRA=${measured.input_lra}` +
     `:measured_TP=${measured.input_tp}:measured_thresh=${measured.input_thresh}` +
-    `:offset=${measured.target_offset}:linear=true`
+    `:offset=${measured.target_offset}:linear=true` +
+    `,aresample=48000,alimiter=limit=${ceiling}:attack=1:release=60:level=false`
   );
 }
 
 /** @param {string} video @param {string} audio @param {string} out @param {{ width: number, height: number, fps: number }} size */
-export function muxArgs(video, audio, out, { width, height, fps }) {
+/** `audioCodec`: "aac_at" (Apple's AudioToolbox encoder, where ffmpeg has it) keeps the limited peaks;
+ * ffmpeg's own "aac" overshoots them by up to 3 dB. */
+export function muxArgs(video, audio, out, { width, height, fps, audioCodec = "aac" }) {
   return [
     "-y",
     "-hide_banner",
@@ -398,7 +404,7 @@ export function muxArgs(video, audio, out, { width, height, fps }) {
     "-movflags",
     "+faststart",
     "-c:a",
-    "aac",
+    audioCodec,
     "-b:a",
     "320k",
     "-ar",

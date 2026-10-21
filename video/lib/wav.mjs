@@ -148,3 +148,35 @@ function writeSample(buf, at, sample, bits, full) {
   buf[at + 1] = (n >> 8) & 0xff;
   buf[at + 2] = (n >> 16) & 0xff;
 }
+
+/**
+ * The speech in a synthesized line, without the silence Azure puts around it (about 0.15 s before
+ * and 0.9 s after). Keeps `pad` seconds either side so no consonant is clipped. Mono or the first
+ * channel decides; every channel is cut the same.
+ * @param {{ samples: Float64Array[], sampleRate: number }} wav
+ * @param {{ thresholdDb?: number, pad?: number }} [opts]
+ * @returns {Float64Array[]}
+ */
+export function trimSilence(wav, { thresholdDb = -45, pad = 0.04 } = {}) {
+  const x = wav.samples[0];
+  const n = x.length;
+  const win = Math.max(1, Math.round(wav.sampleRate * 0.01));
+  const limit = Math.pow(10, thresholdDb / 20);
+  // A 10 ms moving average of |x|, so a single click does not count as speech.
+  const loud = (i) => {
+    let sum = 0;
+    const from = Math.max(0, i - win);
+    const to = Math.min(n, i + win);
+    for (let k = from; k < to; k++) sum += Math.abs(x[k]);
+    return sum / (to - from) > limit;
+  };
+  let first = 0;
+  while (first < n && !loud(first)) first += win;
+  let last = n - 1;
+  while (last > first && !loud(last)) last -= win;
+  if (first >= n) return wav.samples.map((c) => c.slice(0, 0));
+  const keep = Math.round(pad * wav.sampleRate);
+  const from = Math.max(0, first - keep);
+  const to = Math.min(n, last + keep);
+  return wav.samples.map((c) => c.slice(from, to));
+}

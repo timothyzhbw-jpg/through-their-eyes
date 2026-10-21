@@ -1,7 +1,7 @@
 // WAV header round trip: 24-bit stereo for effects, 16-bit mono for a silent voice-over.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { encodeWav16Mono, encodeWav24, readWav, wavDuration } from "../lib/wav.mjs";
+import { encodeWav16Mono, encodeWav24, readWav, trimSilence, wavDuration } from "../lib/wav.mjs";
 
 function close(actual, expected, bits) {
   const full = bits === 16 ? 32767 : 8388607;
@@ -40,4 +40,15 @@ test("16-bit mono survives a write and a read", () => {
 
 test("a buffer that is not a WAV is rejected", () => {
   assert.throws(() => readWav(Buffer.from("not a wav file at all!!")), /not a WAV file/);
+});
+
+test("trimSilence keeps the speech and a little air, and drops the edges", () => {
+  const sr = 24000;
+  const x = new Float64Array(sr * 2); // 2 s: silence, 0.5 s of tone from 0.25 s, silence
+  for (let i = Math.round(0.25 * sr); i < Math.round(0.75 * sr); i++) x[i] = 0.5 * Math.sin(i / 5);
+  const [trimmed] = trimSilence({ samples: [x], sampleRate: sr }, { pad: 0.04 });
+  const seconds = trimmed.length / sr;
+  assert.ok(seconds > 0.5 && seconds < 0.62, `${seconds}`);
+  const [none] = trimSilence({ samples: [new Float64Array(sr)], sampleRate: sr });
+  assert.equal(none.length, 0);
 });

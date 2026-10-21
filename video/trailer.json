@@ -6,7 +6,7 @@
     "width": 1920,
     "height": 1080,
     "lufs": -14,
-    "true_peak": -2.0
+    "true_peak": -1.5
   },
   "site": "https://ttesite1ff906.z14.web.core.windows.net",
   "voice": {
@@ -26,8 +26,8 @@
     {
       "asset": "music-unsolicited",
       "at": 28.5,
-      "from": 18.4,
-      "until": 104.6,
+      "from": 18.344,
+      "until": 106.5,
       "gain_db": -2,
       "fade_in": 0.02,
       "fade_out": 3.0,
@@ -1087,7 +1087,7 @@
     },
     "press-wins": {
       "template": "slam",
-      "dur": 1.1,
+      "dur": 0.85,
       "alpha": true,
       "params": {
         "lines": [
@@ -1472,7 +1472,7 @@
     },
     {
       "id": "b11-studio",
-      "dur": 4.0,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
@@ -1485,7 +1485,7 @@
       "overlays": [
         {
           "title": "studio",
-          "at": 0.3
+          "at": 0.15
         }
       ],
       "vo": [
@@ -1502,7 +1502,7 @@
     },
     {
       "id": "b12-verified",
-      "dur": 5.0,
+      "dur": 5.25,
       "picture": {
         "src": "capture",
         "shot": "07-evidence",
@@ -1661,7 +1661,7 @@
     },
     {
       "id": "b15-redcard",
-      "dur": 3.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
@@ -1754,7 +1754,7 @@
     },
     {
       "id": "b17-casual",
-      "dur": 2.2,
+      "dur": 2.25,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
@@ -1780,7 +1780,7 @@
     },
     {
       "id": "b18-analyst",
-      "dur": 2.2,
+      "dur": 2.25,
       "picture": {
         "src": "capture",
         "shot": "05-personas",
@@ -1799,7 +1799,7 @@
     },
     {
       "id": "b19-zh",
-      "dur": 3.2,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "06-language",
@@ -1818,7 +1818,7 @@
       "vo": [
         {
           "id": "vo17",
-          "at": 0.4,
+          "at": 0.25,
           "lang": "zh",
           "line": {
             "persona": "casual",
@@ -1836,7 +1836,7 @@
     },
     {
       "id": "b20-whatif",
-      "dur": 4.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "08-what-if",
@@ -1855,7 +1855,7 @@
       "vo": [
         {
           "id": "vo18",
-          "at": 0.3,
+          "at": 0.7,
           "text": "Ask what if, and the simulation answers."
         }
       ],
@@ -1866,7 +1866,7 @@
     },
     {
       "id": "b21-live",
-      "dur": 5.0,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "02-live-stream",
@@ -1885,7 +1885,7 @@
       "vo": [
         {
           "id": "vo19",
-          "at": 0.4,
+          "at": 0.3,
           "text": "A whole match, live, with a camera director."
         }
       ],
@@ -1896,7 +1896,7 @@
     },
     {
       "id": "b22-yc-decide",
-      "dur": 4.0,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
@@ -1954,11 +1954,11 @@
     },
     {
       "id": "b23-yc-reveal",
-      "dur": 5.5,
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
-        "in": 3.4,
+        "in": 4.5,
         "push": [
           1.0,
           1.05
@@ -1967,21 +1967,21 @@
       "vo": [
         {
           "id": "vo22",
-          "at": 2.9,
+          "at": 1.6,
           "text": "Then see what really happened."
         }
       ],
       "sfx": [
         {
           "name": "boom",
-          "at": 3.1,
+          "at": 1.5,
           "gain_db": -9
         }
       ]
     },
     {
       "id": "b24-yc-truth",
-      "dur": 4.0,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
@@ -2043,7 +2043,7 @@
     },
     {
       "id": "b26-press-cf",
-      "dur": 4.0,
+      "dur": 3.75,
       "picture": {
         "src": "cine",
         "id": "press-cf",
