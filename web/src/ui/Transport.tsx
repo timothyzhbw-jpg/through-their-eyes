@@ -1,8 +1,9 @@
 // The bar along the bottom of the live screen: play / pause, the timeline with scan bars and the
-// decision marker (the key scan and the decision are labelled under it, and jump there), the
-// clock, the view options and the camera. In a stitched match the timeline also marks where each
-// possession starts (hero possessions shaded) and the hero moments, with jumps between
-// possessions; the clock is the match clock, also inside a hero moment's breakdown.
+// decision marker (the key scan and the decision, or where the ball reaches a marker's man, are
+// labelled under it, and jump there), the clock, the view options and the camera. In a stitched
+// match the timeline also marks where each possession starts (hero possessions shaded) and the
+// hero moments, with jumps between possessions; the clock is the match clock, also inside a hero
+// moment's breakdown.
 
 import { useEffect, useRef, useState } from "react";
 import { possessionAt } from "../match/match";
@@ -288,9 +289,13 @@ function Timeline() {
             className="mark"
             style={at(decision)}
             onClick={() => controls.seek(decision)}
-            title="Jump to the decision"
+            title={
+              hero.marker
+                ? `Jump to where the pass to ${hero.marker.man} ends`
+                : "Jump to the decision"
+            }
           >
-            Decision
+            {hero.marker ? "Ball arrives" : "Decision"}
           </button>
         </div>
       )}

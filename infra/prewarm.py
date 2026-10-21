@@ -4,7 +4,8 @@ waiting for one or spending the daily model cap.
 A viewer opens one persona in one language for one hero moment at a time (web/src/api/client.ts
 `breakdown`), so that is what this asks the live API for: every hero moment of every served match,
 times every persona and language. Standalone heroes go first; a stitched match's heroes have the
-same cards, so by then they are cache hits.
+same cards, so by then they are cache hits. Then each stitched match's end-of-match recap
+(`POST /api/recaps`, SPEC 6), one persona in one language at a time, as the web app asks for it.
 
 A cached breakdown costs nothing. A missing one costs one unit of the daily model cap
 (`TTE_DAILY_MODEL_CAP`, 40) and one of this address's per-client limit (`TTE_RATE_LIMIT`, 3 per
@@ -78,15 +79,21 @@ def parse_rate(text: str) -> tuple[int, float]:
 
 @dataclass(frozen=True)
 class View:
-    """One breakdown a viewer can open."""
+    """One breakdown a viewer can open, or a stitched match's recap (`moment` "recap")."""
 
     match: str
     moment: str
     persona: str
     language: str
+    kind: str = "breakdown"  # or "recap"
+
+    @property
+    def path(self) -> str:
+        return "/api/recaps" if self.kind == "recap" else "/api/breakdowns"
 
     def body(self, regenerate: bool = False) -> dict[str, Any]:
-        return {"match": self.match, "moment": self.moment, "personas": [self.persona],
+        moment = {} if self.kind == "recap" else {"moment": self.moment}
+        return {"match": self.match, **moment, "personas": [self.persona],
                 "languages": [self.language], "regenerate": regenerate}  # fmt: skip
 
 
@@ -119,8 +126,11 @@ def views(http: Http) -> list[View]:
             raise RuntimeError(f"GET /api/matches/{m['id']}: HTTP {status}")
         infos.append(info)
     infos.sort(key=lambda i: i.get("kind") != "hero")  # stable: the API's order otherwise
-    return [View(i["id"], moment, p, lang) for i in infos for moment in i["hero_moments"]
-            for p in PERSONAS for lang in LANGUAGES]  # fmt: skip
+    breakdowns = [View(i["id"], moment, p, lang) for i in infos for moment in i["hero_moments"]
+                  for p in PERSONAS for lang in LANGUAGES]  # fmt: skip
+    recaps = [View(i["id"], "recap", p, lang, "recap") for i in infos if i.get("kind") == "match"
+              for p in PERSONAS for lang in LANGUAGES]  # fmt: skip
+    return breakdowns + recaps
 
 
 def problems(res: dict[str, Any]) -> list[str]:
@@ -128,7 +138,8 @@ def problems(res: dict[str, Any]) -> list[str]:
     if res.get("source") != "model":
         return [f"source {res.get('source')}"]
     result = res.get("result") or {}
-    out = ["plan from template"] if result.get("plan_source") != "agent" else []
+    plan = result.get("plan_source", result.get("reel_source"))  # a recap's plan is its reel
+    out = ["plan from template"] if plan != "agent" else []
     return out + [f"{s['step']} from template" for s in result.get("trace", ())
                   if s.get("source") == "template"]  # fmt: skip
 
@@ -179,7 +190,7 @@ def run(http: Http, *, rate: tuple[int, float] = (3, 600.0), max_new: int = 20,
     cues: dict[str, None] = {}  # voice cue keys of the breakdowns served, in order
 
     def ask(view: View, regenerate: bool = False) -> Row:
-        status, res = http("POST", "/api/breakdowns", view.body(regenerate))
+        status, res = http("POST", view.path, view.body(regenerate))
         if status != 200:
             detail = res.get("detail") if isinstance(res, dict) else None
             return Row(view, "error", detail=f"HTTP {status}: {detail}")

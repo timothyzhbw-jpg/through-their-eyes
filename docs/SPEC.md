@@ -72,12 +72,14 @@ on an LLM.
 
 *Implemented (`api/`, M3):* FastAPI.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
-  `moment` and `end` messages; clients can pause, resume, seek, change speed or stop.
+  `moment` and `end` messages (`full_time: true` when it reached the last frame); clients can
+  pause, resume, seek, change speed or stop.
 - REST: `/api/matches`, `/api/matches/<id>` (+ `/export`, `/moments`, `/audit`),
   `POST /api/breakdowns` (`fail` for the failure drill, §6),
   `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
   is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
-  audited, rate-limited per client, no model call).
+  audited, rate-limited per client, no model call), `POST /api/recaps` and
+  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6).
 - The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
   key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
   allows a few streams per client and a session length, and closes on a malformed control
@@ -1067,6 +1069,61 @@ Application Insights.
   player id next to a Chinese character (the digit is still rejected as a number), and rewritten
   lines are not tidied again, so a rewrite can air a line twice.
 
+- **End-of-match recap** (2026-10-21, §9 cut item 6). The challenge names "automated match recaps
+  suitable for studio, broadcast, or streaming scenarios". At full time on the live stream (its
+  `end` says `full_time: true`) or from the Moments panel ("Match recap"), the crew recaps a
+  stitched match: `POST /api/recaps`, `agents/recap.py`, `uv run python -m agents.recap --seed 1`.
+  - *The same graph, its own steps.* `build_workflow(story=RECAP)`: each step is a subclass of
+    the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
+    - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
+      ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
+      pressure; a moment whose shot went in first; live-only overlays never), at most 8. The
+      model may name only candidates (an enum); the template takes the largest impacts (at least
+      3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
+      on those moments only.
+    - Analyst: picks the headline claims, reading the match through our MCP tools
+      (`get_match_stats`, `list_key_moments`, `list_recap_claims`; `agents.mcp_server --recap
+      <evidence file>`, which the API writes so the server starts without simulating). The card
+      shows the match stats it picked.
+    - Telestrator: the reel, one clip per key moment: 4 s before its key instant to 2 s after (or
+      its end), inside its possession, at most 8 s; its speed (1 or 0.5, at most one slow clip)
+      and its opening camera (broadcast, or the tactical board for the space lens). The camera
+      director cuts inside each clip (§7). An invalid reel falls back to the template with reason
+      codes (`clips: not_the_key_moments_in_order`).
+    - Narration: anchored lines (above) whose claim enum holds only the match's claims and the
+      chosen moments'; templates `RECAP_SEQUENCES` and `MOMENT_LINES`, a row per persona.
+    - Verifier: unchanged. Voice: SSML per line on the reel's clock (a clip holds its last frame
+      while its lines still run), and the overlay cue sheet.
+  - *Evidence* (`agents/recap_context.py`, `explain/recap.py`). Match totals (score, passes
+    completed of those resolved, scans, balls won back, shots) are claims on one run over the
+    match clock (`count_events` without an anchor counts the whole run; a `where` value may be a
+    list of allowed values). A pass counts once received, intercepted or out, as the live stats
+    panel counts it: one still in flight when its possession ends does not. A hero moment's
+    claims are its MomentContext's, re-verified under `k<rank>.<id>` on the hero's evaluator, so
+    every renamed claim has its own fingerprint and audit record. Other moments get observed
+    claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
+    the line-breaking detector's own count), scans before the reception, heavy pressure, and how
+    its shot ended (scored, saved by the keeper, blocked, wide; §3.3).
+    Payload evidence and seek frames are lifted to the match clock.
+  - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
+    (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken
+    line) and `stat`, each with `t`/`until` on the reel's clock and SMPTE timecode at 25 fps. Text
+    is only ever a verified line and numbers only verified values: what a broadcast graphics
+    engine would render.
+  - *Cache and limits.* Keyed by the content hash of the evidence, personas, languages, the
+    recap's own prompt version (`RECAP_PROMPT_VERSION`, so breakdown keys never move with it),
+    `PIPELINE_VERSION` and the model; the same per-client limit and daily model cap as
+    breakdowns, then the cached model recap or the offline template. Speech speaks its lines like
+    a breakdown's. `infra/prewarm.py` warms each stitched match's recap for every persona and
+    language after the breakdowns, as the web app asks for it.
+  - *Web* (`web/src/recap/`; deep link `?match=match-1&play=recap`): the recap card (the score,
+    one verified sentence per key moment with Watch and Breakdown, the stats), persona and
+    language switches, the reel on the match's own playback with the auto director on, its
+    captions and spoken lines, and a link to the cue sheet. Every response is checked against the match before it shows (claims supported,
+    evidence in the match, captions verified lines, clips on the clock).
+  - *Tests:* `tests/test_recap_evidence.py`, `tests/test_recap.py`, `tests/test_api_recap.py`,
+    `web/src/recap/recap.test.ts`, `web/src/recap/RecapPanel.test.tsx`.
+
 `TelestrationPlan` sketch:
 
 ```json
@@ -1452,7 +1509,8 @@ pilot only, never generalised.
 4. Your call (§7): remove its header button, the Moments buttons and `?play=yourcall`; nothing
    else depends on it (the bundled press_escape what-ifs stay for the "What if…?" box)
 5. viewer pilot
-6. end-of-match recap reel
+6. end-of-match recap reel (built 2026-10-21, §6: drop `web/src/recap/`, the Moments panel's
+   button and `POST /api/recaps`; nothing else depends on them)
 7. "What if…?" free text → suggested questions only
 8. two voices → one narrator
 9. `coach` persona
