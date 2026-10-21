@@ -3,8 +3,9 @@
 Functions: count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
 observed_share, scan_side, max_visibility, seconds_between, turnover_at_resolution,
 opponents_bypassed, cf_delta. Every function accepts `cf: <scan id>` to evaluate on the
-counterfactual run without that scan instead of the factual run, or
-`cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7).
+counterfactual run without that scan instead of the factual run,
+`cf: force:<player>:<frame>:<action>` for the what-if run with that decision forced (SPEC 3.7), or
+`cf: look:<player>:<frame>:<degrees>` for the run where he looks only there (SPEC 3.7, 7).
 
 Time is anchored on events: `anchor` is an event id ("<type>:<player>:<frame>") or a moment
 anchor "<card id>.<name>" (SPEC 5.1, e.g. "m:decision_after_scan:H8:0075.reception"), and offsets
@@ -36,10 +37,11 @@ from analytics.xt import xt_for
 from explain.cards import MomentCard
 from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
 from sim.counterfactual import (
-    WHAT_IF_PREFIX,
     CounterfactualResult,
+    LookResult,
     WhatIfResult,
     drop_scan_counterfactual,
+    is_what_if_id,
     what_if_from_id,
 )
 from sim.decision import (
@@ -145,10 +147,11 @@ class EvalContext:
             raise Inconclusive(f"{anchor}{offset_s:+} s is after the recorded run")
         return f
 
-    def counterfactual(self, scan_ref: Any) -> CounterfactualResult | WhatIfResult:
+    def counterfactual(self, scan_ref: Any) -> CounterfactualResult | WhatIfResult | LookResult:
         """The run without one scan (an event id or a moment anchor such as `<card>.last_scan`),
-        or a what-if with one decision forced (`force:<player>:<frame>:<action>`, SPEC 3.7)."""
-        if isinstance(scan_ref, str) and scan_ref.startswith(WHAT_IF_PREFIX):
+        a what-if with one decision forced (`force:<player>:<frame>:<action>`, SPEC 3.7), or with
+        the player's eyes taken (`look:<player>:<frame>:<degrees>`, SPEC 3.7, 7)."""
+        if is_what_if_id(scan_ref):
             if scan_ref not in self.counterfactuals:
                 if not self.resimulate:
                     raise Inconclusive(f"no what-if {scan_ref} was supplied")
@@ -401,37 +404,58 @@ def observed_share(
     return _observed_share(ctx, run, ctx.frame(run, anchor, at), player, window_s)
 
 
-def scan_side(ctx: EvalContext, run: MatchRun, scan: str) -> str:
+def scan_side(ctx: EvalContext, run: MatchRun, scan: str, against: str = "head") -> str:
     """Which way a scan turned the head away from the ball: "left" (anticlockwise) or "right".
 
     When a scan begins the head still points at the ball (baseline gaze, SPEC 3.4) and the scan's
     `direction` is the yaw it turned to, so for a player facing the ball a turn to the right is a
-    look over his right shoulder.
+    look over his right shoulder. `against="ball"` measures the turn from the direction of the
+    ball at the scan's first frame instead, as a look of Take his eyes is placed (SPEC 3.7
+    `add_scan`): his head need not be on the ball then, e.g. as it reaches him.
     """
     e = ctx.event(run, scan)
     if e.type != "scan":
         raise Refuted(f"{e.id} is not a scan")
     i = ctx.player(run, e.player)
-    turn = float(wrap_angle(float(e.attrs["direction"]) - run.head_yaw[e.frame, i]))
+    if against == "head":
+        reference = float(run.head_yaw[e.frame, i])
+    elif against == "ball":
+        to_ball = run.ball_pos[e.frame, :2] - run.pos[e.frame, i]
+        if float(np.hypot(*to_ball)) < 1e-6:
+            raise Inconclusive(f"{e.player} is on the ball at {e.frame}: no direction to it")
+        reference = float(np.arctan2(to_ball[1], to_ball[0]))
+    else:
+        raise Inconclusive(f"scan_side measures against the head or the ball, not {against!r}")
+    turn = float(wrap_angle(float(e.attrs["direction"]) - reference))
     if abs(turn) < 1e-3:
         raise Inconclusive(f"{e.id} turned neither left nor right")
     return "left" if turn > 0 else "right"
 
 
 def max_visibility(
-    ctx: EvalContext, run: MatchRun, observer: str, target: str, event: str
+    ctx: EvalContext,
+    run: MatchRun,
+    observer: str,
+    target: str,
+    event: str,
+    until: str | None = None,
+    until_s: float = 0.0,
 ) -> float:
     """The most the observer saw of the target during an event with an end frame (a scan): the
     vision model with occlusion (`analytics.vision`) on each frame of it. The sim counts a player
-    as seen from `SimParams.perception_threshold` (SPEC 3.4)."""
+    as seen from `SimParams.perception_threshold` (SPEC 3.4). With `until` (an event id, plus
+    `until_s` seconds), later frames do not count: what he saw of a look before he decided."""
     e = ctx.event(run, event)
     end = e.attrs.get("end")
     if end is None:
         raise Inconclusive(f"{e.id} has no end frame")
     if int(end) >= len(run.owner):
         raise Inconclusive(f"{e.id} ends after the recorded run")
+    last = int(end) if until is None else min(int(end), ctx.frame(run, until, until_s))
+    if last < e.frame:
+        raise Inconclusive(f"{e.id} starts after {until}")
     i, j = ctx.player(run, observer), ctx.player(run, target)
-    return max(float(ctx.visibility_matrix(run, f)[i, j]) for f in range(e.frame, int(end) + 1))
+    return max(float(ctx.visibility_matrix(run, f)[i, j]) for f in range(e.frame, last + 1))
 
 
 def seconds_between(ctx: EvalContext, run: MatchRun, a: str, b: str) -> float:

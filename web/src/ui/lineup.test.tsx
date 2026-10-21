@@ -62,7 +62,7 @@ const click = (el: HTMLElement) => act(() => el.click());
 const PITCH =
   "See what they saw. An AI studio that explains key moments through the player's own " +
   "perception — the scans before the ball arrived, what was visible, what he believed — and " +
-  "proves every on-screen number before it airs.";
+  "checks every number the crew says or captions before it airs.";
 
 /** Two heroes, so the card offers two pairs of eyes. */
 function twoHeroes() {
@@ -218,6 +218,18 @@ describe("the pre-match line-up", () => {
     expect(page.querySelector('[role="dialog"]')).toBeNull();
     const { INTRO_MS } = (await import("./LineupCard")) as { INTRO_MS?: number };
     expect(INTRO_MS).toBe(5000);
+  });
+
+  it("tells a screen reader that it closes by itself and that Tab keeps it open", () => {
+    const page = mount(offline());
+    const dialog = page.querySelector<HTMLElement>('[role="dialog"]')!;
+    const note = document.getElementById(dialog.getAttribute("aria-describedby") ?? "");
+    expect(note?.textContent).toMatch(/closes by itself/);
+    expect(note?.textContent).toMatch(/Tab/);
+    expect(note?.classList.contains("sr-only")).toBe(true); // the countdown line shows it
+    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    expect(intro.get().open).toBe(true);
+    expect(dialog.hasAttribute("aria-describedby")).toBe(false); // it no longer closes by itself
   });
 
   it("closes on a click anywhere that is not a button", () => {
