@@ -8,6 +8,15 @@ Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
 Status: **deployed on Azure (M3)** — the sim, analytics, explain layer (moments, lenses, verified
 claims), the agent crew and the web replay run end to end, live; see [docs/SPEC.md](docs/SPEC.md) §8–9.
 
+**How this differs from FIFA AI Pro.** FIFA AI Pro, the assistant Lenovo built with FIFA for the
+2026 World Cup teams, answers *what happened*, from statistics, before and after a match, and
+labels its answers "validated". We answer *what he saw and what he believed*, while the synthetic
+match streams live. Every number in the captions and narration is a verified claim that a viewer
+can open and challenge with **Try a wrong number**, and every "What if…?" is re-simulated in the
+sim, not estimated. Lenovo's figures for its Referee View, an AI-stabilised referee body camera,
+show that fans want first person; it shows what a camera captured, we show what the player
+perceived. Sources: [docs/REFERENCES.md](docs/REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026).
+
 ## For judges: try it in 3 minutes
 A simulated match with fictional players; no login. Each link opens the live site on Azure (the
 players take a few seconds to load). URL parameters: [web/README.md](web/README.md#url-parameters).
