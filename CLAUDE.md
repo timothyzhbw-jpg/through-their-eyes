@@ -134,13 +134,19 @@ _Fill in as they come to exist._
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
-- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio)
+- `uv run python -m agents.mcp_server --seed 3` — the MCP tool server (stdio); `--match 1` or
+  `--recap <evidence file>` serves the end-of-match recap's tools instead
+- `uv run python -m agents.recap --seed 1 --offline` — the end-of-match recap of stitched match 1
+  (SPEC 6): the crew on the whole match, written to `out/recap_match1.json`; without
+  `--offline` it uses Foundry, `--mcp` gives the Analyst the recap's MCP tools, `--down
+  narration` takes steps down (no model calls for them)
 - `uv run --env-file .env python -m agents.whatif --seed 3 "What if he had played it back to the
   centre-back?"` — answer a what-if question by re-simulating with `force_action` (SPEC 3.7, 6);
   Foundry maps the question when `FOUNDRY_*` is set, `--offline` uses the rule parser only
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
-  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`
+  `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo

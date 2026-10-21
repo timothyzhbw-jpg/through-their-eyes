@@ -177,9 +177,24 @@ def test_the_model_crew_picks_the_moments_the_reel_and_the_stats(rc):
     assert r.stats == ["passes_home"]  # the card shows the stats the Analyst picked
     (script,) = r.scripts
     texts = [line.text for line in script.payload.lines]
-    # The two voices interleave, as in a breakdown: play-by-play, co-commentator, play-by-play.
-    assert texts[0] == "Full time: Home 0, Away 0." and texts[1].startswith("Home completed")
-    assert texts[2].startswith("Let's go back. ")
+    # In the recap's order, whichever voice said it: the result, the moments, the stats.
+    assert texts[0] == "Full time: Home 0, Away 0." and texts[-1].startswith("Home completed")
+    assert texts[1].startswith("Let's go back. ")
+
+
+def test_the_voices_lines_air_in_the_recaps_order(rc):
+    """A moment told by both voices keeps its play-by-play line first, even when only the
+    co-commentator speaks about an earlier moment (the voices interleave line by line)."""
+    r = _recap(rc, personas=("casual",), languages=("en",), down=("narration",))
+    (script,) = r.scripts
+    order = {m.id: k for k, m in enumerate(r.moments)}
+    told = [rc.moment_of(line.claims[0]) for line in script.payload.lines if line.claims]
+    groups = [order[m.id] for m in told if m is not None]
+    assert groups == sorted(groups)
+    texts = [line.text for line in script.payload.lines]
+    seen = next(i for i, t in enumerate(texts) if "he saw H9" in t)
+    assert "Without that look" in texts[seen + 1]
+    assert [line.id for line in script.payload.lines] == [f"L{n + 1}" for n in range(len(texts))]
 
 
 def test_a_director_reply_outside_the_candidates_falls_back_to_the_template(rc, offline):

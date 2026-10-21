@@ -238,8 +238,7 @@ export function createRecap(options: RecapOptions): Recap {
   const script = (): RecapScript | null => {
     const { response, persona, language } = state.get();
     return (
-      response?.result.scripts.find((s) => s.persona === persona && s.language === language) ??
-      null
+      response?.result.scripts.find((s) => s.persona === persona && s.language === language) ?? null
     );
   };
 
@@ -322,6 +321,8 @@ export function createRecap(options: RecapOptions): Recap {
       autoSlow: false, // the cue sheet times the clips at their own speed
       mode: "factual",
       frame: first ? Number(first.data.match_frame_in) : p.frame,
+      focus: "broadcast", // the result over the broadcast picture
+      camera: "broadcast",
     });
     state.set({ reel: null });
     show(0);

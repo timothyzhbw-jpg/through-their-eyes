@@ -50,7 +50,12 @@ export function recapFixture(
   const claims = {
     final_score: { kind: "observed", values: { home: 1, away: 0 }, evidence: [], seek: null },
     "k2.seen_in_scan": { kind: "computed", values: {}, evidence: [scan.id], seek: scan.frame },
-    "k3.bypassed": { kind: "observed", values: { n: 3 }, evidence: [], seek: lineBreak.anchor_frame },
+    "k3.bypassed": {
+      kind: "observed",
+      values: { n: 3 },
+      evidence: [],
+      seek: lineBreak.anchor_frame,
+    },
     "k1.heavy_pressure": { kind: "computed", values: {}, evidence: [], seek: press.anchor_frame },
     passes_home: { kind: "observed", values: { done: 30, passes: 34 }, evidence: [], seek: null },
   } as const;
@@ -99,7 +104,11 @@ export function recapFixture(
     speed: 1,
     camera,
   });
-  const clips = [clipOf(hero, "broadcast"), clipOf(lineBreak, "tactical"), clipOf(press, "broadcast")];
+  const clips = [
+    clipOf(hero, "broadcast"),
+    clipOf(lineBreak, "tactical"),
+    clipOf(press, "broadcast"),
+  ];
   const cue = (id: string, type: string, t: number, until: number, extra: object = {}) => ({
     id,
     type,
@@ -112,9 +121,18 @@ export function recapFixture(
     ...extra,
   });
   const caption = (id: string, line: (typeof lines)[number], t: number, until: number) =>
-    cue(id, "caption", t, until, { line: line.id, speaker: "pbp", text: line.text, claims: line.claims });
+    cue(id, "caption", t, until, {
+      line: line.id,
+      speaker: "pbp",
+      text: line.text,
+      claims: line.claims,
+    });
   const cues = [
-    cue("q1", "score_bug", 0, 10, { text: text.S, claims: ["final_score"], data: { home: 1, away: 0, state: "full_time" } }),
+    cue("q1", "score_bug", 0, 10, {
+      text: text.S,
+      claims: ["final_score"],
+      data: { home: 1, away: 0, state: "full_time" },
+    }),
     caption("q2", lines[0], 0.4, 2),
     ...clips.flatMap((c, k) => {
       const t = 2 + 2 * k;
@@ -133,13 +151,24 @@ export function recapFixture(
         cue(`q${4 + 3 * k}`, "moment_title", t, t + 1.5, {
           moment: c.moment,
           text: [text.K1, text.K2, text.K3][k],
-          data: { kind: c.moment.split(":")[1], actor: "H8", receiver: null, lens: null, rank: k + 1 },
+          data: {
+            kind: c.moment.split(":")[1],
+            actor: "H8",
+            receiver: null,
+            lens: null,
+            rank: k + 1,
+          },
         }),
         caption(`q${5 + 3 * k}`, lines[k + 2], t + 0.4, t + 2),
       ];
     }),
     caption("q12", lines[5], 8.4, 10),
-    cue("q13", "stat", 8, 10, { line: "T1", text: text.T1, claims: ["passes_home"], data: { done: 30, passes: 34 } }),
+    cue("q13", "stat", 8, 10, {
+      line: "T1",
+      text: text.T1,
+      claims: ["passes_home"],
+      data: { done: 30, passes: 34 },
+    }),
   ];
   const voice = lines.map((line) => ({
     line: line.id,
@@ -168,8 +197,21 @@ export function recapFixture(
     capped: patch.capped ?? false,
     source: patch.source ?? "offline",
     result: {
-      request: { match: MATCH, moments: clips.map((c) => c.moment), personas: [persona], languages: [language], priority: "high", reason: "Template." },
-      findings: { match: MATCH, moments: clips.map((c) => c.moment), headline: ["final_score"], supporting: ["passes_home"], angle: "The match." },
+      request: {
+        match: MATCH,
+        moments: clips.map((c) => c.moment),
+        personas: [persona],
+        languages: [language],
+        priority: "high",
+        reason: "Template.",
+      },
+      findings: {
+        match: MATCH,
+        moments: clips.map((c) => c.moment),
+        headline: ["final_score"],
+        supporting: ["passes_home"],
+        angle: "The match.",
+      },
       score: { home: 1, away: 0 },
       moments: [
         moment(hero, 2, "decision_after_scan"),
@@ -195,14 +237,16 @@ export function recapFixture(
           cues: { version: 1, match: MATCH, persona, language, fps: 25, duration_s: 10, cues },
         },
       ],
-      trace: ["director", "analyst", "telestrator", "narration", "verifier", "voice"].map((step) => ({
-        step,
-        source: ["verifier", "voice"].includes(step) ? "code" : "template",
-        attempts: 0,
-        ms: 0,
-        error: null,
-        notes: [],
-      })),
+      trace: ["director", "analyst", "telestrator", "narration", "verifier", "voice"].map(
+        (step) => ({
+          step,
+          source: ["verifier", "voice"].includes(step) ? "code" : "template",
+          attempts: 0,
+          ms: 0,
+          error: null,
+          notes: [],
+        }),
+      ),
       total_ms: 12,
     },
   };

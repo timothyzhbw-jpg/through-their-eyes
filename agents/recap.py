@@ -486,6 +486,34 @@ def narration(
     return [(who, line) for who, line in out if speaker is None or who == speaker]
 
 
+def story_order(rc: RecapContext, lines: list[ScriptLine]) -> list[ScriptLine]:
+    """The two voices' lines in the recap's order: the result, then each key moment in match
+    order (play-by-play before co-commentator), then the stats. The voices interleave line by
+    line, which pairs lines of different moments when only one voice tells a moment. A
+    connective goes with the line after it. Ids are numbered again in the new order."""
+    order = {m.id: k for k, m in enumerate(rc.moments, start=1)}
+
+    def group(line: ScriptLine) -> int | None:
+        if not line.claims:
+            return None
+        m = rc.moment_of(line.claims[0])
+        if m is not None:
+            return order.get(m.id, len(order) + 1)
+        return 0 if line.claims[0] == "final_score" else len(order) + 1
+
+    groups: list[int] = []
+    for line in reversed(lines):  # a connective takes the group of the line after it
+        g = group(line)
+        groups.append(g if g is not None else (groups[-1] if groups else len(order) + 1))
+    groups.reverse()
+    rank = {"pbp": 1, "color": 2}
+    keyed = sorted(
+        range(len(lines)),
+        key=lambda i: (groups[i], 0 if not lines[i].claims else rank[lines[i].speaker], i),
+    )
+    return [lines[i].model_copy(update={"id": f"L{n}"}) for n, i in enumerate(keyed, start=1)]
+
+
 def card_stats(rc: RecapContext, findings: RecapFindings) -> list[str]:
     """The match stats on the card: the ones the Analyst picked, else all of them."""
     picked = [c for c in dict.fromkeys(findings.headline + findings.supporting)
@@ -784,6 +812,10 @@ class RecapNarration(Narration):
     def template(self, persona, language, speaker=None):
         return narration(self.crew.ctx, persona, language, speaker)
 
+    async def _script(self, base, key):
+        lines, attempts = await super()._script(base, key)
+        return story_order(self.crew.ctx, lines), attempts
+
 
 class RecapVerifier(Verifier):
     def payload(self, persona, language, kept):
@@ -851,11 +883,13 @@ async def run_recap(
     step_timeout_s: float = DEFAULT_TIMEOUT_S,
     use_mcp: bool = False,
     voice_styles: dict[str, set[str]] | None = None,
+    down: tuple[str, ...] = (),
 ) -> RecapResult:
-    """The recap of the match: the crew's workflow with the recap's steps."""
+    """The recap of the match: the crew's workflow with the recap's steps. `down`: agent steps
+    taken down for this run, as in the failure drill (no model call for them)."""
     run = await run_crew(rc, client=client, personas=personas, languages=languages,
                          step_timeout_s=step_timeout_s, use_mcp=use_mcp,
-                         voice_styles=voice_styles, story=RECAP)  # fmt: skip
+                         voice_styles=voice_styles, down=down, story=RECAP)  # fmt: skip
     return run.result
 
 
@@ -876,7 +910,7 @@ async def main_async(args: argparse.Namespace) -> Path:
         result = await run_recap(
             rc, client=client, personas=tuple(args.personas.split(",")),
             languages=tuple(args.languages.split(",")), step_timeout_s=args.timeout,
-            use_mcp=args.mcp,
+            use_mcp=args.mcp, down=tuple(d for d in args.down.split(",") if d),
         )  # fmt: skip
     finally:
         if close is not None:
@@ -909,6 +943,7 @@ def main() -> None:
     parser.add_argument("--timeout", type=float, default=8.0, help="seconds per agent step")
     parser.add_argument("--offline", action="store_true", help="templates only, no model calls")
     parser.add_argument("--mcp", action="store_true", help="the Analyst uses the MCP tool server")
+    parser.add_argument("--down", default="", help="agent steps to take down, e.g. narration")
     asyncio.run(main_async(parser.parse_args()))
 
 
