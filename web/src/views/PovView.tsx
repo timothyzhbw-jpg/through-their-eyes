@@ -186,7 +186,10 @@ function PovScene() {
       now,
       reduced: motion.get().reduced,
     });
-    [fog.near, fog.far] = FOG[s.camera];
+    // The shared look hazes the broadcast camera's far side as the Blender shots do.
+    [fog.near, fog.far] = featuresOf(quality.get().tier, false).look
+      ? LOOK.fog[s.camera]
+      : FOG[s.camera];
     if (broadcast) {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
@@ -343,17 +346,22 @@ function PovScene() {
 
 /** The apron, the marked pitch and the goals. The capture renderer films the same ground. */
 export function Ground() {
-  // With the shared look (quality/) the grass is matte: a low camera would otherwise see mostly
-  // its sheen, which greys the stripes. It never takes image-based light.
+  // With the shared look (quality/) the grass is tinted towards the Blender shots' green, per
+  // camera (a multiplier on the stripes, so the kits and the rim are untouched), with a hint of
+  // sheen. It never takes image-based light.
+  const { playback } = useView();
   const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  const pitch = useRef<THREE.MeshPhysicalMaterial>(null);
+  useFrame(() => {
+    if (look) pitch.current?.color.fromArray(LOOK.grassTint[playback.get().camera]);
+  });
   return (
     <>
       <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
         <planeGeometry args={[130, 92]} />
         {look ? (
           <meshPhysicalMaterial
-            color="#173826"
-            roughness={0.9}
+            color={LOOK.apron}
             specularIntensity={LOOK.grassSpecular}
             envMapIntensity={0}
           />
@@ -365,8 +373,8 @@ export function Ground() {
         <planeGeometry args={[PITCH.length, PITCH.width]} />
         {look ? (
           <meshPhysicalMaterial
+            ref={pitch}
             map={getPitchTexture()}
-            roughness={0.9}
             specularIntensity={LOOK.grassSpecular}
             envMapIntensity={0}
           />

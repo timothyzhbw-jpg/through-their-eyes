@@ -47,12 +47,22 @@ export function lookOutput(pass: { material: THREE.ShaderMaterial }): void {
 export const LOOK = {
   toneMapping: THREE.CustomToneMapping, // AgX and the black floor, above
   exposure: 0.8,
-  grassSpecular: 0.06, // a hint of sheen: matte grass reads too saturated from above
+  // The grass: the stripes multiplied towards the Blender shots' lit stripe (32, 62, 42): G/R 1.8–2
+  // and luma 50–56 from every camera. Grass only, so the kits and the rim stay where they are.
+  // A linear multiplier on the stripes, per camera: from above the lit grass reads about 1.2×
+  // greener than from eye height, so the broadcast camera's is a little stronger.
+  grassTint: {
+    pov: [1.22, 0.86, 0.95],
+    broadcast: [1.34, 0.82, 0.95],
+  } as Record<"pov" | "broadcast", [number, number, number]>,
+  fog: { pov: [45, 120], broadcast: [80, 280] } as Record<"pov" | "broadcast", [number, number]>,
+  grassSpecular: 0.06, // a hint of sheen: a low camera would otherwise see mostly sheen
+  apron: "#1a3027", // the apron round the pitch, tinted the same way
   rim: { color: "#fff2d8", strength: 0.55, power: 2.5 }, // the floodlights' warm white
-  crowdTint: "#b4bcc8", // multiplies the crowd's shirts: neutral-cool, no team-colour flashes
+  crowdTint: "#c6beb8", // multiplies the crowd's shirts: neutral, a touch cool (B−R +3..+5)
   crowdGrey: 0.75, // how far every shirt is pulled to the crowd grey (classic: 0.45 for colours)
   // The night sky as authored before the curve: AgX's toe would crush the classic #04070c.
-  sky: { zenith: "#0d131b", horizon: "#202c36" },
+  sky: { zenith: "#10141a", horizon: "#252c31" },
   starShadow: 0.27, // each of the three fill masts' shadows (25–35 %)
   keyShadow: 0.34, // the key mast's (+x, +y): the fills are at 0.75 of the key
   shadowTipWidth: 0.9, // m at the tip; 0.5 m (the shoulders) at the feet

@@ -1753,7 +1753,12 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
 - [x] *Render tiers:* tier detection, link and viewer precedence, one look at every new tier with
       fidelity-only differences, depth of field only through the beat on the broadcast camera and
       never under reduced motion, the rim patch on and off, the automatic step-down; each tier
-      holds 60 fps; first load no heavier. *Open:* the art director's review of the look.
+      holds 60 fps; first load no heavier; the look on the art director's shared targets
+      (`~/tte-blender/renders/review/app_v2_*`): black floor 5,8,6; first-person stands luma 22
+      (B−R +5), sky luma 12; lit pitch 33,61,36 (G/R 1.84) from eye height and 31,62,39 (G/R 1.98)
+      from the broadcast camera, luma 53–54; coral G/R 0.50; top and low tiers within one level.
+      `npm run fps` with the look (2026-10-21, M4 Pro, Metal): high and low 57.8–60.0 fps at
+      1080p; medium on the phone profile 60.0. *Open:* the art director's sign-off on app_v2.
       — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts),
       [look.test.ts](../web/src/quality/look.test.ts);
       `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;
