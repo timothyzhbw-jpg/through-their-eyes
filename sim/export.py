@@ -321,6 +321,10 @@ def _match_event(e: Event, p: Possession) -> dict[str, Any]:
     attrs = dict(e.attrs)
     if isinstance(attrs.get("end"), int):  # pass, scan and head-turn ends are frames
         attrs["end"] += p.start
+    if e.type in ("shot", "dive") and isinstance(attrs.get("seen"), int):
+        attrs["seen"] += p.start
+    if e.type == "save" and isinstance(attrs.get("shot"), str):  # a local event id
+        attrs["shot"] = global_id(attrs["shot"], p.start)
     lifted = {"id": global_id(e.id, p.start), "type": e.type, "frame": e.frame + p.start,
               "player": e.player, "attrs": attrs, "possession": p.index}  # fmt: skip
     return _plain(lifted)
