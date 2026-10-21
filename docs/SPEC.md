@@ -1403,6 +1403,17 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - *Extra motion (2026-10-21, Bowen approved the sources):* motion capture from the CMU
+    database, retargeted onto the same skeleton (which is unchanged) and shipped as an
+    animations-only GLB (`web/public/models/anims_extra.glb`, ~20 KB; sources, terms and the
+    acknowledgement in its README). A kick (`pass_short`) replaces the standing pass, its ball
+    contact on the pass event, in place, with the planted foot held still. At every sim `scan`
+    a shoulder check turns the trunk with the look, as an additive layer timed to the head's
+    turn (out, hold, back) and sized by how far the head turns from the body; it counts towards
+    the trunk's share of the look, so a look past 80° turns the trunk no further than before.
+    The head still points exactly along `head_yaw`. On by default; `?anims=base` turns it off;
+    under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
+    and not used.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -1592,6 +1603,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Extra motion (mocap kick, shoulder checks):* the GLB binds every track to a bone of the
+      model without changing its joint frames; the kick plays at each pass event with its contact
+      on the event's frame and the kick along the pass; the shoulder check plays only during the
+      sim's scans, on the side the head turns, phased by the head; the head stays on `head_yaw`
+      (< 1e-3 rad) for every player; the feet stay on the ground; poses are history-free; reduced
+      motion drops the checks; fps unchanged.
+      — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts); `npm run fps` and
+      `npm run fps -- --anims base` alternating (2026-10-21, Apple M4 Pro, headless, 1920 × 1080):
+      60 fps capped in every row either way, median 16.7 ms, p95 16.7–16.8 ms.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.

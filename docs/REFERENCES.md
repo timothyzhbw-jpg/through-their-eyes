@@ -305,6 +305,9 @@ printed range, or a shape only. It also says how far the source was read.
 | unravelsports | MPL | optional, unmodified only; Python 3.11 only |
 | Python-RVO2 | Apache-2.0 | optional collision avoidance; only tested on old Python versions |
 | google-research/football | Apache-2.0; `third_party/gfootball_engine` (Gameplay Football, Bastiaan Konings Schuiling) is under the Unlicense, with no separate notice on its assets (checked 2026-10-19) | engine not used (C++ build risk). *Stretch trial (SPEC §7):* player models, skeleton, kit template and animations from `gfootball_engine/data/media`; not the ad-board or stadium textures; credit the original author anyway |
+| CMU Graphics Lab Motion Capture Database ([mocap.cs.cmu.edu](https://mocap.cs.cmu.edu/)) | free for all uses; may be included in commercially sold products; not resold directly, even converted; acknowledgement requested (checked 2026-10-21 on the official site) | **use**, animation only: trials 10_02 (a kick) and 139_04 (looking around), retargeted into `web/public/models/anims_extra.glb` (SPEC §7). Official site only: not the third-party mirrors (4TU, CC BY-NC; Kaggle, CC BY-ND). Lab motion capture, not match data |
+| Quaternius Universal Animation Library 1, free "Standard" pack | CC0 1.0 (`License.txt` in the zip, and the itch.io page; checked 2026-10-21) | evaluated 2026-10-21 (walk, jog, sprint retargeted onto the rigged player), **not used**: the jog crouches deep every step, the sprint is no better than the engine's |
+| 100STYLE, Mixamo | licence unconfirmed / Adobe terms | **not used** |
 | PitchAura | GPL-3.0 | **do not use** (copyleft) — ideas only |
 | LaurieOnTracking | no license found | **do not copy** — reimplement from papers |
 | SoccerMaster | weights Apache-2.0; code repo has no LICENSE file; bundles YOLOv8 (AGPL) | **not in submission** |
