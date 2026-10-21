@@ -6,8 +6,9 @@
 //
 // It never delays the first frame: the procedural stadium draws first, the file is fetched at low
 // priority once the canvas has drawn and the page is idle, and the baked one is swapped in when it
-// is ready. If it fails to load, the procedural stadium stays. It is the default;
-// `?stadium=procedural` keeps the procedural one.
+// is ready. If it fails to load, the procedural stadium stays. It is the default except on
+// Data Saver, a connection slower than 4G or a device with under 4 GB of memory;
+// `?stadium=procedural` or `?stadium=baked` decides.
 //
 // Everything in the file but the grass is unlit: the light is in its textures and vertex colours.
 // The players and the grass stay lit by the scene's lights. By material name:
@@ -31,9 +32,22 @@ export type StadiumMode = "baked" | "procedural";
 /** The baked stadium is the default (compared 2026-10-21: richer, no slower to load, same fps). */
 export const DEFAULT_STADIUM: StadiumMode = "baked";
 
-export function stadiumFromSearch(search: string): StadiumMode {
+/** What the browser says about the visitor's connection and device (absent outside Chrome). */
+export interface DeviceHints {
+  saveData?: boolean;
+  effectiveType?: string; // "slow-2g" | "2g" | "3g" | "4g"
+  deviceMemory?: number; // GB, rounded down
+}
+
+/** `?stadium=` decides when given. Otherwise the baked stadium, unless the visitor saves data,
+ * is on a connection slower than 4G or has under 4 GB of memory: their 0.8 MB and ~20 MB of
+ * GPU memory go to the procedural stadium instead. */
+export function stadiumFromSearch(search: string, hints: DeviceHints = {}): StadiumMode {
   const v = new URLSearchParams(search).get("stadium");
-  return v === "baked" || v === "procedural" ? v : DEFAULT_STADIUM;
+  if (v === "baked" || v === "procedural") return v;
+  const slow = hints.effectiveType !== undefined && hints.effectiveType !== "4g";
+  const small = hints.deviceMemory !== undefined && hints.deviceMemory < 4;
+  return hints.saveData || slow || small ? "procedural" : DEFAULT_STADIUM;
 }
 
 /** Light stored in the ground's map is the light divided by this (headroom above the pitch). */
@@ -62,7 +76,15 @@ export const stadium = createStore<{ mode: StadiumMode; status: Status; model: B
 
 function modeFromUrl(): StadiumMode {
   try {
-    return stadiumFromSearch(window.location.search);
+    const nav = navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+      deviceMemory?: number;
+    };
+    return stadiumFromSearch(window.location.search, {
+      saveData: nav.connection?.saveData,
+      effectiveType: nav.connection?.effectiveType,
+      deviceMemory: nav.deviceMemory,
+    });
   } catch {
     return DEFAULT_STADIUM;
   }
@@ -346,7 +368,11 @@ export function dress(scene: THREE.Group, textures: AppTextures): BakedModel {
         mesh.material = shared(old.name, () => vertexColourMaterial({ side: THREE.DoubleSide }));
         break;
       case "lamp":
-        mesh.material = shared(old.name, () => new THREE.MeshBasicMaterial({ color: lamp }));
+        mesh.material = shared(old.name, () => {
+          const m = new THREE.MeshBasicMaterial({ color: lamp });
+          m.userData.lamp = true; // the lamp faces: a high quality tier may scale them for bloom
+          return m;
+        });
         break;
       case "strip":
         mesh.material = shared(

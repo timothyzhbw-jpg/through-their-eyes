@@ -379,6 +379,14 @@ describe("loading the baked stadium", () => {
     expect(stadiumFromSearch("")).toBe("baked");
     expect(stadiumFromSearch("?stadium=procedural")).toBe("procedural");
     expect(stadiumFromSearch("?stadium=nonsense")).toBe("baked");
+    expect(stadiumFromSearch("", { effectiveType: "4g", deviceMemory: 8 })).toBe("baked");
+  });
+
+  it("is skipped on Data Saver, a slow connection or a small device, unless asked for", () => {
+    for (const hints of [{ saveData: true }, { effectiveType: "3g" }, { deviceMemory: 2 }]) {
+      expect(stadiumFromSearch("", hints)).toBe("procedural");
+      expect(stadiumFromSearch("?stadium=baked", hints)).toBe("baked");
+    }
   });
 
   it("waits for the first frame, then a second and an idle moment, at low priority", async () => {
@@ -450,6 +458,7 @@ describe("loading the baked stadium", () => {
     for (const m of meshes) expect(m.material).toBeInstanceOf(THREE.MeshBasicMaterial);
     expect(meshes[0].material).toMatchObject({ map: expect.any(THREE.Texture) }); // the stands
     expect(meshes[1].material).toMatchObject({ vertexColors: true, alphaTest: 0.5 }); // crowd
+    expect((meshes[3].material as THREE.Material).userData.lamp).toBe(true); // the lamp faces
     expect(model.groundLight).toBe(light.map);
   });
 });

@@ -1459,9 +1459,10 @@ original visual identity.
     is evenly lit (5th percentile 0.78 of the median). Everything but the grass is unlit; the
     grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
     geometry, WebP textures.
-  - It is the default. It is fetched at low priority a second after the first frame, once the
-    page is idle, and swapped in when ready; if it fails to load, the procedural stadium stays.
-    `?stadium=procedural` keeps the procedural one. Capture (`?cine=1`) is ready only once the
+  - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of
+    memory (the browser's hints; Safari gives none). It is fetched at low priority a second
+    after the first frame, once the page is idle, and swapped in when ready; if it fails to load,
+    the procedural stadium stays. `?stadium=procedural` or `?stadium=baked` decides. Capture (`?cine=1`) is ready only once the
     stadium has settled, so a shot never cuts between the two. The bpy scripts stay outside the repo (Blender is
     GPL); only their output is committed (`web/public/models/README.md`).
 - **Cameras:**
