@@ -75,13 +75,13 @@ const PAGES = [
     name: "phone-hero",
     path: "?intro=0",
     device: PHONE,
-    check: (p, _, note) => phone(p, hero, note),
+    check: (p) => phone(p, hero),
   },
   {
     name: "phone-match-1",
     path: "?match=match-1&intro=0",
     device: PHONE,
-    check: (p, _, note) => phone(p, match, note),
+    check: (p) => phone(p, match),
   },
 ];
 
@@ -153,16 +153,20 @@ async function lineup(page, shoot, button, then) {
   await then(page);
 }
 
-/** At 375 px the page should scroll only up and down. On main it does not yet (the live screen's
- * header is wider than a phone), so a sideways scroll is a note, not a failure, until the layout
- * is fixed; then it should fail the page. */
-async function phone(page, check, note) {
+/** At 375 px the page scrolls only up and down: a page wider than the screen fails. Before the
+ * live screen's header was fitted to a phone, the hero was 436 px wide and match-1 594 px while
+ * streaming. The width is read until the page has settled, since the stream's status and the match
+ * picker can change it after the checks pass. */
+async function phone(page, check) {
   await check(page);
-  const [wide, width] = await page.evaluate(() => [
-    document.documentElement.scrollWidth,
-    document.documentElement.clientWidth,
-  ]);
-  if (wide > width) note(`scrolls sideways: ${wide} px wide in ${width} px`);
+  for (const end = Date.now() + SETTLE; ; await page.waitForTimeout(250)) {
+    const [wide, width] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    if (wide > width) throw new Error(`scrolls sideways: ${wide} px wide in ${width} px`);
+    if (Date.now() >= end) return;
+  }
 }
 
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */
@@ -256,7 +260,7 @@ async function health(url) {
 }
 
 /** Open one page in a fresh context; resolves to its console errors and uncaught exceptions, and
- * notes (on the screenshots, and what a page reports without failing). */
+ * notes on the screenshots. */
 async function visit(browser, base, page) {
   const context = await browser.newContext(page.device ?? DESKTOP);
   context.setDefaultTimeout(TIMEOUT);
@@ -301,7 +305,7 @@ async function visit(browser, base, page) {
   };
   try {
     await tab.goto(new URL(page.path, base).href);
-    const checks = page.check(tab, shoot, (n) => notes.push(n));
+    const checks = page.check(tab, shoot);
     checks.catch(() => {}); // left behind if the page throws first
     await Promise.race([checks, thrown]);
     await Promise.race([tab.waitForTimeout(SETTLE), thrown]);
