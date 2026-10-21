@@ -323,6 +323,30 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 
   ([hero_lens_press_escape_100-139.md](../eval/reports/hero_lens_press_escape_100-139.md)).
   `blind_side_run` is unchanged where it matters: 39/40 flips, its seed 3 byte for byte.
 
+**Cutback hero (`cutback_scan`, 2026-10-21).** A cheap extra of the hero expansion pack
+([drafts/hero_expansion.md](drafts/hero_expansion.md) §7): the scan story from the winger, with no
+new mechanism.
+- **The play.** The home team attacks +x down the right. H2 releases H7 at the byline, about
+  (47.8, −17.8). H9 attacks the near post, tightly marked by A5. H8 arrives late toward the
+  penalty spot, about (40.5, −2), because A8 has followed the ball instead of tracking him. The
+  rest of the away back line protects the goal and the far post; two home centre-backs and a
+  holding midfielder stay behind the attack.
+- **Key action and intervention.** H7's look into the box just before he decides is the key scan;
+  the intervention is `drop_scan`. Both passes are ground passes, and H7 chooses on his belief.
+- **Hero design rule.** An early look shows H8 beside A8 outside the box. H8's run then happens
+  behind H7's field of view, so only the key scan shows him free.
+- **Acceptance** (`eval/hero_flip.py --scenario cutback_scan`; designed on seeds 0–39, held-out
+  100–139): dropping the key scan changes H7's decision in 38/40 (95%, target ≥ 60%: met; 34/40
+  on the design seeds). With the look he cuts the ball back to H8 in 38/40, and all 38 are
+  completed; mean ΔxT +0.233 on the fitted xT grid (§4; +0.092 on the prior). Without it he
+  carries (32) or shoots from the angle (8): the near-post ball to the marked H9 that the design
+  expected never wins. Report: [hero_flip_cutback_scan.md](../eval/reports/hero_flip_cutback_scan.md).
+  On the same seeds `eval/hero_lens.py` selects `scan` 38/40 (median margin over the next lens
+  0.20 xT, 0.10 on the prior; [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
+  ([tests/test_cutback_scan.py](../tests/test_cutback_scan.py), design seeds): the design rule,
+  role speed and acceleration limits, and at least 0.7 m between every pair of players before H7
+  acts.
+
 **Set-piece hero (`corner_blind_side`, 2026-10-20).** The first moment of the hero expansion pack
 ([drafts/hero_expansion.md](drafts/hero_expansion.md), C4). It is the same perception story from
 the defending side.
