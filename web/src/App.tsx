@@ -61,7 +61,11 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   }, [yourCall]);
   useEffect(() => {
     if (wasTakeEyes.current && !takeEyes) {
-      document.getElementById("take-eyes-open")?.focus({ preventScroll: true });
+      // The header pill, or on a phone (no pill there) the moment's own button.
+      const pill = document.getElementById("take-eyes-open");
+      const shown = pill && getComputedStyle(pill).display !== "none";
+      const opener = shown ? pill : document.getElementById("take-eyes-story");
+      opener?.focus({ preventScroll: true });
     }
     wasTakeEyes.current = takeEyes;
   }, [takeEyes]);
@@ -169,6 +173,7 @@ function StoryCta() {
       )}
       {!te.unavailable && (
         <button
+          id="take-eyes-story"
           type="button"
           className="btn"
           title="Choose when and where he looks; the sim re-runs the moment"

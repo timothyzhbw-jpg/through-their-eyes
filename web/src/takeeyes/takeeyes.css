@@ -9,6 +9,13 @@
 .stage-head .te-open {
   background: rgba(8, 14, 11, 0.55);
 }
+/* a phone's live screen header has no room for a third pill: the moment's own button below opens
+   it; inside the mode the pressed pill is the header's only control and stays */
+@media (max-width: 880px) {
+  .stage-head .te-open[aria-pressed="false"] {
+    display: none;
+  }
+}
 
 .takeeyes {
   position: absolute;
@@ -162,7 +169,7 @@
 /* the timeline: from the pass to him to his decision */
 .te-timeline {
   position: relative;
-  padding: 40px 34px 16px;
+  padding: 56px 34px 16px;
   border-top: 1px solid var(--hairline);
 }
 .te-track {
@@ -192,15 +199,25 @@
 .te-track .te-own {
   color: var(--floodlight);
 }
-/* the ball arrives a few frames before he decides: the decision's label goes on a row of its own,
-   ending at its tick */
-.te-track .te-mark.decide {
-  bottom: 20px;
+/* three rows, so close marks never collide: his own looks, the ball's arrival, his decision (a few
+   frames after it). The last two end at their ticks. */
+.te-track .te-mark {
   transform: translateX(-100%);
 }
-.te-track .te-mark.decide::after {
+.te-track .te-mark::after {
   left: 100%;
-  height: 22px;
+}
+.te-track .te-mark.arrive {
+  bottom: 22px;
+}
+.te-track .te-mark.arrive::after {
+  height: 24px;
+}
+.te-track .te-mark.decide {
+  bottom: 36px;
+}
+.te-track .te-mark.decide::after {
+  height: 38px;
 }
 .te-times {
   position: relative;
@@ -358,7 +375,7 @@
     width: 42%;
   }
   .te-timeline {
-    padding: 26px 26px 12px;
+    padding: 56px 26px 12px;
   }
   .te-time {
     min-width: 40px;
