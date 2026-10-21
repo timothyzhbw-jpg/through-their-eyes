@@ -1,10 +1,11 @@
 """The live ingest stream (SPEC 2): a recorded synthetic match replayed at wall-clock speed.
 
-Messages, in order: `hello`; then per frame a `frame`, followed by the `event`s of that frame and
-the `moment`s whose window ends on it; finally `end`, with `full_time: true` when the stream
-reached the last frame (the web app's cue for the end-of-match recap). Live overlays (sprint
-tags, blind-side alerts) are computed ahead of time, so a frame costs no analytics at send
-time. A frame's
+Messages, in order: `hello`; then per frame a `frame`, followed by the `event`s of that frame, the
+`stat` cues whose value is final on it (SPEC 4.6) and the `moment`s whose window ends on it;
+finally `end`, with `full_time: true` when the stream reached the last frame (the web app's cue
+for the end-of-match recap). Live overlays (sprint tags, blind-side alerts, stats) are computed
+ahead of time, so a frame costs no analytics at send time; a stat cue uses frames up to its own
+only. A frame's
 `blind_side` lists the alerts on as [observer, target, frames unseen] (player indices,
 SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
 `{"type": "seek", "f": 120}` (a frame of the match) or `{"type": "speed", "x": 2.0}` (clamped to
@@ -145,6 +146,10 @@ async def stream(
     moments: dict[int, list[dict]] = defaultdict(list)
     for card in match.cards:
         moments[card["frame_end"]].append(card)
+    stat_cues: dict[int, list[dict]] = defaultdict(list)
+    if match.stats is not None:
+        for cue in match.stats.snapshot().cues:
+            stat_cues[cue.frame].append(cue.model_dump(mode="json"))
 
     control = Control(speed=_speed(speed) or 1.0, frames=frames)  # NaN in the query: 1x
     listener = asyncio.create_task(_listen(ws, control))
@@ -170,6 +175,8 @@ async def stream(
                     await ws.send_json(_frame(match, run, f, dt))
                     for e in events.get(f, ()):
                         await ws.send_json({"type": "event", "event": e})
+                    for cue in stat_cues.get(f, ()):
+                        await ws.send_json({"type": "stat", "cue": cue})
                     for card in moments.get(f, ()):
                         await ws.send_json({"type": "moment", "card": card})
                     f += 1

@@ -119,6 +119,14 @@ _Fill in as they come to exist._
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
+  distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
+  only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
+  rewrites the viewer's parity fixture (a test fails when it is stale). The API serves them at
+  `GET /api/matches/<id>/stats` and as `stat` messages on the live stream
+- `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
+  passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
+  `eval/reports/pass_difficulty.md`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`

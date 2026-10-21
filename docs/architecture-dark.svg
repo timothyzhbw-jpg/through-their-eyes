@@ -135,7 +135,7 @@ text { fill: #e6eee9; }
 <path d="M495,664 V624" class="wire" marker-end="url(#head)"/>
 <rect x="330" y="664" width="290" height="140" rx="12" class="code"/>
 <text x="348" y="694" font-size="22" class="b"><tspan x="348" dy="0">MCP tool server</tspan></text>
-<text x="348" y="722" font-size="19" class="muted"><tspan x="348" dy="0">9 tools: moment, claims,</tspan><tspan x="348" dy="24">vision, pitch control, xT,</tspan><tspan x="348" dy="24">pressing, re-sim, what-if</tspan></text>
+<text x="348" y="722" font-size="19" class="muted"><tspan x="348" dy="0">10 tools: moment, claims,</tspan><tspan x="348" dy="24">stats, vision, pitch control,</tspan><tspan x="348" dy="24">xT, pressing, re-sim, what-if</tspan></text>
 <text x="348" y="792" font-size="18" class="mono c-code"><tspan x="348" dy="0">TTE_ANALYST_MCP</tspan></text>
 </g>
 <g id="verifier-detail">
