@@ -135,6 +135,14 @@ moment plays and the badge says why.
   counterfactual that forces an action. The run toggle and the ghost say "What he did" / "If he
   carried it", there is no key-scan jump or scan marker (the template plan watches the 2.4 s up
   to the decision instead), and the counterfactual ghost is the forced carry's ball path.
+- **A marker's look.** The set-piece hero (`corner_blind_side`) is a defender with a key scan and
+  no decision on the ball, so the export's `decision`, `action`, `possession_value` and
+  `delta_xt` are null. `Hero.marker` holds the man he marks, the pass to him and how far the
+  marker was from him when it resolved in each run; that frame anchors the moment, as on the
+  service's `marker_scan` card. The story tells his look and his man, the counterfactual cards
+  compare the two separations, the timeline marks "Ball arrives" instead of a decision, and the
+  look's worth is the verified `cf_value` claim when the narration airs it, else the scan lens's
+  delta from `/api/matches/<id>/moments` (marked "lens"), else nothing until the breakdown.
 
 ## Data
 
