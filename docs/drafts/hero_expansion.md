@@ -198,6 +198,10 @@ height is ignored).
 
 ## 2. C1 — the striker reads the keeper (`far_post_finish`)
 
+> **As built (2026-10-21): SPEC §3.3 (Module A) and §3.6 ("Shot hero") are authoritative,
+> including their "Deviations from the design plan".** Held out on fresh seeds 200–239: the
+> placement changes in 38/40, the median ΔP_goal is +0.524, and both v_dive ends give 38/40.
+
 ### 2.1 Setup (home attacks +x; hero H9, ST)
 - **Before the switch.** The ball starts with the left back H3 at (18, 24). The away keeper A1
   stands on the bisector, toward the post on that side: y ≈ +1.6…+2.2 (keyed jitter).

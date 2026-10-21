@@ -866,6 +866,10 @@ optgroup {
 .stage-head > * {
   pointer-events: auto;
 }
+/* an open viewer menu sits above the transport and the run switch (same layer, later in the page) */
+.stage-head:has(.viewer-panel) {
+  z-index: 7;
+}
 .brand {
   display: flex;
   flex-direction: column;
@@ -3203,6 +3207,74 @@ optgroup {
   }
   .free .btn {
     width: 100%;
+  }
+}
+
+/* On a phone the match picker gives way before it pushes the header off the screen. */
+@media (max-width: 760px) {
+  .header-start,
+  .header-start .match-picker {
+    min-width: 0;
+  }
+  .header-start .match-picker select {
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+}
+
+/* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
+   the stream label goes (the pill already says live), then the brand tightens, then the sound
+   button goes (the commentary panel keeps one). Inside a match the way back or the match picker
+   replaces the brand. */
+@media (max-width: 480px) {
+  .stage-head .live-status {
+    display: none;
+  }
+  .stage:has(.live-chip.back) .stage-head .brand,
+  .stage:has(.header-start .match-picker) .stage-head .brand {
+    display: none;
+  }
+  /* the story's big numbers shrink with the screen instead of running off it */
+  .numeral {
+    font-size: clamp(72px, 26vw, 120px);
+  }
+  /* a long claim tag wraps rather than widening the page */
+  .kind {
+    height: auto;
+    min-height: 22px;
+    padding-block: 3px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+}
+@media (max-width: 400px) {
+  .stage-head {
+    gap: 6px;
+  }
+  .brand h1 {
+    font-size: 18px;
+  }
+  .stage-head .live-chip {
+    padding: 0 10px;
+  }
+}
+@media (max-width: 359px) {
+  .header-end .sound {
+    display: none;
+  }
+}
+
+/* From 1181 px the run switch sits centred in the header row: the stream status takes its own line
+   under the Live pill, between the header row and the eyes row, so the two never meet. */
+@media (min-width: 1181px) {
+  .stage-head .live {
+    position: relative;
+  }
+  .stage-head .live-status {
+    position: absolute;
+    top: calc(100% + 13px);
+    left: 0;
+    white-space: nowrap;
   }
 }
 
