@@ -14,7 +14,13 @@ import { parseHero } from "../data/hero";
 import type { ExportEvent } from "../data/types";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
-import { createSession, SessionContext, type Session, type ViewSession } from "../session";
+import {
+  createSession,
+  SessionContext,
+  tickSession,
+  type Session,
+  type ViewSession,
+} from "../session";
 import { StageHud } from "../ui/Stage";
 import { Transport } from "../ui/Transport";
 import {
@@ -342,6 +348,11 @@ describe("live", () => {
     expect(session.playback.get()).toMatchObject({ camera: "pov", povPlayer: "H8", live: true });
     act(() => ws.push(frameMsg(16), momentMsg(HERO_MOMENT, 16)));
     await act(settle);
+    // The show first (the look, then the run without it: autoplay/), then the breakdown.
+    expect(session.comparison.status.get().phase).toBe("with");
+    for (let k = 0; k < 150 && session.runner.status.get().status !== "running"; k++) {
+      act(() => tickSession(session, 0.1));
+    }
     expect(session.runner.status.get().status).toBe("running");
   });
 

@@ -70,6 +70,23 @@ server-side). AI breakdowns run asynchronously once a moment is detected and are
 replay window (target p95 < 12 s), the way broadcast replays follow a goal. Live play never waits
 on an LLM.
 
+**The cold load** (a judge who opens the page and only watches; web/src/App.tsx,
+[web/src/autoplay/](../web/src/autoplay/)):
+- The lineup card opens first. Behind it the picture rests on the stream's first frame. The hero
+  moment's stream starts only when the card closes, by itself after 5 s or on a click: its key
+  scan comes in the first seconds and must not play under the card. A stitched match's stream
+  plays behind the card; its first possession is open play.
+- When the stream detects the hero moment, the show plays at once; it does not wait for the
+  breakdown:
+  1. the look, replayed (slowed around the scan);
+  2. the same seconds re-simulated without it, the other run's path as a ghost on the board.
+- Each part shows its verified line from the breakdown as soon as the breakdown is there ("Without
+  that look, H8 would have passed to H4.").
+- Then the breakdown plays.
+- Any viewer action ends the show.
+- Measured: the run without the look and its line are on screen 16–17 s after opening the page
+  (local API, headless Chrome).
+
 *Implemented (`api/`, M3):* FastAPI.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
   `moment` and `end` messages (`full_time: true` when it reached the last frame); clients can
@@ -1740,6 +1757,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
+- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
+      without the look and its verified line are on screen within 20 s of opening the page, and
+      any viewer action ends the show.
+      — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
+      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
+      2026-10-21)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
