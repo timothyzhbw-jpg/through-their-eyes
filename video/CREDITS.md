@@ -17,6 +17,23 @@ below and checks its SHA-256 (`assets.json`) before using it.
 CC0 needs no attribution; the end card credits the track anyway. Licences checked on each
 page on 2026-10-21.
 
+## Original score
+
+The alternative to the tracks above: a score composed for this project in code
+([`score/`](score/README.md)), in two variants (grime, hybrid). End-card credit: "Original score
+composed for this project". No samples from existing songs and no AI music generators.
+
+| Part | Source | Licence |
+|---|---|---|
+| Composition, arrangement, mix and master | [`score/`](score/) in this repository | MIT |
+| Drums, basses, synths and effects | synthesised in numpy by [`score/synth.py`](score/synth.py); no recorded samples | MIT |
+| Strings, brass, horns, choir, timpani, orchestra hit | Fluid (R3) General MIDI SoundFont by Frank Wen, `FluidR3_GM.sf2` from Debian's `fluid-soundfont` 3.1 source package (https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz; SHA-256 in [`score/assets.json`](score/assets.json)) | MIT |
+| Rendering of the SoundFont parts | FluidSynth 2.6 (Homebrew), run as a tool, not distributed | LGPL-2.1 |
+| MIDI files, signal processing | pretty_midi and mido (MIT), numpy and scipy (BSD-3-Clause) | MIT / BSD |
+
+The SoundFont's notice, from the package's `COPYING`: "Copyright (c) 2000-2002, 2008 Frank Wen
+<getfrank@gmail.com>", released under the MIT license. Licence checked on 2026-10-21.
+
 ## Sound effects
 
 All synthesized by [`lib/sfx.mjs`](lib/sfx.mjs) in this repository (MIT): heartbeat, stadium
