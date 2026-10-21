@@ -8,8 +8,9 @@
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
 // - the extra clips (extra.ts; `?anims=base` turns them off): a mocap kick at every pass instead
-//   of the standing pass, and the trunk joining every scan's look over the shoulder (not under
-//   prefers-reduced-motion);
+//   of the standing pass, the trunk joining every scan's look over the shoulder (not under
+//   prefers-reduced-motion), and with them a real walk at slow speeds (walk.ts; `?walk=0` leaves
+//   it out), cross-fading into the jog on one gait phase (gait.ts);
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
@@ -23,6 +24,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
 import { trial } from "./trial";
+import { WALK_URL, type WalkClips, walkClips } from "./walk";
 import { BOOTS, hairColour, kitTexture, skinTone } from "./kit";
 import {
   type ModelMeta,
@@ -78,27 +80,40 @@ function useReducedMotion() {
 
 export function RiggedPlayers() {
   const anims = useStore(trial, (s) => s.anims);
-  if (anims !== "extra") return <Rigged extra={null} />;
+  const walk = useStore(trial, (s) => s.walk);
+  if (anims !== "extra") return <Rigged extra={null} walk={null} />;
   useLoader.preload(GLTFLoader, MODEL_URL); // fetched alongside the clips, not after them
+  if (walk) useLoader.preload(GLTFLoader, WALK_URL);
   return (
     <ExtraFallback>
-      <WithExtra />
+      <WithExtra walk={walk} />
     </ExtraFallback>
   );
 }
 
-function WithExtra() {
+function WithExtra({ walk }: { walk: boolean }) {
   const gltf = useLoader(GLTFLoader, EXTRA_URL);
   const extra = useMemo(() => extraClips(gltf), [gltf]);
-  return <Rigged extra={extra} />;
+  if (!walk) return <Rigged extra={extra} walk={null} />;
+  return (
+    <WalkFallback>
+      <WithWalk extra={extra} />
+    </WalkFallback>
+  );
 }
 
-function Rigged({ extra }: { extra: ExtraClips | null }) {
+function WithWalk({ extra }: { extra: ExtraClips }) {
+  const gltf = useLoader(GLTFLoader, WALK_URL);
+  const walk = useMemo(() => walkClips(gltf), [gltf]);
+  return <Rigged extra={extra} walk={walk} />;
+}
+
+function Rigged({ extra, walk }: { extra: ExtraClips | null; walk: WalkClips | null }) {
   const { hero, playback } = useView();
   const gltf = useLoader(GLTFLoader, MODEL_URL);
   const meta = gltf.scene.userData as ModelMeta;
   const reduced = useReducedMotion();
-  const clips = useMemo(() => modelClips(meta, extra), [meta, extra]);
+  const clips = useMemo(() => modelClips(meta, extra, walk), [meta, extra, walk]);
   const motion = useMemo<Record<RunName, Motion>>(() => {
     const check = clips.extra?.check ?? null;
     const factual = runMotion(hero, hero.runs.factual, clips.gait, check);
@@ -112,10 +127,10 @@ function Rigged({ extra }: { extra: ExtraClips | null }) {
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {
-        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra);
+        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra, walk);
         return { rig, materials: dress(rig, p, j) };
       }),
-    [gltf, hero, meta, clips],
+    [gltf, hero, meta, clips, walk],
   );
   useEffect(
     () => () => {
@@ -173,6 +188,21 @@ class ExtraFallback extends Component<{ children: ReactNode }, { failed: boolean
   componentDidCatch(error: unknown) {
     console.error("Extra animations failed to load; using the engine's clips.", error);
     trial.set({ anims: "base" });
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/** If the walk cannot load, keep the extra clips without it. */
+class WalkFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("The walk failed to load; using the engine's slow gait.", error);
+    trial.set({ walk: false });
   }
   render() {
     return this.state.failed ? null : this.props.children;

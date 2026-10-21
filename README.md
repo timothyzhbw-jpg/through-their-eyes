@@ -364,6 +364,8 @@ accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subs
 - The players' kick and shoulder checks are motion capture, retargeted onto that skeleton. The
   data used in this project was obtained from mocap.cs.cmu.edu. The database was created with
   funding from NSF EIA-0196217.
+- The players' walk: Universal Animation Library by Quaternius (CC0), retargeted onto the same
+  skeleton.
 
 ## License
 MIT — see [LICENSE](LICENSE).

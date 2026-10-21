@@ -50,6 +50,34 @@ Clips:
   The scripts (numpy; Blender is used only for preview renders) live outside the repo in
   `tte-blender/anims/`, with the source files. The scene extras record each clip's source, its
   ball contact (`touch_s`), the kick's direction and the shoulder check's phases.
-- Quaternius' Universal Animation Library 1 (CC0) was retargeted and compared too (walk, jog,
-  sprint) and is not used: its jog drops into a deep crouch every step, and its sprint looked no
-  better than the engine's.
+- Of Quaternius' Universal Animation Library 1 (CC0) only the walk is used, in its own file
+  (below): its jog drops into a deep crouch every step, and its sprint looked no better than the
+  engine's.
+
+# The walk (SPEC 7)
+
+`anims_walk.glb` holds one clip, `walk`, bound to the same 14 skeleton nodes in the same way
+(animations only, int16 quaternions). It is a file of its own so it can ship, or be dropped, apart
+from the extra clips above.
+
+- Source: Quaternius' Universal Animation Library 1, free "Standard" pack, `Walk_Loop`: one
+  two-step cycle (1.33 s), retargeted in place by direction matching (each bone takes its
+  direction and twist from the source, its length from this model), the root keeping only its
+  height.
+- Its stride speed (`stride_speed_mps`, 1.01 m/s) is the root speed of the same loop in the
+  pack's root-motion file, 0.975 m/s, scaled by leg length. The scene extras also give its
+  left-foot strike phase and the engine walk's, measured the same way, so the web app plays it on
+  the engine clips' phase.
+- Feet: the planted ankle holds still without locking (under 2 mm). The retarget left the boot
+  5.5° toe-up, so it is levelled; the root is lifted where the heel would sink at strike, and the
+  ankle pitched (at most 12°) to keep the sole down while the source foot is planted. Knees and
+  hips are the retarget's.
+- Licence: **CC0 1.0** (public domain dedication; `License.txt` in the pack, checked 2026-10-21).
+  It asks for no credit; we give it anyway: _Walk: Universal Animation Library by Quaternius
+  (quaternius.com)._ Quaternius' page does not say how the animations were made; Digital
+  Production (2025-03-21) reports Xsens motion capture, which would make it motion capture for
+  animation only, as Bowen allowed for the CMU clips on 2026-10-21. It is not footage or match
+  data.
+- Written by `tte-blender/anims/walk.py` (numpy; outside the repo, with the source files):
+  `nice -n 10 .venv/bin/python -I ~/tte-blender/anims/walk.py --model web/public/models/grf_player.glb --out web/public/models/anims_walk.glb`.
+  Same inputs give the same bytes.
