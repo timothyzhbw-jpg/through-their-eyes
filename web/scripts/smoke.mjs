@@ -59,6 +59,8 @@ const PAGES = [
   },
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
+  { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
+  { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
   {
     name: "lineup-match-1",
