@@ -799,6 +799,7 @@ export function tickSession(session: ViewSession, dt: number): void {
     return;
   }
   if (session.kind === "hero") session.runner.tick(dt);
+  else session.recap.tick(dt); // the end-of-match recap's reel, while it plays
   advance(playback, hero, dt);
 }
 
