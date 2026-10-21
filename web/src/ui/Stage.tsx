@@ -427,7 +427,8 @@ export function ViewOptions() {
 
 // ---------- who is watching ----------
 
-/** The audience and language of the commentary, in the header (SPEC 1). */
+/** The audience and language of the commentary, in the header (SPEC 1). It stays open while the
+ * viewer picks, until Escape or a press outside. */
 export function ViewerMenu() {
   const { api, controls } = useSession();
   const { persona, language } = useBreakdown();
@@ -475,11 +476,9 @@ export function ViewerMenu() {
               className="persona"
               aria-pressed={p === persona}
               disabled={!online && p !== persona}
-              onClick={() => {
-                controls.setPersona(p);
-                close();
-                toggle.current?.focus();
-              }}
+              // The menu stays open: the language, or another audience, is one more pick. It
+              // closes on Escape or a press outside (usePopover), the keyboard back on the toggle.
+              onClick={() => controls.setPersona(p)}
             >
               <span className="persona-name">{PERSONA_LABEL[p]}</span>{" "}
               <span className="persona-note">{PERSONA_NOTE[p]}</span>

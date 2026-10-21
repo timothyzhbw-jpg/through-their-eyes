@@ -206,12 +206,16 @@ describe("the live match", () => {
     expect(numbered([])).toEqual([]);
   });
 
-  it("lists every moment with its lens; the two hero moments open breakdowns", () => {
+  it("lists the key moments with their lens; the two hero moments open breakdowns", () => {
     const { session } = online();
     const html = render(session, <MomentsPanel />);
-    for (const m of raw.moments) expect(html).toContain(`${m.anchor_t.toFixed(2)} s`);
+    // Key moments in full; the sprint is folded into its group until opened (moments.test.tsx).
+    for (const m of raw.moments.filter((x) => x.selected_lens !== null)) {
+      expect(html).toContain(`${m.anchor_t.toFixed(2)} s`);
+    }
     expect(html).toContain("scan lens");
     expect(html).toContain("pressure lens");
+    expect(html).toContain("1 sprint");
     expect(html).toContain("live only");
     expect(html.match(/>Breakdown</g)).toHaveLength(2);
     expect(html).toContain("Possession 2");

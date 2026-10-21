@@ -26,6 +26,7 @@ import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
 import { BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
+import { declutter, labelBox } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
@@ -38,6 +39,12 @@ const HEAD_CENTRE = 1.66; // head sphere centre height
 const HEAD_RADIUS = 0.14;
 const POV_NEAR = 0.05;
 const POV_FAR = 300;
+// Shirt numbers: a 0.75 m sprite 2.1 m up; the digits fill about 0.36 m of its height and 1.6
+// times that across. One that would sit on a nearer number is lifted by that height (declutter.ts).
+const LABEL_Y = 2.1;
+const LABEL_TEXT = 0.36;
+const LABEL_ASPECT = 1.6;
+const labelAt = new THREE.Vector3();
 /** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
 const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
 
@@ -99,6 +106,7 @@ function PovScene() {
   const heads = useRef<(THREE.Group | null)[]>([]);
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
   const ghosts = useRef<(THREE.Mesh | null)[]>([]);
+  const labels = useRef<(THREE.Sprite | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
 
   const materials = useMemo(
@@ -182,6 +190,23 @@ function PovScene() {
       camera.position.set(hx, EYE_HEIGHT, -hy);
       camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
     }
+    // Shirt numbers, nearest first: lifted or hidden where they would sit on another; the
+    // runner's gold number always shows.
+    camera.updateMatrixWorld();
+    const placed = declutter(
+      hero.players.map((_, j) => {
+        if (j === me || !labels.current[j]) return null;
+        labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
+        const box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
+        return box && { ...box, priority: j === hero.runner };
+      }),
+    );
+    placed.forEach(({ visible, lift }, j) => {
+      const label = labels.current[j];
+      if (!label) return;
+      label.visible = visible;
+      label.position.y = LABEL_Y + lift * LABEL_TEXT;
+    });
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
 
@@ -226,7 +251,13 @@ function PovScene() {
             <mesh geometry={headGeometry} material={materials.teams[p.team]} />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
           </group>
-          <sprite position-y={2.1} scale={[0.75, 0.75, 1]}>
+          <sprite
+            ref={(l) => {
+              labels.current[j] = l;
+            }}
+            position-y={LABEL_Y}
+            scale={[0.75, 0.75, 1]}
+          >
             <spriteMaterial
               map={getLabelTexture(String(p.number), {
                 ...LABEL.shirt,

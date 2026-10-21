@@ -1,23 +1,20 @@
 // The live stream in the page (SPEC 2): the header control that follows the stream (or the
 // "Offline data" badge when there is no live service), and the moments: for a hero moment, those
-// the stream has detected, in the order they arrived; for a stitched match, every moment of every
-// possession with its lens, the hero moments opening their breakdowns.
+// the stream has detected, in the order they arrived; for a stitched match, every moment with its
+// lens: the hero moments first (they open their breakdowns), then every other one folded into a
+// row per kind and lens (those a lens explains first; sprints and the like after).
 
 import { WHAT_IF_FILES } from "../data/load";
 import type { LiveFeed, LiveMoment, LiveState, LiveStatus } from "../live/feed";
-import {
-  restartLabel,
-  scenarioLabel,
-  scenarioMatchId,
-  type MatchMoment,
-  type Possession,
-} from "../match/match";
+import { scenarioLabel, scenarioMatchId, type MatchMoment, type Possession } from "../match/match";
 import type { MatchSession } from "../match/matchSession";
 import { RecapButton } from "../recap/RecapButton";
+import { useId, useState, type ReactElement } from "react";
 import { useSession, useView } from "../session";
 import { MISSING_RUNS } from "../yourcall/controller";
 import { createStore, useStore, type Store } from "../store/store";
 import { Chapter } from "./Chapter";
+import { ChevronIcon } from "./icons";
 import "./live.css";
 
 /** "Offline data" without the live service; otherwise the Live button and the stream's state. */
@@ -90,6 +87,7 @@ const KIND: Record<string, string> = {
   pressed_decision: "Decision under pressure",
   decision_after_scan: "Decision after a scan",
   line_breaking_pass: "Line-breaking pass",
+  marker_scan: "Marker's scan",
   sprint: "Sprint",
 };
 
@@ -100,6 +98,60 @@ export function momentLabel(
 ): string {
   const kind = KIND[m.kind] ?? m.kind.replaceAll("_", " ");
   return `${kind} · ${m.actor ?? "?"}${receiver && m.receiver ? ` → ${m.receiver}` : ""}`;
+}
+
+/** A kind's name for a count of them: singular, plural. */
+const KIND_COUNT: Record<string, [string, string]> = {
+  sprint: ["sprint", "sprints"],
+  line_breaking_pass: ["line-breaking pass", "line-breaking passes"],
+  pressed_decision: ["decision under pressure", "decisions under pressure"],
+  decision_after_scan: ["decision after a scan", "decisions after a scan"],
+  marker_scan: ["marker's scan", "markers' scans"],
+};
+
+/** A group of routine moments in words: "141 sprints", "1 sprint"; a kind with no name of its
+ * own reads "4 × first touch turn". */
+export function routineLabel(kind: string, n: number): string {
+  const names = KIND_COUNT[kind];
+  return names ? `${n} ${names[n === 1 ? 0 : 1]}` : `${n} × ${kind.replaceAll("_", " ")}`;
+}
+
+/** Moments of one kind explained by one lens (null: none, a live overlay). */
+export interface MomentGroup {
+  kind: string;
+  lens: string | null;
+  moments: MatchMoment[]; // in match order
+}
+
+export interface MomentGroups {
+  heroes: MatchMoment[]; // the hero moments, in match order: they open breakdowns
+  groups: MomentGroup[]; // every other moment: those a lens explains first, then by size
+}
+
+/** A group this small starts open: a few rows say more than a count. */
+export const OPEN_UP_TO = 5;
+
+/**
+ * A whole match has about 200 moments (match-1: 149 sprints, some 40 line-breaking passes): the
+ * few a judge should open must not be buried. The hero moments come first; every other moment is
+ * folded into its kind and lens's group, those a lens explains first, the bigger groups first.
+ * Each moment appears once.
+ */
+export function groupMoments(moments: readonly MatchMoment[]): MomentGroups {
+  const heroes = moments.filter((m) => m.hero);
+  const byKind = new Map<string, MomentGroup>();
+  for (const m of moments) {
+    if (m.hero) continue;
+    const id = `${m.kind}|${m.selected_lens ?? ""}`;
+    const group = byKind.get(id);
+    if (group) group.moments.push(m);
+    else byKind.set(id, { kind: m.kind, lens: m.selected_lens, moments: [m] });
+  }
+  const groups = [...byKind.values()].sort(
+    (a, b) =>
+      Number(a.lens === null) - Number(b.lens === null) || b.moments.length - a.moments.length,
+  );
+  return { heroes, groups };
 }
 
 /** Which lens explains a moment (SPEC 5.2); sprints and the like are live overlays only. */
@@ -168,8 +220,9 @@ function Moments({ feed }: { feed: LiveFeed }) {
 
 const NO_MOMENTS: Store<Pick<LiveState, "moments">> = createStore({ moments: [] as LiveMoment[] });
 
-/** Every moment of a stitched match, by possession. While live, those the stream has not
- * announced yet are dimmed; any of them replays, and the hero moments open their breakdowns. */
+/** Every moment of a stitched match: the key ones first, the routine ones folded by kind. While
+ * live, those the stream has not announced yet are dimmed; any of them replays, and the hero
+ * moments open their breakdowns. */
 function MatchMoments({ session }: { session: MatchSession }) {
   const { match, controls, playback, screen } = session;
   const stream: Store<Pick<LiveState, "moments">> = session.feed?.state ?? NO_MOMENTS;
@@ -177,12 +230,29 @@ function MatchMoments({ session }: { session: MatchSession }) {
   const live = useStore(playback, (s) => s.live);
   const opening = useStore(screen, (s) => s.opening);
   const seen = new Set(detected.map((m) => m.id));
-  const at = (f: number) => `${(f * session.hero.dt).toFixed(2)} s`;
-  const heroCount = match.moments.filter((m) => m.hero).length;
+  const { heroes, groups } = groupMoments(match.moments);
+  const possession = new Map(match.possessions.map((p) => [p.index, p]));
+  const heroCount = heroes.length;
   const breakdowns =
     heroCount === 0
       ? "No hero moments are available for breakdowns; every moment replays only."
       : `The ${heroCount} hero ${heroCount === 1 ? "moment opens its breakdown" : "moments open their breakdowns"}, played on each possession's own run; the others replay only.`;
+  const row = (m: MatchMoment) => {
+    const p = possession.get(m.possession);
+    return (
+      <MatchMomentRow
+        key={m.id}
+        m={m}
+        ahead={live && !seen.has(m.id)}
+        opening={opening === m.id}
+        onReplay={() => controls.replayMoment(m)}
+        onBreakdown={() => controls.openBreakdown(m)}
+        onYourCall={() => controls.openBreakdown(m, "yourcall")}
+        yourCallReason={p ? yourCallReason(p) : MISSING_RUNS}
+        where={`Possession ${m.possession + 1}${p ? ` · ${scenarioLabel(p.scenario)}` : ""}`}
+      />
+    );
+  };
   return (
     <Chapter
       className="moments match-moments"
@@ -195,36 +265,65 @@ function MatchMoments({ session }: { session: MatchSession }) {
       lede={`Every possession's moments, detected and explained on its own run and lifted to match time. ${breakdowns}`}
       aside={<RecapButton />}
     >
-      <div className="possessions">
-        {match.possessions.map((p) => (
-          <section key={p.index} aria-label={`Possession ${p.index + 1}`}>
-            <h3 className="possession-head">
-              <b>Possession {p.index + 1}</b>
-              <span>{scenarioLabel(p.scenario)}</span>
-              <span>
-                {restartLabel(p.restart)} · {at(p.start)}
-              </span>
-            </h3>
-            <ol className="moment-list">
-              {match.moments
-                .filter((m) => m.possession === p.index)
-                .map((m) => (
-                  <MatchMomentRow
-                    key={m.id}
-                    m={m}
-                    ahead={live && !seen.has(m.id)}
-                    opening={opening === m.id}
-                    onReplay={() => controls.replayMoment(m)}
-                    onBreakdown={() => controls.openBreakdown(m)}
-                    onYourCall={() => controls.openBreakdown(m, "yourcall")}
-                    yourCallReason={yourCallReason(p)}
-                  />
-                ))}
-            </ol>
-          </section>
-        ))}
-      </div>
+      <section className="key-moments" aria-label="Key moments">
+        <h3 className="possession-head">
+          <b>Hero moments</b>
+          <span>Each opens its breakdown and Your call</span>
+        </h3>
+        {heroes.length === 0 ? (
+          <p className="note">No hero moment in this match: every moment replays only.</p>
+        ) : (
+          <ol className="moment-list">{heroes.map(row)}</ol>
+        )}
+      </section>
+      {groups.length > 0 && (
+        <section className="routine-moments" aria-label="Other moments">
+          <h3 className="possession-head">
+            <b>Every other moment</b>
+            <span>By kind: those a lens explains first, then the live overlays</span>
+          </h3>
+          <ul className="routine-groups">
+            {groups.map((g) => (
+              <MomentGroupRow key={`${g.kind}|${g.lens}`} group={g} row={row} />
+            ))}
+          </ul>
+        </section>
+      )}
     </Chapter>
+  );
+}
+
+/** The moments of one kind and lens, folded into a row; a small group starts open. */
+function MomentGroupRow({
+  group,
+  row,
+}: {
+  group: MomentGroup;
+  row: (m: MatchMoment) => ReactElement;
+}) {
+  const { kind, lens, moments } = group;
+  const [open, setOpen] = useState(moments.length <= OPEN_UP_TO);
+  const id = useId();
+  const how = lens ? `${lens} lens` : moments.every((m) => m.live_only) ? "live only" : "no lens";
+  return (
+    <li className={open ? "routine open" : "routine"}>
+      <button
+        type="button"
+        className="routine-toggle"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{routineLabel(kind, moments.length)}</span>{" "}
+        <small className={lens ? "lens on" : "lens"}>· {how}</small>
+        <ChevronIcon />
+      </button>
+      {open && (
+        <ol id={id} className="moment-list">
+          {moments.map(row)}
+        </ol>
+      )}
+    </li>
   );
 }
 
@@ -241,17 +340,19 @@ function MatchMomentRow(props: {
   onBreakdown: () => void;
   onYourCall: () => void;
   yourCallReason: string | null;
+  where: string; // its possession, as the timeline numbers them
 }) {
   const { m } = props;
   const classes = [m.hero ? "hero" : "", props.ahead ? "ahead" : ""].filter(Boolean).join(" ");
   // A hero row that can open Your call must not name his receiver: that is his answer.
   const label = momentLabel(m, { receiver: !(m.hero && props.yourCallReason === null) });
   return (
-    <li className={classes || undefined}>
+    <li className={classes || undefined} data-possession={m.possession + 1}>
       <button type="button" onClick={props.onReplay} title="Replay from this moment">
         <span className="t">{m.anchor_t.toFixed(2)} s</span>
         <span>
-          {label} <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>
+          {label} <small className={m.selected_lens ? "lens on" : "lens"}>· {lensLabel(m)}</small>{" "}
+          <small className="where">· {props.where}</small>
         </span>
         {/* The dimmer colour says it on screen; this says it to a screen reader. */}
         {props.ahead && <span className="sr-only"> · not on the stream yet</span>}

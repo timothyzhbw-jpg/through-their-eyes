@@ -208,7 +208,9 @@ function LiveScreen(props: {
           <div className="brand">
             {/* Focused when the lineup card closes (LineupCard), never by Tab. */}
             <h1 tabIndex={-1}>Through Their Eyes</h1>
-            <p className="sub">A synthetic match · every player fictional</p>
+            <p className="sub">
+              A synthetic match<span className="sub-more"> · every player fictional</span>
+            </p>
           </div>
           <div className="header-start">{props.start}</div>
           <div className="header-end">{props.end}</div>
