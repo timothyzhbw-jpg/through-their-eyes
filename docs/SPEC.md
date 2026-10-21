@@ -429,7 +429,26 @@ expansion pack, on Module A (§3.3).
   `force_action(player, frame, action)` (*M4*): at that decision the player takes `action` — any
   option he evaluated, e.g. `pass:H4` — instead of sampling; everything else re-simulates as
   usual. It answers "what if he had passed to H4?" with a re-simulation, not a statistic.
-- A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
+- **A look the viewer chooses** (2026-10-21, for Take his eyes, §7): `add_scan(player, frame,
+  offset)` (`sim.overrides.AddScan`) starts one scan at that frame, `offset` from the ball
+  (counter-clockwise positive). It takes the path of the scenario's forced scans, so it is as
+  physical as any scan: the amplitude must lie in `SimParams.scan_amplitude` (70–150°), the head
+  turns at the scan's keyed peak speed (404 ± 51°/s, §3.4), and the dwell is the median of
+  `SimParams.scan_dwell_s`. A turn outside that range is refused. `no_scans(player, start, end)`
+  (`NoScans`) stops his own spontaneous and partial scans in a window.
+  - `look_counterfactual` gives the hero **one look**, from the pass to him until his decision:
+    his own scans in that window (the key scan, spontaneous and partial ones) do not happen, and
+    the viewer's look is his only one. Looks added on top of his own would collide with them: a
+    forced scan waits for one under way, so an extra look before the key scan cancels it, and in
+    `press_escape` seed 0 his own looks fill the window so that additive looks could start only
+    in its first 0.9 s.
+  - With no look, the scan hero's run is the run without his key scan byte for byte.
+  - A look changes only his head and what he believes until he decides: positions, the ball,
+    every other player's head and events, and every random draw are unchanged
+    (`tests/test_look.py`; `sim.export.export_looks` refuses a look that breaks this).
+  - Ids: `look:H8:0050:-150` (a look at frame 50, 150° clockwise of the ball: over his right
+    shoulder as he faces it) and `look:H8:none`; `what_if_from_id` and the Verifier re-simulate
+    them like `force:` ids.
 
 ### Acceptance checks — sim
 - [x] Same seed twice in the same environment ⇒ identical output hashes.
@@ -487,6 +506,15 @@ expansion pack, on Module A (§3.3).
       with an action that was not an option, it is refused (not silently mapped).
       — [tests/test_whatif.py](../tests/test_whatif.py)::`test_forcing_the_action_actually_chosen_reproduces_the_factual_run`,
       `test_an_action_that_was_not_an_option_is_refused`
+- [x] `add_scan`: a look turns where and when it is asked, no faster than a scan turns (its peak
+      within 3 SD of the published 404 ± 51°/s), and a turn or dwell no scan makes is refused, as
+      is a look outside the window from the pass to his decision. With no look, the scan hero's
+      run equals the run without his key scan byte for byte; a look leaves every random draw, and
+      until his decision every position and every other player's head, unchanged; the same look
+      twice is byte-identical.
+      — [tests/test_look.py](../tests/test_look.py) (23 sim cases); the factual runs, the
+      committed exports and every eval report regenerate unchanged with the override in the engine
+      (`git status -s eval/` after re-running every eval that calls no model, 2026-10-21)
 
 ## 4. Analytics kernels (`analytics/`)
 Every kernel: numpy reference + unit tests. GLSL versions in `web/` must match the numpy reference
@@ -1044,6 +1072,42 @@ original visual identity.
     the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
     it is loaded; a hero with no decision on the ball (`corner_blind_side`) has no Your call.
   - Reduced motion: every clip and move cuts to its end. No model call.
+- **Take his eyes** (2026-10-21, [web/src/takeeyes/](../web/src/takeeyes/); deep link
+  `?play=eyes`, a hero moment's only): the viewer chooses when and where the hero looks, and the
+  sim re-runs the moment with that look as his only one between the pass and his decision
+  (§3.7 `add_scan`). Other entries' what-ifs estimate what might have happened; this one
+  re-simulates it.
+  - *The grid.* Every look is precomputed into `look_*.json` (`sim.export.export_looks`): no live
+    re-simulation, no model call. Times: every 0.4 s back from the reception while the ball is on
+    its way to him (`blind_side_run` seed 3: 2.0 s to 0; `press_escape` seed 0: 1.6 s to 0).
+    Directions: to his left, over his left shoulder, over his right shoulder, to his right (±90°,
+    ±150° from the ball; 150° is the widest a scan turns). It opens on the cell nearest his own
+    look.
+  - *Choosing.* The board shows his picture at the chosen time with no look yet (belief ghosts);
+    over it a dial: the cone where he will look and the arc a scan reaches. Drag or tap round him
+    and the cone snaps to the grid's directions; the directions and the times are also radio
+    groups (arrow keys, Enter to look). The timeline marks his own looks, the ball's arrival and
+    his decision.
+  - *Looking, then the result.* The moment plays through his eyes with the look (the first-person
+    view and the board play a derived session: the factual run with his head, sight and belief
+    spliced in, `takeeyes/looks.ts`). The result compares his call with the look, his real call
+    and his call with no look; the board shows both runs from the decision on (the look's run as
+    the gold ghost path of the What if box, over what he really did) or his picture at the
+    decision, with the look or with none.
+  - *Words.* Only verified lines (`agents/look.py`, slot-filled en and zh templates checked by the
+    Verifier on the look's run and the no-look run): when and where he looked, that his head was
+    still turning when he decided, which teammates the look brought into his sight, how far off
+    his picture of the one that mattered was with the look and with none, what he did against what
+    he really did, what came of it, and its value in expected threat. No count or rate is shown
+    outside a verified line.
+  - *What the grid shows, honestly* ([look_grid_blind_side_run.md](../eval/reports/look_grid_blind_side_run.md),
+    [look_grid_press_escape.md](../eval/reports/look_grid_press_escape.md)): on `blind_side_run`
+    seed 3, 10 of 24 looks change his decision against no look (looking behind him 0.4–1.6 s
+    before the ball arrives finds the runner; 2 s is too early, at the reception too late), and
+    on held-out seeds 100–139 a look over either shoulder 0.4–1.6 s before finds the runner in
+    95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
+    held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
+    a close call.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -1109,6 +1173,17 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
       [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+- [x] Take his eyes: every look of the grid airs only lines that pass the checks, in en and zh;
+      a look's run is the factual run with only his head, sight, belief and own events spliced in
+      before his decision; times and directions are named radio groups with arrow keys and Enter,
+      and a drag or tap round him snaps to the nearest direction; looking plays to his decision
+      and the result shows the look's run as the board's ghost path; reduced motion cuts to the
+      end; a moment with no bundled grid says why.
+      — [web/src/takeeyes/looks.test.ts](../web/src/takeeyes/looks.test.ts),
+      [flow.test.ts](../web/src/takeeyes/flow.test.ts),
+      [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
+      [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
