@@ -56,6 +56,9 @@ class Settings:
     live_max_total: int = 64  # live streams open at once, all clients, this process
     live_max_s: float = 1200.0  # longest live stream, paused time included
     analyst_mcp: bool = True  # the Analyst inspects the moment through our MCP server (SPEC 6, 8)
+    egress_per_client: tuple[int, float] = (500, 3600.0)  # MB sent per client per window (s)
+    daily_egress_gb: float = 20.0  # GB sent per UTC day, all clients (api/egress.py)
+    crew_concurrency: int = 2  # crew runs with a model at once, this process (MCP subprocesses)
     warm: bool = False  # load every match before the port opens (from the environment: on)
 
     @classmethod
@@ -76,5 +79,8 @@ class Settings:
             live_max_total=int(os.environ.get("TTE_LIVE_MAX_TOTAL") or 64),
             live_max_s=float(os.environ.get("TTE_LIVE_MAX_S") or 1200),
             analyst_mcp=_flag(os.environ.get("TTE_ANALYST_MCP"), True),
+            egress_per_client=_rate(os.environ.get("TTE_EGRESS_PER_CLIENT") or "500/3600"),
+            daily_egress_gb=float(os.environ.get("TTE_DAILY_EGRESS_GB") or 20),
+            crew_concurrency=int(os.environ.get("TTE_CREW_CONCURRENCY") or 2),
             warm=_flag(os.environ.get("TTE_WARM"), True),
         )

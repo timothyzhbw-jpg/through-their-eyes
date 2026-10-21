@@ -9,11 +9,14 @@ what-if answers are computed once and cached by a content hash of everything tha
 regeneration is rate-limited per client and capped per UTC day across all clients
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
-tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
+tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0); at most
+`TTE_CREW_CONCURRENCY` crew runs with a model run at once. A what-if question the model mapped
+is kept by its normalised text, so asking it again costs no model call and no unit of the cap.
 
 Speech speaks only voice cues the crew wrote, by key (api/tts.py); a cached breakdown is re-voiced
 on read before those cues are recorded. The live stream, request bodies and response headers are
-bounded for a public service (api/live.py, api/guard.py).
+bounded for a public service (api/live.py, api/guard.py), and every response body and live
+message counts against a per-client and a daily egress budget (api/egress.py).
 
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
@@ -48,8 +51,9 @@ import hashlib
 import json
 import re
 import shutil
+import unicodedata
 import uuid
-from contextlib import asynccontextmanager, suppress
+from contextlib import AbstractAsyncContextManager, asynccontextmanager, nullcontext, suppress
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -69,6 +73,7 @@ from agents.schemas import AgentStep, Language, Persona
 from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
 from api import guard, tts
+from api.egress import MB, Egress, EgressLimit
 from api.live import Slots, stream
 from api.settings import Settings
 from api.store import (
@@ -96,6 +101,7 @@ def _unique(items: list) -> list:
     return list(dict.fromkeys(items))
 
 
+Name = Annotated[str, Field(max_length=100)]  # a match or moment id
 Personas = Annotated[
     list[Persona], Field(min_length=1, max_length=MAX_LIST), AfterValidator(_unique)
 ]
@@ -105,8 +111,8 @@ Languages = Annotated[
 
 
 class BreakdownBody(BaseModel):
-    match: str
-    moment: str | None = None
+    match: Name
+    moment: Name | None = None
     personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
     languages: Languages = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
@@ -118,15 +124,15 @@ class BringBackBody(BaseModel):
 
 
 class RecapBody(BaseModel):
-    match: str
+    match: Name
     personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
     languages: Languages = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
 
 
 class WhatIfBody(BaseModel):
-    match: str
-    moment: str | None = None  # which hero moment, in a match with several; default the first
+    match: Name
+    moment: Name | None = None  # which hero moment, in a match with several; default the first
     question: str = Field(min_length=1, max_length=300)
     language: Language = "en"
     persona: Persona = "analyst"
@@ -140,12 +146,19 @@ class TtsBody(BaseModel):
 
 
 class VerifyBody(BaseModel):
-    match: str
-    moment: str | None = None  # which hero moment, in a match with several; default the first
+    match: Name
+    moment: Name | None = None  # which hero moment, in a match with several; default the first
     claim: str = Field(max_length=100)
     slot: str = Field(max_length=100)
     value: float = Field(strict=True, allow_inf_nan=False)  # a JSON number: no strings, no bools
     language: Language = "en"
+
+
+def _question(text: str) -> str:
+    """A what-if question as its mapping is cached: case, spacing and the closing punctuation do
+    not change what it asks."""
+    text = " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+    return text.rstrip(" ?!.")
 
 
 def _client_ip(request: HTTPConnection) -> str:
@@ -190,6 +203,10 @@ def create_app(
     speech_calls = asyncio.Semaphore(settings.tts_concurrency)  # Azure Speech calls in flight
     synthesizing = KeyedLocks()  # one synthesis per cue key at a time
     slots = Slots(settings.live_per_client, settings.live_max_total)
+    per_client_mb, egress_window_s = settings.egress_per_client
+    egress = Egress(per_client_mb * MB, egress_window_s, int(settings.daily_egress_gb * 1000 * MB))
+    # Crew runs with a model at once: each starts an MCP server subprocess (about 90 MB).
+    crew_slots = asyncio.Semaphore(settings.crew_concurrency)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -203,6 +220,7 @@ def create_app(
             await close()
 
     app = FastAPI(title="Through Their Eyes", version=VERSION, lifespan=lifespan)
+    app.add_middleware(EgressLimit, egress=egress, client_ip=_client_ip)
     guard.install(app)
     app.add_middleware(
         CORSMiddleware,
@@ -228,6 +246,10 @@ def create_app(
             return "rate_limited"
         cap.take()
         return "model"
+
+    def crew_slot(llm: Any) -> AbstractAsyncContextManager[Any]:
+        """A slot for a crew run with a model (`crew_slots`); a run without one needs none."""
+        return crew_slots if llm is not None else nullcontext()
 
     def drill_allowed(request: Request) -> None:
         """A drill or a bring-back runs the crew: it counts against the per-client limit and a
@@ -315,12 +337,13 @@ def create_app(
             await ws.close(code=4404)
             return
         ip = _client_ip(ws)
-        if refused := slots.take(ip):
+        if refused := egress.refused(ip) or slots.take(ip):
             await ws.send_json({"type": "error", "detail": refused})
             await ws.close(code=4429)
             return
         try:
-            await stream(ws, match, speed, start, settings.live_max_s)
+            await stream(ws, match, speed, start, settings.live_max_s,
+                         sent=lambda n: egress.charge(ip, n))  # fmt: skip
         finally:
             slots.give(ip)
 
@@ -369,7 +392,7 @@ def create_app(
     ) -> dict[str, Any]:
         """Run the crew and cache the result. A run of this key that was interrupted resumes from
         its checkpoint; once the result is cached, the checkpoints go."""
-        async with locks.hold(k):
+        async with locks.hold(k), crew_slot(llm):
             run = await run_crew(ctx, client=llm, personas=tuple(body.personas),
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
                                  checkpoints=FileCheckpointStorage(runs_dir / k))  # fmt: skip
@@ -398,7 +421,7 @@ def create_app(
         where: dict[str, Any],
     ) -> dict[str, Any]:
         """The crew with `down` taken down, checkpointed for a bring-back (SPEC 6)."""
-        async with locks.hold(k):
+        async with locks.hold(k), crew_slot(client):
             run = await run_crew(ctx, client=client, personas=tuple(body.personas),
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
                                  down=down, checkpoints=drills.checkpoints(k))  # fmt: skip
@@ -435,11 +458,12 @@ def create_app(
             asked = record["result"]["request"]
             down = [d for d in drill["down"] if d != body.step]
             try:
-                run = await run_crew(ctx, client=client, personas=tuple(asked["personas"]),
-                                     languages=tuple(asked["languages"]),
-                                     use_mcp=settings.analyst_mcp, down=down,
-                                     checkpoints=drills.checkpoints(key),
-                                     bring_back=body.step)  # fmt: skip
+                async with crew_slot(client):
+                    run = await run_crew(ctx, client=client, personas=tuple(asked["personas"]),
+                                         languages=tuple(asked["languages"]),
+                                         use_mcp=settings.analyst_mcp, down=down,
+                                         checkpoints=drills.checkpoints(key),
+                                         bring_back=body.step)  # fmt: skip
             except NotWaiting as e:
                 raise HTTPException(410, f"{e}: run the drill again") from e
             record = {**record, "result": run.result.model_dump(mode="json", by_alias=True),
@@ -492,9 +516,10 @@ def create_app(
                 if not path.exists():
                     path.write_text(json.dumps(rc.evidence(), ensure_ascii=False))
                 rc = dataclasses.replace(rc, evidence_path=str(path))
-            result = await run_recap(rc, client=llm, personas=tuple(body.personas),
-                                     languages=tuple(body.languages),
-                                     use_mcp=settings.analyst_mcp)  # fmt: skip
+            async with crew_slot(llm):
+                result = await run_recap(rc, client=llm, personas=tuple(body.personas),
+                                         languages=tuple(body.languages),
+                                         use_mcp=settings.analyst_mcp)  # fmt: skip
             value = {"source": source, "result": result.model_dump(mode="json")}
             recaps.put(k, value)
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
@@ -516,9 +541,20 @@ def create_app(
         ctx = m.context(body.moment)
         if ctx is None:
             raise HTTPException(404, f"what-ifs are available for {', '.join(m.contexts)}")
-        verdict = regeneration(request) if client is not None else "offline"
-        use_model, capped = verdict == "model", verdict == "capped"
-        action, _ = await whatif.map_question(ctx, body.question, client if use_model else None)
+        # The model maps a question once: asked again, in any case or spacing, its mapping is
+        # read back, with no model call and no unit of the daily cap.
+        qkey = content_key(kind="whatif-question", match=m.id, moment=ctx.card.id,
+                           question=_question(body.question), version=WHATIF_VERSION,
+                           model=model)  # fmt: skip
+        if client is not None and (known := answers.get(qkey)) is not None:
+            verdict, (action, source) = "mapped", (known["action"], "llm")
+        else:
+            verdict = regeneration(request) if client is not None else "offline"
+            llm = client if verdict == "model" else None
+            action, source = await whatif.map_question(ctx, body.question, llm)
+            if source == "llm":
+                answers.put(qkey, {"action": action})
+        capped = verdict == "capped"
         if action is not None:
             # A match with one hero keeps its cache keys; with several, the moment is part of it.
             moment = {"moment": ctx.card.id} if len(m.contexts) > 1 else {}
@@ -528,7 +564,7 @@ def create_app(
                 return {"key": k, "cached": True, "capped": capped,
                         "answer": {**hit, "question": body.question}}  # fmt: skip
         answer = await whatif.answer_question(ctx, body.question, body.language, body.persona,
-                                              client if use_model else None)  # fmt: skip
+                                              mapped=(action, source))  # fmt: skip
         data = answer.model_dump(mode="json")
         if action is None or answer.action is None:
             return {"key": None, "cached": False, "capped": capped, "answer": data}
