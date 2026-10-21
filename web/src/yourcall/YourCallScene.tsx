@@ -9,6 +9,7 @@ import { Line } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { ALL_KITS, kitSlot } from "../players/kit";
 import { NIGHT, Stadium } from "../views/Stadium";
 import { Goals } from "../views/PovView";
 import {
@@ -17,7 +18,6 @@ import {
   PITCH,
   getLabelTexture,
   getPitchTexture,
-  teamColor,
   useRedrawOn,
 } from "../views/scene";
 import { useStore } from "../store/store";
@@ -72,10 +72,10 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
         depthWrite: opacity >= 1,
       });
     return {
-      solid: [0, 1].map((t) => make(teamColor(t), 1)),
-      belief: [0, 1].map((t) => make(teamColor(t), 0.78)),
-      ghost: [0, 1].map((t) => make(teamColor(t), 0.5)),
-      stale: [0, 1].map(() => make(GREY, 0.3)),
+      solid: ALL_KITS.map((kit) => make(kit.shirt, 1)),
+      belief: ALL_KITS.map((kit) => make(kit.shirt, 0.78)),
+      ghost: ALL_KITS.map((kit) => make(kit.shirt, 0.5)),
+      stale: ALL_KITS.map(() => make(GREY, 0.3)),
     } satisfies Record<Look, THREE.Material[]>;
   }, []);
   useEffect(
@@ -145,8 +145,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
     for (let j = 0; j < hero.n; j++) {
       const g = groups.current[j];
       if (g) g.position.set(pos[2 * j], 0, -pos[2 * j + 1]);
-      const team = hero.players[j].team;
-      const material = materials[looks[j]][team];
+      const material = materials[looks[j]][kitSlot(hero.players[j])];
       if (bodies.current[j]) bodies.current[j]!.material = material;
       if (heads.current[j]) heads.current[j]!.material = material;
     }
@@ -236,7 +235,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
             }}
             geometry={capsule}
             position-y={BODY_CENTRE}
-            material={materials.solid[p.team]}
+            material={materials.solid[kitSlot(p)]}
           />
           <mesh
             ref={(m) => {
@@ -244,7 +243,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
             }}
             geometry={headGeometry}
             position-y={HEAD_CENTRE}
-            material={materials.solid[p.team]}
+            material={materials.solid[kitSlot(p)]}
           />
           {/* While deciding, the option markers carry the numbers. */}
           <sprite position-y={2.35} scale={[1.1, 1.1, 1]} visible={step !== "deciding"}>

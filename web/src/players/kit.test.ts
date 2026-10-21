@@ -1,0 +1,72 @@
+// Kits (SPEC 7): each keeper wears his own kit (the trailer's look-dev), every other player his
+// team's, and the keepers' colours stay clear of both teams, the pitch and the reserved data
+// colours.
+
+import { describe, expect, it } from "vitest";
+import raw from "../../public/data/hero_seed3.json";
+import { parseHero } from "../data/hero";
+import type { ExportPlayer } from "../data/types";
+import { ALERT_COLOR } from "../alerts/blindSide";
+import { DETECTOR_COLOR } from "../skeleton/skeleton";
+import { COLORS } from "../views/scene";
+import { ALL_KITS, GK_KITS, KITS, isKeeper, kitOf, kitSlot } from "./kit";
+
+const hero = parseHero(raw);
+const FLOODLIGHT = "#f6d566"; // --floodlight in styles.css
+const PITCH = ["#1f4a32", "#245638", "#173826"]; // the mowing stripes and the grass around them
+
+const player = (team: 0 | 1, role: string): Pick<ExportPlayer, "team" | "role"> => ({
+  team,
+  role,
+});
+
+/** CIE 1976 colour difference in L*a*b* (D65): about 2 is just noticeable. */
+function deltaE(a: string, b: string): number {
+  const lab = (hex: string) => {
+    const lin = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    const [r, g, bl] = lin;
+    const xyz = [
+      (0.4124 * r + 0.3576 * g + 0.1805 * bl) / 0.95047,
+      0.2126 * r + 0.7152 * g + 0.0722 * bl,
+      (0.0193 * r + 0.1192 * g + 0.9505 * bl) / 1.08883,
+    ].map((v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116));
+    return [116 * xyz[1] - 16, 500 * (xyz[0] - xyz[1]), 200 * (xyz[1] - xyz[2])];
+  };
+  const [p, q] = [lab(a), lab(b)];
+  return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+}
+
+describe("kit lookup", () => {
+  it("dresses a keeper in his team's keeper kit and everyone else in the team kit", () => {
+    for (const team of [0, 1] as const) {
+      expect(kitOf(player(team, "GK"))).toBe(GK_KITS[team]);
+      for (const role of ["CB", "FB", "DM", "CM", "AM", "W", "ST"])
+        expect(kitOf(player(team, role))).toBe(KITS[team]);
+    }
+  });
+
+  it("gives the four kits four slots, and kitOf reads its slot", () => {
+    const players = [0, 1].flatMap((t) => ["GK", "CB"].map((r) => player(t as 0 | 1, r)));
+    expect(new Set(players.map(kitSlot))).toEqual(new Set([0, 1, 2, 3]));
+    for (const p of players) expect(ALL_KITS[kitSlot(p)]).toBe(kitOf(p));
+  });
+
+  it("finds one keeper per team in the hero export: H1 and A1", () => {
+    const keepers = hero.players.filter(isKeeper);
+    expect(keepers.map((p) => p.id)).toEqual(["H1", "A1"]);
+    expect(keepers.map((p) => kitOf(p).shirt)).toEqual(["#2ec4b6", "#c062e8"]);
+    for (const p of hero.players.filter((q) => !isKeeper(q)))
+      expect(kitOf(p).shirt).toBe(p.team === 0 ? COLORS.home : COLORS.away);
+  });
+
+  it("keeps the keepers' shirts clear of the teams, each other, the pitch and the data colours", () => {
+    const reserved = [FLOODLIGHT, DETECTOR_COLOR, ALERT_COLOR, COLORS.sight, COLORS.gold];
+    for (const [team, gk] of GK_KITS.entries()) {
+      const near = [...KITS.map((k) => k.shirt), GK_KITS[1 - team].shirt, ...PITCH, ...reserved];
+      for (const c of near) expect(deltaE(gk.shirt, c), `${gk.shirt} vs ${c}`).toBeGreaterThan(30);
+    }
+  });
+});

@@ -12,15 +12,8 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
-import {
-  COLORS,
-  LABEL,
-  PITCH,
-  getLabelTexture,
-  getPitchTexture,
-  teamColor,
-  useRedrawOn,
-} from "./scene";
+import { ALL_KITS, kitSlot } from "../players/kit";
+import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
@@ -125,8 +118,8 @@ function PovScene() {
 
   const materials = useMemo(
     () => ({
-      teams: [0, 1].map(
-        (t) => new THREE.MeshStandardMaterial({ color: teamColor(t), roughness: 0.6 }),
+      shirts: ALL_KITS.map(
+        (kit) => new THREE.MeshStandardMaterial({ color: kit.shirt, roughness: 0.6 }),
       ),
       visor: new THREE.MeshBasicMaterial({
         color: VISOR_COLOR,
@@ -266,7 +259,7 @@ function PovScene() {
             position-y={BODY_CENTRE}
             userData={{ player: true }}
             geometry={capsule}
-            material={materials.teams[p.team]}
+            material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
           />
           <mesh
@@ -289,7 +282,7 @@ function PovScene() {
           >
             <mesh
               geometry={headGeometry}
-              material={materials.teams[p.team]}
+              material={materials.shirts[kitSlot(p)]}
               userData={{ player: true }}
             />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
