@@ -245,8 +245,8 @@ function boardWords(): THREE.Texture | null {
 }
 
 /** The grass stays the procedural one, lit by the scene's lights as before (its colour, the
- * sky's tint, its sheen), and the baked light shapes it: the map's light over the pitch's
- * median, softened by GRASS_CONTRAST, multiplies it. So the pitch looks as it did at its
+ * sky's tint, its sheen), and the baked light shapes it: the map's luminance over the pitch's
+ * median, softened by GRASS_CONTRAST, multiplies it (its hue stays the grass's own). So the pitch looks as it did at its
  * median, with the floodlights' pools, the darker edges and the boards' glow added. The light
  * map is only read here (lightMapIntensity 0 keeps three from adding it as light). */
 export function grassMaterial(
@@ -264,8 +264,8 @@ export function grassMaterial(
       )
       .replace(
         "#include <opaque_fragment>",
-        `vec3 bake = max( texture2D( lightMap, vLightMapUv ).rgb * uBake, vec3( 1e-3 ) );
-        outgoingLight *= pow( bake, vec3( uContrast ) );
+        `float bake = dot( texture2D( lightMap, vLightMapUv ).rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+        outgoingLight *= pow( max( bake * uBake, 1e-3 ), uContrast );
         #include <opaque_fragment>`,
       );
   };

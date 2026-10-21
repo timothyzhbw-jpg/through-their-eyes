@@ -1417,6 +1417,23 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+- **Stadium:** two builds of one bowl ([web/src/views/stadiumGeometry.ts](../web/src/views/stadiumGeometry.ts)).
+  - *Procedural* ([Stadium.tsx](../web/src/views/Stadium.tsx)): generated in the browser, drawn
+    on the first frame; it is the fallback.
+  - *Baked* ([bakedStadium.ts](../web/src/views/bakedStadium.ts),
+    `web/public/models/stadium_baked.glb`, about 0.8 MB): modelled in Blender from our own
+    procedural scripts on the same numbers (stepped terraces, 15,171 flat spectators, lattice
+    masts, roof trusses and light strips, a players' tunnel and two dugouts; no imported models
+    or textures). Cycles bakes the four masts' floodlights, the strips, the sky and the ambient
+    occlusion into a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a
+    light map for the grass. The floodlight spots' powers are fitted by least squares so the pitch
+    is evenly lit (5th percentile 0.78 of the median). Everything but the grass is unlit; the
+    grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
+    geometry, WebP textures.
+  - It is fetched at low priority a second after the first frame, once the page is idle, and
+    swapped in when ready; if it fails to load, the procedural stadium stays.
+    `?stadium=procedural|baked` picks one. The bpy scripts stay outside the repo (Blender is
+    GPL); only their output is committed (`web/public/models/README.md`).
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
