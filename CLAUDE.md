@@ -88,7 +88,12 @@ _Fill in as they come to exist._
 - `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
-  CI run on main.
+  CI run on main. Both upload web/ through `infra/upload_web.sh` (gzipped, hashed assets cached
+  for a year, `index.html` last with `no-cache`)
+- `cd web && npm run build && npm run loadperf` — cold-load timings of the live site (SPEC 8):
+  first paint, first draw, players drawn and bytes, laptop and phone, plain and on Fast 3G with a
+  4× CPU slowdown; `-- --serve dist-upload` measures a staged build (`node scripts/stage.mjs`)
+  served as Storage would on the site's origin. Report: `eval/reports/web_load.md`
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
@@ -131,6 +136,9 @@ _Fill in as they come to exist._
   out/dataset` reads it back
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
+  moments, breakdowns, the Verifier, interventions, determinism and the realism rows at season
+  scale, on all cores (15–30 min); writes `eval/reports/season.md` (`--from-cache` re-renders)
 - `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
   distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
   only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
@@ -149,6 +157,12 @@ _Fill in as they come to exist._
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
   `out/narration_ablation/`. Writes `eval/reports/narration_ablation.md`
+- `uv run --group eval --env-file .env python -m eval.crew_vs_single` — crew vs single agent
+  (SPEC 6, Best Multi-Agent System): one Foundry call doing the four agents' jobs
+  (`eval/single_agent.py`) vs the crew, each with and without the Verifier, on six hero moments,
+  plus the failure drill and a free-text sensitivity. Every model request is cached in
+  `out/crew_vs_single/` (about 200 calls the first time, none after; `--cached-only` re-scores).
+  Writes `eval/reports/crew_vs_single.md`
 - `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
   (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
   `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
@@ -170,7 +184,8 @@ _Fill in as they come to exist._
   the hero moment
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
-  skeleton view off and on (`-- --headed` on a laptop's GPU)
+  skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a
+  render tier, SPEC 7)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
   including axe-core's WCAG 2.2 A/AA rules
 - `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core

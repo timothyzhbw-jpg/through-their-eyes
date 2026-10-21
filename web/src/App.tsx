@@ -8,6 +8,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { DirectorBar } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
+import { GK_KITS } from "./players/kit";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
@@ -355,6 +356,12 @@ function Legend() {
       <span>
         <i style={{ background: "var(--away)" }} />
         {clubName(1)}
+      </span>
+      <span>
+        {GK_KITS.map((kit) => (
+          <i key={kit.shirt} style={{ background: kit.shirt }} />
+        ))}
+        Keepers (home, away)
       </span>
       {hero.runs.factual.sight && (
         <span>

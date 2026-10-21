@@ -4,6 +4,7 @@
 // button, who is watching sits in the header, and the moment card on the right has one primary
 // action: read the moment.
 
+import { QualityOption } from "../quality/QualityOption";
 import { withViewTransition } from "../beat/viewTransition";
 import {
   useEffect,
@@ -426,6 +427,7 @@ export function ViewOptions() {
       {open && (
         <div id={id} className="popover options-panel" role="group" aria-label="View options">
           <PovOptions />
+          <QualityOption />
           <TacticalOptions />
         </div>
       )}
