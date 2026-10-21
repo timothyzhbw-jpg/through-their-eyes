@@ -123,6 +123,12 @@ _Fill in as they come to exist._
   writes `eval/reports/hero_save_screened_shot.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
+- `uv run python -m sim.dataset --matches 10 --out out/dataset/` — the downloadable dataset
+  (SPEC 3.1, docs/DATASET.md): stitched matches on seeds 5001–, as events, tracking, metadata
+  and per-reception perception, plus a deterministic tar.gz in out/, about 80 s on all cores;
+  `--sample data/sample` rewrites the committed one-possession sample (a test fails when it is
+  stale on the platform that made it). `uv run python examples/dataset_quickstart.py --data
+  out/dataset` reads it back
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
 - `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
