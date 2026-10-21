@@ -36,6 +36,10 @@ once deployed. On 3G, `match-1` still falls back to the bundled hero ("offline")
 export is 4 MB gzipped, more than the 15 s the app waits for it. That is the API's payload, not the
 site's; see "Not done".
 
+Re-checked after merging `main` at ad33a09 (judge tour, cine mode, accessibility, QA sweep), before
+and after alternating, median of 3: phone on Fast 3G, players at 18.80 s → **8.49 s** (2499 →
+784 KB); laptop on broadband, 2.08 s → **1.37 s** (2512 → 1069 KB).
+
 ## Broadband (median of 3, interleaved)
 
 Local builds with 100 ms per round trip and 20 Mbps, roughly what this Mac gets from the site (a
