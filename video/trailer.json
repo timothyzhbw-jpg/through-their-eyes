@@ -1160,6 +1160,11 @@
           "name": "shutter",
           "at": 1.2,
           "gain_db": -5
+        },
+        {
+          "name": "touch",
+          "at": 2.45,
+          "gain_db": -4
         }
       ],
       "out": {
