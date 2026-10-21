@@ -3,7 +3,15 @@
 
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { addRim, grassTintAt, LOOK, playerMaterials, removeRim } from "./look";
+import {
+  addRim,
+  bakedLook,
+  grassTintAt,
+  LOOK,
+  playerMaterials,
+  removeRim,
+  undoBakedLook,
+} from "./look";
 
 const fakeShader = () => ({
   uniforms: {} as Record<string, unknown>,
@@ -74,5 +82,33 @@ describe("the grass tint", () => {
       for (let k = 0; k < 3; k++) expect(Math.abs(t[k] - last[k])).toBeLessThan(0.002);
       last = t;
     }
+  });
+});
+
+describe("the baked stadium under the look", () => {
+  const part = (name: string, color: string) => {
+    const m = new THREE.MeshBasicMaterial({ color });
+    m.userData.part = name;
+    if (name === "lamp" || name === "roof_lamp") m.userData.lamp = true;
+    return new THREE.Mesh(new THREE.PlaneGeometry(), m);
+  };
+
+  it("tints the crowd, brightens the lamps for the bloom, and leaves the rest", () => {
+    const root = new THREE.Group();
+    const crowd = part("crowd", "#808080");
+    const lamp = part("lamp", "#ffffff");
+    const board = part("board", "#0a1416");
+    root.add(crowd, lamp, board);
+    const changed = bakedLook(root);
+    const c = (crowd.material as THREE.MeshBasicMaterial).color;
+    const expected = new THREE.Color("#808080").multiply(new THREE.Color(LOOK.bakedCrowdTint));
+    expect(c.getHex()).toBe(expected.getHex());
+    expect((lamp.material as THREE.MeshBasicMaterial).color.r).toBeCloseTo(LOOK.bakedLampGain, 6);
+    expect((board.material as THREE.MeshBasicMaterial).color.getHexString()).toBe("0a1416");
+    bakedLook(root, changed); // once per material
+    expect(c.getHex()).toBe(expected.getHex());
+    undoBakedLook(changed);
+    expect(c.getHexString()).toBe("808080");
+    expect((lamp.material as THREE.MeshBasicMaterial).color.getHexString()).toBe("ffffff");
   });
 });

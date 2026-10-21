@@ -60,6 +60,11 @@ export const LOOK = {
   apron: "#1a3027", // the apron round the pitch, tinted the same way
   rim: { color: "#fff2d8", strength: 0.55, power: 2.5 }, // the floodlights' warm white
   crowdTint: "#c6beb8", // multiplies the crowd's shirts: neutral, a touch cool (B−R +3..+5)
+  // The baked stadium (bakedStadium.ts, PR #124): its unlit materials carry userData.part; the
+  // crowd's colour is multiplied by this, and the lamp faces brightened like the procedural
+  // ones (×4 against classic ×2.5) so the high tier's bloom finds them.
+  bakedCrowdTint: "#f2f4fa",
+  bakedLampGain: 1.6,
   crowdGrey: 0.75, // how far every shirt is pulled to the crowd grey (classic: 0.45 for colours)
   // The night sky as authored before the curve: AgX's toe would crush the classic #04070c.
   sky: { zenith: "#10141a", horizon: "#252c31" },
@@ -156,6 +161,32 @@ export function removeRim(material: THREE.Material): void {
   material.customProgramCacheKey = saved.key;
   delete material.userData.rim;
   material.needsUpdate = true;
+}
+
+/**
+ * The look on the baked stadium's materials in `root`: the crowd tinted, the lamp faces brighter.
+ * Each material once; returns those changed with their classic colours, for undoBakedLook.
+ */
+export function bakedLook(root: THREE.Object3D, done = new Map<THREE.Material, THREE.Color>()) {
+  root.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+    if (!m || Array.isArray(m) || !m.color || done.has(m)) return;
+    const part = m.userData.part as string | undefined;
+    if (part === "crowd") {
+      done.set(m, m.color.clone());
+      m.color.multiply(new THREE.Color(LOOK.bakedCrowdTint));
+    } else if (m.userData.lamp) {
+      done.set(m, m.color.clone());
+      m.color.multiplyScalar(LOOK.bakedLampGain);
+    }
+  });
+  return done;
+}
+
+/** Back to the classic colours. */
+export function undoBakedLook(done: Map<THREE.Material, THREE.Color>): void {
+  for (const [m, color] of done) (m as THREE.MeshBasicMaterial).color.copy(color);
+  done.clear();
 }
 
 /** The materials of the players in `root`: the rigged meshes and the token bodies. */

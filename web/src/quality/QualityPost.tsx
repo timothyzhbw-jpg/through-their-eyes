@@ -40,7 +40,7 @@ import {
 import { blurFragmentShader, blurVertexShader } from "../views/PovMotionBlur";
 import { FLOODLIGHTS } from "../views/stadiumGeometry";
 import { NIGHT } from "../views/Stadium";
-import { addRim, aimRim, LOOK, playerMaterials, removeRim } from "./look";
+import { addRim, aimRim, bakedLook, LOOK, playerMaterials, removeRim, undoBakedLook } from "./look";
 import {
   dofAt,
   featuresOf,
@@ -404,6 +404,7 @@ export function LookRig() {
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
   const rimmed = useMemo(() => new Set<THREE.Material>(), []);
+  const baked = useMemo(() => new Map<THREE.Material, THREE.Color>(), []);
   const tick = useMemo(() => ({ n: 0 }), []);
   useEffect(() => {
     const before = { toneMapping: gl.toneMapping, exposure: gl.toneMappingExposure };
@@ -415,12 +416,16 @@ export function LookRig() {
       gl.toneMappingExposure = before.exposure;
       for (const m of rimmed) removeRim(m);
       rimmed.clear();
+      undoBakedLook(baked);
       invalidate();
     };
-  }, [gl, invalidate, rimmed]);
+  }, [gl, invalidate, rimmed, baked]);
   useFrame(({ camera }) => {
     aimRim(camera);
     if (tick.n++ % 30) return;
+    const before = baked.size;
+    bakedLook(scene, baked); // the baked stadium loads late too
+    if (baked.size !== before) invalidate();
     for (const m of playerMaterials(scene)) {
       if (rimmed.has(m)) continue;
       addRim(m);
