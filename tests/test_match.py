@@ -225,7 +225,7 @@ def test_match_2_plays_the_same_heroes_on_other_gated_seeds_in_another_order():
         ("corner_blind_side", 2),
         ("blind_side_run", 11),
     ]
-    assert match_heroes(1) == [("blind_side_run", 3), ("press_escape", 0), ("corner_blind_side", 0)]
+    assert match_heroes(1) == [(s.scenario, s.seed) for s in DEFAULT_PLAN if s.seed is not None]
     assert 15 <= len(MATCH_2) <= 25
     longest = sum(spec.max_s or 0.0 for spec in MATCH_2 if spec.seed is None)
     assert longest + 3 * 7.0 <= 900  # a hero possession lasts about 6 s
