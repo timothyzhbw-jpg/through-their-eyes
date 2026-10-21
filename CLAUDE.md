@@ -105,7 +105,7 @@ _Fill in as they come to exist._
   does lens selection pick the lens the scenario is built for, and does its intervention
   (`Scenario.intervention`) change the outcome? Design seeds are 0–99. By default it runs the
   held-out seeds, 100–139, or 200–239 for `press_escape` (100–139 were seen while fixing the
-  decision model), and writes `eval/reports/hero_lens_<scenario>.md`. With other `--seeds` it
+  decision model) and for `far_post_finish` (its gate's seeds), and writes `eval/reports/hero_lens_<scenario>.md`. With other `--seeds` it
   writes `hero_lens_<scenario>_<first>-<last>.md` instead (`--out` for another path). With
   `--scenario corner_blind_side` it reads the marker's look (`marker_scan`, no decision on the
   ball): the scan lens's Δ, whether its scan is the key scan, and `eval.hero_marking`'s gate

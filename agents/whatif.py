@@ -35,6 +35,7 @@ from agents.context import MomentContext
 from agents.llm import DEFAULT_TIMEOUT_S, ask, client_from_env
 from agents.prompts import CREW
 from agents.schemas import Language, Persona, Strict
+from explain.builders import POST
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.render import RenderPayload, build_payload
 from explain.render import ScriptLine as RenderLine
@@ -88,6 +89,9 @@ _KEYWORDS = {
               "dribbling", "run with", "runs with", "ran with", "running with", "take on",
               "takes on", "took on", "taking on", "带球", "盘带", "过人"),
     "shot": ("shoot", "shoots", "shooting", "shot", "shots", "射门"),
+    # A placed shot (Module A, `shot:near` / `shot:far`): only where the decision offers one.
+    "shot:near": ("near post", "near side of the goal", "近角", "近门柱"),
+    "shot:far": ("far post", "far side of the goal", "远角", "远门柱"),
 }  # fmt: skip
 # Words a viewer may use for a receiver's role. Bare "back" and "forward" are directions, not roles.
 _ROLE_WORDS: dict[tuple[str, ...], tuple[str, ...]] = {
@@ -325,8 +329,12 @@ def _cues(question: str, available: list[str], recv: list[Receiver]) -> list[tup
         cues.append((m.start(), m.end(), [action] if action in available else []))
     for m in _ROLE.finditer(question):
         cues.append((m.start(), m.end(), _named(question, m, recv)))
+    placed = any(a.startswith("shot:") for a in available)
     for m in _ACTION.finditer(question):
         action = _ACTION_OF[_key(m.group(0))]
+        if action == "shot" and placed:  # "shoot" names no option; "near/far post" picks one
+            cues.append((m.start(), m.end(), []))
+            continue
         cues.append((m.start(), m.end(), [action] if action in available else None))
     return sorted(cues, key=lambda c: c[0])
 
@@ -395,6 +403,13 @@ def _decision_evidence(ctx: MomentContext) -> str:
     return anchors.get("action") or anchors["reception"]
 
 
+def _evidence(ctx: MomentContext, ids: list[str]) -> list[str]:
+    """Evidence must be events of the factual run: a what-if pass has the factual pass's id when
+    he also passed at that frame, but not when he shot (`far_post_finish`)."""
+    known = {e.id for e in ctx.run.events}
+    return [i for i in ids if i in known] or [_decision_evidence(ctx)]
+
+
 def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
     hero = w.factual_decision.player
     passes = [
@@ -420,7 +435,7 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
                 template="If {player} had passed to {target}, {receiver} would have received it.",
                 templates={"zh": "如果{player}把球传给{target}，{receiver}会接到球。"},
                 slots={"player": Slot(ref=hero), "target": target, "receiver": Slot(ref=receiver)},
-                predicate=Predicate(op="all", args=checks), evidence=[p.id],
+                predicate=Predicate(op="all", args=checks), evidence=_evidence(ctx, [p.id]),
             ))  # fmt: skip
         elif outcome == "intercepted" and receiver:
             checks.append(Predicate(op="eq", lhs=fn("event_attr", attr="receiver", **at),
@@ -432,7 +447,7 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
                 templates={"zh": "如果{player}把球传给{target}，球会被{interceptor}断下。"},
                 slots={"player": Slot(ref=hero), "target": target,
                        "interceptor": Slot(ref=receiver)},
-                predicate=Predicate(op="all", args=checks), evidence=[p.id],
+                predicate=Predicate(op="all", args=checks), evidence=_evidence(ctx, [p.id]),
             ))  # fmt: skip
     if w.action == "carry":
         tackle = next(
@@ -457,6 +472,8 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
                 ]),
                 evidence=[_decision_evidence(ctx)],
             ))  # fmt: skip
+    if w.action.startswith("shot:"):
+        return out + _shot_claims(ctx, w)
     delta = fn("cf_delta", of="possession_value", scan=w.id)
     value = round(abs(w.delta_xt), 2)
     better = w.delta_xt >= 0  # what he did was worth more than the forced option
@@ -469,8 +486,70 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=delta, rhs=slot("dxt", scale=1.0 if better else -1.0),
                             abs_tol=0.005),
-        evidence=[p.id for p in passes] or [_decision_evidence(ctx)],
+        evidence=_evidence(ctx, [p.id for p in passes]),
     ))  # fmt: skip
+    return out
+
+
+def _shot_claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
+    """A forced placed shot: where it would have ended, and both placements' chance of a goal on
+    the truth at his decision. A goal's possession value is an outcome, not a chance, so these
+    replace the value line of the other what-ifs."""
+    d = w.factual_decision
+    hero, placement = d.player, w.action.removeprefix("shot:")
+    post, post_zh = POST[placement]
+    out: list[Claim] = []
+    shot = next(
+        (e for e in w.counterfactual.events
+         if e.type == "shot" and e.player == hero and e.frame == d.frame),
+        None,
+    )  # fmt: skip
+    if shot is not None and shot.attrs.get("outcome") in ("goal", "saved", "wide"):
+        at = {"event": shot.id, "cf": w.id}
+        outcome = shot.attrs["outcome"]
+        checks = [
+            Predicate(op="eq", lhs=fn("event_attr", attr="player", **at), rhs=slot("player")),
+            Predicate(op="eq", lhs=fn("event_attr", attr="placement", **at), rhs=placement),
+            Predicate(op="eq", lhs=fn("event_attr", attr="outcome", **at), rhs=outcome),
+        ]
+        slots = {"player": Slot(ref=hero)}
+        end = {"goal": ("it would have gone in", "球会进"),
+               "wide": ("it would have gone wide", "球会偏出")}.get(outcome)  # fmt: skip
+        if outcome == "saved":
+            slots["keeper"] = Slot(ref=shot.attrs["keeper"])
+            checks.append(Predicate(op="eq", lhs=fn("event_attr", attr="keeper", **at),
+                                    rhs=slot("keeper")))  # fmt: skip
+            end = ("{keeper} would have saved it", "会被{keeper}扑出")
+        out.append(Claim(
+            id="whatif_outcome",
+            template=f"If {{player}} had gone for the {post}, {end[0]}.",
+            templates={"zh": f"如果{{player}}打{post_zh}，{end[1]}。"},
+            slots=slots, predicate=Predicate(op="all", args=checks), evidence=[shot.id],
+        ))  # fmt: skip
+    chosen = d.chosen.removeprefix("shot:")
+    if chosen != placement and d.chosen.startswith("shot:"):
+        anchor = _decision_evidence(ctx) if ctx.key_scan is None else ctx.card.anchors["action"]
+        p_new, p_his = (
+            fn("metric_at", metric="shot_success", player=slot("player"), placement=p,
+               state="true", anchor=anchor)
+            for p in (placement, chosen)
+        )  # fmt: skip
+        values = {"player": hero}
+        his, his_zh = POST[chosen]
+        out.append(Claim(
+            id="whatif_chance",
+            template=f"Going for the {post} had a {{p_new}} chance of a goal; the {his} had "
+                     "{p_his}.",
+            templates={"zh": f"打{post_zh}的进球概率是{{p_new}}，打{his_zh}是{{p_his}}。"},
+            slots={"player": Slot(ref=hero),
+                   "p_new": Slot(value=round(ctx.evaluator.value(p_new, values), 2), decimals=2),
+                   "p_his": Slot(value=round(ctx.evaluator.value(p_his, values), 2), decimals=2)},
+            predicate=Predicate(op="all", args=[
+                Predicate(op="approx", lhs=p_new, rhs=slot("p_new"), abs_tol=0.005),
+                Predicate(op="approx", lhs=p_his, rhs=slot("p_his"), abs_tol=0.005),
+            ]),
+            evidence=[ctx.card.anchors["action"]],
+        ))  # fmt: skip
     return out
 
 

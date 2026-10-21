@@ -318,7 +318,8 @@ Acceptance (`eval/hero_lens.py`; designed on seeds 0–99; fresh held-out seeds 
   the sim's tackle and control rules did not. One redesign, tried on design seeds only (pressing
   him 6 m deeper; the presser off the passing lanes), did not help (39/80 kept; or no press at
   all), so the scenario was not tuned further. The fix is in the decision model (§3.5, the run-in), not
-  in the scenario; on 100–139 it gives lens 39/40 and outcome 30/40, no carry lost
+  in the scenario; on 100–139 it gives lens 40/40 (39/40 before the fitted xT grid, §4) and
+  outcome 30/40, no carry lost
   ([hero_lens_press_escape_100-139.md](../eval/reports/hero_lens_press_escape_100-139.md)).
   `blind_side_run` is unchanged where it matters: 39/40 flips, its seed 3 byte for byte.
 
@@ -385,7 +386,8 @@ the defending side.
   0–39, run once on 100–139 ([hero_lens_corner_blind_side.md](../eval/reports/hero_lens_corner_blind_side.md)):
   the look is detected as the moment 40/40; the scan lens is selected 40/40, which is by
   construction, since the other two lenses need a decision on the ball; its Δ is positive in 39/40
-  (median +0.063 xT); the lens's most informative scan is the key scan 40/40; and the outcome
+  (median +0.1435 xT on the fitted grid, §4; +0.063 on the prior); the lens's most informative
+  scan is the key scan 40/40; and the outcome
   changes in 37/40 (the gate above). The one negative Δ, seed 103, is the gate's miss there:
   without the look another defender is 4.9 m from A9, so the pressure on him is higher.
   - Demo seed 0, a typical design seed: separation 2.9 m with the look and 7.9 m without (design
@@ -449,11 +451,21 @@ expansion pack, on Module A (§3.3).
     labelled as seen). The defence was then moved into the box, which needs fresh seeds.
   - *Eval.* `eval/hero_shot.py` instead of `eval/hero_flip.py`. A placed shot's value on the
     truth needs the save model.
-  - *Not reported yet: lens selection, and whether the key scan is the most informative.* Both
-    need the explain layer to score placed shots on the truth; that is the follow-up explain PR.
-    The demo seed is not chosen yet either.
+  - *Lens selection and the key scan* were not reported with the scene; the explain layer now
+    scores placed shots on the truth (§5.2) and they are in "In the app" below.
   - *Scripted keeper set.* Not in the plan; added so the cutback finds A1 where the wide player's
     angle put him.
+- **In the app (2026-10-21).** The hero card is the ordinary `decision_after_scan` card. A placed
+  shot is valued on the truth (§5.2), its claims and template narration tell the look at the
+  keeper (§6), and a "What if…?" on the near or far post is answered by re-simulation.
+  `eval/hero_lens.py`, built on design seeds 0–39, run once on 200–239
+  ([hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)): the scan lens is
+  selected in 38/40, its scan is the key scan in 40/40, and the decision changes in 38/40. In 38 of
+  the 40, Δscan equals Δspace (+0.50 to +0.54 on the truth) and the tie goes to `scan`. The two
+  `space` seeds, 200 and 233, are the gate's two misses: he sees the keeper during his first
+  touch, so the look changes nothing and Δscan is 0.
+  - Demo seed 11, a typical design seed: `shot:far`, a goal, chance 0.79 on the truth; without
+    the look `shot:near`, saved by A1, chance 0.26.
 
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
@@ -825,6 +837,13 @@ For each moment, compute candidate explanations. All three deltas are in xT of t
 Pick the lens with the largest absolute delta; exact ties go `scan > space > pressure`. Record all
 three in the MomentCard.
 
+A placed shot (`shot:near` / `shot:far`, Module A) is worth its chance of a goal on the truth:
+P(on target) × (1 − E[P(save)]) with the keeper where he really is, the decision model's own value
+re-scored on the true state. Its xG-like value on his belief would make the look worth less than
+nothing whenever his stale picture flattered the near post. Without the look the striker picks
+the other placement, which is also the space lens's best alternative, so on `far_post_finish`
+Δscan equals Δspace and the tie goes to `scan`.
+
 A marker's look (`marker_scan`) has no decision on the ball, so only `scan` applies; `space` and
 `pressure` are recorded as unavailable. Its value is the pressure lens's currency from the
 defending side: the expected turnover where the pass to his man resolves, pressing intensity on
@@ -887,7 +906,9 @@ Every factual sentence on screen comes from a `Claim`:
 - Functions: `count_events, metric_at, metric_delta, event_attr, distance, scans_in_window,
   observed_share, cf_delta`, and for a marker's look `seconds_between` and
   `turnover_at_resolution`, with the metrics `time_unseen` (since he last saw his man) and
-  `sighting_error` (his belief rebuilt from sightings, for a player with no recorded decision).
+  `sighting_error` (his belief rebuilt from sightings, for a player with no recorded decision);
+  for a placed shot the metrics `shot_success` (his chance of a goal, on his belief or the truth)
+  and `near_side_offset` (the keeper's offset toward the shooter's near post).
 - Every verdict is written to the claims audit log (Cosmos DB) with inputs and timestamps.
 - **Claim kinds, shown on screen.** Every claim is one of:
   - `observed`: an event or tracking fact (a scan count, a pass outcome);
@@ -946,6 +967,12 @@ Every factual sentence on screen comes from a `Claim`:
       (40/40, 39/40 and 40/40 on seeds 100–139, §3.6);
       [tests/test_corner_breakdown.py](../tests/test_corner_breakdown.py) (design seeds, the API,
       and `test_no_other_moment_is_a_markers_look`)
+- [x] A placed shot is explained on the truth: on `far_post_finish` the scan lens is selected in
+      ≥ 60% of held-out seeds and its scan is the key scan in ≥ 90%; every claim verifies and every
+      persona's template script airs in en and zh; heroes without placed shots are unchanged.
+      — [eval/reports/hero_lens_far_post_finish.md](../eval/reports/hero_lens_far_post_finish.md)
+      (38/40 and 40/40 on seeds 200–239, §3.6);
+      [tests/test_finish_breakdown.py](../tests/test_finish_breakdown.py)
 - [x] Lens selection is deterministic for a given seed.
       — [tests/test_lenses.py](../tests/test_lenses.py)::`test_lens_selection_is_deterministic_for_a_seed`
 
@@ -1051,6 +1078,18 @@ Application Insights.
   Every persona has its template sequence in en and zh. The template plan's POV is his, with the
   scan marker on his look. "What if…?" refuses with its own sentence (he had no option to
   replay), and `list_options` and `what_if` say there is no decision on the ball.
+- *A placed shot (2026-10-21, `far_post_finish`).* Claims: the look before the ball arrived
+  (`scan_at_goal`), the keeper it showed him (`keeper_seen_in_scan`) and where he stood
+  (`keeper_near_side`), the placement (`shot_placement`), its result (`shot_scored`, `shot_saved`
+  or `shot_wide`; the recap keeps `goal`, `saved` and `wide` for its own per-moment claims),
+  `shot_speed`, and he thought vs it was (`shot_thought_vs_was`); from the run without the look,
+  `cf_shot` (the other post, and the save when there is one), `cf_keeper_age` and `cf_shot_value`
+  (his chance of a goal with and without the look, the scan lens's Δ). The generic `cf_value` is
+  not built for a placed shot: a goal's possession value is an outcome, not a chance. Every
+  persona has its sequence in en and zh. "What if…?" understands "near post" and "far post"
+  (近角, 远角); its answer is where the shot would have ended and both placements' chance on the
+  truth. A what-if pass from a striker who shot cites the decision as its evidence, since the
+  re-simulated pass is not an event of the real run.
 - Every model step has a deterministic template (`agents/fallbacks.py`), so the crew runs end to end
   offline. A Telestrator plan is validated with the same rules as `web/` and replaced by the
   template plan when invalid. The reasons are public (`trace[].notes`, `plan_errors`), so each is a
@@ -1586,11 +1625,11 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 |---|---:|---:|---|
 | §3 sim | 10 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
 | §4 analytics | 8 | 0 | — |
-| §5 explain | 7 | 0 | — |
+| §5 explain | 8 | 0 | — |
 | §7 render | 6 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
 | §8 platform (Application Insights) | 1 | 0 | — |
 | §11 submission | 1 | 7 | Bowen's: registration, Innovation Studio page, public repo, video; test link up until Nov 10; video and submission in English; technology table in the video and submission |
-| **Total** | **33** | **9** | |
+| **Total** | **34** | **9** |
 
 **Vertical slice first.** One hero moment runs end-to-end — sim → perception → counterfactual →
 verified narration → POV replay → deployed on Azure — before any layer is widened. Building layer
