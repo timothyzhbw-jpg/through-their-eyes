@@ -891,8 +891,8 @@ optgroup {
 .hud .blind-hud .source {
   padding: 2px 6px;
 }
-.hud .source {
-  color: var(--chalk-2); /* over the picture, as .brand .sub */
+.stage-hud .hud .source {
+  color: var(--chalk-2); /* over the picture, as .brand .sub (beats the shared .hud .source) */
   text-shadow: var(--halo);
 }
 
@@ -1117,6 +1117,9 @@ optgroup {
 .persona-note {
   font-size: 13px;
   color: var(--chalk-3);
+}
+.persona[aria-pressed="true"] .persona-note {
+  color: var(--chalk-2); /* Chalk 3 on the chosen option's Floodlight tint was 4.3:1 */
 }
 .viewer-lang {
   display: flex;

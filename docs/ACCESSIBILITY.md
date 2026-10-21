@@ -63,7 +63,7 @@ screen reader.
 | axe WCAG A/AA, 13 screens × 2 viewports | 4 rules violated, all serious (5 findings below) | 0 violations |
 | axe best practice | heading order, no `<main>` in Your call, no `<h1>` on phones | heading order in View options, no `<main>` in Your call |
 | smoke (14 pages, with axe) | — (axe not in the smoke run) | 14 of 14 pass |
-| Text over the picture, 72 renders | 24 text boxes below threshold | see the sweep note under Known gaps |
+| Text over the picture (`npm run contrast`, 72 renders) | 46 of 1,944 text boxes under threshold; worst: the director's × 1.3:1, the board legend 1.5:1, the strapline 2.1:1 | 1 of 1,908: the HUD's "sim" tag, 4.0:1 on one phone frame. Fixed after the sweep; the 12 phone first-person renders then had 0 of 244 under |
 | Keyboard: Escape closes the overlay | lineup card, menus and Your call: yes; evidence card: no | all |
 | Focus after the lineup card closes | lost to `<body>`; the next Tab skipped the live screen | the live screen's title |
 
@@ -98,6 +98,12 @@ Found by hand, fixed here:
   covers the header strapline, "Watching as", the clock, the timeline marks, the HUD's "sim" tag
   and the pass-options legend. Those labels move from Chalk 3 to Chalk 2 with a Night halo, and the
   legend gets a glass backing because it sits on the touchline.
+- The lineup card let the live screen show through at 12 %, which took a few Chalk 3 labels to
+  4.2–4.4:1. The backing is now 0.92 opaque.
+- The note under the chosen option (the lineup card's eyes, the viewer menu's audience) was
+  Chalk 3 on a Floodlight tint, 4.3:1. It is now Chalk 2.
+- After the fixes, the lineup card on desktop (hero and `match-1`) and the viewer menu on a phone
+  measured 0 boxes under threshold.
 
 ## What passes (verified)
 
@@ -137,16 +143,17 @@ Found by hand, fixed here:
 
 ## Known gaps
 
-- **Text over the moving picture.** The sweep is a sample of 72 renders, not every frame. After
-  the fix, the smaller labels are Chalk 2 with a halo; their worst-5 % numbers are in the PR. The
-  3D views change every frame, so a frame not sampled could still put a floodlight behind a label.
+- **Text over the moving picture.** The sweep is a sample of 72 renders, not every frame, and the
+  3D views change every frame. The full sweep ran before the last fix (the HUD's "sim" tag), and
+  only the 12 renders that tag failed on were measured again. A frame not sampled could still put a
+  floodlight behind a label.
 - **The lineup card closes itself after 5 s.** That was the design for judges who do not click.
   A screen reader is told, and Tab keeps the card open. WCAG 2.2.1 would rather have no timer, or
   a way to turn it off before it starts. Two smaller issues remain:
   - Any key other than Tab, Enter, Space or a bare modifier closes the card, so the arrow keys
     cannot scroll it when it overflows on a small screen.
-  - The card is 88 % opaque, and on desktop the live screen behind it shows through. A few of its
-    Chalk 3 labels measure 4.0–4.5:1 at their worst 5 % of pixels.
+  - On a phone the last rows of the line-up fade out under the sticky buttons until they are
+    scrolled up; while faded they measure 1.2–1.7:1.
 - **The views are pictures.** The 3D views and the tactical board are canvases with a name and no
   text alternative for what they show. The narration (audio description above all), the HUD
   readouts and the story panels carry the content. The board's pass-option values appear on hover
