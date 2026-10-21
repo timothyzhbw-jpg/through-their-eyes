@@ -45,6 +45,7 @@ from explain.recap import (
 from explain.render import RenderPayload
 from explain.verifier import Verdict, Verifier
 from sim.match import StitchedMatch, build_match, global_id
+from sim.roster import short_name
 
 RECAP_VERSION = 1  # bump when the evidence changes shape: part of the recap's content hash
 MAX_CANDIDATES = 8
@@ -221,7 +222,8 @@ class RecapContext:
 
     @property
     def names(self) -> dict[str, str]:
-        return {pid: pid for pid in self.players}
+        """Players as the recap speaks of them: their fictional short names (sim/roster.py)."""
+        return {pid: short_name(pid) for pid in self.players}
 
     @property
     def mcp_args(self) -> list[str]:

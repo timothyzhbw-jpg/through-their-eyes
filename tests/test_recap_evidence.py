@@ -218,9 +218,9 @@ def test_a_goal_is_in_the_score_and_its_moment_leads_the_candidates(scoring):
     cid = f"{first.prefix}.goal"
     assert cid in first.claims
     out = render_claim(rc.all_claims[cid], rc.verdicts[cid], "en", rc.names)
-    assert out.text == "H9 scored."
+    assert out.text == "N. Varnhall scored."
     zh = render_claim(rc.all_claims[cid], rc.verdicts[cid], "zh", rc.names)
-    assert zh.text == "H9进球了。"
+    assert zh.text == "N. Varnhall进球了。"
 
 
 def test_a_goal_claim_with_another_scorer_is_refuted(scoring):

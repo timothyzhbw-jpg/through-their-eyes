@@ -231,7 +231,10 @@ async function recap(page, shoot) {
 async function lineup(page, shoot, button, then) {
   const card = page.getByRole("dialog");
   await see(card, "the lineup card");
-  await see(card.getByRole("list", { name: "Home line-up" }), "the home line-up on the card");
+  await see(
+    card.getByRole("list", { name: "Kestrel Bay line-up" }),
+    "the home line-up on the card",
+  );
   await shoot("card");
   // The card also closes by itself after a few seconds (INTRO_MS), and a slow runner can reach
   // the button after that: a card that is already gone has closed, which is what this checks.

@@ -24,6 +24,7 @@ import { useStore } from "../store/store";
 import { Chapter, Title } from "./Chapter";
 import { CheckIcon } from "./icons";
 import { LineText } from "./Narration";
+import { renameIds, shortName } from "../data/roster";
 
 interface Beat {
   from: number; // frame
@@ -360,7 +361,7 @@ export function StoryPanel() {
           <li key={k} className={k === now ? "now" : undefined}>
             <button type="button" onClick={() => controls.seek(b.from)}>
               <span className="t">{((b.from + offset) * hero.dt).toFixed(2)} s</span>
-              <span>{b.text}</span>
+              <span>{renameIds(b.text)}</span>
             </button>
           </li>
         ))}
@@ -384,7 +385,7 @@ export function DecisionPanel() {
     <Chapter
       className="decision"
       kicker={`What he believed · at ${at} s`}
-      label={`${hero.heroId}'s options at ${at} s, on his belief`}
+      label={`${shortName(hero.heroId ?? "He")}'s options at ${at} s, on his belief`}
       title={<Title lead="On his" em="belief." />}
       lede="He decides on what he believes, never on the truth. Each option is scored on his picture of the pitch; the probabilities come from the softmax of each option's expected threat."
     >
@@ -396,7 +397,7 @@ export function DecisionPanel() {
               <span className="unit">m</span>
             </p>
             <figcaption>
-              His picture of {runner} was off by this much when he decided.{" "}
+              His picture of {shortName(runner)} was off by this much when he decided.{" "}
               <span className="source" title="Read from the sim export, not a verified claim">
                 sim
               </span>
@@ -405,7 +406,7 @@ export function DecisionPanel() {
         )}
         <div className="options-figure">
           <p className="kicker">
-            {hero.heroId}'s options at {at} s, on his belief{" "}
+            {shortName(hero.heroId ?? "He")}'s options at {at} s, on his belief{" "}
             <span className="source" title="Read from the sim export, not a verified claim">
               sim
             </span>
@@ -417,7 +418,7 @@ export function DecisionPanel() {
                 className={o.action === dec.chosen ? "opt chosen" : "opt"}
                 title={`P(success) ${o.p_success.toFixed(2)} · value ${o.value.toFixed(4)} xT`}
               >
-                <span className="name">{actionLabel(o.action)}</span>
+                <span className="name">{renameIds(actionLabel(o.action))}</span>
                 <span className="bar">
                   <i style={{ width: `${Math.max(1, o.prob * 100)}%` }} />
                 </span>
@@ -428,11 +429,11 @@ export function DecisionPanel() {
           {runner && (
             <div className="facts">
               <Fact
-                label={`Last saw ${runner}`}
+                label={`Last saw ${shortName(runner)}`}
                 value={`${dec.belief_age[runner].toFixed(2)} s ago`}
               />
               <Fact
-                label={`P(pass to ${runner} arrives), as he sees it`}
+                label={`P(pass to ${shortName(runner)} arrives), as he sees it`}
                 value={runnerOption ? runnerOption.p_success.toFixed(2) : "not on"}
               />
             </div>
@@ -518,7 +519,7 @@ export function VerdictPanel() {
         step
           ? "We play the same match again with only that step removed. Everything else is held the same, so any difference comes from where he stood."
           : marker
-            ? `We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw. Each card: how far he was from ${marker.man} when the pass to him ended.`
+            ? `We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw. Each card: how far he was from ${shortName(marker.man)} when the pass to him ended.`
             : look
               ? "We play the same match again with only that look removed. Everything else is held the same, so any difference comes from what he saw."
               : "We play the same match again with his choice forced. Everything else is held the same, so any difference comes from that choice."
@@ -527,11 +528,11 @@ export function VerdictPanel() {
       <div className="versus">
         <div className={mode === "factual" ? "run-card on" : "run-card"}>
           <span className="kicker">{labels.tag.factual}</span>
-          <span className="run-action">{cardText("factual")}</span>
+          <span className="run-action">{renameIds(cardText("factual"))}</span>
         </div>
         <div className={mode === "counterfactual" ? "run-card cf on" : "run-card cf"}>
           <span className="kicker">{labels.tag.counterfactual}</span>
-          <span className="run-action">{cardText("counterfactual")}</span>
+          <span className="run-action">{renameIds(cardText("counterfactual"))}</span>
         </div>
       </div>
       <div className={claim ? "worth verified" : "worth"}>

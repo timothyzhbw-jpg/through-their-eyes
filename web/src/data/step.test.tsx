@@ -61,14 +61,14 @@ describe("a keeper's step", () => {
   it("tells his step and the shot, never a decision or a press", () => {
     const factual = render(session("factual"), <StoryPanel />);
     expect(factual).not.toMatch(/Decision|closing him down|keeps the ball|takes it/);
-    expect(factual).toContain("H1 steps 0.6 m across.");
-    expect(factual).toContain("A9 shoots.");
-    expect(factual).toContain("H1 saves it.");
+    expect(factual).toContain("B. Oystervelt steps 0.6 m across.");
+    expect(factual).toContain("M. Quillan shoots.");
+    expect(factual).toContain("B. Oystervelt saves it.");
     const times = [...factual.matchAll(/class="t">([\d.]+) s</g)].map((m) => Number(m[1]));
     expect(times).toEqual([...times].sort((a, b) => a - b));
     const cf = render(session("counterfactual"), <StoryPanel />);
-    expect(cf).toContain("Same moment, but H1 stays where he is. No step.");
-    expect(cf).toContain("A9 scores.");
+    expect(cf).toContain("Same moment, but B. Oystervelt stays where he is. No step.");
+    expect(cf).toContain("M. Quillan scores.");
   });
 
   it("compares how the shot ended, and shows his chance of saving it", () => {
@@ -78,7 +78,7 @@ describe("a keeper's step", () => {
     );
     expect(html).toContain("Take the step");
     expect(html).toContain("He saves it");
-    expect(html).toContain("A9 scores");
+    expect(html).toContain("M. Quillan scores");
     expect(html).toContain("+0.700");
     expect(html).toContain("Chance of saving it gained by the step, on the true positions.");
     expect(html).not.toContain("Expected threat is");

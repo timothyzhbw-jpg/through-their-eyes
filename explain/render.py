@@ -273,7 +273,9 @@ def check_caption(
         Violation("placeholder", "unrendered brace", m.start(), m.end())
         for m in re.finditer(r"[{}]", text)
     ]
-    for name in sorted(set((names or {}).values())):
+    # A player is named only by a slot: his on-screen name, and his id, are entities.
+    entities = set((names or {}).values()) | set(names or {})
+    for name in sorted(entities):
         pattern = rf"\b{re.escape(name)}\b" if name.isascii() else re.escape(name)
         violations += [
             Violation("entity", name, m.start(), m.end())

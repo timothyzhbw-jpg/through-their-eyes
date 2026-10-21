@@ -193,7 +193,8 @@ describe("Your call: deciding", () => {
     const { session, yc } = open();
     const el = mount(session);
     const group = el.querySelector('[role="group"]')!;
-    expect(group.getAttribute("aria-label")).toBe("Options of H8");
+    expect(group.getAttribute("aria-label")).toBe("Options of J. Ferriday");
+    expect(textOf(el.querySelector(".yc-you"))).toBe("J. Ferriday · you");
     const names = markers(el).map((m) => m.getAttribute("aria-label"));
     // The shirt number the marker shows is in its name too, so a speech user can say it.
     const named = (o: (typeof yc.options)[number]) =>
@@ -319,12 +320,16 @@ describe("Your call: the reveal", () => {
   it("plays every beat with verified lines, then one tap tries another option or goes back", () => {
     const { session, yc } = open();
     const el = mount(session);
-    click(markers(el).find((m) => m.getAttribute("aria-label") === "Pass to H4, number 4")!);
+    click(
+      markers(el).find((m) => m.getAttribute("aria-label") === "Pass to K. Annersley, number 4")!,
+    );
 
     // Outcome: the re-simulated run of the call plays, with its verified counterfactual line.
     expect(yc.state.get().clip).toMatchObject({ of: "pass:H4", playing: true });
-    expect(textOf(el.querySelector(".yc-card h2"))).toBe("Your call: Pass to H4");
-    expect(textOf(el)).toContain("If H8 had passed to H4, H4 would have received it.");
+    expect(textOf(el.querySelector(".yc-card h2"))).toBe("Your call: Pass to K. Annersley");
+    expect(textOf(el)).toContain(
+      "If J. Ferriday had passed to K. Annersley, K. Annersley would have received it.",
+    );
     expect(textOf(el.querySelector(".yc-lines .kind"))).toMatch(/^Counterfactual/);
     // "Playing…" is shown, but outside the live region: it is not announced with every clip.
     expect(textOf(el.querySelector(".yc-card"))).toContain("Playing…");
@@ -337,17 +342,21 @@ describe("Your call: the reveal", () => {
 
     click(button(el, "See the truth"));
     expect(textOf(el.querySelector(".yc-card h2"))).toBe("The true picture");
-    expect(textOf(el)).toContain("Not where he pictured them: A3, A4, H10, H7.");
+    expect(textOf(el)).toContain(
+      "Not where he pictured them: M. Undholm, O. Grevholt, L. Brackwell, R. Castellane.",
+    );
     const sim = el.querySelector(".yc-lead .source")!;
     expect(textOf(sim)).toBe("sim (read from the sim export, not a verified claim)");
     expect(textOf(sim.querySelector(".sr-only"))).toBe(
       "(read from the sim export, not a verified claim)",
     );
-    expect(textOf(el)).toContain("H8 thought the pass to H9 had a 0.80 chance of arriving");
+    expect(textOf(el)).toContain(
+      "J. Ferriday thought the pass to N. Varnhall had a 0.80 chance of arriving",
+    );
 
     click(button(el, "What he did"));
-    expect(textOf(el.querySelector(".yc-card h2"))).toBe("What he did: Pass to H9");
-    expect(textOf(el)).toContain("H9 took the pass from H8.");
+    expect(textOf(el.querySelector(".yc-card h2"))).toBe("What he did: Pass to N. Varnhall");
+    expect(textOf(el)).toContain("N. Varnhall took the pass from J. Ferriday.");
     expect(yc.state.get().clip).toMatchObject({ of: "pass:H9", playing: true });
     // The bundled narration was not verified: its lines say "sample", not "fixture".
     expect(textOf(el.querySelector(".yc-lines .source"))).toBe("sample");
@@ -361,8 +370,8 @@ describe("Your call: the reveal", () => {
       textOf(d.querySelector("dd")),
     ]);
     expect(versus).toEqual([
-      ["Your call", "Pass to H4"],
-      ["His call", "Pass to H9"],
+      ["Your call", "Pass to K. Annersley"],
+      ["His call", "Pass to N. Varnhall"],
     ]);
     expect(textOf(el)).toContain(
       "That option would have been worth 0.13 less in expected threat than what he did.",
@@ -371,7 +380,9 @@ describe("Your call: the reveal", () => {
     click(button(el, "Try another call"));
     expect(yc.state.get().step).toBe("deciding");
     expect(
-      markers(el).some((m) => m.getAttribute("aria-label") === "Pass to H4, number 4, tried"),
+      markers(el).some(
+        (m) => m.getAttribute("aria-label") === "Pass to K. Annersley, number 4, tried",
+      ),
     ).toBe(true);
     click(button(el, "Back to the replay"));
     expect(yc.state.get().step).toBe("closed");
@@ -398,7 +409,7 @@ describe("Your call: the reveal", () => {
     const { session, yc } = open();
     const el = mount(session);
     act(() => yc.choose("pass:H9"));
-    expect(textOf(el.querySelector(".yc-card h2"))).toBe("You made his call: Pass to H9");
+    expect(textOf(el.querySelector(".yc-card h2"))).toBe("You made his call: Pass to N. Varnhall");
     act(() => {
       yc.next();
       yc.next();
@@ -505,7 +516,9 @@ describe("Your call: online and in the match", () => {
     expect(session.breakdown.get().status).toBe("ready");
     expect(yc.state.get().step).toBe("truth"); // the breakdown arriving does not end the mode
     act(() => yc.next());
-    expect(textOf(el)).toContain("Without that look, H8 would have passed to H4.");
+    expect(textOf(el)).toContain(
+      "Without that look, J. Ferriday would have passed to K. Annersley.",
+    );
     expect(el.querySelector(".yc-lines .source")).toBeNull(); // verified: no fixture tag
   });
 
@@ -562,7 +575,9 @@ describe("Your call: online and in the match", () => {
     const yourCallRow = [...heroRow.querySelectorAll("button")].find((b) =>
       b.getAttribute("aria-label")?.startsWith("Your call"),
     )!;
-    expect(yourCallRow.getAttribute("aria-label")).toBe("Your call: Decision after a scan · H8");
+    expect(yourCallRow.getAttribute("aria-label")).toBe(
+      "Your call: Decision after a scan · J. Ferriday",
+    );
     const yourCallIn = (possession: number) => {
       const rows = host.querySelectorAll(`li[data-possession="${possession}"]`);
       return [...rows]

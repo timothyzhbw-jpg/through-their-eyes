@@ -22,6 +22,7 @@ import { Chapter } from "./Chapter";
 import { ClaimCard, isVerified, KindTags, LineText } from "./Narration";
 import { Segmented } from "./Segmented";
 import "./whatif.css";
+import { renameIds } from "../data/roster";
 
 export function WhatIfPanel() {
   const { whatIfs, whatIfError, playback, controls, api, ask: askStore } = useSession();
@@ -66,7 +67,7 @@ export function WhatIfPanel() {
         option &&
         option.answers[lang] && (
           <Answer
-            asked={option.question[lang]}
+            asked={renameIds(option.question[lang])}
             narration={option.answers[lang]!}
             run={option.run}
             onClose={controls.clearWhatIf}
@@ -203,7 +204,7 @@ function Question({
       title={option.errors.length ? option.errors.join("\n") : undefined}
       onClick={() => controls.askWhatIf(option.action)}
     >
-      {option.question[lang]}
+      {renameIds(option.question[lang])}
       {option.factual && <span className="did">{lang === "zh" ? "他的选择" : "what he did"}</span>}
     </button>
   );

@@ -84,9 +84,10 @@ export const LABEL = {
   },
   token: { font: '700 92px "IBM Plex Mono", ui-monospace, monospace' },
   name: {
+    // Wide enough for a short name ("J. Ferriday", data/roster.ts), centred.
     font: '700 78px "Saira Condensed", "Arial Narrow", sans-serif',
     outline: "rgba(11,18,16,0.85)",
-    width: 192,
+    width: 512,
     height: 96,
   },
   tag: {

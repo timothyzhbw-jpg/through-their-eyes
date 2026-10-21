@@ -32,6 +32,7 @@ import { Segmented } from "./Segmented";
 import { formatSlot, plainReason, slotLabel } from "./tamperText";
 import "./live.css";
 import "./whatif.css";
+import { renameIds } from "../data/roster";
 
 export function KindTag({ kind }: { kind: ClaimKind }) {
   return (
@@ -63,9 +64,12 @@ export const isVerified = (narration: Narration, line: PayloadLine) =>
 
 /**
  * A line's text; in a verified line each number, with its unit, gets the dotted Floodlight
- * underline (every digit on air was slot-filled from a checked value).
+ * underline (every digit on air was slot-filled from a checked value). Players go by their
+ * fictional names: the service names them already; the bundled example, written with ids, is
+ * named here (data/roster.ts).
  */
-export function LineText({ text, verified }: { text: string; verified: boolean }) {
+export function LineText({ text: raw, verified }: { text: string; verified: boolean }) {
+  const text = renameIds(raw);
   if (!verified) return <>{text}</>;
   return (
     <>

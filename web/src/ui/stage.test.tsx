@@ -166,7 +166,7 @@ describe("whose eyes", () => {
     const page = mount(session, <StageHud />);
     const select = page.querySelector<HTMLSelectElement>("select[aria-label='Whose eyes']")!;
     expect(select.value).toBe("H8");
-    expect(text(page.querySelector(".hud"))).toMatch(/H8 · head \d+° from the ball/);
+    expect(text(page.querySelector(".hud"))).toMatch(/J. Ferriday · head \d+° from the ball/);
     act(() => {
       select.value = "H9";
       select.dispatchEvent(new Event("change", { bubbles: true }));

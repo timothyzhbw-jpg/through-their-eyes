@@ -165,7 +165,7 @@ describe("on the live screen", () => {
     const suggestion = chip(page)!;
     expect(suggestion.type).toBe("button");
     expect(suggestion.tabIndex).toBe(0);
-    expect(text(suggestion)).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(text(suggestion)).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
     expect(getComputedStyle(suggestion).color).toBe("#efede5");
     expect(getComputedStyle(suggestion).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
     suggestion.focus();
@@ -181,10 +181,10 @@ describe("the chip", () => {
     at(session, 14);
     expect(chip(page)).toBeNull();
     at(session, 15);
-    expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(text(chip(page))).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
     at(session, 52);
     expect(text(chip(page))).toBe(
-      "Switch to H8's eyes: he checks over his shoulder before the ball arrives.",
+      "Switch to J. Ferriday's eyes: he checks over his shoulder before the ball arrives.",
     );
     act(() => chip(page)!.click());
     expect(session.playback.get()).toMatchObject({ camera: "pov", povPlayer: "H8" });
@@ -197,7 +197,7 @@ describe("the chip", () => {
     const page = mount(session);
     at(session, session.moment.endFrame);
     expect(text(chip(page))).toBe(
-      "Watch the breakdown: a moment was detected, H8's decision after a scan.",
+      "Watch the breakdown: a moment was detected, J. Ferriday's decision after a scan.",
     );
     act(() => chip(page)!.click());
     expect(session.runner.status.get().status).toBe("running");
@@ -276,7 +276,7 @@ describe("between suggestions", () => {
     expect(chip(page)).toBeNull();
     at(session, 10);
     for (let f = 11; f <= 34; f++) at(session, f);
-    expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him."); // 0.16 s on
+    expect(text(chip(page))).toBe("Switch to J. Ferriday's eyes: the ball is coming to him."); // 0.16 s on
     for (let f = 35; f <= 45; f++) at(session, f);
     expect(text(page.querySelector(".director-idle"))).toMatch(/^Pick any camera/);
   });
@@ -321,7 +321,7 @@ describe("live", () => {
     const pass = exportJson.runs.factual.events.find((e) => e.id === "pass:H4:0015")!;
     act(() => ws.push({ type: "event", event: pass }));
     at(session, 15.2);
-    expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(text(chip(page))).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
   });
 
   it("taking a camera keeps the autoplay: the breakdown still plays once detected", async () => {
@@ -384,7 +384,7 @@ describe("in a stitched match", () => {
     const page = mount(session);
     onBroadcast(session);
     at(session, 15);
-    expect(text(chip(page))).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(text(chip(page))).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
   });
 
   it("keeps the chip on the stitched live screen, with a working camera switch", () => {
@@ -395,7 +395,7 @@ describe("in a stitched match", () => {
     at(session, 15);
     expect(page.querySelector(".stage-director section.director")).not.toBeNull();
     const suggestion = chip(page)!;
-    expect(text(suggestion)).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(text(suggestion)).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
     expect(suggestion.tabIndex).toBe(0);
     suggestion.focus();
     expect(document.activeElement).toBe(suggestion);
@@ -410,7 +410,7 @@ describe("in a stitched match", () => {
     const card = session.match.moments.find((m) => m.id === MATCH_HERO)!;
     at(session, card.frame_end);
     expect(text(chip(page))).toBe(
-      "Watch the breakdown: a moment was detected, H8's decision after a scan.",
+      "Watch the breakdown: a moment was detected, J. Ferriday's decision after a scan.",
     );
     act(() => chip(page)!.click());
     expect(session.screen.get().opening).toBe(MATCH_HERO);

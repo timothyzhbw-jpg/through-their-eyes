@@ -98,7 +98,7 @@ describe("hover", () => {
   it("shows the option and both probabilities, from the claim when there is one", () => {
     const verified = thoughtVsWas(narration, hero, hero.runs.counterfactual);
     const h9 = hoverContent(find(without, "pass:H9"), verified);
-    expect(h9.title).toBe("Pass to H9");
+    expect(h9.title).toBe("Pass to N. Varnhall");
     expect(h9.chosen).toBe(false);
     expect(h9.rows.map((r) => [r.label, r.value, r.source, r.kind])).toEqual([
       ["Chance he picked it", "0.00", "sim", undefined],

@@ -299,7 +299,7 @@ describe("the pre-match autoplay gate", () => {
     expect(session.playback.get()).toMatchObject({ live: true, playing: true });
     // Not the default eyes, so the pick has to land on H8 without taking over the autoplay.
     act(() => session.playback.set({ povPlayer: "A5" }));
-    click(button(container, "H8 · CM The hero of this moment"));
+    click(button(container, "J. Ferriday · CM The hero of this moment"));
     expect(session.playback.get().povPlayer).toBe("H8");
     expect(intro.get().open).toBe(true);
     click(button(container, "Start watching"));

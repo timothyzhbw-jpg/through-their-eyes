@@ -9,6 +9,7 @@ import { ArrowIcon } from "./icons";
 import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
 import { TourButton } from "../tour/Tour";
+import { clubName, shortName } from "../data/roster";
 
 export const INTRO_MS = 5000; // the card closes by itself after this long
 
@@ -132,7 +133,7 @@ function OpenLineupCard() {
         <header className="lineup-head">
           <p className="kicker">A synthetic match · every player fictional</p>
           <h2 id={titleId}>
-            Home <em>v</em> Away
+            {clubName(0)} <em>v</em> {clubName(1)}
           </h2>
           <p className="lineup-pitch">
             <em>See what they saw.</em> An AI studio that explains key moments through the player's
@@ -143,7 +144,7 @@ function OpenLineupCard() {
 
         <div className="lineup-teams">
           {(["home", "away"] as const).map((team) => {
-            const name = team === "home" ? "Home" : "Away";
+            const name = clubName(team === "home" ? 0 : 1);
             return (
               <section className="lineup-team" key={team} aria-label={`${name} players`}>
                 <header className="lineup-team-head">
@@ -163,7 +164,7 @@ function OpenLineupCard() {
                       <span className="lineup-number">{row.number}</span>
                       <span className="lineup-player">
                         <span>
-                          {row.id}
+                          {shortName(row.id)}
                           {row.hero && <span className="sr-only"> · Hero</span>}
                         </span>
                         <span className="lineup-role">{row.role}</span>
@@ -212,7 +213,7 @@ function OpenLineupCard() {
                 }}
               >
                 <span className="persona-name">
-                  {option.id} · {option.role}
+                  {shortName(option.id)} · {option.role}
                 </span>{" "}
                 <span className="persona-note">{option.note}</span>
               </button>

@@ -205,7 +205,9 @@ describe("the recap over the live screen", () => {
     expect(page.querySelector(".recap-card.intro")?.textContent).toContain("Full time");
     act(() => session.recap.tick(2));
     // The title says which moment (as the Moments panel does), the caption what it showed.
-    expect(page.querySelector(".recap-title")?.textContent).toBe("Decision after a scan · H8");
+    expect(page.querySelector(".recap-title")?.textContent).toBe(
+      "Decision after a scan · J. Ferriday",
+    );
     expect(page.querySelector(".recap-caption")?.textContent).toBe(
       cardLines.find((line) => line.id === "K1")!.text,
     );

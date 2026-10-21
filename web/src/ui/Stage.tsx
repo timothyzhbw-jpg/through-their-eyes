@@ -26,6 +26,7 @@ import { ArrowIcon, ChevronIcon, CloseIcon, ExpandIcon, SlidersIcon } from "./ic
 import { PERSONA_LABEL } from "./labels";
 import { MatchPicker } from "./Match";
 import { Segmented } from "./Segmented";
+import { clubName, shortName } from "../data/roster";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -220,12 +221,12 @@ export function PlayerPicker() {
         title="Whose eyes the first-person view looks through"
       >
         {[0, 1].map((team) => (
-          <optgroup key={team} label={team === 0 ? "Home" : "Away"}>
+          <optgroup key={team} label={clubName(team)}>
             {hero.players
               .filter((p) => p.team === team)
               .map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.id} · {p.role}
+                  {shortName(p.id)} · {p.role}
                   {p.id === hero.heroId ? " (hero)" : ""}
                 </option>
               ))}

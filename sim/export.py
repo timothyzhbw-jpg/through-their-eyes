@@ -53,6 +53,7 @@ from sim.engine import Simulation
 from sim.match import Possession, StitchedMatch, build_match, global_id
 from sim.model import Decision, Event
 from sim.overrides import DropScan, ForceAction
+from sim.roster import short_name
 from sim.run import MatchRun, _plain
 
 VERSION = 5
@@ -532,9 +533,10 @@ WHAT_IF_LANGUAGES = ("en", "zh")
 
 
 def what_if_question(action: str, language: str) -> str:
-    """The suggested question for an option, in words the what-if parser maps back to it."""
+    """The suggested question for an option, in words the what-if parser maps back to it. A
+    player goes by his short name, as everywhere on screen (SPEC 4.6)."""
     if action.startswith("pass:"):
-        target = action.removeprefix("pass:")
+        target = short_name(action.removeprefix("pass:"))
         return f"What if he passed to {target}?" if language == "en" else f"如果他传给{target}呢？"
     if action == "carry":
         return "What if he carried it?" if language == "en" else "如果他带球呢？"

@@ -232,7 +232,7 @@ describe("audio description", () => {
     act(() => session.controls.openLine("L1"));
     expect(caption().classList.contains("large")).toBe(true);
     expect(list().classList.contains("large")).toBe(true);
-    expect(textOf(caption())).toContain("H8 checked his shoulder");
+    expect(textOf(caption())).toContain("J. Ferriday checked his shoulder");
   });
 });
 
@@ -331,7 +331,7 @@ describe("keyboard and screen reader access", () => {
       session.playback.set({ frame: 20 });
     });
     const chip = page.querySelector<HTMLButtonElement>("button.director-chip")!;
-    expect(accessibleName(chip)).toBe("Switch to H8's eyes: the ball is coming to him.");
+    expect(accessibleName(chip)).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
     expect(accessibleName(page.querySelector("button.director-dismiss")!)).toBe(
       "Dismiss the suggestion",
     );

@@ -39,6 +39,7 @@ import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
+import { clubName } from "./data/roster";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
@@ -314,11 +315,11 @@ function Legend() {
     <footer className="legend" inert={introOpen}>
       <span>
         <i style={{ background: "var(--home)" }} />
-        Home (attacking right)
+        {clubName(0)} (attacking right)
       </span>
       <span>
         <i style={{ background: "var(--away)" }} />
-        Away
+        {clubName(1)}
       </span>
       {hero.runs.factual.sight && (
         <span>

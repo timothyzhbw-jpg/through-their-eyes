@@ -22,6 +22,7 @@ import {
   type KeyPoints,
   type Telemetry,
 } from "../telemetry/telemetry";
+import { renameIds, shortName } from "../data/roster";
 
 const NO_FEED = createStore({ latest: -1 }); // offline: there is no stream to wait for
 const THIN = { vectorEffect: "non-scaling-stroke" } as const;
@@ -71,7 +72,7 @@ export function TelemetryPanel() {
       <header className="chapter-head">
         <div className="chapter-title">
           <p className="kicker">
-            Perception telemetry · {player.id} {player.role}
+            Perception telemetry · {shortName(player.id)} {player.role}
           </p>
           <h2>
             {hero.keyScan ? (
@@ -163,12 +164,16 @@ export function TelemetryPanel() {
 
         <Row
           name="belief"
-          label={t.belief ? `Belief error · ${t.belief.target ?? "mean"}` : "Belief error"}
+          label={
+            t.belief
+              ? `Belief error · ${t.belief.target ? shortName(t.belief.target) : "mean"}`
+              : "Belief error"
+          }
           value={now.belief === null ? "n/a" : `${now.belief.toFixed(1)} m`}
           detail={
             t.belief
               ? "how far his belief is from where the player really is"
-              : `beliefs are recorded for ${hero.heroId} only`
+              : `beliefs are recorded for ${shortName(hero.heroId ?? "")} only`
           }
           note={SIM_NOTE}
           source="sim"
@@ -244,7 +249,7 @@ function Axis({ hero, kp, axis }: { hero: string | null; kp: KeyPoints; axis: nu
             }}
           >
             <span>
-              {hero} key scan{kp.scan.dropped ? " · dropped" : ""}
+              {renameIds(String(hero))} key scan{kp.scan.dropped ? " · dropped" : ""}
             </span>
           </span>
         )}
@@ -255,7 +260,7 @@ function Axis({ hero, kp, axis }: { hero: string | null; kp: KeyPoints; axis: nu
             className={`tpoint ${p.align}`}
             style={{ left: pct(p.frame) }}
           >
-            {p.label}
+            {renameIds(p.label)}
           </span>
         ))}
       </div>

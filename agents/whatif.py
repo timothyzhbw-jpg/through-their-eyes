@@ -42,6 +42,7 @@ from explain.render import ScriptLine as RenderLine
 from explain.verifier import Verifier
 from sim.counterfactual import WhatIfResult, what_if_id
 from sim.model import Decision
+from sim.roster import ROSTER, full_name
 from sim.run import MatchRun
 
 PICK = """Picking a receiver:
@@ -84,6 +85,19 @@ DEPTH_M = 3.0  # m along the attack: closer than this to the ball, a receiver is
 CENTRE_M = 5.0  # m across: closer than this to the long axis, he stood in the middle
 _ACTIONS = {"carry": "run with the ball", "shot": "shoot at goal"}
 _PLAYER = re.compile(r"(?<![A-Z0-9])([HA]\d{1,2})(?!\d)", re.IGNORECASE)
+# A player by the fictional name the screen shows (sim/roster.py): "K. Annersley", "Kofi Annersley"
+# or "Annersley"; the longest form first, so a short name is one cue, not two.
+_NAME_OF = {
+    form.lower(): pid
+    for pid, (first, last) in ROSTER.items()
+    for form in (f"{first} {last}", f"{first[0]}. {last}", last)
+}
+_NAME = re.compile(
+    r"(?<![A-Za-z])("
+    + "|".join(re.escape(f) for f in sorted(_NAME_OF, key=len, reverse=True))
+    + r")(?![A-Za-z])",
+    re.IGNORECASE,
+)
 _KEYWORDS = {
     "carry": ("carry", "carries", "carried", "carrying", "dribble", "dribbles", "dribbled",
               "dribbling", "run with", "runs with", "ran with", "running with", "take on",
@@ -241,9 +255,10 @@ def receivers(run: MatchRun, decision: Decision) -> list[Receiver]:
 
 def _option_lines(recv: list[Receiver], available: list[str]) -> list[str]:
     passes = {r.action for r in recv}
-    return [f"- {r.action}: pass to {r.player}, the {r.name}, {r.where}" for r in recv] + [
-        f"- {a}: {_ACTIONS.get(a, a)}" for a in available if a not in passes
-    ]
+    return [
+        f"- {r.action}: pass to {r.player} ({full_name(r.player)}), the {r.name}, {r.where}"
+        for r in recv
+    ] + [f"- {a}: {_ACTIONS.get(a, a)}" for a in available if a not in passes]
 
 
 def _meant(recv: list[Receiver], role: str, depth: str | None = None) -> Receiver:
@@ -276,7 +291,8 @@ def _prompt(
     defaults = _defaults(recv)
     return "\n".join([
         f"Question: {question}",
-        f"He is {decision.player}, the {ROLE_NAMES.get(role, role)}, on the ball. "
+        f"He is {decision.player} ({full_name(decision.player)}), the "
+        f"{ROLE_NAMES.get(role, role)}, on the ball. "
         "His options, passes nearest receiver first:",
         *_option_lines(recv, available),
         *([defaults] if defaults else []),
@@ -326,6 +342,9 @@ def _cues(question: str, available: list[str], recv: list[Receiver]) -> list[tup
     cues: list[tuple] = []
     for m in _PLAYER.finditer(question):
         action = f"pass:{m.group(1).upper()}"
+        cues.append((m.start(), m.end(), [action] if action in available else []))
+    for m in _NAME.finditer(question):
+        action = f"pass:{_NAME_OF[m.group(1).lower()]}"
         cues.append((m.start(), m.end(), [action] if action in available else []))
     for m in _ROLE.finditer(question):
         cues.append((m.start(), m.end(), _named(question, m, recv)))

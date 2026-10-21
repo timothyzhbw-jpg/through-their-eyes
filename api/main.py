@@ -70,6 +70,7 @@ from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
 from api import guard, tts
 from api.live import Slots, stream
+from api.names import Renamed, rename
 from api.settings import Settings
 from api.store import (
     DailyCap,
@@ -175,8 +176,10 @@ def create_app(
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
     cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
-    breakdowns, answers = cues.recording(tts.Revoiced(storage.breakdowns)), storage.answers
-    recaps = cues.recording(storage.recaps)  # a recap's lines may be spoken too
+    # Values cached before players and clubs had names are renamed when read (api/names.py).
+    breakdowns = cues.recording(tts.Revoiced(Renamed(storage.breakdowns)))
+    answers = Renamed(storage.answers)
+    recaps = cues.recording(Renamed(storage.recaps, clubs=True))  # its lines may be spoken too
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
@@ -495,7 +498,8 @@ def create_app(
             result = await run_recap(rc, client=llm, personas=tuple(body.personas),
                                      languages=tuple(body.languages),
                                      use_mcp=settings.analyst_mcp)  # fmt: skip
-            value = {"source": source, "result": result.model_dump(mode="json")}
+            # Its claims say Home and Away (their templates are in the cache key): name the clubs.
+            value = rename({"source": source, "result": result.model_dump(mode="json")}, clubs=True)
             recaps.put(k, value)
         return {"key": k, "cached": False, "rate_limited": False, "capped": False, **value}
 
