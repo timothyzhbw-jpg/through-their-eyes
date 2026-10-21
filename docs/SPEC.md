@@ -1465,6 +1465,12 @@ original visual identity.
     default; `web/src/pitchControl/`);
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
+  - **his belief map** ([web/src/views/BeliefMap.tsx](../web/src/views/BeliefMap.tsx); teammates'
+    feedback, 2026-10-21): the corner beside his eyes is a disc of where he believes everyone is,
+    around him and attacking up, corrected by each scan as the replay plays; red: the two or
+    three defenders nearest the ball carrier in his belief; green: his likeliest receivers at his
+    decision (pass options he gave at least 0.05); out of his sight now: drawn as remembered.
+    The sim's readout, labelled so; a stitched match keeps the board there;
   - counterfactual ghost path;
   - *M4:* **blind-side alert** (§4.4): the target's token pulses and a thin line points to the
     observer's blind side, with how long he has gone unseen; it clears when he is seen;
@@ -1732,6 +1738,11 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
+      ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
+      55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
+      his likeliest receivers (H9 with the look; H4, H1, H5 without); remembered players dashed.
+      — [web/src/views/beliefMap.test.tsx](../web/src/views/beliefMap.test.tsx) (8 cases).
 - [x] *Key-moment beat:* slow motion starts as the key scan begins and ends by the release, the
       accent holds at the sighting, the run without the look slows with no accent, plans and the
       recap keep their speeds, reduced motion turns it off, the live playhead never jumps inside a
