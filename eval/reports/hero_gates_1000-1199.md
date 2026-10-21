@@ -21,12 +21,19 @@ Each hero's held-out acceptance eval, run once more and unchanged (same design, 
 | `far_post_finish` | `scan` lens selected | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | 198/200 (99%) | 96%–100% | pass |
 | `far_post_finish` | The scan lens's scan | ≥ 90% | 40/40 (100%) (200–239) | 91%–100% | 200/200 (100%) | 98%–100% | pass |
 | `keeper_switch` | Decision changed without the key scan | ≥ 60% | 26/40 (65%) (100–139) | 50%–78% | 151/200 (76%) | 69%–81% | pass |
+| `cutback_scan` | Decision changed without the key scan | ≥ 60% | 38/40 (95%) (100–139) | 83%–99% | not run yet | — | — |
+| `cutback_scan` | `scan` lens selected | ≥ 60% | 38/40 (95%) (100–139) | 83%–99% | not run yet | — | — |
+| `screened_shot` | P_save(step) − P_save(no step) ≥ 0.4 | ≥ 60% | 28/40 (70%) (300–339) | 55%–82% | not run yet | — | — |
+| `screened_shot` | P_save gap ≥ 0.4, v_dive = 2.5 | ≥ 60% | 28/40 (70%) (300–339) | 55%–82% | not run yet | — | — |
+| `screened_shot` | P_save gap ≥ 0.4, v_dive = 4 | ≥ 60% | 29/40 (72%) (300–339) | 57%–84% | not run yet | — | — |
+| `screened_shot` | Without the step, first sight ≥ 0.25 s later | ≥ 90% | 35/40 (88%) (300–339) | 74%–95% | not run yet | — | — |
+| `screened_shot` | delta_sight > delta_position | ≥ 80% | 30/40 (75%) (300–339) | 60%–86% | not run yet | — | — |
 
 | Hero | Gate on a value | Target | Original | 1000–1199 | Verdict |
 |---|---|---|---|---|---|
 | `far_post_finish` | Median ΔP_goal on truth | ≥ 0.300 | +0.524 | +0.520 | pass |
 
-Pending, their scenario or original report not on this branch yet: `hero_flip_cutback_scan`, `hero_lens_cutback_scan`, `hero_save_screened_shot`, `hero_flip_read_the_run`.
+Pending, their scenario or original report not on this branch yet: `hero_flip_read_the_run`.
 
 Reports and commands (each run once, with `uv run python -m`):
 
@@ -38,3 +45,6 @@ Reports and commands (each run once, with `uv run python -m`):
 - [hero_shot_far_post_finish_1000-1199.md](hero_shot_far_post_finish_1000-1199.md): `eval.hero_shot --seeds 1000-1199 --out eval/reports/hero_shot_far_post_finish_1000-1199.md`
 - [hero_lens_far_post_finish_1000-1199.md](hero_lens_far_post_finish_1000-1199.md): `eval.hero_lens --scenario far_post_finish --seeds 1000-1199 --out eval/reports/hero_lens_far_post_finish_1000-1199.md`
 - [hero_flip_keeper_switch_1000-1199.md](hero_flip_keeper_switch_1000-1199.md): `eval.hero_flip --scenario keeper_switch --seeds 1000-1199 --out eval/reports/hero_flip_keeper_switch_1000-1199.md`
+- [hero_flip_cutback_scan_1000-1199.md](hero_flip_cutback_scan_1000-1199.md): `eval.hero_flip --scenario cutback_scan --seeds 1000-1199 --out eval/reports/hero_flip_cutback_scan_1000-1199.md`
+- [hero_lens_cutback_scan_1000-1199.md](hero_lens_cutback_scan_1000-1199.md): `eval.hero_lens --scenario cutback_scan --seeds 1000-1199 --out eval/reports/hero_lens_cutback_scan_1000-1199.md`
+- [hero_save_screened_shot_1000-1199.md](hero_save_screened_shot_1000-1199.md): `eval.hero_save --seeds 1000-1199 --out eval/reports/hero_save_screened_shot_1000-1199.md`
