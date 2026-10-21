@@ -14,7 +14,7 @@ import {
   type RefObject,
 } from "react";
 import { DESCRIBED, PERSONAS, type Persona } from "../api/client";
-import { runLabels, type Hero } from "../data/hero";
+import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
@@ -31,6 +31,8 @@ export const BLURB: Record<string, string> = {
     "See what the midfielder saw, and what he would have done without one look over his shoulder.",
   press_escape:
     "See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
+  far_post_finish:
+    "See what the striker saw of the keeper as the cutback came, and where he would have shot without one look at the goal.",
   corner_blind_side:
     "A short corner. See what the centre-back saw of the man he marks, and where that man would have been without one look over his shoulder.",
 };
@@ -53,6 +55,8 @@ function didPhrase(action: string): string {
   if (action.startsWith("pass:")) return `passed to ${action.slice(5)}`;
   if (action === "carry") return "carried it";
   if (action === "shot") return "shot";
+  const post = shotPost(action);
+  if (post) return `shot at the ${post} post`;
   return `chose ${action}`;
 }
 
@@ -66,7 +70,10 @@ export function momentTitle(hero: Hero): [string, string] {
   const without = hero.counterfactual ? hero.runs.counterfactual.decision?.chosen : undefined;
   if (hero.keyScan) {
     if (did && without && did !== without)
-      return ["One look changed his", did.startsWith("pass:") ? "pass." : "decision."];
+      return [
+        "One look changed his",
+        did.startsWith("pass:") ? "pass." : isShot(did) ? "shot." : "decision.",
+      ];
     return ["One look, and", "the same choice."];
   }
   if (did) return ["Under pressure, he", `${didPhrase(did)}.`];

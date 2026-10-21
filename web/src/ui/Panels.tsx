@@ -2,15 +2,18 @@
 // his belief), and the other match (the counterfactual and what the look was worth). Numbers here
 // are read straight from the sim export and say so, in Chalk; only a value the verifier checked is
 // set in Floodlight with its check (SPEC 5.3). The beats follow the hero's lens: the look over the
-// shoulder (blind_side_run), a marker's look at the man he marks (corner_blind_side), or the press
-// he plays out of (press_escape).
+// shoulder (blind_side_run), a striker's look at the keeper before a placed shot (far_post_finish),
+// a marker's look at the man he marks (corner_blind_side), or the press he plays out of
+// (press_escape).
 
 import {
   actionLabel,
   isSeen,
+  isShot,
   runLabels,
   type Hero,
   type Marker,
+  placedShot,
   type Run,
   type Scan,
 } from "../data/hero";
@@ -28,7 +31,81 @@ interface Beat {
 
 function beats(hero: Hero, run: Run): Beat[] {
   if (hero.marker && hero.keyScan) return markerBeats(hero, run, hero.keyScan, hero.marker);
+  if (hero.keyScan && isShot(hero.runs.factual.decision?.chosen)) {
+    return shotBeats(hero, run, hero.keyScan);
+  }
   return hero.keyScan ? scanBeats(hero, run, hero.keyScan) : pressureBeats(hero, run);
+}
+
+const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+
+/** How the run's shot ended (its action's outcome): a sentence for the story, a few words for
+ * the counterfactual card. Null when the run's action is not a shot. */
+export function shotEnd(run: Run): { from: number; text: string; short: string } | null {
+  const act = run.action;
+  if (!act || !isShot(run.decision?.chosen)) return null;
+  const from = act.end ?? run.frames - 1;
+  const keeper = act.keeper ?? "the keeper";
+  if (act.outcome === "goal") return { from, text: "Goal.", short: "goal" };
+  if (act.outcome === "saved")
+    return { from, text: `${keeper} saves it.`, short: `saved by ${keeper}` };
+  if (act.outcome === "wide") return { from, text: "Wide.", short: "wide" };
+  return { from, text: "He shoots.", short: "" };
+}
+
+/**
+ * A striker's look before a placed shot (far_post_finish): the build-up passes, the look (or,
+ * without it, eyes on the ball), whether he saw the keeper in it, the shot he chose on his belief
+ * and how it ended. Sight is the sim's perception (seen_by); a beat it cannot back is left out.
+ */
+function shotBeats(hero: Hero, run: Run, key: Scan): Beat[] {
+  const factual = run.name === "factual";
+  const heroId = hero.heroId ?? "He";
+  const dec = run.decision;
+  const decided = dec ? dec.frame : run.frames - 1;
+  const keeper = run.action?.keeper ?? null;
+  const k = keeper ? hero.ids.indexOf(keeper) : -1;
+  let seenAt = -1; // the first frame of the look in which he sees the keeper
+  for (let f = key.start; f <= key.end && seenAt < 0 && k >= 0 && run.sight; f++) {
+    if (isSeen(hero, run, f, hero.hero, k)) seenAt = f;
+  }
+  const p = dec ? (dec.options.find((o) => o.action === dec.chosen)?.prob ?? 0) : 0;
+  const passes = run.events.filter(
+    (e) => e.type === "pass" && e.player !== heroId && e.frame < decided,
+  );
+  const list: (Beat | null)[] = [
+    ...passes.map((e) => ({ from: e.frame, text: `${e.player} plays it to ${e.attrs.to}.` })),
+    factual
+      ? {
+          from: key.start,
+          text: `${heroId} looks away from the ball: a ${((key.end - key.start) * hero.dt).toFixed(2)} s look.`,
+        }
+      : {
+          from: key.start,
+          text: `Same moment, but ${heroId} keeps his eyes on the ball. No look.`,
+        },
+    k < 0 || !run.sight
+      ? null
+      : factual && seenAt >= 0
+        ? { from: seenAt, text: `He sees ${keeper} in that look.` }
+        : !factual && seenAt < 0
+          ? {
+              from: key.end,
+              text: `He does not see ${keeper}: he pictures him where he last saw him.`,
+            }
+          : null,
+    dec
+      ? {
+          from: dec.frame,
+          text: `Decision: ${lower(actionLabel(dec.chosen))} (chosen with probability ${p.toFixed(2)}).`,
+        }
+      : null,
+    shotEnd(run),
+  ];
+  return list
+    .filter((b): b is Beat => b !== null)
+    .map(({ from, text }) => ({ from, text }))
+    .sort((a, b) => a.from - b.from);
 }
 
 const SIGHT_GAP_S = 0.5; // out of sight at least this long before the look to be worth a beat
@@ -103,8 +180,8 @@ function scanBeats(hero: Hero, run: Run, key: Scan): Beat[] {
   const passer = run.firstPass?.player ?? "The centre-back";
   const outcome = !act
     ? ""
-    : run.decision?.chosen === "shot"
-      ? "He shoots."
+    : isShot(run.decision?.chosen)
+      ? (shotEnd(run)?.text ?? "He shoots.")
       : act.outcome === "complete"
         ? `Completed to ${act.receiver}.`
         : act.outcome == null
@@ -164,17 +241,15 @@ function pressureBeats(hero: Hero, run: Run): Beat[] {
     : act
       ? {
           from: act.end ?? run.frames - 1,
-          text:
-            run.decision?.chosen === "shot"
-              ? "He shoots."
-              : act.outcome === "complete"
-                ? `Completed to ${act.receiver}: out of the press.`
-                : act.outcome == null
-                  ? "The pass is still running when the clip ends."
-                  : `Lost: ${act.outcome}${act.receiver ? ` by ${act.receiver}` : ""}.`,
+          text: isShot(run.decision?.chosen)
+            ? (shotEnd(run)?.text ?? "He shoots.")
+            : act.outcome === "complete"
+              ? `Completed to ${act.receiver}: out of the press.`
+              : act.outcome == null
+                ? "The pass is still running when the clip ends."
+                : `Lost: ${act.outcome}${act.receiver ? ` by ${act.receiver}` : ""}.`,
         }
       : { from: run.frames - 1, text: "He keeps the ball." };
-  const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
   return [
     { from: 0, text: `${passer} plays it to ${heroId}.` },
     { from: hero.reception, text: `${heroId} takes it with an opponent closing him down.` },
@@ -324,26 +399,39 @@ export function VerdictPanel() {
   const labels = runLabels(hero);
   const marker = hero.marker;
   // What each run shows: his action, or for a marker how far he was from his man.
-  const cardText = (run: RunName) =>
-    marker
-      ? `${marker.separation[run].toFixed(1)} m from ${marker.man}`
-      : actionLabel(hero.runs[run].decision?.chosen ?? "");
+  const cardText = (run: RunName) => {
+    if (marker) return `${marker.separation[run].toFixed(1)} m from ${marker.man}`;
+    const action = actionLabel(hero.runs[run].decision?.chosen ?? "");
+    const end = shotEnd(hero.runs[run])?.short; // a shot: and how it ended
+    return end ? `${action} · ${end}` : action;
+  };
+  const shot = placedShot(hero); // worth a chance of scoring on the truth, not xT
+  const num = (x: unknown): x is number => typeof x === "number";
+  // The verified worth: `dxt` (cf_value), or a placed shot's chances without and with the look
+  // (cf_shot_value: p0, p1), on a line the narration airs.
   const claim =
     narration && !narration.fixture
       ? [...narration.claims.values()].find(
           (c) =>
             c.kind === "counterfactual" &&
             c.verdict === "supported" &&
-            typeof c.values.dxt === "number" &&
+            (num(c.values.dxt) || (num(c.values.p0) && num(c.values.p1))) &&
             narration.lines.some((l) => l.claims.includes(c.id)),
         )
       : undefined;
   const line = claim ? narration?.lines.find((l) => l.claims.includes(claim.id)) : undefined;
-  const value = claim ? (claim.values.dxt as number) : hero.deltaXt;
-  const shown =
-    value === null
-      ? "\u2014"
-      : `${value >= 0 ? "+" : "\u2212"}${Math.abs(value).toFixed(claim ? 2 : 3)}`;
+  const signed = (x: number, digits: number) =>
+    `${x >= 0 ? "+" : "\u2212"}${Math.abs(x).toFixed(digits)}`;
+  const { dxt, p0, p1 } = claim?.values ?? {};
+  const shown = num(dxt)
+    ? signed(dxt, 2)
+    : num(p0) && num(p1)
+      ? `${p0.toFixed(2)} \u2192 ${p1.toFixed(2)}`
+      : hero.deltaXt === null
+        ? "\u2014"
+        : signed(hero.deltaXt, 3);
+  const pending = !claim && hero.deltaXt === null; // nothing measured yet
+  const unit = shot ? "on the true positions" : "in expected threat (xT)";
   const look = !!hero.keyScan;
   return (
     <Chapter
@@ -377,20 +465,21 @@ export function VerdictPanel() {
             <p className="worth-line">
               <LineText text={line.text} verified />
             </p>
-          ) : value === null ? (
+          ) : pending ? (
             <p className="worth-line">
-              {labels.gain}, in expected threat (xT), comes with the breakdown when its narration
-              states it.
+              {labels.gain}, {unit}, comes with the breakdown when its narration states it.
             </p>
           ) : (
-            <p className="worth-line">{labels.gain}, in expected threat (xT).</p>
+            <p className="worth-line">
+              {labels.gain}, {unit}.
+            </p>
           )}
           <p className="note">
             {claim ? (
               <span className="checked">
                 <CheckIcon size={12} /> Counterfactual · checked by the verifier, in code
               </span>
-            ) : value === null ? null : hero.deltaSource === "lens" ? (
+            ) : pending ? null : hero.deltaSource === "lens" ? (
               <>
                 <span className="source" title="From the moment's scan lens, not a verified claim">
                   lens
@@ -405,7 +494,9 @@ export function VerdictPanel() {
                 Read from the sim export, not a verified claim.
               </>
             )}{" "}
-            Expected threat is how much a position raises the chance of scoring soon.
+            {shot
+              ? "His chance of scoring is the chance the shot he chose goes in: on target and not saved, on the true positions."
+              : "Expected threat is how much a position raises the chance of scoring soon."}
             {marker &&
               " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
             Causal inside the simulation; not a claim about real football.

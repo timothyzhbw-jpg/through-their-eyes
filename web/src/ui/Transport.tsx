@@ -86,6 +86,8 @@ function PossessionJumps() {
   );
 }
 
+const TIGHT_LABELS_PX = 96; // "Key scan" (~56 px) plus half of "Decision" and a gap
+
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(0);
@@ -120,6 +122,11 @@ function Timeline() {
   const decision = run.decision ? run.decision.frame : hero.reception;
   // The same mapping as X, in CSS: the labels need no measured width.
   const at = (f: number) => ({ left: `calc(6px + (100% - 12px) * ${f / last})` });
+  // A decision inside or just after the key scan (a striker who looks while the ball comes): the
+  // two labels would overlap, so "Key scan" ends where the scan starts and "Decision" starts at
+  // its frame.
+  const tight =
+    !!key && width > 0 && X(decision) - X(key.start) < TIGHT_LABELS_PX && X(key.start) > 64;
 
   return (
     <div
@@ -257,7 +264,7 @@ function Timeline() {
           {key && (
             <button
               type="button"
-              className="mark key"
+              className={tight ? "mark key before" : "mark key"}
               style={at(key.start)}
               onClick={() => controls.seek(Math.max(0, key.start - 8))}
               title="Jump to just before the key scan"
@@ -267,7 +274,7 @@ function Timeline() {
           )}
           <button
             type="button"
-            className="mark"
+            className={tight ? "mark after" : "mark"}
             style={at(decision)}
             onClick={() => controls.seek(decision)}
             title={

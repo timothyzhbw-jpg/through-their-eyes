@@ -481,6 +481,61 @@ export const markerCards = (delta: number | null = 0.09596) => [
   },
 ];
 
+export const SHOT_MOMENT = "m:decision_after_scan:H8:0075";
+
+/**
+ * Like far_post_finish-11 (Module A placed shots, SPEC 3.3): the hero's options include
+ * `shot:far` and `shot:near`. With the look he shoots at the far post and scores; without it he
+ * shoots at the near post and A1 saves. The bundled runs, with the hero's pass at the decision
+ * turned into the shot as sim.export writes it: an action with `aim`, `placement` and `keeper`
+ * (no `to` or `target`), and `shot`, `dive` and `goal` / `save` events.
+ */
+export function shotExport(): HeroExport {
+  const e = structuredClone(exportJson);
+  const pad = (f: number) => String(f).padStart(4, "0");
+  for (const [name, placement, outcome] of [
+    ["factual", "far", "goal"],
+    ["counterfactual", "near", "saved"],
+  ] as const) {
+    const run = e.runs[name];
+    const d = run.decision!;
+    const f = d.frame;
+    const end = f + 15;
+    const aim: [number, number] = [52.5, placement === "far" ? 3.16 : -3.16];
+    const [first, second, ...rest] = d.options;
+    const far = { ...first, action: "shot:far", target: [52.5, 3.16] as [number, number] };
+    const near = { ...second, action: "shot:near", target: [52.5, -3.16] as [number, number] };
+    d.options = placement === "far" ? [far, near, ...rest] : [near, far, ...rest];
+    d.chosen = `shot:${placement}`;
+    run.action = {
+      frame: f,
+      start: run.action!.start,
+      aim,
+      placement,
+      keeper: "A1",
+      speed: 27.6,
+      distance: 50,
+      outcome,
+      end,
+      end_at: aim,
+    };
+    const shotEnds = run.events.find((ev) => ev.type === "pass" && ev.frame === f)?.attrs.end;
+    run.events = run.events.filter(
+      (ev) => !(ev.frame === f && ev.type === "pass") && !(ev.frame === shotEnds),
+    );
+    run.events.push(
+      { id: `shot:H8:${pad(f)}`, type: "shot", frame: f, player: "H8",
+attrs: { placement, outcome, end } },
+      { id: `dive:A1:${pad(f + 5)}`, type: "dive", frame: f + 5, player: "A1", attrs: {} },
+      outcome === "goal"
+        ? { id: `goal:H8:${pad(end)}`, type: "goal", frame: end, player: "H8", attrs: {} }
+        : { id: `save:A1:${pad(end)}`, type: "save", frame: end, player: "A1", attrs: {} },
+    ); // prettier-ignore
+    run.events.sort((a, b) => a.frame - b.frame || a.id.localeCompare(b.id));
+  }
+  return { ...e, scenario: "far_post_finish", seed: 11, runner: null };
+}
+
 export const MATCH = "match-1";
 export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled run's first 60 frames
 export const BLIND_START = OPEN_FRAMES; // possession 1: blind_side_run 3

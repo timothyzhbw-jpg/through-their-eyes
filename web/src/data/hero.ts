@@ -16,6 +16,7 @@ import type {
   HeroExport,
   MatchExport,
   RunName,
+  Vec2,
 } from "./types";
 
 export const SCHEMA_VERSION = 5;
@@ -281,7 +282,9 @@ export function parseHero(json: unknown): Hero {
       onsetFrames: d.onset_frames,
       maxDurationS: d.max_duration_s,
     },
-    deltaXt: finite(raw.delta_xt),
+    // A placed shot's possession value is its outcome (a goal counts 1), not a chance: its worth
+    // is the scan lens's gain in his chance of scoring on the truth (loaded with the cards).
+    deltaXt: shotPost(runs.factual.decision?.chosen) ? null : finite(raw.delta_xt),
     deltaSource: "sim",
     runs,
     reception: marker
@@ -362,7 +365,11 @@ export function runLabels(hero: Hero): RunLabels {
     ghostOfCounterfactual: "Ghost: no look",
     tag: { factual: "with the look", counterfactual: "without the look" },
     // The verdict reads "…, in expected threat (xT)." A marker's look is worth a turnover chance.
-    gain: hero.marker ? "Worth of the look to his side" : "Gained by looking",
+    gain: hero.marker
+      ? "Worth of the look to his side"
+      : placedShot(hero)
+        ? "Chance of scoring gained by looking"
+        : "Gained by looking",
   };
 }
 
@@ -372,6 +379,8 @@ function forced(action: string): [string, string] {
     return [`passed to ${action.slice(5)}`, `passing to ${action.slice(5)}`];
   if (action === "carry") return ["carried it", "carrying it"];
   if (action === "shot") return ["shot", "shooting"];
+  const post = shotPost(action);
+  if (post) return [`shot at the ${post} post`, `shooting at the ${post} post`];
   return [`chose ${action}`, action];
 }
 
@@ -527,5 +536,24 @@ export function actionLabel(action: string): string {
   if (action.startsWith("pass:")) return `Pass to ${action.slice(5)}`;
   if (action === "carry") return "Carry forward";
   if (action === "shot") return "Shoot";
+  const post = shotPost(action);
+  if (post) return `Shoot at the ${post} post`;
   return action;
+}
+
+/** A shot: "shot", or a placed shot "shot:near" / "shot:far" (Module A, SPEC 3.3). */
+export const isShot = (action: string | null | undefined): boolean =>
+  action === "shot" || !!action?.startsWith("shot:");
+
+/** The hero's decision is a placed shot (far_post_finish): its worth is a chance of scoring. */
+export const placedShot = (hero: Hero): boolean => !!shotPost(hero.runs.factual.decision?.chosen);
+
+/** "near" or "far" for a placed shot, else null. */
+export function shotPost(action: string | null | undefined): "near" | "far" | null {
+  return action === "shot:near" ? "near" : action === "shot:far" ? "far" : null;
+}
+
+/** Where the action was aimed: a pass's target, a shot's aim, else where it ended. */
+export function actionTarget(action: ExportAction): Vec2 {
+  return action.target ?? action.aim ?? action.end_at ?? action.start;
 }

@@ -1327,6 +1327,13 @@ optgroup {
 .mark:not(.key) {
   transform: translateX(-50%);
 }
+.mark.key.before {
+  transform: translateX(-100%);
+  padding-right: 6px;
+}
+.mark.after {
+  transform: none;
+}
 .mark:hover {
   color: var(--chalk);
 }
@@ -3070,7 +3077,8 @@ optgroup {
     border-radius: var(--r-control);
     font-size: 10px;
   }
-  .mark:not(.key) {
+  .mark:not(.key),
+  .mark.key.before {
     transform: none;
   }
   .mark:hover {

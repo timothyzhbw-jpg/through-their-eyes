@@ -47,15 +47,21 @@ export interface ExportDecision {
   belief_age: Record<string, number>; // s
 }
 
+/** The hero's action: a pass, or a shot. A placed shot (Module A, `shot:near` / `shot:far`) has
+ * `aim`, `placement` and `keeper` instead of a pass's `to` and `target`. */
 export interface ExportAction {
   frame: number;
-  to: string;
+  to?: string; // a pass's intended receiver
   start: Vec2; // m
-  target: Vec2; // m
+  target?: Vec2; // m, a pass's target
+  aim?: Vec2; // m, a shot's aim on the goal line
+  placement?: "near" | "far";
+  keeper?: string; // the keeper the shot is placed against
   speed: number; // m/s
   distance: number; // m
-  outcome: string;
-  end?: number; // frame the pass was resolved
+  // A pass: complete / intercepted / out; a shot: goal / saved / wide; null while still running.
+  outcome: string | null;
+  end?: number; // frame the pass or shot was resolved
   end_at?: Vec2;
   receiver?: string | null;
 }
