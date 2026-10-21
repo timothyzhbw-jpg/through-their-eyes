@@ -117,7 +117,9 @@ on an LLM.
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
     for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
     puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 4 of 15 end in a throw-in.
+    passages reach their cap: on this Mac 4 of 15 end in a throw-in. Where the ball goes out
+    depends on the platform (§3.7): on the live service (Linux x86) the 18-possession version
+    ran 13:06 on 2026-10-21, against 11:31 on this Mac.
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
