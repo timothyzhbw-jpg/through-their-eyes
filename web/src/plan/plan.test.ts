@@ -177,6 +177,41 @@ describe("plan executor", () => {
     expect(runner.status.get().applied).toBe(plan.steps.length);
   });
 
+  it("pause() holds the plan clock, the picture and the caption; resume() goes on from there", () => {
+    const { playback, runner, until } = start(EXAMPLE_PLAN);
+    const pov = EXAMPLE_PLAN.steps[povIndex] as { t: number };
+    expect(until(pov.t + 0.05).playing).toBe(true);
+    playback.set({ captionLine: "L1" });
+    runner.pause();
+    expect(runner.status.get()).toMatchObject({ status: "running", paused: true });
+    expect(playback.get().playing).toBe(false);
+    const t = runner.time;
+    const frame = playback.get().frame;
+    for (let k = 0; k < 2 * FPS; k++) {
+      runner.tick(1 / FPS);
+      advance(playback, hero, 1 / FPS);
+    }
+    expect(runner.time).toBe(t);
+    expect(playback.get().frame).toBe(frame);
+    expect(playback.get().captionLine).toBe("L1");
+    runner.resume();
+    expect(runner.status.get().paused).toBe(false);
+    expect(playback.get().playing).toBe(true); // the POV clip was playing when it paused
+    until(t + 0.5);
+    expect(runner.time).toBeGreaterThan(t);
+    expect(playback.get().frame).toBeGreaterThan(frame);
+  });
+
+  it("stop() while paused ends the breakdown", () => {
+    const { runner, until } = start(EXAMPLE_PLAN);
+    until(2.5);
+    runner.pause();
+    runner.stop();
+    expect(runner.status.get()).toMatchObject({ status: "stopped", paused: false });
+    runner.resume(); // nothing to resume
+    expect(runner.status.get().status).toBe("stopped");
+  });
+
   it("stop() hands control back to free play", () => {
     const { playback, runner, until } = start(EXAMPLE_PLAN);
     until(2.5);
