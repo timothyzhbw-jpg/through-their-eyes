@@ -1342,3 +1342,40 @@ html.spec #stage {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.85), transparent 68%);
 }
+
+/* --- caption: burned-in voice-over text ------------------------------------- */
+
+.cap {
+  position: absolute;
+  left: 50%;
+  bottom: 34px; /* inside the bottom bar of a 2.39:1 letterbox, above the title-safe edge */
+  transform: translateX(-50%);
+  max-width: 1500px;
+  padding: 10px 26px 8px;
+  background: rgba(5, 8, 6, 0.72);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.cap-text {
+  margin: 0;
+  color: var(--chalk);
+  font-size: 64px;
+  letter-spacing: 0.04em;
+  line-height: 1.02;
+}
+
+.cap-num {
+  color: var(--gold);
+}
+
+/* --- label: a quiet corner note -------------------------------------------- */
+
+.corner-label {
+  position: absolute;
+  top: 158px; /* below the top bar of a 2.39:1 letterbox */
+  right: 64px;
+  color: rgba(239, 237, 229, 0.72);
+  font-size: 26px;
+  letter-spacing: 0.22em;
+}

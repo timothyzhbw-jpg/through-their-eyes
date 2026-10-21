@@ -239,3 +239,14 @@ test("the contact sheet is four columns and labels each tile", () => {
   assert.match(html, /Before &lt;the&gt; ball/);
   assert.doesNotMatch(html, /drawtext/);
 });
+
+test("every ffmpeg run is capped to a few threads", async () => {
+  const { limitThreads } = await import("../lib/ffmpeg.mjs");
+  const capped = limitThreads(["-y", "-i", "in.mp4", "-c:v", "libx264", "out.mp4"]);
+  assert.deepEqual(capped.slice(0, 2), ["-filter_complex_threads", "4"]);
+  assert.deepEqual(capped.slice(-3), ["-threads", "4", "out.mp4"]);
+  const kept = ["-i", "a", "-threads", "2", "b"];
+  assert.equal(limitThreads(kept), kept);
+  const probe = ["-hide_banner", "-i", "clip.mp4"];
+  assert.equal(limitThreads(probe), probe);
+});

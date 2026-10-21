@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { assetFileName, downloadAsset, validateAssets } from "./lib/assets.mjs";
 import { digest, isCached, storeHash } from "./lib/cache.mjs";
+import { burnArgs, captionTimeline } from "./lib/captions.mjs";
 import { claimTable, resolveTitle, resolveVo } from "./lib/claims.mjs";
 import {
   beatCommand,
@@ -38,7 +39,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 /** The edit's own code: a change to it re-renders what it built (caches key on it). */
 const ENGINE = digest(
-  ["trailer.mjs", "lib/edit.mjs", "lib/sfx.mjs", "lib/vo.mjs", "lib/report.mjs"].map((f) =>
+  ["trailer.mjs", "lib/edit.mjs", "lib/sfx.mjs", "lib/vo.mjs", "lib/report.mjs", "lib/captions.mjs"].map((f) =>
     readFileSync(path.join(HERE, f), "utf8"),
   ),
 );
@@ -483,15 +484,76 @@ async function stepEdit(ctx) {
     console.log("  mix: normalised");
   }
 
+  // Captions over the joined film (they cross cuts, so they go on after the join).
+  const picture = await burnCaptions(ctx, timeline, joined);
+
   const finalMp4 = path.join(ctx.finalsDir, "trailer.mp4");
-  const muxHash = digest(["mux-v2", ENGINE, fileStamp(joined), fileStamp(mixWav), ctx.spec.output]);
+  const muxHash = digest(["mux-v2", ENGINE, fileStamp(picture), fileStamp(mixWav), ctx.spec.output]);
   if (fresh(finalMp4, muxHash, ctx.force)) console.log("  mux: cached");
   else {
     const audioCodec = (await hasEncoder(ctx.ffmpeg, "aac_at")) ? "aac_at" : "aac";
-    await runFfmpeg(ctx.ffmpeg, muxArgs(joined, mixWav, finalMp4, { width, height, fps, audioCodec }));
+    await runFfmpeg(ctx.ffmpeg, muxArgs(picture, mixWav, finalMp4, { width, height, fps, audioCodec }));
     storeHash(finalMp4, muxHash);
     console.log(`  mux: ${path.relative(ctx.root, finalMp4)}`);
   }
+}
+
+/**
+ * Every voice-over line as a burned-in caption (spec `captions`, on unless `enabled: false`):
+ * the `caption` card rendered per line, laid over the joined film. Lines in a language listed in
+ * `skip_languages` (default zh: the app's own caption is on screen) get none.
+ * @returns {Promise<string>} the picture to mux: the captioned film, or `joined` without captions
+ */
+async function burnCaptions(ctx, timeline, joined) {
+  const opts = ctx.spec.captions ?? {};
+  if (opts.enabled === false) return joined;
+  const skip = new Set(opts.skip_languages ?? ["zh"]);
+  const { table, doc } = loadClaims(ctx);
+  const lines = resolveLines(ctx.spec, table, doc)
+    .filter((line) => !line.drop && !skip.has(line.lang ?? "en"))
+    .map((line) => {
+      const wav = path.join(ctx.outDir, "vo", `${line.id}.wav`);
+      return {
+        id: line.id,
+        start: line.beatStart + line.at,
+        duration: existsSync(wav) ? wavSeconds(wav) : 2,
+        text: String(line.text ?? "").replace(/\s*\[pause \d+\]\s*/g, " ").trim(),
+      };
+    });
+  const cues = captionTimeline(lines, { tail: opts.tail ?? 0.25, min: opts.min ?? 1.0, total: timeline.duration });
+  const dir = path.join(ctx.outDir, "captions");
+  mkdirSync(dir, { recursive: true });
+  const page = ["titles.css", "titles.js", "caption.html"].map((f) => fileStamp(path.join(HERE, "titles", f)));
+  const { width, height, fps } = ctx.spec.output;
+  const todo = [];
+  for (const cue of cues) {
+    cue.file = path.join(dir, `${cue.id}.mov`);
+    cue.hash = digest(["caption-v1", cue.text, cue.dur, ctx.spec.output, ...page]);
+    if (!fresh(cue.file, cue.hash, ctx.force)) todo.push(cue);
+  }
+  if (todo.length) {
+    const { renderTitle } = await import("./lib/titles.mjs");
+    const { chromium } = await import("playwright");
+    const browser = await chromium.launch({ args: ["--hide-scrollbars"] });
+    try {
+      for (const cue of todo) {
+        const title = { template: "caption", dur: cue.dur, alpha: true, params: { text: cue.text, dur: cue.dur } };
+        await renderTitle({ browser, id: cue.id, title, fps, width, height, outFile: cue.file, ffmpeg: ctx.ffmpeg, log: () => {} });
+        storeHash(cue.file, cue.hash);
+      }
+    } finally {
+      await browser.close();
+    }
+  }
+  console.log(`  captions: ${cues.length} lines (${todo.length} rendered)`);
+  const out = path.join(ctx.outDir, "captioned.mp4");
+  const hash = digest(["captioned-v1", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)])]);
+  if (!fresh(out, hash, ctx.force)) {
+    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps }));
+    storeHash(out, hash);
+  }
+  writeFileSync(path.join(ctx.outDir, "captions.json"), `${JSON.stringify(cues.map(({ file, hash, ...c }) => c), null, 2)}\n`);
+  return out;
 }
 
 /** Whether this ffmpeg build has an encoder (`ffmpeg -encoders`). */

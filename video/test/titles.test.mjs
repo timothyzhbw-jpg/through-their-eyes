@@ -23,6 +23,8 @@ const TEMPLATES = [
   { name: "spec", alpha: false, params: ["header", "rows", "footer"] },
   { name: "end", alpha: false, params: ["name", "tagline", "url", "lines"] },
   { name: "countdown", alpha: true, params: ["label", "sub", "secs"] },
+  { name: "caption", alpha: true, params: ["text", "dur"] },
+  { name: "label", alpha: true, params: ["text"] },
 ];
 
 const read = (file) => readFileSync(file, "utf8");
@@ -155,6 +157,8 @@ test("ffmpeg args for opaque H.264 and alpha ProRes", async () => {
     "medium",
     "-pix_fmt",
     "yuv420p",
+    "-threads",
+    "4",
     "-y",
     "out/card.mp4",
   ]);
@@ -177,6 +181,8 @@ test("ffmpeg args for opaque H.264 and alpha ProRes", async () => {
     "4444",
     "-pix_fmt",
     "yuva444p10le",
+    "-threads",
+    "4",
     "-y",
     "out/slam.mov",
   ]);
