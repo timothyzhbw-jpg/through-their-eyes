@@ -8,15 +8,9 @@ from sim.config import DT
 from sim.export import export_match
 from sim.match import (
     DEFAULT_PLAN,
-    EDITS,
-    KICK_OFF_S,
-    OPEN_PLAY_S,
-    OUT_OF_PLAY,
     SET_PIECES,
     PossessionSpec,
     build_match,
-    ends_out_of_play,
-    first_fit,
     global_id,
     open_play_seed,
     restart_after,
@@ -46,6 +40,13 @@ def test_the_default_match_has_15_to_25_possessions_and_10_to_15_min_of_play(mat
     assert 15 <= len(DEFAULT_PLAN) <= 25
     assert len(match.possessions) == len(DEFAULT_PLAN)
     assert 600 <= match.duration_s <= 900
+    # A passage stops at its cap, so the match can be no longer than this on any platform.
+    longest = sum(spec.max_s or 0.0 for spec in DEFAULT_PLAN if spec.seed is None)
+    heroes = sum(p.frames * DT for p in match.possessions if p.scenario != "possession_play")
+    assert longest + heroes <= 900
+    for spec, p in zip(DEFAULT_PLAN, match.possessions, strict=True):
+        if spec.seed is None:
+            assert p.frames * DT <= spec.max_s + DT
 
 
 def test_the_default_match_includes_every_scenario_on_main(match):
@@ -68,71 +69,24 @@ def test_hero_possessions_keep_their_seeds_and_open_play_is_keyed_by_the_match(m
     play = [p for p in match.possessions if p.scenario == "possession_play"]
     assert len({p.seed for p in play}) == len(play)
     assert all(p.seed >= 1_000_000 for p in play)  # never a design or eval seed
-    edit = EDITS[SEED]
-    assert [p.seed for p in play] == [open_play_seed(SEED, n, edit[n]) for n in range(len(play))]
+    # n counts open-play passages only: a hero inserted into the plan moves no open-play seed.
+    assert [p.seed for p in play] == [open_play_seed(SEED, n) for n in range(len(play))]
     assert open_play_seed(1, 0) != open_play_seed(2, 0)
-    assert open_play_seed(1, 0) != open_play_seed(1, 0, 1)
-
-
-def test_every_open_play_passage_ends_out_of_play_inside_its_window(match):
-    edit = EDITS[SEED]
-    n = 0
-    for spec, p in zip(DEFAULT_PLAN, match.possessions, strict=True):
-        if spec.seed is not None:
-            assert p.attempt is None
-            continue
-        assert spec.window_s is not None
-        assert p.attempt == edit[n]
-        assert ends_out_of_play(p.run, spec.window_s)
-        n += 1
-    assert n == len(edit)
-
-
-def test_the_edit_is_the_first_attempt_that_ends_out_of_play():
-    assert first_fit(SEED, 0, KICK_OFF_S) == EDITS[SEED][0]
-    assert first_fit(SEED, 1, OPEN_PLAY_S) == EDITS[SEED][1]
-
-
-def test_a_stale_or_wrong_length_edit_is_refused():
-    # The committed kick-off fit is attempt 1 (see first_fit), so attempt 0 does not fit.
-    assert EDITS[SEED][0] == 1
-    with pytest.raises(ValueError, match=r"passage 0 \(possession 0\)"):
-        build_match(SEED, edit=(0,) * 17)
-    with pytest.raises(ValueError, match="the edit lists"):
-        build_match(SEED, edit=(1,))
-
-
-def test_a_plan_without_an_edit_is_not_checked_and_seeds_differ():
-    plan = (PossessionSpec("possession_play", window_s=(0.0, 5.0)),) * 2
-    a, b = build_match(2, plan), build_match(3, plan)
-    assert [p.attempt for p in a.possessions] == [0, 0]
-    assert a.to_bytes() != b.to_bytes()
 
 
 def test_same_match_seed_is_byte_identical(match):
     assert build_match(SEED).to_bytes() == match.to_bytes()
+    plan = (PossessionSpec("possession_play", max_s=5.0),) * 2
+    assert build_match(2, plan).to_bytes() != build_match(3, plan).to_bytes()
 
 
 def test_restarts_follow_the_stoppage_except_a_set_piece_declares_its_own(match):
     assert match.possessions[0].restart == "kick_off"
-    pairs = zip(DEFAULT_PLAN, match.possessions, match.possessions[1:], strict=False)
-    for spec, prev, cur in pairs:
+    for prev, cur in zip(match.possessions, match.possessions[1:], strict=False):
         if cur.scenario in SET_PIECES:
             assert cur.restart == SET_PIECES[cur.scenario]
         else:
             assert cur.restart == restart_after(prev.run)
-        if spec.seed is None:  # the possession after an open-play passage is a real stoppage
-            assert cur.restart in OUT_OF_PLAY
-
-
-def test_the_corner_hero_takes_the_corner_the_passage_before_it_gave_away(match):
-    # The away team's corner at the home goal (corner_blind_side): in match 1 the open-play
-    # passage before it ends with a home player putting the ball over his own goal line.
-    k = next(p.index for p in match.possessions if p.scenario == "corner_blind_side")
-    before = match.possessions[k - 1]
-    out = max((e for e in before.run.events if e.type == "out"), key=lambda e: e.frame)
-    assert restart_after(before.run) == "corner" == match.possessions[k].restart
-    assert out.team == 0 and out.attrs["at"][0] < 0 and out.attrs["at"][1] > 0  # its flag side
 
 
 def _out(x: float, y: float, team: int) -> Event:
@@ -236,7 +190,7 @@ def test_the_match_export_keeps_the_tracking_of_each_possession(match, export):
 
 def test_shot_frame_attrs_and_the_save_shot_id_move_to_match_time():
     plan = (
-        PossessionSpec("possession_play", window_s=(0.0, 5.0)),
+        PossessionSpec("possession_play", max_s=5.0),
         PossessionSpec("far_post_finish", 40),  # the first seed 0-399 that ends in a save
     )
     m = build_match(1, plan)
