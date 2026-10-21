@@ -15,6 +15,9 @@ An opponent wins the ball in either of two ways, both from the time-to-intercept
   passing lane, is in the ball's way without reacting to anything; the closed-form time to
   intercept only counts arrivals after the reaction time, so it misses him. The sim wins the ball
   by the same radius (`SimParams.control_radius`: control of a free ball, tackles).
+
+xT here is the smooth prior (`analytics.xt.xt_prior_for`), not the fitted grid: the grid is fitted
+on play this model drives (SPEC 4.5), and valuing options with it would change its own data.
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ import numpy as np
 
 from analytics.pitch_control import control_from_times, logistic
 from analytics.tti import REACTION_S, V_MAX, time_to_intercept
-from analytics.xt import GOAL_X, xt_for
+from analytics.xt import GOAL_X, xt_prior_for
 from sim import shots
 from sim.ball import BallParams, flight_time, launch_speed, path_distances
 from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
@@ -245,10 +248,10 @@ def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
     sign = ctx.attack_sign
 
     def xt(point):
-        return float(xt_for(point, sign))
+        return float(xt_prior_for(point, sign))
 
     def xt_opp(point):
-        return float(xt_for(point, -sign))
+        return float(xt_prior_for(point, -sign))
 
     options: list[OptionEval] = []
     for j in mates:

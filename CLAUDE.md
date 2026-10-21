@@ -148,6 +148,10 @@ _Fill in as they come to exist._
   deployed site it asks only for the casual and analyst breakdowns in English. Writes `out/a11y/`.
   `npm run contrast -- --url <site>`: the contrast of the text over the 3D views, by pixels (axe
   cannot judge it), on 72 renders
+- `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
+  seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
+  and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
+  behaves as it did for the fit: re-run it, then regenerate the exports (web/README.md)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);
   without `--offline` it uses Microsoft Foundry when `FOUNDRY_*` is set; `--mcp` gives the
   Analyst our MCP tool server. Writes `out/breakdown_<scenario>_seed<seed>.json`
