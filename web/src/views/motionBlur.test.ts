@@ -57,7 +57,14 @@ function blurFrame(width: number, height: number, dpr: number, reducedMotion = f
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   } as unknown as MediaQueryList);
-  const playback = { povPlayer: "H8", mode: "factual", frame: 54.5, comfort: false, camera: "pov" };
+  const playback = {
+    povPlayer: "H8",
+    mode: "factual",
+    frame: 54.5,
+    comfort: false,
+    camera: "pov",
+    playing: true,
+  };
   const gl = {
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(width, height),
     getPixelRatio: () => dpr,
@@ -123,18 +130,36 @@ describe("blur strength", () => {
     expect(centrePxPerDeg(3200, 95)).toBeCloseTo(25.6, 1);
   });
 
-  it("is off under prefers-reduced-motion and on the broadcast camera", () => {
-    const turning = { yawRate: (404 * Math.PI) / 180, widthPx: 1600, hfovDeg: 95 };
+  it("is off under prefers-reduced-motion, on the broadcast camera and while paused", () => {
+    const turning = {
+      yawRate: (404 * Math.PI) / 180,
+      widthPx: 1600,
+      hfovDeg: 95,
+      playing: true,
+    };
     expect(povBlurSigmaPx({ ...turning, camera: "pov", reducedMotion: false })).toBeCloseTo(
       0.3 * 404 * 0.02 * centrePxPerDeg(1600, 95),
       6,
     );
     expect(povBlurSigmaPx({ ...turning, camera: "pov", reducedMotion: true })).toBe(0);
     expect(povBlurSigmaPx({ ...turning, camera: "broadcast", reducedMotion: false })).toBe(0);
+    expect(
+      povBlurSigmaPx({ ...turning, playing: false, camera: "pov", reducedMotion: false }),
+    ).toBe(0);
   });
 });
 
 describe("blur plan", () => {
+  it("pause mid head-turn: the blur plan is empty", () => {
+    const yawRate = headYawRate(hero, run, h8, 54.5, false);
+    expect(Math.abs(deg(yawRate))).toBeGreaterThan(300);
+    const widthPx = 1600;
+    const view = { reducedMotion: false, camera: "pov", yawRate, widthPx, hfovDeg: 95 } as const;
+    expect(blurPlan(povBlurSigmaPx({ ...view, playing: false }), widthPx).passes).toBe(0);
+    const playing = blurPlan(povBlurSigmaPx({ ...view, playing: true }), widthPx);
+    expect(playing.passes).toBeGreaterThan(0);
+  });
+
   it("reuses a caller's tap buffers while the blur changes, stops, and starts again", () => {
     const plan = blurPlan(2, 1600);
     const offsets = plan.offsets;
@@ -238,12 +263,13 @@ describe("motion blur GPU budget", () => {
     expect(gl.render).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["reduced motion", "broadcast", "stationary head"])(
+  it.each(["reduced motion", "broadcast", "stationary head", "paused"])(
     "draws straight to the canvas for %s",
     (bypass) => {
       const { gl, playback, draw } = blurFrame(3200, 1800, 2, bypass === "reduced motion");
       if (bypass === "broadcast") playback.camera = "broadcast";
       if (bypass === "stationary head") playback.frame = 60;
+      if (bypass === "paused") playback.playing = false;
       draw();
       expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
       expect(gl.render).toHaveBeenCalledTimes(1);

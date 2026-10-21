@@ -230,6 +230,22 @@ describe("moment card", () => {
     expect(text(page)).not.toContain("every number checked");
   });
 
+  it("stops saying it is watching once the viewer has left the stream before the moment", () => {
+    const session = online();
+    const page = mount(session, <MomentCard />);
+    expect(text(page)).toContain("Live · waiting for the moment");
+    // live, frames came in, then the Live pill left the stream (the run switch is locked until
+    // the moment, so it can no longer do that)
+    act(() => session.playback.set({ live: true }));
+    act(() => session.feed!.state.set({ latest: 40 }));
+    expect(text(page)).toContain("Live · waiting for the moment");
+    act(() => session.controls.leaveLive());
+    expect(text(page)).toContain("Off the stream · moment not reached");
+    expect(text(page)).toContain("You left the stream.");
+    expect(text(page)).not.toContain("Watching the stream");
+    expect(text(page.querySelector(".btn-primary"))).toBe("Get breakdown");
+  });
+
   it("waits for the stream, shows the crew at work, then each crew step's source", async () => {
     const session = online();
     const page = mount(session, <MomentCard />);

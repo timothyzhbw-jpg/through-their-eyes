@@ -406,7 +406,10 @@ optgroup {
   overflow: auto;
   overscroll-behavior: contain;
   background:
-    radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%), var(--night);
+    radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%),
+    rgba(8, 14, 11, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--chalk);
 }
 .lineup-inner {
@@ -423,13 +426,42 @@ optgroup {
   animation: tt-rise 560ms var(--settle) both;
 }
 .lineup-head h2 {
-  margin: 14px 0 28px;
+  margin: 14px 0 18px;
   font: 300 clamp(64px, 7vw, 92px)/1 var(--font-display);
   letter-spacing: -0.04em;
 }
 .lineup-head em {
   color: var(--floodlight);
   padding: 0 0.12em;
+}
+.lineup-pitch {
+  max-width: 620px;
+  margin: 0 auto 32px;
+  font: 400 clamp(17px, 1.5vw, 20px)/1.45 var(--font-display);
+  color: var(--chalk-2);
+  text-wrap: balance;
+}
+.lineup-pitch em {
+  color: var(--chalk);
+}
+.lineup-countdown {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--floodlight);
+  transform-origin: left center;
+  animation: tt-countdown linear both;
+  pointer-events: none;
+}
+@keyframes tt-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 .lineup-teams {
   display: grid;
@@ -955,6 +987,33 @@ optgroup {
 }
 .stage-run .seg button {
   min-width: 132px;
+}
+.seg button[aria-disabled="true"]:not([aria-pressed="true"]) {
+  color: var(--chalk-3);
+  cursor: not-allowed;
+}
+.run-hint {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 7px 12px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-quick);
+}
+.stage-run:has(button[aria-disabled="true"]:hover) .run-hint,
+.stage-run:has(button[aria-disabled="true"]:focus-visible) .run-hint,
+.run-hint[data-nudge] {
+  opacity: 1;
 }
 
 .sound[aria-pressed="true"] {
@@ -3212,7 +3271,7 @@ optgroup {
 
 /* On a phone the match picker gives way before it pushes the header off the screen. */
 @media (max-width: 760px) {
-  .header-start,
+  .header-start:has(.match-picker),
   .header-start .match-picker {
     min-width: 0;
   }
@@ -3222,16 +3281,31 @@ optgroup {
   }
 }
 
+/* Between a phone and a laptop the viewer button shows its avatar alone: with the Your call pill
+   and the sound button, the full "Watching as …" label would push it off the right edge. */
+@media (min-width: 761px) and (max-width: 900px) {
+  .viewer-toggle > span:not(.avatar),
+  .viewer-toggle > svg {
+    display: none;
+  }
+  .viewer-toggle {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
 /* The phone header has room for the brand, the live pill, sound and who is watching, and no more:
    the stream label goes (the pill already says live), then the brand tightens, then the sound
-   button goes (the commentary panel keeps one). Inside a match the way back or the match picker
-   replaces the brand. */
+   button goes (the commentary panel keeps one). The way back, the match picker or the Your call
+   pill replaces the brand. */
 @media (max-width: 480px) {
   .stage-head .live-status {
     display: none;
   }
   .stage:has(.live-chip.back) .stage-head .brand,
-  .stage:has(.header-start .match-picker) .stage-head .brand {
+  .stage:has(.header-start .match-picker) .stage-head .brand,
+  .stage:has(.header-end .yc-open) .stage-head .brand {
     display: none;
   }
   /* the story's big numbers shrink with the screen instead of running off it */
@@ -3343,6 +3417,9 @@ optgroup {
     animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001s !important;
+  }
+  .lineup-countdown {
+    display: none;
   }
 }
 
