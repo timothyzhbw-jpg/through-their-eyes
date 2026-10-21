@@ -19,6 +19,7 @@ import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
+import { startTour } from "./tour/tourState";
 import { intro } from "./ui/intro";
 import "./styles.css";
 
@@ -79,6 +80,7 @@ async function main() {
         return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
       });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
+      if (link.tour) startTour(link.tour); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
       broadcast(session.controls);
@@ -111,6 +113,7 @@ async function main() {
       await showCine(session);
       return;
     }
+    if (link.tour) startTour(link.tour); // the judge tour: its steps are a hero moment's
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>

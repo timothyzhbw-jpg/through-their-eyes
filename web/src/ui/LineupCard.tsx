@@ -8,6 +8,7 @@ import { useStore } from "../store/store";
 import { ArrowIcon } from "./icons";
 import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
+import { TourButton } from "../tour/Tour";
 
 export const INTRO_MS = 5000; // the card closes by itself after this long
 
@@ -24,7 +25,7 @@ export function LineupCard() {
 }
 
 function OpenLineupCard() {
-  const { hero, playback } = useView();
+  const { hero, playback, kind } = useView();
   // Not controls.setPovPlayer: its viewer take-over would cancel the autoplay behind the card.
   const teams = lineup(hero);
   const options = watchOptions(hero);
@@ -232,6 +233,7 @@ function OpenLineupCard() {
             Start watching
             <ArrowIcon />
           </button>
+          {kind === "hero" && <TourButton /> /* its steps are a hero moment's */}
           <button
             type="button"
             className="btn btn-quiet"

@@ -1466,6 +1466,28 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
+- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the lineup card,
+  the moment card and the story, and the link `?tour=1`, or `?tour=<step id>`): an optional walk
+  of about ninety seconds, so a judge with three minutes sees every signature feature without
+  exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
+  at (CSS selectors), one plain line, the app control it runs on arrival, an optional button in
+  the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
+  - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
+    captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
+    number; Your call; another audience in another language (a casual fan, in Chinese); the
+    Producer's failure drill and bring-back; then the whole match, whose card links to
+    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
+    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
+    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
+    main.
+  - *It never takes over.* It only calls the app's own controls, and never presses anything that
+    spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
+    with the card's button. The overlay lets every click through, the card is a non-modal dialog,
+    and closing it at any step (Skip tour, Done, Escape) leaves the app as that step left it. Its
+    words carry no number; the numbers on screen are the app's own verified values.
+  - Next, Back, Skip; arrow keys and Escape in the card. Reduced motion: no animated ring, no
+    smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
+    the viewer touches the app, so Your call and the evidence stay usable.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
@@ -1525,6 +1547,14 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
       [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+- [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
+      live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
+      and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
+      fold; the card stays on screen at desktop and phone width; its words carry no number.
+      — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
+      [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
+      `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
+      no sideways scroll
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
