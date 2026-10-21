@@ -1615,6 +1615,18 @@ original visual identity.
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
     the ring, the sweep and the stamp still show.
+- **Render tiers** ([web/src/quality/](../web/src/quality/), behind `?quality=` until they beat
+  the standard picture): *standard* draws the scene straight to the canvas as above; *medium* adds
+  a post chain (half-float HDR buffer, bloom on the lamps, depth of field through the beat on the
+  broadcast camera only, the head-whip blur, one tone mapping at the end, SMAA) and image-based
+  light from a procedural night-stadium environment (no HDRI download; the grass takes none of
+  it); *high* adds ambient occlusion (GTAO at half resolution) and a soft shadow map from the key
+  floodlight in place of the decal shadows. three.js's own addons (MIT), in a lazy chunk.
+  - Tier from the device (renderer string, memory, phone or not; software renderers and older
+    Intel graphics get standard), `?quality=high|medium|standard|auto`, or the View options
+    switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s steps it down.
+  - First person gets no depth of field: the shirt numbers float in front of the stands, and a
+    blur from the scene's depth would blur them with the stands.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1732,6 +1744,17 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
+- [x] *Render tiers:* tier detection, link and viewer precedence, features per tier, depth of field
+      only through the beat on the broadcast camera and never under reduced motion, the
+      automatic step-down; each tier holds 60 fps; first load no heavier.
+      — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts) (24 cases);
+      `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;
+      `npm run fps -- --quality high|medium` (2026-10-21, Apple M4 Pro, Metal, headless):
+      1920 × 1080 high 60.0 fps p95 16.7–16.8 ms in every row; medium on a 402 × 874 @ 3 phone
+      profile 60.0 fps (this Mac's GPU, not a phone's). Uncapped at 1080p: standard 200–300 fps,
+      medium 140–160, high ≈ 128, so high costs ≈ 3–5 ms a frame here. Eager JS 467 kB gzipped
+      (469 before: the post passes left the vendor chunk); the tier chunk is 47 kB. Not measured
+      on a laptop iGPU or a real phone.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
