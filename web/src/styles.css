@@ -2949,3 +2949,10 @@ optgroup {
     transition-duration: 0.001s !important;
   }
 }
+
+/* Inside a match the way back says where the moment sits; keep it clear of the centred run switch. */
+@media (max-width: 1700px) {
+  .header-start [aria-label="Match"] .live-status {
+    display: none;
+  }
+}
