@@ -1455,6 +1455,11 @@ original visual identity.
     towards the trunk's share of the look, so a look past 80° turns the trunk no further than
     before. The head still points exactly along `head_yaw`. On by default; `?anims=base` turns
     it off; under reduced motion there are no shoulder checks.
+  - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
+    `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
+    and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
+    fallback, Your call). On the tactical board a keeper's token keeps its team colour, which
+    the board's other layers (pitch control) also use, with a band in his kit colour.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;

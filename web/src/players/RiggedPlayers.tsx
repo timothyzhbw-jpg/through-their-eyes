@@ -10,7 +10,7 @@
 // - the extra clips (extra.ts; `?anims=base` turns them off): a kick at every pass instead of
 //   the standing pass, and the trunk joining every scan's look over the shoulder (not under
 //   prefers-reduced-motion);
-// - kits in the fictional clubs' colours (kit.ts).
+// - kits in the fictional clubs' colours, keepers in their own (kit.ts).
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
@@ -37,11 +37,12 @@ import {
 
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player.glb`;
 
-/** Kit in the club's colours with the shirt number; flat skin, hair and boots. */
+/** Kit in the club's colours (the keeper's own kit) with the shirt number; flat skin, hair and
+ * boots. */
 function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
   const byName: Record<string, THREE.Material> = {
     kit: new THREE.MeshStandardMaterial({
-      map: kitTexture(player.team, player.number),
+      map: kitTexture(player),
       roughness: 0.75,
     }),
     skin: new THREE.MeshStandardMaterial({ color: skinTone(j), roughness: 0.65 }),
