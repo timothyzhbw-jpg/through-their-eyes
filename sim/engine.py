@@ -88,6 +88,8 @@ class Simulation:
         self.beliefs = BeliefStore(n, 0, self.pos, self.vel)
         self.head = HeadModel(n)
         self.dropped_scans: set[str] = set()
+        self.dropped_steps: set[str] = set()
+        self.sight_at: dict[int, int] = {}  # keeper index -> frame of his first sight of this shot
         self.frozen_belief: dict[int, int] = {}
         self.forced_actions: dict[tuple[int, int], str] = {}  # (player, frame) -> action
         self.events: list[Event] = []
@@ -189,6 +191,11 @@ class Simulation:
         if forced is not None and self.owner == self.index(forced.passer):
             target = forced.target if forced.target is not None else self.pos[self.index(forced.to)]
             self._kick_pass(self.index(forced.passer), np.asarray(target), self.index(forced.to), f)
+        # A scripted strike before a pending decision, so that decision cannot also kick.
+        if self.scenario.shots:
+            forced_shot = self.scenario.forced_shot(self, f)
+            if forced_shot is not None and self.owner == self.index(forced_shot.shooter):
+                self._kick_shot(self.index(forced_shot.shooter), forced_shot, f)
         if self.pending_decision is not None and self.pending_decision[1] == f:
             i = self.pending_decision[0]
             self.pending_decision = None
@@ -660,7 +667,7 @@ class Simulation:
             "y_seen": None,
             "decided": False,
             "u": self.rng.uniform_for("save", f, self.ids[k]),
-            "hero": self.scenario.ends_on_pass(self, i),
+            "hero": self.scenario.ends_on_shot(self, i),
         }
         self._watch_shot()  # The first sighting can be the strike itself, before the ball rolls.
 
@@ -673,7 +680,13 @@ class Simulation:
             others = np.delete(np.arange(len(self.ids)), k)
             v = visibility(self.pos[k], float(self.head_yaw[k]), float(np.linalg.norm(self.vel[k])),
                            self.ball_pos[None, :2], self.pos[others])[0]  # fmt: skip
-            if v >= self.params.perception_threshold:
+            # Empty sight_at keeps the ordinary test. SightAt counts the ball as unseen before
+            # its frame and seen on it, whatever the line of sight says.
+            forced_sight = self.sight_at.get(k)
+            visible = (
+                v >= self.params.perception_threshold if forced_sight is None else f >= forced_sight
+            )
+            if visible:
                 s["seen"], s["y_seen"] = f, float(self.pos[k, 1])
                 cross = s["cross"] if s["cross"] is not None else f
                 d = s["y_c"] - s["y_seen"]

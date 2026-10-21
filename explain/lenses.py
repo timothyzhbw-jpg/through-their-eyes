@@ -8,7 +8,10 @@ share one value function, so their deltas are directly comparable:
     V(option) = PC * xT(target) - (1 - PC) * xT_opp(target)
 
 on the true positions at the decision, PC being the acting team's pitch control at the option's
-target (a shot keeps its xG: pitch control at the goal mouth says nothing).
+target (a shot keeps its xG: pitch control at the goal mouth says nothing). A placed shot
+(`shot:near` / `shot:far`, Module A) is worth its chance of a goal on the truth: P(on target) ×
+(1 − E[P(save)]) with the keeper where he really is, the decision model's own value re-scored on
+the true state (`sim.decision.placed_shot_value`).
 
 - `scan`: drop the most informative scan (the one whose sightings move the decision-time belief
   about the eventual target the most) and re-simulate with
@@ -54,7 +57,7 @@ from explain.cards import LensName, LensResult, MomentCard
 from explain.moments import detect_moments, hero_card
 from sim.config import SimParams
 from sim.counterfactual import drop_scan_counterfactual
-from sim.decision import DecisionParams, OptionEval
+from sim.decision import DecisionParams, OptionEval, placed_shot_value
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
@@ -182,6 +185,11 @@ def option_values(run: MatchRun, frame: int, player: str, options: list[OptionEv
     for k, o in enumerate(options):
         if o.kind == "shot":
             value[k] = o.value
+            if o.action.startswith("shot:"):  # a placed shot: its chance of a goal on the truth
+                from explain.functions import true_decision_context
+
+                truth = true_decision_context(run, run.index(player), frame)
+                value[k] = placed_shot_value(truth, o.action.removeprefix("shot:"))
     return value, pc, xt_own
 
 
