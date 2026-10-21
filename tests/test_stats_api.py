@@ -88,9 +88,9 @@ def test_the_analysts_mcp_tool_serves_the_api_numbers(client):
 
     ctx = client.app.state.store._loaded[HERO].ctx
     body = _stats(client)
-    out = json.loads(tools.get_match_stats(ctx))
+    out = json.loads(tools.get_live_stats(ctx))
     assert out["players"] == body["players"] and out["teams"] == body["teams"]
-    h8 = json.loads(tools.get_match_stats(ctx, player="H8", frame=60))
+    h8 = json.loads(tools.get_live_stats(ctx, player="H8", frame=60))
     assert [p["id"] for p in h8["players"]] == ["H8"] and h8["frame"] == 60
     assert all(c["player"] == "H8" or c.get("receiver") == "H8" for c in h8["cues"])
     assert h8["players"] == [p for p in _stats(client, frame=60)["players"] if p["id"] == "H8"]
@@ -99,16 +99,16 @@ def test_the_analysts_mcp_tool_serves_the_api_numbers(client):
         server = build_server(ctx)
         async with create_connected_server_and_client_session(server._mcp_server) as session:
             names = {t.name for t in (await session.list_tools()).tools}
-            result = await session.call_tool("get_match_stats", {"player": "H9"})
+            result = await session.call_tool("get_live_stats", {"player": "H9"})
             return names, json.loads(result.content[0].text)
 
     names, h9 = asyncio.run(go())
-    assert "get_match_stats" in names
+    assert "get_live_stats" in names
     assert [p["id"] for p in h9["players"]] == ["H9"]
 
 
 def test_the_mcp_tool_can_serve_a_whole_match(client):
     ctx = client.app.state.store._loaded[HERO].ctx
     match = compute_stats(client.get(f"/api/matches/{MATCH}/export").json(), MATCH)
-    out = json.loads(tools.get_match_stats(ctx, stats=match))
+    out = json.loads(tools.get_live_stats(ctx, stats=match))
     assert out["match"] == MATCH and out["players"] == _stats(client, MATCH)["players"]

@@ -128,7 +128,7 @@ def list_options(ctx: MomentContext) -> str:
     ])  # fmt: skip
 
 
-def get_match_stats(
+def get_live_stats(
     ctx: MomentContext,
     player: str | None = None,
     frame: int | None = None,
@@ -180,7 +180,7 @@ TOOLS = {
     "get_pitch_control": get_pitch_control,
     "get_xt": get_xt,
     "get_pressing": get_pressing,
-    "get_match_stats": get_match_stats,
+    "get_live_stats": get_live_stats,
     "run_counterfactual": run_counterfactual,
     "list_options": list_options,
     "what_if": what_if,

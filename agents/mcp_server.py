@@ -51,12 +51,12 @@ def build_server(ctx: MomentContext, stats: StatsTimeline | None = None) -> Fast
         return tools.get_pressing(ctx, frame)
 
     @server.tool()
-    def get_match_stats(player: str | None = None, frame: int | None = None) -> str:
+    def get_live_stats(player: str | None = None, frame: int | None = None) -> str:
         """Live match stats measured from tracking and events (SPEC 4.6): per player distance,
         top speed, sprints, passes (accuracy, difficulty 0-1) and shots, plus timecoded cues.
         `player` filters to one player; `frame` is the snapshot frame (default: the last).
         Metrics, not verified claims."""
-        return tools.get_match_stats(ctx, player, frame, stats)
+        return tools.get_live_stats(ctx, player, frame, stats)
 
     @server.tool()
     def run_counterfactual(scan_id: str | None = None) -> str:

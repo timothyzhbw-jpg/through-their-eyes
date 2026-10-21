@@ -596,7 +596,7 @@ a pass at its reception, interception or out; a sprint at its first frame back b
   definitions); `?frame=F` is the snapshot at frame F, `?tracks=true` adds per-frame ball speed,
   speeds above 19.8 km/h and per-second distance checkpoints for viewers. The live stream sends each
   cue as a `stat` message on its frame (§2), timecoded for a graphics engine. The Analyst's MCP
-  tool `get_match_stats` serves the same numbers (§6).
+  tool `get_live_stats` serves the same numbers (§6).
 
 ### 4.7 Scan detector
 Input: the `head_yaw` time series plus the player's and the ball's positions (needed for the ball
