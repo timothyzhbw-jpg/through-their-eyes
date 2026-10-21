@@ -1512,6 +1512,33 @@ original visual identity.
     smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
     the viewer touches the app, so Your call and the evidence stay usable.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
+- **Key-moment beat** ([web/src/beat/](../web/src/beat/)): each key scan plays like a broadcast
+  highlight. Free play and the live stream ease into slow motion (about 0.4×) as the scan begins,
+  hold for a beat (≈ 0.35 s) when the player the look is for first comes into the hero's sight,
+  and are back at 1× by the release (his pass); the run without the look slows at the same frames
+  with no hold. Plans and the recap reel keep their own speeds. The broadcast camera pushes in on
+  the hero, then opens to both players once he has seen the runner, and eases back after the
+  pass; in first person the 95° view stays and the vignette closes in instead. The arc his look
+  swept fills in gold on the board and the grass; the runner gets a ring and a glow from the
+  sighting; while he is in the sim's sight but outside the camera, the picture's edge glows on his
+  side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
+  by what the beats added and catches up at the next possession's cut. Timing is a function of
+  the frame only: no position, event or number changes.
+  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
+    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
+    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
+    with the playhead.
+  - Verified numbers in a caption count up from zero the first time they come up and take a
+    check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
+    page's text is the verified value throughout.
+  - Sound ([web/src/sound/](../web/src/sound/), synthesized in code, [CREDITS](CREDITS.md)): a
+    low crowd bed that muffles through the beat, a whoosh as each scan of the POV player begins,
+    a sting at the "without the look" reveal; all ducked under the narration voice, all off with
+    the Sound switch.
+  - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
+    and a CSS grade and first-person vignette over the canvas.
+  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+    the ring, the sweep and the stamp still show.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1606,6 +1633,18 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Key-moment beat:* slow motion starts as the key scan begins and ends by the release, the
+      accent holds at the sighting, the run without the look slows with no accent, plans and the
+      recap keep their speeds, reduced motion turns it off, the live playhead never jumps inside a
+      beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
+      and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
+      — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
+      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
+      [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
+      `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
+      pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
+      1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
