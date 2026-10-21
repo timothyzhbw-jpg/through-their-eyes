@@ -15,7 +15,7 @@ import numpy as np
 from analytics.xt import xt_for
 from sim.engine import Simulation
 from sim.model import Decision
-from sim.overrides import DropScan, ForceAction
+from sim.overrides import DropScan, DropStep, ForceAction
 from sim.run import MatchRun
 
 SHOT_OUTCOMES = ("goal", "saved", "wide", "blocked")
@@ -23,7 +23,7 @@ SHOT_OUTCOMES = ("goal", "saved", "wide", "blocked")
 
 @dataclass
 class CounterfactualResult:
-    scan_id: str
+    scan_id: str  # intervention id: a scan id, or a step id when the intervention is drop_step
     factual: MatchRun
     counterfactual: MatchRun
     factual_decision: Decision | None
@@ -216,16 +216,41 @@ def what_if_from_id(scenario: str, seed: int, what_if: str) -> WhatIfResult:
     return force_action_counterfactual(scenario, seed, action, player, frame)
 
 
+def drop_step_counterfactual(
+    scenario: str, seed: int, step_id: str | None = None, record_draws: bool = False
+) -> CounterfactualResult:
+    """Factual run vs the same run without one step (by default the scenario's key step).
+
+    The step id is stored on `scan_id`: that field is the intervention id."""
+    if step_id is None:
+        step_id = Simulation.from_scenario(scenario, seed).run().key_step().id
+    start = int(step_id.rsplit(":", 1)[1])
+    factual, counterfactual = run_counterfactual(
+        scenario, seed, start, [DropStep(step_id)], record_draws
+    )
+    return CounterfactualResult(
+        scan_id=step_id,
+        factual=factual,
+        counterfactual=counterfactual,
+        factual_decision=factual.hero_decision(),
+        counterfactual_decision=counterfactual.hero_decision(),
+        delta_xt=possession_value(factual) - possession_value(counterfactual),
+    )
+
+
 def hero_counterfactual(
     scenario: str, seed: int, record_draws: bool = False
 ) -> CounterfactualResult | WhatIfResult:
     """The scenario's own intervention on its hero (`Scenario.intervention`, SPEC 3.6): the run
-    without the key scan ("drop_scan"), or the hero forced to take an option ("force:carry")."""
+    without the key scan ("drop_scan"), without the key step ("drop_step"), or the hero forced
+    to take an option ("force:carry")."""
     from sim.scenarios import SCENARIOS
 
     intervention = SCENARIOS[scenario].intervention
     if intervention == "drop_scan":
         return drop_scan_counterfactual(scenario, seed, record_draws=record_draws)
+    if intervention == "drop_step":
+        return drop_step_counterfactual(scenario, seed, record_draws=record_draws)
     if intervention and intervention.startswith("force:"):
         action = intervention.removeprefix("force:")
         return force_action_counterfactual(scenario, seed, action, record_draws=record_draws)
