@@ -13,6 +13,7 @@ import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
+import { FIELD } from "./fieldMarkings";
 import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
@@ -338,20 +339,23 @@ export function Ground() {
   );
 }
 
+/** Round posts on the goal line, inner edges 7.32 m apart, the bar's lower edge at 2.44 m (Law 1). */
 export function Goals() {
+  const { postRadius: r, postX, postY, barHeight } = FIELD;
+  const height = barHeight + r; // the posts reach the top of the bar
   const posts = [];
   for (const g of [-1, 1]) {
-    for (const y of [-3.66, 3.66]) {
+    for (const y of [-postY, postY]) {
       posts.push(
-        <mesh key={`${g}${y}`} position={[g * PITCH.halfLength, 1.22, -y]}>
-          <cylinderGeometry args={[0.06, 0.06, 2.44, 10]} />
+        <mesh key={`${g}${y}`} position={[g * postX, height / 2, -y]}>
+          <cylinderGeometry args={[r, r, height, 10]} />
           <meshStandardMaterial color="#f4f6f5" />
         </mesh>,
       );
     }
     posts.push(
-      <mesh key={`bar${g}`} position={[g * PITCH.halfLength, 2.44, 0]} rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[0.06, 0.06, 7.32, 10]} />
+      <mesh key={`bar${g}`} position={[g * postX, barHeight, 0]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[r, r, 2 * postY, 10]} />
         <meshStandardMaterial color="#f4f6f5" />
       </mesh>,
     );
