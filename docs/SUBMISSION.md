@@ -89,8 +89,8 @@ The brief's pipeline, end to end, on a synthetic match:
   original plan's checks, reported in the same file, are not met. Live in the app, as the
   stitched match's third hero.
 
-The live heroes play inside a stitched match: 18 possessions on one clock, about 13 minutes,
-with the set-piece hero's corner as its third hero moment.[^match]
+The live heroes play inside a stitched match: 19 possessions on one clock, about 13½ minutes.
+The shot hero scores (1–0), and the set-piece hero's corner comes at 1–0.[^match]
 
 ## The multi-agent design
 
@@ -232,8 +232,8 @@ Multi-Agent System (SPEC §0).
   hero's scenario alone.[^matchstats]
 - **xT is our own grid, not fitted to real football.** A gain such as "That look was worth … in
   expected threat" is a value inside the simulation.
-- **The stitched match has no goal yet:** 18 possessions and about 13 minutes, inside the
-  spec's 15–25 and 10–15 min, but it stays 0–0 until the shot hero joins it.[^match]
+- **The stitched match has one goal, from its shot hero:** open play has no shots
+  (`possession_play` scripts its passes), so the scoreline is the heroes' doing.[^match]
 - **Not yet measured:** no single-agent baseline (the narration ablation is the closest
   comparison), no viewer study, and no frame-rate run on a laptop's integrated GPU.
 - **A failure drill lives on one replica's disk.** A restart or redeploy drops it, and
@@ -266,8 +266,8 @@ Multi-Agent System (SPEC §0).
     seeds 100–139, scan lens selected 40/40.
 [^marking]: [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md):
     seeds 100–139, 37/40; median separation 3.3 m with the look, 8.5 m without.
-[^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 18
-    possessions and "798.9 s, 0-0" on a Mac (2026-10-22 CT, with the team shape). Where open play goes out
+[^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
+    possessions and "808.4 s, 1-0" on a Mac (2026-10-22 CT, with the team shape). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).

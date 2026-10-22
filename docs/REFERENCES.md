@@ -172,10 +172,12 @@ conservatively), and no logos anywhere.
   https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13441872/
   → The 125°/s angular-velocity threshold over-counts scans → threshold sweep in the scan detector.
   Peak head yaw rate of detected scans: 404.2 ± 50.7°/s (Results 3.1).
-- Movement and ball speeds: none of the papers here prints a measured sprint speed, acceleration
-  or pass speed. Spearman (2018) sets v = 5 m/s and a = 7 m/s² in its time-to-intercept model as
-  model parameters, not measurements; the realism report marks these rows "no published
-  reference".
+- Movement and ball speeds: the papers in this section print no measured sprint speed,
+  acceleration or pass speed. Spearman (2018) sets v = 5 m/s and a = 7 m/s² in its
+  time-to-intercept model as model parameters, not measurements. Measured values are now in
+  "Sim parameters" below (2026-10-21): Bradley 2024, Nevado Garrosa et al. 2025, Oliva-Lozano et
+  al. 2020, Herold et al. 2022 and Pfaff et al. 2022. The realism report has not been updated
+  and still marks these rows "no published reference".
 - **Arbués-Sangüesa et al. (CVPRW 2020; J. Sports Sciences 2021)** — body orientation → pass
   feasibility. https://arxiv.org/abs/2004.07209 , https://repositori.upf.edu/handle/10230/57891
   → Receiver orientation in the decision model; production path for orientation from video.
@@ -361,6 +363,8 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
   19.8 km/h for high-speed running and 25.2 km/h for sprinting (§ "Defining 'absolute'
   thresholds"); it finds no consensus and lists entry speeds from 14.4 to 21.1 and 19.8 to
   30 km/h. It gives no minimum sprint duration; our 0.4 s is our own choice.
+  Its match-demand table lists Altmann et al. (2021) at 495 m of sprinting. Altmann's own Table 1
+  prints 0.27 km of sprinting and 495 accelerations, so do not take match demands from that table.
 - **Spearman, Basye, Dick, Hotovy & Pop (2017). *Physics-Based Modeling of Pass Probabilities in
   Soccer.*** MIT Sloan Sports Analytics Conference (11th) —
   https://www.researchgate.net/publication/315166647_Physics-Based_Modeling_of_Pass_Probabilities_in_Soccer
@@ -374,6 +378,70 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
 - **Choi (2026). *Training-Free Off-Screen Player Imputation for Broadcast-Based Spatial Football
   Analytics.*** arXiv:2607.11548 — https://arxiv.org/abs/2607.11548
   → Production-path caveat: a broadcast camera shows only 10–16 players at a time.
+
+### Sim parameters ([SIM_PARAMETERS.md](SIM_PARAMETERS.md), 2026-10-21)
+Published aggregate values for team shape, movement, passing, pressing and scanning, each read in
+the source. The dossier gives every value with its table or page, its population and the sim's
+current number, and lists the full citations. The sources added there, by area:
+- **Team shape:**
+  - Errekagorri et al. 2024, *PLoS ONE* 19:e0299242: LaLiga width, length and line height per
+    match.
+  - Castellano, Álvarez-Pastor & Blanco-Villaseñor 2013, *Rev Psicol Deporte* 22(2):437–446:
+    shape in vs out of possession.
+  - Castellano & Álvarez 2013, *RICYDE* 9(32):126–136: line height = 6.3 m + 0.46 × the ball's
+    distance to goal.
+  - Gonçalves et al. 2019, *PLoS ONE* 14:e0221368, and Fradua et al. 2013, *J Sports Sci*
+    31(6):573–581: both teams' length and width.
+  - Olthof, Frencken & Lemmink 2019, *J Strength Cond Res* 33(1):167–173: centroid coupling,
+    youth.
+  - Rico-González et al. 2022, *Biol Sport* 39(1): a review of reference values.
+  - Forcher et al. 2022, *PLoS ONE* 17:e0265501: formation counts.
+  - Forcher et al. 2023, *J Sports Sci Med* 22(4):707–725: rest defence.
+  - Amichay et al. 2025, *Sci Rep* 15:35217: inter-line distances, citing Forcher et al. 2024.
+  - Memmert et al. 2019, *PLoS ONE* 14:e0210191; Moura et al. 2012, *Sports Biomech* 11:85–96;
+    Duarte et al. 2013, *Hum Mov Sci* 32:555–566; Shaw & Glickman 2019 (Barça Sports Analytics
+    Summit); Bialkowski et al. 2014 (MIT Sloan).
+- **Movement:**
+  - Bradley et al. 2010, *J Strength Cond Res* 24(9):2343–2351: distance and time by speed zone
+    and position.
+  - Bradley 2024, *Biol Sport* 41(1):261–270: peak speed by role, World Cup 2022.
+  - Altmann et al. 2021, *PLoS ONE* 16:e0256695: Bundesliga distance by position.
+  - Nevado Garrosa et al. 2025, *Biol Sport* 42(4):125–133: acceleration against current speed.
+  - Oliva-Lozano et al. 2020, *PLoS ONE* 15:e0236959: peak acceleration and deceleration, sprints.
+  - Sonderegger et al. 2016, *PLoS ONE* 11:e0166534; Harper et al. 2019, *Sports Med*
+    49:1923–1947; Morgans et al. 2025, *Biol Sport* 42:81–87; Baptista et al. 2018, *PLoS ONE*
+    13:e0198115; Chmura et al. 2017, *J Hum Kinet* 56:187–195; Bloomfield et al. 2007, *J Sports
+    Sci Med* 6:63–70; Barnes et al. 2014, *Int J Sports Med* 35:1095–1100; Di Salvo et al. 2008,
+    *J Sports Med Phys Fitness* 48:443–446.
+- **Ball, passing and possession:**
+  - Link & Hoernig 2017, *PLoS ONE* 12:e0179953: ball in play, time on the ball.
+  - Schwarz et al. 2025, *Eur J Sport Sci* 25:e12256: passes and length mix.
+  - Anzer & Bauer 2022, *Data Min Knowl Disc* 36:295–317: completion.
+  - Zhao & Liu 2022, *Front Psychol* 13:907336; Siegle & Lames 2012, *J Sports Sci* 30:619–624:
+    stoppages.
+  - Yamamoto et al. 2023, Chacoma et al. 2020, Pfaff et al. 2022 and Carstens et al. 2026, all
+    arXiv preprints: possession durations, pass speed, passes per team.
+  - Herold et al. 2022, *Front Sports Act Living* 4:1019990; González-Rodenas et al. 2020, *PLoS
+    ONE* 15:e0226978; Yi et al. 2019, *Front Psychol* 10:2738; Lago-Peñas & Lago-Ballesteros
+    2011, *J Sports Sci Med* 10:465–471; Castellano, Casamichana & Lago 2012, *J Hum Kinet*
+    31:139–147; Taha & Orlov 2025, *PLoS ONE* 20:e0314630; Carling 2010, *J Sports Sci*
+    28:319–326.
+- **Pressing and transitions:**
+  - Andrienko et al. 2017, *Data Min Knowl Disc* 31:1793–1839: pressure zone, 9 m in front and
+    3 m behind.
+  - Bauer & Anzer 2021, *Data Min Knowl Disc* 35:2009–2049: counterpressing.
+  - Hobbs et al. 2018 (MIT Sloan): counter-attacks.
+  - Almeida, Ferreira & Volossovitch 2014, *J Hum Kinet* 41:203–214: where the ball is won.
+  - Campos et al. 2025, *Front Psychol* 16:1697146; Stafylidis et al. 2024, *J Funct Morphol
+    Kinesiol* 9:107; Barthelemy et al. 2024, *J Hum Kinet* 94:203–214: PPDA.
+  - Vogelbein, Nopp & Hökelmann 2014, *J Sports Sci* 32:1076–1083 (abstract only).
+- **Perception:**
+  - McGuckian et al. 2018, *Front Psychol* 9:2520: head turns before receiving.
+  - Abächerli et al. 2026, *Front Sports Act Living* 8:1853406: scanning on the ball, youth women.
+  - Aksum et al. 2020, *Front Psychol* 11:562995: fixation durations.
+  - Phatak & Gruber 2019, *Sports* 7:139: scanning against pass completion.
+→ The sim gaps these values show are listed in SIM_PARAMETERS.md §6. The sim changes go through
+  the session that owns `sim/`, one writer at a time.
 
 ### Counterfactuals and tactics
 - **Wang et al. (2024). *TacticAI: an AI assistant for football tactics.*** Nature Communications —

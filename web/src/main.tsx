@@ -21,6 +21,7 @@ import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
 import { startTour } from "./tour/tourState";
+import { withoutLookOf } from "./without/without";
 import { intro } from "./ui/intro";
 import "./styles.css";
 
@@ -115,6 +116,7 @@ async function main() {
       loaded.whatIfs,
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
+    void withoutLookOf(session, undefined, dataUrl).load(); // "Without the look", told: a few KB
     applyDeepLink(session, link);
     broadcast(session.controls);
     if (filming) {
