@@ -63,6 +63,14 @@ const GRASS_CONTRAST = 0.7;
 export const NIGHT_LAMP = "#fff2d8";
 /** The roof-edge lamps' colour, as a multiple of the lamp colour (see dress). */
 export const ROOF_LAMP_LEVEL = 0.2;
+/** From head height the roof's edge crosses the top of the frame, where the header and the HUD
+ * are, so a camera below this height (m) does not draw the roof-edge lamps: first person, Take
+ * his eyes, low cine shots. The broadcast camera and every high view keep them. */
+export const ROOF_LAMPS_MIN_EYE = 3;
+
+export function roofLampsVisible(cameraHeight: number): boolean {
+  return cameraHeight >= ROOF_LAMPS_MIN_EYE;
+}
 
 export interface BakedModel {
   /** The dressed scene; every canvas shows its own clone (geometry and materials shared). */

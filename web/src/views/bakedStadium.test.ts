@@ -15,6 +15,7 @@ import {
   loadBakedStadium,
   stadium,
   stadiumFromSearch,
+  roofLampsVisible,
   STADIUM_URL,
   whenStadiumSettled,
 } from "./bakedStadium";
@@ -482,5 +483,12 @@ describe("loading the baked stadium", () => {
     const roof = meshes[5].material as THREE.MeshBasicMaterial;
     expect(Math.max(roof.color.r, roof.color.g, roof.color.b)).toBeLessThanOrEqual(0.25);
     expect(roof.userData.lamp).toBe(true);
+  });
+
+  it("leaves the roof-edge lamps out of head-height views, where the HUD is", () => {
+    expect(roofLampsVisible(1.72)).toBe(false); // first person (EYE_HEIGHT)
+    expect(roofLampsVisible(1.2)).toBe(false); // a low cine shot
+    expect(roofLampsVisible(21)).toBe(true); // the broadcast camera
+    expect(roofLampsVisible(40)).toBe(true); // Your call's view from above
   });
 });

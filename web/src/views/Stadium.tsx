@@ -21,6 +21,7 @@ import {
   armBakedStadium,
   grassMaterial,
   groundLightFor,
+  roofLampsVisible,
   setBoardWords,
   stadium,
 } from "./bakedStadium";
@@ -112,8 +113,18 @@ export function Grass() {
 function BakedStadium() {
   const model = useStore(stadium, (s) => s.model)!;
   const scene = useMemo(() => model.scene.clone(true), [model]);
-  useFrame(() => {
+  const roofLamps = useMemo(() => {
+    const out: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+      if (m?.userData.part === "roof_lamp") out.push(o);
+    });
+    return out;
+  }, [scene]);
+  useFrame(({ camera }) => {
     model.time.value = sceneClock.now();
+    const show = roofLampsVisible(camera.position.y); // three's y is the height
+    for (const o of roofLamps) o.visible = show;
   });
   return <primitive object={scene} />;
 }
