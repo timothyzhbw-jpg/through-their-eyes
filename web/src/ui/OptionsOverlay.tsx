@@ -17,6 +17,7 @@ import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { boardZoom } from "../views/scene";
 import { KindTag } from "./Narration";
+import { SourceChip } from "../provenance/SourceChip";
 
 const PICK_PX = 10; // pointer tolerance
 
@@ -128,9 +129,7 @@ function HoverCard({
             <dt>{row.label}</dt>
             <dd>
               {row.value}
-              <span className={row.source === "claim" ? "source verified" : "source"}>
-                {row.source === "claim" ? "✓" : "sim"}
-              </span>
+              <SourceChip kind={row.source === "claim" ? "verified" : "sim"} />
             </dd>
           </div>
         ))}

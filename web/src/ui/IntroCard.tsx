@@ -15,6 +15,7 @@ import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lin
 import { momentTitle } from "./Stage";
 import { TourButton } from "../tour/Tour";
 import { clubName, shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
 export function playLength(minutes: number): string {
@@ -246,10 +247,7 @@ function Lineup() {
       <p className="lineup-note">
         A scan is a quick look away from the ball to check the space around him.{" "}
         {measured === "count" ? "Scans counted" : "Scans per minute, counted"} from the scan events
-        of this run ({playLength(runMinutes(hero))}).{" "}
-        <span className="source" title="Read from the sim export, not a verified claim">
-          sim
-        </span>
+        of this run ({playLength(runMinutes(hero))}). <SourceChip kind="sim" />
       </p>
     </>
   );
