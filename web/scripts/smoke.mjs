@@ -251,28 +251,38 @@ async function tier(page, want) {
   }
 }
 
-/** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable): play through
- * the key scan, where his head whips round, and the canvas stays sharp. Then turn "Motion blur"
- * on in View options, play into the scan again, cut to the broadcast camera and back, and read
- * the blur on the frames right after each cut: it must be 0. */
+/** How long the replay may take to reach a frame: a software renderer (SwiftShader on the CI
+ * runner) draws far fewer frames, and the app's clock steps at most 0.1 s a frame. */
+const PLAY_MS = process.env.CI ? 60_000 : 20_000;
+/** The cut guard (beat/cut.ts) keeps blur off for 0.3 s of wall time after a cut; frames drawn
+ * within this long of the click are read. A software renderer draws a frame every ~100 ms, so
+ * later frames rightly have their blur back. */
+const CUT_READ_MS = 250;
+
+/** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable). The replay
+ * opens as H8 looks away (his head whips round over frames 50-59, holds at 60-62, and looks back
+ * over 63-69): played to frame 60, the canvas stays sharp. Then, paused, "Motion blur" is turned
+ * on in View options; played into the look back, the moment the blur shows the camera cuts to
+ * the broadcast camera and back, and every frame drawn within CUT_READ_MS of each cut is sharp. */
 async function cutNoBlur(page) {
   await hero(page);
   await page.getByRole("button", { name: "Play", exact: true }).click();
-  // The replay opens inside the key scan (frames 50-70); play past its end.
-  const byDefault = await page.evaluate(async () => {
+  const byDefault = await page.evaluate(async (limit) => {
     const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
     const el = document.querySelector(".view.pov canvas");
     const timeline = document.querySelector('input[aria-label="Timeline"]');
     const t0 = performance.now();
     let most = 0;
-    while (Number(timeline.value) < 72 && performance.now() - t0 < 20_000) {
+    while (Number(timeline.value) < 60 && performance.now() - t0 < limit) {
       await frame();
       most = Math.max(most, Number(el.dataset.blurSigma ?? 0));
     }
+    document.querySelector('button[aria-label="Pause"]')?.click(); // before the look back
     return { most, frame: Number(timeline.value) };
-  });
-  if (byDefault.frame < 72)
-    throw new Error(`play did not pass the key scan (frame ${byDefault.frame})`);
+  }, PLAY_MS);
+  if (byDefault.frame < 60) {
+    throw new Error(`play did not pass the look away (frame ${byDefault.frame})`);
+  }
   if (byDefault.most > 0) {
     throw new Error(`expected no head-turn blur by default, got sigma ${byDefault.most} px`);
   }
@@ -283,39 +293,44 @@ async function cutNoBlur(page) {
   if ((await blur.getAttribute("aria-pressed")) !== "true")
     throw new Error("Motion blur did not turn on");
   await page.keyboard.press("Escape");
-  // Back to just before the key scan (the timeline's mark), playing.
-  await page.getByTitle("Jump to just before the key scan").click();
-  const play = page.getByRole("button", { name: "Play", exact: true });
-  if (await play.count()) await play.click();
-  const canvas = page.locator(".view.pov canvas");
-  // Turned on, the blur comes on as his head whips round.
-  await page.waitForFunction(
-    (el) => Number(el.dataset.blurSigma) > 0,
-    await canvas.elementHandle(),
-    {
-      timeout: 15_000,
-    },
-  );
-  const after = await page.evaluate(async () => {
-    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
-    const el = document.querySelector(".view.pov canvas");
-    const pick = (name) =>
-      [...document.querySelectorAll('[aria-label="Camera"] button')]
-        .find((b) => b.textContent.trim() === name)
-        .click();
-    const seen = [];
-    for (const name of ["Broadcast", "His eyes"]) {
-      pick(name);
-      for (let k = 0; k < 4; k++) {
+  const after = await page.evaluate(
+    async ([limit, window]) => {
+      const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+      const el = document.querySelector(".view.pov canvas");
+      document.querySelector('button[aria-label="Play"]').click();
+      // Turned on, the blur comes on as his head whips back.
+      const t0 = performance.now();
+      while (!(Number(el.dataset.blurSigma) > 0)) {
+        if (performance.now() - t0 > limit) return { blurred: false };
         await frame();
-        // The head-whip blur and, at the medium and high tiers, the depth of field.
-        seen.push(Number(el.dataset.blurSigma ?? 0) + Number(el.dataset.dof ?? 0));
       }
+      const reads = [];
+      for (const name of ["Broadcast", "His eyes"]) {
+        const clicked = performance.now();
+        [...document.querySelectorAll('[aria-label="Camera"] button')]
+          .find((b) => b.textContent.trim() === name)
+          .click();
+        const seen = [];
+        for (;;) {
+          await frame();
+          if (performance.now() - clicked > window) break;
+          // The head-whip blur and, at the medium and high tiers, the depth of field.
+          seen.push(Number(el.dataset.blurSigma ?? 0) + Number(el.dataset.dof ?? 0));
+        }
+        reads.push({ name, seen });
+      }
+      return { blurred: true, reads };
+    },
+    [PLAY_MS, CUT_READ_MS],
+  );
+  if (!after.blurred) throw new Error("Motion blur on, but no blur as his head turned back");
+  for (const { name, seen } of after.reads) {
+    if (!seen.length) {
+      throw new Error(`no frame drawn within ${CUT_READ_MS} ms of the cut to ${name}`);
     }
-    return seen;
-  });
-  if (after.some((sigma) => sigma > 0)) {
-    throw new Error(`expected no blur right after a camera cut, got ${after.join(", ")}`);
+    if (seen.some((v) => v > 0)) {
+      throw new Error(`expected no blur right after the cut to ${name}, got ${seen.join(", ")}`);
+    }
   }
 }
 

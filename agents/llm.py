@@ -17,6 +17,8 @@ from typing import Any
 from agent_framework import Agent, BaseChatClient
 from pydantic import BaseModel, ValidationError
 
+from agents.crewtrace import ToolCall, tool_calls
+
 DEFAULT_TIMEOUT_S = 8.0
 RETRIES = 1
 
@@ -28,6 +30,7 @@ class Attempt:
     error: str | None
     ms: float
     tools_called: list[str] = field(default_factory=list)  # tool names, in call order
+    tool_calls: list[ToolCall] = field(default_factory=list)  # with arguments and results
 
 
 async def ask(
@@ -56,7 +59,7 @@ async def ask(
             if value is None:
                 raise ValueError("no structured output")
             return Attempt(value, attempts, None, (time.perf_counter() - start) * 1000,
-                           tools_called(response))  # fmt: skip
+                           tools_called(response), tool_calls(response))  # fmt: skip
         except Exception as e:  # any failure counts against the step; the caller falls back
             error = describe(e)
     return Attempt(None, attempts, error, (time.perf_counter() - start) * 1000)
