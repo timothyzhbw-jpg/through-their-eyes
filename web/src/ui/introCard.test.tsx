@@ -175,7 +175,7 @@ describe("the first screen", () => {
       });
     // Folded: the last control is the last moment link, not a hidden button behind the toggle.
     const lastMoment = [...page.querySelectorAll<HTMLAnchorElement>(".intro-moments a")].at(-1)!;
-    expect(lastMoment.textContent).toBe("Full match · live");
+    expect(lastMoment.textContent).toBe("Academy drill");
     tab(lastMoment);
     expect(document.activeElement).toBe(start);
     tab(start, true);
@@ -191,7 +191,7 @@ describe("the first screen", () => {
 });
 
 describe("every moment from the first screen", () => {
-  it("links the moments and the full match, live, beside the tour; this one marked", () => {
+  it("links the moments, the full match live and the drill, beside the tour; this one marked", () => {
     const page = mount(offline());
     const nav = page.querySelector<HTMLElement>('.intro-moments nav[aria-label="Moments"]')!;
     const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
@@ -201,6 +201,7 @@ describe("every moment from the first screen", () => {
       "The corner",
       "The goal",
       "Full match · live",
+      "Academy drill",
     ]);
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
       "/?intro=0",
@@ -208,6 +209,7 @@ describe("every moment from the first screen", () => {
       "/?match=match-1&moment=corner_blind_side",
       "/?match=match-1&moment=far_post_finish",
       "/?match=match-1&intro=0",
+      "/?play=drill",
     ]);
     // Not behind Teams and more: shown with the hook and Start.
     expect(nav.closest("[hidden]")).toBeNull();
