@@ -54,7 +54,7 @@ from agent_framework import (
 )
 from pydantic import BaseModel, ValidationError
 
-from agents import crewtrace, fallbacks, prompts, schemas, telemetry
+from agents import crewtrace, fallbacks, persona_rules, prompts, schemas, telemetry
 from agents.budget import budget, replay_slot, slot_errors
 from agents.context import MomentContext
 from agents.crewtrace import CrewTrace, ModelCall, Recorder, Rejected, Rewritten, StepRecord
@@ -92,7 +92,7 @@ MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # API's cache key, so cached breakdowns from the older code are not served again.
 # 2: tidy() keeps each connective once; 3: plan errors are reason codes; 4: audio-description
 # delivery; 5: rendered narration lines; 6: the Director's priority sets the budget
-# (agents/budget.py)
+# (agents/budget.py) and per-persona required and forbidden claims (agents/persona_rules.py)
 PIPELINE_VERSION = 6
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
@@ -154,6 +154,8 @@ class Drafts:
 class Rewrite:
     drafts: Drafts
     failed: dict[Key, list[tuple[ScriptLine, list[str]]]]
+    # Scripts that break their persona's rules (agents/persona_rules.py): drafted again whole.
+    problems: dict[Key, list[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -521,8 +523,10 @@ class Narration(Step):
     def rewrite_prompt(self, base: str, failed: list[tuple[ScriptLine, list[str]]]) -> str:
         return prompts.rewrite_prompt(base, failed)
 
-    def schema(self, language: Language) -> type[BaseModel]:
-        return anchored_draft_model(list(self.crew.ctx.supported), language)
+    def schema(self, language: Language, persona: Persona | None = None) -> type[BaseModel]:
+        """The anchored schema: the persona's forbidden claims are not in its enum."""
+        off = persona_rules.forbidden(persona)
+        return anchored_draft_model([c for c in self.crew.ctx.supported if c not in off], language)
 
     def to_lines(self, value: Any, language: Language) -> list[DraftLine]:
         return compose(self.crew.ctx, value, language)
@@ -534,7 +538,12 @@ class Narration(Step):
         return fallbacks.narration(self.crew.ctx, persona, language, speaker)
 
     async def _speaker(
-        self, base: Briefing, key: Key, speaker: Speaker, pbp: list[ScriptLine] | None
+        self,
+        base: Briefing,
+        key: Key,
+        speaker: Speaker,
+        pbp: list[ScriptLine] | None,
+        problems: list[str] | None = None,
     ) -> tuple[list[DraftLine], Attempt | None]:
         crew = self.crew
         persona, language = key
@@ -542,10 +551,12 @@ class Narration(Step):
         if not crew.uses_model("narration"):
             return template, None
         prompt = self.prompt(base.findings, persona, language, speaker, pbp)
-        schema = self.schema(language)
+        if problems:
+            prompt = prompts.script_rewrite_prompt(prompt, problems)
+        schema = self.schema(language, persona)
         instructions = self.instructions(speaker)
         attrs = {"persona": persona, "language": language, "speaker": speaker,
-                 "resumed": self.resumed or None}  # fmt: skip
+                 "resumed": self.resumed or None, "redraft": bool(problems) or None}  # fmt: skip
         with crew.step("narration", **attrs) as span:
             attempt = await crew.ask(speaker, instructions, prompt, schema)
             lines = self.to_lines(attempt.value, language) if attempt.value is not None else []
@@ -560,7 +571,7 @@ class Narration(Step):
         return (lines or template), attempt
 
     async def _script(
-        self, base: Briefing, key: Key
+        self, base: Briefing, key: Key, problems: list[str] | None = None
     ) -> tuple[list[ScriptLine], list[Attempt | None]]:
         persona, language = key
         if not self.crew.uses_model("narration"):  # the template already has the speaking order
@@ -576,9 +587,9 @@ class Narration(Step):
                 ScriptLine(id=f"L{i + 1}", speaker=who, text=d.text, claims=d.claims)
                 for i, (who, d) in enumerate(ordered)
             ], [None]
-        pbp, a1 = await self._speaker(base, key, "pbp", None)
+        pbp, a1 = await self._speaker(base, key, "pbp", None, problems)
         pbp_lines = [ScriptLine(id="", speaker="pbp", text=d.text, claims=d.claims) for d in pbp]
-        color, a2 = await self._speaker(base, key, "color", pbp_lines)
+        color, a2 = await self._speaker(base, key, "color", pbp_lines, problems)
         ordered: list[tuple[Speaker, DraftLine]] = []
         for i in range(max(len(pbp), len(color))):
             ordered += [("pbp", pbp[i])] if i < len(pbp) else []
@@ -639,6 +650,8 @@ class Narration(Step):
         drafts = msg.drafts
         jobs = []
         for key, failed in msg.failed.items():
+            if key in msg.problems:  # drafted again whole below
+                continue
             for speaker in ("pbp", "color"):
                 mine = [(line, problems) for line, problems in failed if line.speaker == speaker]
                 if mine:
@@ -652,7 +665,7 @@ class Narration(Step):
             with self.crew.step("narration", **attrs) as span:
                 attempt = await self.crew.ask(
                     speaker, self.instructions(speaker), self.rewrite_prompt(base, mine),
-                    self.schema(language),
+                    self.schema(language, persona),
                 )  # fmt: skip
                 new = self.to_lines(attempt.value, language) if attempt.value else []
                 # A failed rewrite replaces nothing; the Verifier then drops the line.
@@ -665,7 +678,15 @@ class Narration(Step):
                                      error=attempt.error))  # fmt: skip
             return key, {line.id: d for (line, _), d in zip(mine, new, strict=False)}
 
-        done = await asyncio.gather(*(redo(*job) for job in jobs))
+        async def redraft(key: Key, problems: list[str]) -> tuple[Key, list[ScriptLine]]:
+            # A script that breaks its persona's rules: both voices draft it again, told why.
+            lines, _ = await self._script(drafts.base, key, problems)
+            return key, lines
+
+        done, redrafted = await asyncio.gather(
+            asyncio.gather(*(redo(*job) for job in jobs)),
+            asyncio.gather(*(redraft(key, p) for key, p in msg.problems.items())),
+        )
         for (key, _, mine), (_, replaced) in zip(jobs, done, strict=True):
             for line, _ in mine if rec is not None else ():
                 new = replaced.get(line.id)
@@ -679,6 +700,8 @@ class Narration(Step):
                 _replace(line, replaced[line.id]) if line.id in replaced else line
                 for line in drafts.scripts[key]
             ]
+        for key, lines in redrafted:
+            drafts.scripts[key], _ = tidy(self.crew.ctx, lines, key[1], key[0])
         if rec is not None:
             answered = [c for c in rec.calls if c.source == "llm"]
             rec.source = "llm" if answered else "template"
@@ -694,8 +717,8 @@ def tidy(
 ) -> tuple[list[ScriptLine], list[str]]:
     """Deterministic clean-up of model lines before the Verifier.
 
-    - A line with a claim the persona must not hear (xT or probabilities for audio description,
-      agents/delivery.py) is dropped, whatever the model picked.
+    - A line with a claim the persona must not hear (agents/persona_rules.py: xT and
+      probabilities for casual and audio description) is dropped, whatever the model picked.
     - A bare placeholder ({n}) is given the full form its claim's template uses ({n:times}): same
       slot, so the value is unchanged, only its wording.
     - A line that only restates claims an earlier line already stated is dropped, and so is a
@@ -787,7 +810,7 @@ class Verifier(Step):
         mc = self.crew.ctx
         persona, language = key
         if held := withheld(persona, line.claims):  # a rewrite may bring one back past tidy()
-            violation = Violation("persona", f"{', '.join(held)}: no xT or probabilities")
+            violation = Violation("persona", f"{', '.join(held)}: not for {persona}")
             return RenderResult(ok=False, text=None, lang=language, line_id=line.id,
                                 claims=line.claims, violations=[violation])  # fmt: skip
         render = RenderLine(id=line.id, text=line.text, claims=line.claims)
@@ -805,6 +828,7 @@ class Verifier(Step):
                     failed=sum(len(lines) for lines in failed.values()),
                     rewrites=sum(drafts.rewrites.values()),
                     dropped=sum(len(s.dropped) for s in message.scripts) if approved else 0,
+                    scripts_failed=0 if approved else len(message.problems),
                 )  # fmt: skip
             if rec is not None:
                 rec.source, rec.attempts = "code", 1
@@ -820,22 +844,42 @@ class Verifier(Step):
                                  f"{MAX_REWRITES})"]  # fmt: skip
             await self.send(ctx, message)
 
+    def script_problems(self, key: Key, lines: list[ScriptLine]) -> list[str]:
+        """Why the whole script breaks its persona's rules (agents/persona_rules.py)."""
+        mc = self.crew.ctx
+        persona, language = key
+        return persona_rules.problems(persona, lines, mc.supported, mc.card.selected_lens,
+                                      language)  # fmt: skip
+
+    def repair(
+        self, key: Key, lines: list[ScriptLine]
+    ) -> tuple[list[ScriptLine], list[tuple[ScriptLine, str]], list[str]]:
+        """After the last rewrite: verified template lines make the script follow its rules."""
+        mc = self.crew.ctx
+        persona, language = key
+        return persona_rules.repair(persona, lines, mc.supported, mc.card.selected_lens,
+                                    language)  # fmt: skip
+
     def _round(
         self, drafts: Drafts
     ) -> tuple[Rewrite | Approved, dict[Key, list[tuple[ScriptLine, list[str]]]]]:
-        """One round: the failing lines go back for a rewrite, or the rest airs. Also returns
-        the lines that failed, with their problems."""
+        """One round: failing lines, and scripts that break their persona's rules, go back for a
+        rewrite, or the rest airs. Also returns the lines that failed, with their problems."""
         failed: dict[Key, list[tuple[ScriptLine, list[str]]]] = {}
+        problems: dict[Key, list[str]] = {}
         for key, lines in drafts.scripts.items():
             bad = [(line, res) for line in lines if not (res := self._check(line, key)).ok]
             if bad:
                 failed[key] = [
                     (line, [f"{v.kind}: {v.detail}" for v in res.violations]) for line, res in bad
                 ]
-        if failed and drafts.round < MAX_REWRITES and self.crew.uses_model("narration"):
-            for key in failed:
+            if found := self.script_problems(key, lines):
+                problems[key] = found
+        retry = failed or problems
+        if retry and drafts.round < MAX_REWRITES and self.crew.uses_model("narration"):
+            for key in {*failed, *problems}:
                 drafts.rewrites[key] = drafts.rewrites.get(key, 0) + 1
-            return Rewrite(drafts, failed), failed
+            return Rewrite(drafts, failed, problems), failed
 
         notes, results = [], []
         for (persona, language), lines in drafts.scripts.items():
@@ -849,6 +893,12 @@ class Verifier(Step):
                     dropped.append(DroppedLine(id=line.id, speaker=line.speaker, text=line.text,
                                                reason=first.kind, detail=first.detail))  # fmt: skip
                     notes.append(f"{persona}/{language} {line.id} dropped: {first.kind}")
+            kept, cut, fixed = self.repair((persona, language), kept)
+            for line, why in cut:
+                dropped.append(DroppedLine(id=line.id, speaker=line.speaker, text=line.text,
+                                           reason="persona", detail=why))  # fmt: skip
+                notes.append(f"{persona}/{language} {line.id} dropped: persona")
+            notes += [f"{persona}/{language} {note}" for note in fixed]
             results.append(
                 ScriptResult(
                     persona=persona,

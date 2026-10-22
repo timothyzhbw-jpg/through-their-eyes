@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import datetime as dt
 import os
 import re
@@ -41,7 +42,7 @@ from pydantic import BaseModel
 from agents.context import MomentContext
 from agents.llm import Attempt
 from agents.schemas import Findings, Language, Persona, ScriptLine, ScriptResult
-from agents.workflow import Crew, Job, Key, Narration, build_workflow, tidy
+from agents.workflow import BREAKDOWN, Crew, Job, Key, Narration, Verifier, build_workflow, tidy
 from eval.free_text import FreeTextNarration
 from explain.claims import PLACEHOLDER
 from explain.functions import is_number
@@ -178,20 +179,35 @@ class _Recording:
 
     crew: NarrationOnlyCrew
 
-    async def _speaker(self, base, key: Key, speaker, pbp):
-        lines, attempt = await super()._speaker(base, key, speaker, pbp)
-        if attempt is None or attempt.value is None:
+    async def _speaker(self, base, key: Key, speaker, pbp, problems=None):
+        lines, attempt = await super()._speaker(base, key, speaker, pbp, problems)
+        if problems is None and (attempt is None or attempt.value is None):
             self.crew.fell_back.add(key)
         return lines, attempt
 
-    async def _script(self, base, key: Key):
-        lines, attempts = await super()._script(base, key)
-        self.crew.drafts[key] = lines
+    async def _script(self, base, key: Key, problems=None):
+        lines, attempts = await super()._script(base, key, problems)
+        if problems is None:  # a redraft for the persona rules is not the first draft
+            self.crew.drafts[key] = lines
         return lines, attempts
 
 
 class _Anchored(_Recording, Narration):
     pass
+
+
+class _LineVerifier(Verifier):
+    """The shipped Verifier with the persona rules (agents/persona_rules.py) off: the ablation
+    isolates anchoring, line by line, as when its report was measured."""
+
+    def script_problems(self, key, lines):
+        return []
+
+    def repair(self, key, lines):
+        return list(lines), [], []
+
+
+ABLATION = dataclasses.replace(BREAKDOWN, verifier=_LineVerifier)
 
 
 class _FreeText(_Recording, FreeTextNarration):
@@ -211,7 +227,8 @@ async def run_mode(
 ) -> tuple[list[Script], int]:
     """One breakdown of the moment in `mode`: the scored scripts and the model calls made."""
     crew = NarrationOnlyCrew(ctx, client, timeout_s)
-    result = await build_workflow(crew, NARRATION[mode]).run(Job(tuple(personas), tuple(languages)))
+    workflow = build_workflow(crew, NARRATION[mode], story=ABLATION)
+    result = await workflow.run(Job(tuple(personas), tuple(languages)))
     (out,) = result.get_outputs()
     return [_score(ctx, mode, out.findings, crew, s) for s in out.scripts], crew.calls
 

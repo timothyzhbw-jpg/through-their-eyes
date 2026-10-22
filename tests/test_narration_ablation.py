@@ -77,10 +77,11 @@ def test_the_shipped_crew_narrates_anchored_lines(ctx):
     assert sent == prompts.narration_prompt(ctx, r.findings, "analyst", "en", "pbp")
     assert "allowed_connectives" in sent and '"slots"' not in sent
     (script,) = r.scripts
-    assert [line.text for line in script.payload.lines] == [
-        "Watch this. H8 checked his shoulder before the ball reached him.",
-        "Without that look, H8 would have passed to H4.",
-    ]
+    texts = [line.text for line in script.payload.lines]
+    assert texts[0] == "Watch this. H8 checked his shoulder before the ball reached him."
+    assert "Without that look, H8 would have passed to H4." in texts
+    # The analyst's persona rules add their template lines (agents/persona_rules.py).
+    assert {"cf_value", "belief_error"} <= {c for line in script.lines for c in line.claims}
 
 
 def test_the_default_workflow_and_run_breakdown_use_the_shipped_narration():

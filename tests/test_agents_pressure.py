@@ -94,15 +94,19 @@ def test_agent_outputs_are_used_through_verified_claims(ctx):
                     "supporting": ["presser_distance"], "angle": "He beat the press."},
         "telestrator": template_plan(ctx).model_dump(by_alias=True),
         "pbp": {"lines": [{"claim": "heavy_pressure", "connective": "Watch this."}]},
-        "color": {"lines": [{"claim": "cf_carry_lost", "connective": None}]},
+        # The analyst hears what escaping the press was worth (agents/persona_rules.py).
+        "color": {"lines": [{"claim": "cf_carry_lost", "connective": None},
+                            {"claim": "cf_value", "connective": None}]},
     }  # fmt: skip
     r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
     assert r.findings.lens == "pressure" and r.plan_source == "agent"
     (script,) = r.scripts
-    assert [line.text for line in script.payload.lines] == [
+    assert [line.text for line in script.payload.lines][:2] == [
         "Watch this. H4 was under heavy pressure when he released the ball.",
         "Had H4 kept the ball, A11 would have won it off him.",
     ]
+    assert [line.claims for line in script.lines][2:] == [["cf_value"]]
+    assert script.rewrites == 0
 
 
 def test_what_if_he_had_carried_it(ctx):
