@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import copy
 import math
+from collections.abc import Mapping
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -35,7 +37,7 @@ from sim.decision import (
     gumbel,
     pass_speed,
 )
-from sim.model import Decision, Event
+from sim.model import Decision, Event, PlayerTraits
 from sim.movement import steer, turn_toward
 from sim.perception import (
     BeliefStore,
@@ -65,6 +67,7 @@ class Simulation:
         seed: int,
         params: SimParams = SimParams(),
         record_draws: bool = False,
+        traits: Mapping[str, PlayerTraits] | None = None,
     ) -> None:
         self.scenario = scenario
         self.seed = seed
@@ -73,6 +76,17 @@ class Simulation:
         self.ball_params = BallParams()
         self.rng = KeyedRng(seed, record=record_draws)
         setup = scenario.setup(self.rng.generator("scenario", 0))
+        # A player's own traits (eval/archetypes.py), or None: every head turns at the mean speed
+        # of SimParams.scan_omega and scans at its role's rate, as in every other run.
+        self.omega_mean: np.ndarray | None = None
+        if traits:
+            self.omega_mean = np.full(len(setup.players), params.scan_omega[0])
+            for pid, t in traits.items():
+                i = [p.id for p in setup.players].index(pid)
+                if t.scan_rate is not None:
+                    setup.players[i] = replace(setup.players[i], scan_rate=t.scan_rate)
+                if t.scan_omega_mean is not None:
+                    self.omega_mean[i] = t.scan_omega_mean
         self.players = setup.players
         self.ids = [p.id for p in self.players]
         self.team = np.array([p.team for p in self.players])
@@ -147,11 +161,16 @@ class Simulation:
 
     @classmethod
     def from_scenario(
-        cls, name: str, seed: int, record_draws: bool = False, params: SimParams = SimParams()
+        cls,
+        name: str,
+        seed: int,
+        record_draws: bool = False,
+        params: SimParams = SimParams(),
+        traits: Mapping[str, PlayerTraits] | None = None,
     ) -> Simulation:
         from sim.scenarios import SCENARIOS
 
-        return cls(SCENARIOS[name](), seed, params, record_draws)
+        return cls(SCENARIOS[name](), seed, params, record_draws, traits)
 
     @classmethod
     def resume(cls, snapshot: Simulation, overrides=()) -> Simulation:
@@ -271,6 +290,7 @@ class Simulation:
             partial_draws=partial_draws,
             drift_noise=drift_noise,
             speed_noise=speed_noise,
+            omega_mean=self.omega_mean,
         )
         for scan in finished:
             self._emit_scan(scan)

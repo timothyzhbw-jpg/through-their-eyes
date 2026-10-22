@@ -161,6 +161,11 @@ _Fill in as they come to exist._
 - `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
   passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
   `eval/reports/pass_difficulty.md`
+- `uv run python -m eval.archetypes` — five fictional archetypes of one midfielder's perception
+  (scan rate, head speed) placed on published ranges, compared in `open_play` (4,500 runs each,
+  ≥ 2,000 of his receptions) and validated against Jordet et al. (2020); about 20 CPU-hours
+  (`--workers N`; a cloud session runs it), `--from-cache` re-renders in seconds; writes
+  `eval/reports/archetypes.md`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
