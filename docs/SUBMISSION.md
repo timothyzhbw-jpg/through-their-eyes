@@ -250,11 +250,11 @@ Multi-Agent System (SPEC §0).
 Teammates who play proposed a tactics knowledge base: each tactic, its mechanism, the data that
 shows it and a sentence for a fan. We built the two rows our simulator truly supports.
 
-- **Why build from the back?** Under pressure, Home completed 13 of 19 short passes out from the
-  back in match-1 (68%, against 89% without). The pressure hero's recorded options show his
+- **Why build from the back?** Under pressure, Home completed 25 of 34 short passes out from the
+  back in match-1 (74%, against 86% without). The pressure hero's recorded options show his
   safest pass was back to the keeper.
 - **Why focus on set pieces?** The one corner reached 0.29 xT in 4.4 seconds, more than any of
-  the 17 open-play passages. No shot followed: the stitched match cuts the corner before one
+  the 18 open-play passages. No shot followed: the stitched match cuts the corner before one
   could.
 
 Every number is measured from tracking and events, and each card's sentence is verified before

@@ -1159,10 +1159,10 @@ are sim records, labelled `sim` on screen.
       them; each sentence is supported, renders in `en` and `zh` with no number outside a slot,
       and a wrong value in any slot is refuted.
       — [tests/test_tactics.py](../tests/test_tactics.py) (19 cases),
-      [tests/test_tactics_api.py](../tests/test_tactics_api.py). On match-1 (2026-10-21, `main`
-      c947b42), Home completed 13 of 19 short build-up passes under pressure (68%), against 89%
-      without. Its one corner reached 0.29 xT in 4.4 s, more than any of the 17 open-play passages
-      (median 0.0035), with no shot after it.
+      [tests/test_tactics_api.py](../tests/test_tactics_api.py). On match-1 (2026-10-22, with the team
+      shape), Home completed 25 of 34 short build-up passes under pressure (74%), against 86%
+      without. Its one corner reached 0.29 xT in 4.4 s, more than any of the 18 open-play passages
+      (median 0.0192), with no shot after it.
 
 ## 5. Explain layer (`explain/`)
 
