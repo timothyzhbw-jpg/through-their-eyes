@@ -57,8 +57,8 @@ the [failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=produce
 
 ## When something is limited or down
 
-The service never hides where an answer came from. Say what the chip or badge says, and never
-present a cached or template answer as a fresh model run.
+The chip and the badges say where an answer came from, with one known gap: a model outage
+(below). Say what they say, and never present a cached or template answer as a fresh model run.
 
 | What happens | What you see | What to say or do |
 |---|---|---|
@@ -66,7 +66,7 @@ present a cached or template answer as a fresh model run.
 | Too many new model runs from your address (3 per 10 minutes; 8 per 10 minutes in the judging window) | **Rate-limited** badge with the same chips | Same as above. Cached breakdowns do not count; the path above makes two new model runs (the drill and its bring-back), inside the limit. |
 | The failure drill while limited | a **Recorded run · \<time\>** badge and the note "Recorded run from …", or "ran without the model: the steps it ran aired their templates" | "This is the same drill as it ran at \<time\>: a recording, because new model runs are limited right now." The ops checklist runs each drill once after the last deploy so that recordings exist ([OPERATIONS](OPERATIONS.md#the-judging-windows-cost)). |
 | **Bring back** answers 404 | an error under the drill | The API restarted or redeployed since the drill ran (drills live on the replica's disk). Press **Take down** and run it again. |
-| Foundry throttles or is down | the breakdown still airs; the chip says **Offline template**, and the Producer desk and Crew trace show **Template** steps | "Each agent retried once and fell back to its template; the crew still aired, and the Verifier checked every line." This is the failure policy working. |
+| Foundry throttles or is down | the breakdown still airs, every line verified, but on templates. **Known gap:** the chip may still read **Live**, then **Cached**, because that run is stored under the model's cache key (PR #195's finding); the Producer desk and Crew trace show **Template** on every step | "Each agent retried once and fell back to its template; the crew still aired, and the Verifier checked every line." Read the steps from the Producer desk, not the chip. After the outage, tell the team to re-run the prewarm with `--regenerate-degraded` so the cached run is replaced. |
 | Speech quota or throttling | captions play without voice | Say the line yourself, or keep going: the captions carry it. |
 | The API is down or the address is over its data budget (HTTP 429) | the app plays its bundled hero with an **Offline data** badge; `match-1` will not load | Switch to the offline tab above. The hero, the run without the look, Your call, Take his eyes and the bundled breakdown all play offline; the live stream, new breakdowns, What if and the whole match need the API. |
 | A slow first breakdown | a spinner on the breakdown | The breakdown was not in the cache, so the crew is running: the first uncached request after a deploy took 24–26 s on 2026-10-20 (NUMBERS D1). Talk over it. Running `infra.prewarm` after every deploy keeps the tour's breakdowns cached. |
