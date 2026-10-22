@@ -204,7 +204,8 @@ No login, free, live until 2026-11-10.
   live heroes and the camera director.
 - Model-backed breakdowns are rate-limited per visitor and capped per day. Past that, the
   service serves the cache or the deterministic template, so the demo keeps working.
-- TODO(Bowen): add the video URL and the public repository URL.
+- **Code:** https://github.com/timothyzhbw-jpg/through-their-eyes (public, MIT).
+- TODO(Bowen): add the video URL.
 
 ## Team
 
