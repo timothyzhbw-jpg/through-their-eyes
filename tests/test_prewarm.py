@@ -36,11 +36,12 @@ class Clock:
 
 @pytest.fixture(scope="module")
 def replies():
-    """Every role answers; a connective is checked against the script's language, so none."""
+    """Every role answers, every voice as its persona's rules ask in the script's language
+    (tests/test_agents.py `_good_replies`: the persona's opener, a number first for the analyst,
+    where it happened first for audio description)."""
     from agents.context import MomentContext
 
-    good = _good_replies(MomentContext.load("blind_side_run", 3))
-    return {**good, "pbp": {"lines": [{"claim": "scan_before_reception", "connective": None}]}}
+    return _good_replies(MomentContext.load("blind_side_run", 3))
 
 
 @pytest.fixture
