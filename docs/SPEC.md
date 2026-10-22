@@ -132,9 +132,9 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
-  passages and four heroes. On this Mac it lasts 751.7 s (12:32) and ends 1–0. The heroes start
-  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0), 7:01 (the
-  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:51 (the set-piece hero
+  passages and four heroes. On this Mac it lasts 808.3 s (13:28) and ends 1–0. The heroes start
+  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 5:07 (`press_escape` seed 0), 7:58 (the
+  shot hero `far_post_finish` seed 11, who scores at the far post) and 9:47 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
@@ -159,7 +159,7 @@ on an LLM.
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the whole ball went out, an indirect free kick after an offside call
     (§3.9), a `cut` when it ended in play. On this Mac:
-    2 kick-offs (the start, and after the goal), 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
+    2 kick-offs (the start, and after the goal), 1 corner, 16 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
     never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
@@ -225,14 +225,14 @@ on an LLM.
     for settled defence (docs/REFERENCES.md, Team shape). On held-out seeds 100–199
     ([realism.md](../eval/reports/realism.md), Team shape) those eight rows are inside. Six are
     outside: Errekagorri et al.'s (2024) per-match means over 5,518 LaLiga team-matches, both
-    phases together (the sim's team is 34.2 m long against 36.9 ± 1.7, 39.2 m wide against
-    43.4 ± 2.1, its deepest player 32.5 m out against 37.3 ± 3.0, its keeper 20.3 m from the
+    phases together (the sim's team is 34.0 m long against 36.9 ± 1.7, 39.2 m wide against
+    43.4 ± 2.1, its deepest player 32.6 m out against 37.3 ± 3.0, its keeper 20.5 m from the
     nearest team-mate against 25.0 ± 1.7), which were not fitted to: Castellano et al.'s one
     team is narrower, shorter and deeper than that league, and `possession_play` keeps the ball
     nearer its own goal than a match does; and the line's regression on the ball, which comes
-    out at 8.78 m + 0.406 × against the paper's 6.30 + 0.46 × (r 0.74 against 0.86). Without the
+    out at 8.92 m + 0.406 × against the paper's 6.30 + 0.46 × (r 0.75 against 0.86). Without the
     shape 4 of the 14 are inside, a team is longer out of possession than in it, and the
-    regression's slope is 0.225. Slot depths, the tuck, the push and the speeds are style knobs.
+    regression's slope is 0.226. Slot depths, the tuck, the push and the speeds are style knobs.
   - The hero scenarios do not set the flag, so their runs, gates and reports are unchanged, and
     neither does `open_play`: the xT grid every moment's ΔxT reads is fitted on it (§4.5). A
     hero scenario's off-ball players could join once its gate is re-run on held-out seeds.
@@ -730,21 +730,21 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,997 passes attempted (77.1% of resolved ones completed), 444 possession changes
+      of play, 1,995 passes attempted (76.9% of resolved ones completed), 448 possession changes
       (all interceptions: with the team shape no ball goes out in open play, §3.2; no tackles),
-      570 team possessions of 9.5 s on average,
+      575 team possessions of 9.4 s on average,
       and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
       match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
       has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
       printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
       scenario possessions per match (target 15–25) and 13.47 min of play (target 10–15). 360 of
-      380 scenario possessions start with the home team, which has 54.9% of the possession time.
+      380 scenario possessions start with the home team, which has 55.5% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
       — [tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`
-      (the mean and CMs > forwards on seeds 100–119; the mean is 2.75 on 100 seeds in
+      (the mean and CMs > forwards on seeds 100–119; the mean is 2.79 on 100 seeds in
       [realism.md](../eval/reports/realism.md)),
       `test_spec_scan_rate_under_pressure_is_lower_than_without` (midfielders on seeds 100–119:
       0.395 scan onsets/s with an opponent within 4 m vs 0.485 beyond 8 m). Pooled at the
@@ -1040,7 +1040,7 @@ data limb tracking reports; nothing in the API or the app calls it yet.
 - [x] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
       — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.991 at
-      275°/s, the threshold the sweep picks since open play keeps a team shape, and 0.992 at
+      250°/s, the threshold the sweep picks since open play keeps a team shape, and 0.991 at
       the coded 200°/s; 125–300°/s table);
       [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
 - [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers position, head yaw and
@@ -1051,9 +1051,9 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       error must be within 15% of 2° and no frame may exceed 5 σ: blind_side_run seed 3 gives
       1.99° RMS and 8.2° at most. Torso yaw 0.76° RMS, position 4.7 mm RMS.
       Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
-      detector on the adapter's output on its held-out seeds: F1 0.991 (0.992 on the tracked yaw).
+      detector on the adapter's output on its held-out seeds: F1 0.991, as on the tracked yaw.
       That is equal by construction at matched noise, a consistency check, not evidence. The
-      0.985 and 0.962 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      0.984 and 0.962 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [x] xT grid increases toward goal (sanity plot saved).
       — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
@@ -1074,17 +1074,18 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       [tests/test_live_stats.py](../tests/test_live_stats.py),
       [tests/test_stats_api.py](../tests/test_stats_api.py);
       [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-22, with
-      the team shape, §3.2: `possession_play` seeds 300–399: 1 605 passes, AUC 0.748, 95% interval
-      0.722–0.772, supported). Reported, not tuned: the distance part alone ranks the other way
-      (AUC 0.258), because an intercepted pass is measured to where it was won, and the "very
-      hard" band (44 passes) completes more often than "hard".
+      the team shape, §3.2: `possession_play` seeds 300–399: 1 609 passes, AUC 0.730, 95% interval
+      0.704–0.755, supported). Reported, not tuned: the distance part alone ranks the other way
+      (AUC 0.259), because an intercepted pass is measured to where it was won, and the "very
+      hard" band (42 passes) completes more often than "hard".
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on when the key scan starts
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.923, recall 0.985);
+      0.915, recall 0.943, with the alert's distance re-chosen at 3.5 m on the tuning seeds since
+      open play keeps a team shape; 0.877 and 0.973 at the coded 3.0 m);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
