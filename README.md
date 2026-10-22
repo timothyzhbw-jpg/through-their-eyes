@@ -38,7 +38,7 @@ and a whole stitched match.
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show
 what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
-turns his head on a schedule calibrated to published scan rates (2.54 scans in the 10 s before
+turns his head on a schedule calibrated to published scan rates (2.75 scans in the 10 s before
 receiving, against 3.0 ± 2.1 in Jordet et al. 2020: [realism](eval/reports/realism.md)), sees
 only what falls in his field of view, and decides on his *belief*: everyone where he last saw
 them, carried forward. Other tools show the passing lanes that existed; we show the ones he knew

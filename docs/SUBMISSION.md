@@ -242,8 +242,8 @@ Multi-Agent System (SPEC §0).
 ---
 
 [^realism]: [eval/reports/realism.md](../eval/reports/realism.md): scans in the 10 s before
-    receiving, sim 2.54 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
-    vs 404.2 ± 50.7 (Kokubu et al. 2026); "10 inside, 6 outside, 0 inconclusive, 10 with no
+    receiving, sim 2.75 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
+    vs 404.2 ± 50.7 (Kokubu et al. 2026); "14 inside, 2 outside, 0 inconclusive, 10 with no
     published reference".
 [^ablation]: [eval/reports/narration_ablation.md](../eval/reports/narration_ablation.md): free
     text, 120 lines drafted, 54 dropped as repeats, 66 first-draft lines left; 34 of them with an
