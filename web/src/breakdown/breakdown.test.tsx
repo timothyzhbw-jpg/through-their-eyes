@@ -120,20 +120,19 @@ describe("asking the service for a breakdown", () => {
     expect(html).toContain("What did he see? H8 checked his shoulder before the ball reached him.");
     expect(html).toContain("Without that look, H8 would have passed to H4.");
     expect(html).toContain("Counterfactual · inside the sim");
-    expect(html).toContain(">Cached<");
-    expect(html).toContain(">Model<");
+    // Where it came from, as the service said it (`provenance`).
+    expect(html).toContain("Cached: a crew run from 21 Oct 2026, 19:31 UTC");
     expect(html).not.toContain("Sample");
     expect(html).not.toContain("Rate-limited");
     expect(render(session, <BreakdownPanel />)).toContain("Telestrator agent");
   });
 
-  it("says when the breakdown was generated, rate-limited or capped", async () => {
+  it("says when the breakdown was made just now, rate-limited or capped", async () => {
     const generated = online(() => json(breakdownResponse({ cached: false })));
     generated.session.controls.requestBreakdown();
     await settle();
     const html = render(generated.session, <NarrationPanel />);
-    expect(html).toContain(">Generated<");
-    expect(html).toContain("6.3 s");
+    expect(html).toContain("Live: written by the crew just now");
 
     const limited = online(() =>
       json(breakdownResponse({ cached: true, rate_limited: true, capped: true })),

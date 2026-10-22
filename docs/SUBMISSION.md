@@ -29,6 +29,25 @@ checks every number in its captions and narration before it airs.
   backs. One said "H8's picture of A5 was off by 1.2 metres", where the data says H9 and
   0.5 metres.[^ablation]
 
+## Why it matters
+
+- **The league's broadcast money is now as much overseas as at home.** Its broadcast revenue
+  exports were £1.8bn in 2024/25,[^ey] about the £1.7bn a season of its UK deals (£6.7bn over
+  2025/26–2028/29).[^uk-rights] The same report estimates that 1.9bn people follow the league,
+  with its matches broadcast in 189 countries.[^ey] A replay explained once has to work for
+  very different viewers.
+- **Rights holders already serve one game to several audiences.** Amazon debuts new AI features
+  on Prime Vision, an alternate stream it calls a laboratory for features that may reach the
+  main feed; its Defensive Alerts already has.[^prime] The Premier League's partnership with
+  Microsoft plans questions and answers in fans' native languages.[^pl-microsoft]
+- **What we bring to that.** Through Their Eyes explains one moment for five audiences, in
+  English or Chinese, and hands its overlays to a graphics engine as timecoded, machine-readable
+  cues. AI output on air needs an audit trail: ESPN's AI-generated recap of a retiring star's
+  final match left her out, although each recap was to be reviewed by a human editor.[^espn]
+  Code checks every number our crew says or captions before it airs, and every verdict is
+  logged. It does not judge what a recap leaves out, and it runs on synthetic matches only, so it
+  shows the workflow, not accuracy on real matches.
+
 ## What it does
 
 The brief's pipeline, end to end, on a synthetic match:
@@ -70,8 +89,8 @@ The brief's pipeline, end to end, on a synthetic match:
   original plan's checks, reported in the same file, are not met. Live in the app, as the
   stitched match's third hero.
 
-The live heroes play inside a stitched match: 18 possessions on one clock, about 12 minutes,
-with the set-piece hero's corner as its third hero moment.[^match]
+The live heroes play inside a stitched match: 19 possessions on one clock, about 12½ minutes.
+The shot hero scores (1–0), and the set-piece hero's corner comes at 1–0.[^match]
 
 ## The multi-agent design
 
@@ -213,8 +232,8 @@ Multi-Agent System (SPEC §0).
   hero's scenario alone.[^matchstats]
 - **xT is our own grid, not fitted to real football.** A gain such as "That look was worth … in
   expected threat" is a value inside the simulation.
-- **The stitched match has no goal yet:** 18 possessions and about 12 minutes, inside the
-  spec's 15–25 and 10–15 min, but it stays 0–0 until the shot hero joins it.[^match]
+- **The stitched match has one goal, from its shot hero:** open play has no shots
+  (`possession_play` scripts its passes), so the scoreline is the heroes' doing.[^match]
 - **Not yet measured:** no single-agent baseline (the narration ablation is the closest
   comparison), no viewer study, and no frame-rate run on a laptop's integrated GPU.
 - **A failure drill lives on one replica's disk.** A restart or redeploy drops it, and
@@ -247,8 +266,8 @@ Multi-Agent System (SPEC §0).
     seeds 100–139, scan lens selected 40/40.
 [^marking]: [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md):
     seeds 100–139, 37/40; median separation 3.3 m with the look, 8.5 m without.
-[^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 18
-    possessions and "742.2 s, 0-0" on a Mac (2026-10-21 CT, with players kept on the pitch). Where open play goes out
+[^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
+    possessions and "751.8 s, 1-0" on a Mac (2026-10-21 CT, with players kept on the pitch). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).
@@ -272,5 +291,25 @@ Multi-Agent System (SPEC §0).
     vitest "Tests 595 passed", smoke "15 of 15 pages passed".
 [^matchstats]: [eval/reports/match_stats.md](../eval/reports/match_stats.md): possession changes
     by tackle per 90 min 0 (n = 20 matches); "Tackles are on in press_escape only".
+[^ey]: EY for the Premier League, *Economic and Social Impact Report*, July 2026
+    ([PDF](https://resources.premierleague.pulselive.com/premierleague/document/2026/07/31/8ee78e99-a3e3-4b81-ab38-cf76eae8dd94/Premier-League-Economic-and-Social-Impact-Report-2026.pdf)):
+    "broadcast revenue exports totalling £1.8b in 2024/25"; "1.9b people follow the Premier
+    League worldwide"; broadcast content "reaches 189 countries".
+[^uk-rights]: Premier League, 4 Dec 2023 ([article](https://www.premierleague.com/en/news/3807882)):
+    UK agreements worth "a total of £6.7billion in revenue across the four-year period" from
+    2025/26; £6.7bn over four seasons is about £1.7bn a season.
+[^prime]: Amazon, Thursday Night Football on Prime Video, 2025 season
+    ([article](https://www.aboutamazon.com/news/entertainment/thursday-night-football-amazon-prime-video-ai-features)):
+    "Prime Vision serves as a laboratory and incubator for new features that may eventually
+    advance to the main feed"; Defensive Alerts returns in the main feed.
+[^pl-microsoft]: Microsoft, 1 Jul 2025
+    ([announcement](https://news.microsoft.com/source/2025/07/01/premier-league-and-microsoft-announce-five-year-strategic-partnership-to-personalize-the-fan-experience-with-ai-for-1-8-billion-people/)):
+    "open-text questions and answers in fans' native languages through text and audio
+    translation".
+[^espn]: Awful Announcing, 9 Sep 2024
+    ([article](https://awfulannouncing.com/espn/alex-morgan-ai-generated-recap-mention.html)):
+    the recap by "ESPN Generative AI Services" of the 8 Sep 2024 match did not mention the
+    retiring player until it was updated the next morning; ESPN had said "each AI-generated recap
+    will be reviewed by a human editor".
 [^devtools]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#development-tools): git history and all pull
     requests checked on 2026-10-20.

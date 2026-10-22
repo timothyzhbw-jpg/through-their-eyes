@@ -128,9 +128,12 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    airs its template plan, and the breakdown still plays. **Bring back** resumes the Agent
    Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
    plan replaces the template. The trace id is the run's operation_Id in Application Insights.
+   **Crew trace** opens the run as a timeline: each agent's lane, its typed input and output,
+   the shared state it read and wrote, the Analyst's MCP tool calls, the Verifier sending a line
+   back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   18 possessions on one clock of about 12 minutes, opened where the scan hero's possession
+   19 possessions on one clock of about 12½ minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
@@ -296,9 +299,10 @@ uv run ruff check .
 uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
-"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 18 possessions,
-about 12 minutes on one clock — 15 open-play passages and three heroes: the scan hero at 0:30, the
-pressure hero (`press_escape`) at 4:54 and the short corner (`corner_blind_side`) at 8:41 — with
+"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 19 possessions,
+about 12½ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 4:54, the shot hero (`far_post_finish`) scoring at 7:01 and the
+short corner (`corner_blind_side`) at 8:51, at 1–0 — with
 moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 

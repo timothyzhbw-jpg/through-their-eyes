@@ -175,6 +175,9 @@ export const telestratorDownTrace = () =>
     { telestrator: { error: "AgentDown: the telestrator is down", attempts: 2 } },
   );
 
+/** When the crew run behind a test breakdown started (its `provenance.ran_at`). */
+export const RAN_AT = "2026-10-21T19:31:12.532447+00:00";
+
 /** The casual / en script of the deployed service's breakdown (Telestrator plan + 3 lines). */
 export function breakdownResponse(
   flags: Partial<{ cached: boolean; rate_limited: boolean; capped: boolean }> = {},
@@ -187,6 +190,8 @@ export function breakdownResponse(
     trace_id?: string | null;
     drill?: { down: string[]; pending: string[] } | null;
     plan_source?: "agent" | "template";
+    source?: "model" | "offline";
+    provenance?: object | null; // null: an older service that did not say
   } = {},
 ) {
   const persona = patch.persona ?? "casual";
@@ -204,13 +209,19 @@ export function breakdownResponse(
     },
     { id: "L3", text: "Without that look, H8 would have passed to H4.", claims: ["cf_pass"] },
   ];
+  const cached = flags.cached ?? true;
+  const provenance =
+    patch.provenance === undefined
+      ? { kind: cached ? "cached" : "live", ran_at: RAN_AT, reason: null }
+      : patch.provenance;
   return {
     key: patch.key ?? "d05e90c31e6fdbe42d0e9c63a1d1e0ce",
-    cached: flags.cached ?? true,
+    cached,
     rate_limited: flags.rate_limited ?? false,
     capped: flags.capped ?? false,
-    source: "model",
+    source: patch.source ?? "model",
     drill: patch.drill ?? null,
+    ...(provenance ? { provenance } : {}),
     result: {
       request: { moment: HERO_MOMENT, personas: [persona], languages: [language] },
       plan: {
