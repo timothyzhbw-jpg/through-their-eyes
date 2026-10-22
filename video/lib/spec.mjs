@@ -243,6 +243,9 @@ function checkBeats(spec, ctx, errors, warnings) {
   });
 
   if (total >= 120) errors.push(`total duration ${trim(total)}s is not under 120s`);
+  // A margin under the platform's 2:00 (encoding padding, a stray frame): output.max_s caps the plan.
+  const cap = spec?.output?.max_s;
+  if (typeof cap === "number" && total > cap) errors.push(`total duration ${trim(total)}s is over output.max_s (${cap}s)`);
   warnVoFit(planned, warnings);
 }
 

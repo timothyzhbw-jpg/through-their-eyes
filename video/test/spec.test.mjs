@@ -193,3 +193,10 @@ test("both tellings of the story are valid and the same length", () => {
   }
   assert.ok(Math.abs(lengths.blender - lengths.app) < 1e-6, JSON.stringify(lengths));
 });
+
+test("output.max_s caps the planned film under 2:00", () => {
+  const spec = clone();
+  spec.output = { ...spec.output, max_s: 5 };
+  const { errors } = check(spec);
+  assert.ok(errors.some((e) => e.includes("is over output.max_s (5s)")), errors.join("\n"));
+});

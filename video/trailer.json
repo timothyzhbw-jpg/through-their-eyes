@@ -6,7 +6,9 @@
     "width": 1920,
     "height": 1080,
     "lufs": -14,
-    "true_peak": -1.5
+    "true_peak": -1.5,
+    "max_s": 116,
+    "fail_at_s": 117
   },
   "site": "https://ttesite1ff906.z14.web.core.windows.net",
   "voice": {
@@ -28,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0.0,
       "from": 0.0,
-      "until": 118.05,
+      "until": 115.4,
       "gain_db": 4,
       "fade_in": 0.0,
       "fade_out": 0.0,
@@ -645,7 +647,7 @@
     },
     "verified": {
       "template": "verified",
-      "dur": 4.3,
+      "dur": 3.6,
       "alpha": true,
       "params": {
         "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
@@ -2010,7 +2012,7 @@
     },
     {
       "id": "b25-yc-truth",
-      "dur": 3.0,
+      "dur": 2.6,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
@@ -2023,7 +2025,7 @@
       "vo": [
         {
           "id": "vo23",
-          "at": 0.3,
+          "at": 0.05,
           "text": "He saw the run. Would you?"
         }
       ],
@@ -2179,7 +2181,7 @@
     },
     {
       "id": "b32-corner-b",
-      "dur": 3.0,
+      "dur": 2.25,
       "picture": {
         "src": "capture",
         "shot": "16-corner",
@@ -2217,7 +2219,7 @@
     },
     {
       "id": "b34-verified",
-      "dur": 4.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "07-evidence",
@@ -2359,7 +2361,7 @@
     },
     {
       "id": "b37-bringback",
-      "dur": 4.5,
+      "dur": 3.75,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
@@ -2563,7 +2565,14 @@
         "src": "title",
         "id": "ph-s4d-strike"
       },
-      "overlays": []
+      "overlays": [],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.05,
+          "gain_db": -2
+        }
+      ]
     },
     {
       "id": "b45a-s4e-net",

@@ -271,5 +271,6 @@ message naming the file when one is missing, `--check` does not look for it); it
 `speed`, `reverse` and `fit: "pad"` (keep a 2.39:1 render as it is, inside the bars, instead of
 cropping it to fill the frame). `fx: ["glue"]` is the shared finish of every 3D shot. Its `out` is `cut`, `fade`, `flash`, `dip`,
 `whip` or `glitch`. The validator names the beat when something does not resolve
-(`beats[3] (b04-pov): unknown cine id "pov2"`). The planned film must be under two minutes, and
+(`beats[3] (b04-pov): unknown cine id "pov2"`). The planned film must be under two minutes (and under `output.max_s`, 116 s, for a margin), the
+report step fails when the encoded film measures `output.fail_at_s` (117 s) or more, and
 the last beat cuts so the length stays the sum of the beat lengths.

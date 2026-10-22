@@ -79,10 +79,10 @@
   {
     "id": "music-score-hybrid",
     "kind": "music",
-    "title": "Original score, hybrid variant (orchestral and percussion), cut v9",
+    "title": "Original score, hybrid variant (orchestral and percussion), cut v11",
     "author": "This project (video/score/)",
     "page": "score/README.md",
-    "local": "video/score/out/hybrid_v9.wav",
+    "local": "video/score/out/hybrid_v11.wav",
     "licence": "Original",
     "checked_on": "2026-10-21"
   }

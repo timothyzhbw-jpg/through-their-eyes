@@ -723,6 +723,10 @@ async function stepReport(ctx) {
   const measured = await runFfmpeg(ctx.ffmpeg, measureArgs(finalMp4));
   const loudness = parseEbur128(measured.stderr);
   const duration = parseDuration(measured.stderr) ?? timelineOf(ctx.spec.beats).duration;
+  // The film as encoded must stay clear of 2:00: fail at output.fail_at_s (default 117 s) of
+  // measured length, after the report is written so it shows what ran long.
+  const failAt = ctx.spec.output?.fail_at_s ?? 117;
+  const encoded = await probe(ctx.ffmpeg, finalMp4);
   const { table, doc } = loadClaims(ctx);
   const titles = resolveUsedTitles(ctx.spec, table);
   const lines = resolveLines(ctx.spec, table, doc);
@@ -753,6 +757,10 @@ async function stepReport(ctx) {
   console.log(
     `  ${duration.toFixed(2)}s, ${loudness.integrated.toFixed(1)} LUFS, true peak ${loudness.truePeak.toFixed(1)} dBFS`,
   );
+  if (encoded >= failAt) {
+    rmSync(`${out}.hash`, { force: true }); // run the check again next time
+    throw new Error(`out/video/trailer.mp4 is ${encoded.toFixed(2)} s, at or over the ${failAt} s limit (output.fail_at_s)`);
+  }
 }
 
 /** Picture inputs for one beat: which file, how long the source is, which overlays survived. */
