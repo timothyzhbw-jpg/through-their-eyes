@@ -17,9 +17,10 @@ import { DESCRIBED, PERSONAS, type Persona } from "../api/client";
 import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
+import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { TourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
-import { useStore } from "../store/store";
+import { createStore, useStore, type Store } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 import { ArrowIcon, ChevronIcon, CloseIcon, ExpandIcon, SlidersIcon } from "./icons";
@@ -532,13 +533,12 @@ function CrewStatus() {
     );
   } else if (status === "ready" || status === "failed") {
     const steps = origin?.kind === "api" ? crewSteps(origin) : [];
+    // Who wrote it is what the service said (provenance), never a guess from the other fields.
     const note = !narration
       ? "No narration: the breakdown failed its checks"
       : narration.fixture
         ? "Bundled example · not checked by the verifier"
-        : origin?.kind === "api"
-          ? "Written by the crew · every number checked in code"
-          : "Every number checked in code";
+        : "Every number checked in code";
     body = (
       <>
         {steps.length > 0 && (
@@ -548,6 +548,7 @@ function CrewStatus() {
             ))}
           </span>
         )}
+        {origin?.kind === "api" && <ProvenanceChip provenance={origin.provenance} />}
         <span className="crew-note">{note}</span>
       </>
     );
@@ -559,14 +560,61 @@ function CrewStatus() {
   );
 }
 
-/** The hero moment, top right of the live screen: what it is, the crew, and what to do next. */
+/** Whether the viewer closed a session's moment card: kept per session, so the card stays closed
+ * when its slot shows the evidence, Your call or Take his eyes and comes back. */
+const cardClosed = new WeakMap<object, Store<{ closed: boolean }>>();
+function closedOf(session: object): Store<{ closed: boolean }> {
+  let store = cardClosed.get(session);
+  if (!store)
+    cardClosed.set(session, (store = createStore<{ closed: boolean }>({ closed: false })));
+  return store;
+}
+
+/** The hero moment, top right of the live screen: what it is, the crew, and what to do next.
+ * Its × or Escape (from inside it) closes it to a chip that opens it again. */
 export function MomentCard() {
+  const session = useSession();
+  const closed = useStore(closedOf(session), (s) => s.closed);
+  const chip = useRef<HTMLButtonElement>(null);
+  const close = useRef<HTMLButtonElement>(null);
+  const moved = useRef(false); // the viewer opened or closed it: focus follows (not on mount)
+  useEffect(() => {
+    if (!moved.current) return;
+    moved.current = false;
+    (closed ? chip : close).current?.focus({ preventScroll: true });
+  }, [closed]);
+  const setClosed = (value: boolean) => {
+    moved.current = true;
+    closedOf(session).set({ closed: value });
+  };
+  if (closed) {
+    return (
+      <button
+        ref={chip}
+        type="button"
+        className="btn moment-chip"
+        aria-expanded={false}
+        onClick={() => setClosed(false)}
+      >
+        <i className="dot" aria-hidden="true" />
+        Show the moment
+      </button>
+    );
+  }
+  return <MomentCardBody closeRef={close} onClose={() => setClosed(true)} />;
+}
+
+function MomentCardBody({
+  closeRef,
+  onClose,
+}: {
+  closeRef: RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}) {
   const { hero, moment, offset, runner, controls, playback, feed } = useSession();
   const { status } = useBreakdown();
   const run = useStore(runner.status, (s) => s.status);
   const live = useStore(playback, (s) => s.live);
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
   const waiting = status === "waiting";
   // Waiting for the moment, the card says what is really going on: watching only while the
   // stream is live; "left" once frames came in and the viewer left before the moment (the Live
@@ -585,7 +633,15 @@ export function MomentCard() {
           ? "Play breakdown"
           : "Replay breakdown";
   return (
-    <aside className="moment-card card" aria-label="The moment">
+    <aside
+      className="moment-card card"
+      aria-label="The moment"
+      onKeyDown={(e) => {
+        if (e.key !== "Escape" || e.defaultPrevented) return;
+        e.preventDefault();
+        onClose();
+      }}
+    >
       <div className="card-head">
         <span className="kicker accent">
           <i className="dot" aria-hidden="true" />
@@ -596,10 +652,12 @@ export function MomentCard() {
               : momentKicker(hero, moment.decisionFrame, offset)}
         </span>
         <button
+          ref={closeRef}
           type="button"
           className="icon-btn"
           aria-label="Dismiss the moment"
-          onClick={() => setDismissed(true)}
+          aria-keyshortcuts="Escape"
+          onClick={onClose}
         >
           <CloseIcon />
         </button>

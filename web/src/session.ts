@@ -55,7 +55,7 @@ import {
 import type { YawSource } from "./skeleton/skeleton";
 import { createStore, useStore, type Store } from "./store/store";
 import { IDLE_TAMPER, numericValues, tamperError, type TamperState } from "./tamper/tamper";
-import { VoicePlayer, type MakeAudio } from "./voice/voice";
+import { VoicePlayer, type MakeAudio, type SoundSwitch } from "./voice/voice";
 import { answerOf, IDLE_ASK, type AskState } from "./whatif/ask";
 import {
   LANGUAGES,
@@ -82,6 +82,7 @@ export interface SessionOptions {
   offline?: string | null; // why there is no live service (shown on the badge)
   socket?: SocketFactory; // WebSocket stand-in for tests
   makeAudio?: MakeAudio; // <audio> stand-in for tests
+  sound?: Store<SoundSwitch>; // the page's Sound switch (a match's); absent: the session's own
   momentId?: string | null; // the hero moment's id as the service names it (heroMoment)
   possession?: PossessionRef | null; // a hero moment of a stitched match
 }
@@ -191,7 +192,11 @@ export function createSession(
     api && !possession
       ? new LiveFeed(hero, (start) => api.liveUrl(start), options.socket, hooks)
       : null;
-  const voice = new VoicePlayer(api ? (key) => api.tts(key) : null, options.makeAudio);
+  const voice = new VoicePlayer(
+    api ? (key) => api.tts(key) : null,
+    options.makeAudio,
+    options.sound,
+  );
   // While a line is loading or playing, the next voice step waits so it is not cut off.
   const runner = new BreakdownRunner(playback, hero, moment, { hold: () => voice.busy });
   const parts = {
