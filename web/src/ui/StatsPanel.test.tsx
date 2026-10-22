@@ -46,6 +46,8 @@ describe("the stats panel", () => {
     // Measured metrics, never shown as verified claims (as the telemetry panel says of its own).
     expect(html).toContain("not verified claims");
     expect(html).not.toContain("data-verdict");
+    // What the feed cannot show is said, not left as a zero (SPEC 4.6).
+    expect(html).toContain("Tackles are not modelled yet");
   });
 
   it("lists the analyst's passes with distance, ball speed and the parts of their difficulty", () => {

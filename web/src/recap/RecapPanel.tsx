@@ -1,8 +1,12 @@
 // The end-of-match recap in the page (SPEC 6, 7): the chapter below the match with the verified
 // card, the caption and the reel's overlays over the live screen, and the button that asks for it
 // from the Moments panel. Every sentence and number here is a verified line or a verified value.
+// "Crew trace" opens the timeline of the crew run that wrote the recap (SPEC 6).
 
+import { useState } from "react";
 import { PERSONAS, type Persona } from "../api/client";
+import { CrewTracePanel, TraceButton } from "../crewtrace/CrewTrace";
+import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import type { MatchSession } from "../match/matchSession";
 import { useView } from "../session";
 import { useStore } from "../store/store";
@@ -39,11 +43,8 @@ function Panel({ session }: { session: MatchSession }) {
   const home = final?.values.home;
   const away = final?.values.away;
   const stats = card?.lines.filter((line) => line.id.startsWith("T")) ?? [];
+  const [tracing, setTracing] = useState(false);
   const moments = response?.result.moments ?? [];
-  const source =
-    response?.source === "model"
-      ? "Written by the crew on Microsoft Foundry · every number checked in code"
-      : "Template recap (the model's budget is used up or it is offline) · every number checked in code";
 
   return (
     <div id="recap">
@@ -55,7 +56,7 @@ function Panel({ session }: { session: MatchSession }) {
             The match, <em>in moments.</em>
           </>
         }
-        lede="Written by the agent crew at the final whistle: the key moments by how much they changed the match, every sentence and number checked in code before it airs."
+        lede="At the final whistle: the key moments by how much they changed the match, every sentence and number checked in code before it airs. The chip says who wrote it: the agent crew now, a cached crew run, or the offline template."
       >
         {state.status === "idle" && (
           <button type="button" className="btn btn-primary" onClick={() => void recap.request()}>
@@ -184,11 +185,18 @@ function Panel({ session }: { session: MatchSession }) {
                   Overlay cues (JSON)
                 </a>
               )}
+              <TraceButton open={tracing} onClick={() => setTracing((open) => !open)} />
               <p className="written">
-                {source}
-                {response.cached ? " · cached" : ""}
+                <ProvenanceChip provenance={response.provenance} /> Every number checked in code
               </p>
             </div>
+            {tracing && (
+              <CrewTracePanel
+                kind="recaps"
+                traceKey={response.key}
+                provenance={response.provenance}
+              />
+            )}
           </>
         )}
       </Chapter>
@@ -318,7 +326,7 @@ function RecapSound({ session }: { session: MatchSession }) {
       onClick={() => session.recap.setSound(!on)}
     >
       {on ? <SoundOnIcon /> : <SoundOffIcon />}
-      {on ? "Sound on" : "Sound off"}
+      Sound
     </button>
   );
 }

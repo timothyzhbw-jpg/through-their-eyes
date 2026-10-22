@@ -225,7 +225,7 @@ describe("live mode in the session", () => {
     expect(session.playback.get()).toMatchObject({ live: true, mode: "factual" });
   });
 
-  it("asks for the breakdown when the stream detects the moment, then plays it", async () => {
+  it("asks for the breakdown when the stream detects the moment, then plays the show and it", async () => {
     const { session, sockets, fetch } = online();
     session.controls.startLive();
     const ws = sockets.sockets[0];
@@ -240,7 +240,12 @@ describe("live mode in the session", () => {
     await settle();
     expect(fetch.calls.map((c) => [c.method, c.path])).toEqual([["POST", "/api/breakdowns"]]);
     expect(session.breakdown.get().status).toBe("ready");
-    expect(session.runner.status.get().status).toBe("running");
     expect(session.playback.get().live).toBe(false);
+    // The show first (the look, then the run without it: autoplay/), then the breakdown.
+    expect(session.comparison.status.get().phase).toBe("with");
+    for (let k = 0; k < 150 && session.runner.status.get().status !== "running"; k++) {
+      tickSession(session, 0.1);
+    }
+    expect(session.runner.status.get().status).toBe("running");
   });
 });

@@ -33,7 +33,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, create_model, field_validator
 
-from agents import prompts, telemetry
+from agents import crewtrace, prompts, telemetry
 from agents.delivery import (
     CLUTCH_DELTA,
     DESCRIBED,
@@ -64,6 +64,7 @@ from agents.workflow import (
     Analyst,
     Analyze,
     Briefing,
+    CrewRun,
     Director,
     Job,
     Narration,
@@ -704,7 +705,7 @@ class RecapDirector(Director):
         self.whole: RecapContext = crew.ctx  # every candidate; after it picks, the crew's focus
 
     async def _direct(self, job: Job, ctx, resumed: bool = False) -> None:
-        crew, rc = self.crew, self.whole
+        crew, rc = self.crew, crewtrace.watched(self.whole)
         with crew.step("director", resumed=resumed or None) as span:
             request = template_request(rc, job.personas, job.languages)
             attempt, notes, used = None, [BACK] if resumed else [], False
@@ -726,7 +727,9 @@ class RecapDirector(Director):
                         notes.append("too few key moments: template moments")
             crew.record("director", attempt, notes, used, span)
         crew.ctx = rc.focused(request.moments)
-        await ctx.send_message(Analyze(request))
+        if (rec := crewtrace.current()) is not None:  # the crew now works on these moments only
+            rec.writes.append("evidence")
+        await self.send(ctx, Analyze(request))
         await self.wait_if_down([attempt], ctx)
 
 
@@ -761,7 +764,7 @@ class RecapAnalyst(Analyst):
                     else:
                         notes.append("no usable headline: template findings")
             crew.record("analyst", attempt, notes, used, span)
-        await ctx.send_message(Briefing(msg.request, findings, rev=self.sent))
+        await self.send(ctx, Briefing(msg.request, findings, rev=self.sent))
         self.sent += 1
         await self.wait_if_down([attempt], ctx)
 
@@ -791,7 +794,7 @@ class RecapTelestrator(Telestrator):
             notes = [BACK] if resumed else []
             notes += [f"invalid reel, template used: {e}" for e in errors]
             crew.record("telestrator", attempt, notes, used, span)
-        await ctx.send_message(Planned(reel, source, errors, rev=msg.rev))
+        await self.send(ctx, Planned(reel, source, errors, rev=msg.rev))
         await self.wait_if_down([attempt], ctx)
 
 
@@ -888,10 +891,15 @@ async def run_recap(
 ) -> RecapResult:
     """The recap of the match: the crew's workflow with the recap's steps. `down`: agent steps
     taken down for this run, as in the failure drill (no model call for them)."""
-    run = await run_crew(rc, client=client, personas=personas, languages=languages,
-                         step_timeout_s=step_timeout_s, use_mcp=use_mcp,
-                         voice_styles=voice_styles, down=down, story=RECAP)  # fmt: skip
+    run = await run_recap_crew(rc, client=client, personas=personas, languages=languages,
+                               step_timeout_s=step_timeout_s, use_mcp=use_mcp,
+                               voice_styles=voice_styles, down=down)  # fmt: skip
     return run.result
+
+
+async def run_recap_crew(rc: RecapContext, **kwargs: Any) -> CrewRun:
+    """`run_recap`, with the crew trace (`CrewRun.trace`) and what waits to be brought back."""
+    return await run_crew(rc, story=RECAP, **kwargs)
 
 
 # --- command line -------------------------------------------------------------------------------

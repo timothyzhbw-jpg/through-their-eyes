@@ -57,13 +57,15 @@ jobs:
         run: npm run build
       - name: Video shot list
         run: node ../video/capture.mjs --list
+      - name: Video trailer spec and edit tests
+        run: node ../video/trailer.mjs --check && node --test ../video/test/*.test.mjs
 
   # SPEC 7, 8: the web app built against a local offline API and opened page by page in headless
   # Chromium (web/scripts/smoke.mjs). Any console error, uncaught exception or missing main view
   # fails it; the screenshots are kept as an artifact.
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25  # the smoke suite passed 10 minutes on a loaded runner (29 pages, axe on each)
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0

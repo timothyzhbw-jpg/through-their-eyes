@@ -96,6 +96,22 @@ describe("Your call: markers", () => {
     expect(out[2]).toEqual([300, 300]);
   });
 
+  it("pushes wide markers apart by their widths, so two labels side by side do not overlap", () => {
+    // "Far post" and "Near post" on the goal line, a few pixels apart, and a round marker.
+    const out = declutter(
+      [
+        [400, 200],
+        [420, 200],
+        [100, 100],
+      ],
+      36,
+      [],
+      [90, 96, 36],
+    );
+    expect(Math.abs(out[1][0] - out[0][0])).toBeGreaterThanOrEqual(92.9);
+    expect(out[2]).toEqual([100, 100]);
+  });
+
   it("keeps markers out of a fixed label and leaves the label where it is", () => {
     const label = { at: [200, 200] as [number, number], r: 50 };
     const out = declutter(

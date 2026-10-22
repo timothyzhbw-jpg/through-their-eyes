@@ -68,7 +68,9 @@ def test_time_is_continuous_across_possessions(match):
 
 def test_hero_possessions_keep_their_seeds_and_open_play_is_keyed_by_the_match(match):
     heroes = {p.scenario: p.seed for p in match.possessions if p.scenario != "possession_play"}
-    assert heroes == {"blind_side_run": 3, "press_escape": 0, "corner_blind_side": 0}
+    assert heroes == {
+        "blind_side_run": 3, "press_escape": 0, "far_post_finish": 11, "corner_blind_side": 0
+    }  # fmt: skip
     play = [p for p in match.possessions if p.scenario == "possession_play"]
     assert len({p.seed for p in play}) == len(play)
     assert all(p.seed >= 1_000_000 for p in play)  # never a design or eval seed
@@ -131,7 +133,10 @@ def test_the_score_counts_goals_and_carries_over(match):
     for p in match.possessions:
         assert p.score_before == score
         score = score_after(score, p.run.events)
-    assert match.score == score == (0, 0)
+    assert match.score == score == (1, 0)  # far_post_finish 11 scores (SPEC 3.3, 3.6)
+    goal = next(p for p in match.possessions if p.scenario == "far_post_finish")
+    after = match.possessions[goal.index + 1]
+    assert after.restart == "kick_off" and after.score_before == (1, 0)
 
 
 def test_event_ids_move_to_match_time():
@@ -156,7 +161,7 @@ def test_moments_are_detected_in_every_possession_and_lifted_to_match_time(match
         assert m["anchor_t"] == pytest.approx(m["anchor_frame"] * DT, abs=1e-4)
         assert m["id"] == global_id(m["local_id"], p.start)
     lenses = {m["actor"]: m["selected_lens"] for m in moments if m["hero"]}
-    assert lenses == {"H8": "scan", "H4": "pressure", "H5": "scan"}
+    assert lenses == {"H8": "scan", "H4": "pressure", "H9": "scan", "H5": "scan"}
 
 
 def test_the_match_export_is_the_hero_run_schema_plus_a_match_block(match, export):

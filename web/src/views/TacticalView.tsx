@@ -15,6 +15,7 @@ import {
   runLabels,
   Sample,
   sampleInto,
+  actionTarget,
   speedAt,
   type Hero,
   type Run,
@@ -33,6 +34,7 @@ import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
 import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
+import { isKeeper, kitOf } from "../players/kit";
 import { BlindSideOverlay } from "../ui/BlindSideOverlay";
 import { pathTagPx, placePathTag } from "./boardLabels";
 import {
@@ -51,8 +53,12 @@ import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { aimYaw, VISOR_COLOR } from "./tokens";
+import { BeatBoardLayer } from "../beat/BeatLayers";
+import { motion } from "../beat/beat";
 
 const TOKEN_R = 0.95; // m
+/** A keeper's token keeps its team colour with a band in his kit's colour (players/kit.ts). */
+const GK_BAND = [0.55, 0.77] as const; // m, inner and outer radius
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
 const TAG_PX = 24; // on-screen height of a tag such as "shoulder check"
@@ -77,6 +83,7 @@ const LAYER = {
 };
 const flat = { transparent: true, depthTest: false, depthWrite: false } as const;
 const lie = -Math.PI / 2; // rotate a plane from XY into the pitch plane (XZ)
+const DRAW_ON_S = 0.6; // the other run's ghost path draws itself on when it appears
 
 interface Shared {
   sample: Sample;
@@ -151,6 +158,12 @@ function TacticalScene() {
       <Field />
       <PitchControlLayer hero={hero} renderOrder={LAYER.pitch + 0.5} />
       {hero.vision && <VisionCone hero={hero} vision={hero.vision} shared={shared} />}
+      <BeatBoardLayer
+        sample={shared.current.sample}
+        half={hero.vision?.halfCone ?? 0}
+        scale={scale}
+        renderOrder={{ sweep: LAYER.cone + 0.5, ring: LAYER.halo + 0.5 }}
+      />
       <PassLine run={hero.runs[mode]} mode={mode} shared={shared} />
       {hero.counterfactual && (
         <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} scale={scale} />
@@ -284,7 +297,7 @@ function PassLine({ run, mode, shared }: { run: Run; mode: RunName; shared: Shar
   const points = useMemo(() => {
     if (!action) return null;
     const [sx, sy] = action.start;
-    const [tx, ty] = action.target;
+    const [tx, ty] = actionTarget(action); // a pass's target, a shot's aim
     return {
       line: [
         [sx, 0, -sy],
@@ -342,7 +355,10 @@ function OtherRunGhost({ hero, mode, shared, scale, px }: GhostProps) {
   const line = useRef<ComponentRef<typeof Line>>(null);
   const group = useRef<THREE.Group>(null);
   const tag = useRef<THREE.Mesh>(null);
+  const tip = useRef<THREE.Mesh>(null);
   const prefer = useRef(-1);
+  const shownAt = useRef<number | null>(null); // wall time the path appeared: it draws itself on
+  const invalidate = useThree((s) => s.invalidate);
   const path = useMemo(() => {
     const start = other.decision?.frame ?? 0;
     const end = Math.min(other.frames - 1, other.action?.end ?? other.frames - 1);
@@ -362,12 +378,27 @@ function OtherRunGhost({ hero, mode, shared, scale, px }: GhostProps) {
     const g = group.current;
     if (!g) return;
     g.visible = state.cfGhost && state.frame >= path.start && path.points.length > 1;
-    // Grow the path with the playhead: draw only the segments already "played".
-    const done = Math.max(
-      1,
-      Math.min(path.points.length - 1, Math.floor(state.frame - path.start)),
-    );
-    if (line.current) line.current.geometry.instanceCount = done;
+    // Grow the path with the playhead: draw only the segments already "played". When it appears
+    // with a stretch already played, that stretch draws itself on over DRAW_ON_S.
+    const now = performance.now() / 1000;
+    if (!g.visible) shownAt.current = null;
+    else if (shownAt.current === null) shownAt.current = motion.get().reduced ? -Infinity : now;
+    const drawn = Math.min(1, (now - (shownAt.current ?? -Infinity)) / DRAW_ON_S);
+    const played = Math.min(path.points.length - 1, Math.floor(state.frame - path.start));
+    const done = Math.max(1, Math.ceil(played * (1 - (1 - drawn) ** 3)));
+    if (drawn < 1) invalidate();
+    if (line.current) {
+      line.current.geometry.instanceCount = done;
+      // The dashes march with the playhead, so the path reads as the run it would have been.
+      line.current.material.dashOffset = motion.get().reduced ? 0 : -state.frame * 0.09;
+    }
+    const head = tip.current;
+    if (head) {
+      const [hx, , hz] = path.points[Math.min(done, path.points.length - 1)];
+      head.visible = g.visible && done < path.points.length - 1;
+      head.position.set(hx, 0, hz);
+      head.scale.setScalar(scale);
+    }
     // The tag sits beside the path end, clear of the tokens, and keeps its side while it can.
     const mesh = tag.current;
     if (!mesh) return;
@@ -402,6 +433,10 @@ function OtherRunGhost({ hero, mode, shared, scale, px }: GhostProps) {
         renderOrder={LAYER.path}
         {...flat}
       />
+      <mesh ref={tip} rotation-x={lie} renderOrder={LAYER.path + 0.5}>
+        <circleGeometry args={[0.55, 24]} />
+        <meshBasicMaterial color={color} {...flat} opacity={0.95} />
+      </mesh>
       <mesh ref={tag} rotation-x={lie} renderOrder={LAYER.name}>
         <planeGeometry args={[tagW, tagH]} />
         <meshBasicMaterial map={label} {...flat} />
@@ -637,6 +672,12 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
                 <circleGeometry args={[TOKEN_R, 32]} />
                 <meshBasicMaterial color={teamColor(p.team)} {...flat} />
               </mesh>
+              {isKeeper(p) && (
+                <mesh rotation-x={lie} renderOrder={LAYER.token + 0.5}>
+                  <ringGeometry args={[...GK_BAND, 32]} />
+                  <meshBasicMaterial color={kitOf(p).shirt} {...flat} />
+                </mesh>
+              )}
               {outline && (
                 <mesh rotation-x={lie} renderOrder={LAYER.outline}>
                   <ringGeometry args={[TOKEN_R - 0.1, TOKEN_R + 0.16, 32]} />
@@ -793,7 +834,7 @@ function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
   const tagH = Math.max(2.4, TAG_PX * px);
   const [ex, , ez] = path[path.length - 1];
   const what = actionLabel(option.action);
-  const label = getLabelTexture(`what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
+  const label = getLabelTexture(option.tag ?? `what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
     ...LABEL.tag,
     color: COLORS.gold,
   });

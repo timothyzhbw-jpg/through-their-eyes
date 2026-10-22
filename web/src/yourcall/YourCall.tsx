@@ -30,6 +30,8 @@ import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
+// A text marker (carry, a shot) is a pill: its width from the label (11 px uppercase, tracked).
+const textMarkerPx = (text: string) => Math.max(MARKER_PX, 24 + 8 * text.length);
 const SWIPE_START_PX = 72; // the swipe layer's radius around the carrier: two marker sizes
 const YOU_DROP_PX = 18; // the "you" label hangs this far under the carrier's feet
 const YOU_CLEAR_PX = 56; // and markers keep this far from its centre (half its width + a marker)
@@ -109,7 +111,9 @@ export function YourCallScreen({ start, scene = true }: { start: ReactNode; scen
       <header className="stage-head">
         <div className="brand">
           <h1>Through Their Eyes</h1>
-          <p className="sub">A synthetic match · every player fictional</p>
+          <p className="sub">
+            A synthetic match<span className="sub-more"> · every player fictional</span>
+          </p>
         </div>
         <div className="header-start">{start}</div>
         <div className="header-end">
@@ -165,7 +169,8 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
   );
   const markers = useMemo(() => {
     const raw = options.map((o) => markerAt(camera, o.anchor, w, h));
-    const placed = declutter(raw, MARKER_PX, [{ at: youAt(carrierPx), r: YOU_CLEAR_PX }]);
+    const widths = options.map((o) => (o.kind === "pass" ? MARKER_PX : textMarkerPx(o.short)));
+    const placed = declutter(raw, MARKER_PX, [{ at: youAt(carrierPx), r: YOU_CLEAR_PX }], widths);
     return options
       .map((o, k) => ({ option: o, at: placed[k] }))
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
@@ -266,7 +271,13 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
             {markers.map(({ option: o, at }, k) => {
               const unseen = !!o.receiver && stale.has(o.receiver);
               const done = tried.includes(o.action);
-              const name = [o.label, unseen && "not seen lately", done && "tried"]
+              // The shirt number it shows is in its name too: a speech user says what they see.
+              const name = [
+                o.label,
+                o.receiver && `number ${o.short}`,
+                unseen && "not seen lately",
+                done && "tried",
+              ]
                 .filter(Boolean)
                 .join(", ");
               return (
@@ -383,8 +394,9 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
           the players he had not seen lately are grey.
         </p>
         <p className="yc-hint">
-          Tap a teammate, or swipe from {heroId} toward one. Keyboard: Pick with the keyboard, then
-          the arrow keys and Enter.
+          Tap {options.some((o) => o.kind === "shot") ? "a teammate or a shot" : "a teammate"}, or
+          swipe from {heroId} toward one. Keyboard: Pick with the keyboard, then the arrow keys and
+          Enter.
         </p>
         {state.tried.length > 0 && (
           <p className="yc-hint">Tried: {state.tried.map(labelOf(options)).join(", ")}</p>

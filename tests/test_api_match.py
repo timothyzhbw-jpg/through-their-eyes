@@ -56,7 +56,7 @@ def test_the_defaults_serve_the_match_and_each_hero_possession(tmp_path, monkeyp
         assert ids == ["blind_side_run-3", CORNER, MATCH, "match-2", PRESS]
         possessions = c.get(f"/api/matches/{MATCH}").json()["possessions"]
         heroes = [f"{p['scenario']}-{p['seed']}" for p in possessions if p["hero_moment"]]
-        assert heroes == ["blind_side_run-3", PRESS, CORNER]
+        assert heroes == ["blind_side_run-3", PRESS, "far_post_finish-11", CORNER]
         for hero in heroes:
             assert c.get(f"/api/matches/{hero}/export").status_code == 200
         # match-2: the same heroes on other gated seeds, in another order (sim/match.py MATCH_2).
@@ -125,10 +125,11 @@ def test_the_match_is_listed_with_its_possessions_and_its_hero_moments(client, i
     assert ids == [MATCH, PRESS]
     assert info["kind"] == "match" and info["hero"] is None
     assert len(info["possessions"]) == len(DEFAULT_PLAN)
-    assert info["score"] == {"home": 0, "away": 0}
+    assert info["score"] == {"home": 1, "away": 0}
     heroes = info["hero_moments"]
     assert [h.split(":")[1:3] for h in heroes] == [
-        ["decision_after_scan", "H8"], ["pressed_decision", "H4"], ["marker_scan", "H5"]
+        ["decision_after_scan", "H8"], ["pressed_decision", "H4"], ["decision_after_scan", "H9"],
+        ["marker_scan", "H5"]
     ]  # fmt: skip
 
 
@@ -148,7 +149,7 @@ def test_moments_are_detected_across_the_match(client, info):
     cards = client.get(f"/api/matches/{MATCH}/moments").json()
     hero = {c["id"]: c for c in cards if c["hero"]}
     assert list(hero) == info["hero_moments"]
-    assert [c["selected_lens"] for c in hero.values()] == ["scan", "pressure", "scan"]
+    assert [c["selected_lens"] for c in hero.values()] == ["scan", "pressure", "scan", "scan"]
     played = {p["index"] for p in info["possessions"] if p["hero_moment"]}
     assert played <= {c["possession"] for c in cards}
     assert [c["anchor_frame"] for c in cards] == sorted(c["anchor_frame"] for c in cards)
