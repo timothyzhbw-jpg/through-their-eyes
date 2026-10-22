@@ -9,6 +9,7 @@ import { useStore } from "../store/store";
 import { Pose, poseInto, type YawSource } from "./skeleton";
 import "./skeleton.css";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
 
 const DEG = 180 / Math.PI;
 
@@ -49,7 +50,7 @@ function Legend() {
     <div className="skeleton-key" role="group" aria-label="Skeleton data">
       <div className="sk-top">
         <span className="sk-title">Skeleton</span>
-        <SourceChip kind="sim" title="Live overlay from the sim's tracking, not a verified claim" />
+        <SourceChip kind="sim" title={computed("A live overlay from the simulation's tracking")} />
         <div className="segmented sk-source" role="group" aria-label="Head yaw">
           {options.map(([value, label, title]) => (
             <button

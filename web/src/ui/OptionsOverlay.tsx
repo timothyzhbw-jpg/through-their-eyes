@@ -139,7 +139,7 @@ function HoverCard({
           ✓ <KindTag kind={claimKind} /> claim <code>{verified.claim.id}</code>
         </p>
       )}
-      {anySim && <p className="option-source">sim: read from the export, not verified</p>}
+      {anySim && <p className="option-source">sim: computed directly by the simulation</p>}
     </div>
   );
 }

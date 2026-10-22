@@ -58,6 +58,9 @@ export function useTakeEyesOpen(): boolean {
   return useStore(useTakeEyes().state, (s) => s.step !== "closed");
 }
 
+/** What Take his eyes is, in plain words: its subtitle wherever it is named. */
+export const TAKE_EYES_SUB = "Choose when and where he looks";
+
 /** The header button that opens Take his eyes (pressed while it is open). */
 export function TakeEyesButton() {
   const te = useTakeEyes();
@@ -69,7 +72,7 @@ export function TakeEyesButton() {
       className="btn te-open"
       aria-pressed={open}
       disabled={!!te.unavailable}
-      title={te.unavailable ?? "Choose when and where he looks; the sim re-runs the moment"}
+      title={te.unavailable ?? `${TAKE_EYES_SUB}; the sim re-runs the moment`}
       onClick={() => (open ? te.close() : te.open())}
     >
       Take his eyes
@@ -413,6 +416,7 @@ function Card({ te }: { te: TakeEyes }) {
         <h2 id="te-title" ref={heading} tabIndex={-1}>
           Take his eyes
         </h2>
+        <p className="te-sub">{TAKE_EYES_SUB}</p>
         <p className="te-lead" role="status">
           {s.step === "error" ? `The looks could not be loaded: ${s.error}` : "Loading every look…"}
         </p>
@@ -435,6 +439,7 @@ function Card({ te }: { te: TakeEyes }) {
         <h2 id="te-title" ref={heading} tabIndex={-1}>
           Take his eyes
         </h2>
+        <p className="te-sub">{TAKE_EYES_SUB}</p>
         <p className="te-lead">
           You are {heroId}. Between the pass and his decision he gets one look: you choose when, and
           where. The sim re-runs the moment with it.

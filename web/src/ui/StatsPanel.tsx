@@ -25,10 +25,11 @@ import { Segmented } from "./Segmented";
 import "./stats.css";
 import { clubName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
+import { HowChecked } from "../provenance/HowChecked";
 
 const DASH = "–";
-const SOURCE =
-  "Measured from tracking and the event feed (analytics/stats.py): a metric, not a verified claim";
+const SOURCE = computed("Measured from the match's tracking and event feed (analytics/stats.py)");
 const PARTS = ["lane", "passer", "receiver", "distance"] as const;
 
 type PassCue = Extract<Cue, { kind: "pass" }>;
@@ -352,12 +353,13 @@ export function StatsPanel() {
             plays, synced to the playhead.
           </p>
           <p className="note">
-            Measured from tracking and the event feed, not verified claims. Sprint: above 25.2 km/h
-            for 0.4 s; high-speed running: above 19.8 km/h (Gualtieri et al., 2023). Pass difficulty
-            0–1: 40% interception risk along the lane, 20% each pressure on the passer, pressure on
-            the receiver and distance. Tackles are not modelled yet (only the pressure hero has
-            them): the ball changes hands by interceptions and balls out of play.
+            Measured from the match's tracking and event feed. Sprint: above 25.2 km/h for 0.4 s;
+            high-speed running: above 19.8 km/h (Gualtieri et al., 2023). Pass difficulty 0–1: 40%
+            interception risk along the lane, 20% each pressure on the passer, pressure on the
+            receiver and distance. Tackles are not modelled yet (only the pressure hero has them):
+            the ball changes hands by interceptions and balls out of play.
           </p>
+          <HowChecked kinds={["tracking"]} />
           {view.kind === "match" && (
             <Segmented
               label="Stats for"

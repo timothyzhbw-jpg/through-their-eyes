@@ -6,6 +6,7 @@ import { statTags, type StatTag, type Stats } from "../stats/stats";
 import { useStats } from "../stats/store";
 import { useStore } from "../store/store";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
 
 const MAX = 4;
 
@@ -54,7 +55,9 @@ export function StatsTicker() {
           <b>{tag.label}</b> {tag.text}{" "}
           <SourceChip
             kind="tracking"
-            title="Measured from tracking and the event feed (analytics/stats.py): a metric, not a verified claim"
+            title={computed(
+              "Measured from the match's tracking and event feed (analytics/stats.py)",
+            )}
           />
         </span>
       ))}

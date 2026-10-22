@@ -33,7 +33,7 @@ import {
 } from "../testing";
 import { takeEyesOf, type Fetch } from "../takeeyes/controller";
 import { intro } from "../ui/intro";
-import { LineupCard } from "../ui/LineupCard";
+import { IntroCard } from "../ui/IntroCard";
 import { yourCallOf } from "../yourcall/controller";
 import { resolveSteps, envOf, targetOf, STEPS } from "./steps";
 import { recapFixture } from "../recap/fixture";
@@ -495,11 +495,11 @@ describe("a stitched match", () => {
     expect(textOf(card())).toContain("Every moment of the match is listed below the picture.");
   });
 
-  it("offers no tour on its lineup card: the tour's steps are a hero moment's", () => {
+  it("offers no tour on its intro card: the tour's steps are a hero moment's", () => {
     intro.set({ open: true });
     const m = match();
     const container = mount(m, <MatchApp session={m} autoplay={false} />);
-    expect(buttonIn(container, "Start watching")).toBeDefined();
+    expect(buttonIn(container, "Start")).toBeDefined();
     expect(buttonIn(container, "Take the 90-second tour")).toBeUndefined();
   });
 
@@ -619,9 +619,9 @@ describe("starting it", () => {
     expect(stepId()).toBe("pov");
   });
 
-  it("from the lineup card, which closes", async () => {
+  it("from the intro card, which closes", async () => {
     intro.set({ open: true });
-    const container = mount(offline(), <LineupCard />);
+    const container = mount(offline(), <IntroCard />);
     await click(buttonIn(container, "Take the 90-second tour"));
     expect(intro.get().open).toBe(false);
     expect(tour.get()).toMatchObject({ open: true });

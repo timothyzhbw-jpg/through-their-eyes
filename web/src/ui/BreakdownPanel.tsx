@@ -78,7 +78,14 @@ export function BreakdownPanel() {
           The crew writes. <em>Code</em> checks.
         </>
       }
-      lede="A TelestrationPlan is the cue list the Telestrator agent writes. Every plan is validated before it plays; an invalid one is replaced by a template plan built from the moment."
+      lede="The Telestrator agent writes the replay's cue list: which view, when to slow down, what to mark. Code checks every list before it plays."
+      how={
+        <p>
+          The cue list is a TelestrationPlan: a JSON document checked against its schema and the
+          moment (its moment, its players, frames in range, cues in order) before it plays. An
+          invalid plan never plays: a template plan built from the moment takes its place.
+        </p>
+      }
       aside={
         <div className="breakdown-head">
           {ready && (

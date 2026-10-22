@@ -31,6 +31,7 @@ import {
   momentMsg,
   settle,
 } from "../testing";
+import { closeTour, tour } from "../tour/tourState";
 import { intro } from "./intro";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <canvas /> }));
@@ -205,10 +206,15 @@ describe("the pre-match autoplay gate", () => {
   });
 
   it("hands the focus to the live screen's title when the card closes", () => {
-    vi.useFakeTimers();
     const closers: [string, (page: HTMLElement) => void][] = [
-      ["Skip", (page) => click(button(page, "Skip"))],
-      ["Start watching", (page) => click(button(page, "Start watching"))],
+      [
+        "Skip",
+        (page) => {
+          click(button(page, "Teams and more"));
+          click(button(page, "Skip"));
+        },
+      ],
+      ["Start", (page) => click(button(page, "Start"))],
       [
         "Escape",
         () =>
@@ -218,7 +224,7 @@ describe("the pre-match autoplay gate", () => {
             );
           }),
       ],
-      ["the countdown", () => act(() => void vi.advanceTimersByTime(6000))],
+      ["the page around it", (page) => click(page.querySelector<HTMLElement>(".intro-scrim")!)],
     ];
     for (const [how, close] of closers) {
       intro.set({ open: true });
@@ -227,7 +233,7 @@ describe("the pre-match autoplay gate", () => {
           <App autoplay={false} />
         </SessionContext.Provider>,
       );
-      expect(document.activeElement?.textContent, how).toContain("Start watching");
+      expect(document.activeElement?.textContent, how).toBe("Start");
       close(container);
       expect(container.querySelector("[role=dialog]"), how).toBeNull();
       // Not <body>: the next Tab would skip the whole live screen.
@@ -238,7 +244,21 @@ describe("the pre-match autoplay gate", () => {
     }
   });
 
-  it("on a cold load with no input, the card is gone and the stream is playing by 6 s", () => {
+  it("takes the moment card's place while it is up, and gives it back", () => {
+    intro.set({ open: true });
+    const { container } = mount(
+      <SessionContext.Provider value={heroSession()}>
+        <App autoplay={false} />
+      </SessionContext.Provider>,
+    );
+    expect(container.querySelector(".stage-card")?.childElementCount).toBe(0);
+    expect(container.querySelector(".intro-card")).not.toBeNull();
+    click(button(container, "Start"));
+    expect(container.querySelector(".stage-card .moment-card")).not.toBeNull();
+    expect(container.querySelector(".intro-card")).toBeNull();
+  });
+
+  it("on a cold load with no input, the card waits and nothing streams under it; Start starts the stream", () => {
     vi.useFakeTimers();
     const { session, sockets } = onlineHero();
     intro.set({ open: true });
@@ -247,10 +267,16 @@ describe("the pre-match autoplay gate", () => {
         <App autoplay />
       </SessionContext.Provider>,
     );
-    expect(sockets.sockets, "no stream under the open card").toHaveLength(0);
     act(() => {
-      vi.advanceTimersByTime(6000);
+      vi.advanceTimersByTime(60_000);
     });
+    expect(
+      container.querySelector("[role=dialog]"),
+      "the card waits for the viewer",
+    ).not.toBeNull();
+    expect(sockets.sockets, "no stream under the open card").toHaveLength(0);
+    expect(session.playback.get()).toMatchObject({ frame: 0, playing: false });
+    click(button(container, "Start"));
     expect(container.querySelector("[role=dialog]")).toBeNull();
     expect(sockets.sockets, "the live stream starts as the card closes").toHaveLength(1);
     const ws = sockets.sockets[0];
@@ -263,7 +289,7 @@ describe("the pre-match autoplay gate", () => {
     expect(session.feed!.state.get().status).toBe("streaming");
   });
 
-  it("on a cold load with no input, the run without the look is on screen and said within 20 s", async () => {
+  it("after Start, the run without the look is on screen and said within 20 s", async () => {
     vi.useFakeTimers();
     const { session, sockets } = onlineHero();
     intro.set({ open: true });
@@ -280,9 +306,7 @@ describe("the pre-match autoplay gate", () => {
         vi.advanceTimersByTime(DT * 1000);
         t += DT;
       });
-    // The card counts down; nothing streams under it.
-    while (intro.get().open && t < 10) tick();
-    expect(t).toBeLessThan(5.5);
+    click(button(container, "Start"));
     const ws = sockets.sockets[0];
     const last = hero.runs.factual.frames - 1;
     act(() => {
@@ -297,13 +321,13 @@ describe("the pre-match autoplay gate", () => {
     await act(settle);
     vi.useFakeTimers();
     while (session.playback.get().mode !== "counterfactual" && t < 30) tick();
-    expect(t, "seconds from the page opening to the run without the look").toBeLessThan(20);
+    expect(t, "seconds from Start to the run without the look").toBeLessThan(20);
     expect(container.querySelector(".stage-caption")?.textContent).toContain(
       "Without that look, J. Ferriday would have passed to K. Annersley.",
     );
   }, 20_000); // a few hundred rendered ticks: slow on a loaded machine
 
-  it("on a cold load of a stitched match, the card is gone and the stream plays by 6 s", () => {
+  it("on a cold load of a stitched match, the stream plays behind the card, which waits", () => {
     vi.useFakeTimers();
     const sockets = fakeSockets();
     const exported = matchExport();
@@ -322,15 +346,18 @@ describe("the pre-match autoplay gate", () => {
       ws.push(matchHello(exported), matchFrameMsg(exported, 0), matchFrameMsg(exported, 1));
     });
     act(() => {
-      vi.advanceTimersByTime(6000);
+      vi.advanceTimersByTime(60_000);
     });
-    expect(container.querySelector("[role=dialog]")).toBeNull();
-    expect(intro.get().open).toBe(false);
+    expect(container.querySelector("[role=dialog]")).not.toBeNull();
+    expect(intro.get().open).toBe(true);
     expect(session.playback.get()).toMatchObject({ live: true, playing: true });
     expect(session.feed!.state.get().status).toBe("streaming");
+    click(button(container, "Start"));
+    expect(container.querySelector("[role=dialog]")).toBeNull();
+    expect(session.playback.get()).toMatchObject({ live: true, playing: true });
   });
 
-  it("keeps the autoplay when eyes are picked and Start watching is pressed", async () => {
+  it("keeps the autoplay when eyes are picked and Start is pressed", async () => {
     const { session, sockets } = onlineHero();
     intro.set({ open: true });
     const { container } = mount(
@@ -342,10 +369,11 @@ describe("the pre-match autoplay gate", () => {
     expect(session.playback.get()).toMatchObject({ live: false, playing: false });
     // Not the default eyes, so the pick has to land on H8 without taking over the autoplay.
     act(() => session.playback.set({ povPlayer: "A5" }));
+    click(button(container, "Teams and more"));
     click(button(container, "J. Ferriday · CM The hero of this moment"));
     expect(session.playback.get().povPlayer).toBe("H8");
     expect(intro.get().open).toBe(true);
-    click(button(container, "Start watching"));
+    click(button(container, "Start"));
     expect(intro.get().open).toBe(false);
     expect(sockets.sockets).toHaveLength(1);
     const ws = sockets.sockets[0];
@@ -359,5 +387,24 @@ describe("the pre-match autoplay gate", () => {
     // The show comes first (the look, then the run without it), then the breakdown.
     expect(session.comparison.status.get().phase).toBe("with");
     expect(session.playback.get().povPlayer).toBe("H8");
+  });
+
+  it("lets a tour started from the card keep its first step: no autoplay over it", () => {
+    const { session, sockets } = onlineHero();
+    const live = vi.spyOn(session.controls, "startLive");
+    intro.set({ open: true });
+    const { container } = mount(
+      <SessionContext.Provider value={session}>
+        <App autoplay />
+      </SessionContext.Provider>,
+    );
+    click(button(container, "Teams and more"));
+    click(button(container, "Take the 90-second tour"));
+    expect(intro.get().open).toBe(false);
+    expect(tour.get().open).toBe(true);
+    expect(live).not.toHaveBeenCalled();
+    expect(sockets.sockets).toHaveLength(0);
+    expect(session.playback.get().live).toBe(false);
+    act(() => closeTour());
   });
 });

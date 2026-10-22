@@ -38,20 +38,28 @@ describe("SourceChip", () => {
     }
   });
 
-  it("marks everything but a verified claim as not one", () => {
+  it("says what each number is first, and tells a number computed in code from the AI's", () => {
     for (const [kind, { title }] of Object.entries(SOURCES)) {
+      // Never framed as a lack ("not a verified claim" read as "not to be trusted").
+      expect(title, kind).not.toMatch(/not a verified claim/);
       if (kind === "verified") expect(title).toMatch(/Verifier checked it/);
-      else expect(title).toMatch(/not a verified claim|not checked by the Verifier/);
+      else if (kind === "sample") expect(title).toMatch(/not checked by the Verifier/);
+      else {
+        expect(title, kind).toMatch(/^(Computed|Measured|Estimated)/);
+        expect(title, kind).toContain("not AI narration. The Verifier checks what the AI crew");
+      }
     }
+    expect(SOURCES.sim.title).toMatch(/^Computed directly by the simulation/);
   });
 
   it("takes a closer title, and reads it to a screen reader when asked", () => {
-    const el = chip({ kind: "sim", title: "Live readouts from the sim, not a verified claim" });
-    expect(el.getAttribute("title")).toBe("Live readouts from the sim, not a verified claim");
+    const el = chip({ kind: "sim", title: "Live readouts from the sim" });
+    expect(el.getAttribute("title")).toBe("Live readouts from the sim");
     expect(el.querySelector(".sr-only")).toBeNull();
     const spoken = chip({ kind: "sim", spoken: true });
+    const words = SOURCES.sim.title;
     expect(spoken.querySelector(".sr-only")?.textContent).toBe(
-      " (read from the sim export, not a verified claim)",
+      ` (${words.charAt(0).toLowerCase()}${words.slice(1)})`,
     );
   });
 });

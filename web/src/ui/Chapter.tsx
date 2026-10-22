@@ -1,6 +1,7 @@
 // One chapter of the moment's story (the Floodlit design's story page): a numbered mono kicker, a
-// serif title whose last words are italic, a lede, then the chapter's own figure. No boxes: the
-// chapters are set like a magazine, separated by space and a hairline.
+// serif title whose last words are italic, a lede in plain words, the mechanism behind "How it
+// works" for whoever wants it, then the chapter's own figure. No boxes: the chapters are set like a
+// magazine, separated by space and a hairline.
 
 import type { ReactNode } from "react";
 
@@ -9,6 +10,7 @@ export function Chapter(props: {
   kicker: string; // what the chapter is, in a few words; CSS numbers it
   title: ReactNode;
   lede?: ReactNode;
+  how?: ReactNode; // the mechanism and its terms, folded under the lede ("How it works")
   aside?: ReactNode; // controls and badges under the lede
   split?: boolean; // the head as a sticky column on the left, the body on the right
   label?: string; // the section's accessible name; defaults to the kicker
@@ -24,15 +26,26 @@ export function Chapter(props: {
           <p className="kicker">{props.kicker}</p>
           <h2>{props.title}</h2>
         </div>
-        {(props.lede || props.aside) && (
+        {(props.lede || props.how || props.aside) && (
           <div className="chapter-lede">
             {props.lede && <p className="lede">{props.lede}</p>}
+            {props.how && <HowItWorks>{props.how}</HowItWorks>}
             {props.aside}
           </div>
         )}
       </header>
       <div className="chapter-body">{props.children}</div>
     </section>
+  );
+}
+
+/** The terms and the mechanism, on demand: plain words first, jargon one tap away. */
+export function HowItWorks({ children }: { children: ReactNode }) {
+  return (
+    <details className="how">
+      <summary>How it works</summary>
+      <div className="how-body">{children}</div>
+    </details>
   );
 }
 
