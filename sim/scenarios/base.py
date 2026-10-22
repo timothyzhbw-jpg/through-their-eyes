@@ -81,6 +81,9 @@ class Scenario:
     # With `team_shape`: (home formation, away formation) and each player's slot by id.
     formation: tuple[str, str] = ("4-3-3", "4-2-3-1")
     slots: dict[str, str] = {}
+    # The restart the scenario opens with, if it plays one (SPEC 3.1, 3.9): its first kick takes
+    # it, with the Laws' distances (`sim.referee.Referee.keep_back`) and offside exemptions.
+    restart: str | None = None
 
     def setup(self, gen: np.random.Generator) -> Setup:
         raise NotImplementedError

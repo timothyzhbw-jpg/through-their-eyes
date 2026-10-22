@@ -161,8 +161,14 @@ class PossessionPlay(Scenario):
         score = np.minimum(space, OPEN_ENOUGH) * (0.5 + jitter)
         keeper = np.array([sim.players[j].role == "GK" for j in mates])
         out_of_range = (dist < PASS_RANGE[0]) | (dist > PASS_RANGE[1])
-        score[out_of_range | keeper | (mates == self.last_passer)] = -1.0
-        to = mates[int(np.argmax(score))] if score.max() > 0 else mates[int(np.argmin(dist))]
+        # Never to a team-mate in an offside position: the referee would give it away (SPEC 3.9).
+        offside = sim.referee.offside_now(sim, int(sim.team[i]), i)[mates]
+        score[out_of_range | keeper | (mates == self.last_passer) | offside] = -1.0
+        to = (
+            mates[int(np.argmax(score))]
+            if score.max() > 0
+            else mates[int(np.argmin(np.where(offside, np.inf, dist)))]
+        )
         if not self.team_shape:
             return ForcedPass(sim.ids[i], sim.ids[to])
         return ForcedPass(sim.ids[i], sim.ids[to], target=tuple(self.lead(sim, i, to)))

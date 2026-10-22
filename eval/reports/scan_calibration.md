@@ -7,15 +7,15 @@
 | Parameter | Fitted | sim/config.py | Target |
 |---|---|---|---|
 | `scan_omega` (°/s) | 404.2 ± 50.7 (as printed) | same | Kokubu et al. (2026), Results 3.1: 404.2 ± 50.7 |
-| `scan_dwell_s` (median s, log SD) | 0.016, 1.96 | 0.019, 1.86 | Aksum et al. (2021): 90.3% ≤ 0.66 s, SD 0.2842 s |
+| `scan_dwell_s` (median s, log SD) | 0.019, 1.86 | 0.019, 1.86 | Aksum et al. (2021): 90.3% ≤ 0.66 s, SD 0.2842 s |
 | `pressure_scan_factor` | 0.611 | 0.61 | Jordet et al. (2020): d = 0.57 (0–1 m vs 10+ m), SD 0.3, mean 0.44 scans/s |
-| `ROLES['CB'].scan_rate` | 0.847 | 0.74 | central defenders: 0.440 scans/s at receptions |
-| `ROLES['FB'].scan_rate` | 0.779 | 0.56 | side defenders: 0.377 scans/s at receptions |
-| `ROLES['DM'].scan_rate` | 1.419 | 1.19 | central midfielders: 0.485 scans/s at receptions |
-| `ROLES['CM'].scan_rate` | 1.419 | 1.19 | central midfielders: 0.485 scans/s at receptions |
-| `ROLES['AM'].scan_rate` | 1.419 | 1.19 | central midfielders: 0.485 scans/s at receptions |
-| `ROLES['W'].scan_rate` | 1.034 | 0.74 | wingers: 0.423 scans/s at receptions |
-| `ROLES['ST'].scan_rate` | 0.890 | 0.66 | forwards: 0.356 scans/s at receptions |
+| `ROLES['CB'].scan_rate` | 0.753 | 0.74 | central defenders: 0.413 scans/s at receptions |
+| `ROLES['FB'].scan_rate` | 0.558 | 0.56 | side defenders: 0.353 scans/s at receptions |
+| `ROLES['DM'].scan_rate` | 1.214 | 1.19 | central midfielders: 0.456 scans/s at receptions |
+| `ROLES['CM'].scan_rate` | 1.214 | 1.19 | central midfielders: 0.456 scans/s at receptions |
+| `ROLES['AM'].scan_rate` | 1.214 | 1.19 | central midfielders: 0.456 scans/s at receptions |
+| `ROLES['W'].scan_rate` | 0.746 | 0.74 | wingers: 0.397 scans/s at receptions |
+| `ROLES['ST'].scan_rate` | 0.667 | 0.66 | forwards: 0.332 scans/s at receptions |
 
 Pressure factor: 0.57 × 0.3 = 0.171 scans/s lower at 0–1 m than at 10+ m, 39% of the mean, so the rate at 1 m is 0.61 of the rate at 10 m. This assumes the 10+ m bin sits near the overall mean and the SD within a bin near the overall SD; the paper prints neither. It also assumes the bins differ only in pressure: in `possession_play` they differ by role as well (eval/reports/realism.md, the pressure row's ablation).
 
@@ -25,52 +25,52 @@ Share of midfielders' scans off the ball with the ball out of an 82° frame for 
 
 | Median (s) | Log SD | ≤ 0.66 s | SD (s) | Scans |
 |---|---|---|---|---|
-| 0.01 | 1.25 | 97.2% | 0.147 | 16048 |
-| 0.01 | 1.50 | 96.0% | 0.159 | 15982 |
-| 0.01 | 1.75 | 94.5% | 0.186 | 15897 |
-| 0.01 | 2.00 | 92.7% | 0.239 | 15766 |
-| 0.01 | 2.25 | 90.8% | 0.308 | 15587 |
-| 0.01 | 2.50 | 88.9% | 0.384 | 15375 |
-| 0.02 | 1.25 | 95.0% | 0.160 | 15898 |
-| 0.02 | 1.50 | 93.0% | 0.191 | 15788 |
-| 0.02 | 1.75 | 90.5% | 0.253 | 15633 |
-| 0.02 | 2.00 | 88.3% | 0.333 | 15407 |
-| 0.02 | 2.25 | 86.0% | 0.416 | 15162 |
-| 0.02 | 2.50 | 83.8% | 0.493 | 14872 |
-| 0.03 | 1.25 | 92.7% | 0.179 | 15758 |
-| 0.03 | 1.50 | 89.9% | 0.231 | 15584 |
-| 0.03 | 1.75 | 87.2% | 0.313 | 15382 |
-| 0.03 | 2.00 | 84.6% | 0.405 | 15102 |
-| 0.03 | 2.25 | 82.4% | 0.488 | 14798 |
-| 0.03 | 2.50 | 80.3% | 0.566 | 14503 |
-| 0.04 | 1.25 | 90.1% | 0.200 | 15605 |
-| 0.04 | 1.50 | 87.0% | 0.272 | 15433 |
-| 0.04 | 1.75 | 84.2% | 0.364 | 15164 |
-| 0.04 | 2.00 | 81.8% | 0.457 | 14825 |
-| 0.04 | 2.25 | 79.5% | 0.542 | 14522 |
-| 0.04 | 2.50 | 77.5% | 0.614 | 14220 |
+| 0.01 | 1.25 | 97.3% | 0.145 | 15790 |
+| 0.01 | 1.50 | 96.3% | 0.158 | 15712 |
+| 0.01 | 1.75 | 94.7% | 0.187 | 15605 |
+| 0.01 | 2.00 | 92.8% | 0.244 | 15463 |
+| 0.01 | 2.25 | 91.1% | 0.314 | 15304 |
+| 0.01 | 2.50 | 89.2% | 0.389 | 15089 |
+| 0.02 | 1.25 | 95.2% | 0.158 | 15592 |
+| 0.02 | 1.50 | 93.2% | 0.191 | 15481 |
+| 0.02 | 1.75 | 90.9% | 0.257 | 15322 |
+| 0.02 | 2.00 | 88.6% | 0.338 | 15114 |
+| 0.02 | 2.25 | 86.2% | 0.421 | 14842 |
+| 0.02 | 2.50 | 84.0% | 0.500 | 14578 |
+| 0.03 | 1.25 | 92.9% | 0.178 | 15425 |
+| 0.03 | 1.50 | 90.3% | 0.236 | 15270 |
+| 0.03 | 1.75 | 87.5% | 0.320 | 15078 |
+| 0.03 | 2.00 | 84.9% | 0.409 | 14789 |
+| 0.03 | 2.25 | 82.4% | 0.495 | 14521 |
+| 0.03 | 2.50 | 80.3% | 0.568 | 14201 |
+| 0.04 | 1.25 | 90.6% | 0.201 | 15290 |
+| 0.04 | 1.50 | 87.4% | 0.279 | 15103 |
+| 0.04 | 1.75 | 84.5% | 0.370 | 14834 |
+| 0.04 | 2.00 | 81.6% | 0.465 | 14514 |
+| 0.04 | 2.25 | 79.5% | 0.545 | 14204 |
+| 0.04 | 2.50 | 77.4% | 0.626 | 13889 |
 
 | Median (s) | Log SD at 90.3% | SD there (s) |
 |---|---|---|
-| 0.01 | 2.313 | 0.327 |
-| 0.02 | 1.776 | 0.261 |
-| 0.03 | 1.465 | 0.223 |
-| 0.04 | 1.235 | 0.200 |
-| **0.016** | **1.964** | **0.2842** |
+| 0.01 | 2.356 | 0.346 |
+| 0.02 | 1.818 | 0.279 |
+| 0.03 | 1.502 | 0.237 |
+| 0.04 | 1.270 | 0.208 |
+| **0.019** | **1.858** | **0.2842** |
 
 ## Role rates
 
-Group targets: central midfielders highest, the other groups below by the least-squares offsets in pooled-SD units (central midfielders -0.000, central defenders -0.241, wingers -0.327, side defenders -0.569, forwards -0.683), all scaled so receptions average 3 scans in the last 10 s. Each iteration simulates every tuning seed and moves each rate by (target / measured)^(2.5 / (k + 1)) at iteration k.
+Group targets: central midfielders highest, the other groups below by the least-squares offsets in pooled-SD units (central midfielders -0.000, central defenders -0.236, wingers -0.324, side defenders -0.562, forwards -0.676), all scaled so receptions average 3 scans in the last 10 s. Each iteration simulates every tuning seed and moves each rate by (target / measured)^(2.5 / (k + 1)) at iteration k.
 
 | Iteration | CM rate | Scans in window | Pooled SD | central midfielders (measured → target) | central defenders (measured → target) | wingers (measured → target) | side defenders (measured → target) | forwards (measured → target) |
 |---|---|---|---|---|---|---|---|---|
-| 0 | 1.190 | 2.68 | 0.194 | 0.447 → 0.489 | 0.408 → 0.442 | 0.342 → 0.425 | 0.311 → 0.378 | 0.328 → 0.356 |
-| 1 | 1.487 | 3.13 | 0.190 | 0.496 → 0.485 | 0.452 → 0.439 | 0.452 → 0.423 | 0.424 → 0.377 | 0.341 → 0.355 |
-| 2 | 1.447 | 3.04 | 0.189 | 0.489 → 0.484 | 0.447 → 0.438 | 0.450 → 0.422 | 0.381 → 0.376 | 0.349 → 0.355 |
-| 3 | 1.434 | 3.03 | 0.189 | 0.488 → 0.485 | 0.444 → 0.439 | 0.453 → 0.423 | 0.378 → 0.377 | 0.347 → 0.356 |
-| 4 | 1.428 | 3.02 | 0.188 | 0.489 → 0.485 | 0.442 → 0.440 | 0.440 → 0.423 | 0.379 → 0.378 | 0.354 → 0.356 |
-| 5 | 1.422 | 3.01 | 0.189 | 0.486 → 0.485 | 0.442 → 0.439 | 0.430 → 0.423 | 0.378 → 0.377 | 0.352 → 0.356 |
-| 6 | 1.421 | 3.01 | 0.189 | 0.486 → 0.485 | 0.443 → 0.440 | 0.428 → 0.423 | 0.377 → 0.377 | 0.352 → 0.356 |
-| 7 | 1.420 | 3.01 | 0.190 | 0.487 → 0.485 | 0.443 → 0.440 | 0.428 → 0.423 | 0.377 → 0.377 | 0.359 → 0.356 |
+| 0 | 1.190 | 2.97 | 0.184 | 0.450 → 0.456 | 0.410 → 0.412 | 0.392 → 0.396 | 0.352 → 0.352 | 0.329 → 0.332 |
+| 1 | 1.227 | 3.02 | 0.186 | 0.459 → 0.457 | 0.412 → 0.413 | 0.407 → 0.396 | 0.355 → 0.352 | 0.337 → 0.331 |
+| 2 | 1.218 | 3.00 | 0.184 | 0.457 → 0.456 | 0.413 → 0.413 | 0.392 → 0.397 | 0.352 → 0.353 | 0.329 → 0.332 |
+| 3 | 1.216 | 3.00 | 0.184 | 0.457 → 0.456 | 0.413 → 0.413 | 0.392 → 0.396 | 0.352 → 0.353 | 0.331 → 0.332 |
+| 4 | 1.216 | 3.00 | 0.184 | 0.457 → 0.456 | 0.413 → 0.413 | 0.392 → 0.396 | 0.352 → 0.353 | 0.331 → 0.332 |
+| 5 | 1.215 | 3.00 | 0.184 | 0.457 → 0.456 | 0.412 → 0.413 | 0.404 → 0.397 | 0.352 → 0.353 | 0.331 → 0.332 |
+| 6 | 1.215 | 3.00 | 0.184 | 0.457 → 0.456 | 0.413 → 0.413 | 0.392 → 0.396 | 0.352 → 0.353 | 0.331 → 0.332 |
+| 7 | 1.215 | 3.00 | 0.184 | 0.457 → 0.456 | 0.413 → 0.413 | 0.399 → 0.397 | 0.352 → 0.353 | 0.330 → 0.332 |
 
-Forwards receive rarely in `possession_play` (52 receptions here), so their measured mean is noisy.
+Forwards receive rarely in `possession_play` (76 receptions here), so their measured mean is noisy.

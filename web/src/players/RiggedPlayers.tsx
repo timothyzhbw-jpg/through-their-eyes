@@ -7,16 +7,21 @@
 // - the standing pass clip with its ball contact on each pass event, the body turned so the
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
+// - the extra clips (extra.ts; `?anims=base` turns them off): a mocap kick at every pass instead
+//   of the standing pass, and the trunk joining every scan's look over the shoulder (not under
+//   prefers-reduced-motion);
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
-import { useFrame, useLoader } from "@react-three/fiber";
-import { Component, type ReactNode, useEffect, useMemo } from "react";
+import { useFrame, useLoader, useThree } from "@react-three/fiber";
+import { Component, type ReactNode, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Sample, sampleInto } from "../data/hero";
 import type { ExportPlayer, RunName } from "../data/types";
 import { useView } from "../session";
+import { useStore } from "../store/store";
+import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
 import { trial } from "./trial";
 import { BOOTS, hairColour, kitTexture, skinTone } from "./kit";
 import {
@@ -53,27 +58,64 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
   return Object.values(byName);
 }
 
+/** prefers-reduced-motion, kept current; a change redraws the view. */
+function useReducedMotion() {
+  const invalidate = useThree((s) => s.invalidate);
+  const reduced = useRef(false);
+  useEffect(() => {
+    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!query) return;
+    const update = () => {
+      reduced.current = query.matches;
+      invalidate();
+    };
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, [invalidate]);
+  return reduced;
+}
+
 export function RiggedPlayers() {
+  const anims = useStore(trial, (s) => s.anims);
+  if (anims !== "extra") return <Rigged extra={null} />;
+  useLoader.preload(GLTFLoader, MODEL_URL); // fetched alongside the clips, not after them
+  return (
+    <ExtraFallback>
+      <WithExtra />
+    </ExtraFallback>
+  );
+}
+
+function WithExtra() {
+  const gltf = useLoader(GLTFLoader, EXTRA_URL);
+  const extra = useMemo(() => extraClips(gltf), [gltf]);
+  return <Rigged extra={extra} />;
+}
+
+function Rigged({ extra }: { extra: ExtraClips | null }) {
   const { hero, playback } = useView();
   const gltf = useLoader(GLTFLoader, MODEL_URL);
   const meta = gltf.scene.userData as ModelMeta;
-  const clips = useMemo(() => modelClips(meta), [meta]);
+  const reduced = useReducedMotion();
+  const clips = useMemo(() => modelClips(meta, extra), [meta, extra]);
   const motion = useMemo<Record<RunName, Motion>>(() => {
-    const factual = runMotion(hero, hero.runs.factual, clips.gait);
+    const check = clips.extra?.check ?? null;
+    const factual = runMotion(hero, hero.runs.factual, clips.gait, check);
     // A stitched match has one run under both names: its motion is computed once.
     const cf = hero.runs.counterfactual;
     return {
       factual,
-      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips.gait),
+      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips.gait, check),
     };
   }, [hero, clips]);
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {
-        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m);
+        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra);
         return { rig, materials: dress(rig, p, j) };
       }),
-    [gltf, hero, meta],
+    [gltf, hero, meta, clips],
   );
   useEffect(
     () => () => {
@@ -108,6 +150,7 @@ export function RiggedPlayers() {
         y,
         sample.body[j],
         sample.head[j],
+        !reduced.current,
       );
     }
   });
@@ -119,6 +162,21 @@ export function RiggedPlayers() {
       ))}
     </>
   );
+}
+
+/** If the extra clips cannot load, keep the rigged players on the engine's clips. */
+class ExtraFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("Extra animations failed to load; using the engine's clips.", error);
+    trial.set({ anims: "base" });
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /** If the model cannot load, switch the rigged players off: the tokens come back. */

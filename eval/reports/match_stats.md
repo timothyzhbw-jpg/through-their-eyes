@@ -6,19 +6,19 @@
 
 | Metric | Sim (pooled) | Sim, 90% over seeds | Target | Range checked | Source | Inside |
 |---|---|---|---|---|---|---|
-| Play per match (min) | 13.47 ± 0.00 (n = 20 matches) | 13.47 to 13.47 | 10–15 | 10.00 to 15.00 (design range of the spec) | SPEC §3.1 | ✅ inside |
+| Play per match (min) | 13.13 ± 0.37 (n = 20 matches) | 12.98 to 13.26 | 10–15 | 10.00 to 15.00 (design range of the spec) | SPEC §3.1 | ✅ inside |
 | Scenario possessions per match | 19.0 ± 0.0 (n = 20 matches) | 19.0 to 19.0 | 15–25 | 15.0 to 25.0 (design range of the spec) | SPEC §3.1 | ✅ inside |
-| Passes attempted per 90 min | 1,997 (298.9 ± 3.8 per match, n = 20 matches) | 1,988 to 2,007 | no published reference | — | — | — |
-| Passes completed per 90 min | 1,496 (223.9 ± 5.3 per match, n = 20 matches) | 1,483 to 1,509 | no published reference | — | — | — |
-| Pass completion (%) | 77.1% (n = 5,806 resolved passes) | 76.3 to 78.0% | no published reference | — | — | — |
-| Possession changes per 90 min | 444 (66.4 ± 7.2 per match, n = 20 matches) | 425 to 461 | no published reference | — | — | — |
-| Possession changes by interception per 90 min | 444 (66.4 ± 7.2 per match, n = 20 matches) | 425 to 461 | no published reference | — | — | — |
+| Passes attempted per 90 min | 1,851 (270.0 ± 9.8 per match, n = 20 matches) | 1,836 to 1,866 | no published reference | — | — | — |
+| Passes completed per 90 min | 1,445 (210.8 ± 10.7 per match, n = 20 matches) | 1,423 to 1,466 | no published reference | — | — | — |
+| Pass completion (%) | 80.5% (n = 5,238 resolved passes) | 79.3 to 81.5% | no published reference | — | — | — |
+| Possession changes per 90 min | 351 (51.1 ± 8.2 per match, n = 20 matches) | 333 to 372 | no published reference | — | — | — |
+| Possession changes by interception per 90 min | 344 (50.1 ± 8.3 per match, n = 20 matches) | 325 to 366 | no published reference | — | — | — |
 | Possession changes by tackle per 90 min | 0 (0.0 ± 0.0 per match, n = 20 matches) | 0 to 0 | no published reference | — | — | — |
-| Possession changes out of play per 90 min | 0 (0.0 ± 0.0 per match, n = 20 matches) | 0 to 0 | no published reference | — | — | — |
-| Team possessions per 90 min | 570 (85.4 ± 7.2 per match, n = 20 matches) | 552 to 588 | no published reference | — | — | — |
-| Team possession length (s) | 9.5 ± 8.2 (n = 1,708 team possessions) | 9.2 to 9.8 | no published reference | — | — | — |
-| Passes per team possession | 3.50 ± 2.78 (n = 1,708 team possessions) | 3.40 to 3.61 | no published reference | — | — | — |
-| Home team's share of possession time (%) | 54.9% (n = 16,169 s of team possession) | 53.0 to 57.0% | no published reference | — | — | — |
+| Possession changes out of play per 90 min | 7 (1.1 ± 0.9 per match, n = 20 matches) | 5 to 9 | no published reference | — | — | — |
+| Team possessions per 90 min | 474 (69.1 ± 8.3 per match, n = 20 matches) | 456 to 496 | no published reference | — | — | — |
+| Team possession length (s) | 11.4 ± 10.5 (n = 1,382 team possessions) | 10.9 to 11.8 | no published reference | — | — | — |
+| Passes per team possession | 3.91 ± 3.43 (n = 1,382 team possessions) | 3.74 to 4.06 | no published reference | — | — | — |
+| Home team's share of possession time (%) | 56.5% (n = 15,751 s of team possession) | 54.2 to 58.9% | no published reference | — | — | — |
 | Shots per 90 min | 7 (1.0 ± 0.0 per match, n = 20 matches) | 7 to 7 | no published reference | — | — | — |
 | Shot outcomes (goals, saves, misses) | 20 goals of 20 shots | — | no published reference | — | — | — |
 
@@ -32,19 +32,19 @@
 
 ## Notes per row
 
-- **Play per match (min)** — Length of the stitched clock: possession k starts on the frame after possession k − 1 ended, with no stoppages. Mean scenario possession: possession_play 52.0 s (n = 300), blind_side_run 6.6 s (n = 20), press_escape 5.8 s (n = 20), far_post_finish 9.6 s (n = 20), corner_blind_side 5.9 s (n = 20); possession_play runs until the ball goes out or the plan's cap (30–70 s, sim/match.py DEFAULT_PLAN).
+- **Play per match (min)** — Length of the stitched clock: possession k starts on the frame after possession k − 1 ended, with no stoppages. Mean scenario possession: possession_play 50.7 s (n = 300), blind_side_run 6.5 s (n = 20), press_escape 5.8 s (n = 20), far_post_finish 9.6 s (n = 20), corner_blind_side 5.9 s (n = 20); possession_play runs until the ball goes out or the plan's cap (30–70 s, sim/match.py DEFAULT_PLAN).
 - **Scenario possessions per match** — The plan (sim/match.py DEFAULT_PLAN) has 19: possession_play, blind_side_run seed 3, possession_play, possession_play, possession_play, possession_play, possession_play, press_escape seed 0, possession_play, possession_play, possession_play, far_post_finish seed 11, possession_play, possession_play, corner_blind_side seed 0, possession_play, possession_play, possession_play, possession_play.
-- **Passes attempted per 90 min** — Pass events; shots are not passes. 40 of 5,979 were chosen by the decision model (SPEC 3.5), the rest scripted (Scenario.forced_pass): possession_play holds the ball 0.6–1.6 s and plays an open teammate 8–35 m away, so its script sets the pass rate.
+- **Passes attempted per 90 min** — Pass events; shots are not passes. 40 of 5,400 were chosen by the decision model (SPEC 3.5), the rest scripted (Scenario.forced_pass): possession_play holds the ball 0.6–1.6 s and plays an open teammate 8–35 m away, so its script sets the pass rate.
 - **Passes completed per 90 min** — Received by a teammate of the passer, the intended receiver or another.
-- **Pass completion (%)** — Completed over resolved passes (completed, intercepted or out of play). 173 passes were still rolling when their scenario possession was cut and are left out.
+- **Pass completion (%)** — Completed over resolved passes (completed, intercepted or out of play). 162 passes were still rolling when their scenario possession was cut and are left out.
 - **Possession changes per 90 min** — Interceptions, tackles and balls out of play. A cut between scenario possessions is an edit, not a change, and is not counted.
 - **Possession changes by interception per 90 min** — An opponent of the passer controls the ball in flight (engine `interception`). Every `possession_change` event is an interception or a tackle (checked).
 - **Possession changes by tackle per 90 min** — An opponent within the control radius of a carried ball wins it. Tackles are on in press_escape only (Scenario.tackles, SPEC 3.6).
-- **Possession changes out of play per 90 min** — The ball crosses a line (engine `out`); the last kicker's team loses it, as the laws give the throw-in, goal kick or corner to the other side. The stitch does not hand it over: in 0 of the 0 restarts after an out, the next scenario possession starts with the team that put the ball out.
+- **Possession changes out of play per 90 min** — The ball crosses a line (engine `out`); the last kicker's team loses it, as the laws give the throw-in, goal kick or corner to the other side. The stitch does not hand it over: in 8 of the 18 restarts after an out, the next scenario possession starts with the team that put the ball out.
 - **Team possessions per 90 min** — A team possession runs from the moment a team has the ball (the start of a scenario possession, or winning the ball) until it loses it or the scenario possession is cut; a free ball belongs to the team that last had it. A cut ends one even when the same team has the ball after it: the next scenario possession is a new passage of play.
-- **Team possession length (s)** — How they ended: interception 1328, tackle 0, out 0, cut 380. Those that end at a cut are cut short by the edit, so for them the length is a lower bound.
+- **Team possession length (s)** — How they ended: interception 1002, tackle 0, out 21, cut 359. Those that end at a cut are cut short by the edit, so for them the length is a lower bound.
 - **Passes per team possession** — Passes the team in possession played in it; a lower bound too where it ends at a cut.
-- **Home team's share of possession time (%)** — 360 of 380 scenario possessions start with the home team: possession_play gives the ball to H4, H5 or H6, and the hero scenarios are built around a home player. So the away team has the ball only after winning it, and at 156 of the 320 cuts the cut itself took the ball from the away team.
+- **Home team's share of possession time (%)** — 360 of 380 scenario possessions start with the home team: possession_play gives the ball to H4, H5 or H6, and the hero scenarios are built around a home player. So the away team has the ball only after winning it, and at 156 of the 302 cuts the cut itself took the ball from the away team.
 - **Shots per 90 min** — Shot events (engine `shot`, an option of the decision model). Only a scenario with the shot model on (`Scenario.shots`) shoots: in the default plan `far_post_finish` 11, a hero that keeps its seed, so its shot is the same in every match; possession_play never shoots.
 - **Shot outcomes (goals, saves, misses)** — Counted from `goal` events (sim/match.py scores them, never sets a score). Every shot here is a hero's with the same seed in every match, so its outcome repeats by construction: a property of the plan, not a measured scoring rate. SPEC 3.3's shot speed, roughly 80–130 km/h, is module A's and is not checked here.
 

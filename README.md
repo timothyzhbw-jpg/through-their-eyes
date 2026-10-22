@@ -197,7 +197,7 @@ the deployed service. Nothing has been run on real tracking data.
 
 | Claim | Number | Report |
 |---|---|---|
-| Without one look, the hero decides differently | 39/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
+| Without one look, the hero decides differently | 33/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
 | Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 40/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
@@ -360,6 +360,13 @@ Built with Claude Code.
 [infra/deploy.sh](infra/deploy.sh) creates the hosting resources (`provision`), rolls out the API
 (`api`), uploads the web app (`web`) and sets the deploy workflow's variables (`github`). It only
 accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subscription.
+
+## Credits
+- Rigged players: converted from Gameplay Football by Bastiaan Konings Schuiling, as shipped in
+  Google Research Football (Unlicense); see [web/public/models/README.md](web/public/models/README.md).
+- The players' kick and shoulder checks are motion capture, retargeted onto that skeleton. The
+  data used in this project was obtained from mocap.cs.cmu.edu. The database was created with
+  funding from NSF EIA-0196217.
 
 ## License
 MIT — see [LICENSE](LICENSE).

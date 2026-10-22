@@ -593,6 +593,17 @@ describe("keyboard and motion", () => {
     expect(scroll).toHaveBeenCalled();
     for (const [arg] of scroll.mock.calls) expect(arg).toMatchObject({ behavior: "auto" });
   });
+
+  it("jumps to a target more than a screen and a half away instead of scrolling through the page", async () => {
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: 3 * window.innerHeight, width: 300, height: 100 }),
+    );
+    mount(offline());
+    await start("evidence");
+    const scroll = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
+    expect(scroll).toHaveBeenCalled();
+    for (const [arg] of scroll.mock.calls) expect(arg).toMatchObject({ behavior: "instant" });
+  });
 });
 
 describe("starting it", () => {

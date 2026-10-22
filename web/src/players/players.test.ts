@@ -129,7 +129,7 @@ describe("pass clip", () => {
     const passes = passEvents(hero.runs.factual.events, hero.ids);
     const h8 = passes[hero.ids.indexOf("H8")];
     expect(h8.map((p) => p.frame)).toEqual([75]);
-    expect(h8[0].yaw / DEG).toBeCloseTo(-4.5, 0); // forward to H9
+    expect(h8[0].yaw / DEG).toBeCloseTo(-1.7, 0); // forward to H9
     expect(passes[hero.ids.indexOf("H4")].map((p) => p.frame)).toEqual([15]);
   });
   it("turns the body so the kick goes along the pass while the clip plays, else body_yaw", () => {

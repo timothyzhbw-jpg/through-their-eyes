@@ -131,6 +131,28 @@ conservatively), and no logos anywhere.
 - Amazon Prime Vision live alerts for NFL —
   https://www.aboutamazon.com/news/entertainment/thursday-night-football-amazon-prime-video-ai-features
 
+## The Laws of the Game (SPEC 3.9)
+- The International Football Association Board (IFAB), *Laws of the Game 2026/27*,
+  https://www.theifab.com/laws/latest/ (the edition the site serves as "latest"; changes listed at
+  https://www.theifab.com/law-changes/latest/). **Read law by law on 2026-10-22:** Laws 1, 2, 3,
+  8, 9, 10, 11, 12, 13, 15, 16 and 17, the laws the sim can express.
+- How we use it: `sim/laws.py` restates each rule in our own words and cites it by law and
+  section ("Law 11.2"); `sim/referee.py` enforces it in the frame loop; `eval/laws.py` audits every
+  run against it. No text, diagram or figure of the Laws is in the repo. The Laws are © IFAB.
+- Section map we cite (2026/27): 1.2 markings, 1.3–1.4 dimensions, 1.5 goal area, 1.6 penalty
+  area, mark and arc, 1.7 corner area, 1.10 goals; 2.1 the ball's size and weight; 3.1 number of
+  players; 8.1 kick-off; 9.1–9.2 out of and in play; 10.1 goal; 11.1 offside position, 11.2
+  offence, 11.3 no offence, 11.4 sanctions and players off the field; 12.1 direct free kick
+  (tackles, handling), 12.2 indirect free kick (the keeper's back-pass and throw-in offences),
+  12.3 corner kick (the keeper holding the ball over eight seconds);
+  13.2 free-kick procedure, 13.3 sanctions; 15.1, 16.1 and 17.1 the throw-in, goal kick and
+  corner procedures.
+- Not expressed, and why: offside's "clearly attempting to play a close ball" and "an obvious
+  action" need a judgement the sim has no data for; the free-kick wall (13.2) needs a free kick the
+  sim never plays; the dropped ball (8.2), the eight-second keeper rule (12.3) and the
+  crossbar need situations the sim never creates (no match officials, keepers hold the ball for
+  under a second, every ball is on the ground).
+
 ## Papers and how we use them
 
 ### Perception and scanning
@@ -498,6 +520,9 @@ current number, and lists the full citations. The sources added there, by area:
 | unravelsports | MPL | optional, unmodified only; Python 3.11 only |
 | Python-RVO2 | Apache-2.0 | optional collision avoidance; only tested on old Python versions |
 | google-research/football | Apache-2.0; `third_party/gfootball_engine` (Gameplay Football, Bastiaan Konings Schuiling) is under the Unlicense, with no separate notice on its assets (checked 2026-10-19) | engine not used (C++ build risk). *Stretch trial (SPEC §7):* player models, skeleton, kit template and animations from `gfootball_engine/data/media`; not the ad-board or stadium textures; credit the original author anyway |
+| CMU Graphics Lab Motion Capture Database ([mocap.cs.cmu.edu](https://mocap.cs.cmu.edu/)) | free for all uses; may be included in commercially sold products; not resold directly, even converted; acknowledgement requested (checked 2026-10-21 on the official site) | **use**, animation only: trials 10_02 (a kick) and 139_04 (looking around), retargeted into `web/public/models/anims_extra.glb` (SPEC §7). Official site only: not the third-party mirrors (4TU, CC BY-NC; Kaggle, CC BY-ND). Lab motion capture, not match data |
+| Quaternius Universal Animation Library 1, free "Standard" pack | CC0 1.0 (`License.txt` in the zip, and the itch.io page; checked 2026-10-21) | evaluated 2026-10-21 (walk, jog, sprint retargeted onto the rigged player), **not used**: the jog crouches deep every step, the sprint is no better than the engine's |
+| 100STYLE, Mixamo | licence unconfirmed / Adobe terms | **not used** |
 | PitchAura | GPL-3.0 | **do not use** (copyleft) — ideas only |
 | LaurieOnTracking | no license found | **do not copy** — reimplement from papers |
 | SoccerMaster | weights Apache-2.0; code repo has no LICENSE file; bundles YOLOv8 (AGPL) | **not in submission** |

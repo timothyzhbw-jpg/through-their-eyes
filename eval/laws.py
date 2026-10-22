@@ -534,8 +534,9 @@ def render(audits: list[RunAudit], stitches: list[Stitch]) -> str:
         "",
         "`uv run python -m eval.laws`. Every scenario on design seeds 0–99 and held-out seeds "
         "100–139 and 200–239, each hero scenario's own intervention on the same seeds, and the "
-        f"stitched matches {', '.join(map(str, MATCH_SEEDS))}, judged with `sim/laws.py` "
-        "(IFAB Laws of the Game, cited by law; the rules are restated in our own words there). "
+        f"stitched matches {', '.join(map(str, MATCH_SEEDS))} (each on its own plan, "
+        "`sim.match.plan_for`), judged with `sim/laws.py`: the IFAB *Laws of the Game 2026/27* "
+        "(theifab.com), each rule cited by law and section and restated in our own words there. "
         f"`possession_play` and `open_play` run {LONG_S:.0f} s. Runs: "
         + ", ".join(f"{runs[g]} {g}" for g in groups)
         + f" ({_fmt(len(audits))} in all).",

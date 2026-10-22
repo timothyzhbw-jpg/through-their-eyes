@@ -267,7 +267,7 @@ src/
   skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
   alerts/     blind-side alerts from the export, for the board, first person and the HUD
   options/    pass options at the decision: believed and true targets, chance and value
-  players/    the rigged Gameplay Football players: rig, gait, look, kits
+  players/    the rigged Gameplay Football players: rig, gait, look, kits, the mocap extras
   whatif/     "What if…?": the bundled what-ifs, and free questions to POST /api/whatif
   yourcall/   "Your call": decide with what he knew, then the reveal (a pure reducer, its scene)
   cine/       filming mode for the demo video (`?cine=1`, never linked): a full-screen 3D view a
@@ -299,15 +299,17 @@ src/
   is kept — what the player saw stays on screen. Playback also slows while the head turns faster
   than 120°/s on screen; during a plan the plan clock slows with it, so captions stay in sync.
   Plan POV clips always use comfort mode.
-- **Motion blur in first person** (the Floodlit design). When the head whips round the picture
-  smears sideways, as a camera's would, and it is sharp the instant the head stops: a horizontal
-  Gaussian whose sigma is 0.3 × the angle the head sweeps while a 25 Hz, 180° shutter is open,
-  in pixels at the image centre (sigma = 0.3 · |ω| · 1/50 s · px per degree), capped at 3% of the
-  width, from the measured head yaw rate in match time (`views/motionBlur.ts`). The scene is drawn
+- **Motion blur in first person** (the Floodlit design), **off by default**: blur is
+  uncomfortable to watch (Bowen, 2026-10-21), so it is opt-in under View options → "Motion blur".
+  Turned on, when the head whips round the picture smears sideways, as a camera's would, and it is
+  sharp the instant the head stops: a horizontal Gaussian whose sigma is 0.3 × the angle the head
+  sweeps while a 25 Hz, 90° shutter is open, in pixels at the image centre (sigma = 0.3 · |ω| ·
+  1/100 s · px per degree), capped at 0.3% of the width (about 6 px at 1920: a trace, not a
+  streak), from the measured head yaw rate in match time (`views/motionBlur.ts`). The scene is drawn
   into a half-float target that three.js treats like the canvas, so the blur converges on the
   sharp frame; one pass of 17 taps up to 3 px, two passes beyond (`views/PovMotionBlur.tsx`).
-  Under half a pixel, on the broadcast camera and under `prefers-reduced-motion` the scene is
-  drawn straight to the canvas. The canvas carries the current sigma in `data-blur-sigma`.
+  With it off, under half a pixel, on the broadcast camera and under `prefers-reduced-motion`
+  the scene is drawn straight to the canvas. The canvas carries the current sigma in `data-blur-sigma`.
 - **Broadcast camera** (SPEC 7: high side angle, follows the ball, smoothed). The **Broadcast**
   button of the camera switch, or a plan's `camera` step with mode `broadcast`, films the same
   scene from a fixed camera 21 m up, 26 m behind the near touchline at the halfway line, which
@@ -412,7 +414,12 @@ src/
   animated footballer converted from Gameplay Football (`src/players/`,
   `public/models/README.md`, SPEC 7): gait blended by sim speed with the playback rate
   matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
-  turned so the head points along `head_yaw`, kits in the fictional clubs' colours.
+  turned so the head points along `head_yaw`, kits in the fictional clubs' colours. On top, by
+  default, retargeted motion capture (`src/players/extra.ts`, `public/models/anims_extra.glb`):
+  a real kick at every pass, its ball contact on the pass event and the planted foot still, and
+  the trunk joining every scan's look over the shoulder, timed to the head's turn out, hold and
+  back. The head stays exactly on `head_yaw`. `?anims=base` shows the engine's clips only;
+  reduced motion leaves the shoulder checks out.
 - **Perception telemetry** (SPEC 4.7, 7). Under the timeline, curves for the player in the
   first-person view ("Whose eyes"), with a cursor on the playhead: head angle to the ball with
   his scans from the sim (the key scan highlighted; without the look, a dashed box where it

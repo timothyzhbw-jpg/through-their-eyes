@@ -69,8 +69,10 @@ import {
 export type Toggle =
   | "cone"
   | "beliefGhosts"
+  | "ghostsAll"
   | "cfGhost"
   | "comfort"
+  | "motionBlur"
   | "options"
   | "blindSide"
   | "pitchControl"

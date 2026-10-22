@@ -69,11 +69,11 @@ describe("the committed rigged player, posed on seed 3", () => {
   });
 
   it("H8's key scan: the head turns over the shoulder, the hips stay on body_yaw", () => {
-    // Frame 58: the head is at −127°, before the turn into the pass (from ~0.3 s before the clip)
+    // Frame 58: the head is at −124°, before the turn into the pass (from ~0.3 s before the clip)
     // starts opening the hips; the scan's hold, frames 59–62, overlaps that turn since the sim's
     // head speed was calibrated (#20).
     const { rig, body, head, split } = pose("H8", 58);
-    expect(wrapAngle(head - body) / DEG).toBeCloseTo(-127, 0);
+    expect(wrapAngle(head - body) / DEG).toBeCloseTo(-124, 0);
     expect(Math.abs(split.hips)).toBe(0);
     expect(Math.abs(wrapAngle(yawOf(rig.holder) - body))).toBeLessThan(1e-6);
   });

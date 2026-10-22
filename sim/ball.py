@@ -7,7 +7,8 @@ This has a closed form. With phi0 = atan(v0 sqrt(b/a)) and k = sqrt(a b):
     x(t) = ln(cos(phi0 - k t) / cos(phi0)) / b
     v(x)^2 = (v0^2 + a/b) exp(-2 b x) - a/b
 Frame stepping uses the same closed form, so energy only decreases and predictions match the sim
-exactly. Lofted passes, bounce and Magnus are later work.
+exactly. A ball that meets a post bounces off it (`post_contact`, `bounce`; SPEC 3.9). Lofted
+passes, bounce on the ground and Magnus are later work.
 """
 
 from __future__ import annotations
@@ -87,3 +88,40 @@ def path_distances(v0: float, times: np.ndarray, p: BallParams = BallParams()) -
     phi0 = math.atan(v0 * math.sqrt(b / a))
     phi = np.maximum(phi0 - k * np.asarray(times, dtype=float), 0.0)
     return np.log(np.cos(phi) / math.cos(phi0)) / b
+
+
+# --- the woodwork (SPEC 3.3, 3.9) --------------------------------------------------------------
+
+POST_RESTITUTION = 0.5  # tunable: the ground bounce's 0.5 (SPEC 3.3); no cited value for a post
+
+
+def post_contact(
+    start: np.ndarray, end: np.ndarray, radius: float, posts: np.ndarray, post_radius: float
+) -> tuple[float, np.ndarray] | None:
+    """The first post the ball meets moving straight from `start` to `end` (its centre, 2D):
+    (fraction of the way, the post's centre), or None. Posts are vertical cylinders, so a ground
+    ball meets one when its centre comes within radius + post_radius of the post's."""
+    d = np.asarray(end, dtype=float) - np.asarray(start, dtype=float)
+    a = float(d @ d)
+    if a < 1e-12:
+        return None
+    reach2 = (radius + post_radius) ** 2
+    best: tuple[float, np.ndarray] | None = None
+    for c in np.asarray(posts, dtype=float):
+        f = np.asarray(start, dtype=float) - c
+        b, cc = 2.0 * float(f @ d), float(f @ f) - reach2
+        disc = b * b - 4.0 * a * cc
+        if cc <= 0.0 or disc < 0.0:  # already touching (moving off it), or never meets it
+            continue
+        t = (-b - math.sqrt(disc)) / (2.0 * a)
+        if 0.0 <= t <= 1.0 and (best is None or t < best[0]):
+            best = (t, c)
+    return best
+
+
+def bounce(velocity: np.ndarray, normal: np.ndarray, restitution: float = POST_RESTITUTION):
+    """Velocity after striking a surface with outward `normal`: the normal part reversed and
+    scaled by the restitution, the tangential part kept (no spin, SPEC 3.3)."""
+    v = np.asarray(velocity, dtype=float)
+    along = float(v @ normal)
+    return v if along >= 0.0 else v - (1.0 + restitution) * along * normal

@@ -56,6 +56,7 @@ SHOT_WORDS = {
     "goal": ("It goes in.", "球进了。"),
     "wide": ("It goes wide.", "射偏了。"),
     "blocked": ("It is blocked.", "射门被挡出。"),
+    "post": ("It comes back off the post.", "球击中门柱弹回。"),
 }
 
 

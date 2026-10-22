@@ -9,9 +9,9 @@ import pytest
 
 from analytics.vision import visibility
 from eval import hero_shot
-from sim import shots
+from sim import laws, shots
 from sim.config import HALF_LENGTH
-from sim.counterfactual import drop_scan_counterfactual
+from sim.counterfactual import SHOT_OUTCOMES, drop_scan_counterfactual
 from sim.decision import DecisionContext, _placed_shot, evaluate_options
 from sim.engine import Simulation
 from sim.export import export_hero
@@ -117,7 +117,7 @@ def test_c1_shot_speed_and_resolution_events_agree_with_the_outcome(design_pairs
         assert shot_events, (seed, run.hero_decision())
         for shot in shot_events:
             assert 18.0 <= shot.attrs["speed"] <= 35.0
-            assert shot.attrs["outcome"] in {"goal", "saved", "wide", "blocked"}
+            assert shot.attrs["outcome"] in SHOT_OUTCOMES
             end = shot.attrs["end"]
             assert end is not None and end > shot.frame
             goals = [
@@ -128,17 +128,16 @@ def test_c1_shot_speed_and_resolution_events_agree_with_the_outcome(design_pairs
             saves = [e for e in run.events if e.type == "save" and e.attrs.get("shot") == shot.id]
             assert bool(goals) == (shot.attrs["outcome"] == "goal"), (seed, shot)
             assert bool(saves) == (shot.attrs["outcome"] == "saved"), (seed, shot)
-            if goals:
+            if goals:  # the whole ball over the line between the posts (Law 10.1, SPEC 3.9)
                 assert len(goals) == 1
                 goal = goals[0]
-                sign = 1 if shot.team == 0 else -1
-                before = run.ball_pos[goal.frame - 1, :2]
-                after = run.ball_pos[goal.frame, :2]
-                assert sign * before[0] <= HALF_LENGTH < sign * after[0]
-                fraction = (sign * HALF_LENGTH - before[0]) / (after[0] - before[0])
-                crossing_y = before[1] + fraction * (after[1] - before[1])
-                assert abs(crossing_y) < shots.GOAL_HALF_WIDTH
-                assert crossing_y == pytest.approx(shot.attrs["goal_line_y"], abs=1e-9)
+                crossing = laws.goal_line_crossing(
+                    run.ball_pos[goal.frame - 1], run.ball_pos[goal.frame]
+                )
+                assert crossing is not None and crossing.verdict == "goal"
+                if not any(e.type == "post" and shot.frame < e.frame <= end for e in run.events):
+                    # Straight from the boot: where it passes the posts is where it was aimed.
+                    assert crossing.y_posts == pytest.approx(shot.attrs["goal_line_y"], abs=0.05)
 
 
 @pytest.mark.parametrize("seed", DESIGN_SEEDS)
@@ -148,6 +147,9 @@ def test_keeper_never_takes_shots_by_the_free_ball_control_radius(design_pairs, 
         for shot in (e for e in run.events if e.type == "shot"):
             keeper = shot.attrs["keeper"]
             start, end = shot.frame, shot.attrs["end"]
+            # Back off the woodwork, the ball is free again: the keeper may take it then.
+            post = next((e.frame for e in run.events if e.type == "post" and start < e.frame), None)
+            end = end if post is None else min(end, post)
             assert not any(
                 e.player == keeper
                 and e.type in ("reception", "interception")
@@ -265,7 +267,7 @@ def test_control_radius_does_not_bypass_the_keeper_save_model():
 
 @pytest.mark.parametrize(
     ("start_y", "crossing_y", "outcome"),
-    [(0.0, 3.65, "goal"), (6.0, 3.7, "wide")],
+    [(0.0, 3.5, "goal"), (9.0, 3.92, "wide")],  # all of the ball inside / outside the posts
 )
 def test_goal_uses_the_line_crossing_instead_of_the_overshot_frame_position(
     monkeypatch, start_y, crossing_y, outcome
@@ -295,7 +297,7 @@ def test_goal_uses_the_line_crossing_instead_of_the_overshot_frame_position(
     sim.ball_pos[:2] = (x_after, y_after)
     sim.frame += 1
     assert (abs(y_after) < shots.GOAL_HALF_WIDTH) != (outcome == "goal")
-    assert sim._check_out()
+    assert sim._check_out(np.array([*start, sim.ball_params.radius]))
     assert shot.attrs["outcome"] == outcome
     assert any(e.type == "goal" for e in sim.events) == (outcome == "goal")
 
@@ -363,9 +365,10 @@ def test_a_goal_has_one_terminal_event_and_a_kickoff_after_its_tail():
     )
     sim._kick_shot(0, _placed_shot(ctx, sim.ball_pos[:2], "near"), sim.frame)
     assert abs(sim.shot_in_flight["event"].attrs["goal_line_y"]) < shots.GOAL_HALF_WIDTH
-    sim.ball_pos[:2] = (HALF_LENGTH + 0.1, 3.0)
+    before = sim.ball_pos.copy()
+    sim.ball_pos[:2] = (HALF_LENGTH + 0.2, 3.0)  # the whole ball over the line (Law 10.1)
     sim.frame += 1
-    assert sim._check_out()
+    assert sim._check_out(before)
     sim._record()
     run = sim.run()
     assert run.events[0].type == "shot"

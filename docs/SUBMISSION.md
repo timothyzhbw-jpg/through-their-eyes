@@ -89,7 +89,7 @@ The brief's pipeline, end to end, on a synthetic match:
   original plan's checks, reported in the same file, are not met. Live in the app, as the
   stitched match's third hero.
 
-The live heroes play inside a stitched match: 19 possessions on one clock, about 13½ minutes.
+The live heroes play inside a stitched match: 19 possessions on one clock, about 12½ minutes.
 The shot hero scores (1–0), and the set-piece hero's corner comes at 1–0.[^match]
 
 ## The multi-agent design
@@ -132,12 +132,12 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 
 | Claim | Result | Source |
 |---|---|---|
-| Without the key look, the scan hero decides differently | 39 of 40 held-out seeds | [^flip] |
+| Without the key look, the scan hero decides differently | 33 of 40 held-out seeds | [^flip] |
 | Lens selection picks the lens each hero is built for | scan hero 40/40; pressure hero 40/40 on fresh seeds | [^lens], [^press] |
 | Forced to keep the ball, the pressure hero loses it; the possession outcome changes | 40/40 lost; 32/40 changed | [^press] |
 | Set-piece hero: unmarked without the look, marked within 5 m with it | 37/40 (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
-| Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
-| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.910, recall 0.946 | [^blind] |
+| Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.993 | [^detector] |
+| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.923, recall 0.985 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
 | Simulator statistics against published values | 10 inside the published range, 6 outside, 10 with no published value | [^realism] |
@@ -242,8 +242,8 @@ Multi-Agent System (SPEC §0).
 ---
 
 [^realism]: [eval/reports/realism.md](../eval/reports/realism.md): scans in the 10 s before
-    receiving, sim 2.75 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
-    vs 404.2 ± 50.7 (Kokubu et al. 2026); "14 inside, 2 outside, 0 inconclusive, 10 with no
+    receiving, sim 2.95 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
+    vs 404.2 ± 50.7 (Kokubu et al. 2026); "10 inside, 6 outside, 0 inconclusive, 10 with no
     published reference".
 [^ablation]: [eval/reports/narration_ablation.md](../eval/reports/narration_ablation.md): free
     text, 120 lines drafted, 54 dropped as repeats, 66 first-draft lines left; 34 of them with an
@@ -255,7 +255,7 @@ Multi-Agent System (SPEC §0).
     analyst/en).
 [^spec31]: [docs/SPEC.md](SPEC.md) §3.1: 25 Hz frames, per-player body and head yaw.
 [^flip]: [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md):
-    seeds 100–139, decision changed without the key scan in 39/40.
+    seeds 100–139, decision changed without the key scan in 33/40.
 [^verify]: [tests/test_api.py](../tests/test_api.py)
     `test_a_wrong_number_is_refuted_and_its_line_would_not_air` and
     `test_the_verified_number_is_supported_and_its_line_airs`.
@@ -263,11 +263,11 @@ Multi-Agent System (SPEC §0).
     fresh seeds 200–239, pressure lens 40/40, ball lost after the forced carry 40/40, outcome
     changed 32/40.
 [^lens]: [eval/reports/hero_lens_blind_side_run.md](../eval/reports/hero_lens_blind_side_run.md):
-    seeds 100–139, scan lens selected 40/40.
+    seeds 100–139, scan lens selected 34/40.
 [^marking]: [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md):
     seeds 100–139, 37/40; median separation 3.3 m with the look, 8.5 m without.
 [^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
-    possessions and "808.4 s, 1-0" on a Mac (2026-10-22 CT, with the team shape). Where open play goes out
+    possessions and "751.7 s, 1-0" on a Mac (2026-10-21 CT, with players kept on the pitch). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).
@@ -276,10 +276,10 @@ Multi-Agent System (SPEC §0).
 [^latency]: [docs/SPEC.md](SPEC.md) §8, "Deployed 2026-10-20": the same request from the
     cache took 0.15 s; "Live on Container Apps": 12.9 s uncached on a warm replica, 25.9 s for
     the first request after a new revision.
-[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.991
+[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.993
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
-    0.910, recall 0.946, and the upper-bound note.
+    0.923, recall 0.985, and the upper-bound note.
 [^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): 90/90 false
     perturbations refuted; 468/468 generated claims supported.
 [^parity]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md) §1;

@@ -7,8 +7,8 @@
       "index": 0,
       "kind": "run",
       "step": null,
-      "started": "2026-10-21T19:41:01.555621+00:00",
-      "total_ms": 2293.6,
+      "started": "2026-10-22T04:23:17.590405+00:00",
+      "total_ms": 1347.8,
       "model": "ToolCallingFakeChatClient",
       "down": ["telestrator"],
       "pending": ["telestrator"],
@@ -18,8 +18,8 @@
       "index": 1,
       "kind": "bring_back",
       "step": "telestrator",
-      "started": "2026-10-21T19:41:03.855689+00:00",
-      "total_ms": 1890.7,
+      "started": "2026-10-22T04:23:18.945764+00:00",
+      "total_ms": 1101.7,
       "model": "ToolCallingFakeChatClient",
       "down": [],
       "pending": [],
@@ -32,8 +32,8 @@
       "run": 0,
       "step": "mcp",
       "round": null,
-      "start_ms": 3.9,
-      "end_ms": 2097.7,
+      "start_ms": 20.1,
+      "end_ms": 1189.4,
       "source": "code",
       "attempts": 1,
       "error": null,
@@ -74,8 +74,8 @@
       "run": 0,
       "step": "director",
       "round": null,
-      "start_ms": 2102.7,
-      "end_ms": 2113.6,
+      "start_ms": 1196.1,
+      "end_ms": 1206.3,
       "source": "llm",
       "attempts": 1,
       "error": null,
@@ -112,7 +112,7 @@
           "language": null,
           "source": "llm",
           "attempts": 1,
-          "ms": 10.3,
+          "ms": 9.7,
           "error": null
         }
       ],
@@ -127,8 +127,8 @@
       "run": 0,
       "step": "analyst",
       "round": null,
-      "start_ms": 2117.0,
-      "end_ms": 2134.2,
+      "start_ms": 1209.6,
+      "end_ms": 1222.2,
       "source": "llm",
       "attempts": 1,
       "error": null,
@@ -162,7 +162,7 @@
           "truncated": false
         }
       ],
-      "reads": ["evidence.card", "evidence.supported"],
+      "reads": ["evidence.card", "evidence.run", "evidence.supported"],
       "writes": ["findings"],
       "calls": [
         {
@@ -171,7 +171,7 @@
           "language": null,
           "source": "llm",
           "attempts": 1,
-          "ms": 15.4,
+          "ms": 10.3,
           "error": null
         }
       ],
@@ -179,14 +179,14 @@
         {
           "name": "get_moment",
           "arguments": {},
-          "result": "{\"version\":1,\"id\":\"m:decision_after_scan:H8:0075\",\"kind\":\"decision_after_scan\",\"tags\":[\"decision_after_scan\",\"line_breaking_pass\"],\"scenario\":\"blind_side_run\",\"seed\":3,\"live_only\":false,\"frame_start\":0,\"frame_end\":164,\"anchor_frame\":75,\"t_start\":0.0,\"t_end\":6.56,\"anchor_t\":3.0,\"actor\":\"H8\",\"receiver\":\"H9\",\"players\":[\"H8\",\"H9\",\"A10\",\"A2\",\"A3\",\"A4\",\"A5\",\"A6\",\"A7\",\"A8\"],\"anchors\":{\"action\":\"pass:H8:0075\",\"completion\":\"reception:H9:0139\",\"reception\":\"reception:H8:0070\",\"last_scan\":\"scan:H8:0050\"},\"events\":[\"scan:H8:0050\",\"reception:H8:0070\",\"pass:H8:0075\",\"reception:H9:0139\"],\"metrics\":{\"opponents_bypassed\":8,\"pass_distance_m\":42.05,\"pass_progression_m\":41.92,\"pass_speed_mps\":22.95,\"pass_xt_gain\":0.1285,\"scans_in_window\":1,\"scan_window_s\":10.0,\"time_since_last_scan_at_reception_s\":0.0,\"time_to_decision_s\":0.2,\"chosen\":\"pass:H9\",\"chosen_prob\":0.9994,\"options\":11,\"belief_error_receiver_m\":0.31,\"belief_age_receiver_s\":0.48},\"candidate_lenses\":[\"scan\",\"space\",\"pressure\"],\"lenses\":[{\"lens\":\"scan\",\"available\":true,\"delta_xt\":0.130868,\"unit\":\"xT\",\"metrics\":{\"scan_id\":\"scan:H8:0050\",\"belief_update_m\":11.945,\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"decision_changed\":true,\"factual_value_xt\":0.133203,\"counterfactual_value_xt\":0.002335,\"realized_delta_xt\":0.130314,\"p_factual_action_with_scan\":0.999418,\"p_factual_action_without_scan\":0.00285,\"target\":\"H9\",\"belief_error_target_with_scan_m\":0.31,\"belief_error_target_without_scan_m\":12.255},\"rows\":[{\"scan_id\":\"scan:H8:0050\",\"start_frame\":50,\"end_frame\":70,\"belief_update_m\":11.945}],\"evidence\":[\"scan:H8:0050\"],\"note\":\"V(factual choice) - V(choice re-simulated without this scan), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"space\",\"available\":true,\"delta_xt\":0.116141,\"unit\":\"xT\",\"metrics\":{\"chosen\":\"pass:H9\",\"chosen_value_xt\":0.133203,\"chosen_pitch_control\":0.9998,\"best_alternative\":\"pass:H11\",\"best_alternative_value_xt\":0.017062},\"rows\":[{\"action\":\"pass:H1\",\"target_x\":-40.8,\"target_y\":-0.63,\"pitch_control\":1.0,\"xt\":0.0021,\"value_xt\":0.002139},{\"action\":\"pass:H2\",\"target_x\":-4.41,\"target_y\":-27.61,\"pitch_control\":0.9996,\"xt\":0.0032,\"value_xt\":0.003218},{\"action\":\"pass:H3\",\"target_x\":-1.26,\"target_y\":26.07,\"pitch_control\":0.9974,\"xt\":0.0037,\"value_xt\":0.003677},{\"action\":\"pass:H4\",\"target_x\":-17.5,\"target_y\":-9.58,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002335},{\"action\":\"pass:H5\",\"target_x\":-17.37,\"target_y\":7.94,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002295},{\"action\":\"pass:H6\",\"target_x\":-6.64,\"target_y\":1.01,\"pitch_control\":0.884,\"xt\":0.0024,\"value_xt\":0.001622},{\"action\":\"pass:H10\",\"target_x\":5.82,\"target_y\":12.52,\"pitch_control\":0.8028,\"xt\":0.0049,\"value_xt\":0.003433},{\"action\":\"pass:H7\",\"target_x\":14.74,\"target_y\":-29.27,\"pitch_control\":0.9998,\"xt\":0.0059,\"value_xt\":0.00588},{\"action\":\"pass:H11\",\"target_x\":23.64,\"target_y\":24.42,\"pitch_control\":0.991,\"xt\":0.0172,\"value_xt\":0.017062},{\"action\":\"pass:H9\",\"target_x\":43.45,\"target_y\":-13.02,\"pitch_control\":0.9998,\"xt\":0.1332,\"value_xt\":0.133203},{\"action\":\"carry\",\"target_x\":6.87,\"target_y\":-9.72,\"pitch_control\":0.982,\"xt\":0.0058,\"value_xt\":0.005696}],\"evidence\":[],\"note\":\"V(chosen option) - V(best alternative), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"pressure\",\"available\":true,\"delta_xt\":0.0,\"unit\":\"xT\",\"metrics\":{\"pressure_before\":0.000865,\"stake_before_xt\":0.007244,\"cost_before_xt\":6e-6,\"main_presser\":\"A11\",\"pressure_after\":0.000047,\"stake_after_xt\":0.13364,\"cost_after_xt\":6e-6,\"after_frame\":139,\"escaped\":true,\"how\":\"pass completed\"},\"rows\":[],\"evidence\":[\"pass:H8:0075\"],\"note\":\"expected turnover cost (pressing intensity x stake) on the actor at the anchor minus after the action\"}],\"selected_lens\":\"scan\"}",
+          "result": "{\"version\":1,\"id\":\"m:decision_after_scan:H8:0075\",\"kind\":\"decision_after_scan\",\"tags\":[\"decision_after_scan\",\"line_breaking_pass\"],\"scenario\":\"blind_side_run\",\"seed\":3,\"live_only\":false,\"frame_start\":0,\"frame_end\":161,\"anchor_frame\":75,\"t_start\":0.0,\"t_end\":6.44,\"anchor_t\":3.0,\"actor\":\"H8\",\"receiver\":\"H9\",\"players\":[\"H8\",\"H9\",\"A10\",\"A2\",\"A3\",\"A4\",\"A5\",\"A6\",\"A7\",\"A8\"],\"anchors\":{\"action\":\"pass:H8:0075\",\"completion\":\"reception:H9:0136\",\"reception\":\"reception:H8:0070\",\"last_scan\":\"scan:H8:0050\"},\"events\":[\"scan:H8:0050\",\"reception:H8:0070\",\"pass:H8:0075\",\"reception:H9:0136\"],\"metrics\":{\"opponents_bypassed\":8,\"pass_distance_m\":38.91,\"pass_progression_m\":38.89,\"pass_speed_mps\":21.77,\"pass_xt_gain\":0.1675,\"scans_in_window\":1,\"scan_window_s\":10.0,\"time_since_last_scan_at_reception_s\":0.0,\"time_to_decision_s\":0.2,\"chosen\":\"pass:H9\",\"chosen_prob\":0.9895,\"options\":11,\"belief_error_receiver_m\":0.28,\"belief_age_receiver_s\":0.44},\"candidate_lenses\":[\"scan\",\"space\",\"pressure\"],\"lenses\":[{\"lens\":\"scan\",\"available\":true,\"delta_xt\":0.166733,\"unit\":\"xT\",\"metrics\":{\"scan_id\":\"scan:H8:0050\",\"belief_update_m\":12.012,\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"decision_changed\":true,\"factual_value_xt\":0.169068,\"counterfactual_value_xt\":0.002335,\"realized_delta_xt\":0.169252,\"p_factual_action_with_scan\":0.989511,\"p_factual_action_without_scan\":0.002232,\"target\":\"H9\",\"belief_error_target_with_scan_m\":0.276,\"belief_error_target_without_scan_m\":12.288},\"rows\":[{\"scan_id\":\"scan:H8:0050\",\"start_frame\":50,\"end_frame\":70,\"belief_update_m\":12.012}],\"evidence\":[\"scan:H8:0050\"],\"note\":\"V(factual choice) - V(choice re-simulated without this scan), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"space\",\"available\":true,\"delta_xt\":0.152006,\"unit\":\"xT\",\"metrics\":{\"chosen\":\"pass:H9\",\"chosen_value_xt\":0.169068,\"chosen_pitch_control\":0.9997,\"best_alternative\":\"pass:H11\",\"best_alternative_value_xt\":0.017062},\"rows\":[{\"action\":\"pass:H1\",\"target_x\":-40.8,\"target_y\":-0.63,\"pitch_control\":1.0,\"xt\":0.0021,\"value_xt\":0.002139},{\"action\":\"pass:H2\",\"target_x\":-4.41,\"target_y\":-27.61,\"pitch_control\":0.9996,\"xt\":0.0032,\"value_xt\":0.003218},{\"action\":\"pass:H3\",\"target_x\":-1.26,\"target_y\":26.07,\"pitch_control\":0.9974,\"xt\":0.0037,\"value_xt\":0.003677},{\"action\":\"pass:H4\",\"target_x\":-17.5,\"target_y\":-9.58,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002335},{\"action\":\"pass:H5\",\"target_x\":-17.37,\"target_y\":7.94,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002295},{\"action\":\"pass:H6\",\"target_x\":-6.64,\"target_y\":1.01,\"pitch_control\":0.884,\"xt\":0.0024,\"value_xt\":0.001622},{\"action\":\"pass:H10\",\"target_x\":5.82,\"target_y\":12.52,\"pitch_control\":0.8028,\"xt\":0.0049,\"value_xt\":0.003433},{\"action\":\"pass:H7\",\"target_x\":14.74,\"target_y\":-29.27,\"pitch_control\":0.9998,\"xt\":0.0059,\"value_xt\":0.00588},{\"action\":\"pass:H11\",\"target_x\":23.64,\"target_y\":24.42,\"pitch_control\":0.991,\"xt\":0.0172,\"value_xt\":0.017062},{\"action\":\"pass:H9\",\"target_x\":39.91,\"target_y\":-10.82,\"pitch_control\":0.9997,\"xt\":0.1691,\"value_xt\":0.169068},{\"action\":\"carry\",\"target_x\":6.87,\"target_y\":-9.72,\"pitch_control\":0.9798,\"xt\":0.0058,\"value_xt\":0.005678}],\"evidence\":[],\"note\":\"V(chosen option) - V(best alternative), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"pressure\",\"available\":true,\"delta_xt\":-0.000064,\"unit\":\"xT\",\"metrics\":{\"pressure_before\":0.00088,\"stake_before_xt\":0.007244,\"cost_before_xt\":6e-6,\"main_presser\":\"A11\",\"pressure_after\":0.000415,\"stake_after_xt\":0.169075,\"cost_after_xt\":0.00007,\"after_frame\":136,\"escaped\":true,\"how\":\"pass completed\"},\"rows\":[],\"evidence\":[\"pass:H8:0075\"],\"note\":\"expected turnover cost (pressing intensity x stake) on the actor at the anchor minus after the action\"}],\"selected_lens\":\"scan\"}",
           "error": null,
           "truncated": false
         },
         {
           "name": "run_counterfactual",
           "arguments": {},
-          "result": "{\"intervention\":\"drop_scan\",\"dropped_scan\":\"scan:H8:0050\",\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"delta_xt\":0.1303}",
+          "result": "{\"intervention\":\"drop_scan\",\"dropped_scan\":\"scan:H8:0050\",\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"delta_xt\":0.1693}",
           "error": null,
           "truncated": false
         }
@@ -201,8 +201,8 @@
       "run": 0,
       "step": "telestrator",
       "round": null,
-      "start_ms": 2137.8,
-      "end_ms": 2162.7,
+      "start_ms": 1226.4,
+      "end_ms": 1234.0,
       "source": "template",
       "attempts": 2,
       "error": "AgentDown: the telestrator is down",
@@ -314,7 +314,7 @@
           "language": null,
           "source": "template",
           "attempts": 2,
-          "ms": 23.7,
+          "ms": 6.3,
           "error": "AgentDown: the telestrator is down"
         }
       ],
@@ -329,8 +329,8 @@
       "run": 0,
       "step": "narration",
       "round": 0,
-      "start_ms": 2139.1,
-      "end_ms": 2164.9,
+      "start_ms": 1228.7,
+      "end_ms": 1235.7,
       "source": "llm",
       "attempts": 2,
       "error": null,
@@ -376,7 +376,7 @@
           "truncated": false
         }
       ],
-      "reads": ["evidence.card", "evidence.claims", "evidence.supported"],
+      "reads": ["evidence.card", "evidence.claims", "evidence.run", "evidence.supported"],
       "writes": ["drafts"],
       "calls": [
         {
@@ -385,7 +385,7 @@
           "language": "en",
           "source": "llm",
           "attempts": 1,
-          "ms": 20.5,
+          "ms": 2.4,
           "error": null
         },
         {
@@ -394,7 +394,7 @@
           "language": "en",
           "source": "llm",
           "attempts": 1,
-          "ms": 1.4,
+          "ms": 1.3,
           "error": null
         }
       ],
@@ -409,8 +409,8 @@
       "run": 0,
       "step": "verifier",
       "round": 0,
-      "start_ms": 2172.5,
-      "end_ms": 2173.1,
+      "start_ms": 1241.8,
+      "end_ms": 1242.3,
       "source": "code",
       "attempts": 1,
       "error": null,
@@ -483,8 +483,8 @@
       "run": 0,
       "step": "narration",
       "round": 1,
-      "start_ms": 2181.7,
-      "end_ms": 2185.1,
+      "start_ms": 1247.2,
+      "end_ms": 1249.2,
       "source": "llm",
       "attempts": 1,
       "error": null,
@@ -543,7 +543,7 @@
           "language": "en",
           "source": "llm",
           "attempts": 1,
-          "ms": 1.0,
+          "ms": 0.7,
           "error": null
         }
       ],
@@ -569,8 +569,8 @@
       "run": 0,
       "step": "verifier",
       "round": 1,
-      "start_ms": 2192.0,
-      "end_ms": 2192.8,
+      "start_ms": 1255.2,
+      "end_ms": 1256.6,
       "source": "code",
       "attempts": 1,
       "error": null,
@@ -632,8 +632,8 @@
       "run": 0,
       "step": "voice",
       "round": null,
-      "start_ms": 2198.5,
-      "end_ms": 2198.9,
+      "start_ms": 1263.0,
+      "end_ms": 1263.4,
       "source": "code",
       "attempts": 1,
       "error": null,
@@ -658,9 +658,9 @@
       "output": [
         {
           "type": "BreakdownResult",
-          "summary": "tier excited · 2 voice cues",
+          "summary": "tier clutch · 2 voice cues",
           "data": {
-            "tier": "excited",
+            "tier": "clutch",
             "scripts": [
               {
                 "persona": "analyst",
@@ -693,7 +693,7 @@
       "tools": [],
       "rejected": [],
       "rewritten": [],
-      "notes": ["tier excited", "joined with the plan it already held (rev 0)"],
+      "notes": ["tier clutch", "joined with the plan it already held (rev 0)"],
       "span_id": null
     },
     {
@@ -701,8 +701,8 @@
       "run": 1,
       "step": "mcp",
       "round": null,
-      "start_ms": 0.2,
-      "end_ms": 1755.7,
+      "start_ms": 0.1,
+      "end_ms": 974.4,
       "source": "code",
       "attempts": 1,
       "error": null,
@@ -743,8 +743,8 @@
       "run": 1,
       "step": "telestrator",
       "round": null,
-      "start_ms": 1766.9,
-      "end_ms": 1769.1,
+      "start_ms": 989.8,
+      "end_ms": 992.0,
       "source": "llm",
       "attempts": 1,
       "error": null,
@@ -857,7 +857,7 @@
           "language": null,
           "source": "llm",
           "attempts": 1,
-          "ms": 1.2,
+          "ms": 1.0,
           "error": null
         }
       ],
@@ -872,8 +872,8 @@
       "run": 1,
       "step": "voice",
       "round": null,
-      "start_ms": 1775.9,
-      "end_ms": 1776.4,
+      "start_ms": 1006.7,
+      "end_ms": 1008.0,
       "source": "code",
       "attempts": 1,
       "error": null,
@@ -952,9 +952,9 @@
       "output": [
         {
           "type": "BreakdownResult",
-          "summary": "tier excited · 2 voice cues",
+          "summary": "tier clutch · 2 voice cues",
           "data": {
-            "tier": "excited",
+            "tier": "clutch",
             "scripts": [
               {
                 "persona": "analyst",
@@ -987,7 +987,7 @@
       "tools": [],
       "rejected": [],
       "rewritten": [],
-      "notes": ["tier excited", "joined with the approved scripts it already held (rev 0)"],
+      "notes": ["tier clutch", "joined with the approved scripts it already held (rev 0)"],
       "span_id": null
     }
   ],
@@ -1004,11 +1004,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2100.7,
+      "t_ms": 1194.4,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 0",
-      "checkpoint": "5a02d6fe-6a66-42f6-83fd-4819ea8f1f42",
+      "checkpoint": "1e36088f-f88d-412e-a639-c8e81caaccfc",
       "superstep": 0,
       "keys": [
         "executor.analyst",
@@ -1021,11 +1021,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2114.9,
+      "t_ms": 1207.5,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 1",
-      "checkpoint": "d44d33d9-5ec5-4066-9f1c-ec93f0eec870",
+      "checkpoint": "fd92d977-bca3-4971-b11e-0eb3967cd373",
       "superstep": 1,
       "keys": [
         "request",
@@ -1039,11 +1039,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2135.3,
+      "t_ms": 1224.2,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 2",
-      "checkpoint": "e3954c67-b5c0-4a27-b833-a182bc399778",
+      "checkpoint": "ebad4ef6-3596-405e-871c-0b2b896d08c6",
       "superstep": 2,
       "keys": [
         "findings",
@@ -1058,7 +1058,7 @@
     },
     {
       "run": 0,
-      "t_ms": 2162.5,
+      "t_ms": 1233.9,
       "kind": "fallback",
       "step": "telestrator",
       "detail": "ran on its template after 2 attempts: AgentDown",
@@ -1068,7 +1068,7 @@
     },
     {
       "run": 0,
-      "t_ms": 2162.7,
+      "t_ms": 1234.0,
       "kind": "waiting",
       "step": "telestrator",
       "detail": "asks to be brought back (workflow request down:telestrator)",
@@ -1078,11 +1078,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2168.0,
+      "t_ms": 1239.0,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 3; waiting: down:telestrator",
-      "checkpoint": "f461e663-3300-43f5-9c8a-6ff05d83ec64",
+      "checkpoint": "985e0428-c6fc-4b06-90eb-40335836f506",
       "superstep": 3,
       "keys": [
         "drafts",
@@ -1099,11 +1099,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2175.5,
+      "t_ms": 1244.8,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 4; waiting: down:telestrator",
-      "checkpoint": "02e409bb-fa97-44b6-a9b6-656b1952cc10",
+      "checkpoint": "538089cc-ef47-4d1d-af5f-e43a5fe609a6",
       "superstep": 4,
       "keys": [
         "drafts",
@@ -1121,11 +1121,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2188.8,
+      "t_ms": 1251.9,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 5; waiting: down:telestrator",
-      "checkpoint": "71cbbbf5-8f53-4d3b-b628-5945688dc87b",
+      "checkpoint": "b86c47bb-7f63-40a3-b6dc-7f7b001eef77",
       "superstep": 5,
       "keys": [
         "drafts",
@@ -1143,11 +1143,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2195.4,
+      "t_ms": 1260.2,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 6; waiting: down:telestrator",
-      "checkpoint": "b5ee5b2c-d072-49fa-968d-7512a4b809be",
+      "checkpoint": "f08b5b0b-8b9e-43af-961a-af0e6635d2dd",
       "superstep": 6,
       "keys": [
         "drafts",
@@ -1166,11 +1166,11 @@
     },
     {
       "run": 0,
-      "t_ms": 2202.0,
+      "t_ms": 1267.1,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 7; waiting: down:telestrator",
-      "checkpoint": "5cd27994-bc47-40e8-a79c-9de02ae88dac",
+      "checkpoint": "169ca007-c649-4c88-8bf9-e2dd7dd89dbe",
       "superstep": 7,
       "keys": [
         "drafts",
@@ -1193,18 +1193,18 @@
       "t_ms": 0.0,
       "kind": "back",
       "step": "telestrator",
-      "detail": "is back: the workflow resumes from checkpoint 5cd27994 (superstep 7) and re-runs it",
-      "checkpoint": "5cd27994-bc47-40e8-a79c-9de02ae88dac",
+      "detail": "is back: the workflow resumes from checkpoint 169ca007 (superstep 7) and re-runs it",
+      "checkpoint": "169ca007-c649-4c88-8bf9-e2dd7dd89dbe",
       "superstep": 7,
       "keys": []
     },
     {
       "run": 1,
-      "t_ms": 1762.1,
+      "t_ms": 983.7,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 7",
-      "checkpoint": "d2b449c0-3d79-4e9d-87c8-18ba7f7c6e5e",
+      "checkpoint": "2caa8cb5-1da7-45fe-bdaa-a93bef60f3a1",
       "superstep": 7,
       "keys": [
         "drafts",
@@ -1224,11 +1224,11 @@
     },
     {
       "run": 1,
-      "t_ms": 1772.6,
+      "t_ms": 998.7,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 8",
-      "checkpoint": "cc964ba4-8851-481f-bbdd-b4cf22cc9b28",
+      "checkpoint": "7e7f645f-c786-4860-a9b7-96b1942a70c2",
       "superstep": 8,
       "keys": [
         "drafts",
@@ -1248,11 +1248,11 @@
     },
     {
       "run": 1,
-      "t_ms": 1780.8,
+      "t_ms": 1015.8,
       "kind": "checkpoint",
       "step": null,
       "detail": "saved after superstep 9",
-      "checkpoint": "8d813a4c-b032-4d6a-8b72-84b3af2be271",
+      "checkpoint": "0bb96fde-54c5-4f17-bc9b-068a19e25e4a",
       "superstep": 9,
       "keys": [
         "drafts",

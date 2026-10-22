@@ -282,7 +282,9 @@ function LiveScreen(props: {
             <PovView />
           </div>
           <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
-            {belief ? <BeliefMap /> : <TacticalView />}
+            {/* The board stays mounted under the belief map: a cut to it is instant. */}
+            <TacticalView hidden={belief} />
+            {belief && <BeliefMap />}
           </div>
           <div className="shade top" aria-hidden="true" />
           <div className="shade bottom" aria-hidden="true" />

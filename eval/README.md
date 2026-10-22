@@ -24,6 +24,7 @@ result.
 | [`realism.py`](realism.py) | Sim scan, head-turn, speed and pass-speed statistics against values printed in the cited papers | held out 100–199 | `realism.md` | ~40 s |
 | [`scan_calibration.py`](scan_calibration.py) | Fits scan dwell, the pressure factor and role scan rates to printed values | tuning 0–99 | `scan_calibration.md` | ~3 min |
 | [`pitch_control_parity.py`](pitch_control_parity.py) | The numpy half of the shader parity test: 10 snapshots and the kernel's values | blind_side_run seed 3 | `web/src/pitchControl/snapshots.json` | |
+| [`laws.py`](laws.py) | Does the sim break a Law of the Game the referee does not call (SPEC 3.9)? Every scenario, each hero's intervention, both matches | design 0–99, held out 100–139 and 200–239 | `laws.md` | ~7 min at 4 workers |
 | [`narration_ablation.py`](narration_ablation.py) | Free-text vs anchored narration on Foundry, scored by the Verifier and `GroundednessEvaluator` | `--seeds 3,100-103` | `narration_ablation.md` | ~30 model calls per seed |
 
 [`free_text.py`](free_text.py) is the pre-anchoring narration, recovered from git for the
@@ -37,6 +38,7 @@ uv run python -m eval.hero_lens --scenario blind_side_run
 uv run python -m eval.hero_lens --scenario press_escape
 uv run python -m eval.hero_marking
 uv run python -m eval.hero_shot
+uv run python -m eval.laws
 uv run python -m eval.scan_detector
 uv run python -m eval.keypoint_ingest
 uv run python -m eval.blind_side
