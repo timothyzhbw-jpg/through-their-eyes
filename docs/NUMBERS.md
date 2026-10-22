@@ -160,6 +160,6 @@ freeze (`curl -sG https://prices.azure.com/api/retail/prices --data-urlencode "\
 
 | Id | What | Refresh | Where |
 |---|---|---|---|
-| X1 | `docs/hero-key-scan.jpg`: the README's first picture still shows the pre-#126 caption "H8 checked his shoulder…" | after the last deploy, capture `?view=pov&at=key-scan&intro=0` at 1920×1080 (headless Chrome, `web/scripts/gpu.mjs`); rewrite its alt text and caption with the names (J. Ferriday, N. Varnhall) | README top |
+| X1 | `docs/hero-key-scan.jpg`: the README's first picture still shows the pre-#126 caption "H8 checked his shoulder…", and its alt text and caption say H8 and H9 | after the last deploy (2026-10-24), capture `?view=pov&at=key-scan&intro=0` from the live site at 1920×1080 (headless Chrome, `web/scripts/gpu.mjs`), with whatever has landed by then (the names, the radar if merged); rewrite the alt text and the caption under it with the names (J. Ferriday, N. Varnhall) | README top |
 | X2 | `docs/screenshots/` | the same pass, for any screenshot a judge page links | README, RUBRIC_MAP |
 | X3 | The Innovation Studio page | from `out/innovation-studio-page.md` (not in the repository), with the values of H1, H4, C1 and D6 | the project page |
