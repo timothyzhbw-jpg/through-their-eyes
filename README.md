@@ -361,5 +361,12 @@ Built with Claude Code.
 (`api`), uploads the web app (`web`) and sets the deploy workflow's variables (`github`). It only
 accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subscription.
 
+## Credits
+- Rigged players: converted from Gameplay Football by Bastiaan Konings Schuiling, as shipped in
+  Google Research Football (Unlicense); see [web/public/models/README.md](web/public/models/README.md).
+- The players' kick and shoulder checks are motion capture, retargeted onto that skeleton. The
+  data used in this project was obtained from mocap.cs.cmu.edu. The database was created with
+  funding from NSF EIA-0196217.
+
 ## License
 MIT — see [LICENSE](LICENSE).

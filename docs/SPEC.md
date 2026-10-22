@@ -1603,6 +1603,18 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - *Extra motion (2026-10-21, Bowen approved the sources):* motion capture from the CMU
+    database, retargeted onto the same skeleton (which is unchanged) and shipped as an
+    animations-only GLB (`web/public/models/anims_extra.glb`, ~20 KB; sources, terms and the
+    acknowledgement in its README). A kick (`pass_short`) replaces the standing pass, its ball
+    contact on the pass event, in place, with the planted foot held still. At every sim `scan`
+    a shoulder check turns the trunk with the look, as an additive layer timed to the head's
+    turn (out, hold, back) and sized by how far the head turns from the body; it counts towards
+    the trunk's share of the look, so a look past 80° turns the trunk no further than before.
+    The head still points exactly along `head_yaw`. On by default (Bowen kept it on after the
+    before/after video, 2026-10-21); `?anims=base` turns it off;
+    under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
+    and not used.
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
@@ -1850,6 +1862,11 @@ original visual identity.
 ### Real-footage overlay (cut)
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
+Motion capture of lab subjects is not match data or footage: Bowen allowed the CMU motion
+capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
+(`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
+the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+
 ### Acceptance checks — render
 - [x] *The run without the look, told:* which look was removed, what it cost and where each pass
       went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
@@ -1950,6 +1967,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Extra motion (mocap kick, shoulder checks):* the GLB binds every track to a bone of the
+      model without changing its joint frames; the kick plays at each pass event with its contact
+      on the event's frame and the kick along the pass; the shoulder check plays only during the
+      sim's scans, on the side the head turns, phased by the head; the head stays on `head_yaw`
+      (< 1e-3 rad) for every player; the feet stay on the ground; poses are history-free; reduced
+      motion drops the checks; fps unchanged.
+      — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts); `npm run fps` and
+      `npm run fps -- --anims base` alternating (2026-10-21, Apple M4 Pro, headless, 1920 × 1080):
+      60 fps capped in every row either way, median 16.7 ms, p95 16.7–16.8 ms.
 - [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
       ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
       55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
