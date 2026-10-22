@@ -111,9 +111,17 @@ scripts/regen_linux.sh exports evals
 ```
 
 Groups: `exports`, `xt` (the xT fit, about 25 min; then `exports` and `evals` again), `evals`,
-`season` (about an hour), `dataset`, or `all`. The checks that compare a committed artifact with a
-fresh run do it byte for byte on Linux and skip on other platforms with that command
-(`tests/canonical.py`). A change that moves a report's numbers also updates every place that
+`season` (about an hour), `dataset`, or `all`. Emulating amd64 is slow on a loaded Mac; the
+`regen` workflow runs the same steps (`scripts/regen_steps.sh`) on CI's own runner instead and
+uploads what changed, for review before you commit it:
+
+```bash
+gh workflow run regen.yml -f ref=<branch> -f groups="exports evals"
+gh run download <run id> -n regen
+```
+
+The checks that compare a committed artifact with a fresh run do it byte for byte on x86_64 Linux
+and skip on other platforms with the regen command (`tests/canonical.py`). A change that moves a report's numbers also updates every place that
 quotes them (README, SPEC, [EVALS.md](EVALS.md)).
 Tuning happens on design or tuning seeds only; held-out seeds are run once the design is fixed
 ([eval/README.md](../eval/README.md#rules)).

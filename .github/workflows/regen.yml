@@ -1,0 +1,58 @@
+name: regen
+
+# Regenerates the committed generated artifacts of a branch on CI's own platform, ubuntu on
+# linux/amd64: the canonical one (SPEC 3.7). Started by hand; it commits nothing, it uploads what
+# changed for review:
+#   gh workflow run regen.yml -f ref=<branch> -f groups="exports evals"
+#   gh run download <run id> -n regen    (then review the diff and commit it)
+# Groups: exports xt evals season dataset (scripts/regen_steps.sh).
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or commit to regenerate
+        required: true
+      groups:
+        description: "Space-separated: exports xt evals season dataset"
+        required: true
+        default: exports
+
+permissions:
+  contents: read
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Regenerate
+        env:
+          GROUPS_TO_RUN: ${{ inputs.groups }}
+          WORKERS: "4"
+        run: |
+          for g in $GROUPS_TO_RUN; do
+            case "$g" in exports|xt|evals|season|dataset) ;; *) echo "unknown group: $g"; exit 1;; esac
+          done
+          scripts/regen_steps.sh $GROUPS_TO_RUN
+      - name: Collect what changed
+        if: always()
+        run: |
+          mkdir -p out/regen
+          git status --porcelain | tee out/regen/changed.txt
+          git diff --name-only -z | xargs -0 -r tar -czf out/regen/changed.tar.gz
+          cp out/dataset_counts.txt out/regen/ 2>/dev/null || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: regen
+          path: out/regen/
+          if-no-files-found: ignore
