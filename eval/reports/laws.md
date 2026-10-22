@@ -16,9 +16,9 @@ A **breach** is something a law forbids; it is **called** when the referee stopp
 | Law | What is checked | Checked | Breaches | Called | Unpunished | Wrong calls | Early calls | Not modelled |
 |---|---|---|---|---|---|---|---|---|
 | 3.1 | line-ups: eleven a side, one keeper | 2,916 runs | 0 | 0 | 0 | 0 | 0 | 0 |
-| 9.1 | frames in play: the whole ball over a line stops play | 809,581 frames | 0 | 0 | 0 | 0 | 0 | 0 |
+| 9.1 | frames in play: the whole ball over a line stops play | 816,180 frames | 0 | 0 | 0 | 0 | 0 | 0 |
 | 10.1 | whole-ball crossings of a goal line, and every goal given | 802 goal-line crossings | 0 | 0 | 0 | 0 | 0 | 0 |
-| 11.2 | passes and shots: offside position, then involvement | 11,389 kicks | 0 | 0 | 0 | 0 | 0 | 0 |
+| 11.2 | passes and shots: offside position, then involvement | 11,791 kicks | 0 | 0 | 0 | 0 | 0 | 0 |
 | 12.1 | keeper handling (saves) and tackles | 388 saves and tackles | 0 | 0 | 0 | 0 | 0 | 0 |
 | 13-17 | simulated restarts: distances and the ball's place | 362 restarts | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -123,18 +123,15 @@ How each possession of a match begins (its label), what the Laws award after the
 
 | Match | Restarts | Label as the Laws award | Played in the sim | Edits | … to the awarded team |
 |---|---|---|---|---|---|
-| 1 | 4 of 19 stitches | 18/19 | 0 | 4 | 2/4 |
-| 2 | 2 of 17 stitches | 16/17 | 0 | 2 | 2/2 |
+| 1 | 2 of 19 stitches | 18/19 | 0 | 2 | 1/2 |
+| 2 | 1 of 17 stitches | 16/17 | 0 | 1 | 1/1 |
 
 | Match | # | Scenario | Label | The Laws award | To team | First team on the ball | Played |
 |---|---|---|---|---|---|---|---|
 | 1 | 0 | `possession_play` | kick_off | kick_off | — | 0 | no (edit) |
-| 1 | 5 | `possession_play` | throw_in | throw_in | 0 | 0 | no (edit) |
-| 1 | 10 | `possession_play` | throw_in | throw_in | 1 | 0 | no (edit) |
 | 1 | 12 | `possession_play` | kick_off | kick_off | 1 | 0 | no (edit) |
 | 1 | 14 | `corner_blind_side` | corner | cut | — | 1 | yes |
 | 2 | 0 | `possession_play` | kick_off | kick_off | — | 0 | no (edit) |
-| 2 | 3 | `possession_play` | throw_in | throw_in | 0 | 0 | no (edit) |
 | 2 | 6 | `corner_blind_side` | corner | cut | — | 1 | yes |
 
 ## Players off the field while the ball is in play (informational)
