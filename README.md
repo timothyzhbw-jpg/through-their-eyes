@@ -25,7 +25,7 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 2. **Take the look away.** [Without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
    the same moment re-simulated with that one scan removed. He no longer knows where Varnhall is,
    and plays it back to K. Annersley (No. 4); **With the look** switches back to the pass to
-   Varnhall. Without the look, 33 of 40 held-out seeds decide differently
+   Varnhall. Without the look, <!--num:H1-->33 of 40<!--/num--> held-out seeds decide differently
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams in, and once the moment is detected the agent crew's breakdown plays
@@ -48,7 +48,7 @@ the run is the same up to that scan and differs only through what he no longer s
 ([test](tests/test_export.py#L37)), so what he would have done without it is re-simulated, not
 guessed. Under all of it runs the backbone a broadcast needs: a crew of agents writes the
 breakdown for each audience and language, and code checks every number the crew says or
-captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/reports/corruption.md)).
+captions before it airs (<!--num:A5-->90 of 90<!--/num--> perturbed claims refuted: [corruption](eval/reports/corruption.md)).
 
 ## Path to production
 - **Who it is for.** A broadcaster's studio analyst explaining a replay on air, and a club's
@@ -56,7 +56,7 @@ captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/re
 - **What it needs as input.** Player tracking at 25 Hz with head direction, the kind stadium
   limb tracking or broadcast pose models report. [analytics/keypoints.py](analytics/keypoints.py)
   turns COCO-style head, shoulder and hip keypoints into position and head yaw; on synthetic
-  keypoints the scan detector keeps a held-out F1 of 0.962 with 20 mm of noise per keypoint axis
+  keypoints the scan detector keeps a held-out F1 of <!--num:A2-->0.962<!--/num--> with 20 mm of noise per keypoint axis
   ([keypoint_ingest](eval/reports/keypoint_ingest.md)). The belief and the counterfactual need a
   simulator of the match around the moment; ours is that piece.
 - **What it hands a graphics engine.** Per moment, a `TelestrationPlan` (timed camera cuts,
@@ -66,7 +66,7 @@ captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/re
 - **Controls.** Code checks every number the crew says or captions before it airs; every verdict
   goes to an audit log (Cosmos DB, `GET /api/matches/<id>/audit`); model calls are rate-limited
   per client and capped per day, with deterministic templates and a cache behind them.
-- **Validated, and not.** The perception parameters are calibrated to published values: 11 of 16
+- **Validated, and not.** The perception parameters are calibrated to published values: <!--num:R3.inside-->11<!--/num--> of 16
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
   only; see [Limitations](#limitations).
@@ -99,7 +99,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 2. **With and without that look.** [Without the look, at his decision](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
    the same moment re-simulated with that one scan removed. His picture of Varnhall is now 12 m
    off, and his pass options point backwards; he plays it back to K. Annersley (No. 4). Click
-   **With the look**: one thick line to Varnhall. Over 40 held-out seeds, 33 decide differently
+   **With the look**: one thick line to Varnhall. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently
    without the look ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz; once the moment is detected, the agent crew's
@@ -120,7 +120,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    number no claim holds, for example "H8's picture of A5 was off by 1.2 metres" where the claim
    holds H9 and 0.5, and none of them passed the Verifier
    ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)). It also
-   refuted 90 of 90 perturbed claims: a number off by one unit or by 20%, a swapped player, a
+   refuted <!--num:A5-->90 of 90<!--/num--> perturbed claims: a number off by one unit or by 20%, a swapped player, a
    wrong order ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
 6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0):
@@ -138,7 +138,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
-   to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
+   to keep the ball (**If he carried it**). He loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds
    ([pressure](eval/reports/hero_lens_press_escape.md)). **View options** → **Skeleton** on the
    broadcast camera or the board draws each player's torso and head direction, the way
    limb-tracking data is shown.
@@ -198,14 +198,14 @@ the deployed service. Nothing has been run on real tracking data.
 
 | Claim | Number | Report |
 |---|---|---|
-| Without one look, the hero decides differently | 33/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
-| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 34/40; 40/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
-| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
-| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
-| Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
-| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.991 | [scan_detector](eval/reports/scan_detector.md) |
+| Without one look, the hero decides differently | <!--num:H1-->33/40<!--/num--> seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
+| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | <!--num:H2-->34/40<!--/num-->; <!--num:H3-->40/40<!--/num--> | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
+| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [pressure](eval/reports/hero_lens_press_escape.md) |
+| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → <!--num:H6-->30/40<!--/num--> changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
+| Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | <!--num:H7-->37/40<!--/num--> | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
+| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | <!--num:A1-->0.991<!--/num--> | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
-| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded) | 90/90 | [corruption](eval/reports/corruption.md) |
+| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded) | <!--num:A5-->90/90<!--/num--> | [corruption](eval/reports/corruption.md) |
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
 | Free-text vs anchored narration, same moment and seeds: first-draft lines naming a player or number that no claim holds (none passed the verifier); groundedness of the scripts that aired (1–5, Foundry evaluator) | 34 of 66 vs 0 of 111; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
 | The crew against one agent doing its four model roles in one call, same moments, tools and schemas (single vs crew): wrong facts aired; model roles kept with the Analyst or the Telestrator down; agent runs over the deployed 8 s step timeout; cost per breakdown | 0 vs 0; 0 of 4 vs 3 of 4; 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 | [crew_vs_single](eval/reports/crew_vs_single.md) |
@@ -220,7 +220,7 @@ the deployed service. Nothing has been run on real tracking data.
   could only be an association.
 - **Pressure and scanning.** In the published data players scan less when an opponent is tight
   on them (d = +0.57 between 10+ m and 0–1 m). Our simulator has the same sign but a much
-  smaller effect (d = 0.18, 90% interval over seeds −0.02 to 0.38): one of the 5 statistics
+  smaller effect (d = <!--num:R4.d-->0.18<!--/num-->, 90% interval over seeds <!--num:R4.lo-->−0.02<!--/num--> to <!--num:R4.hi-->0.38<!--/num-->): one of the <!--num:R3.outside-->5<!--/num--> statistics
   outside the published range; the other four compare scan rates between roles
   ([realism](eval/reports/realism.md)).
 - **No tackles yet.** In the stitched matches possession changes hands by interceptions only:

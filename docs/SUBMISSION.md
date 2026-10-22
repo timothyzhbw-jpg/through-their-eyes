@@ -72,7 +72,7 @@ The brief's pipeline, end to end, on a synthetic match:
 4. **Counterfactual.** We re-simulate the moment with that one look removed. Random draws are
    tied to each player and purpose, not to one shared sequence. So the two runs differ only
    because of the change. Without the look, the midfielder plays it back; with it, he finds the
-   runner. Over 40 held-out seeds, 33 decide differently without the look.[^flip]
+   runner. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently without the look.[^flip]
 5. **Verified numbers.** Every number in the captions, the narration and the evidence cards is
    a claim computed from the match and checked by code before it airs. Viewers can open any
    caption's evidence, or try a wrong number and watch the Verifier refute it.[^verify] Other
@@ -82,9 +82,9 @@ The brief's pipeline, end to end, on a synthetic match:
 **Three hero moments.**
 - **Scan hero:** a midfielder's one look over his shoulder shows him the runner. Live in the app.
 - **Pressure hero:** a centre-back under a high press. Re-simulated with him forced to keep the
-  ball, he loses it in 40 of 40 fresh seeds.[^press] Live in the app.
+  ball, he loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds.[^press] Live in the app.
 - **Set-piece hero:** at a corner, a defender marks the striker where he *believes* the striker
-  is. In 37 of 40 held-out seeds, the striker is unmarked at the cutback without the defender's
+  is. In <!--num:H7-->37 of 40<!--/num--> held-out seeds, the striker is unmarked at the cutback without the defender's
   look, and marked with it.[^marking] That headline uses a gate revised during design; the
   original plan's checks, reported in the same file, are not met. Live in the app, as the
   stitched match's third hero.
@@ -156,15 +156,15 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 
 | Claim | Result | Source |
 |---|---|---|
-| Without the key look, the scan hero decides differently | 33 of 40 held-out seeds | [^flip] |
-| Lens selection picks the lens each hero is built for | scan hero 34/40; pressure hero 40/40 on fresh seeds | [^lens], [^press] |
-| Forced to keep the ball, the pressure hero loses it; the possession outcome changes | 40/40 lost; 32/40 changed | [^press] |
-| Set-piece hero: unmarked without the look, marked within 5 m with it | 37/40 (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
+| Without the key look, the scan hero decides differently | <!--num:H1-->33 of 40<!--/num--> held-out seeds | [^flip] |
+| Lens selection picks the lens each hero is built for | scan hero <!--num:H2-->34/40<!--/num-->; pressure hero <!--num:H3-->40/40<!--/num--> on fresh seeds | [^lens], [^press] |
+| Forced to keep the ball, the pressure hero loses it; the possession outcome changes | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [^press] |
+| Set-piece hero: unmarked without the look, marked within 5 m with it | <!--num:H7-->37/40<!--/num--> (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
 | Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.915, recall 0.943 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
-| Simulator statistics against published values | 11 inside the published range, 5 outside, 10 with no published value | [^realism] |
+| Simulator statistics against published values | <!--num:R3.inside-->11<!--/num--> inside the published range, <!--num:R3.outside-->5<!--/num--> outside, <!--num:R3.none-->10<!--/num--> with no published value | [^realism] |
 | GPU pitch-control shader against the numpy reference | max difference about 5e-5 (target < 0.02) | [^parity] |
 | Same seed, same output (same platform) | byte-identical | [^determinism] |
 | Test suites in CI on `main` | Python 1216 passed; web 595 passed; end-to-end smoke 15 of 15 pages | [^tests] |
@@ -248,9 +248,9 @@ Multi-Agent System (SPEC §0).
   counterfactual outcome depends on our models of movement, perception and decisions. On real
   data we could only claim association.
 - **Realism is partial.** Of the 16 simulator statistics we can check against a published
-  value, 5 fall outside the published range. All five compare scan rates between roles or
+  value, <!--num:R3.outside-->5<!--/num--> fall outside the published range. All five compare scan rates between roles or
   pressure levels. Published players scan less when an opponent is tight on them (d = +0.57);
-  ours do too, but much less so (d = 0.18).[^realism]
+  ours do too, but much less so (d = <!--num:R4.d-->0.18<!--/num-->).[^realism]
 - **No tackles yet.** In the stitched matches the ball changes hands by interceptions only: 0
   tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
   matches. Tackles are switched on in the pressure hero's scenario alone.[^matchstats]
@@ -306,17 +306,17 @@ play that attacks the goal.
     analyst/en).
 [^spec31]: [docs/SPEC.md](SPEC.md) §3.1: 25 Hz frames, per-player body and head yaw.
 [^flip]: [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md):
-    seeds 100–139, decision changed without the key scan in 33/40.
+    seeds 100–139, decision changed without the key scan in <!--num:H1-->33/40<!--/num-->.
 [^verify]: [tests/test_api.py](../tests/test_api.py)
     `test_a_wrong_number_is_refuted_and_its_line_would_not_air` and
     `test_the_verified_number_is_supported_and_its_line_airs`.
 [^press]: [eval/reports/hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md):
-    fresh seeds 200–239, pressure lens 40/40, ball lost after the forced carry 40/40, outcome
-    changed 32/40.
+    fresh seeds 200–239, pressure lens <!--num:H3-->40/40<!--/num-->, ball lost after the forced carry <!--num:H4-->40/40<!--/num-->, outcome
+    changed <!--num:H5-->32/40<!--/num-->.
 [^lens]: [eval/reports/hero_lens_blind_side_run.md](../eval/reports/hero_lens_blind_side_run.md):
-    seeds 100–139, scan lens selected 34/40.
+    seeds 100–139, scan lens selected <!--num:H2-->34/40<!--/num-->.
 [^marking]: [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md):
-    seeds 100–139, 37/40; median separation 3.3 m with the look, 8.5 m without.
+    seeds 100–139, <!--num:H7-->37/40<!--/num-->; median separation 3.3 m with the look, 8.5 m without.
 [^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
     possessions and "808.3 s, 1-0" on a Mac (2026-10-22 CT, with the referee and the team shape). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
@@ -327,7 +327,7 @@ play that attacks the goal.
 [^latency]: [docs/SPEC.md](SPEC.md) §8, "Deployed 2026-10-20": the same request from the
     cache took 0.15 s; "Live on Container Apps": 12.9 s uncached on a warm replica, 25.9 s for
     the first request after a new revision.
-[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.991
+[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 <!--num:A1-->0.991<!--/num-->
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
     0.915, recall 0.943, and the upper-bound note.

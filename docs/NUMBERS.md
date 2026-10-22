@@ -24,8 +24,11 @@ instead.
    heavy evals (season, five seasons, archetypes, hero gates on 1000–1199) run in the cloud as
    in the shared notes' `freeze-heavy-evals.md`. The cloud is Linux too, so their bytes are
    canonical.
-2. For each row: run its **Read** command, write the value into **Freeze**, then replace the old
-   value at each place in **Quoted in**. `grep -rn '<old value>' README.md docs/` finds them. Keep
+2. Run `uv run pytest tests/test_doc_numbers.py`. Every marked number in the docs
+   (`<!--num:H1-->33/40<!--/num-->`, invisible on GitHub) is checked against its report, and
+   each failure names the doc, the line and the report's value. Then, for each row: run its
+   **Read** command, write the value into **Freeze**, then replace the old value at each place
+   in **Quoted in**. `grep -rn '<old value>' README.md docs/` finds them. Keep
    the wording; if a count crosses a threshold (a target missed, a "most" that is no longer most),
    rewrite the sentence instead of the digits.
 3. The app's own numbers (rows C) come from the exports and from the live API's claims after the
