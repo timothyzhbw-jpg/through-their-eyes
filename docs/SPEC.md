@@ -141,13 +141,13 @@ on an LLM.
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
   - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
-    for rhythm. The match is therefore at most 13:28 on any platform (780 s of caps and the
-    four heroes). With the team shape (§3.2) a pass nobody reaches is fetched, and
-    `possession_play` put no ball out in 40 runs of 45 s (tuning seeds 0–39), so every passage
-    reaches its cap: on this Mac none ends in a throw-in, and match-1 runs its full 13:28. (Before
-    the team shape 4 of 15 did, and where the ball went out depended on the platform, §3.7: the
-    live service, Linux x86, ran the 18-possession version for 13:06 on 2026-10-21 against 11:31
-    on this Mac.)
+    for rhythm. The match is therefore at most 13:28 on any platform (780 s of caps and 27.8 s of
+    heroes). With the team shape (§3.2) a pass nobody reaches is fetched, and `possession_play`
+    put no ball out in 40 runs of 45 s (tuning seeds 0–39), so every passage reaches its cap: on
+    this Mac none ends in a throw-in, and match-1 runs its full 13:28. (Before the team shape 2 of
+    15 did, 4 before players were kept on the pitch, and where the ball went out depended on the
+    platform, §3.7: the live service, Linux x86, ran the 18-possession version for 13:06 on
+    2026-10-21 against 11:31 on this Mac.)
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -241,7 +241,7 @@ on an LLM.
   every setup position is clamped to the pitch, and a player brakes for the line ahead (the
   exact discrete stopping envelope at the max decel, sharing the frame's accel/decel limit with
   the rest of his step), so keepers stay at or in front of their goal line and nobody crosses a
-  touchline (`tests/test_on_pitch.py`: every frame, 0.3 m tolerance; the measured worst is 0).
+  touchline (`tests/test_on_pitch.py`: every frame, 1e-6 m tolerance; the measured worst is 0).
   Clamping targets alone was not enough: a player who turns along a line keeps drifting over it.
   Before, the formation shift and a free ball's predicted path, which runs on past the lines, put
   the away keeper up to 8 m behind his goal line in `blind_side_run` (1.7 m on the demo seed) and

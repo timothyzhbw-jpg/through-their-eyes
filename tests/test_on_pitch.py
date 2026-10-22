@@ -1,8 +1,10 @@
 """Players stay on the pitch (SPEC 3.2): every movement target lies inside the touchlines and goal
 lines, so keepers stand at or in front of their goal line and nobody runs off the field.
 
-The tolerance covers the steering's last step onto a target on a line. The sim never simulates a
-restart (a stitched match's restarts are edits, SPEC 3.1), so no player needs to stand outside.
+A player ends at most on a line (the braking envelope stops him there), so the tolerance is only
+floating-point slack; the brief allowed 0.3 m, and the measured worst is 0. The sim never
+simulates a restart (a stitched match's restarts are edits, SPEC 3.1), so no player needs to stand
+outside.
 """
 
 import numpy as np
@@ -13,7 +15,7 @@ from sim.engine import Simulation
 from sim.match import build_match
 from sim.movement import steer
 
-TOLERANCE = 0.3  # m
+TOLERANCE = 1e-6  # m
 
 # Each hero at the seed the demo shows: the served heroes and the bundled what-ifs (web/src/data),
 # and the first design seed of the two the demo does not serve.

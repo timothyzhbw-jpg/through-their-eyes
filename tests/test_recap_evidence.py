@@ -95,14 +95,13 @@ def test_the_scenario_heroes_follow_the_goals_and_lead_open_play_whatever_its_im
     assert [c["id"] for c in rank_moments(cards)] == ["goal", "hero_press", "hero_scan", "open"]
 
 
-def test_match_1s_three_heroes_lead_its_candidates(rc):
-    assert [c.hero for c in rc.candidates[:3]] == [True] * 3
-    assert {c.kind for c in rc.candidates[:3]} == {
-        "decision_after_scan",
-        "pressed_decision",
-        "marker_scan",
-    }
-    assert not any(c.hero for c in rc.candidates[3:])
+def test_match_1s_goal_then_its_heroes_lead_its_candidates(rc):
+    heroes = [c for c in rc.candidates if c.hero]
+    assert len(heroes) == 4
+    assert rc.candidates[0].hero and "goal" in rc.candidates[0].tags  # the shot hero's goal
+    assert rc.candidates[: len(heroes)] == heroes
+    kinds = {c.kind for c in heroes[1:]}
+    assert kinds == {"decision_after_scan", "pressed_decision", "marker_scan"}
 
 
 def test_every_match_claim_is_supported_and_holds_the_true_totals(rc, match):
