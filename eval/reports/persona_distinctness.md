@@ -8,16 +8,15 @@ How different the five audiences' breakdowns of one hero moment are, in what is 
 
 ## Before and after
 
-| | before (before (main 7c424f3d + #191)) | after (after (this branch)) |
+| | before (main 7c424f3d + #191) | after (this branch) |
 |---|---:|---:|
 | mean pairwise claim Jaccard (gate ≤ 0.3) | 0.34 | 0.16 |
-| most similar pair (mean Jaccard) | casual / player fan 0.71 | player fan / audio description 0.30 |
-| persona pairs whose first line differs | 70% | 100% |
-| worst pair's mean Jaccard (gate ≤ 0.5) | 0.71 | 0.30 |
-| different plans among the 5 personas of a moment (fewest) | 1 | 5 |
+| closest pair of personas, mean Jaccard (gate ≤ 0.5) | casual / player fan 0.71 | player fan / audio description 0.30 |
+| persona pairs whose first line differs (gate 100%) | 70% | 100% |
+| different plans among the 5 personas of a moment, fewest (gate 5) | 1 | 5 |
 | scripts within their persona's spec and rules | 8 of 40 | 40 of 40 |
 | scripts whose every line verifies again | 40 of 40 | 40 of 40 |
-| digits in text a model wrote | 0 | 0 |
+| numbers in text a model wrote | 0 | 0 |
 
 **Gate: passed.**
 
@@ -29,7 +28,7 @@ How different the five audiences' breakdowns of one hero moment are, in what is 
 | persona pairs whose first line differs | 70% |
 | scripts within their persona's spec | 8 of 40 |
 | scripts whose every line verifies again | 40 of 40 |
-| digits in text a model wrote | 0 |
+| numbers in text a model wrote | 0 |
 
 Per persona (all four moments, both languages):
 
@@ -138,7 +137,7 @@ Scripts outside their spec:
 | persona pairs whose first line differs | 100% |
 | scripts within their persona's spec | 40 of 40 |
 | scripts whose every line verifies again | 40 of 40 |
-| digits in text a model wrote | 0 |
+| numbers in text a model wrote | 0 |
 
 Per persona (all four moments, both languages):
 
@@ -184,8 +183,8 @@ blind_side_run-3, `en`, side by side:
   6. That look was worth 0.17 in expected threat.
 - **player fan** (4 lines, 36 words, 2 numbers)
   1. Lovely from him. Before the ball reached him, J. Ferriday looked over his right shoulder.
-  2. J. Ferriday found N. Varnhall with a 38-metre pass.
-  3. J. Ferriday's pass left his foot at 78 km/h.
+  2. J. Ferriday found N. Varnhall with a 39-metre pass.
+  3. J. Ferriday's pass left his foot at 76.0 km/h.
   4. What a player.
 - **coach** (4 lines, 44 words, 1 numbers)
   1. Coaching point. J. Ferriday had last checked his shoulder 0.8 seconds before the ball arrived.
@@ -197,7 +196,7 @@ blind_side_run-3, `en`, side by side:
   2. N. Varnhall's run was on J. Ferriday's blind side.
   3. Before the ball reached him, J. Ferriday looked over his right shoulder.
   4. When J. Ferriday looked over his shoulder before the ball arrived, he saw N. Varnhall.
-  5. J. Ferriday found N. Varnhall with a 38-metre pass.
+  5. J. Ferriday found N. Varnhall with a 39-metre pass.
   6. Without that look, J. Ferriday would have passed to K. Annersley.
 
 ## Model sample: gpt-4.1-mini before this change (crew_vs_single's cached runs, casual and analyst, 2026-10-21)
@@ -208,7 +207,7 @@ blind_side_run-3, `en`, side by side:
 | persona pairs whose first line differs | 60% |
 | scripts within their persona's spec | 0 of 24 |
 | scripts whose every line verifies again | 24 of 24 |
-| digits in text a model wrote | 0 |
+| numbers in text a model wrote | 0 |
 
 | persona | lines (min–max, mean) | words en | chars zh | numbers (mean, max) | lines with a number | jargon lines | jargon | out of spec |
 |---|---|---:|---:|---|---:|---:|---|---:|

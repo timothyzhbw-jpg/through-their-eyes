@@ -1497,8 +1497,9 @@ verifies again; no number in text a model wrote. Measured before (main 7c424f3d 
 in the report: mean Jaccard 0.34 → 0.16, the closest pair 0.71 → 0.30, first lines distinct for
 70% → 100% of pairs, 1 → 5 plans. The model picks among the same palettes under the same rules
 (below), so the template scripts are what the rules allow at their tightest; a model sample is
-scored apart with `--runs` (the cached crew-vs-single runs, casual and analyst under the rules
-before this change: Jaccard 0.53 between them, casual out of spec in 10 of 12 scripts).
+scored apart with `--runs` (the cached crew-vs-single runs of `gpt-4.1-mini`, casual and analyst
+under the prompts before this change: Jaccard 0.53 between the two, none of the 24 scripts within
+today's specs, and xT, probabilities or pressing percentages in 29% of the casual fan's lines).
 
 **Persona rules** (`agents/persona_rules.py`). The red-team review found the cached model scripts
 of different personas were the same claims reordered (casual heard expected threat and no

@@ -71,6 +71,7 @@ const PAGES = [
     check: (p, shoot) => lineup(p, shoot, "Start", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  { name: "audiences", path: "?autoplay=0&intro=0", check: audiences },
   { name: "link-eyes", path: "?play=eyes", check: takeEyes },
   { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
   {
@@ -265,6 +266,28 @@ async function mainView(page, main) {
       : page.getByRole("figure", { name: /^(First-person|Broadcast) view$/ });
   await see(view, `the ${main === "board" ? "tactical board" : "3D view"} on screen`);
   await see(view.locator("canvas"), "its WebGL canvas");
+}
+
+/** Each audience sees its own view (SPEC 6, "Persona specs"): picking one sets its camera and
+ * overlays at once, before its breakdown arrives. A screenshot of each. */
+async function audiences(page, shoot) {
+  await hero(page);
+  const pick = async (label, main, figure) => {
+    const toggle = page.getByRole("button", { name: /^Watching as / });
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+    const menu = page.getByRole("dialog", { name: "Who is watching" });
+    await menu.getByRole("button", { name: new RegExp(`^${label} `) }).click();
+    await page.keyboard.press("Escape");
+    await see(page.getByRole("button", { name: `Watching as ${label} · English` }), label);
+    await mainView(page, main);
+    if (figure) await see(page.getByRole("figure", { name: figure }), figure);
+    await shoot(label.toLowerCase().replaceAll(" ", "-"));
+  };
+  await pick("Analyst", "board");
+  await pick("Player fan", "eyes", "Broadcast view");
+  await pick("Coach", "eyes", "Tactical view from above");
+  await pick("Casual fan", "eyes", "First-person view");
+  await pick("Audio description", "eyes", "Broadcast view");
 }
 
 /** A hero moment: its views and its run switch; at the top level, the live service's control
