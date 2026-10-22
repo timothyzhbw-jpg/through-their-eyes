@@ -82,6 +82,10 @@
 * {
   box-sizing: border-box;
 }
+/* a phrase that must not break across lines (a club's name: ui/keepTogether.tsx) */
+.nowrap {
+  white-space: nowrap;
+}
 html {
   scroll-behavior: smooth;
 }
@@ -3662,6 +3666,24 @@ optgroup {
     -webkit-line-clamp: 2;
     overflow: hidden;
     text-align: left;
+  }
+  /* On the board the one live stat sits on its bottom edge, where the pass options' key is: the
+     key goes up a line while a stat shows (they were text on text). */
+  .stage.focus-tactical:not(:has(.stage-caption .caption-text)):has(.stage-ticker .stat-chip)
+    .view.tac
+    .options-legend {
+    bottom: 50px;
+  }
+}
+/* A small phone's picture is 240 px tall: with a caption up, his readouts keep to the alert. The
+   "removed look" badge says what the run switch under the picture already says; the BLIND SIDE
+   badge stays on one line (with a long name it broke in two and met the caption's speaker). */
+@media (max-width: 480px) {
+  .stage:has(.stage-caption .caption-text) .hud .badge.cf {
+    display: none;
+  }
+  .hud .badge.blind {
+    white-space: nowrap;
   }
 }
 /* The director's switch comes first and the suggestion after it: a suggestion that comes and goes
