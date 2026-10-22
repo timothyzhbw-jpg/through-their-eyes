@@ -3471,6 +3471,59 @@ optgroup {
   }
 }
 
+/* The phone's live screen gives the picture to the picture. The header sits above it instead of
+   on it, so his readouts own its top edge and the caption its bottom edge; the live stats leave
+   the picture while a caption is up (they shared its bottom edge: text on text); and the
+   director's row keeps one height whether it suggests a camera or not, so the moment card under
+   it never jumps. */
+@media (max-width: 760px) {
+  .stage {
+    grid-template-areas:
+      "head"
+      "views"
+      "bar"
+      "run"
+      "director"
+      "card";
+  }
+  .stage-head {
+    grid-area: head;
+    align-self: auto;
+  }
+  .stage-hud {
+    top: 0;
+    margin: 12px 16px 0;
+  }
+  .stage:has(.stage-caption .caption-text) .stage-ticker {
+    display: none;
+  }
+  .stage-director .director-slot {
+    display: flex;
+    align-items: center;
+    min-height: 58px;
+  }
+  .stage-director .director-idle {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font: 400 13px/1.35 var(--font-body);
+    color: var(--chalk-2);
+  }
+  .stage-director .director-chip {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-align: left;
+  }
+}
+/* The director's switch comes first and the suggestion after it: a suggestion that comes and goes
+   no longer pushes the switch along the row. */
+.stage-director .director-auto {
+  order: -1;
+}
+
 /* From 1181 px the run switch sits centred in the header row: the stream status takes its own line
    under the Live pill, between the header row and the eyes row, so the two never meet. */
 @media (min-width: 1181px) {
