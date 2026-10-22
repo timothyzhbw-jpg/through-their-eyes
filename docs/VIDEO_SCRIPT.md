@@ -4,7 +4,7 @@ The submission video is a fast, cheeky trailer told around a staged first-person
 academy player who never checks his shoulder loses the ball, his coach shows him the replay on a
 tablet, and the tablet match-cuts into the real app. The app then runs as three chapters (the
 look, under pressure, the corner), the product is shown wider, and the story's callback closes
-it. It runs **1:55** and is rendered end to end by code from
+it. It runs **1:57** and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -42,64 +42,67 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
 
 ## Timeline
 
-Story beats are placeholders until the Blender story clips land (labelled "DRAMATISATION ·
-RENDERED IN BLENDER"); the hero shots from the simulation carry "RENDERED IN BLENDER FROM OUR
+The story shots are staged in Blender and labelled "DRAMATISATION · RENDERED IN BLENDER"; the hero shots from the simulation carry "RENDERED IN BLENDER FROM OUR
 SIMULATION DATA" and the cinematic-mode shots "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA".
 No frame is blurred: hard cuts, flashes or a plain fade only; the rewind is colour split,
 noise and scanlines; the cine shots render without motion blur or peripheral blur. Freeze-frame
 name cards hold a sharp frame under a one-stop scrim; ramps drop frames, slow motion comes only
 from rendered frames. While a player scans, music and crowd drop about 10 dB under an 800 Hz
-low-pass and flood back when he acts. The coach speaks with his own voice (`speakers.coach`).
+low-pass and flood back when he acts. The coach speaks with his own voice (`speakers.coach`). His tablet shows the app's first-person
+replay, corner-pinned frame by frame (`pins`, `video/pin.py`) so that its last frame is the
+first frame of that replay full frame: the match-cut is exact.
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
-| 0:00.00 | 2.25 | s1a-receive | story (placeholder) |  |
-| 0:02.25 | 1.0 | s1b-freeze · name card YOU | freeze card |  |
-| 0:03.25 | 2.25 | s1c-tackle | story (placeholder) |  |
-| 0:05.50 | 6.0 | s2-coach | story (placeholder) | See this? You know why you lost the ball? |
-| 0:11.50 | 3.0 | a1-pov | app | Replays show where the ball went… never what the player saw. |
-| 0:14.50 | 0.75 | ch1 | chapter card |  |
-| 0:15.25 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
-| 0:16.60 | 4.05 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
-| 0:20.65 | 0.3 | bl01c | Blender |  |
-| 0:20.95 | 0.45 | rw1 | Blender | Here's what he saw. |
-| 0:21.40 | 0.3 | bl02a | Blender |  |
-| 0:21.70 | 3.6 | bl02b | Blender |  |
-| 0:25.30 | 3.0 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
-| 0:28.30 | 3.75 | pov-pass | in-engine | And he knows where his man is. |
-| 0:32.05 | 3.6 | toggle | app | Take that look away, and re-run the match. |
-| 0:35.65 | 0.2 | board-rewind | app |  |
-| 0:35.85 | 1.15 | rw2 | Blender |  |
-| 0:37.00 | 2.6 | bl03 | Blender |  |
-| 0:39.60 | 1.5 | split | Blender split |  |
-| 0:41.10 | 2.25 | eyes-drag | app | Or take his eyes yourself. |
-| 0:43.35 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
-| 0:44.85 | 1.5 | eyes-result | app |  |
-| 0:46.35 | 3.0 | yc-decide | app | Your call. You only know what he knew. |
-| 0:49.35 | 3.0 | yc-truth | app | He saw the run. Would you? |
-| 0:52.35 | 0.75 | ch2 | chapter card |  |
-| 0:53.10 | 2.1 | press-a · name card A11 | in-engine |  |
-| 0:55.20 | 1.8 | press-b | in-engine | Under a high press… |
-| 0:57.00 | 3.0 | press-cf | in-engine | make him keep the ball, and the press wins it. |
-| 1:00.00 | 0.75 | ch3 | chapter card |  |
-| 1:00.75 | 1.5 | corner-a | app | At a corner, it's the marker who has to look. |
-| 1:02.25 | 3.0 | corner-b | app |  |
-| 1:05.25 | 6.75 | crew | card | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
-| 1:12.00 | 4.5 | verified | app | Every line is checked against the simulation before it airs. |
-| 1:16.50 | 3.75 | wrong | app | Try a wrong number… and it never airs. |
-| 1:20.25 | 3.0 | redcard | app | Take an agent down… |
-| 1:23.25 | 4.5 | bringback | app | bring it back, and it picks up where it left off. |
-| 1:27.75 | 1.5 | casual | app | The same moment, for every fan, in every language. |
-| 1:29.25 | 1.5 | analyst | app |  |
-| 1:30.75 | 4.5 | zh | app | (the app's own zh line) |
-| 1:35.25 | 3.75 | impact | app | Timecoded cues for broadcasters, every player's numbers for coaches. |
-| 1:39.00 | 2.25 | s4-check | story (placeholder) |  |
-| 1:41.25 | 2.25 | s4-escape | story (placeholder) |  |
-| 1:43.50 | 1.5 | s4-nod | story (placeholder) |  |
-| 1:45.00 | 5.25 | spec | card | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
-| 1:50.25 | 5.25 | end | card | Through Their Eyes. [pause 500] See what they saw. |
+| 0:00.00 | 2.87 | s1a-receive · name card YOU | story (Blender, dramatisation) |  |
+| 0:02.87 | 0.6 | s1c-tackle | story (Blender, dramatisation) |  |
+| 0:03.47 | 1.8 | s1d-fall | story (Blender, dramatisation) |  |
+| 0:05.27 | 1.0 | s1e-ground | story (Blender, dramatisation) |  |
+| 0:06.27 | 6.0 | s2-coach | story (Blender, dramatisation) | Coach: See this? Coach: You know why you lost the ball? |
+| 0:12.27 | 3.0 | a1-pov | in-engine | Replays show where the ball went… never what the player saw. |
+| 0:15.27 | 0.75 | ch1 | chapter card |  |
+| 0:16.02 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
+| 0:17.37 | 4.05 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
+| 0:21.42 | 0.3 | bl01c | Blender |  |
+| 0:21.72 | 0.45 | rw1 | Blender | Here's what he saw. |
+| 0:22.17 | 0.3 | bl02a | Blender |  |
+| 0:22.47 | 3.6 | bl02b | Blender |  |
+| 0:26.07 | 3.0 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
+| 0:29.07 | 3.75 | pov-pass | in-engine | And he knows where his man is. |
+| 0:32.82 | 3.6 | toggle | app | Take that look away, and re-run the match. |
+| 0:36.42 | 0.2 | board-rewind | app |  |
+| 0:36.62 | 1.15 | rw2 | Blender |  |
+| 0:37.77 | 2.6 | bl03 | Blender |  |
+| 0:40.37 | 1.5 | split | Blender split |  |
+| 0:41.87 | 2.25 | eyes-drag | app | Or take his eyes yourself. |
+| 0:44.12 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
+| 0:45.62 | 1.5 | eyes-result | app |  |
+| 0:47.12 | 3.0 | yc-decide | app | Your call. You only know what he knew. |
+| 0:50.12 | 3.0 | yc-truth | app | He saw the run. Would you? |
+| 0:53.12 | 0.75 | ch2 | chapter card |  |
+| 0:53.87 | 2.1 | press-a · name card A11 | in-engine |  |
+| 0:55.97 | 1.8 | press-b | in-engine | Under a high press… |
+| 0:57.77 | 3.0 | press-cf | in-engine | make him keep the ball, and the press wins it. |
+| 1:00.77 | 0.75 | ch3 | chapter card |  |
+| 1:01.52 | 1.5 | corner-a | app | At a corner, it's the marker who has to look. |
+| 1:03.02 | 3.0 | corner-b | app |  |
+| 1:06.02 | 6.75 | crew | card | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
+| 1:12.77 | 4.5 | verified | app | Every line is checked against the simulation before it airs. |
+| 1:17.27 | 3.75 | wrong | app | Try a wrong number… and it never airs. |
+| 1:21.02 | 3.0 | redcard | app | Take an agent down… |
+| 1:24.02 | 4.5 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:28.52 | 1.5 | casual | app | The same moment, for every fan, in every language. |
+| 1:30.02 | 1.5 | analyst | app |  |
+| 1:31.52 | 4.5 | zh | app | (the app's own zh line) |
+| 1:36.02 | 4.5 | impact | app | Timecoded cues for broadcasters, every player's numbers for coaches. |
+| 1:40.52 | 1.0 | s4a-pov | story (Blender, dramatisation) |  |
+| 1:41.52 | 2.03 | s4b-check | story (Blender, dramatisation) |  |
+| 1:43.55 | 1.8 | s4c-escape | story (Blender, dramatisation) |  |
+| 1:45.35 | 1.2 | s4d-run | story (Blender, dramatisation) |  |
+| 1:46.55 | 5.5 | spec | card | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
+| 1:52.05 | 5.25 | end | card | Through Their Eyes. [pause 500] See what they saw. |
 
-Total 115.50 s. The score session composes to the cue sheet generated from this spec.
+Total 117.30 s. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 

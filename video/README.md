@@ -223,6 +223,7 @@ it as `<file>.hash`, has not changed. `--force` ignores the hashes.
 | `assets` | download each entry of `assets.json` and check its sha256 | `<out>/assets/<id>.<ext>` |
 | `capture` | record the capture shots the beats use, via `capture.mjs`, unless the WebM is already in `out/video/` | the capture kit's own files in `out/video/` |
 | `cine` | render each cine shot in one Chromium | `<out>/cine/<id>.mp4` |
+| `pin` | corner-pin a cine shot onto a screen in a rendered clip (`pins`: the coach's tablet), with `video/pin.py` (numpy): per frame the screen's corners and matte, mapped so the last frame equals the shot full frame | `<out>/pins/<id>.mp4` |
 | `titles` | fill slots, then render each title card | `<out>/titles/<id>.mov` (alpha) or `.mp4` |
 | `vo` | build SSML and synthesize the lines whose SSML changed | `<out>/vo/<id>.wav` and `.ssml` |
 | `sfx` | synthesize each effect the beats name | `<out>/sfx/<name>.wav` |
@@ -263,7 +264,7 @@ present the command is `uv run --env-file .env python video/tts.py <jobs.json>` 
 root; otherwise `--env-file` is left off. `--check` does not call Azure.
 
 The spec is version 1: `output` (fps, size, LUFS, true peak), `site`, `voice` / `voices`,
-`music` (asset ids from `assets.json`), `cine`, `titles`, `beats` and `captions`. A beat's picture is
+`music` (asset ids from `assets.json`), `cine`, `pins`, `speakers`, `titles`, `beats` and `captions`. A beat's picture is
 `black`, `cine`, `capture`, `title`, `image` or `clip`. A `clip` is a video rendered outside the
 repo, such as the Blender shots in `out/video/blender/` (git-ignored; the edit stops with a
 message naming the file when one is missing, `--check` does not look for it); it takes `in`,

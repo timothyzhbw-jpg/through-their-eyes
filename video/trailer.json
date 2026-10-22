@@ -26,9 +26,9 @@
   "music": [
     {
       "asset": "music-unsolicited",
-      "at": 11.5,
+      "at": 12.27,
       "from": 18.344,
-      "until": 115.5,
+      "until": 117.3,
       "gain_db": -2,
       "fade_in": 0.02,
       "fade_out": 3.0,
@@ -612,7 +612,7 @@
     },
     "spec": {
       "template": "spec",
-      "dur": 5.25,
+      "dur": 5.5,
       "alpha": false,
       "params": {
         "header": "UNDER THE HOOD",
@@ -793,16 +793,16 @@
     },
     "nc-you": {
       "template": "namecard",
-      "dur": 1.0,
+      "dur": 0.9,
       "alpha": true,
       "params": {
         "name": "YOU ARE No. 14.",
         "role": "",
         "sub": "YOU NEVER CHECK YOUR SHOULDER.",
         "spot": {
-          "x": 960,
-          "y": 560,
-          "r": 240
+          "x": 1026,
+          "y": 574,
+          "r": 170
         },
         "side": "left",
         "scrim": 0.5
@@ -866,65 +866,6 @@
       "params": {
         "left": "WITH THE LOOK",
         "right": "WITHOUT"
-      }
-    },
-    "ph-s1a": {
-      "template": "card",
-      "dur": 2.25,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · STORY SHOT",
-        "lines": [
-          {
-            "text": "POV: YOU RECEIVE,"
-          },
-          {
-            "text": "BACK TO PLAY."
-          }
-        ],
-        "stagger": 0.2
-      }
-    },
-    "label-dr-2p25": {
-      "template": "label",
-      "dur": 2.25,
-      "alpha": true,
-      "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
-      }
-    },
-    "ph-s1c": {
-      "template": "card",
-      "dur": 2.25,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · STORY SHOT",
-        "lines": [
-          {
-            "text": "THE TACKLE."
-          },
-          {
-            "text": "YOU HIT THE GRASS."
-          }
-        ],
-        "stagger": 0.2
-      }
-    },
-    "ph-s2": {
-      "template": "card",
-      "dur": 6.0,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · STORY SHOT",
-        "lines": [
-          {
-            "text": "THE COACH CROUCHES,"
-          },
-          {
-            "text": "TABLET IN HAND."
-          }
-        ],
-        "stagger": 0.2
       }
     },
     "label-dr-6p0": {
@@ -1034,57 +975,70 @@
         "title": "THE CORNER"
       }
     },
-    "ph-s4a": {
-      "template": "card",
-      "dur": 2.25,
-      "alpha": false,
+    "tagline": {
+      "template": "slam",
+      "dur": 1.2,
+      "alpha": true,
       "params": {
-        "kicker": "PLACEHOLDER · STORY SHOT",
         "lines": [
           {
-            "text": "POV: THIS TIME,"
+            "text": "EVERY TOUCH",
+            "size": 96
           },
           {
-            "text": "YOU CHECK YOUR SHOULDER."
+            "text": "STARTS WITH A LOOK.",
+            "color": "gold",
+            "size": 96
           }
         ],
-        "stagger": 0.2
+        "align": "lower-left",
+        "stagger": 0.15,
+        "backdrop": true
       }
     },
-    "ph-s4b": {
-      "template": "card",
-      "dur": 2.25,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · STORY SHOT",
-        "lines": [
-          {
-            "text": "YOU TURN."
-          },
-          {
-            "text": "YOU'RE AWAY."
-          }
-        ],
-        "stagger": 0.2
-      }
-    },
-    "ph-s4c": {
-      "template": "card",
-      "dur": 1.5,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · STORY SHOT",
-        "lines": [
-          {
-            "text": "THE COACH NODS."
-          }
-        ],
-        "stagger": 0.2
-      }
-    },
-    "label-dr-1p5": {
+    "label-dr-2p87": {
       "template": "label",
-      "dur": 1.5,
+      "dur": 2.87,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-0p6": {
+      "template": "label",
+      "dur": 0.6,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p8": {
+      "template": "label",
+      "dur": 1.8,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p0": {
+      "template": "label",
+      "dur": 1.0,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-2p03": {
+      "template": "label",
+      "dur": 2.03,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p2": {
+      "template": "label",
+      "dur": 1.2,
       "alpha": true,
       "params": {
         "text": "DRAMATISATION · RENDERED IN BLENDER"
@@ -1094,11 +1048,30 @@
   "beats": [
     {
       "id": "b01-s1a-receive",
-      "dur": 2.25,
+      "dur": 2.87,
       "picture": {
-        "src": "title",
-        "id": "ph-s1a"
+        "src": "clip",
+        "path": "out/video/blender/bs1_pov.mp4",
+        "in": 0.0,
+        "fit": "pad"
       },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 1.97
+      },
+      "overlays": [
+        {
+          "title": "label-dr-2p87",
+          "at": 0.0
+        },
+        {
+          "title": "nc-you",
+          "at": 1.97
+        }
+      ],
       "sfx": [
         {
           "name": "hum",
@@ -1110,74 +1083,110 @@
           "at": 0.3,
           "gain_db": -8,
           "dur": 3.0
-        }
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-2p25",
-          "at": 0.0
-        }
-      ]
-    },
-    {
-      "id": "b02-s1b-freeze",
-      "dur": 1.0,
-      "picture": {
-        "src": "black"
-      },
-      "overlays": [
-        {
-          "title": "nc-you",
-          "at": 0.0
-        }
-      ],
-      "sfx": [
+        },
         {
           "name": "slam",
-          "at": 0.0,
+          "at": 1.97,
           "gain_db": -6
         }
       ]
     },
     {
-      "id": "b03-s1c-tackle",
-      "dur": 2.25,
+      "id": "b02-s1c-tackle",
+      "dur": 0.6,
       "picture": {
-        "src": "title",
-        "id": "ph-s1c"
+        "src": "clip",
+        "path": "out/video/blender/bs1_pov.mp4",
+        "in": 2.0,
+        "fit": "pad"
       },
-      "sfx": [
-        {
-          "name": "boom",
-          "at": 0.9,
-          "gain_db": -5
-        }
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
       ],
       "overlays": [
         {
-          "title": "label-dr-2p25",
+          "title": "label-dr-0p6",
           "at": 0.0
         }
       ]
     },
     {
-      "id": "b04-s2-coach",
+      "id": "b03-s1d-fall",
+      "dur": 1.8,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_fall.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-dr-1p8",
+          "at": 0.0
+        }
+      ],
+      "sfx": [
+        {
+          "name": "boom",
+          "at": 0.0,
+          "gain_db": -5
+        },
+        {
+          "name": "touch",
+          "at": 1.3,
+          "gain_db": -2
+        }
+      ]
+    },
+    {
+      "id": "b04-s1e-ground",
+      "dur": 1.0,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_ground.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-dr-1p0",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b05-s2-coach",
       "dur": 6.0,
       "picture": {
-        "src": "title",
-        "id": "ph-s2"
+        "src": "clip",
+        "path": "out/video/trailer/pins/bs2.mp4",
+        "in": 0.0,
+        "fit": "pad"
       },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
       "vo": [
         {
           "id": "vc1",
-          "at": 0.6,
+          "at": 2.3,
           "speaker": "coach",
           "text": "See this?",
           "style": "friendly"
         },
         {
           "id": "vc2",
-          "at": 2.4,
+          "at": 3.75,
           "speaker": "coach",
           "text": "You know why you lost the ball?",
           "style": "friendly"
@@ -1191,7 +1200,7 @@
       ]
     },
     {
-      "id": "b05-a1-pov",
+      "id": "b06-a1-pov",
       "dur": 3.0,
       "picture": {
         "src": "cine",
@@ -1237,7 +1246,7 @@
       ]
     },
     {
-      "id": "b06-ch1",
+      "id": "b07-ch1",
       "dur": 0.75,
       "picture": {
         "src": "title",
@@ -1252,7 +1261,7 @@
       ]
     },
     {
-      "id": "b07-bl01a",
+      "id": "b08-bl01a",
       "dur": 1.35,
       "picture": {
         "src": "clip",
@@ -1293,7 +1302,7 @@
       ]
     },
     {
-      "id": "b08-bl01b",
+      "id": "b09-bl01b",
       "dur": 4.05,
       "picture": {
         "src": "clip",
@@ -1355,7 +1364,7 @@
       ]
     },
     {
-      "id": "b09-bl01c",
+      "id": "b10-bl01c",
       "dur": 0.3,
       "picture": {
         "src": "clip",
@@ -1376,7 +1385,7 @@
       ]
     },
     {
-      "id": "b10-rw1",
+      "id": "b11-rw1",
       "dur": 0.45,
       "picture": {
         "src": "clip",
@@ -1418,7 +1427,7 @@
       ]
     },
     {
-      "id": "b11-bl02a",
+      "id": "b12-bl02a",
       "dur": 0.3,
       "picture": {
         "src": "clip",
@@ -1439,7 +1448,7 @@
       ]
     },
     {
-      "id": "b12-bl02b",
+      "id": "b13-bl02b",
       "dur": 3.6,
       "picture": {
         "src": "clip",
@@ -1471,7 +1480,7 @@
       ]
     },
     {
-      "id": "b13-pov-look",
+      "id": "b14-pov-look",
       "dur": 3.0,
       "picture": {
         "src": "cine",
@@ -1516,7 +1525,7 @@
       ]
     },
     {
-      "id": "b14-pov-pass",
+      "id": "b15-pov-pass",
       "dur": 3.75,
       "picture": {
         "src": "cine",
@@ -1565,7 +1574,7 @@
       ]
     },
     {
-      "id": "b15-toggle",
+      "id": "b16-toggle",
       "dur": 3.6,
       "picture": {
         "src": "capture",
@@ -1599,7 +1608,7 @@
       ]
     },
     {
-      "id": "b16-board-rewind",
+      "id": "b17-board-rewind",
       "dur": 0.2,
       "picture": {
         "src": "capture",
@@ -1625,7 +1634,7 @@
       ]
     },
     {
-      "id": "b17-rw2",
+      "id": "b18-rw2",
       "dur": 1.15,
       "picture": {
         "src": "clip",
@@ -1653,7 +1662,7 @@
       }
     },
     {
-      "id": "b18-bl03",
+      "id": "b19-bl03",
       "dur": 2.6,
       "picture": {
         "src": "clip",
@@ -1693,7 +1702,7 @@
       }
     },
     {
-      "id": "b19-split",
+      "id": "b20-split",
       "dur": 1.5,
       "picture": {
         "src": "split",
@@ -1743,7 +1752,7 @@
       ]
     },
     {
-      "id": "b20-eyes-drag",
+      "id": "b21-eyes-drag",
       "dur": 2.25,
       "picture": {
         "src": "capture",
@@ -1782,7 +1791,7 @@
       ]
     },
     {
-      "id": "b21-eyes-pov",
+      "id": "b22-eyes-pov",
       "dur": 1.5,
       "picture": {
         "src": "capture",
@@ -1815,7 +1824,7 @@
       ]
     },
     {
-      "id": "b22-eyes-result",
+      "id": "b23-eyes-result",
       "dur": 1.5,
       "picture": {
         "src": "capture",
@@ -1846,7 +1855,7 @@
       }
     },
     {
-      "id": "b23-yc-decide",
+      "id": "b24-yc-decide",
       "dur": 3.0,
       "picture": {
         "src": "capture",
@@ -1904,7 +1913,7 @@
       ]
     },
     {
-      "id": "b24-yc-truth",
+      "id": "b25-yc-truth",
       "dur": 3.0,
       "picture": {
         "src": "capture",
@@ -1927,7 +1936,7 @@
       }
     },
     {
-      "id": "b25-ch2",
+      "id": "b26-ch2",
       "dur": 0.75,
       "picture": {
         "src": "title",
@@ -1942,7 +1951,7 @@
       ]
     },
     {
-      "id": "b26-press-a",
+      "id": "b27-press-a",
       "dur": 2.1,
       "picture": {
         "src": "cine",
@@ -1982,7 +1991,7 @@
       }
     },
     {
-      "id": "b27-press-b",
+      "id": "b28-press-b",
       "dur": 1.8,
       "picture": {
         "src": "cine",
@@ -2009,7 +2018,7 @@
       ]
     },
     {
-      "id": "b28-press-cf",
+      "id": "b29-press-cf",
       "dur": 3.0,
       "picture": {
         "src": "cine",
@@ -2063,7 +2072,7 @@
       }
     },
     {
-      "id": "b29-ch3",
+      "id": "b30-ch3",
       "dur": 0.75,
       "picture": {
         "src": "title",
@@ -2078,7 +2087,7 @@
       ]
     },
     {
-      "id": "b30-corner-a",
+      "id": "b31-corner-a",
       "dur": 1.5,
       "picture": {
         "src": "capture",
@@ -2098,7 +2107,7 @@
       ]
     },
     {
-      "id": "b31-corner-b",
+      "id": "b32-corner-b",
       "dur": 3.0,
       "picture": {
         "src": "capture",
@@ -2115,7 +2124,7 @@
       }
     },
     {
-      "id": "b32-crew",
+      "id": "b33-crew",
       "dur": 6.75,
       "picture": {
         "src": "title",
@@ -2171,7 +2180,7 @@
       }
     },
     {
-      "id": "b33-verified",
+      "id": "b34-verified",
       "dur": 4.5,
       "picture": {
         "src": "capture",
@@ -2237,7 +2246,7 @@
       }
     },
     {
-      "id": "b34-wrong",
+      "id": "b35-wrong",
       "dur": 3.75,
       "picture": {
         "src": "capture",
@@ -2284,7 +2293,7 @@
       }
     },
     {
-      "id": "b35-redcard",
+      "id": "b36-redcard",
       "dur": 3.0,
       "picture": {
         "src": "capture",
@@ -2329,7 +2338,7 @@
       ]
     },
     {
-      "id": "b36-bringback",
+      "id": "b37-bringback",
       "dur": 4.5,
       "picture": {
         "src": "capture",
@@ -2381,7 +2390,7 @@
       }
     },
     {
-      "id": "b37-casual",
+      "id": "b38-casual",
       "dur": 1.5,
       "picture": {
         "src": "capture",
@@ -2407,7 +2416,7 @@
       ]
     },
     {
-      "id": "b38-analyst",
+      "id": "b39-analyst",
       "dur": 1.5,
       "picture": {
         "src": "capture",
@@ -2426,7 +2435,7 @@
       ]
     },
     {
-      "id": "b39-zh",
+      "id": "b40-zh",
       "dur": 4.5,
       "picture": {
         "src": "capture",
@@ -2470,8 +2479,8 @@
       ]
     },
     {
-      "id": "b40-impact",
-      "dur": 3.75,
+      "id": "b41-impact",
+      "dur": 4.5,
       "picture": {
         "src": "capture",
         "shot": "14-stats",
@@ -2505,16 +2514,22 @@
       }
     },
     {
-      "id": "b41-s4-check",
-      "dur": 2.25,
+      "id": "b42-s4a-pov",
+      "dur": 1.0,
       "picture": {
-        "src": "title",
-        "id": "ph-s4a"
+        "src": "clip",
+        "path": "out/video/blender/bs4_pov_a.mp4",
+        "in": 0.0,
+        "fit": "pad"
       },
-      "muffle": [
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
         {
-          "at": 0.2,
-          "dur": 1.3
+          "title": "label-dr-1p0",
+          "at": 0.0
         }
       ],
       "sfx": [
@@ -2522,56 +2537,94 @@
           "name": "hum",
           "at": 0.0,
           "gain_db": -12
-        },
-        {
-          "name": "tick",
-          "at": 0.2,
-          "gain_db": -10
-        },
-        {
-          "name": "whoosh",
-          "at": 1.5,
-          "gain_db": -8
-        }
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-2p25",
-          "at": 0.0
         }
       ]
     },
     {
-      "id": "b42-s4-escape",
-      "dur": 2.25,
+      "id": "b43-s4b-check",
+      "dur": 2.03,
       "picture": {
-        "src": "title",
-        "id": "ph-s4b"
+        "src": "clip",
+        "path": "out/video/blender/bs4_check.mp4",
+        "in": 0.0,
+        "fit": "pad"
       },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-dr-2p03",
+          "at": 0.0
+        }
+      ],
+      "muffle": [
+        {
+          "at": 0.1,
+          "dur": 1.6
+        }
+      ],
+      "sfx": [
+        {
+          "name": "tick",
+          "at": 0.1,
+          "gain_db": -10
+        },
+        {
+          "name": "whoosh",
+          "at": 1.7,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
+      "id": "b44-s4c-escape",
+      "dur": 1.8,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_escape.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-dr-1p8",
+          "at": 0.0
+        }
+      ],
       "sfx": [
         {
           "name": "boom",
           "at": 0.1,
           "gain_db": -6
         }
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-2p25",
-          "at": 0.0
-        }
       ]
     },
     {
-      "id": "b43-s4-nod",
-      "dur": 1.5,
+      "id": "b45-s4d-run",
+      "dur": 1.2,
       "picture": {
-        "src": "title",
-        "id": "ph-s4c"
+        "src": "clip",
+        "path": "out/video/blender/bs4_run.mp4",
+        "in": 0.0,
+        "fit": "pad"
       },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
       "overlays": [
         {
-          "title": "label-dr-1p5",
+          "title": "label-dr-1p2",
+          "at": 0.0
+        },
+        {
+          "title": "tagline",
           "at": 0.0
         }
       ],
@@ -2581,8 +2634,8 @@
       }
     },
     {
-      "id": "b44-spec",
-      "dur": 5.25,
+      "id": "b46-spec",
+      "dur": 5.5,
       "picture": {
         "src": "title",
         "id": "spec"
@@ -2608,7 +2661,7 @@
       }
     },
     {
-      "id": "b45-end",
+      "id": "b47-end",
       "dur": 5.25,
       "picture": {
         "src": "title",
@@ -2647,5 +2700,17 @@
       "rate": "-4%",
       "pitch": "-6%"
     }
-  }
+  },
+  "pins": [
+    {
+      "id": "bs2",
+      "clip": "out/video/blender/bs2.mp4",
+      "corners": "out/video/blender/bs2_screen_corners.json",
+      "matte": "out/video/blender/bs2_screen_matte",
+      "source": {
+        "cine": "pov-match"
+      },
+      "source_offset_y": 138
+    }
+  ]
 }

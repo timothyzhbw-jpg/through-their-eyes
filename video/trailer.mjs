@@ -44,7 +44,7 @@ const ENGINE = digest(
   ),
 );
 
-const STEPS = ["assets", "capture", "cine", "titles", "vo", "sfx", "edit", "sheet", "report"];
+const STEPS = ["assets", "capture", "cine", "pin", "titles", "vo", "sfx", "edit", "sheet", "report"];
 
 const USAGE = `Usage: node video/trailer.mjs [options]
 
@@ -156,6 +156,7 @@ const STEP = {
   assets: stepAssets,
   capture: stepCapture,
   cine: stepCine,
+  pin: stepPin,
   titles: stepTitles,
   vo: stepVo,
   sfx: stepSfx,
@@ -188,6 +189,41 @@ async function stepAssets(ctx) {
       await downloadAsset(asset, dest);
     }
     storeHash(dest, hash);
+  }
+}
+
+/**
+ * Corner-pin a picture onto a screen in a rendered clip (video/pin.py): the coach's tablet shows
+ * a cine shot, mapped so its last frame matches that shot full frame. Output: <out>/pins/<id>.mp4.
+ */
+async function stepPin(ctx) {
+  const pins = ctx.spec.pins ?? [];
+  if (!pins.length) {
+    console.log("  no pins");
+    return;
+  }
+  const dir = path.join(ctx.outDir, "pins");
+  mkdirSync(dir, { recursive: true });
+  for (const pin of pins) {
+    const out = path.join(dir, `${pin.id}.mp4`);
+    const clip = path.resolve(ctx.root, pin.clip);
+    const corners = path.resolve(ctx.root, pin.corners);
+    const matte = path.resolve(ctx.root, pin.matte);
+    const source = path.join(ctx.outDir, "cine", `${pin.source.cine}.mp4`);
+    for (const f of [clip, corners, matte, source]) {
+      if (!existsSync(f)) throw new Error(`pin ${pin.id}: missing ${path.relative(ctx.root, f)}`);
+    }
+    const mattes = readdirSync(matte).filter((f) => f.endsWith(".png")).sort();
+    const hash = digest(["pin-v1", pin, fileStamp(clip), fileStamp(corners), fileStamp(source), mattes.length,
+      fileStamp(path.join(matte, mattes[mattes.length - 1] ?? "")), fileStamp(path.join(HERE, "pin.py"))]);
+    if (fresh(out, hash, ctx.force)) {
+      console.log(`  ${pin.id}: cached`);
+      continue;
+    }
+    await runProcess("uv", ["run", "--no-sync", "python", "video/pin.py", "--clip", clip, "--corners", corners,
+      "--matte", matte, "--source", source, "--source-offset-y", String(pin.source_offset_y ?? 0), "--out", out],
+      { cwd: ctx.root, inherit: true });
+    storeHash(out, hash);
   }
 }
 

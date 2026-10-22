@@ -25,6 +25,15 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
  */
 export function validateTrailer(spec, ctx) {
   const errors = [];
+  // `pins`: a cine shot corner-pinned onto a screen in a rendered clip (video/pin.py).
+  for (const [k, pin] of (Array.isArray(spec?.pins) ? spec.pins : []).entries()) {
+    const at = `pins[${k}]`;
+    if (!pin || typeof pin.id !== "string" || !/^[A-Za-z0-9_-]+$/.test(pin.id)) errors.push(`${at}: id is not a safe file name`);
+    for (const key of ["clip", "corners", "matte"]) {
+      if (typeof pin?.[key] !== "string" || !pin[key]) errors.push(`${at}: ${key} is required`);
+    }
+    if (!spec.cine?.[pin?.source?.cine]) errors.push(`${at}: source.cine must name a cine shot`);
+  }
   const warnings = [];
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
     return { errors: ["trailer.json: expected an object"], warnings };
