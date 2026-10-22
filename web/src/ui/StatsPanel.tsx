@@ -24,6 +24,7 @@ import { TacticsCards } from "../tactics/TacticsCards";
 import { Segmented } from "./Segmented";
 import "./stats.css";
 import { clubName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 const DASH = "–";
 const SOURCE =
@@ -40,11 +41,7 @@ function personaStore(view: ViewSession): Store<{ persona: Persona }> {
 }
 
 function Source() {
-  return (
-    <span className="source" title={SOURCE}>
-      tracking
-    </span>
-  );
+  return <SourceChip kind="tracking" title={SOURCE} />;
 }
 
 function pct(accuracy: number | null): string {

@@ -24,6 +24,7 @@ import {
 } from "../telemetry/telemetry";
 import { renameIds, shortName } from "../data/roster";
 import { useOnScreen, useStoreWhile } from "./onScreen";
+import { SourceChip } from "../provenance/SourceChip";
 
 const NO_FEED = createStore({ latest: -1 }); // offline: there is no stream to wait for
 const THIN = { vectorEffect: "non-scaling-stroke" } as const;
@@ -293,9 +294,7 @@ function Row(props: {
         <span className="tname">{props.label}</span>
         <span className="tread">
           <b className="tvalue">{props.value}</b>
-          <span className="source" title={props.note}>
-            {props.source}
-          </span>
+          <SourceChip kind={props.source} title={props.note} />
         </span>
         <span className="tdetail">{props.detail}</span>
       </div>

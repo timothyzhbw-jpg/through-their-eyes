@@ -29,6 +29,7 @@ import { revealOf, type RevealLine } from "./reveal";
 import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
 import { renameIds, shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
 // A text marker (carry, a shot) is a pill: its width from the label (11 px uppercase, tracked).
@@ -558,11 +559,7 @@ const labelOf = (options: CallOption[]) => (action: string) =>
 
 /** Marks a statement read from the sim export rather than a verified claim, for screen readers too. */
 function SimTag() {
-  return (
-    <span className="source" title="Read from the sim export, not a verified claim">
-      sim<span className="sr-only"> (read from the sim export, not a verified claim)</span>
-    </span>
-  );
+  return <SourceChip kind="sim" spoken />;
 }
 
 function Lines({ lines }: { lines: RevealLine[] }) {
@@ -577,7 +574,7 @@ function Lines({ lines }: { lines: RevealLine[] }) {
             ))}
           </span>
           <span className="yc-line">{renameIds(l.text)}</span>
-          {l.source === "fixture" && <span className="source">sample</span>}
+          {l.source === "fixture" && <SourceChip kind="sample" />}
         </li>
       ))}
     </ul>

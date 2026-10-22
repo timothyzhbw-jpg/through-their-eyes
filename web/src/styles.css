@@ -1856,6 +1856,8 @@ optgroup {
 .caption .kind {
   background: rgba(8, 14, 11, 0.55);
 }
+/* Where a number comes from (provenance/SourceChip.tsx): one chip everywhere. A metric's chip is
+   dashed (sim, tracking, detector, lens, sample); a claim the Verifier checked is solid Floodlight. */
 .source {
   font: 500 10px/1 var(--font-data);
   color: var(--chalk-3);
@@ -1863,6 +1865,11 @@ optgroup {
   border-radius: 4px;
   padding: 2px 4px;
   vertical-align: 0.15em;
+}
+.source.verified,
+:is(.tread, .blind-tag, .hud, .option-card) .source.verified {
+  color: var(--floodlight);
+  border: 1px solid rgba(246, 213, 102, 0.6);
 }
 
 /* ---------- evidence: every number is a door ---------- */
@@ -2899,10 +2906,6 @@ optgroup {
 .option-card .source {
   width: 28px;
   text-align: center;
-}
-.option-card .source.verified {
-  color: var(--floodlight);
-  border: 1px solid rgba(246, 213, 102, 0.6);
 }
 .option-source {
   margin: 8px 0 0;

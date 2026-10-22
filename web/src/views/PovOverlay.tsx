@@ -9,6 +9,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
 import { shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 /** The Skeleton chip's tooltip, on the broadcast camera and the tactical board (SPEC 7). */
 export const SKELETON_TITLE =
@@ -65,10 +66,7 @@ export function Hud() {
     <div className="hud" aria-live="off">
       <span>
         {shortName(povPlayer)} · head {offBall.toFixed(0)}° from the ball
-        {run.sight && <> · {inSight} players in sight</>}{" "}
-        <span className="source" title="Live readouts from the sim, not a verified claim">
-          sim
-        </span>
+        {run.sight && <> · {inSight} players in sight</>} <SourceChip kind="sim" />
       </span>
       {scan && (
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
@@ -78,9 +76,10 @@ export function Hud() {
         <span key={a.target} className="blind-hud">
           <span className="badge blind">BLIND SIDE</span> {shortName(hero.ids[a.target])}{" "}
           {unseenLabel(a.unseen)}{" "}
-          <span className="source" title="Live overlay from tracking, not a verified claim">
-            sim
-          </span>
+          <SourceChip
+            kind="tracking"
+            title="Live overlay from tracking (head yaw and positions), not a verified claim"
+          />
         </span>
       ))}
     </div>
