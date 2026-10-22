@@ -41,6 +41,9 @@ const POV_FAR = 300;
 const LABEL_Y = 2.1;
 const LABEL_TEXT = 0.36;
 const LABEL_ASPECT = 1.6;
+// At most this tall on screen (px): a player a few metres away wore a number the size of his head.
+const LABEL_MAX_PX = 28;
+const labelScale = new Float32Array(32);
 const labelAt = new THREE.Vector3();
 /** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
 const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
@@ -220,14 +223,18 @@ function PovScene() {
         if (j === me || !labels.current[j]) return null;
         labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
         const box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
-        return box && { ...box, priority: j === hero.runner };
+        const k = box && box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        labelScale[j] = k;
+        return box && { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
       }),
     );
     placed.forEach(({ visible, lift }, j) => {
       const label = labels.current[j];
       if (!label) return;
+      const k = labelScale[j] || 1;
       label.visible = visible;
-      label.position.y = LABEL_Y + lift * LABEL_TEXT;
+      label.scale.set(0.75 * k, 0.75 * k, 1);
+      label.position.y = LABEL_Y + lift * LABEL_TEXT * k;
     });
     if (moving) invalidate();
     if (alerted.size) invalidate(); // keep the blind-side pulse going
