@@ -148,6 +148,18 @@ function measure(hero: Hero): Measured[] {
   return out;
 }
 
+describe("the ball in the 3D views", () => {
+  it("sits on the kicker's foot, except in his own eyes (his body is not drawn)", () => {
+    const hero = parseHero(raw);
+    const motion = runMotion(hero, hero.runs.factual, clips, scale);
+    const h8 = hero.ids.indexOf("H8");
+    const out: [number, number] = [0, 0];
+    expect(Math.hypot(...kickBall(motion, 75, hero.dt, out))).toBeGreaterThan(0.1);
+    expect(kickBall(motion, 75, hero.dt, out, h8)).toEqual([0, 0]);
+    expect(kickBall(motion, 40, hero.dt, out)).toEqual([0, 0]); // nobody kicking
+  });
+});
+
 describe.each(exports())("the kick on %s", (_, hero) => {
   const kicks = measure(hero);
   it("finds its passes and shots", () => {

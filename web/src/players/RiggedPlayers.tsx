@@ -24,7 +24,7 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { Sample, sampleInto } from "../data/hero";
+import { type Hero, Sample, sampleInto } from "../data/hero";
 import type { ExportPlayer, RunName } from "../data/types";
 import { useView } from "../session";
 import { useStore } from "../store/store";
@@ -218,11 +218,12 @@ function Rigged({
     };
   }, [hero, clips, scale]);
   useEffect(() => {
+    // The first-person view's own kicks leave the ball where the sim has it: his body is hidden.
     const offset: KickBallOffset = (mode, frame, out) =>
-      kickBall(motion[mode], frame, hero.dt, out);
+      kickBall(motion[mode], frame, hero.dt, out, hiddenPlayer(hero, playback.get()));
     setKickBall(offset);
     return () => clearKickBall(offset);
-  }, [motion, hero]);
+  }, [motion, hero, playback]);
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {
@@ -247,7 +248,7 @@ function Rigged({
     const s = playback.get();
     const run = hero.runs[s.mode];
     sampleInto(sample, hero, run, s.frame, s.comfort);
-    const me = s.camera === "broadcast" ? -1 : hero.ids.indexOf(s.povPlayer); // hidden: his own
+    const me = hiddenPlayer(hero, s); // his own body, in his eyes
     for (let j = 0; j < hero.n; j++) {
       const { rig } = rigs[j];
       rig.holder.visible = j !== me;
@@ -277,6 +278,11 @@ function Rigged({
       ))}
     </>
   );
+}
+
+/** Whose body is not drawn: the first-person view's own (nobody's on the broadcast camera). */
+function hiddenPlayer(hero: Hero, s: { camera: string; povPlayer: string }): number {
+  return s.camera === "broadcast" ? -1 : hero.ids.indexOf(s.povPlayer);
 }
 
 /** If the extra clips cannot load, keep the rigged players on the engine's clips. */

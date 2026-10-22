@@ -200,18 +200,21 @@ export function runMotion(hero: Hero, run: Run, clips: ModelClips, scale: number
 
 /**
  * Where to draw the ball at fractional frame f (m, added to the sim's): on the kicking foot while
- * a rigged player kicks it (gait.ts), else nothing. `out` is returned.
+ * a rigged player kicks it (gait.ts), else nothing; not for player `hidden` (the first-person
+ * view's own, whose body is not drawn). `out` is returned.
  */
 export function kickBall(
   motion: Motion,
   f: number,
   dt: number,
   out: [number, number],
+  hidden = -1,
 ): [number, number] {
   out[0] = 0;
   out[1] = 0;
-  for (const kicks of motion.kicks) {
-    for (const kick of kicks) {
+  for (let j = 0; j < motion.kicks.length; j++) {
+    if (j === hidden) continue;
+    for (const kick of motion.kicks[j]) {
       const w = kickBallWeight(f, kick, dt);
       if (w <= 0) continue;
       out[0] += w * kick.ball[0];
