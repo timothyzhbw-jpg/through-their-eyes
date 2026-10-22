@@ -112,6 +112,10 @@ _Fill in as they come to exist._
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
 - `uv run --env-file .env python -m infra.voices` — check the narration voices and their speaking
   styles against the Azure Speech voices list for `AZURE_SPEECH_REGION`
+- `uv run python -m eval.hero_gates --run --jobs 4` — large-sample check (SPEC 3.6): every hero's
+  held-out gate re-run unchanged on fresh seeds 1000–1199 (only the missing reports, under `nice`),
+  then the summary with 95% Wilson intervals, `eval/reports/hero_gates_1000-1199.md`. Without
+  `--run` it only rewrites the summary from the committed reports
 - `uv run python -m eval.hero_flip --seeds 100-139` — hero-moment eval (SPEC 3.6): does dropping
   the key scan change the decision? Writes `eval/reports/hero_flip_<scenario>.md`
 - `uv run python -m eval.hero_lens --scenario press_escape` — hero lens eval (SPEC 3.6, 5.2):
@@ -146,7 +150,9 @@ _Fill in as they come to exist._
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
 - `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
   moments, breakdowns, the Verifier, interventions, determinism and the realism rows at season
-  scale, on all cores (15–30 min); writes `eval/reports/season.md` (`--from-cache` re-renders)
+  scale, on all cores (15–30 min); writes `eval/reports/season.md` (`--from-cache` re-renders).
+  `--season-seed 2027 --seasons 5` runs five independent seasons and writes them side by side,
+  pooled with 95% intervals, to `eval/reports/seasons_2027-2031.md`
 - `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
   distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
   only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
