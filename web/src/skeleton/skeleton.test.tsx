@@ -39,7 +39,7 @@ vi.mock("@react-three/fiber", async (original) => ({
 const DEG = 180 / Math.PI;
 const hero = parseHero(raw);
 const H8 = hero.ids.indexOf("H8");
-const KEY = { start: 50, end: 70 }; // the scan detector's scan of H8 in the factual run (the key scan)
+const KEY = { start: 50, end: 69 }; // the scan detector's scan of H8 in the factual run (the key scan)
 
 const heroSession = (): Session => createSession(hero, EXAMPLE_PLAN, payloadJson);
 function matchSession(): MatchSession {
