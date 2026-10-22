@@ -50,8 +50,8 @@ On match-1 (measured 2026-10-22 with the team shape, #150):
 
 What it cannot say yet:
 - **Open play passes by a rule.** Outside the hero moments, who passes, when and to whom
-  comes from possession play's passing rule (SPEC 3.6: the carrier keeps the ball a moment,
-  then finds the onside team-mate in range with the most space); the decision model chooses only
+  comes from possession play's passing rule (SPEC 3.1: after a moment on the ball, the carrier
+  plays an onside team-mate 8–35 m away, picked by a draw weighted toward space); the decision model chooses only
   at the hero moments (SPEC 3.5). The movement, press, marking, perception and whether each pass
   arrives are simulated throughout. So the rates describe that rule under the sim's press, not
   a coached team's choices.

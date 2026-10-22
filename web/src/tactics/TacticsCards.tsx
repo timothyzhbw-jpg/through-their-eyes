@@ -226,9 +226,9 @@ function BuildUp({
         Simulated for every pass: the players&apos; movement, the press and the marking, what each
         player has seen and believes, and whether the ball arrives. Who passes, when and to whom: at
         the hero moments the decision model chooses on what the player believed (SPEC 3.5); in the
-        rest of open play a passing rule does (SPEC 3.6: the carrier keeps the ball a moment, then
-        finds the onside team-mate in range with the most space). Tackles are not modelled yet in
-        open play: the ball changes hands on interceptions.
+        rest of open play a passing rule does (SPEC 3.1: after a moment on the ball, the carrier
+        plays an onside team-mate 8–35 m away, picked by a draw weighted toward space). Tackles are
+        not modelled yet in open play: the ball changes hands on interceptions.
       </p>
     </article>
   );
@@ -314,7 +314,7 @@ function SetPieceCard({
         {sp.open_play > 0 && (
           <>
             {" "}
-            Open play follows a passing rule that rarely reaches the final third (SPEC 3.6), so the
+            Open play follows a passing rule that rarely reaches the final third (SPEC 3.1), so the
             comparison favours the corner.
           </>
         )}
