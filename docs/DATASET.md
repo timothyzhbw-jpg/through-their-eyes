@@ -12,12 +12,12 @@ At a glance (v1, built on macOS arm64):
 | | |
 |---|---|
 | Matches | 10 stitched matches, match seeds 5001–5010 |
-| Play | 130.5 min in all; 12:25–13:28 per match; 19 possessions each |
-| Frames | 195,793 at 25 Hz; 4,307,446 player rows |
-| Events | 101,202: 61,730 scans, 31,176 head turns, 2,714 passes, 2,089 receptions, 515 interceptions, 516 possession changes, 2,228 pressure spells, 190 restarts, 14 balls out of play, 10 shots, 10 keeper dives, 9 goals, 1 tackle |
-| Perception | 2,089 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (43,869 rows) |
+| Play | 134.7 min in all; 13:26–13:29 per match; 19 possessions each |
+| Frames | 201,981 at 25 Hz; 4,443,582 player rows |
+| Events | 103,091: 62,433 scans, 31,391 head turns, 2,987 passes, 2,227 receptions, 673 interceptions, 674 possession changes, 2,485 pressure spells, 190 restarts, 1 ball out of play, 10 shots, 10 keeper dives, 9 goals, 1 tackle |
+| Perception | 2,227 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (46,767 rows) |
 | Decisions | 30 decisions on belief, with all 339 options weighed |
-| Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 70 MB |
+| Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 74 MB |
 | Licence | **TODO(Bowen):** proposed CC BY 4.0 for the data; the code stays MIT ([§ Licence](#licence)) |
 
 A one-possession sample of the same files (under 200 KB) is in the repository:
@@ -323,15 +323,17 @@ The simulator simplifies football heavily. Read the data as the output of these 
   has on the true state, with random jitter.
   - There are no shots, dribbles or tackles in open play. The ball changes hands only by
     interception or going out.
-  - Open play is pass-heavy. `eval/reports/match_stats.md` counts about 1,853 passes per
+  - Open play is pass-heavy. `eval/reports/match_stats.md` counts about 2,000 passes per
     90 min of play. No published target is configured to check that against (SPEC 3,
     acceptance checks).
 - **Scripted heroes.** The four hero scenarios set up a situation with scripted passes and, for
   three of them, a scripted key scan. Their outcomes are designed:
   - the shot hero scores in 9 of 10 matches, which is not a realistic conversion rate;
   - the only tackle is in `press_escape`.
-- **Same players, fixed shape.** The same 22 players with fixed formations play every match, and
-  role parameters are shared within a role. There is no per-player trait, fatigue,
+- **Same players, fixed shape.** The same 22 players play every match in the same formations (in
+  open play a 4-3-3 and a 4-2-3-1 with the ball, a 4-1-4-1 and a 4-4-1-1 without it, fitted to
+  published team lengths, widths and line heights; SPEC 3.2), and role parameters are shared
+  within a role. There is no per-player trait, fatigue,
   substitution, foul, card or offside.
 - **Perception model.** Vision is a cone with soft edges and occlusion. Beliefs are the last
   sighting, extrapolated at most 1 s, with no uncertainty stored. Real players also use memory,
