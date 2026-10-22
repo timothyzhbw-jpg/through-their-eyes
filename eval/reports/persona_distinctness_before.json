@@ -404,7 +404,7 @@
    "length": 76,
    "numbers": 4,
    "numbered_lines": 3,
-   "jargon_lines": 3,
+   "jargon_lines": 2,
    "jargon": [
     "belief error",
     "scan"
@@ -428,7 +428,7 @@
     "4 numbers, at most 3 for coach",
     "start with the opener \"教学要点。\"",
     "end with the cue \"要教的就是这一点：球到之前，先回头看。\"",
-    "3 jargon lines, spec ≤ 1"
+    "2 jargon lines, spec ≤ 1"
    ],
    "plan": {
     "cameras": [
@@ -1517,7 +1517,7 @@
    "length": 107,
    "numbers": 6,
    "numbered_lines": 4,
-   "jargon_lines": 3,
+   "jargon_lines": 2,
    "jargon": [
     "probability",
     "scan"
@@ -1543,7 +1543,7 @@
     "6 numbers, at most 3 for coach",
     "start with the opener \"教学要点。\"",
     "end with the cue \"要教的就是这一点：球到之前，先抬头看球门。\"",
-    "3 jargon lines, spec ≤ 1"
+    "2 jargon lines, spec ≤ 1"
    ],
    "plan": {
     "cameras": [

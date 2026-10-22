@@ -37,7 +37,7 @@ Per persona (all four moments, both languages):
 | casual | 4–6, 5.2 | 48 | 73 | 0.8, 2 | 14% | 0% | – | 8 of 8 |
 | analyst | 7–9, 7.8 | 91 | 138 | 7.0, 9 | 74% | 42% | belief error, pitch control, pressing, probability, scan, xT | 8 of 8 |
 | player fan | 5–6, 5.2 | 53 | 79 | 1.5, 3 | 29% | 5% | belief error | 8 of 8 |
-| coach | 4–5, 4.5 | 60 | 90 | 4.5, 6 | 83% | 44% | belief error, pressing, probability, scan, xT | 8 of 8 |
+| coach | 4–5, 4.5 | 60 | 90 | 4.5, 6 | 83% | 39% | belief error, pressing, probability, scan, xT | 8 of 8 |
 | audio description | 5–6, 5.8 | 65 | 94 | 1.2, 2 | 22% | 0% | – | 0 of 8 |
 
 Mean claim Jaccard per pair:
@@ -103,7 +103,7 @@ Scripts outside their spec:
 - m:decision_after_scan:H8:0075 player fan en: not for player_fan: belief_error, cf_pass, runner_received; missing his decision: cite one of pass_to_runner; 5 lines, at most 4 for player_fan; start with the opener "Lovely from him."; 5 lines, spec 3–4; 1 jargon lines, spec ≤ 0
 - m:decision_after_scan:H8:0075 player fan zh: not for player_fan: belief_error, cf_pass, runner_received; missing his decision: cite one of pass_to_runner; 5 lines, at most 4 for player_fan; start with the opener "这一下漂亮！"; 5 lines, spec 3–4; 1 jargon lines, spec ≤ 0
 - m:decision_after_scan:H8:0075 coach en: not for coach: belief_error, scans_before_reception; 4 numbers, at most 3 for coach; start with the opener "Coaching point."; end with the cue "Teach it: check your shoulder before the ball arrives."; 2 jargon lines, spec ≤ 1
-- m:decision_after_scan:H8:0075 coach zh: not for coach: belief_error, scans_before_reception; 4 numbers, at most 3 for coach; start with the opener "教学要点。"; end with the cue "要教的就是这一点：球到之前，先回头看。"; 3 jargon lines, spec ≤ 1
+- m:decision_after_scan:H8:0075 coach zh: not for coach: belief_error, scans_before_reception; 4 numbers, at most 3 for coach; start with the opener "教学要点。"; end with the cue "要教的就是这一点：球到之前，先回头看。"; 2 jargon lines, spec ≤ 1
 - m:marker_scan:H5:0121 casual en: not for casual: marker_scan; 2 numbers, at most 1 for casual; 6 lines, at most 3 for casual; start with the opener "Watch his head."; 6 lines, spec 2–3; 65 words, spec ≤ 45
 - m:marker_scan:H5:0121 casual zh: not for casual: marker_scan; 2 numbers, at most 1 for casual; 6 lines, at most 3 for casual; start with the opener "注意看他回头。"; 6 lines, spec 2–3; 92 characters, spec ≤ 80
 - m:marker_scan:H5:0121 analyst en: 9 lines, at most 7 for analyst; start with a number: the first line cites a claim that says one; 9 lines, spec 5–7
@@ -119,7 +119,7 @@ Scripts outside their spec:
 - m:decision_after_scan:H9:0198 player fan en: not for player_fan: cf_shot, keeper_seen_in_scan; 6 lines, at most 4 for player_fan; start with the opener "Lovely from him."; 6 lines, spec 3–4
 - m:decision_after_scan:H9:0198 player fan zh: not for player_fan: cf_shot, keeper_seen_in_scan; 6 lines, at most 4 for player_fan; start with the opener "这一下漂亮！"; 6 lines, spec 3–4
 - m:decision_after_scan:H9:0198 coach en: not for coach: cf_shot_value, scans_before_reception; 6 numbers, at most 3 for coach; start with the opener "Coaching point."; end with the cue "Teach it: look at the goal before the ball arrives."; 2 jargon lines, spec ≤ 1
-- m:decision_after_scan:H9:0198 coach zh: not for coach: cf_shot_value, scans_before_reception; 6 numbers, at most 3 for coach; start with the opener "教学要点。"; end with the cue "要教的就是这一点：球到之前，先抬头看球门。"; 3 jargon lines, spec ≤ 1
+- m:decision_after_scan:H9:0198 coach zh: not for coach: cf_shot_value, scans_before_reception; 6 numbers, at most 3 for coach; start with the opener "教学要点。"; end with the cue "要教的就是这一点：球到之前，先抬头看球门。"; 2 jargon lines, spec ≤ 1
 - m:pressed_decision:H4:0066 casual en: 4 lines, at most 3 for casual; 4 lines, spec 2–3
 - m:pressed_decision:H4:0066 casual zh: 4 lines, at most 3 for casual; 4 lines, spec 2–3
 - m:pressed_decision:H4:0066 analyst en: missing the options' chances: what he gave his pass or shot against what it was: cite one of pass_success; start with a number: the first line cites a claim that says one
