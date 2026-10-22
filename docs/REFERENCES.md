@@ -244,6 +244,34 @@ printed range, or a shape only. It also says how far the source was read.
   - The 0.2 s render delay before a dive.
   - The bisector rule with the keeper 1.5 m off his line.
 
+### Goalkeeper positioning (`sim/keeper.py`, SPEC 3.2)
+Read on 2026-10-22. Where a keeper stands when no script moves him, in every scenario.
+- **FIFA Football Analysis and Insights Team. *Goalkeeper height and connection with the
+  defensive line.*** FIFA Training Centre, World Cup Qatar 2022 technical analysis —
+  https://fifatrainingcentre.com/en/fwc2022/technical-and-tactical-analysis/goalkeeper-height-and-connection-with-the-defensive-line.php
+  → **`GAP_TO_LINE`.** Open play only, set plays excluded; positional data, tracking system and
+  match count not named. Average keeper height off his goal line 11.8 m (2018) and 13.1 m (2022);
+  average distance from the keeper to his defensive line 21.4 m (2018) and 20.4 m (2022). By game
+  state the article gives changes, and only some absolute values. *Read:* full article.
+- **FIFA Training Centre. *Goalkeeper and defensive line distances when defending in the final
+  third.*** Club World Cup UAE 2021 —
+  https://fifatrainingcentre.com/en/game/individual-qualities/goalkeeping/goalkeeper-and-defensive-line-distances-when-defending-in-the-final-third.php
+  → **`DEPTH_FLOOR`.** One keeper (Monterrey's): average starting position 4.8 m from his goal
+  line, his team's defensive line on average 17.4 m from goal, the highest of the teams compared.
+  A single keeper, not a tournament average. *Read:* full article.
+- **The bisector.** The keeper on the bisector of the angle the ball makes with his two posts is
+  the angle-play rule of goalkeeping coaching (also used, 1.5 m off the line, for the set position
+  before a shot in `sim/shots.py`, above). Context only, not a source of numbers: the theoretical
+  arc of goalkeeper position (Geoinformatica Polonica,
+  https://ejournals.eu/czasopismo/geoinformatica-polonica/artykul/theoretical-arc-of-goalkeeper-position-in-team-sports-case-study-football).
+- **Checks, not fitted to:** keeper to the nearest defender 24.969 m per match (Errekagorri et al.
+  2024, Team shape, below); defending keeper to his nearest team-mate by ball zone 29.9 → 8.9 m
+  (Fradua et al. 2013, [SIM_PARAMETERS.md](SIM_PARAMETERS.md)).
+- **Ours, a style knob:** holding the 20.4 m gap to the line down to the 4.8 m floor. Neither
+  article prints the keeper's depth as a function of the line's or the ball's; the rule reproduces
+  both anchors (a 33.5 m line puts him 13.1 m off his line, a 17.4 m line on the floor). Also ours:
+  the 1 m margins inside his penalty area and behind the ball.
+
 ### Team shape (`sim/team_shape.py`, `analytics/team_shape.py`, eval/realism.py "Team shape")
 All read on 2026-10-21. Every value below was read in the source itself, with its table or page.
 "Abstract only" means the full text could not be opened and only the abstract's numbers are given.
@@ -362,7 +390,7 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
 - **Ours, not cited (style knobs):** the slot depths and laterals, how far the block slides toward
   the ball's side (`shift`: no readable study prints a centroid-on-ball slope or a ball-side
   offset, as the sim-parameters dossier also found), how far the wide players tuck in
-  and the full-backs push on, the keeper's depth as a share of the back line's, the zonal marking
+  and the full-backs push on, the zonal marking
   radii and leash, the in-possession line (a set distance behind the ball; no paper prints a
   relation for it), the block's one-second lag behind the ball, the jog to a slot (3 m/s, below
   the 19.8 km/h high-speed running entry speed of Gualtieri et al. 2023), and the five seconds the
