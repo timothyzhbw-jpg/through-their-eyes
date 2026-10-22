@@ -9,14 +9,16 @@ only. A frame's
 `blind_side` lists the alerts on as [observer, target, frames unseen] (player indices,
 SPEC 4.4). The client may send `{"type": "pause" | "resume" | "stop"}`,
 `{"type": "seek", "f": 120}` (a frame of the match) or `{"type": "speed", "x": 2.0}` (clamped to
-0.1–1000).
+0.1–8; the web app plays at most 4x).
 
 The stream is public, so it is bounded: a few open at once per client and a ceiling across all
 clients (`Slots`), a session length with paused time included, and control messages that are
 exactly one of the forms above. Anything else gets an `error` with the reason, then the stream
 closes: 4400 for a malformed control message, 4408 past the session length, 4429 for too many
-streams (4404: unknown match). A frame larger than the server's `--ws-max-size` (Dockerfile) is
-refused by uvicorn from its header, with 1009, before it is buffered.
+streams or a spent egress budget (4404: unknown match). Every message counts against the
+client's and the day's egress budget (api/egress.py), which is checked when a stream opens. A
+frame larger than the server's `--ws-max-size` (Dockerfile) is refused by uvicorn from its
+header, with 1009, before it is buffered.
 
 A stitched match (SPEC 3.1) streams the same way over its whole clock: `hello` says
 `kind: "match"`, every event carries its `possession`, and the moments of every possession are
@@ -30,6 +32,7 @@ import contextlib
 import json
 import math
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -37,7 +40,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from api.store import Match
 
-MIN_SPEED, MAX_SPEED = 0.1, 1000.0
+# 4 streams at 1000x delayed 50 viewers' frames by 0.3 s (p95) on 0.5 vCPU (docs/OPERATIONS.md)
+MIN_SPEED, MAX_SPEED = 0.1, 8.0
 MAX_CONTROL_CHARS = 256  # the longest valid control message is about 30
 
 
@@ -135,9 +139,22 @@ async def _listen(ws: WebSocket, control: Control) -> None:
 
 
 async def stream(
-    ws: WebSocket, match: Match, speed: float = 1.0, start: int = 0, max_s: float = 600.0
+    ws: WebSocket,
+    match: Match,
+    speed: float = 1.0,
+    start: int = 0,
+    max_s: float = 600.0,
+    sent: Callable[[int], None] | None = None,
 ) -> None:
-    """Replay `match` on the accepted socket `ws`, then close it."""
+    """Replay `match` on the accepted socket `ws`, then close it. `sent` is told the size of
+    every message, in bytes (the egress budget, api/egress.py)."""
+
+    async def send(message: dict[str, Any]) -> None:
+        text = json.dumps(message, separators=(",", ":"), ensure_ascii=False)  # as send_json
+        await ws.send_text(text)
+        if sent is not None:
+            sent(len(text.encode()))
+
     run = match.export["runs"]["factual"]
     dt, frames = match.export["dt"], run["frames"]
     events: dict[int, list[dict]] = defaultdict(list)
@@ -156,7 +173,7 @@ async def stream(
     loop = asyncio.get_running_loop()
     f, next_at = min(max(start, 0), frames - 1), loop.time()
     try:
-        await ws.send_json({
+        await send({
             "type": "hello", "match": match.id, "dt": dt, "frames": frames,
             "players": match.export["players"], "hero": match.export["hero"],
             "kind": match.export.get("kind", "hero"),
@@ -172,13 +189,13 @@ async def stream(
                         await control.changed.wait()
                         next_at = loop.time()
                         continue
-                    await ws.send_json(_frame(match, run, f, dt))
+                    await send(_frame(match, run, f, dt))
                     for e in events.get(f, ()):
-                        await ws.send_json({"type": "event", "event": e})
+                        await send({"type": "event", "event": e})
                     for cue in stat_cues.get(f, ()):
-                        await ws.send_json({"type": "stat", "cue": cue})
+                        await send({"type": "stat", "cue": cue})
                     for card in moments.get(f, ()):
-                        await ws.send_json({"type": "moment", "card": card})
+                        await send({"type": "moment", "card": card})
                     f += 1
                     next_at += dt / control.speed
                     delay = next_at - loop.time()
@@ -193,10 +210,10 @@ async def stream(
         else:
             code = 4400 if control.refused else 1000
         if control.refused:
-            await ws.send_json({"type": "error", "detail": control.refused})
+            await send({"type": "error", "detail": control.refused})
         else:
             # Full time: the stream reached the match's last frame (not a stop or a seek).
-            await ws.send_json({"type": "end", "f": f, "full_time": f >= frames})
+            await send({"type": "end", "f": f, "full_time": f >= frames})
         await ws.close(code)
     except (WebSocketDisconnect, RuntimeError):
         pass  # the client is gone

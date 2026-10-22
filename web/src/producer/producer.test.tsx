@@ -21,6 +21,7 @@ import {
   type Route,
 } from "../testing";
 import { BreakdownPanel } from "../ui/BreakdownPanel";
+import { NarrationPanel, recordedTime } from "../ui/Narration";
 import { BACK_NOTE, crewSteps, toggled } from "./producer";
 
 const hero = parseHero(raw);
@@ -200,6 +201,70 @@ describe("a failure drill", () => {
     expect(session.producer.get().error).toMatch(/HTTP 429.*rate_limited/);
     expect(session.producer.get().down).toEqual(["analyst"]); // still picked, to try again
     expect(render(session, <BreakdownPanel />)).toContain("HTTP 429");
+  });
+
+  it("a limited drill shows the recorded run and when it ran, not a dead end", async () => {
+    const recorded = {
+      ...breakdownResponse(
+        { cached: true, rate_limited: true },
+        {
+          key: "5f0c1d2e3a4b5c6d7e8f90a1b2c3d4e5",
+          trace: telestratorDownTrace(),
+          plan_source: "template",
+          drill: { down: ["telestrator"], pending: ["telestrator"] },
+        },
+      ),
+      recorded: { at: "2026-10-21T15:04:05+00:00" },
+    };
+    const { session } = online({
+      "POST /api/breakdowns": (body) =>
+        (body as { fail?: string[] }).fail ? json(recorded) : json(breakdownResponse()),
+    });
+    session.controls.requestBreakdown();
+    await settle();
+    session.controls.toggleDown("telestrator");
+    session.controls.runDrill();
+    await settle();
+    expect(session.producer.get().error).toBeNull();
+    expect(session.breakdown.get().origin).toMatchObject({
+      kind: "api",
+      recordedAt: "2026-10-21T15:04:05+00:00",
+    });
+    const producer = render(session, <BreakdownPanel />);
+    expect(producer).toContain("Recorded run from 10-21 15:04 UTC");
+    expect(row(producer, "Telestrator")).toContain(">Bring back<"); // its bring-back is recorded
+    const badges = render(session, <NarrationPanel />);
+    expect(badges).toContain("Recorded run · 10-21 15:04 UTC");
+    expect(badges).toContain("Rate-limited");
+  });
+
+  it("a limited drill without a recording ran without the model and says so", async () => {
+    const offline = {
+      ...breakdownResponse(
+        { cached: false, capped: true },
+        { key: DRILL_KEY, drill: { down: ["analyst"], pending: ["analyst"] } },
+      ),
+      source: "offline",
+    };
+    const { session } = online({
+      "POST /api/breakdowns": (body) =>
+        (body as { fail?: string[] }).fail ? json(offline) : json(breakdownResponse()),
+    });
+    session.controls.requestBreakdown();
+    await settle();
+    session.controls.toggleDown("analyst");
+    session.controls.runDrill();
+    await settle();
+    expect(session.producer.get().error).toBeNull();
+    const html = render(session, <BreakdownPanel />);
+    expect(html).toContain("ran without the model");
+    expect(html).not.toContain("Recorded run");
+  });
+
+  it("formats the recording's time in UTC", () => {
+    expect(recordedTime("2026-11-02T23:59:00+00:00")).toBe("11-02 23:59 UTC");
+    expect(recordedTime("2026-10-27T01:30:00-05:00")).toBe("10-27 06:30 UTC");
+    expect(recordedTime("not a time")).toBe("not a time");
   });
 
   it("says when the breakdown has no trace id", async () => {

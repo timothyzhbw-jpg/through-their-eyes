@@ -161,6 +161,19 @@ on an LLM.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
     never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
     look; without it, the counterfactual goes near post and A1 saves it (§3.6).
+  - *match-2* (`sim.match.MATCH_2`, 2026-10-21): three of match-1's heroes on other design seeds,
+    in another order: `press_escape` 1 from 0:25, `corner_blind_side` 2 from 3:22 and
+    `blind_side_run` 11 from 7:58. It has 17 possessions, 11:45 on this Mac and at most 12:23,
+    and no shooting hero, so it ends 0–0.
+    Each new seed passed the checks its demo seed passes: the hero moment and its lens are found,
+    the scenario's intervention changes the outcome (the decision; whether the man is marked as
+    the ball arrives; the possession after a forced carry), every claim is supported, and an
+    offline breakdown for every persona and language has no render violation. Of the seeds
+    screened, only `press_escape` 8 failed: its breakdown crashed in `runner_received` on an
+    intercepted pass (fixed in #89). The other seeds were picked for a typical size and a different
+    story: wide to H7 without the look; out to the full-back H3 under the press; 3.0 m with the
+    look and 8.1 m without, at the corner. The API serves it as `match-2` (`TTE_MATCHES=…,match:2`),
+    listed in the match picker; the default stays where it was.
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
     per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
     is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
@@ -1638,6 +1651,39 @@ original visual identity.
     95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
+- **His looks, step by step** (2026-10-21, a teammate's request: the scans go by too fast;
+  [web/src/steps/](../web/src/steps/); "His looks" in the header, "Step through his looks" on the
+  moment; deep link `?play=steps`, a hero moment's only): each look the hero takes before the ball
+  reaches him is a freeze frame the viewer steps through, and the last step explains his decision.
+  - *Steps.* One per `scan` event of the hero that starts before his reception, from the run's own
+    events: `blind_side_run` seed 3 has 1 (the key scan), `press_escape` seed 0 has 2. In the run
+    without the key scan that look stays as a missing step at the same time. A look freezes his eyes
+    at the middle of its dwell (the frames his head is within the sim's `scan_out_tolerance` of
+    where it turned), or at his decision if it is still under way then. Precomputed per run by
+    `sim.export --steps` (`agents/steps.py`): no model call.
+  - *On a look.* His eyes, with the board in the corner: who came into his sight on it (out of it as
+    the look began, in it on a frame of the look up to his decision) is ringed and listed; dashed
+    arrows in the team's colour project where each player within 30 m of him is heading, his sim
+    velocity at that frame kept for a second, and are labelled as a projection.
+  - *Potential passes.* The options of the run's decision record, as lanes from the ball at his
+    decision to each option's target on his belief: width how likely he was to pick it, gold his
+    pick, brighter a receiver this look brought into sight. The decision model runs only at his
+    decision (§3.5), so a look shows the options he went on to weigh, and says so. No pass type:
+    every pass in the sim is along the ground (lofted and curled balls are not modelled).
+  - *His decision.* On the board, dimmed (never blurred: the picture stays clear) but round
+    exactly two players: a pass's receiver and the opponent nearest him, a carrier and the opponent
+    nearest him, a shooter and the keeper.
+  - *Words.* Only verified lines in en and zh, slot-filled and checked by the Verifier on the run
+    they describe: how many looks he takes, where and when each one goes (the side from the ball,
+    over his shoulder from 120°, as Take his eyes says it), who it brings into his sight, that his
+    head is still turning when he decides, or that he takes no look then; at the decision, the look
+    that found the player who mattered (the runner, else his receiver), how far off his picture of
+    that player was and how old, what he did, and the pair the freeze leaves lit with their
+    distance. Direction labels have no "behind": a scan turns at most 150° from the ball.
+  - *Controls.* Next, Back and Back to the replay; ← and → step, Escape leaves, a swipe on the
+    picture steps on a phone; the steps are buttons; the run switch keeps the same look. Reduced
+    motion: the dimming appears without fading in.
+  - A hero with no decision on the ball (`corner_blind_side`, `screened_shot`) has no steps.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -1652,12 +1698,13 @@ original visual identity.
   the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
   - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
     captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
-    number; Your call; another audience in another language (a casual fan, in Chinese); the
-    Producer's failure drill and bring-back; then the whole match, whose card links to
-    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
-    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
-    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
-    main.
+    number; Your call; Take his eyes (opened on his own look, the dial and the times out; the
+    viewer picks and presses Look, and the app keeps the keyboard); another audience in another
+    language (a casual fan, in Chinese); the Producer's failure drill and bring-back; then the
+    whole match, whose card links to `?match=match-1&play=recap&tour=recap`, where the tour goes
+    on at the full-time recap card. A step the page cannot show (no live service, no
+    counterfactual, no Your call, no bundled look grid; a match page shows only its recap) is left
+    out, not shown broken.
   - *It never takes over.* It only calls the app's own controls, and never presses anything that
     spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
     with the card's button. The overlay lets every click through, the card is a non-modal dialog,
@@ -1797,6 +1844,17 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
       [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
       [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
+- [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
+      scan events (a file whose looks are not the run's is refused), the dropped look missing in
+      the run without it; the freeze frame inside the dwell; movement arrows from the sim's
+      velocities; potential passes from the decision record; the decision dims all but exactly two
+      players, with no blur; every line verifies in en and zh; Next, Back, Exit, arrow keys, Escape, swipe
+      and the run switch.
+      — [web/src/steps/steps.test.ts](../web/src/steps/steps.test.ts),
+      [scansteps.test.tsx](../web/src/steps/scansteps.test.tsx);
+      [tests/test_steps.py](../tests/test_steps.py) (steps, dwell, velocities, every line verified,
+      the committed files current); `npm run smoke`, pages `link-steps`,
+      `link-steps-press-escape` and `phone-320-steps`
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
@@ -1870,6 +1928,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   - Per-client limits key on the last `X-Forwarded-For` hop, the address the Container Apps
     ingress appends; earlier hops come from the client. Live streams also have a ceiling per
     process (`TTE_LIVE_MAX_TOTAL`), and uvicorn refuses WebSocket frames over 4 KiB.
+  - Egress: every response body and live message counts against a per-client budget
+    (`TTE_EGRESS_PER_CLIENT`, 500 MB an hour) and a daily total (`TTE_DAILY_EGRESS_GB`, 10 GB),
+    since Azure bills internet egress past 100 GB a month; the live stream plays at most 8x. At
+    most `TTE_CREW_CONCURRENCY` crew runs with a model at once (each starts an MCP subprocess).
+    The audit, a local load test and what happens when a quota runs out: docs/OPERATIONS.md.
+  - Judging window (`TTE_JUDGING_WINDOW`, 2026-10-27 to 2026-11-10, UTC days): 8 model runs per
+    client per 10 min and 100 a day, so a judge's tour (what-if, drill, bring-back, recap) fits,
+    two judges behind one NAT too. A limited drill or bring-back replays the recording of the
+    same run, labelled with its time, or runs without the model: never a dead end.
   - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
     at $40 if the offer supports budgets.
 - **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
@@ -1883,7 +1950,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
   | Storage static website (`web`) | StorageV2, LRS, hot | ≈ $0.1 | < $1 |
   | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
-  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $9: cap of 40 per day, every day |
+  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $21: cap of 40 a day to 10/26, 100 a day in the judging window |
+  | Internet egress (API + site) | first 100 GB a month free; API capped at 10 GB a day | $0 (≈ 0.6 GB a day on 10/20–21) | ≈ $1: the cap every day (10 GB over the free 100 in October) |
   | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
   | **Total** | | **≈ $15** | **≈ $50** |
 - **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as
@@ -1956,6 +2024,21 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
   keys; the API allows the site's origin only.
+  - *Compression and caching:* Storage sends each blob as stored and never compresses, so the site
+    sent 1.6 MB of JS raw. `infra/upload_web.sh` uploads a staged build (`web/scripts/stage.mjs`):
+    text gzipped (`Content-Encoding: gzip`), every batch's `Content-Type` named, 5-minute cache,
+    `index.html` with `no-cache`. No Azure setting changes: these are blob properties set at upload.
+  - *Checked deploys:* `index.html` goes up last, only after every other file reads back from the
+    site with the right type, encoding and bytes (`web/scripts/check-site.mjs`); then the page must
+    draw in headless Chrome, or the previous `index.html` goes back up. The first gzip upload (#115,
+    2026-10-21) stored every gzipped file as `application/octet-stream` (`az storage blob
+    upload-batch` guesses a type only without an encoding); browsers refused the scripts until the
+    PR desk reverted it (#138). Hashed files are named `[name].[hash]` since, so no browser keeps
+    that deploy's year-cached copies; a longer cache waits until the check has run clean on a few
+    deploys.
+  - *Load time:* cold loads before and after, laptop and phone, plain and on Fast 3G with a 4× CPU
+    slowdown, in [eval/reports/web_load.md](../eval/reports/web_load.md) (`cd web && npm run
+    loadperf`): on a phone on Fast 3G the players are drawn at 8.1 s instead of 18.2 s.
   - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
     2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
     none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.

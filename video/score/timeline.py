@@ -29,6 +29,9 @@ class Cut:
     """The film's beats and length, read from a trailer spec."""
 
     def __init__(self, spec: dict):
+        # One telling of the story (trailer.json `story`: beats tagged with another drop out).
+        pick = spec.get("story", "blender")
+        spec = {**spec, "beats": [b for b in spec["beats"] if b.get("story") in (None, pick)]}
         self.beats: list[Beat] = []
         start = 0.0
         for beat in spec["beats"]:

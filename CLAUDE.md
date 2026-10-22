@@ -88,7 +88,14 @@ _Fill in as they come to exist._
 - `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
-  CI run on main.
+  CI run on main. Both upload web/ through `infra/upload_web.sh <account> <site url>`: gzipped,
+  every Content-Type named, each file read back from the site before `index.html` goes up, then
+  the page loaded in headless Chrome, the previous `index.html` restored on failure
+- `cd web && npm run build && npm run loadperf` — cold-load timings of the live site (SPEC 8):
+  first paint, first draw, players drawn, LCP and bytes, laptop and phone, plain and on Fast 3G
+  with a 4× CPU slowdown; `-- --serve dist-upload` measures a staged build (`node
+  scripts/stage.mjs`) served as Storage would on the site's origin. Report:
+  `eval/reports/web_load.md`
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
@@ -177,6 +184,10 @@ _Fill in as they come to exist._
   `uv run python -m sim.export --scenario blind_side_run --seed 3 --looks
   web/public/data/look_seed3.json` (and `press_escape` seed 0) rewrites the grid the web ships;
   `uv run python -m agents.look --seed 3 --frame 50 --offset -150` prints one look's verified lines
+- `uv run python -m sim.export --scenario blind_side_run --seed 3 --steps
+  web/public/data/steps_seed3.json` (and `press_escape` seed 0) — His looks, step by step (SPEC 7):
+  the hero's looks before the reception, his decision, sim velocities and verified lines;
+  `uv run python -m agents.steps --seed 3` prints them
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
@@ -217,6 +228,10 @@ _Fill in as they come to exist._
   Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
+- `docker run -d --name tte-load --cpus 0.5 --memory 1g -p 8797:8000 tte-api`, then
+  `uv run python -m infra.loadtest --container tte-load` — local load test (SPEC 8,
+  docs/OPERATIONS.md): 50 live viewers and a burst of breakdowns and what-ifs on the deployed
+  0.5 vCPU / 1 GiB, offline; frame lag, latency, memory. It refuses any host but localhost
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
   video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
   `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)
