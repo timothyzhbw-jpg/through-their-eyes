@@ -36,9 +36,8 @@ instead.
 4. Dated rows (D): measure after the last deploy, then re-run `uv run python -m infra.prewarm`.
 5. Commit as `docs: numbers at the sim freeze (SPEC 11)`, with this file's Freeze column filled.
 
-`TODO(freeze)` marks a value pending the freeze; `TODO(multi-agent-evidence)` a value the
-multi-agent evidence session is measuring. Neither is a number yet, and neither goes on a judge
-page.
+`TODO(freeze)` marks a value pending the freeze. It is not a number yet, and does not go on a
+judge page.
 
 ## H. Hero moments (held-out seeds)
 
@@ -125,7 +124,9 @@ which runs on Linux. The trailer reads them off the live page (`out/video/claims
 ## MA. The crew against one agent (Best Multi-Agent System)
 
 From [crew_vs_single](../eval/reports/crew_vs_single.md) (2026-10-21, Foundry `gpt-4.1-mini`,
-six moments × four audiences) and the multi-agent evidence session, whose numbers are pending.
+six moments × four audiences) and [crew_evidence](../eval/reports/crew_evidence.md) (PR #195,
+offline: a scripted model through the real workflow, seven served moments × five audiences × two
+languages, generated in `python:3.11-slim`).
 
 | Id | Number | Source | Value | Freeze | Quoted in |
 |---|---|---|---|---|---|
@@ -136,10 +137,10 @@ six moments × four audiences) and the multi-agent evidence session, whose numbe
 | MA4 | Model plans that validate, crew vs single | same | 6/6 vs 5/6 | TODO(freeze) | RUBRIC_MAP §5 |
 | MA5 | Wrong facts aired · groundedness, crew vs single (no difference) | same | 0 vs 0 · 5.00 vs 5.00 | TODO(freeze) | SUBMISSION Limitations, [^crew]; RUBRIC_MAP §5 |
 | MA6 | Cost per breakdown, crew vs single | same | $0.0090 vs $0.0046 | TODO(freeze) | SUBMISSION [^crew]; RUBRIC_MAP §5 |
-| MA7 | Recovery under an outage of the model service | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew"; DEMO_SCRIPT |
-| MA8 | Per-step Verifier: lines sent back and rewritten or dropped | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
-| MA9 | Personas in parallel: seconds to air for N audiences vs one | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
-| MA10 | Crew trace: steps a viewer can audit per breakdown | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5 |
+| MA7 | One agent down, offline (28 drills): scripts aired · roles from the model, crew vs single · fault-free breakdown after bring-back · model outage | [crew_evidence](../eval/reports/crew_evidence.md) (PR #195) ← `uv run python -m eval.crew_evidence` | 280/280 · 3 of 4 vs 0 of 4 · 70/70 · every request answered, on templates | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew"; DEMO_SCRIPT |
+| MA8 | Broken lines kept off the air with the Verifier · aired without it · of them false; anchored Foundry lines rejected | crew_evidence, section 2 | 2,837 of 2,837 · 2,823 · 888; 0 of 234 | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
+| MA9 | Narration for 10 scripts · for 1; the breakdown one call at a time · in parallel · single agent; time to recover, Telestrator · Analyst · single | crew_evidence, sections 1 and 4 (simulated Foundry median latencies; wall times move by 0.1–0.5 s from run to run, so the docs quote them rounded) | 3.5 s · 3.4 s; 21.7 s · 8.6 s · 9.2 s; 3.7 s · 8.0 s · 9.5 s (report at 7ba2027); quoted as about 3.5 s; about 22 s · about 9 s · about 9 s; about 4 s · about 8 s · about 9.5 s; 16.3 s as about 16 s | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
+| MA10 | Aired lines traced to claims, audit record, voice call, Verifier round and cue · claim lines whose stored tool result is cut | crew_evidence, section 3 | 394 of 394 · 52 of 352 | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
 | MA11 | Headline claims spoken, crew vs single (paired difference and interval) | crew_vs_single, four arms | 92% vs 81% (+0.11, −0.00 to +0.24) | TODO(freeze) | RUBRIC_MAP §5 |
 
 ## B. Business model (SUBMISSION "Business model")
