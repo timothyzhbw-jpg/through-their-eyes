@@ -21,6 +21,7 @@ import {
   projectSegment,
   PROJECTION_S,
   scanStepIds,
+  stackTags,
   focusPlayers,
   stepTitle,
   type DecisionStep,
@@ -220,5 +221,61 @@ describe("the first-person camera the overlay projects with", () => {
     expect(seg).not.toBeNull();
     expect(seg[1]).toEqual(project(pose, ahead(10), 1600, 900));
     expect(projectSegment(pose, ahead(-10), ahead(-5), 1600, 900)).toBeNull();
+  });
+});
+
+describe("the names under the players who came into sight", () => {
+  const tag = (x: number, y: number, w = 80) => ({ x, y, w });
+
+  it("leave a name where it is when it touches none", () => {
+    expect(stackTags([tag(100, 300), tag(300, 300), tag(100, 400)], 14)).toEqual([0, 0, 0]);
+  });
+
+  it("drop a name a row, then two, when it would touch, and leave out a fourth", () => {
+    expect(stackTags([tag(200, 300), tag(220, 300), tag(190, 302), tag(205, 299)], 14)).toEqual([
+      0,
+      1,
+      2,
+      null,
+    ]);
+  });
+
+  it("keep the nearest name, given first, in its place", () => {
+    expect(stackTags([tag(200, 320), tag(210, 320)], 14)).toEqual([0, 1]);
+    // a row is relative to each name's own place: 2 px higher, one row down still touches
+    expect(stackTags([tag(200, 320), tag(210, 318)], 14)).toEqual([0, 2]);
+  });
+
+  it("never put two placed names on top of each other (the hero's first look)", () => {
+    const step = fac.steps.find((s) => s.kind === "look" && !s.missing) as LookStep;
+    const [w, h] = [640, 400];
+    const pose = povPose(hero, hero.runs.factual, hero.hero, step.frame, w / h);
+    const tags = step.sight
+      .map((id) => {
+        const j = hero.ids.indexOf(id);
+        const f = step.frame;
+        const p = project(
+          pose,
+          [hero.runs.factual.pos[(f * n + j) * 2], hero.runs.factual.pos[(f * n + j) * 2 + 1]],
+          w,
+          h,
+          0,
+        );
+        return p && { x: p[0], y: p[1] + 16, w: 11 * 7.2 + 6 };
+      })
+      .filter((t) => t !== null)
+      .sort((a, b) => b.y - a.y);
+    const rows = stackTags(tags, 14);
+    const placed = tags.flatMap((t, k) =>
+      rows[k] === null ? [] : [{ ...t, y: t.y + rows[k]! * 14 }],
+    );
+    for (let a = 0; a < placed.length; a++)
+      for (let b = a + 1; b < placed.length; b++) {
+        const apart =
+          Math.abs(placed[a].x - placed[b].x) >= (placed[a].w + placed[b].w) / 2 ||
+          Math.abs(placed[a].y - placed[b].y) >= 14;
+        expect(apart).toBe(true);
+      }
+    expect(placed.length).toBeGreaterThan(0);
   });
 });
