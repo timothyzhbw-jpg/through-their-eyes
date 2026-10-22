@@ -1,8 +1,9 @@
 // First-person view: the camera sits in the chosen player's head (1.72 m) and turns with his head
-// yaw; 95 degrees of horizontal field of view (SPEC 7). A whipping head blurs the picture
-// sideways, as a camera's would (PovMotionBlur.tsx). Players are animated by default
-// (players/); the "Animated players" switch turns them off, back to capsule bodies turned to their
-// body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
+// yaw; 95 degrees of horizontal field of view (SPEC 7). With "Motion blur" on (off by default), a
+// whipping head blurs the picture sideways, as a camera's would (PovMotionBlur.tsx). Players are
+// animated by default (players/); the "Animated players" switch turns them off, back to capsule
+// bodies turned to their body yaw, with a head on top turned to their head yaw: a white visor
+// shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useMemo, useRef } from "react";
@@ -24,10 +25,11 @@ import { declutter, labelBox } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
-import { motion, pushedBy } from "../beat/beat";
+import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
-import { CameraBlend } from "../beat/cameraBlend";
+import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
+import { BeliefRings } from "./BeliefRings";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -107,10 +109,8 @@ function PovScene() {
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
-  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const labels = useRef<(THREE.Sprite | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
-  const blend = useMemo(() => new CameraBlend(), []);
 
   const materials = useMemo(
     () => ({
@@ -121,18 +121,6 @@ function PovScene() {
         color: VISOR_COLOR,
         side: THREE.DoubleSide,
         toneMapped: false,
-      }),
-      ghost: new THREE.MeshBasicMaterial({
-        color: COLORS.fg,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-      }),
-      runnerGhost: new THREE.MeshBasicMaterial({
-        color: COLORS.gold,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
       }),
     }),
     [],
@@ -146,7 +134,6 @@ function PovScene() {
     const broadcast = s.camera === "broadcast";
     const pov = hero.ids.indexOf(s.povPlayer);
     const me = broadcast ? -1 : pov; // whose body is hidden: nobody's on broadcast
-    const showGhosts = s.beliefGhosts && pov === hero.hero;
     const alerted = new Set(s.blindSide ? alertsAt(hero, run, s.frame).map((a) => a.target) : []);
     const beat = pulse(performance.now() / 1000);
     for (let j = 0; j < hero.n; j++) {
@@ -164,24 +151,15 @@ function PovScene() {
         body.visible = j !== me;
         poseToken(body, head, sample.body[j], sample.head[j]);
       }
-      const ghost = ghosts.current[j];
-      if (ghost) {
-        const gx = sample.ghost[2 * j];
-        const gy = sample.ghost[2 * j + 1];
-        ghost.position.set(gx, BODY_CENTRE, -gy);
-        ghost.visible = showGhosts && j !== pov && Math.hypot(gx - x, gy - y) > 1.2;
-      }
     }
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
+    // A switch of camera or view is a clean cut: the camera is on its new pose at once, and the
+    // blur passes stay off around it (beat/cut.ts).
     const now = performance.now() / 1000;
-    blend.begin(camera, fog, {
-      camera: s.camera,
-      frame: s.frame,
-      now,
-      reduced: motion.get().reduced,
-    });
+    cuts.note(viewKey(s), now);
+    if (cuts.inCut(now)) invalidate(); // until the blur has eased back
     [fog.near, fog.far] = FOG[s.camera];
     if (broadcast) {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
@@ -214,8 +192,6 @@ function PovScene() {
       camera.position.set(hx, EYE_HEIGHT, -hy);
       camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
     }
-    // A camera move between the two cameras, before the labels are placed on the pose it gives.
-    const moving = blend.apply(camera, fog, now);
     // Shirt numbers, nearest first: lifted or hidden where they would sit on another; the
     // runner's gold number always shows.
     camera.updateMatrixWorld();
@@ -237,7 +213,6 @@ function PovScene() {
       label.scale.set(0.75 * k, 0.75 * k, 1);
       label.position.y = LABEL_Y + lift * LABEL_TEXT * k;
     });
-    if (moving) invalidate();
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
 
@@ -300,17 +275,7 @@ function PovScene() {
           </sprite>
         </group>
       ))}
-      {hero.players.map((p, j) => (
-        <mesh
-          key={p.id}
-          ref={(m) => {
-            ghosts.current[j] = m;
-          }}
-          geometry={capsule}
-          material={j === hero.runner ? materials.runnerGhost : materials.ghost}
-          visible={false}
-        />
-      ))}
+      <BeliefRings sampleOf={() => sample} />
       {rigged && (
         <RiggedFallback>
           <Suspense fallback={null}>

@@ -64,6 +64,7 @@ function blurFrame(width: number, height: number, dpr: number, reducedMotion = f
     comfort: false,
     camera: "pov",
     playing: true,
+    motionBlur: true, // opt-in (View options): these frames test the blur itself
   };
   const gl = {
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(width, height),
@@ -115,12 +116,13 @@ describe("head yaw rate", () => {
 });
 
 describe("blur strength", () => {
-  it("is 0.3 x the angle swept while the virtual 25 Hz, 180-degree shutter is open", () => {
-    // 400 deg/s for 1/50 s sweeps 8 degrees; at 12.8 px per degree that is 102 px; sigma 30.7 px.
+  it("is 0.3 x the angle swept while the virtual 25 Hz, 90-degree shutter is open", () => {
+    // 400 deg/s for 1/100 s sweeps 4 degrees; at 12.8 px per degree that is 51 px; sigma 15.4 px
+    // before the cap.
     const rad = (400 * Math.PI) / 180;
-    expect(blurSigmaPx(rad, 12.8)).toBeCloseTo(0.3 * 8 * 12.8, 6);
-    expect(blurSigmaPx(-rad, 12.8)).toBeCloseTo(0.3 * 8 * 12.8, 6); // either direction
-    expect(blurSigmaPx(rad, 12.8, 360)).toBeCloseTo(2 * 0.3 * 8 * 12.8, 6);
+    expect(blurSigmaPx(rad, 12.8)).toBeCloseTo(0.3 * 4 * 12.8, 6);
+    expect(blurSigmaPx(-rad, 12.8)).toBeCloseTo(0.3 * 4 * 12.8, 6); // either direction
+    expect(blurSigmaPx(rad, 12.8, 360)).toBeCloseTo(4 * 0.3 * 4 * 12.8, 6);
     expect(blurSigmaPx(rad, 12.8, 0)).toBe(0);
   });
 
@@ -130,15 +132,29 @@ describe("blur strength", () => {
     expect(centrePxPerDeg(3200, 95)).toBeCloseTo(25.6, 1);
   });
 
+  it("is off unless the viewer turns it on (Bowen, 2026-10-21: blur is uncomfortable)", () => {
+    const turning = {
+      yawRate: (404 * Math.PI) / 180,
+      widthPx: 1600,
+      hfovDeg: 95,
+      playing: true,
+      camera: "pov",
+      reducedMotion: false,
+    } as const;
+    expect(povBlurSigmaPx({ ...turning, motionBlur: false })).toBe(0);
+    expect(povBlurSigmaPx({ ...turning, motionBlur: true })).toBeGreaterThan(MIN_SIGMA_PX);
+  });
+
   it("is off under prefers-reduced-motion, on the broadcast camera and while paused", () => {
     const turning = {
       yawRate: (404 * Math.PI) / 180,
       widthPx: 1600,
       hfovDeg: 95,
       playing: true,
+      motionBlur: true,
     };
     expect(povBlurSigmaPx({ ...turning, camera: "pov", reducedMotion: false })).toBeCloseTo(
-      0.3 * 404 * 0.02 * centrePxPerDeg(1600, 95),
+      0.3 * 404 * 0.01 * centrePxPerDeg(1600, 95),
       6,
     );
     expect(povBlurSigmaPx({ ...turning, camera: "pov", reducedMotion: true })).toBe(0);
@@ -154,24 +170,31 @@ describe("blur plan", () => {
     const yawRate = headYawRate(hero, run, h8, 54.5, false);
     expect(Math.abs(deg(yawRate))).toBeGreaterThan(300);
     const widthPx = 1600;
-    const view = { reducedMotion: false, camera: "pov", yawRate, widthPx, hfovDeg: 95 } as const;
+    const view = {
+      reducedMotion: false,
+      motionBlur: true,
+      camera: "pov",
+      yawRate,
+      widthPx,
+      hfovDeg: 95,
+    } as const;
     expect(blurPlan(povBlurSigmaPx({ ...view, playing: false }), widthPx).passes).toBe(0);
     const playing = blurPlan(povBlurSigmaPx({ ...view, playing: true }), widthPx);
     expect(playing.passes).toBeGreaterThan(0);
   });
 
   it("reuses a caller's tap buffers while the blur changes, stops, and starts again", () => {
-    const plan = blurPlan(2, 1600);
+    const plan = blurPlan(2, 1920);
     const offsets = plan.offsets;
     const weights = plan.weights;
-    expect(blurPlan(40, 1600, plan)).toBe(plan);
+    expect(blurPlan(5, 1920, plan)).toBe(plan);
     expect(plan.offsets).toBe(offsets);
     expect(plan.weights).toBe(weights);
     expect(plan.passes).toBe(2);
-    expect(Math.sqrt(2) * spread(plan)).toBeGreaterThan(0.97 * 40);
-    expect(blurPlan(0, 1600, plan)).toBe(plan);
+    expect(Math.sqrt(2) * spread(plan)).toBeGreaterThan(0.97 * 5);
+    expect(blurPlan(0, 1920, plan)).toBe(plan);
     expect(plan.passes).toBe(0);
-    expect(blurPlan(1, 1600, plan)).toBe(plan);
+    expect(blurPlan(1, 1920, plan)).toBe(plan);
     expect(plan.offsets).toBe(offsets);
     expect(plan.weights).toBe(weights);
     expect(spread(plan)).toBeCloseTo(1, 1);
@@ -191,21 +214,34 @@ describe("blur plan", () => {
     expect(blurPlan(MIN_SIGMA_PX, 1600).passes).toBe(1);
   });
 
-  it("caps the blur at 3% of the width, as the design does", () => {
-    expect(blurPlan(500, 1600).sigma).toBeCloseTo(MAX_SIGMA_FRACTION * 1600, 6);
-    expect(blurPlan(20, 1600).sigma).toBe(20);
+  it("caps the blur at 0.3% of the width, about 6 px at 1920 (LOOKDEV 2b: a subtle smear)", () => {
+    expect(MAX_SIGMA_FRACTION).toBe(0.003);
+    expect(blurPlan(500, 1920).sigma).toBeCloseTo(5.76, 6);
+    expect(blurPlan(5, 1920).sigma).toBe(5);
+    // H8's look away at 404 degrees a second asks for more than the cap on a 1920 px frame.
+    const yawRate = headYawRate(hero, run, h8, 54.5, false);
+    const view = {
+      reducedMotion: false,
+      motionBlur: true,
+      camera: "pov",
+      playing: true,
+      yawRate,
+    } as const;
+    const asked = povBlurSigmaPx({ ...view, widthPx: 1920, hfovDeg: 95 });
+    expect(asked).toBeGreaterThan(5.76);
+    expect(blurPlan(asked, 1920).sigma).toBeCloseTo(5.76, 6);
   });
 
   it("splits a wide blur into two passes whose spreads add up to the asked one", () => {
     const small = blurPlan(2, 1600);
     expect(small.passes).toBe(1);
     expect(spread(small)).toBeCloseTo(2, 1);
-    const wide = blurPlan(40, 1600);
+    const wide = blurPlan(5, 1920);
     expect(wide.passes).toBe(2);
-    expect(wide.perPass).toBeCloseTo(40 / Math.SQRT2, 6);
+    expect(wide.perPass).toBeCloseTo(5 / Math.SQRT2, 6);
     // Two Gaussian passes in a row: variances add.
-    expect(Math.sqrt(2) * spread(wide)).toBeGreaterThan(0.97 * 40);
-    expect(Math.sqrt(2) * spread(wide)).toBeLessThan(1.01 * 40);
+    expect(Math.sqrt(2) * spread(wide)).toBeGreaterThan(0.97 * 5);
+    expect(Math.sqrt(2) * spread(wide)).toBeLessThan(1.01 * 5);
   });
 
   it("uses normalised, symmetric Gaussian taps", () => {
@@ -224,12 +260,13 @@ describe("blur plan", () => {
 });
 
 describe("motion blur GPU budget", () => {
+  // The cap is 0.3% of the canvas width: the 900 px canvas's blur fits one pass, the others need two.
   it.each([
-    [3200, 1800, 2, 1600, 900],
-    [5120, 2880, 2, 1920, 1080],
-    [2560, 1440, 1, 1920, 1080],
-    [900, 600, 0.75, 900, 600],
-  ])("caps a %s x %s canvas at DPR %s to %s x %s", (width, height, dpr, w, h) => {
+    [3200, 1800, 2, 1600, 900, 2],
+    [5120, 2880, 2, 1920, 1080, 2],
+    [2560, 1440, 1, 1920, 1080, 2],
+    [900, 600, 0.75, 900, 600, 1],
+  ])("caps a %s x %s canvas at DPR %s to %s x %s", (width, height, dpr, w, h, passes) => {
     const { gl, draw } = blurFrame(width, height, dpr);
     draw();
     const target = gl.setRenderTarget.mock.calls[0][0] as THREE.WebGLRenderTarget;
@@ -239,10 +276,13 @@ describe("motion blur GPU budget", () => {
     expect(target.texture.type).toBe(THREE.HalfFloatType);
     expect(target.texture.colorSpace).toBe(THREE.SRGBColorSpace);
     expect((target as unknown as { isXRRenderTarget: boolean }).isXRRenderTarget).toBe(true);
-    const mid = gl.setRenderTarget.mock.calls[1][0] as THREE.WebGLRenderTarget;
-    expect(mid.width).toBe(w);
-    expect(mid.height).toBe(h);
-    expect(mid.samples).toBe(0);
+    const mid = gl.setRenderTarget.mock.calls[1][0] as THREE.WebGLRenderTarget | null;
+    if (passes === 1) expect(mid).toBeNull();
+    else {
+      expect(mid!.width).toBe(w);
+      expect(mid!.height).toBe(h);
+      expect(mid!.samples).toBe(0);
+    }
     const quad = gl.render.mock.calls.at(-1)![0] as THREE.Scene;
     const material = (quad.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
     // Taps remain in canvas pixels, preserving the blur's apparent width after downsampling.
@@ -263,17 +303,21 @@ describe("motion blur GPU budget", () => {
     expect(gl.render).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["reduced motion", "broadcast", "stationary head", "paused"])(
-    "draws straight to the canvas for %s",
-    (bypass) => {
-      const { gl, playback, draw } = blurFrame(3200, 1800, 2, bypass === "reduced motion");
-      if (bypass === "broadcast") playback.camera = "broadcast";
-      if (bypass === "stationary head") playback.frame = 60;
-      if (bypass === "paused") playback.playing = false;
-      draw();
-      expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
-      expect(gl.render).toHaveBeenCalledTimes(1);
-      expect(gl.domElement.dataset.blurSigma).toBe("0");
-    },
-  );
+  it.each([
+    "motion blur off (the default)",
+    "reduced motion",
+    "broadcast",
+    "stationary head",
+    "paused",
+  ])("draws straight to the canvas for %s", (bypass) => {
+    const { gl, playback, draw } = blurFrame(3200, 1800, 2, bypass === "reduced motion");
+    if (bypass.startsWith("motion blur off")) playback.motionBlur = false;
+    if (bypass === "broadcast") playback.camera = "broadcast";
+    if (bypass === "stationary head") playback.frame = 60;
+    if (bypass === "paused") playback.playing = false;
+    draw();
+    expect(gl.setRenderTarget.mock.calls).toEqual([[null]]);
+    expect(gl.render).toHaveBeenCalledTimes(1);
+    expect(gl.domElement.dataset.blurSigma).toBe("0");
+  });
 });

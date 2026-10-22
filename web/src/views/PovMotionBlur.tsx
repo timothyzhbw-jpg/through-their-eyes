@@ -14,6 +14,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { cuts } from "../beat/cut";
 import { useView } from "../session";
 import {
   blurPlan,
@@ -184,14 +185,17 @@ export function MotionBlur({ hfov }: { hfov: number }) {
     gl.getDrawingBufferSize(size);
     const j = hero.ids.indexOf(s.povPlayer);
     const yawRate = j < 0 ? 0 : headYawRate(hero, hero.runs[s.mode], j, s.frame, s.comfort);
-    const sigma = povBlurSigmaPx({
-      reducedMotion: reduced.current,
-      camera: s.camera,
-      playing: s.playing,
-      yawRate,
-      widthPx: size.x,
-      hfovDeg,
-    });
+    // No blur on the frames around a camera cut (beat/cut.ts): off, then easing back.
+    const sigma =
+      povBlurSigmaPx({
+        motionBlur: s.motionBlur,
+        reducedMotion: reduced.current,
+        camera: s.camera,
+        playing: s.playing,
+        yawRate,
+        widthPx: size.x,
+        hfovDeg,
+      }) * cuts.blurScale(performance.now() / 1000);
     const plan = blurPlan(supported ? sigma : 0, size.x, planBuffer);
     const shown = plan.passes ? plan.sigma.toFixed(1) : "0";
     if (gl.domElement.dataset.blurSigma !== shown) gl.domElement.dataset.blurSigma = shown;

@@ -87,6 +87,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): StepThroug
     camera: "pov",
     cone: hero.vision !== null,
     beliefGhosts: true,
+    ghostsAll: true, // a look's freeze frame shows his whole picture, as before
   });
   const stage: ViewSession = { ...session, playback };
   let steps: Steps | null = null;
