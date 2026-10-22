@@ -89,9 +89,11 @@ describe("steps resolve from the run's scan events", () => {
       }
     }
     const text = fac.answers.en!.lines.map((l) => l.text).join(" ");
-    expect(text).toContain("H8 looks over his right shoulder");
-    expect(text).toContain("So he passes to H9.");
-    expect(cf.answers.en!.lines.map((l) => l.text).join(" ")).toContain("So he passes to H4.");
+    expect(text).toContain("J. Ferriday looks over his right shoulder");
+    expect(text).toContain("So he passes to N. Varnhall.");
+    expect(cf.answers.en!.lines.map((l) => l.text).join(" ")).toContain(
+      "So he passes to K. Annersley.",
+    );
   });
 });
 
