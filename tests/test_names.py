@@ -39,7 +39,7 @@ def test_players_are_named_by_their_fictional_short_names(ctx):
 
 def test_the_clubs_have_fictional_names_not_home_and_away():
     assert club_name(0) == "Kestrel Bay" and club_name(1) == "Corvane Vale"
-    assert club_name(0, "zh") == "红隼湾" and club_name(1, "zh") == "科尔瓦恩谷"
+    assert club_name(0, "zh") == "红隼湾" and club_name(1, "zh") == "科尔文谷"
     assert set(CLUBS) == {0, 1}
 
 
@@ -94,7 +94,7 @@ def test_ids_are_renamed_only_where_they_are_whole_tokens():
     assert rename_ids("Without that look, H8 would have passed to H4.") == (
         "Without that look, J. Ferriday would have passed to K. Annersley."
     )
-    assert rename_ids("没有那一眼，H8会传给H4。") == "没有那一眼，J. Ferriday会传给K. Annersley。"
+    assert rename_ids("没有那一眼，H8会传给H4。") == "没有那一眼，费里迪会传给安纳斯利。"
     assert rename_ids("A10 beat A1.") == "J. Kestrell beat H. Talvisto."
     for kept in ("H12", "xH8", "H8a", "AH8", "{player}", "8 H", "scan:H8:0050"):
         assert rename_ids(kept) == kept
@@ -191,7 +191,7 @@ def test_a_recap_cached_with_home_and_away_names_the_clubs_when_read():
     assert texts == [
         "Full time: Kestrel Bay 0, Corvane Vale 0.",
         "Kestrel Bay completed 30 of 34 passes.",
-        "全场结束：红隼湾0比0科尔瓦恩谷。",
+        "全场结束：红隼湾0比0科尔文谷。",
         "N. Varnhall found space on the blind side.",
     ]
     # A breakdown never mentions the clubs by those words: no club renaming there.

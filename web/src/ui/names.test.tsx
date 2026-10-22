@@ -81,6 +81,15 @@ describe("the names", () => {
       "J. Ferriday passed to K. Annersley; J. Kestrell beat H. Talvisto (scan:H8:0050).",
     );
   });
+
+  it("are Chinese in a Chinese line, as the zh narration says them (sim/roster.py ZH_NAMES)", () => {
+    expect(shortName("H8", "zh")).toBe("费里迪");
+    expect(shortName("Z9", "zh")).toBe("Z9");
+    expect(renameIds("球到之前回头的那一眼，H8看到了H9。")).toBe(
+      "球到之前回头的那一眼，费里迪看到了瓦恩霍尔。",
+    );
+    expect(renameIds("H8 passed to H4.", "zh")).toBe("费里迪 passed to 安纳斯利.");
+  });
 });
 
 describe("on screen, a player and a club go by their names", () => {

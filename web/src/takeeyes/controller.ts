@@ -133,6 +133,8 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): TakeEyes {
     const run = lookRun(hero, looks!, entry);
     const scan = entry.look ? (run.scans.find((s) => s.start === entry.look!.start) ?? null) : null;
     const derived: Hero = { ...hero, keyScan: scan, runs: { ...hero.runs, counterfactual: run } };
+    // Only the stage's 3D views read these what-ifs, for the look's ghost path: no question or
+    // refusal is ever shown, in either language.
     const ghost: WhatIfs = {
       moment: moment.id,
       decisionFrame: looks!.decisionFrame,
