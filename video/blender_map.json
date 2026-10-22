@@ -515,7 +515,14 @@
       "fx": [
         "glue"
       ],
-      "label": "simulation"
+      "label": "simulation",
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -4
+        }
+      ]
     },
     {
       "beat": "b29-press-cf",
@@ -541,6 +548,13 @@
         {
           "title": "press-wins",
           "at": 2.0
+        }
+      ],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 1.9,
+          "gain_db": -4
         }
       ]
     },

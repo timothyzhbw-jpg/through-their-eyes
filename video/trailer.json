@@ -3076,7 +3076,7 @@
       "picture": {
         "src": "capture",
         "shot": "16-corner",
-        "in": 3.3,
+        "in": 3.23,
         "push": [
           1.0,
           1.02
@@ -3094,7 +3094,7 @@
       "picture": {
         "src": "capture",
         "shot": "16-corner",
-        "in": 4.2,
+        "in": 4.13,
         "push": [
           1.02,
           1.04
