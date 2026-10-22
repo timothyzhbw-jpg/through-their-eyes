@@ -58,9 +58,9 @@ const PERSONA_NOTE: Record<Persona, string> = {
   audio_description: "Every line spoken, in large print.",
 };
 
-/** What he did, as a past-tense phrase: "passed to H4", "carried it". */
+/** What he did, as a past-tense phrase: "passed to K. Annersley", "carried it". */
 function didPhrase(action: string): string {
-  if (action.startsWith("pass:")) return `passed to ${action.slice(5)}`;
+  if (action.startsWith("pass:")) return `passed to ${shortName(action.slice(5))}`;
   if (action === "carry") return "carried it";
   if (action === "shot") return "shot";
   const post = shotPost(action);

@@ -10,6 +10,7 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
+import { describeStep } from "./BreakdownPanel";
 import { createApi } from "../api/client";
 import { parseHero, runLabels } from "../data/hero";
 import { clubName, renameIds, shortName } from "../data/roster";
@@ -23,7 +24,7 @@ import { LineupCard } from "./LineupCard";
 import { momentLabel, MomentsPanel } from "./Live";
 import { Scoreboard } from "./Match";
 import { DecisionPanel, StoryPanel } from "./Panels";
-import { StageHud } from "./Stage";
+import { momentTitle, StageHud } from "./Stage";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -115,8 +116,24 @@ describe("on screen, a player and a club go by their names", () => {
     expect(optionLabel("pass:H4")).toBe("Pass to K. Annersley");
   });
 
+  it("the telestration steps", () => {
+    const steps = [
+      describeStep({ t: 1, do: "pov", player: "H8", from: -1.6, to: 0, speed: 0.5 }),
+      describeStep({ t: 1, do: "zone", layer: "vision", player: "H8" }),
+      describeStep({ t: 1, do: "scan_marker", scan: "scan:H8:0060" }),
+      describeStep({ t: 1, do: "voice", line: "L1" }, { L1: "H8 checked his shoulder." }),
+    ];
+    expect(steps).toEqual([
+      "POV J. Ferriday, −1.60 s → +0.00 s at 0.5×",
+      "Zone: vision of J. Ferriday",
+      "Mark J. Ferriday's scan",
+      "L1: “J. Ferriday checked his shoulder.”",
+    ]);
+  });
+
   it("the runs' names when the run forces a pass or a carry", () => {
     expect(runLabels(parseHero(pressureExport())).counterfactual).toBe("If he carried it");
+    expect(momentTitle(parseHero(pressureExport())).join(" ")).not.toMatch(ID);
     const forcedPass = parseHero(raw);
     forcedPass.counterfactual = {
       ...forcedPass.counterfactual!,
