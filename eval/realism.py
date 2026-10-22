@@ -22,12 +22,14 @@ from pathlib import Path
 
 import numpy as np
 
+from analytics import team_shape
 from analytics.scan_detector import ball_offset
 from analytics.vision import wrap_angle
-from sim.config import ROLES, SimParams
+from sim.config import DT, ROLES, SimParams
 from sim.engine import Simulation
 from sim.perception import longest_scan_s
 from sim.run import MatchRun
+from sim.scenarios import SCENARIOS
 
 REPORTS = Path(__file__).parent / "reports"
 
@@ -82,6 +84,30 @@ ROLE_PAIRS = (
 )  # fmt: skip
 
 
+# Team shape (SPEC 3.2, 3.8): the shape metrics of analytics/team_shape.py per phase.
+SHAPE_METRICS = (
+    ("length", "Team length (m)", ".1f"),
+    ("width", "Team width (m)", ".1f"),
+    ("lpw", "Length per width", ".2f"),
+    ("line_height", "Defensive line height: deepest outfield player to own goal line (m)", ".1f"),
+    ("defence_midfield", "Distance from the defensive to the midfield line (m)", ".1f"),
+    ("midfield_attack", "Distance from the midfield to the forward line (m)", ".1f"),
+)
+SHAPE_PHASES = (
+    (team_shape.ATTACK, "in possession"),
+    (team_shape.DEFENCE, "out of possession"),
+    (team_shape.TRANSITION_ATTACK, "just won the ball"),
+    (team_shape.TRANSITION_DEFENCE, "just lost the ball"),
+)
+TRANSITION_S = 5.0  # s after a change of possession counted as transition
+SHAPE_WARM_UP_S = 5.0  # the first seconds of a run, while the players leave their setup spots
+SHAPE_EVERY = 5  # frames: the shape is sampled at 5 Hz
+SHAPE_COLUMNS = (
+    "Metric", "Phase", "Sim (pooled)", "Sim, 90% over seeds", "Before: anchors", "Published",
+    "Range checked", "Source", "Inside",
+)  # fmt: skip
+
+
 @dataclass(frozen=True)
 class Source:
     cite: str  # short citation, as written in docs/REFERENCES.md
@@ -120,6 +146,23 @@ SOURCES = {
         "field-based football gameplay. Frontiers in Psychology 17:1785026. 12 university players, "
         "a 7-min 6 v 6 game, head-worn IMU at 200 Hz.",
         "https://pmc.ncbi.nlm.nih.gov/articles/PMC13441872/",
+    ),
+    "castellano2013": Source(
+        "Castellano et al. (2013)",
+        "Castellano, Álvarez-Pastor, Blanco-Villaseñor. Análisis del espacio de interacción en "
+        "fútbol. Revista de Psicología del Deporte 22(2):437–446 (in Spanish). Six La Liga "
+        "matches of 2005-06 (AMISCO), 6,793 touches; one reference team (EQ1) and its six "
+        "opponents (EQ2); goalkeepers excluded.",
+        "https://ddd.uab.cat/pub/revpsidep/revpsidep_a2013v22n2/revpsidep_a2013v22n2p437.pdf",
+    ),
+    "forcher2024": Source(
+        "Forcher et al. (2024)",
+        "Forcher, Forcher, Altmann, Jekauc, Kempe. Is a compact organization important for "
+        "defensive success in elite soccer? International Journal of Sports Science & Coaching "
+        "19(2):757–768, read as reprinted in Forcher's dissertation (KIT 2024, ch. 7). 153 "
+        "Bundesliga matches of 2020/21 (TRACAB 25 Hz); opponent possessions of three passes and "
+        "five seconds or more; 2,889 successful and 12,899 unsuccessful defensive plays.",
+        "https://doi.org/10.5445/IR/1000173445",
     ),
 }
 
@@ -177,8 +220,41 @@ def out_of_frame_s(
 
 
 def simulate(seed: int, params: SimParams = PARAMS) -> dict[str, dict[str, np.ndarray]]:
-    """Per-observation tables of one run: receptions, scans, player peaks, passes."""
+    """Per-observation tables of one run: receptions, scans, player peaks, passes, shape."""
     return tables(Simulation.from_scenario(SCENARIO, seed, params=params).run())
+
+
+def simulate_anchors(seed: int, params: SimParams = PARAMS) -> dict[str, np.ndarray]:
+    """The shape table of the same run without the team shape (`Scenario.team_shape` off):
+    formation anchors shifted with the ball, as every scenario moved before it."""
+    scenario = SCENARIOS[SCENARIO]()
+    scenario.team_shape = False
+    return shape_table(Simulation(scenario, seed, params).run())
+
+
+def shape_table(run: MatchRun, every: int = SHAPE_EVERY) -> dict[str, np.ndarray]:
+    """Each team's shape (analytics/team_shape.py) every `every` frames after the warm-up, with
+    its phase as an index into SHAPE_PHASES (-1: none). The home team attacks +x."""
+    team = np.array([p.team for p in run.players])
+    keeper = np.array([p.role == "GK" for p in run.players])
+    owner_team = np.where(run.owner >= 0, team[np.maximum(run.owner, 0)], -1)
+    possession = team_shape.possession_by_frame(owner_team)
+    spell = team_shape.spells(possession)
+    frames = np.arange(round(SHAPE_WARM_UP_S / run.dt), len(run.owner), every)
+    codes = {name: k for k, (name, _) in enumerate(SHAPE_PHASES)}
+    columns: dict[str, list] = {
+        k: [] for k in ("team", "phase", "ball_depth", *(m for m, *_ in SHAPE_METRICS))
+    }
+    for t, sign in ((0, 1), (1, -1)):
+        mine = team == t
+        shape = team_shape.shape(run.pos[frames][:, mine], keeper[mine], sign, spell[frames])
+        phase = team_shape.phases(possession, t, round(TRANSITION_S / run.dt))[frames]
+        columns["team"].append(np.full(len(frames), t))
+        columns["ball_depth"].append(team_shape.HALF_LENGTH + sign * run.ball_pos[frames, 0])
+        columns["phase"].append(np.array([codes.get(p, -1) for p in phase], dtype=np.int64))
+        for metric, *_ in SHAPE_METRICS:
+            columns[metric].append(shape[metric])
+    return {k: np.concatenate(v) if v else np.zeros(0) for k, v in columns.items()}
 
 
 def tables(run: MatchRun) -> dict[str, dict[str, np.ndarray]]:
@@ -256,7 +332,13 @@ def tables(run: MatchRun) -> dict[str, dict[str, np.ndarray]]:
     def table(columns: dict[str, list]) -> dict[str, np.ndarray]:
         return {k: np.asarray(v) for k, v in columns.items()}
 
-    return {"receptions": table(rec), "scans": table(scan), "peaks": peak, "passes": table(kicked)}
+    return {
+        "receptions": table(rec),
+        "scans": table(scan),
+        "peaks": peak,
+        "passes": table(kicked),
+        "shape": shape_table(run),
+    }
 
 
 # --- pooled statistics with seed bootstrap --------------------------------------------------
@@ -637,6 +719,218 @@ def evaluate(
     return rows
 
 
+# --- team shape ------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ShapeReference:
+    """Two printed means ± SD (two teams, or two groups of plays); the range checked spans both
+    means ± 1 SD."""
+
+    printed: tuple[tuple[str, str], tuple[str, str]]  # as printed: (mean, SD)
+    source: str  # "<cite>, <where>"
+    label: str
+    note: str = ""
+
+    @property
+    def published(self) -> str:
+        return " and ".join(f"{m} ± {sd}" for m, sd in self.printed)
+
+    @property
+    def lo(self) -> float:
+        return min(float(m) - float(sd) for m, sd in self.printed)
+
+    @property
+    def hi(self) -> float:
+        return max(float(m) + float(sd) for m, sd in self.printed)
+
+
+# (metric, phase) -> the printed value it is checked against. Only values read in the papers
+# themselves (docs/REFERENCES.md, "Team shape"); every other row says it has none.
+CASTELLANO_TEAMS = "EQ1, the reference team, and EQ2, its opponents"
+FORCHER_PLAYS = "successful and unsuccessful defensive plays"
+SHAPE_PUBLISHED: dict[tuple[str, str], ShapeReference] = {
+    ("length", team_shape.ATTACK): ShapeReference(
+        (("36.4", "6.8"), ("36.2", "6.7")),
+        "Castellano et al. (2013), Table 1",
+        "both teams' mean ± SD",
+        f"{CASTELLANO_TEAMS}: deepest to most advanced outfield player.",
+    ),
+    ("length", team_shape.DEFENCE): ShapeReference(
+        (("32.49", "8.69"), ("32.22", "9.16")),
+        "Forcher et al. (2024), Table 7.1",
+        "both groups' mean ± SD",
+        f"Settled defence, {FORCHER_PLAYS}; the convex hull's length. Castellano et al. (2013, "
+        "Table 1) print 33.1 ± 8.0 and 34.5 ± 7.1 out of possession.",
+    ),
+    ("width", team_shape.ATTACK): ShapeReference(
+        (("41.0", "10.0"), ("41.8", "10.0")),
+        "Castellano et al. (2013), Table 1",
+        "both teams' mean ± SD",
+        f"{CASTELLANO_TEAMS}: between the two widest outfield players.",
+    ),
+    ("width", team_shape.DEFENCE): ShapeReference(
+        (("37.34", "4.83"), ("37.14", "4.86")),
+        "Forcher et al. (2024), Table 7.1",
+        "both groups' mean ± SD",
+        f"Settled defence, {FORCHER_PLAYS}. Castellano et al. (2013, Table 1) print 36.5 ± 7.0 "
+        "and 37.0 ± 7.0 out of possession.",
+    ),
+    ("line_height", team_shape.ATTACK): ShapeReference(
+        (("31.2", "13.3"), ("36.2", "13.5")),
+        "Castellano et al. (2013), Results p. 440",
+        "both teams' mean ± SD",
+        f"{CASTELLANO_TEAMS}; the paper's defensive height.",
+    ),
+    ("line_height", team_shape.DEFENCE): ShapeReference(
+        (("31.0", "12.2"), ("35.3", "13.1")),
+        "Castellano et al. (2013), Results p. 440",
+        "both teams' mean ± SD",
+        f"{CASTELLANO_TEAMS}; the paper's defensive height.",
+    ),
+    ("defence_midfield", team_shape.DEFENCE): ShapeReference(
+        (("10.22", "3.76"), ("10.16", "3.89")),
+        "Forcher et al. (2024), Table 7.1",
+        "both groups' mean ± SD",
+        f"Settled defence, {FORCHER_PLAYS}; lines by k-means on depth, as here.",
+    ),
+    ("midfield_attack", team_shape.DEFENCE): ShapeReference(
+        (("13.30", "4.22"), ("13.19", "4.21")),
+        "Forcher et al. (2024), Table 7.1",
+        "both groups' mean ± SD",
+        f"Settled defence, {FORCHER_PLAYS}; lines by k-means on depth, as here.",
+    ),
+}
+
+
+@dataclass
+class ShapeRow:
+    metric: str
+    phase: str
+    sim: str
+    seeds: str
+    before: str
+    published: str = NO_REFERENCE
+    range: str = "—"
+    source: str = "—"
+    inside: str = "—"
+    note: str = ""
+
+    @property
+    def label(self) -> str:  # every row with a printed value was fitted on tuning seeds
+        return self.metric if self.published == NO_REFERENCE else f"{self.metric} †"
+
+
+def shape_rows(
+    observed: list[dict[str, dict[str, np.ndarray]]],
+    anchors: list[dict[str, np.ndarray]] | None = None,
+    dt: float = DT,
+) -> list[ShapeRow]:
+    """Team-shape rows per metric and phase: the pooled value over every sampled team-frame,
+    its 90% interval over seed resamples, and the same seeds without the team shape."""
+    pool = Pool([{"shape": o["shape"]} for o in observed])
+    before = Pool([{"shape": a} for a in anchors]) if anchors else None
+    table = pool.tables["shape"]
+    rows = []
+    for metric, label, fmt in SHAPE_METRICS:
+        for k, (phase, phase_label) in enumerate(SHAPE_PHASES):
+            mask = (table["phase"] == k) & np.isfinite(table[metric])
+            x = table[metric]
+
+            def stat(w, x=x, mask=mask):
+                return _wmean(x[mask], pool.weights("shape", w)[mask])
+
+            value = pool.pooled(stat)
+            sd = _wsd(x[mask], pool.weights("shape", np.ones(pool.n_seeds))[mask])
+            a, b = pool.interval(stat)
+            seconds = mask.sum() * SHAPE_EVERY * dt
+            then = "—"
+            if before is not None:
+                bt = before.tables["shape"]
+                bm = (bt["phase"] == k) & np.isfinite(bt[metric])
+                then = f"{_num(_wmean(bt[metric][bm], np.ones(bm.sum())), fmt)}"
+            row = ShapeRow(
+                label,
+                phase_label,
+                f"{_num(value, fmt)} ± {_num(sd, fmt)} ({seconds / 60:.0f} team-min)",
+                _span(a, b, fmt),
+                then,
+            )
+            ref = SHAPE_PUBLISHED.get((metric, phase))
+            if ref is not None:
+                row.published, row.source, row.note = ref.published, ref.source, ref.note
+                row.range = f"{_span(ref.lo, ref.hi, fmt)} ({ref.label})"
+                row.inside = _verdict(value, ref.lo, ref.hi, mask.sum() >= MIN_GROUP)
+            if metric == "line_height" and phase == team_shape.ATTACK:
+                ball = np.median(table["ball_depth"][table["phase"] == k])
+                row.note += (
+                    f" In possession the ball is a median {_num(ball, '.1f')} m from the team's "
+                    "own goal line: `possession_play` has no intent to go forward. In Castellano "
+                    "et al. it is 58 ± 23.9 m from the goal attacked on a 105.5 m pitch (p. 440), "
+                    "47.5 m from its own."
+                )
+            rows.append(row)
+    return rows
+
+
+def render_shape(rows: list[ShapeRow]) -> list[str]:
+    counts = {v: sum(r.inside == v for r in rows) for v in VERDICTS}
+    no_ref = sum(r.published == NO_REFERENCE for r in rows)
+    lines = [
+        "## Team shape",
+        "",
+        f"**{counts[INSIDE]} inside, {counts[OUTSIDE]} outside, {counts[INCONCLUSIVE]} "
+        f"inconclusive, {no_ref} with no published reference.**",
+        "",
+    ]
+    outside = [r for r in rows if r.inside == OUTSIDE]
+    if outside:
+        lines += ["Outside the published range:", ""]
+        lines += [f"- {r.label}, {r.phase}: sim {r.sim}; published {r.published}."
+                  for r in outside]  # fmt: skip
+        lines.append("")
+    lines += ["| " + " | ".join(SHAPE_COLUMNS) + " |", "|" + "---|" * len(SHAPE_COLUMNS)]
+    for r in rows:
+        cells = (r.label, r.phase, r.sim, r.seeds, r.before, r.published, r.range, r.source,
+                 r.inside)  # fmt: skip
+        lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
+    lines += [
+        "",
+        "How to read it:",
+        "",
+        "- Each team's outfield players, sampled at 5 Hz after the first "
+        f"{SHAPE_WARM_UP_S:.0f} s of a run (while they leave their setup spots), measured as "
+        "analytics/team_shape.py defines it, from positions and possession only. **Sim (pooled)**: "
+        "mean ± SD over the sampled team-frames, and how many team-minutes they make up; **90% "
+        "over seeds** as above.",
+        f"- **Phases.** *Just won the ball* and *just lost the ball* are the {TRANSITION_S:.0f} s "
+        "after a change of possession; *in possession* and *out of possession* are the rest, the "
+        "settled phases. The five seconds are ours; Forcher et al. (2024) count settled defence "
+        "from opponent possessions of three passes and five seconds or more.",
+        "- **Before: anchors**: the same seeds without the team shape (`Scenario.team_shape` "
+        "off): every player's setup spot shifted with the ball, as every scenario still moves "
+        "(the pooled mean).",
+        "- **Range checked**: both printed means ± 1 SD (two teams, or successful and "
+        "unsuccessful defending). **†**: the shape's parameters (sim/team_shape.py `ShapeParams`) "
+        "were fitted by hand to these printed means on `possession_play` tuning seeds 0–39; the "
+        "seeds here are held out.",
+        "- **Length per width** is checked against nothing: no 11 v 11 source prints it (the "
+        "youth small-sided Folgado et al. 2014 is read in abstract only, which prints none). The "
+        "ratios of the printed means are 0.87–0.89 in possession and 0.87–0.93 out of it "
+        "(docs/REFERENCES.md, Team shape); a ratio of means is not a mean of ratios.",
+        "- **Transitions** have no printed reference. Santos & Lago-Peñas (2019) print the shape "
+        "of one team at the instant it wins the ball as regression intercepts, 35.451 m long and "
+        "34.604 m wide, for one reference condition: not a sample mean, so not checked.",
+        "- `possession_play` keeps the ball rather than going forward, so the ball sits nearer the "
+        "team's own goal than in a real match, and that sets where its lines stand (the note on "
+        "the defensive line in possession gives the numbers).",
+        "",
+    ]
+    lines += [f"- **{r.label}, {r.phase}** — {r.note}" for r in rows if r.note]
+    lines.append("")
+    return lines
+
+
 # --- report ----------------------------------------------------------------------------------
 
 
@@ -646,7 +940,7 @@ def _seed_text(seeds: list[int]) -> str:
     return f"`{SCENARIO}` seeds {span} ({len(seeds)})"
 
 
-def render(rows: list[Row], seeds: list[int]) -> str:
+def render(rows: list[Row], seeds: list[int], shape: list[ShapeRow] | None = None) -> str:
     counts = {v: sum(r.inside == v for r in rows) for v in VERDICTS}
     no_ref = sum(r.published == NO_REFERENCE for r in rows)
     outside = [r for r in rows if r.inside == OUTSIDE]
@@ -673,8 +967,10 @@ def render(rows: list[Row], seeds: list[int]) -> str:
     for r in rows:
         cells = (r.label, r.sim, r.seeds, r.published, r.range, r.source, r.inside)
         lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
+    lines.append("")
+    if shape:
+        lines += render_shape(shape)
     lines += [
-        "",
         "## How to read it",
         "",
         "- **Sim (pooled)**: all observations of all seeds pooled; mean ± SD of the observations "
@@ -728,7 +1024,9 @@ def main() -> None:
     parser.add_argument("--seeds", default="100-199")
     args = parser.parse_args()
     seeds = _parse_seeds(args.seeds)
-    report = render(evaluate(seeds), seeds)
+    observed = [simulate(s) for s in seeds]
+    anchors = [simulate_anchors(s) for s in seeds]
+    report = render(evaluate(seeds, observed), seeds, shape_rows(observed, anchors))
     REPORTS.mkdir(exist_ok=True)
     path = REPORTS / "realism.md"
     path.write_text(report)

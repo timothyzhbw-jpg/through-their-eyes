@@ -27,8 +27,15 @@ def report():
     return rows, render(rows, SEEDS)
 
 
-def _table(markdown: str) -> tuple[list[str], list[list[str]]]:
-    lines = [line for line in markdown.splitlines() if line.startswith("|")]
+def _table(markdown: str, after: str = "") -> tuple[list[str], list[list[str]]]:
+    """The first table of `markdown` after the line `after` (from the start by default)."""
+    text = markdown.split(f"\n{after}\n", 1)[1] if after else markdown
+    lines = []
+    for line in text.splitlines():
+        if line.startswith("|"):
+            lines.append(line)
+        elif lines:
+            break
     header = [c.strip() for c in lines[0].strip("|").split("|")]
     assert set(lines[1].replace("|", "").strip()) <= {"-", ":"}
     body = [[c.strip() for c in line.strip("|").split("|")] for line in lines[2:]]
@@ -97,3 +104,60 @@ def test_out_of_frame_time_runs_from_first_frame_out_to_first_frame_back():
     half_width = np.deg2rad(41.0)
     assert out_of_frame_s(yaw, pos, ball, 0.04, half_width) == pytest.approx(4 * 0.04)
     assert out_of_frame_s(np.zeros(5), pos[:5], ball[:5], 0.04, half_width) is None
+
+
+@pytest.fixture(scope="module")
+def shape_report():
+    from eval.realism import shape_rows, simulate, simulate_anchors
+
+    observed = [simulate(s) for s in SEEDS]
+    anchors = [simulate_anchors(s) for s in SEEDS]
+    rows = shape_rows(observed, anchors)
+    return rows, render(evaluate(SEEDS, observed), SEEDS, rows)
+
+
+def test_team_shape_table_has_every_metric_in_every_phase(shape_report):
+    from eval.realism import SHAPE_COLUMNS, SHAPE_METRICS, SHAPE_PHASES
+
+    rows, markdown = shape_report
+    header, body = _table(markdown, after="## Team shape")
+    assert header == list(SHAPE_COLUMNS)
+    assert len(body) == len(rows) == len(SHAPE_METRICS) * len(SHAPE_PHASES)
+    assert {(c[0].removesuffix(" †"), c[1]) for c in body} == {
+        (m, p) for _, m, _ in SHAPE_METRICS for _, p in SHAPE_PHASES
+    }
+    # The scan table above it is unchanged in shape.
+    header, body = _table(markdown)
+    assert header == list(COLUMNS)
+
+
+def test_every_team_shape_row_is_cited_with_a_location_or_says_it_has_none(shape_report):
+    from eval.realism import SHAPE_COLUMNS
+
+    _, markdown = shape_report
+    _, body = _table(markdown, after="## Team shape")
+    col = {name: i for i, name in enumerate(SHAPE_COLUMNS)}
+    for cells in body:
+        published, source, verdict = (cells[col[k]] for k in ("Published", "Source", "Inside"))
+        assert cells[col["Sim (pooled)"]] and cells[col["Before: anchors"]] != "—"
+        if published == NO_REFERENCE:
+            assert source == "—" and verdict == "—", cells
+            continue
+        paper = next((s for s in SOURCES.values() if source.startswith(s.cite)), None)
+        assert paper is not None, f"unknown source: {source}"
+        assert paper.cite in REFERENCES, f"{paper.cite} is not in docs/REFERENCES.md"
+        assert source != paper.cite, f"no table, figure or section given: {source}"
+        assert verdict in VERDICTS, cells
+
+
+def test_the_shape_table_samples_both_teams_after_the_warm_up():
+    from eval.realism import SHAPE_EVERY, SHAPE_WARM_UP_S, shape_table
+    from sim.config import DT
+    from sim.engine import Simulation
+
+    run = Simulation.from_scenario("possession_play", 100).run()
+    table = shape_table(run)
+    frames = len(range(round(SHAPE_WARM_UP_S / DT), len(run.owner), SHAPE_EVERY))
+    assert len(table["team"]) == 2 * frames
+    assert set(table["team"].tolist()) == {0, 1}
+    assert np.all(table["length"] > 0) and np.all(table["width"] > 0)
