@@ -1,0 +1,15 @@
+{
+  "soundfont": {
+    "title": "Fluid (R3) General MIDI SoundFont",
+    "author": "Frank Wen",
+    "licence": "MIT",
+    "page": "https://packages.debian.org/source/sid/fluid-soundfont",
+    "url": "https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz",
+    "archive_sha256": "2621acaa1c78e4abdb24bdd163230cc577e61276936d6aa6e3180582142f0343",
+    "member": "fluid-soundfont-3.1/FluidR3_GM.sf2",
+    "extract": "fluid/fluid-soundfont-3.1/FluidR3_GM.sf2",
+    "sha256": "74594e8f4250680adf590507a306655a299935343583256f3b722c48a1bc1cb0",
+    "licence_file": "fluid-soundfont-3.1/COPYING",
+    "checked_on": "2026-10-21"
+  }
+}

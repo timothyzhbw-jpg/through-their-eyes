@@ -58,3 +58,19 @@ export function bindSound(
     out.setOn(false);
   };
 }
+
+/** A stitched match's live screen: the crowd follows the match's Sound switch (its recap's voice)
+ * and ducks under that voice. No scans or reveals of its own to cue. Returns the unbinding. */
+export function bindMatchSound(voice: Pick<Session["voice"], "state">, out: SoundOut): () => void {
+  const onVoice = () => {
+    const v = voice.state.get();
+    out.setOn(v.on);
+    out.setDuck(duckFor(v));
+  };
+  onVoice();
+  const stop = voice.state.subscribe(onVoice);
+  return () => {
+    stop();
+    out.setOn(false);
+  };
+}
