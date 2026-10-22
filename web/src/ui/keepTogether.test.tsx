@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // Club names stay on one line (ui/keepTogether.tsx): the full-time line broke "Corvane / Vale 0."
-// and the lineup title left "Vale" alone on a second line.
+// at 960 px and left a lone "." at 1280.
 
 import { act } from "react";
 import { createRoot } from "react-dom/client";

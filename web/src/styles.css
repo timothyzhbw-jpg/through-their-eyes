@@ -435,13 +435,10 @@ optgroup {
   text-align: center;
   animation: tt-rise 560ms var(--settle) both;
 }
-/* "Kestrel Bay v Corvane Vale" on one line from about 1000 px (at 92 px it left "Vale" alone on
-   a second line at 1440); narrower, the club names stay whole and the two lines balance. */
 .lineup-head h2 {
   margin: 14px 0 18px;
-  font: 300 clamp(64px, 7vw, 88px)/1 var(--font-display);
+  font: 300 clamp(64px, 7vw, 92px)/1 var(--font-display);
   letter-spacing: -0.04em;
-  text-wrap: balance;
 }
 .lineup-head em {
   color: var(--floodlight);

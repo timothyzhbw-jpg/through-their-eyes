@@ -133,8 +133,7 @@ function OpenLineupCard() {
         <header className="lineup-head">
           <p className="kicker">A synthetic match · every player fictional</p>
           <h2 id={titleId}>
-            <span className="nowrap">{clubName(0)}</span> <em>v</em>{" "}
-            <span className="nowrap">{clubName(1)}</span>
+            {clubName(0)} <em>v</em> {clubName(1)}
           </h2>
           <p className="lineup-pitch">
             <em>See what they saw.</em> An AI studio that explains key moments through the player's
