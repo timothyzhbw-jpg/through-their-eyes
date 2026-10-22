@@ -1527,9 +1527,10 @@ original visual identity.
     walking foot is down for 60% of the cycle and a jogging one for 30%, so a mix lets the
     planted foot skate (measured 17–36 cm a step at 1.4–2.6 m/s). In the walking gait the model
     is lifted by however far a blended pose would sink a boot into the ground. On with the extra
-    clips; `?walk=0` keeps the kick and the checks without the walk. Quaternius does not say how the pack was made; Digital Production (2025-03-21) reports Xsens
-    motion capture, which would make it motion capture for animation only, as Bowen allowed for
-    the CMU clips on 2026-10-21 (hard constraint 2).
+    clips; `?walk=0` keeps the kick and the checks without the walk. Quaternius does not say how
+    the pack was made; Digital Production (2025-03-21) reports Xsens motion capture. Bowen allowed
+    the walk on 2026-10-22 on the same terms as the CMU clips: animation only, credited (hard
+    constraint 2).
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
@@ -1738,6 +1739,9 @@ Motion capture of lab subjects is not match data or footage: Bowen allowed the C
 capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
 (`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
 the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+On 2026-10-22 he allowed Quaternius' Universal Animation Library walk on the same terms (CC0,
+reported to be Xsens motion capture; animation only): the players' walk
+(`web/public/models/anims_walk.glb`, §7 *Walk*), credited in [CREDITS.md](CREDITS.md).
 
 ### Acceptance checks — render
 - [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other

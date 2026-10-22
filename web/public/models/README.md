@@ -75,9 +75,8 @@ from the extra clips above.
 - Licence: **CC0 1.0** (public domain dedication; `License.txt` in the pack, checked 2026-10-21).
   It asks for no credit; we give it anyway: _Walk: Universal Animation Library by Quaternius
   (quaternius.com)._ Quaternius' page does not say how the animations were made; Digital
-  Production (2025-03-21) reports Xsens motion capture, which would make it motion capture for
-  animation only, as Bowen allowed for the CMU clips on 2026-10-21. It is not footage or match
-  data.
+  Production (2025-03-21) reports Xsens motion capture. Bowen allowed it on 2026-10-22 on the
+  same terms as the CMU clips: animation only, credited. It is not footage or match data.
 - Written by `tte-blender/anims/walk.py` (numpy; outside the repo, with the source files):
   `nice -n 10 .venv/bin/python -I ~/tte-blender/anims/walk.py --model web/public/models/grf_player.glb --out web/public/models/anims_walk.glb`.
   Same inputs give the same bytes.
