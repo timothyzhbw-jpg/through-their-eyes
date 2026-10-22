@@ -19,7 +19,7 @@ from sim.overrides import AddScan, DropScan, DropStep, ForceAction, NoScans
 from sim.perception import scan_id
 from sim.run import MatchRun
 
-SHOT_OUTCOMES = ("goal", "saved", "wide", "blocked")
+SHOT_OUTCOMES = ("goal", "saved", "wide", "blocked", "post")  # "post": back off the woodwork
 
 
 @dataclass
@@ -85,7 +85,8 @@ def possession_result(run: MatchRun) -> str:
     """What the hero's action did with the ball: "kept" (a completed pass, or a carry nobody won
     off him), "lost" (intercepted, out of play, or tackled during the carry), "open" (a pass still
     rolling when the run ended), "shot", or "none" without a decision. With `Scenario.shots` a
-    shot ends "goal", "saved", "wide" or "blocked" instead."""
+    shot ends "goal", "saved", "wide", "blocked" or "post" (back into play off the woodwork)
+    instead."""
     decision = run.hero_decision()
     if decision is None:
         return "none"

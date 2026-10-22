@@ -36,10 +36,12 @@ from sim.engine import Simulation
 from sim.model import Event, PlayerInfo
 from sim.rng import KeyedRng
 from sim.run import MatchRun
+from sim.scenarios import SCENARIOS
 
 SEED_BASE = 1_000_000
-# Scenarios that open with a set piece begin with it, whatever the previous possession did.
-SET_PIECES = {"corner_blind_side": "corner"}
+# Scenarios that open with a set piece begin with it, whatever the previous possession did
+# (`Scenario.restart`).
+SET_PIECES = {name: cls.restart for name, cls in SCENARIOS.items() if cls.restart}
 
 
 @dataclass(frozen=True)
@@ -93,7 +95,7 @@ class Possession:
     scenario: str
     seed: int
     start: int  # match frame of its first frame
-    restart: str  # kick_off | throw_in | goal_kick | corner | cut
+    restart: str  # kick_off | throw_in | goal_kick | corner | free_kick | cut
     score_before: tuple[int, int]  # (home, away)
     run: MatchRun
 
@@ -154,16 +156,19 @@ def global_id(local_id: str, start: int) -> str:
 
 
 def restart_after(run) -> str:
-    """How play restarts after a possession: a kick-off after a goal, else where the ball went
-    out, or a cut when it ended in play."""
+    """How play restarts after a possession (SPEC 3.9): a kick-off after a goal, an indirect free
+    kick after offside (Law 11.4), else where the whole ball went out (Laws 15-17), or a cut
+    when it ended in play."""
     if any(e.type == "goal" for e in run.events):
         return "kick_off"  # the other team kicks off
+    if any(e.type == "offside" for e in run.events):
+        return "free_kick"  # to the defenders, where the offence was
     outs = [e for e in run.events if e.type == "out"]
     if not outs:
         return "cut"
     out = max(outs, key=lambda e: e.frame)
     x, y = out.attrs["at"]
-    if abs(y) > HALF_WIDTH:
+    if out.attrs.get("line", "touchline" if abs(y) > HALF_WIDTH else "goal_line") == "touchline":
         return "throw_in"
     if abs(x) > HALF_LENGTH:
         defending = 1 if x > 0 else 0  # the away team defends +x, the home team -x

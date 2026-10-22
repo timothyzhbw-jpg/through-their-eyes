@@ -6,8 +6,11 @@ Each step from frame f to f + 1:
   3. heads and scans;
   4. player movement;
   5. ball: attached to its owner (an opponent may tackle it, in scenarios with tackles), or
-     rolling; control and out-of-play checks at f + 1;
+     rolling (off the posts too); the referee's Laws at f + 1: out of play and goals (Laws 9,
+     10), offside at the next touch (Law 11);
   6. record frame f + 1.
+The referee (`sim.referee`, SPEC 3.9) stops play whenever a law says so, and players know the
+law: attackers hold the offside line while a teammate has the ball.
 `snapshot()` / `resume(snapshot, overrides)` re-simulate from any frame (SPEC 3.7).
 """
 
@@ -21,9 +24,9 @@ import numpy as np
 
 from analytics.tti import time_to_intercept
 from analytics.vision import player_visibility, visibility, wrap_angle
-from sim import shots
-from sim.ball import BallParams, advance, path_distances
-from sim.config import DT, HALF_LENGTH, HALF_WIDTH, SimParams
+from sim import laws, shots
+from sim.ball import BallParams, advance, bounce, path_distances, post_contact
+from sim.config import DT, SimParams
 from sim.decision import (
     DecisionContext,
     DecisionParams,
@@ -42,6 +45,7 @@ from sim.perception import (
     head_turn_id,
     scan_id,
 )
+from sim.referee import Offence, Referee
 from sim.rng import KeyedRng
 from sim.run import MatchRun
 
@@ -110,7 +114,9 @@ class Simulation:
         # Scenarios with `shots` (Module A): the shot in flight, and each keeper's dive
         # (target, first frame, last frame).
         self.shot_in_flight: dict | None = None
-        self.ball_out = False
+        # The referee (SPEC 3.9) and why play stopped: "out", "goal" or "offside" (dead ball).
+        self.referee = Referee(scenario.restart)
+        self.stopped: str | None = None
         self.dives: dict[int, tuple[np.ndarray, int, int]] = {}
         self.tackle_lockout: dict[int, int] = {}  # player -> first frame he may tackle again
         self.last_kicker = -1
@@ -268,17 +274,23 @@ class Simulation:
         body_target = np.where(moving, np.arctan2(self.vel[:, 1], self.vel[:, 0]), ball_dir)
         self.body_yaw = wrap_angle(turn_toward(self.body_yaw, body_target, p.body_turn_rate * DT))
 
-        # 5. Ball.
+        # 5. Ball, and the Laws on it (SPEC 3.9). A dead ball stays where play stopped.
         self.frame = f + 1
-        if self.owner >= 0:
+        before = self.ball_pos.copy()
+        if self.stopped is not None:
+            pass
+        elif self.owner >= 0:
             self._attach_ball()
             if self.scenario.tackles:
                 self._check_tackle()
+            self._check_out(before)  # a ball carried over a line is out too (Law 9.1)
         else:
             self._roll_ball()
             held = self.shot_in_flight is not None and self._watch_shot()
-            if not held and not self._check_out():
+            if not held and not self._check_out(before):
                 self._check_control()
+            if self.owner >= 0 and self.stopped is None:
+                self._check_out(before)  # taken at the feet of a man on or over a line
 
         # 6. Record and stop conditions.
         self._record()
@@ -327,8 +339,30 @@ class Simulation:
             return
         direction = v / speed
         dist, new_speed = advance(speed, DT, self.ball_params)
-        self.ball_pos[:2] += direction * dist
-        self.ball_vel[:2] = direction * new_speed
+        start = self.ball_pos[:2].copy()
+        hit = post_contact(start, start + direction * dist, self.ball_params.radius, laws.POSTS,
+                           laws.POST_RADIUS)  # fmt: skip
+        if hit is None:
+            self.ball_pos[:2] += direction * dist
+            self.ball_vel[:2] = direction * new_speed
+            return
+        # It strikes the woodwork (SPEC 3.3, 3.9): off the post, the rest of the frame's roll.
+        s, centre = hit
+        contact = start + s * dist * direction
+        normal = (contact - centre) / float(np.linalg.norm(contact - centre))
+        vel = bounce(direction * new_speed, normal)
+        out = float(np.linalg.norm(vel))
+        rest = (1.0 - s) * dist * (out / new_speed if new_speed > 0.0 else 0.0)
+        self.ball_pos[:2] = contact + (vel / out * rest if out > 0.0 else 0.0)
+        self.ball_vel[:2] = vel
+        last = self.ids[self.last_kicker] if self.last_kicker >= 0 else ""
+        self.events.append(
+            Event(f"post:{last}:{self.frame:04d}", "post", self.frame, self.frame * DT, last,
+                  int(self.team[self.last_kicker]) if self.last_kicker >= 0 else -1,
+                  {"at": [float(contact[0]), float(contact[1])]})
+        )  # fmt: skip
+        if self.shot_in_flight is not None:
+            self.shot_in_flight["post"] = True
 
     def _predicted_path(self) -> tuple[np.ndarray, np.ndarray]:
         times = DT * np.arange(1, PREDICTION_FRAMES + 1)
@@ -362,6 +396,9 @@ class Simulation:
 
         if self.scenario.shots:
             self._keeper_targets(target, cap)
+        # Onside while a teammate has the ball (SPEC 3.9). A scripted run is timed by its
+        # scenario instead; the referee still whistles it.
+        target = self.referee.hold_the_line(self, target)
 
         for i, (t, c) in self.scenario.scripted_targets(self, f).items():
             target[i], cap[i] = t, c
@@ -384,7 +421,8 @@ class Simulation:
         for k, (t, start, until) in self.dives.items():
             if start <= f <= until:
                 target[k], cap[k] = t, shots.KEEPER.v_dive_max
-        return target, cap
+        # Back from a set piece until it is taken (SPEC 3.9).
+        return self.referee.keep_back(self, target), cap
 
     def _kick_pass(self, i: int, target: np.ndarray, intended: int, f: int) -> None:
         ball = self.ball_pos[:2].copy()
@@ -419,6 +457,7 @@ class Simulation:
             },
         )
         self.events.append(event)
+        self.referee.kick(self, i, event)
         self.pass_in_flight = {
             "event": event,
             "passer": i,
@@ -486,27 +525,32 @@ class Simulation:
             self.events[-1].type = "shot"
             self.events[-1].id = f"shot:{self.ids[i]}:{f:04d}"
 
-    def _check_out(self) -> bool:
-        x, y = self.ball_pos[:2]
-        if abs(x) <= HALF_LENGTH and abs(y) <= HALF_WIDTH:
+    def _check_out(self, before: np.ndarray) -> bool:
+        """Laws 9.1 and 10.1 (SPEC 3.9): play stops once the whole ball is over a goal line or a
+        touchline, carried or not; it is a goal when all of it went over the goal line between
+        the posts and under the bar, whoever touched it last (an own goal counts for the team
+        attacking that goal). The ball stays where play stopped."""
+        r = self.ball_params.radius
+        line = laws.ball_out(self.ball_pos, r)
+        if line is None:
             return False
-        if self.scenario.shots and self.ball_out:
-            return True
-        self.ball_vel[:] = 0.0
-        last = self.last_kicker
-        goal = (
-            self.shot_in_flight is not None
-            and abs(x) > HALF_LENGTH
-            and abs(self.shot_in_flight["event"].attrs["goal_line_y"]) < shots.GOAL_HALF_WIDTH
-        )
+        crossing = laws.goal_line_crossing(before, self.ball_pos, r)
+        goal = crossing is not None and crossing.verdict == "goal"
+        last = self.owner if self.owner >= 0 else self.last_kicker
+        x, y = self.ball_pos[:2]
+        attrs = {"at": [float(x), float(y)], "line": line}
+        team = int(self.team[last])
+        if goal:
+            scoring = 0 if crossing.end == 1 else 1
+            if scoring != team:
+                attrs["own_goal"] = True
+            team = scoring
         etype = "goal" if goal else "out"
         self.events.append(
             Event(f"{etype}:{self.ids[last]}:{self.frame:04d}", etype, self.frame,
-                  self.frame * DT, self.ids[last], int(self.team[last]),
-                  {"at": [float(x), float(y)]})
+                  self.frame * DT, self.ids[last], team, attrs)
         )  # fmt: skip
-        if self.scenario.shots:
-            self.ball_out = True
+        self._stop_play(etype)
         if self.shot_in_flight is not None:
             self._finish_shot("goal" if goal else "wide")
         self._resolve_pass(None, "out")
@@ -514,17 +558,49 @@ class Simulation:
             self.done = True
         return True
 
+    def _stop_play(self, why: str) -> None:
+        """The referee stops play: the ball is dead where it is, and nobody has it."""
+        self.stopped = why
+        self.ball_vel[:] = 0.0
+        if self.owner >= 0:
+            self.carry.pop(self.owner, None)
+            self.owner = -1
+        self.pending_decision = None
+
+    def _whistle_offside(self, offence: Offence) -> None:
+        """An offside offence (Law 11.2): play stops with an indirect free kick to the defenders
+        where the offender became involved (Law 11.4); the pass, or shot, ends there."""
+        w, j = offence.watch, offence.player
+        pid = self.ids[j]
+        self.events.append(
+            Event(f"offside:{pid}:{self.frame:04d}", "offside", self.frame, self.frame * DT,
+                  pid, int(self.team[j]),
+                  {"at": list(offence.at), "how": offence.how, "kick": w.kick.id,
+                   "kick_frame": w.frame, "margin": w.margins[j], "line": w.line_by,
+                   "restart": "free_kick", "awarded_to": 1 - w.team})
+        )  # fmt: skip
+        self._stop_play("offside")
+        if self.shot_in_flight is not None:
+            self._finish_shot("offside")
+        self._resolve_pass(j if offence.how == "played the ball" else None, "offside")
+        if self.hero_resolved_frame is None:
+            self.done = True
+
     def _check_control(self) -> None:
         dist = np.linalg.norm(self.pos - self.ball_pos[:2], axis=-1)
         eligible = dist <= self.params.control_radius
         lockout = round(self.params.kick_lockout_s / DT)
         if self.last_kicker >= 0 and self.frame - self.kick_frame < lockout:
             eligible[self.last_kicker] = False
-        if self.shot_in_flight is not None:  # the save model decides the keeper's part
-            eligible[self.shot_in_flight["keeper"]] = False
+        if self.shot_in_flight is not None and not self.shot_in_flight.get("post"):
+            eligible[self.shot_in_flight["keeper"]] = False  # the save model decides his part
         if not eligible.any():
             return
         i = int(np.argmin(np.where(eligible, dist, np.inf)))
+        offence = self.referee.touch(self, i)  # Law 11: was this touch an offside offence?
+        if offence is not None:
+            self._whistle_offside(offence)
+            return
         passer = self.pass_in_flight["passer"] if self.pass_in_flight else self.last_kicker
         same_team = passer >= 0 and self.team[i] == self.team[passer]
         etype = "reception" if same_team else "interception"
@@ -539,8 +615,8 @@ class Simulation:
                       self.frame, self.frame * DT, self.ids[i], int(self.team[i]), {})
             )  # fmt: skip
         self._resolve_pass(i, "complete" if same_team else "intercepted")
-        if self.shot_in_flight is not None:
-            self._finish_shot("blocked")
+        if self.shot_in_flight is not None:  # off a player, or back off the woodwork
+            self._finish_shot("post" if self.shot_in_flight.get("post") else "blocked")
         self.owner = i
         self._attach_ball()
         if self.scenario.decides(self, i):
@@ -549,10 +625,14 @@ class Simulation:
     def _check_tackle(self) -> None:
         """An opponent within the control radius of a carried ball wins it, as he would win a free
         ball there (scenarios with `tackles`; no draw, so no randomness). The nearest one wins it;
-        the player who lost it cannot win it back for `tackle_lockout_s`."""
+        the player who lost it cannot win it back for `tackle_lockout_s`. Only a ball-first
+        tackle counts: he is nearer the ball than the man (`sim.laws.ball_first`, Law 12.1), so
+        nobody wins it through the carrier from behind."""
         i = self.owner
         dist = np.linalg.norm(self.pos - self.ball_pos[:2], axis=-1)
+        to_man = np.linalg.norm(self.pos - self.pos[i], axis=-1)
         eligible = (self.team != self.team[i]) & (dist <= self.params.control_radius)
+        eligible &= dist < to_man
         for j, until in self.tackle_lockout.items():
             if self.frame < until:
                 eligible[j] = False
@@ -676,6 +756,7 @@ class Simulation:
             },
         )
         self.events.append(event)
+        self.referee.kick(self, i, event)
         self.shot_in_flight = {
             "event": event,
             "keeper": k,
@@ -689,6 +770,10 @@ class Simulation:
             "u": self.rng.uniform_for("save", f, self.ids[k]),
             "hero": self.scenario.ends_on_shot(self, i),
         }
+        offence = self.referee.shot(self, i, k)  # a teammate offside in the keeper's view
+        if offence is not None:
+            self._whistle_offside(offence)
+            return
         self._watch_shot()  # The first sighting can be the strike itself, before the ball rolls.
 
     def _watch_shot(self) -> bool:
@@ -735,8 +820,13 @@ class Simulation:
         attrs = s["event"].attrs
         attrs.update(seen=seen, reach=r, keeper_distance=d, p_save=p)
         on_target = abs(attrs["goal_line_y"]) < shots.GOAL_HALF_WIDTH
-        if not (stopped or on_target and s["u"] < p):
+        hands = laws.keeper_may_handle(self.pos[k], int(self.team[k]))  # Law 12.1
+        if not (stopped or on_target and s["u"] < p) or not hands:
             return False
+        offence = self.referee.touch(self, k)  # an attacker offside challenging him for it
+        if offence is not None:
+            self._whistle_offside(offence)
+            return True
         at = [float(self.ball_pos[0]), float(self.ball_pos[1])]
         self.events.append(
             Event(f"save:{self.ids[k]}:{f:04d}", "save", f, f * DT, self.ids[k],
