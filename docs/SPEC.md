@@ -1894,6 +1894,14 @@ original visual identity.
     option in `whatif_*.json`) plays with a gold ball: it never happened. (2) The truth: everyone
     moves from where he pictured them to where they were. (3) What he did and why. (4) The two
     calls compared. One tap tries another option or goes back to the replay.
+  - *Why it went this way* (2026-10-22, outside UX review: the result needed explaining;
+    [why.ts](../web/src/yourcall/why.ts)). Right after the pick, the first beat says what he had
+    just seen (his teammates fresh in his picture, and those he had not seen lately, from the
+    belief ages of the scans), whether the call's receiver was fresh in his picture, and how his
+    picture rated the call against his own (the decision record's chances, in words: "the pass to
+    N. Varnhall looked more promising than your call"), then what it led to in the sim (the
+    verified lines). The first two are read from the sim export and marked so; they carry no
+    number, since no claim stands behind a count or a time.
   - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
     against his), and the breakdown's narration sorted by claim (state at the decision → truth;
     the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
