@@ -1,9 +1,11 @@
 // The breakdown player's console: which plan is loaded (and why, if it fell back to the template),
 // play / stop, and the cue list with the step being executed. With the live service the plan is
 // the Telestrator agent's, with the narration's voice cues added as voice steps, and the Producer's
-// failure drill sits below it.
+// failure drill sits below it. "Crew trace" (here and on the Producer desk) opens the timeline of
+// the crew run behind the breakdown on screen.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CrewTracePanel, TraceButton } from "../crewtrace/CrewTrace";
 import type { PlanStep, Script } from "../plan/schema";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
@@ -45,6 +47,9 @@ export function BreakdownPanel() {
   const running = status === "running";
   const ready = arrival === "ready" || arrival === "failed";
   const list = useRef<HTMLOListElement>(null);
+  const [tracing, setTracing] = useState(false);
+  const api = ready && origin?.kind === "api" ? origin : null;
+  const toggleTrace = () => setTracing((open) => !open);
 
   // Keep the step being executed in view inside the (scrollable) cue list.
   useEffect(() => {
@@ -90,6 +95,7 @@ export function BreakdownPanel() {
               {origin.planSource === "agent" ? "Telestrator agent" : "Server template"}
             </span>
           )}
+          {api && <TraceButton open={tracing} onClick={toggleTrace} />}
           <button
             type="button"
             className="btn"
@@ -143,7 +149,8 @@ export function BreakdownPanel() {
         <i style={{ width: `${Math.min(100, (100 * t) / plan.duration_s)}%` }} />
       </div>
       {ready && (
-        <ol className="steps" ref={list}>
+        // A scrolling box with no control inside: focusable, so the keyboard can scroll it.
+        <ol className="steps" ref={list} tabIndex={0} aria-label="Telestration steps">
           {plan.steps.map((step, k) => (
             <li
               key={k}
@@ -161,7 +168,15 @@ export function BreakdownPanel() {
           ))}
         </ol>
       )}
-      <Producer />
+      <Producer trace={api ? { open: tracing, toggle: toggleTrace } : null} />
+      {api && tracing && (
+        <CrewTracePanel
+          kind="breakdowns"
+          traceKey={api.key}
+          provenance={api.provenance}
+          version={`${api.traceId ?? ""}:${api.totalMs}:${api.drill?.pending.join(",") ?? ""}`}
+        />
+      )}
     </Chapter>
   );
 }

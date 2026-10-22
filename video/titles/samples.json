@@ -1,0 +1,194 @@
+{
+  "slam": {
+    "lines": [
+      {
+        "text": "THROUGH",
+        "color": "chalk",
+        "size": "160"
+      },
+      {
+        "text": "THEIR EYES",
+        "color": "gold",
+        "size": "160"
+      }
+    ],
+    "kicker": "FIRST PERSON",
+    "stagger": "0.35",
+    "align": "center",
+    "hold": "1.5",
+    "out": "fade",
+    "backdrop": true
+  },
+  "card": {
+    "lines": [
+      {
+        "text": "SEE WHAT THEY SAW",
+        "color": "gold",
+        "size": "120"
+      }
+    ],
+    "kicker": "A MATCH STUDIO",
+    "sub": "EVERY TOUCH STARTS WITH A LOOK",
+    "stagger": "0.35",
+    "align": "center",
+    "hold": "1.8",
+    "out": "fade",
+    "backdrop": false
+  },
+  "freeze": {
+    "title": "HIS PICTURE OF THE RUNNER",
+    "items": [
+      {
+        "label": "OFF BY",
+        "value": "0.0",
+        "unit": "M",
+        "color": "gold"
+      },
+      {
+        "label": "LANE",
+        "value": "0.0",
+        "unit": "M",
+        "color": "chalk"
+      }
+    ]
+  },
+  "verified": {
+    "kicker": "EVERY NUMBER CHECKED",
+    "stagger": "0.45",
+    "items": [
+      {
+        "before": "THE RUNNER WAS",
+        "value": "0.0",
+        "after": "METRES OFF HIS READ"
+      },
+      {
+        "before": "THE LANE WAS",
+        "value": "0.0",
+        "after": "METRES WIDE"
+      },
+      {
+        "before": "HE LAST LOOKED",
+        "value": "0.0",
+        "after": "SECONDS BEFORE THE BALL"
+      }
+    ]
+  },
+  "refuted": {
+    "kicker": "TRY A WRONG NUMBER",
+    "before": "THE RUNNER WAS",
+    "value": "0.0",
+    "after": "METRES OFF",
+    "stamp": "WOULD NOT AIR"
+  },
+  "lineup": {
+    "header": "THE CREW",
+    "stagger": "0.18",
+    "highlight": "VERIFIER",
+    "cards": [
+      {
+        "name": "DIRECTOR",
+        "job": "CALLS THE CUT",
+        "glyph": "director"
+      },
+      {
+        "name": "ANALYST",
+        "job": "READS THE MOMENT",
+        "glyph": "analyst"
+      },
+      {
+        "name": "TELESTRATOR",
+        "job": "DRAWS THE LOOK",
+        "glyph": "telestrator"
+      },
+      {
+        "name": "NARRATOR",
+        "job": "CALLS THE PLAY",
+        "glyph": "narrator"
+      },
+      {
+        "name": "VERIFIER",
+        "job": "CHECKS THE LINE",
+        "glyph": "verifier"
+      },
+      {
+        "name": "VOICE",
+        "job": "SPEAKS IT",
+        "glyph": "voice"
+      }
+    ]
+  },
+  "redcard": {
+    "title": "TELESTRATOR DOWN",
+    "sub": "THE TEMPLATE AIRS. THE REPLAY PLAYS ON."
+  },
+  "subboard": {
+    "off": "TEMPLATE",
+    "on": "TELESTRATOR",
+    "caption": "BACK FROM ITS CHECKPOINT"
+  },
+  "tag": {
+    "text": "THE SWITCH",
+    "sub": "他看到的"
+  },
+  "spec": {
+    "header": "UNDER THE HOOD",
+    "footer": "SYNTHETIC MATCHES ONLY",
+    "rows": [
+      {
+        "label": "MATCH",
+        "value": "SYNTHETIC ENGINE",
+        "note": "SEEDED POSSESSIONS"
+      },
+      {
+        "label": "READ",
+        "value": "VISION AND BELIEF",
+        "note": "WHAT HE COULD SEE"
+      },
+      {
+        "label": "EXPLAIN",
+        "value": "LENSES AND CLAIMS"
+      },
+      {
+        "label": "CREW",
+        "value": "AGENT FRAMEWORK"
+      },
+      {
+        "label": "MODELS",
+        "value": "MICROSOFT FOUNDRY"
+      },
+      {
+        "label": "SPEECH",
+        "value": "AZURE AI SPEECH"
+      },
+      {
+        "label": "MEMORY",
+        "value": "AZURE COSMOS DB"
+      },
+      {
+        "label": "HOST",
+        "value": "CONTAINER APPS"
+      }
+    ]
+  },
+  "end": {
+    "name": "THROUGH THEIR EYES",
+    "tagline": "SEE THE GAME THROUGH THE PLAYER",
+    "url": "https://ttesite1ff906.z14.web.core.windows.net",
+    "lines": [
+      "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS",
+      "FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE"
+    ]
+  },
+  "countdown": {
+    "label": "YOUR CALL",
+    "sub": "DOES HE PLAY IT",
+    "secs": "4"
+  },
+  "caption": {
+    "text": "That look was worth 0.0 in expected threat.",
+    "dur": 2.5
+  },
+  "label": {
+    "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+  }
+}

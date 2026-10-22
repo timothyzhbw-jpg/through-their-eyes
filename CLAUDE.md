@@ -123,6 +123,12 @@ _Fill in as they come to exist._
   writes `eval/reports/hero_save_screened_shot.md`
 - `uv run python -m sim.match --seed 1` — summarise the stitched match (SPEC 3.1);
   `uv run python -m sim.export --match 1 --out out/match_seed1.json` writes its export
+- `uv run python -m sim.dataset --matches 10 --out out/dataset/` — the downloadable dataset
+  (SPEC 3.1, docs/DATASET.md): stitched matches on seeds 5001–, as events, tracking, metadata
+  and per-reception perception, plus a deterministic tar.gz in out/, about 80 s on all cores;
+  `--sample data/sample` rewrites the committed one-possession sample (a test fails when it is
+  stale on the platform that made it). `uv run python examples/dataset_quickstart.py --data
+  out/dataset` reads it back
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
 - `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
@@ -150,6 +156,12 @@ _Fill in as they come to exist._
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
   `out/narration_ablation/`. Writes `eval/reports/narration_ablation.md`
+- `uv run --group eval --env-file .env python -m eval.crew_vs_single` — crew vs single agent
+  (SPEC 6, Best Multi-Agent System): one Foundry call doing the four agents' jobs
+  (`eval/single_agent.py`) vs the crew, each with and without the Verifier, on six hero moments,
+  plus the failure drill and a free-text sensitivity. Every model request is cached in
+  `out/crew_vs_single/` (about 200 calls the first time, none after; `--cached-only` re-scores).
+  Writes `eval/reports/crew_vs_single.md`
 - `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
   (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
   `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
@@ -159,6 +171,12 @@ _Fill in as they come to exist._
 - `uv run python -m eval.keypoint_ingest` — the scan detector on limb tracking (SPEC 4.7):
   held-out F1 from keypoint-derived head yaw (`sim/keypoints.py` → `analytics/keypoints.py`) vs
   the sim's tracked head yaw, about 20 s; writes `eval/reports/keypoint_ingest.md`
+- `uv run python -m eval.look_grid --scenario blind_side_run` (or `press_escape`) — Take his
+  eyes (SPEC 3.7, 7): which looks change the hero's decision on the demo seed and on held-out
+  seeds, about a minute each; writes `eval/reports/look_grid_<scenario>.md`.
+  `uv run python -m sim.export --scenario blind_side_run --seed 3 --looks
+  web/public/data/look_seed3.json` (and `press_escape` seed 0) rewrites the grid the web ships;
+  `uv run python -m agents.look --seed 3 --frame 50 --offset -150` prints one look's verified lines
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
@@ -166,7 +184,13 @@ _Fill in as they come to exist._
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU)
-- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`)
+- `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
+  including axe-core's WCAG 2.2 A/AA rules
+- `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core
+  on every screen (menus, Your call, evidence, a match's breakdown) at 1440×900 and 375×812; on a
+  deployed site it asks only for the casual and analyst breakdowns in English. Writes `out/a11y/`.
+  `npm run contrast -- --url <site>`: the contrast of the text over the 3D views, by pixels (axe
+  cannot judge it), on 72 renders
 - `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
   seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
   and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
@@ -186,12 +210,22 @@ _Fill in as they come to exist._
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
   `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
-  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, SPEC 6)
+- `uv run python -m agents.crewtrace` — rewrite the web's Crew trace fixture
+  (`web/src/crewtrace/fixture.json`, SPEC 6): a drill with a scripted model, MCP tool calls, a
+  Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
   video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
   `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)
+- `cd video && npm run trailer` — the < 2:00 demo video as a trailer edit (SPEC 10): records the app
+  shots (`capture.mjs`), films the cold open in cinematic mode (`?cine=1`), renders the titles, the
+  Azure voice-over and the synthesized sound, cuts with ffmpeg into `out/video/trailer.mp4` plus a
+  contact sheet and a report. `-- --check` validates `video/trailer.json` (CI); `-- --base-url
+  http://localhost:5173` films a local build; from a worktree `uv run --env-file <.env> node
+  video/trailer.mjs`
 - `python3 docs/architecture.py` — regenerate the architecture diagram (SPEC 2, 10):
   `docs/architecture.svg` and `-dark.svg`, standard library only. `--png --chrome <path to
   chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full

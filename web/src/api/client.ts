@@ -4,6 +4,7 @@
 // Responses are checked with zod before use, like plans and payloads.
 
 import { z } from "zod";
+import { Provenance } from "../provenance/provenance";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 
 export const MATCH_ID = "blind_side_run-3"; // the default: api/settings.py match_id(scenario, seed)
@@ -23,6 +24,7 @@ export const WHAT_IF_TIMEOUT_MS = 30000;
 export const TTS_TIMEOUT_MS = 30000;
 export const VERIFY_TIMEOUT_MS = 10000; // the verifier alone, no model: well under a second
 export const RECAP_TIMEOUT_MS = 90000; // a model-backed recap makes about a dozen calls
+export const TRACE_TIMEOUT_MS = 15000; // a cached file: no crew runs for it
 
 /** `fetch`, or a stand-in for tests. */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -111,9 +113,10 @@ export const MomentCards = z.array(
 );
 export type MomentCards = z.infer<typeof MomentCards>;
 
-/** The scan lens's delta (xT) of one moment's card; null when it has none. */
-export function scanLensDelta(cards: MomentCards, moment: string): number | null {
-  const lens = cards.find((c) => c.id === moment)?.lenses.find((l) => l.lens === "scan");
+/** A lens's delta (`scan`: xT or a chance; `sight`: a chance) on one moment's card; null when it
+ * has none. */
+export function lensDelta(cards: MomentCards, moment: string, name = "scan"): number | null {
+  const lens = cards.find((c) => c.id === moment)?.lenses.find((l) => l.lens === name);
   return lens?.available && typeof lens.delta_xt === "number" ? lens.delta_xt : null;
 }
 /** One step of the crew run (agents/schemas.py StepTrace): who answered, the model or a template. */
@@ -138,6 +141,8 @@ export const BreakdownResponse = z.object({
   rate_limited: z.boolean(),
   capped: z.boolean(),
   source: z.enum(["model", "offline"]),
+  // Where it came from, as the service says it: shown as given, never worked out from the rest.
+  provenance: Provenance.nullish(),
   drill: Drill.nullish(), // a failure drill; absent or null for a normal breakdown
   result: z.object({
     plan: z.unknown(), // a TelestrationPlan, validated like any other before it plays
@@ -220,6 +225,8 @@ export interface Api {
   tts(key: string): Promise<Blob>;
   /** The end-of-match recap of this (stitched) match, for one audience; checked by recap/. */
   recap(req: { persona: Persona; language: Language }): Promise<unknown>;
+  /** The crew trace of a breakdown or a recap, by its key; checked by crewtrace/. */
+  trace(kind: "breakdowns" | "recaps", key: string): Promise<unknown>;
   verify(req: {
     claim: string;
     slot: string;
@@ -344,6 +351,8 @@ export function createApi(
         RECAP_TIMEOUT_MS,
         json(),
       ),
+    trace: (kind, key) =>
+      call(`/api/${kind}/${encodeURIComponent(key)}/trace`, {}, TRACE_TIMEOUT_MS, json()),
     verify: ({ claim, slot, value, language, moment }) =>
       call(
         "/api/verify",

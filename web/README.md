@@ -29,6 +29,8 @@ npm run format       # prettier
 npm run licenses     # fails on any dependency outside MIT / BSD / Apache-2.0 (and ISC, 0BSD)
 npm run fps          # after a build: fps with pitch control and the skeleton off and on (below)
 npm run smoke        # end to end: a local API, the build, every page in headless Chromium (below)
+npm run a11y -- --url <site>  # axe-core on every screen, desktop and phone (docs/ACCESSIBILITY.md)
+npm run contrast -- --url <site>  # contrast of the text over the 3D views, 72 renders (same doc)
 ```
 
 ## URL parameters
@@ -48,6 +50,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                                           |
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                                                 |
 | `play`     | `yourcall`, `recap`                                             | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused; `recap` (with a stitched `match`): its end-of-match recap for `persona` and `lang`, offered as at full time |
+| `play`     | `eyes`                                                          | open "Take his eyes" on his own look; with `match`, on its first hero moment that has a bundled look grid; counts as a spot: opens paused                                                                                                       |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                                         |
 | `intro`    | `0`                                                             | skip the pre-match lineup card; links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                                                     |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                                               |
@@ -55,6 +58,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                           |
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                                                    |
 | `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                                         |
+| `cine`     | `1`                                                             | filming the demo video only (`src/cine/`, SPEC 10), never linked: the 3D view full screen with no UI, driven by `window.__cine`                                                                                                                 |
 
 A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
@@ -109,21 +113,21 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 ## The stitched match (`?match=match-1`, SPEC 3.1)
 
-`match-1` is 18 scenario possessions on one clock of about 11½ minutes (`sim/match.py`, SPEC 3.1):
-open-play passages and three heroes (the blind-side run at 0:30, escaping the press at 4:33, the
-short corner at 8:21). It exists only on the live service: offline, the bundled hero
+`match-1` is 19 scenario possessions on one clock of about 11¾ minutes (`sim/match.py`, SPEC 3.1):
+open-play passages and four heroes (the blind-side run at 0:30, escaping the press at 4:33, the
+far-post finish at 6:41, which scores, and the short corner at 8:30). It exists only on the live service: offline, the bundled hero
 moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
-  possession on screen (n of 18, its scenario) and how play restarted (kick-off, throw-in, …, or a
+  possession on screen (n of 19, its scenario) and how play restarted (kick-off, throw-in, …, or a
   cut). The timeline is banded by possession, numbered where the numbers fit, hero possessions
-  in gold, the three hero moments as gold diamonds (the short corner's is the marker's look);
+  in gold, the four hero moments as gold diamonds (the short corner's is the marker's look);
   ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
   has no beliefs, sight or vision model, so belief ghosts, "in his sight" and the vision cone are
   off until a hero moment is opened.
 - **Moments.** Every moment of every possession, in match time, with its lens (`scan lens`,
   `pressure lens`, or `live only`); while live, those the stream has not announced yet are dimmed.
-  Any moment replays; the three hero moments have **Breakdown**.
+  Any moment replays; the four hero moments have **Breakdown**.
 - **Breakdowns.** A hero moment's breakdown plays on its possession's own run: the app loads that
   run's hero export from the service (`/api/matches/<scenario>-<seed>/export`, so `TTE_MATCHES`
   must list it; for `blind_side_run-3` the bundled file stands in) and asks
@@ -154,6 +158,8 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -173,6 +179,14 @@ uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_es
   the decision on (players and ball, mm) for the ghost path. The suggested questions use it online
   and offline; free questions go to the api's live what-if, which uses its forced runs for the
   ghost.
+
+- `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
+  SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
+  only one between the pass and his decision: his head, sight and belief over the window (the
+  belief sparse against the no-look run), his decision as `hero_seed3.json` has it, its verified
+  lines in en and zh, and the run from the decision on for the players on the ball (each distinct
+  run once). `src/takeeyes/looks.ts` splices a look into the factual run; fetched when the mode
+  first opens.
 
 Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
 `tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
@@ -204,6 +218,8 @@ src/
   players/    the rigged Gameplay Football players: rig, gait, look, kits
   whatif/     "What if…?": the bundled what-ifs, and free questions to POST /api/whatif
   yourcall/   "Your call": decide with what he knew, then the reveal (a pure reducer, its scene)
+  cine/       filming mode for the demo video (`?cine=1`, never linked): a full-screen 3D view a
+              script drives frame by frame through `window.__cine` (shot spec, cameras, post)
   producer/   the Producer's failure drill: take agents down, bring them back, step sources
   ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
               transport + timeline, caption + evidence card, the story's chapters, console
@@ -426,9 +442,11 @@ checks the whole tree in CI.
 | vitest 5.0.3 (dev)                                                | MIT        | unit tests, reusing the Vite config                                    |
 | prettier 3.9.9 (dev)                                              | MIT        | formatting, checked in CI like `ruff format`                           |
 | playwright-core 1.63.0 (dev)                                      | Apache-2.0 | drives Chrome for GPU tests, `fps` and `smoke`; no browser download    |
+| axe-core 4.14.0 (dev)                                             | MPL-2.0    | WCAG rules for `smoke` and `a11y`, injected unmodified into the page   |
 
-Transitive exceptions, reviewed by hand: `lightningcss` (Vite's CSS minifier) is MPL-2.0, used
-unmodified at build time only (allowed by CLAUDE.md); `webgl-constants` (via drei → detect-gpu)
+MPL-2.0 is allowed only unmodified (CLAUDE.md): `axe-core` is a dev dependency whose `axe.min.js`
+the scripts inject into the page as shipped, and `lightningcss` (Vite's CSS minifier, transitive)
+runs unmodified at build time only. Other transitive exceptions, reviewed by hand: `webgl-constants` (via drei → detect-gpu)
 has no licence field in its package.json, its LICENSE file is MIT.
 
 Fonts (Barlow, Saira Condensed, IBM Plex Mono) are loaded from Google Fonts at runtime, as in
@@ -469,8 +487,9 @@ the unit tests do not: on 2026-10-20 `?match=match-1` rendered a black page on t
 | `/` and `?match=match-1` on an iPhone 17 | the phone width, live; a sideways scroll is noted (below)          |
 
 Every page but the two lineup ones adds `intro=0`. A page passes when its main view shows (with
-its WebGL canvas) and it logs no console error and throws no uncaught exception; an uncaught
-exception fails it at once. The phone is Playwright's iPhone 17 profile (402 px wide, touch,
+its WebGL canvas), it logs no console error, throws no uncaught exception and has no serious or
+critical violation of axe-core's WCAG 2.2 A/AA rules (`scripts/axe.mjs`; lesser ones are notes);
+an uncaught exception fails it at once. The phone is Playwright's iPhone 17 profile (402 px wide, touch,
 Safari's user agent), drawn by Chromium: the layout an iPhone gets, not WebKit's rendering. On it
 the run notes a page wider than the screen without failing it: on main the live screen's header
 is (436 px for the hero, 595 px for match-1 while streaming), and the check becomes a failure once

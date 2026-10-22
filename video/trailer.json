@@ -1,0 +1,2030 @@
+{
+  "version": 1,
+  "about": "The < 2:00 demo video as a game-trailer edit (SPEC 10): a hook filmed in the web app's cinematic mode (?cine=1), the product told in the same grammar from the capture kit's clips, then the stack and the end card. `npm run trailer` in video/ renders it end to end (video/README.md, 'Trailer edit'). Numbers on screen and in the voice come only through {claim.value} slots filled from verified claims (out/video/claims.json); without the claim the fallback is used or the line is dropped.",
+  "output": {
+    "fps": 30,
+    "width": 1920,
+    "height": 1080,
+    "lufs": -14,
+    "true_peak": -1.5
+  },
+  "site": "https://ttesite1ff906.z14.web.core.windows.net",
+  "voice": {
+    "name": "en-US-GuyNeural",
+    "lang": "en-US",
+    "rate": "-5%",
+    "pitch": "-12%",
+    "fx": "trailer"
+  },
+  "voices": {
+    "zh": {
+      "name": "zh-CN-YunjianNeural",
+      "lang": "zh-CN",
+      "rate": "0%"
+    }
+  },
+  "music": [
+    {
+      "asset": "music-unsolicited",
+      "at": 9.9,
+      "from": 35.594,
+      "until": 111.15,
+      "gain_db": -2,
+      "fade_in": 0.02,
+      "fade_out": 3.0,
+      "duck_db": -9
+    }
+  ],
+  "cine": {
+    "pov-look": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": {
+        "id": "pov-look",
+        "run": "factual",
+        "duration": 3.0,
+        "pov": "H8",
+        "time": [
+          {
+            "t": 0,
+            "frame": 50
+          },
+          {
+            "t": 3.0,
+            "frame": 66
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "eyes",
+              "id": "H8"
+            },
+            "look": {
+              "at": "eyes",
+              "id": "H8"
+            }
+          }
+        ],
+        "periphery": 0.5,
+        "labels": true,
+        "fog": [
+          45,
+          160
+        ],
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        }
+      }
+    },
+    "pov-pass": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": {
+        "id": "pov-pass",
+        "run": "factual",
+        "duration": 2.0,
+        "pov": "H8",
+        "time": [
+          {
+            "t": 0,
+            "frame": 66
+          },
+          {
+            "t": 1.6,
+            "frame": 75
+          },
+          {
+            "t": 2.0,
+            "frame": 76
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "eyes",
+              "id": "H8"
+            },
+            "look": {
+              "at": "eyes",
+              "id": "H8"
+            }
+          }
+        ],
+        "periphery": 0.4,
+        "labels": true,
+        "fog": [
+          45,
+          160
+        ],
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        }
+      }
+    },
+    "press-low": {
+      "url": "/?cine=1&intro=0&autoplay=0&match=press_escape-0",
+      "shot": {
+        "id": "press-low",
+        "run": "factual",
+        "duration": 3.0,
+        "time": [
+          {
+            "t": 0,
+            "frame": 48
+          },
+          {
+            "t": 3.0,
+            "frame": 70
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "player",
+              "id": "H4",
+              "offset": [
+                -2.6,
+                -1.0,
+                0.9
+              ],
+              "axes": "body"
+            },
+            "look": {
+              "at": "player",
+              "id": "A11",
+              "offset": [
+                0,
+                0,
+                1.3
+              ]
+            },
+            "fov": 36
+          },
+          {
+            "t": 3.0,
+            "eye": {
+              "at": "player",
+              "id": "H4",
+              "offset": [
+                -3.4,
+                -1.6,
+                1.1
+              ],
+              "axes": "body"
+            },
+            "look": {
+              "at": "ball",
+              "offset": [
+                0,
+                0,
+                0.6
+              ]
+            },
+            "fov": 40,
+            "ease": "inOut"
+          }
+        ],
+        "dof": {
+          "focus": {
+            "at": "player",
+            "id": "A11",
+            "offset": [
+              0,
+              0,
+              1.3
+            ]
+          },
+          "aperture": 0.0015,
+          "maxBlur": 0.01
+        },
+        "bloom": {
+          "strength": 0.8,
+          "radius": 0.6,
+          "threshold": 0.75
+        },
+        "rings": true
+      }
+    },
+    "press-cf": {
+      "url": "/?cine=1&intro=0&autoplay=0&match=press_escape-0",
+      "shot": {
+        "id": "press-cf",
+        "run": "counterfactual",
+        "duration": 3.0,
+        "time": [
+          {
+            "t": 0,
+            "frame": 62
+          },
+          {
+            "t": 2.0,
+            "frame": 81
+          },
+          {
+            "t": 3.0,
+            "frame": 84,
+            "ease": "out"
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "world",
+              "p": [
+                -30,
+                -30,
+                8
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H4",
+              "offset": [
+                0,
+                0,
+                1
+              ]
+            },
+            "fov": 36
+          },
+          {
+            "t": 3.0,
+            "eye": {
+              "at": "world",
+              "p": [
+                -33,
+                -21,
+                3.2
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H4",
+              "offset": [
+                0,
+                0,
+                1.1
+              ]
+            },
+            "fov": 30,
+            "ease": "inOut"
+          }
+        ],
+        "dof": {
+          "focus": {
+            "at": "player",
+            "id": "H4",
+            "offset": [
+              0,
+              0,
+              1.1
+            ]
+          },
+          "aperture": 0.001,
+          "maxBlur": 0.008
+        },
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        },
+        "rings": true
+      }
+    }
+  },
+  "titles": {
+    "open": {
+      "template": "card",
+      "dur": 2.5,
+      "alpha": false,
+      "params": {
+        "lines": [
+          {
+            "text": "EVERY TOUCH",
+            "size": 140
+          },
+          {
+            "text": "STARTS WITH A LOOK.",
+            "color": "gold",
+            "size": 140
+          }
+        ],
+        "stagger": 0.45
+      }
+    },
+    "freeze-with": {
+      "template": "freeze",
+      "dur": 2.15,
+      "alpha": true,
+      "params": {
+        "title": "HIS PICTURE OF H9",
+        "items": [
+          {
+            "label": "OFF BY",
+            "value": "{belief_error.err}",
+            "unit": "M",
+            "color": "gold"
+          }
+        ]
+      },
+      "fallback": {
+        "title": "THE LOOK",
+        "items": []
+      }
+    },
+    "without-kicker": {
+      "template": "slam",
+      "dur": 2.0,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "WITHOUT THAT LOOK…",
+            "color": "dusk",
+            "size": 120
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "see": {
+      "template": "card",
+      "dur": 3.0,
+      "alpha": false,
+      "params": {
+        "lines": [
+          {
+            "text": "SEE WHAT",
+            "size": 190
+          },
+          {
+            "text": "THEY SAW.",
+            "color": "gold",
+            "size": 190
+          }
+        ],
+        "stagger": 0.3
+      }
+    },
+    "studio": {
+      "template": "slam",
+      "dur": 3.6,
+      "alpha": true,
+      "params": {
+        "kicker": "THROUGH THEIR EYES",
+        "lines": [
+          {
+            "text": "THE AI MATCH STUDIO",
+            "size": 110
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "verified": {
+      "template": "verified",
+      "dur": 4.3,
+      "alpha": true,
+      "params": {
+        "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
+        "backdrop": true,
+        "items": [
+          {
+            "before": "H8 CHECKED HIS SHOULDER BEFORE THE BALL",
+            "value": "",
+            "after": ""
+          },
+          {
+            "before": "H9'S RUN WAS ON HIS BLIND SIDE",
+            "value": "",
+            "after": ""
+          },
+          {
+            "before": "HIS PICTURE OF H9: OFF BY",
+            "value": "{belief_error.err}",
+            "after": "M"
+          },
+          {
+            "before": "THAT LOOK WAS WORTH",
+            "value": "{cf_value.dxt}",
+            "after": "xT"
+          }
+        ]
+      },
+      "fallback": {
+        "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
+        "backdrop": true,
+        "items": [
+          {
+            "before": "H8 CHECKED HIS SHOULDER BEFORE THE BALL",
+            "value": "",
+            "after": ""
+          },
+          {
+            "before": "H9'S RUN WAS ON HIS BLIND SIDE",
+            "value": "",
+            "after": ""
+          }
+        ]
+      }
+    },
+    "refuted": {
+      "template": "refuted",
+      "dur": 2.0,
+      "alpha": true,
+      "params": {
+        "before": "WRONG NUMBER",
+        "value": "",
+        "after": "",
+        "stamp": "WOULD NOT AIR"
+      }
+    },
+    "crew": {
+      "template": "lineup",
+      "dur": 7.5,
+      "alpha": false,
+      "params": {
+        "header": "THE CREW",
+        "cards": [
+          {
+            "name": "DIRECTOR",
+            "job": "PICKS THE MOMENT AND THE LENS",
+            "glyph": "director"
+          },
+          {
+            "name": "ANALYST",
+            "job": "ASKS THE MCP TOOLS",
+            "glyph": "analyst"
+          },
+          {
+            "name": "TELESTRATOR",
+            "job": "PLANS THE REPLAY",
+            "glyph": "telestrator"
+          },
+          {
+            "name": "NARRATOR",
+            "job": "WRITES EVERY LINE",
+            "glyph": "narrator"
+          },
+          {
+            "name": "VERIFIER",
+            "job": "CHECKS EVERY LINE",
+            "glyph": "verifier"
+          },
+          {
+            "name": "VOICE",
+            "job": "SPEAKS IT",
+            "glyph": "voice"
+          }
+        ],
+        "stagger": 0.62
+      }
+    },
+    "redcard": {
+      "template": "redcard",
+      "dur": 2.8,
+      "alpha": true,
+      "params": {
+        "title": "TELESTRATOR DOWN",
+        "sub": "THE TEMPLATE AIRS. THE REPLAY PLAYS ON."
+      }
+    },
+    "subboard": {
+      "template": "subboard",
+      "dur": 3.0,
+      "alpha": true,
+      "params": {
+        "off": "TEMPLATE",
+        "on": "TELESTRATOR",
+        "caption": "BACK FROM ITS CHECKPOINT"
+      }
+    },
+    "tag-casual": {
+      "template": "tag",
+      "dur": 1.4,
+      "alpha": true,
+      "params": {
+        "text": "CASUAL FAN"
+      }
+    },
+    "tag-analyst": {
+      "template": "tag",
+      "dur": 1.4,
+      "alpha": true,
+      "params": {
+        "text": "ANALYST"
+      }
+    },
+    "tag-zh": {
+      "template": "tag",
+      "dur": 2.6,
+      "alpha": true,
+      "params": {
+        "text": "中文",
+        "sub": "CHINESE"
+      }
+    },
+    "live": {
+      "template": "slam",
+      "dur": 3.0,
+      "alpha": true,
+      "params": {
+        "kicker": "A WHOLE MATCH",
+        "lines": [
+          {
+            "text": "LIVE",
+            "color": "gold",
+            "size": 130
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "press": {
+      "template": "slam",
+      "dur": 2.4,
+      "alpha": true,
+      "params": {
+        "kicker": "ANOTHER MOMENT, ANOTHER LENS",
+        "lines": [
+          {
+            "text": "UNDER PRESS",
+            "size": 120
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "spec": {
+      "template": "spec",
+      "dur": 6.0,
+      "alpha": false,
+      "params": {
+        "header": "UNDER THE HOOD",
+        "rows": [
+          {
+            "label": "MODELS",
+            "value": "MICROSOFT FOUNDRY"
+          },
+          {
+            "label": "AGENTS",
+            "value": "MICROSOFT AGENT FRAMEWORK"
+          },
+          {
+            "label": "TOOLS",
+            "value": "OUR MCP SERVER"
+          },
+          {
+            "label": "VOICE",
+            "value": "AZURE AI SPEECH"
+          },
+          {
+            "label": "API",
+            "value": "AZURE CONTAINER APPS"
+          },
+          {
+            "label": "WEB",
+            "value": "AZURE STORAGE STATIC WEBSITE"
+          },
+          {
+            "label": "STORE",
+            "value": "AZURE COSMOS DB"
+          },
+          {
+            "label": "TRACES",
+            "value": "APPLICATION INSIGHTS"
+          },
+          {
+            "label": "SHIP",
+            "value": "GITHUB ACTIONS"
+          }
+        ],
+        "footer": "SYNTHETIC MATCH ENGINE · PERCEPTION MODEL · VERIFIED CLAIMS"
+      }
+    },
+    "end": {
+      "template": "end",
+      "dur": 6.0,
+      "alpha": false,
+      "params": {
+        "name": "THROUGH THEIR EYES",
+        "tagline": "SEE WHAT THEY SAW.",
+        "url": "TTESITE1FF906.Z14.WEB.CORE.WINDOWS.NET",
+        "lines": [
+          "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS",
+          "MUSIC: “UNSOLICITED TRAILER MUSIC” BY EMMA_MA · PUBLIC DOMAIN DEDICATION",
+          "FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE",
+          "VOICE: AZURE AI SPEECH"
+        ]
+      }
+    },
+    "press-wins": {
+      "template": "slam",
+      "dur": 1.0,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "THE PRESS WINS IT.",
+            "color": "flare",
+            "size": 120
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "back-to-h4": {
+      "template": "slam",
+      "dur": 1.35,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "HE PLAYS IT BACK TO H4.",
+            "color": "dusk",
+            "size": 110
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "countdown": {
+      "template": "countdown",
+      "dur": 3.0,
+      "alpha": true,
+      "params": {
+        "label": "YOUR CALL",
+        "sub": "YOU ONLY KNOW WHAT HE KNEW",
+        "secs": 2.6
+      }
+    },
+    "if-kept": {
+      "template": "slam",
+      "dur": 2.0,
+      "alpha": true,
+      "params": {
+        "kicker": "INSIDE THE SIM",
+        "lines": [
+          {
+            "text": "IF HE KEPT THE BALL",
+            "color": "dusk",
+            "size": 96
+          }
+        ],
+        "align": "lower-left",
+        "hold": 1.5,
+        "out": "fade",
+        "backdrop": true
+      }
+    },
+    "tag-eyes": {
+      "template": "tag",
+      "dur": 2.1,
+      "alpha": true,
+      "params": {
+        "text": "TAKE HIS EYES",
+        "sub": "YOU CHOOSE THE LOOK"
+      }
+    },
+    "impact": {
+      "template": "slam",
+      "dur": 3.6,
+      "alpha": true,
+      "params": {
+        "kicker": "WHO IT'S FOR",
+        "lines": [
+          {
+            "text": "BROADCASTERS.",
+            "size": 104
+          },
+          {
+            "text": "COACHES.",
+            "color": "gold",
+            "size": 104
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "recap-tag": {
+      "template": "tag",
+      "dur": 2.8,
+      "alpha": true,
+      "params": {
+        "text": "FULL TIME",
+        "sub": "THE CREW WRITES THE RECAP"
+      }
+    },
+    "label-3p0": {
+      "template": "label",
+      "dur": 3.0,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-3p75": {
+      "template": "label",
+      "dur": 3.75,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-3p9": {
+      "template": "label",
+      "dur": 3.9,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-3p5": {
+      "template": "label",
+      "dur": 3.5,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-1p15": {
+      "template": "label",
+      "dur": 1.15,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-2p6": {
+      "template": "label",
+      "dur": 2.6,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "b01-open",
+      "dur": 2.5,
+      "picture": {
+        "src": "title",
+        "id": "open"
+      },
+      "sfx": [
+        {
+          "name": "hum",
+          "at": 0.0,
+          "gain_db": -10,
+          "dur": 14.0
+        },
+        {
+          "name": "heartbeat",
+          "at": 0.2,
+          "gain_db": -4,
+          "dur": 3.0
+        },
+        {
+          "name": "boom",
+          "at": 0.5,
+          "gain_db": -9
+        }
+      ],
+      "out": {
+        "type": "dip",
+        "dur": 0.3
+      }
+    },
+    {
+      "id": "b02-look",
+      "dur": 3.9,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.33,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "vo": [
+        {
+          "id": "vo01",
+          "at": 0.3,
+          "text": "Replays show where the ball went…",
+          "style": "whispering",
+          "degree": 1.0
+        },
+        {
+          "id": "vo02",
+          "at": 2.15,
+          "text": "never what the player saw.",
+          "style": "whispering",
+          "degree": 1.0
+        }
+      ],
+      "sfx": [
+        {
+          "name": "heartbeat",
+          "at": 0.0,
+          "gain_db": -6,
+          "dur": 3.0
+        },
+        {
+          "name": "whoosh",
+          "at": 0.22,
+          "gain_db": -6
+        },
+        {
+          "name": "sting",
+          "at": 1.92,
+          "gain_db": -9
+        },
+        {
+          "name": "touch",
+          "at": 3.88,
+          "gain_db": -3
+        }
+      ],
+      "overlays": [
+        {
+          "title": "label-bl-3p9",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b03-reveal",
+      "dur": 3.5,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl02_reveal.mp4",
+        "in": 0.64,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.1,
+          "gain_db": -8
+        },
+        {
+          "name": "boom",
+          "at": 1.6,
+          "gain_db": -8
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      },
+      "overlays": [
+        {
+          "title": "label-bl-3p5",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b05-see",
+      "dur": 3.0,
+      "picture": {
+        "src": "title",
+        "id": "see"
+      },
+      "vo": [
+        {
+          "id": "vo07",
+          "at": 0.35,
+          "text": "See what they saw.",
+          "style": "excited",
+          "degree": 0.6
+        }
+      ],
+      "sfx": [
+        {
+          "name": "boom",
+          "at": 0.0,
+          "gain_db": -2
+        },
+        {
+          "name": "slam",
+          "at": 0.0,
+          "gain_db": -9
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.12
+      }
+    },
+    {
+      "id": "b06-replay",
+      "dur": 4.5,
+      "picture": {
+        "src": "capture",
+        "shot": "03-breakdown",
+        "in": 0.3,
+        "push": [
+          1.0,
+          1.08
+        ]
+      },
+      "overlays": [
+        {
+          "title": "studio",
+          "at": 0.15
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo08",
+          "at": 0.3,
+          "text": "Through Their Eyes replays the moment through the player's own eyes."
+        }
+      ],
+      "out": {
+        "type": "whip",
+        "dur": 0.25
+      },
+      "sfx": [
+        {
+          "name": "boom",
+          "at": 0.0,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
+      "id": "b07-pov-look",
+      "dur": 3.0,
+      "picture": {
+        "src": "cine",
+        "id": "pov-look",
+        "in": 0
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "flash-in",
+        "glue"
+      ],
+      "vo": [
+        {
+          "id": "vo03",
+          "at": 0.4,
+          "text": "A look over his shoulder, and he finds the runner."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.0,
+          "gain_db": -8
+        }
+      ],
+      "overlays": [
+        {
+          "title": "label-3p0",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b08-pov-pass",
+      "dur": 3.75,
+      "picture": {
+        "src": "cine",
+        "id": "pov-pass",
+        "in": 0
+      },
+      "letterbox": 2.39,
+      "freeze": {
+        "at": 1.6,
+        "punch": 1.05
+      },
+      "overlays": [
+        {
+          "title": "freeze-with",
+          "at": 1.6
+        },
+        {
+          "title": "label-3p75",
+          "at": 0.0
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo04",
+          "at": 1.7,
+          "text": "And he knows where his man is."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "shutter",
+          "at": 1.6,
+          "gain_db": -4
+        },
+        {
+          "name": "stamp",
+          "at": 2.0,
+          "gain_db": -6
+        }
+      ],
+      "out": {
+        "type": "whip",
+        "dur": 0.25
+      },
+      "fx": [
+        "glue"
+      ]
+    },
+    {
+      "id": "b09-toggle",
+      "dur": 5.8,
+      "picture": {
+        "src": "capture",
+        "shot": "04-with-without",
+        "in": 0.4,
+        "crop": "tactical",
+        "push": [
+          1.0,
+          1.05
+        ]
+      },
+      "overlays": [
+        {
+          "title": "without-kicker",
+          "at": 1.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo05",
+          "at": 0.3,
+          "text": "Take that look away, and re-run the match."
+        },
+        {
+          "id": "vo06",
+          "at": 3.3,
+          "text": "Without it, he plays it back."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "slam",
+          "at": 1.1,
+          "gain_db": -9
+        }
+      ]
+    },
+    {
+      "id": "b09r-board-rewind",
+      "dur": 0.2,
+      "picture": {
+        "src": "capture",
+        "shot": "04-with-without",
+        "in": 5.6,
+        "speed": 3,
+        "reverse": true,
+        "crop": "tactical",
+        "push": [
+          1.05,
+          1.05
+        ]
+      },
+      "fx": [
+        "rewind"
+      ],
+      "sfx": [
+        {
+          "name": "rewind",
+          "at": 0.0,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
+      "id": "b10a-rewind",
+      "dur": 1.15,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.0,
+        "speed": 3.68,
+        "reverse": true,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "rewind",
+        "glue"
+      ],
+      "sfx": [],
+      "overlays": [
+        {
+          "title": "label-bl-1p15",
+          "at": 0.0
+        }
+      ],
+      "out": {
+        "type": "fade",
+        "dur": 0.3
+      }
+    },
+    {
+      "id": "b10b-without",
+      "dur": 2.6,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl03_without.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "back-to-h4",
+          "at": 1.2
+        },
+        {
+          "title": "label-bl-2p6",
+          "at": 0.0
+        }
+      ],
+      "vo": [],
+      "sfx": [
+        {
+          "name": "shutter",
+          "at": 1.2,
+          "gain_db": -5
+        },
+        {
+          "name": "touch",
+          "at": 2.45,
+          "gain_db": -4
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.12
+      }
+    },
+    {
+      "id": "b11a-eyes-drag",
+      "dur": 2.25,
+      "picture": {
+        "src": "capture",
+        "shot": "13-take-his-eyes",
+        "in": 0.8,
+        "crop": [
+          295,
+          300,
+          1040,
+          585
+        ],
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "overlays": [
+        {
+          "title": "tag-eyes",
+          "at": 0.05
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo18",
+          "at": 0.2,
+          "text": "Or take his eyes yourself: choose the look, and the match plays it out."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.3,
+          "gain_db": -7
+        }
+      ]
+    },
+    {
+      "id": "b11b-eyes-pov",
+      "dur": 2.25,
+      "picture": {
+        "src": "capture",
+        "shot": "13-take-his-eyes",
+        "in": 4.3,
+        "crop": [
+          32,
+          96,
+          1440,
+          810
+        ],
+        "push": [
+          1.0,
+          1.04
+        ]
+      },
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.0,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
+      "id": "b11c-eyes-result",
+      "dur": 2.25,
+      "picture": {
+        "src": "capture",
+        "shot": "13-take-his-eyes",
+        "in": 7.6,
+        "crop": [
+          1180,
+          90,
+          720,
+          405
+        ],
+        "push": [
+          1.0,
+          1.03
+        ]
+      },
+      "vo": [
+        {
+          "id": "vo18b",
+          "at": 0.1,
+          "text": "Look the other way… he plays it safe."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "stamp",
+          "at": 0.1,
+          "gain_db": -7
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.12
+      }
+    },
+    {
+      "id": "b12-yc-decide",
+      "dur": 3.75,
+      "picture": {
+        "src": "capture",
+        "shot": "12-your-call",
+        "in": 0.0,
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "overlays": [
+        {
+          "title": "countdown",
+          "at": 0.2
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo20",
+          "at": 0.2,
+          "text": "Your call."
+        },
+        {
+          "id": "vo21",
+          "at": 1.3,
+          "text": "You only know what he knew."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "tick",
+          "at": 0.6,
+          "gain_db": -7
+        },
+        {
+          "name": "tick",
+          "at": 1.2,
+          "gain_db": -7
+        },
+        {
+          "name": "tick",
+          "at": 1.8,
+          "gain_db": -7
+        },
+        {
+          "name": "tick",
+          "at": 2.4,
+          "gain_db": -7
+        },
+        {
+          "name": "whoosh",
+          "at": 3.0,
+          "gain_db": -6
+        }
+      ]
+    },
+    {
+      "id": "b13-yc-reveal",
+      "dur": 3.75,
+      "picture": {
+        "src": "capture",
+        "shot": "12-your-call",
+        "in": 4.5,
+        "push": [
+          1.0,
+          1.05
+        ]
+      },
+      "vo": [
+        {
+          "id": "vo22",
+          "at": 1.6,
+          "text": "Then see what really happened."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "boom",
+          "at": 1.5,
+          "gain_db": -9
+        }
+      ]
+    },
+    {
+      "id": "b14-yc-truth",
+      "dur": 3.0,
+      "picture": {
+        "src": "capture",
+        "shot": "12-your-call",
+        "in": 10.0,
+        "push": [
+          1.02,
+          1.07
+        ]
+      },
+      "vo": [
+        {
+          "id": "vo23",
+          "at": 0.65,
+          "text": "He saw the run. Would you?"
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      }
+    },
+    {
+      "id": "b15-press",
+      "dur": 3.0,
+      "picture": {
+        "src": "cine",
+        "id": "press-low",
+        "in": 0
+      },
+      "grade": "night",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "press",
+          "at": 0.2
+        },
+        {
+          "title": "label-3p0",
+          "at": 0.0
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo24",
+          "at": 0.3,
+          "text": "Under a high press…"
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.0,
+          "gain_db": -6
+        }
+      ],
+      "out": {
+        "type": "glitch",
+        "dur": 0.2
+      }
+    },
+    {
+      "id": "b16-press-cf",
+      "dur": 3.0,
+      "picture": {
+        "src": "cine",
+        "id": "press-cf",
+        "in": 0
+      },
+      "grade": "danger",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 2.0,
+        "punch": 1.05
+      },
+      "overlays": [
+        {
+          "title": "if-kept",
+          "at": 0.05
+        },
+        {
+          "title": "press-wins",
+          "at": 2.0
+        },
+        {
+          "title": "label-3p0",
+          "at": 0.0
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo25",
+          "at": 0.15,
+          "text": "make him keep the ball, and the press wins it."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "boom",
+          "at": 2.0,
+          "gain_db": -4
+        },
+        {
+          "name": "shutter",
+          "at": 2.0,
+          "gain_db": -6
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      }
+    },
+    {
+      "id": "b17-crew",
+      "dur": 7.5,
+      "picture": {
+        "src": "title",
+        "id": "crew"
+      },
+      "vo": [
+        {
+          "id": "vo12",
+          "at": 0.2,
+          "text": "Behind every replay, a crew of agents."
+        },
+        {
+          "id": "vo13",
+          "at": 2.9,
+          "text": "Director, Analyst, Telestrator, Narrator, Verifier, Voice."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 0.16,
+          "gain_db": -13
+        },
+        {
+          "name": "whoosh",
+          "at": 0.78,
+          "gain_db": -13
+        },
+        {
+          "name": "whoosh",
+          "at": 1.4,
+          "gain_db": -13
+        },
+        {
+          "name": "whoosh",
+          "at": 2.02,
+          "gain_db": -13
+        },
+        {
+          "name": "whoosh",
+          "at": 2.64,
+          "gain_db": -13
+        },
+        {
+          "name": "whoosh",
+          "at": 3.26,
+          "gain_db": -13
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.12
+      }
+    },
+    {
+      "id": "b18-verified",
+      "dur": 4.5,
+      "picture": {
+        "src": "capture",
+        "shot": "07-evidence",
+        "in": 4.0,
+        "crop": [
+          0,
+          0,
+          1244,
+          700
+        ],
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "fx": [
+        "vignette"
+      ],
+      "overlays": [
+        {
+          "title": "verified",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo09",
+          "at": 0.3,
+          "text": "Every line is checked against the simulation before it airs."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "stamp",
+          "at": 2.22,
+          "gain_db": -4
+        },
+        {
+          "name": "stamp",
+          "at": 2.54,
+          "gain_db": -4
+        },
+        {
+          "name": "stamp",
+          "at": 2.86,
+          "gain_db": -4
+        },
+        {
+          "name": "stamp",
+          "at": 3.18,
+          "gain_db": -4
+        },
+        {
+          "name": "whoosh",
+          "at": 4.2,
+          "gain_db": -9
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.12
+      }
+    },
+    {
+      "id": "b19-wrong",
+      "dur": 4.5,
+      "picture": {
+        "src": "capture",
+        "shot": "09-verifier",
+        "in": 0.0,
+        "crop": [
+          569,
+          80,
+          1351,
+          760
+        ],
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "overlays": [
+        {
+          "title": "refuted",
+          "at": 1.4
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo10",
+          "at": 0.1,
+          "text": "Try a wrong number…"
+        },
+        {
+          "id": "vo11",
+          "at": 2.3,
+          "text": "and it never airs."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "slam",
+          "at": 1.9,
+          "gain_db": -3
+        }
+      ],
+      "out": {
+        "type": "whip",
+        "dur": 0.25
+      }
+    },
+    {
+      "id": "b20-redcard",
+      "dur": 3.0,
+      "picture": {
+        "src": "capture",
+        "shot": "10-drill",
+        "in": 17.3,
+        "crop": [
+          700,
+          260,
+          1000,
+          562
+        ],
+        "push": [
+          1.0,
+          1.04
+        ]
+      },
+      "grade": "danger",
+      "overlays": [
+        {
+          "title": "redcard",
+          "at": 0.2
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo14",
+          "at": 0.3,
+          "text": "Take an agent down…"
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whistle",
+          "at": 0.1,
+          "gain_db": -9
+        },
+        {
+          "name": "slam",
+          "at": 0.85,
+          "gain_db": -6
+        }
+      ]
+    },
+    {
+      "id": "b21-bringback",
+      "dur": 4.5,
+      "picture": {
+        "src": "capture",
+        "shot": "10-drill",
+        "in": 28.2,
+        "crop": [
+          700,
+          260,
+          1000,
+          562
+        ],
+        "push": [
+          1.04,
+          1.08
+        ]
+      },
+      "overlays": [
+        {
+          "title": "subboard",
+          "at": 0.6
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo15",
+          "at": 0.1,
+          "text": "bring it back, and it picks up where it left off."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "tick",
+          "at": 0.72,
+          "gain_db": -6
+        },
+        {
+          "name": "tick",
+          "at": 1.12,
+          "gain_db": -6
+        },
+        {
+          "name": "whoosh",
+          "at": 4.2,
+          "gain_db": -9
+        }
+      ],
+      "out": {
+        "type": "whip",
+        "dur": 0.25
+      }
+    },
+    {
+      "id": "b22-casual",
+      "dur": 1.5,
+      "picture": {
+        "src": "capture",
+        "shot": "03-breakdown",
+        "in": 4.0,
+        "push": [
+          1.0,
+          1.05
+        ]
+      },
+      "overlays": [
+        {
+          "title": "tag-casual",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo16",
+          "at": 0.1,
+          "text": "The same moment, for every fan, in every language."
+        }
+      ]
+    },
+    {
+      "id": "b23-analyst",
+      "dur": 1.5,
+      "picture": {
+        "src": "capture",
+        "shot": "05-personas",
+        "in": 2.5,
+        "push": [
+          1.0,
+          1.05
+        ]
+      },
+      "overlays": [
+        {
+          "title": "tag-analyst",
+          "at": 0.1
+        }
+      ]
+    },
+    {
+      "id": "b24-zh",
+      "dur": 4.5,
+      "picture": {
+        "src": "capture",
+        "shot": "06-language",
+        "in": 4.45,
+        "push": [
+          1.0,
+          1.04
+        ],
+        "speed": 0.68
+      },
+      "overlays": [
+        {
+          "title": "tag-zh",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo17",
+          "at": 0.2,
+          "lang": "zh",
+          "line": {
+            "persona": "casual",
+            "language": "zh",
+            "index": 2
+          },
+          "style": "sports-commentary",
+          "degree": 1.3
+        }
+      ],
+      "out": {
+        "type": "whip",
+        "dur": 0.25
+      },
+      "sfx": [
+        {
+          "name": "whoosh",
+          "at": 4.95,
+          "gain_db": -9
+        }
+      ]
+    },
+    {
+      "id": "b25-live",
+      "dur": 3.75,
+      "picture": {
+        "src": "capture",
+        "shot": "02-live-stream",
+        "in": 0.5,
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "overlays": [
+        {
+          "title": "live",
+          "at": 0.2
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo19",
+          "at": 0.3,
+          "text": "A whole match, live, with a camera director."
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      }
+    },
+    {
+      "id": "b26-recap",
+      "dur": 3.0,
+      "picture": {
+        "src": "capture",
+        "shot": "15-recap",
+        "in": 0.9,
+        "push": [
+          1.0,
+          1.08
+        ]
+      },
+      "overlays": [
+        {
+          "title": "recap-tag",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo26r",
+          "at": 0.15,
+          "text": "At the final whistle, the crew writes the recap."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "whistle",
+          "at": 0.0,
+          "gain_db": -12
+        },
+        {
+          "name": "whoosh",
+          "at": 2.7,
+          "gain_db": -9
+        }
+      ],
+      "out": {
+        "type": "whip",
+        "dur": 0.25
+      }
+    },
+    {
+      "id": "b27-impact",
+      "dur": 3.75,
+      "picture": {
+        "src": "capture",
+        "shot": "14-stats",
+        "in": 0.3,
+        "crop": [
+          300,
+          170,
+          1320,
+          742
+        ],
+        "push": [
+          1.0,
+          1.06
+        ]
+      },
+      "overlays": [
+        {
+          "title": "impact",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo26i",
+          "at": 0.1,
+          "text": "Timecoded cues for broadcasters, every player's numbers for coaches."
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      }
+    },
+    {
+      "id": "b28-spec",
+      "dur": 6.0,
+      "picture": {
+        "src": "title",
+        "id": "spec"
+      },
+      "vo": [
+        {
+          "id": "vo26",
+          "at": 0.8,
+          "text": "Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech."
+        }
+      ],
+      "sfx": [
+        {
+          "name": "riser",
+          "at": 3.0,
+          "gain_db": -10,
+          "dur": 3.0
+        }
+      ],
+      "out": {
+        "type": "flash",
+        "dur": 0.15
+      }
+    },
+    {
+      "id": "b29-end",
+      "dur": 6.0,
+      "picture": {
+        "src": "title",
+        "id": "end"
+      },
+      "vo": [
+        {
+          "id": "vo27",
+          "at": 0.4,
+          "text": "Through Their Eyes. [pause 500] See what they saw.",
+          "style": "excited",
+          "degree": 0.6
+        }
+      ],
+      "sfx": [
+        {
+          "name": "sting",
+          "at": 0.0,
+          "gain_db": -3
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "enabled": true,
+    "tail": 0.25,
+    "min": 1.0,
+    "skip_languages": [
+      "zh"
+    ]
+  }
+}

@@ -275,7 +275,9 @@ describe("moment card", () => {
 
     act(() => session.controls.requestBreakdown());
     await act(settle);
-    expect(text(page)).toContain("Written by the crew · every number checked in code");
+    // Who wrote it, as the service said it: the test service answers with a cached crew run.
+    expect(text(page)).toContain("Cached: a crew run from 21 Oct 2026, 19:31 UTC");
+    expect(text(page)).toContain("Every number checked in code");
     const steps = [...page.querySelectorAll(".crew-bar [data-step]")];
     expect(steps.map((s) => s.getAttribute("data-step"))).toEqual([
       "director",
@@ -330,6 +332,38 @@ describe("moment card", () => {
     click(button(page, "Dismiss the moment"));
     expect(page.querySelector("aside.moment-card")).toBeNull();
   });
+
+  it("closes with Escape, stays closed when it comes back on screen, and reopens from its chip", () => {
+    const session = offline();
+    const first = mount(session, <MomentCard />);
+    const card = first.querySelector<HTMLElement>("aside.moment-card")!;
+    button(card, "Play breakdown").focus();
+    act(() => {
+      card.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(first.querySelector("aside.moment-card")).toBeNull();
+    const chip = button(first, "Show the moment");
+    expect(document.activeElement).toBe(chip); // focus is not lost with the card
+    expect(chip.getAttribute("aria-expanded")).toBe("false");
+
+    // The slot shows the evidence and comes back (a new MomentCard): still closed.
+    act(() =>
+      mounted.splice(0).forEach(({ root, container }) => (root.unmount(), container.remove())),
+    );
+    const again = mount(session, <MomentCard />);
+    expect(again.querySelector("aside.moment-card")).toBeNull();
+
+    click(button(again, "Show the moment"));
+    const back = again.querySelector<HTMLElement>("aside.moment-card")!;
+    expect(back).not.toBeNull();
+    expect(document.activeElement).toBe(button(back, "Dismiss the moment"));
+
+    // Escape from elsewhere on the page does not close it: only from inside the card.
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(again.querySelector("aside.moment-card")).not.toBeNull();
+  });
 });
 
 describe("who is watching", () => {
@@ -348,16 +382,51 @@ describe("who is watching", () => {
     await act(settle);
     expect(session.breakdown.get().persona).toBe("analyst");
 
-    click(page.querySelector<HTMLButtonElement>("button[aria-haspopup=dialog]")!);
+    // The menu stays open after a pick: the language is one more click, not two.
     const zh = page.querySelector<HTMLButtonElement>(
       "[role=dialog] [role=group][aria-label=Language] button[lang=zh]",
     )!;
+    expect(zh).not.toBeNull();
     click(zh);
     await act(settle);
     expect(session.breakdown.get().language).toBe("zh");
+    expect(page.querySelector("[role=dialog][aria-label='Who is watching']")).not.toBeNull();
     expect(text(page.querySelector("button[aria-haspopup=dialog]"))).toContain(
       "Watching as Analyst · 中文",
     );
+  });
+
+  it("stays open after each pick until Escape or a press outside closes it", async () => {
+    const session = online();
+    session.controls.requestBreakdown();
+    await settle();
+    const page = mount(session, <ViewerMenu />);
+    const toggle = page.querySelector<HTMLButtonElement>("button[aria-haspopup=dialog]")!;
+    const dialog = () => page.querySelector("[role=dialog][aria-label='Who is watching']");
+    click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const coach = button(dialog()!, "Coach Shapes, distances, decisions.");
+    act(() => coach.focus()); // as a press or Enter on it would
+    click(coach);
+    await act(settle);
+    expect(dialog()).not.toBeNull();
+    // The keyboard stays where it was: on the audience just picked, now pressed.
+    const picked = button(dialog()!, "Coach Shapes, distances, decisions.");
+    expect(pressed(picked)).toBe("true");
+    expect(document.activeElement).toBe(picked);
+    // Escape closes it and hands the keyboard back to the toggle.
+    act(() => {
+      picked.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(toggle);
+    // A press outside closes it too.
+    click(toggle);
+    expect(dialog()).not.toBeNull();
+    act(() => {
+      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    expect(dialog()).toBeNull();
   });
 
   it("says why only the bundled audience exists offline", () => {
