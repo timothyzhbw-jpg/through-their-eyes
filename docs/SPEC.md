@@ -1160,7 +1160,7 @@ tools exposed by our own MCP server.
 
 | Agent | Input | Output (JSON schema) | Notes |
 |---|---|---|---|
-| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority |
+| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority, which is the breakdown's budget (below) |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
 | Commentator | Findings + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
@@ -1224,6 +1224,14 @@ Application Insights.
   placeholder (`{window_s|second}`) that rendered as literal braces. With anchored lines and the
   enum Analyst, two reruns aired 22 and 24 lines in four scripts (casual and analyst × en and zh)
   with no rewrites, no drops, no invented names, and every headline claim spoken.
+- **The Director's priority is the breakdown's budget** (`agents/budget.py`, 2026-10-21). The
+  agents after it read it: at high priority the Analyst inspects the moment with our MCP tools;
+  at normal and low it answers from the claims in its prompt, one request instead of a tool loop.
+  The priority also buys the replay a slot, 20, 16 or 12 s, never shorter than the moment's
+  template plan: the Telestrator is told it, and a plan that runs longer airs as the template
+  (`duration_s: over_slot`). With the Director on its template, the rule on the lens delta sets
+  the priority and the budget follows. *Why:* a red-team read found the priority was written and
+  never read. `tests/test_director_budget.py`.
 - Telestrator: Azure structured outputs reject the `oneOf` a discriminated union produces, so the
   model fills `PlanDraft` (a plain `anyOf` union) and `to_plan()` applies the full checks.
 - *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus; seed 3, `--mcp`, casual and

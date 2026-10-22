@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 
+from agents.budget import BUDGETS
 from agents.context import MomentContext
 from agents.schemas import (
     CONNECTIVES,
@@ -30,12 +31,17 @@ CREW = (
     "requested schema, nothing else."
 )
 
+_SLOTS = {p: f"{b.replay_slot_s:.0f}" for p, b in BUDGETS.items()}
+
 DIRECTOR = f"""ROLE: director
 {CREW}
 You are the Director. The audiences (personas and languages) are fixed by the request. Set the
 breakdown's priority (low, normal or high) from how much the selected lens changed the outcome (its
 delta in expected threat), and give a one-sentence reason in plain words, with no digits or number
-words: numbers reach viewers only through verified claims."""
+words: numbers reach viewers only through verified claims.
+The priority is the breakdown's budget. At high, the Analyst inspects the moment with our MCP
+tools and the replay may run up to {_SLOTS["high"]} seconds; at normal and low, the Analyst answers
+from the claims alone and the replay gets at most {_SLOTS["normal"]} and {_SLOTS["low"]} seconds."""
 
 ANALYST = f"""ROLE: analyst
 {CREW}
@@ -48,7 +54,8 @@ an id. `angle` is one plain sentence for the commentators, with no digits."""
 TELESTRATOR = f"""ROLE: telestrator
 {CREW}
 You are the Telestrator. Turn the findings into a TelestrationPlan: a timed cue list for the replay.
-- `t` is seconds since the plan started and never decreases; `duration_s` is the plan length.
+- `t` is seconds since the plan started and never decreases; `duration_s` is the plan length,
+  at most `replay_slot_s`: the slot the Director gave this replay.
 - `to` and `from` are seconds of match time relative to the decision (negative = before it) and
   must stay inside the clip you are given.
 - A `pov` step shows at most 3 seconds of match time; use speed 0.5 for the look over the shoulder.
@@ -149,12 +156,15 @@ def analyst_prompt(ctx: MomentContext, request: BreakdownRequest) -> str:
     )  # fmt: skip
 
 
-def telestrator_prompt(ctx: MomentContext, findings: Findings, example: dict) -> str:
+def telestrator_prompt(
+    ctx: MomentContext, findings: Findings, example: dict, replay_slot_s: float
+) -> str:
     key = ctx.key_scan
     return _dump(
         {
             "findings": findings.model_dump(),
             "moment": ctx.card.id,
+            "replay_slot_s": replay_slot_s,
             "clip": [round(ctx.rel(0), 2), round(ctx.rel(ctx.frames - 1), 2)],
             "decision_at": 0.0,
             "hero": ctx.hero,
