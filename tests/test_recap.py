@@ -211,7 +211,7 @@ def test_the_voices_lines_air_in_the_recaps_order(rc):
     both = [said for said in voices.values() if {"pbp", "color"} <= set(said)]
     assert both and all(said[0] == "pbp" for said in both)
     texts = [line.text for line in script.payload.lines]
-    seen = next(i for i, t in enumerate(texts) if "he saw H9" in t)
+    seen = next(i for i, t in enumerate(texts) if "he saw N. Varnhall" in t)
     assert "Without that look" in texts[seen + 1]
     assert [line.id for line in script.payload.lines] == [f"L{n + 1}" for n in range(len(texts))]
 
