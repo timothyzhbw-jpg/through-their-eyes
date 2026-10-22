@@ -10,7 +10,7 @@ something is limited or down. Every link opens the live site at that spot. The p
 - **Numbers:** say only a number that is on the screen or in [NUMBERS](NUMBERS.md). Each number
   below names its row there; `TODO(freeze)` marks one that changes at the sim freeze.
 
-## Five minutes before
+## Ten minutes before
 
 1. Open `/health`. Expect `"status":"ok"`, `"model":"foundry"`, `"speech":true` and
    `"analyst_mcp":true`. A first request after a restart can take about a minute while the
@@ -18,8 +18,13 @@ something is limited or down. Every link opens the live site at that spot. The p
 2. Open the links below in tabs, in order, in desktop Chrome at 1440 px wide or more. The links
    to a spot (`at`, `run`, `tamper`, `play`) open paused. The two breakdown links start the live
    stream as soon as they open, so open those right before their step.
-3. Turn the sound on, and share the browser tab, not the whole screen.
-4. Keep one fallback tab ready: [the hero, offline](https://ttesite1ff906.z14.web.core.windows.net/?offline=1&view=pov&at=key-scan&intro=0).
+3. Check the cached breakdowns the path plays. On the Analyst · 中文 and Analyst · English links,
+   open **Behind the replay** → **Producer · failure drill** and read each step's row: every
+   model step should say **Model**. A cached run with a step on **Template** (on 2026-10-22 the
+   cached analyst/zh run had its Analyst on Template after a model error) still plays and is
+   still verified, but tell the team so they re-run that key, and demo the other language.
+4. Turn the sound on, and share the browser tab, not the whole screen.
+5. Keep one fallback tab ready: [the hero, offline](https://ttesite1ff906.z14.web.core.windows.net/?offline=1&view=pov&at=key-scan&intro=0).
    It plays the data bundled with the site and needs no API.
 
 ## The three minutes
