@@ -131,6 +131,9 @@ _Fill in as they come to exist._
   out/dataset` reads it back
 - `uv run python -m eval.blind_side` — blind-side alert eval (SPEC 4.4) against the sim's
   beliefs, about 2 min; writes `eval/reports/blind_side.md`
+- `uv run python -m eval.season` — the pipeline offline on a season of 380 stitched matches (SPEC 3, 5, 6):
+  moments, breakdowns, the Verifier, interventions, determinism and the realism rows at season
+  scale, on all cores (15–30 min); writes `eval/reports/season.md` (`--from-cache` re-renders)
 - `uv run python -m analytics.live_stats --match 1` — live match stats (SPEC 4.6): per player
   distance, top speed, sprints, passes with accuracy and difficulty, from tracking and events
   only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
@@ -149,6 +152,12 @@ _Fill in as they come to exist._
   — narration ablation (SPEC 6): free-text vs anchored lines on Foundry, scored by the
   Verifier and azure-ai-evaluation groundedness; about 30 model calls per seed, cached in
   `out/narration_ablation/`. Writes `eval/reports/narration_ablation.md`
+- `uv run --group eval --env-file .env python -m eval.crew_vs_single` — crew vs single agent
+  (SPEC 6, Best Multi-Agent System): one Foundry call doing the four agents' jobs
+  (`eval/single_agent.py`) vs the crew, each with and without the Verifier, on six hero moments,
+  plus the failure drill and a free-text sensitivity. Every model request is cached in
+  `out/crew_vs_single/` (about 200 calls the first time, none after; `--cached-only` re-scores).
+  Writes `eval/reports/crew_vs_single.md`
 - `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
   (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
   `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
@@ -158,6 +167,12 @@ _Fill in as they come to exist._
 - `uv run python -m eval.keypoint_ingest` — the scan detector on limb tracking (SPEC 4.7):
   held-out F1 from keypoint-derived head yaw (`sim/keypoints.py` → `analytics/keypoints.py`) vs
   the sim's tracked head yaw, about 20 s; writes `eval/reports/keypoint_ingest.md`
+- `uv run python -m eval.look_grid --scenario blind_side_run` (or `press_escape`) — Take his
+  eyes (SPEC 3.7, 7): which looks change the hero's decision on the demo seed and on held-out
+  seeds, about a minute each; writes `eval/reports/look_grid_<scenario>.md`.
+  `uv run python -m sim.export --scenario blind_side_run --seed 3 --looks
+  web/public/data/look_seed3.json` (and `press_escape` seed 0) rewrites the grid the web ships;
+  `uv run python -m agents.look --seed 3 --frame 50 --offset -150` prints one look's verified lines
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
@@ -191,7 +206,11 @@ _Fill in as they come to exist._
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
   `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
-  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, SPEC 6)
+- `uv run python -m agents.crewtrace` — rewrite the web's Crew trace fixture
+  (`web/src/crewtrace/fixture.json`, SPEC 6): a drill with a scripted model, MCP tool calls, a
+  Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo

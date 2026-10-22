@@ -108,7 +108,7 @@ if (opt.cine) {
 
     const rows = [];
     for (const [overlay, camera] of [
-      ["pitch control", "His eyes"],
+      ["pitch control", "Tactical"], // the board: beside his eyes the corner is his belief map
       ["skeleton", "Broadcast"], // the skeleton is drawn on the broadcast camera and the board
     ]) {
       await button(camera).click();

@@ -1,9 +1,11 @@
 // The Producer's desk in the breakdown panel (SPEC 6, failure drill). The rows are the crew's steps
 // and who answered each one: the model, its template, or code. "Take down" picks agents to fail
 // for the next run, and "Bring back" re-runs a downed agent from the workflow checkpoint. The
-// trace id names the run's spans in Application Insights.
+// trace id names the run's spans in Application Insights, and "Crew trace" opens the run's
+// timeline below.
 
 import { AGENTS, type Agent } from "../api/client";
+import { TraceButton } from "../crewtrace/CrewTrace";
 import { crewSteps, STEP_LABEL, type CrewStep } from "../producer/producer";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
@@ -71,7 +73,11 @@ function StepRow({ s, picked, busy }: { s: CrewStep; picked: boolean; busy: bool
   );
 }
 
-export function Producer() {
+export function Producer({
+  trace = null,
+}: {
+  trace?: { open: boolean; toggle: () => void } | null; // the crew trace, when there is a run
+}) {
   const { api, producer, controls } = useSession();
   const { origin, status } = useBreakdown();
   const { down, busy, error } = useStore(producer, (p) => p);
@@ -104,6 +110,7 @@ export function Producer() {
                 ? `Run with ${names(picked)} down`
                 : "Pick agents to take down"}
         </button>
+        {trace && <TraceButton open={trace.open} onClick={trace.toggle} />}
         {origin?.kind === "api" && (
           <span
             className="trace-id"

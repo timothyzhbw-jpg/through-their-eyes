@@ -128,6 +128,9 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    airs its template plan, and the breakdown still plays. **Bring back** resumes the Agent
    Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
    plan replaces the template. The trace id is the run's operation_Id in Application Insights.
+   **Crew trace** opens the run as a timeline: each agent's lane, its typed input and output,
+   the shared state it read and wrote, the Analyst's MCP tool calls, the Verifier sending a line
+   back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
    18 possessions on one clock of about 11½ minutes, opened where the scan hero's possession

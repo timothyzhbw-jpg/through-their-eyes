@@ -21,7 +21,8 @@ import {
 import { createPlayback, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { createRecap, type Recap } from "../recap/recap";
-import type { MakeAudio } from "../voice/voice";
+import { createSoundSwitch, type MakeAudio, type SoundSwitch } from "../voice/voice";
+import { takeEyesOf } from "../takeeyes/controller";
 import { yourCallOf } from "../yourcall/controller";
 import { scenarioMatchId, type MatchInfo, type MatchMoment } from "./match";
 
@@ -50,10 +51,11 @@ export interface MatchScreen {
 export interface MatchControls extends ViewControls {
   startLive(): void;
   /** Open a hero moment's breakdown (the moment's card, in match time); with "yourcall", open it
-   * in Your call instead of playing the breakdown. If Your call cannot open, the match stays up. */
+   * in Your call instead of playing the breakdown, with "eyes" in Take his eyes. If that cannot
+   * open, the match stays up. */
   openBreakdown(
     card: Pick<MatchMoment, "id" | "hero" | "possession" | "local_id">,
-    play?: "breakdown" | "yourcall",
+    play?: "breakdown" | "yourcall" | "eyes",
   ): void;
   backToMatch(): void;
 }
@@ -68,6 +70,7 @@ export interface MatchSession {
   offline: string | null;
   screen: Store<MatchScreen>;
   recap: Recap; // the end-of-match recap: its card and its reel
+  sound: Store<SoundSwitch>; // one Sound switch for the match, its recap and its breakdowns
   controls: MatchControls;
 }
 
@@ -81,6 +84,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
   const feed = api ? new LiveFeed(hero, (start) => api.liveUrl(start), options.socket) : null;
   const screen = createStore<MatchScreen>({ hero: null, opening: null, error: null });
   const heroes = new Map<number, Session>(); // by possession index, loaded once
+  const sound = createSoundSwitch();
   const { controls: transport, endLive } = transportControls({
     hero,
     playback,
@@ -100,6 +104,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
       screen.set({ error: null });
     },
     makeAudio: options.makeAudio,
+    sound,
   });
 
   // The stream ended (or broke): the viewer is left in the replay at the last frame received.
@@ -111,8 +116,19 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     if (status === "ended" && latest >= hero.runs.factual.frames - 1) recap.fullTime();
   });
 
-  const show = (session: Session, cardId: string, play: "breakdown" | "yourcall") => {
+  const show = (session: Session, cardId: string, play: "breakdown" | "yourcall" | "eyes") => {
     const yc = yourCallOf(session);
+    if (play === "eyes") {
+      const te = takeEyesOf(session);
+      if (te.unavailable) {
+        screen.set({ hero: null, opening: null, error: `${cardId}: ${te.unavailable}` });
+        return;
+      }
+      screen.set({ hero: session, opening: null, error: null });
+      yc.close();
+      te.open();
+      return;
+    }
     if (play === "yourcall") {
       if (yc.unavailable) {
         // Not the hero screen, and not the breakdown: that replay would show what he picked.
@@ -130,7 +146,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
 
   async function openBreakdown(
     card: Parameters<MatchControls["openBreakdown"]>[0],
-    play: "breakdown" | "yourcall" = "breakdown",
+    play: "breakdown" | "yourcall" | "eyes" = "breakdown",
   ) {
     const p = match!.possessions.find((x) => x.index === card.possession);
     if (!card.hero || !p) return;
@@ -166,6 +182,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
         {
           api,
           makeAudio: options.makeAudio,
+          sound,
           momentId: card.local_id,
           possession: { index: p.index, start: p.start, moment: card.id },
         },
@@ -212,6 +229,7 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
     offline: api ? null : (options.offline ?? "no live service"),
     screen,
     recap,
+    sound,
     controls,
   };
 }

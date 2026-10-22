@@ -1,7 +1,8 @@
 # Credits — demo video (SPEC 10)
 
-Everything in the video is our own synthetic match rendered by our web app, our own title cards
-and our own synthesized sound effects, plus the CC0 music and the OFL fonts below. No real
+Everything in the video is our own synthetic match, rendered by our web app (and, for three
+shots, in Blender from the same simulation data), our own title cards and our own synthesized
+sound effects, plus the CC0 music and the OFL fonts below. No real
 footage, players, clubs, leagues, broadcasters, logos or brand fonts. The edit
 (`npm run trailer`, see [README.md](README.md)) downloads each external file from the link
 below and checks its SHA-256 (`assets.json`) before using it.
@@ -17,11 +18,28 @@ below and checks its SHA-256 (`assets.json`) before using it.
 CC0 needs no attribution; the end card credits the track anyway. Licences checked on each
 page on 2026-10-21.
 
+## Original score
+
+The alternative to the tracks above: a score composed for this project in code
+([`score/`](score/README.md)), in two variants (grime, hybrid). End-card credit: "Original score
+composed for this project". No samples from existing songs and no AI music generators.
+
+| Part | Source | Licence |
+|---|---|---|
+| Composition, arrangement, mix and master | [`score/`](score/) in this repository | MIT |
+| Drums, basses, synths and effects | synthesised in numpy by [`score/synth.py`](score/synth.py); no recorded samples | MIT |
+| Strings, brass, horns, choir, timpani, orchestra hit | Fluid (R3) General MIDI SoundFont by Frank Wen, `FluidR3_GM.sf2` from Debian's `fluid-soundfont` 3.1 source package (https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz; SHA-256 in [`score/assets.json`](score/assets.json)) | MIT |
+| Rendering of the SoundFont parts | FluidSynth 2.6 (Homebrew), run as a tool, not distributed | LGPL-2.1 |
+| MIDI files, signal processing | pretty_midi and mido (MIT), numpy and scipy (BSD-3-Clause) | MIT / BSD |
+
+The SoundFont's notice, from the package's `COPYING`: "Copyright (c) 2000-2002, 2008 Frank Wen
+<getfrank@gmail.com>", released under the MIT license. Licence checked on 2026-10-21.
+
 ## Sound effects
 
 All synthesized by [`lib/sfx.mjs`](lib/sfx.mjs) in this repository (MIT): heartbeat, stadium
-hum, whoosh, riser, boom, stamp, slam, whistle, tick, rewind, glitch, shutter, sting. No
-recorded samples.
+hum, whoosh, riser, boom, stamp, slam, whistle, tick, rewind, glitch, shutter, sting, ball
+touch. No recorded samples.
 
 ## Fonts
 
@@ -36,11 +54,19 @@ Fonts), as the web app loads them.
 
 ## Voice
 
-Narration: Azure AI Speech neural voices (`en-US-ChristopherNeural`; the Chinese line is the
-app's own verified narration in `zh-CN-YunjianNeural`), synthesized through the project's own
+Narration: Azure AI Speech neural voices (`en-US-GuyNeural`, the app's play-by-play voice, in a
+lower register; the Chinese line is the app's own verified narration in `zh-CN-YunjianNeural`), synthesized through the project's own
 speech setup (`video/tts.py` → `api/tts.py`).
 
 ## Footage
 
-None. Every frame is the synthetic match rendered by our web app: the live site recorded by
-`capture.mjs`, and its cinematic mode (`?cine=1`) driven frame by frame.
+No real footage. Every frame is the synthetic match: the live site recorded by `capture.mjs`,
+its cinematic mode (`?cine=1`) driven frame by frame, and three shots rendered in Blender.
+
+Shots bl01–bl03 were rendered in Blender 5.2 (EEVEE) from our own simulation data (`sim.export`,
+blind_side_run seed 3, factual and counterfactual runs). Players are the Gameplay Football model
+(Unlicense, Bastiaan Konings Schuiling), posed from the sim's positions and body/head yaw; the
+stadium is procedural; no third-party assets. The Blender scripts are kept outside the
+repository; only rendered frames are used. In the film these shots carry the label "RENDERED IN
+BLENDER FROM OUR SIMULATION DATA"; the cinematic-mode shots carry "IN-ENGINE · RENDERED FROM OUR
+SIMULATION DATA".
