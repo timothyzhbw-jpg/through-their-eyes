@@ -78,6 +78,11 @@ def test_what_if_is_deterministic(to_h4):
         ("What if he passed to H4?", "pass:H4"),
         ("what if he'd played it back to h4", "pass:H4"),
         ("如果他传给H4呢？", "pass:H4"),
+        # By the fictional names the screen shows (sim/roster.py): short, full or surname alone.
+        ("What if he passed to K. Annersley?", "pass:H4"),
+        ("what if he'd played it to annersley", "pass:H4"),
+        ("What if he had found Kofi Annersley?", "pass:H4"),
+        ("如果他传给K. Annersley呢？", "pass:H4"),
         ("What if he had carried the ball forward?", "carry"),
         ("What if he scored a header?", None),
         ("What if he passed to A5?", None),
@@ -346,7 +351,7 @@ def test_a_what_if_answer_is_verified_counterfactual_narration(ctx, language):
     assert {c.kind for c in a.payload.claims} == {"counterfactual"}
     assert all(c.verdict == "supported" for c in a.payload.claims)
     text = " ".join(line.text for line in a.payload.lines)
-    assert "H4" in text
+    assert "K. Annersley" in text and "H4" not in text  # by his fictional name (sim/roster.py)
 
 
 def test_an_impossible_question_gets_a_refusal_not_narration(ctx):

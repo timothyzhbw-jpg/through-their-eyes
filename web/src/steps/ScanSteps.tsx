@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import { runLabels, type Hero, type Run } from "../data/hero";
+import { shortName } from "../data/roster";
 import type { RunName, Vec2 } from "../data/types";
 import type { Narration, PayloadLine } from "../narration/payload";
 import { toScreen } from "../options/passOptions";
@@ -314,7 +315,7 @@ function PovMarks(props: {
           <g key={j} className="ss-seen">
             <ellipse cx={feet[0]} cy={(feet[1] + head[1]) / 2} rx={tall * 0.32} ry={tall * 0.62} />
             <text x={feet[0]} y={feet[1] + 16}>
-              {hero.ids[j]}
+              {shortName(hero.ids[j])}
             </text>
           </g>
         );
@@ -342,7 +343,7 @@ function LaneLine(props: {
       {end && <circle cx={b[0]} cy={b[1]} r={small ? 2.5 : 4} />}
       {end && named && (
         <text x={b[0]} y={b[1] - 8}>
-          {lane.receiver ?? (lane.kind === "carry" ? "Carry" : "Shot")}
+          {lane.receiver ? shortName(lane.receiver) : lane.kind === "carry" ? "Carry" : "Shot"}
         </text>
       )}
     </g>
@@ -412,7 +413,7 @@ function BoardMarks(props: {
             <g key={j} className="ss-focus-ring">
               <circle cx={x} cy={y} r={Math.max(FOCUS_MIN_PX, FOCUS_RADIUS_M * zoom)} />
               <text x={x} y={y - Math.max(FOCUS_MIN_PX, FOCUS_RADIUS_M * zoom) - 6}>
-                {hero.ids[j]}
+                {shortName(hero.ids[j])}
               </text>
             </g>
           );
@@ -628,7 +629,7 @@ function SightChips({ hero, ids }: { hero: Hero; ids: string[] }) {
           const p = hero.players[hero.ids.indexOf(id)];
           return (
             <li key={id} className={p?.team === 0 ? "home" : "away"}>
-              {id}
+              {shortName(id)}
             </li>
           );
         })}

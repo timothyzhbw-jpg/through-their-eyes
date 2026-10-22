@@ -28,6 +28,7 @@ import { ArrowIcon, ChevronIcon, CloseIcon, ExpandIcon, SlidersIcon } from "./ic
 import { PERSONA_LABEL } from "./labels";
 import { MatchPicker } from "./Match";
 import { Segmented } from "./Segmented";
+import { clubName, shortName } from "../data/roster";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -57,9 +58,9 @@ const PERSONA_NOTE: Record<Persona, string> = {
   audio_description: "Every line spoken, in large print.",
 };
 
-/** What he did, as a past-tense phrase: "passed to H4", "carried it". */
+/** What he did, as a past-tense phrase: "passed to K. Annersley", "carried it". */
 function didPhrase(action: string): string {
-  if (action.startsWith("pass:")) return `passed to ${action.slice(5)}`;
+  if (action.startsWith("pass:")) return `passed to ${shortName(action.slice(5))}`;
   if (action === "carry") return "carried it";
   if (action === "shot") return "shot";
   const post = shotPost(action);
@@ -223,12 +224,12 @@ export function PlayerPicker() {
         title="Whose eyes the first-person view looks through"
       >
         {[0, 1].map((team) => (
-          <optgroup key={team} label={team === 0 ? "Home" : "Away"}>
+          <optgroup key={team} label={clubName(team)}>
             {hero.players
               .filter((p) => p.team === team)
               .map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.id} · {p.role}
+                  {shortName(p.id)} · {p.role}
                   {p.id === hero.heroId ? " (hero)" : ""}
                 </option>
               ))}

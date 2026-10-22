@@ -35,6 +35,7 @@ import { SoundToggle } from "./SoundToggle";
 import { formatSlot, plainReason, slotLabel } from "./tamperText";
 import "./live.css";
 import "./whatif.css";
+import { renameIds } from "../data/roster";
 
 export { SoundToggle }; // the header's Sound switch, imported from here before it had a file
 
@@ -68,10 +69,12 @@ export const isVerified = (narration: Narration, line: PayloadLine) =>
 
 /**
  * A line's text; in a verified line each number, with its unit, gets the dotted Floodlight
- * underline (every digit on air was slot-filled from a checked value).
+ * underline (every digit on air was slot-filled from a checked value). Players go by their
+ * fictional names: the service names them already; the bundled example, written with ids, is
+ * named here (data/roster.ts).
  */
 export function LineText({
-  text,
+  text: raw,
   verified,
   countId,
 }: {
@@ -79,6 +82,7 @@ export function LineText({
   verified: boolean;
   countId?: string; // count each number up the first time this line comes up (CountUp.tsx)
 }) {
+  const text = renameIds(raw);
   if (!verified) return <>{text}</>;
   return (
     <>
@@ -116,7 +120,7 @@ export function Caption() {
   return (
     <>
       <p className="sr-only" aria-live={speaking ? "off" : "polite"}>
-        {line?.text}
+        {line ? renameIds(line.text) : null}
       </p>
       {narration && line && (
         <button

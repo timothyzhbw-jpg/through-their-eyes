@@ -106,7 +106,7 @@ describe("Take his eyes: opening", () => {
       "Over his right shoulder, 0.8 s before it arrives",
     );
     expect(textOf(checked(el, "When he looks"))).toBe("−0.8");
-    expect(checked(el, "Where H8 looks")!.getAttribute("aria-label")).toBe(
+    expect(checked(el, "Where J. Ferriday looks")!.getAttribute("aria-label")).toBe(
       "Over his right shoulder",
     );
     expect(textOf(el.querySelector(".te-own"))).toBe("his look");
@@ -149,7 +149,7 @@ describe("Take his eyes: opening", () => {
 describe("Take his eyes: choosing", () => {
   it("names the four directions round him and every time of the grid", async () => {
     const { el } = await opened();
-    expect(radios(el, "Where H8 looks").map((b) => b.getAttribute("aria-label"))).toEqual([
+    expect(radios(el, "Where J. Ferriday looks").map((b) => b.getAttribute("aria-label"))).toEqual([
       "To his left",
       "Over his left shoulder",
       "Over his right shoulder",
@@ -167,13 +167,13 @@ describe("Take his eyes: choosing", () => {
 
   it("moves with the arrow keys in each group, one focus stop per group", async () => {
     const { te, el } = await opened();
-    const where = checked(el, "Where H8 looks")!;
-    expect(radios(el, "Where H8 looks").filter((b) => b.tabIndex === 0)).toEqual([where]);
+    const where = checked(el, "Where J. Ferriday looks")!;
+    expect(radios(el, "Where J. Ferriday looks").filter((b) => b.tabIndex === 0)).toEqual([where]);
     key(where, "ArrowRight");
     expect(te.state.get().offset).toBe(-90);
-    expect(document.activeElement).toBe(checked(el, "Where H8 looks"));
-    key(checked(el, "Where H8 looks")!, "ArrowLeft");
-    key(checked(el, "Where H8 looks")!, "ArrowLeft");
+    expect(document.activeElement).toBe(checked(el, "Where J. Ferriday looks"));
+    key(checked(el, "Where J. Ferriday looks")!, "ArrowLeft");
+    key(checked(el, "Where J. Ferriday looks")!, "ArrowLeft");
     expect(te.state.get().offset).toBe(150);
     key(checked(el, "When he looks")!, "ArrowLeft");
     expect(te.state.get().frame).toBe(40);
@@ -210,7 +210,7 @@ describe("Take his eyes: choosing", () => {
 describe("Take his eyes: looking and the result", () => {
   it("Enter looks: the stage plays the look's run through his eyes up to his decision", async () => {
     const { te, el } = await opened();
-    key(checked(el, "Where H8 looks")!, "Enter");
+    key(checked(el, "Where J. Ferriday looks")!, "Enter");
     expect(te.state.get().step).toBe("looking");
     const stage = te.stage()!;
     expect(stage.hero.runs.counterfactual.decision?.chosen).toBe("pass:H9");
@@ -236,16 +236,16 @@ describe("Take his eyes: looking and the result", () => {
     expect(te.playback.get()).toMatchObject({ mode: "factual", whatIf: "look:H8:0050:+090" });
     const ghost = stage.kind === "hero" ? stage.whatIfs!.options[0] : null;
     expect(ghost?.run?.start).toBe(75);
-    expect(ghost?.tag).toBe("your look: pass to H4");
+    expect(ghost?.tag).toBe("your look: pass to K. Annersley");
     expect(textOf(el.querySelector(".te-card h2"))).toBe("Your look changes his call");
     const versus = [...el.querySelectorAll(".te-versus div")].map((d) => [
       textOf(d.querySelector("dt")),
       textOf(d.querySelector("dd")),
     ]);
     expect(versus).toEqual([
-      ["With your look", "Pass to H4"],
-      ["What he did", "Pass to H9"],
-      ["With no look", "Pass to H4"],
+      ["With your look", "Pass to K. Annersley"],
+      ["What he did", "Pass to N. Varnhall"],
+      ["With no look", "Pass to K. Annersley"],
     ]);
   });
 
@@ -255,9 +255,9 @@ describe("Take his eyes: looking and the result", () => {
     click(button(el, "See what he does"));
     const lines = [...el.querySelectorAll(".te-lines li .te-line")].map(textOf);
     expect(lines[0]).toBe(
-      "You make H8 look over his right shoulder 0.8 s before the ball reaches him.",
+      "You make J. Ferriday look over his right shoulder 0.8 s before the ball reaches him.",
     );
-    expect(lines).toContain("He still passes to H9, as he really did.");
+    expect(lines).toContain("He still passes to N. Varnhall, as he really did.");
     expect(el.querySelectorAll(".te-lines .kind").length).toBeGreaterThan(0);
     // Every number on the card is in a verified line, the chosen time or a player id.
     const card = el.querySelector(".te-card")!.cloneNode(true) as HTMLElement;
@@ -266,7 +266,7 @@ describe("Take his eyes: looking and the result", () => {
 
     act(() => te.session.breakdown.set({ language: "zh" }));
     expect(textOf(el.querySelector(".te-lines .te-line"))).toBe(
-      "你让H8在球到达前0.8秒越过右肩向后看。",
+      "你让J. Ferriday在球到达前0.8秒越过右肩向后看。",
     );
   });
 

@@ -25,6 +25,7 @@ cannot add one.
 | [`numbers.py`](numbers.py) | `number_tokens`: digits, English number words and Chinese numerals with a measure word |
 | [`render.py`](render.py) | `render_line`, `check_caption`, `build_payload`, `check_payload`: verified captions and the render payload a viewer receives |
 | [`match.py`](match.py) | `match_moments`: moments of a stitched match, detected per possession and lifted to match time |
+| [`tactics.py`](tactics.py) | `tactics_view`: the tactics cards of a run or a stitched match (`analytics.tactics`) and one sentence per card, a claim checked with `tactics_stat` and rendered in `en` and `zh` (SPEC 4.8) |
 
 ## Data flow
 

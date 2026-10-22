@@ -21,13 +21,15 @@
   "teams": [
     {
       "id": 0,
-      "name": "Home",
+      "name": "Kestrel Bay",
+      "side": "home",
       "attacks": "+x",
       "fictional": true
     },
     {
       "id": 1,
-      "name": "Away",
+      "name": "Corvane Vale",
+      "side": "away",
       "attacks": "-x",
       "fictional": true
     }

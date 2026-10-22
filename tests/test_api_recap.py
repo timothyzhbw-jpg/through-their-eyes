@@ -1,5 +1,7 @@
 """The end-of-match recap over the API (SPEC 2, 6): cached and limited like a breakdown."""
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -43,6 +45,11 @@ def test_a_stitched_match_gets_an_offline_recap_then_the_cached_one(client, casu
     (script,) = result["scripts"]
     assert (script["persona"], script["language"]) == ("casual", "en")
     assert script["card"]["lines"][0]["text"].startswith("Full time:")
+    # The clubs and the players by their fictional names (SPEC 4.6), in the text and the SSML.
+    texts = [line["text"] for line in script["card"]["lines"]]
+    assert "Kestrel Bay" in texts[0] and "Corvane Vale" in texts[0]
+    spoken = " ".join(texts + [cue["ssml"] for cue in script["voice"]])
+    assert not re.search(r"\b(Home|Away)\b|(?<![\w:])[HA]\d+(?![\w:])", spoken)
     again = client.post("/api/recaps", json={"match": MATCH, "personas": ["casual", "casual"],
                                              "languages": ["en"]}).json()  # fmt: skip
     assert again["cached"] and again["key"] == casual["key"] and again["result"] == result

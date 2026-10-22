@@ -2,7 +2,8 @@
 
 Routes each request by the `ROLE: <name>` line at the top of the agent's instructions and answers
 with the reply configured for that role: a value (returned as JSON), a list of values (one per
-call, the last one repeating), an exception (raised), or `SLOW` (never answers in time).
+call, the last one repeating), a function of the prompt that returns one of those, an exception
+(raised), or `SLOW` (never answers in time).
 `delays` adds a fixed latency in seconds to every call of a role, like a model's response time.
 
 `ToolCallingFakeChatClient` also runs Agent Framework's tool loop, so a `Call` reply makes the
@@ -65,6 +66,8 @@ class FakeChatClient(BaseChatClient):
         reply = self.replies[role]
         if isinstance(reply, list):
             reply = reply[min(k, len(reply) - 1)]
+        if callable(reply) and not isinstance(reply, type):  # a reply that reads the prompt
+            reply = reply(self.prompts[role][-1])
 
         async def answer() -> ChatResponse:
             await asyncio.sleep(self.delays.get(role, 0.0))

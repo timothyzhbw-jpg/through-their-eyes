@@ -24,17 +24,17 @@ describe("a scan hero other than the blind-side run", () => {
   it("tells the move from the runs, not the blind-side run's script", () => {
     const factual = render(session("factual"), <StoryPanel />);
     expect(factual).not.toMatch(/at the back|drops in to receive|back to goal|over his shoulder/);
-    expect(factual).toContain("H4 plays it to H8.");
-    expect(factual).toContain("H8 looks away from the ball");
-    expect(factual).toContain("Decision: pass to H9");
-    expect(factual).toContain("Completed to H9.");
+    expect(factual).toContain("K. Annersley plays it to J. Ferriday.");
+    expect(factual).toContain("J. Ferriday looks away from the ball");
+    expect(factual).toContain("Decision: pass to N. Varnhall");
+    expect(factual).toContain("Completed to N. Varnhall.");
     const times = [...factual.matchAll(/class="t">([\d.]+) s</g)].map((m) => Number(m[1]));
     expect(times).toEqual([...times].sort((a, b) => a - b));
   });
 
   it("ends the run without the look with the carry", () => {
     const cf = render(session("counterfactual"), <StoryPanel />);
-    expect(cf).toContain("H8 keeps his eyes on the ball");
+    expect(cf).toContain("J. Ferriday keeps his eyes on the ball");
     expect(cf).toContain("Decision: carry forward");
     expect(cf).toContain("He keeps the ball.");
     expect(cf).not.toContain("Completed");
@@ -42,7 +42,7 @@ describe("a scan hero other than the blind-side run", () => {
 
   it("names the carry on the counterfactual card", () => {
     const html = render(session("factual"), <VerdictPanel />);
-    expect(html).toContain("Pass to H9");
+    expect(html).toContain("Pass to N. Varnhall");
     expect(html).toContain("Carry forward");
     expect(html).toContain("in expected threat (xT)");
   });

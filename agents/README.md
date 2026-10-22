@@ -26,6 +26,7 @@ workflow's output). [`docs/architecture.svg`](../docs/architecture.svg) draws th
 | [`schemas.py`](schemas.py) | the typed handoffs; what a model may return (`DirectorChoice`, `analyst_model`, `PlanDraft`, `anchored_draft_model`); `TelestrationPlan` (mirrors `web/src/plan/schema.ts`); `BreakdownResult` with its `StepTrace`s |
 | [`prompts.py`](prompts.py) | instructions per role and persona; `PROMPT_VERSION`, a hash of every instruction |
 | [`fallbacks.py`](fallbacks.py) | a deterministic template for every model step, built from verified claims only |
+| [`budget.py`](budget.py) | what the Director's priority buys: the Analyst's MCP tools (high only) and the replay slot the Telestrator's plan must fit |
 | [`plan.py`](plan.py) | `validate_plan` (the rules of `web/src/plan/validate.ts`, as `PlanError` codes) and `template_plan` (a port of `web/src/plan/template.ts`) |
 | [`llm.py`](llm.py) | `ask`: per-step timeout (8 s), one retry, then give up; `client_from_env` (Foundry, keyless) or `None`; `Outage` for a downed agent |
 | [`tools.py`](tools.py), [`mcp_server.py`](mcp_server.py) | the Analyst's tools as plain functions, and our MCP server (stdio) that exposes exactly those: `get_moment`, `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`, `run_counterfactual`, `list_options`, `what_if` |

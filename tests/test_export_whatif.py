@@ -35,8 +35,8 @@ def test_every_option_has_a_question_and_the_choice_is_marked(data, hero):
 
 
 def test_questions_read_naturally():
-    assert what_if_question("pass:H4", "en") == "What if he passed to H4?"
-    assert what_if_question("pass:H4", "zh") == "如果他传给H4呢？"
+    assert what_if_question("pass:H4", "en") == "What if he passed to K. Annersley?"
+    assert what_if_question("pass:H4", "zh") == "如果他传给K. Annersley呢？"
     assert what_if_question("carry", "en") == "What if he carried it?"
     with pytest.raises(ValueError):
         what_if_question("dribble", "en")
@@ -59,7 +59,9 @@ def test_answers_are_verified_counterfactual_payloads(data):
 def test_the_pass_back_to_h4(data):
     h4 = next(o for o in data["options"] if o["action"] == "pass:H4")
     texts = [line["text"] for line in h4["answers"]["en"]["lines"]]
-    assert texts[0] == "If H8 had passed to H4, H4 would have received it."
+    assert texts[0] == (
+        "If J. Ferriday had passed to K. Annersley, K. Annersley would have received it."
+    )
     assert "less in expected threat than what he did" in texts[-1]
 
 

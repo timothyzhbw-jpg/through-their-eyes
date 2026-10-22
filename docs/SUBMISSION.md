@@ -236,8 +236,32 @@ Multi-Agent System (SPEC §0).
   (`possession_play` scripts its passes), so the scoreline is the heroes' doing.[^match]
 - **Not yet measured:** no single-agent baseline (the narration ablation is the closest
   comparison), no viewer study, and no frame-rate run on a laptop's integrated GPU.
+- **Tactics: two cards, not a knowledge base.** The analyst's stats panel and the recap answer
+  "why build from the back?" and "why focus on set pieces?" from the match's own data, each with
+  one verified sentence. The rest of a tactics table (high press, counter-attack, wide overloads,
+  central penetration, low block, counter-press) needs tackles, crosses and open play that
+  shoots; see the roadmap below.
 - **A failure drill lives on one replica's disk.** A restart or redeploy drops it, and
   **Bring back** then answers 404.
+
+
+## Roadmap: a tactics knowledge base
+
+Teammates who play proposed a tactics knowledge base: each tactic, its mechanism, the data that
+shows it and a sentence for a fan. We built the two rows our simulator truly supports.
+
+- **Why build from the back?** Under pressure, Home completed 13 of 19 short passes out from the
+  back in match-1 (68%, against 89% without). The pressure hero's recorded options show his
+  safest pass was back to the keeper.
+- **Why focus on set pieces?** The one corner reached 0.29 xT in 4.4 seconds, more than any of
+  the 17 open-play passages. No shot followed: the stitched match cuts the corner before one
+  could.
+
+Every number is measured from tracking and events, and each card's sentence is verified before
+it airs. The other six rows (high press, counter-attack, wide overloads, central penetration, low
+block, counter-press) need events the simulator does not produce yet. [docs/TACTICS.md](TACTICS.md)
+lists, for each, what it would need: tackles and duels everywhere, crosses and headers, and open
+play that attacks the goal.
 
 ---
 

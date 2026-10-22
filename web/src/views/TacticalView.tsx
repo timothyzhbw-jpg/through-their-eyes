@@ -58,6 +58,7 @@ import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { aimYaw, VISOR_COLOR } from "./tokens";
+import { shortName } from "../data/roster";
 import { BeatBoardLayer } from "../beat/BeatLayers";
 import { motion } from "../beat/beat";
 
@@ -67,7 +68,7 @@ const GK_BAND = [0.55, 0.77] as const; // m, inner and outer radius
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
 const TAG_PX = 24; // on-screen height of a tag such as "shoulder check"
-const NAME_ASPECT = 192 / 96; // LABEL.name canvas
+const NAME_ASPECT = 512 / 96; // LABEL.name canvas (wide enough for a short name)
 const CONE_RADIUS = 45; // m drawn
 const LAYER = {
   field: 0,
@@ -768,7 +769,7 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
               >
                 <planeGeometry args={[nameH * NAME_ASPECT, nameH]} />
                 <meshBasicMaterial
-                  map={getLabelTexture(p.id, {
+                  map={getLabelTexture(shortName(p.id), {
                     ...LABEL.name,
                     color: j === hero.runner ? COLORS.gold : COLORS.white,
                   })}

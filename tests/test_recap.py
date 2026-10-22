@@ -71,7 +71,9 @@ def test_every_persona_has_a_recap_template_and_a_brief():
 
 def test_recap_prompts_leave_breakdown_cache_keys_alone():
     # Recap instructions have their own version: a breakdown's key must not move with them.
-    assert prompts.PROMPT_VERSION == "998360964f7f" and PIPELINE_VERSION == 5
+    # Moved on purpose with the Director's budget (agents/budget.py) and the persona rules
+    # (agents/persona_rules.py): PIPELINE_VERSION 6.
+    assert prompts.PROMPT_VERSION == "451f64ac88e9" and PIPELINE_VERSION == 6
 
 
 def test_an_offline_recap_runs_the_whole_crew_graph(rc, offline):
@@ -211,7 +213,7 @@ def test_the_voices_lines_air_in_the_recaps_order(rc):
     both = [said for said in voices.values() if {"pbp", "color"} <= set(said)]
     assert both and all(said[0] == "pbp" for said in both)
     texts = [line.text for line in script.payload.lines]
-    seen = next(i for i, t in enumerate(texts) if "he saw H9" in t)
+    seen = next(i for i, t in enumerate(texts) if "he saw N. Varnhall" in t)
     assert "Without that look" in texts[seen + 1]
     assert [line.id for line in script.payload.lines] == [f"L{n + 1}" for n in range(len(texts))]
 
@@ -287,7 +289,7 @@ def test_a_match_with_a_goal_leads_its_recap_with_it():
     assert "goal" in min(r.moments, key=lambda m: m.rank).tags
     for script in r.scripts:
         texts = [line.text for line in script.payload.lines]
-        assert texts[0] == "Full time: Home 1, Away 0." and "H9 scored." in texts
+        assert texts[0] == "Full time: Home 1, Away 0." and "N. Varnhall scored." in texts
         assert check_payload(script.payload, rc.names) == []
         bug = script.cues.cues[0]
         assert (bug.data["home"], bug.data["away"]) == (1, 0)

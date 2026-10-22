@@ -91,6 +91,7 @@ from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
 from api import guard, tts
 from api.egress import MB, Egress, EgressLimit
 from api.live import Slots, stream
+from api.names import Renamed, rename
 from api.recorded import Recordings, now, recording_key
 from api.settings import Settings
 from api.store import (
@@ -259,8 +260,10 @@ def create_app(
     storage = open_storage(settings, credential, cosmos_client)
     store = MatchStore(settings, audit=storage.audit)
     cues = tts.Cues(storage.voice)  # what POST /api/tts may speak: cues of breakdowns served
-    breakdowns, answers = cues.recording(tts.Revoiced(storage.breakdowns)), storage.answers
-    recaps = cues.recording(storage.recaps)  # a recap's lines may be spoken too
+    # Values cached before players and clubs had names are renamed when read (api/names.py).
+    breakdowns = cues.recording(tts.Revoiced(Renamed(storage.breakdowns)))
+    answers = Renamed(storage.answers)
+    recaps = cues.recording(Renamed(storage.recaps, clubs=True))  # its lines may be spoken too
     limiter = RateLimiter(*settings.rate_limit)
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
@@ -437,6 +440,14 @@ def create_app(
         if m.stats is None:
             raise HTTPException(503, f"no stats for {mid}")
         return m.stats.snapshot(frame, tracks=tracks).model_dump(mode="json")
+
+    @app.get("/api/matches/{mid}/tactics")
+    async def match_tactics(mid: str) -> dict[str, Any]:
+        """The tactics cards (SPEC 4.8): build-up under pressure and set pieces, measured from
+        the tracking and events this service streams, with one verified sentence per card."""
+        m = await match_or_404(mid)
+        view = await asyncio.to_thread(m.tactics)
+        return view.model_dump(mode="json")
 
     @app.get("/api/matches/{mid}/audit")
     async def match_audit(mid: str, limit: int = 50) -> list[dict[str, Any]]:
@@ -702,9 +713,10 @@ def create_app(
                 run = await run_recap_crew(rc, client=llm, personas=tuple(body.personas),
                                            languages=tuple(body.languages),
                                            use_mcp=settings.analyst_mcp)  # fmt: skip
-            value = {"source": source, "result": run.result.model_dump(mode="json"),
-                     "trace": run.trace.model_dump(mode="json"),
-                     "ran_at": run.trace.runs[-1].started}  # fmt: skip
+            # Its claims say Home and Away (their templates are in the cache key): name the clubs.
+            value = rename({"source": source, "result": run.result.model_dump(mode="json"),
+                            "trace": run.trace.model_dump(mode="json"),
+                            "ran_at": run.trace.runs[-1].started}, clubs=True)  # fmt: skip
             recaps.put(k, value)
         return _answer(k, value, cached=False, limits=limits)
 
