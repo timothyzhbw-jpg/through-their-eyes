@@ -4,7 +4,7 @@ import { parseHero } from "../data/hero";
 import type { ExportEvent } from "../data/types";
 import { matchExport } from "../testing";
 import { lineup, measure, runMinutes, watchOptions } from "./lineup";
-import { playLength } from "./LineupCard";
+import { playLength } from "./IntroCard";
 
 describe("the pre-match line-up", () => {
   const hero = parseHero(raw);

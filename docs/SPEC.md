@@ -74,8 +74,13 @@ on an LLM.
 
 **The cold load** (a judge who opens the page and only watches; web/src/App.tsx,
 [web/src/autoplay/](../web/src/autoplay/)):
-- The lineup card opens first. Behind it the picture rests on the stream's first frame. The hero
-  moment's stream starts only when the card closes, by itself after 5 s or on a click: its key
+- The intro card opens first: one line on what the moment shows ("One look over his shoulder
+  changed his pass. See why.") and one button, Start. It sits where the moment card goes (on a
+  phone, a sheet at the bottom), so the picture stays in view, resting on the stream's first
+  frame; the line-ups, whose eyes to watch and the tour are behind "Teams and more". It waits
+  for the viewer (2026-10-22, outside UX review: nobody read the old full-screen card in its
+  5 s countdown, and the countdown was there only because the card covered the match). The hero
+  moment's stream starts when the card closes (Start, Skip, Escape or a click beside it): its key
   scan comes in the first seconds and must not play under the card. A stitched match's stream
   plays behind the card; its first possession is open play.
 - When the stream detects the hero moment, the show plays at once; it does not wait for the
@@ -1980,7 +1985,7 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
-- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the lineup card,
+- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the intro card,
   the moment card and the story, and the link `?tour=1`, or `?tour=<step id>`): an optional walk
   of about ninety seconds, so a judge with three minutes sees every signature feature without
   exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
@@ -2252,7 +2257,7 @@ reported to be Xsens motion capture; animation only): the players' walk
       (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
       3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
       (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
-      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      LCP is text in both (the lineup card's heading at about 6.1 s, before the intro card; when it first paints in
       the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
       eval/reports/web_load.md). `npm run fps` 60
       capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
@@ -2284,13 +2289,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
-- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
-      without the look and its verified line are on screen within 20 s of opening the page, and
-      any viewer action ends the show.
+- [x] Cold load: nothing of the hero moment plays under the intro card, which waits for the
+      viewer; after Start, the run without the look and its verified line are on screen within
+      20 s, and any viewer action ends the show.
       — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
-      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
-      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
-      2026-10-21)
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("after Start, the run without
+      the look is on screen and said within 20 s"),
+      [web/src/ui/introCard.test.tsx](../web/src/ui/introCard.test.tsx); `npm run smoke`, page
+      `cold-load-without-the-look` (16 s after the page opened, 2026-10-21, with the old card)
 - [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
       no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
       slot is a render violation, in en and zh; values cached with ids are renamed when read, with

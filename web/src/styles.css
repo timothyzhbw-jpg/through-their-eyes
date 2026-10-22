@@ -404,91 +404,104 @@ optgroup {
   color: var(--chalk-3);
 }
 
-/* ---------- the lineup card ---------- */
-.lineup-card {
+/* ---------- the first screen: the intro card ---------- */
+/* Where the moment card goes (on a phone, a sheet at the bottom): the picture stays in view. No
+   blur behind it, and nothing counts down. */
+.intro-scrim {
   position: fixed;
   inset: 0;
-  z-index: 30;
-  overflow: auto;
-  overscroll-behavior: contain;
-  /* 0.92: the stream still shows through, and Chalk 3 labels keep 4.5:1 over a white pill behind */
-  background:
-    radial-gradient(ellipse at 50% 0, rgba(246, 213, 102, 0.045), transparent 60%),
-    rgba(8, 14, 11, 0.92);
-  backdrop-filter: blur(8px);
-  color: var(--chalk);
+  z-index: 29;
 }
-.lineup-inner {
-  width: min(100%, 1080px);
-  min-height: 100%;
-  margin: 0 auto;
-  padding: clamp(28px, 4vh, 48px) 48px;
+.intro-card {
+  position: absolute;
+  z-index: 30;
+  top: var(--head-h);
+  right: var(--gutter);
+  width: var(--card-w);
+  max-height: calc(100% - var(--head-h) - var(--gutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-}
-.lineup-head {
-  text-align: center;
+  gap: 16px;
+  padding: 24px;
+  border-radius: var(--r-card);
+  background: var(--night-2); /* opaque: the controls under a phone's sheet must not show through */
+  box-shadow:
+    inset 0 0 0 1px var(--hairline-strong),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  color: var(--chalk);
   animation: tt-rise 560ms var(--settle) both;
 }
-.lineup-head h2 {
-  margin: 14px 0 18px;
-  font: 300 clamp(64px, 7vw, 92px)/1 var(--font-display);
-  letter-spacing: -0.04em;
+.intro-card .kicker {
+  margin: 0;
 }
-.lineup-head em {
+.intro-hook {
+  margin: 0;
+  font: 400 34px/1.06 var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.intro-hook em {
   color: var(--floodlight);
-  padding: 0 0.12em;
+}
+.intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.intro-more-toggle svg {
+  transition: transform var(--t-quick) var(--settle);
+}
+.intro-more-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.intro-more {
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline-strong);
+}
+.intro-more[hidden] {
+  display: none;
+}
+.lineup-clubs {
+  margin: 0 0 10px;
+  font: 400 26px/1.1 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.lineup-clubs em {
+  color: var(--floodlight);
+  padding: 0 0.1em;
 }
 .lineup-pitch {
-  max-width: 620px;
-  margin: 0 auto 32px;
-  font: 400 clamp(17px, 1.5vw, 20px)/1.45 var(--font-display);
+  margin: 0 0 20px;
+  font: 400 16px/1.45 var(--font-display);
   color: var(--chalk-2);
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 .lineup-pitch em {
   color: var(--chalk);
 }
-.lineup-countdown {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--floodlight);
-  transform-origin: left center;
-  animation: tt-countdown linear both;
-  pointer-events: none;
-}
-@keyframes tt-countdown {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
 .lineup-teams {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 48px;
-  animation: tt-rise 560ms 60ms var(--settle) both;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
 }
 .lineup-team-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--hairline-strong);
 }
-.lineup-team-head h3 {
+.lineup-team-head h4 {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0;
-  font: 400 26px/1 var(--font-display);
+  font: 400 20px/1 var(--font-display);
 }
 .lineup-team-head i {
   width: 7px;
@@ -506,22 +519,23 @@ optgroup {
 }
 .lineup-team li {
   display: grid;
-  grid-template-columns: 34px minmax(80px, 1fr) minmax(32px, 90px) 44px;
+  grid-template-columns: 28px minmax(80px, 1fr) minmax(24px, 64px) 36px;
   align-items: center;
-  gap: 12px;
-  min-height: 34px;
+  gap: 10px;
+  min-height: 30px;
   border-bottom: 1px solid var(--hairline);
 }
 .lineup-number {
   color: var(--chalk-2);
-  font: 300 27px/1 var(--font-display);
+  font: 300 22px/1 var(--font-display);
   text-align: center;
   font-variant-numeric: lining-nums tabular-nums;
 }
 .lineup-player {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
   font-size: 13px;
 }
 .lineup-role {
@@ -552,73 +566,55 @@ optgroup {
   background: var(--floodlight);
 }
 .lineup-note {
-  margin: 14px 0 24px;
+  margin: 12px 0 20px;
   color: var(--chalk-3);
   font-size: 12px;
-  animation: tt-rise 560ms 100ms var(--settle) both;
 }
 .lineup-watch {
-  padding-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid var(--hairline-strong);
-  animation: tt-rise 560ms 140ms var(--settle) both;
 }
 .lineup-options {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 12px;
 }
 .lineup-options .persona {
-  width: auto;
-  min-width: 220px;
+  width: 100%;
   background-color: var(--night-2);
 }
 .lineup-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  animation: tt-rise 560ms 180ms var(--settle) both;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 20px;
 }
 @media (max-width: 760px) {
-  .lineup-inner {
-    padding: 32px 20px;
-  }
-  .lineup-head .kicker {
-    max-width: 260px;
-    margin-inline: auto;
-    line-height: 1.6;
-  }
-  .lineup-head h2 {
-    margin: 16px 0 28px;
-    font-size: clamp(48px, 12vw, 72px);
-  }
-  .lineup-teams {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 28px;
-  }
-  .lineup-team li {
-    min-height: 38px;
-    gap: 10px;
-  }
-  .lineup-options,
-  .lineup-actions {
-    flex-direction: column;
-  }
-  .lineup-options .persona,
-  .lineup-actions .btn {
-    width: 100%;
-    min-width: 0;
-  }
-  /* one tap away however far the line-ups scroll: the buttons stay at the bottom */
-  .lineup-actions {
-    position: sticky;
+  /* A sheet at the bottom, over the playback controls, under the picture. */
+  .intro-card {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
     bottom: 0;
-    z-index: 1;
-    gap: 8px;
-    margin: 24px -20px -32px;
-    padding: 20px 20px calc(16px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(180deg, rgba(8, 14, 11, 0), var(--night) 28%);
+    width: auto;
+    max-height: 85svh;
+    gap: 14px;
+    padding: 20px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--r-card) var(--r-card) 0 0;
+  }
+  .intro-hook {
+    font-size: 28px;
+  }
+  .intro-actions .btn {
+    flex: 1 1 100%;
+    min-width: 0;
+    height: 52px;
+    font-size: 15px;
+  }
+  .lineup-actions .btn {
+    flex: 1 1 100%;
   }
 }
 
@@ -923,7 +919,7 @@ optgroup {
   white-space: nowrap;
 }
 .brand h1:focus {
-  outline: none; /* focused from code when the lineup card closes, never by Tab */
+  outline: none; /* focused from code when the intro card closes, never by Tab */
 }
 .brand .sub {
   margin: 0;
@@ -3768,9 +3764,6 @@ optgroup {
     animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001s !important;
-  }
-  .lineup-countdown {
-    display: none;
   }
 }
 
