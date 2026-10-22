@@ -75,7 +75,7 @@ def test_recap_prompts_leave_breakdown_cache_keys_alone():
     # (agents/persona_rules.py): PIPELINE_VERSION 6; with one number per quantity (claims
     # measured as the chips measure them): 7; with the persona specs (SPEC 6), which also move
     # the prompt version: 8.
-    assert prompts.PROMPT_VERSION == "d448fc898c07" and PIPELINE_VERSION == 8
+    assert prompts.PROMPT_VERSION == "c8de151a7faf" and PIPELINE_VERSION == 8
 
 
 def test_an_offline_recap_runs_the_whole_crew_graph(rc, offline):

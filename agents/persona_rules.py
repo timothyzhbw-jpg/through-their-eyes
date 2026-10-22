@@ -166,12 +166,12 @@ OPENERS: dict[str, dict[Language, dict[Story, str]]] = {
     "casual": {
         "en": {"look": "Watch his head.", "shot": "Watch his head.", "marker": "Watch his head.",
                "pressure": "Watch this."},
-        "zh": {"look": "注意看他回头。", "shot": "注意看他这一抬头。",
+        "zh": {"look": "注意看他回头。", "shot": "注意看他看哪儿。",
                "marker": "注意看他回头。", "pressure": "注意看。"},
     },
     "coach": {
         "en": dict.fromkeys(("look", "shot", "marker", "pressure"), "Coaching point."),
-        "zh": dict.fromkeys(("look", "shot", "marker", "pressure"), "教学要点。"),
+        "zh": dict.fromkeys(("look", "shot", "marker", "pressure"), "这里有个细节要讲。"),
     },
     "player_fan": {
         "en": dict.fromkeys(("look", "shot", "marker", "pressure"), "Lovely from him."),
@@ -203,7 +203,7 @@ EXTRA_CONNECTIVES: dict[str, dict[Language, tuple[str, ...]]] = {
     "casual": {"en": ("Look again.",), "zh": ("再看看。",)},
     "analyst": {"en": ("Now the numbers.", "Here's why."), "zh": ("看数据。", "关键在这里。")},
     "coach": {"en": ("Look again.",), "zh": ("再看看。",)},
-    "player_fan": {"en": ("What a player.",), "zh": ("真是好球员。",)},
+    "player_fan": {"en": ("What a player.",), "zh": ("这才是好球员。",)},
     "audio_description": {"en": (), "zh": ()},
 }
 

@@ -1445,7 +1445,7 @@ change them.
   Five to seven lines, four numbers or more. Shown: the tactical board from the first second, with
   pitch control, his pass options and his vision cone; his eyes in the board's corner. Heard: a
   measured read, the same at every tier (newscast or documentary styles, no styledegree).
-- *Coach.* What to teach: opens with "Coaching point." (教学要点。), then when he looked against the
+- *Coach.* What to teach: opens with "Coaching point." (这里有个细节要讲。), then when he looked against the
   ball (or how close the press was), the cue that called for it (the runner on his blind side), and
   the run without the look as the lesson; ends with the moment's teaching cue ("Teach it: check
   your shoulder before the ball arrives.", one per kind of moment, only when the claim that shows
@@ -1453,7 +1453,7 @@ change them.
   board side by side, the look marked, the run without the look drawn as soon as the look has
   played. Heard: steady and a little slower (−6%), a pause after the coaching point.
 - *Player fan.* About him: opens with praise ("Lovely from him.", 这一下漂亮！), then his own look,
-  his pass or shot and its numbers (how far, how fast), and may end "What a player." No expected
+  his pass or shot and its numbers (how far, how fast), and may end "What a player." (这才是好球员。) No expected
   threat, probabilities or what-ifs. Three or four lines, at most three numbers. Shown: his eyes,
   then the broadcast camera locked on him (`player_lock`) instead of the ball, no ghosts. Heard:
   the booth, warmer and higher (+3 points of pitch), a pause after the praise.
