@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
-// The first screen: a one-line hook and one button, the line-ups and whose eyes to watch behind
-// "Teams and more". It waits for the viewer (no countdown, nothing closes it by itself), closes
-// on Start, Skip, Escape or a click on the page around it, and keeps the keyboard inside.
+// The first screen: a one-line hook and one button, Start, which opens the quick tour where the
+// page has it; the line-ups, whose eyes to watch, Just watch and the full tour behind "Teams and
+// more". It waits for the viewer (no countdown, nothing closes it by itself), closes on Start,
+// Just watch, Escape or a click on the page around it, and keeps the keyboard inside.
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -14,6 +15,7 @@ import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type ViewSession } from "../session";
 import { SOURCES } from "../provenance/source";
 import { matchExport } from "../testing";
+import { closeTour, tour } from "../tour/tourState";
 import { intro } from "./intro";
 import { hookOf, IntroCard } from "./IntroCard";
 
@@ -30,6 +32,7 @@ afterEach(() => {
     container.remove();
   }
   intro.set({ open: false });
+  closeTour();
   vi.useRealTimers();
 });
 
@@ -114,14 +117,25 @@ describe("the first screen", () => {
     expect(page.querySelector(".lineup-countdown")).toBeNull();
   });
 
-  it("closes with Start, applying the chosen eyes", () => {
-    const session = offline();
-    const page = mount(session);
-    session.controls.setPovPlayer("A5");
+  it("Start opens the quick tour on a hero moment that has it", () => {
+    const page = mount(offline());
     click(button(page, "Start"));
-    expect(session.playback.get().povPlayer).toBe("H8");
     expect(intro.get().open).toBe(false);
     expect(dialogOf(page)).toBeNull();
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick", at: null });
+  });
+
+  it("Start starts watching where there is no quick tour (a stitched match), with the chosen eyes", () => {
+    const session = twoHeroes();
+    const page = mount(session);
+    click(button(page, "Teams and more"));
+    expect(page.textContent).not.toContain("Just watch"); // Start does that here
+    click(button(page, "T. Mardelius · CB Hero of possession 3"));
+    act(() => session.playback.set({ povPlayer: "H8" }));
+    click(button(page, "Start"));
+    expect(session.playback.get().povPlayer).toBe("A5");
+    expect(intro.get().open).toBe(false);
+    expect(tour.get().open).toBe(false);
   });
 
   it("closes with Escape, and with a click on the page around it", () => {
@@ -159,17 +173,17 @@ describe("the first screen", () => {
           new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true }),
         );
       });
-    // Folded: the last control is the toggle, not a hidden Skip.
+    // Folded: the last control is the toggle, not a hidden button behind it.
     tab(toggle);
     expect(document.activeElement).toBe(start);
     tab(start, true);
     expect(document.activeElement).toBe(toggle);
     click(toggle);
-    const skip = button(page, "Skip");
-    tab(skip);
+    const full = button(page, "Full tour · 90 s");
+    tab(full);
     expect(document.activeElement).toBe(start);
     expect(document.body.style.overflow).toBe("hidden");
-    click(skip);
+    click(button(page, "Just watch"));
     expect(document.body.style.overflow).toBe(overflow);
   });
 });
@@ -219,14 +233,16 @@ describe("Teams and more", () => {
     expect(intro.get().open).toBe(true);
   });
 
-  it("Skip closes without applying the default eyes", () => {
+  it("Just watch closes with the chosen eyes and no tour; the full tour is there too", () => {
     const session = offline();
-    session.controls.setPovPlayer("A5");
     const page = mount(session);
+    session.controls.setPovPlayer("A5");
     click(button(page, "Teams and more"));
-    click(button(page, "Skip"));
-    expect(session.playback.get().povPlayer).toBe("A5");
+    expect(button(page, "Full tour · 90 s")).not.toBeNull();
+    click(button(page, "Just watch"));
+    expect(session.playback.get().povPlayer).toBe("H8");
     expect(intro.get().open).toBe(false);
+    expect(tour.get().open).toBe(false);
   });
 
   it("works on a stitched match, and stays closed across session remounts on the page", () => {
