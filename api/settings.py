@@ -73,6 +73,9 @@ class Settings:
     egress_per_client: tuple[int, float] = (500, 3600.0)  # MB sent per client per window (s)
     daily_egress_gb: float = 10.0  # GB sent per UTC day, all clients (api/egress.py)
     crew_concurrency: int = 2  # crew runs with a model at once, this process (MCP subprocesses)
+    # A cached crew run in which a model step fell back to its template (degraded) is run again
+    # while the model is available, at most once per key per this many seconds (SPEC 2, 6).
+    degraded_retry_s: float = 600.0
     # The judging window (UTC days, both included): its own per-client limit and daily model cap,
     # so that a judge's tour (what-if, drill, bring-back, recap) fits, and judges behind one NAT
     # too. From the environment it defaults to the hackathon's judging, 2026-10-27/2026-11-10.
@@ -109,6 +112,7 @@ class Settings:
             egress_per_client=_rate(os.environ.get("TTE_EGRESS_PER_CLIENT") or "500/3600"),
             daily_egress_gb=float(os.environ.get("TTE_DAILY_EGRESS_GB") or 10),
             crew_concurrency=int(os.environ.get("TTE_CREW_CONCURRENCY") or 2),
+            degraded_retry_s=float(os.environ.get("TTE_DEGRADED_RETRY_S") or 600),
             judging_window=_window(os.environ.get("TTE_JUDGING_WINDOW", JUDGING)),
             judging_rate_limit=_rate(os.environ.get("TTE_JUDGING_RATE_LIMIT") or "8/600"),
             judging_daily_model_cap=int(os.environ.get("TTE_JUDGING_DAILY_MODEL_CAP") or 100),

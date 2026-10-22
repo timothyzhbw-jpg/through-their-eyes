@@ -1587,6 +1587,21 @@ cue keys change, the breakdown key does not.
 that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
 Application Insights.
 
+**A degraded run is never served as final** (2026-10-22). A model run in which any step fell back
+to its template (a step traced `template`, or a plan or reel that aired as the template) is cached
+as degraded, and every answer lists those steps (`degraded`). *Why:* a red-team read found the
+README's Analyst · 中文 link serving a cached run with the Analyst on its template after a
+`ChatClientException`, to every judge who followed it.
+- While the model is available, the API runs a degraded key again: at most once per key per
+  `TTE_DEGRADED_RETRY_S` (600 s), so many viewers of one key cost one run; under the per-client
+  limit and the daily model cap like any regeneration. A retry that comes back more degraded
+  does not replace the cached run, and the viewer gets the better one.
+- While it is not (the client is limited, the cap is reached, or the retry is not due), the
+  degraded run is served as it is, labelled by its steps' sources on the Producer desk.
+- Recaps follow the same rule; drills never write to the cache. `infra.prewarm
+  --refresh-degraded` asks for every degraded view again with `regenerate`, once per run.
+- *Evidence:* `tests/test_api_degraded.py`, `tests/test_prewarm.py`.
+
 *Implemented (M3, `agents/`):*
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
   outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
@@ -1736,7 +1751,7 @@ Application Insights.
     Breakdowns cached before traces were recorded answer `recorded: false` and the web says
     "trace not recorded for this cached run". The cache keys did not move (`PIPELINE_VERSION`
     unchanged); `infra.prewarm` reports such views as "no crew trace", and
-    `--regenerate-degraded` runs them again.
+    `--refresh-degraded` runs them again.
   - *Public, like the breakdown.* Ids, counts, verified templates with their placeholders,
     reason codes and error classes; model text only where the breakdown already shows it (the
     Director's reason, the Analyst's angle) and in tool-call arguments, labelled as the model's.
@@ -1749,6 +1764,29 @@ Application Insights.
   - *Evidence:* `tests/test_crew_trace.py`, `tests/test_api_trace.py`,
     `web/src/crewtrace/crewtrace.test.tsx` (on a fixture the backend recorded:
     `uv run python -m agents.crewtrace`).
+- **Why a crew, measured** (2026-10-22, Best Multi-Agent System; `eval/crew_evidence.py`,
+  [`eval/reports/crew_evidence.md`](../eval/reports/crew_evidence.md)). crew_vs_single found no
+  narration-quality win of the crew over one agent, so the case rests on what the architecture
+  provides, measured offline with a scripted model that answers every agent with its template's
+  choices through Agent Framework, on every hero moment the site serves × every persona and
+  language:
+  - *Fault tolerance and recovery.* With any one agent down, every script airs, verified, with
+    the other three roles from the model (the single agent keeps none); bringing the agent back
+    re-runs only the steps that read its output and gives the fault-free breakdown.
+  - *Verification by construction.* No free-text field accepts a number, every number aired is a
+    verified slot's value, and perturbed lines (a number or player the model writes, an unbacked
+    term, a broken placeholder, an unknown or forbidden claim, a tampered claim) never air with
+    the Verifier; without it they all do. The Foundry drafts cached by crew_vs_single
+    (`eval/fixtures/crew_vs_single_cache.json`) are re-checked by today's Verifier.
+  - *Auditability.* Every aired line traces to verified claims with an audit record, the voice
+    call that chose it, the Verifier round that passed it and its voice cue. Found: the trace
+    keeps 4,000 characters of a tool result (`MAX_RESULT`), which cuts the Analyst's
+    `list_claims` result on the larger moments.
+  - *Limits, measured.* The lanes run at once and more audiences cost requests, not time, but the
+    crew is not faster than one agent's call; its short steps are what fit the 8 s step timeout.
+    Found: in a model outage the API caches the all-template run under the model's key and labels
+    it `live`, then `cached`.
+  - *Tests:* `tests/test_crew_evidence.py`.
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
@@ -2142,6 +2180,16 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
+- **Every moment in reach** (2026-10-22, Bowen: "why does the site now have only one moment?";
+  [web/src/moments/](../web/src/moments/)): a rail of links above the live screen (and the same
+  row on the intro card, beside Start) names every moment the site plays, as the trailer's
+  chapters do: The look (`blind_side_run` seed 3), Under pressure (`press_escape` seed 0), The
+  corner and The goal (`corner_blind_side`, `far_post_finish`: hero moments inside match-1, opened
+  as their breakdowns there with `?match=match-1&moment=<scenario>`, where they are cached), and
+  Full match · live (match-1's stream). The page on screen is marked; a phone scrolls the row
+  sideways. While the intro card is up the rail keeps its place, hidden; it stays off Your call,
+  Take his eyes and the step-through, which have their own way back; `rail=0` leaves it out (the
+  demo video's framing). On a hero page the Live pill opens the full match's stream.
 - **Quick tour** (2026-10-22, outside UX review: a first-time visitor met too many concepts and
   buttons at once; [web/src/tour/](../web/src/tour/), the `quick` list of
   [steps.json](../web/src/tour/steps.json); Start on the intro card, "Quick tour" on the moment

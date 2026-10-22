@@ -72,6 +72,7 @@ what it means for developers, businesses and end users.
 | Production | Runs within a student budget and survives quota loss | cache by content hash, per-client rate limit, daily model cap (PR #19), Cosmos cache (PR #21); [tests/test_api.py](../tests/test_api.py) `test_past_the_daily_cap_breakdowns_serve_the_cache_or_the_template`; the judging window's cost and what happens when a quota runs out: [OPERATIONS](OPERATIONS.md#when-a-quota-runs-out); ≈ $15 expected to 2026-11-10 (SPEC §8) | ✅ |
 | End users | One moment for five audiences, two languages | casual, analyst, player fan, coach, and audio description for blind and low-vision fans, in English and Chinese; Azure AI Speech with two voices. Live: [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0), [audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0). Trailer: `casual` 1:28, `zh` 1:31. Accessibility audit: [ACCESSIBILITY](ACCESSIBILITY.md) | ✅ |
 | Businesses and developers | Live stats for coaches, an open dataset for developers | `GET /api/matches/<id>/stats`: per player distance, speeds, sprints, passes with accuracy and difficulty, from tracking and events only ([analytics/live_stats.py](../analytics/live_stats.py)); [DATASET](DATASET.md) | Partial: the dataset is not released yet |
+| Businesses | Who pays, for what, and the cost to serve | [SUBMISSION, Business model](SUBMISSION.md#business-model): the offers as hypotheses (broadcasters, clubs, the league's fan apps; no betting); measured cost per breakdown (about $0.01, [crew_vs_single](../eval/reports/crew_vs_single.md)), speech per line and hosting per month at Azure list prices of 2026-10-22 | Partial: no customer has seen it, no price is set, and the cache's share of views is not measured yet |
 | End users | Viewers understand the play better | — | **Missing:** the optional viewer pilot (SPEC §9) has not run |
 
 ## 4. User experience and presentation
@@ -106,7 +107,7 @@ as effectively". The last point is the one we measured against a single agent
 | Distinct roles | Director (whether and why to explain the moment, and so its budget), Analyst (lens and headline claims, with MCP tools), Telestrator (the `TelestrationPlan`), narration (two voices, play-by-play and colour, per persona and language), Verifier and Voice. Prompts: [agents/prompts.py](../agents/prompts.py). Live: **Crew trace** shows each agent's lane | ✅; Verifier and Voice are deterministic code by design, not models |
 | Shared state | `MomentContext` ([agents/context.py](../agents/context.py)): the run, the counterfactual, moment cards, claims, verdicts and the audit sink, read by every step; `Crew` ([agents/workflow.py](../agents/workflow.py)) holds the step trace and spans; the Crew trace shows which state each step read and wrote (PR #112, [tests/test_crew_trace.py](../tests/test_crew_trace.py)) | ✅ |
 | Handoffs | typed messages on the workflow's edges (`Briefing`, `Planned`, `Drafts`, `Rewrite`, `Approved` in [agents/workflow.py](../agents/workflow.py)); [tests/test_agents.py](../tests/test_agents.py) `test_telestrator_and_narration_run_concurrently`; [tests/test_telemetry.py](../tests/test_telemetry.py) `test_the_parallel_lanes_overlap_and_stay_children_of_the_breakdown` | ✅ |
-| Failure recovery | Each model step: a timeout, one retry, then its template. The failure drill (SPEC §6): the Producer desk takes an agent down and brings it back from the Agent Framework workflow checkpoint, which re-runs only that step and the one after it; an interrupted breakdown resumes from its last superstep, after a restart too ([tests/test_crew_recovery.py](../tests/test_crew_recovery.py), [tests/test_api_drill.py](../tests/test_api_drill.py), [web/src/producer/producer.test.tsx](../web/src/producer/producer.test.tsx)). Measured: with the Analyst or the Telestrator down, the crew aired a valid, verified breakdown 3 of 3 times with 3 of 4 model roles intact; one agent doing all four roles kept 0 of 4 ([crew_vs_single](../eval/reports/crew_vs_single.md), "Failure drill"). Outage of the model service: TODO(multi-agent-evidence) (NUMBERS MA7). Live: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer). Trailer: `redcard` 1:21, `bringback` 1:24 | Partial: a drill lives on the replica's disk, so every restart or redeploy drops it, and bring-back then answers 404 |
+| Failure recovery | Each model step: a timeout, one retry, then its template. The failure drill (SPEC §6): the Producer desk takes an agent down and brings it back from the Agent Framework workflow checkpoint, which re-runs only that step and the one after it; an interrupted breakdown resumes from its last superstep, after a restart too ([tests/test_crew_recovery.py](../tests/test_crew_recovery.py), [tests/test_api_drill.py](../tests/test_api_drill.py), [web/src/producer/producer.test.tsx](../web/src/producer/producer.test.tsx)). Measured: with the Analyst or the Telestrator down, the crew aired a valid, verified breakdown 3 of 3 times with 3 of 4 model roles intact; one agent doing all four roles kept 0 of 4 ([crew_vs_single](../eval/reports/crew_vs_single.md), "Failure drill"). Offline, through the real workflow with a scripted model ([crew_evidence](../eval/reports/crew_evidence.md), PR #195): with any one of the four agents down, 280/280 scripts aired in 28 drills and the crew kept 3 of 4 roles on the model, the single agent 0 of 4; bringing the agent back restored the fault-free breakdown in 70/70 drills; with the model service down, every API request was still answered with a verified breakdown, on templates. Live: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer). Trailer: `redcard` 1:21, `bringback` 1:24 | Partial: a drill lives on the replica's disk, so every restart or redeploy drops it, and bring-back then answers 404; in a model outage the all-template run is cached under the model's key and its chip reads Live, then Cached (crew_evidence's finding; the Producer desk shows the template steps) |
 | End-to-end outcome | one `BreakdownResult` = a validated plan + verified scripts per persona and language + timed SSML cues, played by the web app; measured against a single agent on the same inputs ([crew_vs_single](../eval/reports/crew_vs_single.md)): see [Why a crew](#why-a-crew) | Partial: the crew's lines are no better than one agent's; its advantage is recovery, timing and auditability |
 
 ### Why a crew
@@ -129,23 +130,37 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   model request (about 2.1k tokens) against the single agent's full re-run (1.7 requests, about
   11.7k tokens). The Analyst, whose findings every later step reads, cost the crew more: 11.0
   requests (about 21.6k tokens), because the steps after it run again, against the same 1.7
-  requests and about 11.7k tokens for the single agent. Outage of the model service:
-  TODO(multi-agent-evidence).
+  requests and about 11.7k tokens for the single agent. Offline at Foundry's median latencies,
+  the Telestrator is back in about 4 s and the Analyst in about 8 s; the single agent's only way
+  back is its whole call, about 9.5 s, and under the deployed 8 s step timeout it never comes
+  back ([crew_evidence](../eval/reports/crew_evidence.md), PR #195, a scripted model through the
+  real workflow; its wall times move by up to half a second from run to run, its counts do
+  not).
 - **Steps that fit the deployed timeout.** The API gives each model step 8 s. The eval allowed
   30 s, and 0 of 66 crew agent runs took longer than 8 s, against 6 of 6 single-agent runs: under
   the deployed timeout the single agent would have fallen back to its templates on every
-  moment.
+  moment. Offline, under that timeout its call times out twice and the breakdown airs on
+  templates after about 16 s (crew_evidence).
 - **A Verifier per step, and a rewrite sent to the line's author.** A rejected line goes back to
   the voice that wrote it, told why; the other lines and the plan stand
-  ([agents/workflow.py](../agents/workflow.py)). Rewrites and drops per breakdown:
-  TODO(multi-agent-evidence) (NUMBERS MA8).
+  ([agents/workflow.py](../agents/workflow.py)). Of 2,837 deliberately broken lines (a number or
+  player the model wrote, an unbacked term, a broken placeholder, an unknown, forbidden or
+  tampered claim), none aired with the Verifier; without it 2,823 aired, 888 of them false. On
+  the Foundry drafts it rejected 0 of 234 anchored lines: the schema already prevents those
+  errors (crew_evidence).
 - **Audiences in parallel.** Narration drafts every persona × language script at once, and
-  rewrites only the scripts that broke a rule. Seconds to air for four audiences against one:
-  TODO(multi-agent-evidence) (NUMBERS MA9).
+  rewrites only the scripts that broke a rule. Offline at Foundry's median latencies, narration
+  takes about 3.5 s for ten scripts as for one; one call at a time the breakdown would take
+  about 22 s instead of about 9 s. It is still not faster than one agent: about 9 s either way
+  offline, 13.8 s against 14.4 s on Foundry (crew_evidence, crew_vs_single).
 - **An audit trail per agent.** Every breakdown carries its trace: each step's typed input and
   output, the state it read and wrote, the Analyst's MCP calls, the Verifier's verdicts, and
   whether a line came from the model or a template. The **Crew trace** shows it in the app, and
-  Application Insights has the same run as spans (below).
+  Application Insights has the same run as spans (below). Offline, 394 of 394 aired lines traced
+  to verified claims with an audit record, the voice call that chose them, the Verifier round
+  that passed them and their voice cue. One gap: the trace keeps 4,000 characters of a tool
+  result, so for 52 of 352 claim lines the stored tool result no longer names the claim
+  (crew_evidence).
 - **Plans that validate.** 6 of 6 crew plans passed the web app's rules, against 5 of 6 from the
   single agent (one named a scan that does not exist).
 - **More of the headline spoken.** The crew's scripts carried 92% of the Analyst's headline

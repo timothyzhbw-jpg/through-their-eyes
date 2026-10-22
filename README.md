@@ -70,6 +70,8 @@ captions before it airs (<!--num:A5-->90 of 90<!--/num--> perturbed claims refut
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
   only; see [Limitations](#limitations).
+- **Business model.** Who would pay and for what, what one explained moment costs us to serve
+  (about a cent of model calls), and what is still missing: [SUBMISSION](docs/SUBMISSION.md#business-model).
 
 ## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
