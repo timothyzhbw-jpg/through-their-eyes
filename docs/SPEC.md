@@ -1681,8 +1681,9 @@ original visual identity.
   the frame only: no position, event or number changes.
   - Every camera switch is a clean cut (Bowen, 2026-10-21: no blur when the camera switches):
     his eyes, the broadcast camera, the tactical board and the director's cuts change the
-    picture at once, with no camera move or morph between them, and for 0.3 s after a cut no
-    blur pass runs (the head-whip blur, depth of field), easing back over 0.25 s
+    picture at once, with no camera move or morph between them, and for 0.3 s after a cut, and
+    at least its first 4 frames (one slow frame can outlast 0.3 s), no blur pass runs (the
+    head-whip blur, depth of field), easing back over 0.25 s
     ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The
     first-person head-whip blur itself is off by default and opt-in (View options, "Motion
     blur"), and subtle when on (90° shutter, at most 0.3% of the width); text rises in by

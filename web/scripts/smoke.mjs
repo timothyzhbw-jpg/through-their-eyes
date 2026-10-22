@@ -224,16 +224,16 @@ async function beat(page, { push }) {
 /** How long the replay may take to reach a frame: a software renderer (SwiftShader on the CI
  * runner) draws far fewer frames, and the app's clock steps at most 0.1 s a frame. */
 const PLAY_MS = process.env.CI ? 60_000 : 20_000;
-/** The cut guard (beat/cut.ts) keeps blur off for 0.3 s of wall time after a cut; frames drawn
- * within this long of the click are read. A software renderer draws a frame every ~100 ms, so
- * later frames rightly have their blur back. */
-const CUT_READ_MS = 250;
+/** Frames read after each cut. The cut guard (beat/cut.ts) keeps blur off for 0.3 s and for at
+ * least its first 4 frames: on a software renderer one frame can outlast the 0.3 s, so the check
+ * counts frames, one short of the guard. */
+const CUT_READ_FRAMES = 3;
 
 /** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable). The replay
  * opens as H8 looks away (his head whips round over frames 50-59, holds at 60-62, and looks back
  * over 63-69): played to frame 60, the canvas stays sharp. Then, paused, "Motion blur" is turned
  * on in View options; played into the look back, the moment the blur shows the camera cuts to
- * the broadcast camera and back, and every frame drawn within CUT_READ_MS of each cut is sharp. */
+ * the broadcast camera and back, and the first CUT_READ_FRAMES frames after each cut are sharp. */
 async function cutNoBlur(page) {
   await hero(page);
   await page.getByRole("button", { name: "Play", exact: true }).click();
@@ -264,7 +264,7 @@ async function cutNoBlur(page) {
     throw new Error("Motion blur did not turn on");
   await page.keyboard.press("Escape");
   const after = await page.evaluate(
-    async ([limit, window]) => {
+    async ([limit, reads]) => {
       const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
       const el = document.querySelector(".view.pov canvas");
       document.querySelector('button[aria-label="Play"]').click();
@@ -274,30 +274,25 @@ async function cutNoBlur(page) {
         if (performance.now() - t0 > limit) return { blurred: false };
         await frame();
       }
-      const reads = [];
+      const cuts = [];
       for (const name of ["Broadcast", "His eyes"]) {
-        const clicked = performance.now();
         [...document.querySelectorAll('[aria-label="Camera"] button')]
           .find((b) => b.textContent.trim() === name)
           .click();
         const seen = [];
-        for (;;) {
+        for (let k = 0; k < reads; k++) {
           await frame();
-          if (performance.now() - clicked > window) break;
           // The head-whip blur and, at the medium and high tiers, the depth of field.
           seen.push(Number(el.dataset.blurSigma ?? 0) + Number(el.dataset.dof ?? 0));
         }
-        reads.push({ name, seen });
+        cuts.push({ name, seen });
       }
-      return { blurred: true, reads };
+      return { blurred: true, cuts };
     },
-    [PLAY_MS, CUT_READ_MS],
+    [PLAY_MS, CUT_READ_FRAMES],
   );
   if (!after.blurred) throw new Error("Motion blur on, but no blur as his head turned back");
-  for (const { name, seen } of after.reads) {
-    if (!seen.length) {
-      throw new Error(`no frame drawn within ${CUT_READ_MS} ms of the cut to ${name}`);
-    }
+  for (const { name, seen } of after.cuts) {
     if (seen.some((v) => v > 0)) {
       throw new Error(`expected no blur right after the cut to ${name}, got ${seen.join(", ")}`);
     }
