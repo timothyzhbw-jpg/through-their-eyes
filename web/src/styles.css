@@ -3497,6 +3497,11 @@ optgroup {
   .stage:has(.stage-caption .caption-text) .stage-ticker {
     display: none;
   }
+  /* one live stat at a time, the last listed (an event, else a sprint, else the carrier): three
+     covered most of a 320 px picture */
+  .stage-ticker .stat-chip:has(+ .stat-chip) {
+    display: none;
+  }
   .stage-director .director-slot {
     display: flex;
     align-items: center;
