@@ -23,16 +23,16 @@
     {
      "team": 0,
      "all": {
-      "passes": 11,
+      "passes": 10,
       "completed": 9,
-      "completion": 0.8182,
-      "xt": -0.001
+      "completion": 0.9,
+      "xt": -0.0004
      },
      "pressed": {
-      "passes": 5,
+      "passes": 4,
       "completed": 4,
-      "completion": 0.8,
-      "xt": -0.0011
+      "completion": 1.0,
+      "xt": 0.0002
      },
      "unpressed": {
       "passes": 6,
@@ -41,10 +41,10 @@
       "xt": -0.0008
      },
      "short": {
-      "passes": 9,
+      "passes": 8,
       "completed": 8,
-      "completion": 0.8889,
-      "xt": -0.0005
+      "completion": 1.0,
+      "xt": 0.0002
      },
      "long": {
       "passes": 2,
@@ -53,10 +53,10 @@
       "xt": -0.0029
      },
      "pressed_short": {
-      "passes": 4,
+      "passes": 3,
       "completed": 3,
-      "completion": 0.75,
-      "xt": -0.0015
+      "completion": 1.0,
+      "xt": 0.0001
      },
      "unpressed_short": {
       "passes": 5,
@@ -64,16 +64,15 @@
       "completion": 1.0,
       "xt": 0.0003
      },
-     "line_breaking": 3,
-     "line_breaking_pressed": 2,
-     "lost": 2,
-     "lost_xt": 0.0039,
-     "lost_pressed_short": 1,
-     "lost_pressed_short_xt": 0.004,
+     "line_breaking": 2,
+     "line_breaking_pressed": 1,
+     "lost": 1,
+     "lost_xt": 0.0038,
+     "lost_pressed_short": 0,
+     "lost_pressed_short_xt": null,
      "pressed_short_ids": [
       "pass:H5:0188",
-      "pass:H4:0374",
-      "pass:H10:0458",
+      "pass:H4:0376",
       "pass:H6:0515"
      ]
     },
@@ -191,7 +190,7 @@
    "shot_share": null,
    "xg_share": null,
    "open_play": 3,
-   "open_play_peak_median": 0.0028,
+   "open_play_peak_median": 0.0025,
    "best": {
     "possession": 3,
     "scenario": "corner_blind_side",
@@ -236,7 +235,7 @@
    "lines": [
     {
      "id": "build_up",
-     "text": "Building short under pressure, Home kept the ball on 3 of 4 passes (75%, against 100% without pressure); the passes it lost handed Away the ball where it was worth 0.004 in expected threat, on average.",
+     "text": "Building short under pressure, Home kept the ball on 3 of 3 passes (100%, against 100% without pressure).",
      "claims": [
       "tactics_build_up"
      ]
@@ -255,16 +254,14 @@
      "kind": "computed",
      "verdict": "supported",
      "values": {
-      "n": 4,
+      "n": 3,
       "done": 3,
-      "pct": 75,
-      "base": 100,
-      "xt": 0.004
+      "pct": 100,
+      "base": 100
      },
      "evidence": [
       "pass:H5:0188",
-      "pass:H4:0374",
-      "pass:H10:0458",
+      "pass:H4:0376",
       "pass:H6:0515"
      ],
      "seek_frame": 188
@@ -294,7 +291,7 @@
    "lines": [
     {
      "id": "build_up",
-     "text": "\u4e3b\u961f\u5728\u538b\u529b\u4e0b\u77ed\u4f20\u51fa\u74034\u6b21\uff0c\u4fdd\u4f4f\u7403\u67433\u6b21\uff0875%\uff0c\u65e0\u538b\u529b\u65f6\u4e3a100%\uff09\uff1b\u4e22\u6389\u7684\u7403\u5e73\u5747\u8ba9\u5ba2\u961f\u5728\u4e22\u7403\u5904\u62ff\u5230\u4ef7\u503c0.004\u7684\u9884\u671f\u5a01\u80c1\u3002",
+     "text": "\u4e3b\u961f\u5728\u538b\u529b\u4e0b\u77ed\u4f20\u51fa\u74033\u6b21\uff0c\u4fdd\u4f4f\u7403\u67433\u6b21\uff08100%\uff0c\u65e0\u538b\u529b\u65f6\u4e3a100%\uff09\u3002",
      "claims": [
       "tactics_build_up"
      ]
@@ -313,16 +310,14 @@
      "kind": "computed",
      "verdict": "supported",
      "values": {
-      "n": 4,
+      "n": 3,
       "done": 3,
-      "pct": 75,
-      "base": 100,
-      "xt": 0.004
+      "pct": 100,
+      "base": 100
      },
      "evidence": [
       "pass:H5:0188",
-      "pass:H4:0374",
-      "pass:H10:0458",
+      "pass:H4:0376",
       "pass:H6:0515"
      ],
      "seek_frame": 188

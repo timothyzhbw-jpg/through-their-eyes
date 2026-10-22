@@ -361,8 +361,16 @@ def test_a_lone_hero_is_one_passage():
 
 
 def test_the_web_fixture_is_current():
-    """The viewer's tests (web/src/tactics/) run on this output."""
+    """The viewer's tests (web/src/tactics/) run on this output.
+
+    The short match's decisions are ties at the last digit on some seeds, so macOS and Linux (CI)
+    play it differently (10 against 11 passes in one block): the fixture is generated on Linux,
+    where CI runs, e.g. `docker run --rm -v "$PWD":/src:ro -v /tmp/out:/out python:3.11-slim
+    bash -c "pip install -q uv; cp -r /src /w; cd /w; UV_PROJECT_ENVIRONMENT=/tmp/venv uv sync -q
+    --locked; uv run python -m explain.tactics --fixture --web-fixture /out/fixture.json"`.
+    On a Mac this test fails by design; the other committed exports agree on both.
+    """
     assert WEB_FIXTURE.read_text() == web_fixture(fixture_view()), (
-        "stale: uv run python -m explain.tactics --fixture --web-fixture "
-        "web/src/tactics/fixture.json"
+        "stale: regenerate on Linux (see this test's docstring): uv run python -m "
+        "explain.tactics --fixture --web-fixture web/src/tactics/fixture.json"
     )
