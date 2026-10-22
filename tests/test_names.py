@@ -48,7 +48,8 @@ def test_an_offline_breakdown_names_every_player_and_shows_no_id(offline):
         texts = [line.text for line in script.payload.lines]
         for text in texts:
             assert not PLAYER_ID.search(text), text
-        assert any("J. Ferriday" in t for t in texts), (script.persona, script.language, texts)
+        hero = short_name("H8", script.language)  # 费里戴 in Chinese (sim/roster.py ZH_NAMES)
+        assert any(hero in t for t in texts), (script.persona, script.language, texts)
         for cue in script.voice:
             assert not PLAYER_ID.search(re.sub(r"<[^>]+>", " ", cue.ssml)), cue.ssml
             assert cue.cache_key == cache_key(cue.ssml)

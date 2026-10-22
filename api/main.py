@@ -105,6 +105,7 @@ from api.store import (
     open_storage,
 )
 from api.tamper import TamperError, tamper
+from explain.render import render_fingerprint
 
 VERSION = "0.5.0"
 DRILLS_KEPT = 50  # failure drills kept on disk for a bring-back
@@ -490,6 +491,7 @@ def create_app(
             return content_key(card=ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
                                pipeline=PIPELINE_VERSION, model=model_name,
+                               render=render_fingerprint(body.languages, ctx.claims, ctx.names),
                                **extra)  # fmt: skip
 
         if body.fail:  # a fresh run under its own key: never a cache hit, never cached for others
@@ -678,7 +680,9 @@ def create_app(
             return content_key(kind="recap", match=rc.content_hash(),
                                personas=sorted(body.personas), languages=sorted(body.languages),
                                prompts=RECAP_PROMPT_VERSION, pipeline=PIPELINE_VERSION,
-                               model=model_name, **extra)  # fmt: skip
+                               model=model_name,
+                               render=render_fingerprint(body.languages, names=rc.names),
+                               **extra)  # fmt: skip
 
         model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
         offline_key = key("offline")
@@ -755,7 +759,9 @@ def create_app(
             # A match with one hero keeps its cache keys; with several, the moment is part of it.
             moment = {"moment": ctx.card.id} if len(m.contexts) > 1 else {}
             k = content_key(match=m.id, action=action, language=body.language,
-                            persona=body.persona, version=WHATIF_VERSION, **moment)  # fmt: skip
+                            persona=body.persona, version=WHATIF_VERSION,
+                            render=render_fingerprint([body.language], names=ctx.names),
+                            **moment)  # fmt: skip
             if (hit := answers.get(k)) is not None:
                 return {"key": k, "cached": True, "capped": capped,
                         "answer": {**hit, "question": body.question}}  # fmt: skip

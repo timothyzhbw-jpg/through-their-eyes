@@ -266,7 +266,7 @@ describe("Take his eyes: looking and the result", () => {
 
     act(() => te.session.breakdown.set({ language: "zh" }));
     expect(textOf(el.querySelector(".te-lines .te-line"))).toBe(
-      "你让J. Ferriday在球到达前0.8秒越过右肩向后看。",
+      "你让费里戴在球到达前0.8秒扭头看向右后方。",
     );
   });
 

@@ -555,9 +555,10 @@ WHAT_IF_LANGUAGES = ("en", "zh")
 
 def what_if_question(action: str, language: str) -> str:
     """The suggested question for an option, in words the what-if parser maps back to it. A
-    player goes by his short name, as everywhere on screen (SPEC 4.6)."""
+    player goes by his short name, as everywhere on screen (SPEC 4.6), in Chinese by his Chinese
+    name, as the zh lines say it."""
     if action.startswith("pass:"):
-        target = short_name(action.removeprefix("pass:"))
+        target = short_name(action.removeprefix("pass:"), language)
         return f"What if he passed to {target}?" if language == "en" else f"如果他传给{target}呢？"
     if action == "carry":
         return "What if he carried it?" if language == "en" else "如果他带球呢？"

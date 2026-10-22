@@ -2,7 +2,9 @@
 
 Names are presentation only and are not in the export: the sim, the claims and the evidence keep
 the ids (H8, A5) and the teams (0 home, 1 away). Narration renders players by their short names
-(agents/context.py `names`, slot values the Verifier checks) and the clubs by theirs.
+(agents/context.py `names`, slot values the Verifier checks) and the clubs by theirs. In
+Chinese they go by `ZH_NAMES`, as a Chinese commentator names a player over an English world
+feed: the screen's labels stay "J. Ferriday", the zh captions and voice say 费里戴.
 """
 
 from __future__ import annotations
@@ -44,13 +46,56 @@ def full_name(pid: str) -> str:
     return f"{first} {last}"
 
 
-def short_name(pid: str) -> str:
-    """'J. Ferriday'; an unknown id is returned unchanged."""
+# Each surname transliterated as Chinese football media write foreign players (Xinhua style): what
+# zh narration writes and the zh voices say. "J. Ferriday" in Chinese speech came out as "G
+# Faraday" (zh-qa, 2026-10-22). One edit here renames a player in every zh line.
+ZH_NAMES: dict[str, str] = {
+    "H1": "奥伊斯特维尔特",
+    "H2": "马伦科",
+    "H3": "布兰纳",
+    "H4": "安纳斯利",
+    "H5": "韦尔坎普",
+    "H6": "索尔顿比",
+    "H7": "卡斯特兰",
+    "H8": "费里戴",
+    "H9": "瓦恩霍尔",
+    "H10": "布拉克韦尔",
+    "H11": "奥孔德鲁",
+    "A1": "塔尔维斯托",
+    "A2": "佩拉德",
+    "A3": "温德霍尔姆",
+    "A4": "格雷夫霍尔特",
+    "A5": "马德利乌斯",
+    "A6": "库尔瓦尔",
+    "A7": "芬莫尔",
+    "A8": "布伦瓦尔德",
+    "A9": "奎兰",
+    "A10": "凯斯特雷尔",
+    "A11": "温特格伦",
+}
+
+
+def short_name(pid: str, lang: str = "en") -> str:
+    """'J. Ferriday'; '费里戴' in Chinese (`lang` "zh"); an unknown id is returned unchanged."""
+    if lang == "zh" and pid in ZH_NAMES:
+        return ZH_NAMES[pid]
     found = ROSTER.get(pid)
     if found is None:
         return pid
     first, last = found
     return f"{first[0]}. {last}"
+
+
+def name_forms(pid: str) -> set[str]:
+    """Every way a text may write the player: his id, short name, surname (alone or in his full
+    name) and Chinese name. The Verifier allows each of them only inside a slot
+    (explain/render.py)."""
+    forms = {pid}
+    if pid in ROSTER:
+        forms |= {short_name(pid), ROSTER[pid][1]}
+    if pid in ZH_NAMES:
+        forms.add(ZH_NAMES[pid])
+    return forms
 
 
 # The two clubs, home (team 0) and away (team 1): name, three-letter code, Chinese name. Invented;

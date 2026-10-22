@@ -73,7 +73,10 @@ workflow's output). [`docs/architecture.svg`](../docs/architecture.svg) draws th
   breakdowns ([api/README.md](../api/README.md)).
 - **Cache keys move with the code.** `PROMPT_VERSION` changes with any instruction, and
   `PIPELINE_VERSION` in `workflow.py` must be bumped when code that shapes a breakdown changes
-  without a prompt change; both are part of the API's cache key.
+  without a prompt change; both are part of the API's cache key. So is the rendered text's
+  fingerprint (`explain.render.render_fingerprint`), which follows the claims' templates and the
+  names by itself; bump `RENDER_VERSION` there for a change to slot formatting or to a what-if,
+  look or steps template.
 - **Telemetry carries no content**: spans hold ids, counts, sources and timings. Keep Agent
   Framework's `ENABLE_SENSITIVE_DATA` off.
 

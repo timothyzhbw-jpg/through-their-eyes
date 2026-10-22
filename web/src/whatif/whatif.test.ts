@@ -26,7 +26,7 @@ describe("what-if answers", () => {
     expect(factual[0].run).toBeNull();
     expect(h4.question).toEqual({
       en: "What if he passed to K. Annersley?",
-      zh: "如果他传给K. Annersley呢？",
+      zh: "如果他传给安纳斯利呢？",
     });
   });
 
