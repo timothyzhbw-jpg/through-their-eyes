@@ -11,7 +11,7 @@
   background: rgba(8, 14, 11, 0.55);
 }
 
-.drill {
+.dr-main {
   position: absolute;
   inset: var(--head-h) var(--gutter) var(--gutter);
   display: grid;
@@ -385,7 +385,7 @@
   .dr-screen .stage-head {
     position: relative;
   }
-  .drill {
+  .dr-main {
     position: static;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto;

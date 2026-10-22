@@ -100,7 +100,7 @@ export function DrillStage({ scene = true }: { scene?: boolean }) {
   useEffect(() => startDrillClock(d), [d]);
   if (step === "closed") return null;
   return (
-    <div className="drill">
+    <div className="dr-main">
       {step === "calling" ? (
         <CallStage d={d} scene={scene} markers={markers} />
       ) : (
@@ -307,7 +307,7 @@ function CallStage(props: {
   const yc = props.d.call();
   if (!yc) return <div className="dr-view" />;
   return (
-    <div className="dr-call yourcall-embed">
+    <div className="dr-call">
       <CallView yc={yc} scene={props.scene} buttons={props.markers} />
     </div>
   );
