@@ -57,8 +57,9 @@ describe("SourceChip", () => {
     expect(el.getAttribute("title")).toBe("Live readouts from the sim");
     expect(el.querySelector(".sr-only")).toBeNull();
     const spoken = chip({ kind: "sim", spoken: true });
-    expect(spoken.querySelector(".sr-only")?.textContent).toMatch(
-      /^ \(computed directly by the simulation: not AI narration\. /,
+    const words = SOURCES.sim.title;
+    expect(spoken.querySelector(".sr-only")?.textContent).toBe(
+      ` (${words.charAt(0).toLowerCase()}${words.slice(1)})`,
     );
   });
 });
