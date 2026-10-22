@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Regenerate committed generated artifacts on the canonical platform (SPEC 3.7): python:3.11-slim,
-# where CI and the live API run. The sim is byte-identical only within one OS (macOS and glibc
+# Regenerate committed generated artifacts on the canonical platform (SPEC 3.7): python:3.11-slim
+# on linux/amd64, where CI and the live API run. The sim is byte-identical only within one OS (macOS and glibc
 # differ in libm's last bits), so files made on a Mac fail CI's byte checks.
 #
 #   scripts/regen_linux.sh [group ...]     groups: exports xt evals season dataset all
@@ -13,7 +13,8 @@
 # season   eval/reports/season.md (about an hour on 4 cores)
 # dataset  data/sample (the full dataset is built in the container and discarded)
 #
-# Needs Docker (native arm64 on a Mac equals amd64 Linux). The repository is mounted read-only and
+# Needs Docker. It runs linux/amd64, emulated on Apple silicon (slower): arm64 Linux differs from
+# amd64 in the last bit of a few exports (numpy's SIMD paths). The repository is mounted read-only and
 # copied inside the container; the results are copied back into this checkout at the end.
 # WORKERS (default 4) caps the evals' process pools.
 set -euo pipefail
@@ -25,7 +26,8 @@ workers=${WORKERS:-4}
 out=$(mktemp -d -t tte-regen.XXXXXX)
 
 status=0
-docker run --rm --cpus "$workers" -e GROUPS_TO_RUN="${groups[*]}" -e WORKERS="$workers" \
+docker run --rm --platform linux/amd64 --cpus "$workers" -e GROUPS_TO_RUN="${groups[*]}" \
+  -e WORKERS="$workers" \
   -v "$PWD":/src:ro -v "$out":/out python:3.11-slim bash -c '
 set -uo pipefail
 pip install -q uv 2>/dev/null

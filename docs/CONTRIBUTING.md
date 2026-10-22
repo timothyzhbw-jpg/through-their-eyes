@@ -102,8 +102,9 @@ eval uses) runs them before it merges:
 `demo/hero.html`, the xT grid and its fingerprint, `data/sample`, the eval reports): CI and the
 live API run in `python:3.11-slim`. The sim is byte-identical only within one OS (SPEC 3.7): macOS
 and glibc differ in libm's last bits, which open play and the hero counterfactuals amplify to
-millimetres, so files made on a Mac fail CI. Generate them in the container (Docker; native arm64
-on a Mac equals amd64 Linux):
+millimetres, so files made on a Mac fail CI. Generate them in the container, on linux/amd64 like
+CI (Docker; emulated on Apple silicon, slower: arm64 Linux differs from amd64 in the last bit of a
+few exports):
 
 ```bash
 scripts/regen_linux.sh exports evals

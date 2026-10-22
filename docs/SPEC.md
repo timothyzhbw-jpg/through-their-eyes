@@ -708,10 +708,10 @@ is a step.
   1 mm/s, angles to 1e-4 rad). Cross-platform identity is not promised: numpy's SIMD
   transcendental functions can differ in the last bits between ARM and x86, and a multi-agent sim
   amplifies that. CI compares runs inside CI, never against hashes made on a laptop.
-  *Canonical platform (2026-10-22):* macOS and glibc differ in libm's last bits (arm64 and amd64
-  Linux agree), so every committed generated artifact (exports, fixtures, the xT grid, the eval
-  reports, `data/sample`) is generated on Linux, `python:3.11-slim`, where CI and the live API
-  run: `scripts/regen_linux.sh`. Checks that compare one with a fresh run are byte for byte on
+  *Canonical platform (2026-10-22):* macOS and glibc differ in libm's last bits, and arm64 and
+  amd64 Linux in a few exports' last bit, so every committed generated artifact (exports,
+  fixtures, the xT grid, the eval reports, `data/sample`) is generated on linux/amd64,
+  `python:3.11-slim`, where CI and the live API run: `scripts/regen_linux.sh`. Checks that compare one with a fresh run are byte for byte on
   Linux and skip elsewhere (`tests/canonical.py`).
 - `snapshot(t)` / `resume(snapshot, overrides)` re-simulate from t with overrides such as
   `drop_scan(scan_id)`, `freeze_belief(player, at=t')`, `move_player(...)`,
