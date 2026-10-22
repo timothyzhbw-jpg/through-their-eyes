@@ -177,6 +177,10 @@ _Fill in as they come to exist._
   `uv run python -m sim.export --scenario blind_side_run --seed 3 --looks
   web/public/data/look_seed3.json` (and `press_escape` seed 0) rewrites the grid the web ships;
   `uv run python -m agents.look --seed 3 --frame 50 --offset -150` prints one look's verified lines
+- `uv run python -m sim.export --scenario blind_side_run --seed 3 --steps
+  web/public/data/steps_seed3.json` (and `press_escape` seed 0) — His looks, step by step (SPEC 7):
+  the hero's looks before the reception, his decision, sim velocities and verified lines;
+  `uv run python -m agents.steps --seed 3` prints them
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or

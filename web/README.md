@@ -164,6 +164,8 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look we
 uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look web/public/data/without_look_far_post_finish_seed11.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --steps web/public/data/steps_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/data/steps_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -200,6 +202,13 @@ uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/
   lines in en and zh, and the run from the decision on for the players on the ball (each distinct
   run once). `src/takeeyes/looks.ts` splices a look into the factual run; fetched when the mode
   first opens.
+
+- `steps_seed3.json`, `steps_press_escape_seed0.json`: His looks, step by step
+  (`sim.export.export_steps`, SPEC 7). Per run: each look of the hero before the ball reaches him
+  (the dropped one marked missing), its freeze frame, who came into his sight, every player's sim
+  velocity there (mm/s), and his decision with the two players it turns on; the verified lines in
+  en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
+  scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
 
 Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
 `tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the

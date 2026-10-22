@@ -87,6 +87,14 @@ const PAGES = [
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
   },
+  { name: "link-steps", path: "?play=steps", check: scanSteps },
+  { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
+  {
+    name: "phone-320-steps",
+    path: "?play=steps",
+    device: PHONE_320,
+    check: (p) => phone(p, scanSteps, { live: false }),
+  },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
   { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
@@ -120,6 +128,20 @@ const PAGES = [
     name: "desktop-960-hero",
     path: "?intro=0",
     device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
+  },
+  // A laptop: the header's pills and the run switch over the picture must not meet (they did at
+  // 1440 px once "His looks" joined the header).
+  {
+    name: "desktop-1440-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 1440, height: 900 } },
+    check: (p) => phone(p, hero),
+  },
+  {
+    name: "desktop-1280-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 1280, height: 800 } },
     check: (p) => phone(p, hero),
   },
   {
@@ -281,6 +303,21 @@ async function takeEyes(page) {
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
+/** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
+ * frozen with its verified lines, the potential passes, then his decision with everything but two
+ * players dimmed. */
+async function scanSteps(page) {
+  await see(page.getByRole("region", { name: "His looks, step by step" }), "the step-through");
+  await see(page.getByRole("list", { name: "Steps" }), "the steps");
+  await see(page.getByRole("list", { name: "Verified lines" }), "a look's verified lines");
+  await page.getByRole("button", { name: "Potential passes" }).click();
+  await see(page.locator(".ss-board .ss-lane.chosen"), "his pick among the options", "attached");
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  while (await next.isVisible()) await next.click();
+  await see(page.getByRole("heading", { name: /His decision|The what-if/ }), "his decision");
+  await see(page.locator(".ss-focus[data-focus]"), "the dimming round two players", "attached");
+}
+
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
  * full-time card on the live screen, the recap card with a Watch per key moment, and the reel's
  * captions once it plays. */
@@ -346,8 +383,8 @@ async function lineup(page, shoot, button, then) {
   await then(page);
 }
 
-/** On a phone the page should scroll only up and down, and no two header controls overlap or run
- * off screen, with the live stream running (its status and the header's buttons are then all
+/** On a phone the page should scroll only up and down, and no two header controls (nor the run
+ * switch over the picture) overlap or run off screen, with the live stream running (its status and the header's buttons are then all
  * there). `live: false` for a screen that takes the live screen's place (Take his eyes). */
 async function phone(page, check, { live = true } = {}) {
   await check(page);
@@ -369,7 +406,7 @@ async function phone(page, check, { live = true } = {}) {
     const width = root.clientWidth;
     const found = [
       ...document.querySelectorAll(
-        ".stage-head :is(.brand, .live-chip, .live-status, button, select)",
+        ".stage-head :is(.brand, .live-chip, .live-status, button, select), .stage-run .seg",
       ),
     ].filter((el) => {
       if (el.closest(".popover")) return false;
