@@ -21,6 +21,53 @@ The source files are fetched into `out/` (git-ignored) and never committed; only
 model is. The first-person view shows it by default; the "Animated players" toggle switches back
 to the tokens.
 
+## The upgraded look (`grf_player_look.glb`, `kit_mask.webp`)
+
+The app dresses the players in the look shared with the trailer's Blender shots (`?look=v1` shows
+the plain kits on `grf_player.glb` for comparison). The model is
+`grf_player.glb` with additions only (`demo/grf/reskin.py`): every node, skin, clip and accessor
+keeps its index and bytes, so the animation code poses both alike (`src/players/lookModel.test.ts`
+compares every bone's world matrix through H8's key scan, H9's run and standing players).
+
+- `_LOOK`, one RGBA byte quad per vertex: R ambient occlusion, baked with Cycles from the rest
+  pose (0.3 m, 512 samples) and remapped to 0.45–1 so vertices hidden inside the sleeves, boots
+  and shorts don't darken the visible ones; G the keepers' long sleeves (skin from the shoulder
+  to the wrist ring, picked by skin weight) or the boots' sole ring; B the keepers' gloves (the
+  hand rings).
+- The kit's normal map (512², WebP): rolled hems at the collar, cuffs, shorts and sock tops, a
+  stitch line along the panel edges, soft folds at the waist, the armpits and the shorts. A
+  height field defined on the body in 3D, rasterised into the kit UVs, turned into a tangent-space
+  map in glTF's convention.
+- `kit_mask.webp` (256², lossless), in the same UVs: R side panels (where the torso and the outer
+  thighs face sideways), G raglan sleeves (a straight seam from the armpit to the collar, the same
+  front and back), B trims (collar, cuffs, shorts hems, a sock band). `src/players/kit.ts` colours
+  them per kit; nothing in them echoes a real club (no stripes, hoops, sashes, crests or marks).
+
+The bake and the design scripts run outside the repo (`~/tte-blender/reskin`: Blender for the
+occlusion, numpy for the rest), next to the trailer's shots, which use the same files. Together
+the two files add 17 KB (+22 %) to what the browser loads for the players.
+
+# Baked stadium (SPEC 7)
+
+`stadium_baked.glb` is our own: **modelled in Blender from our own procedural scripts**, with no
+imported models, photos or textures, and no real stadium, club, sponsor or broadcaster. The
+scripts build the same bowl as the app's procedural stadium (`src/views/stadiumGeometry.ts`, same
+numbers, pitch coordinates) with a stepped terrace, a crowd of 15,171 flat spectators, lattice
+floodlight masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+dugouts; Cycles bakes the floodlights, the roof lamps, a hidden fill under the roof for the stands,
+the sky and the ambient occlusion into it. The words on its
+boards and ribbon ("Through Their Eyes", "Synthetic match", "All players fictional") are drawn by
+the app.
+
+- Stands and roof: one 4096 x 768 lightmap (albedo x light); the grass: a 1024 x 724 map of the
+  light alone, which the app puts on its own pitch markings; the crowd, masts and props: vertex
+  colours (the square root of the light, so 8 bits keep the darks).
+- Geometry compressed with meshopt by gltfpack (meshoptimizer, MIT; decoded by the decoder that
+  ships with three.js, MIT); images re-encoded as WebP (EXT_texture_webp) with Pillow (MIT-CMU).
+  About 0.8 MB.
+- The scripts are not in this repository (bpy scripts may count as derived from Blender's GPL);
+  only their output is. Same inputs give the same file up to Cycles' sampling noise.
+
 # Extra player animations (SPEC 7)
 
 `anims_extra.glb` holds animations only: no mesh, no skin, no textures. Its nodes are the 14

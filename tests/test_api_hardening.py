@@ -145,8 +145,8 @@ def test_a_live_stream_plays_at_most_8x(tmp_path):
         while (m := ws.receive_json())["type"] != "end":
             frames += m["type"] == "frame"
         elapsed = time.monotonic() - started
-    assert frames == 65
-    assert elapsed >= 0.9 * 64 * 0.04 / 8  # at 1000x, 65 frames take milliseconds
+    assert frames == 62  # frames 100-161 of the hero run
+    assert elapsed >= 0.9 * 61 * 0.04 / 8  # at 1000x, 62 frames take milliseconds
 
 
 # --- what-if: a question the model mapped is not mapped again -----------------------------------

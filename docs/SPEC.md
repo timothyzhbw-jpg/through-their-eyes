@@ -132,7 +132,7 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
-  passages and four heroes. On this Mac it lasts 751.8 s (12:32) and ends 1–0. The heroes start
+  passages and four heroes. On this Mac it lasts 751.7 s (12:32) and ends 1–0. The heroes start
   at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0), 7:01 (the
   shot hero `far_post_finish` seed 11, who scores at the far post) and 8:51 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
@@ -156,7 +156,8 @@ on an LLM.
   - *Restarts.* A restart is how a possession begins. The first kicks off, and so does one after
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
-    kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
+    kick or corner when the whole ball went out, an indirect free kick after an offside call
+    (§3.9), a `cut` when it ended in play. On this Mac:
     2 kick-offs (the start, and after the goal), 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
@@ -187,7 +188,7 @@ on an LLM.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
 - Events: `pass, reception, carry, shot, tackle, interception, pressure, possession_change, out,
-  goal, scan, head_turn` with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed,
+  goal, offside, post, scan, head_turn` (`offside` and `post`: §3.9) with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed,
   outcome, difficulty). Ids are `<type>:<player>:<frame>`, stable across factual and
   counterfactual runs.
 - `scan` events are **ground truth** from the sim. The analytics scan detector must recover them
@@ -712,7 +713,7 @@ is a step.
 - [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
       — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
-      (39/40 seeds, 98%) and [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md)
+      (33/40 seeds, 82%; 39/40 before the run was made onside, §3.9) and [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md)
       (26/40 held-out seeds, 65%). The pressure hero `press_escape` is tested by its own
       intervention, `force:carry`, in
       [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md) (§3.6);
@@ -759,6 +760,67 @@ is a step.
       — [tests/test_look.py](../tests/test_look.py) (23 sim cases); the factual runs, the
       committed exports and every eval report regenerate unchanged with the override in the engine
       (`git status -s eval/` after re-running every eval that calls no model, 2026-10-21)
+- [x] The sim never breaks a Law of the Game without the referee calling it (§3.9): no
+      unpunished breach, wrong call or early call in the audit, and every hero moment on its demo
+      seed is onside.
+      — [eval/reports/laws.md](../eval/reports/laws.md) (0 in 2,916 runs; before the referee, on
+      main 3b9480e: 237 unpunished breaches in 2,918 runs, 182 of them offside);
+      [tests/test_laws.py](../tests/test_laws.py), [tests/test_laws_checks.py](../tests/test_laws_checks.py)
+
+### 3.9 Laws of the Game (2026-10-22)
+The sim plays by the IFAB Laws of the Game as hard rules: it never breaks a law without the
+referee calling it. Bowen asked for it on 2026-10-22 ("把足球裁判员手册写进sim写死"), after he saw that
+the flagship pass H8 → H9 of `blind_side_run` was offside. The audit found it offside on every
+seed. The source is the IFAB *Laws of the Game 2026/27* on theifab.com, read law by law on
+2026-10-22 ([REFERENCES.md](REFERENCES.md#the-laws-of-the-game-spec-39)): where the Laws and
+intuition differ, the Laws win. Each rule is cited by law and section ("IFAB Laws of the Game,
+Law 11.2") and restated in our own words; no text, diagram or figure of the Laws is in the repo.
+
+- **Where.**
+  - `sim/laws.py`: constants and pure checks over a frame or an event, with no engine imports.
+  - `sim/referee.py`: the referee in the frame loop, called by `sim/engine.py`.
+  - `eval/laws.py`: the audit of every scenario on design and held-out seeds, each hero's
+    intervention, and both served matches, written to
+    [eval/reports/laws.md](../eval/reports/laws.md).
+  - Tests: [tests/test_laws_checks.py](../tests/test_laws_checks.py) (hand-built snapshots,
+    every offside edge case), [tests/test_laws_audit.py](../tests/test_laws_audit.py) and
+    [tests/test_laws.py](../tests/test_laws.py) (the invariant sweep: no unpunished breach, no
+    wrong or early call).
+  - The web's pitch is checked against `sim/laws.py` by `tests/test_pitch_geometry.py`.
+- **Body model.** Players are points: the centre of the body on the ground. For offside the Laws
+  count head, body and feet, never the hands or arms (Law 11.1), and compare the attacker's part nearest the goal line
+  with the second-last opponent's. Every player has the same body, so its depth cancels and the
+  comparison is point against point; the ball counts by its centre. "Level" means within 1 mm,
+  the resolution positions are written at (§3.7).
+
+| Law | What the sim does |
+|---|---|
+| 1, the field | 105 × 68 m, inside the international range (1.4). Lines 12 cm, each belonging to the area it bounds (1.2). Goal area 5.5 m (1.5); penalty area 16.5 m, penalty mark 11 m, penalty arc 9.15 m (1.6); centre circle 9.15 m (1.2); corner arc 1 m (1.7). Goal 7.32 m between the inner edges of the posts, 2.44 m to the bar's lower edge; round posts on the goal line, their backs on its outer edge (1.10 allows round ones). `sim.config`, `sim.shots`, `analytics.xt` and the web app use these numbers (tests). |
+| 2, the ball | Radius 0.11 m, inside the 68–70 cm circumference (0.108–0.111 m), and 0.43 kg, inside 410–450 g (2.1). |
+| 3, the players | Eleven a side, one goalkeeper each, in every scenario (3.1; test). |
+| 8, kick-off | Not simulated: a match's kick-offs are stitches (§3.1). `laws.restart_breaches` checks one (8.1). |
+| 9, ball in and out of play | Out once the whole ball is over a goal line or a touchline, carried or rolling, on the first frame it has wholly crossed (9.1). A ball back off a post stays in play (9.2). Until 2026-10-22 it was out when its centre crossed, and a carried ball never went out. |
+| 10, a goal | Any ball that wholly crossed the goal line between the posts and under the bar, whoever touched it last, and only if the scoring team committed no offence first (10.1). An own goal counts for the attacking team (`own_goal`). A ball that meets a post bounces off it (`sim.ball.post_contact`, restitution 0.5, tunable and uncited). Until then a ball through the post counted as a goal or as wide, and a pass that rolled in was called out. |
+| 11, offside | At the first contact of a team-mate's pass or shot the referee notes who is in an offside position: in the opponents' half (the halfway line excluded), nearer their goal line than the ball and the second-last opponent; level is onside (11.1). Off-field players count as on the line (11.4). The offence needs involvement in active play (11.2): he plays or touches the ball, including after it came back off a post (gaining an advantage: the watch survives the rebound); he challenges an opponent for it (within the 1 m control radius); or he clearly blocks the keeper's line of vision at a shot. A clear attempt to play a close ball and an obvious action are judgement calls the sim has no data for. No offence straight from a goal kick, throw-in or corner (11.3). Play stops with an `offside` event and an indirect free kick to the defenders where he became involved (11.4); the pass's outcome is `offside` and the stitched match restarts with `free_kick`. |
+| 11, players who know it | Attackers without the ball hold HOLD_MARGIN (1 m) short of the line while their team has the ball, except the intended receiver of a pass in flight (`Referee.hold_the_line`). A scripted run is timed by its scenario. The decision model multiplies a pass's P(success) by 1 − P(offside) on the carrier's belief, with the belief's position spread (§3.5), so a clear offside pass is worth about losing the ball there; only a belief error or the softmax picks it. `possession_play`'s passer never picks an offside receiver. |
+| 12, fouls | A keeper handles (saves) only inside his own penalty area (12.1); he never handles a team-mate's back pass or throw-in (12.2), and never holds the ball for eight seconds (12.3). A tackle counts only ball-first: the tackler is nearer the ball than the carrier, our stand-in for a careless challenge (12.1; `press_escape`, the only scenario with tackles). Players are points with no contact model, so the sim has no other fouls to call. |
+| 13–17, restarts | The only simulated restart is `corner_blind_side`'s corner (`Scenario.restart`): the ball in the corner area, part of it over the arc being enough, and opponents 9.15 m from the arc until it is taken (17.1; `Referee.keep_back`). The receiver of a corner cannot be offside (11.3). Checks for the others (13.2–13.3, 15.1, 16.1) are in `laws.restart_breaches`; throw-ins, goal kicks and kick-offs between possessions are stitches (§3.1), and `eval/laws.py` lists what the Laws award and to which team. |
+
+- **The flagship pass, onside by construction.** `blind_side_run`'s H9 starts 5 m deeper
+  (19, −2), with A5 straight goal-side of him. His run is timed so that he is 1 m short of the
+  second-last defender as H8 plays, at speed, and crosses the line only once the ball is on its
+  way. The new layout was chosen on design seeds 0–99 (onside 100/100, flips 84/100), then run
+  once on held-out 100–139: flips 33/40 (82%, target ≥ 60%). Seed 3: H9 1.50 m onside at
+  7.75 m/s; the pass is completed.
+- **What the audit found** ([eval/reports/laws.md](../eval/reports/laws.md)). On main before the
+  referee (3b9480e), 2,918 runs had 237 unpunished breaches: 182 offside offences, 27 tackles
+  through the man, 18 goals not given and 10 balls carried over a line. There were also 144 early
+  calls and 79 balls through the woodwork. With the referee: none in 2,916 runs. Every other hero
+  gate is unchanged; `blind_side_run` flips 33/40 (was 39/40, offside) and its scan lens wins
+  34/40.
+- **Not yet.** Live match stats skip a pass that ends in an offside call (§4.6: their outcomes
+  are complete, intercepted, out). Stitched restarts after a throw-in or a goal often start with
+  the other team (audit, "Stitched matches").
 
 ## 4. Analytics kernels (`analytics/`)
 Every kernel: numpy reference + unit tests. GLSL versions in `web/` must match the numpy reference
@@ -979,10 +1041,10 @@ data limb tracking reports; nothing in the API or the app calls it yet.
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
-      table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
+      table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on when the key scan starts
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.917, recall 0.984);
+      0.923, recall 0.985);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
@@ -1568,11 +1630,40 @@ original visual identity.
     the pack was made; Digital Production (2025-03-21) reports Xsens motion capture. Bowen allowed
     the walk on 2026-10-22 on the same terms as the CMU clips: animation only, credited (hard
     constraint 2).
+- **Stadium:** two builds of one bowl ([web/src/views/stadiumGeometry.ts](../web/src/views/stadiumGeometry.ts)).
+  - *Procedural* ([Stadium.tsx](../web/src/views/Stadium.tsx)): generated in the browser, drawn
+    on the first frame; it is the fallback.
+  - *Baked* ([bakedStadium.ts](../web/src/views/bakedStadium.ts),
+    `web/public/models/stadium_baked.glb`, about 0.8 MB): modelled in Blender from our own
+    procedural scripts on the same numbers (stepped terraces, 15,171 flat spectators, lattice
+    masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+    dugouts; no imported models or textures). Cycles bakes the four masts' floodlights, the roof
+    lamps, a hidden fill under the roof for the stands, the sky and the ambient occlusion into
+    a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a light map
+    for the grass. The floodlight spots' powers are fitted by least squares so the pitch
+    is evenly lit (5th percentile 0.73 of the median). Everything but the grass is unlit; the
+    grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
+    geometry, WebP textures.
+  - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of
+    memory (the browser's hints; Safari gives none). It is fetched at low priority a second
+    after the first frame, once the page is idle, and swapped in when ready; if it fails to load,
+    the procedural stadium stays. `?stadium=procedural` or `?stadium=baked` decides. Capture
+    (`?cine=1`) is ready only once the stadium has settled, so a shot never cuts between the
+    two. The bpy scripts stay outside the repo (Blender is GPL); only their output is committed
+    (`web/public/models/README.md`).
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
     fallback, Your call). On the tactical board a keeper's token keeps its team colour, which
     the board's other layers (pitch control) also use, with a band in his kit colour.
+  - Upgraded look, approved by the art director on 2026-10-21 and shared with the trailer's
+    Blender shots (`web/public/models/README.md`; `?look=v1` shows the plain kits). The model
+    gains only appended data (`demo/grf/reskin.py`): baked occlusion and the keepers' sleeve and
+    glove masks per vertex, and a cloth normal map, so the skeleton and clips stay byte for byte
+    (`web/src/players/lookModel.test.ts` poses both and compares every bone). Kit designs come
+    from one mask defined on the body in 3D: home side panels, away raglan sleeves, keepers'
+    tonal raglan with long sleeves and gloves, trims at the collar, cuffs, hems and socks; the
+    kit colours above are unchanged. Cost: +17 KB (+22 %) for the players; fps unchanged.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -1771,10 +1862,16 @@ original visual identity.
   side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
   by what the beats added and catches up at the next possession's cut. Timing is a function of
   the frame only: no position, event or number changes.
-  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
-    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
-    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
-    with the playhead.
+  - Every camera switch is a clean cut (Bowen, 2026-10-21: no blur when the camera switches):
+    his eyes, the broadcast camera, the tactical board and the director's cuts change the
+    picture at once, with no camera move or morph between them, and for 0.3 s after a cut, and
+    at least its first 4 frames (one slow frame can outlast 0.3 s), no blur pass runs (the
+    head-whip blur, depth of field), easing back over 0.25 s
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The
+    first-person head-whip blur itself is off by default and opt-in (View options, "Motion
+    blur"), and subtle when on (90° shutter, at most 0.3% of the width); text rises in by
+    opacity and position only, never a blur. The other
+    run's ghost path draws itself on and its dashes march with the playhead.
   - Verified numbers in a caption count up from zero the first time they come up and take a
     check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
     page's text is the verified value throughout.
@@ -1789,8 +1886,29 @@ original visual identity.
     for sound", and a line that could not be spoken says "No voice" beside it.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
-  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+  - `prefers-reduced-motion`: no slow motion, push-in, count-up or sting;
     the ring, the sweep and the stamp still show.
+- **Render tiers and one look** ([web/src/quality/](../web/src/quality/), behind `?quality=` until
+  the art director and Bowen approve): *classic* (`standard`) is the picture above, the default.
+  *low*, *medium* and *high* share one look with the Blender trailer shots, on the shared targets
+  of `~/tte-blender/LOOKDEV.md` §2a: AgX tone mapping, a Fresnel rim in the lamp colour from the
+  key floodlight on the players, the crowd tinted neutral-cool, the lamp glow capped at about three
+  lamp heads with no wide halo or flare streak, four decal shadows per player at 30 % each, and a
+  faint image-based light from a procedural night-stadium environment (≤ 0.3, never visible, not
+  on the grass; no HDRI download). The tiers differ in fidelity only: medium adds a post chain
+  (half-float HDR buffer, SMAA, depth of field through the beat on the broadcast camera, the
+  head-whip blur in it); high adds ambient occlusion (GTAO at half resolution) and bloom on the
+  lamp heads only. three.js's own addons (MIT), in a lazy chunk. Cine mode takes the look with
+  `&quality=` (AgX, the rim, the lamp-only bloom, the cone in `#ffd36b`), unchanged without it.
+  - Tier from the device (renderer string, memory, phone or not; software renderers and older
+    Intel graphics get low), `?quality=standard|low|medium|high|auto`, or the
+    View options switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s
+    steps it down (low is the floor).
+  - First person gets no depth of field: the shirt numbers float in front of the stands, and a
+    blur from the scene's depth would blur them with the stands. Depth of field and the post
+    chain's head-whip blur are off around a camera cut like the standard blur
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts); smoke page `cut-no-blur-high`). Depth of
+    field eases in and out over 0.6 s of wall time, a gentle focus pull, never a pop.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1952,12 +2070,50 @@ reported to be Xsens motion capture; animation only): the players' walk
       beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
       and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
       — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
-      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [cut.test.ts](../web/src/beat/cut.test.ts) (no blur around a camera cut; smoke page
+      `cut-no-blur`: 0 px on the frames after a switch, 27.9 px with the guard taken out),
       [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
       [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
+- [x] *Baked stadium:* the GLB is at most 3 MB on the wire, meshopt and WebP; its pitch, stands,
+      crowd, masts and boards sit on stadiumGeometry.ts's numbers (pitch coordinates as three.js
+      (x, height, -y)); the app's grass reads its light map with the file's own UVs; it is
+      fetched only after the first frame and never with `?stadium=procedural`; a missing or
+      broken file keeps the procedural stadium; capture waits until the stadium has settled.
+      — [web/src/views/bakedStadium.test.ts](../web/src/views/bakedStadium.test.ts) (the file
+      decoded with meshopt in Node: every one of the 30,342 crowd triangles stands 12 cm under a
+      rake of the app's profile; the lamps on FLOODLIGHTS; the boards on BOARDS),
+      [Stadium.test.tsx](../web/src/views/Stadium.test.tsx). 2026-10-21, production build,
+      Chrome on an Apple M4 Pro (loaded machine), median of 3 cold loads at Lighthouse's Slow 4G
+      (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
+      3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
+      (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
+      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
+      eval/reports/web_load.md). `npm run fps` 60
+      capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
+      245–299 → 339–344 fps broadcast.
+- [x] *Render tiers:* tier detection, link and viewer precedence, one look at every new tier with
+      fidelity-only differences, depth of field only through the beat on the broadcast camera and
+      never under reduced motion, the rim patch on and off, the automatic step-down; each tier
+      holds 60 fps; first load no heavier; the look on the art director's shared targets
+      (`~/tte-blender/renders/review/app_v2_*`): black floor 5,8,6; first-person stands luma 22
+      (B−R +5), sky luma 12; lit pitch 33,61,36 (G/R 1.84) from eye height and 31,62,39 (G/R 1.98)
+      from the broadcast camera, luma 53–54; coral G/R 0.50; top and low tiers within one level.
+      `npm run fps` with the look (2026-10-21, M4 Pro, Metal): high and low 57.8–60.0 fps at
+      1080p; medium on the phone profile 60.0. Approved by the art director (2026-10-21). With the
+      baked stadium the grass keeps its baked light and takes the look's tint and sheen.
+      — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts),
+      [look.test.ts](../web/src/quality/look.test.ts);
+      `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;
+      `npm run fps -- --quality high|medium` (2026-10-21, Apple M4 Pro, Metal, headless):
+      1920 × 1080 high 60.0 fps p95 16.7–16.8 ms in every row; medium on a 402 × 874 @ 3 phone
+      profile 60.0 fps (this Mac's GPU, not a phone's). Uncapped at 1080p: standard 200–300 fps,
+      medium 140–160, high ≈ 128, so high costs ≈ 3–5 ms a frame here. Eager JS 467 kB gzipped
+      (469 before: the post passes left the vendor chunk); the tier chunk is 47 kB. Not measured
+      on a laptop iGPU or a real phone.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.

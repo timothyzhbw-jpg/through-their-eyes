@@ -3029,6 +3029,148 @@ optgroup {
     top: 140px;
   }
 }
+/* A short screen with the board as the main view (a 720 px laptop, a tablet on its side): his eyes
+   ride along smaller and the card leaves out its description, so the card's buttons stay on screen
+   above them (at 960 x 720 "Get breakdown" had scrolled out of the card). */
+@media (min-width: 761px) and (max-height: 780px) {
+  .focus-tactical .slot.pip,
+  .focus-tactical .swap {
+    width: min(var(--card-w), 220px);
+  }
+  .focus-tactical .stage-card {
+    max-height: calc(
+      100% - var(--head-h) - var(--bar-h) - 48px - min(var(--card-w), 220px) * 9 / 16
+    );
+  }
+  .focus-tactical .moment-card .card-body {
+    display: none;
+  }
+}
+
+/* The board as the main view keeps the HUD (whose eyes, the director's suggestion, the stats
+   ticker) off it: floating over the board they hid the players in its top-left corner, and
+   trailer shot 04 (the board, cropped) filmed them. The pitch keeps 111:74 (BOARD_EXTENT), so
+   the HUD costs the board height or width:
+   - a band over the board (16:10 screens, tablets): picker and director on one row, the
+     suggestion shortened to fit, the ticker one line under them; the board starts 92 px under
+     the band's top and its panel is as wide as the pitch at that height, centred with the band;
+   - a column beside it (from 1181 px on screens wider than 5:3, where the board has width to
+     spare): the board keeps its height. */
+@media (min-width: 761px) {
+  .focus-tactical .stage-top {
+    display: grid;
+    grid-template-columns: auto minmax(0, max-content);
+    grid-template-areas:
+      "hud director"
+      "ticker ticker";
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  .focus-tactical .stage-top .stage-hud {
+    grid-area: hud;
+  }
+  .focus-tactical .stage-top .stage-director {
+    grid-area: director;
+    min-width: 0;
+  }
+  .focus-tactical .stage-director .director {
+    flex-wrap: nowrap;
+  }
+  .focus-tactical .stage-director .director-slot {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .focus-tactical .stage-director .chip.director-chip {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .focus-tactical .stage-top .stage-ticker {
+    grid-area: ticker;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .focus-tactical .stage-ticker .stat-chip:nth-child(n + 4) {
+    display: none;
+  }
+  .focus-tactical .slot.main {
+    top: calc(var(--head-h) + 92px);
+  }
+  .focus-tactical .slot.main .view.tac {
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 111 / 74;
+    margin-inline: auto;
+  }
+}
+/* the same 92 px under the band where it starts at 140 px (the rules above for .stage-top) */
+@media (max-width: 1760px) and (min-width: 1181px) {
+  .stage.focus-tactical:has(.stage-run) .slot.main {
+    top: 232px;
+  }
+}
+@media (max-width: 1400px) and (min-width: 1181px) {
+  .stage.focus-tactical:has(.live-chip.back) .slot.main {
+    top: 232px;
+  }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
+  .focus-tactical .slot.main {
+    top: 232px;
+  }
+  .focus-tactical .stage-ticker .stat-chip:nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (min-width: 1181px) and (min-aspect-ratio: 5 / 3) {
+  .focus-tactical .stage-top {
+    right: auto;
+    width: 296px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "hud"
+      "director"
+      "ticker";
+    justify-content: stretch;
+    justify-items: start;
+    align-content: start;
+  }
+  .focus-tactical .stage-director .director {
+    flex-wrap: wrap;
+  }
+  .focus-tactical .stage-director .director-slot {
+    flex: 1 1 100%;
+  }
+  .focus-tactical .stage-director .chip.director-chip {
+    white-space: normal;
+  }
+  .focus-tactical .stage-director .director-auto {
+    margin-left: 0;
+  }
+  .focus-tactical .stage-top .stage-ticker {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: visible;
+  }
+  .focus-tactical .slot.main,
+  .stage.focus-tactical:has(.stage-run) .slot.main,
+  .stage.focus-tactical:has(.live-chip.back) .slot.main {
+    top: var(--head-h);
+    left: calc(var(--gutter) + 312px);
+  }
+  .focus-tactical .stage-caption {
+    left: calc(var(--gutter) + 312px);
+  }
+}
+/* where the run switch drops under the header row, the board starts under it, with the column */
+@media (min-width: 1181px) and (max-width: 1760px) and (min-aspect-ratio: 5 / 3) {
+  .stage.focus-tactical:has(.stage-run) .slot.main {
+    top: 140px;
+  }
+}
 /* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
    to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
    call". The switch drops under the header row there too. */
@@ -3471,20 +3613,80 @@ optgroup {
   }
 }
 
+/* The phone's live screen gives the picture to the picture. The header sits above it instead of
+   on it, so his readouts own its top edge and the caption its bottom edge; the live stats leave
+   the picture while a caption is up (they shared its bottom edge: text on text); and the
+   director's row keeps one height whether it suggests a camera or not, so the moment card under
+   it never jumps. */
+@media (max-width: 760px) {
+  .stage {
+    grid-template-areas:
+      "head"
+      "views"
+      "bar"
+      "run"
+      "director"
+      "card";
+  }
+  .stage-head {
+    grid-area: head;
+    align-self: auto;
+  }
+  .stage-hud {
+    top: 0;
+    margin: 12px 16px 0;
+  }
+  .stage:has(.stage-caption .caption-text) .stage-ticker {
+    display: none;
+  }
+  /* one live stat at a time, the last listed (an event, else a sprint, else the carrier): three
+     covered most of a 320 px picture */
+  .stage-ticker .stat-chip:has(+ .stat-chip) {
+    display: none;
+  }
+  .stage-director .director-slot {
+    display: flex;
+    align-items: center;
+    min-height: 58px;
+  }
+  .stage-director .director-idle {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font: 400 13px/1.35 var(--font-body);
+    color: var(--chalk-2);
+  }
+  .stage-director .director-chip {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-align: left;
+  }
+}
+/* The director's switch comes first and the suggestion after it: a suggestion that comes and goes
+   no longer pushes the switch along the row. */
+.stage-director .director-auto {
+  order: -1;
+}
+
 /* From 1181 px the run switch sits centred in the header row: the stream status takes its own line
    under the Live pill, between the header row and the eyes row, so the two never meet. */
 @media (min-width: 1181px) {
   .stage-head .live {
     position: relative;
   }
-  /* In the band between the header buttons (bottom edge 68 px) and the run switch (top edge 84 px),
-     i.e. 7 to 23 px under the pill: at 13 px the 13 px line ended 4 px into the switch's row, and
-     at 6 px it began inside the buttons'. At 8 px the 13.2 px line fills 69 to 82.2 px whatever
-     the status says. A long list of sprinters ends in an ellipsis. */
+  /* In the band between the header's buttons (to y 68) and the run switch under them (from
+     y 84): a fixed 12 px line at 70-82 whatever the font. At 13 px below the pill a sprinter's name
+     ran into "With the look" from 1181 to about 1400 px; at 6 px, with Linux's taller line, into
+     "Your call". A long list of sprinters ends in an ellipsis. */
   .stage-head .live-status {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 9px);
     left: 0;
+    height: 12px;
+    line-height: 12px;
     max-width: 260px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3493,28 +3695,26 @@ optgroup {
 }
 
 /* ---------- motion ---------- */
+/* Cards and captions rise and fade in, sharp from the first frame: no blur-in (Bowen: blur is
+   uncomfortable; styles.test.ts keeps keyframes blur-free). */
 @keyframes tt-rise {
   from {
     opacity: 0;
     transform: translateY(14px);
-    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-cap {
   from {
     opacity: 0;
     transform: translateY(10px);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-beat {
@@ -3648,28 +3848,4 @@ optgroup {
     opacity: 1;
     transform: none;
   }
-}
-
-/* the 3D view and the board morph into each other's place (beat/viewTransition.ts); the rest of
-   the page changes at once */
-:root {
-  view-transition-name: none;
-}
-.views > .slot:nth-child(1) {
-  view-transition-name: tte-view-3d;
-}
-.views > .slot:nth-child(2) {
-  view-transition-name: tte-view-board;
-}
-::view-transition-group(tte-view-3d),
-::view-transition-group(tte-view-board) {
-  animation-duration: var(--t-slow);
-  animation-timing-function: var(--settle);
-}
-::view-transition-old(tte-view-3d),
-::view-transition-old(tte-view-board),
-::view-transition-new(tte-view-3d),
-::view-transition-new(tte-view-board) {
-  height: 100%;
-  object-fit: cover;
 }

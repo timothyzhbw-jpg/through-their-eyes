@@ -295,3 +295,13 @@ test("the perception duck crossfades a dry and an 800 Hz copy over each window",
   assert.match(f, /volume='0\.316\*\(max\(clip\(\(t-10\)\/0\.08,0,1\)/);
   assert.match(f, /amix=inputs=2:normalize=0\[m0\]$/);
 });
+
+test("fit contain keeps the whole picture on the page colour, and a push zooms the padded frame", () => {
+  const graph = beatGraph(
+    { id: "b1", dur: 2, picture: { src: "capture", shot: "04", crop: "tactical", fit: "contain", push: [1, 1.05] } },
+    { file: "x.webm", sourceDuration: 6, cropBox: { x: 344, y: 96, w: 1128, h: 784 }, fps: 30, width: 1920, height: 1080 },
+  );
+  assert.match(graph.filter, /crop=1128:784:344:96/);
+  assert.match(graph.filter, /force_original_aspect_ratio=decrease:force_divisible_by=2,pad=1920:1080:\(ow-iw\)\/2:\(oh-ih\)\/2:color=0x050707/);
+  assert.ok(graph.filter.indexOf("pad=1920:1080") < graph.filter.indexOf("eval=frame"), "the push comes after the pad");
+});

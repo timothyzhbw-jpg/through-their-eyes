@@ -117,7 +117,7 @@ const breakdownButton = (page, name) =>
   page.locator(".panel.breakdown").getByRole("button", { name, exact: true });
 
 const WAITS = {
-  /** The match is loaded, both views have a canvas, fonts and the player model are in. */
+  /** The match is loaded, both views are up, fonts and the player model are in. */
   async assets(page, a, timeout) {
     await page.locator("header .brand h1, .load-error").first().waitFor({ timeout });
     const error = page.locator(".load-error");
@@ -125,9 +125,18 @@ const WAITS = {
     // A shot that opens on the lineup card (covered: true) waits for the canvases behind it.
     const state = a.covered ? "attached" : "visible";
     await page.locator(".view.pov canvas").waitFor({ state, timeout });
-    // views: ["pov"] for a shot that shows only the 3D view (the broadcast camera, focused).
-    if (!a.views || a.views.includes("tac"))
-      await page.locator(".view.tac canvas").waitFor({ state, timeout });
+    // views: ["pov"] for a shot that shows only the 3D view (the broadcast camera, focused). The
+    // second view is the board, or beside his eyes his belief map, which has no canvas (the hero's
+    // default view since #137; the board may be mounted under it, hidden).
+    if (!a.views || a.views.includes("tac")) {
+      const shown = (covered) =>
+        [...document.querySelectorAll(".view.tac canvas, .views .belief-map")].some(
+          (el) =>
+            covered ||
+            (el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== "hidden"),
+        );
+      await page.waitForFunction(shown, Boolean(a.covered), { timeout });
+    }
     await page.waitForLoadState("networkidle", { timeout });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     // Animated players unless the address asks for the tokens (players/trial.ts).
@@ -190,6 +199,11 @@ const WAITS = {
 function locate(page, a) {
   const scope = a.within ? page.locator(a.within) : page;
   if (a.selector) return scope.locator(a.selector).first();
+  // A list of names: whichever the page shows (a button before and after the players are named).
+  if (a.role && Array.isArray(a.name)) {
+    const any = a.name.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    return scope.getByRole(a.role, { name: new RegExp(a.exact === false ? any : `^(?:${any})$`) });
+  }
   if (a.role) return scope.getByRole(a.role, { name: a.name, exact: a.exact ?? true });
   // Not exact by default: a <label> wrapping a <select> also holds the options' text.
   return scope.getByLabel(a.label, { exact: a.exact ?? false });

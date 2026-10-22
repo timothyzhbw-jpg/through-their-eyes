@@ -12,9 +12,9 @@ At a glance (v1, built on macOS arm64):
 | | |
 |---|---|
 | Matches | 10 stitched matches, match seeds 5001–5010 |
-| Play | 130.5 min in all; 12:25–13:28 per match; 19 possessions each |
-| Frames | 195,793 at 25 Hz; 4,307,446 player rows |
-| Events | 101,202: 61,730 scans, 31,176 head turns, 2,714 passes, 2,089 receptions, 515 interceptions, 516 possession changes, 2,228 pressure spells, 190 restarts, 14 balls out of play, 10 shots, 10 keeper dives, 9 goals, 1 tackle |
+| Play | 130.4 min in all; 12:20–13:28 per match; 19 possessions each |
+| Frames | 195,651 at 25 Hz; 4,304,322 player rows |
+| Events | 101,126: 61,675 scans, 31,156 head turns, 2,712 passes, 2,089 receptions, 514 interceptions, 515 possession changes, 2,228 pressure spells, 190 restarts, 14 balls out of play, 10 shots, 10 keeper dives, 10 goals (one an own goal), 2 balls off the post, 1 tackle |
 | Perception | 2,089 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (43,869 rows) |
 | Decisions | 30 decisions on belief, with all 339 options weighed |
 | Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 70 MB |
@@ -93,7 +93,7 @@ A worked example that reads the files:
 | `end_frame` | int32 | frame | a pass or shot resolved, a scan or head turn over, a pressure spell's last frame |
 | `end_x` | float64 | m | ball position when a pass or shot was resolved |
 | `end_y` | float64 | m | |
-| `outcome` | string | | pass: `complete`, `intercepted` or `out`; shot: `goal`, `saved`, `wide` or `blocked` |
+| `outcome` | string | | pass: `complete`, `intercepted`, `out` or `offside`; shot: `goal`, `saved`, `wide`, `blocked` or `post` (back into play off the woodwork) |
 | `recipient` | string | | pass: the teammate it was played to |
 | `receiver` | string | | pass: who controlled it, teammate or interceptor; null when it went out |
 | `attrs` | string | | every attribute the sim recorded for the event, as JSON (frames in match time) |
@@ -107,19 +107,22 @@ Event types:
 | `interception` | sim | an opponent who controls the free ball | ball | `at` |
 | `possession_change` | sim | who won the ball (interception or tackle), same frame | — | |
 | `tackle` | sim | the tackler; only `press_escape` has tackles | ball | `won_from`, `at` |
-| `out` | sim | the last player to kick it | ball on the first frame off the pitch | `at` |
+| `out` | sim | the last player to touch it | ball on the first frame the whole ball is off the pitch (Law 9) | `at`, `line` (`touchline` or `goal_line`) |
 | `shot` | sim | shooter | ball at the strike | `placement` (near or far post), `aim`, `speed` (m/s), `error` (aim error, rad), `keeper`, `goal_line_y` (m), `seen` (the keeper's first sight of the ball, frame), `reach` (m), `p_save`, `outcome` |
 | `dive` | sim | goalkeeper | — | `toward` (m), `seen` (frame) |
 | `save` | sim | goalkeeper | ball | `shot` (event id) |
-| `goal` | sim | scorer | ball on the first frame past the goal line | `at` |
+| `goal` | sim | the last player to touch it; `team` is the scoring team | ball on the first frame the whole ball is past the goal line, between the posts (Law 10) | `at`, `line`, `own_goal` (true for an own goal) |
+| `offside` | sim | the player in an offside position who became involved (Law 11) | — | `at` (where; the defenders' indirect free kick), `how`, `kick` (the pass's event id), `kick_frame`, `margin` (m beyond the line), `line` (who set it), `awarded_to` |
+| `post` | sim | the last player to kick it | — | `at` (where the ball met the post) |
 | `scan` | sim | the player | — | `direction` (world yaw he turned to, rad), `amplitude` (rad from the ball), `key` (the hero scenario's key scan) |
 | `head_turn` | sim | the player | — | a partial turn away and straight back, not a scan: `direction`, `amplitude`, `partial` |
-| `restart` | stitch | the possession's first carrier | ball at its first frame | `kind`: `kick_off`, `throw_in`, `goal_kick`, `corner` or `cut`; `scenario` |
+| `restart` | stitch | the possession's first carrier | ball at its first frame | `kind`: `kick_off`, `throw_in`, `goal_kick`, `corner`, `free_kick` (after offside) or `cut`; `scenario` |
 | `pressure` | derived | the main presser | the carrier at the start | `carrier`, `peak`, `peak_frame`, `threshold` |
 
 - **How a restart's `kind` is set.** The first possession, and one after a goal, kick off. A
   set-piece scenario starts with its own set piece. Otherwise `kind` says how the *previous*
-  possession stopped: where the ball went out, or `cut` when it was still in play. The next
+  possession stopped: where the ball went out, `free_kick` after an offside call, or `cut` when
+  it was still in play. The next
   possession then starts from its own scripted set-up (SPEC 3.1). See the limitations.
 - **How a `pressure` spell is defined.** We compute it; the sim emits no pressure events.
   - It is a run of frames with one ball carrier whose pressing intensity is at least 0.7.

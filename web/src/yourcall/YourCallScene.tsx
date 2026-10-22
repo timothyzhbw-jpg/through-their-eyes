@@ -10,16 +10,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { ALL_KITS, kitSlot } from "../players/kit";
-import { NIGHT, Stadium } from "../views/Stadium";
+import { Grass, NIGHT, Stadium } from "../views/Stadium";
 import { Goals } from "../views/PovView";
-import {
-  COLORS,
-  LABEL,
-  PITCH,
-  getLabelTexture,
-  getPitchTexture,
-  useRedrawOn,
-} from "../views/scene";
+import { COLORS, LABEL, getLabelTexture, useRedrawOn } from "../views/scene";
 import { useStore } from "../store/store";
 import { TOKEN_SCALE } from "./camera";
 import type { YourCall } from "./controller";
@@ -190,14 +183,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
       <color attach="background" args={[NIGHT.horizon]} />
       <fog attach="fog" args={[NIGHT.horizon, 150, 360]} />
       <Stadium />
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <planeGeometry args={[130, 92]} />
-        <meshStandardMaterial color="#173826" />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} />
-      </mesh>
+      <Grass />
       <Goals />
       {step === "deciding" &&
         options.map((o) => (

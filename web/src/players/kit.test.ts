@@ -9,7 +9,7 @@ import type { ExportPlayer } from "../data/types";
 import { ALERT_COLOR } from "../alerts/blindSide";
 import { DETECTOR_COLOR } from "../skeleton/skeleton";
 import { COLORS } from "../views/scene";
-import { ALL_KITS, GK_KITS, KITS, isKeeper, kitOf, kitSlot } from "./kit";
+import { ALL_KITS, GK_KITS, KITS, type Kit, isKeeper, kitOf, kitSlot, paintDesign } from "./kit";
 
 const hero = parseHero(raw);
 const FLOODLIGHT = "#f6d566"; // --floodlight in styles.css
@@ -67,6 +67,57 @@ describe("kit lookup", () => {
     for (const [team, gk] of GK_KITS.entries()) {
       const near = [...KITS.map((k) => k.shirt), GK_KITS[1 - team].shirt, ...PITCH, ...reserved];
       for (const c of near) expect(deltaE(gk.shirt, c), `${gk.shirt} vs ${c}`).toBeGreaterThan(30);
+    }
+  });
+});
+
+describe("kit design (v2 look)", () => {
+  const SIZE = 100;
+  const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  /** Paint one kit over its plain colours with one mask channel set at (u, v); read it back. */
+  function paintAt(kit: Kit, u: number, v: number, channel: 0 | 1 | 2, under: string): number[] {
+    const base = new Uint8ClampedArray(SIZE * SIZE * 4);
+    const mask = new Uint8ClampedArray(SIZE * SIZE * 4);
+    const i = 4 * (Math.floor(v * SIZE) * SIZE + Math.floor(u * SIZE));
+    base.set([...hex(under), 255], i);
+    mask[i + channel] = 255;
+    paintDesign(base, mask, SIZE, kit);
+    return Array.from(base.subarray(i, i + 3));
+  }
+  const [home, away] = KITS;
+
+  it("colours the side panels on the shirt and on the shorts separately", () => {
+    expect(paintAt(home, 0.25, 0.3, 0, home.shirt)).toEqual(hex(home.panel[0]!));
+    expect(paintAt(home, 0.2, 0.5, 0, home.shorts)).toEqual(hex(home.panel[1]!));
+    expect(paintAt(away, 0.25, 0.3, 0, away.shirt)).toEqual(hex(away.shirt)); // no shirt panel
+  });
+
+  it("colours the raglan only where the kit has one", () => {
+    expect(paintAt(away, 0.25, 0.1, 1, away.shirt)).toEqual(hex(away.raglan!));
+    expect(paintAt(home, 0.25, 0.1, 1, home.shirt)).toEqual(hex(home.shirt));
+  });
+
+  it("trims the cuffs of outfield players, not the keepers' (their long sleeves go on)", () => {
+    expect(paintAt(home, 0.03, 0.05, 2, home.shirt)).toEqual(hex(home.trim));
+    for (const gk of GK_KITS) {
+      expect(paintAt(gk, 0.03, 0.05, 2, gk.raglan!)).toEqual(hex(gk.raglan!));
+      expect(paintAt(gk, 0.25, 0.01, 2, gk.shirt)).toEqual(hex(gk.trim)); // the collar
+    }
+  });
+
+  it("dresses only the keepers in long sleeves and gloves", () => {
+    for (const k of KITS) expect([k.sleeve, k.glove]).toEqual([undefined, undefined]);
+    for (const k of GK_KITS) expect(k.sleeve && k.glove).toBeTruthy();
+  });
+
+  it("keeps every design colour clear of the reserved data colours", () => {
+    const reserved = [FLOODLIGHT, DETECTOR_COLOR, ALERT_COLOR];
+    for (const k of ALL_KITS) {
+      const used = [k.panel[0], k.panel[1], k.raglan, k.sleeve, k.glove].filter(
+        (c): c is string => !!c,
+      );
+      for (const c of used)
+        for (const r of reserved) expect(deltaE(c, r), `${c} vs ${r}`).toBeGreaterThan(30);
     }
   });
 });

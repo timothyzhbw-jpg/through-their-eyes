@@ -51,6 +51,7 @@ def test_the_ball_is_a_law_2_ball():
     assert lo == pytest.approx(0.68 / (2 * math.pi)) and hi == pytest.approx(0.70 / (2 * math.pi))
     assert lo <= BallParams().radius <= hi
     assert BallParams().radius == laws.BALL_RADIUS
+    assert laws.BALL_MASS_RANGE[0] <= BallParams().mass <= laws.BALL_MASS_RANGE[1]  # 410-450 g
 
 
 def test_the_laws_reuse_the_sims_body_and_control_radius():
@@ -112,10 +113,10 @@ def test_the_ball_is_out_only_when_the_whole_ball_has_crossed_a_line(ball, line)
     "y, z, verdict",
     [
         (0.0, R, "goal"),
-        (3.66 - R, R, "goal"),  # the ball's edge touches the inner edge of the post
+        (3.66 - R - 0.01, R, "goal"),  # the ball's edge 1 cm inside the post
         (3.60, R, "post"),  # its outer part would hit the post
         (-3.70, R, "post"),
-        (3.66 + 0.12 + R, R, "wide"),  # clear of the outside of the post
+        (3.66 + 0.12 + R + 0.01, R, "wide"),  # 1 cm clear of the outside of the post
         (0.0, 2.44 - R, "goal"),  # just under the bar
         (0.0, 2.40, "post"),  # into the bar
         (0.0, 2.44 + 0.12 + R + 0.01, "over"),
@@ -126,6 +127,27 @@ def test_whole_ball_goal_line_crossings_are_goal_post_wide_or_over(y, z, verdict
     assert crossing is not None and crossing.end == 1
     assert crossing.verdict == verdict
     assert crossing.fraction == pytest.approx((52.5 + R - 52.0) / 1.0)
+
+
+def test_a_ball_that_passed_inside_the_posts_is_a_goal_wherever_it_ends():
+    # Angled outward: inside the posts as it passes them, past 3.55 m once wholly over.
+    a, b = np.array([51.94, 3.10, R]), np.array([53.04, 3.87, R])
+    crossing = laws.goal_line_crossing(a, b)
+    assert crossing.verdict == "goal" and crossing.y > 3.66 - R and crossing.y_posts < 3.55
+
+
+def test_a_ball_rolling_along_the_goal_line_meets_the_post_from_outside():
+    a, b = np.array([52.7, 6.0, R]), np.array([52.62, 0.0, R])  # beyond the line, toward goal
+    assert laws.goal_line_crossing(a, b) is None  # it never crosses the line from the field
+    a, b = np.array([52.3, 6.0, R]), np.array([52.9, 0.0, R])
+    assert laws.goal_line_crossing(a, b).verdict == "post"
+
+
+def test_the_posts_stand_on_the_goal_line_with_their_inner_edges_7_32_m_apart():
+    assert laws.POSTS.shape == (4, 2)
+    inner = 2 * (laws.POST_Y - laws.POST_RADIUS)
+    assert inner == pytest.approx(7.32)
+    assert pytest.approx(laws.HALF_LENGTH) == laws.POST_X + laws.POST_RADIUS
 
 
 def test_a_ball_half_over_the_goal_line_has_not_crossed_it():
@@ -294,28 +316,34 @@ def test_corner_from_the_arc_with_opponents_9_15_m_from_the_arc():
     pos, team = snapshot([(-46.0, 28.0), (-51.0, 23.9)], [(-52.0, 33.5), (-49.0, 25.0)])
     found = laws.restart_breaches("corner", np.array([-52.2, 33.6]), pos, team, 2)
     # H1 is 8.8 m from the corner, 7.8 m from the arc: too close; H2 is 9.2 m from the arc.
-    assert rules(found) == [("17.2", "opponents 9.15 m from the corner arc", 0)]
+    assert rules(found) == [("17.1", "opponents 9.15 m from the corner arc", 0)]
     assert found[0].value == pytest.approx(np.hypot(6.5, 6.0) - 1.0)
     off_arc = laws.restart_breaches("corner", corner + [2.0, -1.0], pos[1:], team[1:], 1)
-    assert ("17.2", "ball in the corner area", None) in rules(off_arc)
+    assert ("17.1", "ball in the corner area", None) in rules(off_arc)
+    # Part of the ball over the arc is enough: centre 1.05 m from the corner, 0.11 m ball.
+    overhang = corner + 1.05 * np.array([np.cos(-np.pi / 4), np.sin(-np.pi / 4)])
+    assert not [b for b in laws.restart_breaches("corner", overhang, pos[1:], team[1:], 1)
+                if b.player is None]  # fmt: skip
+    assert laws.in_corner_area(overhang, radius=laws.BALL_RADIUS)
+    assert not laws.in_corner_area(overhang)
 
 
 def test_throw_in_from_where_the_ball_left_with_opponents_2_m_off():
     pos, team = snapshot([(10.0, 33.9)], [(11.5, 33.0), (10.0, 31.0)])
     found = laws.restart_breaches("throw_in", np.array([10.0, 34.0]), pos, team, 0,
                                   out_at=np.array([10.4, 34.2]))  # fmt: skip
-    assert rules(found) == [("15.2", "opponents 2 m from the throw", 1)]
+    assert rules(found) == [("15.1", "opponents 2 m from the throw", 1)]
     found = laws.restart_breaches("throw_in", np.array([14.0, 34.0]), pos, team, 0,
                                   out_at=np.array([10.4, 34.2]))  # fmt: skip
-    assert ("15.2", "thrown from where the ball left the field", None) in rules(found)
+    assert ("15.1", "thrown from where the ball left the field", None) in rules(found)
 
 
 def test_goal_kick_from_the_goal_area_with_opponents_outside_the_penalty_area():
     pos, team = snapshot([(-50.0, 2.0)], [(-38.0, 5.0), (-30.0, 0.0)])
     found = laws.restart_breaches("goal_kick", np.array([-48.0, 4.0]), pos, team, 0)
-    assert rules(found) == [("16.2", "opponents outside the penalty area", 1)]
+    assert rules(found) == [("16.1", "opponents outside the penalty area", 1)]
     found = laws.restart_breaches("goal_kick", np.array([-45.0, 4.0]), pos, team, 0)
-    assert ("16.2", "ball in the goal area", None) in rules(found)
+    assert ("16.1", "ball in the goal area", None) in rules(found)
 
 
 def test_free_kick_opponents_9_15_m_unless_on_their_goal_line_between_the_posts():

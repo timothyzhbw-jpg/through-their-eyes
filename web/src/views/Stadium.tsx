@@ -1,19 +1,35 @@
-// The stadium around the pitch in the 3D view (first person and broadcast), all generated here:
-// a two-tier bowl under a roof, an instanced crowd (one draw call), four floodlight masts with a
-// glow, our own boards ("Through Their Eyes", "Synthetic match": no real brands), a night sky
-// gradient, and faint floodlight shadows under the players. It is background: dark, low
-// contrast and hazed by the fog, so the players and the look over the shoulder stay the subject.
-// Glow and shadows are faked (additive sprites, soft decals) instead of a bloom pass and shadow
-// maps, to keep 60 fps on integrated GPUs.
+// The stadium around the pitch in the 3D view (first person and broadcast): a two-tier bowl under
+// a roof, a crowd, four floodlight masts with a glow, our own boards ("Through Their Eyes",
+// "Synthetic match": no real brands), a night sky gradient, and faint floodlight shadows under
+// the players. It is background: dark, low contrast and hazed by the fog, so the players and the
+// look over the shoulder stay the subject. Glow and shadows are faked (additive sprites, soft
+// decals) instead of a bloom pass and shadow maps, to keep 60 fps on integrated GPUs.
+//
+// Two builds of the same bowl (stadiumGeometry.ts). The procedural one is generated here and
+// draws on the first frame. The baked one (bakedStadium.ts) is modelled in Blender with its
+// lighting baked in; it loads after the first frame and replaces the procedural bowl, crowd,
+// boards and masts when it is ready, and its baked light shapes the grass (Grass). The sky, the
+// lights for the players, the masts' glow and the gantry are shared.
 
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
+import { useStore } from "../store/store";
+import {
+  armBakedStadium,
+  grassMaterial,
+  groundLightFor,
+  roofLampsVisible,
+  setBoardWords,
+  stadium,
+} from "./bakedStadium";
 import { BROADCAST_CAMERA } from "./broadcast";
 import { BOARDS, BOWL, FLOODLIGHTS, hash01, loopAt, PROFILE, ROOF, seats } from "./stadiumGeometry";
-import { COLORS } from "./scene";
+import { COLORS, getPitchTexture, PITCH } from "./scene";
+import { featuresOf, quality } from "../quality/quality";
+import { grassTintAt, LOOK } from "../quality/look";
 
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
@@ -26,7 +42,10 @@ export const sceneClock: { now: () => number } = {
   now: () => performance.now() / 1000,
 };
 
+setBoardWords(boardTexture);
+
 export function Stadium() {
+  const model = useStore(stadium, (s) => s.model);
   return (
     <>
       <Sky />
@@ -35,13 +54,131 @@ export function Stadium() {
         <planeGeometry args={[2 * BOWL.halfX + 70, 2 * BOWL.halfY + 70]} />
         <meshStandardMaterial color="#121a17" roughness={1} />
       </mesh>
-      <Bowl />
-      <Crowd />
-      <Boards />
-      <Floodlights />
+      {model ? (
+        <BakedStadium />
+      ) : (
+        <>
+          <Bowl />
+          <Crowd />
+          <Boards />
+          <Masts />
+        </>
+      )}
+      <FloodlightGlow />
       <Gantry />
     </>
   );
+}
+
+/** The grass: the apron round the pitch and the pitch with its markings, lit by the scene's
+ * lights. Once the baked stadium is in, its baked light shapes them too (bakedStadium.ts). With
+ * the shared look (quality/look.ts) the pitch is tinted towards the Blender shots' green by the
+ * camera's height (a multiplier on the stripes, so the kits and the rim are untouched), with a
+ * hint of sheen; the grass never takes image-based light. */
+export function Grass() {
+  const light = useStore(stadium, (s) => s.model?.groundLight ?? null);
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  const baked = useMemo(() => {
+    if (!light) return null;
+    const sheen = look ? { specularIntensity: LOOK.grassSpecular } : undefined;
+    return {
+      apron: grassMaterial(
+        { color: look ? LOOK.apron : "#173826", envMapIntensity: 0 },
+        groundLightFor(light, 130, 92),
+        sheen,
+      ),
+      pitch: grassMaterial(
+        { map: getPitchTexture(), envMapIntensity: 0 },
+        groundLightFor(light, PITCH.length, PITCH.width),
+        sheen,
+      ),
+    };
+  }, [light, look]);
+  useEffect(
+    () => () => {
+      for (const m of baked ? [baked.apron, baked.pitch] : []) {
+        m.lightMap?.dispose();
+        m.dispose();
+      }
+    },
+    [baked],
+  );
+  const pitch = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(({ camera }) => {
+    if (!look) return;
+    (baked?.pitch ?? pitch.current)?.color.fromArray(grassTintAt(camera.position.y));
+  });
+  if (baked)
+    return (
+      <>
+        <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={baked.apron}>
+          <planeGeometry args={[130, 92]} />
+        </mesh>
+        <mesh rotation-x={-Math.PI / 2} material={baked.pitch}>
+          <planeGeometry args={[PITCH.length, PITCH.width]} />
+        </mesh>
+      </>
+    );
+  return (
+    <>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
+        <planeGeometry args={[130, 92]} />
+        {look ? (
+          <meshPhysicalMaterial
+            color={LOOK.apron}
+            specularIntensity={LOOK.grassSpecular}
+            envMapIntensity={0}
+          />
+        ) : (
+          <meshStandardMaterial color="#173826" />
+        )}
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[PITCH.length, PITCH.width]} />
+        {look ? (
+          <meshPhysicalMaterial
+            ref={pitch}
+            map={getPitchTexture()}
+            specularIntensity={LOOK.grassSpecular}
+            envMapIntensity={0}
+          />
+        ) : (
+          <meshStandardMaterial map={getPitchTexture()} />
+        )}
+      </mesh>
+    </>
+  );
+}
+
+/** The baked stadium: this canvas's clone of the loaded scene, its crowd bobbing. Asks for the
+ * file on its first frame, so the procedural stadium always draws first. */
+function BakedStadium() {
+  const model = useStore(stadium, (s) => s.model)!;
+  const scene = useMemo(() => model.scene.clone(true), [model]);
+  const roofLamps = useMemo(() => {
+    const out: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+      if (m?.userData.part === "roof_lamp") out.push(o);
+    });
+    return out;
+  }, [scene]);
+  useFrame(({ camera }) => {
+    model.time.value = sceneClock.now();
+    const show = roofLampsVisible(camera.position.y); // three's y is the height
+    for (const o of roofLamps) o.visible = show;
+  });
+  return <primitive object={scene} />;
+}
+
+/** Arms the baked stadium's load on the canvas's first frame (see bakedStadium.ts). */
+export function useArmBakedStadium() {
+  const armed = useRef(false);
+  useFrame(() => {
+    if (armed.current) return;
+    armed.current = true;
+    armBakedStadium();
+  });
 }
 
 // ---------- sky: a gradient dome that moves with the camera ----------
@@ -59,27 +196,31 @@ const skyFragment = /* glsl */ `
   void main() {
     float up = smoothstep(-0.02, 0.45, vDir.y);
     gl_FragColor = vec4(mix(uHorizon, uZenith, up), 1.0);
+    #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
 
 function Sky() {
   const mesh = useRef<THREE.Mesh>(null);
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
         vertexShader: skyVertex,
         fragmentShader: skyFragment,
         uniforms: {
-          uZenith: { value: new THREE.Color(NIGHT.zenith) },
-          uHorizon: { value: new THREE.Color(NIGHT.horizon) },
+          uZenith: { value: new THREE.Color(look ? LOOK.sky.zenith : NIGHT.zenith) },
+          uHorizon: { value: new THREE.Color(look ? LOOK.sky.horizon : NIGHT.horizon) },
         },
         side: THREE.BackSide,
         depthWrite: false,
         depthTest: false,
         fog: false,
+        // With the look the sky goes through the curve like everything else (classic: as authored).
+        toneMapped: look,
       }),
-    [],
+    [look],
   );
   useFrame(({ camera }) => mesh.current?.position.copy(camera.position));
   return (
@@ -180,8 +321,13 @@ function silhouette(): THREE.CanvasTexture {
  * away section in one half of the right end. Dim on purpose: the crowd is background. */
 const DARK_SHIRTS = ["#2b3036", "#383d44", "#3b342e", "#2c3832", "#46484c", "#25292f"];
 const CROWD_GREY = new THREE.Color("#30353a");
-function shirtColor(k: number, x: number, y: number, out: THREE.Color): THREE.Color {
+function shirtColor(k: number, x: number, y: number, out: THREE.Color, look = false): THREE.Color {
   const r = hash01(k);
+  if (look) {
+    // The shared look: the same shirts, mostly greyed, so the stands read neutral-cool.
+    shirtColor(k, x, y, out, false);
+    return out.lerp(CROWD_GREY, LOOK.crowdGrey);
+  }
   const homeEnd = x < -BOWL.halfX + 4 && r < 0.5;
   const awaySection = x > BOWL.halfX - 4 && y > 0 && r < 0.5;
   if (homeEnd || (!awaySection && r < 0.07)) out.set(COLORS.home).lerp(CROWD_GREY, 0.45);
@@ -198,6 +344,8 @@ function Crowd() {
   const placed = useMemo(() => seats().filter((_, k) => hash01(k + 11) < OCCUPANCY), []);
   const geometry = useMemo(() => new THREE.PlaneGeometry(0.5, 0.8).translate(0, 0.4, 0), []);
   const time = useMemo(() => ({ value: 0 }), []);
+  // The shared look tints the crowd neutral-cool (quality/look.ts).
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const material = useMemo(() => {
     const m = new THREE.MeshLambertMaterial({
       map: silhouette(),
@@ -219,6 +367,9 @@ function Crowd() {
     m.customProgramCacheKey = () => "crowd";
     return m;
   }, [time]);
+  useEffect(() => {
+    material.color.set(look ? LOOK.crowdTint : "#ffffff");
+  }, [look, material]);
 
   useFrame(() => {
     time.value = sceneClock.now();
@@ -235,11 +386,11 @@ function Crowd() {
       at.scale.setScalar(0.9 + 0.2 * hash01(k + 5));
       at.updateMatrix();
       m.setMatrixAt(k, at.matrix);
-      m.setColorAt(k, shirtColor(k, seat.x, seat.y, color));
+      m.setColorAt(k, shirtColor(k, seat.x, seat.y, color, look));
     });
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [placed]);
+  }, [placed, look]);
   return (
     <instancedMesh ref={mesh} args={[geometry, material, placed.length]} frustumCulled={false} />
   );
@@ -352,10 +503,14 @@ function flareTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function Floodlights() {
-  const glow = useMemo(glowTexture, []);
-  const flare = useMemo(flareTexture, []);
-  const lamp = useMemo(() => new THREE.Color(NIGHT.lamp).multiplyScalar(2.5), []);
+/** The procedural masts: a pole and a lamp bank facing the centre spot. With the shared look
+ * (quality/look.ts) the lamp faces are brighter: the high tier blooms them. */
+function Masts() {
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  const lamp = useMemo(
+    () => new THREE.Color(NIGHT.lamp).multiplyScalar(look ? LOOK.lamp : 2.5),
+    [look],
+  );
   return (
     <>
       {FLOODLIGHTS.map((m, k) => {
@@ -378,43 +533,49 @@ function Floodlights() {
                 </mesh>
               </group>
             </group>
-            <sprite position-y={m.height} scale={[34, 34, 1]}>
-              <spriteMaterial
-                map={glow}
-                transparent
-                opacity={0.5}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
-            {/* The bloom: a wide, faint halo in the night air, and the lens's flare. */}
-            <sprite position-y={m.height} scale={[96, 96, 1]}>
-              <spriteMaterial
-                map={glow}
-                transparent
-                opacity={0.13}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
-            <sprite position-y={m.height} scale={[70, 2.6, 1]}>
-              <spriteMaterial
-                map={flare}
-                transparent
-                opacity={0.2}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
           </group>
         );
       })}
+    </>
+  );
+}
+
+/** The glow round each mast's lamps, for both stadiums: the lamps' glow, and the bloom (a wide,
+ * faint halo in the night air, and the lens's flare). With the shared look (quality/look.ts) the
+ * glow is capped at about three lamp heads, with no wide halo and no flare streak. */
+function FloodlightGlow() {
+  const glow = useMemo(glowTexture, []);
+  const flare = useMemo(flareTexture, []);
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  useArmBakedStadium();
+  const sprite = (map: THREE.Texture, opacity: number) => (
+    <spriteMaterial
+      map={map}
+      transparent
+      opacity={opacity}
+      blending={THREE.AdditiveBlending}
+      depthWrite={false}
+      fog={false}
+      toneMapped={false}
+    />
+  );
+  return (
+    <>
+      {FLOODLIGHTS.map((m, k) => (
+        <group key={k} position={[m.x, m.height, -m.y]}>
+          {look ? (
+            <sprite scale={[LOOK.glowScale, LOOK.glowScale, 1]}>
+              {sprite(glow, LOOK.glowOpacity)}
+            </sprite>
+          ) : (
+            <>
+              <sprite scale={[34, 34, 1]}>{sprite(glow, 0.5)}</sprite>
+              <sprite scale={[96, 96, 1]}>{sprite(glow, 0.13)}</sprite>
+              <sprite scale={[70, 2.6, 1]}>{sprite(flare, 0.2)}</sprite>
+            </>
+          )}
+        </group>
+      ))}
     </>
   );
 }
@@ -448,10 +609,151 @@ function blobTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(cv);
 }
 
+/** The players' floodlight shadows: the classic decals, or with the shared look (quality/) the
+ * art director's mast shadows. */
+export function PlayerShadows() {
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  return look ? <MastShadows /> : <ClassicShadows />;
+}
+
+/** A wedge for a mast shadow: dark at the feet (left), fading to nothing at the tip (right),
+ * 0.5 m wide at the feet and widening to the tip (the plane is 1 × 1, scaled per player). */
+function wedgeTexture(): THREE.CanvasTexture {
+  const cv = document.createElement("canvas");
+  cv.width = 128;
+  cv.height = 64;
+  const c = cv.getContext("2d")!;
+  const img = c.createImageData(128, 64);
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 128; x++) {
+      const u = x / 127; // 0 at the feet, 1 at the tip
+      const half = 0.5 * (0.55 + 0.45 * u); // of the plane's width (the plane is the tip's width)
+      const v = Math.abs(y / 63 - 0.5);
+      const across = Math.max(0, Math.min(1, (half - v) / (0.18 * half) + 0.5));
+      const along = Math.pow(1 - u, 1.4) * Math.min(1, u * 14 + 0.35); // soft start under the core
+      const a = Math.round(255 * along * across);
+      const k = 4 * (y * 128 + x);
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
+      img.data[k + 3] = a;
+    }
+  }
+  c.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(cv);
+  return tex;
+}
+
+/**
+ * Four shadows per player, as the Blender shots draw them (LOOKDEV §2a): each points from a
+ * mast's foot through the player's feet, 1.8 m × the horizontal distance to the mast ÷ its 46 m
+ * height long, about the shoulders' width at the feet and widening as it fades to the tip; the
+ * key mast's (+x, +y) a little darker than the fills', over the dark contact core.
+ */
+function MastShadows() {
+  const { hero, playback } = useView();
+  const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const key = useRef<THREE.InstancedMesh>(null);
+  const fill = useRef<THREE.InstancedMesh>(null);
+  const contact = useRef<THREE.InstancedMesh>(null);
+  const core = useRef<THREE.InstancedMesh>(null);
+  // The wedge's plane starts at its local origin (the feet) and runs along +x.
+  const wedge = useMemo(
+    () => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0.5, 0, 0),
+    [],
+  );
+  const blob = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), []);
+  const materials = useMemo(() => {
+    const make = (alphaMap: THREE.Texture, opacity: number) =>
+      new THREE.MeshBasicMaterial({
+        color: "#000000",
+        alphaMap,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      });
+    const w = wedgeTexture();
+    const b = blobTexture();
+    return {
+      key: make(w, LOOK.keyShadow),
+      fill: make(w, LOOK.starShadow),
+      contact: make(b, 0.42),
+      core: make(b, 0.4),
+    };
+  }, []);
+  const at = useMemo(() => new THREE.Object3D(), []);
+
+  useFrame(() => {
+    const s = playback.get();
+    sampleInto(sample, hero, hero.runs[s.mode], s.frame, s.comfort);
+    const me = s.camera === "pov" ? hero.ids.indexOf(s.povPlayer) : -1;
+    for (let j = 0; j < hero.n; j++) {
+      const x = sample.pos[2 * j];
+      const y = sample.pos[2 * j + 1];
+      const size = j === me ? 0 : 1;
+      FLOODLIGHTS.forEach((m, k) => {
+        const dx = x - m.x;
+        const dy = y - m.y;
+        const reach = Math.hypot(dx, dy);
+        const length = (PLAYER_H * reach) / m.height;
+        at.position.set(x, 0.02, -y);
+        at.rotation.set(0, Math.atan2(dy, dx), 0);
+        at.scale.set(length * size, 1, LOOK.shadowTipWidth * size);
+        at.updateMatrix();
+        if (k === 0) key.current?.setMatrixAt(j, at.matrix);
+        else fill.current?.setMatrixAt(3 * j + k - 1, at.matrix);
+      });
+      at.position.set(x, 0.021, -y);
+      at.rotation.set(0, 0, 0);
+      at.scale.set(size, 1, size);
+      at.updateMatrix();
+      contact.current?.setMatrixAt(j, at.matrix);
+      at.position.y = 0.022;
+      at.scale.set(0.5 * size, 1, 0.5 * size);
+      at.updateMatrix();
+      core.current?.setMatrixAt(j, at.matrix);
+    }
+    for (const r of [key, fill, contact, core]) {
+      if (r.current) r.current.instanceMatrix.needsUpdate = true;
+    }
+  });
+
+  return (
+    <>
+      <instancedMesh
+        ref={key}
+        args={[wedge, materials.key, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={fill}
+        args={[wedge, materials.fill, 3 * hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={contact}
+        args={[blob, materials.contact, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={core}
+        args={[blob, materials.core, hero.n]}
+        frustumCulled={false}
+        renderOrder={1}
+      />
+    </>
+  );
+}
+
 /** One faint shadow per mast, pointing away from it, plus a darker contact blob. In first
  * person the POV player's own are left out, like his body. */
-export function PlayerShadows() {
+function ClassicShadows() {
   const { hero, playback } = useView();
+
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);

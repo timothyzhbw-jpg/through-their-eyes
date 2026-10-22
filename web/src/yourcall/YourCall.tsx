@@ -5,7 +5,7 @@
 // first) and a dotted path to the option aimed at; a swipe from the carrier picks the option it
 // points at. The card tells each beat with verified lines only.
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import {
   useEffect,
   useMemo,
@@ -179,6 +179,13 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const stale = new Set(picture!.players.filter((p) => p.stale).map((p) => p.id));
   const deciding = step === "deciding";
+  // The markers come up with his picture, not on an empty view before it has drawn (a new WebGL
+  // context and its shaders take a few hundred milliseconds); without WebGL, after a moment.
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setDrawn(true), DRAWN_LATEST_MS);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const local = (e: PointerEvent<HTMLElement>): Vec2 => {
     // Relative to the view, not the layer: the layer is a circle around the carrier.
@@ -200,7 +207,10 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
   };
 
   return (
-    <figure className={`yc-view step-${step}`} aria-label="His picture, from behind him">
+    <figure
+      className={`yc-view step-${step}${drawn ? "" : " drawing"}`}
+      aria-label="His picture, from behind him"
+    >
       <div ref={ref} className="yc-canvas">
         {scene && (
           <Canvas
@@ -211,6 +221,7 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
             fallback={<p className="no-webgl">This view needs WebGL.</p>}
           >
             <YourCallScene yc={yc} pose={camera} />
+            <FirstFrame onDrawn={() => setDrawn(true)} />
           </Canvas>
         )}
         {deciding && aimed && (
@@ -318,6 +329,19 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
       </div>
     </figure>
   );
+}
+
+const DRAWN_LATEST_MS = 1500;
+
+/** Calls `onDrawn` once the canvas has drawn its first frame (a frame after it ran). */
+function FirstFrame({ onDrawn }: { onDrawn: () => void }) {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    requestAnimationFrame(onDrawn);
+  });
+  return null;
 }
 
 function viewTag(step: string): string {

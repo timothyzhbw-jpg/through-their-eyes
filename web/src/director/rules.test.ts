@@ -390,7 +390,7 @@ describe("on the bundled hero moment (seed 3)", () => {
     runKnowledge(hero, hero.runs[runName], []);
 
   it("follows the ball to H8, his look over his shoulder, then the pass to H9", () => {
-    expect(hero.runs.factual.frames - 1).toBeLessThan(139 + frames(CARRY_S)); // H9 keeps it
+    expect(hero.runs.factual.frames - 1).toBeLessThan(136 + frames(CARRY_S)); // H9 keeps it
     const rows = play(live("factual"), 0, hero.runs.factual.frames - 1);
     expect(changes(rows)).toEqual([
       [15, "Switch to H8's eyes: the ball is coming to him."],
@@ -399,7 +399,7 @@ describe("on the bundled hero moment (seed 3)", () => {
       [70, "Switch to H8's eyes: he has just received the ball."],
       // H9 is already looking over his shoulder (73-88) as the ball is played.
       [75, "Switch to H9's eyes: he checks over his shoulder before the ball arrives."],
-      [139, "Switch to H9's eyes: he has just received the ball."],
+      [136, "Switch to H9's eyes: he has just received the ball."],
     ]);
   });
 

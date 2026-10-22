@@ -16,7 +16,7 @@ P_save is the shot event's `p_save`. delta_sight is P(step) minus P(step, late s
 | … first sight ≥ 0.25 s later, shots not blocked | 35/35 | reported |
 | … delta_sight > delta_position, shots not blocked and not both 0 | 30/32 | reported |
 | … P_save gap ≥ 0.4, shots on target with the step (saved or goal) | 23/23 | reported |
-| … P_save gap ≥ 0.4, shots wide with the step | 5/28 of the gate's passes | reported |
+| … P_save gap ≥ 0.4, shots wide with the step | 2/28 of the gate's passes | reported |
 
 The rows marked … are reported only. A blocked shot fails every gate that needs `p_save`. A wide shot still has a `p_save`: the save model at the point where it crosses the goal line, outside the posts. So it counts in the hard gate as the keeper's reach, even though no save was needed. delta_sight and delta_position are both 0 when the shot is beyond the keeper's reach with or without the step; that tie fails the decomposition.
 
@@ -25,14 +25,14 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | Seed | Delay step (s) | Delay no step (s) | P_save step | P_save no step | P_save step+late | Δsight | Δposition | Outcome step | Outcome no step | Outcome late | ≥0.25 s later | Gap ≥ 0.4 | Sight > position | Save→goal |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 300 | 0.000 | 0.520 | 0.700 | 0.000 | 0.047 | 0.653 | 0.047 | saved | goal | goal | yes | yes | yes | yes |
-| 301 | 0.000 | 0.480 | 0.536 | 0.000 | 0.000 | 0.536 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 301 | 0.000 | 0.480 | 0.536 | 0.000 | 0.000 | 0.536 | 0.000 | post | post | post | yes | yes | yes | no |
 | 302 | 0.000 | 0.640 | 0.700 | 0.009 | 0.372 | 0.328 | 0.362 | saved | goal | saved | yes | yes | no | yes |
 | 303 | 0.000 | 0.600 | 0.700 | 0.083 | 0.424 | 0.276 | 0.342 | saved | goal | goal | yes | yes | no | yes |
 | 304 | 0.000 | 0.520 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | wide | wide | wide | yes | no | no | no |
 | 305 | 0.000 | 0.600 | 0.700 | 0.000 | 0.000 | 0.700 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
 | 306 | 0.000 | 0.520 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | wide | wide | wide | yes | no | no | no |
 | 307 | 0.000 | 0.600 | 0.700 | 0.000 | 0.092 | 0.608 | 0.092 | saved | goal | goal | yes | yes | yes | yes |
-| 308 | 0.000 | 0.560 | 0.592 | 0.000 | 0.000 | 0.592 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 308 | 0.000 | 0.560 | 0.592 | 0.000 | 0.000 | 0.592 | 0.000 | post | post | post | yes | yes | yes | no |
 | 309 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
 | 310 | 0.000 | 0.600 | 0.700 | 0.000 | 0.324 | 0.376 | 0.324 | saved | goal | saved | yes | yes | yes | yes |
 | 311 | 0.000 | 0.520 | 0.666 | 0.000 | 0.000 | 0.666 | 0.000 | goal | goal | goal | yes | yes | yes | no |
@@ -51,7 +51,7 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 324 | 0.000 | 0.560 | 0.215 | 0.000 | 0.000 | 0.215 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 325 | 0.000 | 0.560 | 0.580 | 0.000 | 0.000 | 0.580 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
 | 326 | 0.000 | 0.520 | 0.700 | 0.030 | 0.363 | 0.337 | 0.333 | saved | goal | goal | yes | yes | yes | yes |
-| 327 | 0.000 | 0.560 | 0.478 | 0.000 | 0.000 | 0.478 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 327 | 0.000 | 0.560 | 0.478 | 0.000 | 0.000 | 0.478 | 0.000 | post | post | post | yes | yes | yes | no |
 | 328 | 0.000 | 0.600 | 0.700 | 0.000 | 0.126 | 0.574 | 0.126 | saved | goal | goal | yes | yes | yes | yes |
 | 329 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
 | 330 | 0.000 | 0.480 | 0.700 | 0.000 | 0.040 | 0.660 | 0.040 | goal | goal | goal | yes | yes | yes | no |

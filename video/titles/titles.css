@@ -1329,7 +1329,7 @@ html.spec #stage {
 
 .corner-label {
   position: absolute;
-  top: 158px; /* below the top bar of a 2.39:1 letterbox */
+  top: 28px; /* in the top bar of a 2.39:1 letterbox, level with the preview mark: off the picture */
   right: 64px;
   color: rgba(239, 237, 229, 0.72);
   font-size: 26px;
@@ -1438,4 +1438,15 @@ html.opaque .chapter {
   font-size: 22px;
   letter-spacing: 0.08em;
   color: rgba(239, 237, 229, 0.62);
+}
+
+/* A watermark in the top-left corner, clear of the corner label on the right. */
+.corner-label.corner-tl {
+  top: 22px;
+  right: auto;
+  left: 24px;
+  padding: 6px 12px 4px;
+  background: rgba(5, 8, 6, 0.7);
+  border-radius: 4px;
+  color: rgba(246, 213, 102, 0.95);
 }

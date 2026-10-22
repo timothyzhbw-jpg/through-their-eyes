@@ -89,6 +89,7 @@ eval uses) runs them before it merges:
    uv run python -m eval.corruption
    uv run python -m eval.scan_calibration
    uv run python -m eval.pitch_control_parity
+   uv run python -m eval.laws
    ```
 
 2. Regenerate the committed exports: the `sim.export` commands in

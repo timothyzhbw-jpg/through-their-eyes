@@ -4,7 +4,7 @@
 
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { declutter, labelBox, type LabelBox } from "./declutter";
+import { declutter, labelBox, labelHeight, type LabelBox } from "./declutter";
 
 const box = (x: number, y: number, depth: number, priority = false): LabelBox => ({
   x,
@@ -71,5 +71,41 @@ describe("a label's box on screen", () => {
 
   it("has no box behind the camera", () => {
     expect(labelBox(camera, new THREE.Vector3(0, 1.7, 10), 0.75, view)).toBeNull();
+  });
+});
+
+describe("how high a shirt number floats", () => {
+  // His eyes: 1.72 m up, looking level; a number 2.1 m up, 0.36 m of digits; heads top at 1.8 m.
+  const camera = new THREE.PerspectiveCamera(60, 1440 / 900, 0.05, 300);
+  camera.position.set(0, 1.72, 0);
+  camera.lookAt(0, 1.72, -10);
+  camera.updateMatrixWorld();
+  const view = { width: 1440, height: 900 };
+  const [BASE, HEAD, TEXT, GAP, MAX] = [2.1, 1.8, 0.36, 6, 28];
+  /** Where his number lands, and his head top, on screen (px, y down), d metres ahead. */
+  const onScreen = (d: number) => {
+    const box = labelBox(camera, new THREE.Vector3(0.3, BASE, -d), TEXT, view)!;
+    const k = box.h > MAX ? MAX / box.h : 1;
+    const y = labelHeight(BASE, HEAD, box.h / TEXT, TEXT * k, GAP);
+    const label = labelBox(camera, new THREE.Vector3(0.3, y, -d), TEXT, view)!;
+    const head = labelBox(camera, new THREE.Vector3(0.3, HEAD, -d), TEXT, view)!;
+    return { y, bottom: label.y + (label.h * k) / 2, head: head.y };
+  };
+
+  it("stays 2.1 m up over a player across the pitch", () => {
+    // From about 16 m out, 2.1 m up already leaves the gap over his head.
+    for (const d of [20, 30, 60]) expect(onScreen(d).y).toBe(BASE);
+  });
+
+  it("sits just above a near player's head instead of up in the stands", () => {
+    for (const d of [1.2, 2, 3]) {
+      const { y, bottom, head } = onScreen(d);
+      expect(y).toBeLessThan(BASE);
+      expect(head - bottom).toBeCloseTo(GAP, 0); // px between his head and the number
+    }
+    // At 2.1 m up it would have floated far above him: over 100 px at 1.2 m.
+    const box = labelBox(camera, new THREE.Vector3(0.3, BASE, -1.2), TEXT, view)!;
+    const head = labelBox(camera, new THREE.Vector3(0.3, HEAD, -1.2), TEXT, view)!;
+    expect(head.y - box.y).toBeGreaterThan(100);
   });
 });

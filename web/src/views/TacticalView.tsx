@@ -6,6 +6,7 @@
 
 import { Line } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { InstantFrame } from "./InstantFrame";
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
 import * as THREE from "three";
 import {
@@ -33,10 +34,13 @@ import { useSession, useView } from "../session";
 import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
 import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
+import { ghostAlpha, ghostLabelAlpha } from "./ghosts";
+import type { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { isKeeper, kitOf } from "../players/kit";
 import { BlindSideOverlay } from "../ui/BlindSideOverlay";
 import { pathTagPx, placePathTag } from "./boardLabels";
+import { FIELD } from "./fieldMarkings";
 import {
   BOARD_EXTENT,
   boardZoom,
@@ -45,6 +49,7 @@ import {
   PITCH,
   getLabelTexture,
   getPitchTexture,
+  labelAspect,
   teamColor,
   useRedrawOn,
 } from "./scene";
@@ -62,7 +67,6 @@ const GK_BAND = [0.55, 0.77] as const; // m, inner and outer radius
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
 const TAG_PX = 24; // on-screen height of a tag such as "shoulder check"
-const TAG_ASPECT = 512 / 96; // LABEL.tag canvas
 const NAME_ASPECT = 192 / 96; // LABEL.name canvas
 const CONE_RADIUS = 45; // m drawn
 const LAYER = {
@@ -92,14 +96,22 @@ interface Shared {
   me: number;
 }
 
-export function TacticalView() {
+/**
+ * The board. `hidden`: it stays mounted under another view (his belief map, beside his eyes) but
+ * neither shows nor draws, so a cut back to it needs no new WebGL context (InstantFrame).
+ */
+export function TacticalView({ hidden = false }: { hidden?: boolean }) {
   const { kind } = useView();
   return (
-    <figure className="view tac" aria-label="Tactical view from above">
+    <figure
+      className="view tac"
+      aria-label="Tactical view from above"
+      style={hidden ? { visibility: "hidden" } : undefined}
+    >
       <div className="canvas-wrap">
         <Canvas
           orthographic
-          frameloop="demand"
+          frameloop={hidden ? "never" : "demand"}
           flat
           dpr={[1, 2]}
           gl={{ antialias: true }}
@@ -107,6 +119,7 @@ export function TacticalView() {
           fallback={<p className="no-webgl">This view needs WebGL.</p>}
         >
           <TacticalScene />
+          <InstantFrame visible={!hidden} />
         </Canvas>
         {kind === "hero" && <OptionsOverlay />}
         <BlindSideOverlay />
@@ -169,7 +182,7 @@ function TacticalScene() {
         <OtherRunGhost hero={hero} mode={mode} shared={shared} px={px} scale={scale} />
       )}
       <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
-      <BeliefGhosts hero={hero} shared={shared} scale={scale} />
+      <BeliefGhosts hero={hero} shared={shared} scale={scale} px={px} />
       <SkeletonLayer sample={shared.current.sample} variant="board" scale={scale} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
@@ -189,10 +202,10 @@ function Field() {
         const x = g * PITCH.halfLength;
         const back = x + g * 1.8;
         return [
-          [x, 0, -3.66],
-          [back, 0, -3.66],
-          [back, 0, 3.66],
-          [x, 0, 3.66],
+          [x, 0, -FIELD.goalHalfWidth],
+          [back, 0, -FIELD.goalHalfWidth],
+          [back, 0, FIELD.goalHalfWidth],
+          [x, 0, FIELD.goalHalfWidth],
         ] as [number, number, number][];
       }),
     [],
@@ -371,7 +384,7 @@ function OtherRunGhost({ hero, mode, shared, scale, px }: GhostProps) {
   const pitchPx = 105 / px;
   const tagPx = pathTagPx(pitchPx);
   const tagH = tagPx === null ? 0 : Math.max(2.4, tagPx * px);
-  const tagW = tagH * TAG_ASPECT;
+  const tagW = tagH * labelAspect(label);
 
   useFrame(() => {
     const { sample, state } = shared.current;
@@ -541,43 +554,94 @@ const circlePoints = (r: number) =>
     return [r * Math.cos(a), 0, r * Math.sin(a)] as [number, number, number];
   });
 
-function BeliefGhosts({ hero, shared, scale }: { hero: Hero; shared: SharedRef; scale: number }) {
+function BeliefGhosts({
+  hero,
+  shared,
+  scale,
+  px,
+}: {
+  hero: Hero;
+  shared: SharedRef;
+  scale: number;
+  px: number;
+}) {
   const rings = useRef<(THREE.Group | null)[]>([]);
+  const tag = useRef<THREE.Mesh>(null);
+  const tagH = Math.max(2.4, TAG_PX * px);
+  const tagMap = useMemo(() => {
+    const number = hero.runner >= 0 ? hero.players[hero.runner].number : null;
+    return number === null
+      ? null
+      : getLabelTexture(`where he thinks #${number} is`, { ...LABEL.tag, color: COLORS.gold });
+  }, [hero]);
+  const lines = useRef<(Line2 | null)[]>([]);
   const all = useRef<THREE.Group>(null);
   const circle = useMemo(() => circlePoints(TOKEN_R), []);
   const connectors = useMemo(() => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(hero.n * 6), 3));
+    // RGBA per end: each line fades with its ghost (views/ghosts.ts)
+    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(hero.n * 8), 4));
     return geometry;
   }, [hero]);
+  const fg = useMemo(() => new THREE.Color(COLORS.fg), []);
 
   useFrame(() => {
-    const { sample, state, me } = shared.current;
+    const { sample, state, run, me } = shared.current;
     const show = state.beliefGhosts && me === hero.hero;
     if (all.current) all.current.visible = show;
     if (!show) return;
     const xyz = connectors.attributes.position.array as Float32Array;
+    const rgba = connectors.attributes.color.array as Float32Array;
+    let runnerAlpha = 0;
     for (let j = 0; j < hero.n; j++) {
       const gx = sample.ghost[2 * j];
       const gy = sample.ghost[2 * j + 1];
       const px = sample.pos[2 * j];
       const py = sample.pos[2 * j + 1];
-      const visible = j !== hero.hero && Math.hypot(gx - px, gy - py) >= 1.2;
+      // Which ghosts and how strongly: the runner's in the moment by default, everyone's on request.
+      const alpha = ghostAlpha(hero, run, state.frame, j, state.ghostsAll);
+      if (j === hero.runner) runnerAlpha = alpha;
+      const visible = alpha > 0.01;
       const ring = rings.current[j];
       if (ring) {
         ring.visible = visible;
         ring.position.set(gx, 0, -gy);
       }
+      const line = lines.current[j];
+      if (line) line.material.opacity = alpha * (j === hero.runner ? 1 : 0.75);
       xyz.set(visible ? [gx, 0, -gy, px, 0, -py] : [0, 0, 0, 0, 0, 0], j * 6);
+      rgba.set([fg.r, fg.g, fg.b, 0.32 * alpha, fg.r, fg.g, fg.b, 0.32 * alpha], j * 8);
     }
     connectors.attributes.position.needsUpdate = true;
+    connectors.attributes.color.needsUpdate = true;
+    // For its first seconds the runner's ghost says what it is, above his ring (his real token and
+    // name are usually just below it: the picture lags the run).
+    const t = tag.current;
+    if (t && hero.runner >= 0) {
+      const a = runnerAlpha * ghostLabelAlpha(hero, run, state.frame);
+      t.visible = a > 0.01;
+      (t.material as THREE.MeshBasicMaterial).opacity = a;
+      const r = hero.runner;
+      t.position.set(
+        sample.ghost[2 * r],
+        0,
+        -sample.ghost[2 * r + 1] - TOKEN_R * scale - tagH * 0.75,
+      );
+    }
   });
 
   return (
     <group ref={all}>
       <lineSegments geometry={connectors} renderOrder={LAYER.connector}>
-        <lineBasicMaterial color={COLORS.fg} opacity={0.32} {...flat} />
+        <lineBasicMaterial vertexColors {...flat} />
       </lineSegments>
+      {tagMap && (
+        <mesh ref={tag} rotation-x={lie} renderOrder={LAYER.name} visible={false}>
+          <planeGeometry args={[tagH * labelAspect(tagMap), tagH]} />
+          <meshBasicMaterial map={tagMap} opacity={0} {...flat} />
+        </mesh>
+      )}
       {hero.players.map((p, j) => (
         <group
           key={p.id}
@@ -585,11 +649,15 @@ function BeliefGhosts({ hero, shared, scale }: { hero: Hero; shared: SharedRef; 
             rings.current[j] = g;
           }}
           scale={scale}
+          visible={false}
         >
           <Line
+            ref={(l) => {
+              lines.current[j] = l as Line2 | null;
+            }}
             points={circle}
             color={j === hero.runner ? COLORS.gold : COLORS.fg}
-            opacity={j === hero.runner ? 1 : 0.75}
+            opacity={0}
             lineWidth={1.5}
             dashed
             dashSize={0.45}
@@ -750,7 +818,7 @@ function ScanMarker({ hero, shared, scale, px }: MarkerProps) {
         </mesh>
       </group>
       <mesh position={[0, 0, ring + 0.3 + tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
-        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+        <planeGeometry args={[tagH * labelAspect(label), tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
@@ -877,7 +945,7 @@ function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
         </mesh>
       </group>
       <mesh position={[ex, 0, ez - 1.5 - tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
-        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+        <planeGeometry args={[tagH * labelAspect(label), tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
