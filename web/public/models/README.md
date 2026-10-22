@@ -21,6 +21,27 @@ The source files are fetched into `out/` (git-ignored) and never committed; only
 model is. The first-person view shows it by default; the "Animated players" toggle switches back
 to the tokens.
 
+# Baked stadium (SPEC 7)
+
+`stadium_baked.glb` is our own: **modelled in Blender from our own procedural scripts**, with no
+imported models, photos or textures, and no real stadium, club, sponsor or broadcaster. The
+scripts build the same bowl as the app's procedural stadium (`src/views/stadiumGeometry.ts`, same
+numbers, pitch coordinates) with a stepped terrace, a crowd of 15,171 flat spectators, lattice
+floodlight masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+dugouts; Cycles bakes the floodlights, the roof lamps, a hidden fill under the roof for the stands,
+the sky and the ambient occlusion into it. The words on its
+boards and ribbon ("Through Their Eyes", "Synthetic match", "All players fictional") are drawn by
+the app.
+
+- Stands and roof: one 4096 x 768 lightmap (albedo x light); the grass: a 1024 x 724 map of the
+  light alone, which the app puts on its own pitch markings; the crowd, masts and props: vertex
+  colours (the square root of the light, so 8 bits keep the darks).
+- Geometry compressed with meshopt by gltfpack (meshoptimizer, MIT; decoded by the decoder that
+  ships with three.js, MIT); images re-encoded as WebP (EXT_texture_webp) with Pillow (MIT-CMU).
+  About 0.8 MB.
+- The scripts are not in this repository (bpy scripts may count as derived from Blender's GPL);
+  only their output is. Same inputs give the same file up to Cycles' sampling noise.
+
 # Extra player animations (SPEC 7)
 
 `anims_extra.glb` holds animations only: no mesh, no skin, no textures. Its nodes are the 14

@@ -9,6 +9,7 @@
 //   npm run build && npm run fps            headless; SwiftShader (software) where there is no GPU
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
 //   npm run fps -- --width 1440 --height 900 --dpr 2 --seconds 4 --runs 3
+//   npm run fps -- --query stadium=baked     extra URL parameters for every page (e.g. a stadium)
 //   npm run fps -- --anims base            the engine's player clips only (?anims=base)
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -27,11 +28,13 @@ const { values: opt } = parseArgs({
     seconds: { type: "string", default: "4" },
     runs: { type: "string", default: "3" },
     cine: { type: "boolean", default: false },
+    query: { type: "string", default: "" },
     anims: { type: "string", default: "" }, // "base": without the retargeted clips (players/extra.ts)
   },
 });
 
 const web = fileURLToPath(new URL("..", import.meta.url));
+const extra = opt.query ? `&${opt.query}` : "";
 if (!existsSync(`${web}/dist/index.html`)) throw new Error("no build: run `npm run build` first");
 
 if (opt.cine) {
@@ -54,10 +57,12 @@ if (opt.cine) {
     const page = await context.newPage();
     const button = (name) => page.getByRole("button", { name, exact: true });
     const anims = opt.anims ? `&anims=${encodeURIComponent(opt.anims)}` : "";
-    await page.goto(`${base}?offline=1&autoplay=0&intro=0${anims}`);
+    await page.goto(`${base}?offline=1&autoplay=0&intro=0${extra}${anims}`);
     await button("Play").waitFor();
     await page.waitForFunction(() => document.querySelectorAll("canvas").length >= 2);
     await page.waitForTimeout(1500); // models and textures
+    if (/stadium=baked/.test(extra))
+      await page.waitForFunction(() => document.documentElement.dataset.stadium === "ready");
     const renderer = await rendererOf(page);
     const board = await page.locator(".tac canvas").evaluate((c) => [c.width, c.height]);
     const pov = await page.locator(".pov canvas").evaluate((c) => [c.width, c.height]);
@@ -121,7 +126,7 @@ if (opt.cine) {
       }
     }
     await set("skeleton", false);
-    console.log(`renderer: ${renderer}`);
+    console.log(`renderer: ${renderer}${extra ? `; extra parameters ${extra.slice(1)}` : ""}`);
     console.log(
       `viewport ${opt.width}x${opt.height} @ dpr ${opt.dpr}; first-person canvas ${pov[0]}x${pov[1]} px; ` +
         `tactical canvas ${board[0]}x${board[1]} px; ${opt.seconds} s per run, playing the hero moment at 1x`,
@@ -144,10 +149,10 @@ if (opt.cine) {
       reducedMotion: "reduce",
     });
     const reduced = await still.newPage();
-    await reduced.goto(`${base}?offline=1&autoplay=0&at=54&intro=0`);
+    await reduced.goto(`${base}?offline=1&autoplay=0&at=54&intro=0${extra}`);
     await reduced.waitForFunction(() => document.querySelector(".pov canvas")?.dataset.blurSigma);
     const sharp = await reduced.locator(".pov canvas").evaluate((c) => c.dataset.blurSigma);
-    await page.goto(`${base}?offline=1&autoplay=0&at=54&intro=0`);
+    await page.goto(`${base}?offline=1&autoplay=0&at=54&intro=0${extra}`);
     await page.waitForFunction(() => document.querySelector(".pov canvas")?.dataset.blurSigma);
     const whip = await page.locator(".pov canvas").evaluate((c) => c.dataset.blurSigma);
     console.log(
@@ -220,7 +225,7 @@ async function measureCine(webRoot, flags) {
     });
     const page = await context.newPage();
     const url = new URL("/", base);
-    url.search = "cine=1&intro=0&autoplay=0&offline=1";
+    url.search = `cine=1&intro=0&autoplay=0&offline=1${extra}`;
     await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 120_000 });
     await page.waitForFunction(() => window.__cine?.ready === true, undefined, {
       timeout: 120_000,

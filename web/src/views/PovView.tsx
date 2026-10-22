@@ -14,7 +14,7 @@ import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
-import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
+import { COLORS, LABEL, getLabelTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
@@ -22,7 +22,7 @@ import { pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { declutter, labelBox } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
-import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
+import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { motion, pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
@@ -333,14 +333,7 @@ function PovScene() {
 export function Ground() {
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <planeGeometry args={[130, 92]} />
-        <meshStandardMaterial color="#173826" />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} />
-      </mesh>
+      <Grass />
       <Goals />
     </>
   );
