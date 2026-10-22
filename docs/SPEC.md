@@ -1698,12 +1698,13 @@ original visual identity.
   the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
   - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
     captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
-    number; Your call; another audience in another language (a casual fan, in Chinese); the
-    Producer's failure drill and bring-back; then the whole match, whose card links to
-    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
-    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
-    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
-    main.
+    number; Your call; Take his eyes (opened on his own look, the dial and the times out; the
+    viewer picks and presses Look, and the app keeps the keyboard); another audience in another
+    language (a casual fan, in Chinese); the Producer's failure drill and bring-back; then the
+    whole match, whose card links to `?match=match-1&play=recap&tour=recap`, where the tour goes
+    on at the full-time recap card. A step the page cannot show (no live service, no
+    counterfactual, no Your call, no bundled look grid; a match page shows only its recap) is left
+    out, not shown broken.
   - *It never takes over.* It only calls the app's own controls, and never presses anything that
     spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
     with the card's button. The overlay lets every click through, the card is a non-modal dialog,
