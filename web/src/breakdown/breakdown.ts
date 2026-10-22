@@ -12,6 +12,7 @@ import type { BreakdownResponse, Drill, Persona, StepTrace, VoiceCue } from "../
 import type { Hero } from "../data/hero";
 import { scriptOf, validatePayload, type Narration } from "../narration/payload";
 import type { MomentContext } from "../plan/moment";
+import type { Provenance } from "../provenance/provenance";
 import type { Script } from "../plan/schema";
 import { resolvePlan, type ResolvedPlan } from "../plan/validate";
 import type { Language } from "../whatif/whatif";
@@ -28,6 +29,7 @@ export type BreakdownOrigin =
       rateLimited: boolean;
       capped: boolean;
       source: "model" | "offline"; // the agent crew on the model, or its offline template
+      provenance: Provenance | null; // live, cached or template as the service said; null: unsaid
       planSource: "agent" | "template"; // the Telestrator's plan, or the server's template
       planErrors: string[];
       totalMs: number; // the crew's wall time when it was generated
@@ -108,6 +110,7 @@ export function apiBreakdown(
     rateLimited: res.rate_limited,
     capped: res.capped,
     source: res.source,
+    provenance: res.provenance ?? null,
     planSource: result.plan_source,
     planErrors: result.plan_errors,
     totalMs: result.total_ms,

@@ -65,9 +65,7 @@ jobs:
   # fails it; the screenshots are kept as an artifact.
   smoke:
     runs-on: ubuntu-latest
-    # The job takes 8–10 min now (2026-10-21); at 10 it was cancelled after every page had passed,
-    # and main's deploy was skipped.
-    timeout-minutes: 20
+    timeout-minutes: 25  # the smoke suite passed 10 minutes on a loaded runner (29 pages, axe on each)
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0

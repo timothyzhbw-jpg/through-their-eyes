@@ -25,9 +25,10 @@ import {
 import type { Hero } from "../data/hero";
 import { directorPrefs } from "../director/director";
 import { RenderPayload } from "../narration/payload";
+import { Provenance } from "../provenance/provenance";
 import type { PlaybackState, PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
-import { browserAudio, VoicePlayer, type MakeAudio } from "../voice/voice";
+import { VoicePlayer, type MakeAudio, type SoundSwitch } from "../voice/voice";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 
 const Value = z.union([z.boolean(), z.number(), z.string(), z.null()]);
@@ -101,6 +102,8 @@ export const RecapResponse = z.object({
   rate_limited: z.boolean(),
   capped: z.boolean(),
   source: z.enum(["model", "offline"]),
+  // Where it came from, as the service says it: shown as given, never worked out from the rest.
+  provenance: Provenance.nullish(),
   result: z.object({
     score: z.object({ home: z.number().int(), away: z.number().int() }),
     moments: z.array(RecapMoment),
@@ -193,6 +196,7 @@ export interface RecapOptions {
   playback: PlaybackStore;
   takeOver: () => void; // leave the live stream: the recap drives the playhead
   makeAudio?: MakeAudio;
+  sound?: Store<SoundSwitch>; // the match's Sound switch, shared with its moments' breakdowns
 }
 
 export interface Recap {
@@ -241,7 +245,8 @@ export function createRecap(options: RecapOptions): Recap {
   });
   const voice = new VoicePlayer(
     api ? (key) => api.tts(key) : null,
-    options.makeAudio ?? browserAudio,
+    options.makeAudio,
+    options.sound,
   );
   let turn = 0;
   let saved: Pick<PlaybackState, "autoSlow" | "speed"> | null = null; // restored after the reel

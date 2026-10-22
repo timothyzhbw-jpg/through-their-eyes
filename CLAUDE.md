@@ -213,7 +213,11 @@ _Fill in as they come to exist._
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
   `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
-  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, SPEC 6)
+- `uv run python -m agents.crewtrace` — rewrite the web's Crew trace fixture
+  (`web/src/crewtrace/fixture.json`, SPEC 6): a drill with a scripted model, MCP tool calls, a
+  Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
