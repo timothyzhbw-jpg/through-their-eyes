@@ -463,6 +463,47 @@
         }
       ],
       "vo": "At the final whistle, the crew writes the recap."
+    },
+    {
+      "id": "16-corner",
+      "spec_beat": "trailer, chapter III",
+      "title": "The corner: the stitched match paused before the short corner, then the centre-back's hero moment in his eyes, with its verified caption",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&intro=0&at=14150",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 5,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": "text=The corner", "timeout_s": 60 },
+        { "do": "hold", "s": 1.5 }
+      ],
+      "actions": [
+        { "do": "hold", "s": 1.2, "still": true },
+        { "do": "click", "role": "button", "name": "hero moment", "exact": false, "hold": 7 }
+      ],
+      "vo": "At a corner, it is the marker who has to look."
+    },
+    {
+      "id": "17-pov-scan",
+      "spec_beat": "trailer, the match-cut from the coach's tablet",
+      "title": "The crew's replay in his eyes, sharp: the key scan in first person with the head-turn blur off (reduced motion), finding H9",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 4,
+      "crop": "stage",
+      "reduced_motion": true,
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
+      ],
+      "actions": [
+        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "scroll", "y": 0 },
+        { "do": "hold", "s": 6 }
+      ],
+      "vo": "Through his eyes: the look that found the runner."
     }
   ]
 }

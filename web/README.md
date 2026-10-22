@@ -143,9 +143,9 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 ## The stitched match (`?match=match-1`, SPEC 3.1)
 
-`match-1` is 19 scenario possessions on one clock of about 11¾ minutes (`sim/match.py`, SPEC 3.1):
-open-play passages and four heroes (the blind-side run at 0:30, escaping the press at 4:33, the
-far-post finish at 6:41, which scores, and the short corner at 8:30). `match-2` (`?match=match-2`,
+`match-1` is 19 scenario possessions on one clock of about 12½ minutes (`sim/match.py`, SPEC 3.1):
+open-play passages and four heroes (the blind-side run at 0:30, escaping the press at 4:54, the
+far-post finish at 7:01, which scores, and the short corner at 8:51). `match-2` (`?match=match-2`,
 in the match picker) plays three of them on other seeds, in another order: escaping the press at
 0:25, the short corner at 3:22, the blind-side run at 7:58. Both exist only on the live service:
 offline, the bundled hero moment plays and the badge says why.
@@ -267,7 +267,7 @@ src/
   skeleton/   the optional skeleton view: torso line, head ray (true or tracked yaw), its key
   alerts/     blind-side alerts from the export, for the board, first person and the HUD
   options/    pass options at the decision: believed and true targets, chance and value
-  players/    the rigged Gameplay Football players: rig, gait, look, kits
+  players/    the rigged Gameplay Football players: rig, gait, look, kits, the mocap extras
   whatif/     "What if…?": the bundled what-ifs, and free questions to POST /api/whatif
   yourcall/   "Your call": decide with what he knew, then the reveal (a pure reducer, its scene)
   cine/       filming mode for the demo video (`?cine=1`, never linked): a full-screen 3D view a
@@ -412,7 +412,12 @@ src/
   animated footballer converted from Gameplay Football (`src/players/`,
   `public/models/README.md`, SPEC 7): gait blended by sim speed with the playback rate
   matched so the feet do not slide, the pass clip on pass events, the neck (then the trunk)
-  turned so the head points along `head_yaw`, kits in the fictional clubs' colours.
+  turned so the head points along `head_yaw`, kits in the fictional clubs' colours. On top, by
+  default, retargeted motion capture (`src/players/extra.ts`, `public/models/anims_extra.glb`):
+  a real kick at every pass, its ball contact on the pass event and the planted foot still, and
+  the trunk joining every scan's look over the shoulder, timed to the head's turn out, hold and
+  back. The head stays exactly on `head_yaw`. `?anims=base` shows the engine's clips only;
+  reduced motion leaves the shoulder checks out.
 - **Perception telemetry** (SPEC 4.7, 7). Under the timeline, curves for the player in the
   first-person view ("Whose eyes"), with a cursor on the playhead: head angle to the ball with
   his scans from the sim (the key scan highlighted; without the look, a dashed box where it
