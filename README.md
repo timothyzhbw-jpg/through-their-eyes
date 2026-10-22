@@ -38,7 +38,7 @@ and a whole stitched match.
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show
 what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
-turns his head on a schedule calibrated to published scan rates (2.95 scans in the 10 s before
+turns his head on a schedule calibrated to published scan rates (2.79 scans in the 10 s before
 receiving, against 3.0 ± 2.1 in Jordet et al. 2020: [realism](eval/reports/realism.md)), sees
 only what falls in his field of view, and decides on his *belief*: everyone where he last saw
 them, carried forward. Other tools show the passing lanes that existed; we show the ones he knew
@@ -133,7 +133,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   19 possessions on one clock of about 12½ minutes, opened where the scan hero's possession
+   19 possessions on one clock of about 13½ minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
@@ -202,7 +202,7 @@ the deployed service. Nothing has been run on real tracking data.
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
 | Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
-| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
+| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.991 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded) | 90/90 | [corruption](eval/reports/corruption.md) |
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
@@ -300,12 +300,12 @@ uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
 "What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 19 possessions,
-about 12½ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
-pressure hero (`press_escape`) at 4:54, the shot hero (`far_post_finish`) scoring at 7:01 and the
-short corner (`corner_blind_side`) at 8:51, at 1–0 — with
+about 13½ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 5:07, the shot hero (`far_post_finish`) scoring at 7:58 and the
+short corner (`corner_blind_side`) at 9:47, at 1–0 — with
 moments detected in every possession; breakdowns and what-ifs take the hero moment's id. `match-2`
 plays three of those heroes (pressure, corner, scan) on other seeds, in another order (17
-possessions, about 11¾ minutes; no shot, so 0–0). Without Microsoft Foundry configured, every agent step runs on its
+possessions, about 12½ minutes; no shot, so 0–0). Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
 The container image for Azure Container Apps (main dependencies only, runs as a non-root user):

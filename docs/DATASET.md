@@ -12,12 +12,12 @@ At a glance (v1, built on macOS arm64):
 | | |
 |---|---|
 | Matches | 10 stitched matches, match seeds 5001–5010 |
-| Play | 130.4 min in all; 12:20–13:28 per match; 19 possessions each |
-| Frames | 195,651 at 25 Hz; 4,304,322 player rows |
-| Events | 101,126: 61,675 scans, 31,156 head turns, 2,712 passes, 2,089 receptions, 514 interceptions, 515 possession changes, 2,228 pressure spells, 190 restarts, 14 balls out of play, 10 shots, 10 keeper dives, 10 goals (one an own goal), 2 balls off the post, 1 tackle |
-| Perception | 2,089 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (43,869 rows) |
+| Play | 134.6 min in all; 13:26–13:29 per match; 19 possessions each |
+| Frames | 201,961 at 25 Hz; 4,443,142 player rows |
+| Events | 103,189: 62,504 scans, 31,233 head turns, 2,993 passes, 2,201 receptions, 712 interceptions, 713 possession changes, 2,610 pressure spells, 190 restarts, 1 ball out of play, 10 shots, 10 keeper dives, 9 goals, 2 balls off the post, 1 tackle |
+| Perception | 2,201 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (46,221 rows) |
 | Decisions | 30 decisions on belief, with all 339 options weighed |
-| Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 70 MB |
+| Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 74 MB |
 | Licence | **TODO(Bowen):** proposed CC BY 4.0 for the data; the code stays MIT ([§ Licence](#licence)) |
 
 A one-possession sample of the same files (under 200 KB) is in the repository:
@@ -327,7 +327,7 @@ The simulator simplifies football heavily. Read the data as the output of these 
   has on the true state, with random jitter.
   - There are no shots, dribbles or tackles in open play. The ball changes hands only by
     interception or going out.
-  - Open play is pass-heavy. `eval/reports/match_stats.md` counts about 1,853 passes per
+  - Open play is pass-heavy. `eval/reports/match_stats.md` counts about 2,000 passes per
     90 min of play. No published target is configured to check that against (SPEC 3,
     acceptance checks).
 - **Scripted heroes.** The four hero scenarios set up a situation with scripted passes and, for

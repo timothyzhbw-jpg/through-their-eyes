@@ -24,7 +24,7 @@ import numpy as np
 
 from analytics.tti import time_to_intercept
 from analytics.vision import player_visibility, visibility, wrap_angle
-from sim import laws, shots
+from sim import laws, shots, team_shape
 from sim.ball import BallParams, advance, bounce, path_distances, post_contact
 from sim.config import DT, HALF_LENGTH, HALF_WIDTH, SimParams
 from sim.decision import (
@@ -98,6 +98,14 @@ class Simulation:
         self._attach_ball()
         self.anchor = self.pos.copy()
         self.ball_anchor = self.ball_pos[:2].copy()
+        self.formation = (
+            team_shape.Formation.from_names(
+                self.team, scenario.formation, [scenario.slots[pid] for pid in self.ids]
+            )
+            if scenario.team_shape
+            else None
+        )
+        self.shape_ball = self.ball_pos[:2].copy()  # the ball as the block follows it
 
         self.beliefs = BeliefStore(n, 0, self.pos, self.vel)
         self.head = HeadModel(n)
@@ -380,19 +388,39 @@ class Simulation:
         return times, path
 
     def formation_spots(self) -> np.ndarray:
-        """(N, 2) formation anchors shifted with the ball (SPEC 3.2)."""
+        """(N, 2) formation spots (SPEC 3.2): with `Scenario.team_shape`, each slot placed in its
+        team's block for the ball and the team on it (`sim.team_shape`); else the anchors shifted
+        with the ball."""
+        if self.formation is not None:
+            return team_shape.spots(self.formation, self.shape_ball, self.possession_team())
         shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(self.params.formation_shift)
         return self.anchor + shift
 
+    def possession_team(self) -> int:
+        """The team on the ball: the carrier's, else the passer's of a ball in flight, else the
+        last kicker's; -1 before anyone has had it."""
+        if self.owner >= 0:
+            return int(self.team[self.owner])
+        if self.pass_in_flight is not None:
+            return int(self.team[self.pass_in_flight["passer"]])
+        return int(self.team[self.last_kicker]) if self.last_kicker >= 0 else -1
+
     def _movement_targets(self, f: int) -> tuple[np.ndarray, np.ndarray]:
         p = self.params
+        if self.formation is not None:  # the block follows the ball smoothed (`sim.team_shape`)
+            follow = min(1.0, DT / team_shape.SHAPE.ball_follow_s)
+            self.shape_ball = self.shape_ball + (self.ball_pos[:2] - self.shape_ball) * follow
         target = self.formation_spots()
         cap = self.v_max.copy()
+        if self.formation is not None:  # out of position he runs harder
+            cap = team_shape.slot_speed(np.linalg.norm(target - self.pos, axis=-1), self.v_max)
 
         if self.owner >= 0:
             i = self.owner
             target[i] = self.pos[i]
             opponents = np.flatnonzero(self.team != self.team[i])
+            if self.formation is not None:  # with a team shape the keeper keeps to his area
+                opponents = opponents[self.formation.array("line")[opponents] != "keeper"]
             dist = np.linalg.norm(self.pos[opponents] - self.pos[i], axis=-1)
             presser = opponents[np.argmin(dist)]
             target[presser], cap[presser] = self.pos[i], p.press_speed
@@ -413,8 +441,9 @@ class Simulation:
             margin = time_to_intercept(self.pos, self.vel, path) - times[None, :]
             passer_team = self.team[self.pass_in_flight["passer"]]
             defenders = np.flatnonzero(self.team != passer_team)
-            if self.scenario.shots:
-                # Keepers keep their bisector position rather than chasing a passing lane.
+            if self.scenario.shots or self.formation is not None:
+                # Keepers keep their bisector position or their slot in the area rather than
+                # chasing a passing lane.
                 defenders = np.array([j for j in defenders if self.players[j].role != "GK"])
             if defenders.size:
                 best = defenders[np.argmin(margin[defenders].min(axis=1))]
@@ -423,9 +452,15 @@ class Simulation:
                     target[best], cap[best] = path[feasible[0]], self.v_max[best]
             r = self.pass_in_flight["intended"]
             target[r], cap[r] = self.pass_in_flight["meet"], self.v_max[r]
+            if self.formation is not None:
+                self._chase_loose_pass(target, cap, path, margin)
         for k, (t, start, until) in self.dives.items():
             if start <= f <= until:
                 target[k], cap[k] = t, shots.KEEPER.v_dive_max
+        if self.formation is not None:  # and with a team shape, inside his penalty area
+            for k in np.flatnonzero(self.formation.array("line") == "keeper"):
+                sign = self.formation.attack_sign[int(self.team[k])]
+                target[k] = team_shape.in_penalty_area(target[k], sign)
         # Back from a set piece until it is taken (SPEC 3.9).
         target = self.referee.keep_back(self, target)
         # Every target lies on the pitch (SPEC 3.2): keepers at or in front of their goal line,
@@ -433,6 +468,30 @@ class Simulation:
         # runs on past the lines) can both point outside; no restart is ever simulated (SPEC 3.1),
         # so nobody needs to stand there.
         return np.clip(target, -PITCH_HALF, PITCH_HALF), cap
+
+    def _chase_loose_pass(
+        self, target: np.ndarray, cap: np.ndarray, path: np.ndarray, margin: np.ndarray
+    ) -> None:
+        """With a team shape: a pass its receiver cannot reach is also chased by the team-mate
+        who gets there first, and a ball nobody reaches within the prediction horizon by each
+        team's nearest outfield player, to where it stops. The receiver keeps running to meet it.
+        Without this a misplaced pass rolled on with nobody after it until it went out or the run
+        ended."""
+        outfield = self.formation.array("line") != "keeper"
+        passer_team = self.team[self.pass_in_flight["passer"]]
+        r = self.pass_in_flight["intended"]
+        for team in (passer_team, 1 - passer_team):
+            mine = np.flatnonzero((self.team == team) & outfield & (np.arange(len(self.ids)) != r))
+            reachable = (margin[mine] <= 0.0).any(axis=1)
+            if team == passer_team and (margin[r] <= 0.0).any():
+                continue  # his receiver gets there
+            if team == passer_team and reachable.any():
+                best = mine[np.argmin(np.where(reachable, margin[mine].min(axis=1), np.inf))]
+                at = np.flatnonzero(margin[best] <= 0.0)[0]
+                target[best], cap[best] = path[at], self.v_max[best]
+            elif not reachable.any():
+                nearest = mine[np.argmin(np.linalg.norm(self.pos[mine] - path[-1], axis=-1))]
+                target[nearest], cap[nearest] = path[-1], self.v_max[nearest]
 
     def _kick_pass(self, i: int, target: np.ndarray, intended: int, f: int) -> None:
         ball = self.ball_pos[:2].copy()

@@ -20,7 +20,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from sim.config import DT, HALF_LENGTH
+from sim import team_shape
+from sim.ball import flight_time
+from sim.config import DT, HALF_LENGTH, HALF_WIDTH
+from sim.decision import pass_speed
 from sim.scenarios.base import ForcedPass, Scenario, Setup, make_player
 
 if TYPE_CHECKING:
@@ -54,6 +57,15 @@ AWAY = [
     ("A9", "ST", -14.0, 0.0),
 ]
 
+# Each player's slot in his team's formation (`sim.team_shape`): right and left as the team faces
+# the goal it attacks, so the away team's right-hand side is +y.
+SLOTS = {
+    "H1": "GK", "H2": "RB", "H3": "LB", "H4": "RCB", "H5": "LCB", "H6": "DM", "H8": "RCM",
+    "H10": "LCM", "H7": "RW", "H11": "LW", "H9": "ST",
+    "A1": "GK", "A2": "RB", "A3": "LB", "A4": "RCB", "A5": "LCB", "A6": "RDM", "A8": "LDM",
+    "A10": "CAM", "A7": "RAM", "A11": "LAM", "A9": "ST",
+}  # fmt: skip
+
 HOLD_S = (0.6, 1.6)  # time on the ball before passing
 PASS_RANGE = (8.0, 35.0)  # m
 OPEN_ENOUGH = 8.0  # m to the nearest opponent; more space than this does not make a better pass
@@ -70,23 +82,59 @@ MARK_SPELL_S = 10.0  # each defender's spells start at his own keyed phase
 TIGHT_SHARE = 0.5  # share of spells marked tightly
 TIGHT_GAP = (1.0, 2.0)  # m, goal-side of the attacker
 LOOSE_GAP = (3.0, 6.0)  # m
+# With a team shape (`team_shape`) marking is zonal, so the block keeps its shape: a defender picks
+# up an attacker within SHAPE_ZONE_RADIUS of his slot and follows him goal-side while that keeps
+# him within SHAPE_LEASH of it; beyond, he lets him go to the next zone and returns to his slot.
+# Style knobs, not fitted.
+SHAPE_ZONE_RADIUS = 12.0  # m
+SHAPE_LEASH = 15.0  # m
+# With a team shape the ball is played ahead of a moving receiver, by at most this long of his run,
+# and at least a metre inside the lines.
+LEAD_MAX_S = 2.0
+LEAD_INSIDE = np.array([HALF_LENGTH - 1.0, HALF_WIDTH - 1.0])
 
 
 class PossessionPlay(Scenario):
     name = "possession_play"
     hero = None
+    # Both teams keep a formation-based shape (SPEC 3.2): 4-3-3 at home, 4-2-3-1 away.
+    team_shape = True
+    formation = ("4-3-3", "4-2-3-1")
+    slots = SLOTS
+    # Who has the first ball: 0 the home team, 1 the away team, whose build-up player mirrors the
+    # home one drawn (A4, A5 or A6 for H4, H5 or H6), so the draws are the same either way. A
+    # stitched match can set it so that a restart goes to the team the Laws award.
+    start_team: int = 0
 
     def setup(self, gen: np.random.Generator) -> Setup:
         rows = HOME + AWAY
         players = [make_player(pid, role) for pid, role, _, _ in rows]
         pos = np.array([[x, y] for _, _, x, y in rows])
-        pos += np.clip(gen.normal(0.0, 1.5, pos.shape), -3.0, 3.0)
+        noise = np.clip(gen.normal(0.0, 1.5, pos.shape), -3.0, 3.0)
         self.holder, self.release, self.last_passer = -1, 0, -1
         self.marking_team, self.marks = -1, {}  # attacking team, defender -> attacker
         self.phases: dict[int, int] = {}  # defender -> frames into his first spell
         self.gaps: dict[tuple[int, int], float] = {}  # (defender, spell start) -> marking gap
-        owner = [p.id for p in players].index(str(gen.choice(["H4", "H5", "H6"])))
+        first = str(gen.choice(["H4", "H5", "H6"]))
+        owner = [p.id for p in players].index(first if self.start_team == 0 else "A" + first[1:])
+        if not self.team_shape:
+            return Setup(players=players, pos=pos + noise, ball_owner=owner)
+        pos = self.lined_up(players, owner, pos[owner]) + noise
+        for i, p in enumerate(players):  # the keepers start inside their areas
+            if p.role == "GK":
+                pos[i] = team_shape.in_penalty_area(pos[i], 1 if p.team == 0 else -1)
         return Setup(players=players, pos=pos, ball_owner=owner)
+
+    def lined_up(self, players: list, owner: int, ball: np.ndarray) -> np.ndarray:
+        """Every player on his slot, the carrier's team on the ball and the carrier on his own
+        slot."""
+        team = np.array([p.team for p in players])
+        names = [self.slots[p.id] for p in players]
+        form = team_shape.Formation.from_names(team, self.formation, names)
+        for _ in range(3):  # the carrier's slot moves with the ball he carries
+            pos = team_shape.spots(form, ball, possession=int(team[owner]))
+            ball = pos[owner]
+        return pos
 
     def forced_pass(self, sim: Simulation, frame: int) -> ForcedPass | None:
         i = sim.owner
@@ -121,7 +169,22 @@ class PossessionPlay(Scenario):
             if score.max() > 0
             else mates[int(np.argmin(np.where(offside, np.inf, dist)))]
         )
-        return ForcedPass(sim.ids[i], sim.ids[to])
+        if not self.team_shape:
+            return ForcedPass(sim.ids[i], sim.ids[to])
+        return ForcedPass(sim.ids[i], sim.ids[to], target=tuple(self.lead(sim, i, to)))
+
+    def lead(self, sim: Simulation, i: int, to: int) -> np.ndarray:
+        """Where to play the ball to a team-mate on the move: where his run takes him by the
+        time it gets there (two passes of the estimate), kept on the pitch. With a team shape
+        players move between slots as the ball moves; a pass to where he stood went behind him."""
+        ball = sim.ball_pos[:2]
+        target = sim.pos[to].copy()
+        for _ in range(2):
+            d = float(np.linalg.norm(target - ball))
+            t = min(flight_time(pass_speed(d, sim.decision_params, sim.ball_params), d,
+                                sim.ball_params), LEAD_MAX_S)  # fmt: skip
+            target = sim.pos[to] + sim.vel[to] * t
+        return np.clip(target, -LEAD_INSIDE, LEAD_INSIDE)
 
     def scripted_targets(self, sim: Simulation, frame: int) -> dict[int, tuple[np.ndarray, float]]:
         i = sim.owner
@@ -136,31 +199,50 @@ class PossessionPlay(Scenario):
         targets, presser = {}, -1
         if i >= 0:
             opponents = np.flatnonzero(sim.team != sim.team[i])
+            if self.team_shape:  # the keeper keeps to his area
+                opponents = np.array([j for j in opponents if sim.players[j].role != "GK"])
             presser = opponents[np.argmin(np.linalg.norm(sim.pos[opponents] - sim.pos[i], axis=-1))]
             away = sim.pos[presser] - sim.pos[i]
             dist = float(np.linalg.norm(away))
             if dist < 1e-6:
                 away, dist = np.array([1.0 if sim.team[presser] == 1 else -1.0, 0.0]), 1.0
             targets[presser] = (sim.pos[i] + PRESS_DISTANCE * away / dist, sim.params.press_speed)
-        self.update_marks(sim, attacking, presser)
+        self.update_marks(sim, frame, attacking, presser)
         for j, a in self.marks.items():
             if j == presser or a == i:
                 continue
-            own_goal = np.array([HALF_LENGTH if sim.team[j] == 1 else -HALF_LENGTH, 0.0])
-            goal_side = own_goal - sim.pos[a]
-            goal_side /= max(float(np.linalg.norm(goal_side)), 1e-6)
-            targets[j] = (sim.pos[a] + self.gap(sim, frame, j) * goal_side, sim.v_max[j])
+            point = self.mark_point(sim, frame, j, a)
+            speed = sim.v_max[j]
+            if self.team_shape:  # he jogs with his man and runs harder when left behind
+                speed = float(team_shape.slot_speed(np.linalg.norm(point - sim.pos[j]), speed))
+            targets[j] = (point, speed)
         return targets
 
-    def update_marks(self, sim: Simulation, attacking: int, presser: int) -> None:
+    def mark_point(self, sim: Simulation, frame: int, j: int, a: int) -> np.ndarray:
+        """Where defender j marks attacker a: goal-side of him at j's gap for this spell."""
+        own_goal = np.array([HALF_LENGTH if sim.team[j] == 1 else -HALF_LENGTH, 0.0])
+        goal_side = own_goal - sim.pos[a]
+        goal_side /= max(float(np.linalg.norm(goal_side)), 1e-6)
+        return sim.pos[a] + self.gap(sim, frame, j) * goal_side
+
+    def update_marks(self, sim: Simulation, frame: int, attacking: int, presser: int) -> None:
         """Keep the pairs still in their zone, then pair free defenders and attackers."""
         if attacking != self.marking_team:
             self.marking_team, self.marks = attacking, {}
         spots = sim.formation_spots()
-        self.marks = {
-            j: a for j, a in self.marks.items()
-            if np.linalg.norm(sim.pos[a] - spots[j]) <= RELEASE_RADIUS
-        }  # fmt: skip
+        if self.team_shape:
+            zone = SHAPE_ZONE_RADIUS
+
+            def keeps(j: int, a: int) -> bool:
+                return bool(np.linalg.norm(self.mark_point(sim, frame, j, a) - spots[j])
+                            <= SHAPE_LEASH)  # fmt: skip
+        else:
+            zone = ZONE_RADIUS
+
+            def keeps(j: int, a: int) -> bool:
+                return bool(np.linalg.norm(sim.pos[a] - spots[j]) <= RELEASE_RADIUS)
+
+        self.marks = {j: a for j, a in self.marks.items() if keeps(j, a)}
         outfield = np.array([p.role != "GK" for p in sim.players])
         busy = {*self.marks, presser}
         taken = {*self.marks.values(), sim.owner}
@@ -173,9 +255,11 @@ class PossessionPlay(Scenario):
         dist = np.linalg.norm(spots[defenders][:, None, :] - sim.pos[attackers][None], axis=-1)
         for flat in np.argsort(dist, axis=None, kind="stable"):
             d, a = divmod(int(flat), len(attackers))
-            if dist[d, a] > ZONE_RADIUS:
+            if dist[d, a] > zone:
                 break
             if defenders[d] in self.marks or attackers[a] in self.marks.values():
+                continue
+            if self.team_shape and not keeps(int(defenders[d]), int(attackers[a])):
                 continue
             self.marks[int(defenders[d])] = int(attackers[a])
 

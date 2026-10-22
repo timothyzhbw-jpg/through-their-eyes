@@ -293,10 +293,17 @@ def test_back_and_forward_pick_the_first_receiver_the_prompt_puts_there(where, r
 
 def test_left_and_right_are_as_his_team_attacks():
     """The away team attacks -x, so its left-back (A3) stands at negative y."""
-    run = Simulation.from_scenario("possession_play", 100).run()
-    away = [f for f in range(len(run.owner)) if run.owner[f] >= 0
-            and run.players[run.owner[f]].team == 1]  # fmt: skip
-    f = next(f for f in away if run.ids[run.owner[f]] not in ("A2", "A3"))
+
+    def away_on_the_ball(seed):  # the first frame an away player other than a full-back has it
+        run = Simulation.from_scenario("possession_play", seed).run()
+        frames = [f for f in range(len(run.owner)) if run.owner[f] >= 0
+                  and run.players[run.owner[f]].team == 1
+                  and run.ids[run.owner[f]] not in ("A2", "A3")]  # fmt: skip
+        return run, frames[0] if frames else None
+
+    # possession_play starts with the home team on the ball; the first held-out seed where the
+    # away team wins it within the run.
+    run, f = next((r, f) for r, f in map(away_on_the_ball, range(100, 120)) if f is not None)
     recv = receivers(run, _passes_from(run, f))
     assert run.pos[f, run.index("A3"), 1] < 0 < run.pos[f, run.index("A2"), 1]
     actions = [r.action for r in recv]

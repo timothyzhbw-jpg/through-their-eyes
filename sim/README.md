@@ -18,6 +18,7 @@ parameters come from published papers (`docs/REFERENCES.md`).
 | [`config.py`](config.py) | `SimParams` (head, scan, perception and run-length parameters), `ROLES` (speed limit, fitted scan rate and softmax temperature per role), pitch size and `FPS` |
 | [`perception.py`](perception.py) | `HeadModel` (gaze on the ball, scans, partial scans, drift) and `BeliefStore` (each player's last sighting of everyone, extrapolated) |
 | [`decision.py`](decision.py) | options valued on the carrier's belief (pass, carry, shot), Gumbel-max choice |
+| [`team_shape.py`](team_shape.py) | formation slots (4-3-3, 4-2-3-1) placed in each team's block by phase: the back line steps up and drops with the ball, the block shortens and narrows out of possession and shifts to the ball's side; only in scenarios with `Scenario.team_shape` |
 | [`movement.py`](movement.py), [`ball.py`](ball.py) | steering with speed and acceleration limits; the closed-form rolling ball with drag |
 | [`shots.py`](shots.py) | placed shots, the keeper's reach and the save model; only in scenarios with `Scenario.shots` |
 | [`overrides.py`](overrides.py) | interventions for `resume`: `DropScan`, `FreezeBelief`, `ForceAction` |
@@ -38,7 +39,7 @@ authority; each class names its hero, lens and intervention):
 | `press_escape` | H4 | `pressure` | `force:carry` | `tackles` on |
 | `corner_blind_side` | H5 | `scan` | `drop_scan` | markers mark where they *believe* their man is; no decision on the ball |
 | `far_post_finish` | H9 | `scan` | `drop_scan` | `shots` on |
-| `possession_play` | — | — | — | open play for evals that need volume, and the open-play possessions of a stitched match |
+| `possession_play` | — | — | — | open play for evals that need volume, and the open-play possessions of a stitched match; `team_shape` on (4-3-3 vs 4-2-3-1, [`team_shape.py`](team_shape.py)) |
 
 ## Data flow
 

@@ -39,12 +39,12 @@ Passes kicked in the passer's own half, per team:
 Where the sim records the alternatives (the decision model's options, SPEC 3.5), the card shows
 what the carrier chose against his best short option, his best long option and his safest pass.
 
-On match-1 (measured 2026-10-21 on `main` c947b42):
+On match-1 (measured 2026-10-22 with the team shape, #150):
 
-- Under pressure, Home completed 13 of its 19 short passes out from the back (68%), against 89%
+- Under pressure, Home completed 25 of its 34 short passes out from the back (74%), against 86%
   without pressure.
-- The passes it lost there handed Away the ball where it was worth 0.028 xT on average.
-- In the pressure hero (4:35), H4 under a press of 0.94 chose the 35 m pass to H7 (P 0.82,
+- The passes it lost there handed Away the ball where it was worth 0.038 xT on average.
+- In the pressure hero (5:09), H4 under a press of 0.94 chose the 35 m pass to H7 (P 0.82,
   value +0.013). His safest pass was back to H1 (P 0.95, +0.005); his best long option, to H3,
   was worth about the same as the one he took (+0.013).
 
@@ -52,7 +52,7 @@ What it cannot say yet:
 - **Open play is scripted.** Who passes, when and to whom is fixed by possession play
   (SPEC 3.6); only whether a pass arrives is simulated. So the rates describe the sim's script
   under its press, not a coached team's choices.
-- **Long balls are rare** (9 for Home in match-1), and tackles are not modelled.
+- **Long balls are rare** (5 for Home in match-1), and tackles are not modelled.
 
 ### Why focus on set pieces?
 
@@ -63,8 +63,8 @@ For each team:
 - how much threat a corner reaches: the best reception's xT, against the open-play passages'.
 
 On match-1:
-- Its one corner put A9 on the ball 4.4 s after the kick at a spot worth 0.29 xT. None of the 17
-  open-play passages reached that (their median best is 0.0035).
+- Its one corner put A9 on the ball 4.4 s after the kick at a spot worth 0.29 xT. None of the 18
+  open-play passages reached that (their median best is 0.0192).
 - No shot followed, so corners added 0.00 xG.
 
 What it cannot say yet:
@@ -74,7 +74,7 @@ What it cannot say yet:
   final third.
 - **One corner, and only one kind.** match-1 has a single corner, played short, and the sim plays
   no other set piece.
-- **No shots in match-1 yet**, so the shares are undefined until the shot hero joins the match.
+- **One shot in match-1**, the shot hero's, from open play.
 
 ## The full table, and what each row needs
 

@@ -134,9 +134,9 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
-  passages and four heroes. On this Mac it lasts 751.7 s (12:32) and ends 1–0. The heroes start
-  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0), 7:01 (the
-  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:51 (the set-piece hero
+  passages and four heroes. On this Mac it lasts 808.3 s (13:28) and ends 1–0. The heroes start
+  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 5:07 (`press_escape` seed 0), 7:58 (the
+  shot hero `far_post_finish` seed 11, who scores at the far post) and 9:47 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
@@ -144,11 +144,12 @@ on an LLM.
   - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
     for rhythm. The match is therefore at most 13:28 on any platform (780 s of caps and 27.8 s of
-    heroes). `possession_play` rarely
-    puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 2 of 15 end in a throw-in (4 before players were kept on
-    the pitch, §3.2). Where the ball goes out depends on the platform (§3.7): on the live service
-    (Linux x86) the 18-possession version ran 13:06 on 2026-10-21, against 11:31 on this Mac.
+    heroes). With the team shape (§3.2) a pass nobody reaches is fetched, and `possession_play`
+    put no ball out in 40 runs of 45 s (tuning seeds 0–39), so every passage reaches its cap: on
+    this Mac none ends in a throw-in, and match-1 runs its full 13:28. (Before the team shape 2 of
+    15 did, 4 before players were kept on the pitch, and where the ball went out depended on the
+    platform, §3.7: the live service, Linux x86, ran the 18-possession version for 13:06 on
+    2026-10-21 against 11:31 on this Mac.)
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -160,15 +161,15 @@ on an LLM.
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the whole ball went out, an indirect free kick after an offside call
     (§3.9), a `cut` when it ended in play. On this Mac:
-    2 kick-offs (the start, and after the goal), 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
+    2 kick-offs (the start, and after the goal), 1 corner, 16 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
     never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
     look; without it, the counterfactual goes near post and A1 saves it (§3.6).
   - *match-2* (`sim.match.MATCH_2`, 2026-10-21): three of match-1's heroes on other design seeds,
-    in another order: `press_escape` 1 from 0:25, `corner_blind_side` 2 from 3:22 and
-    `blind_side_run` 11 from 7:58. It has 17 possessions, 11:45 on this Mac and at most 12:23,
-    and no shooting hero, so it ends 0–0.
+    in another order: `press_escape` 1 from 0:25, `corner_blind_side` 2 from 4:01 and
+    `blind_side_run` 11 from 8:37. It has 17 possessions and runs every cap (§3.2), 743.8 s
+    (12:24) on this Mac, and no shooting hero, so it ends 0–0.
     Each new seed passed the checks its demo seed passes: the hero moment and its lens are found,
     the scenario's intervention changes the outcome (the decision; whether the man is marked as
     the ball arrives; the possession after a forced carry), every claim is supported, and an
@@ -202,8 +203,41 @@ on an LLM.
   with a datasheet: [DATASET.md](DATASET.md).
 
 ### 3.2 Movement
-- Formation anchors (e.g. 4-3-3 vs 4-2-3-1) shifted by ball position and phase; compactness and
-  line height are team-style knobs.
+- **Team shape** (2026-10-22, `sim/team_shape.py`, behind `Scenario.team_shape`; on for
+  `possession_play`, the open play of every stitched match). Each off-ball player's target is his
+  slot in his team's block: a 4-3-3 at home and a 4-2-3-1 away with the ball, a 4-1-4-1 and a
+  4-4-1-1 without it (Shaw & Glickman measure formations in and out of possession apart).
+  - The team on the ball is in its attacking shape, the other in its defending shape; the phase
+    switches when possession does, and the players then move between the two shapes under the
+    usual limits, so a transition is that movement, not a third template.
+  - The back line is one line of four. Without the ball its height follows the regression
+    Castellano & Álvarez (2013) fit on La Liga matches, 6.30 m + 0.46 × the ball's distance from
+    the goal defended; with it, it stays a set distance behind the ball within a deepest and a
+    highest line (no paper prints a relation for it). The front line never goes beyond the
+    opponents' back line unless the ball does. The block is shorter and narrower without the ball, slides toward
+    the ball's side, and follows the ball smoothed over a second rather than the ball itself.
+  - Full-backs push on in possession; the far-side wide player tucks in without it; the keeper
+    stands on the line from his goal's centre to the ball, inside his area (he no longer presses
+    or chases passing lanes).
+  - A player making for his slot jogs (3 m/s) and runs harder the further out of position he is,
+    at full speed from 25 m: with the block on the instant ball and full speed to every slot,
+    15% of the time was above 5.5 m/s (5% now, 3% before the shape).
+  - The block's sizes and the in-possession line were fitted by hand on tuning seeds 0–39 to the
+    means Castellano et al. (2013) print in and out of possession and Forcher et al. (2024) print
+    for settled defence (docs/REFERENCES.md, Team shape). On held-out seeds 100–199
+    ([realism.md](../eval/reports/realism.md), Team shape) those eight rows are inside. Six are
+    outside: Errekagorri et al.'s (2024) per-match means over 5,518 LaLiga team-matches, both
+    phases together (the sim's team is 34.0 m long against 36.9 ± 1.7, 39.2 m wide against
+    43.4 ± 2.1, its deepest player 32.6 m out against 37.3 ± 3.0, its keeper 20.5 m from the
+    nearest team-mate against 25.0 ± 1.7), which were not fitted to: Castellano et al.'s one
+    team is narrower, shorter and deeper than that league, and `possession_play` keeps the ball
+    nearer its own goal than a match does; and the line's regression on the ball, which comes
+    out at 8.92 m + 0.406 × against the paper's 6.30 + 0.46 × (r 0.75 against 0.86). Without the
+    shape 4 of the 14 are inside, a team is longer out of possession than in it, and the
+    regression's slope is 0.226. Slot depths, the tuck, the push and the speeds are style knobs.
+  - The hero scenarios do not set the flag, so their runs, gates and reports are unchanged, and
+    neither does `open_play`: the xT grid every moment's ΔxT reads is fitted on it (§4.5). A
+    hero scenario's off-ball players could join once its gate is re-run on held-out seeds.
 - Steering toward targets with limits — *tunable*: max speed by role 8.0–9.5 m/s, max accel
   ≈ 3.5 m/s², max decel ≈ 5 m/s², turn-rate limit.
 - Pitch bounds (2026-10-21, `sim/engine.py`, `sim/movement.py`): every movement target and
@@ -224,6 +258,10 @@ on an LLM.
   receiver under tight pressure has usually been marked for a while, and the scan slowdown under
   pressure (§3.4) can show in the realism report. A passer judges a teammate's space without the
   opponents beyond him along the pass, such as a goal-side marker: a ball to his feet gets there first.
+  With the team shape the marking is zonal: a defender picks up an attacker within 12 m of his slot
+  and lets him go when following him would take him more than 15 m from it, so the block keeps its
+  shape (man to man anywhere in a 20 m zone, it was 47 m wide without the ball). A pass is played
+  ahead of a receiver on the move, and a pass its receiver cannot reach is chased by a team-mate.
 
 ### 3.3 Ball physics
 - Flight: gravity + quadratic drag — *tunable*: m = 0.43 kg, r = 0.11 m, ρ = 1.2 kg/m³, C_d ≈ 0.25.
@@ -694,20 +732,21 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,851 passes attempted (80.5% of resolved ones completed), 351 possession changes
-      (344 interceptions, 7 out of play, no tackles), 474 team possessions of 11.4 s on average,
+      of play, 1,995 passes attempted (76.9% of resolved ones completed), 448 possession changes
+      (all interceptions: with the team shape no ball goes out in open play, §3.2; no tackles),
+      575 team possessions of 9.4 s on average,
       and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
       match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
       has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
       printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
-      scenario possessions per match (target 15–25) and 13.15 min of play (target 10–15). 360 of
-      380 scenario possessions start with the home team, which has 56.5% of the possession time.
+      scenario possessions per match (target 15–25) and 13.47 min of play (target 10–15). 360 of
+      380 scenario possessions start with the home team, which has 55.5% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
       — [tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`
-      (the mean and CMs > forwards on seeds 100–119; the mean is 2.95 on 100 seeds in
+      (the mean and CMs > forwards on seeds 100–119; the mean is 2.79 on 100 seeds in
       [realism.md](../eval/reports/realism.md)),
       `test_spec_scan_rate_under_pressure_is_lower_than_without` (midfielders on seeds 100–119:
       0.395 scan onsets/s with an opponent within 4 m vs 0.485 beyond 8 m). Pooled at the
@@ -1064,8 +1103,9 @@ are sim records, labelled `sim` on screen.
       `test_occluded_cells_score_lower_than_unoccluded_at_same_angle_and_distance`
 - [x] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
-      — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.993 at
-      200°/s, 125–300°/s table);
+      — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.991 at
+      250°/s, the threshold the sweep picks since open play keeps a team shape, and 0.991 at
+      the coded 200°/s; 125–300°/s table);
       [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
 - [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers position, head yaw and
       torso yaw, and the scan detector runs on the adapter's output unchanged.
@@ -1075,9 +1115,9 @@ are sim records, labelled `sim` on screen.
       error must be within 15% of 2° and no frame may exceed 5 σ: blind_side_run seed 3 gives
       1.99° RMS and 8.2° at most. Torso yaw 0.76° RMS, position 4.7 mm RMS.
       Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
-      detector on the adapter's output on its held-out seeds: F1 0.993, as on the tracked yaw.
+      detector on the adapter's output on its held-out seeds: F1 0.991, as on the tracked yaw.
       That is equal by construction at matched noise, a consistency check, not evidence. The
-      0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      0.984 and 0.962 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [x] xT grid increases toward goal (sanity plot saved).
       — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
@@ -1097,18 +1137,19 @@ are sim records, labelled `sim` on screen.
       — [tests/test_stats_kernels.py](../tests/test_stats_kernels.py),
       [tests/test_live_stats.py](../tests/test_live_stats.py),
       [tests/test_stats_api.py](../tests/test_stats_api.py);
-      [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-21,
-      `possession_play` seeds 300–399: 1 439 passes, AUC 0.737, 95% interval 0.712–0.763,
-      supported). Reported, not tuned: the distance part alone ranks the other way (AUC 0.257),
-      because an intercepted pass is measured to where it was won, and the "very hard" band (50
-      passes) completes more often than "hard".
+      [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-22, with
+      the team shape, §3.2: `possession_play` seeds 300–399: 1 609 passes, AUC 0.730, 95% interval
+      0.704–0.755, supported). Reported, not tuned: the distance part alone ranks the other way
+      (AUC 0.259), because an intercepted pass is measured to where it was won, and the "very
+      hard" band (42 passes) completes more often than "hard".
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on when the key scan starts
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.923, recall 0.985);
+      0.915, recall 0.943, with the alert's distance re-chosen at 3.5 m on the tuning seeds since
+      open play keeps a team shape; 0.877 and 0.973 at the coded 3.0 m);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
@@ -1118,10 +1159,10 @@ are sim records, labelled `sim` on screen.
       them; each sentence is supported, renders in `en` and `zh` with no number outside a slot,
       and a wrong value in any slot is refuted.
       — [tests/test_tactics.py](../tests/test_tactics.py) (19 cases),
-      [tests/test_tactics_api.py](../tests/test_tactics_api.py). On match-1 (2026-10-21, `main`
-      c947b42), Home completed 13 of 19 short build-up passes under pressure (68%), against 89%
-      without. Its one corner reached 0.29 xT in 4.4 s, more than any of the 17 open-play passages
-      (median 0.0035), with no shot after it.
+      [tests/test_tactics_api.py](../tests/test_tactics_api.py). On match-1 (2026-10-22, with the team
+      shape), Home completed 25 of 34 short build-up passes under pressure (74%), against 86%
+      without. Its one corner reached 0.29 xT in 4.4 s, more than any of the 18 open-play passages
+      (median 0.0192), with no shot after it.
 
 ## 5. Explain layer (`explain/`)
 

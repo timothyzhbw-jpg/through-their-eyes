@@ -49,7 +49,7 @@ def test_one_match_runs_the_whole_pipeline(small):
     assert (hero["flip"], hero["measure"]) == (True, "decision")  # seed 3 flips (SPEC 3.6)
     assert any(m["hero"] for m in small["moments"])
     assert small["hash"] == build_match(11_000_000, SMALL).output_hash()
-    assert set(small["observed"]) == {"receptions", "scans", "peaks", "passes"}
+    assert set(small["observed"]) == {"receptions", "scans", "peaks", "passes", "shape"}
     assert len(small["ablation"]["scans"]) == len(small["observed"]["receptions"]["scans"])
 
 
