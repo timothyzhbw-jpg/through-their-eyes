@@ -609,7 +609,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "N. Varnhall's run was on J. Ferriday's blind side.",
         "Before the ball reached him, J. Ferriday looked over his right shoulder.",
         "When J. Ferriday looked over his shoulder before the ball arrived, he saw N. Varnhall.",
-        "J. Ferriday found N. Varnhall with a 38-metre pass.",
+        "J. Ferriday found N. Varnhall with a 39-metre pass.",
         "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert [line.text for line in zh.payload.lines] == [
@@ -617,7 +617,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "瓦恩霍尔的跑位在费里迪的视野盲区。",
         "球到之前，费里迪扭头看向了右后方。",
         "球到之前回头的那一眼，费里迪看到了瓦恩霍尔。",
-        "费里迪一脚38米的传球找到了瓦恩霍尔。",
+        "费里迪一脚39米的传球找到了瓦恩霍尔。",
         "如果没有那一眼，费里迪会把球传给安纳斯利。",
     ]
     assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
@@ -815,7 +815,7 @@ _SNAPSHOT_LINES = (
     ("analyst", "zh", "接球前2秒内，费里迪回头观察了一次。", "build", None, False),
     ("player_fan", "en", "Lovely from him. Before the ball reached him, J. Ferriday looked over "
      "his right shoulder.", "build", "looked over his right shoulder", False),
-    ("player_fan", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None,
+    ("player_fan", "en", "J. Ferriday found N. Varnhall with a 39-metre pass.", "peak", None,
      False),
     ("coach", "en", "Coaching point. J. Ferriday had last checked his shoulder 0.8 seconds before "
      "the ball arrived.", "build", "checked his shoulder", False),
@@ -830,7 +830,7 @@ _SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",
                 "time_since_last_scan"}  # fmt: skip
 _PEAK_CLAIMS = {"pass_to_runner", "runner_received", "pressure_at_pass"}
 _PEAK_LINES = (
-    "found N. Varnhall with a 38-metre pass",
+    "found N. Varnhall with a 39-metre pass",
     "took the pass",
     "Pressing intensity on K. Annersley was 95% when he released the ball",
 )

@@ -12,6 +12,7 @@ intensity (Bekkers 2025).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from decimal import ROUND_HALF_UP, Decimal
 
 import numpy as np
 
@@ -142,6 +143,29 @@ def milestones(cum: np.ndarray, step: float) -> list[tuple[int, int]]:
         out.append((int(np.searchsorted(cum, target, side="left")), int(target)))
         k += 1
     return out
+
+
+def display(value: float, decimals: int = 0) -> float:
+    """The one rounding rule for a number shown on screen (SPEC 4.6, 5.3): `decimals` places of
+    the exact binary value, ties away from zero, which is what the web's `toFixed` prints. A
+    claim's slot and a chip's payload value are rounded by this, once, so a chip and the claim
+    about the same quantity read the same; the web prints them as they are."""
+    step = Decimal(1).scaleb(-decimals)
+    return float(Decimal(float(value)).quantize(step, rounding=ROUND_HALF_UP))
+
+
+def feed_track(positions: np.ndarray) -> np.ndarray:
+    """Positions (m) as the tracking feed carries them, to the mm (sim/export.py `_mm`): what the
+    live stats measure, and what a claim about the same quantity measures too."""
+    return np.rint(np.asarray(positions, dtype=np.float64) * 1000) / 1000.0
+
+
+def pass_length(ball: np.ndarray, kick: int, end: int) -> float:
+    """A pass's length (m): how far the tracked ball moved from the kick to the frame the pass
+    resolved (received, intercepted or out). The one definition of pass length: the live chip,
+    the pass log, pass difficulty, the moment card and the claims all measure it so (SPEC 4.6).
+    `ball`: (F, 2), as `feed_track` gives it."""
+    return float(np.linalg.norm(ball[end] - ball[kick]))
 
 
 def release_frame(kick: int, end: int) -> int:

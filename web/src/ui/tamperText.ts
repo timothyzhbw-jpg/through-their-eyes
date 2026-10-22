@@ -11,7 +11,7 @@ const SLOTS: Record<string, SlotText> = {
   secs: { label: "seconds since his last look", decimals: 1 },
   dur: { label: "length of the look (s)", decimals: 2 },
   dist: { label: "pass length (m)", decimals: 0 },
-  kmh: { label: "pass speed (km/h)", decimals: 0 },
+  kmh: { label: "pass speed (km/h)", decimals: 1 }, // measured on the tracked ball, as the chips
   gap: { label: "gap (m)", decimals: 1 },
   err: { label: "belief error (m)", decimals: 1 },
   p_belief: { label: "chance he thought it had", decimals: 2 },

@@ -26,6 +26,7 @@ from dataclasses import dataclass
 
 from agents.context import MomentContext
 from agents.schemas import Language, Persona
+from analytics.stats import display
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.render import RenderPayload, build_payload
 from explain.render import ScriptLine as RenderLine
@@ -159,14 +160,14 @@ def _when(look: LookResult, ctx: MomentContext, d: _Decided) -> Claim | None:
         Predicate(op="eq", lhs=fn("event_attr", event=e.id, attr="player", cf=cf),
                   rhs=slot("player")),
     ]  # fmt: skip
-    seconds = round((reception.frame - e.frame) * look.counterfactual.dt, 1)
+    seconds = display((reception.frame - e.frame) * look.counterfactual.dt, 1)
     slots = {"player": Slot(ref=hero)}
     if e.frame > reception.frame:  # after the ball reached him: timed against his decision
         since = fn("metric_at", metric="time_since_last_scan", anchor=d.anchor, at=d.at,
                    player=hero, cf=cf)  # fmt: skip
         checks += [_pin(look, d),
                    Predicate(op="approx", lhs=since, rhs=slot("s"), abs_tol=0.05)]  # fmt: skip
-        slots["s"] = Slot(value=round((d.frame - e.frame) * look.counterfactual.dt, 1),
+        slots["s"] = Slot(value=display((d.frame - e.frame) * look.counterfactual.dt, 1),
                           decimals=1)  # fmt: skip
         template = f"You make {{player}} look {where_en} {{s}} s before he has to decide."
         zh = f"你让{{player}}在做决定前{{s}}秒{where_zh}。"
@@ -283,8 +284,8 @@ def _belief(look: LookResult, none: LookResult) -> Claim | None:
                  "with no look at all, {before} m.",
         templates={"zh": "做决定时，他脑海中{mate}的位置与实际相差{after}米；"
                          "如果一眼都不看，相差{before}米。"},
-        slots={"mate": Slot(ref=mate), "after": Slot(value=round(after[mate], 1), decimals=1),
-               "before": Slot(value=round(before[mate], 1), decimals=1)},
+        slots={"mate": Slot(ref=mate), "after": Slot(value=display(after[mate], 1), decimals=1),
+               "before": Slot(value=display(before[mate], 1), decimals=1)},
         predicate=Predicate(op="all", args=[
             Predicate(op="approx", lhs=err(look.id), rhs=slot("after"), abs_tol=0.05),
             Predicate(op="approx", lhs=err(none.id), rhs=slot("before"), abs_tol=0.05),
@@ -414,7 +415,7 @@ def _outcome(look: LookResult) -> Claim | None:
 
 
 def _value(look: LookResult) -> Claim | None:
-    value = round(abs(look.delta_xt), 2)
+    value = display(abs(look.delta_xt), 2)
     if value < 0.01:
         return None
     better = look.delta_xt > 0  # what he really did was worth more

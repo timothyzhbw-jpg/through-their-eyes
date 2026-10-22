@@ -92,9 +92,11 @@ MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # API's cache key, so cached breakdowns from the older code are not served again.
 # 2: tidy() keeps each connective once; 3: plan errors are reason codes; 4: audio-description
 # delivery; 5: rendered narration lines; 6: the Director's priority sets the budget
-# (agents/budget.py) and per-persona required and forbidden claims (agents/persona_rules.py)
+# (agents/budget.py) and per-persona required and forbidden claims (agents/persona_rules.py);
+# 7: one quantity, one number: a pass's length and speed and a shot's speed are measured on the
+# tracked ball as the chips measure them, every slot rounded by `analytics.stats.display`;
 # 8: persona specs (SPEC 6): palettes, openers, the coach's cue, line caps, a plan and a voice per
-# persona (7 is #200's one number per quantity)
+# persona
 PIPELINE_VERSION = 8
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two

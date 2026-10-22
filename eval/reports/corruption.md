@@ -98,9 +98,9 @@ Player ids stand in for display names.
 | `gap_to_nearest_opponent` | H9 was 9.9 metres from the nearest opponent when the pass was played. | 出球时，H9离最近的对手有9.9米。 |
 | `key_scan_duration` | H8's look over his shoulder lasted 0.76 seconds. | H8这次回头观察持续了0.76秒。 |
 | `observed_share` | In the 1 second before receiving, H8 saw 62% of the space the opponents controlled. | 接球前1秒内，H8看到了对手控制区域的62%。 |
-| `pass_speed` | H8's pass left his foot at 78 km/h. | H8这脚传球的出球时速为78公里。 |
+| `pass_speed` | H8's pass left his foot at 76.0 km/h. | H8这脚传球的出球时速为76.0公里。 |
 | `pass_success` | H8 thought the pass to H9 had a 0.74 chance of arriving; it was 0.89. | H8判断传给H9的球能到的概率是0.74，实际是0.89。 |
-| `pass_to_runner` | H8 found H9 with a 38-metre pass. | H8一脚38米的传球找到了H9。 |
+| `pass_to_runner` | H8 found H9 with a 40-metre pass. | H8一脚40米的传球找到了H9。 |
 | `presser_distance` | The nearest opponent, A11, was 11.2 metres from H8 when he released the ball. | H8出球时，离他最近的对手是A11，相距11.2米。 |
 | `pressure_at_pass` | Pressing intensity on H8 was 0% when he released the ball. | 出球时，H8承受的逼抢强度为0%。 |
 | `receiver_pressure` | When the pass reached H9, pressing intensity on him was 0%. | 球到H9脚下时，他承受的逼抢强度为0%。 |
