@@ -22,7 +22,8 @@ from agents.workflow import BREAKDOWN, Narration, breakdown, build_workflow, run
 ROOT = Path(__file__).resolve().parents[1]
 SHIPPED = ("agents", "analytics", "api", "explain", "sim")
 
-ANCHORED_PBP = {"lines": [{"claim": "scan_before_reception", "connective": "Watch this."}]}
+# No connective: each persona has its own now (agents/persona_rules.py), none common to both.
+ANCHORED_PBP = {"lines": [{"claim": "scan_before_reception", "connective": None}]}
 ANCHORED_COLOR = {"lines": [{"claim": "cf_pass", "connective": None}]}
 
 # Free-text replies with the M0 failure modes: a malformed placeholder that would air as literal
@@ -78,9 +79,11 @@ def test_the_shipped_crew_narrates_anchored_lines(ctx):
     assert "allowed_connectives" in sent and '"slots"' not in sent
     (script,) = r.scripts
     texts = [line.text for line in script.payload.lines]
-    assert texts[0] == "Watch this. J. Ferriday checked his shoulder before the ball reached him."
+    assert "J. Ferriday checked his shoulder before the ball reached him." in texts
     assert "Without that look, J. Ferriday would have passed to K. Annersley." in texts
-    # The analyst's persona rules add their template lines (agents/persona_rules.py).
+    # The analyst's persona rules add their template lines and open on a number
+    # (agents/persona_rules.py).
+    assert texts[0] == "J. Ferriday scanned once in the 2 seconds before receiving."
     assert {"cf_value", "belief_error"} <= {c for line in script.lines for c in line.claims}
 
 
@@ -186,7 +189,7 @@ def test_anchored_lines_pass_the_first_round(ctx):
     assert all(not line.kinds for line in s.first_pass) and sum(s.violations.values()) == 0
     assert s.made_up == 0 and s.aired_repeats == 0 and all(a.verbatim for a in s.aired_lines)
     assert s.aired == [
-        "Watch this. J. Ferriday checked his shoulder before the ball reached him.",
+        "J. Ferriday checked his shoulder before the ball reached him.",
         "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert s.headline == ["scan_before_reception", "belief_error", "cf_pass"]
@@ -221,7 +224,9 @@ def test_the_ablation_runs_end_to_end_offline(tmp_path):
     assert seed.seed == 3 and {s.mode for s in seed.scripts} == {"free_text", "anchored"}
     assert len(seed.scripts) == 4
     assert len(seen) == 4  # one groundedness call per aired script
-    assert seed.calls == {"free_text": 12, "anchored": 4, "judge": 4}
+    # Free text: 12 before the persona palettes; tidy now drops the casual fan's scan-count line
+    # (off its palette) before the Verifier, so one rewrite call fewer.
+    assert seed.calls == {"free_text": 11, "anchored": 4, "judge": 4}
     for s in seed.scripts:
         assert s.groundedness is not None and s.groundedness_reason == "stub"
         response, context = seen[seed.scripts.index(s)]

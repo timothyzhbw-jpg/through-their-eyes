@@ -272,7 +272,7 @@ async function mainView(page, main) {
  * overlays at once, before its breakdown arrives. A screenshot of each. */
 async function audiences(page, shoot) {
   await hero(page);
-  const pick = async (label, main, figure) => {
+  const pick = async (label, main, also) => {
     const toggle = page.getByRole("button", { name: /^Watching as / });
     if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
     const menu = page.getByRole("dialog", { name: "Who is watching" });
@@ -280,14 +280,16 @@ async function audiences(page, shoot) {
     await page.keyboard.press("Escape");
     await see(page.getByRole("button", { name: `Watching as ${label} · English` }), label);
     await mainView(page, main);
-    if (figure) await see(page.getByRole("figure", { name: figure }), figure);
+    if (also) await see(also, `${label}'s view`);
     await shoot(label.toLowerCase().replaceAll(" ", "-"));
   };
+  const figure = (name) => page.getByRole("figure", { name });
   await pick("Analyst", "board");
-  await pick("Player fan", "eyes", "Broadcast view");
-  await pick("Coach", "eyes", "Tactical view from above");
-  await pick("Casual fan", "eyes", "First-person view");
-  await pick("Audio description", "eyes", "Broadcast view");
+  await pick("Player fan", "eyes", figure("Broadcast view"));
+  // Split: his eyes, and in the corner his picture of the pitch (views/BeliefMap.tsx).
+  await pick("Coach", "eyes", page.getByRole("img", { name: /'s picture of the pitch/ }));
+  await pick("Casual fan", "eyes", figure("First-person view"));
+  await pick("Audio description", "eyes", figure("Broadcast view"));
 }
 
 /** A hero moment: its views and its run switch; at the top level, the live service's control

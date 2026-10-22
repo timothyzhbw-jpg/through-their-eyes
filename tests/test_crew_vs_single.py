@@ -141,7 +141,8 @@ def test_a_digit_in_its_free_text_fails_the_whole_reply(ctx):
 
 
 def test_free_text_rewrites_take_one_call_per_round(ctx):
-    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["scans_before_reception"]}]}
+    # A claim on both personas' palettes (agents/persona_rules.py): tidy drops a line off it.
+    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["blind_side"]}]}
     good = {"lines": [{"text": "{player} checked his shoulder before the ball reached him.",
                        "claims": ["scan_before_reception"]}]}  # fmt: skip
     scripts = {solo.audience(p, lg): {"pbp": bad, "color": good} for p, lg in AUDIENCES}
@@ -153,7 +154,8 @@ def test_free_text_rewrites_take_one_call_per_round(ctx):
 
 
 def test_rewrites_stop_after_the_crews_budget(ctx):
-    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["scans_before_reception"]}]}
+    # A claim on both personas' palettes (agents/persona_rules.py): tidy drops a line off it.
+    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["blind_side"]}]}
     worse = {"lines": [{"text": "He was free by 3 metres.", "claims": ["unmarked"]}]}
     scripts = {solo.audience(p, lg): {"pbp": bad, "color": worse} for p, lg in AUDIENCES}
     still = {f"{solo.audience(p, lg)}_{s}": v for p, lg in AUDIENCES
@@ -249,7 +251,8 @@ def test_digits_are_counted_only_in_the_models_own_words():
 
 
 def test_without_the_verifier_the_first_drafts_air(ctx, tmp_path):
-    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["scans_before_reception"]}]}
+    # A claim on both personas' palettes (agents/persona_rules.py): tidy drops a line off it.
+    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["blind_side"]}]}
     good = {"lines": [{"text": "{player} checked his shoulder before the ball reached him.",
                        "claims": ["scan_before_reception"]}]}  # fmt: skip
     scripts = {solo.audience(p, lg): {"pbp": bad, "color": good} for p, lg in AUDIENCES}
