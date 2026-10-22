@@ -1,7 +1,7 @@
 // Skeleton data (SPEC 7, optional; the first item in the SPEC 9 cut order): every player drawn
 // the way limb-tracking data is shown, but only with what the sim records on every frame: the
-// position, the torso yaw (`body`), the head yaw (`head`, or as a tracking system reports it), and
-// the scan detector's marks. Limbs are not sim data, so none are drawn.
+// position, the torso yaw (`body`) and the head yaw (`head`, or as a tracking system reports it);
+// a scanning player gets the scan radar (radar.ts). Limbs are not sim data, so none are drawn.
 //
 // "As tracked" is the head yaw with the sim's sensor noise (independent, 2 degrees, per frame:
 // sim/config.py `sensor_noise`), the series the scan detector runs on. The export carries it as the
@@ -26,11 +26,10 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { clampFrame, wrapAngle, type Hero, type Run, type Sample } from "../data/hero";
 import { COLORS } from "../views/scene";
+import { scanSource, type ScanSource } from "./radar";
 
 /** Which head yaw the skeleton draws: the sim's, or as a tracking system reports it. */
 export type YawSource = "true" | "tracked";
-/** What lights the head ray: the scan detector where the export has its run, else the sim. */
-export type LitBy = "detector" | "sim";
 
 export const DETECTOR_COLOR = "#b6e86f"; // --detector in styles.css: the detector's own output
 const DEG = Math.PI / 180;
@@ -69,46 +68,18 @@ export function trackedHead(hero: Hero, run: Run): Float32Array | null {
   return out;
 }
 
-// ---------- what lights the head ray ----------
-
-export const litBy = (run: Run): LitBy => (run.detector ? "detector" : "sim");
-
-const litCache = new WeakMap<Run, Uint8Array>();
-
-/**
- * 1 where player j's head ray is lit at frame f (index f * n + j): over every scan the detector
- * accepted, from its onset to its end; in a stitched match, which has no detector run, over the
- * sim's own scans.
- */
-export function litMask(hero: Hero, run: Run): Uint8Array {
-  const hit = litCache.get(run);
-  if (hit) return hit;
-  const { n } = hero;
-  const mask = new Uint8Array(run.frames * n);
-  const mark = (j: number, start: number, end: number) => {
-    for (let f = Math.max(0, start); f <= Math.min(run.frames - 1, end); f++) mask[f * n + j] = 1;
-  };
-  if (run.detector)
-    run.detector.scans.forEach((scans, j) => scans.forEach((s) => mark(j, s.start, s.end)));
-  else for (const s of run.scans) mark(hero.ids.indexOf(s.player), s.start, s.end);
-  litCache.set(run, mask);
-  return mask;
-}
-
 // ---------- the pose of every player at one frame ----------
 
 export class Pose {
   source: YawSource = "true"; // the head yaw drawn (tracked only where the export has it)
-  litBy: LitBy = "detector";
+  scanBy: ScanSource = "detector"; // what tells a scan (the radar)
   yaw: Float32Array; // head yaw drawn, rad
   body: Float32Array; // torso yaw, rad
   twist: Float32Array; // head yaw minus torso yaw, rad in [-pi, pi], counter-clockwise positive
-  lit: Uint8Array;
   constructor(n: number) {
     this.yaw = new Float32Array(n);
     this.body = new Float32Array(n);
     this.twist = new Float32Array(n);
-    this.lit = new Uint8Array(n);
   }
 }
 
@@ -123,13 +94,12 @@ export function poseInto(
 ): Pose {
   const { n } = hero;
   const tracked = wanted === "tracked" ? trackedHead(hero, run) : null;
-  const lit = litMask(hero, run);
   const c = clampFrame(run, frame);
   const i0 = Math.floor(c);
   const i1 = Math.min(run.frames - 1, i0 + 1);
   const t = c - i0;
   out.source = tracked ? "tracked" : "true";
-  out.litBy = litBy(run);
+  out.scanBy = scanSource(run);
   for (let j = 0; j < n; j++) {
     let yaw = sample.head[j]; // the true yaw, as the other views draw it
     if (tracked) {
@@ -139,7 +109,6 @@ export function poseInto(
     out.yaw[j] = wrapAngle(yaw);
     out.body[j] = sample.body[j];
     out.twist[j] = wrapAngle(yaw - sample.body[j]);
-    out.lit[j] = lit[i0 * n + j];
   }
   return out;
 }
@@ -266,7 +235,6 @@ export class SkeletonGeometry {
   readonly torso: Segments;
   readonly spine: Segments;
   readonly rays: Segments;
-  readonly lit: Segments;
   private readonly fan: BufferGeometry;
   private readonly fanMaterial: MeshBasicMaterial;
   private readonly alphas: Float32Array;
@@ -280,14 +248,11 @@ export class SkeletonGeometry {
     const w = v.widths;
     this.torso = new Segments(n, w.torso, COLORS.fg, 0.95);
     this.spine = new Segments(v.spine ? n : 0, w.spine, COLORS.fg, 0.55);
+    // Every head ray is the same white line, scanning or not: a scan is the radar under it.
     this.rays = new Segments(n, w.ray, COLORS.fg, 0.9);
-    // A scanning player's head ray is the same line in the scan colour, not a longer one: a long
-    // bright line off a player read as an arrow (Bowen, 10/22: "这个箭头是什么").
-    this.lit = new Segments(n, w.ray, DETECTOR_COLOR, 1);
     this.torso.object.renderOrder = v.order.torso;
     this.spine.object.renderOrder = v.order.torso;
     this.rays.object.renderOrder = v.order.ray;
-    this.lit.object.renderOrder = v.order.ray + 0.1;
     this.alphas = new Float32Array(n);
     this.fan = new BufferGeometry();
     const vertices = n * FAN_STEPS * 3;
@@ -304,29 +269,20 @@ export class SkeletonGeometry {
     const fanMesh = new Mesh(this.fan, this.fanMaterial);
     fanMesh.frustumCulled = false;
     fanMesh.renderOrder = v.order.fan;
-    this.group.add(
-      fanMesh,
-      this.torso.object,
-      this.spine.object,
-      this.rays.object,
-      this.lit.object,
-    );
+    this.group.add(fanMesh, this.torso.object, this.spine.object, this.rays.object);
     this.group.visible = false; // until the layer turns it on
   }
 
   /** The canvas size in CSS px, which screen-space line widths need. */
   resize(width: number, height: number): void {
-    for (const s of [this.torso, this.spine, this.rays, this.lit]) {
-      s.material.resolution.set(width, height);
-    }
+    for (const s of [this.torso, this.spine, this.rays]) s.material.resolution.set(width, height);
   }
 
   /** Redraw every player from `pose`; `scale` grows the board's shapes with its tokens. */
   update(pose: Pose, sample: Sample, scale: number): void {
     const v = this.view;
     const k = v.spine ? 1 : scale; // the broadcast camera draws to real size
-    this.lit.material.color.set(pose.litBy === "detector" ? DETECTOR_COLOR : COLORS.sight);
-    for (const s of [this.torso, this.spine, this.rays, this.lit]) s.begin();
+    for (const s of [this.torso, this.spine, this.rays]) s.begin();
     const xyz = this.fan.attributes.position.array as Float32Array;
     const rgba = this.fan.attributes.color.array as Float32Array;
     let vertex = 0;
@@ -338,10 +294,9 @@ export class SkeletonGeometry {
       if (v.spine) this.spine.push(x, 0.05, -y, x, v.shoulderH, -y);
       const c = Math.cos(pose.yaw[j]);
       const s = Math.sin(pose.yaw[j]);
-      const ray = pose.lit[j] ? this.lit : this.rays;
       const from = v.rayFrom * k;
       const to = v.ray * k;
-      ray.push(x + from * c, v.eyeH, -(y + from * s), x + to * c, v.eyeH, -(y + to * s));
+      this.rays.push(x + from * c, v.eyeH, -(y + from * s), x + to * c, v.eyeH, -(y + to * s));
 
       // The fan: FAN_STEPS triangles from the position, torso facing to head yaw.
       const alpha = (this.alphas[j] = fanAlpha(pose.twist[j]));
@@ -363,7 +318,7 @@ export class SkeletonGeometry {
         put(x + r * Math.cos(edges[i + 1]), y + r * Math.sin(edges[i + 1]));
       }
     }
-    for (const s of [this.torso, this.spine, this.rays, this.lit]) s.end();
+    for (const s of [this.torso, this.spine, this.rays]) s.end();
     this.fan.setDrawRange(0, vertex);
     this.fan.attributes.position.needsUpdate = true;
     this.fan.attributes.color.needsUpdate = true;
@@ -375,7 +330,7 @@ export class SkeletonGeometry {
   }
 
   dispose(): void {
-    for (const s of [this.torso, this.spine, this.rays, this.lit]) s.dispose();
+    for (const s of [this.torso, this.spine, this.rays]) s.dispose();
     this.fan.dispose();
     this.fanMaterial.dispose();
   }

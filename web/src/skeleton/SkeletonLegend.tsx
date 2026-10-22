@@ -127,16 +127,15 @@ function Legend({ className }: { className?: string }) {
           head–torso angle
         </li>
         <li
-          className="sk-lit"
+          className="sk-radar"
           title={
-            pose.litBy === "detector"
-              ? "His head ray turns green while the scan detector marks a scan"
-              : "A match export has no scan detector run: his head ray turns gold during the sim's own scans"
+            pose.scanBy === "detector"
+              ? "A sector on the grass at his feet, turning with his head, while the scan detector marks a scan"
+              : "A match export has no scan detector run: the radar shows during the sim's own scans"
           }
         >
-          <i className={`sw lit ${pose.litBy}`} aria-hidden="true" />
-          {pose.litBy === "detector" ? "green" : "gold"}: scanning now (head turned away from the
-          ball)
+          <i className="sw radar" aria-hidden="true" />
+          radar: scanning now (his head turned away from the ball)
         </li>
       </ul>
       <p className="sk-readout">

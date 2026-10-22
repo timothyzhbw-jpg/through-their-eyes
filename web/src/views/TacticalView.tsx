@@ -56,6 +56,7 @@ import {
 import { PitchControlLayer } from "../pitchControl/PitchControlLayer";
 import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
+import { RadarLayer } from "../skeleton/RadarLayer";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 import { shortName } from "../data/roster";
@@ -185,6 +186,7 @@ function TacticalScene() {
       <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} px={px} />
       <SkeletonLayer sample={shared.current.sample} variant="board" scale={scale} />
+      <RadarLayer sample={shared.current.sample} variant="board" scale={scale} px={px} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />

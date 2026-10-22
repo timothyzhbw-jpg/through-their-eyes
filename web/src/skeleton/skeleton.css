@@ -51,8 +51,8 @@
 .skeleton-key .sk-marks li {
   white-space: nowrap;
 }
-/* the scan colour's line says what it means in plain words: it wraps inside the key */
-.skeleton-key .sk-marks li.sk-lit {
+/* the radar's line says what it means in plain words: it wraps inside the key */
+.skeleton-key .sk-marks li.sk-radar {
   white-space: normal;
 }
 .skeleton-key .sw {
@@ -73,13 +73,15 @@
   border-bottom: 9px solid rgba(230, 238, 233, 0.45);
   width: 0;
 }
-.skeleton-key .sw.lit.detector {
-  height: 4px;
-  background: var(--detector);
-}
-.skeleton-key .sw.lit.sim {
-  height: 4px;
-  background: var(--sight);
+/* the radar (radar.ts): a 60 degree sector in Floodlight with its edge on one side */
+.skeleton-key .sw.radar {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  vertical-align: -2px;
+  background:
+    conic-gradient(from 28deg, var(--floodlight) 0 3deg, transparent 3deg),
+    conic-gradient(from -30deg, rgba(246, 213, 102, 0.42) 0 60deg, transparent 60deg);
 }
 .skeleton-key .sk-readout {
   margin: 4px 0 0;
