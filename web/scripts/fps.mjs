@@ -53,11 +53,13 @@ if (opt.cine) {
     const button = (name) => page.getByRole("button", { name, exact: true });
     await page.goto(`${base}?offline=1&autoplay=0&intro=0`);
     await button("Play").waitFor();
-    await page.waitForFunction(() => document.querySelectorAll("canvas").length >= 2);
+    // Beside his eyes the corner shows his belief map, not the board: the board's canvas is read
+    // once it is the main view (below).
+    await page.locator(".pov canvas").waitFor();
     await page.waitForTimeout(1500); // models and textures
     const renderer = await rendererOf(page);
-    const board = await page.locator(".tac canvas").evaluate((c) => [c.width, c.height]);
     const pov = await page.locator(".pov canvas").evaluate((c) => [c.width, c.height]);
+    let board = [0, 0];
 
     /** An overlay on or off: the toggles are behind the bar's View options. */
     const NAMES = { "pitch control": "Pitch control", skeleton: "Skeleton" };
@@ -109,6 +111,17 @@ if (opt.cine) {
       ["skeleton", "Broadcast"], // the skeleton is drawn on the broadcast camera and the board
     ]) {
       await button(camera).click();
+      if (camera === "Tactical") {
+        const canvas = page.locator(".tac canvas");
+        await canvas.waitFor({ state: "visible" });
+        // after the frame that drew it as the main view
+        board = await canvas.evaluate(
+          (c) =>
+            new Promise((done) =>
+              requestAnimationFrame(() => setTimeout(() => done([c.width, c.height]), 0)),
+            ),
+        );
+      }
       for (const other of Object.keys(NAMES)) await set(other, false);
       for (let r = 0; r < Number(opt.runs); r++) {
         for (const on of [false, true]) {
