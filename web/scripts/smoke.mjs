@@ -87,6 +87,13 @@ const PAGES = [
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
   },
+  { name: "link-yourcall", path: "?play=yourcall", check: (p, shoot) => yourCall(p, shoot) },
+  {
+    name: "phone-375-yourcall",
+    path: "?play=yourcall",
+    device: PHONE_375,
+    check: (p, shoot) => phone(p, (q) => yourCall(q, shoot), { live: false }),
+  },
   { name: "link-steps", path: "?play=steps", check: scanSteps },
   { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
   {
@@ -569,6 +576,26 @@ async function takeEyes(page) {
   await see(play, "the look playing through his eyes");
   await play.click();
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
+/** `?play=yourcall`: Your call (SPEC 7). A pick, then the reveal: why it went this way (what he
+ * had seen, how his picture rated the call), what it led to, then each beat to the comparison. */
+async function yourCall(page, shoot = async () => {}) {
+  await see(page.getByRole("region", { name: "Your call" }), "Your call");
+  const markers = page.getByRole("group", { name: /^Options of / }).getByRole("button");
+  await see(markers.first(), "Your call's markers");
+  await page
+    .getByRole("button", { name: /^Pass to / })
+    .first()
+    .click();
+  await see(page.getByRole("list", { name: "Reveal" }), "the reveal's steps");
+  await see(page.locator('dl[aria-label="Why it went this way"]'), "why it went this way");
+  await see(page.getByText("What it led to in the sim"), "what it led to");
+  await shoot("why");
+  for (const name of ["See the truth", "What he did", "Compare"]) {
+    await page.getByRole("button", { name, exact: true }).click();
+  }
+  await see(page.getByRole("button", { name: "Try another call" }), "the comparison");
 }
 
 /** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look

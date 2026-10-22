@@ -405,6 +405,34 @@ describe("Your call: the reveal", () => {
     ).toEqual([null, null, null, "step"]);
   });
 
+  it("explains the call right after the pick: what he had seen, how his picture rated it, what it led to", () => {
+    const { session } = open();
+    const el = mount(session);
+    click(
+      markers(el).find((m) => m.getAttribute("aria-label") === "Pass to K. Annersley, number 4")!,
+    );
+    const why = el.querySelector<HTMLElement>('dl.yc-why[aria-label="Why it went this way"]')!;
+    expect(why).not.toBeNull();
+    const rows = [...why.querySelectorAll("dt")].map((dt) => textOf(dt));
+    expect(rows).toEqual(["He had just seen", "Not seen lately", "On his picture"]);
+    expect(textOf(why)).toContain("N. Varnhall");
+    const unseen = textOf(why.querySelectorAll("dd")[1]);
+    expect(unseen).toContain("R. Castellane"); // not seen lately
+    expect(unseen).toContain("L. Brackwell");
+    expect(textOf(why)).toContain("K. Annersley was fresh in his picture.");
+    expect(textOf(why)).toContain(
+      "the pass to N. Varnhall looked more promising than your call, so that was his choice.",
+    );
+    // Read from the sim export: marked so, and not a number in it.
+    expect(why.querySelectorAll('[data-source="sim"]').length).toBe(2);
+    expect(textOf(why)?.replace(/\(.*?\)/g, "")).not.toMatch(/\d/);
+    // Then what it led to, in verified lines.
+    expect(textOf(el.querySelector(".yc-sub"))).toBe("What it led to in the sim");
+    expect(textOf(el.querySelector(".yc-lines"))).toContain("K. Annersley would have received it.");
+    // The beats' buttons keep their names (the trailer's shot 12 clicks them).
+    expect(button(el, "See the truth")).toBeDefined();
+  });
+
   it("his own call: you made his call, and what he did is not played twice", () => {
     const { session, yc } = open();
     const el = mount(session);

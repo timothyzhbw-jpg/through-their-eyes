@@ -1899,6 +1899,14 @@ original visual identity.
     option in `whatif_*.json`) plays with a gold ball: it never happened. (2) The truth: everyone
     moves from where he pictured them to where they were. (3) What he did and why. (4) The two
     calls compared. One tap tries another option or goes back to the replay.
+  - *Why it went this way* (2026-10-22, outside UX review: the result needed explaining;
+    [why.ts](../web/src/yourcall/why.ts)). Right after the pick, the first beat says what he had
+    just seen (his teammates fresh in his picture, and those he had not seen lately, from the
+    belief ages of the scans), whether the call's receiver was fresh in his picture, and how his
+    picture rated the call against his own (the decision record's chances, in words: "the pass to
+    N. Varnhall looked more promising than your call"), then what it led to in the sim (the
+    verified lines). The first two are read from the sim export and marked so; they carry no
+    number, since no claim stands behind a count or a time.
   - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
     against his), and the breakdown's narration sorted by claim (state at the decision → truth;
     the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
@@ -2162,11 +2170,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       tries another option or closes; the reveal shows no number outside a verified line, each line
       once; the camera frames every option on desktop and phone; markers are focusable named
       buttons (arrow keys, Enter, Escape) and a swipe picks the option it points at; reduced
-      motion cuts to the end; it works on both heroes with a decision and inside `?match=`.
+      motion cuts to the end; it works on both heroes with a decision and inside `?match=`; after
+      the pick it says what he had seen and how his picture rated the call, with no digit.
       — [web/src/yourcall/flow.test.ts](../web/src/yourcall/flow.test.ts),
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
-      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+      [why.test.ts](../web/src/yourcall/why.test.ts),
+      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx); `npm run smoke`, pages
+      `link-yourcall` and `phone-375-yourcall` (axe on the reveal)
 - [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
       live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
       and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
