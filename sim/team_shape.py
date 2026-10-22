@@ -116,11 +116,20 @@ class PhaseShape:
 @dataclass(frozen=True)
 class ShapeParams:
     attack: PhaseShape = PhaseShape(
-        length=43.0, width=41.5, gap=13.0, line_min=22.0, line_max=50.0, shift=0.3
+        length=46.0, width=41.5, gap=16.0, line_min=22.0, line_max=50.0, shift=0.3
     )
     defence: PhaseShape = PhaseShape(
-        length=33.5, width=36.0, gap=15.0, line_min=12.0, line_max=35.0, shift=0.5
+        length=31.0, width=34.5, gap=15.0, line_min=12.0, line_max=37.0, shift=0.5
     )
+    # A player making for his slot jogs when he is near it and runs harder the further out of
+    # position he is, at full speed from `sprint_distance` (style knobs). The jog is below the
+    # 19.8 km/h (5.5 m/s) entry speed of high-speed running most studies use (Gualtieri et al.
+    # 2023, docs/REFERENCES.md). Pressing, marking and runs to the ball keep their own speeds.
+    slot_speed: float = 3.0  # m/s
+    sprint_distance: float = 25.0  # m
+    # The block follows the ball smoothed over this time constant, not the ball itself: a pass
+    # moves the ball at 10-20 m/s, and a block that followed it would sprint (a style knob).
+    ball_follow_s: float = 1.0
     fullback_push: float = 0.5  # slot depth of the full-backs in possession
     far_tuck: float = 0.4  # far-side wide player's share of his lateral slot out of possession
     keeper_share: float = 0.4  # keeper's depth as a share of the back line's
@@ -193,6 +202,14 @@ def spots(
         if keeper.any():
             out[keeper] = keeper_spot(ball, back[t], sign, params)
     return out
+
+
+def slot_speed(distance: np.ndarray, v_max: np.ndarray, params: ShapeParams | None = None):
+    """Speed cap toward the slot `distance` metres away: `slot_speed` near it, up to `v_max` at
+    `sprint_distance` and beyond."""
+    params = SHAPE if params is None else params
+    share = np.clip(distance / params.sprint_distance, 0.0, 1.0)
+    return np.minimum(params.slot_speed + (v_max - params.slot_speed) * share, v_max)
 
 
 def keeper_spot(ball: np.ndarray, back_line: float, sign: float, params: ShapeParams = SHAPE):

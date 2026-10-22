@@ -189,19 +189,20 @@ def test_a_team_is_shorter_and_narrower_out_of_possession_than_in_it(runs):
 
 
 def test_the_defending_block_follows_the_ball_across_and_along_the_pitch(runs):
-    across, near, far = [], [], []
+    left, right, near, far = [], [], [], []
     for run in runs:
         for s, phase, sign in _measured(run):
             defending = phase == metrics.DEFENCE
-            if defending.sum() < round(5.0 / DT):
-                continue
-            across.append(np.corrcoef(s["centroid_y"][defending],
-                                      run.ball_pos[defending, 1])[0, 1])  # fmt: skip
+            # The block slides to the ball's side (it follows the ball smoothed over a second).
+            left.append(s["centroid_y"][defending & (run.ball_pos[:, 1] > 12.0)])
+            right.append(s["centroid_y"][defending & (run.ball_pos[:, 1] < -12.0)])
             # Ball depth from the defending team's goal line: near its goal, or far from it.
             ball_depth = HALF_LENGTH + sign * run.ball_pos[:, 0]
             near.append(s["line_height"][defending & (ball_depth < 45.0)])
             far.append(s["line_height"][defending & (ball_depth > 65.0)])
-    assert np.median(across) > 0.5  # the block slides to the ball's side
+    left, right = np.concatenate(left), np.concatenate(right)
+    assert left.size > 100 and right.size > 100
+    assert left.mean() > right.mean() + 6.0
     # The line drops as the ball comes toward its goal (it is capped at line_max further out).
     near, far = np.concatenate(near), np.concatenate(far)
     assert near.size > 100 and far.size > 100

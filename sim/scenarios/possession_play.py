@@ -199,7 +199,11 @@ class PossessionPlay(Scenario):
         for j, a in self.marks.items():
             if j == presser or a == i:
                 continue
-            targets[j] = (self.mark_point(sim, frame, j, a), sim.v_max[j])
+            point = self.mark_point(sim, frame, j, a)
+            speed = sim.v_max[j]
+            if self.team_shape:  # he jogs with his man and runs harder when left behind
+                speed = float(team_shape.slot_speed(np.linalg.norm(point - sim.pos[j]), speed))
+            targets[j] = (point, speed)
         return targets
 
     def mark_point(self, sim: Simulation, frame: int, j: int, a: int) -> np.ndarray:

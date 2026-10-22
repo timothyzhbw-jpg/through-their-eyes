@@ -101,6 +101,7 @@ class Simulation:
             if scenario.team_shape
             else None
         )
+        self.shape_ball = self.ball_pos[:2].copy()  # the ball as the block follows it
 
         self.beliefs = BeliefStore(n, 0, self.pos, self.vel)
         self.head = HeadModel(n)
@@ -355,7 +356,7 @@ class Simulation:
         team's block for the ball and the team on it (`sim.team_shape`); else the anchors shifted
         with the ball."""
         if self.formation is not None:
-            return team_shape.spots(self.formation, self.ball_pos[:2], self.possession_team())
+            return team_shape.spots(self.formation, self.shape_ball, self.possession_team())
         shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(self.params.formation_shift)
         return self.anchor + shift
 
@@ -370,8 +371,13 @@ class Simulation:
 
     def _movement_targets(self, f: int) -> tuple[np.ndarray, np.ndarray]:
         p = self.params
+        if self.formation is not None:  # the block follows the ball smoothed (`sim.team_shape`)
+            follow = min(1.0, DT / team_shape.SHAPE.ball_follow_s)
+            self.shape_ball = self.shape_ball + (self.ball_pos[:2] - self.shape_ball) * follow
         target = self.formation_spots()
         cap = self.v_max.copy()
+        if self.formation is not None:  # out of position he runs harder
+            cap = team_shape.slot_speed(np.linalg.norm(target - self.pos, axis=-1), self.v_max)
 
         if self.owner >= 0:
             i = self.owner
