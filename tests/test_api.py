@@ -584,7 +584,7 @@ def test_the_verified_number_is_supported_and_its_line_airs(client):
     assert out["status"] == "supported" and out["airs"] is True and out["violations"] == []
     assert out["line"] == "That look was worth 0.17 in expected threat."
     zh = _verify(client, value=true, language="zh").json()
-    assert zh["line"] == "那一眼带来了0.17的预期威胁（xT）。" and zh["airs"] is True
+    assert zh["line"] == "那一眼价值0.17的预期威胁（xT）。" and zh["airs"] is True
 
 
 def test_every_numeric_slot_of_every_claim_can_be_tampered(settings, tmp_path):
