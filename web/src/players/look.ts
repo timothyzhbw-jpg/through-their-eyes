@@ -30,6 +30,18 @@ export function splitLook(bodyYaw: number, headYaw: number): LookSplit {
   return { hips: sign * (a - neck - trunk), trunk: sign * trunk, neck: sign * neck };
 }
 
+/**
+ * The head yaw a kick allows: no further round from the body than the neck and trunk turn
+ * (NECK_MAX + TRUNK_MAX), by weight w (the kick's turn, gait.ts). Beyond that the hips would take
+ * the rest and turn the kick off the pass; a kicker does not look further behind him. The sim's
+ * passer can (it has him face away from the pass until the event): then the head stops short.
+ */
+export function kickLook(bodyYaw: number, headYaw: number, w: number): number {
+  const rel = wrapAngle(headYaw - bodyYaw);
+  const max = NECK_MAX + TRUNK_MAX;
+  return headYaw + (Math.max(-max, Math.min(max, rel)) - rel) * w;
+}
+
 const UP = new THREE.Vector3(0, 1, 0);
 const axis = new THREE.Vector3();
 const parentWorld = new THREE.Quaternion();
