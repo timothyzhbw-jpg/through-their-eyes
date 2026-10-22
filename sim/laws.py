@@ -42,6 +42,13 @@ GOAL_WIDTH = 7.32  # m, between the inner edges of the posts
 GOAL_HALF_WIDTH = GOAL_WIDTH / 2.0
 GOAL_HEIGHT = 2.44  # m, from the ground to the lower edge of the crossbar
 POST_WIDTH = LINE_WIDTH  # m, depth and width of the posts and the crossbar
+# Round posts (Law 1 allows square, rectangular, round or elliptical ones) standing on the goal
+# line, their backs on its outer edge and their inner edges GOAL_WIDTH apart: centres at
+# (±POST_X, ±POST_Y).
+POST_RADIUS = POST_WIDTH / 2.0
+POST_X = HALF_LENGTH - POST_RADIUS
+POST_Y = GOAL_HALF_WIDTH + POST_RADIUS
+POSTS = np.array([[sx * POST_X, sy * POST_Y] for sx in (1, -1) for sy in (1, -1)])
 GOAL_AREA_DEPTH = 5.5  # m into the field, and 5.5 m out from the inside of each post
 GOAL_AREA_HALF_WIDTH = GOAL_HALF_WIDTH + GOAL_AREA_DEPTH  # 9.16 m
 PENALTY_AREA_DEPTH = 16.5  # m into the field, and 16.5 m out from the inside of each post
@@ -196,6 +203,7 @@ class GoalLineCrossing:
     y: float  # ball centre at the crossing
     z: float
     verdict: str  # "goal" | "post" | "wide" | "over"
+    y_posts: float = 0.0  # ball centre as it passes the posts
 
 
 def goal_line_crossing(
@@ -204,31 +212,50 @@ def goal_line_crossing(
     """The whole ball crossing a goal line on the straight path from `before` to `after` (x, y, z).
 
     A goal is scored only when all of the ball has passed over the goal line between the posts
-    and under the crossbar (Law 10.1). Its verdict:
-    - "goal": the whole ball is between the inner edges of the posts and under the bar;
-    - "post": part of it overlaps a post (or the bar): it would strike the woodwork, which the
-      sim does not model, so neither a goal nor out of play can be called from the Laws alone;
+    and under the crossbar (Law 10.1). A ground ball rolls straight, so the line through the two
+    points is its path past the posts (`POSTS`). Its verdict:
+    - "goal": the path stays clear of both posts, the ball's centre passes inside them, and the
+      whole ball is under the bar: all of it went between the posts;
+    - "post": the path meets a post or the bar, so the ball strikes the woodwork. The engine
+      bounces it off (`sim.ball.post_contact`) before it can cross, so only a run without that
+      physics shows this verdict;
     - "wide" / "over": the whole ball passes outside a post or above the bar.
+    `y` is the ball's centre where it has wholly crossed, `y_posts` where it passes the posts.
     None when the whole ball does not cross a goal line between the two points.
     """
     b0, b1 = np.asarray(before, dtype=float), np.asarray(after, dtype=float)
     line = HALF_LENGTH + radius
     for end in (1, -1):
-        x0, x1 = end * b0[0], end * b1[0]
-        if x0 <= line < x1:
-            s = (line - x0) / (x1 - x0)
-            y = float(b0[1] + s * (b1[1] - b0[1]))
-            z = float(b0[2] + s * (b1[2] - b0[2])) if len(b0) > 2 else radius
-            if z - radius > GOAL_HEIGHT + POST_WIDTH:
-                verdict = "over"
-            elif abs(y) - radius >= GOAL_HALF_WIDTH + POST_WIDTH:
-                verdict = "wide"
-            elif abs(y) + radius <= GOAL_HALF_WIDTH and z + radius <= GOAL_HEIGHT:
-                verdict = "goal"
-            else:
-                verdict = "post"
-            return GoalLineCrossing(end, float(s), y, z, verdict)
+        a = np.array([end * b0[0], b0[1]])  # mirrored so that this goal line is at +x
+        b = np.array([end * b1[0], b1[1]])
+        if not a[0] <= line < b[0]:
+            continue
+        s = (line - a[0]) / (b[0] - a[0])
+        y = float(a[1] + s * (b[1] - a[1]))
+        z = float(b0[2] + s * (b1[2] - b0[2])) if len(b0) > 2 else radius
+        y_posts = float(a[1] + (POST_X - a[0]) / (b[0] - a[0]) * (b[1] - a[1]))
+        reach = radius + POST_RADIUS
+        post = any(_approach(a, b, np.array([POST_X, sy * POST_Y]), line) < reach for sy in (1, -1))
+        inside = abs(y_posts) < GOAL_HALF_WIDTH
+        if z - radius > GOAL_HEIGHT + POST_WIDTH:
+            verdict = "over"
+        elif post or (inside and z + radius > GOAL_HEIGHT):
+            verdict = "post"
+        else:
+            verdict = "goal" if inside else "wide"
+        return GoalLineCrossing(end, float(s), y, z, verdict, y_posts)
     return None
+
+
+def _approach(a: np.ndarray, b: np.ndarray, c: np.ndarray, x_max: float) -> float:
+    """Closest approach to c of the ball's path from a toward b, until it has wholly crossed
+    (x <= x_max; it moves toward +x). Only from a on: a ball that came off a post moves away
+    from it. A ball slow enough to pass the posts a frame earlier met them, if at all, then;
+    the engine's post physics checks every frame."""
+    d = b - a
+    t = float((c - a) @ d) / max(float(d @ d), 1e-12)
+    t = min(max(t, 0.0), (x_max - a[0]) / d[0])
+    return float(np.linalg.norm(a + t * d - c))
 
 
 # --- Law 11, offside ----------------------------------------------------------------------------

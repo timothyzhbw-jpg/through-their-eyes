@@ -112,10 +112,10 @@ def test_the_ball_is_out_only_when_the_whole_ball_has_crossed_a_line(ball, line)
     "y, z, verdict",
     [
         (0.0, R, "goal"),
-        (3.66 - R, R, "goal"),  # the ball's edge touches the inner edge of the post
+        (3.66 - R - 0.01, R, "goal"),  # the ball's edge 1 cm inside the post
         (3.60, R, "post"),  # its outer part would hit the post
         (-3.70, R, "post"),
-        (3.66 + 0.12 + R, R, "wide"),  # clear of the outside of the post
+        (3.66 + 0.12 + R + 0.01, R, "wide"),  # 1 cm clear of the outside of the post
         (0.0, 2.44 - R, "goal"),  # just under the bar
         (0.0, 2.40, "post"),  # into the bar
         (0.0, 2.44 + 0.12 + R + 0.01, "over"),
@@ -126,6 +126,27 @@ def test_whole_ball_goal_line_crossings_are_goal_post_wide_or_over(y, z, verdict
     assert crossing is not None and crossing.end == 1
     assert crossing.verdict == verdict
     assert crossing.fraction == pytest.approx((52.5 + R - 52.0) / 1.0)
+
+
+def test_a_ball_that_passed_inside_the_posts_is_a_goal_wherever_it_ends():
+    # Angled outward: inside the posts as it passes them, past 3.55 m once wholly over.
+    a, b = np.array([51.94, 3.10, R]), np.array([53.04, 3.87, R])
+    crossing = laws.goal_line_crossing(a, b)
+    assert crossing.verdict == "goal" and crossing.y > 3.66 - R and crossing.y_posts < 3.55
+
+
+def test_a_ball_rolling_along_the_goal_line_meets_the_post_from_outside():
+    a, b = np.array([52.7, 6.0, R]), np.array([52.62, 0.0, R])  # beyond the line, toward goal
+    assert laws.goal_line_crossing(a, b) is None  # it never crosses the line from the field
+    a, b = np.array([52.3, 6.0, R]), np.array([52.9, 0.0, R])
+    assert laws.goal_line_crossing(a, b).verdict == "post"
+
+
+def test_the_posts_stand_on_the_goal_line_with_their_inner_edges_7_32_m_apart():
+    assert laws.POSTS.shape == (4, 2)
+    inner = 2 * (laws.POST_Y - laws.POST_RADIUS)
+    assert inner == pytest.approx(7.32)
+    assert pytest.approx(laws.HALF_LENGTH) == laws.POST_X + laws.POST_RADIUS
 
 
 def test_a_ball_half_over_the_goal_line_has_not_crossed_it():
