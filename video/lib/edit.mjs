@@ -54,6 +54,7 @@ export function pictureLabel(beat) {
   if (p.src === "capture") return `capture:${p.shot}`;
   if (p.src === "title") return `title:${p.id}`;
   if (p.src === "image") return `image:${p.path}`;
+  if (p.src === "clip") return `clip:${String(p.path).split("/").pop()}`;
   return String(p.src ?? "?");
 }
 
@@ -138,13 +139,14 @@ export function beatGraph(beat, env = {}) {
         ? addInput(["-loop", "1", "-framerate", String(fps), "-i", env.file])
         : addInput(["-i", env.file]);
     const filters = [];
-    if (picture.src === "cine" || picture.src === "capture") {
+    if (picture.src === "cine" || picture.src === "capture" || picture.src === "clip") {
       const inn = picture.in ?? 0;
       const available =
         env.sourceDuration != null ? Math.max(0, env.sourceDuration - inn) : playFor * speed;
       const take = Math.max(1 / fps, Math.min(playFor * speed, available));
       filters.push(`trim=start=${num(inn)}:duration=${num(take)}`);
       filters.push(speed === 1 ? "setpts=PTS-STARTPTS" : `setpts=(PTS-STARTPTS)/${num(speed)}`);
+      if (picture.reverse) filters.push("reverse");
     } else {
       filters.push(`trim=duration=${num(playFor)}`, "setpts=PTS-STARTPTS");
     }
@@ -363,14 +365,15 @@ export function mixGraph(plan) {
 export function loudnormFilter(output, measured = null) {
   const base = `loudnorm=I=${output.lufs}:TP=${output.true_peak}:LRA=11`;
   if (!measured) return `${base}:print_format=json`;
-  // loudnorm's linear pass cannot hold the true peak on its own; a limiter at the target (sample
-  // peaks) keeps the final AAC, which overshoots a little, near it.
-  const ceiling = Math.pow(10, output.true_peak / 20).toFixed(4);
+  // loudnorm's linear pass cannot hold the true peak on its own. The limiter runs on loudnorm's
+  // 192 kHz output, before the resample to 48 kHz, so it sees most inter-sample peaks; half a dB
+  // under the target leaves room for the rest and the AAC's small overshoot.
+  const ceiling = Math.pow(10, (output.true_peak - 0.5) / 20).toFixed(4);
   return (
     `${base}:measured_I=${measured.input_i}:measured_LRA=${measured.input_lra}` +
     `:measured_TP=${measured.input_tp}:measured_thresh=${measured.input_thresh}` +
     `:offset=${measured.target_offset}:linear=true` +
-    `,aresample=48000,alimiter=limit=${ceiling}:attack=1:release=60:level=false`
+    `,aresample=192000,alimiter=limit=${ceiling}:attack=1:release=60:level=false,aresample=48000`
   );
 }
 
@@ -467,6 +470,8 @@ function resolveCrop(picture, env) {
 
 /** @param {object} picture @param {number} w @param {number} h @param {number} beatDur */
 function coverOrPush(picture, w, h, beatDur) {
+  // "pad": keep the frame as rendered (a 2.39:1 clip) inside bars, never cropped or zoomed.
+  if (picture.fit === "pad") return [`scale=${w}:-2`, `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black`];
   if (!picture.push) {
     return [`scale=${w}:${h}:force_original_aspect_ratio=increase`, `crop=${w}:${h}`];
   }
@@ -524,6 +529,11 @@ function fxFilter(name, w, h, fps) {
     return `scale=${W}:${H},crop=${w}:${h}:x='(in_w-${w})/2+8*sin(n*0.7)':y='(in_h-${h})/2+6*sin(n*1.1)'`;
   }
   if (name === "flash-in") return `fade=t=in:st=0:d=${num(4 / fps)}:c=white`;
+  // The shared finish on every 3D shot (the Blender clips and the cine captures, not the app's
+  // screens): a light vignette, blacks lifted to about (5, 8, 6) so they never sit at 0, fine grain.
+  if (name === "glue") {
+    return "vignette=angle=PI/7,colorlevels=romin=0.020:gomin=0.031:bomin=0.024,noise=alls=5:allf=t+u";
+  }
   return "";
 }
 

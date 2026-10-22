@@ -25,6 +25,7 @@ import {
 import type { Hero } from "../data/hero";
 import { directorPrefs } from "../director/director";
 import { RenderPayload } from "../narration/payload";
+import { Provenance } from "../provenance/provenance";
 import type { PlaybackState, PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { browserAudio, VoicePlayer, type MakeAudio } from "../voice/voice";
@@ -101,6 +102,8 @@ export const RecapResponse = z.object({
   rate_limited: z.boolean(),
   capped: z.boolean(),
   source: z.enum(["model", "offline"]),
+  // Where it came from, as the service says it: shown as given, never worked out from the rest.
+  provenance: Provenance.nullish(),
   result: z.object({
     score: z.object({ home: z.number().int(), away: z.number().int() }),
     moments: z.array(RecapMoment),

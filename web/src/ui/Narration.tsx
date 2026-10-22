@@ -21,6 +21,7 @@ import {
   type PayloadClaim,
   type PayloadLine,
 } from "../narration/payload";
+import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
@@ -476,6 +477,32 @@ export function BreakdownSource() {
       </span>
     );
   }
+  if (origin.provenance) {
+    // As the service said it. A cached answer may also say why it was not made again.
+    const cached = origin.provenance.kind === "cached";
+    return (
+      <>
+        <ProvenanceChip provenance={origin.provenance} />
+        {origin.recordedAt && <RecordedBadge at={origin.recordedAt} />}
+        {cached && origin.rateLimited && (
+          <span
+            className="plan-badge fallback"
+            title="Too many new breakdowns from this address: the cached crew run was served"
+          >
+            Rate-limited
+          </span>
+        )}
+        {cached && origin.capped && (
+          <span
+            className="plan-badge fallback"
+            title="Today's model budget is used up: the cached crew run was served"
+          >
+            Daily cap reached
+          </span>
+        )}
+      </>
+    );
+  }
   const seconds = (origin.totalMs / 1000).toFixed(1);
   return (
     <>
@@ -515,15 +542,17 @@ export function BreakdownSource() {
           Daily cap reached
         </span>
       )}
-      {origin.recordedAt && (
-        <span
-          className="plan-badge fallback"
-          title={`A recording of the same drill, run at ${origin.recordedAt}`}
-        >
-          Recorded run · {recordedTime(origin.recordedAt)}
-        </span>
-      )}
+      {origin.recordedAt && <RecordedBadge at={origin.recordedAt} />}
     </>
+  );
+}
+
+/** A limited drill or bring-back replayed from its recording (api/recorded.py). */
+function RecordedBadge({ at }: { at: string }) {
+  return (
+    <span className="plan-badge fallback" title={`A recording of the same drill, run at ${at}`}>
+      Recorded run · {recordedTime(at)}
+    </span>
   );
 }
 

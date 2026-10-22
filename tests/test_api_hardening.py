@@ -395,3 +395,21 @@ def test_the_judging_window_comes_from_the_environment(monkeypatch):
     assert s.judging_window is None and s.limits_on(date(2026, 10, 30)) == ((3, 600.0), 40)
     assert (s.judging_rate_limit, s.judging_daily_model_cap) == ((6, 600.0), 60)
     assert Settings().judging_window is None  # a Settings made in code has no window
+
+
+def test_a_replay_says_where_it_came_from_and_keeps_its_crew_trace(tmp_path, replies):
+    app, _ = _model_app(tmp_path, replies, rate_limit=(1, 600.0))
+    with TestClient(app) as c:
+        first = c.post("/api/breakdowns", json=DRILL, headers=_ip(1)).json()
+        replay = c.post("/api/breakdowns", json=DRILL, headers=_ip(1)).json()
+        offline = c.post("/api/breakdowns", json={**DRILL, "fail": ["analyst"]},
+                         headers=_ip(1)).json()  # fmt: skip
+        trace = c.get(f"/api/breakdowns/{replay['key']}/trace").json()
+    assert first["provenance"]["kind"] == "live"
+    assert replay["provenance"] == {"kind": "cached", "ran_at": replay["recorded"]["at"],
+                                    "reason": None}  # fmt: skip
+    assert replay["recorded"]["at"] == first["provenance"]["ran_at"]
+    assert offline["provenance"]["kind"] == "template"
+    assert offline["provenance"]["reason"] == "rate_limited"  # not "model_unavailable"
+    assert trace["recorded"] is True and trace["trace"]
+    assert "trace" not in replay and replay["traced"] is True

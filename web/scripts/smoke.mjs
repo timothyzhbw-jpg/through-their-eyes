@@ -62,12 +62,29 @@ const PAGES = [
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
     path: "?match=match-1",
     check: (p, shoot) => lineup(p, shoot, "Start watching", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  { name: "link-eyes", path: "?play=eyes", check: takeEyes },
+  { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
+  {
+    name: "link-eyes-match-1",
+    path: "?match=match-1&play=eyes",
+    check: async (p) => {
+      await see(p.getByRole("button", { name: /Back to the match/ }), "Back to the match");
+      await takeEyes(p);
+    },
+  },
+  {
+    name: "phone-320-eyes",
+    path: "?play=eyes",
+    device: PHONE_320,
+    check: (p) => phone(p, takeEyes, { live: false }),
+  },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
   { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
@@ -94,6 +111,14 @@ const PAGES = [
     path: "?tour=1",
     device: PHONE,
     check: (p, shoot) => tour(p, shoot),
+  },
+  {
+    // a narrow desktop: from 901 px the viewer button shows its full label, and the hero's header
+    // also carries Your call and Take his eyes; checked like a phone's (no overlap, on screen)
+    name: "desktop-960-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
   },
   {
     name: "phone-hero",
@@ -239,6 +264,21 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
+/** `?play=eyes`: Take his eyes (SPEC 7) in the live screen's place: the board with the dial, the
+ * times and the directions to look; a look plays through his eyes, and the result airs its
+ * verified lines. */
+async function takeEyes(page) {
+  await see(page.getByRole("region", { name: "Take his eyes" }), "Take his eyes");
+  await see(page.getByRole("radiogroup", { name: "When he looks" }), "the times to look");
+  await see(page.getByRole("radiogroup", { name: /^Where [HA]\d+ looks$/ }), "the directions");
+  await mainView(page, "board");
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const play = page.getByRole("button", { name: "See what he does" });
+  await see(play, "the look playing through his eyes");
+  await play.click();
+  await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
  * full-time card on the live screen, the recap card with a Watch per key moment, and the reel's
  * captions once it plays. */
@@ -251,6 +291,35 @@ async function recap(page, shoot) {
   await page.getByRole("button", { name: "Play the recap reel" }).first().click();
   await see(page.locator(".recap-caption").filter({ hasText: /\S/ }), "a caption of the reel");
   await page.waitForTimeout(SETTLE);
+}
+
+/** A cold load with no click (SPEC 2, 7): the lineup card closes by itself, the stream plays, and
+ * within about 20 s of opening the page the run without the look is on screen with its line.
+ * The 20 s is for a viewer's machine. The app's clock steps at most 0.1 s a frame (session.ts
+ * `startClock`), so where WebGL is drawn in software, as on a CI runner (SwiftShader, about 0.5 s
+ * a frame), the show plays slower than the wall clock: there the check is only that a cold load
+ * gets there, and the time it took is printed. */
+const COLD_LOAD_S = process.env.CI ? 120 : 22;
+
+async function coldLoad(page, shoot) {
+  const opened = Date.now();
+  const without = page
+    .getByRole("group", { name: "Run" })
+    .getByRole("button", { name: "Without the look", pressed: true });
+  try {
+    await without.waitFor({ timeout: COLD_LOAD_S * 1000 });
+  } catch {
+    throw new Error(
+      `expected the run without the look on screen within ${COLD_LOAD_S} s of a cold load`,
+    );
+  }
+  const took = Math.round((Date.now() - opened) / 1000);
+  console.log(`     the run without the look after ${took} s (deadline ${COLD_LOAD_S} s)`);
+  await see(
+    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
+    'the "Without that look" line',
+  );
+  await shoot(`at-${took}s`);
 }
 
 /** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
@@ -277,16 +346,21 @@ async function lineup(page, shoot, button, then) {
 
 /** On a phone the page should scroll only up and down, and no two header controls overlap or run
  * off screen, with the live stream running (its status and the header's buttons are then all
- * there). */
-async function phone(page, check) {
+ * there). `live: false` for a screen that takes the live screen's place (Take his eyes). */
+async function phone(page, check, { live = true } = {}) {
   await check(page);
-  await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
-  // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
-  await see(page.locator(".stage-head .brand h1"), "the product name in the header");
-  await see(
-    page.locator(".stage-head .brand .sub").filter({ hasText: /synthetic match/i }),
-    'the "synthetic match" note in the header',
-  );
+  if (live) {
+    await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+    // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
+    await see(page.locator(".stage-head .brand h1"), "the product name in the header");
+    // The note shows on a phone's header (up to 480 px); a tablet and a narrow desktop hide it.
+    if ((page.viewportSize()?.width ?? 0) <= 480) {
+      await see(
+        page.locator(".stage-head .brand .sub").filter({ hasText: /synthetic match/i }),
+        'the "synthetic match" note in the header',
+      );
+    }
+  }
   const { wide, width, overlaps, offscreen } = await page.evaluate(() => {
     const root = document.documentElement;
     const wide = root.scrollWidth;
