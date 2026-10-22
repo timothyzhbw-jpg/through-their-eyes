@@ -18,7 +18,7 @@ import {
   smoothedSpeeds,
 } from "./gait";
 import { NECK_MAX, TRUNK_MAX, aimLook, splitLook } from "./look";
-import { riggedFromSearch } from "./trial";
+import { lookFromSearch, riggedFromSearch } from "./trial";
 
 const CLIPS: GaitClips = { walkSpeed: 5.25, sprintSpeed: 7.0, cycle: 0.48 };
 const DEG = Math.PI / 180;
@@ -30,6 +30,14 @@ describe("animated players switch", () => {
     expect(riggedFromSearch("?seed=3")).toBe(true);
     expect(riggedFromSearch("?rigged=0")).toBe(false);
     expect(riggedFromSearch("?seed=3&rigged=0")).toBe(false);
+  });
+
+  it("wears the upgraded look by default; only ?look=v1 brings back the plain kits", () => {
+    expect(lookFromSearch("")).toBe("v2");
+    expect(lookFromSearch("?look=v2")).toBe("v2");
+    expect(lookFromSearch("?look=other&seed=3")).toBe("v2");
+    expect(lookFromSearch("?look=v1")).toBe("v1");
+    expect(lookFromSearch("?rigged=1&look=v1")).toBe("v1");
   });
 });
 

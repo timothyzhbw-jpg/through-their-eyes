@@ -11,6 +11,10 @@
 //   of the standing pass, and the trunk joining every scan's look over the shoulder (not under
 //   prefers-reduced-motion);
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
+// By default (trial.ts; `?look=v1` for the plain kits) it loads the re-skinned copy,
+// grf_player_look.glb (same skeleton and clips byte for byte): kit designs from
+// models/kit_mask.webp, a cloth normal map, and baked occlusion plus the keepers' sleeves and
+// gloves from its `_LOOK` attribute (shading.ts). index.html preloads both files.
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
@@ -22,8 +26,9 @@ import type { ExportPlayer, RunName } from "../data/types";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
-import { trial } from "./trial";
-import { BOOTS, hairColour, kitTexture, skinTone } from "./kit";
+import { type Look, trial } from "./trial";
+import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
+import { withLook } from "./shading";
 import {
   type ModelMeta,
   type Motion,
@@ -36,6 +41,9 @@ import {
 } from "./rig";
 
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player.glb`;
+export const LOOK_MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player_look.glb`;
+export const KIT_MASK_URL = `${import.meta.env.BASE_URL}models/kit_mask.webp`;
+const NORMAL_STRENGTH = 1;
 
 /** Kit in the club's colours (the keeper's own kit) with the shirt number; flat skin, hair and
  * boots. */
@@ -49,6 +57,42 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
     hair: new THREE.MeshStandardMaterial({ color: hairColour(j), roughness: 0.9 }),
     boots: new THREE.MeshStandardMaterial({ color: BOOTS, roughness: 0.5 }),
   };
+  return assign(rig, byName);
+}
+
+/** The v2 look: the kit's design and cloth normals, occlusion everywhere, the keeper's long
+ * sleeves and gloves, a light sole edge on the boots. */
+function dressLook(
+  rig: Rig,
+  player: ExportPlayer,
+  j: number,
+  mask: HTMLImageElement,
+  normalMap: THREE.Texture | null,
+): THREE.Material[] {
+  const kit = kitOf(player);
+  const byName: Record<string, THREE.Material> = {
+    kit: withLook(
+      new THREE.MeshStandardMaterial({
+        map: kitTexture(player, mask),
+        normalMap,
+        // glTF's normal maps with three.js's derivative tangents: y flips, as GLTFLoader does.
+        normalScale: new THREE.Vector2(NORMAL_STRENGTH, -NORMAL_STRENGTH),
+        roughness: 0.8,
+      }),
+    ),
+    skin: withLook(new THREE.MeshStandardMaterial({ color: skinTone(j), roughness: 0.6 }), {
+      g: kit.sleeve,
+      b: kit.glove,
+    }),
+    hair: withLook(new THREE.MeshStandardMaterial({ color: hairColour(j), roughness: 0.9 })),
+    boots: withLook(new THREE.MeshStandardMaterial({ color: BOOTS, roughness: 0.45 }), {
+      g: SOLE,
+    }),
+  };
+  return assign(rig, byName);
+}
+
+function assign(rig: Rig, byName: Record<string, THREE.Material>): THREE.Material[] {
   rig.model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
     if (!mesh.isSkinnedMesh) return;
@@ -77,25 +121,56 @@ function useReducedMotion() {
 }
 
 export function RiggedPlayers() {
+  const look = useStore(trial, (s) => s.look);
   const anims = useStore(trial, (s) => s.anims);
-  if (anims !== "extra") return <Rigged extra={null} />;
-  useLoader.preload(GLTFLoader, MODEL_URL); // fetched alongside the clips, not after them
+  if (anims !== "extra") return <Dressed look={look} extra={null} />;
+  // Fetched alongside the clips, not after them.
+  useLoader.preload(GLTFLoader, look === "v2" ? LOOK_MODEL_URL : MODEL_URL);
   return (
     <ExtraFallback>
-      <WithExtra />
+      <WithExtra look={look} />
     </ExtraFallback>
   );
 }
 
-function WithExtra() {
+function WithExtra({ look }: { look: Look }) {
   const gltf = useLoader(GLTFLoader, EXTRA_URL);
   const extra = useMemo(() => extraClips(gltf), [gltf]);
-  return <Rigged extra={extra} />;
+  return <Dressed look={look} extra={extra} />;
 }
 
-function Rigged({ extra }: { extra: ExtraClips | null }) {
+/** The look's files: the re-skinned model with its kit mask (v2), or the plain model (v1). The
+ * extra clips bind to either: both have the same skeleton, byte for byte. */
+function Dressed({ look, extra }: { look: Look; extra: ExtraClips | null }) {
+  return look === "v2" ? <LookPlayers extra={extra} /> : <Rigged url={MODEL_URL} extra={extra} />;
+}
+
+function LookPlayers({ extra }: { extra: ExtraClips | null }) {
+  const mask = useLoader(THREE.ImageLoader, KIT_MASK_URL);
+  return <Rigged url={LOOK_MODEL_URL} mask={mask} extra={extra} />;
+}
+
+/** The kit material's normal map in the loaded model, if it has one. */
+function kitNormalMap(gltf: { scene: THREE.Object3D }): THREE.Texture | null {
+  let found: THREE.Texture | null = null;
+  gltf.scene.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (m?.name === "kit" && m.normalMap) found = m.normalMap;
+  });
+  return found;
+}
+
+function Rigged({
+  url,
+  mask,
+  extra,
+}: {
+  url: string;
+  mask?: HTMLImageElement;
+  extra: ExtraClips | null;
+}) {
   const { hero, playback } = useView();
-  const gltf = useLoader(GLTFLoader, MODEL_URL);
+  const gltf = useLoader(GLTFLoader, url);
   const meta = gltf.scene.userData as ModelMeta;
   const reduced = useReducedMotion();
   const clips = useMemo(() => modelClips(meta, extra), [meta, extra]);
@@ -113,9 +188,10 @@ function Rigged({ extra }: { extra: ExtraClips | null }) {
     () =>
       hero.players.map((p, j) => {
         const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra);
-        return { rig, materials: dress(rig, p, j) };
+        const materials = mask ? dressLook(rig, p, j, mask, kitNormalMap(gltf)) : dress(rig, p, j);
+        return { rig, materials };
       }),
-    [gltf, hero, meta, clips],
+    [gltf, hero, meta, clips, mask],
   );
   useEffect(
     () => () => {
