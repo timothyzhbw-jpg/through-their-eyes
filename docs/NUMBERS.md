@@ -66,6 +66,13 @@ All from `scripts/regen_linux.sh evals`; the single command is in the **Source**
 | A5 | Verifier on perturbed claims: false perturbations refuted · generated claims supported · verdicts logged | [corruption](../eval/reports/corruption.md) ← `uv run python -m eval.corruption` | `grep -e 'Generated claims verified' -e 'refuted by the verifier' -e 'Verdicts written' eval/reports/corruption.md` | 90/90 · 468/468 · 568/568 | same | TODO(freeze) | README "What only we do", "The full tour" 5, Evidence; SUBMISSION Evidence, [^corruption]; RUBRIC_MAP §2, §3; EVALS; DEMO_SCRIPT |
 | A6 | Laws audit: unpunished breaches · runs | [laws](../eval/reports/laws.md) ← `uv run python -m eval.laws` | `grep -m2 -e 'unpunished breaches' -e 'line-ups' eval/reports/laws.md` | 0 · 2,916 | 0 · 3,096 | TODO(freeze) | EVALS; RUBRIC_MAP §1 (after the rubric PR) |
 
+## P. Audiences (SUBMISSION "What it does", Personalize; RUBRIC_MAP §3; README "The full tour" 3)
+
+| Id | Number | Source | Read | before #205 | #205 | Freeze | Quoted in |
+|---|---|---|---|---|---|---|---|
+| P1 | Mean claim overlap between two audiences (pairwise Jaccard; gate ≤ 0.3) | [persona_distinctness](../eval/reports/persona_distinctness.md) ← `uv run python -m eval.persona_distinctness` | `grep -m1 'mean pairwise claim Jaccard (gate' eval/reports/persona_distinctness.md` | 0.34 | 0.16 | TODO(freeze) | SUBMISSION Personalize; RUBRIC_MAP §3 |
+| P2 | Scripts within their audience's spec and rules, of 40 | same | `grep -m1 'scripts within their persona' eval/reports/persona_distinctness.md` | 8 | 40 | TODO(freeze) | SUBMISSION Personalize; RUBRIC_MAP §3 |
+
 ## R. Realism (`possession_play` held-out seeds 100–199)
 
 | Id | Number | Source | Read | main | #172 | Freeze | Quoted in |

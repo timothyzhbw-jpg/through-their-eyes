@@ -80,7 +80,7 @@ The brief's pipeline, end to end, on a synthetic match:
 | **Interpret** | Analytics kernels read the tracking: time to intercept, pitch control, pressing, field of view, expected threat (xT), a scan detector that reads head direction only, and blind-side alerts. | `analytics/` |
 | **Explain** | The system detects moments and gives each one the lens with the biggest counterfactual impact (perception, pressure or space). It re-simulates the moment with one change and turns the results into claims, which a deterministic Verifier checks. | `explain/` |
 | **Render** | A first-person view through the player's eyes, a broadcast camera with a camera director, and a tactical board with pass options ("he thought / it was"). Overlays show his vision cone, where he believed the others were, pitch control (a GPU shader), blind-side alerts, and the counterfactual's ghost paths. | `web/` |
-| **Personalize** | An agent crew on Microsoft Foundry writes the breakdown for five audiences (casual, analyst, player fan, coach, audio description) in English or Chinese. Azure AI Speech voices it with two commentators. Every audience gets the same verified facts. | `agents/`, `api/` |
+| **Personalize** | An agent crew on Microsoft Foundry writes the breakdown for five audiences (casual, analyst, player fan, coach, audio description) in English or Chinese. Azure AI Speech voices it with two commentators. Each audience gets its own broadcast from the same verified claims: what is said, the camera and overlays, and the voice. Across the four served hero moments, the mean overlap of the claims two audiences hear fell from <!--num:P1.before-->0.34<!--/num--> to <!--num:P1.after-->0.16<!--/num-->, and <!--num:P2.after-->40<!--/num--> of 40 scripts keep their audience's spec (<!--num:P2.before-->8<!--/num--> of 40 before).[^personas] | `agents/`, `api/` |
 
 ## The signature feature: through the player's eyes
 
@@ -371,6 +371,10 @@ play that attacks the goal.
     offline, a scripted model answering through the real Agent Framework workflow, schemas and
     Verifier, on the 7 hero moments the site serves × 5 audiences × 2 languages, generated in
     `python:3.11-slim`; times simulated at Foundry's median latency per role.
+[^personas]: [eval/reports/persona_distinctness.md](../eval/reports/persona_distinctness.md)
+    (PR #205), `uv run python -m eval.persona_distinctness`: the crew offline on its templates,
+    4 served hero moments × 5 audiences × `en`, `zh` = 40 scripts; claim overlap is the mean
+    pairwise Jaccard of the claim ids two audiences' scripts cite.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).
 [^trace]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#the-live-trace): 2026-10-20 21:34:51 UTC, revision

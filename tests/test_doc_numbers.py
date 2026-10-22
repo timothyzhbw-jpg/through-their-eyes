@@ -85,6 +85,16 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| … refuted by the verifier \| \*\*{NUM}/{NUM} \({NUM}%\)\*\*",
         ("k", "n", "pct"),
     ),
+    "P1": (
+        "persona_distinctness.md",
+        rf"\| mean pairwise claim Jaccard \(gate ≤ 0\.3\) \| {NUM} \| {NUM} \|",
+        ("before", "after"),
+    ),
+    "P2": (
+        "persona_distinctness.md",
+        rf"\| scripts within their persona's spec and rules \| {NUM} of {NUM} \| {NUM} of {NUM} \|",
+        ("before", "n_before", "after", "n"),
+    ),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",
