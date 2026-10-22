@@ -411,6 +411,26 @@ class RateLimiter:
             self._seen.popitem(last=False)
 
 
+class Retries:
+    """At most one retry per key per `interval_s` seconds: a degraded cached run is run again
+    once, not once per viewer. Memory is bounded like RateLimiter's: past `max_keys`, the oldest
+    retry is forgotten."""
+
+    def __init__(self, interval_s: float, max_keys: int = 10_000) -> None:
+        self.interval_s, self.max_keys = interval_s, max_keys
+        self._at: OrderedDict[str, float] = OrderedDict()  # oldest retry first
+
+    def due(self, key: str) -> bool:
+        at = self._at.get(key)
+        return at is None or time.monotonic() - at >= self.interval_s
+
+    def start(self, key: str) -> None:
+        self._at.pop(key, None)
+        self._at[key] = time.monotonic()
+        while len(self._at) > self.max_keys:
+            self._at.popitem(last=False)
+
+
 class DailyCap:
     """At most `count` events per UTC day across all clients (SPEC 8).
 

@@ -1447,6 +1447,21 @@ cue keys change, the breakdown key does not.
 that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
 Application Insights.
 
+**A degraded run is never served as final** (2026-10-22). A model run in which any step fell back
+to its template (a step traced `template`, or a plan or reel that aired as the template) is cached
+as degraded, and every answer lists those steps (`degraded`). *Why:* a red-team read found the
+README's Analyst · 中文 link serving a cached run with the Analyst on its template after a
+`ChatClientException`, to every judge who followed it.
+- While the model is available, the API runs a degraded key again: at most once per key per
+  `TTE_DEGRADED_RETRY_S` (600 s), so many viewers of one key cost one run; under the per-client
+  limit and the daily model cap like any regeneration. A retry that comes back more degraded
+  does not replace the cached run, and the viewer gets the better one.
+- While it is not (the client is limited, the cap is reached, or the retry is not due), the
+  degraded run is served as it is, labelled by its steps' sources on the Producer desk.
+- Recaps follow the same rule; drills never write to the cache. `infra.prewarm
+  --refresh-degraded` asks for every degraded view again with `regenerate`, once per run.
+- *Evidence:* `tests/test_api_degraded.py`, `tests/test_prewarm.py`.
+
 *Implemented (M3, `agents/`):*
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
   outgoing edges: back to Narration (rewrite request) or on to Voice (approved scripts).
@@ -1596,7 +1611,7 @@ Application Insights.
     Breakdowns cached before traces were recorded answer `recorded: false` and the web says
     "trace not recorded for this cached run". The cache keys did not move (`PIPELINE_VERSION`
     unchanged); `infra.prewarm` reports such views as "no crew trace", and
-    `--regenerate-degraded` runs them again.
+    `--refresh-degraded` runs them again.
   - *Public, like the breakdown.* Ids, counts, verified templates with their placeholders,
     reason codes and error classes; model text only where the breakdown already shows it (the
     Director's reason, the Analyst's angle) and in tool-call arguments, labelled as the model's.
