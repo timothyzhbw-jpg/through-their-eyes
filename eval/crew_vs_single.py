@@ -57,13 +57,12 @@ from agents.workflow import (
     NAME,
     Narration,
     Story,
-    Verifier,
     Voice,
     run_crew,
 )
 from eval.free_text import FreeTextNarration
 from eval.narration_ablation import Line, _check
-from eval.single_agent import REJECTED, Lines, solo_story
+from eval.single_agent import REJECTED, Lines, LineVerifier, solo_story
 from explain.numbers import number_tokens
 from explain.render import render_claim
 
@@ -287,7 +286,7 @@ class Recorder(ChatMiddleware):
         return entry
 
 
-class RecordingVerifier(Verifier):
+class RecordingVerifier(LineVerifier):
     """Keeps the first drafts it checks (what airs with no Verifier) and when they arrived."""
 
     def _round(self, drafts):
