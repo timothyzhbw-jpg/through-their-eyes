@@ -132,18 +132,19 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 18 possessions: 15 open-play
-  passages and three heroes. On this Mac it lasts 742.2 s (12:22), and the heroes start at 0:30
-  (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0) and 8:41 (the
+  passages and three heroes. On this Mac it lasts 798.9 s (13:19), and the heroes start at 0:30
+  (`blind_side_run` seed 3, hero moment at 0:33), 5:07 (`press_escape` seed 0) and 9:38 (the
   set-piece hero `corner_blind_side` seed 0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
   - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
-    for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
-    puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 2 of 15 end in a throw-in. (The rate was measured
-    before players were kept on the pitch, §3.2; then 4 of 15 ended in a throw-in.)
+    for rhythm. The match is therefore about 13:19 at most on any platform (780 s of caps and the
+    three heroes). With the team shape (§3.2) a pass nobody reaches is fetched, and
+    `possession_play` put no ball out in 40 runs of 45 s (tuning seeds 0–39), so every passage
+    reaches its cap: on this Mac none ends in a throw-in. (Before the team shape 2 of 15 did, and
+    4 of 15 before players were kept on the pitch.)
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -154,7 +155,7 @@ on an LLM.
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
-    1 kick-off, 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
+    1 kick-off, 1 corner, 16 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
     possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
@@ -182,8 +183,41 @@ on an LLM.
   with a datasheet: [DATASET.md](DATASET.md).
 
 ### 3.2 Movement
-- Formation anchors (e.g. 4-3-3 vs 4-2-3-1) shifted by ball position and phase; compactness and
-  line height are team-style knobs.
+- **Team shape** (2026-10-22, `sim/team_shape.py`, behind `Scenario.team_shape`; on for
+  `possession_play`, the open play of every stitched match). Each off-ball player's target is his
+  slot in his team's block: a 4-3-3 at home and a 4-2-3-1 away with the ball, a 4-1-4-1 and a
+  4-4-1-1 without it (Shaw & Glickman measure formations in and out of possession apart).
+  - The team on the ball is in its attacking shape, the other in its defending shape; the phase
+    switches when possession does, and the players then move between the two shapes under the
+    usual limits, so a transition is that movement, not a third template.
+  - The back line is one line of four. Without the ball its height follows the regression
+    Castellano & Álvarez (2013) fit on La Liga matches, 6.30 m + 0.46 × the ball's distance from
+    the goal defended; with it, it stays a set distance behind the ball within a deepest and a
+    highest line (no paper prints a relation for it). The front line never goes beyond the
+    opponents' back line unless the ball does. The block is shorter and narrower without the ball, slides toward
+    the ball's side, and follows the ball smoothed over a second rather than the ball itself.
+  - Full-backs push on in possession; the far-side wide player tucks in without it; the keeper
+    stands on the line from his goal's centre to the ball, inside his area (he no longer presses
+    or chases passing lanes).
+  - A player making for his slot jogs (3 m/s) and runs harder the further out of position he is,
+    at full speed from 25 m: with the block on the instant ball and full speed to every slot,
+    15% of the time was above 5.5 m/s (5% now, 3% before the shape).
+  - The block's sizes and the in-possession line were fitted by hand on tuning seeds 0–39 to the
+    means Castellano et al. (2013) print in and out of possession and Forcher et al. (2024) print
+    for settled defence (docs/REFERENCES.md, Team shape). On held-out seeds 100–199
+    ([realism.md](../eval/reports/realism.md), Team shape) those eight rows are inside. Six are
+    outside: Errekagorri et al.'s (2024) per-match means over 5,518 LaLiga team-matches, both
+    phases together (the sim's team is 34.2 m long against 36.9 ± 1.7, 39.2 m wide against
+    43.4 ± 2.1, its deepest player 32.5 m out against 37.3 ± 3.0, its keeper 20.3 m from the
+    nearest team-mate against 25.0 ± 1.7), which were not fitted to: Castellano et al.'s one
+    team is narrower, shorter and deeper than that league, and `possession_play` keeps the ball
+    nearer its own goal than a match does; and the line's regression on the ball, which comes
+    out at 8.78 m + 0.406 × against the paper's 6.30 + 0.46 × (r 0.74 against 0.86). Without the
+    shape 4 of the 14 are inside, a team is longer out of possession than in it, and the
+    regression's slope is 0.225. Slot depths, the tuck, the push and the speeds are style knobs.
+  - The hero scenarios do not set the flag, so their runs, gates and reports are unchanged, and
+    neither does `open_play`: the xT grid every moment's ΔxT reads is fitted on it (§4.5). A
+    hero scenario's off-ball players could join once its gate is re-run on held-out seeds.
 - Steering toward targets with limits — *tunable*: max speed by role 8.0–9.5 m/s, max accel
   ≈ 3.5 m/s², max decel ≈ 5 m/s², turn-rate limit.
 - Pitch bounds (2026-10-21, `sim/engine.py`, `sim/movement.py`): every movement target and
@@ -204,6 +238,10 @@ on an LLM.
   receiver under tight pressure has usually been marked for a while, and the scan slowdown under
   pressure (§3.4) can show in the realism report. A passer judges a teammate's space without the
   opponents beyond him along the pass, such as a goal-side marker: a ball to his feet gets there first.
+  With the team shape the marking is zonal: a defender picks up an attacker within 12 m of his slot
+  and lets him go when following him would take him more than 15 m from it, so the block keeps its
+  shape (man to man anywhere in a 20 m zone, it was 47 m wide without the ball). A pass is played
+  ahead of a receiver on the move, and a pass its receiver cannot reach is chased by a team-mate.
 
 ### 3.3 Ball physics
 - Flight: gravity + quadratic drag — *tunable*: m = 0.43 kg, r = 0.11 m, ρ = 1.2 kg/m³, C_d ≈ 0.25.

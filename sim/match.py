@@ -54,7 +54,7 @@ def _open(max_s: float) -> PossessionSpec:
     return PossessionSpec("possession_play", max_s=max_s)
 
 
-# 15 open-play passages and 3 heroes; at most 13:18 of play. Hero seeds are the demo seeds:
+# 15 open-play passages and 3 heroes; about 13:19 of play at most. Hero seeds are the demo seeds:
 # blind_side_run 3 (the deployed hero), press_escape 0 and corner_blind_side 0 (each scenario's
 # first design seed). The kick-off passage is short, so the first hero comes within 35 s; the caps
 # vary so that open play has a rhythm, and a passage that puts the ball out ends there.

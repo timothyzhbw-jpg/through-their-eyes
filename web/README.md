@@ -113,9 +113,9 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 ## The stitched match (`?match=match-1`, SPEC 3.1)
 
-`match-1` is 18 scenario possessions on one clock of about 12 minutes (`sim/match.py`, SPEC 3.1):
-open-play passages and three heroes (the blind-side run at 0:30, escaping the press at 4:54, the
-short corner at 8:41). It exists only on the live service: offline, the bundled hero
+`match-1` is 18 scenario possessions on one clock of about 13 minutes (`sim/match.py`, SPEC 3.1):
+open-play passages and three heroes (the blind-side run at 0:30, escaping the press at 5:07, the
+short corner at 9:38). It exists only on the live service: offline, the bundled hero
 moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the

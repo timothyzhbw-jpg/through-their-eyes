@@ -133,7 +133,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   18 possessions on one clock of about 12 minutes, opened where the scan hero's possession
+   18 possessions on one clock of about 13 minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
@@ -300,8 +300,8 @@ uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
 "What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 18 possessions,
-about 12 minutes on one clock — 15 open-play passages and three heroes: the scan hero at 0:30, the
-pressure hero (`press_escape`) at 4:54 and the short corner (`corner_blind_side`) at 8:41 — with
+about 13 minutes on one clock — 15 open-play passages and three heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 5:07 and the short corner (`corner_blind_side`) at 9:38 — with
 moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
