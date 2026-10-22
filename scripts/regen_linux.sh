@@ -22,7 +22,7 @@ cd "$(dirname "$0")/.."
 groups=("${@:-exports}")
 if [[ " ${groups[*]} " == *" all "* ]]; then groups=(xt exports evals season dataset); fi
 workers=${WORKERS:-4}
-out=$(mktemp -d "${TMPDIR:-/tmp}/tte-regen-XXXXXX")
+out=$(mktemp -d -t tte-regen.XXXXXX)
 
 status=0
 docker run --rm --cpus "$workers" -e GROUPS_TO_RUN="${groups[*]}" -e WORKERS="$workers" \
