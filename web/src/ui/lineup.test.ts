@@ -76,7 +76,7 @@ describe("the pre-match line-up", () => {
     // The test match stitches three short possessions; match-1, the stitched match the card opens
     // on, is about 12½ min on one clock (SPEC 3.1), so give the fixture that run length.
     const match = matchExport();
-    match.runs.factual.frames = Math.round(751.8 / match.dt);
+    match.runs.factual.frames = Math.round(751.7 / match.dt);
     const stitched = parseHero(match);
     expect(runMinutes(stitched)).toBeGreaterThanOrEqual(1);
     expect(measure(stitched)).toBe("rate");

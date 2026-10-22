@@ -75,6 +75,9 @@ class Scenario:
     # Placed shots, keepers on the bisector who react when they see the ball, and the save model
     # (`sim.shots`, Module A). Off unless a scenario needs it, so the others keep their runs.
     shots: bool = False
+    # The restart the scenario opens with, if it plays one (SPEC 3.1, 3.9): its first kick takes
+    # it, with the Laws' distances (`sim.referee.Referee.keep_back`) and offside exemptions.
+    restart: str | None = None
 
     def setup(self, gen: np.random.Generator) -> Setup:
         raise NotImplementedError

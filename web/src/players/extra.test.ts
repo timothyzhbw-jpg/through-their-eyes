@@ -11,7 +11,7 @@ import { parseHero, wrapAngle } from "../data/hero";
 import { worldYaw } from "../views/tokens";
 import { type ExtraMeta, checkPose, checkTwist, extraClips, shoulderChecks } from "./extra";
 import { passPose } from "./gait";
-import { NECK_MAX, splitLook } from "./look";
+import { NECK_MAX, TRUNK_MAX, splitLook } from "./look";
 import { type ModelMeta, PLAYER_HEIGHT, makeRig, modelClips, poseRig, runMotion } from "./rig";
 import { animsFromSearch } from "./trial";
 
@@ -200,10 +200,10 @@ describe("the head stays the sim's", () => {
   });
 
   it("the trunk joins a smaller look; a big one turns it no further than before", () => {
-    // A5's scan from frame 100: the head 8° → 48° off the body, below the neck's 80°, so the
+    // A5's scan from frame 136: the head ends 53° off the body, below the neck's 80°, so the
     // engine's split turned only the neck; the check now turns the trunk with it.
     const a5 = hero.ids.indexOf("A5");
-    const c = shoulderChecks(hero, run, a5, extra.check).find((s) => s.start === 100)!;
+    const c = shoulderChecks(hero, run, a5, extra.check).find((s) => s.start === 136)!;
     expect(c.side).toBe(1);
     const f = Math.round((c.reach + c.leave) / 2);
     const on = pose("A5", f);
@@ -213,14 +213,15 @@ describe("the head stays the sim's", () => {
     const twist = checkTwist(extra.check, s.time, s.weight, s.side);
     expect(turned / DEG).toBeGreaterThan(4);
     expect(Math.abs(turned - twist) / DEG).toBeLessThan(3);
-    // H8's key scan, −128°: the trunk's share is the engine's 48° (−128 + 80), check or not.
-    const big = pose("H8", 60);
+    // H3's scan at frame 100, −180°: the trunk is at the engine's cap of 50° (the neck's 80° and
+    // the trunk's 50° leave the hips the rest), check or not.
+    const big = pose("H3", 100);
     const split = splitLook(big.body, big.head);
     const trunkOn = wrapAngle(worldYaw(big.rig.middle) - worldYaw(big.rig.holder));
-    const ref = pose("H8", 60, { checks: false });
+    const ref = pose("H3", 100, { checks: false });
     const trunkOff = wrapAngle(worldYaw(ref.rig.middle) - worldYaw(ref.rig.holder));
     expect(Math.abs(trunkOn - trunkOff) / DEG).toBeLessThan(3);
-    expect(Math.abs(split.trunk) / DEG).toBeCloseTo(48, 0);
+    expect(Math.abs(split.trunk) / DEG).toBeCloseTo(TRUNK_MAX / DEG, 0);
   });
 });
 

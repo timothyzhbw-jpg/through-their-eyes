@@ -66,7 +66,7 @@ def test_offline_breakdown_of_the_hero_moment(ctx, offline):
         for line in script.payload.lines:
             assert all(claims[cid].verdict == "supported" for cid in line.claims)
         assert len(script.voice) == len(script.payload.lines)
-    assert r.tier == "excited"
+    assert r.tier == "clutch"
 
 
 def test_offline_breakdown_is_deterministic(ctx, offline):
@@ -402,7 +402,7 @@ def test_plan_validation_matches_the_web_rules(ctx):
 
 
 def test_delivery_tier_is_rule_based(ctx):
-    assert delivery_tier(ctx.card) == "excited"
+    assert delivery_tier(ctx.card) == "clutch"
     quiet = ctx.card.model_copy(deep=True)
     for lens in quiet.lenses:
         lens.delta_xt = 0.001 if lens.delta_xt is not None else None
@@ -558,7 +558,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "H9's run was on H8's blind side.",
         "Before the ball reached him, H8 looked over his right shoulder.",
         "When H8 looked over his shoulder before the ball arrived, he saw H9.",
-        "H8 found H9 with a 42-metre pass.",
+        "H8 found H9 with a 38-metre pass.",
         "Without that look, H8 would have passed to H4.",
     ]
     assert [line.text for line in zh.payload.lines] == [
@@ -566,7 +566,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "H9的跑位在H8的盲区。",
         "球到之前，H8扭头看向了右后方。",
         "球到之前回头的那一眼，H8看到了H9。",
-        "H8一脚42米的传球找到了H9。",
+        "H8一脚38米的传球找到了H9。",
         "如果没有那一眼，H8会把球传给H4。",
     ]
     assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
@@ -719,11 +719,12 @@ def test_the_voice_step_reads_audio_description_calmly_on_any_moment(ctx, delta,
 
 # --- broadcast delivery: roles, emphasis, the reveal break (SPEC 6) ------------------------------
 
-# Styles best first, styledegree or none, then rate and pitch, at tier excited.
+# Styles best first, styledegree or none, then rate and pitch, at tier clutch (the hero moment's
+# scan lens is worth more than 0.15 xT since its run is onside, SPEC 3.9).
 _LINE = {
     "open": (("sports-commentary", "cheerful"), None, "+6%", "+3%"),
     "build": (("sports-commentary-excited", "excited", "cheerful"), None, "+8%", "+3%"),
-    "peak": (("sports-commentary-excited", "excited", "cheerful"), "1.5", "+10%", "+4%"),
+    "peak": (("sports-commentary-excited", "excited", "cheerful"), "2", "+14%", "+6%"),
     "why": (("cheerful", "excited"), None, "+2%", "+2%"),
 }
 _AD_LINE = (("narration-relaxed", "narration-professional", "calm", "newscast"), "-10%", "+0%")
@@ -735,12 +736,12 @@ _SNAPSHOT_LINES = (
      "checked his shoulder", False),
     ("casual", "en", "H9's run was on H8's blind side.", "why", "blind side", False),
     ("casual", "en", "Without that look, H8 would have passed to H4.", "why", "that look", True),
-    ("analyst", "en", "H8 found H9 with a 42-metre pass.", "peak", None, False),
+    ("analyst", "en", "H8 found H9 with a 38-metre pass.", "peak", None, False),
     ("casual", "zh", "他看到了什么？", "open", None, False),
     ("casual", "zh", "球到之前，H8先回头看了一眼。", "build", "回头看了一眼", False),
     ("casual", "zh", "H9的跑位在H8的盲区。", "why", "盲区", False),
     ("casual", "zh", "如果没有那一眼，H8会把球传给H4。", "why", "那一眼", True),
-    ("analyst", "zh", "H8一脚42米的传球找到了H9。", "peak", None, False),
+    ("analyst", "zh", "H8一脚38米的传球找到了H9。", "peak", None, False),
     (AD, "en", "H9's run was on H8's blind side.", "why", None, False),
     (AD, "zh", "H9的跑位在H8的盲区。", "why", None, False),
 )  # fmt: skip
@@ -749,7 +750,7 @@ _SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",
                 "time_since_last_scan"}  # fmt: skip
 _PEAK_CLAIMS = {"pass_to_runner", "runner_received", "pressure_at_pass"}
 _PEAK_LINES = (
-    "found H9 with a 42-metre pass",
+    "found H9 with a 38-metre pass",
     "took the pass",
     "Pressing intensity on H4 was 95% when he released the ball",
 )
@@ -854,7 +855,7 @@ def test_peak_prosody_follows_the_tier():
     """Calm peak uses the build style. Excited and clutch add styledegree when a style fits."""
     from agents.delivery import VOICE_STYLES, VOICES
 
-    line = ScriptLine(id="L1", speaker="pbp", text="H8 found H9 with a 42-metre pass.",
+    line = ScriptLine(id="L1", speaker="pbp", text="H8 found H9 with a 38-metre pass.",
                       claims=["pass_to_runner"])  # fmt: skip
     for language in ("en", "zh"):
         styles = VOICE_STYLES[VOICES[(language, "pbp")]]
@@ -1016,7 +1017,7 @@ def test_known_voices_use_the_table_and_a_given_map_overrides_it(ctx):
     from agents.delivery import VOICES
 
     plain = breakdown(ctx, client=None, personas=("casual",), languages=("en",))
-    assert next(s.notes for s in plain.trace if s.step == "voice") == ["tier excited"]
+    assert next(s.notes for s in plain.trace if s.step == "voice") == ["tier clutch"]
     assert any(cue.style for script in plain.scripts for cue in script.voice)
     styles = {voice: set() for voice in VOICES.values()}
     forced = breakdown(ctx, client=None, personas=("casual",), languages=("en",),

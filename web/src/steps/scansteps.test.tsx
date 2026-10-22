@@ -138,9 +138,9 @@ describe("His looks: stepping", () => {
     expect(st.playback.get()).toMatchObject({ frame: 75, focus: "tactical" });
     expect(lines(el)).toEqual([
       "It is his look over his right shoulder that brings H9 into his sight.",
-      "When he decides, he pictures H9 0.3 m from where he really is: he last saw him 0.5 s earlier.",
+      "When he decides, he pictures H9 0.3 m from where he really is: he last saw him 0.4 s earlier.",
       "So he passes to H9.",
-      "A5 is the opponent nearest to H9, 11.0 m from him.",
+      "A5 is the opponent nearest to H9, 11.6 m from him.",
     ]);
     click(button(el, "Back"));
     expect(st.state.get().index).toBe(0);

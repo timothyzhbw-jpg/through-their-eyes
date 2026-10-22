@@ -343,7 +343,7 @@ describe("Your call: the reveal", () => {
     expect(textOf(sim.querySelector(".sr-only"))).toBe(
       "(read from the sim export, not a verified claim)",
     );
-    expect(textOf(el)).toContain("H8 thought the pass to H9 had a 0.80 chance of arriving");
+    expect(textOf(el)).toContain("H8 thought the pass to H9 had a 0.67 chance of arriving");
 
     click(button(el, "What he did"));
     expect(textOf(el.querySelector(".yc-card h2"))).toBe("What he did: Pass to H9");
@@ -365,7 +365,7 @@ describe("Your call: the reveal", () => {
       ["His call", "Pass to H9"],
     ]);
     expect(textOf(el)).toContain(
-      "That option would have been worth 0.13 less in expected threat than what he did.",
+      "That option would have been worth 0.17 less in expected threat than what he did.",
     );
 
     click(button(el, "Try another call"));
