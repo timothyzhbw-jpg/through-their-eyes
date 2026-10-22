@@ -179,7 +179,6 @@ describe.each(exports())("the kick on %s", (_, hero) => {
   it("meets the ball with the kicking boot at the event", () => {
     const worst = Math.max(...kicks.map((k) => k.reach));
     console.log("%s: boot to ball centre at the event, worst %s m", _, worst.toFixed(3));
-    for (const k of kicks)
     for (const k of kicks) expect(k.reach, `${k.name} @${k.frame}`).toBeLessThan(BALL_R + 0.05);
   });
   it("keeps the plant foot still while it holds", () => {
