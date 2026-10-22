@@ -12,7 +12,7 @@ import { GK_KITS } from "./players/kit";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
-import { LineupCard } from "./ui/LineupCard";
+import { IntroCard } from "./ui/IntroCard";
 import { LiveBar, MomentsPanel } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
@@ -41,6 +41,7 @@ import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
+import { tour } from "./tour/tourState";
 import { TacticalView } from "./views/TacticalView";
 import { stepThroughOf } from "./steps/controller";
 import { ScanStepsButton, ScanStepsScreen, useStepThroughOpen } from "./steps/ScanSteps";
@@ -93,11 +94,12 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasScanSteps.current = scanSteps;
   }, [scanSteps]);
-  // The autoplay waits for the lineup card: the key scan comes in the stream's first seconds and
+  // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
   // must not play under it. Behind the card the picture rests on the first frame. Online: watch
   // live, then the show (the look, then the run without it) and the breakdown once the moment is
   // detected. Offline: the show and the bundled breakdown at once. Once per session: the card
-  // never opens again.
+  // never opens again. A tour started from the card drives the app itself: the autoplay would
+  // take its first step over (the step is set up before this effect runs).
   const started = useRef(false);
   useEffect(() => {
     if (!autoplay || started.current) return;
@@ -106,6 +108,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       return;
     }
     started.current = true;
+    if (tour.get().open) return;
     if (session.feed) controls.startLive();
     else controls.autoplay();
   }, [autoplay, controls, introOpen, playback, session]);
@@ -293,7 +296,7 @@ function LiveScreen(props: {
         </div>
         <header className="stage-head">
           <div className="brand">
-            {/* Focused when the lineup card closes (LineupCard), never by Tab. */}
+            {/* Focused when the intro card closes (IntroCard), never by Tab. */}
             <h1 tabIndex={-1}>Through Their Eyes</h1>
             <p className="sub">
               A synthetic match<span className="sub-more"> · every player fictional</span>
@@ -312,9 +315,10 @@ function LiveScreen(props: {
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}
         <Transport />
-        <div className="stage-card">{props.card}</div>
+        {/* The intro card takes the card's place while it is up. */}
+        <div className="stage-card">{introOpen ? null : props.card}</div>
       </div>
-      <LineupCard />
+      <IntroCard />
     </section>
   );
 }

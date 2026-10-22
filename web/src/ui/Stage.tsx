@@ -29,6 +29,7 @@ import { PERSONA_LABEL } from "./labels";
 import { MatchPicker } from "./Match";
 import { Segmented } from "./Segmented";
 import { clubName, shortName } from "../data/roster";
+import { directorPrefs } from "../director/director";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -413,6 +414,29 @@ export function TacticalOptions() {
   );
 }
 
+/** On a phone the camera switch and the Auto director live here: below the picture they took two
+ * of its rows (styles.css shows this group only up to 760 px and hides the two there). */
+function PhoneCameraOptions() {
+  const auto = useStore(directorPrefs, (s) => s.auto);
+  return (
+    <section className="options-group phone-only">
+      <h3 className="kicker">Camera</h3>
+      <CameraSwitch />
+      <div className="chips">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={auto}
+          onClick={() => directorPrefs.set({ auto: !auto })}
+          title="Let the director cut the cameras: it holds each shot a moment, never cuts in the middle of a scan, and never starts a replay"
+        >
+          Auto director
+        </button>
+      </div>
+    </section>
+  );
+}
+
 /** Every overlay toggle of both views, behind one button. */
 export function ViewOptions() {
   const [open, setOpen] = useState(false);
@@ -437,6 +461,7 @@ export function ViewOptions() {
       </button>
       {open && (
         <div id={id} className="popover options-panel" role="group" aria-label="View options">
+          <PhoneCameraOptions />
           <PovOptions />
           <QualityOption />
           <TacticalOptions />

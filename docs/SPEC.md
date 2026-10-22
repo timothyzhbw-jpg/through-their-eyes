@@ -74,8 +74,13 @@ on an LLM.
 
 **The cold load** (a judge who opens the page and only watches; web/src/App.tsx,
 [web/src/autoplay/](../web/src/autoplay/)):
-- The lineup card opens first. Behind it the picture rests on the stream's first frame. The hero
-  moment's stream starts only when the card closes, by itself after 5 s or on a click: its key
+- The intro card opens first: one line on what the moment shows ("One look over his shoulder
+  changed his pass. See why.") and one button, Start. It sits where the moment card goes (on a
+  phone, a sheet at the bottom), so the picture stays in view, resting on the stream's first
+  frame; the line-ups, whose eyes to watch and the tour are behind "Teams and more". It waits
+  for the viewer (2026-10-22, outside UX review: nobody read the old full-screen card in its
+  5 s countdown, and the countdown was there only because the card covered the match). The hero
+  moment's stream starts when the card closes (Start, Skip, Escape or a click beside it): its key
   scan comes in the first seconds and must not play under the card. A stitched match's stream
   plays behind the card; its first possession is open play.
 - When the stream detects the hero moment, the show plays at once; it does not wait for the
@@ -1903,6 +1908,14 @@ original visual identity.
     option in `whatif_*.json`) plays with a gold ball: it never happened. (2) The truth: everyone
     moves from where he pictured them to where they were. (3) What he did and why. (4) The two
     calls compared. One tap tries another option or goes back to the replay.
+  - *Why it went this way* (2026-10-22, outside UX review: the result needed explaining;
+    [why.ts](../web/src/yourcall/why.ts)). Right after the pick, the first beat says what he had
+    just seen (his teammates fresh in his picture, and those he had not seen lately, from the
+    belief ages of the scans), whether the call's receiver was fresh in his picture, and how his
+    picture rated the call against his own (the decision record's chances, in words: "the pass to
+    N. Varnhall looked more promising than your call"), then what it led to in the sim (the
+    verified lines). The first two are read from the sim export and marked so; they carry no
+    number, since no claim stands behind a count or a time.
   - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
     against his), and the breakdown's narration sorted by claim (state at the decision → truth;
     the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
@@ -1989,7 +2002,7 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
-- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the lineup card,
+- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the intro card,
   the moment card and the story, and the link `?tour=1`, or `?tour=<step id>`): an optional walk
   of about ninety seconds, so a judge with three minutes sees every signature feature without
   exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
@@ -2157,11 +2170,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       tries another option or closes; the reveal shows no number outside a verified line, each line
       once; the camera frames every option on desktop and phone; markers are focusable named
       buttons (arrow keys, Enter, Escape) and a swipe picks the option it points at; reduced
-      motion cuts to the end; it works on both heroes with a decision and inside `?match=`.
+      motion cuts to the end; it works on both heroes with a decision and inside `?match=`; after
+      the pick it says what he had seen and how his picture rated the call, with no digit.
       — [web/src/yourcall/flow.test.ts](../web/src/yourcall/flow.test.ts),
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
-      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+      [why.test.ts](../web/src/yourcall/why.test.ts),
+      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx); `npm run smoke`, pages
+      `link-yourcall` and `phone-375-yourcall` (axe on the reveal)
 - [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
       live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
       and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
@@ -2261,7 +2277,7 @@ reported to be Xsens motion capture; animation only): the players' walk
       (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
       3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
       (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
-      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      LCP is text in both (the lineup card's heading at about 6.1 s, before the intro card; when it first paints in
       the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
       eval/reports/web_load.md). `npm run fps` 60
       capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
@@ -2293,13 +2309,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
-- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
-      without the look and its verified line are on screen within 20 s of opening the page, and
-      any viewer action ends the show.
+- [x] Cold load: nothing of the hero moment plays under the intro card, which waits for the
+      viewer; after Start, the run without the look and its verified line are on screen within
+      20 s, and any viewer action ends the show.
       — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
-      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
-      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
-      2026-10-21)
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("after Start, the run without
+      the look is on screen and said within 20 s"),
+      [web/src/ui/introCard.test.tsx](../web/src/ui/introCard.test.tsx); `npm run smoke`, page
+      `cold-load-without-the-look` (16 s after the page opened, 2026-10-21, with the old card)
 - [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
       no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
       slot is a render violation, in en and zh; values cached with ids are renamed when read, with
