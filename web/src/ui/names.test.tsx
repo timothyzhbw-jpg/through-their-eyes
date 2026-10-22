@@ -22,7 +22,7 @@ import { createSession, SessionContext, type ViewSession } from "../session";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport, pressureExport } from "../testing";
 import { intro } from "./intro";
 import { LineupCard } from "./LineupCard";
-import { momentLabel, MomentsPanel } from "./Live";
+import { LiveBar, momentLabel, MomentsPanel } from "./Live";
 import { Scoreboard } from "./Match";
 import { DecisionPanel, StoryPanel } from "./Panels";
 import { momentTitle, StageHud } from "./Stage";
@@ -162,6 +162,14 @@ describe("on screen, a player and a club go by their names", () => {
     expect(momentLabel({ kind: "decision_after_scan", actor: "H8", receiver: "H4" })).toBe(
       "Decision after a scan · J. Ferriday → K. Annersley",
     );
+    // The live bar names who is sprinting in the latest frame.
+    act(() => {
+      m.playback.set({ live: true });
+      m.feed!.state.set({ status: "streaming", sprint: ["A3", "H9"] });
+    });
+    const bar = mount(m, <LiveBar />);
+    expect(text(bar.querySelector(".sprint")!)).toBe(`· sprinting ${shortName("A3")}, N. Varnhall`);
+    expect(words(bar)).not.toMatch(ID);
     const moments = mount(m, <MomentsPanel />);
     expect(words(moments)).not.toMatch(ID);
     const score = mount(m, <Scoreboard />);
