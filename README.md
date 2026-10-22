@@ -29,7 +29,7 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams in, and once the moment is detected the agent crew's breakdown plays
-   (Microsoft Foundry; **Sound on** for Azure AI Speech). Click a caption to open its claims and
+   (Microsoft Foundry; **Tap for sound** for Azure AI Speech). Click a caption to open its claims and
    the evidence frame. Then [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value)
    and press **Check**: the verifier refutes it, and the line would not air.
 
@@ -104,7 +104,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz; once the moment is detected, the agent crew's
    breakdown plays (Microsoft Foundry, cached after the first request). Click a caption to open
-   its claims and the evidence frame; **Sound on** speaks it with Azure AI Speech.
+   its claims and the evidence frame; **Tap for sound** to hear it in Azure AI Speech.
 4. **Your own "What if…?"** [A question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
    press **Ask**. The API maps the question to one of his options, forces it, re-simulates the
    moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
