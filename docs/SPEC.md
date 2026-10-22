@@ -1922,6 +1922,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   - Per-client limits key on the last `X-Forwarded-For` hop, the address the Container Apps
     ingress appends; earlier hops come from the client. Live streams also have a ceiling per
     process (`TTE_LIVE_MAX_TOTAL`), and uvicorn refuses WebSocket frames over 4 KiB.
+  - Egress: every response body and live message counts against a per-client budget
+    (`TTE_EGRESS_PER_CLIENT`, 500 MB an hour) and a daily total (`TTE_DAILY_EGRESS_GB`, 10 GB),
+    since Azure bills internet egress past 100 GB a month; the live stream plays at most 8x. At
+    most `TTE_CREW_CONCURRENCY` crew runs with a model at once (each starts an MCP subprocess).
+    The audit, a local load test and what happens when a quota runs out: docs/OPERATIONS.md.
+  - Judging window (`TTE_JUDGING_WINDOW`, 2026-10-27 to 2026-11-10, UTC days): 8 model runs per
+    client per 10 min and 100 a day, so a judge's tour (what-if, drill, bring-back, recap) fits,
+    two judges behind one NAT too. A limited drill or bring-back replays the recording of the
+    same run, labelled with its time, or runs without the model: never a dead end.
   - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
     at $40 if the offer supports budgets.
 - **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
@@ -1935,7 +1944,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
   | Storage static website (`web`) | StorageV2, LRS, hot | ≈ $0.1 | < $1 |
   | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
-  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $9: cap of 40 per day, every day |
+  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $21: cap of 40 a day to 10/26, 100 a day in the judging window |
+  | Internet egress (API + site) | first 100 GB a month free; API capped at 10 GB a day | $0 (≈ 0.6 GB a day on 10/20–21) | ≈ $1: the cap every day (10 GB over the free 100 in October) |
   | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
   | **Total** | | **≈ $15** | **≈ $50** |
 - **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as

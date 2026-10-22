@@ -35,6 +35,8 @@ The full list of messages and limits is in the docstrings of [`main.py`](main.py
 | [`tamper.py`](tamper.py) | the "Try a wrong number" check: a copy of the claim with the viewer's value, through the real Verifier |
 | [`tts.py`](tts.py) | Azure AI Speech: voice cues recorded per breakdown, audio cached by key under `TTE_CACHE_DIR/tts/` |
 | [`guard.py`](guard.py) | body cap (16 KiB, 413), security headers, a 500 with no traceback |
+| [`recorded.py`](recorded.py) | `Recordings`: every drill and bring-back as it ran, replayed while a viewer is limited |
+| [`egress.py`](egress.py) | `Egress`: bytes sent per client and per UTC day (every response body and live message); `EgressLimit`, the 429 once either is spent |
 | [`settings.py`](settings.py) | `Settings.from_env()`: every `TTE_*` variable, with its default |
 
 ## Data flow
@@ -61,12 +63,24 @@ The full list of messages and limits is in the docstrings of [`main.py`](main.py
 - **Spend is bounded.** Model-backed regenerations are rate-limited per client (`TTE_RATE_LIMIT`,
   3 per 10 min) and capped per UTC day across clients (`TTE_DAILY_MODEL_CAP`, 40); past either
   the cache or the template is served, flagged `rate_limited` or `capped`. A template served
-  while limited never stands in for the model's answer in the cache. Speech has its own limits
-  and daily synthesis cap; per-client limits key on the last `X-Forwarded-For` hop.
+  while limited never stands in for the model's answer in the cache. A what-if question the
+  model mapped is kept by its normalised text: asked again, it costs no model call and no unit.
+  At most `TTE_CREW_CONCURRENCY` (2) crew runs with a model at once. On the judging window's
+  UTC days (`TTE_JUDGING_WINDOW`, 2026-10-27 to 2026-11-10) the limits are 8 per 10 min and 100
+  a day. Speech has its own limits and daily synthesis cap; per-client limits key on the last
+  `X-Forwarded-For` hop.
+- **Egress is bounded.** Every response body and live message counts against the client's
+  bucket (`TTE_EGRESS_PER_CLIENT`, 500 MB per hour) and the day's total (`TTE_DAILY_EGRESS_GB`,
+  10); past either, 429 (a new live stream: 4429). The live stream plays at most 8x. Costs and
+  what to do when a quota runs out: [docs/OPERATIONS.md](../docs/OPERATIONS.md).
 - **Drills never touch Cosmos DB or the shared cache.** A request with `fail` is a fresh run under
   its own key; its record and checkpoints live in one directory on the replica's disk, the 50
   most recent only, and a restart onto a new disk drops them (bring-back then answers 404). A
   drill can be brought back at most 5 times.
+- **A limited drill is never a dead end.** Every drill and bring-back is recorded on the replica's
+  disk (`recorded.py`, the 200 most recent). Limited, the recording of the same drill in the same
+  state is replayed (`recorded.at`), else the crew runs without the model, flagged; 429 only
+  past the offline drills' daily cap too.
 - **Tamper checks are never audited.** The audit log records what the service decided to air,
   not what a viewer tried; `/api/verify` calls no model and is rate-limited.
 - **Speech speaks only the crew's SSML**, by cue key; a client never sends SSML.
@@ -92,12 +106,16 @@ dependencies and `agents`, `analytics`, `api`, `explain`, `sim`, and runs as a n
 
 ```bash
 uv run pytest tests/test_api.py tests/test_api_match.py tests/test_api_drill.py \
-  tests/test_cosmos_store.py tests/test_dockerfile.py tests/test_env_example.py
+  tests/test_api_hardening.py tests/test_cosmos_store.py tests/test_dockerfile.py \
+  tests/test_env_example.py
 ```
 
 - [`test_api.py`](../tests/test_api.py): the live stream and its limits, the cache, the rate
   limit and the daily cap, the MCP switch, what-ifs, the audit log, tamper checks (refuted and
   not audited), TTS (only the crew's cues, caps, concurrency), body caps, security headers.
+- [`test_api_hardening.py`](../tests/test_api_hardening.py): the egress budget (exports, live
+  streams, the daily total), the 8x speed cap, what-if mappings kept and not re-asked, crew run
+  slots, bounded ids, no secret, URL, path or id in the public trace.
 - [`test_api_drill.py`](../tests/test_api_drill.py): a drill is a fresh run under its own key,
   counts against the limits, stays out of Cosmos DB, is brought back at most five times.
 - [`test_cosmos_store.py`](../tests/test_cosmos_store.py): the Cosmos cache and audit sink, the

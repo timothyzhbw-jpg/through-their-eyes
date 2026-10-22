@@ -221,6 +221,10 @@ _Fill in as they come to exist._
   Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
+- `docker run -d --name tte-load --cpus 0.5 --memory 1g -p 8797:8000 tte-api`, then
+  `uv run python -m infra.loadtest --container tte-load` — local load test (SPEC 8,
+  docs/OPERATIONS.md): 50 live viewers and a burst of breakdowns and what-ifs on the deployed
+  0.5 vCPU / 1 GiB, offline; frame lag, latency, memory. It refuses any host but localhost
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
   video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
   `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)
