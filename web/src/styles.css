@@ -3477,14 +3477,16 @@ optgroup {
   .stage-head .live {
     position: relative;
   }
-  /* In the band between the header buttons (bottom edge 68 px) and the run switch (top edge 84 px),
-     i.e. 7 to 23 px under the pill: at 13 px the 13 px line ended 4 px into the switch's row, and
-     at 6 px it began inside the buttons'. At 8 px the 13.2 px line fills 69 to 82.2 px whatever
-     the status says. A long list of sprinters ends in an ellipsis. */
+  /* In the band between the header's buttons (to y 68) and the run switch under them (from
+     y 84): a fixed 12 px line at 70-82 whatever the font. At 13 px below the pill a sprinter's name
+     ran into "With the look" from 1181 to about 1400 px; at 6 px, with Linux's taller line, into
+     "Your call". A long list of sprinters ends in an ellipsis. */
   .stage-head .live-status {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 9px);
     left: 0;
+    height: 12px;
+    line-height: 12px;
     max-width: 260px;
     overflow: hidden;
     text-overflow: ellipsis;
