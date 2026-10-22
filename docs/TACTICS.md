@@ -49,9 +49,12 @@ On match-1 (measured 2026-10-22 with the team shape, #150):
   was worth about the same as the one he took (+0.013).
 
 What it cannot say yet:
-- **Open play is scripted.** Who passes, when and to whom is fixed by possession play
-  (SPEC 3.6); only whether a pass arrives is simulated. So the rates describe the sim's script
-  under its press, not a coached team's choices.
+- **Open play passes by a rule.** Outside the hero moments, who passes, when and to whom
+  comes from possession play's passing rule (SPEC 3.6: the carrier keeps the ball a moment,
+  then finds the onside team-mate in range with the most space); the decision model chooses only
+  at the hero moments (SPEC 3.5). The movement, press, marking, perception and whether each pass
+  arrives are simulated throughout. So the rates describe that rule under the sim's press, not
+  a coached team's choices.
 - **Long balls are rare** (5 for Home in match-1), and tackles are not modelled.
 
 ### Why focus on set pieces?
@@ -94,7 +97,7 @@ without inventing anything.
 
 ## What would unlock most of the table
 
-1. **Open play that attacks.** Today's possession play is scripted. The `open_play` scenario
+1. **Open play that attacks.** Today's possession play passes by a rule. The `open_play` scenario
    already exists: every carrier decides with the decision model and shots are on (the xT fit
    uses it, SPEC 4.5). Putting it in the stitched match unlocks counter-attack, central
    penetration and the payoff rows of the high press and the low block.

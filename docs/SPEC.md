@@ -1081,7 +1081,12 @@ are sim records, labelled `sim` on screen.
   events, with the stitched run's possessions, and the Verifier checks every slot before the line
   renders. Percentages and decimals are checked to half a unit of the last digit shown.
 - **Honest limits, on the card.**
-  - Open-play passing is scripted (§3.6): the rates describe the sim's script under its press.
+  - Open-play passing follows a rule (§3.6: the carrier keeps the ball a moment, then finds the
+    onside team-mate in range with the most space), while the decision model chooses only at the
+    hero moments (§3.5): the rates describe that rule under the sim's press. The card says what
+    is simulated for every pass first (movement, press, marking, perception and belief, whether
+    the ball arrives), then who decides (2026-10-22: the red team found "who passes, when and to
+    whom is scripted" read as the whole sim being scripted).
   - A corner's possession ends after its cutback, before any shot (§3.1): set-piece xG is zero
     by construction.
   - Open play rarely reaches the final third, so the peak comparison favours the corner.
@@ -1705,7 +1710,12 @@ Application Insights.
     every renamed claim has its own fingerprint and audit record. Other moments get observed
     claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
     the line-breaking detector's own count), scans before the reception, heavy pressure, and how
-    its shot ended (scored, saved by the keeper, blocked, wide; §3.3).
+    its shot ended (scored, saved by the keeper, blocked, wide; §3.3). A goal is told as it was
+    made (2026-10-22): the pass that found the scorer, his look before it reached him (within
+    2 s), the post it went in at and the keeper it beat, each part a checked slot and left out
+    when the run does not have it ("{assister} found {shooter}, who looked up {secs} seconds
+    before the ball reached him and scored at the far post past {keeper}."; `goal_templates`).
+    *Why:* the red team found the match's only goal told as "N. Varnhall scored."
     Payload evidence and seek frames are lifted to the match clock.
   - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
     (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken
