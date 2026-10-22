@@ -26,14 +26,17 @@ import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
 import { LANGUAGES } from "../whatif/whatif";
-import { CheckIcon, SoundOffIcon, SoundOnIcon } from "./icons";
+import { CheckIcon } from "./icons";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
 import { Chapter } from "./Chapter";
 import { numberParts } from "./numbers";
 import { Segmented } from "./Segmented";
+import { SoundToggle } from "./SoundToggle";
 import { formatSlot, plainReason, slotLabel } from "./tamperText";
 import "./live.css";
 import "./whatif.css";
+
+export { SoundToggle }; // the header's Sound switch, imported from here before it had a file
 
 export function KindTag({ kind }: { kind: ClaimKind }) {
   return (
@@ -601,44 +604,6 @@ export function BreakdownChoice() {
       />
       <SoundToggle />
     </div>
-  );
-}
-
-/** Spoken narration (Azure AI Speech through the API). Off until the viewer turns it on or
- * chooses audio description. Its name stays "Sound"; `aria-pressed` carries the state. The text
- * button shows "Sound" and draws "off" / "on" from aria-pressed (live.css), so what it shows
- * is in its name (WCAG 2.5.3). */
-export function SoundToggle({ icon = false }: { icon?: boolean }) {
-  const { voice, controls } = useSession();
-  const on = useStore(voice.state, (s) => s.on);
-  const status = useStore(voice.state, (s) => s.status);
-  const error = useStore(voice.state, (s) => s.error);
-  const title = !voice.available
-    ? "The voice needs the live service"
-    : error
-      ? `Speech failed: ${error}`
-      : on
-        ? "Turn the commentary voice and the crowd off"
-        : "Speak each narration line as it comes up, with the crowd";
-  return (
-    <button
-      type="button"
-      className={[
-        "sound",
-        icon ? "btn btn-icon" : "",
-        status === "failed" ? "failed" : "",
-        on && status === "loading" ? "loading" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      aria-label="Sound"
-      aria-pressed={on}
-      disabled={!voice.available}
-      title={title}
-      onClick={() => controls.setSound(!on)}
-    >
-      {icon ? on ? <SoundOnIcon /> : <SoundOffIcon /> : "Sound"}
-    </button>
   );
 }
 

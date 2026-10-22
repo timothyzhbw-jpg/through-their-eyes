@@ -5,8 +5,9 @@
 // - whoosh: a noise burst through a band-pass that sweeps up and back down, panned;
 // - sting: a soft low thud under a short minor chord with a breath of high noise.
 // Everything goes through one duck gain (down while the voice speaks) and a master gain that
-// fades in and out with the Sound switch. The AudioContext is made on the first switch on (a
-// click, so the browser lets it start) and suspended while the sound is off.
+// fades in and out with the Sound switch. The AudioContext is made and woken by `unlock`, inside
+// the tap that turns the sound on (Safari and iOS start audio only from a tap), and suspended
+// while the sound is off. The narration voice plays through the same context (voice/voice.ts).
 
 import type { SoundOut } from "./bind";
 
@@ -55,10 +56,29 @@ export class SoundEngine implements SoundOut {
 
   constructor(private readonly make: () => Ctx | null = defaultContext) {}
 
+  /** The page's AudioContext, once `unlock` has made it. */
+  get context(): Ctx | null {
+    return this.ctx;
+  }
+
+  /**
+   * Make and wake the AudioContext. Call it inside the tap that turns the sound on: a context
+   * woken there may play at any time after, which an <audio> element on Safari or iOS may not.
+   * On an iPhone the page plays as media, so the silent switch does not mute it.
+   */
+  unlock(): void {
+    const ctx = this.context ?? this.makeContext();
+    if (!ctx) return;
+    const session = (globalThis.navigator as { audioSession?: { type: string } } | undefined)
+      ?.audioSession;
+    if (session && session.type !== "playback") session.type = "playback";
+    if (ctx.state !== "running") void ctx.resume().catch(() => {});
+  }
+
   setOn(on: boolean): void {
     if (on === this.on) return;
     this.on = on;
-    if (on && !this.ctx) this.build();
+    if (on && !this.master) this.build();
     const ctx = this.ctx;
     if (!ctx || !this.master) return;
     const t = ctx.currentTime;
@@ -167,10 +187,14 @@ export class SoundEngine implements SoundOut {
     return this.on && this.ctx && this.ctx.state !== "closed" ? this.ctx : null;
   }
 
+  private makeContext(): Ctx | null {
+    this.ctx ??= this.make();
+    return this.ctx;
+  }
+
   private build(): void {
-    const ctx = this.make();
+    const ctx = this.makeContext();
     if (!ctx) return;
-    this.ctx = ctx;
     this.noise = pinkNoise(ctx, 6);
     this.master = ctx.createGain();
     this.master.gain.value = 0;

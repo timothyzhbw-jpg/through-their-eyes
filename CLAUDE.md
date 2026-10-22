@@ -167,6 +167,10 @@ _Fill in as they come to exist._
 - `uv run python -m eval.keypoint_ingest` — the scan detector on limb tracking (SPEC 4.7):
   held-out F1 from keypoint-derived head yaw (`sim/keypoints.py` → `analytics/keypoints.py`) vs
   the sim's tracked head yaw, about 20 s; writes `eval/reports/keypoint_ingest.md`
+- `uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look
+  web/public/data/without_look_seed3.json` (and `far_post_finish` seed 11) — the run without the
+  look, told (SPEC 7): which look was removed, what it cost, where the pass went in xT, verified
+  in en and zh (`explain/look_cost.py`); a test fails when a committed file is stale
 - `uv run python -m eval.look_grid --scenario blind_side_run` (or `press_escape`) — Take his
   eyes (SPEC 3.7, 7): which looks change the hero's decision on the demo seed and on held-out
   seeds, about a minute each; writes `eval/reports/look_grid_<scenario>.md`.

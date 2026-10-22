@@ -1035,6 +1035,34 @@ optgroup {
 .sound.failed {
   box-shadow: inset 0 0 0 1px var(--flare);
 }
+/* Until the sound has been on once: browsers start sound only from a tap, so the switch asks. */
+.sound.with-hint {
+  width: auto;
+  gap: 8px;
+  padding: 0 16px 0 12px;
+  color: var(--chalk);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
+  animation: tt-sound-ask 2.4s ease-in-out 3;
+}
+@keyframes tt-sound-ask {
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(246, 213, 102, 0.9),
+      0 0 0 6px rgba(246, 213, 102, 0.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound.with-hint {
+    animation: none;
+  }
+}
+.sound-note {
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--flare);
+  text-shadow: var(--halo);
+}
 .sound.loading svg {
   animation: tt-pulse 1.2s ease-in-out infinite;
 }
@@ -1146,6 +1174,22 @@ optgroup {
 }
 .stage-card:empty {
   display: none;
+}
+/* the moment card, closed: a chip that opens it again, at the card's top right */
+.stage-card:has(> .moment-chip) {
+  width: auto;
+  overflow: visible;
+}
+.moment-chip {
+  background: rgba(8, 14, 11, 0.55);
+}
+.moment-chip .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--floodlight);
 }
 .moment-card {
   display: flex;
@@ -2985,6 +3029,17 @@ optgroup {
     top: 140px;
   }
 }
+/* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
+   to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
+   call". The switch drops under the header row there too. */
+@media (max-width: 1760px) and (min-width: 1181px) {
+  .stage-run {
+    top: 84px;
+  }
+  .stage:has(.stage-run) .stage-top {
+    top: 140px;
+  }
+}
 
 /* ---------- a phone: the picture, the bar, then the card, in that order ---------- */
 @media (max-width: 760px) {
@@ -3373,6 +3428,18 @@ optgroup {
   }
   .stage-head .live-status {
     display: none;
+  }
+  /* "Tap for sound" on two short lines: the header row keeps Your call and who is watching */
+  .sound.with-hint {
+    gap: 6px;
+    padding: 0 10px 0 8px;
+  }
+  .sound-hint {
+    max-width: 4.8em;
+    font-size: 11.5px;
+    line-height: 1.1;
+    text-align: left;
+    white-space: normal;
   }
   /* the story's big numbers shrink with the screen instead of running off it */
   .numeral {
