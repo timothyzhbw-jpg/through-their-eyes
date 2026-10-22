@@ -328,12 +328,18 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
   text); Moura et al. (2012), Sports Biomech 11(1):85–96 (abstract only; its "spread" sums all
   player pairs); Castellano, Álvarez, Figueira, Coutinho & Sampaio (2013), IJPAS 13(3):822–832
   (abstract only, no numbers); Low et al. (2020) review, Sports Med 50:343–385 (abstract only).
+  Checked again on 2026-10-22: no open full text of Low et al. 2020 (Springer; the author's DSHS
+  Köln dissertation refuses connections), Frencken et al. 2011 (the RUG thesis is behind a bot
+  check) or Folgado et al. 2014 (the Évora copy is restricted). None of the three gives a value
+  used here. Bialkowski et al. (2014) and Shaw & Glickman were read in full (above).
 - Derived from the means above, not checked: length per width 0.87–0.89 in possession and
   0.87–0.93 out of possession (ratios of means, not means of ratios), and the out/in ratios of width
   (0.89) and length (0.91–0.95) in Castellano et al.
 - Rejected: Dash et al. (2025), arXiv:2511.06191, prints a back-four height of 46.947 ± 12.710 with
   no unit and sample counts that disagree.
-- **Ours, not cited (style knobs):** the slot depths and laterals, how far the wide players tuck in
+- **Ours, not cited (style knobs):** the slot depths and laterals, how far the block slides toward
+  the ball's side (`shift`: no readable study prints a centroid-on-ball slope or a ball-side
+  offset, as the sim-parameters dossier also found), how far the wide players tuck in
   and the full-backs push on, the keeper's depth as a share of the back line's, the zonal marking
   radii and leash, the in-possession line (a set distance behind the ball; no paper prints a
   relation for it), the block's one-second lag behind the ball, the jog to a slot (3 m/s, below

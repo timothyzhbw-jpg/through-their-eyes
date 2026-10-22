@@ -108,7 +108,9 @@ class PhaseShape:
     line_slope: float  # m of line depth per m of the ball's distance from that goal line
     line_min: float  # m from the own goal line: the deepest the back line goes
     line_max: float  # m from the own goal line: the highest
-    shift: float  # block centre's y as a share of the ball's y
+    # Block centre's y as a share of the ball's y. A style knob: no readable study prints how far a
+    # team slides toward the ball's side (docs/REFERENCES.md, Team shape).
+    shift: float
 
 
 # The defending line is the published regression (Castellano & Álvarez 2013, RICYDE 9(32), Tabla
