@@ -729,14 +729,15 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,853 passes attempted (79.7% of resolved ones completed), 367 possession changes
-      (349 interceptions, 17 out of play, no tackles), 486 team possessions of 11.1 s on average,
+      of play, 1,997 passes attempted (77.1% of resolved ones completed), 444 possession changes
+      (all interceptions: with the team shape no ball goes out in open play, §3.2; no tackles),
+      570 team possessions of 9.5 s on average,
       and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
       match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
       has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
       printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
-      scenario possessions per match (target 15–25) and 12.47 min of play (target 10–15). 360 of
-      380 scenario possessions start with the home team, which has 56.6% of the possession time.
+      scenario possessions per match (target 15–25) and 13.47 min of play (target 10–15). 360 of
+      380 scenario possessions start with the home team, which has 54.9% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
