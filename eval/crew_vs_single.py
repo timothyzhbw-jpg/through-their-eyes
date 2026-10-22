@@ -302,11 +302,11 @@ class RecordingVerifier(Verifier):
 class RecordingVoice(Voice):
     """Notes when the plan arrived (the other half of what airs with no Verifier)."""
 
-    async def _join(self, ctx) -> None:
+    async def _join(self, ctx, msg=None) -> None:
         state = RUN.get()
         if state is not None and self.planned is not None and state.t_planned is None:
             state.t_planned = time.perf_counter()
-        await super()._join(ctx)
+        await super()._join(ctx, msg)
 
 
 class _FreeTextCrewNarration(FreeTextNarration):

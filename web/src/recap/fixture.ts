@@ -36,7 +36,13 @@ export function recapFixture(
   m: MatchExport,
   persona = "casual",
   language: "en" | "zh" = "en",
-  patch: { source?: "model" | "offline"; capped?: boolean } = {},
+  patch: {
+    source?: "model" | "offline";
+    capped?: boolean;
+    rate_limited?: boolean;
+    cached?: boolean;
+    provenance?: object | null; // the API's `provenance`; null: an older service
+  } = {},
 ) {
   const text = TEXT[language];
   const events = m.runs.factual.events;
@@ -192,10 +198,19 @@ export function recapFixture(
   });
   return {
     key: "a".repeat(32),
-    cached: false,
-    rate_limited: false,
+    cached: patch.cached ?? false,
+    rate_limited: patch.rate_limited ?? false,
     capped: patch.capped ?? false,
     source: patch.source ?? "offline",
+    ...(patch.provenance === null
+      ? {}
+      : {
+          provenance: patch.provenance ?? {
+            kind: "template",
+            ran_at: "2026-10-21T19:31:12+00:00",
+            reason: "model_unavailable",
+          },
+        }),
     result: {
       request: {
         match: MATCH,

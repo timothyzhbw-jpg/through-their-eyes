@@ -31,7 +31,6 @@ npm run fps          # after a build: fps with pitch control and the skeleton of
 npm run smoke        # end to end: a local API, the build, every page in headless Chromium (below)
 npm run a11y -- --url <site>  # axe-core on every screen, desktop and phone (docs/ACCESSIBILITY.md)
 npm run contrast -- --url <site>  # contrast of the text over the 3D views, 72 renders (same doc)
-npm run loadperf     # cold-load timings and bytes, laptop and phone, plain and on Fast 3G (below)
 ```
 
 ## URL parameters
@@ -66,28 +65,6 @@ no breakdown on load unless `tamper` needs one. If no line of the breakdown carr
 claim, the first claim with a number opens instead (`analyst` narrations carry the most).
 Without them, the app watches live and then plays the breakdown, in the linked `persona` and
 `lang` if given. Values the app does not know are ignored and listed in the console.
-
-## Hosting and load time (SPEC 8)
-
-Azure Storage sends each file exactly as uploaded and never compresses on the fly, so
-`infra/upload_web.sh` (used by `infra/deploy.sh web` and the deploy workflow) uploads a staged
-copy of the build (`scripts/stage.mjs`): text files gzipped with `Content-Encoding: gzip`
-(1.6 MB of JS becomes 0.44 MB on the wire), hashed files under `assets/` cached for a year
-(`immutable`), `data/` and `models/` for 5 minutes, and `index.html` last with `no-cache`, so a
-visitor never gets a page whose scripts are not uploaded yet. gzip rather than Brotli because
-Storage cannot choose an encoding per request and every browser and proxy takes gzip.
-`index.html` also shows "Loading the match…" before any script runs, opens the API's connection
-(`preconnect`, added at build time from `VITE_API_URL`) and fetches the players' model while the
-scripts load. The telemetry panel, the costliest below the live screen, stops following the
-playhead while it is off screen or the tab is hidden (`src/ui/onScreen.ts`), and builds its curves
-once per run and player instead of on every frame.
-
-`npm run loadperf` measures cold loads of the live site (a fresh Chrome per load): first paint,
-first WebGL draw, when the rigged players are drawn, main-thread blocking time and bytes by kind,
-on a laptop (1440 × 900) and a phone (375 × 812), plain and throttled to DevTools' "Fast 3G" with
-a 4× CPU slowdown. `--serve dist-upload` serves a staged build as Storage would, on the site's
-own origin (inside Chrome only), so the API, the stream and the fonts behave as live. Results:
-[eval/reports/web_load.md](../eval/reports/web_load.md).
 
 ## The live service (`VITE_API_URL`)
 
@@ -136,21 +113,21 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 ## The stitched match (`?match=match-1`, SPEC 3.1)
 
-`match-1` is 18 scenario possessions on one clock of about 11½ minutes (`sim/match.py`, SPEC 3.1):
-open-play passages and three heroes (the blind-side run at 0:30, escaping the press at 4:33, the
-short corner at 8:21). It exists only on the live service: offline, the bundled hero
+`match-1` is 19 scenario possessions on one clock of about 11¾ minutes (`sim/match.py`, SPEC 3.1):
+open-play passages and four heroes (the blind-side run at 0:30, escaping the press at 4:33, the
+far-post finish at 6:41, which scores, and the short corner at 8:30). It exists only on the live service: offline, the bundled hero
 moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
-  possession on screen (n of 18, its scenario) and how play restarted (kick-off, throw-in, …, or a
+  possession on screen (n of 19, its scenario) and how play restarted (kick-off, throw-in, …, or a
   cut). The timeline is banded by possession, numbered where the numbers fit, hero possessions
-  in gold, the three hero moments as gold diamonds (the short corner's is the marker's look);
+  in gold, the four hero moments as gold diamonds (the short corner's is the marker's look);
   ◀ / ▶ jump between possessions; speeds go up to 4×. The match export
   has no beliefs, sight or vision model, so belief ghosts, "in his sight" and the vision cone are
   off until a hero moment is opened.
 - **Moments.** Every moment of every possession, in match time, with its lens (`scan lens`,
   `pressure lens`, or `live only`); while live, those the stream has not announced yet are dimmed.
-  Any moment replays; the three hero moments have **Breakdown**.
+  Any moment replays; the four hero moments have **Breakdown**.
 - **Breakdowns.** A hero moment's breakdown plays on its possession's own run: the app loads that
   run's hero export from the service (`/api/matches/<scenario>-<seed>/export`, so `TTE_MATCHES`
   must list it; for `blind_side_run-3` the bundled file stands in) and asks
@@ -181,6 +158,8 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
   --payload-fixture web/public/data/fixture_payload_seed3.json \
   --what-if web/public/data/whatif_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look web/public/data/without_look_seed3.json
+uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look web/public/data/without_look_far_post_finish_seed11.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 ```
@@ -202,6 +181,15 @@ uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/
   the decision on (players and ball, mm) for the ghost path. The suggested questions use it online
   and offline; free questions go to the api's live what-if, which uses its forced runs for the
   ghost.
+
+- `without_look_seed3.json`, `without_look_far_post_finish_seed11.json`: the run without the look,
+  told (`sim.export.export_without_look`, `explain/look_cost.py`; teammates' feedback,
+  2026-10-21). Verified lines in en and zh: which look was removed (which shoulder, how long
+  before the ball reached him), what losing it cost (played back instead of forward, or the ball
+  lost), and where each run's pass reached its receiver with the xT there; plus the 16 × 12 xT
+  grid (1e-4) the explainer draws. Not part of the crew's evidence, so breakdown cache keys do
+  not move. `src/without/` checks the payloads against the replay and shows them under "Without
+  the look", on the timeline, at the edge of his eyes and in the verdict; fetched when the session is made.
 
 - `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
   SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
