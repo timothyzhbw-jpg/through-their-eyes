@@ -20,6 +20,7 @@ import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
+import { kindOf } from "./tour/steps";
 import { startTour } from "./tour/tourState";
 import { withoutLookOf } from "./without/without";
 import { intro } from "./ui/intro";
@@ -82,7 +83,7 @@ async function main() {
         return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
       });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
-      if (link.tour) startTour(link.tour); // the judge tour's match steps: the recap
+      if (link.tour) startTour(link.tour, kindOf(link.tour)); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
       // play=eyes: the first hero moment whose possession has a bundled look grid.
@@ -123,7 +124,7 @@ async function main() {
       await showCine(session);
       return;
     }
-    if (link.tour) startTour(link.tour); // the judge tour: its steps are a hero moment's
+    if (link.tour) startTour(link.tour, kindOf(link.tour)); // a tour: its steps are a hero moment's
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>

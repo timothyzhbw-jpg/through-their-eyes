@@ -19,7 +19,7 @@ import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
 import { ProvenanceChip } from "../provenance/ProvenanceChip";
-import { TourButton } from "../tour/Tour";
+import { FirstTourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
@@ -717,7 +717,7 @@ function MomentCardBody({
           {label}
         </button>
       </div>
-      <TourButton />
+      <FirstTourButton />
     </aside>
   );
 }

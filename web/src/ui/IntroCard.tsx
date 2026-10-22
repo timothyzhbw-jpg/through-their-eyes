@@ -1,11 +1,12 @@
 // The first screen (SPEC 2, 7): one line on what this is and one button. The card sits where the
 // moment card goes (on a phone, a sheet at the bottom), so the picture stays in view behind it,
-// resting on the stream's first frame. It waits for the viewer: nobody reads a card in 5 s. The
-// line-ups, whose eyes to watch and the other ways in are one tap away, behind "Teams and more".
-// Its store belongs to the page, so opening a possession's breakdown never brings it back. It
-// closes on Start, Skip, Escape, or a click on the page around it.
+// resting on the stream's first frame. It waits for the viewer: nobody reads a card in 5 s. Start
+// opens the quick tour where the page has it (a hero moment with a key scan and the run without
+// it), else starts watching. The line-ups, whose eyes to watch, Just watch and the full tour are
+// one tap away, behind "Teams and more". Its store belongs to the page, so opening a possession's
+// breakdown never brings it back. Escape, or a click on the page around it, starts watching.
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Hero } from "../data/hero";
 import { useView, type ViewSession } from "../session";
 import { useStore } from "../store/store";
@@ -14,6 +15,8 @@ import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
 import { momentTitle } from "./Stage";
 import { TourButton } from "../tour/Tour";
+import { envOf, quickTourFits } from "../tour/steps";
+import { startTour } from "../tour/tourState";
 import { clubName, shortName } from "../data/roster";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
@@ -61,13 +64,19 @@ function OpenIntroCard() {
   const titleId = useId();
   const moreId = useId();
   const dialog = useRef<HTMLElement>(null);
-  const start = useRef<HTMLButtonElement>(null);
+  const primary = useRef<HTMLButtonElement>(null);
   const { line, call } = hookOf(view);
+  const quick = useMemo(() => kind === "hero" && quickTourFits(envOf(view)), [kind, view]);
 
-  const close = () => intro.set({ open: false });
   const startWatching = () => {
     if (chosen) playback.set({ povPlayer: chosen });
-    close();
+    intro.set({ open: false });
+  };
+  // The tour first, so the autoplay sees it open when the card closes (App.tsx).
+  const start = () => {
+    if (!quick) return startWatching();
+    startTour(null, "quick");
+    intro.set({ open: false });
   };
 
   useEffect(() => {
@@ -77,7 +86,7 @@ function OpenIntroCard() {
     const title = document.querySelector<HTMLElement>(".stage .stage-head h1");
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    start.current?.focus({ preventScroll: true });
+    primary.current?.focus({ preventScroll: true });
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -130,7 +139,13 @@ function OpenIntroCard() {
           {line} <em>{call}</em>
         </h2>
         <div className="intro-actions">
-          <button type="button" className="btn btn-primary" ref={start} onClick={startWatching}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            ref={primary}
+            onClick={start}
+            title={quick ? "A quick tour in four steps" : undefined}
+          >
             Start
             <ArrowIcon />
           </button>
@@ -172,10 +187,12 @@ function OpenIntroCard() {
             </div>
           </section>
           <div className="lineup-actions">
+            {quick && (
+              <button type="button" className="btn" onClick={startWatching}>
+                Just watch
+              </button>
+            )}
             {kind === "hero" && <TourButton /> /* its steps are a hero moment's */}
-            <button type="button" className="btn btn-quiet" onClick={close}>
-              Skip
-            </button>
           </div>
         </div>
       </section>

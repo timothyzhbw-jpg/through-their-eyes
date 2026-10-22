@@ -590,6 +590,9 @@ optgroup {
   gap: 8px 12px;
   margin-top: 20px;
 }
+.lineup-actions:empty {
+  display: none;
+}
 @media (max-width: 760px) {
   /* A sheet at the bottom, over the playback controls, under the picture. */
   .intro-card {

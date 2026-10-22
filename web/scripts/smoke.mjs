@@ -63,7 +63,7 @@ const PAGES = [
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
-  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Just watch", hero) },
   { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
@@ -161,6 +161,13 @@ const PAGES = [
     },
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
+  { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
+  {
+    name: "phone-375-quick-tour",
+    path: "?tour=quick",
+    device: PHONE_375,
+    check: (p, shoot) => quickTour(p, shoot),
+  },
   {
     name: "tour-recap",
     path: "?match=match-1&play=recap&tour=recap",
@@ -594,13 +601,14 @@ async function recap(page, shoot) {
 }
 
 /** A cold load (SPEC 2, 7): the intro card waits for the viewer, with nothing playing under it;
- * after Start the stream plays, and within about 20 s the run without the look is on screen with
- * its line. The 20 s is for a viewer's machine. The app's clock steps at most 0.1 s a frame
- * (session.ts `startClock`), so where WebGL is drawn in software, as on a CI runner (SwiftShader,
- * about 0.5 s a frame), the show plays slower than the wall clock: there the check is only that
- * it gets there, and the time it took is printed. */
+ * Start opens the quick tour on the look, and its next step, within about 20 s of Start, puts the
+ * run without the look on screen with its line. The 20 s is for a viewer's machine. The app's
+ * clock steps at most 0.1 s a frame (session.ts `startClock`), so where WebGL is drawn in software,
+ * as on a CI runner (SwiftShader, about 0.5 s a frame), the look plays slower than the wall clock:
+ * there the check is only that it gets there, and the time it took is printed. */
 const COLD_LOAD_S = process.env.CI ? 120 : 22;
 const CARD_WAITS_MS = 7000; // longer than the old card's 5 s countdown
+const LOOK_S = 8; // a viewer watches the look before pressing Next
 
 async function coldLoad(page, shoot) {
   const card = page.getByRole("dialog");
@@ -613,6 +621,10 @@ async function coldLoad(page, shoot) {
   }
   await card.getByRole("button", { name: "Start", exact: true }).click();
   const started = Date.now();
+  const tourCard = page.getByRole("dialog").filter({ hasText: /^Quick tour · 1 of / });
+  await see(tourCard, "the quick tour's first step");
+  await page.waitForTimeout(LOOK_S * 1000);
+  await tourCard.getByRole("button", { name: "Next" }).click();
   const without = page
     .getByRole("group", { name: "Run" })
     .getByRole("button", { name: "Without the look", pressed: true });
@@ -623,11 +635,57 @@ async function coldLoad(page, shoot) {
   }
   const took = Math.round((Date.now() - started) / 1000);
   console.log(`     the run without the look ${took} s after Start (deadline ${COLD_LOAD_S} s)`);
-  await see(
-    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
-    'the "Without that look" line',
-  );
+  await see(page.getByText(/without that look/i).first(), 'the "Without that look" line');
   await shoot(`at-${took}s`);
+}
+
+/** The quick tour (SPEC 7): four steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, then Your call, which Done leaves open. */
+async function quickTour(page, shoot) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 4/ });
+  const expect = [
+    ["Watch the look", () => mainView(page, "eyes")],
+    [
+      "Now remove it",
+      () =>
+        see(
+          page.getByRole("group", { name: "Run" }).getByRole("button", {
+            name: "Without the look",
+            pressed: true,
+          }),
+          "the run without the look",
+        ),
+    ],
+    ["Compare the outcomes", () => mainView(page, "board")],
+    ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
+  ];
+  for (const [k, [title, shows]] of expect.entries()) {
+    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 4`) });
+    await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
+    await shows();
+    await cardOnScreen(page, step, k + 1);
+    await shoot(`step-${k + 1}`);
+    if (k < expect.length - 1) await step.getByRole("button", { name: "Next" }).click();
+  }
+  await card.getByRole("button", { name: "Done" }).click();
+  try {
+    await card.waitFor({ state: "detached" });
+  } catch {
+    throw new Error('expected "Done" to close the quick tour');
+  }
+  await see(page.getByRole("region", { name: "Your call" }), "Your call, left open");
+}
+
+/** A tour card inside the screen, and no sideways scroll. */
+async function cardOnScreen(page, card, k) {
+  const [box, [w, h, wide]] = await Promise.all([
+    card.boundingBox(),
+    page.evaluate(() => [innerWidth, innerHeight, document.documentElement.scrollWidth]),
+  ]);
+  if (!box || box.x < 0 || box.y < 0 || box.x + box.width > w || box.y + box.height > h) {
+    throw new Error(`expected the tour's step ${k} card on screen, got ${JSON.stringify(box)}`);
+  }
+  if (wide > w) throw new Error(`expected no sideways scroll at step ${k}: ${wide} px in ${w}`);
 }
 
 /** The intro card (SPEC 7): one line and Start, clear of the picture; the line-ups behind "Teams

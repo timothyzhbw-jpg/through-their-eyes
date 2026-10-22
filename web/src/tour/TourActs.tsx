@@ -1,13 +1,15 @@
 // The tour card's own button on a step, for what calls the live service: the wrong-number check
 // (POST /api/verify), the sound, and the failure drill and its bring-back (each a fresh crew run).
 // The tour never presses these by itself; each is the viewer's click on the app's own control.
+// The quick tour's buttons call nothing: the look again, and on to the full tour.
 
 import type { ComponentType } from "react";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { wrongNumber } from "../tamper/tamper";
-import { tourClaim } from "./actions";
+import { playTheLook, tourClaim } from "./actions";
 import type { ActName } from "./steps";
+import { startTour } from "./tourState";
 
 /** Check the evidence card's prefilled wrong number: the verifier's answer shows in the card. */
 function CheckWrongNumber() {
@@ -102,9 +104,30 @@ function OpenMatch() {
   );
 }
 
+/** The look again, from the same seconds before it. */
+function ReplayLook() {
+  const session = useSession();
+  return (
+    <button type="button" className="btn" onClick={() => playTheLook(session)}>
+      Watch it again
+    </button>
+  );
+}
+
+/** From the quick tour's last step to the full one. */
+function FullTour() {
+  return (
+    <button type="button" className="btn" onClick={() => startTour(null, "full")}>
+      Full tour · 90 s
+    </button>
+  );
+}
+
 export const ACT_VIEW: Record<ActName, ComponentType> = {
   checkWrongNumber: CheckWrongNumber,
   sound: Sound,
   drill: Drill,
   openMatch: OpenMatch,
+  replayLook: ReplayLook,
+  fullTour: FullTour,
 };

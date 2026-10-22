@@ -35,7 +35,7 @@ import { takeEyesOf, type Fetch } from "../takeeyes/controller";
 import { intro } from "../ui/intro";
 import { IntroCard } from "../ui/IntroCard";
 import { yourCallOf } from "../yourcall/controller";
-import { resolveSteps, envOf, targetOf, STEPS } from "./steps";
+import { resolveSteps, envOf, targetOf, QUICK_STEPS, STEPS } from "./steps";
 import { recapFixture } from "../recap/fixture";
 import { closeTour, startTour, tour } from "./tourState";
 
@@ -161,6 +161,80 @@ async function start(at: string | null = null) {
     await settle();
   });
 }
+
+describe("the quick tour", () => {
+  const quick = () =>
+    act(async () => {
+      startTour(null, "quick");
+      await settle();
+    });
+
+  it("walks four steps, each on the app's own controls, every target found", async () => {
+    const session = offline();
+    mount(session);
+    await quick();
+    expect(stepId()).toBe("look");
+    expect(document.querySelector(".tour")?.getAttribute("data-kind")).toBe("quick");
+    expect(textOf(card())).toMatch(/^Quick tour · 1 of 4\s*Watch the look/);
+    // The look in his eyes, slowed around the scan, pausing a little after his decision.
+    const look = session.playback.get();
+    expect(look).toMatchObject({
+      mode: "factual",
+      playing: true,
+      autoSlow: true,
+      camera: "pov",
+      povPlayer: hero.heroId,
+      live: false,
+    });
+    expect(look.frame).toBeLessThan(hero.keyScan!.start);
+    expect(look.playUntil).toBeGreaterThan(session.moment.decisionFrame);
+    expect(targetOf(QUICK_STEPS[0])).not.toBeNull();
+
+    // "Watch it again" puts the look back at its start.
+    act(() => session.playback.set({ frame: look.playUntil!, playing: false }));
+    await click(buttonIn(card(), "Watch it again"));
+    expect(session.playback.get()).toMatchObject({ frame: look.frame, playing: true });
+
+    await next(); // remove it
+    expect(stepId()).toBe("remove");
+    expect(session.playback.get()).toMatchObject({ mode: "counterfactual", cfGhost: true });
+    expect(session.playback.get().playing).toBe(true);
+    expect(targetOf(QUICK_STEPS[1])).not.toBeNull();
+
+    await next(); // compare: the board, both passes arrived, the other run as a ghost
+    expect(stepId()).toBe("compare");
+    const compare = session.playback.get();
+    expect(compare).toMatchObject({ mode: "factual", focus: "tactical", cfGhost: true });
+    const { factual, counterfactual } = hero.runs;
+    expect(compare.frame).toBeGreaterThanOrEqual(
+      Math.min(factual.action!.end!, counterfactual.action!.end!),
+    );
+
+    await next(); // your call
+    expect(stepId()).toBe("call");
+    expect(yourCallOf(session).state.get().step).toBe("deciding");
+    expect(document.querySelector(".yc-view")).not.toBeNull();
+    expect(textOf(card())).toContain("Quick tour · 4 of 4");
+    expect(buttonIn(card(), "Done")).toBeDefined();
+
+    // On to the full tour from its last step.
+    await click(buttonIn(card(), "Full tour · 90 s"));
+    expect(tour.get()).toMatchObject({ open: true, kind: "full" });
+    expect(stepId()).toBe("pov");
+  });
+
+  it("does not open on a stitched match: none of its steps are there", async () => {
+    const m = createMatchSession(parseHero(matchExport()), {
+      api: createApi(API, MATCH, fakeFetch({})),
+      dataUrl: "/data/",
+      socket: fakeSockets(),
+    });
+    mount(m, <MatchApp session={m} autoplay={false} />);
+    await quick();
+    expect(tour.get().open).toBe(false);
+    expect(document.querySelector(".tour")).toBeNull();
+  });
+});
 
 describe("every step resolves on the hero moment", () => {
   it("offline: the replay, the run switch, the evidence, Your call and Take his eyes, then the end", async () => {
@@ -295,10 +369,10 @@ describe("every step resolves on the hero moment", () => {
     // The run switch is locked until the stream detects the moment (it has not).
     session.controls.setMode("counterfactual");
     expect(session.playback.get().mode).toBe("factual");
-    await click(buttonIn(container.querySelector(".moment-card"), "Take the 90-second tour"));
-    expect(session.playback.get().live).toBe(false); // the tour's replay leaves the stream
+    await click(buttonIn(container.querySelector(".moment-card"), "Quick tour"));
+    expect(session.playback.get().live).toBe(false); // the tour's look leaves the stream
     await next();
-    expect(stepId()).toBe("without");
+    expect(stepId()).toBe("remove");
     expect(session.playback.get().mode).toBe("counterfactual");
   });
 
@@ -609,20 +683,22 @@ describe("keyboard and motion", () => {
 describe("starting it", () => {
   it("from the story's button", async () => {
     const container = mount(offline());
-    await click(buttonIn(container.querySelector(".moment-cta"), "Take the 90-second tour"));
+    await click(buttonIn(container.querySelector(".moment-cta"), "Full tour · 90 s"));
     expect(stepId()).toBe("pov");
   });
 
-  it("from the moment card on the live screen", async () => {
+  it("from the moment card on the live screen: the quick tour", async () => {
     const container = mount(offline());
-    await click(buttonIn(container.querySelector(".moment-card"), "Take the 90-second tour"));
-    expect(stepId()).toBe("pov");
+    await click(buttonIn(container.querySelector(".moment-card"), "Quick tour"));
+    expect(stepId()).toBe("look");
+    expect(tour.get().kind).toBe("quick");
   });
 
   it("from the intro card, which closes", async () => {
     intro.set({ open: true });
     const container = mount(offline(), <IntroCard />);
-    await click(buttonIn(container, "Take the 90-second tour"));
+    await click(buttonIn(container, "Teams and more"));
+    await click(buttonIn(container, "Full tour · 90 s"));
     expect(intro.get().open).toBe(false);
     expect(tour.get()).toMatchObject({ open: true });
   });

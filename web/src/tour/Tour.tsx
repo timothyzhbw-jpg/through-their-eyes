@@ -1,12 +1,14 @@
-// The judge tour (SPEC 7): an optional walk of about ninety seconds through the signature
-// features, so a judge with three minutes sees each of them without exploring. Each step lights up
-// one thing the app already draws (a ring, the page dimmed around it where the picture is not the
-// point), says one plain line, and sets the app up with the app's own controls (actions.ts).
+// The tours (SPEC 7). The quick tour is a first-time visitor's one path, four steps: watch the
+// look, remove it, compare the outcomes, make your own call (Start on the intro card, "Quick tour"
+// on the moment card, ?tour=quick). The full tour is an optional walk of about ninety seconds
+// through the signature features, so a judge with three minutes sees each of them without
+// exploring ("Full tour" on the intro card and the story, ?tour=1). Each step lights up one thing
+// the app already draws (a ring, the page dimmed around it where the picture is not the point),
+// says one plain line, and sets the app up with the app's own controls (actions.ts).
 //
 // It never takes the app over: the overlay lets every click through, the card is a non-modal
 // dialog, and closing it at any step (Skip tour, Done, Escape) leaves the app as that step left it.
-// Started from "Take the 90-second tour" (the lineup card, the moment card, the story) or the
-// link ?tour=1 (deeplink.ts). Reduced motion: no animated ring, no smooth scrolling.
+// Reduced motion: no animated ring, no smooth scrolling.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
@@ -16,7 +18,17 @@ import { intro } from "../ui/intro";
 import { prefersReducedMotion } from "../yourcall/controller";
 import { enterStep } from "./actions";
 import { onScreen, PHONE_MAX, placeCard, type Box, type Keep, type Size } from "./layout";
-import { envOf, indexOf, resolveSteps, targetOf, wordsOf, type TourStep } from "./steps";
+import {
+  envOf,
+  indexOf,
+  quickTourFits,
+  resolveSteps,
+  stepsOf,
+  targetOf,
+  wordsOf,
+  type TourKind,
+  type TourStep,
+} from "./steps";
 import { closeTour, goToStep, startTour, tour } from "./tourState";
 import { ACT_VIEW } from "./TourActs";
 import "./tour.css";
@@ -122,20 +134,29 @@ export function Tour() {
   const session = useView();
   const open = useStore(tour, (s) => s.open);
   const seq = useStore(tour, (s) => s.seq);
+  const kind = useStore(tour, (s) => s.kind);
   // The step on screen was set up in the other view (a start or a move since then is new).
   const switched =
     open && arrived !== null && arrived.seq === seq && arrived.session.kind !== session.kind;
+  // A tour with no step this page can show (the quick tour on a stitched match) does not open.
+  const empty = useMemo(
+    () => open && resolveSteps(envOf(session), stepsOf(kind)).length === 0,
+    [open, session, kind],
+  );
   useEffect(() => {
-    if (switched) closeTour();
-  }, [switched]);
-  return open && !switched ? createPortal(<TourOverlay session={session} />, document.body) : null;
+    if (switched || empty) closeTour();
+  }, [switched, empty]);
+  return open && !switched && !empty
+    ? createPortal(<TourOverlay session={session} />, document.body)
+    : null;
 }
 
 function TourOverlay({ session }: { session: ViewSession }) {
   const at = useStore(tour, (s) => s.at);
   const seq = useStore(tour, (s) => s.seq);
+  const kind = useStore(tour, (s) => s.kind);
   const env = useMemo(() => envOf(session), [session]);
-  const steps = useMemo(() => resolveSteps(env), [env]);
+  const steps = useMemo(() => resolveSteps(env, stepsOf(kind)), [env, kind]);
   const index = indexOf(steps, at);
   const step = steps[index];
   const { title, caption } = wordsOf(step, env);
@@ -277,6 +298,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
       ref={root}
       className={["tour", reduced && "reduced", step.dim && "dim"].filter(Boolean).join(" ")}
       data-step={step.id}
+      data-kind={kind}
     >
       {ring && <div className="tour-ring" style={ring} aria-hidden="true" />}
       <section
@@ -293,7 +315,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
         <div aria-live="polite" className="tour-say">
           <div key={seq} className="tour-words">
             <p className="kicker accent">
-              Tour · {index + 1} of {steps.length}
+              {kind === "quick" ? "Quick tour" : "Tour"} · {index + 1} of {steps.length}
             </p>
             <h2 id="tour-title" className="tour-title">
               {title}
@@ -354,18 +376,37 @@ function TourOverlay({ session }: { session: ViewSession }) {
   );
 }
 
-/** "Take the 90-second tour": closes the lineup card if it is up, and starts at the first step. */
-export function TourButton({ className = "btn btn-quiet" }: { className?: string }) {
+/** The quick tour where it fits this page (a hero moment with a key scan and the run without it),
+ * else the full one: the first tour a newcomer should take. */
+export function FirstTourButton({ className }: { className?: string }) {
+  const session = useView();
+  const quick = useMemo(() => quickTourFits(envOf(session)), [session]);
+  return <TourButton className={className} kind={quick ? "quick" : "full"} />;
+}
+
+const TOUR_LABEL: Record<TourKind, string> = {
+  quick: "Quick tour",
+  full: "Full tour · 90 s",
+};
+
+/** Start a tour at its first step ("Quick tour", "Full tour · 90 s"); closes the intro card. */
+export function TourButton({
+  className = "btn btn-quiet",
+  kind = "full",
+}: {
+  className?: string;
+  kind?: TourKind;
+}) {
   return (
     <button
       type="button"
       className={`${className} tour-start`}
       onClick={() => {
         intro.set({ open: false });
-        startTour();
+        startTour(null, kind);
       }}
     >
-      Take the 90-second tour
+      {TOUR_LABEL[kind]}
     </button>
   );
 }
