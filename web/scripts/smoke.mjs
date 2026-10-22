@@ -108,7 +108,29 @@ const PAGES = [
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
-    check: (p) => hero(p, { main: "board" }),
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
+  },
+  {
+    name: "desktop-1280-tactical",
+    path: "?at=56&view=tactical",
+    device: { viewport: { width: 1280, height: 800 } },
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
+  },
+  // Wider than 5:3: the HUD is a column beside the board (trailer shot 04 films this one).
+  {
+    name: "desktop-1920-tactical",
+    path: "?at=decision&view=tactical",
+    device: { viewport: { width: 1920, height: 1080 } },
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   {
@@ -213,6 +235,29 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   }
   await see(page.getByRole("group", { name: "Run" }), "a hero moment's run switch");
   await mainView(page, main);
+}
+
+/** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
+ * buttons, the stats ticker) or the run switch over it. Floating over the board they hid the
+ * players in its top-left corner, and trailer shot 04, the board cropped, filmed them. */
+async function boardClear(page) {
+  const over = await page.evaluate(() => {
+    const board = document.querySelector(".slot.main .view.tac")?.getBoundingClientRect();
+    if (!board) return ["(no board as the main view)"];
+    return [
+      ...document.querySelectorAll(
+        ".stage-top :is(.eyes-picker, button, .stat-chip, .hud > span), .stage-run .seg",
+      ),
+    ]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        const across = Math.min(r.right, board.right) - Math.max(r.left, board.left);
+        const down = Math.min(r.bottom, board.bottom) - Math.max(r.top, board.top);
+        return r.width > 1 && r.height > 1 && across > 0.5 && down > 0.5;
+      })
+      .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+  });
+  if (over.length) throw new Error(`over the tactical board: ${over.join(", ")}`);
 }
 
 /** A stitched match: the score bug, its views, the live service and every possession's moments. */
