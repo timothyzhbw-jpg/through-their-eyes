@@ -46,6 +46,7 @@ import {
   PITCH,
   getLabelTexture,
   getPitchTexture,
+  labelAspect,
   teamColor,
   useRedrawOn,
 } from "./scene";
@@ -63,7 +64,6 @@ const GK_BAND = [0.55, 0.77] as const; // m, inner and outer radius
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
 const TAG_PX = 24; // on-screen height of a tag such as "shoulder check"
-const TAG_ASPECT = 512 / 96; // LABEL.tag canvas
 const NAME_ASPECT = 192 / 96; // LABEL.name canvas
 const CONE_RADIUS = 45; // m drawn
 const LAYER = {
@@ -372,7 +372,7 @@ function OtherRunGhost({ hero, mode, shared, scale, px }: GhostProps) {
   const pitchPx = 105 / px;
   const tagPx = pathTagPx(pitchPx);
   const tagH = tagPx === null ? 0 : Math.max(2.4, tagPx * px);
-  const tagW = tagH * TAG_ASPECT;
+  const tagW = tagH * labelAspect(label);
 
   useFrame(() => {
     const { sample, state } = shared.current;
@@ -751,7 +751,7 @@ function ScanMarker({ hero, shared, scale, px }: MarkerProps) {
         </mesh>
       </group>
       <mesh position={[0, 0, ring + 0.3 + tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
-        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+        <planeGeometry args={[tagH * labelAspect(label), tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
@@ -878,7 +878,7 @@ function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
         </mesh>
       </group>
       <mesh position={[ex, 0, ez - 1.5 - tagH / 2]} rotation-x={lie} renderOrder={LAYER.name}>
-        <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+        <planeGeometry args={[tagH * labelAspect(label), tagH]} />
         <meshBasicMaterial map={label} {...flat} />
       </mesh>
     </group>
