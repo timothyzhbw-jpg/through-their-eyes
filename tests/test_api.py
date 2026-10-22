@@ -216,10 +216,10 @@ def test_live_speed_is_clamped_and_a_nan_speed_plays_at_1x(client):
     assert elapsed >= 0.9 * 9 * 0.04  # throttled at 1x: unthrottled takes milliseconds
     with _live(client, "speed=1") as ws:
         assert ws.receive_json()["type"] == "hello"
-        ws.send_json({"type": "speed", "x": 1e12})  # clamped to 1000x, not refused
+        ws.send_json({"type": "speed", "x": 1e12})  # clamped to MAX_SPEED (8x), not refused
         started = time.monotonic()
         assert _drain(ws)[-1]["type"] == "end"
-    assert time.monotonic() - started < 3  # 162 frames at 1x would take 6.5 s
+    assert time.monotonic() - started < 3  # 162 frames take 0.8 s at 8x, 6.5 s at 1x
 
 
 def test_live_limits_come_from_the_environment(monkeypatch):
@@ -419,6 +419,7 @@ def test_the_daily_cap_is_shared_by_breakdowns_and_whatif_across_clients(
     app, fake = _capped(settings, tmp_path, replies, cap=2)
     body = {"match": MATCH, "personas": ["analyst"], "languages": ["en"], "regenerate": True}
     question = {"match": MATCH, "question": "What if he passed to H4?", "language": "en"}
+    reworded = {**question, "question": "What if he played it to H4?"}  # a mapping not yet kept
 
     def ip(n):
         return {"x-forwarded-for": f"203.0.113.{n}"}
@@ -427,11 +428,11 @@ def test_the_daily_cap_is_shared_by_breakdowns_and_whatif_across_clients(
         b = c.post("/api/breakdowns", json=body, headers=ip(1)).json()
         w1 = c.post("/api/whatif", json=question, headers=ip(2)).json()
         calls = dict(fake.calls)
-        w2 = c.post("/api/whatif", json=question, headers=ip(3)).json()
-        w3 = c.post("/api/whatif", json={**question, "language": "zh"}, headers=ip(4)).json()
+        w2 = c.post("/api/whatif", json=reworded, headers=ip(3)).json()
+        w3 = c.post("/api/whatif", json={**reworded, "language": "zh"}, headers=ip(4)).json()
     assert b["source"] == "model" and b["capped"] is False
     assert w1["answer"]["source"] == "llm" and w1["capped"] is False
-    assert w2["capped"] is True and w2["cached"] is True  # the cached answer
+    assert w2["capped"] is True and w2["cached"] is True  # the rules map it; the cached answer
     assert w2["answer"]["action"] == "pass:H4"
     assert w3["capped"] is True and w3["cached"] is False  # no cache: the rule mapper
     assert w3["answer"]["source"] == "template" and w3["answer"]["action"] == "pass:H4"

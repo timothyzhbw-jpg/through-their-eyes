@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 import { dropWebkitBackdropFilter } from "./src/build/backdropFilter";
+import { siteHints } from "./src/build/siteHints";
 
 export default defineConfig(({ mode }) => {
   // Dev only: forward the API's paths to a deployed service, whose CORS allows only the site.
@@ -9,7 +10,8 @@ export default defineConfig(({ mode }) => {
   const target = loadEnv(mode, ".", "TTE_").TTE_API_PROXY;
   const forward = { target, changeOrigin: true, secure: true };
   return {
-    plugins: [react()],
+    // The API's preconnect and the hashed files' names (src/build/siteHints.ts).
+    plugins: [react(), siteHints(loadEnv(mode, ".", "VITE_").VITE_API_URL)],
     // Keeps backdrop blur in Chrome and Edge (src/build/backdropFilter.ts).
     css: { postcss: { plugins: [dropWebkitBackdropFilter] } },
     server: target
