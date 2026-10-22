@@ -76,3 +76,19 @@ export function labelBox(
     depth,
   };
 }
+
+/**
+ * How high (m) a shirt number floats over a player whose head top is at `headTop` m: `base` when
+ * that clears his head on screen, else low enough that the number sits `gapPx` above his head. In
+ * his eyes a number 2.1 m up over a player a metre or two away lands far above that player, in
+ * the stands. `pxPerM`: pixels per metre at the player's depth; `textM`: the number's drawn height.
+ */
+export function labelHeight(
+  base: number,
+  headTop: number,
+  pxPerM: number,
+  textM: number,
+  gapPx: number,
+): number {
+  return Math.min(base, headTop + gapPx / pxPerM + textM / 2);
+}

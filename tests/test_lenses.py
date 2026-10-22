@@ -161,13 +161,17 @@ def test_lens_selection_is_deterministic_for_a_seed():
     assert a.model_dump_json() == b.model_dump_json()
 
 
-@pytest.mark.parametrize("seed", [100, 107, 119, 124, 138])
-def test_the_hero_moment_is_a_scan_story(seed):
-    card = _hero(Simulation.from_scenario(SCENARIO, seed=seed).run())
-    assert card.selected_lens == "scan"
-    scan = card.lens("scan")
-    others = [abs(lens.delta_xt) for lens in card.lenses if lens.lens != "scan"]
-    assert abs(scan.delta_xt) > max(others)
+def test_the_hero_moment_is_a_scan_story():
+    """The SPEC 3.6 gate on a sample of held-out seeds: the scan lens wins in at least 60%, by
+    the largest |Δ|. Since the run is onside (SPEC 3.9) H8 does not play H9 on every seed."""
+    cards = [
+        _hero(Simulation.from_scenario(SCENARIO, seed=s).run()) for s in (100, 107, 119, 124, 138)
+    ]
+    scan = [c for c in cards if c.selected_lens == "scan"]
+    assert len(scan) >= 0.6 * len(cards)
+    for card in scan:
+        others = [abs(lens.delta_xt) for lens in card.lenses if lens.lens != "scan"]
+        assert abs(card.lens("scan").delta_xt) > max(others)
 
 
 def test_a_moment_without_a_decision_falls_back_to_the_lenses_it_has(run3):

@@ -48,6 +48,7 @@ import { takeEyesOf } from "./takeeyes/controller";
 import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
+import { clubName } from "./data/roster";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
@@ -282,7 +283,9 @@ function LiveScreen(props: {
             <PovView />
           </div>
           <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
-            {belief ? <BeliefMap /> : <TacticalView />}
+            {/* The board stays mounted under the belief map: a cut to it is instant. */}
+            <TacticalView hidden={belief} />
+            {belief && <BeliefMap />}
           </div>
           <div className="shade top" aria-hidden="true" />
           <div className="shade bottom" aria-hidden="true" />
@@ -403,11 +406,11 @@ function Legend() {
     <footer className="legend" inert={introOpen}>
       <span>
         <i style={{ background: "var(--home)" }} />
-        Home (attacking right)
+        {clubName(0)} (attacking right)
       </span>
       <span>
         <i style={{ background: "var(--away)" }} />
-        Away
+        {clubName(1)}
       </span>
       <span>
         {GK_KITS.map((kit) => (

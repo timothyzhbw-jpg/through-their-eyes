@@ -3046,6 +3046,131 @@ optgroup {
     display: none;
   }
 }
+
+/* The board as the main view keeps the HUD (whose eyes, the director's suggestion, the stats
+   ticker) off it: floating over the board they hid the players in its top-left corner, and
+   trailer shot 04 (the board, cropped) filmed them. The pitch keeps 111:74 (BOARD_EXTENT), so
+   the HUD costs the board height or width:
+   - a band over the board (16:10 screens, tablets): picker and director on one row, the
+     suggestion shortened to fit, the ticker one line under them; the board starts 92 px under
+     the band's top and its panel is as wide as the pitch at that height, centred with the band;
+   - a column beside it (from 1181 px on screens wider than 5:3, where the board has width to
+     spare): the board keeps its height. */
+@media (min-width: 761px) {
+  .focus-tactical .stage-top {
+    display: grid;
+    grid-template-columns: auto minmax(0, max-content);
+    grid-template-areas:
+      "hud director"
+      "ticker ticker";
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  .focus-tactical .stage-top .stage-hud {
+    grid-area: hud;
+  }
+  .focus-tactical .stage-top .stage-director {
+    grid-area: director;
+    min-width: 0;
+  }
+  .focus-tactical .stage-director .director {
+    flex-wrap: nowrap;
+  }
+  .focus-tactical .stage-director .director-slot {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .focus-tactical .stage-director .chip.director-chip {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .focus-tactical .stage-top .stage-ticker {
+    grid-area: ticker;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .focus-tactical .stage-ticker .stat-chip:nth-child(n + 4) {
+    display: none;
+  }
+  .focus-tactical .slot.main {
+    top: calc(var(--head-h) + 92px);
+  }
+  .focus-tactical .slot.main .view.tac {
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 111 / 74;
+    margin-inline: auto;
+  }
+}
+/* the same 92 px under the band where it starts at 140 px (the rules above for .stage-top) */
+@media (max-width: 1760px) and (min-width: 1181px) {
+  .stage.focus-tactical:has(.stage-run) .slot.main {
+    top: 232px;
+  }
+}
+@media (max-width: 1400px) and (min-width: 1181px) {
+  .stage.focus-tactical:has(.live-chip.back) .slot.main {
+    top: 232px;
+  }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
+  .focus-tactical .slot.main {
+    top: 232px;
+  }
+  .focus-tactical .stage-ticker .stat-chip:nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (min-width: 1181px) and (min-aspect-ratio: 5 / 3) {
+  .focus-tactical .stage-top {
+    right: auto;
+    width: 296px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "hud"
+      "director"
+      "ticker";
+    justify-content: stretch;
+    justify-items: start;
+    align-content: start;
+  }
+  .focus-tactical .stage-director .director {
+    flex-wrap: wrap;
+  }
+  .focus-tactical .stage-director .director-slot {
+    flex: 1 1 100%;
+  }
+  .focus-tactical .stage-director .chip.director-chip {
+    white-space: normal;
+  }
+  .focus-tactical .stage-director .director-auto {
+    margin-left: 0;
+  }
+  .focus-tactical .stage-top .stage-ticker {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: visible;
+  }
+  .focus-tactical .slot.main,
+  .stage.focus-tactical:has(.stage-run) .slot.main,
+  .stage.focus-tactical:has(.live-chip.back) .slot.main {
+    top: var(--head-h);
+    left: calc(var(--gutter) + 312px);
+  }
+  .focus-tactical .stage-caption {
+    left: calc(var(--gutter) + 312px);
+  }
+}
+/* where the run switch drops under the header row, the board starts under it, with the column */
+@media (min-width: 1181px) and (max-width: 1760px) and (min-aspect-ratio: 5 / 3) {
+  .stage.focus-tactical:has(.stage-run) .slot.main {
+    top: 140px;
+  }
+}
 /* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
    to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
    call". The switch drops under the header row there too. */
@@ -3488,6 +3613,64 @@ optgroup {
   }
 }
 
+/* The phone's live screen gives the picture to the picture. The header sits above it instead of
+   on it, so his readouts own its top edge and the caption its bottom edge; the live stats leave
+   the picture while a caption is up (they shared its bottom edge: text on text); and the
+   director's row keeps one height whether it suggests a camera or not, so the moment card under
+   it never jumps. */
+@media (max-width: 760px) {
+  .stage {
+    grid-template-areas:
+      "head"
+      "views"
+      "bar"
+      "run"
+      "director"
+      "card";
+  }
+  .stage-head {
+    grid-area: head;
+    align-self: auto;
+  }
+  .stage-hud {
+    top: 0;
+    margin: 12px 16px 0;
+  }
+  .stage:has(.stage-caption .caption-text) .stage-ticker {
+    display: none;
+  }
+  /* one live stat at a time, the last listed (an event, else a sprint, else the carrier): three
+     covered most of a 320 px picture */
+  .stage-ticker .stat-chip:has(+ .stat-chip) {
+    display: none;
+  }
+  .stage-director .director-slot {
+    display: flex;
+    align-items: center;
+    min-height: 58px;
+  }
+  .stage-director .director-idle {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font: 400 13px/1.35 var(--font-body);
+    color: var(--chalk-2);
+  }
+  .stage-director .director-chip {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-align: left;
+  }
+}
+/* The director's switch comes first and the suggestion after it: a suggestion that comes and goes
+   no longer pushes the switch along the row. */
+.stage-director .director-auto {
+  order: -1;
+}
+
 /* From 1181 px the run switch sits centred in the header row: the stream status takes its own line
    under the Live pill, between the header row and the eyes row, so the two never meet. */
 @media (min-width: 1181px) {
@@ -3508,6 +3691,14 @@ optgroup {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+/* Below 1181 px the status shares the header row with the Live pill and the buttons: only "streaming"
+   fits. The sprinters' names (names, since #126: "sprinting N. Varnhall") wrapped into a column
+   that reached the run switch at 960 px, so they are left out there. */
+@media (max-width: 1180px) {
+  .stage-head .live-status .sprint {
+    display: none;
   }
 }
 
@@ -3665,28 +3856,4 @@ optgroup {
     opacity: 1;
     transform: none;
   }
-}
-
-/* the 3D view and the board morph into each other's place (beat/viewTransition.ts); the rest of
-   the page changes at once */
-:root {
-  view-transition-name: none;
-}
-.views > .slot:nth-child(1) {
-  view-transition-name: tte-view-3d;
-}
-.views > .slot:nth-child(2) {
-  view-transition-name: tte-view-board;
-}
-::view-transition-group(tte-view-3d),
-::view-transition-group(tte-view-board) {
-  animation-duration: var(--t-slow);
-  animation-timing-function: var(--settle);
-}
-::view-transition-old(tte-view-3d),
-::view-transition-old(tte-view-board),
-::view-transition-new(tte-view-3d),
-::view-transition-new(tte-view-board) {
-  height: 100%;
-  object-fit: cover;
 }

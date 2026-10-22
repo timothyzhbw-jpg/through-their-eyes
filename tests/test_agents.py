@@ -28,6 +28,30 @@ def offline(ctx):
     return breakdown(ctx, client=None, personas=("casual", "analyst"), languages=("en", "zh"))
 
 
+def _offered(prompt: str) -> tuple[set[str], dict]:
+    """The claim ids a narration prompt offers, and its persona rules."""
+    data, _ = json.JSONDecoder().raw_decode(prompt)
+    keys = ("headline_claims", "supporting_claims", "other_claims")
+    return {c["id"] for key in keys for c in data.get(key, [])}, data.get("rules", {})
+
+
+def _good_pbp(prompt: str) -> dict:
+    """The play-by-play: the shoulder check; for audio description, where it happened first."""
+    offered, rules = _offered(prompt)
+    if start := rules.get("start_with"):
+        return {"lines": [{"claim": start[0], "connective": None}]}
+    return {"lines": [{"claim": "scan_before_reception", "connective": "Watch this."}]}
+
+
+def _good_color(prompt: str) -> dict:
+    """The co-commentator: the counterfactual, then one claim of each group of the persona rules
+    the play-by-play left missing (agents/persona_rules.py), as a model following them would."""
+    offered, rules = _offered(prompt)
+    ids = ["cf_pass"] if "cf_pass" in offered else []
+    ids += [g["one_of"][0] for g in rules.get("still_missing", []) if g["one_of"][0] not in ids]
+    return {"lines": [{"claim": cid, "connective": None} for cid in ids]}
+
+
 def _good_replies(ctx):
     """Valid structured outputs for every role, as a model would return them."""
     plan = template_plan(ctx).model_dump(by_alias=True)
@@ -36,8 +60,8 @@ def _good_replies(ctx):
         "analyst": {"lens": "scan", "headline": ["scan_before_reception", "belief_error"],
                     "supporting": ["cf_pass", "blind_side"], "angle": "He saw the runner."},
         "telestrator": plan,
-        "pbp": {"lines": [{"claim": "scan_before_reception", "connective": "Watch this."}]},
-        "color": {"lines": [{"claim": "cf_pass", "connective": None}]},
+        "pbp": _good_pbp,
+        "color": _good_color,
     }  # fmt: skip
 
 
@@ -66,7 +90,7 @@ def test_offline_breakdown_of_the_hero_moment(ctx, offline):
         for line in script.payload.lines:
             assert all(claims[cid].verdict == "supported" for cid in line.claims)
         assert len(script.voice) == len(script.payload.lines)
-    assert r.tier == "excited"
+    assert r.tier == "clutch"
 
 
 def test_offline_breakdown_is_deterministic(ctx, offline):
@@ -90,11 +114,17 @@ def test_agent_outputs_are_used_through_verified_claims(ctx):
     assert r.plan_source == "agent"
     assert r.findings.headline == ["scan_before_reception", "belief_error"]
     (script,) = r.scripts
-    assert [line.text for line in script.payload.lines] == [
-        "Watch this. H8 checked his shoulder before the ball reached him.",
-        "Without that look, H8 would have passed to H4.",
+    assert [line.text for line in script.payload.lines][:2] == [
+        "Watch this. J. Ferriday checked his shoulder before the ball reached him.",
+        "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
-    assert [line.speaker for line in script.lines] == ["pbp", "color"]
+    # The analyst's rules (agents/persona_rules.py): the look's xT, belief error, scan timing.
+    assert [line.claims for line in script.lines] == [
+        ["scan_before_reception"], ["cf_pass"], ["cf_value"], ["belief_error"],
+        ["scans_before_reception"],
+    ]  # fmt: skip
+    assert [line.speaker for line in script.lines] == ["pbp"] + ["color"] * 4
+    assert script.rewrites == 0
 
 
 @pytest.mark.parametrize("telestrator_s, voice_s", [(1.2, 0.4), (0.4, 0.6)])
@@ -132,7 +162,8 @@ def test_a_model_cannot_add_its_own_words_or_unknown_claims(ctx):
 
 
 def test_a_line_the_verifier_rejects_is_rewritten_or_dropped(ctx):
-    """A stale claim (changed after verification) fails the render check: rewrite, then drop."""
+    """A stale claim (changed after verification) fails the render check: rewrite, then drop.
+    Casual: the replies below follow its persona rules once the stale line is gone."""
     import copy
 
     stale = copy.copy(ctx)
@@ -145,17 +176,19 @@ def test_a_line_the_verifier_rejects_is_rewritten_or_dropped(ctx):
         {"lines": [{"claim": "blind_side", "connective": None}]},
         {"lines": [{"claim": "cf_pass", "connective": None}]},
     ]
-    r = breakdown(stale, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    r = breakdown(stale, client=FakeChatClient(replies), personas=("casual",), languages=("en",))
     assert r.plan_source == "agent"  # the plan waits at the join while narration is rewritten
     (script,) = r.scripts
     assert script.rewrites == 1 and script.dropped == []
-    assert "Without that look, H8 would have passed to H4." in [
+    assert "Without that look, J. Ferriday would have passed to K. Annersley." in [
         line.text for line in script.payload.lines
     ]
     replies["color"] = {"lines": [{"claim": "blind_side", "connective": None}]}
-    r = breakdown(stale, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    r = breakdown(stale, client=FakeChatClient(replies), personas=("casual",), languages=("en",))
     (script,) = r.scripts
     assert script.rewrites == 2 and [d.reason for d in script.dropped] == ["stale_claim"]
+    # Without the stale line the script lacks its counterfactual: a verified template line adds it.
+    assert script.lines[-1].claims == ["cf_pass"]
 
 
 def test_a_voice_keeps_at_most_two_connectives(ctx):
@@ -402,7 +435,7 @@ def test_plan_validation_matches_the_web_rules(ctx):
 
 
 def test_delivery_tier_is_rule_based(ctx):
-    assert delivery_tier(ctx.card) == "excited"
+    assert delivery_tier(ctx.card) == "clutch"
     quiet = ctx.card.model_copy(deep=True)
     for lens in quiet.lenses:
         lens.delta_xt = 0.001 if lens.delta_xt is not None else None
@@ -554,20 +587,20 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
     assert {"reception_zone", "scan_side", "seen_in_scan", "blind_side"} <= set(claims)
     assert set(claims) <= DESCRIBING and not set(claims) & NUMBERS_FOR_ANALYSTS
     assert [line.text for line in en.payload.lines] == [
-        "H8 received the ball in the opponents' half, right of centre.",
-        "H9's run was on H8's blind side.",
-        "Before the ball reached him, H8 looked over his right shoulder.",
-        "When H8 looked over his shoulder before the ball arrived, he saw H9.",
-        "H8 found H9 with a 42-metre pass.",
-        "Without that look, H8 would have passed to H4.",
+        "J. Ferriday received the ball in the opponents' half, right of centre.",
+        "N. Varnhall's run was on J. Ferriday's blind side.",
+        "Before the ball reached him, J. Ferriday looked over his right shoulder.",
+        "When J. Ferriday looked over his shoulder before the ball arrived, he saw N. Varnhall.",
+        "J. Ferriday found N. Varnhall with a 38-metre pass.",
+        "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert [line.text for line in zh.payload.lines] == [
-        "H8在对方半场中路偏右接球。",
-        "H9的跑位在H8的盲区。",
-        "球到之前，H8扭头看向了右后方。",
-        "球到之前回头的那一眼，H8看到了H9。",
-        "H8一脚42米的传球找到了H9。",
-        "如果没有那一眼，H8会把球传给H4。",
+        "J. Ferriday在对方半场中路偏右接球。",
+        "N. Varnhall的跑位在J. Ferriday的盲区。",
+        "球到之前，J. Ferriday扭头看向了右后方。",
+        "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
+        "J. Ferriday一脚38米的传球找到了N. Varnhall。",
+        "如果没有那一眼，J. Ferriday会把球传给K. Annersley。",
     ]
     assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
 
@@ -596,11 +629,13 @@ def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx
                                 {"claim": "scan_side", "connective": None}]}  # fmt: skip
     replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None}]}
     for language, texts in {
-        "zh": ["H8在对方半场中路偏右接球。", "球到之前回头的那一眼，H8看到了H9。",
-               "球到之前，H8扭头看向了右后方。"],
-        "en": ["H8 received the ball in the opponents' half, right of centre.",
-               "When H8 looked over his shoulder before the ball arrived, he saw H9.",
-               "Before the ball reached him, H8 looked over his right shoulder."],
+        "zh": ["J. Ferriday在对方半场中路偏右接球。",
+               "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
+               "球到之前，J. Ferriday扭头看向了右后方。"],
+        "en": ["J. Ferriday received the ball in the opponents' half, right of centre.",
+               "When J. Ferriday looked over his shoulder before the ball arrived, he saw "
+               "N. Varnhall.",
+               "Before the ball reached him, J. Ferriday looked over his right shoulder."],
     }.items():  # fmt: skip
         r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD,), languages=(language,))
         (script,) = r.scripts
@@ -614,8 +649,10 @@ def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx
 
 
 def test_audio_description_never_airs_xt_or_probabilities_even_when_the_model_picks_them(ctx):
-    """Enforced in code, not only in the prompt: a line with an xT or probability claim is dropped
-    for audio description, while the analyst still hears it from the same model reply."""
+    """Enforced in code, not only in the prompt: the schema of audio description has no xT or
+    probability id, so a reply that picks one is refused and the template airs, while the analyst
+    still hears them from the same model reply. (tidy and the Verifier drop such a line too:
+    tests/test_persona_rules.py and the next test.)"""
     from agents.delivery import ANALYST_NUMBERS
 
     assert ANALYST_NUMBERS >= NUMBERS_FOR_ANALYSTS
@@ -630,13 +667,13 @@ def test_audio_description_never_airs_xt_or_probabilities_even_when_the_model_pi
     r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD, "analyst"), languages=("en",))
     ad, analyst = _script(r, AD, "en"), _script(r, "analyst", "en")
     aired = [cid for line in ad.lines for cid in line.claims]
-    assert aired == ["reception_zone", "blind_side"]
+    assert aired[0] == "reception_zone" and not set(aired) & ANALYST_NUMBERS
     assert not {c.id for c in ad.payload.claims} & ANALYST_NUMBERS
     assert not any("chance" in t or "expected threat" in t or "%" in t
                    for t in (line.text for line in ad.payload.lines))  # fmt: skip
     assert check_payload(ad.payload) == []
     notes = next(s for s in r.trace if s.step == "narration").notes
-    assert any(f"{AD}/en" in n and "pass_success" in n for n in notes)
+    assert any("fell back to templates" in n for n in notes)  # the audio-description calls
     # The analyst is not filtered: the same reply airs its numbers there.
     assert set(picked) <= {cid for line in analyst.lines for cid in line.claims}
 
@@ -658,7 +695,12 @@ def test_the_verifier_refuses_xt_or_probabilities_for_audio_description_after_a_
     by = {(s.persona, s.language): s for s in msg.scripts}
     assert [line.id for line in by[(AD, "en")].lines] == ["L1"]
     assert [(d.id, d.reason) for d in by[(AD, "en")].dropped] == [("L2", "persona")]
-    assert [line.id for line in by[("analyst", "en")].lines] == ["L1", "L2"]
+    analyst = by[("analyst", "en")]
+    assert {"L1", "L2"} <= {line.id for line in analyst.lines} and analyst.dropped == []
+    # Repaired for the analyst's rules: belief error and scan timing added from templates.
+    assert {"belief_error", "scans_before_reception"} <= {
+        c for line in analyst.lines for c in line.claims
+    }
 
 
 @pytest.mark.parametrize("tier", ["calm", "excited", "clutch"])
@@ -719,11 +761,12 @@ def test_the_voice_step_reads_audio_description_calmly_on_any_moment(ctx, delta,
 
 # --- broadcast delivery: roles, emphasis, the reveal break (SPEC 6) ------------------------------
 
-# Styles best first, styledegree or none, then rate and pitch, at tier excited.
+# Styles best first, styledegree or none, then rate and pitch, at tier clutch (the hero moment's
+# scan lens is worth more than 0.15 xT since its run is onside, SPEC 3.9).
 _LINE = {
     "open": (("sports-commentary", "cheerful"), None, "+6%", "+3%"),
     "build": (("sports-commentary-excited", "excited", "cheerful"), None, "+8%", "+3%"),
-    "peak": (("sports-commentary-excited", "excited", "cheerful"), "1.5", "+10%", "+4%"),
+    "peak": (("sports-commentary-excited", "excited", "cheerful"), "2", "+14%", "+6%"),
     "why": (("cheerful", "excited"), None, "+2%", "+2%"),
 }
 _AD_LINE = (("narration-relaxed", "narration-professional", "calm", "newscast"), "-10%", "+0%")
@@ -731,27 +774,29 @@ _EMPH = {"pbp": ("+0%", "+8%", "+15%"), "color": ("-10%", "+5%", "+10%")}
 # persona, language, text, role, emphasis span (audio description: none), counterfactual
 _SNAPSHOT_LINES = (
     ("casual", "en", "What did he see?", "open", None, False),
-    ("casual", "en", "H8 checked his shoulder before the ball reached him.", "build",
+    ("casual", "en", "J. Ferriday checked his shoulder before the ball reached him.", "build",
      "checked his shoulder", False),
-    ("casual", "en", "H9's run was on H8's blind side.", "why", "blind side", False),
-    ("casual", "en", "Without that look, H8 would have passed to H4.", "why", "that look", True),
-    ("analyst", "en", "H8 found H9 with a 42-metre pass.", "peak", None, False),
+    ("casual", "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", "blind side",
+     False),
+    ("casual", "en", "Without that look, J. Ferriday would have passed to K. Annersley.", "why",
+     "that look", True),
+    ("analyst", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None, False),
     ("casual", "zh", "他看到了什么？", "open", None, False),
-    ("casual", "zh", "球到之前，H8先回头看了一眼。", "build", "回头看了一眼", False),
-    ("casual", "zh", "H9的跑位在H8的盲区。", "why", "盲区", False),
-    ("casual", "zh", "如果没有那一眼，H8会把球传给H4。", "why", "那一眼", True),
-    ("analyst", "zh", "H8一脚42米的传球找到了H9。", "peak", None, False),
-    (AD, "en", "H9's run was on H8's blind side.", "why", None, False),
-    (AD, "zh", "H9的跑位在H8的盲区。", "why", None, False),
+    ("casual", "zh", "球到之前，J. Ferriday先回头看了一眼。", "build", "回头看了一眼", False),
+    ("casual", "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", "盲区", False),
+    ("casual", "zh", "如果没有那一眼，J. Ferriday会把球传给K. Annersley。", "why", "那一眼", True),
+    ("analyst", "zh", "J. Ferriday一脚38米的传球找到了N. Varnhall。", "peak", None, False),
+    (AD, "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", None, False),
+    (AD, "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", None, False),
 )  # fmt: skip
 _PERSONAS = ("casual", "analyst", "player_fan", "coach", AD)
 _SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",
                 "time_since_last_scan"}  # fmt: skip
 _PEAK_CLAIMS = {"pass_to_runner", "runner_received", "pressure_at_pass"}
 _PEAK_LINES = (
-    "found H9 with a 42-metre pass",
+    "found N. Varnhall with a 38-metre pass",
     "took the pass",
-    "Pressing intensity on H4 was 95% when he released the ball",
+    "Pressing intensity on K. Annersley was 95% when he released the ball",
 )
 
 
@@ -854,7 +899,7 @@ def test_peak_prosody_follows_the_tier():
     """Calm peak uses the build style. Excited and clutch add styledegree when a style fits."""
     from agents.delivery import VOICE_STYLES, VOICES
 
-    line = ScriptLine(id="L1", speaker="pbp", text="H8 found H9 with a 42-metre pass.",
+    line = ScriptLine(id="L1", speaker="pbp", text="H8 found H9 with a 38-metre pass.",
                       claims=["pass_to_runner"])  # fmt: skip
     for language in ("en", "zh"):
         styles = VOICE_STYLES[VOICES[(language, "pbp")]]
@@ -1016,7 +1061,7 @@ def test_known_voices_use_the_table_and_a_given_map_overrides_it(ctx):
     from agents.delivery import VOICES
 
     plain = breakdown(ctx, client=None, personas=("casual",), languages=("en",))
-    assert next(s.notes for s in plain.trace if s.step == "voice") == ["tier excited"]
+    assert next(s.notes for s in plain.trace if s.step == "voice") == ["tier clutch"]
     assert any(cue.style for script in plain.scripts for cue in script.voice)
     styles = {voice: set() for voice in VOICES.values()}
     forced = breakdown(ctx, client=None, personas=("casual",), languages=("en",),

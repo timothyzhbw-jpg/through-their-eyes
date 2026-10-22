@@ -77,10 +77,10 @@ describe("the pre-match line-up", () => {
     const dialog = page.querySelector<HTMLElement>('[role="dialog"]')!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     const title = document.getElementById(dialog.getAttribute("aria-labelledby")!);
-    expect(title?.textContent).toBe("Home v Away");
+    expect(title?.textContent).toBe("Kestrel Bay v Corvane Vale");
     expect(title?.querySelector("em")?.textContent).toBe("v");
     expect(dialog.textContent).toContain("A synthetic match · every player fictional");
-    for (const team of ["Home", "Away"]) {
+    for (const team of ["Kestrel Bay", "Corvane Vale"]) {
       expect(dialog.querySelectorAll(`ol[aria-label="${team} line-up"] > li`)).toHaveLength(11);
     }
     const source = dialog.querySelector(".source")!;
@@ -110,8 +110,8 @@ describe("the pre-match line-up", () => {
     exported.match.possessions[2].hero = "A5";
     const session = createMatchSession(parseHero(exported), { api: null, dataUrl: "/data/" });
     const page = mount(session);
-    const first = button(page, "H8 · CM Hero of possession 2");
-    const other = button(page, "A5 · CB Hero of possession 3");
+    const first = button(page, "J. Ferriday · CM Hero of possession 2");
+    const other = button(page, "T. Mardelius · CB Hero of possession 3");
     expect(first.getAttribute("aria-pressed")).toBe("true");
     expect(other.getAttribute("aria-pressed")).toBe("false");
     click(other);
@@ -124,9 +124,9 @@ describe("the pre-match line-up", () => {
   it("applies the chosen eyes again and dismisses with one Start watching click", () => {
     const session = offline();
     const page = mount(session);
-    expect(button(page, "H8 · CM The hero of this moment").getAttribute("aria-pressed")).toBe(
-      "true",
-    );
+    expect(
+      button(page, "J. Ferriday · CM The hero of this moment").getAttribute("aria-pressed"),
+    ).toBe("true");
     session.controls.setPovPlayer("A5");
     click(button(page, "Start watching"));
     expect(session.playback.get().povPlayer).toBe("H8");
@@ -185,7 +185,7 @@ describe("the pre-match line-up", () => {
     const session = createMatchSession(parseHero(matchExport()), { api: null, dataUrl: "/data/" });
     const page = mount(session);
     expect(page.querySelector('[role="dialog"]')).not.toBeNull();
-    expect(button(page, "H8 · CM Hero of possession 2")).not.toBeNull();
+    expect(button(page, "J. Ferriday · CM Hero of possession 2")).not.toBeNull();
   });
 
   it("stays dismissed across session remounts on the same page", () => {
@@ -270,7 +270,7 @@ describe("the pre-match line-up", () => {
   it("stays open long after an option is picked", () => {
     vi.useFakeTimers();
     const page = mount(twoHeroes());
-    click(button(page, "A5 · CB Hero of possession 3"));
+    click(button(page, "T. Mardelius · CB Hero of possession 3"));
     expect(intro.get().open).toBe(true);
     act(() => {
       vi.advanceTimersByTime(10000);
@@ -282,7 +282,7 @@ describe("the pre-match line-up", () => {
   it("shows a countdown line while it runs and removes it after a pick", () => {
     const page = mount(twoHeroes());
     expect(page.querySelector(".lineup-countdown")).not.toBeNull();
-    click(button(page, "A5 · CB Hero of possession 3"));
+    click(button(page, "T. Mardelius · CB Hero of possession 3"));
     expect(intro.get().open).toBe(true);
     expect(page.querySelector(".lineup-countdown")).toBeNull();
   });

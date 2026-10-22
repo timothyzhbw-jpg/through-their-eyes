@@ -337,8 +337,9 @@ def render(
         lines.append(f"| Restarts: {RESTART_NAMES.get(k, k)} | {_mean(values)} |")
     lines += [
         "",
-        "Goals come only from a shooting hero; match-1's plan has none yet, so the count is zero "
-        "by construction, not a measurement. Restarts are counted after the kick-off: a cut "
+        "Goals come from the plan's shooting hero (`far_post_finish`, once per match) and, rarely, "
+        "a ball that rolls into a goal in open play (Law 10.1 counts any ball, SPEC 3.9), so the "
+        "count is not a measured scoring rate. Restarts are counted after the kick-off: a cut "
         "follows every hero and every passage that reached its cap in play.",
         "",
         "## 1. Moments",

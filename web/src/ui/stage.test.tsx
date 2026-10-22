@@ -120,6 +120,7 @@ describe("view options", () => {
     const names = [...panel.querySelectorAll("button")].map((b) => text(b));
     for (const n of [
       "Comfort",
+      "Motion blur",
       "Belief ghosts",
       "Animated players",
       "Vision cone",
@@ -145,6 +146,19 @@ describe("view options", () => {
     act(() => trial.set({ rigged }));
   });
 
+  it("leaves the head-turn blur off until the viewer turns it on (Bowen: blur is uncomfortable)", () => {
+    const session = offline();
+    expect(session.playback.get().motionBlur).toBe(false);
+    const page = mount(session, <ViewOptions />);
+    click(button(page, "View options"));
+    const panel = page.querySelector("[role=group][aria-label='View options']")!;
+    const blur = button(panel, "Motion blur");
+    expect(pressed(blur)).toBe("false");
+    click(blur);
+    expect(session.playback.get().motionBlur).toBe(true);
+    expect(pressed(button(panel, "Motion blur"))).toBe("true");
+  });
+
   it("closes with Escape and gives focus back to its button", () => {
     const page = mount(offline(), <ViewOptions />);
     const open = button(page, "View options");
@@ -166,7 +180,7 @@ describe("whose eyes", () => {
     const page = mount(session, <StageHud />);
     const select = page.querySelector<HTMLSelectElement>("select[aria-label='Whose eyes']")!;
     expect(select.value).toBe("H8");
-    expect(text(page.querySelector(".hud"))).toMatch(/H8 · head \d+° from the ball/);
+    expect(text(page.querySelector(".hud"))).toMatch(/J. Ferriday · head \d+° from the ball/);
     act(() => {
       select.value = "H9";
       select.dispatchEvent(new Event("change", { bubbles: true }));

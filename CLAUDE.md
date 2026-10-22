@@ -22,6 +22,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
    - Bowen allowed CMU motion capture on 2026-10-21 (lab motion capture of real people, not match
      data or footage) for animation only: the players' animation (`web/public/models/anims_extra.glb`)
      and the trailer's Blender shots, always with the CMU acknowledgement credited (`docs/CREDITS.md`).
+     On 2026-10-22 he allowed Quaternius' Universal Animation Library walk (CC0; reported to be
+     Xsens motion capture) on the same terms: the players' walk (`web/public/models/anims_walk.glb`),
+     for animation only, credited (`docs/CREDITS.md`).
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
@@ -149,6 +152,11 @@ _Fill in as they come to exist._
   only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
   rewrites the viewer's parity fixture (a test fails when it is stale). The API serves them at
   `GET /api/matches/<id>/stats` and as `stat` messages on the live stream
+- `uv run python -m explain.tactics --match 1` — the tactics cards (SPEC 4.8, docs/TACTICS.md):
+  "why build from the back?" and "why focus on set pieces?" with their verified sentences in `en`
+  and `zh`, about 10 s; `--scenario press_escape --seed 0` for a hero; `--fixture --web-fixture
+  web/src/tactics/fixture.json` rewrites the viewer's fixture (a test fails when it is stale).
+  The API serves them at `GET /api/matches/<id>/tactics`
 - `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
   passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
   `eval/reports/pass_difficulty.md`
@@ -197,7 +205,8 @@ _Fill in as they come to exist._
   the hero moment
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
-  skeleton view off and on (`-- --headed` on a laptop's GPU)
+  skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a
+  render tier, SPEC 7)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
   including axe-core's WCAG 2.2 A/AA rules
 - `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core

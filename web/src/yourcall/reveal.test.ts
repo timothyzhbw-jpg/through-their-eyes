@@ -46,7 +46,12 @@ describe("Your call: his options", () => {
   it("marks each pass over the receiver where he pictured him, and aims it where he would", () => {
     const h9 = options.find((o) => o.action === "pass:H9")!;
     const exported = hero.runs.factual.decision!.options.find((o) => o.action === "pass:H9")!;
-    expect(h9).toMatchObject({ kind: "pass", label: "Pass to H9", receiver: "H9", short: "9" });
+    expect(h9).toMatchObject({
+      kind: "pass",
+      label: "Pass to N. Varnhall",
+      receiver: "H9",
+      short: "9",
+    });
     expect(h9.target).toEqual(exported.target);
     const carry = options.find((o) => o.action === "carry")!;
     expect(carry).toMatchObject({ kind: "carry", label: "Carry", receiver: null });
@@ -142,22 +147,24 @@ describe("Your call: the reveal", () => {
     expect(r.same).toBe(false);
     expect(r.pick.action).toBe("pass:H4");
     expect(r.his.action).toBe("pass:H9");
-    expect(texts(r.outcome.lines)).toEqual(["If H8 had passed to H4, H4 would have received it."]);
+    expect(texts(r.outcome.lines)).toEqual([
+      "If J. Ferriday had passed to K. Annersley, K. Annersley would have received it.",
+    ]);
     expect(r.outcome.lines[0]).toMatchObject({ kinds: ["counterfactual"], source: "verified" });
     expect(texts(r.compare.lines)).toEqual([
-      "That option would have been worth 0.13 less in expected threat than what he did.",
+      "That option would have been worth 0.17 less in expected threat than what he did.",
     ]);
     expect(r.truth.lines.map((l) => l.id)).toEqual(["L3", "L6"]); // his picture, he thought / it was
     expect(r.truth.moved).toEqual(["A3", "A4", "H10", "H7"]);
     expect(r.actual.lines.map((l) => l.id)).toEqual(["L2", "L4", "L5", "L7"]);
     expect(r.actual.lines.every((l) => l.source === "fixture")).toBe(true);
-    expect(r.compare).toMatchObject({ yours: "Pass to H4", his: "Pass to H9" });
+    expect(r.compare).toMatchObject({ yours: "Pass to K. Annersley", his: "Pass to N. Varnhall" });
   });
 
   it("his own call: the outcome is what happened, and nothing is compared", () => {
     const r = reveal("pass:H9");
     expect(r.same).toBe(true);
-    expect(r.outcome.title).toBe("You made his call: Pass to H9");
+    expect(r.outcome.title).toBe("You made his call: Pass to N. Varnhall");
     expect(r.outcome.lines.map((l) => l.id)).toEqual(["L4"]); // H9 took the pass
     expect(r.actual.lines.map((l) => l.id)).toEqual(["L2", "L5", "L7"]);
     expect(r.compare.lines).toEqual([]);
@@ -184,13 +191,15 @@ describe("Your call: the reveal", () => {
 
   it("speaks the breakdown's language: the what-if answers in Chinese", () => {
     const r = reveal("pass:H4", narration, "zh");
-    expect(texts(r.outcome.lines)).toEqual(["如果H8把球传给H4，H4会接到球。"]);
+    expect(texts(r.outcome.lines)).toEqual([
+      "如果J. Ferriday把球传给K. Annersley，K. Annersley会接到球。",
+    ]);
   });
 
   it("without the breakdown yet, still has the re-simulated outcome and the comparison", () => {
     const r = reveal("pass:H10", null);
     expect(texts(r.outcome.lines)).toEqual([
-      "If H8 had passed to H10, A7 would have intercepted it.",
+      "If J. Ferriday had passed to L. Brackwell, I. Fenmore would have intercepted it.",
     ]);
     expect(r.compare.lines).toHaveLength(1);
     expect(r.truth.lines).toEqual([]);
@@ -280,6 +289,6 @@ describe("Your call: the reveal", () => {
       "H8 was under heavy pressure when he released the ball.",
     ]);
     expect(r.actual.lines).toEqual([]);
-    expect(r.compare).toMatchObject({ yours: "Carry", his: "Pass to H9", lines: [] });
+    expect(r.compare).toMatchObject({ yours: "Carry", his: "Pass to N. Varnhall", lines: [] });
   });
 });

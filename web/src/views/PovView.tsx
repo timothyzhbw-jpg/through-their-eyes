@@ -1,11 +1,12 @@
 // First-person view: the camera sits in the chosen player's head (1.72 m) and turns with his head
-// yaw; 95 degrees of horizontal field of view (SPEC 7). A whipping head blurs the picture
-// sideways, as a camera's would (PovMotionBlur.tsx). Players are animated by default
-// (players/); the "Animated players" switch turns them off, back to capsule bodies turned to their
-// body yaw, with a head on top turned to their head yaw: a white visor shows where they look.
+// yaw; 95 degrees of horizontal field of view (SPEC 7). With "Motion blur" on (off by default), a
+// whipping head blurs the picture sideways, as a camera's would (PovMotionBlur.tsx). Players are
+// animated by default (players/); the "Animated players" switch turns them off, back to capsule
+// bodies turned to their body yaw, with a head on top turned to their head yaw: a white visor
+// shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
@@ -14,20 +15,27 @@ import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
-import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
+import { COLORS, LABEL, getLabelTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
+import { InstantFrame } from "./InstantFrame";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
-import { declutter, labelBox } from "./declutter";
+import { declutter, labelBox, labelHeight } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
-import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
+import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
-import { motion, pushedBy } from "../beat/beat";
+import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
-import { CameraBlend } from "../beat/cameraBlend";
+import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
+import { featuresOf, quality } from "../quality/quality";
+import { LOOK } from "../quality/look";
+import { BeliefRings } from "./BeliefRings";
+
+// The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
+const QualityLayer = lazy(() => import("../quality/QualityPost"));
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -44,7 +52,12 @@ const LABEL_TEXT = 0.36;
 const LABEL_ASPECT = 1.6;
 // At most this tall on screen (px): a player a few metres away wore a number the size of his head.
 const LABEL_MAX_PX = 28;
+// A near player's number comes down to this far above his head (px) instead of floating 2.1 m up,
+// which from eye height put it in the stands over him (declutter.ts labelHeight).
+const LABEL_GAP_PX = 6;
+const HEAD_TOP = HEAD_CENTRE + HEAD_RADIUS;
 const labelScale = new Float32Array(32);
+const labelY = new Float32Array(32);
 const labelAt = new THREE.Vector3();
 /** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
 const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
@@ -72,6 +85,7 @@ export function PovView() {
           fallback={<p className="no-webgl">This view needs WebGL.</p>}
         >
           <PovScene />
+          <InstantFrame />
         </Canvas>
         <Grade />
         <PovOverlay />
@@ -100,6 +114,9 @@ function PovScene() {
   useRedrawOn(playback);
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
+  const tier = useStore(quality, (s) => s.tier);
+  const { look, post } = featuresOf(tier, false);
+  useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
@@ -107,10 +124,8 @@ function PovScene() {
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
-  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const labels = useRef<(THREE.Sprite | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
-  const blend = useMemo(() => new CameraBlend(), []);
 
   const materials = useMemo(
     () => ({
@@ -121,18 +136,6 @@ function PovScene() {
         color: VISOR_COLOR,
         side: THREE.DoubleSide,
         toneMapped: false,
-      }),
-      ghost: new THREE.MeshBasicMaterial({
-        color: COLORS.fg,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-      }),
-      runnerGhost: new THREE.MeshBasicMaterial({
-        color: COLORS.gold,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
       }),
     }),
     [],
@@ -146,7 +149,6 @@ function PovScene() {
     const broadcast = s.camera === "broadcast";
     const pov = hero.ids.indexOf(s.povPlayer);
     const me = broadcast ? -1 : pov; // whose body is hidden: nobody's on broadcast
-    const showGhosts = s.beliefGhosts && pov === hero.hero;
     const alerted = new Set(s.blindSide ? alertsAt(hero, run, s.frame).map((a) => a.target) : []);
     const beat = pulse(performance.now() / 1000);
     for (let j = 0; j < hero.n; j++) {
@@ -164,25 +166,19 @@ function PovScene() {
         body.visible = j !== me;
         poseToken(body, head, sample.body[j], sample.head[j]);
       }
-      const ghost = ghosts.current[j];
-      if (ghost) {
-        const gx = sample.ghost[2 * j];
-        const gy = sample.ghost[2 * j + 1];
-        ghost.position.set(gx, BODY_CENTRE, -gy);
-        ghost.visible = showGhosts && j !== pov && Math.hypot(gx - x, gy - y) > 1.2;
-      }
     }
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
+    // A switch of camera or view is a clean cut: the camera is on its new pose at once, and the
+    // blur passes stay off around it (beat/cut.ts).
     const now = performance.now() / 1000;
-    blend.begin(camera, fog, {
-      camera: s.camera,
-      frame: s.frame,
-      now,
-      reduced: motion.get().reduced,
-    });
-    [fog.near, fog.far] = FOG[s.camera];
+    cuts.note(viewKey(s), now);
+    if (cuts.inCut(now)) invalidate(); // until the blur has eased back
+    // The shared look hazes the broadcast camera's far side as the Blender shots do.
+    [fog.near, fog.far] = featuresOf(quality.get().tier, false).look
+      ? LOOK.fog[s.camera]
+      : FOG[s.camera];
     if (broadcast) {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
@@ -214,8 +210,6 @@ function PovScene() {
       camera.position.set(hx, EYE_HEIGHT, -hy);
       camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
     }
-    // A camera move between the two cameras, before the labels are placed on the pose it gives.
-    const moving = blend.apply(camera, fog, now);
     // Shirt numbers, nearest first: lifted or hidden where they would sit on another; the
     // runner's gold number always shows.
     camera.updateMatrixWorld();
@@ -223,10 +217,17 @@ function PovScene() {
       hero.players.map((_, j) => {
         if (j === me || !labels.current[j]) return null;
         labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
-        const box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
-        const k = box && box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        let box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
+        if (!box) return null;
+        const k = box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        const y = labelHeight(LABEL_Y, HEAD_TOP, box.h / LABEL_TEXT, LABEL_TEXT * k, LABEL_GAP_PX);
         labelScale[j] = k;
-        return box && { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
+        labelY[j] = y;
+        if (y < LABEL_Y) {
+          labelAt.y = y; // placed where it will be drawn
+          box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT) ?? box;
+        }
+        return { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
       }),
     );
     placed.forEach(({ visible, lift }, j) => {
@@ -235,9 +236,8 @@ function PovScene() {
       const k = labelScale[j] || 1;
       label.visible = visible;
       label.scale.set(0.75 * k, 0.75 * k, 1);
-      label.position.y = LABEL_Y + lift * LABEL_TEXT * k;
+      label.position.y = (labelY[j] || LABEL_Y) + lift * LABEL_TEXT * k;
     });
-    if (moving) invalidate();
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
 
@@ -257,6 +257,7 @@ function PovScene() {
         >
           <mesh
             position-y={BODY_CENTRE}
+            userData={{ player: true }}
             geometry={capsule}
             material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
@@ -279,7 +280,11 @@ function PovScene() {
             }}
             visible={!rigged}
           >
-            <mesh geometry={headGeometry} material={materials.shirts[kitSlot(p)]} />
+            <mesh
+              geometry={headGeometry}
+              material={materials.shirts[kitSlot(p)]}
+              userData={{ player: true }}
+            />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
           </group>
           <sprite
@@ -300,17 +305,7 @@ function PovScene() {
           </sprite>
         </group>
       ))}
-      {hero.players.map((p, j) => (
-        <mesh
-          key={p.id}
-          ref={(m) => {
-            ghosts.current[j] = m;
-          }}
-          geometry={capsule}
-          material={j === hero.runner ? materials.runnerGhost : materials.ghost}
-          visible={false}
-        />
-      ))}
+      <BeliefRings sampleOf={() => sample} />
       {rigged && (
         <RiggedFallback>
           <Suspense fallback={null}>
@@ -324,7 +319,14 @@ function PovScene() {
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
-      <MotionBlur hfov={POV_HFOV} />
+      {/* The post chain draws the frame itself at medium and high; until its chunk is here,
+          and at the other tiers, the motion-blur pass does. */}
+      {!post && <MotionBlur hfov={POV_HFOV} />}
+      {look && (
+        <Suspense fallback={post ? <MotionBlur hfov={POV_HFOV} /> : null}>
+          <QualityLayer sample={sample} hfov={POV_HFOV} />
+        </Suspense>
+      )}
     </>
   );
 }
@@ -333,14 +335,7 @@ function PovScene() {
 export function Ground() {
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <planeGeometry args={[130, 92]} />
-        <meshStandardMaterial color="#173826" />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[PITCH.length, PITCH.width]} />
-        <meshStandardMaterial map={getPitchTexture()} />
-      </mesh>
+      <Grass />
       <Goals />
     </>
   );

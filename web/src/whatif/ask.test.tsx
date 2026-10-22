@@ -54,7 +54,9 @@ describe("free what-if questions", () => {
     });
     const html = render(session, <WhatIfPanel />);
     expect(html).toContain(QUESTION);
-    expect(html).toContain("If H8 had passed to H4, H4 would have received it.");
+    expect(html).toContain(
+      "If J. Ferriday had passed to K. Annersley, K. Annersley would have received it.",
+    );
     expect(html).toContain("Counterfactual · inside the sim");
   });
 
@@ -95,7 +97,7 @@ describe("offline", () => {
     expect(session.ask.get().status).toBe("idle");
     session.controls.askWhatIf("pass:H4");
     expect(session.playback.get().whatIf).toBe("pass:H4");
-    expect(render(session, <WhatIfPanel />)).toContain("What if he passed to H4?");
+    expect(render(session, <WhatIfPanel />)).toContain("What if he passed to K. Annersley?");
     await settle();
   });
 });

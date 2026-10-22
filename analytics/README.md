@@ -17,7 +17,9 @@ reimplemented from its paper (`docs/REFERENCES.md`); no code is copied.
 | [`xt.py`](xt.py) | `xt_prior`, `xt_for`: a smooth expected-threat surface; the fitted 16 × 12 grid of SPEC 4.5 is not on `main` yet | decisions, lenses, claims |
 | [`scan_detector.py`](scan_detector.py) | `detect_scans`, `trace_scans`, `detect_all`: an onset faster than 200°/s that turns away from the ball, an excursion of at least 55°, a return | `sim.export` (the telemetry panel), the evals |
 | [`blind_side.py`](blind_side.py) | `detect_alerts`: an observer has lost sight of a target on the move (unseen for 1.2 s, 3 m from where he was expected, running at 4 m/s or more, within 35 m) | `explain.moments` (blind-side moments), `sim.export` (the alerts the live stream and the views show) |
+| [`team_shape.py`](team_shape.py) | `shape`, `phases`, `possession_by_frame`: a team's length, width, length per width, back-line height, last defender and the distances between its lines, per frame, and each frame's phase (in or out of possession, the seconds after a change of possession) | `eval/realism.py` (team shape), `tests/test_team_shape.py` |
 | [`keypoints.py`](keypoints.py) | `pose_from_keypoints`, `KeypointFrame`: position, head yaw and torso yaw from a COCO keypoint subset | `eval/keypoint_ingest.py`; nothing in the API or the app calls it yet |
+| [`tactics.py`](tactics.py) | `tactics_cards`, `tactics_from_run`: the "why build from the back?" card (own-half passes with and without pressure on the passer, short and long, line-breaking, xT added and handed over, the decision model's recorded options) and the "why focus on set pieces?" card (corners, shots and distance xG after them, the best corner reception's xT against open play), from the live stats timeline | `explain.tactics` (the cards' verified sentences), `GET /api/matches/<id>/tactics`, the stats panel and the recap |
 
 ## Data flow
 
@@ -25,8 +27,11 @@ reimplemented from its paper (`docs/REFERENCES.md`); no code is copied.
   velocities `(N, 2)` or `(F, N, 2)`, head yaw `(F, N)`, the ball, target points `(M, 2)`.
 - **Out:** arrays of times, probabilities, visibilities or detections; dataclasses for the scan
   detector and the alerts. No I/O, no global state.
-- The package imports only numpy, pydantic (for `KeypointFrame`) and itself. Nothing here imports
-  `sim/`, `explain/` or the rest of the repo, so the kernels can run on any tracking source.
+- The kernels import only numpy, pydantic (for `KeypointFrame`) and the package itself, so they
+  can run on any tracking source. Two readers of the live stream reach into `sim/` for names and
+  constants, never for sim state: `live_stats.py` (the roster's fictional names) and `tactics.py`
+  (which scenarios begin with a set piece, and the distance xG model). Nothing here imports
+  `explain/`.
 
 ## Invariants
 

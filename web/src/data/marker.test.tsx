@@ -29,7 +29,10 @@ const raw = markerExport();
 const hero = parseHero(raw);
 const h = raw.players.findIndex((p) => p.id === "H8");
 const r = raw.players.findIndex((p) => p.id === "H9");
-const RESOLVED = 139; // reception:H9:0139, the end of pass:H8:0075
+// The end of pass:H8:0075: H9's reception in the bundled run (frame 136 since the run is onside).
+const RESOLVED = raw.runs.factual.events.find(
+  (e) => e.type === "reception" && e.player === "H9",
+)!.frame;
 
 /** Marker to man at a frame of an exported run, m (the export is in mm). */
 function separation(run: "factual" | "counterfactual", f: number): number {
@@ -72,25 +75,27 @@ describe("a marker's look", () => {
   it("tells the story of his look and his man, with no receiving and no decision", () => {
     const factual = render(session("factual"), <StoryPanel />);
     expect(factual).not.toMatch(/drops in to receive|Decision|chosen with probability/);
-    expect(factual).toContain("H8 marks H9");
-    expect(factual).toContain("H8 checks over his shoulder");
+    expect(factual).toContain("J. Ferriday marks N. Varnhall");
+    expect(factual).toContain("J. Ferriday checks over his shoulder");
     expect(factual).toContain(
-      `H9 receives it with H8 ${separation("factual", RESOLVED).toFixed(1)} m from him.`,
+      `N. Varnhall receives it with J. Ferriday ${separation("factual", RESOLVED).toFixed(1)} m from him.`,
     );
     const times = [...factual.matchAll(/class="t">([\d.]+) s</g)].map((m) => Number(m[1]));
     expect(times.length).toBeGreaterThan(4);
     expect(times).toEqual([...times].sort((a, b) => a - b)); // the playhead's beat is found in order
     const cf = render(session("counterfactual"), <StoryPanel />);
-    expect(cf).toContain("H8 keeps his eyes on the ball");
+    expect(cf).toContain("J. Ferriday keeps his eyes on the ball");
     expect(cf).toContain(
-      `H9 receives it with H8 ${separation("counterfactual", RESOLVED).toFixed(1)} m from him.`,
+      `N. Varnhall receives it with J. Ferriday ${separation("counterfactual", RESOLVED).toFixed(1)} m from him.`,
     );
   });
 
   it("compares how close he was to his man in each run, not an empty action", () => {
     const html = render(session("factual"), <VerdictPanel />);
-    expect(html).toContain(`${separation("factual", RESOLVED).toFixed(1)} m from H9`);
-    expect(html).toContain(`${separation("counterfactual", RESOLVED).toFixed(1)} m from H9`);
+    expect(html).toContain(`${separation("factual", RESOLVED).toFixed(1)} m from N. Varnhall`);
+    expect(html).toContain(
+      `${separation("counterfactual", RESOLVED).toFixed(1)} m from N. Varnhall`,
+    );
   });
 
   it("shows no value until there is one, rather than +0.000", () => {

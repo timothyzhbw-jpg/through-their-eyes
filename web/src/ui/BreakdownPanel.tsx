@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CrewTracePanel, TraceButton } from "../crewtrace/CrewTrace";
+import { renameIds, shortName } from "../data/roster";
 import type { PlanStep, Script } from "../plan/schema";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
@@ -13,6 +14,8 @@ import { Chapter } from "./Chapter";
 import { Producer } from "./Producer";
 
 const rel = (s: number) => `${s >= 0 ? "+" : "−"}${Math.abs(s).toFixed(2)} s`;
+/** A scan event's id ("scan:H8:0060") as the viewer reads it: whose scan. */
+const scanOf = (id: string) => `${shortName(id.split(":")[1] ?? id)}'s scan`;
 
 export function describeStep(step: PlanStep, script: Script = {}): string {
   switch (step.do) {
@@ -25,15 +28,17 @@ export function describeStep(step: PlanStep, script: Script = {}): string {
     case "camera":
       return `Camera: ${step.mode}`;
     case "pov":
-      return `POV ${step.player}, ${rel(step.from)} → ${rel(step.to)} at ${step.speed}×`;
+      return `POV ${shortName(step.player)}, ${rel(step.from)} → ${rel(step.to)} at ${step.speed}×`;
     case "scan_marker":
-      return `Mark ${step.scan}`;
+      return `Mark ${scanOf(step.scan)}`;
     case "zone":
-      return `Zone: ${step.layer} of ${step.player}`;
+      return `Zone: ${step.layer} of ${shortName(step.player)}`;
     case "ghost":
       return step.kind === "belief" ? "Ghosts: belief" : `Ghost: counterfactual ${step.cf}`;
     case "voice":
-      return script[step.line] ? `${step.line}: “${script[step.line]}”` : `Voice ${step.line}`;
+      return script[step.line]
+        ? `${step.line}: “${renameIds(script[step.line])}”`
+        : `Voice ${step.line}`;
   }
 }
 

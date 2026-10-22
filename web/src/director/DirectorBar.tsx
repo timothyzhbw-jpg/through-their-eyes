@@ -6,6 +6,7 @@ import { useEffect, useMemo } from "react";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { Director, directorPrefs } from "./director";
+import { renameIds } from "../data/roster";
 
 /** On a phone, bring the live picture back into view when the viewer asks for the board. */
 function revealBoard(): void {
@@ -44,7 +45,7 @@ export function DirectorBar() {
               onClick={take}
               title="Switch now"
             >
-              <b>{show.title}</b>: {show.reason}
+              <b>{renameIds(show.title)}</b>: {renameIds(show.reason)}
             </button>
             <button
               type="button"

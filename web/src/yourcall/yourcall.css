@@ -36,6 +36,13 @@
   width: 100%;
   height: 100%;
 }
+/* until his picture has drawn: no markers on an empty view (YourCall.tsx) */
+.yc-view.drawing .yc-markers,
+.yc-view.drawing .yc-you,
+.yc-view.drawing .yc-path,
+.yc-view.drawing .yc-swipe {
+  visibility: hidden;
+}
 .yc-path {
   position: absolute;
   inset: 0;

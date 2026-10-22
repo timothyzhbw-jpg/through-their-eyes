@@ -131,6 +131,28 @@ conservatively), and no logos anywhere.
 - Amazon Prime Vision live alerts for NFL —
   https://www.aboutamazon.com/news/entertainment/thursday-night-football-amazon-prime-video-ai-features
 
+## The Laws of the Game (SPEC 3.9)
+- The International Football Association Board (IFAB), *Laws of the Game 2026/27*,
+  https://www.theifab.com/laws/latest/ (the edition the site serves as "latest"; changes listed at
+  https://www.theifab.com/law-changes/latest/). **Read law by law on 2026-10-22:** Laws 1, 2, 3,
+  8, 9, 10, 11, 12, 13, 15, 16 and 17, the laws the sim can express.
+- How we use it: `sim/laws.py` restates each rule in our own words and cites it by law and
+  section ("Law 11.2"); `sim/referee.py` enforces it in the frame loop; `eval/laws.py` audits every
+  run against it. No text, diagram or figure of the Laws is in the repo. The Laws are © IFAB.
+- Section map we cite (2026/27): 1.2 markings, 1.3–1.4 dimensions, 1.5 goal area, 1.6 penalty
+  area, mark and arc, 1.7 corner area, 1.10 goals; 2.1 the ball's size and weight; 3.1 number of
+  players; 8.1 kick-off; 9.1–9.2 out of and in play; 10.1 goal; 11.1 offside position, 11.2
+  offence, 11.3 no offence, 11.4 sanctions and players off the field; 12.1 direct free kick
+  (tackles, handling), 12.2 indirect free kick (the keeper's back-pass and throw-in offences),
+  12.3 corner kick (the keeper holding the ball over eight seconds);
+  13.2 free-kick procedure, 13.3 sanctions; 15.1, 16.1 and 17.1 the throw-in, goal kick and
+  corner procedures.
+- Not expressed, and why: offside's "clearly attempting to play a close ball" and "an obvious
+  action" need a judgement the sim has no data for; the free-kick wall (13.2) needs a free kick the
+  sim never plays; the dropped ball (8.2), the eight-second keeper rule (12.3) and the
+  crossbar need situations the sim never creates (no match officials, keepers hold the ball for
+  under a second, every ball is on the ground).
+
 ## Papers and how we use them
 
 ### Perception and scanning
@@ -221,6 +243,130 @@ printed range, or a shape only. It also says how far the source was read.
   - The dive's tracking limits (4 m/s, 15 m/s²).
   - The 0.2 s render delay before a dive.
   - The bisector rule with the keeper 1.5 m off his line.
+
+### Team shape (`sim/team_shape.py`, `analytics/team_shape.py`, eval/realism.py "Team shape")
+All read on 2026-10-21. Every value below was read in the source itself, with its table or page.
+"Abstract only" means the full text could not be opened and only the abstract's numbers are given.
+No dataset was used: the shape's parameters are fitted by hand to these printed means on
+`possession_play` tuning seeds 0–39, and the realism report checks held-out seeds 100–199.
+
+**Used: the numbers the sim is fitted to and checked against (professional 11 v 11).**
+- **Castellano, Álvarez-Pastor & Blanco-Villaseñor (2013). *Análisis del espacio de interacción en
+  fútbol* [Analysing the space for interaction in soccer].** Revista de Psicología del Deporte
+  22(2):437–446 (in Spanish) — https://ddd.uab.cat/pub/revpsidep/revpsidep_a2013v22n2/revpsidep_a2013v22n2p437.pdf
+  (Castellano et al. (2013) in the realism report.)
+  → **One team in and out of possession.** Six La Liga matches (2005-06, AMISCO), 6,793 touches,
+  one reference team (EQ1) and its six opponents (EQ2); goalkeepers never included (p. 438).
+  Width = between the two widest players, depth (length) = deepest to most advanced player,
+  defensive height = deepest player to the goal the team defends (p. 438). Mean ± SD:
+  - Table 1, in possession: width 41.0 ± 10.0 (EQ1), 41.8 ± 10.0 m (EQ2); length 36.4 ± 6.8,
+    36.2 ± 6.7 m.
+  - Table 1, out of possession: width 36.5 ± 7.0, 37.0 ± 7.0 m; length 33.1 ± 8.0, 34.5 ± 7.1 m.
+  - Results (p. 440), defensive height in possession 31.2 ± 13.3 and 36.2 ± 13.5 m, out of
+    possession 31.0 ± 12.2 and 35.3 ± 13.1 m; by ball zone only plotted (Fig. 3).
+  - Table 1 also gives every value by ball zone (1–5) and the rectangle's area (in possession
+    1506.0 and 1516.0 m², out 1215.2 and 1285.1 m²).
+  - Caveats: six matches of one weak team, sampled per touch, 2005-06. *Read:* full text.
+- **Forcher, Forcher, Altmann, Jekauc & Kempe (2024). *Is a compact organization important for
+  defensive success in elite soccer? – Analysis based on player tracking data.*** International
+  Journal of Sports Science & Coaching 19(2):757–768, doi:10.1177/17479541231172695. Read as
+  reprinted in Forcher (2024), *Success Factors in Soccer Defense* (dissertation, KIT), ch. 7,
+  doi:10.5445/IR/1000173445 (the publisher's PDF was not reachable). (Forcher et al. (2024) in the
+  realism report.)
+  → **The defending team in settled defence.** 153 Bundesliga matches (2020/21, TRACAB 25 Hz),
+  opponent possessions of at least three passes and five seconds, 11 v 11 only; 2,889 successful and
+  12,899 unsuccessful defensive plays. Outfield players only; length and width are the convex hull's
+  extents; lines are found by k-means on mean x positions (15-minute windows), players re-assigned
+  to defence, midfield and attack each possession; the inter-line distance is between the lines'
+  centroids (§7.4.3–7.4.4). Table 7.1 (successful / unsuccessful, mean ± SD):
+  - length 32.49 ± 8.69 / 32.22 ± 9.16 m; width 37.34 ± 4.83 / 37.14 ± 4.86 m;
+  - defence–midfield 10.22 ± 3.76 / 10.16 ± 3.89 m; midfield–attack 13.30 ± 4.22 / 13.19 ± 4.21 m;
+    defence–attack 23.50 ± 5.88 / 23.33 ± 6.05 m.
+  - `analytics/team_shape.py` finds the lines the same way, once per possession spell (our runs are
+    shorter than 15 minutes). *Read:* full text (the dissertation's reprint).
+- **Castellano & Álvarez (2013). *Uso defensivo del espacio de interacción en fútbol* [Defensive
+  use of the interaction space in soccer].** RICYDE 9(32):126–136, doi:10.5232/ricyde2013.03203
+  (in Spanish) — https://cafyd.com/REVISTA/ojs/index.php/ricyde/article/download/560/303
+  → **The defending line's height is this paper's regression.** The same six La Liga matches as
+  Castellano et al. (2013), every touch with the opponents on the ball; goalkeepers excluded
+  (p. 128). DDP, the deepest defender's distance to the goal he defends, on DBP, the ball's
+  distance to that goal: DDP = 6.30 m (SE 0.209) + 0.46 (SE 0.003) × DBP, explaining about 74% of
+  the variance (p. 132, Tabla 2); r = 0.859 (Tabla 1). Out of possession: width 36.8 ± 7.0 m,
+  length 33.8 ± 7.6 m, DDP 33.0 ± 12.8 m (Resultados, p. 130). `ShapeParams.defence` uses 6.30 and
+  0.46 as the back line's target; the realism report checks the regression it produces.
+  *Read:* full text. Found by the sim-parameters dossier (`docs/SIM_PARAMETERS.md`, PR #146).
+- **Errekagorri, Fernandez-Navarro, López-Del Campo, Resta & Castellano (2024). *An eight-season
+  analysis of the teams' performance in the Spanish LaLiga according to the final league
+  ranking.*** PLoS ONE 19(2):e0299242, doi:10.1371/journal.pone.0299242
+  (Errekagorri et al. (2024) in the realism report.)
+  → **A large modern check, both phases together.** 5,518 team-match performances, 2011–12 to
+  2018–19 (Mediacoach); per-match means with the ball in play, goalkeepers excluded from width,
+  length and height (Table 1). Table 4 intercepts (the mean of the four league-table groups), with
+  the match-to-match residual SD: width 43.423 (2.053) m, length 36.854 (1.659) m, height (the
+  deepest outfield player to his goal line) 37.323 (2.977) m, keeper to the nearest defender
+  24.969 (1.716) m. Not fitted to: its teams are wider, longer and higher than Castellano et al.'s
+  (2013) one team, and the sim cannot match both. *Read:* full text (Europe PMC, PMC10901331).
+- **Shaw & Glickman. *Dynamic analysis of team strategy in professional football.*** Barça Sports
+  Analytics Summit (cited as 2019; no DOI) —
+  https://www.sportperformanceanalysis.com/s/Dynamic-analysis-of-team-strategy-in-professional-football-By-Laurie-Shaw-And-Mark-Glickman.pdf
+  → **Why the formation changes without the ball.** Formations measured separately in and out of
+  possession (two-minute windows, 180 matches, 25 Hz) fall into 20 clusters (Sec. 2.2). The Fig. 4
+  labels print each cluster's attacking/defending split: the 4-3-3 clusters are 4/95 (cluster 9)
+  and 84/15 (cluster 10), the 4-1-4-1 is 5/94 (11) and the 4-4-2 5/94 (12). Our 4-3-3 becomes a
+  4-1-4-1 out of possession and our 4-2-3-1 a 4-4-1-1; the slot depths are ours. Its only
+  compactness number is one team in one match (p. 4). *Read:* full text.
+
+**Context: checked, not fitted or checked against.**
+- **Bialkowski, Lucey, Carr, Yue, Sridharan & Matthews (2014).** *Large-scale analysis of soccer
+  matches using spatiotemporal tracking data*, IEEE ICDM 725–730, doi:10.1109/ICDM.2014.133, and
+  *Identifying team style in soccer using formations learned from spatiotemporal tracking data*,
+  ICDM Workshops 9–14, doi:10.1109/ICDMW.2014.167.
+  → Role-based formations: each frame's positions are centred on the team's mean, players are
+  assigned to roles by the Hungarian algorithm inside an EM loop, keepers excluded (Sec. III). 1,411
+  formations over 375 games; 50.37% 4-4-2-like and 20.76% 4-2-3-1-like (Fig. 5). No metric length,
+  width or spread is printed. Our players keep fixed roles; no value used. *Read:* full text.
+- **Bialkowski, Lucey, Carr, Yue & Matthews (2014). *"Win at home and draw away": automatic
+  formation analysis highlighting the differences in home and away team behaviors.*** MIT Sloan
+  Sports Analytics Conference.
+  → Fig. 2(a): team x-centroid −1.79 m at home vs −4.90 m away (p < 0.001), so about 3.1 m
+  further forward at home. The sim has no home advantage; not used. *Read:* full text.
+- **Santos & Lago-Peñas (2019).** Human Movement 20(2):50–56, doi:10.5114/hm.2019.81019.
+  → At the instant one team wins the ball, its length 35.451 m and width 34.604 m (Table 3) are
+  regression intercepts for one reference condition (drawing, at home, similar opponent; one team,
+  510 recoveries), not sample means: quoted in the report's notes, not checked. *Read:* full text.
+- **Forcher (2024), dissertation ch. 6 (rest defence, under review then).** At a ball loss in the
+  attacking third with the opponents' midfield line overplayed, the deepest defender is
+  43.56 ± 10.00 m from his goal line (§6.5.2). The sim does not reproduce that condition; not used.
+- **Both teams pooled, not one team's shape:** Fradua et al. (2013), J Sports Sci 31(6):573–581,
+  doi:10.1080/02640414.2012.746722 (Table 2: the rectangle around all 20 outfield players by ball
+  zone, length 34.49–46.01 m, width 40.82–46.96 m); Tenga et al. (2015), IJPAS 15(1):411–423 (very
+  likely the same four matches); Gonçalves et al. (2019), PLOS ONE 14(8):e0221368 (EPL, in-possession
+  sequences; game length 36.70–38.74 m, width 42.13–47.75 m, Tables 1–2). Not comparable with one
+  team's shape; not used. *Read:* full text each.
+- **Small-sided, youth or abstract only:** Frencken et al. (2011), EJSS 11(4):215–223 (4-a-side
+  youth; centroids couple forward–backward at r > 0.94; abstract only); Folgado et al. (2014), EJSS
+  14(S1):S487–S492 (youth small-sided; its abstract prints no LpW values, so **no length-per-width
+  value is checked**); Clemente et al. (2013), IJSSC 8(4):723–739 (one under-13 7-a-side match, full
+  text); Moura et al. (2012), Sports Biomech 11(1):85–96 (abstract only; its "spread" sums all
+  player pairs); Castellano, Álvarez, Figueira, Coutinho & Sampaio (2013), IJPAS 13(3):822–832
+  (abstract only, no numbers); Low et al. (2020) review, Sports Med 50:343–385 (abstract only).
+  Checked again on 2026-10-22: no open full text of Low et al. 2020 (Springer; the author's DSHS
+  Köln dissertation refuses connections), Frencken et al. 2011 (the RUG thesis is behind a bot
+  check) or Folgado et al. 2014 (the Évora copy is restricted). None of the three gives a value
+  used here. Bialkowski et al. (2014) and Shaw & Glickman were read in full (above).
+- Derived from the means above, not checked: length per width 0.87–0.89 in possession and
+  0.87–0.93 out of possession (ratios of means, not means of ratios), and the out/in ratios of width
+  (0.89) and length (0.91–0.95) in Castellano et al.
+- Rejected: Dash et al. (2025), arXiv:2511.06191, prints a back-four height of 46.947 ± 12.710 with
+  no unit and sample counts that disagree.
+- **Ours, not cited (style knobs):** the slot depths and laterals, how far the block slides toward
+  the ball's side (`shift`: no readable study prints a centroid-on-ball slope or a ball-side
+  offset, as the sim-parameters dossier also found), how far the wide players tuck in
+  and the full-backs push on, the keeper's depth as a share of the back line's, the zonal marking
+  radii and leash, the in-possession line (a set distance behind the ball; no paper prints a
+  relation for it), the block's one-second lag behind the ball, the jog to a slot (3 m/s, below
+  the 19.8 km/h high-speed running entry speed of Gualtieri et al. 2023), and the five seconds the
+  report counts as transition.
 
 ### Space and value
 - **Spearman (2018). *Beyond Expected Goals.*** MIT Sloan — pitch control, time to intercept.
@@ -375,7 +521,7 @@ current number, and lists the full citations. The sources added there, by area:
 | Python-RVO2 | Apache-2.0 | optional collision avoidance; only tested on old Python versions |
 | google-research/football | Apache-2.0; `third_party/gfootball_engine` (Gameplay Football, Bastiaan Konings Schuiling) is under the Unlicense, with no separate notice on its assets (checked 2026-10-19) | engine not used (C++ build risk). *Stretch trial (SPEC §7):* player models, skeleton, kit template and animations from `gfootball_engine/data/media`; not the ad-board or stadium textures; credit the original author anyway |
 | CMU Graphics Lab Motion Capture Database ([mocap.cs.cmu.edu](https://mocap.cs.cmu.edu/)) | free for all uses; may be included in commercially sold products; not resold directly, even converted; acknowledgement requested (checked 2026-10-21 on the official site) | **use**, animation only: trials 10_02 (a kick) and 139_04 (looking around), retargeted into `web/public/models/anims_extra.glb` (SPEC §7). Official site only: not the third-party mirrors (4TU, CC BY-NC; Kaggle, CC BY-ND). Lab motion capture, not match data |
-| Quaternius Universal Animation Library 1, free "Standard" pack | CC0 1.0 (`License.txt` in the zip, and the itch.io page; checked 2026-10-21) | evaluated 2026-10-21 (walk, jog, sprint retargeted onto the rigged player), **not used**: the jog crouches deep every step, the sprint is no better than the engine's |
+| Quaternius Universal Animation Library 1, free "Standard" pack | CC0 1.0 (`License.txt` in the zip, and the itch.io page; checked 2026-10-21) | **use**, animation only: `Walk_Loop`, retargeted into `web/public/models/anims_walk.glb` as the players' walk (SPEC §7), in a file of its own; credited though CC0 asks for none. Quaternius does not say how the pack was made; Digital Production (2025-03-21) reports Xsens motion capture. Bowen allowed it on 2026-10-22 on the same terms as the CMU trials: animation only, credited. Its jog (deep crouch every step) and sprint (no better than the engine's) are **not used** |
 | 100STYLE, Mixamo | licence unconfirmed / Adobe terms | **not used** |
 | PitchAura | GPL-3.0 | **do not use** (copyleft) — ideas only |
 | LaurieOnTracking | no license found | **do not copy** — reimplement from papers |

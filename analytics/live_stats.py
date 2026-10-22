@@ -658,11 +658,13 @@ def _mm(values: np.ndarray) -> list:
     return scaled.reshape(len(scaled), -1).tolist()
 
 
-def stats_from_run(run: Any, match_id: str) -> StatsTimeline:
-    """The same timeline `compute_stats` builds, from a sim run's tracking and events."""
+def stats_from_run(run: Any, match_id: str, starts: Sequence[int] | None = None) -> StatsTimeline:
+    """The same timeline `compute_stats` builds, from a sim run's tracking and events. With
+    `starts` (each possession's first frame) the run is a stitched match on one clock
+    (`explain.recap.stitched_run`), as `sim.export.export_match` streams it."""
     from sim.run import _plain
 
-    export = {
+    export: dict[str, Any] = {
         "dt": run.dt,
         "players": [
             {"id": p.id, "team": p.team, "role": p.role, "number": p.number} for p in run.players
@@ -686,6 +688,9 @@ def stats_from_run(run: Any, match_id: str) -> StatsTimeline:
             }
         },
     }
+    if starts is not None:
+        export["kind"] = "match"
+        export["match"] = {"possessions": [{"start": int(b)} for b in starts]}
     return compute_stats(export, match_id)
 
 

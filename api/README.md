@@ -13,6 +13,7 @@ Speech. It is public with no login, so every expensive path is bounded.
 | `GET /health` | status, version, `model` (`foundry` or offline), `speech`, `analyst_mcp` |
 | `GET /api/matches`, `GET /api/matches/{id}` | the served matches (`TTE_MATCHES`); one match's players, frames, hero moments, possessions and score |
 | `GET /api/matches/{id}/export`, `/moments` | the viewer's export (`sim.export`) and the explained moment cards |
+| `GET /api/matches/{id}/tactics` | the tactics cards (build-up under pressure, set pieces) and one verified sentence per card in `en` and `zh` (`explain.tactics`, SPEC 4.8) |
 | `GET /api/matches/{id}/audit` | the latest verdicts behind what the service aired |
 | `WS /ws/matches/{id}/live` | the live stream: `hello`, then per frame a `frame` with its `event`s and the `moment`s whose window closes, then `end`; the client may `pause`, `resume`, `seek`, `speed` or `stop` |
 | `POST /api/breakdowns` | a breakdown for a moment, personas and languages; `fail` runs the failure drill; every answer (and every recap's) carries `provenance`: `live`, `cached` with `ran_at`, or `template` with its reason |

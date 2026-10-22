@@ -1,37 +1,29 @@
 // The extra clips (extra.ts; on by default, `?anims=base` turns them off) on the committed model and the seed-3 export: the
-// animations-only GLB binds to every bone of grf_player.glb without changing its skeleton, the
+// animations-only GLB binds to every bone of grf_player.glb and of its re-skinned copy
+// grf_player_look.glb (the app's default) without changing their skeleton, the
 // kick plays at the sim's pass events and the shoulder checks at its scans, the head still points
 // along the sim's head_yaw, and reduced motion leaves the checks out.
 
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import raw from "../../public/data/hero_seed3.json";
 import { parseHero, wrapAngle } from "../data/hero";
 import { worldYaw } from "../views/tokens";
 import { type ExtraMeta, checkPose, checkTwist, extraClips, shoulderChecks } from "./extra";
 import { passPose } from "./gait";
-import { NECK_MAX, splitLook } from "./look";
+import { NECK_MAX, TRUNK_MAX, splitLook } from "./look";
 import { type ModelMeta, PLAYER_HEIGHT, makeRig, modelClips, poseRig, runMotion } from "./rig";
+import { loadModel } from "./testing";
 import { animsFromSearch } from "./trial";
 
 const hero = parseHero(raw);
 const run = hero.runs.factual;
 const DEG = Math.PI / 180;
 
-type Fs = { readFileSync(path: URL): Uint8Array };
-const nodeProcess = (globalThis as unknown as { process: { getBuiltinModule(id: string): Fs } })
-  .process;
-
-async function load(file: string): Promise<GLTF> {
-  const bytes = nodeProcess
-    .getBuiltinModule("node:fs")
-    .readFileSync(new URL(`../../public/models/${file}`, import.meta.url));
-  return new GLTFLoader().parseAsync(new Uint8Array(bytes).buffer, "");
-}
-
-const model = await load("grf_player.glb");
-const extraGltf = await load("anims_extra.glb");
+const model = await loadModel("grf_player.glb");
+// The re-skinned model the app loads by default (RiggedPlayers.tsx): the same skeleton.
+const lookModel = await loadModel("grf_player_look.glb");
+const extraGltf = await loadModel("anims_extra.glb");
 const meta = model.scene.userData as ModelMeta;
 const extra = extraClips(extraGltf);
 const clips = modelClips(meta, extra);
@@ -72,9 +64,12 @@ describe("the anims switch", () => {
 });
 
 describe("anims_extra.glb", () => {
-  it("binds every track to a bone of grf_player.glb, whose skeleton it does not change", () => {
+  it.each([
+    ["grf_player.glb", model],
+    ["grf_player_look.glb", lookModel],
+  ])("binds every track to a bone of %s, whose skeleton it does not change", (_, target) => {
     const bones = new Map<string, THREE.Object3D>();
-    model.scene.traverse((o) => bones.set(o.name, o));
+    target.scene.traverse((o) => bones.set(o.name, o));
     const own = new Map<string, THREE.Object3D>();
     extraGltf.scene.traverse((o) => own.set(o.name, o));
     expect(extraGltf.animations.map((c) => c.name).sort()).toEqual([
@@ -98,7 +93,7 @@ describe("anims_extra.glb", () => {
       }
     }
     // Every bound property resolves on a cloned rig, as the mixer binds it.
-    const rig = makeRig(model, 1, extra);
+    const rig = makeRig(target, 1, extra);
     for (const a of [rig.pass, rig.checkLeft!, rig.checkRight!]) {
       for (const track of a.getClip().tracks) {
         const binding = new THREE.PropertyBinding(rig.model, track.name);
@@ -200,10 +195,10 @@ describe("the head stays the sim's", () => {
   });
 
   it("the trunk joins a smaller look; a big one turns it no further than before", () => {
-    // A5's scan from frame 100: the head 8° → 48° off the body, below the neck's 80°, so the
+    // A5's scan from frame 136: the head ends 53° off the body, below the neck's 80°, so the
     // engine's split turned only the neck; the check now turns the trunk with it.
     const a5 = hero.ids.indexOf("A5");
-    const c = shoulderChecks(hero, run, a5, extra.check).find((s) => s.start === 100)!;
+    const c = shoulderChecks(hero, run, a5, extra.check).find((s) => s.start === 136)!;
     expect(c.side).toBe(1);
     const f = Math.round((c.reach + c.leave) / 2);
     const on = pose("A5", f);
@@ -213,14 +208,15 @@ describe("the head stays the sim's", () => {
     const twist = checkTwist(extra.check, s.time, s.weight, s.side);
     expect(turned / DEG).toBeGreaterThan(4);
     expect(Math.abs(turned - twist) / DEG).toBeLessThan(3);
-    // H8's key scan, −128°: the trunk's share is the engine's 48° (−128 + 80), check or not.
-    const big = pose("H8", 60);
+    // H3's scan at frame 100, −180°: the trunk is at the engine's cap of 50° (the neck's 80° and
+    // the trunk's 50° leave the hips the rest), check or not.
+    const big = pose("H3", 100);
     const split = splitLook(big.body, big.head);
     const trunkOn = wrapAngle(worldYaw(big.rig.middle) - worldYaw(big.rig.holder));
-    const ref = pose("H8", 60, { checks: false });
+    const ref = pose("H3", 100, { checks: false });
     const trunkOff = wrapAngle(worldYaw(ref.rig.middle) - worldYaw(ref.rig.holder));
     expect(Math.abs(trunkOn - trunkOff) / DEG).toBeLessThan(3);
-    expect(Math.abs(split.trunk) / DEG).toBeCloseTo(48, 0);
+    expect(Math.abs(split.trunk) / DEG).toBeCloseTo(TRUNK_MAX / DEG, 0);
   });
 });
 

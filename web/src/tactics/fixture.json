@@ -1,0 +1,349 @@
+{
+ "cards": {
+  "version": 1,
+  "match": "fixture",
+  "kind": "match",
+  "dt": 0.04,
+  "source": "tracking",
+  "definitions": {
+   "pressed": 0.7,
+   "long_pass_m": 32.0,
+   "min_bypassed": 2,
+   "set_pieces": [
+    "corner"
+   ],
+   "sources": [
+    "Bekkers (2025), Pressing Intensity, arXiv:2501.04712",
+    "Singh (2019), Expected Threat (xT)"
+   ]
+  },
+  "build_up": {
+   "team": 0,
+   "teams": [
+    {
+     "team": 0,
+     "all": {
+      "passes": 12,
+      "completed": 12,
+      "completion": 1.0,
+      "xt": 0.001
+     },
+     "pressed": {
+      "passes": 5,
+      "completed": 5,
+      "completion": 1.0,
+      "xt": 0.0021
+     },
+     "unpressed": {
+      "passes": 7,
+      "completed": 7,
+      "completion": 1.0,
+      "xt": 0.0002
+     },
+     "short": {
+      "passes": 11,
+      "completed": 11,
+      "completion": 1.0,
+      "xt": 0.0011
+     },
+     "long": {
+      "passes": 1,
+      "completed": 1,
+      "completion": 1.0,
+      "xt": 0.0004
+     },
+     "pressed_short": {
+      "passes": 4,
+      "completed": 4,
+      "completion": 1.0,
+      "xt": 0.0025
+     },
+     "unpressed_short": {
+      "passes": 7,
+      "completed": 7,
+      "completion": 1.0,
+      "xt": 0.0002
+     },
+     "line_breaking": 5,
+     "line_breaking_pressed": 2,
+     "lost": 0,
+     "lost_xt": null,
+     "lost_pressed_short": 0,
+     "lost_pressed_short_xt": null,
+     "pressed_short_ids": [
+      "pass:H5:0206",
+      "pass:H8:0365",
+      "pass:H6:0515",
+      "pass:H11:1078"
+     ]
+    },
+    {
+     "team": 1,
+     "all": {
+      "passes": 1,
+      "completed": 1,
+      "completion": 1.0,
+      "xt": 0.0026
+     },
+     "pressed": {
+      "passes": 1,
+      "completed": 1,
+      "completion": 1.0,
+      "xt": 0.0026
+     },
+     "unpressed": {
+      "passes": 0,
+      "completed": 0,
+      "completion": null,
+      "xt": null
+     },
+     "short": {
+      "passes": 1,
+      "completed": 1,
+      "completion": 1.0,
+      "xt": 0.0026
+     },
+     "long": {
+      "passes": 0,
+      "completed": 0,
+      "completion": null,
+      "xt": null
+     },
+     "pressed_short": {
+      "passes": 1,
+      "completed": 1,
+      "completion": 1.0,
+      "xt": 0.0026
+     },
+     "unpressed_short": {
+      "passes": 0,
+      "completed": 0,
+      "completion": null,
+      "xt": null
+     },
+     "line_breaking": 1,
+     "line_breaking_pressed": 1,
+     "lost": 0,
+     "lost_xt": null,
+     "lost_pressed_short": 0,
+     "lost_pressed_short_xt": null,
+     "pressed_short_ids": [
+      "pass:A8:0907"
+     ]
+    }
+   ],
+   "alternatives": [
+    {
+     "id": "decision:H4:0567",
+     "frame": 567,
+     "t": 22.68,
+     "possession": 1,
+     "scenario": "press_escape",
+     "player": "H4",
+     "team": 0,
+     "pressure": 0.94,
+     "options": 11,
+     "chosen": {
+      "action": "pass:H7",
+      "kind": "pass",
+      "to": "H7",
+      "length_m": 34.54,
+      "long": true,
+      "p_success": 0.8166,
+      "value": 0.0126
+     },
+     "best_short": {
+      "action": "pass:H1",
+      "kind": "pass",
+      "to": "H1",
+      "length_m": 15.68,
+      "long": false,
+      "p_success": 0.9521,
+      "value": 0.0048
+     },
+     "best_long": {
+      "action": "pass:H3",
+      "kind": "pass",
+      "to": "H3",
+      "length_m": 39.1,
+      "long": true,
+      "p_success": 0.8585,
+      "value": 0.0134
+     },
+     "safest": {
+      "action": "pass:H1",
+      "kind": "pass",
+      "to": "H1",
+      "length_m": 15.68,
+      "long": false,
+      "p_success": 0.9521,
+      "value": 0.0048
+     }
+    }
+   ]
+  },
+  "set_pieces": {
+   "awarded": 1,
+   "corners": 1,
+   "shots_from_corners": 0,
+   "xg_from_corners": 0.0,
+   "xg_per_corner": 0.0,
+   "shots": 0,
+   "xg": 0.0,
+   "shot_share": null,
+   "xg_share": null,
+   "open_play": 3,
+   "open_play_peak_median": 0.0053,
+   "best": {
+    "possession": 3,
+    "scenario": "corner_blind_side",
+    "frame": 1158,
+    "t": 46.32,
+    "team": 1,
+    "played": true,
+    "shots": 0,
+    "xg": 0.0,
+    "peak_xt": 0.2861,
+    "peak_frame": 1268,
+    "peak_s": 4.4,
+    "peak_player": "A9",
+    "peak_pass": "pass:A11:1212"
+   },
+   "below_best": 3,
+   "corner_list": [
+    {
+     "possession": 3,
+     "scenario": "corner_blind_side",
+     "frame": 1158,
+     "t": 46.32,
+     "team": 1,
+     "played": true,
+     "shots": 0,
+     "xg": 0.0,
+     "peak_xt": 0.2861,
+     "peak_frame": 1268,
+     "peak_s": 4.4,
+     "peak_player": "A9",
+     "peak_pass": "pass:A11:1212"
+    }
+   ],
+   "shot_list": []
+  }
+ },
+ "lines": {
+  "en": {
+   "moment": "tactics:fixture",
+   "persona": "analyst",
+   "language": "en",
+   "lines": [
+    {
+     "id": "build_up",
+     "text": "Building short under pressure, Home kept the ball on 4 of 4 passes (100%, against 100% without pressure).",
+     "claims": [
+      "tactics_build_up"
+     ]
+    },
+    {
+     "id": "set_pieces",
+     "text": "From 1 corner, A9 got the ball 4.4 seconds after the kick at a spot worth 0.29 in expected threat, more than any of the 3 open-play passages ever reached; no shot followed, so corners added 0.00 expected goals.",
+     "claims": [
+      "tactics_set_pieces"
+     ]
+    }
+   ],
+   "claims": [
+    {
+     "id": "tactics_build_up",
+     "kind": "computed",
+     "verdict": "supported",
+     "values": {
+      "n": 4,
+      "done": 4,
+      "pct": 100,
+      "base": 100
+     },
+     "evidence": [
+      "pass:H5:0206",
+      "pass:H8:0365",
+      "pass:H6:0515",
+      "pass:H11:1078"
+     ],
+     "seek_frame": 206
+    },
+    {
+     "id": "tactics_set_pieces",
+     "kind": "computed",
+     "verdict": "supported",
+     "values": {
+      "c": 1,
+      "s": 4.4,
+      "xt": 0.29,
+      "xg": 0.0,
+      "n": 3
+     },
+     "evidence": [
+      "pass:A11:1212"
+     ],
+     "seek_frame": 1212
+    }
+   ]
+  },
+  "zh": {
+   "moment": "tactics:fixture",
+   "persona": "analyst",
+   "language": "zh",
+   "lines": [
+    {
+     "id": "build_up",
+     "text": "\u4e3b\u961f\u5728\u538b\u529b\u4e0b\u77ed\u4f20\u51fa\u74034\u6b21\uff0c\u4fdd\u4f4f\u7403\u67434\u6b21\uff08100%\uff0c\u65e0\u538b\u529b\u65f6\u4e3a100%\uff09\u3002",
+     "claims": [
+      "tactics_build_up"
+     ]
+    },
+    {
+     "id": "set_pieces",
+     "text": "1\u6b21\u89d2\u7403\u4e2d\uff0cA9\u5728\u5f00\u51fa4.4\u79d2\u540e\u62ff\u5230\u7403\uff0c\u90a3\u4e2a\u4f4d\u7f6e\u7684\u9884\u671f\u5a01\u80c1\u662f0.29\uff0c\u6bd4\u5168\u90e83\u6bb5\u8fd0\u52a8\u6218\u8fbe\u5230\u8fc7\u7684\u6700\u9ad8\u5a01\u80c1\u90fd\u9ad8\uff1b\u4e4b\u540e\u6ca1\u6709\u5c04\u95e8\uff0c\u89d2\u7403\u5e26\u6765\u7684\u9884\u671f\u8fdb\u7403\u4e3a0.00\u3002",
+     "claims": [
+      "tactics_set_pieces"
+     ]
+    }
+   ],
+   "claims": [
+    {
+     "id": "tactics_build_up",
+     "kind": "computed",
+     "verdict": "supported",
+     "values": {
+      "n": 4,
+      "done": 4,
+      "pct": 100,
+      "base": 100
+     },
+     "evidence": [
+      "pass:H5:0206",
+      "pass:H8:0365",
+      "pass:H6:0515",
+      "pass:H11:1078"
+     ],
+     "seek_frame": 206
+    },
+    {
+     "id": "tactics_set_pieces",
+     "kind": "computed",
+     "verdict": "supported",
+     "values": {
+      "c": 1,
+      "s": 4.4,
+      "xt": 0.29,
+      "xg": 0.0,
+      "n": 3
+     },
+     "evidence": [
+      "pass:A11:1212"
+     ],
+     "seek_frame": 1212
+    }
+   ]
+  }
+ }
+}

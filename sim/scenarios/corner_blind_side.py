@@ -87,6 +87,7 @@ class CornerBlindSide(Scenario):
     hero = "H5"
     lens = "scan"
     intervention = "drop_scan"
+    restart = "corner"
     taker = "A7"
     short = "A11"
     runner = "A9"

@@ -24,6 +24,8 @@ import {
   type BlurPlan,
 } from "../views/motionBlur";
 import { blurFragmentShader, blurVertexShader } from "../views/PovMotionBlur";
+import { LOOK, lookOutput } from "../quality/look";
+import { featuresOf, quality } from "../quality/quality";
 import { anchorPoint } from "./anchors";
 import { cineRuntime } from "./runtime";
 import { horizontalFovDeg, pitchToWorld } from "./shot";
@@ -152,6 +154,7 @@ function buildChain(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.C
   });
   for (const pass of [blurA, blurB, periphery]) asQuad(pass.material);
   const output = new OutputPass();
+  if (featuresOf(quality.get().tier, false).look) lookOutput(output); // the look's curve
   bokeh.enabled = false;
   bloom.enabled = false;
   blurA.enabled = false;
@@ -221,9 +224,12 @@ export function CinePost() {
     }
 
     const shot = cineRuntime.shot;
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
+    // With the shared look (`&quality=` low, medium or high: quality/look.ts) the curve and
+    // exposure of the live view and the Blender shots; a shot's exposure is relative to it.
+    const look = featuresOf(quality.get().tier, false).look;
+    gl.toneMapping = look ? LOOK.toneMapping : THREE.ACESFilmicToneMapping;
     gl.outputColorSpace = THREE.SRGBColorSpace;
-    gl.toneMappingExposure = shot?.exposure ?? 1;
+    gl.toneMappingExposure = (shot?.exposure ?? 1) * (look ? LOOK.exposure : 1);
 
     const dof = shot?.dof ?? null;
     chain.bokeh.enabled = dof !== null;
@@ -238,7 +244,8 @@ export function CinePost() {
       u.maxblur.value = dof.maxBlur;
     }
 
-    const bloom = shot?.bloom ?? null;
+    // With the shared look a shot's bloom catches the lamp heads only (the halo cap).
+    const bloom = shot?.bloom ? (look ? LOOK.bloom : shot.bloom) : null;
     chain.bloom.enabled = bloom !== null;
     if (bloom) {
       chain.bloom.strength = bloom.strength;
@@ -259,6 +266,7 @@ export function CinePost() {
     );
     const sigma = whip
       ? povBlurSigmaPx({
+          motionBlur: true, // the shot asked for it (`whip`)
           reducedMotion: false,
           camera: "pov",
           playing: true, // a film frame is motion: the playback store only pauses between frames

@@ -7,27 +7,27 @@ The formula (SPEC 4.6) was fixed before this run and is not tuned on it:
 
 ## Result
 
-- Passes: 1467 resolved, 314 failed (intercepted or out), 1153 completed.
-- **AUC 0.738** (95% bootstrap interval 0.712–0.762, 2000 resamples of passes): **supported** (criterion set before the run: lower bound above 0.5).
-- Mean difficulty: failed 0.486, completed 0.320.
+- Passes: 1609 resolved, 354 failed (intercepted or out), 1255 completed.
+- **AUC 0.730** (95% bootstrap interval 0.704–0.755, 2000 resamples of passes): **supported** (criterion set before the run: lower bound above 0.5).
+- Mean difficulty: failed 0.483, completed 0.334.
 
 ## Each part alone
 
 | Part | Weight | AUC | Mean, failed | Mean, completed |
 |---|---:|---:|---:|---:|
-| lane | 0.4 | 0.811 | 0.776 | 0.326 |
-| passer | 0.2 | 0.598 | 0.441 | 0.326 |
-| receiver | 0.2 | 0.512 | 0.170 | 0.195 |
-| distance | 0.2 | 0.254 | 0.267 | 0.428 |
+| lane | 0.4 | 0.822 | 0.795 | 0.355 |
+| passer | 0.2 | 0.517 | 0.443 | 0.422 |
+| receiver | 0.2 | 0.472 | 0.163 | 0.177 |
+| distance | 0.2 | 0.259 | 0.218 | 0.361 |
 
 ## Completion by band
 
 | Band | Passes | Completed | Completion |
 |---|---:|---:|---:|
-| routine | 548 | 532 | 97% |
-| moderate | 481 | 343 | 71% |
-| hard | 386 | 236 | 61% |
-| very hard | 52 | 42 | 81% |
+| routine | 516 | 495 | 96% |
+| moderate | 618 | 466 | 75% |
+| hard | 433 | 256 | 59% |
+| very hard | 42 | 38 | 90% |
 
 ## How to read it
 

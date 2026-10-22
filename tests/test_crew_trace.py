@@ -194,8 +194,18 @@ def test_the_verifier_loop_shows_rejections_and_rewrites(ctx, replies):
         update={"template": "{runner} ran on the blind side of {player} today."}
     )
     replies = dict(replies)
+    # The analyst's persona rules (agents/persona_rules.py) ask for the look's value, the belief
+    # error and when he scanned: the first draft keeps them, so the stale line is the only thing
+    # to rewrite (a script that also breaks a rule is redrafted whole instead).
     replies["color"] = [
-        {"lines": [{"claim": "blind_side", "connective": None}]},
+        {
+            "lines": [
+                {"claim": "blind_side", "connective": None},
+                {"claim": "cf_value", "connective": None},
+                {"claim": "belief_error", "connective": None},
+                {"claim": "time_since_last_scan", "connective": None},
+            ]
+        },
         {"lines": [{"claim": "cf_pass", "connective": None}]},
     ]
     run = _run(run_crew(stale, client=FakeChatClient(replies), **ONE))

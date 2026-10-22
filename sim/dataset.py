@@ -56,7 +56,7 @@ from sim.export import _match_event
 from sim.match import SEED_BASE, Possession, PossessionSpec, StitchedMatch, build_match
 from sim.perception import BeliefStore
 from sim.rng import KeyedRng
-from sim.roster import full_name
+from sim.roster import club_name, full_name
 from sim.run import MatchRun, _plain
 
 VERSION = 1
@@ -275,7 +275,8 @@ def _xy(attrs: dict, key: str) -> tuple[float | None, float | None]:
 
 
 LOCATION = {"pass": "start", "shot": "start", "reception": "at", "interception": "at",
-            "tackle": "at", "out": "at", "goal": "at", "save": "at"}  # fmt: skip
+            "tackle": "at", "out": "at", "goal": "at", "save": "at", "offside": "at",
+            "post": "at"}  # fmt: skip
 
 
 def _event_row(match_id: int, e, p: Possession) -> dict[str, Any]:
@@ -607,8 +608,8 @@ def metadata(players, matches: list[dict[str, Any]]) -> dict[str, Any]:
             "frame": "1/25 s",
         },  # fmt: skip
         "teams": [
-            {"id": 0, "name": "Home", "attacks": "+x", "fictional": True},
-            {"id": 1, "name": "Away", "attacks": "-x", "fictional": True},
+            {"id": 0, "name": club_name(0), "side": "home", "attacks": "+x", "fictional": True},
+            {"id": 1, "name": club_name(1), "side": "away", "attacks": "-x", "fictional": True},
         ],
         "players": [
             {

@@ -13,7 +13,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A change that touches nothing but prose skips the three heavy jobs (a loaded runner takes
+  # 35-45 minutes on them). Prose here means the docs no test or script reads: SPEC, REFERENCES
+  # and DATASET are read by tests, README by the video test that takes the web app's URL from it,
+  # so those still run everything. Any doubt (no base to compare with, a failed diff) runs it all.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          code=true
+          if [ "$EVENT" = pull_request ]; then
+            base=HEAD^1  # the checkout is the merge of the PR into its base
+          else
+            base="$BEFORE"
+          fi
+          if files=$(git diff --name-only "$base" HEAD 2>/dev/null) && [ -n "$files" ]; then
+            prose='^(CLAUDE\.md|docs/(drafts|screenshots)/.*|docs/(?!(SPEC|REFERENCES|DATASET)\.md$)[A-Z_]+\.md)$'
+            if ! echo "$files" | grep -qvP "$prose"; then code=false; fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "code changed: $code"
+          echo "$files" | head -50
+
   python:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,6 +65,8 @@ jobs:
         run: uv run pytest -q
 
   web:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -64,6 +99,8 @@ jobs:
   # Chromium (web/scripts/smoke.mjs). Any console error, uncaught exception or missing main view
   # fails it; the screenshots are kept as an artifact.
   smoke:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25  # the smoke suite passed 10 minutes on a loaded runner (29 pages, axe on each)
     steps:

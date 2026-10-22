@@ -22,6 +22,7 @@ from explain.moments import hero_card
 from explain.verifier import Verdict, Verifier
 from sim.counterfactual import CounterfactualResult, WhatIfResult, hero_counterfactual
 from sim.model import Event
+from sim.roster import short_name
 from sim.run import MatchRun
 
 COUNTERFACTUAL_ID = "cf1"  # the id web/ and plans use for the hero's counterfactual run
@@ -67,8 +68,9 @@ class MomentContext:
 
     @property
     def names(self) -> dict[str, str]:
-        """Player ids as they appear on screen; outside a slot they are a render violation."""
-        return {pid: pid for pid in self.players}
+        """Players as they appear on screen and in the voice: their fictional short names
+        (sim/roster.py). A name, or an id, outside a slot is a render violation."""
+        return {pid: short_name(pid) for pid in self.players}
 
     @property
     def scans(self) -> list[str]:

@@ -9,6 +9,7 @@ and the licence decisions about them are in [REFERENCES.md](REFERENCES.md).
 |---|---|---|
 | The rigged footballer, its skeleton and its idle, walk, sprint and pass clips (`web/public/models/grf_player.glb`) | Gameplay Football by Bastiaan Konings Schuiling, as shipped in Google Research Football; converted by [demo/grf/convert.py](../demo/grf/convert.py) | Unlicense |
 | The kick (`pass_short`) and the shoulder checks (`shoulder_check_l` / `_r`) in `web/public/models/anims_extra.glb` | CMU Graphics Lab Motion Capture Database, trials 10_02 and 139_04, from the official site only, retargeted onto the skeleton above | Free for all uses, included in the product, never resold as data |
+| The walk (`walk`) in `web/public/models/anims_walk.glb` | Quaternius' Universal Animation Library 1, free "Standard" pack, `Walk_Loop`, retargeted onto the skeleton above | CC0 1.0 (no credit asked; given anyway). Reported to be Xsens motion capture (Digital Production, 2025-03-21; Quaternius does not say); allowed for animation only on 2026-10-22, like the CMU data |
 
 Acknowledgement, as the CMU database asks: *The data used in this project was obtained from
 mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.* It is motion

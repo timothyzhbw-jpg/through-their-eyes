@@ -13,6 +13,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any, Literal
 from xml.sax.saxutils import escape, quoteattr
 
+from agents import persona_rules
 from agents.schemas import Language, Persona, ScriptLine, Speaker, Tier, VoiceCue
 from explain.cards import MomentCard
 from explain.lexicon import TERMS
@@ -189,22 +190,9 @@ _AD_STYLES = ("narration-relaxed", "narration-professional", "calm", "newscast")
 # the voice has one, never an excited one, and always a slower rate, so every name and place lands.
 DESCRIBED: frozenset[Persona] = frozenset({"audio_description"})
 DESCRIBED_PROSODY = ("-10%", "+0%")  # (rate, pitch)
-# Claims whose numbers are model outputs, xT, probabilities or shares, that a listener cannot
-# picture. They never air for a DESCRIBED persona: the workflow drops them in code (tidy() and the
-# Verifier), whatever the model picks.
-ANALYST_NUMBERS: frozenset[str] = frozenset(
-    {
-        "cf_value",
-        "pass_success",
-        "cf_pass_success",
-        "observed_share",
-        "pressure_at_pass",
-        "receiver_pressure",
-        "runner_pressure",
-        "shot_thought_vs_was",
-        "cf_shot_value",
-    }
-)
+# What each persona must not hear lives with the other persona rules; re-exported for callers.
+ANALYST_NUMBERS = persona_rules.ANALYST_NUMBERS
+withheld = persona_rules.withheld
 
 # Emphasis on the decisive words, by speaker: (rate, pitch, volume). Not used for audio description.
 _EMPHASIS: dict[Speaker, tuple[str, str, str]] = {
@@ -223,14 +211,6 @@ _EMPHASIS_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     re.compile(r"回头看了一眼", re.IGNORECASE),
 )
 _BREAK = "250ms"
-
-
-def withheld(persona: str, claims: list[str]) -> list[str]:
-    """The claims of a line that `persona` must not hear. A recap claim `k2.cf_value` is
-    withheld like `cf_value` (agents/recap_context.py)."""
-    if persona not in DESCRIBED:
-        return []
-    return [c for c in claims if c.rpartition(".")[2] in ANALYST_NUMBERS]
 
 
 # Tier rules on the selected lens's |delta| in xT, and the moment's tags.

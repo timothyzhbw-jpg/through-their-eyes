@@ -18,6 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { wrapAngle, type Hero } from "../data/hero";
+import { shortName } from "../data/roster";
 import type { Vec2 } from "../data/types";
 import type { Narration } from "../narration/payload";
 import { toPitch, toScreen } from "../options/passOptions";
@@ -272,7 +273,11 @@ function Dial(props: { te: TakeEyes; hero: Hero; looks: Looks; w: number; h: num
         />
         <circle className="te-me" cx={cx} cy={cy} r={7} />
       </svg>
-      <div className="te-handles" role="radiogroup" aria-label={`Where ${hero.heroId} looks`}>
+      <div
+        className="te-handles"
+        role="radiogroup"
+        aria-label={`Where ${shortName(hero.heroId ?? "")} looks`}
+      >
         {ring.map((o, k) => {
           const [x, y] = point(dirOf(o), r + 10);
           const cell = cellAt(looks, frame, o);
@@ -395,7 +400,7 @@ function Card({ te }: { te: TakeEyes }) {
   useEffect(() => {
     (s.step === "result" ? primary.current : heading.current)?.focus({ preventScroll: true });
   }, [s.step]);
-  const heroId = te.session.hero.heroId ?? "the player";
+  const heroId = te.session.hero.heroId ? shortName(te.session.hero.heroId) : "the player";
   const back = (
     <button type="button" className="btn btn-quiet" onClick={te.close}>
       Back to the replay

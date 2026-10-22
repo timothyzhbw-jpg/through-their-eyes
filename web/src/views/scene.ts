@@ -115,8 +115,9 @@ export interface LabelStyle {
   color: string;
   font: string;
   outline?: string; // dark stroke behind the text
-  width?: number; // canvas px; the plane showing it should have the same aspect ratio
+  width?: number; // canvas px; the plane showing it takes the texture's aspect (labelAspect)
   height?: number;
+  maxWidth?: number; // the canvas widens up to this for a long text, then the text shrinks
 }
 
 export const LABEL = {
@@ -126,9 +127,10 @@ export const LABEL = {
   },
   token: { font: '700 92px "IBM Plex Mono", ui-monospace, monospace' },
   name: {
+    // Wide enough for a short name ("J. Ferriday", data/roster.ts), centred.
     font: '700 78px "Saira Condensed", "Arial Narrow", sans-serif',
     outline: "rgba(11,18,16,0.85)",
-    width: 192,
+    width: 512,
     height: 96,
   },
   tag: {
@@ -136,32 +138,57 @@ export const LABEL = {
     outline: "rgba(11,18,16,0.92)",
     width: 512,
     height: 96,
+    maxWidth: 1024,
   },
 } satisfies Record<string, Omit<LabelStyle, "color">>;
 
-/** A text texture (shirt number, name, tag), cached by content and style. */
+const OUTLINE_PX = 10; // the dark stroke behind a label's text
+const LABEL_PAD_PX = 2; // kept clear at each end of the canvas
+
+/** `font` with its pixel size scaled down so a text `measured` px wide at `font` fits `room` px;
+ * unchanged when it already fits. */
+export function fitFont(font: string, measured: number, room: number): string {
+  if (measured <= room) return font;
+  return font.replace(/(\d+(?:\.\d+)?)px/, (_, px: string) => {
+    return `${Math.floor((Number(px) * room) / measured)}px`;
+  });
+}
+
+/** Width over height of a label texture's canvas: the plane showing it keeps this aspect. */
+export function labelAspect(tex: THREE.CanvasTexture): number {
+  const cv = tex.image as HTMLCanvasElement;
+  return cv.width / cv.height;
+}
+
+/** A text texture (shirt number, name, tag), cached by content and style. A text too long for
+ * the canvas widens it up to `maxWidth`, then is drawn smaller: never cut at both ends (with
+ * fictional names Take his eyes' "your look: pass to K. Annersley" needs ~860 px of a 512 px tag
+ * canvas). */
 const labels = new Map<string, THREE.CanvasTexture>();
 export function getLabelTexture(text: string, style: LabelStyle): THREE.CanvasTexture {
   const { color, font, outline, width = 128, height = 128 } = style;
-  const key = [text, color, font, outline, width, height].join("|");
+  const key = [text, color, font, outline, width, height, style.maxWidth].join("|");
   const hit = labels.get(key);
   if (hit) return hit;
   const cv = document.createElement("canvas");
-  cv.width = width;
-  cv.height = height;
   const c = cv.getContext("2d")!;
   c.font = font;
+  const measured = c.measureText(text).width;
+  const pad = 2 * LABEL_PAD_PX + (outline ? OUTLINE_PX : 0);
+  cv.width = Math.min(style.maxWidth ?? width, Math.max(width, Math.ceil(measured + pad)));
+  cv.height = height; // sizing the canvas resets the context: set the font after it
+  c.font = fitFont(font, measured, cv.width - pad);
   c.textAlign = "center";
   c.textBaseline = "middle";
   const y = height * 0.53;
   if (outline) {
-    c.lineWidth = 10;
+    c.lineWidth = OUTLINE_PX;
     c.lineJoin = "round";
     c.strokeStyle = outline;
-    c.strokeText(text, width / 2, y);
+    c.strokeText(text, cv.width / 2, y);
   }
   c.fillStyle = color;
-  c.fillText(text, width / 2, y);
+  c.fillText(text, cv.width / 2, y);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   labels.set(key, tex);

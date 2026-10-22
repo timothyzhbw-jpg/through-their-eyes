@@ -7,6 +7,7 @@ refuted when a slot value is tampered with.
 """
 
 import json
+import re
 
 import numpy as np
 import pytest
@@ -180,6 +181,14 @@ def test_the_bundle_holds_both_languages_the_removed_scan_and_the_grid():
             "look_cost",
             "pass_zones",
         ]
+    # Players by their fictional names, as everywhere on screen (SPEC 4.6); ids stay the data.
+    (look_cost,) = [x for x in data["answers"]["en"]["lines"] if x["id"] == "look_cost"]
+    assert look_cost["text"] == (
+        "Without that look, J. Ferriday would have played it back to K. Annersley instead of "
+        "forward to N. Varnhall."
+    )
+    texts = [x["text"] for p in data["answers"].values() for x in p["lines"]]
+    assert not any(re.search(r"(?<![A-Za-z0-9_:])[HA]\d+(?![A-Za-z0-9_:])", t) for t in texts)
     xt = data["xt"]
     assert (xt["cols"], xt["rows"], len(xt["grid"]), len(xt["grid"][0])) == (NX, NY, 16, 12)
     assert xt["fitted"] is True
