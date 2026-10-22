@@ -139,6 +139,19 @@ six moments × four audiences) and the multi-agent evidence session, whose numbe
 | MA10 | Crew trace: steps a viewer can audit per breakdown | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5 |
 | MA11 | Headline claims spoken, crew vs single (paired difference and interval) | crew_vs_single, four arms | 92% vs 81% (+0.11, −0.00 to +0.24) | TODO(freeze) | RUBRIC_MAP §5 |
 
+## B. Business model (SUBMISSION "Business model")
+
+Unit prices from the Azure Retail Prices API, `northcentralus`, 2026-10-22; re-query them at the
+freeze (`curl -sG https://prices.azure.com/api/retail/prices --data-urlencode "\$filter=..."`).
+
+| Id | Number | Source | Value | Freeze | Quoted in |
+|---|---|---|---|---|---|
+| B1 | Model cost of one four-script breakdown | crew_vs_single (requests, tokens) × the `gpt-4.1-mini` list price; OPERATIONS "The judging window's cost" | $0.0090 (12 requests, 22K tokens); about $0.012 with the Analyst's MCP tools | TODO(freeze) | SUBMISSION "Business model"; README "Path to production"; RUBRIC_MAP §3 |
+| B2 | Speech per narration line · per four-script breakdown | SPEC §8 (about 80 billed characters a line) × $15 per 1M characters; crew_vs_single 23.5 lines | $0.0012 · about $0.03 | TODO(freeze) | SUBMISSION "Business model" |
+| B3 | Hosting per 30 days, idle to busy | Container Apps 0.5 vCPU / 1 GiB × 2,592,000 s at the list prices; ACR Basic; SPEC §8 for the rest | $17–46 | TODO(freeze) | SUBMISSION "Business model" |
+| B4 | Share of breakdown views served from the cache | Application Insights over the judging window: `POST /api/breakdowns` requests on the deployed API against the `breakdown` spans of crew runs (the query in RUBRIC_MAP "The live trace", grouped by operation) | not measured: only 2026-10-22's telemetry is kept, 14 requests | TODO(freeze) | SUBMISSION "Business model" |
+| B5 | Twenty moments × five audiences × two languages: model · speech | B1 × 50 breakdowns; B2 × 50 | about $0.50 · $1.40 | TODO(freeze) | SUBMISSION "Business model" |
+
 ## X. Pictures and text that hold numbers or names
 
 | Id | What | Refresh | Where |

@@ -48,6 +48,29 @@ checks every number in its captions and narration before it airs.
   logged. It does not judge what a recap leaves out, and it runs on synthetic matches only, so it
   shows the workflow, not accuracy on real matches.
 
+## Business model
+
+Hypotheses, not sales: no customer has seen it. The costs are our own measurements at demo scale,
+at Azure list prices of 2026-10-22.[^azure-prices]
+
+- **Who would pay.** Broadcasters' studios and alternate streams (a per-match or per-season
+  licence for the explainers and their timecoded cues), clubs' analysis departments (per-seat
+  review of scanning and decisions on their own tracking), and the league's fan apps (explainers
+  in many languages, as its Microsoft partnership plans[^pl-microsoft]). No betting use.
+- **Cost to serve.** One moment in four scripts: about $0.01 of Foundry `gpt-4.1-mini` (12
+  requests, 22K tokens)[^crew] and about $0.03 of speech if every line is voiced ($0.0012 a
+  line).[^tts] Hosting at demo scale: $17–46 a month, idle to busy.[^hosting] A re-watch costs
+  no model call: breakdowns are cached by content and served in 0.15 s.[^latency] The cache's
+  share of views: TODO(freeze).
+- **What a licence must cover (hypothesis).** Twenty moments in five audiences and two languages
+  cost about $0.50 of model calls and $1.40 of speech, so a per-match price is set by hosting, the
+  tracking feed and editorial review, not by the model. We set no price and quote no market size
+  beyond the sources above.
+- **Still needed.** Tracking with head orientation from a rights holder (on synthetic keypoints
+  the scan detector keeps F1 0.962 at 20 mm of noise[^keypoints]), the rights to that data, a
+  simulator calibrated on it, and human editorial review: the Verifier catches invented numbers,
+  not omissions.
+
 ## What it does
 
 The brief's pipeline, end to end, on a synthetic match:
@@ -306,6 +329,25 @@ play that attacks the goal.
     Groundedness (1–5) of the scripts that aired after the rewrites: 4.90 vs 5.00. The
     "1.2 metres" line is quoted from its section "Free-text failures, verbatim" (seed 3,
     analyst/en).
+[^azure-prices]: Azure Retail Prices API (https://prices.azure.com/api/retail/prices), region
+    `northcentralus`, queried 2026-10-22: `gpt-4.1-mini` global $0.40 / $0.10 / $1.60 per 1M
+    input / cached input / output tokens; Azure AI Speech S1 neural text to speech $15 per 1M
+    characters; Container Apps consumption $0.000024 per active vCPU-second, $0.000003 per idle
+    vCPU-second and per GiB-second; Container Registry Basic $0.1666 a day. The same prices on
+    the pricing pages:
+    [Azure OpenAI](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/),
+    [Speech](https://azure.microsoft.com/pricing/details/cognitive-services/speech-services/),
+    [Container Apps](https://azure.microsoft.com/pricing/details/container-apps/).
+[^tts]: [docs/SPEC.md](SPEC.md) §8: a narration line bills about 80 characters (the SSML markup
+    counts, a Chinese character twice); [crew_vs_single](../eval/reports/crew_vs_single.md): 23.5
+    lines per four-script breakdown. 80 × $15 per 1M characters = $0.0012. The demo runs on the
+    free F0 tier (500K characters a month).
+[^hosting]: One API replica of 0.5 vCPU and 1 GiB, always on, for 30 days: $11.66 idle, $38.88
+    active the whole time, before the monthly free grant; Container Registry Basic $5.00; Cosmos
+    DB serverless, the static site and egress under $2 together at our traffic
+    ([docs/SPEC.md](SPEC.md) §8 cost table, [docs/OPERATIONS.md](OPERATIONS.md)).
+[^keypoints]: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md), the 20 mm
+    stress row.
 [^spec31]: [docs/SPEC.md](SPEC.md) §3.1: 25 Hz frames, per-player body and head yaw.
 [^flip]: [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md):
     seeds 100–139, decision changed without the key scan in 33/40.
