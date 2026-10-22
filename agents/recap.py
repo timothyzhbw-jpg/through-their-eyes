@@ -4,8 +4,9 @@
     uv run --env-file .env python -m agents.recap --seed 1 --mcp   # Foundry; Analyst on MCP
 
 The breakdown's workflow graph (agents/workflow.py) with the steps told for a match (`RECAP`):
-- Director: picks 3–5 key moments from the ranked candidates (agents/recap_context.py). The model
-  may name only candidates (an enum); the template takes the largest counterfactual impacts. The
+- Director: picks 3–5 key moments from the ranked candidates (agents/recap_context.py: goals,
+  then the hero moments, then the rest, each by counterfactual impact). The model may name only
+  candidates (an enum); the template takes them in that order. The
   reel plays them in match order, and from here on the crew works on those moments only.
 - Analyst: picks the headline claims, the match stats read through our MCP tools (`--recap`);
   the recap card shows the stats it picked.
@@ -33,7 +34,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, create_model, field_validator
 
-from agents import prompts, telemetry
+from agents import crewtrace, prompts, telemetry
 from agents.delivery import (
     CLUTCH_DELTA,
     DESCRIBED,
@@ -64,6 +65,7 @@ from agents.workflow import (
     Analyst,
     Analyze,
     Briefing,
+    CrewRun,
     Director,
     Job,
     Narration,
@@ -250,8 +252,10 @@ CREW = (
 DIRECTOR = f"""ROLE: director
 {CREW}
 You are the Director of the recap. Pick the key moments for the recap reel from the candidates,
-between {MIN_MOMENTS} and {MAX_MOMENTS} of them: the ones that changed the match most (a candidate's
-`impact` is the counterfactual delta of its lens in expected threat), with a variety of lenses.
+between {MIN_MOMENTS} and {MAX_MOMENTS} of them. The candidates come in editorial order: a goal
+first, then the match's hero moments (`hero` true), then the rest by how much they changed the
+match (a candidate's `impact` is the counterfactual delta of its lens in expected threat). Lead
+with the hero moments, then the ones that changed the match most, with a variety of lenses.
 Name only candidate ids. Set the recap's priority (low, normal or high) and give a one-sentence
 reason in plain words, with no digits or number words."""
 
@@ -429,7 +433,7 @@ def template_request(
         match=rc.match_id, moments=in_match_order(rc, [c.id for c in picked]),
         personas=list(personas), languages=list(languages),
         priority="high" if top >= 0.05 else "normal" if top >= NOTABLE_XT else "low",
-        reason="Template: the moments with the largest counterfactual impact.",
+        reason="Template: the hero moments first, then the largest counterfactual impacts.",
     )  # fmt: skip
 
 
@@ -704,7 +708,7 @@ class RecapDirector(Director):
         self.whole: RecapContext = crew.ctx  # every candidate; after it picks, the crew's focus
 
     async def _direct(self, job: Job, ctx, resumed: bool = False) -> None:
-        crew, rc = self.crew, self.whole
+        crew, rc = self.crew, crewtrace.watched(self.whole)
         with crew.step("director", resumed=resumed or None) as span:
             request = template_request(rc, job.personas, job.languages)
             attempt, notes, used = None, [BACK] if resumed else [], False
@@ -726,7 +730,9 @@ class RecapDirector(Director):
                         notes.append("too few key moments: template moments")
             crew.record("director", attempt, notes, used, span)
         crew.ctx = rc.focused(request.moments)
-        await ctx.send_message(Analyze(request))
+        if (rec := crewtrace.current()) is not None:  # the crew now works on these moments only
+            rec.writes.append("evidence")
+        await self.send(ctx, Analyze(request))
         await self.wait_if_down([attempt], ctx)
 
 
@@ -761,7 +767,7 @@ class RecapAnalyst(Analyst):
                     else:
                         notes.append("no usable headline: template findings")
             crew.record("analyst", attempt, notes, used, span)
-        await ctx.send_message(Briefing(msg.request, findings, rev=self.sent))
+        await self.send(ctx, Briefing(msg.request, findings, rev=self.sent))
         self.sent += 1
         await self.wait_if_down([attempt], ctx)
 
@@ -791,7 +797,7 @@ class RecapTelestrator(Telestrator):
             notes = [BACK] if resumed else []
             notes += [f"invalid reel, template used: {e}" for e in errors]
             crew.record("telestrator", attempt, notes, used, span)
-        await ctx.send_message(Planned(reel, source, errors, rev=msg.rev))
+        await self.send(ctx, Planned(reel, source, errors, rev=msg.rev))
         await self.wait_if_down([attempt], ctx)
 
 
@@ -888,10 +894,15 @@ async def run_recap(
 ) -> RecapResult:
     """The recap of the match: the crew's workflow with the recap's steps. `down`: agent steps
     taken down for this run, as in the failure drill (no model call for them)."""
-    run = await run_crew(rc, client=client, personas=personas, languages=languages,
-                         step_timeout_s=step_timeout_s, use_mcp=use_mcp,
-                         voice_styles=voice_styles, down=down, story=RECAP)  # fmt: skip
+    run = await run_recap_crew(rc, client=client, personas=personas, languages=languages,
+                               step_timeout_s=step_timeout_s, use_mcp=use_mcp,
+                               voice_styles=voice_styles, down=down)  # fmt: skip
     return run.result
+
+
+async def run_recap_crew(rc: RecapContext, **kwargs: Any) -> CrewRun:
+    """`run_recap`, with the crew trace (`CrewRun.trace`) and what waits to be brought back."""
+    return await run_crew(rc, story=RECAP, **kwargs)
 
 
 # --- command line -------------------------------------------------------------------------------

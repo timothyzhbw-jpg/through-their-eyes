@@ -95,8 +95,9 @@ def build_recap_server(evidence: dict[str, Any]) -> FastMCP:
 
     @server.tool()
     def list_key_moments() -> str:
-        """Key-moment candidates, most important first: kind, actor, lens, counterfactual impact
-        in expected threat, and the ids of their verified claims."""
+        """Key-moment candidates in editorial order (a goal, then the hero moments, then the rest,
+        each by impact): kind, actor, lens, counterfactual impact in expected threat, and the ids
+        of their verified claims."""
         return tools.list_key_moments(evidence)
 
     @server.tool()

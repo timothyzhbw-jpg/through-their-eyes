@@ -5,6 +5,7 @@ import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import * as THREE from "three";
 import type { Store } from "../store/store";
+import { FIELD, LAW1 } from "./fieldMarkings";
 
 export const COLORS = {
   bg: "#0b1210",
@@ -20,7 +21,12 @@ export const COLORS = {
 export const teamColor = (team: number) => (team === 0 ? COLORS.home : COLORS.away);
 
 // Pitch (x, y) in metres maps to three.js (x, height, -y): y is up and the pitch lies in XZ.
-export const PITCH = { length: 105, width: 68, halfLength: 52.5, halfWidth: 34 };
+export const PITCH = {
+  length: LAW1.length,
+  width: LAW1.width,
+  halfLength: FIELD.halfLength,
+  halfWidth: FIELD.halfWidth,
+};
 /** What the tactical board shows: the pitch plus a 3 m apron, centred on the centre spot. */
 export const BOARD_EXTENT = { x: 111, y: 74 };
 
@@ -29,7 +35,7 @@ export function boardZoom(width: number, height: number): number {
   return Math.max(1e-3, Math.min(width / BOARD_EXTENT.x, height / BOARD_EXTENT.y));
 }
 
-/** Pitch markings drawn once into a canvas texture (20 px per metre). */
+/** Pitch markings drawn once into a canvas texture (20 px per metre), by Law 1 (fieldMarkings). */
 let pitchTexture: THREE.CanvasTexture | null = null;
 export function getPitchTexture(): THREE.CanvasTexture {
   if (pitchTexture) return pitchTexture;
@@ -44,24 +50,60 @@ export function getPitchTexture(): THREE.CanvasTexture {
   }
   const X = (x: number) => (x + PITCH.halfLength) * s;
   const Y = (y: number) => (PITCH.halfWidth - y) * s;
+  const L = FIELD.halfLength;
+  const W = FIELD.halfWidth;
+  // A line belongs to the area it bounds: the outer edges of the touchlines and goal lines are
+  // the edge of the field, so each line is drawn half its width inside its coordinate.
+  const half = LAW1.lineWidth / 2;
   c.strokeStyle = "rgba(255,255,255,0.85)";
   c.fillStyle = "rgba(255,255,255,0.85)";
-  c.lineWidth = 0.12 * s;
-  c.strokeRect(X(-52.5) + 2, Y(34) + 2, PITCH.length * s - 4, PITCH.width * s - 4);
+  c.lineWidth = LAW1.lineWidth * s;
+  c.strokeRect(
+    X(-L + half),
+    Y(W - half),
+    (PITCH.length - LAW1.lineWidth) * s,
+    (PITCH.width - LAW1.lineWidth) * s,
+  );
   c.beginPath();
-  c.moveTo(X(0), Y(34));
-  c.lineTo(X(0), Y(-34));
+  c.moveTo(X(0), Y(W));
+  c.lineTo(X(0), Y(-W));
   c.stroke();
   c.beginPath();
-  c.arc(X(0), Y(0), 9.15 * s, 0, 2 * Math.PI);
+  c.arc(X(0), Y(0), LAW1.centreCircle * s, 0, 2 * Math.PI);
   c.stroke();
-  for (const g of [-1, 1]) {
-    const gx = g * PITCH.halfLength;
-    c.strokeRect(Math.min(X(gx), X(gx - g * 16.5)), Y(20.16), 16.5 * s, 40.32 * s);
-    c.strokeRect(Math.min(X(gx), X(gx - g * 5.5)), Y(9.16), 5.5 * s, 18.32 * s);
+  const dot = (x: number, y: number) => {
     c.beginPath();
-    c.arc(X(gx - g * 11), Y(0), 0.25 * s, 0, 2 * Math.PI);
+    c.arc(X(x), Y(y), 0.12 * s, 0, 2 * Math.PI);
     c.fill();
+  };
+  dot(0, 0); // the centre mark
+  for (const g of [-1, 1]) {
+    const gx = g * L;
+    const box = (depth: number, halfWidth: number) =>
+      c.strokeRect(Math.min(X(gx), X(gx - g * depth)), Y(halfWidth), depth * s, 2 * halfWidth * s);
+    box(LAW1.penaltyAreaDepth, FIELD.penaltyAreaHalfWidth);
+    box(LAW1.goalAreaDepth, FIELD.goalAreaHalfWidth);
+    const mark = gx - g * LAW1.penaltyMark;
+    dot(mark, 0);
+    // The penalty arc, outside the penalty area, facing the centre of the field. On the canvas
+    // the y axis points down, so the angle is measured on mirrored y.
+    const facing = g > 0 ? Math.PI : 0;
+    c.beginPath();
+    c.arc(
+      X(mark),
+      Y(0),
+      LAW1.penaltyArc * s,
+      facing - FIELD.penaltyArcHalfAngle,
+      facing + FIELD.penaltyArcHalfAngle,
+    );
+    c.stroke();
+    // A quarter circle of 1 m in each corner, inside the field.
+    for (const h of [-1, 1]) {
+      const toCentre = Math.atan2(h, -g); // canvas angle toward the field from corner (gx, h·W)
+      c.beginPath();
+      c.arc(X(gx), Y(h * W), LAW1.cornerArc * s, toCentre - Math.PI / 4, toCentre + Math.PI / 4);
+      c.stroke();
+    }
   }
   pitchTexture = new THREE.CanvasTexture(cv);
   pitchTexture.colorSpace = THREE.SRGBColorSpace;

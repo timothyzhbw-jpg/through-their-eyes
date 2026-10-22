@@ -6,70 +6,19 @@
 
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import raw from "../../public/data/hero_seed3.json";
 import { parseHero } from "../data/hero";
 import { type ModelMeta, PLAYER_HEIGHT, makeRig, modelClips, poseRig, runMotion } from "./rig";
+import { loadModel, readGlb } from "./testing";
 
 const hero = parseHero(raw);
 const run = hero.runs.factual;
 
-// Node's fs without @types/node: vitest runs these tests in node (vite.config.ts).
-type Fs = { readFileSync(path: URL): Uint8Array };
-const nodeProcess = (globalThis as unknown as { process: { getBuiltinModule(id: string): Fs } })
-  .process;
-
-function readGlb(name: string): { json: Record<string, unknown>; bin: Uint8Array } {
-  const bytes = nodeProcess
-    .getBuiltinModule("node:fs")
-    .readFileSync(new URL(`../../public/models/${name}`, import.meta.url));
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const jsonLen = view.getUint32(12, true);
-  const json = JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + jsonLen)));
-  const at = 20 + jsonLen;
-  const binLen = view.getUint32(at, true);
-  return { json, bin: bytes.subarray(at + 8, at + 8 + binLen) };
-}
-
-/** Rebuild a GLB from its JSON and binary chunk. */
-function glb(json: Record<string, unknown>, bin: Uint8Array): ArrayBuffer {
-  let doc = new TextEncoder().encode(JSON.stringify(json));
-  const pad = (-doc.length & 3) as number;
-  if (pad) doc = new Uint8Array([...doc, ...new Array(pad).fill(0x20)]);
-  const binPad = -bin.length & 3;
-  const total = 12 + 8 + doc.length + 8 + bin.length + binPad;
-  const out = new Uint8Array(total);
-  const v = new DataView(out.buffer);
-  v.setUint32(0, 0x46546c67, true); // "glTF"
-  v.setUint32(4, 2, true);
-  v.setUint32(8, total, true);
-  v.setUint32(12, doc.length, true);
-  v.setUint32(16, 0x4e4f534a, true); // "JSON"
-  out.set(doc, 20);
-  const at = 20 + doc.length;
-  v.setUint32(at, bin.length + binPad, true);
-  v.setUint32(at + 4, 0x004e4942, true); // "BIN\0"
-  out.set(bin, at + 8);
-  return out.buffer;
-}
-
 const base = readGlb("grf_player.glb");
 const look = readGlb("grf_player_look.glb");
-
-/** The look model without its image (node has no WebP decoder; the image is not geometry). */
-function lookWithoutImages(): ArrayBuffer {
-  const json = structuredClone(look.json) as Record<string, unknown> & {
-    materials: Record<string, unknown>[];
-  };
-  for (const key of ["images", "textures", "samplers", "extensionsUsed", "extensionsRequired"])
-    delete json[key];
-  for (const m of json.materials) delete m.normalTexture;
-  return glb(json, look.bin);
-}
-
-const parse = (buffer: ArrayBuffer): Promise<GLTF> => new GLTFLoader().parseAsync(buffer, "");
-const v1 = await parse(glb(base.json, base.bin));
-const v2 = await parse(lookWithoutImages());
+const v1 = await loadModel("grf_player.glb");
+const v2 = await loadModel("grf_player_look.glb");
 
 function bones(gltf: GLTF, id: string, f: number): Map<string, THREE.Matrix4> {
   const meta = gltf.scene.userData as ModelMeta;

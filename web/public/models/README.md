@@ -46,3 +46,36 @@ compares every bone's world matrix through H8's key scan, H9's run and standing 
 The bake and the design scripts run outside the repo (`~/tte-blender/reskin`: Blender for the
 occlusion, numpy for the rest), next to the trailer's shots, which use the same files. Together
 the two files add 17 KB (+22 %) to what the browser loads for the players.
+
+# Extra player animations (SPEC 7)
+
+`anims_extra.glb` holds animations only: no mesh, no skin, no textures. Its nodes are the 14
+skeleton nodes of `grf_player.glb` with the same names and bind transforms, so its clips bind to
+the rigged players by bone name and the skeleton is unchanged. Rotations are int16-normalized
+quaternions with keys dropped where linear interpolation stays within 0.25°.
+
+Clips:
+
+- `pass_short`: CMU Motion Capture Database, subject 10, trial 02 ("soccer - kick ball"),
+  120 Hz, from 0.40 s before to 0.55 s after ball contact. The whole body, in place: the root
+  keeps only its height, and planted feet are held still with two-bone IK.
+- `shoulder_check_r`: CMU Motion Capture Database, subject 139, trial 04 ("Looking Around"),
+  0.68–1.50 s. Only the trunk joint (`middle`); the head stays the sim's.
+- `shoulder_check_l`: the same, mirrored left to right.
+
+- Terms (checked 2026-10-21 on <https://mocap.cs.cmu.edu/>): the data is free for all uses and may
+  be included in commercially sold products, but not resold directly, even in converted form.
+  Downloaded from the official site only (not from third-party mirrors, which carry other
+  licences).
+- Acknowledgement, as the database asks: _The data used in this project was obtained from
+  mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217._
+- The CMU data is motion capture of lab subjects, not match data or footage: no real match, club
+  or player is in it.
+- Retargeted onto this skeleton by direction matching: each bone takes its direction (hip to knee,
+  knee to ankle, ankle to toe, and so on) and twist from the source, its length from this model.
+  The scripts (numpy; Blender is used only for preview renders) live outside the repo in
+  `tte-blender/anims/`, with the source files. The scene extras record each clip's source, its
+  ball contact (`touch_s`), the kick's direction and the shoulder check's phases.
+- Quaternius' Universal Animation Library 1 (CC0) was retargeted and compared too (walk, jog,
+  sprint) and is not used: its jog drops into a deep crouch every step, and its sprint looked no
+  better than the engine's.

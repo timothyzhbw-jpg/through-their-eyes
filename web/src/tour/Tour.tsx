@@ -46,13 +46,15 @@ const boxOf = (r: DOMRect): Box => ({ top: r.top, left: r.left, width: r.width, 
 const NOTHING = { target: null, keep: [] };
 
 /** What the card should leave visible, by weight: what the viewer reads (the caption, the
- * moment or evidence card, Your call's card, the board beside his eyes), then the controls. */
+ * moment or evidence card, Your call's and Take his eyes' cards, the board beside his eyes), then
+ * the controls. */
 const KEEP_CLEAR: [string, number][] = [
   [".stage-caption", 3],
   [".stage .views", 2], // the picture: on a phone it is only the top of the screen
   [".stage-card > *", 3],
   [".slot.pip", 3],
   [".yc-card", 3],
+  [".te-card", 3],
   [".stage-run", 2],
   [".header-end", 2],
   [".transport", 2],
@@ -183,6 +185,8 @@ function TourOverlay({ session }: { session: ViewSession }) {
     let clips: Element[] = [];
     let last = "";
     const behavior: ScrollBehavior = reduced ? "auto" : "smooth";
+    // A target more than a screen and a half away is jumped to, not scrolled to: a smooth scroll
+    // that far ran the whole story past the viewer for a second and a half (the failure drill).
     const tick = () => {
       const el = targetOf(step);
       const raw = el?.getBoundingClientRect();
@@ -195,7 +199,11 @@ function TourOverlay({ session }: { session: ViewSession }) {
           const seen = visibleBox(el, clips);
           const cut = !seen || seen.height < raw.height - 1 || seen.width < raw.width - 1;
           if (cut || !onScreen(boxOf(raw), viewport())) {
-            el.scrollIntoView({ block: el.closest(".stage") ? "nearest" : "start", behavior });
+            const far = raw.bottom < -0.5 * innerHeight || raw.top > 1.5 * innerHeight;
+            el.scrollIntoView({
+              block: el.closest(".stage") ? "nearest" : "start",
+              behavior: far && !reduced ? "instant" : behavior,
+            });
           }
         }
       }
@@ -211,6 +219,23 @@ function TourOverlay({ session }: { session: ViewSession }) {
     tick();
     return () => cancelAnimationFrame(frame);
   }, [step, seq, reduced]);
+
+  // While the page scrolls the ring moves with what it frames, without its glide (the glide is for
+  // moving between steps): gliding, it trailed the target and framed whatever scrolled past.
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let settle = 0;
+    const onScroll = () => {
+      root.current?.classList.add("scrolling");
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => root.current?.classList.remove("scrolling"), 150);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      window.clearTimeout(settle);
+    };
+  }, []);
 
   // On a phone the card folds into a bar once the viewer touches the app (Your call's options,
   // the evidence card): the card would cover what they are using. It opens again on each step.
@@ -249,6 +274,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
 
   return (
     <div
+      ref={root}
       className={["tour", reduced && "reduced", step.dim && "dim"].filter(Boolean).join(" ")}
       data-step={step.id}
     >
