@@ -3,6 +3,18 @@
 Assets used by the app, where they come from and under which licence. Papers, code repositories
 and the licence decisions about them are in [REFERENCES.md](REFERENCES.md).
 
+## Players and their motion (web app, SPEC 7)
+
+| Asset | Source | Licence or terms |
+|---|---|---|
+| The rigged footballer, its skeleton and its idle, walk, sprint and pass clips (`web/public/models/grf_player.glb`) | Gameplay Football by Bastiaan Konings Schuiling, as shipped in Google Research Football; converted by [demo/grf/convert.py](../demo/grf/convert.py) | Unlicense |
+| The kick (`pass_short`) and the shoulder checks (`shoulder_check_l` / `_r`) in `web/public/models/anims_extra.glb` | CMU Graphics Lab Motion Capture Database, trials 10_02 and 139_04, from the official site only, retargeted onto the skeleton above | Free for all uses, included in the product, never resold as data |
+
+Acknowledgement, as the CMU database asks: *The data used in this project was obtained from
+mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.* It is motion
+capture of lab subjects, not match data or footage. Which part of each trial is used, and how,
+is in [web/public/models/README.md](../web/public/models/README.md).
+
 ## Sound (web app, SPEC 7)
 
 The sound design of the hero moment (crowd bed, scan whoosh, the "without the look" sting) uses

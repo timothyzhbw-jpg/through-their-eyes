@@ -71,7 +71,7 @@ def design_case(request):
         current[:] = [sim]
         return original_step(sim)
 
-    def tracked_steer(pos, vel, target, cap, a_max, d_max, dt):
+    def tracked_steer(pos, vel, target, cap, a_max, d_max, dt, bounds=None):
         sim = current[0]
         diving = _dive_limits(sim)
         expected_a = np.full(len(sim.ids), A_MAX)
@@ -86,7 +86,7 @@ def design_case(request):
         acceleration_cap = np.where(accelerating, expected_a, expected_d)
         speed_cap = np.array([p.v_max for p in sim.players])
         speed_cap[diving] = shots.KEEPER.v_dive_max
-        new_pos, new_vel = original_steer(pos, vel, target, cap, a_max, d_max, dt)
+        new_pos, new_vel = original_steer(pos, vel, target, cap, a_max, d_max, dt, bounds)
         movement.append(
             (
                 sim.frame,

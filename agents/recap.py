@@ -4,8 +4,9 @@
     uv run --env-file .env python -m agents.recap --seed 1 --mcp   # Foundry; Analyst on MCP
 
 The breakdown's workflow graph (agents/workflow.py) with the steps told for a match (`RECAP`):
-- Director: picks 3–5 key moments from the ranked candidates (agents/recap_context.py). The model
-  may name only candidates (an enum); the template takes the largest counterfactual impacts. The
+- Director: picks 3–5 key moments from the ranked candidates (agents/recap_context.py: goals,
+  then the hero moments, then the rest, each by counterfactual impact). The model may name only
+  candidates (an enum); the template takes them in that order. The
   reel plays them in match order, and from here on the crew works on those moments only.
 - Analyst: picks the headline claims, the match stats read through our MCP tools (`--recap`);
   the recap card shows the stats it picked.
@@ -251,8 +252,10 @@ CREW = (
 DIRECTOR = f"""ROLE: director
 {CREW}
 You are the Director of the recap. Pick the key moments for the recap reel from the candidates,
-between {MIN_MOMENTS} and {MAX_MOMENTS} of them: the ones that changed the match most (a candidate's
-`impact` is the counterfactual delta of its lens in expected threat), with a variety of lenses.
+between {MIN_MOMENTS} and {MAX_MOMENTS} of them. The candidates come in editorial order: a goal
+first, then the match's hero moments (`hero` true), then the rest by how much they changed the
+match (a candidate's `impact` is the counterfactual delta of its lens in expected threat). Lead
+with the hero moments, then the ones that changed the match most, with a variety of lenses.
 Name only candidate ids. Set the recap's priority (low, normal or high) and give a one-sentence
 reason in plain words, with no digits or number words."""
 
@@ -430,7 +433,7 @@ def template_request(
         match=rc.match_id, moments=in_match_order(rc, [c.id for c in picked]),
         personas=list(personas), languages=list(languages),
         priority="high" if top >= 0.05 else "normal" if top >= NOTABLE_XT else "low",
-        reason="Template: the moments with the largest counterfactual impact.",
+        reason="Template: the hero moments first, then the largest counterfactual impacts.",
     )  # fmt: skip
 
 
