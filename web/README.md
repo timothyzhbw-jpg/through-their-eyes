@@ -252,7 +252,8 @@ cross-platform identity).
 src/
   api/        the API client (zod-checked responses, timeouts) and VITE_API_URL
   live/       the live stream: WebSocket feed, frame ordering, control messages, live playhead
-  breakdown/  the breakdown on screen per persona and language: service or bundled, checked
+  breakdown/  the breakdown on screen per persona and language: service or bundled, checked;
+              personaView.ts: each audience's camera and overlays, set the moment it is chosen
   voice/      spoken narration from /api/tts, off by default (on for audio description)
   data/       load the export (service or bundled), sample a player at a fractional frame, eased yaw
   store/      the playback store: mode, frame, speed, toggles, POV player, focus, open line

@@ -51,12 +51,13 @@ export const blurbOf = (hero: Hero): string =>
 
 const LANGUAGE_NAME: Record<Language, string> = { en: "English", zh: "中文" };
 
+// What each audience gets (SPEC 6, "Persona specs"): said and shown.
 const PERSONA_NOTE: Record<Persona, string> = {
-  casual: "The story, no jargon.",
-  analyst: "The mechanism, with the numbers.",
-  player_fan: "His view, his choices.",
-  coach: "Shapes, distances, decisions.",
-  audio_description: "Every line spoken, in large print.",
+  casual: "The story in three lines, through his eyes.",
+  analyst: "The board, pitch control and every number.",
+  player_fan: "His look, his pass, the camera on him.",
+  coach: "When he looked, and what to teach.",
+  audio_description: "Who is where, in order, read slowly.",
 };
 
 /** What he did, as a past-tense phrase: "passed to K. Annersley", "carried it". */

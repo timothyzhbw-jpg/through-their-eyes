@@ -13,7 +13,10 @@ const Rel = z.number().min(-60).max(60);
 const Speed = z.number().min(0.1).max(2);
 const PlayerId = z.string().regex(/^[HA]\d{1,2}$/);
 
-export const CAMERA_MODES = ["split", "pov", "tactical", "broadcast"] as const;
+export const CAMERA_MODES = ["split", "pov", "tactical", "broadcast", "player_lock"] as const;
+/** Overlay layers a zone step turns on: his vision cone, the teams' pitch control on the board,
+ * his pass options at the decision (SPEC 4, 7). */
+export const ZONE_LAYERS = ["vision", "pitch_control", "options"] as const;
 
 /** Hold the current frame. */
 const Freeze = z.strictObject({ t: At, do: z.literal("freeze") });
@@ -22,7 +25,8 @@ const Rewind = z.strictObject({ t: At, do: z.literal("rewind"), to: Rel });
 /** Play from the current frame to `to` (not in the SPEC sketch: needed to show the outcome). */
 const Play = z.strictObject({ t: At, do: z.literal("play"), to: Rel, speed: Speed });
 /** Which view gets the space. `pov` and `broadcast` also pick the 3D view's camera; `split` and
- * `tactical` keep it. `player_lock` arrives with that camera. */
+ * `tactical` keep it. `player_lock` is the broadcast camera following the moment's hero instead of
+ * the ball (the player fan's camera, SPEC 6 "Persona specs"). */
 const Camera = z.strictObject({ t: At, do: z.literal("camera"), mode: z.enum(CAMERA_MODES) });
 /** First-person segment through `player`'s eyes, eased yaw, at most MAX_POV_CLIP_S. */
 const Pov = z.strictObject({
@@ -40,11 +44,11 @@ const ScanMarker = z.strictObject({
   scan: z.string(),
   label_claim: z.string().optional(),
 });
-/** Turn on an analytics layer. Only `vision` exists so far (pitch control, pressing: M4). */
+/** Turn on an overlay layer (`ZONE_LAYERS`); `player` is whose vision cone or pass options. */
 const Zone = z.strictObject({
   t: At,
   do: z.literal("zone"),
-  layer: z.enum(["vision"]),
+  layer: z.enum(ZONE_LAYERS),
   player: PlayerId,
 });
 /** Belief ghosts ("where he thought they were") or the counterfactual ghost path. */
