@@ -1,0 +1,200 @@
+/* "Without the look", told (WithoutLook.tsx): Dusk, the colour of the other match. */
+
+/* where the caption goes, in the run without the look, while no caption is up */
+.stage-caption:has(.caption) .without-note {
+  display: none;
+}
+.without-note {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(8, 14, 11, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(149, 167, 186, 0.35);
+  color: var(--chalk);
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: left;
+  pointer-events: auto;
+}
+.without-line {
+  margin: 0;
+}
+.without-line + .without-line {
+  margin-top: 4px;
+  color: var(--chalk-2);
+}
+.without-line.removed_look {
+  color: var(--dusk);
+}
+.without-note .without-xt {
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+
+/* the timeline's mark for the look the other run leaves out */
+.removed-look {
+  fill: rgba(149, 167, 186, 0.16);
+}
+
+/* the edge of his eyes on the removed look's side */
+.removed-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.removed-edge.left {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(90deg, rgba(149, 167, 186, 0.28), rgba(149, 167, 186, 0));
+}
+.removed-edge.right {
+  right: 0;
+  justify-content: flex-end;
+  /* the label low on the right: the moment card covers the top right of the picture */
+  align-items: flex-end;
+  padding-bottom: calc(var(--bar-h, 96px) + 150px);
+  background: linear-gradient(270deg, rgba(149, 167, 186, 0.28), rgba(149, 167, 186, 0));
+}
+.removed-edge span {
+  margin: 0 16px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(8, 14, 11, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(149, 167, 186, 0.6);
+  color: var(--dusk);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* in the verdict */
+.without-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* the explainer */
+.xt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(5, 8, 6, 0.72);
+}
+.xt-explainer {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.xt-explainer h2 {
+  margin: 0;
+  font: 400 24px/1.15 var(--font-display);
+}
+.xt-line {
+  margin: 0;
+  color: var(--chalk);
+  line-height: 1.5;
+}
+.xt-grid {
+  width: 100%;
+  height: auto;
+}
+.xt-cell {
+  fill: var(--floodlight);
+  stroke: rgba(8, 14, 11, 0.6);
+  stroke-width: 1;
+}
+.xt-cell.end {
+  stroke-width: 4;
+}
+.xt-cell.end.factual {
+  stroke: var(--floodlight-hi);
+}
+.xt-cell.end.counterfactual {
+  stroke: var(--dusk);
+}
+.xt-pitch {
+  fill: none;
+  stroke: rgba(239, 237, 229, 0.45);
+  stroke-width: 2;
+}
+.xt-end circle {
+  stroke: var(--night);
+  stroke-width: 3;
+}
+.xt-end.factual circle {
+  fill: var(--floodlight-hi);
+}
+.xt-end.counterfactual circle {
+  fill: var(--dusk);
+}
+.xt-end-label,
+.xt-attack {
+  font: 600 26px var(--font-data);
+  fill: var(--chalk);
+  paint-order: stroke;
+  stroke: var(--night);
+  stroke-width: 6px;
+}
+.xt-attack {
+  font-size: 20px;
+  fill: var(--chalk-2);
+}
+.xt-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--chalk-2);
+  font-size: 13px;
+}
+.xt-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.xt-legend i + i,
+.xt-legend i:not(:first-child) {
+  margin-left: 10px;
+}
+.xt-legend i.factual {
+  background: var(--floodlight-hi);
+}
+.xt-legend i.counterfactual {
+  background: var(--dusk);
+}
+.xt-how p {
+  margin: 0 0 8px;
+  color: var(--chalk-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* a phone: the picture is short, so only which look was removed; the rest is in the verdict */
+@media (max-width: 760px) {
+  .without-note {
+    margin: 0 8px 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .without-line.look_cost,
+  .without-note .without-xt {
+    display: none;
+  }
+}

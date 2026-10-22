@@ -54,17 +54,21 @@ def _open(max_s: float) -> PossessionSpec:
     return PossessionSpec("possession_play", max_s=max_s)
 
 
-# 15 open-play passages and 3 heroes; at most 13:18 of play. Hero seeds are the demo seeds:
+# 15 open-play passages and 4 heroes; at most 13:28 of play. Hero seeds are the demo seeds:
 # blind_side_run 3 (the deployed hero), press_escape 0 and corner_blind_side 0 (each scenario's
-# first design seed). The kick-off passage is short, so the first hero comes within 35 s; the caps
-# vary so that open play has a rhythm, and a passage that puts the ball out ends there.
+# first design seed), far_post_finish 11 (a typical design seed: the far post and a goal with the
+# look, the near post and a save without it). The kick-off passage is short, so the first hero
+# comes within 35 s; the caps vary so that open play has a rhythm, and a passage that puts the
+# ball out ends there. After the goal the away team takes the corner at 1–0.
 DEFAULT_PLAN: tuple[PossessionSpec, ...] = (
     _open(30.0),  # kick-off
     PossessionSpec("blind_side_run", 3),  # the scan hero, by 0:30
     *map(_open, (50.0, 65.0, 40.0, 60.0, 55.0)),
     PossessionSpec("press_escape", 0),  # the pressure hero, about 4:30
-    *map(_open, (45.0, 70.0, 50.0, 60.0, 40.0)),
-    PossessionSpec("corner_blind_side", 0),  # the set-piece hero, about 8:30
+    *map(_open, (45.0, 70.0, 50.0)),
+    PossessionSpec("far_post_finish", 11),  # the shot hero: 1–0, about 7:00
+    *map(_open, (60.0, 40.0)),
+    PossessionSpec("corner_blind_side", 0),  # the set-piece hero, about 8:40
     *map(_open, (55.0, 65.0, 45.0, 50.0)),
 )
 

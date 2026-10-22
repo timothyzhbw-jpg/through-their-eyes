@@ -7,6 +7,7 @@
 // marks (corner_blind_side), or the press he plays out of (press_escape).
 
 import { CountUp } from "./CountUp";
+import { WithoutLookLines } from "../without/WithoutLook";
 import {
   actionLabel,
   isSeen,
@@ -583,6 +584,7 @@ export function VerdictPanel() {
               " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
             Causal inside the simulation; not a claim about real football.
           </p>
+          <WithoutLookLines />
         </div>
       </div>
     </Chapter>
