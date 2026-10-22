@@ -1410,7 +1410,8 @@
       },
       "overlays": [],
       "sfx": [],
-      "story": "blender"
+      "story": "blender",
+      "section": "open"
     },
     {
       "id": "b02-s1c-tackle",
@@ -1421,7 +1422,8 @@
       },
       "overlays": [],
       "sfx": [],
-      "story": "blender"
+      "story": "blender",
+      "section": "open"
     },
     {
       "id": "b03-s1d-fall",
@@ -1438,7 +1440,8 @@
           "gain_db": -2
         }
       ],
-      "story": "blender"
+      "story": "blender",
+      "section": "open"
     },
     {
       "id": "b04-s1e-ground",
@@ -1449,7 +1452,8 @@
       },
       "overlays": [],
       "sfx": [],
-      "story": "blender"
+      "story": "blender",
+      "section": "open"
     },
     {
       "id": "b05-s2-coach",
@@ -1476,7 +1480,8 @@
       ],
       "overlays": [],
       "sfx": [],
-      "story": "blender"
+      "story": "blender",
+      "section": "open"
     },
     {
       "id": "b01-app-s1-pov",
@@ -1503,7 +1508,8 @@
           "title": "nc-you-app",
           "at": 1.97
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b02-app-s1-tackle",
@@ -1523,7 +1529,8 @@
           "title": "label-ie-2p4",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b03-app-s2-see",
@@ -1541,7 +1548,8 @@
           "text": "See this?",
           "style": "friendly"
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b04-app-s2-ui",
@@ -1564,7 +1572,8 @@
           "text": "You know why you lost the ball?",
           "style": "friendly"
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b06-a1-pov",
@@ -2530,7 +2539,8 @@
         "src": "title",
         "id": "ph-s4a-pov"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b43-s4b-check",
@@ -2540,7 +2550,8 @@
         "src": "title",
         "id": "ph-s4b-check"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b44-s4c-drive",
@@ -2550,7 +2561,8 @@
         "src": "title",
         "id": "ph-s4c-drive"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b45-s4d-strike",
@@ -2567,7 +2579,8 @@
           "at": 0.05,
           "gain_db": -2
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b45a-s4e-net",
@@ -2577,7 +2590,8 @@
         "src": "title",
         "id": "ph-s4e-net"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b45b-s4f-celebrate",
@@ -2590,7 +2604,8 @@
       "overlays": [],
       "out": {
         "type": "cut"
-      }
+      },
+      "section": "close"
     },
     {
       "id": "b42-app-s4-check",
@@ -2610,7 +2625,8 @@
           "title": "label-ie-3p03",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b43-app-s4-escape",
@@ -2630,7 +2646,8 @@
           "title": "label-ie-1p8",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b44-app-s4-fp-look",
@@ -2650,7 +2667,8 @@
           "title": "label-ie-1p7",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b45-app-s4-fp-goal",
@@ -2670,7 +2688,8 @@
           "title": "label-ie-1p2",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b45a-app-s4-tag",
@@ -2682,7 +2701,8 @@
       },
       "out": {
         "type": "cut"
-      }
+      },
+      "section": "close"
     },
     {
       "id": "b46-spec",

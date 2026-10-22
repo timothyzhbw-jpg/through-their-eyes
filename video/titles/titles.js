@@ -599,7 +599,8 @@
   // cinematic shots, so no one mistakes them for the app's screens.
   function label(params) {
     const stage = prepare("free", null);
-    stage.append(el("div", "corner-label bebas", params.text || ""));
+    const corner = params.corner === "top-left" ? "corner-label corner-tl bebas" : "corner-label bebas";
+    stage.append(el("div", corner, params.text || ""));
   }
 
   // Freeze-frame name card: everything but the player drops about a stop under a scrim with a

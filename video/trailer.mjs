@@ -553,7 +553,7 @@ async function stepEdit(ctx) {
  */
 async function burnCaptions(ctx, timeline, joined) {
   const opts = ctx.spec.captions ?? {};
-  if (opts.enabled === false) return joined;
+  if (opts.enabled === false && !ctx.spec.watermark) return joined;
   const skip = new Set(opts.skip_languages ?? ["zh"]);
   const { table, doc } = loadClaims(ctx);
   const lines = resolveLines(ctx.spec, table, doc)
@@ -607,10 +607,11 @@ async function burnCaptions(ctx, timeline, joined) {
     }
   }
   console.log(`  captions: ${cues.length} lines (${todo.length} rendered)`);
+  const watermark = ctx.spec.watermark ? await watermarkStill(ctx, ctx.spec.watermark) : null;
   const out = path.join(ctx.outDir, "captioned.mp4");
-  const hash = digest(["captioned-v1", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)])]);
+  const hash = digest(["captioned-v2", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)]), watermark ? fileStamp(watermark) : null]);
   if (!fresh(out, hash, ctx.force)) {
-    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps }));
+    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps, watermark, duration: timeline.duration }));
     storeHash(out, hash);
   }
   writeFileSync(path.join(ctx.outDir, "captions.json"), `${JSON.stringify(cues.map(({ file, hash, ...c }) => c), null, 2)}\n`);
@@ -639,6 +640,31 @@ function lowerLeftWindows(spec, timeline) {
     }
   });
   return out;
+}
+
+/** A still of the watermark (the label template, top left) as a PNG with alpha. */
+async function watermarkStill(ctx, text) {
+  const dir = path.join(ctx.outDir, "captions");
+  mkdirSync(dir, { recursive: true });
+  const mov = path.join(dir, "watermark.mov");
+  const png = path.join(dir, "watermark.png");
+  const page = ["titles.css", "titles.js", "label.html"].map((f) => fileStamp(path.join(HERE, "titles", f)));
+  const hash = digest(["watermark-v1", text, ctx.spec.output, ...page]);
+  if (!fresh(png, hash, ctx.force)) {
+    const { renderTitle } = await import("./lib/titles.mjs");
+    const { chromium } = await import("playwright");
+    const browser = await chromium.launch({ args: ["--hide-scrollbars"] });
+    try {
+      const { width, height, fps } = ctx.spec.output;
+      const title = { template: "label", dur: 0.2, alpha: true, params: { text, corner: "top-left" } };
+      await renderTitle({ browser, id: "watermark", title, fps, width, height, outFile: mov, ffmpeg: ctx.ffmpeg, log: () => {} });
+    } finally {
+      await browser.close();
+    }
+    await runFfmpeg(ctx.ffmpeg, ["-y", "-hide_banner", "-loglevel", "error", "-i", mov, "-frames:v", "1", "-pix_fmt", "rgba", png]);
+    storeHash(png, hash);
+  }
+  return png;
 }
 
 /** Whether this ffmpeg build has an encoder (`ffmpeg -encoders`). */

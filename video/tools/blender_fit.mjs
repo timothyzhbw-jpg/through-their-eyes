@@ -25,8 +25,17 @@ const LABELS = {
   simulation: "RENDERED IN BLENDER FROM OUR SIMULATION DATA",
 };
 
-const apply = process.argv.includes("--apply");
-const fit = process.argv.includes("--fit");
+const argv = process.argv.slice(2);
+const apply = argv.includes("--apply");
+const fit = argv.includes("--fit");
+// --preview: use the candidates before approval, and mark the whole film as a preview.
+// --drop a.mp4,b.mp4: shots the art director dropped; their section goes back to the in-engine
+// telling (open: S1/S2, close: S4). --final: approved clips only, and no preview mark.
+const preview = argv.includes("--preview");
+const final = argv.includes("--final");
+const dropAt = argv.indexOf("--drop");
+const dropped = new Set(dropAt >= 0 ? (argv[dropAt + 1] ?? "").split(",").filter(Boolean) : []);
+const WATERMARK = "PREVIEW · BLENDER SHOTS PENDING APPROVAL";
 const spec = JSON.parse(readFileSync(SPEC, "utf8"));
 const map = JSON.parse(readFileSync(MAP, "utf8"));
 const pins = new Map((map.pins ?? []).map((pin) => [`out/video/trailer/pins/${pin.id}.mp4`, pin]));
@@ -46,14 +55,18 @@ const sources = (picture) => {
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
 let changed = false;
+const fallback = new Set(); // sections that go back to the in-engine telling
 console.log("beat                    clip                       in     have       clip len  beat dur");
 for (const entry of map.beats) {
   const beat = spec.beats.find((b) => b.id === entry.beat);
   if (!beat) throw new Error(`${entry.beat} is in blender_map.json but not in trailer.json`);
   const files = sources(entry.picture);
-  // A clip counts only once it is approved: rejected renders share the finals' file names.
-  const approved = files.every((f) => (map.approved ?? []).includes(path.basename(f)));
+  // A clip counts only once it is approved (or for a preview): rejected renders share the
+  // finals' file names. A dropped clip never counts.
+  const isDropped = files.some((f) => dropped.has(path.basename(f)));
+  const approved = !isDropped && (preview || files.every((f) => (map.approved ?? []).includes(path.basename(f))));
   const have = approved && files.every((f) => existsSync(path.join(ROOT, f)));
+  if (isDropped && beat.section) fallback.add(beat.section);
   const len = have && entry.picture.src !== "split" ? seconds(path.join(ROOT, files[0])) : null;
   const usable = len != null ? round3(len - (entry.picture.in ?? 0)) : null;
   console.log(
@@ -83,10 +96,18 @@ for (const entry of map.beats) {
   changed = true;
 }
 
-const length = (story) => round3(spec.beats.filter((b) => b.story == null || b.story === story).reduce((s, b) => s + b.dur, 0));
-const blender = length("blender");
+if (apply) {
+  spec.story = fallback.size ? { open: fallback.has("open") ? "app" : "blender", close: fallback.has("close") ? "app" : "blender" } : "blender";
+  if (preview) spec.watermark = WATERMARK;
+  if (final) delete spec.watermark;
+  changed = true;
+  if (fallback.size) console.log(`in-engine telling for: ${[...fallback].join(", ")}`);
+}
+const pickOf = (b, story) => (typeof story === "string" ? story : (story?.[b.section] ?? "blender"));
+const length = (story) => round3(spec.beats.filter((b) => b.story == null || b.story === pickOf(b, story)).reduce((s, b) => s + b.dur, 0));
+const blender = length(spec.story ?? "blender");
 const app = length("app");
-console.log(`\ntotal: blender ${blender} s, app ${app} s; cap ${spec.output?.max_s ?? 120} s`);
+console.log(`\ntotal: this cut ${blender} s, in-engine telling ${app} s; cap ${spec.output?.max_s ?? 120} s`);
 if (changed) {
   spec.music = (spec.music ?? []).map((m) => ({ ...m, until: blender }));
   writeFileSync(SPEC, `${JSON.stringify(spec, null, 2)}\n`);
@@ -94,8 +115,9 @@ if (changed) {
 }
 let bad = false;
 if (Math.abs(blender - app) > 1e-6) {
-  console.log(`the tellings differ by ${round3(blender - app)} s: lengthen or shorten the app telling's S4 to match`);
-  bad = true;
+  // The score is re-timed to whatever is cut; equal tellings only keep the fallback one switch away.
+  console.log(`the cut and the in-engine telling differ by ${round3(blender - app)} s: match the app telling's sections before the final`);
+  if (!preview) bad = true;
 }
 if (blender > (spec.output?.max_s ?? 120)) {
   console.log("over output.max_s: trim the feature chapters");

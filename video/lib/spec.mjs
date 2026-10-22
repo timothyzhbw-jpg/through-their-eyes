@@ -24,15 +24,19 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
  * @returns {{ errors: string[], warnings: string[] }}
  */
 /**
- * The beats of one telling of the story: `story` ("blender", the default, or "app") keeps the beats
+ * The beats of one telling of the story: `story` ("blender", the default, or "app", or per section
+ * { open: ..., close: ... } by each beat's `section`) keeps the beats
  * tagged with it and every untagged beat. The two tellings of each story section are the same
  * length, so the rest of the cut, and the score, do not move.
  * @param {{ story?: string, beats?: object[] }} spec
  * @param {string} [story] overrides spec.story
  */
 export function storyBeats(spec, story) {
-  const pick = story ?? spec?.story ?? "blender";
-  return (spec?.beats ?? []).filter((beat) => beat.story == null || beat.story === pick);
+  const choice = story ?? spec?.story ?? "blender";
+  // A telling for the whole story, or one per section ({ open, close }): if a section's shots
+  // fall through, that section alone goes back to the in-engine telling.
+  const pick = (beat) => (typeof choice === "string" ? choice : (choice?.[beat.section] ?? "blender"));
+  return (spec?.beats ?? []).filter((beat) => beat.story == null || beat.story === pick(beat));
 }
 
 export function validateTrailer(spec, ctx) {
