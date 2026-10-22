@@ -41,6 +41,7 @@ the app.
   About 0.8 MB.
 - The scripts are not in this repository (bpy scripts may count as derived from Blender's GPL);
   only their output is. Same inputs give the same file up to Cycles' sampling noise.
+
 # Extra player animations (SPEC 7)
 
 `anims_extra.glb` holds animations only: no mesh, no skin, no textures. Its nodes are the 14
