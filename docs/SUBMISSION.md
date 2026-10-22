@@ -136,8 +136,8 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 | Lens selection picks the lens each hero is built for | scan hero 40/40; pressure hero 40/40 on fresh seeds | [^lens], [^press] |
 | Forced to keep the ball, the pressure hero loses it; the possession outcome changes | 40/40 lost; 32/40 changed | [^press] |
 | Set-piece hero: unmarked without the look, marked within 5 m with it | 37/40 (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
-| Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.993 | [^detector] |
-| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.917, recall 0.984 | [^blind] |
+| Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
+| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.910, recall 0.946 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
 | Simulator statistics against published values | 10 inside the published range, 6 outside, 10 with no published value | [^realism] |
@@ -242,7 +242,7 @@ Multi-Agent System (SPEC §0).
 ---
 
 [^realism]: [eval/reports/realism.md](../eval/reports/realism.md): scans in the 10 s before
-    receiving, sim 2.95 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
+    receiving, sim 2.54 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
     vs 404.2 ± 50.7 (Kokubu et al. 2026); "10 inside, 6 outside, 0 inconclusive, 10 with no
     published reference".
 [^ablation]: [eval/reports/narration_ablation.md](../eval/reports/narration_ablation.md): free
@@ -276,10 +276,10 @@ Multi-Agent System (SPEC §0).
 [^latency]: [docs/SPEC.md](SPEC.md) §8, "Deployed 2026-10-20": the same request from the
     cache took 0.15 s; "Live on Container Apps": 12.9 s uncached on a warm replica, 25.9 s for
     the first request after a new revision.
-[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.993
+[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.991
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
-    0.917, recall 0.984, and the upper-bound note.
+    0.910, recall 0.946, and the upper-bound note.
 [^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): 90/90 false
     perturbations refuted; 468/468 generated claims supported.
 [^parity]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md) §1;

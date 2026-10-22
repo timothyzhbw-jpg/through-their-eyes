@@ -38,7 +38,7 @@ and a whole stitched match.
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show
 what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
-turns his head on a schedule calibrated to published scan rates (2.95 scans in the 10 s before
+turns his head on a schedule calibrated to published scan rates (2.54 scans in the 10 s before
 receiving, against 3.0 ± 2.1 in Jordet et al. 2020: [realism](eval/reports/realism.md)), sees
 only what falls in his field of view, and decides on his *belief*: everyone where he last saw
 them, carried forward. Other tools show the passing lanes that existed; we show the ones he knew
@@ -202,7 +202,7 @@ the deployed service. Nothing has been run on real tracking data.
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
 | Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
-| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.993 | [scan_detector](eval/reports/scan_detector.md) |
+| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.991 | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
 | Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded) | 90/90 | [corruption](eval/reports/corruption.md) |
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |

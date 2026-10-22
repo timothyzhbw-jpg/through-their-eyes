@@ -743,7 +743,7 @@ is a step.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
       CMs > forwards; scan rate under pressure < without pressure.
       — [tests/test_scan_calibration.py](../tests/test_scan_calibration.py)::`test_spec_scan_statistics_on_twenty_seeds`
-      (the mean and CMs > forwards on seeds 100–119; the mean is 2.95 on 100 seeds in
+      (the mean and CMs > forwards on seeds 100–119; the mean is 2.54 on 100 seeds in
       [realism.md](../eval/reports/realism.md)),
       `test_spec_scan_rate_under_pressure_is_lower_than_without` (midfielders on seeds 100–119:
       0.395 scan onsets/s with an opponent within 4 m vs 0.485 beyond 8 m). Pooled at the
@@ -977,8 +977,9 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       `test_occluded_cells_score_lower_than_unoccluded_at_same_angle_and_distance`
 - [x] Scan detector F1 ≥ 0.85 on held-out seeds at the chosen threshold, **with nuisance head
       motion on**; table for all thresholds.
-      — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.993 at
-      200°/s, 125–300°/s table);
+      — [eval/reports/scan_detector.md](../eval/reports/scan_detector.md) (held-out F1 0.991 at
+      275°/s, the threshold the sweep picks since open play keeps a team shape, and 0.992 at
+      the coded 200°/s; 125–300°/s table);
       [tests/test_scan_detector.py](../tests/test_scan_detector.py)::`test_f1_on_held_out_seeds_with_nuisance_on_meets_the_spec`
 - [x] *Limb-tracking ingest (optional):* the keypoint round trip recovers position, head yaw and
       torso yaw, and the scan detector runs on the adapter's output unchanged.
@@ -988,9 +989,9 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       error must be within 15% of 2° and no frame may exceed 5 σ: blind_side_run seed 3 gives
       1.99° RMS and 8.2° at most. Torso yaw 0.76° RMS, position 4.7 mm RMS.
       Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
-      detector on the adapter's output on its held-out seeds: F1 0.993, as on the tracked yaw.
+      detector on the adapter's output on its held-out seeds: F1 0.991 (0.992 on the tracked yaw).
       That is equal by construction at matched noise, a consistency check, not evidence. The
-      0.989 and 0.965 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      0.985 and 0.962 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [x] xT grid increases toward goal (sanity plot saved).
       — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.001 → 0.132, central
@@ -1021,7 +1022,8 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.917, recall 0.984);
+      0.910, recall 0.946, with the alert's distance re-chosen at 3.5 m on the tuning seeds since
+      open play keeps a team shape; 0.877 and 0.971 at the coded 3.0 m);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
