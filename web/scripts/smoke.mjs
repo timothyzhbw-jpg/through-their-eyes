@@ -598,20 +598,32 @@ async function takeEyes(page) {
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
-/** `?play=drill`: the academy drill (SPEC 7) on `level`, completed: start at match speed, look
- * over his shoulder with the arrow keys (his head is a slider), let go, make the pass from his
- * picture when the ball has arrived, then the result's verified lines and the comparison. */
+/** `?play=drill`: the academy drill (SPEC 7) on `level`, completed: start, look over his shoulder
+ * with the arrow keys (his head is a slider), let go, make the pass from his picture when the ball
+ * has arrived, then the result's verified lines and the comparison. */
 async function drill(page, level) {
   await see(page.getByRole("region", { name: "Academy drill" }), "the academy drill");
   await see(page.locator(".dr-kicker", { hasText: level }), `the drill on ${level}`);
-  await accessible(page, "the drill, ready"); // the page's own check runs on the result
-  await page.getByRole("button", { name: "Match speed" }).click();
-  await page.getByRole("button", { name: "Start" }).click();
   await mainView(page, "eyes");
+  await accessible(page, "the drill, ready"); // the page's own check runs on the result
+  await page.getByRole("button", { name: "Start" }).click(); // half speed, the default
   const head = page.getByRole("slider", { name: /'s head$/ });
   await see(head, "his head as a slider");
-  await page.waitForTimeout(500);
-  await head.press("ArrowRight", { delay: 450 }); // held, then let go: the look
+  // Held until his head is well round to his right (a software renderer's frames are slow, and
+  // the head turns with the clock), then let go: the look.
+  await head.focus();
+  await page.keyboard.down("ArrowRight");
+  try {
+    await page.waitForFunction(
+      () => Number(document.querySelector('[role="slider"]')?.getAttribute("aria-valuenow")) >= 100,
+      null,
+      { timeout: 15_000 },
+    );
+  } catch {
+    throw new Error("expected the arrow key to turn his head");
+  } finally {
+    await page.keyboard.up("ArrowRight");
+  }
   await see(
     page.locator(".dr-locked", { hasText: /^Your look: / }),
     "the look snapped to the grid",
