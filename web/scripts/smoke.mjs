@@ -635,7 +635,11 @@ async function coldLoad(page, shoot) {
   }
   const took = Math.round((Date.now() - started) / 1000);
   console.log(`     the run without the look ${took} s after Start (deadline ${COLD_LOAD_S} s)`);
-  await see(page.getByText(/without that look/i).first(), 'the "Without that look" line');
+  // The quick tour's card carries the step's verified lines (the caption stands down).
+  await see(
+    page.locator(".tour-card .tour-lines").filter({ hasText: /without that look/i }),
+    'the "Without that look" line in the tour card',
+  );
   await shoot(`at-${took}s`);
 }
 
