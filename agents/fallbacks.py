@@ -52,7 +52,7 @@ SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
                    ("pbp", ("pass_to_runner", "scan_before_reception")),
                    ("color", ("pass_speed", "reception_zone")), ("color", None)],
     "coach": [("pbp", "time_since_last_scan"), ("color", ("blind_side", "scan_side")),
-              ("color", ("cf_pass", "seen_in_scan"))],
+              ("color", ("cf_pass", "scan_side"))],
     "audio_description": [("pbp", "reception_zone"), ("color", "blind_side"),
                           ("pbp", ("scan_side", "scan_before_reception")),
                           ("color", "seen_in_scan"), ("pbp", ("pass_to_runner", "runner_received")),

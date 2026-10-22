@@ -146,7 +146,7 @@ Per persona (all four moments, both languages):
 | casual | 3–3, 3.0 | 34 | 55 | 0.0, 0 | 0% | 0% | – | 0 of 8 |
 | analyst | 5–6, 5.8 | 81 | 116 | 7.5, 10 | 96% | 70% | belief error, pitch control, pressing, probability, scan, xT | 0 of 8 |
 | player fan | 3–4, 3.8 | 32 | 52 | 1.8, 2 | 47% | 0% | – | 0 of 8 |
-| coach | 4–4, 4.0 | 52 | 86 | 1.8, 2 | 44% | 6% | scan | 0 of 8 |
+| coach | 4–4, 4.0 | 52 | 86 | 1.8, 2 | 44% | 0% | – | 0 of 8 |
 | audio description | 5–6, 5.8 | 66 | 96 | 1.5, 2 | 26% | 0% | – | 0 of 8 |
 
 Mean claim Jaccard per pair:
@@ -199,6 +199,31 @@ blind_side_run-3, `en`, side by side:
   5. J. Ferriday found N. Varnhall with a 39-metre pass.
   6. Without that look, J. Ferriday would have passed to K. Annersley.
 
+## Model sample: gpt-4.1-mini on this branch, 2 moments × 5 personas × en, zh (2026-10-22; ran before the coach palette was narrowed and before the order and cue repairs, scored against today's rules)
+
+| | |
+|---|---|
+| mean pairwise claim Jaccard | 0.19 |
+| persona pairs whose first line differs | 100% |
+| scripts within their persona's spec | 14 of 20 |
+| scripts whose every line verifies again | 20 of 20 |
+| numbers in text a model wrote | 0 |
+
+| persona | lines (min–max, mean) | words en | chars zh | numbers (mean, max) | lines with a number | jargon lines | jargon | out of spec |
+|---|---|---:|---:|---|---:|---:|---|---:|
+| casual | 3–3, 3.0 | 40 | 65 | 0.0, 0 | 0% | 0% | – | 0 of 4 |
+| analyst | 6–7, 6.8 | 93 | 138 | 10.2, 11 | 96% | 85% | belief error, pitch control, pressing, probability, scan, xT | 0 of 4 |
+| player fan | 3–4, 3.5 | 36 | 60 | 1.2, 2 | 36% | 0% | – | 0 of 4 |
+| coach | 4–5, 4.8 | 56 | 101 | 1.0, 1 | 21% | 0% | – | 4 of 4 |
+| audio description | 6–6, 6.0 | 66 | 95 | 0.8, 1 | 12% | 0% | – | 2 of 4 |
+
+| | analyst | player fan | coach | audio description |
+|---|---:|---:|---:|---:|
+| casual | 0.03 | 0.18 | 0.60 | 0.30 |
+| analyst |  | 0.00 | 0.11 | 0.02 |
+| player fan |  |  | 0.12 | 0.32 |
+| coach |  |  |  | 0.27 |
+
 ## Model sample: gpt-4.1-mini before this change (crew_vs_single's cached runs, casual and analyst, 2026-10-21)
 
 | | |
@@ -212,7 +237,7 @@ blind_side_run-3, `en`, side by side:
 | persona | lines (min–max, mean) | words en | chars zh | numbers (mean, max) | lines with a number | jargon lines | jargon | out of spec |
 |---|---|---:|---:|---|---:|---:|---|---:|
 | casual | 3–5, 4.0 | 45 | 66 | 2.1, 4 | 46% | 29% | pressing, probability, xT | 12 of 12 |
-| analyst | 6–8, 7.8 | 89 | 124 | 5.2, 7 | 55% | 34% | belief error, pressing, probability, scan, xT | 12 of 12 |
+| analyst | 6–8, 7.8 | 89 | 124 | 5.2, 7 | 55% | 31% | belief error, pressing, probability, scan, xT | 12 of 12 |
 
 | | analyst | player fan | coach | audio description |
 |---|---:|---:|---:|---:|

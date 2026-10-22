@@ -1496,10 +1496,21 @@ different line; five different plans; every script within its persona's spec; ev
 verifies again; no number in text a model wrote. Measured before (main 7c424f3d + #191) and after,
 in the report: mean Jaccard 0.34 → 0.16, the closest pair 0.71 → 0.30, first lines distinct for
 70% → 100% of pairs, 1 → 5 plans. The model picks among the same palettes under the same rules
-(below), so the template scripts are what the rules allow at their tightest; a model sample is
-scored apart with `--runs` (the cached crew-vs-single runs of `gpt-4.1-mini`, casual and analyst
-under the prompts before this change: Jaccard 0.53 between the two, none of the 24 scripts within
-today's specs, and xT, probabilities or pressing percentages in 29% of the casual fan's lines).
+(below); model breakdowns are scored apart with `--runs`.
+- *Before, the model:* the cached crew-vs-single runs of `gpt-4.1-mini` (casual and analyst):
+  Jaccard 0.53 between the two, none of the 24 scripts within today's specs, xT, probabilities or
+  pressing percentages in 29% of the casual fan's lines.
+- *After, the model* (2026-10-22, two crew runs on Foundry: blind_side_run-3 and
+  far_post_finish-11, five personas × `en`, `zh`): mean Jaccard 0.19, every pair of personas
+  opening differently, five plans, every line verified, no number the model wrote, and no line
+  dropped in the second run. It found three things the templates could not, fixed in code: the
+  coach and the casual fan shared "what he saw" (0.60 between them; the coach's palette is now
+  timing, direction and cues only); audio description, trimmed to its six lines, lost what he did
+  and the run without the look (both are now required); and the two voices, interleaved, put the
+  coach's cue mid-script and audio description's events out of order (`repair` now puts the cue
+  last and tells audio description in story order, no rewrite needed). Each voice is also told its
+  share of the line budget (`max_lines_this_voice`), which cut the rewrites. Through today's tidy
+  and `repair`, the sample's lines score a mean Jaccard of 0.15 and a closest pair of 0.35.
 
 **Persona rules** (`agents/persona_rules.py`). The red-team review found the cached model scripts
 of different personas were the same claims reordered (casual heard expected threat and no
@@ -1512,8 +1523,8 @@ one of, a number budget and a line budget, and how it opens (and, for the coach,
 | `casual` | what he saw (`seen_in_scan`, `keeper_seen_in_scan`, `heavy_pressure`, `scan_before_reception`, `marker_scan`); the counterfactual (`cf_pass`, `cf_carry_lost`, `cf_unmarked`, `cf_lost_runner`, `cf_shot`) | story claims (`CASUAL_PALETTE`) · xT and probabilities | ≤ 1 · ≤ 3 | its opener |
 | `analyst` | the look's value (`cf_value`, `cf_shot_value`); belief error; scan timing (scan lens); the options' chances (`pass_success`, `cf_pass_success`, `shot_thought_vs_was`, `cf_shot_value`); the space and the press (`observed_share`, `gap_opened`, `gap_to_marker`, pressing, `presser_distance`, `keeper_near_side`) | every claim | – · ≤ 7 | a claim that says a number |
 | `player_fan` | his own look (scan lens: `scan_side`, `scan_before_reception`, `scan_at_goal`, `marker_scan`, `key_scan_duration`); his decision (`pass_to_runner`, `shot_placement`, `stayed_with_runner`, `shot_scored`, `runner_received`) | his own actions and their numbers (`PLAYER_FAN_PALETTE`): no counterfactuals | ≤ 3 · ≤ 4 | its opener |
-| `coach` | the coaching point (`time_since_last_scan`, `marker_scan`, `scan_at_goal`, `marker_unseen`, `presser_distance`, `heavy_pressure`); the counterfactual | timings, cues and the counterfactuals (`COACH_PALETTE`): no xT, probabilities, shares or speeds | ≤ 3 · ≤ 5 | its opener · the teaching cue |
-| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`) | positions and events (`DESCRIBED_PALETTE`) · xT, probabilities, shares and pressing percentages | ≤ 2 · ≤ 6 | where it happened |
+| `coach` | the coaching point (`time_since_last_scan`, `marker_scan`, `scan_at_goal`, `marker_unseen`, `presser_distance`, `heavy_pressure`); the counterfactual | timings, directions, cues and the counterfactuals (`COACH_PALETTE`): not what the look showed (the casual fan's), no xT, probabilities, shares or speeds | ≤ 3 · ≤ 5 | its opener · the teaching cue |
+| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`); his decision; the counterfactual | positions and events (`DESCRIBED_PALETTE`) · xT, probabilities, shares and pressing percentages | ≤ 2 · ≤ 6 | where it happened, in story order |
 
 A group is required only when the moment has a supported claim in it on the persona's palette, and
 a scan group only on the scan lens. Numbers are counted as the numeric slots of the cited claims
@@ -1523,14 +1534,16 @@ and the coach's cues are fixed phrases with no number, no player and no lexicon 
 rides on the first claim line ("Watch his head. When J. Ferriday looked…"). Enforcement, in order:
 only the palette is in that persona's schema enum, and only its own connectives (audio
 description: none, the field is null), so the model cannot pick anything else; the prompt carries
-the rules (`must_include`, `max_numbers`, `max_lines`, `start_with`, `start_with_number`,
-`opener`, `cue`, and for the co-commentator `still_missing`); tidy drops a line off the palette;
+the rules (`must_include`, `max_numbers`, `max_lines` and each voice's share of it
+`max_lines_this_voice`, `start_with`, `start_with_number`, `opener`, `cue`, and for the
+co-commentator `still_missing`); tidy drops a line off the palette;
 the Verifier checks every script and sends one that breaks a rule back to both voices, whole, with
 the problems (a rewrite round, at most two); after the last round `repair` makes it comply with
 verified template lines (drops lines off the palette, adds the first supported claim of a missing
 group in story order, brings a spatial line first for audio description and a numeric one for the
-analyst, trims numeric lines that cover no group, fits the line budget, puts the opener on the
-first line and the cue last). The templates go through the same `repair`. A recap tells several
+analyst, tells audio description in story order, trims numeric lines that cover no group, fits
+the line budget, puts the opener on the first line and the cue last: the two voices interleave,
+so a cue said anywhere counts). The templates go through the same `repair`. A recap tells several
 moments and keeps only the never-lists (`withheld`), not the palettes.
 The narration ablation (`eval/narration_ablation.py`) and the crew-vs-single eval
 (`eval/crew_vs_single.py`) run the Verifier with these script checks off (`LineVerifier`, line

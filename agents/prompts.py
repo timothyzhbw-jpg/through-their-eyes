@@ -117,7 +117,8 @@ NARRATION_RULES = """How to build the script:
   play-by-play already used; it adds the claims that explain why.
 - Follow `rules`, which a check enforces on the whole script (both voices): cite one claim from
   every `must_include` group, keep the numbers the chosen claims say within `max_numbers` and the
-  lines within `max_lines`, and start with a `start_with` claim when given. `opener`: the
+  lines within `max_lines` (your voice writes at most `max_lines_this_voice` of them), and start
+  with a `start_with` claim when given. `opener`: the
   play-by-play's first line is that connective together with its first claim. `start_with_number`:
   the play-by-play's first line is a claim from `claims_with_numbers`, with no connective. `cue`:
   the co-commentator's last line is that connective alone. The co-commentator covers whatever the
@@ -224,6 +225,12 @@ def _rules(
         }
     if rule.max_lines is not None:
         out["max_lines"] = rule.max_lines
+        # Each voice's share, so the two together keep to it without a rewrite: the
+        # play-by-play about half, the co-commentator what the play-by-play left.
+        if pbp_lines is None:
+            out["max_lines_this_voice"] = (rule.max_lines + 1) // 2
+        else:
+            out["max_lines_this_voice"] = max(1, rule.max_lines - len(pbp_lines))
     if rule.spatial_first and (spatial := [c for c in persona_rules.SPATIAL if c in ctx.supported]):
         out["start_with"] = spatial
     if rule.numeric_first:

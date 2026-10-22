@@ -174,11 +174,16 @@ def test_audio_description_starts_with_where_and_keeps_numbers_sparse(ctx):
     found = _check(ctx, "audio_description", ["pass_to_runner", "reception_zone", "cf_pass"])
     assert found == ["start with where it happened: cite one of reception_zone, scan_side, "
                      "blind_side first"]  # fmt: skip
-    numbered = ["reception_zone", "presser_distance", "pass_to_runner", "gap_to_marker"]
+    numbered = ["reception_zone", "presser_distance", "pass_to_runner", "gap_to_marker", "cf_pass"]
     found = _check(ctx, "audio_description", numbered)
     assert found == ["3 numbers, at most 2 for audio_description"]
-    assert _check(ctx, "audio_description", ["reception_zone", "cf_value"]) == [
-        "not for audio_description: cf_value"
+    found = _check(ctx, "audio_description", ["reception_zone", "pass_to_runner", "cf_value"])
+    assert found[0] == "not for audio_description: cf_value"
+    # The story must end: what he did and what would have happened.
+    found = _check(ctx, "audio_description", ["reception_zone", "blind_side", "scan_side"])
+    assert [p.split(":")[0] for p in found] == [
+        "missing his decision",
+        "missing the counterfactual",
     ]
 
 
@@ -251,14 +256,23 @@ def test_repair_trims_numbers_and_lines_but_never_a_required_line(ctx):
     assert [why for _, why in dropped] == ["too many lines for casual"] * 2
     lines, dropped, _ = _repair(ctx, "audio_description",
                                 ["reception_zone", "presser_distance", "pass_to_runner",
-                                 "gap_to_marker"])  # fmt: skip
-    assert _ids(lines) == ["reception_zone", "presser_distance", "pass_to_runner"]
+                                 "gap_to_marker", "cf_pass"])  # fmt: skip
+    assert _ids(lines) == ["reception_zone", "presser_distance", "pass_to_runner", "cf_pass"]
     assert [why for _, why in dropped] == ["too many numbers for audio_description"]
+    # Over the line budget, what ends the story stays: the extras go.
+    ids = ["reception_zone", "blind_side", "scan_side", "unmarked", "scan_before_reception",
+           "seen_in_scan", "pass_to_runner", "cf_pass"]  # fmt: skip
+    lines, dropped, _ = _repair(ctx, "audio_description", ids)
+    assert _ids(lines) == ["reception_zone", "blind_side", "scan_side", "unmarked",
+                           "pass_to_runner", "cf_pass"]  # fmt: skip
+    assert [why for _, why in dropped] == ["too many lines for audio_description"] * 2
 
 
 def test_repair_brings_where_it_happened_first_for_audio_description(ctx):
     lines, _, notes = _repair(ctx, "audio_description", ["pass_to_runner", "reception_zone"])
-    assert _ids(lines)[0] == "reception_zone" and "moved first" in notes[0]
+    # In the order it happened: where, what he did, then the run without the look (added).
+    assert _ids(lines) == ["reception_zone", "pass_to_runner", "cf_pass"]
+    assert "put in the order it happened" in notes
     lines, _, notes = _repair(ctx, "audio_description", ["pass_to_runner", "cf_pass"])
     assert _ids(lines) == ["reception_zone", "pass_to_runner", "cf_pass"]
 
@@ -410,8 +424,9 @@ def test_a_casual_script_without_the_counterfactual_is_drafted_again(ctx):
 
 
 def test_a_script_that_never_complies_is_repaired_with_template_lines(ctx):
-    pbp = _lines("seen_in_scan", connective="Look again.")
-    color = _lines("runner_received")
+    # Claims and a connective both palettes offer, that neither persona's rules accept.
+    pbp = _lines("blind_side", connective="Look again.")
+    color = _lines("unmarked")
     fake = FakeChatClient(_replies(ctx, pbp, color))
     r = breakdown(ctx, client=fake, personas=("casual", "coach"), languages=("en",))
     by = {s.persona: s for s in r.scripts}

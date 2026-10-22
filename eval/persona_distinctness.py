@@ -74,7 +74,7 @@ JARGON: dict[Language, dict[str, re.Pattern[str]]] = {
     "zh": {
         "xT": re.compile(r"预期威胁|xT"),
         "pressing": re.compile(r"逼抢强度"),
-        "scan": re.compile(r"回头观察"),
+        "scan": re.compile(r"回头观察了"),  # "scanned once": not 回头观察 alone, as en "checked"
         "pitch control": re.compile(r"控制区域"),
         "probability": re.compile(r"概率|成功率"),
         "belief error": re.compile(r"判断(?:会)?偏差"),
@@ -525,6 +525,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     p.add_argument("--runs", nargs="*", type=Path, default=[],
                    help="model breakdowns to score apart (BreakdownResult JSON files)")  # fmt: skip
     p.add_argument("--runs-label", default="model runs")
+    p.add_argument("--old-runs", nargs="*", type=Path, default=[],
+                   help="model breakdowns from before this change, scored apart too")  # fmt: skip
+    p.add_argument("--old-runs-label", default="model runs before")
     p.add_argument("--label", default="this code")
     p.add_argument("--before", type=Path, default=REPORTS / "persona_distinctness_before.json",
                    help="an earlier measurement (JSON), for the before/after table")  # fmt: skip
@@ -545,6 +548,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     elif a.before and a.before.is_file() and a.before.stat().st_size and a.before != a.save_json:
         before = Measurement.from_json(json.loads(a.before.read_text()))
     models = [measure(a.runs_label, load_runs(a.runs))] if a.runs else []
+    if a.old_runs:
+        models.append(measure(a.old_runs_label, load_runs(a.old_runs)))
     a.out.write_text(report(after, before, models))
     g = gate(after)
     print(f"mean Jaccard {g.mean_jaccard:.3f}, worst pair {g.max_pair_jaccard:.3f}, "

@@ -137,12 +137,13 @@ CASUAL_PALETTE = frozenset(
      "shot_wide", "heavy_pressure", "stayed_with_runner", "cf_pass", "cf_carry_lost",
      "cf_unmarked", "cf_shot", "cf_lost_runner"}
 )  # fmt: skip
+# The coach's look is its timing and direction, not what it showed: "he saw the runner" is the
+# casual fan's story (a model run shared it between the two, 2026-10-22).
 COACH_PALETTE = frozenset(
-    {"time_since_last_scan", "scan_side", "scan_before_reception", "scan_at_goal", "marker_scan",
-     "marker_unseen", "blind_side", "seen_in_scan", "keeper_seen_in_scan", "keeper_near_side",
-     "presser_distance", "heavy_pressure", "unmarked", "gap_to_marker", "stayed_with_runner",
-     "pass_to_runner", "shot_placement", "cf_pass", "cf_carry_lost", "cf_lost_runner",
-     "cf_unmarked", "cf_shot", "cf_keeper_age"}
+    {"time_since_last_scan", "scan_side", "scan_at_goal", "marker_scan", "marker_unseen",
+     "blind_side", "keeper_near_side", "presser_distance", "heavy_pressure", "unmarked",
+     "gap_to_marker", "stayed_with_runner", "pass_to_runner", "shot_placement", "cf_pass",
+     "cf_carry_lost", "cf_lost_runner", "cf_unmarked", "cf_shot", "cf_keeper_age"}
 )  # fmt: skip
 PLAYER_FAN_PALETTE = frozenset(
     {"scan_side", "scan_before_reception", "scan_at_goal", "marker_scan", "key_scan_duration",
@@ -229,9 +230,11 @@ RULES: dict[str, Rule] = {
                        max_numbers=3, max_lines=4, opener=True),
     "coach": Rule(required=(COACHING, COUNTERFACTUAL), palette=COACH_PALETTE, max_numbers=3,
                   max_lines=5, opener=True, cue=True),
+    # What he did and what would have happened are required: trimmed to its line budget, a
+    # listener's script must still end the story (a model run cut both, 2026-10-22).
     "audio_description": Rule(
-        forbidden=ANALYST_NUMBERS | XT | PROBABILITIES, palette=DESCRIBED_PALETTE, max_numbers=2,
-        max_lines=6, spatial_first=True,
+        required=(DECISION, COUNTERFACTUAL), forbidden=ANALYST_NUMBERS | XT | PROBABILITIES,
+        palette=DESCRIBED_PALETTE, max_numbers=2, max_lines=6, spatial_first=True,
     ),
 }  # fmt: skip
 
@@ -387,8 +390,9 @@ def _opens(lines: Sequence[ScriptLine], phrase: str) -> bool:
     return bool(lines) and lines[0].text.startswith(phrase)
 
 
-def _ends(lines: Sequence[ScriptLine], phrase: str) -> bool:
-    return bool(lines) and not lines[-1].claims and lines[-1].text == phrase
+def _says(lines: Sequence[ScriptLine], phrase: str) -> bool:
+    """The cue is said, anywhere: the two voices interleave, so `repair` puts it last."""
+    return any(not line.claims and line.text == phrase for line in lines)
 
 
 def missing(
@@ -438,7 +442,7 @@ def problems(
         out.append("start with a number: the first line cites a claim that says one")
     if (phrase := opener(persona, language, supported, lens)) and not _opens(lines, phrase):
         out.append(f'start with the opener "{phrase}"')
-    if (phrase := cue(persona, language, supported, lens)) and not _ends(lines, phrase):
+    if (phrase := cue(persona, language, supported, lens)) and not _says(lines, phrase):
         out.append(f'end with the cue "{phrase}"')
     return out
 
@@ -522,6 +526,11 @@ def repair(
         at = next((i for i, other in enumerate(out) if _rank(other.claims) > rank), len(out))
         out.insert(at, line)
         notes.append(f"{line.id} added: {options[0]} ({group.name.split(':')[0]})")
+    if rule.spatial_first:  # told in the order it happened: the two voices interleave
+        ordered = sorted(out, key=lambda line: _rank(line.claims))
+        if ordered != out:
+            out = ordered
+            notes.append("put in the order it happened")
     if rule.spatial_first and (spatial := _spatial(supported)) and not _starts_spatially(out):
         first = next((i for i, line in enumerate(out) if line.claims), len(out))
         later = next((i for i, line in enumerate(out) if set(line.claims) & set(SPATIAL)), None)

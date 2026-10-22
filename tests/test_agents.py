@@ -644,8 +644,10 @@ def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx
     sentence names the look itself, in both languages, and never leans on an earlier line."""
     replies = _good_replies(ctx)
     replies["pbp"] = {"lines": [{"claim": "reception_zone", "connective": None},
-                                {"claim": "scan_side", "connective": None}]}  # fmt: skip
-    replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None}]}
+                                {"claim": "scan_side", "connective": None},
+                                {"claim": "pass_to_runner", "connective": None}]}  # fmt: skip
+    replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None},
+                                  {"claim": "cf_pass", "connective": None}]}  # fmt: skip
     for language, texts in {
         "zh": ["费里迪在对方半场中路偏右接球。",
                "球到之前回头的那一眼，费里迪看到了瓦恩霍尔。",
@@ -661,8 +663,11 @@ def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx
             ["reception_zone"],
             ["seen_in_scan"],
             ["scan_side"],
+            ["pass_to_runner"],  # the voices interleave; repair tells it in the order it happened
+            ["cf_pass"],
         ]
-        assert [line.text for line in script.payload.lines] == texts
+        assert script.rewrites == 0
+        assert [line.text for line in script.payload.lines][:3] == texts
         assert check_payload(script.payload) == []
 
 
@@ -711,8 +716,12 @@ def test_the_verifier_refuses_xt_or_probabilities_for_audio_description_after_a_
     msg, _ = Verifier(crew)._round(drafts)
     assert isinstance(msg, Approved)
     by = {(s.persona, s.language): s for s in msg.scripts}
-    assert [line.id for line in by[(AD, "en")].lines] == ["L1"]
-    assert [(d.id, d.reason) for d in by[(AD, "en")].dropped] == [("L2", "persona")]
+    ad = by[(AD, "en")]
+    assert [(d.id, d.reason) for d in ad.dropped] == [("L2", "persona")]
+    # What he did and the run without the look, added from templates: the story ends.
+    assert [line.claims for line in ad.lines] == [["reception_zone"], ["pass_to_runner"],
+                                                  ["cf_pass"]]  # fmt: skip
+    assert ad.lines[0].id == "L1"
     analyst = by[("analyst", "en")]
     assert {"L1", "L2"} <= {line.id for line in analyst.lines} and analyst.dropped == []
     # Repaired for the analyst's rules: belief error and scan timing added from templates.
