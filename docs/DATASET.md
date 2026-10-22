@@ -12,9 +12,9 @@ At a glance (v1, built on macOS arm64):
 | | |
 |---|---|
 | Matches | 10 stitched matches, match seeds 5001–5010 |
-| Play | 130.5 min in all; 12:25–13:28 per match; 19 possessions each |
-| Frames | 195,793 at 25 Hz; 4,307,446 player rows |
-| Events | 101,202: 61,730 scans, 31,176 head turns, 2,714 passes, 2,089 receptions, 515 interceptions, 516 possession changes, 2,228 pressure spells, 190 restarts, 14 balls out of play, 10 shots, 10 keeper dives, 9 goals, 1 tackle |
+| Play | 130.4 min in all; 12:20–13:28 per match; 19 possessions each |
+| Frames | 195,651 at 25 Hz; 4,304,322 player rows |
+| Events | 101,126: 61,675 scans, 31,156 head turns, 2,712 passes, 2,089 receptions, 514 interceptions, 515 possession changes, 2,228 pressure spells, 190 restarts, 14 balls out of play, 10 shots, 10 keeper dives, 10 goals (one an own goal), 2 balls off the post, 1 tackle |
 | Perception | 2,089 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (43,869 rows) |
 | Decisions | 30 decisions on belief, with all 339 options weighed |
 | Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 70 MB |

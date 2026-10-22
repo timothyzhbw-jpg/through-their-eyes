@@ -132,7 +132,7 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
-  passages and four heroes. On this Mac it lasts 751.8 s (12:32) and ends 1–0. The heroes start
+  passages and four heroes. On this Mac it lasts 751.7 s (12:32) and ends 1–0. The heroes start
   at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0), 7:01 (the
   shot hero `far_post_finish` seed 11, who scores at the far post) and 8:51 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
@@ -713,7 +713,7 @@ is a step.
 - [x] For each hero scenario, `drop_scan` on the key scan changes the chosen action in ≥ 60% of
       seeds (*tunable*; otherwise the moment is not a scan story).
       — [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md)
-      (39/40 seeds, 98%) and [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md)
+      (33/40 seeds, 82%; 39/40 before the run was made onside, §3.9) and [hero_flip_keeper_switch.md](../eval/reports/hero_flip_keeper_switch.md)
       (26/40 held-out seeds, 65%). The pressure hero `press_escape` is tested by its own
       intervention, `force:carry`, in
       [hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md) (§3.6);
@@ -763,8 +763,8 @@ is a step.
 - [x] The sim never breaks a Law of the Game without the referee calling it (§3.9): no
       unpunished breach, wrong call or early call in the audit, and every hero moment on its demo
       seed is onside.
-      — [eval/reports/laws.md](../eval/reports/laws.md) (before the referee, on main 3b9480e:
-      237 unpunished breaches in 2,918 runs, 182 of them offside);
+      — [eval/reports/laws.md](../eval/reports/laws.md) (0 in 2,916 runs; before the referee, on
+      main 3b9480e: 237 unpunished breaches in 2,918 runs, 182 of them offside);
       [tests/test_laws.py](../tests/test_laws.py), [tests/test_laws_checks.py](../tests/test_laws_checks.py)
 
 ### 3.9 Laws of the Game (2026-10-22)
@@ -810,6 +810,12 @@ text, diagram or figure of the Laws is in the repo.
   way. The new layout was chosen on design seeds 0–99 (onside 100/100, flips 84/100), then run
   once on held-out 100–139: flips 33/40 (82%, target ≥ 60%). Seed 3: H9 1.50 m onside at
   7.75 m/s; the pass is completed.
+- **What the audit found** ([eval/reports/laws.md](../eval/reports/laws.md)). On main before the
+  referee (3b9480e), 2,918 runs had 237 unpunished breaches: 182 offside offences, 27 tackles
+  through the man, 18 goals not given and 10 balls carried over a line. There were also 144 early
+  calls and 79 balls through the woodwork. With the referee: none in 2,916 runs. Every other hero
+  gate is unchanged; `blind_side_run` flips 33/40 (was 39/40, offside) and its scan lens wins
+  34/40.
 - **Not yet.** Live match stats skip a pass that ends in an offside call (§4.6: their outcomes
   are complete, intercepted, out). Stitched restarts after a throw-in or a goal often start with
   the other team (audit, "Stitched matches").
@@ -1033,10 +1039,10 @@ data limb tracking reports; nothing in the API or the app calls it yet.
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);
-      table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
+      table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on when the key scan starts
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.917, recall 0.984);
+      0.923, recall 0.985);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
