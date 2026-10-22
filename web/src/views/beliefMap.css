@@ -13,11 +13,11 @@
 }
 /* The disc fills the height but leaves the title and legend an 84 px column (the picture in
    picture is 200-320 px wide: at 1280 px a full-height disc left 71 px and "His options" broke
-   onto two lines). 30 px: the padding and the gap. */
+   onto two lines). 100cqw is the map's content box, inside its padding; 10 px is the gap. */
 .belief-map svg {
   grid-row: 1 / 4;
   height: 100%;
-  height: min(100%, 100cqw - 30px - 84px);
+  height: min(100%, 100cqw - 10px - 84px);
   max-height: 100%;
   aspect-ratio: 1;
 }
