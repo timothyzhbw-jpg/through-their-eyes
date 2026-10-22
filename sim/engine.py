@@ -366,6 +366,8 @@ class Simulation:
         )  # fmt: skip
         if self.shot_in_flight is not None:
             self.shot_in_flight["post"] = True
+            if float(vel[0]) * float(np.sign(centre[0])) < 0.0:  # back into the field: it is over
+                self._finish_shot("post")
 
     def _predicted_path(self) -> tuple[np.ndarray, np.ndarray]:
         times = DT * np.arange(1, PREDICTION_FRAMES + 1)
