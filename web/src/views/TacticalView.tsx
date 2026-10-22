@@ -38,6 +38,7 @@ import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { isKeeper, kitOf } from "../players/kit";
 import { BlindSideOverlay } from "../ui/BlindSideOverlay";
 import { pathTagPx, placePathTag } from "./boardLabels";
+import { FIELD } from "./fieldMarkings";
 import {
   BOARD_EXTENT,
   boardZoom,
@@ -199,10 +200,10 @@ function Field() {
         const x = g * PITCH.halfLength;
         const back = x + g * 1.8;
         return [
-          [x, 0, -3.66],
-          [back, 0, -3.66],
-          [back, 0, 3.66],
-          [x, 0, 3.66],
+          [x, 0, -FIELD.goalHalfWidth],
+          [back, 0, -FIELD.goalHalfWidth],
+          [back, 0, FIELD.goalHalfWidth],
+          [x, 0, FIELD.goalHalfWidth],
         ] as [number, number, number][];
       }),
     [],
