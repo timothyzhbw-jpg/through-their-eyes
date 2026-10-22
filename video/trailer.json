@@ -991,11 +991,11 @@
       "dur": 2.15,
       "alpha": true,
       "params": {
-        "title": "HIS PICTURE OF H9",
+        "title": "HE FINDS H9",
         "items": [
           {
-            "label": "OFF BY",
-            "value": "{belief_error.err}",
+            "label": "PASS",
+            "value": "{pass_to_runner.dist}",
             "unit": "M",
             "color": "gold"
           }
@@ -1056,9 +1056,9 @@
             "after": ""
           },
           {
-            "before": "HIS PICTURE OF H9: OFF BY",
-            "value": "{belief_error.err}",
-            "after": "M"
+            "before": "HE FOUND H9 WITH A",
+            "value": "{pass_to_runner.dist}",
+            "after": "M PASS"
           },
           {
             "before": "THAT LOOK WAS WORTH",
@@ -3304,7 +3304,7 @@
     "titles": {
       "freeze-with": {
         "params": {
-          "title": "HIS PICTURE OF VARNHALL"
+          "title": "HE FINDS VARNHALL"
         }
       },
       "verified": {
@@ -3321,9 +3321,9 @@
               "after": ""
             },
             {
-              "before": "HIS PICTURE OF VARNHALL: OFF BY",
-              "value": "{belief_error.err}",
-              "after": "M"
+              "before": "HE FOUND VARNHALL WITH A",
+              "value": "{pass_to_runner.dist}",
+              "after": "M PASS"
             },
             {
               "before": "THAT LOOK WAS WORTH",

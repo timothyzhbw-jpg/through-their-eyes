@@ -19,9 +19,10 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
   `{claim.value}` slot filled from the verified claims read off the live page
   (`out/video/claims.json`, the capture kit's harvest). Without the claim, the card or line uses
   its fallback, which has no number, or is dropped; the report (`out/video/trailer_report.md`)
-  lists every number and the claim it came from. The cut says two, from the current build's
-  claims: how far off his picture of the runner was when he passed (`belief_error.err`, 0.3 m)
-  and the look's value (`cf_value.dxt`, 0.13 xT, at the precision the claim states). The app's
+  lists every number and the claim it came from. The cut shows two, from the current build's
+  claims (live after #161, 2026-10-22): the length of the pass that found the runner
+  (`pass_to_runner.dist`, 38 m) and the look's value (`cf_value.dxt`, 0.17 xT, at the precision
+  the claim states). The app's
   own panels in the footage (scan counts, live stats, the score) show what the app shows; the app
   labels them as not claims, so the cut never says the verifier checks every number on screen,
   only every line the crew says.
@@ -162,8 +163,7 @@ The CC0 candidates remain listed in `video/assets.json` and `video/CREDITS.md`.
 - TODO(Bowen): the music (candidates above) and the story player's placeholder name.
 - TODO(Bowen): the public repository URL on the end card once the repo is public (by 10/26):
   add a line to `titles.end.params.lines`.
-- The app shots are filmed from the live site (main 603e0a8: cinematic mode #90, Take his eyes
-  #99, the slow-mo key beat #110), with the service's cached model narration. Its narration does
-  not say how far off his picture of H9 was, so that one claim (`belief_error.err`, 0.3 m,
-  verified as supported) comes from a harvest of a local build of the same commit with template
-  narration; `out/video/claims.json` and the report say so.
+- The app shots are filmed from the live site after #161 (the offside fix), with the service's
+  cached model narration. Its narration no longer says how far off his picture of H9 was, so
+  the cards that showed it (`belief_error.err`) now show the pass that found him instead; no
+  claim is carried over from another build.
