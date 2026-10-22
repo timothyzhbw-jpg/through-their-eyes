@@ -12,6 +12,7 @@ import { parseHero } from "../data/hero";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type ViewSession } from "../session";
+import { SOURCES } from "../provenance/source";
 import { matchExport } from "../testing";
 import { intro } from "./intro";
 import { LineupCard } from "./LineupCard";
@@ -85,7 +86,7 @@ describe("the pre-match line-up", () => {
     }
     const source = dialog.querySelector(".source")!;
     expect(source.textContent).toBe("sim");
-    expect(source.getAttribute("title")).toBe("Read from the sim export, not a verified claim");
+    expect(source.getAttribute("title")).toBe(SOURCES.sim.title);
     const minutes = (hero.runs.factual.frames * hero.dt) / 60;
     // A judge who never heard the word reads what a scan is before the numbers.
     expect(dialog.textContent).toContain("A scan is a quick look away from the ball");

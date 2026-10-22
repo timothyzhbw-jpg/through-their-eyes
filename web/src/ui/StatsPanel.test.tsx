@@ -43,8 +43,10 @@ describe("the stats panel", () => {
     }
     expect(html).toContain('class="source"');
     expect(html).toContain(">tracking<");
-    // Measured metrics, never shown as verified claims (as the telemetry panel says of its own).
-    expect(html).toContain("not verified claims");
+    // Measured metrics, said as what they are, never shown as verified claims; how that differs
+    // from the AI's narration is one tap away.
+    expect(html).toContain("Measured from the match&#x27;s tracking and event feed.");
+    expect(html).toContain("How is this checked?");
     expect(html).not.toContain("data-verdict");
     // What the feed cannot show is said, not left as a zero (SPEC 4.6).
     expect(html).toContain("Tackles are not modelled yet");

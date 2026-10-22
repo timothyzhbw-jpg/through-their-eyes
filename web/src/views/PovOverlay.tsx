@@ -10,6 +10,7 @@ import { useStore } from "../store/store";
 import { alertsAt, unseenLabel } from "../alerts/blindSide";
 import { shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
 
 /** The Skeleton chip's tooltip, on the broadcast camera and the tactical board (SPEC 7). */
 export const SKELETON_TITLE =
@@ -78,7 +79,7 @@ export function Hud() {
           {unseenLabel(a.unseen)}{" "}
           <SourceChip
             kind="tracking"
-            title="Live overlay from tracking (head yaw and positions), not a verified claim"
+            title={computed("A live overlay computed from tracking (head yaw and positions)")}
           />
         </span>
       ))}

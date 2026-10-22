@@ -346,9 +346,9 @@ describe("Your call: the reveal", () => {
       "Not where he pictured them: M. Undholm, O. Grevholt, L. Brackwell, R. Castellane.",
     );
     const sim = el.querySelector(".yc-lead .source")!;
-    expect(textOf(sim)).toBe("sim (read from the sim export, not a verified claim)");
-    expect(textOf(sim.querySelector(".sr-only"))).toBe(
-      "(read from the sim export, not a verified claim)",
+    expect(textOf(sim)).toMatch(/^sim \(computed directly by the simulation: not AI narration\./);
+    expect(textOf(sim.querySelector(".sr-only"))).toMatch(
+      /^\(computed directly by the simulation: not AI narration\. The Verifier checks/,
     );
     expect(textOf(el)).toContain(
       "J. Ferriday thought the pass to N. Varnhall had a 0.67 chance of arriving",

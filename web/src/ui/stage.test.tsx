@@ -195,7 +195,7 @@ describe("whose eyes", () => {
     const page = mount(offline(), <StageHud />);
     const source = page.querySelector(".hud .source")!;
     expect(text(source)).toBe("sim");
-    expect(source.getAttribute("title")).toContain("not a verified claim");
+    expect(source.getAttribute("title")).toContain("not AI narration");
     expect(text(source.parentElement)).toMatch(/head \d+° from the ball.*\d+ players in sight/);
     expect(page.querySelectorAll(".hud .source")).toHaveLength(1);
     expect(page.querySelector(".hud .verified")).toBeNull();
@@ -207,7 +207,7 @@ describe("sim numbers in the story and decision", () => {
     const page = mount(offline(), <StoryPanel />);
     const source = page.querySelector(".story .chapter-head .source")!;
     expect(text(source)).toBe("sim");
-    expect(source.getAttribute("title")).toContain("not a verified claim");
+    expect(source.getAttribute("title")).toContain("not AI narration");
     expect(text(source.parentElement)).toContain("Timings, distances and probabilities");
     expect(text(page.querySelector(".beats"))).toContain("probability");
     expect(page.querySelector(".verified")).toBeNull();
@@ -217,9 +217,7 @@ describe("sim numbers in the story and decision", () => {
     const page = mount(offline(), <DecisionPanel />);
     const figure = page.querySelector(".options-figure")!;
     expect(text(figure.querySelector(".kicker .source"))).toBe("sim");
-    expect(figure.querySelector(".source")!.getAttribute("title")).toContain(
-      "not a verified claim",
-    );
+    expect(figure.querySelector(".source")!.getAttribute("title")).toContain("not AI narration");
     expect(figure.querySelectorAll(".opt").length).toBeGreaterThan(0);
     expect(text(figure.querySelector(".facts"))).toContain("Last saw");
     expect(figure.querySelector(".verified")).toBeNull();

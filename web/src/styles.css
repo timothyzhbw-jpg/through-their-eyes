@@ -372,6 +372,33 @@ optgroup {
   text-underline-offset: 0.2em;
 }
 
+/* "How it works" (Chapter.tsx) and "How is this checked?" (provenance/HowChecked.tsx): the
+   mechanism and its terms, folded under the plain words until asked for. */
+.how,
+.how-checked {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.how summary,
+.how-checked summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--chalk);
+  text-decoration: underline dotted var(--chalk-3);
+  text-underline-offset: 0.25em;
+}
+.how summary:hover,
+.how-checked summary:hover {
+  color: var(--floodlight);
+}
+.how-body p,
+.how-checked p {
+  max-width: 560px;
+  margin: 8px 0 0;
+}
+
 /* cards and popovers */
 .card {
   border-radius: var(--r-card);
