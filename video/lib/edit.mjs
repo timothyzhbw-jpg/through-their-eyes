@@ -198,12 +198,7 @@ export function beatGraph(beat, env = {}) {
     parts.push(`[${label}]${look}[look]`);
     label = "look";
   }
-  (env.overlays ?? []).forEach((overlay, i) => {
-    const index = addInput(["-i", overlay.file]);
-    parts.push(`[${index}:v]setpts=PTS+${num(overlay.at)}/TB,fps=${fps},format=rgba[ov${i}]`);
-    parts.push(`[${label}][ov${i}]overlay=0:0:eof_action=pass:format=auto[ovd${i}]`);
-    label = `ovd${i}`;
-  });
+  // The bars go under the overlays, so a corner label can sit in the top bar.
   if (beat.letterbox) {
     const bars = letterbox(beat.letterbox, w, h);
     if (bars) {
@@ -211,6 +206,12 @@ export function beatGraph(beat, env = {}) {
       label = "box";
     }
   }
+  (env.overlays ?? []).forEach((overlay, i) => {
+    const index = addInput(["-i", overlay.file]);
+    parts.push(`[${index}:v]setpts=PTS+${num(overlay.at)}/TB,fps=${fps},format=rgba[ov${i}]`);
+    parts.push(`[${label}][ov${i}]overlay=0:0:eof_action=pass:format=auto[ovd${i}]`);
+    label = `ovd${i}`;
+  });
   parts.push(`[${label}]format=yuv420p,setsar=1[vout]`);
   return { inputs, filter: parts.join(";"), duration: length, fps };
 }
