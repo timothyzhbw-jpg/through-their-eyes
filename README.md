@@ -133,7 +133,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   19 possessions on one clock of about 11¾ minutes, opened where the scan hero's possession
+   19 possessions on one clock of about 12½ minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
@@ -300,9 +300,9 @@ uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
 "What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 19 possessions,
-about 11¾ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
-pressure hero (`press_escape`) at 4:33, the shot hero (`far_post_finish`) scoring at 6:41 and the
-short corner (`corner_blind_side`) at 8:30, at 1–0 — with
+about 12½ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 4:54, the shot hero (`far_post_finish`) scoring at 7:01 and the
+short corner (`corner_blind_side`) at 8:51, at 1–0 — with
 moments detected in every possession; breakdowns and what-ifs take the hero moment's id. `match-2`
 plays three of those heroes (pressure, corner, scan) on other seeds, in another order (17
 possessions, about 11¾ minutes; no shot, so 0–0). Without Microsoft Foundry configured, every agent step runs on its
@@ -360,6 +360,13 @@ Built with Claude Code.
 [infra/deploy.sh](infra/deploy.sh) creates the hosting resources (`provision`), rolls out the API
 (`api`), uploads the web app (`web`) and sets the deploy workflow's variables (`github`). It only
 accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subscription.
+
+## Credits
+- Rigged players: converted from Gameplay Football by Bastiaan Konings Schuiling, as shipped in
+  Google Research Football (Unlicense); see [web/public/models/README.md](web/public/models/README.md).
+- The players' kick and shoulder checks are motion capture, retargeted onto that skeleton. The
+  data used in this project was obtained from mocap.cs.cmu.edu. The database was created with
+  funding from NSF EIA-0196217.
 
 ## License
 MIT — see [LICENSE](LICENSE).

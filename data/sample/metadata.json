@@ -301,8 +301,8 @@
   "matches": [
     {
       "match_id": 5001,
-      "frames": 19041,
-      "duration_s": 761.64,
+      "frames": 20207,
+      "duration_s": 808.28,
       "score": {
         "home": 1,
         "away": 0
@@ -312,7 +312,7 @@
           "index": 11,
           "scenario": "far_post_finish",
           "seed": 269249475,
-          "start_frame": 10772,
+          "start_frame": 11938,
           "frames": 235,
           "restart": "cut",
           "first_team": 0,

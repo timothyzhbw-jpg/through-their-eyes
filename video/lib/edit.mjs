@@ -55,6 +55,7 @@ export function pictureLabel(beat) {
   if (p.src === "title") return `title:${p.id}`;
   if (p.src === "image") return `image:${p.path}`;
   if (p.src === "clip") return `clip:${String(p.path).split("/").pop()}`;
+  if (p.src === "split") return `split:${pictureLabel(p.left ?? {})}|${pictureLabel(p.right ?? {})}`;
   return String(p.src ?? "?");
 }
 
@@ -130,7 +131,32 @@ export function beatGraph(beat, env = {}) {
   };
 
   let label = "src";
-  if (picture.src === "black") {
+  if (picture.src === "split") {
+    const files = env.files ?? [];
+    if (files.length !== 2) throw new Error(`beat ${beat.id}: a split needs two files`);
+    const halves = ["left", "right"].map((side, k) => {
+      const part = picture[side];
+      const index = addInput(["-i", files[k]]);
+      const inn = part.in ?? 0;
+      const partSpeed = part.speed ?? 1;
+      const available = env.sourceDurations?.[k] != null ? Math.max(0, env.sourceDurations[k] - inn) : playFor * partSpeed;
+      const take = Math.max(1 / fps, Math.min(playFor * partSpeed, available));
+      const [x, y, cw, ch] = part.crop.map((n) => Math.round(n));
+      parts.push(
+        `[${index}:v]trim=start=${num(inn)}:duration=${num(take)},` +
+          `${partSpeed === 1 ? "setpts=PTS-STARTPTS" : `setpts=(PTS-STARTPTS)/${num(partSpeed)}`},fps=${fps},crop=${cw}:${ch}:${x}:${y},setsar=1[half${k}]`,
+      );
+      return { cw, ch };
+    });
+    const width = halves[0].cw + halves[1].cw;
+    const height = Math.max(halves[0].ch, halves[1].ch);
+    const bar = picture.divider ?? 4;
+    // Native pixels: pad into the frame; scale only if the two crops do not add up to its width.
+    const fit = width === w ? `pad=${w}:${h}:0:(oh-ih)/2:color=black` : `scale=${w}:-2,pad=${w}:${h}:0:(oh-ih)/2:color=black`;
+    parts.push(
+      `[half0][half1]hstack=inputs=2,${fit},drawbox=x=${halves[0].cw - Math.floor(bar / 2)}:y=0:w=${bar}:h=ih:color=0x080e0b:t=fill[src]`,
+    );
+  } else if (picture.src === "black") {
     parts.push(`color=c=black:s=${w}x${h}:r=${fps}:d=${num(playFor)}[src]`);
   } else {
     if (!env.file) throw new Error(`beat ${beat.id}: no file for ${picture.src}`);
@@ -308,7 +334,7 @@ export function mixGraph(plan) {
   const parts = [];
   const voLabels = vo.map((clip, i) => {
     const chain = [
-      plan.voiceFx === "trailer" ? trailerVoiceFilters() : "aresample=48000",
+      (clip.fx !== undefined ? clip.fx : plan.voiceFx) === "trailer" ? trailerVoiceFilters() : "aresample=48000",
       "aformat=sample_fmts=fltp:channel_layouts=stereo",
       `adelay=${ms(clip.start)}|${ms(clip.start)}`,
     ];
@@ -353,12 +379,40 @@ export function mixGraph(plan) {
     }
     return `mus${i}`;
   });
-  const mixers = [voBus, ...sfxLabels, ...musicLabels].filter(Boolean);
+  const windows = plan.muffle ?? [];
+  const muffled = (label, i) => {
+    if (!windows.length) return label;
+    parts.push(`[${label}]${muffleFilter(windows, `muf${i}`)}`);
+    return `muf${i}`;
+  };
+  let k = 0;
+  const bedLabels = sfxLabels.map((label, i) => (sfx[i].bed ? muffled(label, k++) : label));
+  const musicOut = musicLabels.map((label) => muffled(label, k++));
+  const mixers = [voBus, ...bedLabels, ...musicOut].filter(Boolean);
   const tail = `alimiter=limit=${LIMIT}:level=0,apad=whole_dur=${num(plan.videoDuration)},atrim=duration=${num(plan.videoDuration)}[mix]`;
   if (mixers.length === 0) parts.push(`anullsrc=channel_layout=stereo:sample_rate=48000,${tail}`);
   else if (mixers.length === 1) parts.push(`[${mixers[0]}]${tail}`);
   else parts.push(`${mixers.map((label) => `[${label}]`).join("")}amix=inputs=${mixers.length}:normalize=0:duration=longest,${tail}`);
   return { filter: parts.join(";"), inputs: vo.length + sfx.length + music.length };
+}
+
+/**
+ * The perception duck: while a player scans, the bed it is applied to (music, crowd) drops about
+ * 10 dB under an 800 Hz low-pass, and floods back when he acts. A dry and a filtered copy are
+ * crossfaded by an 80 ms ramp at each edge, so nothing clicks.
+ * @param {Array<{ start: number, end: number }>} windows absolute seconds
+ * @param {string} out output label
+ */
+export function muffleFilter(windows, out) {
+  const ramp = 0.08;
+  const one = ({ start, end }) =>
+    `clip((t-${num(start)})/${ramp},0,1)*clip((${num(end)}-t)/${ramp},0,1)`;
+  const m = windows.map(one).reduce((acc, term) => (acc ? `max(${acc},${term})` : term), "");
+  return (
+    `asplit=2[${out}d][${out}w];[${out}d]volume='1-(${m})':eval=frame[${out}dd];` +
+    `[${out}w]lowpass=f=800,volume='0.316*(${m})':eval=frame[${out}ww];` +
+    `[${out}dd][${out}ww]amix=inputs=2:normalize=0[${out}]`
+  );
 }
 
 /** @param {{ lufs: number, true_peak: number }} output @param {object | null} [measured] */
@@ -521,7 +575,8 @@ function fxFilter(name, w, h, fps) {
   if (name === "vignette") return "vignette=PI/5";
   if (name === "chroma") return "format=rgba,rgbashift=rh=4:bh=-4:rv=-4:bv=4";
   if (name === "rewind") {
-    return "format=rgba,rgbashift=rh=8:bh=-8,boxblur=8:1,noise=alls=10:allf=t,drawgrid=width=iw:height=6:thickness=1:color=black@0.2";
+    // Sharp frames only (no blur anywhere in the film): colour split, tape noise, scanlines.
+    return "format=rgba,rgbashift=rh=8:bh=-8,noise=alls=10:allf=t,drawgrid=width=iw:height=6:thickness=1:color=black@0.2";
   }
   if (name === "shake") {
     const W = Math.round(w * 1.04);

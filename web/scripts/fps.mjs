@@ -9,6 +9,7 @@
 //   npm run build && npm run fps            headless; SwiftShader (software) where there is no GPU
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
 //   npm run fps -- --width 1440 --height 900 --dpr 2 --seconds 4 --runs 3
+//   npm run fps -- --anims base            the engine's player clips only (?anims=base)
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
@@ -26,6 +27,7 @@ const { values: opt } = parseArgs({
     seconds: { type: "string", default: "4" },
     runs: { type: "string", default: "3" },
     cine: { type: "boolean", default: false },
+    anims: { type: "string", default: "" }, // "base": without the retargeted clips (players/extra.ts)
   },
 });
 
@@ -51,7 +53,8 @@ if (opt.cine) {
     });
     const page = await context.newPage();
     const button = (name) => page.getByRole("button", { name, exact: true });
-    await page.goto(`${base}?offline=1&autoplay=0&intro=0`);
+    const anims = opt.anims ? `&anims=${encodeURIComponent(opt.anims)}` : "";
+    await page.goto(`${base}?offline=1&autoplay=0&intro=0${anims}`);
     await button("Play").waitFor();
     // Beside his eyes the corner shows his belief map, not the board: the board's canvas is read
     // once it is the main view (below).
