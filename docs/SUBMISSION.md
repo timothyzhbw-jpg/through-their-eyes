@@ -140,7 +140,9 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 - **Recovery that keeps the rest.** With one agent down, the crew still aired three of its four
   model roles; the single agent lost all four, because its one call is every role. Bringing the
   Telestrator back cost the crew one model request; the single agent had to redo everything.
-  TODO(multi-agent-evidence): recovery when the model service itself fails.
+  Bringing the Analyst back costs the crew more than the single agent's redo, because every
+  later step reads the Analyst and runs again. TODO(multi-agent-evidence): recovery when the
+  model service itself fails.
 - **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
   timeout; every single-agent call did, so deployed it would have aired its templates.
 - **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
@@ -346,8 +348,8 @@ play that attacks the goal.
 [^crew]: [eval/reports/crew_vs_single.md](../eval/reports/crew_vs_single.md), 2026-10-21, six
     moments × four audiences on Foundry `gpt-4.1-mini` (single vs crew): wrong facts aired 0 vs
     0, groundedness 5.00 vs 5.00; with the Analyst or the Telestrator down, model roles kept 0 of
-    4 vs 3 of 4; the Telestrator's bring-back 1.7 vs 1.0 model requests; agent runs over 8 s 6 of
-    6 vs 0 of 66; $0.0046 vs $0.0090 per breakdown.
+    4 vs 3 of 4; bringing back the Telestrator 1.7 vs 1.0 model requests, the Analyst 1.7 vs
+    11.0; agent runs over 8 s 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 per breakdown.
 [^ey]: EY for the Premier League, *Economic and Social Impact Report*, July 2026
     ([PDF](https://resources.premierleague.pulselive.com/premierleague/document/2026/07/31/8ee78e99-a3e3-4b81-ab38-cf76eae8dd94/Premier-League-Economic-and-Social-Impact-Report-2026.pdf)):
     "broadcast revenue exports totalling £1.8b in 2024/25"; "1.9b people follow the Premier

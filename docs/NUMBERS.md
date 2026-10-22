@@ -128,6 +128,7 @@ six moments × four audiences) and the multi-agent evidence session, whose numbe
 |---|---|---|---|---|---|
 | MA1 | One agent down (Analyst or Telestrator): valid verified breakdown aired · roles still from the model, crew vs single | crew_vs_single "Failure drill" | 3 of 3 both · 3 of 4 vs 0 of 4 | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew"; README Evidence |
 | MA2 | Bring the Telestrator back: model requests · tokens, crew vs single | same | 1.0 · ~2.1k vs 1.7 · ~11.7k | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
+| MA2b | Bring the Analyst back: model requests · tokens, crew vs single | same | 11.0 · ~21.6k vs 1.7 · ~11.7k | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew", [^crew] |
 | MA3 | Agent runs slower than the deployed 8 s step timeout, crew vs single | crew_vs_single, four arms | 0 of 66 vs 6 of 6 | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
 | MA4 | Model plans that validate, crew vs single | same | 6/6 vs 5/6 | TODO(freeze) | RUBRIC_MAP §5 |
 | MA5 | Wrong facts aired · groundedness, crew vs single (no difference) | same | 0 vs 0 · 5.00 vs 5.00 | TODO(freeze) | SUBMISSION Limitations, [^crew]; RUBRIC_MAP §5 |
