@@ -1,4 +1,4 @@
 match_id,event_id,frame,possession,player,team,role,scans,window_s,belief_error_teammates_m,belief_error_opponents_m,belief_error_max_m
-5001,reception:H6:12008,12008,11,H6,0,DM,2,2.64,0.46,0.415,4.603
-5001,reception:H7:12070,12070,11,H7,0,W,2,5.12,0.46,0.0,4.596
-5001,reception:H9:12132,12132,11,H9,0,ST,1,7.6,0.467,0.498,4.606
+5001,reception:H6:11996,11996,11,H6,0,DM,2,2.64,0.46,0.415,4.603
+5001,reception:H7:12058,12058,11,H7,0,W,2,5.12,0.46,0.0,4.596
+5001,reception:H9:12120,12120,11,H9,0,ST,1,7.6,0.467,0.498,4.606

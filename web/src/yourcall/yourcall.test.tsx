@@ -351,7 +351,7 @@ describe("Your call: the reveal", () => {
       "(read from the sim export, not a verified claim)",
     );
     expect(textOf(el)).toContain(
-      "J. Ferriday thought the pass to N. Varnhall had a 0.67 chance of arriving",
+      "J. Ferriday thought the pass to N. Varnhall had a 0.65 chance of arriving",
     );
 
     click(button(el, "What he did"));
@@ -374,7 +374,7 @@ describe("Your call: the reveal", () => {
       ["His call", "Pass to N. Varnhall"],
     ]);
     expect(textOf(el)).toContain(
-      "That option would have been worth 0.17 less in expected threat than what he did.",
+      "That option would have been worth 0.16 less in expected threat than what he did.",
     );
 
     click(button(el, "Try another call"));
