@@ -10,8 +10,8 @@ import raw from "../../public/data/hero_seed3.json";
 import { parseHero, wrapAngle } from "../data/hero";
 import { worldYaw } from "../views/tokens";
 import { type ExtraMeta, checkPose, checkTwist, extraClips, shoulderChecks } from "./extra";
-import { passPose } from "./gait";
-import { NECK_MAX, TRUNK_MAX, splitLook } from "./look";
+import { kickFacing, kickPose, passEvents } from "./gait";
+import { NECK_MAX, TRUNK_MAX, kickLook, splitLook } from "./look";
 import { type ModelMeta, PLAYER_HEIGHT, makeRig, modelClips, poseRig, runMotion } from "./rig";
 import { loadModel } from "./testing";
 import { animsFromSearch } from "./trial";
@@ -28,8 +28,9 @@ const meta = model.scene.userData as ModelMeta;
 const extra = extraClips(extraGltf);
 const clips = modelClips(meta, extra);
 const base = modelClips(meta);
-const motion = runMotion(hero, run, clips.gait, extra.check);
-const baseMotion = runMotion(hero, run, base.gait);
+const scale = PLAYER_HEIGHT / meta.height_m;
+const motion = runMotion(hero, run, clips, scale);
+const baseMotion = runMotion(hero, run, base, scale);
 
 function pose(id: string, f: number, opts: { extra?: boolean; checks?: boolean } = {}) {
   const useExtra = opts.extra ?? true;
@@ -52,7 +53,13 @@ function pose(id: string, f: number, opts: { extra?: boolean; checks?: boolean }
     opts.checks ?? true,
   );
   rig.holder.updateMatrixWorld(true);
-  return { rig, body, head, split, j };
+  return { rig, body, head, split, j, aim: aimOf(j, f, body, head) };
+}
+
+/** Where the rig points the head: head_yaw, or as near as a kick lets it (look.ts kickLook). */
+function aimOf(j: number, f: number, body: number, head: number): number {
+  const p = kickPose(f, motion.kicks[j], hero.dt, clips.pass);
+  return p.kick ? kickLook(kickFacing(body, p), head, p.facing) : head;
 }
 
 describe("the anims switch", () => {
@@ -153,14 +160,14 @@ describe("timing on the sim's events", () => {
   });
 
   it("plays a check only during scans, on the side the head turns, and the kick at the pass", () => {
-    const pass = motion.passes[h8][0];
+    const pass = motion.kicks[h8][0];
     expect(pass.frame).toBe(75);
     for (let f = 0; f < run.frames; f++) {
       const { rig } = pose("H8", f);
       const inScan = f >= 50 && f <= 70 + 0.5 / hero.dt; // the scan and the trunk's settle
       if (!inScan) expect(rig.checkRight!.getEffectiveWeight()).toBe(0);
       expect(rig.checkLeft!.getEffectiveWeight()).toBe(0);
-      const p = passPose(f, motion.passes[h8], hero.dt, clips.pass);
+      const p = kickPose(f, motion.kicks[h8], hero.dt, clips.pass);
       expect(rig.pass.getEffectiveWeight()).toBeCloseTo(p.weight, 9);
     }
     expect(pose("H8", 60).rig.checkRight!.getEffectiveWeight()).toBe(1);
@@ -171,10 +178,11 @@ describe("timing on the sim's events", () => {
     expect(rig.pass.getClip().name).toBe("pass_short");
   });
 
-  it("at H8's pass the kick goes along the pass to H9", () => {
-    const pass = motion.passes[h8][0];
+  it("at H8's pass the kick goes along the pass to H9, the hips out of the look", () => {
+    const pass = passEvents(run.events, hero.ids)[h8][0];
     const { rig, split } = pose("H8", pass.frame);
-    const kick = worldYaw(rig.holder) - split.hips + clips.pass.kickYaw;
+    expect(Math.abs(split.hips)).toBeLessThan(1e-12);
+    const kick = worldYaw(rig.holder) + clips.pass.kickYaw;
     expect(Math.abs(wrapAngle(kick - pass.yaw))).toBeLessThan(1e-6);
   });
 });
@@ -184,14 +192,42 @@ describe("the head stays the sim's", () => {
     for (const f of [20, 30, 50, 55, 58, 60, 64, 66, 70, 72, 75, 80, 100, 120, 140]) {
       for (const id of hero.ids) {
         for (const checks of [true, false]) {
-          const { rig, head } = pose(id, f, { checks });
-          expect(Math.abs(wrapAngle(worldYaw(rig.neck) - head))).toBeLessThan(1e-3);
+          const { rig, aim } = pose(id, f, { checks });
+          expect(Math.abs(wrapAngle(worldYaw(rig.neck) - aim))).toBeLessThan(1e-3);
           expect(Math.abs(wrapAngle(worldYaw(rig.neck) - worldYaw(rig.middle)))).toBeLessThan(
             NECK_MAX + 0.02,
           );
         }
       }
     }
+  });
+
+  it("a kick stops the head short only where the neck and trunk cannot reach", () => {
+    const reach = NECK_MAX + TRUNK_MAX;
+    let short = 0;
+    let kicking = 0;
+    for (let f = 0; f < run.frames; f++) {
+      for (let j = 0; j < hero.n; j++) {
+        const body = run.body[f * hero.n + j];
+        const head = run.head[f * hero.n + j];
+        const p = kickPose(f, motion.kicks[j], hero.dt, clips.pass);
+        const aim = aimOf(j, f, body, head);
+        if (!p.kick) {
+          expect(aim).toBe(head);
+          continue;
+        }
+        kicking++;
+        const facing = kickFacing(body, p);
+        if (Math.abs(wrapAngle(aim - head)) < 1e-9) continue;
+        short++;
+        // Only a look beyond the reach; the head stops short of it, never further round.
+        expect(Math.abs(wrapAngle(head - facing))).toBeGreaterThan(reach);
+        expect(Math.abs(wrapAngle(aim - facing))).toBeLessThan(Math.abs(wrapAngle(head - facing)));
+        if (p.facing === 1) expect(Math.abs(wrapAngle(aim - facing))).toBeLessThan(reach + 1e-9);
+      }
+    }
+    expect(kicking).toBeGreaterThan(0);
+    console.log("seed 3: the head stops short in %d of %d kicking player-frames", short, kicking);
   });
 
   it("the trunk joins a smaller look; a big one turns it no further than before", () => {
@@ -221,12 +257,12 @@ describe("the head stays the sim's", () => {
 });
 
 describe("reduced motion", () => {
-  it("leaves the checks out and the head exact; the pass still plays", () => {
+  it("leaves the checks out and the head as without; the pass still plays", () => {
     for (const f of [52, 58, 64, 68]) {
-      const { rig, head } = pose("H8", f, { checks: false });
+      const { rig, aim } = pose("H8", f, { checks: false });
       expect(rig.checkLeft!.getEffectiveWeight()).toBe(0);
       expect(rig.checkRight!.getEffectiveWeight()).toBe(0);
-      expect(Math.abs(wrapAngle(worldYaw(rig.neck) - head))).toBeLessThan(1e-3);
+      expect(Math.abs(wrapAngle(worldYaw(rig.neck) - aim))).toBeLessThan(1e-3);
     }
     expect(pose("H8", 75, { checks: false }).rig.pass.getEffectiveWeight()).toBe(1);
   });

@@ -12,6 +12,7 @@ import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
+import { kickBallOffset } from "../players/kickBall";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
@@ -167,7 +168,8 @@ function PovScene() {
         poseToken(body, head, sample.body[j], sample.head[j]);
       }
     }
-    ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
+    const kick = kickBallOffset(s.mode, s.frame); // on the kicking foot (rigged players)
+    ball.current?.position.set(sample.ball[0] + kick[0], 0.11, -(sample.ball[1] + kick[1]));
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
     // A switch of camera or view is a clean cut: the camera is on its new pose at once, and the

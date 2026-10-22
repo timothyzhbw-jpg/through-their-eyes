@@ -1,6 +1,6 @@
 // Rigged-player trial (SPEC 7): the gait blend keeps the feet from sliding at every sim speed,
-// with the engine's clips alone or with the extra walk, the pass clip lands its ball contact on
-// the pass event, and the head of a rigged player points along head_yaw (within 1e-3 rad) with
+// with the engine's clips alone or with the extra walk, the kick lands its ball contact on the
+// pass event after turning to it and never stretches its wind-up, and the head of a rigged player points along head_yaw (within 1e-3 rad) with
 // the neck taking head_yaw − body_yaw.
 
 import { describe, expect, it } from "vitest";
@@ -17,11 +17,28 @@ import {
   gaitBlend,
   gaitPhase,
   gaitRun,
+  BALL_LEAVE,
+  HOLD_MIN,
+  HOP,
+  type Kick,
+  LOCK_RELEASE,
+  PASS_FADE,
+  type PassClip,
+  TURN_MAX,
+  TURN_MIN,
+  WINDUP,
+  STEP_HOP,
+  kickBallWeight,
+  kickHop,
+  kickFacing,
+  kickPose,
+  passBall,
   passEvents,
-  passFacing,
-  passPose,
   smoothedSpeeds,
   strollTime,
+  turnAngle,
+  turnSide,
+  turnTime,
 } from "./gait";
 import { NECK_MAX, TRUNK_MAX, aimLook, splitLook } from "./look";
 import { lookFromSearch, riggedFromSearch } from "./trial";
@@ -251,50 +268,192 @@ describe("gait blend with the extra walk: a walking gait and the engine's, cross
   });
 });
 
-describe("pass clip", () => {
-  const clip = { duration: 0.72, touch: 0.35, kickYaw: 22.46 * DEG };
-  const pass = [{ frame: 75, yaw: -0.07 }];
-  it("puts the ball contact on the pass event's frame", () => {
-    const p = passPose(75, pass, 0.04, clip);
-    expect(p.time).toBeCloseTo(0.35, 12);
+describe("kick timing", () => {
+  const clip: PassClip = {
+    duration: 0.94,
+    touch: 0.4,
+    kickYaw: -1.67 * DEG,
+    plant: { time: 0.27, at: [0.065, 0.203] },
+    contact: [0.174, 0.624],
+    land: 0.82,
+  };
+  const dt = 0.04;
+  const kick: Kick = {
+    frame: 75,
+    facing: 0.5,
+    side: 0,
+    sweep: 0.5,
+    turn: 0.3,
+    hold: 0.42,
+    release: 0.2,
+    anchor: [0, 0],
+    ball: [0.4, 0.1],
+    ballFrom: 75 - (0.4 + 0.3) / 0.04,
+    ballFull: 75 - 0.4 / 0.04,
+  };
+  const at = (f: number) => kickPose(f, [kick], dt, clip);
+  const windup = kick.frame - WINDUP / dt; // the frame the wind-up starts
+  const down = kick.frame + (clip.land! - clip.touch) / dt; // the kicking foot is down
+
+  it("puts the clip's ball contact on the pass event's frame, at full weight", () => {
+    const p = at(75);
+    expect(p.time).toBeCloseTo(clip.touch, 12);
     expect(p.weight).toBe(1);
-    expect(p.yaw).toBe(-0.07);
+    expect(p.facing).toBe(1);
+    expect(p.lock).toBe(1);
+    expect(p.kick).toBe(kick);
   });
-  it("fades in before the clip starts and out after it ends", () => {
-    expect(passPose(60, pass, 0.04, clip).weight).toBe(0); // 0.6 s before contact
-    expect(passPose(67, pass, 0.04, clip).weight).toBeGreaterThan(0);
-    expect(passPose(84, pass, 0.04, clip).weight).toBeGreaterThan(0); // 0.36 s after: ending
-    expect(passPose(90, pass, 0.04, clip).weight).toBe(0);
+
+  it("winds up for WINDUP, at the clip's own rate: never stretched", () => {
+    expect(at(windup - 0.01).weight).toBe(0);
+    expect(at(windup + 0.5).weight).toBeGreaterThan(0);
+    expect(at(windup + PASS_FADE / dt).weight).toBeCloseTo(1, 12);
+    for (let f = windup; f < down; f += 0.25) {
+      expect(at(f + 0.25).time - at(f).time).toBeCloseTo(0.25 * dt, 9);
+    }
+    expect(at(down).weight).toBeCloseTo(1, 12);
+    expect(at(down + PASS_FADE / dt / 2).weight).toBeCloseTo(0.5, 9);
+    expect(at(down + PASS_FADE / dt).weight).toBe(0);
   });
-  it("turns the body over a longer window than the clip, so it does not spin", () => {
-    const before = passPose(60, pass, 0.04, clip); // 0.25 s before the clip starts
-    expect(before.weight).toBe(0);
-    expect(before.facing).toBeGreaterThan(0);
-    expect(passPose(75, pass, 0.04, clip).facing).toBe(1);
-    expect(passPose(90, pass, 0.04, clip).facing).toBeGreaterThan(0); // just after the clip
-    expect(passPose(97, pass, 0.04, clip).facing).toBe(0);
+
+  it("turns the body to the kick before the wind-up, and back once the foot is down", () => {
+    expect(at(windup).facing).toBe(1);
+    expect(at(windup - kick.turn / dt).facing).toBe(0);
+    expect(at(windup - kick.turn / dt - 0.25).kick).toBeNull();
+    expect(at(windup - kick.turn / dt / 2).facing).toBeCloseTo(0.5, 9);
+    expect(at(down).facing).toBe(1);
+    expect(at(down + kick.release / dt).facing).toBe(0);
     let prev = 0;
-    for (let f = 55; f <= 98; f += 0.25) {
-      const now = passPose(f, pass, 0.04, clip).facing;
-      expect(Math.abs(now - prev)).toBeLessThan(0.04); // under 1/42 per 10 ms: no snap
+    const step = (1.5 * 0.25 * dt) / Math.min(kick.turn, kick.release) + 1e-9; // smoothstep's slope
+    for (let f = windup - kick.turn / dt - 2; f <= down + 20; f += 0.25) {
+      const now = at(f).facing;
+      expect(Math.abs(now - prev)).toBeLessThanOrEqual(step);
       prev = now;
     }
   });
-  it("finds each player's passes in the run, with the pass direction", () => {
+
+  it("anchors the body from the wind-up until the kicking foot is down, then lets go", () => {
+    expect(at(windup - 0.25).lock).toBe(0);
+    expect(at(windup + PASS_FADE / dt / 2).lock).toBeCloseTo(0.5, 9);
+    expect(at(windup + PASS_FADE / dt).lock).toBe(1);
+    const plant = kick.frame + (clip.plant!.time - clip.touch) / dt;
+    expect(at(plant).lock).toBe(1);
+    expect(at(down).lock).toBe(1);
+    expect(at(down + LOCK_RELEASE / dt / 2).lock).toBeCloseTo(0.5, 9);
+    expect(at(down + LOCK_RELEASE / dt).lock).toBe(0);
+    // The engine's standing pass has no plant: nothing holds.
+    const engine: PassClip = { duration: 0.72, touch: 0.35, kickYaw: 22.46 * DEG };
+    expect(kickPose(75, [kick], dt, engine).lock).toBe(0);
+    expect(kickPose(75, [kick], dt, engine).weight).toBe(1);
+  });
+
+  it("turns at TURN_RATE, never quicker than TURN_MIN nor slower than TURN_MAX", () => {
+    expect(turnTime(0)).toBe(TURN_MIN);
+    expect(turnTime(72 * DEG)).toBeCloseTo(0.2, 12);
+    expect(turnTime(-90 * DEG)).toBeCloseTo(0.25, 12);
+    expect(turnTime(Math.PI)).toBe(TURN_MAX);
+  });
+
+  it("lifts the feet off the grass: hops through the turn, a lift over each cross-fade", () => {
+    const start = windup - kick.turn / dt;
+    expect(kickHop(start - 1, kick, dt)).toBe(0);
+    expect(kickHop(windup, kick, dt)).toBe(0);
+    const mid = kickHop(start + kick.turn / dt / 2, kick, dt);
+    expect(mid).toBeCloseTo(HOP * Math.min(1, 0.5 / (Math.PI / 3)), 9); // 29°: a low hop
+    const half = { ...kick, sweep: Math.PI, turn: 0.5 };
+    const s = windup - half.turn / dt;
+    expect(kickHop(s + (0.25 * half.turn) / dt, half, dt)).toBeCloseTo(HOP, 9); // two hops
+    expect(kickHop(s + (0.5 * half.turn) / dt, half, dt)).toBeCloseTo(0, 9);
+    expect(kickHop(s + (0.75 * half.turn) / dt, half, dt)).toBeCloseTo(HOP, 9);
+    expect(kickHop(windup + PASS_FADE / dt / 2, kick, dt)).toBeCloseTo(STEP_HOP, 9);
+    expect(kickHop(75, kick, dt)).toBe(0);
+    expect(kickHop(down + PASS_FADE / dt / 2, kick, dt)).toBeCloseTo(STEP_HOP, 9);
+    expect(kickHop(down + PASS_FADE / dt, kick, dt)).toBeCloseTo(0, 9);
+  });
+
+  it("ends the follow-through early when the passer runs on", () => {
+    const short = { ...kick, hold: HOLD_MIN };
+    const end = kick.frame + HOLD_MIN / dt;
+    expect(kickPose(end, [short], dt, clip).weight).toBeCloseTo(1, 12);
+    expect(kickPose(end + PASS_FADE / dt, [short], dt, clip).weight).toBeCloseTo(0, 12);
+    expect(kickPose(end + LOCK_RELEASE / dt, [short], dt, clip).lock).toBe(0);
+  });
+
+  it("moves the ball onto the kicking foot with the turn, and back on its path after", () => {
+    expect(kickBallWeight(windup - kick.turn / dt, kick, dt)).toBe(0);
+    expect(kickBallWeight(windup, kick, dt)).toBe(1);
+    expect(kickBallWeight(75, kick, dt)).toBe(1);
+    expect(kickBallWeight(75 + BALL_LEAVE / dt / 2, kick, dt)).toBeCloseTo(0.5, 9);
+    expect(kickBallWeight(75 + BALL_LEAVE / dt, kick, dt)).toBe(0);
+    expect(kickBallWeight(10, kick, dt)).toBe(0);
+    expect(kickBallWeight(140, kick, dt)).toBe(0);
+  });
+
+  it("turns half round through the side he looks to; less, the shorter way", () => {
+    expect(turnSide(150 * DEG, -60 * DEG)).toBe(-1);
+    expect(turnSide(150 * DEG, 60 * DEG)).toBe(1);
+    expect(turnSide(150 * DEG, 10 * DEG)).toBe(0); // looking ahead: no side
+    expect(turnSide(90 * DEG, -60 * DEG)).toBe(0); // a small turn: the shorter way
+    expect(turnAngle(0, 150 * DEG, -1) / DEG).toBeCloseTo(-210, 9);
+    expect(turnAngle(0, 150 * DEG, 1) / DEG).toBeCloseTo(150, 9);
+    expect(turnAngle(0, 150 * DEG, 0) / DEG).toBeCloseTo(150, 9);
+    const round = { ...kick, facing: 150 * DEG, side: -1 as const };
+    const half = kickFacing(0, { ...at(75), facing: 0.5, kick: round });
+    expect(half / DEG).toBeCloseTo(-105, 9);
+  });
+
+  it("moves the ball to one kicker at a time: the next only once it has left the last", () => {
+    const first = { ...kick, frame: 75 };
+    const next = { ...kick, frame: 90, ballFrom: 90 - 17.5, ballFull: 90 - 10 }; // turn from 72.5
+    passBall([[first], [next]], dt);
+    expect(next.ballFrom).toBeCloseTo(75 + BALL_LEAVE / dt, 9);
+    expect(next.ballFull).toBeCloseTo(75 + (2 * BALL_LEAVE) / dt, 9);
+    expect(kickBallWeight(76, next, dt)).toBe(0);
+    expect(kickBallWeight(78, next, dt)).toBe(0); // the first kick's ball is leaving
+    expect(kickBallWeight(84, next, dt)).toBe(1);
+    // A one-touch pass: on the foot by the contact.
+    const touch = { ...kick, frame: 77, ballFrom: 60, ballFull: 67 };
+    passBall([[first], [touch]], dt);
+    expect(touch.ballFrom).toBe(77);
+    expect(kickBallWeight(77, touch, dt)).toBe(1);
+    // Kicks far apart keep their own timing.
+    const far = { ...kick, frame: 200, ballFrom: 182.5, ballFull: 190 };
+    passBall([[first], [far]], dt);
+    expect([far.ballFrom, far.ballFull]).toEqual([182.5, 190]);
+  });
+
+  it("finds each player's passes and shots in the run, with their direction", () => {
     const hero = parseHero(raw);
     const passes = passEvents(hero.runs.factual.events, hero.ids);
     const h8 = passes[hero.ids.indexOf("H8")];
     expect(h8.map((p) => p.frame)).toEqual([75]);
     expect(h8[0].yaw / DEG).toBeCloseTo(-1.7, 0); // forward to H9
     expect(passes[hero.ids.indexOf("H4")].map((p) => p.frame)).toEqual([15]);
+    const shot = passEvents(
+      [
+        {
+          id: "shot:H9:198",
+          type: "shot",
+          frame: 198,
+          player: "H9",
+          attrs: { start: [40, 2], aim: [52.5, -1], speed: 24, outcome: "goal", end_at: 210 },
+        },
+      ],
+      hero.ids,
+    )[hero.ids.indexOf("H9")];
+    expect(shot).toEqual([{ frame: 198, yaw: Math.atan2(-3, 12.5), start: [40, 2] }]);
   });
-  it("turns the body so the kick goes along the pass while the clip plays, else body_yaw", () => {
+
+  it("turns the body to the kick's facing by the pose's weight, else body_yaw", () => {
     const body = Math.PI; // H8 faces his own goal at the pass
-    expect(passFacing(body, { facing: 0, yaw: -0.07 }, clip)).toBe(body);
-    const full = passFacing(body, { facing: 1, yaw: -0.07 }, clip);
-    expect(wrapAngle(full + clip.kickYaw - -0.07)).toBeCloseTo(0, 12);
-    const half = passFacing(body, { facing: 0.5, yaw: -0.07 }, clip);
-    expect(Math.abs(wrapAngle(half - body))).toBeCloseTo(Math.abs(wrapAngle(full - body)) / 2, 12);
+    const pose = (facing: number) => ({ ...at(75), facing });
+    expect(kickFacing(body, { ...at(10) })).toBe(body);
+    expect(Math.abs(wrapAngle(kickFacing(body, pose(1)) - kick.facing))).toBeLessThan(1e-12);
+    const half = kickFacing(body, pose(0.5));
+    expect(Math.abs(wrapAngle(half - body))).toBeCloseTo(
+      Math.abs(wrapAngle(kick.facing - body)) / 2,
+      12,
+    );
   });
 });
 

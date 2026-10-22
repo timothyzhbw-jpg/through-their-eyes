@@ -18,9 +18,17 @@ deploy that changes one of them empties it: run this after the last deploy, and 
 one. `--tts` also speaks every voice cue once: the audio cache is on the replica's disk and every
 new revision starts without it.
 
+A run in which a model step fell back to its template (a Foundry error or timeout) is cached as
+DEGRADED (SPEC 2, 6). The API runs one again by itself while the model is available, at most once
+per key per `TTE_DEGRADED_RETRY_S`; until then it serves it labelled. `--refresh-degraded` (also
+`--regenerate-degraded`) asks for every degraded view again with `regenerate`, paced like a new
+one and once per run: a retry that comes back worse does not replace the cached run. It also
+re-runs a view cached before the crew recorded its trace.
+
     uv run python -m infra.prewarm --api <API URL>          # or set TTE_API_URL
     uv run python -m infra.prewarm --api <API URL> --dry-run  # GET requests only: what it would ask
     uv run python -m infra.prewarm --api <API URL> --tts --out out/prewarm.json
+    uv run python -m infra.prewarm --api <API URL> --refresh-degraded  # re-run degraded views
 
 Exit code: 0 when every view is a clean model breakdown (no step from a template), 1 when some are
 missing or degraded, 3 when the daily cap was reached.
@@ -134,9 +142,9 @@ def views(http: Http) -> list[View]:
 
 
 def problems(res: dict[str, Any]) -> list[str]:
-    """Why a served breakdown is not a clean model breakdown; empty when it is. One cached before
-    the crew recorded its trace (`traced` false) has no Crew trace to show: `--regenerate-degraded`
-    runs it again, which records one."""
+    """Why a served breakdown is not a clean model breakdown; empty when it is. The API marks
+    the same steps as `degraded`. One cached before the crew recorded its trace (`traced` false)
+    has no Crew trace to show: `--refresh-degraded` runs it again, which records one."""
     if res.get("source") != "model":
         return [f"source {res.get('source')}"]
     result = res.get("result") or {}
@@ -178,14 +186,15 @@ class Pacer:
 
 
 def run(http: Http, *, rate: tuple[int, float] = (3, 600.0), max_new: int = 20,
-        regenerate_degraded: bool = False, tts: bool = False, tts_gap_s: float = 10.5,
+        refresh_degraded: bool = False, tts: bool = False, tts_gap_s: float = 10.5,
         clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], None] = time.sleep,
         log: Callable[[str], None] = print) -> Outcome:  # fmt: skip
     """Ask for every view; new breakdowns paced to `rate`, at most `max_new` of them.
 
     A first pass asks for every view without waiting: cache hits are free, and past this
     address's limit the API answers at once with a template (no model call). The second pass asks
-    again for those, paced. `tts_gap_s` spaces speech requests under the API's per-client limit
+    again for those, paced, and with `refresh_degraded` for every degraded view too, with
+    `regenerate`. `tts_gap_s` spaces speech requests under the API's per-client limit
     (60 per 10 min) and Speech F0's own request rate.
     """
     pacer = Pacer(*rate, clock=clock, sleep=sleep)
@@ -219,9 +228,9 @@ def run(http: Http, *, rate: tuple[int, float] = (3, 600.0), max_new: int = 20,
     later: list[tuple[int, View, bool]] = []  # (row index, view, regenerate)
     for view in views(http):
         row = stopped(view) or ask(view)
-        if row.status == "rate_limited" or (regenerate_degraded and row.problems
-                                            and row.status == "cached"):  # fmt: skip
-            later.append((len(rows), view, row.status == "cached"))
+        refresh = refresh_degraded and bool(row.problems) and row.status in ("cached", "new")
+        if row.status == "rate_limited" or refresh:
+            later.append((len(rows), view, refresh))
             rows.append(None)
             continue
         log(_line(row))
@@ -278,7 +287,7 @@ def _line(row: Row) -> str:
     return f"{v.match:18s} {v.moment:32s} {v.persona:18s} {v.language}  {row.status:12s} {extra}"
 
 
-def main(argv: list[str] | None = None) -> int:
+def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--api", default=os.environ.get("TTE_API_URL"),
                    help="the API's base URL (default: TTE_API_URL)")  # fmt: skip
@@ -290,13 +299,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--rate", default="3/600", help="the API's TTE_RATE_LIMIT (default 3/600)")
     p.add_argument(
+        "--refresh-degraded",
         "--regenerate-degraded",
+        dest="refresh_degraded",
         action="store_true",
-        help="ask again for a cached breakdown that has a template step (costs a call)",
+        help="ask again, once, for every view whose run has a template step (costs a call each)",
     )
     p.add_argument("--tts", action="store_true", help="also speak every voice cue once")
     p.add_argument("--dry-run", action="store_true", help="GET requests only: list the views")
     p.add_argument("--out", type=Path, help="write every row as JSON here")
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = parser()
     a = p.parse_args(argv)
     if not a.api:
         p.error("give --api or set TTE_API_URL")
@@ -308,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{len(found)} views; a cached one costs nothing, a new one a unit of the daily cap")
         return 0
     out = run(http, rate=parse_rate(a.rate), max_new=a.max_new,
-              regenerate_degraded=a.regenerate_degraded, tts=a.tts)  # fmt: skip
+              refresh_degraded=a.refresh_degraded, tts=a.tts)  # fmt: skip
     counts: dict[str, int] = {}
     for r in out.rows:
         counts[r.status] = counts.get(r.status, 0) + 1

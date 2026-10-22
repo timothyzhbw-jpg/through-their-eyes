@@ -48,8 +48,9 @@ const extra = extraClips(extraGltf);
 const walk = walkClips(walkGltf);
 const clips = modelClips(meta, extra, walk);
 const base = modelClips(meta);
-const motion = runMotion(hero, run, clips.gait, extra.check);
-const baseMotion = runMotion(hero, run, base.gait);
+const scale = PLAYER_HEIGHT / meta.height_m;
+const motion = runMotion(hero, run, clips, scale);
+const baseMotion = runMotion(hero, run, base, scale);
 
 function pose(id: string, f: number) {
   const j = hero.ids.indexOf(id);
@@ -135,7 +136,7 @@ describe("the walking gait", () => {
       speeds: [speeds],
       run: [run],
       phase: [gaitPhase(speeds, hero.dt, c.gait, run)],
-      passes: [[]],
+      kicks: [[]],
       checks: [[]],
     };
   }

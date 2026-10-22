@@ -109,7 +109,8 @@ _Fill in as they come to exist._
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
   at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
-  cached on the replica's disk only). Run after the last deploy and after any later one: the
+  cached on the replica's disk only); `--refresh-degraded` asks again, once, for every view whose
+  cached run has a model step on its template (SPEC 6). Run after the last deploy and after any later one: the
   cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
@@ -179,6 +180,14 @@ _Fill in as they come to exist._
   plus the failure drill and a free-text sensitivity. Every model request is cached in
   `out/crew_vs_single/` (about 200 calls the first time, none after; `--cached-only` re-scores).
   Writes `eval/reports/crew_vs_single.md`
+- `uv run python -m eval.crew_evidence` — why a crew (SPEC 6, Best Multi-Agent System), offline
+  with a scripted model through the real workflow, about 5 min: every hero moment the site serves ×
+  every persona and language with each agent down and brought back (single agent too), the API's
+  provenance as limits and an outage pile up, the Verifier on perturbed lines and on the
+  crew-vs-single Foundry drafts (`eval/fixtures/crew_vs_single_cache.json`; `--extract-cache
+  <runs dir>` rebuilds it), trace completeness with the Analyst on MCP, the two lanes timed at
+  Foundry's median latencies. Writes `eval/reports/crew_evidence.md`; generate it in
+  python:3.11-slim
 - `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
   (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
   `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
@@ -206,6 +215,10 @@ _Fill in as they come to exist._
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
   the hero moment
+- `uv run pytest tests/test_doc_numbers.py` — the numbers the judge-facing docs quote match their
+  reports (SPEC 11): each is wrapped in `<!--num:ID-->…<!--/num-->` (ids and readers in the test,
+  every place in docs/NUMBERS.md); after a sim change regenerates the reports, it names each doc
+  line to update
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a
