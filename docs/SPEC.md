@@ -1866,6 +1866,15 @@ original visual identity.
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
   - The persona and language menu stays open across picks until Escape or a press outside.
+  - *Plain words first, jargon on demand* (2026-10-22, outside UX review). A chapter's lede says
+    what happens in plain words; the mechanism and its terms (softmax and Gumbel-max sampling,
+    the TelestrationPlan and its checks, the failure drill's retry and workflow checkpoint) are
+    folded under "How it works". "Take his eyes" carries its subtitle, "Choose when and where he
+    looks". A number computed in code says what it is first ("Computed directly by the
+    simulation", "Measured from the match's tracking and event feed"): its chip's title adds that
+    it is not AI narration and that the Verifier checks what the AI crew writes (the ✓ lines),
+    and the notes under such numbers open "How is this checked?" to say the same. The Verifier's
+    semantics are unchanged: only a claim it checked carries the ✓.
   - A stitched match's Moments panel pins its hero moments (Breakdown, Your call) at the top. Every
     other moment folds into one row per kind and lens, lensed groups first, and groups of up to
     five start open. match-1's 149 sprints are one row.

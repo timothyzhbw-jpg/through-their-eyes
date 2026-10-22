@@ -10,6 +10,7 @@ import { Sample, sampleInto } from "../data/hero";
 import { toScreen } from "../options/passOptions";
 import { shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
 
 export function BlindSideOverlay() {
   const { hero, playback } = useView();
@@ -50,7 +51,7 @@ export function BlindSideOverlay() {
             <b>{shortName(hero.ids[a.target])}</b> {unseenLabel(a.unseen)}
             <SourceChip
               kind="tracking"
-              title="Live overlay from tracking (head yaw and positions), not a verified claim"
+              title={computed("A live overlay computed from tracking (head yaw and positions)")}
             />
           </div>
         );

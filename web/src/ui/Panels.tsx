@@ -28,6 +28,7 @@ import { CheckIcon } from "./icons";
 import { LineText } from "./Narration";
 import { renameIds, shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
+import { HowChecked } from "../provenance/HowChecked";
 
 interface Beat {
   from: number; // frame
@@ -387,7 +388,15 @@ export function DecisionPanel() {
       kicker={`What he believed · at ${at} s`}
       label={`${shortName(hero.heroId ?? "He")}'s options at ${at} s, on his belief`}
       title={<Title lead="On his" em="belief." />}
-      lede="He decides on what he believes, never on the truth. Each option is scored on his picture of the pitch; the probabilities come from the softmax of each option's expected threat."
+      lede="He decides on what he believes, never on the truth. Each option is scored on his picture of the pitch, and the bars show how likely he was to pick each one."
+      how={
+        <p>
+          Each option is valued by its expected threat (xT): how much having the ball where it ends
+          raises his side's chance of scoring soon, times his own chance of it arriving, all on his
+          picture. A softmax turns those values into the chances on the bars, and he picks with some
+          chance, as people do (Gumbel-max sampling over the same chances).
+        </p>
+      }
     >
       <div className="belief">
         {runner && error !== null && (
@@ -556,11 +565,11 @@ export function VerdictPanel() {
               </span>
             ) : pending ? null : hero.deltaSource === "lens" ? (
               <>
-                <SourceChip kind="lens" /> From the moment's scan lens, not a verified claim.
+                <SourceChip kind="lens" /> Computed by the moment's scan lens.
               </>
             ) : (
               <>
-                <SourceChip kind="sim" /> Read from the sim export, not a verified claim.
+                <SourceChip kind="sim" /> Computed directly by the simulation.
               </>
             )}{" "}
             {step
@@ -572,6 +581,9 @@ export function VerdictPanel() {
               " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
             Causal inside the simulation; not a claim about real football.
           </p>
+          {!claim && !pending && (
+            <HowChecked kinds={[hero.deltaSource === "lens" ? "lens" : "sim"]} />
+          )}
           <WithoutLookLines />
         </div>
       </div>

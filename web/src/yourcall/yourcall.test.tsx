@@ -42,6 +42,7 @@ import { MomentsPanel } from "../ui/Live";
 import { frameCall, project, swipePick, toWorld } from "./camera";
 import { MISSING_RUNS, yourCallOf } from "./controller";
 import { YourCallButton, YourCallStage } from "./YourCall";
+import { SOURCES } from "../provenance/source";
 
 // Mounting App: the live screen's views and Your call's 3D view need WebGL; stub them.
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
@@ -346,10 +347,9 @@ describe("Your call: the reveal", () => {
       "Not where he pictured them: M. Undholm, O. Grevholt, L. Brackwell, R. Castellane.",
     );
     const sim = el.querySelector(".yc-lead .source")!;
-    expect(textOf(sim)).toBe("sim (read from the sim export, not a verified claim)");
-    expect(textOf(sim.querySelector(".sr-only"))).toBe(
-      "(read from the sim export, not a verified claim)",
-    );
+    const words = `${SOURCES.sim.title.charAt(0).toLowerCase()}${SOURCES.sim.title.slice(1)}`;
+    expect(textOf(sim)).toBe(`sim (${words})`);
+    expect(textOf(sim.querySelector(".sr-only"))).toBe(`(${words})`);
     expect(textOf(el)).toContain(
       "J. Ferriday thought the pass to N. Varnhall had a 0.67 chance of arriving",
     );

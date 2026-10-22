@@ -25,13 +25,14 @@ import {
 import { renameIds, shortName } from "../data/roster";
 import { useOnScreen, useStoreWhile } from "./onScreen";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
+import { HowChecked } from "../provenance/HowChecked";
 
 const NO_FEED = createStore({ latest: -1 }); // offline: there is no stream to wait for
 const THIN = { vectorEffect: "non-scaling-stroke" } as const;
 
-const SIM_NOTE = "Computed from the sim export: a metric, not a verified claim";
-const DETECTOR_NOTE =
-  "Computed by the scan detector from tracked head yaw: a metric, not a verified claim";
+const SIM_NOTE = computed("Computed directly by the simulation");
+const DETECTOR_NOTE = computed("Estimated by the scan detector from tracked head yaw");
 
 export function TelemetryPanel() {
   const { hero, playback, feed } = useSession();
@@ -109,9 +110,8 @@ export function TelemetryPanel() {
             His head, second by second, against the ball: every look away, how fast it turned, what
             it showed him and what he believed. Synced to the playhead.
           </p>
-          <p className="note">
-            Computed metrics from the sim and the scan detector, not verified claims.
-          </p>
+          <p className="note">Computed directly by the simulation and by the scan detector.</p>
+          <HowChecked kinds={["sim", "detector"]} />
         </div>
       </header>
       <div className="chapter-body">
