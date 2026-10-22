@@ -2002,6 +2002,16 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
+- **Every moment in reach** (2026-10-22, Bowen: "why does the site now have only one moment?";
+  [web/src/moments/](../web/src/moments/)): a rail of links above the live screen (and the same
+  row on the intro card, beside Start) names every moment the site plays, as the trailer's
+  chapters do: The look (`blind_side_run` seed 3), Under pressure (`press_escape` seed 0), The
+  corner and The goal (`corner_blind_side`, `far_post_finish`: hero moments inside match-1, opened
+  as their breakdowns there with `?match=match-1&moment=<scenario>`, where they are cached), and
+  Full match · live (match-1's stream). The page on screen is marked; a phone scrolls the row
+  sideways. While the intro card is up the rail keeps its place, hidden; it stays off Your call,
+  Take his eyes and the step-through, which have their own way back; `rail=0` leaves it out (the
+  demo video's framing). On a hero page the Live pill opens the full match's stream.
 - **Quick tour** (2026-10-22, outside UX review: a first-time visitor met too many concepts and
   buttons at once; [web/src/tour/](../web/src/tour/), the `quick` list of
   [steps.json](../web/src/tour/steps.json); Start on the intro card, "Quick tour" on the moment
