@@ -255,6 +255,7 @@
   font-size: 22px;
   line-height: 1.3;
   color: var(--chalk);
+  text-wrap: balance; /* with the club names kept whole: no lone "0." or "Vale 0." */
 }
 
 .recap-card.stats ul {

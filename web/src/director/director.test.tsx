@@ -533,3 +533,51 @@ describe("the auto director", () => {
     expect(autoFromSearch("?match=match-1")).toBe(false);
   });
 });
+
+describe("on a phone the camera switch and the Auto director live in View options", () => {
+  const shown = (el: Element | null) => !!el && getComputedStyle(el).display !== "none";
+  const open = (page: HTMLElement) =>
+    act(() => page.querySelector<HTMLButtonElement>('button[aria-label="View options"]')!.click());
+
+  it("leaves the row under the picture to play, the timeline and View options", () => {
+    withFloodlitStyles(390);
+    const session = offline();
+    const page = mount(session, <Transport />);
+    expect(shown(page.querySelector(".transport > .seg.camera"))).toBe(false);
+    open(page);
+    const group = page.querySelector(".options-panel .phone-only");
+    expect(shown(group)).toBe(true);
+    const tactical = [...group!.querySelectorAll<HTMLButtonElement>(".seg.camera button")].find(
+      (b) => text(b) === "Tactical",
+    )!;
+    act(() => tactical.click());
+    expect(session.playback.get().focus).toBe("tactical");
+    const auto = [...group!.querySelectorAll<HTMLButtonElement>("button.chip")].find(
+      (b) => text(b) === "Auto director",
+    )!;
+    act(() => auto.click());
+    expect(directorPrefs.get().auto).toBe(true);
+    expect(auto.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("keeps them where they were on a wider screen", () => {
+    withFloodlitStyles(1440);
+    const page = mount(offline(), <Transport />);
+    expect(shown(page.querySelector(".transport > .seg.camera"))).toBe(true);
+    open(page);
+    expect(shown(page.querySelector(".options-panel .phone-only"))).toBe(false);
+  });
+
+  it("takes the Auto director off the director's row on a phone only", () => {
+    // As on the live screen (App.tsx): the bar sits in .stage-director.
+    const bar = () => (
+      <div className="stage-director">
+        <DirectorBar />
+      </div>
+    );
+    withFloodlitStyles(390);
+    expect(shown(mount(offline(), bar()).querySelector(".director-auto"))).toBe(false);
+    withFloodlitStyles(1440);
+    expect(shown(mount(offline(), bar()).querySelector(".director-auto"))).toBe(true);
+  });
+});
