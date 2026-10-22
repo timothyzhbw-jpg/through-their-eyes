@@ -96,7 +96,14 @@ on an LLM.
   `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
   is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
   audited, rate-limited per client, no model call), `POST /api/recaps` and
-  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6).
+  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, §6).
+- Every breakdown, drill and recap answer says where it came from (`provenance`): `live` (the
+  crew ran for this request), `cached` (a crew run from `ran_at`, UTC), or `template` (no model
+  call, with the reason: `rate_limited`, `capped` or `model_unavailable`). The web shows it as a
+  chip on the moment card, the narration, the recap and the crew trace, exactly as given: it is
+  never worked out from `cached` or `source`, so a cached or template answer never reads as a
+  fresh crew run. An answer from an older service without it makes no claim about who wrote it.
 - The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
   key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
   allows a few streams per client and a session length, and closes on a malformed control
@@ -1316,6 +1323,40 @@ Application Insights.
       trace entries and the narration payload are unchanged.
     - An API process killed during narration resumes after a restart without calling the
       Director or the Analyst again.
+- **Crew trace** (2026-10-21, for the Best Multi-Agent System criteria: distinct roles, shared
+  state and handoffs, recovery, an outcome no single agent makes). Every crew run records its
+  own timeline as the workflow runs (`agents/crewtrace.py`), with no model call: per step its
+  start and end (ms since the run started), the typed message it handled and the ones it sent
+  (a summary and the JSON), the shared state it read and wrote, its model calls (or its
+  template, or code), the Analyst's MCP tool calls with the model's arguments and our server's
+  results, and the Verifier's rejections with the rewrites they asked for. Run events show the
+  drill: an agent taken down, its fallback, its request to be brought back, every checkpoint
+  with the state it saved, and the bring-back resuming from one.
+  - *Shared state, as built.* Reads are the evidence every agent works from (`MomentContext`,
+    verified before any model runs), noted as each step reads it. Writes are each step's output
+    on the workflow's state (Agent Framework `State`: `request`, `findings`, `plan`, `drafts`,
+    `verdicts`, `scripts`, `voice`; the recap's Director also writes `evidence`, its focus),
+    which every checkpoint saves. The handoffs themselves stay typed messages on the edges.
+  - *Stored and served.* The API stores the trace with the cached breakdown, recap or drill and
+    serves it by key (`GET /api/breakdowns/<key>/trace`, `GET /api/recaps/<key>/trace`); a POST
+    answer says whether it has one (`traced`). A bring-back continues the drill's trace with a
+    new run; a run resumed after an interruption continues the trace saved on its checkpoint.
+    Breakdowns cached before traces were recorded answer `recorded: false` and the web says
+    "trace not recorded for this cached run". The cache keys did not move (`PIPELINE_VERSION`
+    unchanged); `infra.prewarm` reports such views as "no crew trace", and
+    `--regenerate-degraded` runs them again.
+  - *Public, like the breakdown.* Ids, counts, verified templates with their placeholders,
+    reason codes and error classes; model text only where the breakdown already shows it (the
+    Director's reason, the Analyst's angle) and in tool-call arguments, labelled as the model's.
+    Every time and duration is telemetry and the web labels it so; each step has its span id,
+    and each run its trace id (operation_Id in Application Insights).
+  - *Web.* "Crew trace" on the Producer desk, in the breakdown's head and under the recap opens
+    the timeline (`web/src/crewtrace/`): a lane per step in the graph's order for each run, bars
+    filled by who answered (model, template, code), the drill's events, and the picked step's
+    details.
+  - *Evidence:* `tests/test_crew_trace.py`, `tests/test_api_trace.py`,
+    `web/src/crewtrace/crewtrace.test.tsx` (on a fixture the backend recorded:
+    `uv run python -m agents.crewtrace`).
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
