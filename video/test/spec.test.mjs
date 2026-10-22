@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { spokenIssues, validateTrailer } from "../lib/spec.mjs";
+import { spokenIssues, storyBeats, validateTrailer } from "../lib/spec.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const shots = JSON.parse(readFileSync(path.join(REPO, "video/shots.json"), "utf8"));
@@ -28,7 +28,7 @@ test("the mini fixture and the real trailer spec are valid", () => {
   const miniResult = check(mini);
   assert.deepEqual(miniResult.errors, [], miniResult.errors.join("\n"));
   assert.deepEqual(miniResult.warnings, [], miniResult.warnings.join("\n"));
-  const realResult = check(real, JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8")));
+  const realResult = check({ ...real, beats: storyBeats(real) }, JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8")));
   assert.deepEqual(realResult.errors, [], realResult.errors.join("\n"));
 });
 
@@ -180,4 +180,16 @@ test("a shirt number is a name, like a player id", () => {
   assert.deepEqual(spokenIssues("YOU ARE No. 14.", { allowPause: false }), []);
   assert.deepEqual(spokenIssues("H9 · THE RUNNER", { allowPause: false }), []);
   assert.deepEqual(spokenIssues("YOU ARE 14.", { allowPause: false }), ["a digit outside a slot"]);
+});
+
+test("both tellings of the story are valid and the same length", () => {
+  const assets = JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8"));
+  const lengths = {};
+  for (const story of ["blender", "app"]) {
+    const spec = { ...clone(real), beats: storyBeats(real, story) };
+    const { errors } = check(spec, assets);
+    assert.deepEqual(errors, [], `${story}: ${errors.join("\n")}`);
+    lengths[story] = spec.beats.reduce((sum, b) => sum + b.dur, 0);
+  }
+  assert.ok(Math.abs(lengths.blender - lengths.app) < 1e-6, JSON.stringify(lengths));
 });

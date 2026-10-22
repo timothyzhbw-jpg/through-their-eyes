@@ -23,6 +23,18 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
  * @param {{ root: string, shotIds: Set<string>, assets: object[], harvest?: Array<{ persona: string, language: string }> }} ctx
  * @returns {{ errors: string[], warnings: string[] }}
  */
+/**
+ * The beats of one telling of the story: `story` ("blender", the default, or "app") keeps the beats
+ * tagged with it and every untagged beat. The two tellings of each story section are the same
+ * length, so the rest of the cut, and the score, do not move.
+ * @param {{ story?: string, beats?: object[] }} spec
+ * @param {string} [story] overrides spec.story
+ */
+export function storyBeats(spec, story) {
+  const pick = story ?? spec?.story ?? "blender";
+  return (spec?.beats ?? []).filter((beat) => beat.story == null || beat.story === pick);
+}
+
 export function validateTrailer(spec, ctx) {
   const errors = [];
   // `pins`: a cine shot corner-pinned onto a screen in a rendered clip (video/pin.py).

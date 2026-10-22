@@ -31,7 +31,7 @@ import {
 import { parseDuration, parseEbur128, parseLoudnorm, runFfmpeg, runProcess } from "./lib/ffmpeg.mjs";
 import { renderReport } from "./lib/report.mjs";
 import { SFX_DEFAULT_DUR, conflictingSfx, writeSfx } from "./lib/sfx.mjs";
-import { validateTrailer } from "./lib/spec.mjs";
+import { storyBeats, validateTrailer } from "./lib/spec.mjs";
 import { buildSsml, estimateSpeechSeconds, voiceFor, voRoomWarnings, wavSeconds } from "./lib/vo.mjs";
 import { encodeWav16Mono, readWav, trimSilence } from "./lib/wav.mjs";
 
@@ -54,6 +54,7 @@ const USAGE = `Usage: node video/trailer.mjs [options]
   --step <names>       run only these steps, comma-separated
   --force              ignore caches
   --only <ids>         edit: re-render these beats (ids or prefixes); reuse the others
+  --story <name>       blender (default) or app: which telling of the story to cut
   --base-url <url>     site passed to cine and to the capture kit
   --out <dir>          work directory (default: out/video/trailer)
   --headed             show the browser for cine and titles
@@ -80,6 +81,7 @@ async function main() {
         force: { type: "boolean", default: false },
         only: { type: "string" },
         "base-url": { type: "string" },
+        story: { type: "string" },
         out: { type: "string" },
         headed: { type: "boolean", default: false },
         ffmpeg: { type: "string", default: "ffmpeg" },
@@ -101,6 +103,8 @@ async function main() {
 
   const specPath = path.resolve(args.spec ?? path.join(HERE, "trailer.json"));
   const spec = readJson(specPath);
+  if (args.story && !["blender", "app"].includes(args.story)) throw new Error(`--story must be blender or app`);
+  spec.beats = storyBeats(spec, args.story); // one telling of the story; the other's beats drop out
   const shots = readJson(path.join(HERE, "shots.json"));
   const assets = readJson(path.join(HERE, "assets.json"));
   const credits = readFileSync(path.join(HERE, "CREDITS.md"), "utf8");

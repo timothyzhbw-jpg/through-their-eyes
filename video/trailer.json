@@ -25,13 +25,13 @@
   },
   "music": [
     {
-      "asset": "music-unsolicited",
-      "at": 12.27,
-      "from": 18.344,
+      "asset": "music-score-hybrid",
+      "at": 0.0,
+      "from": 0.0,
       "until": 117.3,
-      "gain_db": -2,
-      "fade_in": 0.02,
-      "fade_out": 3.0,
+      "gain_db": 4,
+      "fade_in": 0.0,
+      "fade_out": 0.0,
       "duck_db": -9
     }
   ],
@@ -412,6 +412,96 @@
         },
         "motionBlur": false
       }
+    },
+    "press-pov-cf": {
+      "url": "/?cine=1&intro=0&autoplay=0&match=press_escape-0",
+      "shot": {
+        "id": "press-pov-cf",
+        "run": "counterfactual",
+        "duration": 2.9,
+        "pov": "H4",
+        "time": [
+          {
+            "t": 0,
+            "frame": 58
+          },
+          {
+            "t": 2.9,
+            "frame": 80
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "eyes",
+              "id": "H4"
+            },
+            "look": {
+              "at": "eyes",
+              "id": "H4"
+            }
+          }
+        ],
+        "periphery": 0,
+        "labels": true,
+        "fog": [
+          45,
+          160
+        ],
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        },
+        "motionBlur": false,
+        "rings": true
+      }
+    },
+    "press-pov-f": {
+      "url": "/?cine=1&intro=0&autoplay=0&match=press_escape-0",
+      "shot": {
+        "id": "press-pov-f",
+        "run": "factual",
+        "duration": 3.05,
+        "pov": "H4",
+        "time": [
+          {
+            "t": 0,
+            "frame": 44
+          },
+          {
+            "t": 3.05,
+            "frame": 66
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "eyes",
+              "id": "H4"
+            },
+            "look": {
+              "at": "eyes",
+              "id": "H4"
+            }
+          }
+        ],
+        "periphery": 0,
+        "labels": true,
+        "fog": [
+          45,
+          160
+        ],
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        },
+        "motionBlur": false,
+        "rings": true
+      }
     }
   },
   "titles": {
@@ -667,7 +757,7 @@
         "url": "TTESITE1FF906.Z14.WEB.CORE.WINDOWS.NET",
         "lines": [
           "ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS",
-          "MUSIC: “UNSOLICITED TRAILER MUSIC” BY EMMA_MA · PUBLIC DOMAIN DEDICATION",
+          "MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT",
           "FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE",
           "VOICE: AZURE AI SPEECH"
         ],
@@ -686,22 +776,6 @@
             "text": "THE PRESS WINS IT.",
             "color": "flare",
             "size": 120
-          }
-        ],
-        "align": "lower-left",
-        "backdrop": true
-      }
-    },
-    "back-to-h4": {
-      "template": "slam",
-      "dur": 1.35,
-      "alpha": true,
-      "params": {
-        "lines": [
-          {
-            "text": "HE PLAYS IT BACK TO H4.",
-            "color": "dusk",
-            "size": 110
           }
         ],
         "align": "lower-left",
@@ -775,73 +849,6 @@
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-bl-1p15": {
-      "template": "label",
-      "dur": 1.15,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
-    "label-bl-2p6": {
-      "template": "label",
-      "dur": 2.6,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
-    "nc-you": {
-      "template": "namecard",
-      "dur": 0.9,
-      "alpha": true,
-      "params": {
-        "name": "YOU ARE No. 14.",
-        "role": "",
-        "sub": "YOU NEVER CHECK YOUR SHOULDER.",
-        "spot": {
-          "x": 1026,
-          "y": 574,
-          "r": 170
-        },
-        "side": "left",
-        "scrim": 0.5
-      }
-    },
-    "nc-h8": {
-      "template": "namecard",
-      "dur": 0.9,
-      "alpha": true,
-      "params": {
-        "name": "H8",
-        "role": "THE MIDFIELDER",
-        "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
-        "spot": {
-          "x": 1380,
-          "y": 600,
-          "r": 260
-        },
-        "side": "left",
-        "scrim": 0.5
-      }
-    },
-    "nc-h9": {
-      "template": "namecard",
-      "dur": 0.9,
-      "alpha": true,
-      "params": {
-        "name": "H9",
-        "role": "THE RUNNER",
-        "sub": "UNMARKED. FOR NOW.",
-        "spot": {
-          "x": 450,
-          "y": 660,
-          "r": 120
-        },
-        "side": "right",
-        "scrim": 0.5
-      }
-    },
     "nc-a11": {
       "template": "namecard",
       "dur": 0.9,
@@ -859,23 +866,6 @@
         "scrim": 0.5
       }
     },
-    "duo-split": {
-      "template": "duo",
-      "dur": 1.5,
-      "alpha": true,
-      "params": {
-        "left": "WITH THE LOOK",
-        "right": "WITHOUT"
-      }
-    },
-    "label-dr-6p0": {
-      "template": "label",
-      "dur": 6.0,
-      "alpha": true,
-      "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
-      }
-    },
     "ch1-card": {
       "template": "chapter",
       "dur": 0.75,
@@ -885,60 +875,12 @@
         "title": "THE LOOK"
       }
     },
-    "label-bl-1p35": {
-      "template": "label",
-      "dur": 1.35,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
-    "label-bl-4p05": {
-      "template": "label",
-      "dur": 4.05,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
-    "label-bl-0p3": {
-      "template": "label",
-      "dur": 0.3,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
-    "label-bl-0p45": {
-      "template": "label",
-      "dur": 0.45,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
-    "label-bl-3p6": {
-      "template": "label",
-      "dur": 3.6,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
-      }
-    },
     "label-ie-3p0": {
       "template": "label",
       "dur": 3.0,
       "alpha": true,
       "params": {
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
-      }
-    },
-    "label-bl-1p5": {
-      "template": "label",
-      "dur": 1.5,
-      "alpha": true,
-      "params": {
-        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
       }
     },
     "ch2-card": {
@@ -975,73 +917,350 @@
         "title": "THE CORNER"
       }
     },
-    "tagline": {
-      "template": "slam",
+    "ph-s1a-receive": {
+      "template": "card",
+      "dur": 2.87,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE KID RECEIVES, BACK TO PLAY."
+          },
+          {
+            "text": "FREEZE: YOU ARE No. 14."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1c-tackle": {
+      "template": "card",
+      "dur": 0.6,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE TACKLE."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1d-fall": {
+      "template": "card",
+      "dur": 1.8,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "HE GOES DOWN."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1e-ground": {
+      "template": "card",
+      "dur": 1.0,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "ON THE GRASS."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s2-coach": {
+      "template": "card",
+      "dur": 6.0,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE COACH, TABLET IN HAND."
+          },
+          {
+            "text": "HARD CUT INTO THE APP."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-bl01a": {
+      "template": "card",
+      "dur": 1.35,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "H8 BEFORE THE LOOK."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-bl01b": {
+      "template": "card",
+      "dur": 4.05,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE LOOK."
+          },
+          {
+            "text": "H9 IN THE GLOW."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-bl01c": {
+      "template": "card",
+      "dur": 0.3,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE TOUCH."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-rw1": {
+      "template": "card",
+      "dur": 0.45,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "TAPE REWIND."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-bl02a": {
+      "template": "card",
+      "dur": 0.3,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE REVEAL."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-bl02b": {
+      "template": "card",
+      "dur": 3.6,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE REVEAL:"
+          },
+          {
+            "text": "THE PASS INTO H9'S RUN."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-rw2": {
+      "template": "card",
+      "dur": 1.15,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "TAPE REWIND."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-bl03": {
+      "template": "card",
+      "dur": 2.6,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "WITHOUT THE LOOK:"
+          },
+          {
+            "text": "HE PLAYS IT BACK."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-split": {
+      "template": "card",
+      "dur": 1.5,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "SPLIT: WITH THE LOOK"
+          },
+          {
+            "text": "AND WITHOUT."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4a-pov": {
+      "template": "card",
+      "dur": 1.0,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE KID AGAIN."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4b-check": {
+      "template": "card",
+      "dur": 2.03,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THIS TIME HE CHECKS"
+          },
+          {
+            "text": "HIS SHOULDER."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4c-escape": {
+      "template": "card",
+      "dur": 1.8,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "HE TURNS. HE'S AWAY."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4d-run": {
+      "template": "card",
       "dur": 1.2,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE COACH NODS."
+          },
+          {
+            "text": "EVERY TOUCH STARTS WITH A LOOK."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "nc-you-app": {
+      "template": "namecard",
+      "dur": 0.9,
       "alpha": true,
+      "params": {
+        "name": "YOU ARE No. 4.",
+        "role": "",
+        "sub": "YOU NEVER CHECK YOUR SHOULDER.",
+        "spot": {
+          "x": 960,
+          "y": 640,
+          "r": 200
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "card-see-this": {
+      "template": "card",
+      "dur": 1.0,
+      "alpha": false,
       "params": {
         "lines": [
           {
-            "text": "EVERY TOUCH",
-            "size": 96
+            "text": "SEE THIS?"
+          }
+        ]
+      }
+    },
+    "card-every-touch": {
+      "template": "card",
+      "dur": 1.2,
+      "alpha": false,
+      "params": {
+        "lines": [
+          {
+            "text": "EVERY TOUCH"
           },
           {
             "text": "STARTS WITH A LOOK.",
-            "color": "gold",
-            "size": 96
+            "color": "gold"
           }
         ],
-        "align": "lower-left",
-        "stagger": 0.15,
-        "backdrop": true
+        "stagger": 0.12
       }
     },
-    "label-dr-2p87": {
+    "label-ie-2p87": {
       "template": "label",
       "dur": 2.87,
       "alpha": true,
       "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-dr-0p6": {
+    "label-ie-2p4": {
       "template": "label",
-      "dur": 0.6,
+      "dur": 2.4,
       "alpha": true,
       "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-dr-1p8": {
+    "label-ie-3p03": {
       "template": "label",
-      "dur": 1.8,
+      "dur": 3.03,
       "alpha": true,
       "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
-      }
-    },
-    "label-dr-1p0": {
-      "template": "label",
-      "dur": 1.0,
-      "alpha": true,
-      "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
-      }
-    },
-    "label-dr-2p03": {
-      "template": "label",
-      "dur": 2.03,
-      "alpha": true,
-      "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
-      }
-    },
-    "label-dr-1p2": {
-      "template": "label",
-      "dur": 1.2,
-      "alpha": true,
-      "params": {
-        "text": "DRAMATISATION · RENDERED IN BLENDER"
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     }
   },
@@ -1050,132 +1269,59 @@
       "id": "b01-s1a-receive",
       "dur": 2.87,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_pov.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s1a-receive"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "freeze": {
-        "at": 1.97
-      },
-      "overlays": [
-        {
-          "title": "label-dr-2p87",
-          "at": 0.0
-        },
-        {
-          "title": "nc-you",
-          "at": 1.97
-        }
-      ],
-      "sfx": [
-        {
-          "name": "hum",
-          "at": 0.0,
-          "gain_db": -10
-        },
-        {
-          "name": "heartbeat",
-          "at": 0.3,
-          "gain_db": -8,
-          "dur": 3.0
-        },
-        {
-          "name": "slam",
-          "at": 1.97,
-          "gain_db": -6
-        }
-      ]
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
     },
     {
       "id": "b02-s1c-tackle",
       "dur": 0.6,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_pov.mp4",
-        "in": 2.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s1c-tackle"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-0p6",
-          "at": 0.0
-        }
-      ]
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
     },
     {
       "id": "b03-s1d-fall",
       "dur": 1.8,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_fall.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s1d-fall"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-1p8",
-          "at": 0.0
-        }
-      ],
+      "overlays": [],
       "sfx": [
-        {
-          "name": "boom",
-          "at": 0.0,
-          "gain_db": -5
-        },
         {
           "name": "touch",
           "at": 1.3,
           "gain_db": -2
         }
-      ]
+      ],
+      "story": "blender"
     },
     {
       "id": "b04-s1e-ground",
       "dur": 1.0,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_ground.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s1e-ground"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-1p0",
-          "at": 0.0
-        }
-      ]
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
     },
     {
       "id": "b05-s2-coach",
       "dur": 6.0,
       "picture": {
-        "src": "clip",
-        "path": "out/video/trailer/pins/bs2.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s2-coach"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
       "vo": [
         {
           "id": "vc1",
@@ -1192,10 +1338,95 @@
           "style": "friendly"
         }
       ],
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
+    },
+    {
+      "id": "b01-app-s1-pov",
+      "story": "app",
+      "dur": 2.87,
+      "picture": {
+        "src": "cine",
+        "id": "press-pov-cf",
+        "in": 0
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 1.97
+      },
       "overlays": [
         {
-          "title": "label-dr-6p0",
+          "title": "label-ie-2p87",
           "at": 0.0
+        },
+        {
+          "title": "nc-you-app",
+          "at": 1.97
+        }
+      ]
+    },
+    {
+      "id": "b02-app-s1-tackle",
+      "story": "app",
+      "dur": 2.4,
+      "picture": {
+        "src": "cine",
+        "id": "press-cf",
+        "in": 0.6
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-2p4",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b03-app-s2-see",
+      "story": "app",
+      "dur": 1.0,
+      "picture": {
+        "src": "title",
+        "id": "card-see-this"
+      },
+      "vo": [
+        {
+          "id": "vc1",
+          "at": 0.2,
+          "speaker": "coach",
+          "text": "See this?",
+          "style": "friendly"
+        }
+      ]
+    },
+    {
+      "id": "b04-app-s2-ui",
+      "story": "app",
+      "dur": 6.0,
+      "picture": {
+        "src": "capture",
+        "shot": "03-breakdown",
+        "in": 0.4,
+        "push": [
+          1.0,
+          1.04
+        ]
+      },
+      "vo": [
+        {
+          "id": "vc2",
+          "at": 3.75,
+          "speaker": "coach",
+          "text": "You know why you lost the ball?",
+          "style": "friendly"
         }
       ]
     },
@@ -1233,13 +1464,7 @@
           "at": 1.7
         }
       ],
-      "sfx": [
-        {
-          "name": "boom",
-          "at": 0.0,
-          "gain_db": -6
-        }
-      ],
+      "sfx": [],
       "letterbox": 2.39,
       "fx": [
         "glue"
@@ -1252,40 +1477,16 @@
         "src": "title",
         "id": "ch1-card"
       },
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 0.0,
-          "gain_db": -6
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b08-bl01a",
       "dur": 1.35,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-bl01a"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "freeze": {
-        "at": 0.45
-      },
-      "overlays": [
-        {
-          "title": "label-bl-1p35",
-          "at": 0.0
-        },
-        {
-          "title": "nc-h8",
-          "at": 0.45
-        }
-      ],
+      "overlays": [],
       "vo": [
         {
           "id": "vo30",
@@ -1293,46 +1494,16 @@
           "text": "Meet H8."
         }
       ],
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 0.45,
-          "gain_db": -7
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b09-bl01b",
       "dur": 4.05,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.45,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-bl01b"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "freeze": {
-        "at": 3.15
-      },
-      "muffle": [
-        {
-          "at": 0.1,
-          "dur": 1.45
-        }
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-4p05",
-          "at": 0.0
-        },
-        {
-          "title": "nc-h9",
-          "at": 3.15
-        }
-      ],
+      "overlays": [],
       "vo": [
         {
           "id": "vo31",
@@ -1345,67 +1516,26 @@
           "text": "Nobody's watching H9."
         }
       ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.1,
-          "gain_db": -10
-        },
-        {
-          "name": "whoosh",
-          "at": 1.5,
-          "gain_db": -8
-        },
-        {
-          "name": "slam",
-          "at": 3.15,
-          "gain_db": -7
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b10-bl01c",
       "dur": 0.3,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 3.6,
-        "fit": "pad",
-        "speed": 2
+        "src": "title",
+        "id": "ph-bl01c"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-0p3",
-          "at": 0.0
-        }
-      ]
+      "overlays": [],
+      "sfx": []
     },
     {
       "id": "b11-rw1",
       "dur": 0.45,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
-        "fit": "pad",
-        "speed": 9.4,
-        "reverse": true
+        "src": "title",
+        "id": "ph-rw1"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "rewind",
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-0p45",
-          "at": 0.0
-        }
-      ],
+      "overlays": [],
       "vo": [
         {
           "id": "vo33",
@@ -1418,11 +1548,6 @@
           "name": "touch",
           "at": 0.0,
           "gain_db": -3
-        },
-        {
-          "name": "rewind",
-          "at": 0.0,
-          "gain_db": -9
         }
       ]
     },
@@ -1430,52 +1555,25 @@
       "id": "b12-bl02a",
       "dur": 0.3,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl02_reveal.mp4",
-        "in": 0.0,
-        "fit": "pad",
-        "speed": 2
+        "src": "title",
+        "id": "ph-bl02a"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-0p3",
-          "at": 0.0
-        }
-      ]
+      "overlays": [],
+      "sfx": []
     },
     {
       "id": "b13-bl02b",
       "dur": 3.6,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl02_reveal.mp4",
-        "in": 0.6,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-bl02b"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-3p6",
-          "at": 0.0
-        }
-      ],
+      "overlays": [],
       "sfx": [
         {
           "name": "touch",
           "at": 0.05,
           "gain_db": -4
-        },
-        {
-          "name": "boom",
-          "at": 1.4,
-          "gain_db": -9
         }
       ]
     },
@@ -1499,28 +1597,11 @@
           "text": "A look over his shoulder, and he finds the runner."
         }
       ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.3,
-          "gain_db": -10
-        },
-        {
-          "name": "slam",
-          "at": 1.5,
-          "gain_db": -8
-        }
-      ],
+      "sfx": [],
       "overlays": [
         {
           "title": "label-ie-3p0",
           "at": 0.0
-        }
-      ],
-      "muffle": [
-        {
-          "at": 0.3,
-          "dur": 1.2
         }
       ]
     },
@@ -1599,13 +1680,7 @@
           "text": "Take that look away, and re-run the match."
         }
       ],
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 1.1,
-          "gain_db": -9
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b17-board-rewind",
@@ -1625,37 +1700,17 @@
       "fx": [
         "rewind"
       ],
-      "sfx": [
-        {
-          "name": "rewind",
-          "at": 0.0,
-          "gain_db": -8
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b18-rw2",
       "dur": 1.15,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
-        "speed": 3.68,
-        "reverse": true,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-rw2"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "rewind",
-        "glue"
-      ],
       "sfx": [],
-      "overlays": [
-        {
-          "title": "label-bl-1p15",
-          "at": 0.0
-        }
-      ],
+      "overlays": [],
       "out": {
         "type": "fade",
         "dur": 0.3
@@ -1665,25 +1720,10 @@
       "id": "b19-bl03",
       "dur": 2.6,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl03_without.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-bl03"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "back-to-h4",
-          "at": 1.2
-        },
-        {
-          "title": "label-bl-2p6",
-          "at": 0.0
-        }
-      ],
+      "overlays": [],
       "vo": [],
       "sfx": [
         {
@@ -1705,51 +1745,11 @@
       "id": "b20-split",
       "dur": 1.5,
       "picture": {
-        "src": "split",
-        "left": {
-          "src": "clip",
-          "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.0,
-          "crop": [
-            0,
-            0,
-            960,
-            804
-          ]
-        },
-        "right": {
-          "src": "clip",
-          "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.9,
-          "crop": [
-            960,
-            0,
-            960,
-            804
-          ]
-        }
+        "src": "title",
+        "id": "ph-split"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "duo-split",
-          "at": 0.0
-        },
-        {
-          "title": "label-bl-1p5",
-          "at": 0.0
-        }
-      ],
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 0.0,
-          "gain_db": -8
-        }
-      ]
+      "overlays": [],
+      "sfx": []
     },
     {
       "id": "b21-eyes-drag",
@@ -1782,13 +1782,7 @@
           "text": "Or take his eyes yourself."
         }
       ],
-      "sfx": [
-        {
-          "name": "whoosh",
-          "at": 0.3,
-          "gain_db": -7
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b22-eyes-pov",
@@ -1808,13 +1802,7 @@
           1.04
         ]
       },
-      "sfx": [
-        {
-          "name": "whoosh",
-          "at": 0.0,
-          "gain_db": -8
-        }
-      ],
+      "sfx": [],
       "vo": [
         {
           "id": "vo18b",
@@ -1884,33 +1872,7 @@
           "text": "You only know what he knew."
         }
       ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.6,
-          "gain_db": -7
-        },
-        {
-          "name": "tick",
-          "at": 1.2,
-          "gain_db": -7
-        },
-        {
-          "name": "tick",
-          "at": 1.8,
-          "gain_db": -7
-        },
-        {
-          "name": "tick",
-          "at": 2.4,
-          "gain_db": -7
-        },
-        {
-          "name": "whoosh",
-          "at": 3.0,
-          "gain_db": -6
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b25-yc-truth",
@@ -1933,7 +1895,8 @@
       ],
       "out": {
         "type": "cut"
-      }
+      },
+      "sfx": []
     },
     {
       "id": "b26-ch2",
@@ -1942,13 +1905,7 @@
         "src": "title",
         "id": "ch2-card"
       },
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 0.0,
-          "gain_db": -6
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b27-press-a",
@@ -1974,18 +1931,7 @@
         }
       ],
       "vo": [],
-      "sfx": [
-        {
-          "name": "whoosh",
-          "at": 0.0,
-          "gain_db": -6
-        },
-        {
-          "name": "slam",
-          "at": 1.2,
-          "gain_db": -7
-        }
-      ],
+      "sfx": [],
       "freeze": {
         "at": 1.2
       }
@@ -2015,7 +1961,8 @@
           "at": 0.1,
           "text": "Under a high press…"
         }
-      ]
+      ],
+      "sfx": []
     },
     {
       "id": "b29-press-cf",
@@ -2057,11 +2004,6 @@
       ],
       "sfx": [
         {
-          "name": "boom",
-          "at": 2.0,
-          "gain_db": -4
-        },
-        {
           "name": "shutter",
           "at": 2.0,
           "gain_db": -6
@@ -2078,13 +2020,7 @@
         "src": "title",
         "id": "ch3-card"
       },
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 0.0,
-          "gain_db": -6
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b31-corner-a",
@@ -2104,7 +2040,8 @@
           "at": 0.2,
           "text": "At a corner, it's the marker who has to look."
         }
-      ]
+      ],
+      "sfx": []
     },
     {
       "id": "b32-corner-b",
@@ -2121,7 +2058,8 @@
       "out": {
         "type": "flash",
         "dur": 0.12
-      }
+      },
+      "sfx": []
     },
     {
       "id": "b33-crew",
@@ -2142,38 +2080,7 @@
           "text": "Director, Analyst, Telestrator, Narrator, Verifier, Voice."
         }
       ],
-      "sfx": [
-        {
-          "name": "whoosh",
-          "at": 0.16,
-          "gain_db": -13
-        },
-        {
-          "name": "whoosh",
-          "at": 0.78,
-          "gain_db": -13
-        },
-        {
-          "name": "whoosh",
-          "at": 1.4,
-          "gain_db": -13
-        },
-        {
-          "name": "whoosh",
-          "at": 2.02,
-          "gain_db": -13
-        },
-        {
-          "name": "whoosh",
-          "at": 2.64,
-          "gain_db": -13
-        },
-        {
-          "name": "whoosh",
-          "at": 3.26,
-          "gain_db": -13
-        }
-      ],
+      "sfx": [],
       "out": {
         "type": "flash",
         "dur": 0.12
@@ -2233,11 +2140,6 @@
           "name": "stamp",
           "at": 3.18,
           "gain_db": -4
-        },
-        {
-          "name": "whoosh",
-          "at": 4.2,
-          "gain_db": -9
         }
       ],
       "out": {
@@ -2281,13 +2183,7 @@
           "text": "and it never airs."
         }
       ],
-      "sfx": [
-        {
-          "name": "slam",
-          "at": 1.9,
-          "gain_db": -3
-        }
-      ],
+      "sfx": [],
       "out": {
         "type": "cut"
       }
@@ -2329,11 +2225,6 @@
           "name": "whistle",
           "at": 0.1,
           "gain_db": -9
-        },
-        {
-          "name": "slam",
-          "at": 0.85,
-          "gain_db": -6
         }
       ]
     },
@@ -2378,11 +2269,6 @@
           "name": "tick",
           "at": 1.12,
           "gain_db": -6
-        },
-        {
-          "name": "whoosh",
-          "at": 4.2,
-          "gain_db": -9
         }
       ],
       "out": {
@@ -2413,7 +2299,8 @@
           "at": 0.1,
           "text": "The same moment, for every fan, in every language."
         }
-      ]
+      ],
+      "sfx": []
     },
     {
       "id": "b39-analyst",
@@ -2432,7 +2319,8 @@
           "title": "tag-analyst",
           "at": 0.1
         }
-      ]
+      ],
+      "sfx": []
     },
     {
       "id": "b40-zh",
@@ -2470,13 +2358,7 @@
       "out": {
         "type": "cut"
       },
-      "sfx": [
-        {
-          "name": "whoosh",
-          "at": 4.95,
-          "gain_db": -9
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b41-impact",
@@ -2511,108 +2393,65 @@
       ],
       "out": {
         "type": "cut"
-      }
+      },
+      "sfx": []
     },
     {
       "id": "b42-s4a-pov",
       "dur": 1.0,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs4_pov_a.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s4a-pov"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-1p0",
-          "at": 0.0
-        }
-      ],
-      "sfx": [
-        {
-          "name": "hum",
-          "at": 0.0,
-          "gain_db": -12
-        }
-      ]
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
     },
     {
       "id": "b43-s4b-check",
       "dur": 2.03,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs4_check.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s4b-check"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-2p03",
-          "at": 0.0
-        }
-      ],
-      "muffle": [
-        {
-          "at": 0.1,
-          "dur": 1.6
-        }
-      ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.1,
-          "gain_db": -10
-        },
-        {
-          "name": "whoosh",
-          "at": 1.7,
-          "gain_db": -8
-        }
-      ]
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
     },
     {
       "id": "b44-s4c-escape",
       "dur": 1.8,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs4_escape.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s4c-escape"
       },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-dr-1p8",
-          "at": 0.0
-        }
-      ],
-      "sfx": [
-        {
-          "name": "boom",
-          "at": 0.1,
-          "gain_db": -6
-        }
-      ]
+      "overlays": [],
+      "sfx": [],
+      "story": "blender"
     },
     {
       "id": "b45-s4d-run",
       "dur": 1.2,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs4_run.mp4",
-        "in": 0.0,
-        "fit": "pad"
+        "src": "title",
+        "id": "ph-s4d-run"
+      },
+      "overlays": [],
+      "out": {
+        "type": "flash",
+        "dur": 0.12
+      },
+      "sfx": [],
+      "story": "blender"
+    },
+    {
+      "id": "b42-app-s4-check",
+      "story": "app",
+      "dur": 3.03,
+      "picture": {
+        "src": "cine",
+        "id": "press-pov-f",
+        "in": 0
       },
       "letterbox": 2.39,
       "fx": [
@@ -2620,14 +2459,39 @@
       ],
       "overlays": [
         {
-          "title": "label-dr-1p2",
-          "at": 0.0
-        },
-        {
-          "title": "tagline",
+          "title": "label-ie-3p03",
           "at": 0.0
         }
+      ]
+    },
+    {
+      "id": "b43-app-s4-escape",
+      "story": "app",
+      "dur": 1.8,
+      "picture": {
+        "src": "cine",
+        "id": "press-low",
+        "in": 1.2
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
       ],
+      "overlays": [
+        {
+          "title": "label-ie-1p8",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b44-app-s4-tag",
+      "story": "app",
+      "dur": 1.2,
+      "picture": {
+        "src": "title",
+        "id": "card-every-touch"
+      },
       "out": {
         "type": "flash",
         "dur": 0.12
@@ -2647,14 +2511,7 @@
           "text": "Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech."
         }
       ],
-      "sfx": [
-        {
-          "name": "riser",
-          "at": 3.0,
-          "gain_db": -10,
-          "dur": 3.0
-        }
-      ],
+      "sfx": [],
       "out": {
         "type": "flash",
         "dur": 0.15
@@ -2676,13 +2533,7 @@
           "degree": 0.6
         }
       ],
-      "sfx": [
-        {
-          "name": "sting",
-          "at": 0.0,
-          "gain_db": -3
-        }
-      ]
+      "sfx": []
     }
   ],
   "captions": {
@@ -2701,16 +2552,5 @@
       "pitch": "-6%"
     }
   },
-  "pins": [
-    {
-      "id": "bs2",
-      "clip": "out/video/blender/bs2.mp4",
-      "corners": "out/video/blender/bs2_screen_corners.json",
-      "matte": "out/video/blender/bs2_screen_matte",
-      "source": {
-        "cine": "pov-match"
-      },
-      "source_offset_y": 138
-    }
-  ]
+  "story": "blender"
 }

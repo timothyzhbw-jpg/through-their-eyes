@@ -75,5 +75,15 @@
     "licence": "CC0-1.0",
     "sha256": "54c1abdd5ca5d67cf43c29bdf9d8332510dd1d74e8498569e5d9a2824a77079e",
     "checked_on": "2026-10-21"
+  },
+  {
+    "id": "music-score-hybrid",
+    "kind": "music",
+    "title": "Original score, hybrid variant (orchestral and percussion), cut v9",
+    "author": "This project (video/score/)",
+    "page": "score/README.md",
+    "local": "video/score/out/hybrid_v9.wav",
+    "licence": "Original",
+    "checked_on": "2026-10-21"
   }
 ]

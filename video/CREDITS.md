@@ -11,7 +11,7 @@ below and checks its SHA-256 (`assets.json`) before using it.
 
 | Track | Author | Licence | Link | Used |
 |---|---|---|---|---|
-| Unsolicited trailer music (loop edit) | Emma_MA | CC0 1.0 | https://opengameart.org/content/unsolicited-trailer-music | yes (default) |
+| Unsolicited trailer music (loop edit) | Emma_MA | CC0 1.0 | https://opengameart.org/content/unsolicited-trailer-music | candidate (earlier cuts) |
 | Generic trailer music | Emma_MA | CC0 1.0 | https://opengameart.org/content/generic-trailer-music | candidate |
 | Digital Acid (glitch hop) | Xenocity (Deva) | CC0 1.0 | https://opengameart.org/content/xenocity-digital-acid-glitch-hop | candidate |
 | Skill Test (album After Dark) | HoliznaCC0 | CC0 1.0 | https://freemusicarchive.org/music/holiznacc0/after-dark/skill-test/ | candidate |
@@ -26,7 +26,7 @@ their albums state "The songs in this album are licensed under: CC0 1.0 Universa
 
 ## Original score
 
-The alternative to the tracks above: a score composed for this project in code
+**Used in the film** (Bowen's pick, 2026-10-21: the hybrid variant): a score composed for this project in code
 ([`score/`](score/README.md)), in two variants (grime, hybrid). End-card credit: "Original score
 composed for this project". No samples from existing songs and no AI music generators.
 
