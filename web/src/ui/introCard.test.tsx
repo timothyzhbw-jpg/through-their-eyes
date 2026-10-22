@@ -13,6 +13,7 @@ import { parseHero } from "../data/hero";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type ViewSession } from "../session";
+import { SOURCES } from "../provenance/source";
 import { matchExport } from "../testing";
 import { closeTour, tour } from "../tour/tourState";
 import { intro } from "./intro";
@@ -202,7 +203,7 @@ describe("Teams and more", () => {
     }
     const source = more.querySelector(".source")!;
     expect(source.textContent).toBe("sim");
-    expect(source.getAttribute("title")).toBe("Read from the sim export, not a verified claim");
+    expect(source.getAttribute("title")).toBe(SOURCES.sim.title);
     const minutes = (hero.runs.factual.frames * hero.dt) / 60;
     expect(more.textContent).toContain("A scan is a quick look away from the ball");
     // A hero moment is seconds long: its scans are counted, not turned into a rate.
