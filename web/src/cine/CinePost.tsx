@@ -259,6 +259,7 @@ export function CinePost() {
     );
     const sigma = whip
       ? povBlurSigmaPx({
+          motionBlur: true, // the shot asked for it (`whip`)
           reducedMotion: false,
           camera: "pov",
           playing: true, // a film frame is motion: the playback store only pauses between frames

@@ -4,7 +4,6 @@
 // button, who is watching sits in the header, and the moment card on the right has one primary
 // action: read the moment.
 
-import { withViewTransition } from "../beat/viewTransition";
 import {
   useEffect,
   useId,
@@ -154,14 +153,11 @@ export function CameraSwitch() {
   const camera = useStore(playback, (s) => s.camera);
   const value: Shot = focus === "tactical" ? "tactical" : camera;
   const pick = (shot: Shot) => {
-    if (shot === "tactical") return withViewTransition(() => controls.setFocus("tactical"));
-    // From the board the panes swap (a morph); between the two cameras the 3D view flies.
-    const swap = focus === "tactical" ? withViewTransition : (change: () => void) => change();
-    swap(() => {
-      controls.setCamera(shot);
-      // The picture in picture stays as it was: off (the 3D view alone) or on (the board with it).
-      controls.setFocus(focus === "pov" || focus === "broadcast" ? shot : "split");
-    });
+    // Every switch is a clean cut (beat/cut.ts).
+    if (shot === "tactical") return controls.setFocus("tactical");
+    controls.setCamera(shot);
+    // The picture in picture stays as it was: off (the 3D view alone) or on (the board with it).
+    controls.setFocus(focus === "pov" || focus === "broadcast" ? shot : "split");
   };
   return (
     <Segmented<Shot>
@@ -200,9 +196,7 @@ export function SwapViews() {
       aria-label={name}
       title={name}
       onClick={() =>
-        withViewTransition(() =>
-          controls.setFocus(board ? (camera === "broadcast" ? "broadcast" : "split") : "tactical"),
-        )
+        controls.setFocus(board ? (camera === "broadcast" ? "broadcast" : "split") : "tactical")
       }
     >
       <ExpandIcon />
@@ -307,6 +301,7 @@ export function PovOptions() {
   const povPlayer = useStore(playback, (s) => s.povPlayer);
   const rigged = useStore(trial, (s) => s.rigged);
   const ghostsAvailable = povPlayer === hero.heroId;
+  const ghostsOn = useStore(playback, (s) => s.beliefGhosts);
   return (
     <section className="options-group">
       <h3 className="kicker">Playback and his eyes</h3>
@@ -318,10 +313,25 @@ export function PovOptions() {
           title="Eased head turns and slower playback when the head whips round"
         />
         <Chip
+          name="motionBlur"
+          label="Motion blur"
+          title="A slight smear while his head whips round, as a camera's would (off by default)"
+        />
+        <Chip
           name="beliefGhosts"
           label="Belief ghosts"
           disabled={!ghostsAvailable}
-          title={ghostsAvailable ? "Where he believes each player is" : noBeliefs(hero)}
+          title={
+            ghostsAvailable
+              ? "Where he believes the runner is, from his look to his decision: a ring on the grass and a line to where the runner really is"
+              : noBeliefs(hero)
+          }
+        />
+        <Chip
+          name="ghostsAll"
+          label="All ghosts"
+          disabled={!ghostsAvailable || !ghostsOn}
+          title="Everyone his picture has a metre or more wrong, at any time, on the broadcast camera too"
         />
         <button
           type="button"
