@@ -32,6 +32,7 @@ import {
   kickHop,
   kickFacing,
   kickPose,
+  passBall,
   passEvents,
   smoothedSpeeds,
   strollTime,
@@ -287,6 +288,8 @@ describe("kick timing", () => {
     release: 0.2,
     anchor: [0, 0],
     ball: [0.4, 0.1],
+    ballFrom: 75 - (0.4 + 0.3) / 0.04,
+    ballFull: 75 - 0.4 / 0.04,
   };
   const at = (f: number) => kickPose(f, [kick], dt, clip);
   const windup = kick.frame - WINDUP / dt; // the frame the wind-up starts
@@ -397,6 +400,26 @@ describe("kick timing", () => {
     const round = { ...kick, facing: 150 * DEG, side: -1 as const };
     const half = kickFacing(0, { ...at(75), facing: 0.5, kick: round });
     expect(half / DEG).toBeCloseTo(-105, 9);
+  });
+
+  it("moves the ball to one kicker at a time: the next only once it has left the last", () => {
+    const first = { ...kick, frame: 75 };
+    const next = { ...kick, frame: 90, ballFrom: 90 - 17.5, ballFull: 90 - 10 }; // turn from 72.5
+    passBall([[first], [next]], dt);
+    expect(next.ballFrom).toBeCloseTo(75 + BALL_LEAVE / dt, 9);
+    expect(next.ballFull).toBeCloseTo(75 + (2 * BALL_LEAVE) / dt, 9);
+    expect(kickBallWeight(76, next, dt)).toBe(0);
+    expect(kickBallWeight(78, next, dt)).toBe(0); // the first kick's ball is leaving
+    expect(kickBallWeight(84, next, dt)).toBe(1);
+    // A one-touch pass: on the foot by the contact.
+    const touch = { ...kick, frame: 77, ballFrom: 60, ballFull: 67 };
+    passBall([[first], [touch]], dt);
+    expect(touch.ballFrom).toBe(77);
+    expect(kickBallWeight(77, touch, dt)).toBe(1);
+    // Kicks far apart keep their own timing.
+    const far = { ...kick, frame: 200, ballFrom: 182.5, ballFull: 190 };
+    passBall([[first], [far]], dt);
+    expect([far.ballFrom, far.ballFull]).toEqual([182.5, 190]);
   });
 
   it("finds each player's passes and shots in the run, with their direction", () => {

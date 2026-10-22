@@ -285,6 +285,10 @@ export interface Kick {
   release: number; // s, the turn back to body_yaw after the follow-through
   anchor: [number, number] | null; // m, the plant foot on the pitch (retargeted kick only)
   ball: [number, number]; // m, from the sim's ball to the kicking foot's at the contact
+  // Frames between which the ball moves onto the kicking foot: with the turn, but never before
+  // the run's previous kick has let the ball go (passBall).
+  ballFrom: number;
+  ballFull: number;
 }
 
 /** Pass and shot events per player index (they name the kicker; start, target or aim in m). */
@@ -378,9 +382,28 @@ export function kickHop(f: number, kick: Kick, dt: number): number {
 
 /** How far the ball is moved onto the kicking foot at fractional frame f (0..1). */
 export function kickBallWeight(f: number, kick: Kick, dt: number): number {
-  const tau = (f - kick.frame) * dt;
-  if (tau >= 0) return Math.max(0, 1 - tau / BALL_LEAVE);
-  return smooth((tau + WINDUP + kick.turn) / kick.turn);
+  if (f >= kick.frame) return Math.max(0, 1 - ((f - kick.frame) * dt) / BALL_LEAVE);
+  if (f <= kick.ballFrom) return 0;
+  return kick.ballFull > kick.ballFrom
+    ? smooth((f - kick.ballFrom) / (kick.ballFull - kick.ballFrom))
+    : 1;
+}
+
+/**
+ * One ball, kicked in turn: a kick's ball move starts once the run's previous kick has let the
+ * ball go (BALL_LEAVE after it), easing in over BALL_LEAVE, or at once by the contact. Without
+ * this, a pass played on within the next kick's turn and wind-up would move the ball towards
+ * both kickers at the same time. `kicks`: every player's, in place.
+ */
+export function passBall(kicks: Kick[][], dt: number): void {
+  const all = kicks.flat().sort((a, b) => a.frame - b.frame);
+  for (let i = 1; i < all.length; i++) {
+    const k = all[i];
+    const free = all[i - 1].frame + BALL_LEAVE / dt;
+    if (k.ballFrom >= free) continue;
+    k.ballFrom = Math.min(free, k.frame);
+    k.ballFull = Math.min(k.frame, Math.max(k.ballFull, k.ballFrom + BALL_LEAVE / dt));
+  }
 }
 
 /** Body yaw while a kick plays: body_yaw turned by the pose's facing weight to the kick's. */

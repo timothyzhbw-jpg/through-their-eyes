@@ -24,6 +24,7 @@ import {
   kickFacing,
   kickHop,
   kickPose,
+  passBall,
   passEvents,
   rootAt,
   smoothedSpeeds,
@@ -174,6 +175,8 @@ export function kicksOf(
       release: turnTime(wrapAngle(after - facing)),
       anchor,
       ball,
+      ballFrom: pass.frame - (WINDUP + turnTime(sweep)) / hero.dt,
+      ballFull: pass.frame - WINDUP / hero.dt,
     };
   });
 }
@@ -189,11 +192,13 @@ export function runMotion(hero: Hero, run: Run, clips: ModelClips, scale: number
     gait.stroll ? gaitRun(s, hero.dt) : new Float32Array(s.length).fill(1),
   );
   const passes = passEvents(run.events, hero.ids);
+  const kicks = passes.map((p, j) => kicksOf(hero, run, j, p, clips.pass, scale));
+  passBall(kicks, hero.dt);
   return {
     speeds,
     run: gaits,
     phase: speeds.map((s, j) => gaitPhase(s, hero.dt, gait, gaits[j])),
-    kicks: passes.map((p, j) => kicksOf(hero, run, j, p, clips.pass, scale)),
+    kicks,
     checks: hero.players.map((_, j) => (check ? shoulderChecks(hero, run, j, check) : [])),
   };
 }
