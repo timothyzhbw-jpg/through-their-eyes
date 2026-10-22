@@ -20,6 +20,7 @@ import { LANGUAGES } from "../whatif/whatif";
 import type { Cue } from "./recap";
 import "./recap.css";
 import { clubName } from "../data/roster";
+import { keepTogether } from "../ui/keepTogether";
 
 const NOTHING = "Nothing verified to say about it.";
 
@@ -113,7 +114,11 @@ function Panel({ session }: { session: MatchSession }) {
               <span className="dash">–</span>
               <b>{away ?? ""}</b>
               <span className="team away">{clubName(1)}</span>
-              {scoreLine && <p className="recap-score-line">{scoreLine.text}</p>}
+              {scoreLine && (
+                <p className="recap-score-line">
+                  {keepTogether(scoreLine.text, [clubName(0), clubName(1)])}
+                </p>
+              )}
             </div>
 
             <ol className="recap-moments">
@@ -286,7 +291,11 @@ function Stage({ session }: { session: MatchSession }) {
   return (
     <section className="recap-card full-time" aria-label="Full time">
       <p className="kicker">Full time</p>
-      {scoreLine && <p className="recap-score-line">{scoreLine.text}</p>}
+      {scoreLine && (
+        <p className="recap-score-line">
+          {keepTogether(scoreLine.text, [clubName(0), clubName(1)])}
+        </p>
+      )}
       {state.status === "loading" ? (
         <p className="note">The crew is writing the recap…</p>
       ) : (
