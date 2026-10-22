@@ -11,6 +11,7 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import lookJson from "../../public/data/look_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
+import withoutJson from "../../public/data/without_look_seed3.json";
 import { App, MatchApp } from "../App";
 import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
@@ -34,6 +35,7 @@ import {
 import { takeEyesOf, type Fetch } from "../takeeyes/controller";
 import { intro } from "../ui/intro";
 import { IntroCard } from "../ui/IntroCard";
+import { withoutLookOf } from "../without/without";
 import { yourCallOf } from "../yourcall/controller";
 import { resolveSteps, envOf, targetOf, QUICK_STEPS, STEPS } from "./steps";
 import { recapFixture } from "../recap/fixture";
@@ -221,6 +223,64 @@ describe("the quick tour", () => {
     await click(buttonIn(card(), "Full tour · 90 s"));
     expect(tour.get()).toMatchObject({ open: true, kind: "full" });
     expect(stepId()).toBe("pov");
+  });
+
+  it("is the one panel: the moment card, the HUD row and the caption stand down", async () => {
+    const session = offline();
+    const container = mount(session);
+    expect(container.querySelector(".moment-card")).not.toBeNull();
+    await quick();
+    const stage = container.querySelector(".stage")!;
+    expect(stage.classList.contains("touring")).toBe(true);
+    expect(stage.classList.contains("touring-quick")).toBe(true); // CSS hides .stage-top, .stage-caption
+    expect(container.querySelector(".moment-card")).toBeNull();
+    expect(container.querySelector(".stage-card > .tour-home")).not.toBeNull();
+    act(() => closeTour());
+    expect(container.querySelector(".moment-card")).not.toBeNull();
+    expect(stage.classList.contains("touring")).toBe(false);
+  });
+
+  it("carries each step's verified line in its card, the sample marked as such", async () => {
+    const session = offline(); // the bundled sample breakdown: not checked by the verifier
+    mount(session);
+    await quick();
+    const lines = () => textOf(card()?.querySelector(".tour-lines"));
+    expect(lines()).toContain("J. Ferriday scanned once in the 2 seconds before receiving.");
+    expect(lines()).toContain("sample, not checked");
+    expect(card()?.querySelector(".tour-lines .num")).toBeNull(); // unchecked: no verified mark
+    await next();
+    expect(lines()).toContain("Without that look, J. Ferriday would have passed to K. Annersley.");
+    await next();
+    expect(lines()).toContain("That look was worth");
+    await next();
+    expect(card()?.querySelector(".tour-lines")).toBeNull(); // Your call's own card tells it
+  });
+
+  it("tells the run without the look with its bundled verified lines where the moment has them", async () => {
+    const session = offline();
+    const served = fakeFetch({ "GET /data/without_look_seed3.json": () => json(withoutJson) });
+    await act(() => withoutLookOf(session, served, "/data/").load());
+    mount(session);
+    await act(async () => {
+      startTour("remove", "quick");
+      await settle();
+    });
+    const lines = card()!.querySelector(".tour-lines")!;
+    expect(textOf(lines)).toContain("Removed: J. Ferriday's look over his right shoulder");
+    expect(textOf(lines)).toContain("would have played it back to K. Annersley");
+    expect(lines.querySelector(".num")?.textContent).toBe("0.8 seconds"); // verified: marked
+    await next();
+    expect(textOf(card()!.querySelector(".tour-lines"))).toContain("xT 0.172");
+    expect(buttonIn(card(), "How xT works")).toBeDefined(); // the jargon, on demand
+  });
+
+  it("hides the moment card in the full tour too, but keeps the evidence card it points at", async () => {
+    const session = offline();
+    const container = mount(session);
+    await start("evidence");
+    expect(container.querySelector(".moment-card")).toBeNull();
+    expect(container.querySelector("section.evidence")).not.toBeNull();
+    expect(container.querySelector(".stage")!.classList.contains("touring-quick")).toBe(false);
   });
 
   it("does not open on a stitched match: none of its steps are there", async () => {

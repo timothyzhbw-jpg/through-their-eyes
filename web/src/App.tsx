@@ -65,6 +65,9 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const wasTakeEyes = useRef(false);
   const wasScanSteps = useRef(false);
   const introOpen = useStore(intro, (s) => s.open);
+  // While a tour runs its card is the one panel: the moment card stands down (the evidence card
+  // stays, the full tour points at it); the quick tour's card takes its place.
+  const touring = useStore(tour, (s) => (s.open ? s.kind : null));
 
   useEffect(() => startClock(session), [session]);
   useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
@@ -138,7 +141,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
             </>
           }
           run={<RunToggle />}
-          card={evidence ? <EvidenceCard /> : <MomentCard />}
+          card={
+            evidence && touring !== "quick" ? (
+              <EvidenceCard />
+            ) : touring === "quick" ? (
+              <div className="tour-home" aria-hidden="true" />
+            ) : touring ? null : (
+              <MomentCard />
+            )
+          }
           caption={
             <>
               <Caption />
@@ -273,12 +284,24 @@ function LiveScreen(props: {
   const focus = useStore(playback, (s) => s.focus);
   const camera = useStore(playback, (s) => s.camera);
   const introOpen = useStore(intro, (s) => s.open);
+  const touring = useStore(tour, (s) => (s.open ? s.kind : null));
   const board = focus === "tactical";
   const pip = focus === "split" || board;
   // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
   const belief = pip && !board && beliefPip(session, camera);
   return (
-    <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
+    <section
+      className={[
+        "stage",
+        `focus-${focus}`,
+        pip && "with-pip",
+        touring && "touring", // the HUD row stands down: the tour card is the one panel
+        touring === "quick" && "touring-quick", // and the caption: its lines are in the card
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label="Live screen"
+    >
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
       <div className="stage-content" inert={introOpen} style={{ display: "contents" }}>
         <div className="views">

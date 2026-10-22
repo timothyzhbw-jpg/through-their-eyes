@@ -36,6 +36,8 @@ export const ENTERS = [
   "producer",
   "recap",
 ] as const;
+/** The verified lines a quick-tour step's panel carries (StepLines.tsx). */
+export const SAYS = ["look", "without", "compare"] as const;
 /** The tour card's own button for a step, for anything that calls the service (TourActs.tsx). */
 export const ACTS = [
   "checkWrongNumber",
@@ -49,6 +51,7 @@ export const ACTS = [
 export type Condition = (typeof CONDITIONS)[number];
 export type EnterName = (typeof ENTERS)[number];
 export type ActName = (typeof ACTS)[number];
+export type SayName = (typeof SAYS)[number];
 
 const When = z
   .string()
@@ -66,6 +69,7 @@ const Step = z.strictObject({
   focus: z.enum(["card", "app"]).optional(), // who takes the keyboard on arrival (default: card)
   enter: z.enum(ENTERS),
   act: z.enum(ACTS).optional(),
+  say: z.enum(SAYS).optional(), // the verified lines its panel carries
   needs: z.array(When),
   hold: z.number().positive(), // suggested seconds on the step
 });

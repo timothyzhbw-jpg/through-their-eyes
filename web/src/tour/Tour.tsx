@@ -17,7 +17,7 @@ import { useStore } from "../store/store";
 import { intro } from "../ui/intro";
 import { prefersReducedMotion } from "../yourcall/controller";
 import { enterStep } from "./actions";
-import { onScreen, PHONE_MAX, placeCard, type Box, type Keep, type Size } from "./layout";
+import { GUTTER, onScreen, PHONE_MAX, placeCard, type Box, type Keep, type Size } from "./layout";
 import {
   envOf,
   indexOf,
@@ -31,6 +31,7 @@ import {
 } from "./steps";
 import { closeTour, goToStep, startTour, tour } from "./tourState";
 import { ACT_VIEW } from "./TourActs";
+import { StepLines } from "./StepLines";
 import "./tour.css";
 
 const RING_PAD = 6; // px between the target and its ring
@@ -55,7 +56,19 @@ function arrive(session: ViewSession, step: TourStep, seq: number) {
 
 const viewport = (): Size => ({ w: window.innerWidth, h: window.innerHeight });
 const boxOf = (r: DOMRect): Box => ({ top: r.top, left: r.left, width: r.width, height: r.height });
-const NOTHING = { target: null, keep: [] };
+const NOTHING = { target: null, keep: [], home: null, floor: null };
+const PHONE_ROOM = 200; // px: the least room under the picture the quick tour's sheet takes
+
+/** The quick tour's panel sits in the moment card's place (App.tsx leaves a `.tour-home` there,
+ * where that slot floats over the picture): the picture's middle, the player and the pass stay
+ * clear. On a phone, and where the slot is in the page's flow, the card is placed as usual. */
+function homeBox(): Box | null {
+  const home = document.querySelector(".stage-card > .tour-home");
+  const slot = home?.parentElement;
+  if (!home || !slot || getComputedStyle(slot).position !== "absolute") return null;
+  const r = slot.getBoundingClientRect();
+  return r.width > 0 ? boxOf(r) : null;
+}
 
 /** What the card should leave visible, by weight: what the viewer reads (the caption, the
  * moment or evidence card, Your call's and Take his eyes' cards, the board beside his eyes), then
@@ -168,7 +181,12 @@ function TourOverlay({ session }: { session: ViewSession }) {
   const next = useRef<HTMLButtonElement>(null);
   const [view, setView] = useState(viewport);
   const [cardSize, setCardSize] = useState<Size>({ w: 400, h: 200 });
-  const [seen, setSeen] = useState<{ target: Box | null; keep: Keep[] }>(NOTHING);
+  const [seen, setSeen] = useState<{
+    target: Box | null;
+    keep: Keep[];
+    home: Box | null;
+    floor: number | null; // a phone in the quick tour: the bottom of the picture
+  }>(NOTHING);
 
   // Set the step up once per arrival, then hand the keyboard to the card: after the app's own
   // focus moves (closing Your call gives its pill the focus back), unless the step's own control
@@ -187,11 +205,15 @@ function TourOverlay({ session }: { session: ViewSession }) {
   }, []);
   // Measure the card after every render, before the browser paints: a step's words change its
   // height, and it must be placed by its new height or it would hang off the screen for a frame.
+  // Its whole height, not what a max-height lets show: placed by its clipped height, a card
+  // under a phone's picture would settle lower and lower.
   useLayoutEffect(() => {
-    const r = card.current?.getBoundingClientRect();
-    if (!r || r.width <= 0 || r.height <= 0) return;
-    if (Math.abs(r.width - cardSize.w) > 0.5 || Math.abs(r.height - cardSize.h) > 0.5) {
-      setCardSize({ w: r.width, h: r.height });
+    const el = card.current;
+    const r = el?.getBoundingClientRect();
+    if (!el || !r || r.width <= 0 || r.height <= 0) return;
+    const h = Math.max(r.height, el.scrollHeight);
+    if (Math.abs(r.width - cardSize.w) > 0.5 || Math.abs(h - cardSize.h) > 0.5) {
+      setCardSize({ w: r.width, h });
     }
   });
 
@@ -230,16 +252,22 @@ function TourOverlay({ session }: { session: ViewSession }) {
       }
       const box = el ? visibleBox(el, clips) : null;
       const keep = el ? keepClear(el) : [];
-      const key = JSON.stringify([box, keep]);
+      const home = homeBox();
+      const views = document.querySelector(".stage .views")?.getBoundingClientRect();
+      const floor =
+        kind === "quick" && innerWidth < PHONE_MAX && views && views.height > 0
+          ? Math.round(views.bottom)
+          : null;
+      const key = JSON.stringify([box, keep, home, floor]);
       if (key !== last) {
         last = key;
-        setSeen({ target: box, keep });
+        setSeen({ target: box, keep, home, floor });
       }
       frame = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(frame);
-  }, [step, seq, reduced]);
+  }, [step, seq, reduced, kind]);
 
   // While the page scrolls the ring moves with what it frames, without its glide (the glide is for
   // moving between steps): gliding, it trailed the target and framed whatever scrolled past.
@@ -262,7 +290,10 @@ function TourOverlay({ session }: { session: ViewSession }) {
   // the evidence card): the card would cover what they are using. It opens again on each step.
   const phone = view.w < PHONE_MAX;
   const [folded, setFolded] = useState(false);
-  useEffect(() => setFolded(false), [seq]);
+  // The quick tour's step on a feature with its own card (Your call): on a phone that card tells
+  // the step, so the tour's card starts as a bar.
+  const foldOnArrival = kind === "quick" && phone && step.focus === "app";
+  useEffect(() => setFolded(foldOnArrival), [seq, foldOnArrival]);
   useEffect(() => {
     if (!phone) return;
     const down = (e: PointerEvent) => {
@@ -279,7 +310,27 @@ function TourOverlay({ session }: { session: ViewSession }) {
     width: target.width + 2 * RING_PAD,
     height: target.height + 2 * RING_PAD,
   };
-  const place = placeCard(ring, view, cardSize, seen.keep);
+  // The quick tour keeps the picture clear: on a wide screen in the moment card's place, on a
+  // phone under the picture (scrolling inside when a small phone has too little room there).
+  const under = seen.floor !== null && view.h - seen.floor - GUTTER >= PHONE_ROOM;
+  const place: { top: number; left: number; width: number; maxHeight?: number } =
+    seen.home && !phone
+      ? {
+          top: Math.max(GUTTER, Math.min(seen.home.top, view.h - GUTTER - cardSize.h)),
+          left: seen.home.left,
+          width: seen.home.width,
+        }
+      : under
+        ? (() => {
+            const top = Math.max(seen.floor! + 8, view.h - GUTTER - cardSize.h);
+            return {
+              top,
+              left: GUTTER,
+              width: view.w - 2 * GUTTER,
+              maxHeight: view.h - GUTTER - top,
+            };
+          })()
+        : placeCard(ring, view, cardSize, seen.keep);
   const go = (k: number) => {
     const to = steps[k];
     if (to) goToStep(to.id);
@@ -325,6 +376,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
             </p>
           </div>
         </div>
+        {step.say && !folded && session.kind === "hero" && <StepLines say={step.say} />}
         {Act && !folded && (
           <div className="tour-act">
             <Act />

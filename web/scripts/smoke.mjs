@@ -662,7 +662,11 @@ async function coldLoad(page, shoot) {
   }
   const took = Math.round((Date.now() - started) / 1000);
   console.log(`     the run without the look ${took} s after Start (deadline ${COLD_LOAD_S} s)`);
-  await see(page.getByText(/without that look/i).first(), 'the "Without that look" line');
+  // The quick tour's card carries the step's verified lines (the caption stands down).
+  await see(
+    page.locator(".tour-card .tour-lines").filter({ hasText: /without that look/i }),
+    'the "Without that look" line in the tour card',
+  );
   await shoot(`at-${took}s`);
 }
 
@@ -683,13 +687,37 @@ async function quickTour(page, shoot) {
           "the run without the look",
         ),
     ],
-    ["Compare the outcomes", () => mainView(page, "board")],
+    [
+      "Compare the outcomes",
+      async () => {
+        await mainView(page, "board");
+        // One panel, clear of what it explains: the card leaves the board's pitch uncovered.
+        const board = page.getByRole("figure", { name: "Tactical view from above" });
+        const [a, b] = await Promise.all([
+          board.locator("canvas").boundingBox(),
+          card.boundingBox(),
+        ]);
+        const cover =
+          a && b
+            ? Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+              Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+            : 0;
+        if (a && cover > 0.25 * a.width * a.height) {
+          throw new Error(
+            `expected the tour card clear of the board: it covers ${Math.round(cover)} px²`,
+          );
+        }
+      },
+    ],
     ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
   ];
   for (const [k, [title, shows]] of expect.entries()) {
     const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 4`) });
     await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
     await shows();
+    if (await page.locator(".moment-card").isVisible()) {
+      throw new Error("expected the moment card to stand down while the quick tour runs");
+    }
     await cardOnScreen(page, step, k + 1);
     await shoot(`step-${k + 1}`);
     if (k < expect.length - 1) await step.getByRole("button", { name: "Next" }).click();

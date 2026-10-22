@@ -2002,6 +2002,14 @@ original visual identity.
   once both passes have arrived, the run without the look as the gold ghost path), make your call
   (Your call). Its words carry no number. It opens only on a hero moment with a key scan and the
   run without it; elsewhere Start starts watching. Its last step offers the full tour.
+  - *One panel per step.* While a tour runs its card is the one panel: the moment card and the
+    HUD row (whose eyes, the director's suggestions, the stats ticker) stand down; the evidence
+    card stays for the full tour, which points at it. In the quick tour the caption stands down
+    too, and the card carries the step's verified lines instead (the breakdown's line for the
+    look; the bundled "without the look" lines, else the breakdown's, for the run without it and
+    the comparison, with "How xT works" on demand). It sits in the moment card's place on a wide
+    screen and under the picture on a phone, so the player and the pass stay in view; on a phone
+    the Your call step starts as a bar, since Your call's own card tells it.
 - **Judge tour**, the full tour ([web/src/tour/](../web/src/tour/); "Full tour · 90 s" behind
   "Teams and more" on the intro card, in the story and at the end of the quick tour, and the link
   `?tour=1`, or `?tour=<step id>`): an optional walk of about ninety seconds, so a judge with
@@ -2193,7 +2201,8 @@ reported to be Xsens motion capture; animation only): the players' walk
       without it. — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
       [tour.test.tsx](../web/src/tour/tour.test.tsx) ("the quick tour"),
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx); `npm run smoke`, pages
-      `quick-tour`, `phone-375-quick-tour` and `cold-load-without-the-look`
+      `quick-tour`, `phone-375-quick-tour` (the moment card stood down at every step, the card
+      clear of the board) and `cold-load-without-the-look`
 - [x] Take his eyes: every look of the grid airs only lines that pass the checks, in en and zh;
       a look's run is the factual run with only his head, sight, belief and own events spliced in
       before his decision; times and directions are named radio groups with arrow keys and Enter,
