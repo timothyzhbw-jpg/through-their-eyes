@@ -3692,6 +3692,22 @@ optgroup {
   order: -1;
 }
 
+/* On a phone the camera switch and the Auto director fold into View options (an outside review,
+   10/22): under the picture they took two of its rows, ahead of the moment card. The picture's
+   own row keeps play, the timeline and View options; the director's row keeps its suggestion. */
+.options-panel .phone-only {
+  display: none;
+}
+@media (max-width: 760px) {
+  .options-panel .phone-only {
+    display: block;
+  }
+  .transport > .seg.camera,
+  .stage-director .director-auto {
+    display: none;
+  }
+}
+
 /* From 1181 px the run switch sits centred in the header row: the stream status takes its own line
    under the Live pill, between the header row and the eyes row, so the two never meet. */
 @media (min-width: 1181px) {
