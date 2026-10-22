@@ -24,7 +24,7 @@ const TEMPLATES = [
   { name: "end", alpha: false, params: ["name", "tagline", "url", "lines"] },
   { name: "countdown", alpha: true, params: ["label", "sub", "secs"] },
   { name: "caption", alpha: true, params: ["text", "dur"] },
-  { name: "label", alpha: true, params: ["text"] },
+  { name: "label", alpha: true, params: ["text", "corner"] },
   { name: "namecard", alpha: true, params: ["name", "role", "sub", "spot", "side", "scrim"] },
   { name: "chapter", alpha: false, params: ["label", "title"] },
   { name: "duo", alpha: true, params: ["left", "right"] },

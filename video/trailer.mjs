@@ -31,7 +31,7 @@ import {
 import { parseDuration, parseEbur128, parseLoudnorm, runFfmpeg, runProcess } from "./lib/ffmpeg.mjs";
 import { renderReport } from "./lib/report.mjs";
 import { SFX_DEFAULT_DUR, conflictingSfx, writeSfx } from "./lib/sfx.mjs";
-import { storyBeats, validateTrailer } from "./lib/spec.mjs";
+import { namedSpec, storyBeats, validateTrailer } from "./lib/spec.mjs";
 import { buildSsml, estimateSpeechSeconds, voiceFor, voRoomWarnings, wavSeconds } from "./lib/vo.mjs";
 import { encodeWav16Mono, readWav, trimSilence } from "./lib/wav.mjs";
 
@@ -55,6 +55,7 @@ const USAGE = `Usage: node video/trailer.mjs [options]
   --force              ignore caches
   --only <ids>         edit: re-render these beats (ids or prefixes); reuse the others
   --story <name>       blender (default) or app: which telling of the story to cut
+  --naming <name>      ids (default) or names: players as H8, or by the app's fictional names
   --base-url <url>     site passed to cine and to the capture kit
   --out <dir>          work directory (default: out/video/trailer)
   --headed             show the browser for cine and titles
@@ -82,6 +83,7 @@ async function main() {
         only: { type: "string" },
         "base-url": { type: "string" },
         story: { type: "string" },
+        naming: { type: "string" },
         out: { type: "string" },
         headed: { type: "boolean", default: false },
         ffmpeg: { type: "string", default: "ffmpeg" },
@@ -105,6 +107,8 @@ async function main() {
   const spec = readJson(specPath);
   if (args.story && !["blender", "app"].includes(args.story)) throw new Error(`--story must be blender or app`);
   spec.beats = storyBeats(spec, args.story); // one telling of the story; the other's beats drop out
+  if (args.naming && !["ids", "names"].includes(args.naming)) throw new Error(`--naming must be ids or names`);
+  Object.assign(spec, namedSpec(spec, args.naming)); // player ids (H8) or the app's fictional names
   const shots = readJson(path.join(HERE, "shots.json"));
   const assets = readJson(path.join(HERE, "assets.json"));
   const credits = readFileSync(path.join(HERE, "CREDITS.md"), "utf8");
@@ -218,14 +222,19 @@ async function stepPin(ctx) {
       if (!existsSync(f)) throw new Error(`pin ${pin.id}: missing ${path.relative(ctx.root, f)}`);
     }
     const mattes = readdirSync(matte).filter((f) => f.endsWith(".png")).sort();
-    const hash = digest(["pin-v1", pin, fileStamp(clip), fileStamp(corners), fileStamp(source), mattes.length,
+    const hash = digest(["pin-v2", pin, fileStamp(clip), fileStamp(corners), fileStamp(source), mattes.length,
       fileStamp(path.join(matte, mattes[mattes.length - 1] ?? "")), fileStamp(path.join(HERE, "pin.py"))]);
     if (fresh(out, hash, ctx.force)) {
       console.log(`  ${pin.id}: cached`);
       continue;
     }
+    const extra = [];
+    if (pin.source_time) extra.push("--source-time", String(pin.source_time));
+    if (pin.ev) extra.push("--ev", String(pin.ev));
+    if (pin.ev_ramp_frames) extra.push("--ev-ramp-frames", String(pin.ev_ramp_frames));
+    if (pin.ref_corners) extra.push("--ref-corners", path.resolve(ctx.root, pin.ref_corners));
     await runProcess("uv", ["run", "--no-sync", "python", "video/pin.py", "--clip", clip, "--corners", corners,
-      "--matte", matte, "--source", source, "--source-offset-y", String(pin.source_offset_y ?? 0), "--out", out],
+      "--matte", matte, "--source", source, "--source-offset-y", String(pin.source_offset_y ?? 0), ...extra, "--out", out],
       { cwd: ctx.root, inherit: true });
     storeHash(out, hash);
   }
@@ -253,9 +262,11 @@ async function stepCapture(ctx) {
 }
 
 async function stepCine(ctx) {
-  const ids = [
-    ...new Set(ctx.spec.beats.filter((b) => b.picture?.src === "cine").map((b) => b.picture.id)),
-  ];
+  // Cine pictures, and the cine halves of split screens.
+  const parts = ctx.spec.beats.flatMap((b) =>
+    b.picture?.src === "split" ? [b.picture.left, b.picture.right] : [b.picture ?? {}],
+  );
+  const ids = [...new Set(parts.filter((p) => p?.src === "cine").map((p) => p.id))];
   if (!ids.length) {
     console.log("  no cine shots");
     return;
@@ -553,7 +564,7 @@ async function stepEdit(ctx) {
  */
 async function burnCaptions(ctx, timeline, joined) {
   const opts = ctx.spec.captions ?? {};
-  if (opts.enabled === false) return joined;
+  if (opts.enabled === false && !ctx.spec.watermark) return joined;
   const skip = new Set(opts.skip_languages ?? ["zh"]);
   const { table, doc } = loadClaims(ctx);
   const lines = resolveLines(ctx.spec, table, doc)
@@ -607,10 +618,11 @@ async function burnCaptions(ctx, timeline, joined) {
     }
   }
   console.log(`  captions: ${cues.length} lines (${todo.length} rendered)`);
+  const watermark = ctx.spec.watermark ? await watermarkStill(ctx, ctx.spec.watermark) : null;
   const out = path.join(ctx.outDir, "captioned.mp4");
-  const hash = digest(["captioned-v1", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)])]);
+  const hash = digest(["captioned-v2", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)]), watermark ? fileStamp(watermark) : null]);
   if (!fresh(out, hash, ctx.force)) {
-    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps }));
+    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps, watermark, duration: timeline.duration }));
     storeHash(out, hash);
   }
   writeFileSync(path.join(ctx.outDir, "captions.json"), `${JSON.stringify(cues.map(({ file, hash, ...c }) => c), null, 2)}\n`);
@@ -639,6 +651,31 @@ function lowerLeftWindows(spec, timeline) {
     }
   });
   return out;
+}
+
+/** A still of the watermark (the label template, top left) as a PNG with alpha. */
+async function watermarkStill(ctx, text) {
+  const dir = path.join(ctx.outDir, "captions");
+  mkdirSync(dir, { recursive: true });
+  const mov = path.join(dir, "watermark.mov");
+  const png = path.join(dir, "watermark.png");
+  const page = ["titles.css", "titles.js", "label.html"].map((f) => fileStamp(path.join(HERE, "titles", f)));
+  const hash = digest(["watermark-v1", text, ctx.spec.output, ...page]);
+  if (!fresh(png, hash, ctx.force)) {
+    const { renderTitle } = await import("./lib/titles.mjs");
+    const { chromium } = await import("playwright");
+    const browser = await chromium.launch({ args: ["--hide-scrollbars"] });
+    try {
+      const { width, height, fps } = ctx.spec.output;
+      const title = { template: "label", dur: 0.2, alpha: true, params: { text, corner: "top-left" } };
+      await renderTitle({ browser, id: "watermark", title, fps, width, height, outFile: mov, ffmpeg: ctx.ffmpeg, log: () => {} });
+    } finally {
+      await browser.close();
+    }
+    await runFfmpeg(ctx.ffmpeg, ["-y", "-hide_banner", "-loglevel", "error", "-i", mov, "-frames:v", "1", "-pix_fmt", "rgba", png]);
+    storeHash(png, hash);
+  }
+  return png;
 }
 
 /** Whether this ffmpeg build has an encoder (`ffmpeg -encoders`). */
@@ -800,7 +837,11 @@ async function beatEnv(ctx, beat, titles, manifest) {
     file = path.resolve(ctx.root, picture.path);
   } else if (picture.src === "split") {
     const sideFile = (part) =>
-      part.src === "clip" ? path.resolve(ctx.root, part.path) : path.join(ctx.finalsDir, `${part.shot}.webm`);
+      part.src === "clip"
+        ? path.resolve(ctx.root, part.path)
+        : part.src === "cine"
+          ? path.join(ctx.outDir, "cine", `${part.id}.mp4`)
+          : path.join(ctx.finalsDir, `${part.shot}.webm`);
     files = [sideFile(picture.left), sideFile(picture.right)];
     for (const f of files) if (!existsSync(f)) throw new Error(`beat ${beat.id}: missing ${path.relative(ctx.root, f)}`);
     sourceDurations = [await probe(ctx.ffmpeg, files[0]), await probe(ctx.ffmpeg, files[1])];

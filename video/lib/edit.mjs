@@ -198,12 +198,7 @@ export function beatGraph(beat, env = {}) {
     parts.push(`[${label}]${look}[look]`);
     label = "look";
   }
-  (env.overlays ?? []).forEach((overlay, i) => {
-    const index = addInput(["-i", overlay.file]);
-    parts.push(`[${index}:v]setpts=PTS+${num(overlay.at)}/TB,fps=${fps},format=rgba[ov${i}]`);
-    parts.push(`[${label}][ov${i}]overlay=0:0:eof_action=pass:format=auto[ovd${i}]`);
-    label = `ovd${i}`;
-  });
+  // The bars go under the overlays, so a corner label can sit in the top bar.
   if (beat.letterbox) {
     const bars = letterbox(beat.letterbox, w, h);
     if (bars) {
@@ -211,6 +206,12 @@ export function beatGraph(beat, env = {}) {
       label = "box";
     }
   }
+  (env.overlays ?? []).forEach((overlay, i) => {
+    const index = addInput(["-i", overlay.file]);
+    parts.push(`[${index}:v]setpts=PTS+${num(overlay.at)}/TB,fps=${fps},format=rgba[ov${i}]`);
+    parts.push(`[${label}][ov${i}]overlay=0:0:eof_action=pass:format=auto[ovd${i}]`);
+    label = `ovd${i}`;
+  });
   parts.push(`[${label}]format=yuv420p,setsar=1[vout]`);
   return { inputs, filter: parts.join(";"), duration: length, fps };
 }
@@ -526,14 +527,24 @@ function resolveCrop(picture, env) {
 function coverOrPush(picture, w, h, beatDur) {
   // "pad": keep the frame as rendered (a 2.39:1 clip) inside bars, never cropped or zoomed.
   if (picture.fit === "pad") return [`scale=${w}:-2`, `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black`];
+  // "contain": all of the picture, scaled to fit, on the app's page colour (a board that is
+  // narrower than 16:9 keeps its touchlines instead of losing them to a cover crop).
+  const fill =
+    picture.fit === "contain"
+      ? [
+          `scale=${w}:${h}:force_original_aspect_ratio=decrease:force_divisible_by=2`,
+          `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=${picture.background ?? "0x050707"}`,
+        ]
+      : [];
   if (!picture.push) {
-    return [`scale=${w}:${h}:force_original_aspect_ratio=increase`, `crop=${w}:${h}`];
+    return fill.length ? fill : [`scale=${w}:${h}:force_original_aspect_ratio=increase`, `crop=${w}:${h}`];
   }
   const [z0, z1] = picture.push;
   const W = w * 2;
   const H = h * 2;
   const z = `${z0}+(${z1}-${z0})*min(1,t/${num(beatDur)})`;
   return [
+    ...fill,
     `scale=${W}:${H}:force_original_aspect_ratio=increase`,
     `crop=${W}:${H}`,
     `scale=w='trunc(${W}*(${z})/2)*2':h='trunc(${H}*(${z})/2)*2':eval=frame`,

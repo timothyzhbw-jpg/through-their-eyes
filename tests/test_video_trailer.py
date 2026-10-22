@@ -22,8 +22,15 @@ NUMBER_WORDS = re.compile(
 def _spec(story: str | None = None) -> dict:
     """The spec with one telling of the story: beats tagged with another `story` drop out."""
     spec = json.loads((VIDEO / "trailer.json").read_text())
-    pick = story or spec.get("story", "blender")
-    spec["beats"] = [b for b in spec["beats"] if b.get("story") in (None, pick)]
+    choice = story or spec.get("story", "blender")
+
+    def keep(b: dict) -> bool:
+        if b.get("story") is None:
+            return True
+        pick = choice if isinstance(choice, str) else choice.get(b.get("section"), "blender")
+        return b["story"] == pick
+
+    spec["beats"] = [b for b in spec["beats"] if keep(b)]
     return spec
 
 

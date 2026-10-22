@@ -43,11 +43,13 @@ export function captionSides(cues, busy) {
  * @param {string} video
  * @param {Array<{ file: string, start: number }>} captions
  * @param {string} out
- * @param {{ fps: number }} size
+ * @param {{ fps: number, watermark?: string | null, duration?: number }} opts
  */
-export function burnArgs(video, captions, out, { fps }) {
+export function burnArgs(video, captions, out, { fps, watermark = null, duration = 0 }) {
   const args = ["-y", "-hide_banner", "-loglevel", "error", "-i", video];
   for (const c of captions) args.push("-i", c.file);
+  // A still (PNG with alpha) over the whole film, e.g. "PREVIEW · ..." on a cut awaiting approval.
+  if (watermark) args.push("-loop", "1", "-t", String(duration), "-i", watermark);
   const parts = [];
   let label = "0:v";
   captions.forEach((c, i) => {
@@ -56,7 +58,11 @@ export function burnArgs(video, captions, out, { fps }) {
     label = `v${i}`;
   });
   if (!captions.length) parts.push("[0:v]null[v0]");
-  const last = captions.length ? `v${captions.length - 1}` : "v0";
+  let last = captions.length ? `v${captions.length - 1}` : "v0";
+  if (watermark) {
+    parts.push(`[${captions.length + 1}:v]format=yuva420p[wm]`, `[${last}][wm]overlay=0:0:shortest=1:format=auto[vwm]`);
+    last = "vwm";
+  }
   parts.push(`[${last}]fps=${fps},format=yuv420p[vout]`);
   return [
     ...args,
