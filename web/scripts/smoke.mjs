@@ -443,6 +443,34 @@ async function phone(page, check, { live = true } = {}) {
   if (wide > width) throw new Error(`scrolls sideways: ${wide} px wide in ${width} px`);
   if (overlaps.length) throw new Error(`header controls overlap: ${overlaps.join(", ")}`);
   if (offscreen.length) throw new Error(`header controls off screen: ${offscreen.join(", ")}`);
+  await beliefLegend(page);
+}
+
+/** Beside his eyes (a tablet or a desktop: a phone has no picture in picture), each label of the
+ * belief map's title and legend sits on one line inside the picture in picture: at 1280 px a
+ * full-height disc left the legend a 71 px column and "His options" broke onto two lines. */
+async function beliefLegend(page) {
+  const broken = await page.evaluate(() => {
+    const map = document.querySelector(".views .belief-map");
+    const box = map?.getBoundingClientRect();
+    if (!box || box.width < 1) return [];
+    const out = [];
+    const walk = document.createTreeWalker(map, NodeFilter.SHOW_TEXT);
+    for (let node = walk.nextNode(); node; node = walk.nextNode()) {
+      const text = node.textContent.trim();
+      if (!text || !node.parentElement.closest(".belief-title, .belief-legend")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+      const lines = new Set(rects.map((r) => Math.round(r.top))).size;
+      const r = range.getBoundingClientRect();
+      if (lines > 1) out.push(`"${text}" on ${lines} lines`);
+      else if (r.left < box.left - 0.5 || r.right > box.right + 0.5)
+        out.push(`"${text}" cut at the edge (${Math.round(r.right - box.right)} px)`);
+    }
+    return out;
+  });
+  if (broken.length) throw new Error(`belief map legend: ${broken.join(", ")}`);
 }
 
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */
