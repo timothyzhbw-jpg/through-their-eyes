@@ -37,7 +37,9 @@ Contents: [1 Team shape](#1-team-shape) · [2 Movement](#2-movement) ·
 
 ## 1. Team shape
 
-Unless a row says otherwise, goalkeepers are excluded. Length is the distance from the deepest to
+The Sim column was measured before the team shape (PR #150, SPEC 3.2); the shape's values by
+phase are in [realism.md](../eval/reports/realism.md), Team shape. Unless a row says otherwise,
+goalkeepers are excluded. Length is the distance from the deepest to
 the most advanced outfield player along the pitch; width is the same across it. "Both teams"
 means the 20 outfield players together.
 
@@ -155,6 +157,15 @@ are not repeated here.
 
 Ordered by how much they show on screen. None is fixed here; the sim changes go through the
 session that owns `sim/`.
+
+*Since PR #150 (formation-based team shape in `possession_play`, SPEC 3.2), gaps 1–3 are smaller
+in open play; the numbers below are from before it.* On `possession_play` seeds 100–119 both
+teams' outfield players span 40.3 m along the pitch and 41.8 m across it (53.6 and 50.1 m before),
+with the team centroids 9.3 m apart (16.4 m before). The defending line follows the 0.46 m per
+metre regression (measured 0.41; 0.23 before). The shape changes with possession: 41.4 m wide
+and 37.8 m long with the ball, 37.9 and 32.1 m without it (held-out seeds 100–199). The deepest
+player (32.5 m) and the keeper's gap (20.3 m) are still short of the LaLiga means: see
+[realism.md](../eval/reports/realism.md), Team shape.
 
 1. **The two teams stand apart.** Both teams' outfield players span 54 m along the pitch in the
    sim against 37–39 m (EPL, LaLiga). The sim's team centroids are 16 m apart against 5–7 m.
