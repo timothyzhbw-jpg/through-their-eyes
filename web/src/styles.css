@@ -3029,6 +3029,23 @@ optgroup {
     top: 140px;
   }
 }
+/* A short screen with the board as the main view (a 720 px laptop, a tablet on its side): his eyes
+   ride along smaller and the card leaves out its description, so the card's buttons stay on screen
+   above them (at 960 x 720 "Get breakdown" had scrolled out of the card). */
+@media (min-width: 761px) and (max-height: 780px) {
+  .focus-tactical .slot.pip,
+  .focus-tactical .swap {
+    width: min(var(--card-w), 220px);
+  }
+  .focus-tactical .stage-card {
+    max-height: calc(
+      100% - var(--head-h) - var(--bar-h) - 48px - min(var(--card-w), 220px) * 9 / 16
+    );
+  }
+  .focus-tactical .moment-card .card-body {
+    display: none;
+  }
+}
 /* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
    to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
    call". The switch drops under the header row there too. */
