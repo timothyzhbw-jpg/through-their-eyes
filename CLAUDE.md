@@ -106,7 +106,8 @@ _Fill in as they come to exist._
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
   at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
-  cached on the replica's disk only). Run after the last deploy and after any later one: the
+  cached on the replica's disk only); `--refresh-degraded` asks again, once, for every view whose
+  cached run has a model step on its template (SPEC 6). Run after the last deploy and after any later one: the
   cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
