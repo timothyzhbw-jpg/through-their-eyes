@@ -8,8 +8,9 @@
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
 // - the extra clips (extra.ts; `?anims=base` turns them off): a mocap kick at every pass instead
-//   of the standing pass, and the trunk joining every scan's look over the shoulder (not under
-//   prefers-reduced-motion);
+//   of the standing pass, the trunk joining every scan's look over the shoulder (not under
+//   prefers-reduced-motion), and with them a real walk at slow speeds (walk.ts; `?walk=0` leaves
+//   it out), cross-fading into the jog on one gait phase (gait.ts);
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
 // By default (trial.ts; `?look=v1` for the plain kits) it loads the re-skinned copy,
 // grf_player_look.glb (same skeleton and clips byte for byte): kit designs from
@@ -27,6 +28,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
 import { type Look, trial } from "./trial";
+import { WALK_URL, type WalkClips, walkClips } from "./walk";
 import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
 import { withLook } from "./shading";
 import {
@@ -123,31 +125,56 @@ function useReducedMotion() {
 export function RiggedPlayers() {
   const look = useStore(trial, (s) => s.look);
   const anims = useStore(trial, (s) => s.anims);
-  if (anims !== "extra") return <Dressed look={look} extra={null} />;
+  const walk = useStore(trial, (s) => s.walk);
+  if (anims !== "extra") return <Dressed look={look} extra={null} walk={null} />;
   // Fetched alongside the clips, not after them.
   useLoader.preload(GLTFLoader, look === "v2" ? LOOK_MODEL_URL : MODEL_URL);
+  if (walk) useLoader.preload(GLTFLoader, WALK_URL);
   return (
     <ExtraFallback>
-      <WithExtra look={look} />
+      <WithExtra look={look} walk={walk} />
     </ExtraFallback>
   );
 }
 
-function WithExtra({ look }: { look: Look }) {
+function WithExtra({ look, walk }: { look: Look; walk: boolean }) {
   const gltf = useLoader(GLTFLoader, EXTRA_URL);
   const extra = useMemo(() => extraClips(gltf), [gltf]);
-  return <Dressed look={look} extra={extra} />;
+  if (!walk) return <Dressed look={look} extra={extra} walk={null} />;
+  return (
+    <WalkFallback>
+      <WithWalk look={look} extra={extra} />
+    </WalkFallback>
+  );
+}
+
+function WithWalk({ look, extra }: { look: Look; extra: ExtraClips }) {
+  const gltf = useLoader(GLTFLoader, WALK_URL);
+  const walk = useMemo(() => walkClips(gltf), [gltf]);
+  return <Dressed look={look} extra={extra} walk={walk} />;
 }
 
 /** The look's files: the re-skinned model with its kit mask (v2), or the plain model (v1). The
- * extra clips bind to either: both have the same skeleton, byte for byte. */
-function Dressed({ look, extra }: { look: Look; extra: ExtraClips | null }) {
-  return look === "v2" ? <LookPlayers extra={extra} /> : <Rigged url={MODEL_URL} extra={extra} />;
+ * extra clips and the walk bind to either: both have the same skeleton, byte for byte. */
+function Dressed({
+  look,
+  extra,
+  walk,
+}: {
+  look: Look;
+  extra: ExtraClips | null;
+  walk: WalkClips | null;
+}) {
+  return look === "v2" ? (
+    <LookPlayers extra={extra} walk={walk} />
+  ) : (
+    <Rigged url={MODEL_URL} extra={extra} walk={walk} />
+  );
 }
 
-function LookPlayers({ extra }: { extra: ExtraClips | null }) {
+function LookPlayers({ extra, walk }: { extra: ExtraClips | null; walk: WalkClips | null }) {
   const mask = useLoader(THREE.ImageLoader, KIT_MASK_URL);
-  return <Rigged url={LOOK_MODEL_URL} mask={mask} extra={extra} />;
+  return <Rigged url={LOOK_MODEL_URL} mask={mask} extra={extra} walk={walk} />;
 }
 
 /** The kit material's normal map in the loaded model, if it has one. */
@@ -164,16 +191,18 @@ function Rigged({
   url,
   mask,
   extra,
+  walk,
 }: {
   url: string;
   mask?: HTMLImageElement;
   extra: ExtraClips | null;
+  walk: WalkClips | null;
 }) {
   const { hero, playback } = useView();
   const gltf = useLoader(GLTFLoader, url);
   const meta = gltf.scene.userData as ModelMeta;
   const reduced = useReducedMotion();
-  const clips = useMemo(() => modelClips(meta, extra), [meta, extra]);
+  const clips = useMemo(() => modelClips(meta, extra, walk), [meta, extra, walk]);
   const motion = useMemo<Record<RunName, Motion>>(() => {
     const check = clips.extra?.check ?? null;
     const factual = runMotion(hero, hero.runs.factual, clips.gait, check);
@@ -187,11 +216,11 @@ function Rigged({
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {
-        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra);
+        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra, walk);
         const materials = mask ? dressLook(rig, p, j, mask, kitNormalMap(gltf)) : dress(rig, p, j);
         return { rig, materials };
       }),
-    [gltf, hero, meta, clips, mask],
+    [gltf, hero, meta, clips, mask, walk],
   );
   useEffect(
     () => () => {
@@ -249,6 +278,21 @@ class ExtraFallback extends Component<{ children: ReactNode }, { failed: boolean
   componentDidCatch(error: unknown) {
     console.error("Extra animations failed to load; using the engine's clips.", error);
     trial.set({ anims: "base" });
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/** If the walk cannot load, keep the extra clips without it. */
+class WalkFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("The walk failed to load; using the engine's slow gait.", error);
+    trial.set({ walk: false });
   }
   render() {
     return this.state.failed ? null : this.props.children;

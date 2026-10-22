@@ -22,6 +22,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
    - Bowen allowed CMU motion capture on 2026-10-21 (lab motion capture of real people, not match
      data or footage) for animation only: the players' animation (`web/public/models/anims_extra.glb`)
      and the trailer's Blender shots, always with the CMU acknowledgement credited (`docs/CREDITS.md`).
+     On 2026-10-22 he allowed Quaternius' Universal Animation Library walk (CC0; reported to be
+     Xsens motion capture) on the same terms: the players' walk (`web/public/models/anims_walk.glb`),
+     for animation only, credited (`docs/CREDITS.md`).
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
