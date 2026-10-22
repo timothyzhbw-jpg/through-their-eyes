@@ -1,8 +1,10 @@
 """The Laws of the Game as hard rules for the sim (SPEC 3.9).
 
-Constants and pure checks over one frame or one event, cited by law as "IFAB Laws of the Game,
-Law 11.1" (the 2025/26 edition). The rules are restated in our own words: no text, diagram or
-figure of the Laws is reproduced here. Dimensions are facts and are given as numbers.
+Constants and pure checks over one frame or one event, cited by law and section as "IFAB Laws of
+the Game, Law 11.1". The source is the 2026/27 edition on theifab.com (www.theifab.com/laws/latest,
+read law by law on 2026-10-22; docs/REFERENCES.md). The rules are restated in our own words: no
+text, diagram or figure of the Laws is reproduced here. Dimensions are facts and are given as
+numbers.
 
 Nothing here imports the engine: every check takes plain arrays, so the referee inside the sim
 (`sim.engine`), the audit (`eval/laws.py`) and the tests judge with the same code.
@@ -13,14 +15,15 @@ ends never change. A team's "depth" of a point is how far it lies toward the goa
 attacks: `attack_sign(team) * x`.
 
 **Body model.** The sim's players are points: the tracked position, the centre of the body on the
-ground. For offside the Laws count the head, body and feet, never the arms or hands (Law 11.1),
-and compare the attacker's part nearest the goal line with the second-last opponent's. We give
-every player the same body, so its depth cancels between attacker and defender: the comparison is
-point against point. The ball is compared by its centre. "Level" (onside) is within
-`LEVEL_TOLERANCE`, the 1 mm resolution positions are written at (SPEC 3.7).
+ground. For offside the Laws count the head, body and feet, never the hands or arms (up to the
+bottom of the armpit; Law 11.1), and compare the attacker's part nearest the goal line with the
+second-last opponent's. We give every player the same body, so its depth cancels between
+attacker and defender: the comparison is point against point. The ball is compared by its
+centre. "Level" (onside) is within `LEVEL_TOLERANCE`, the 1 mm resolution positions are written
+at (SPEC 3.7).
 
 **Lines.** HALF_LENGTH and HALF_WIDTH are the outer edges of the goal lines and touchlines. The
-lines belong to the areas they bound (Law 1), so the field of play ends there, and a player or
+lines belong to the areas they bound (Law 1.2), so the field of play ends there, and a player or
 ball on a line is inside the area that line bounds.
 """
 
@@ -32,44 +35,45 @@ from dataclasses import dataclass
 import numpy as np
 
 # --- Law 1, the field of play -------------------------------------------------------------------
-# Inside the ranges Law 1 allows for international matches (100-110 m by 64-75 m).
+# Inside the ranges Law 1.4 allows for international matches (100-110 m by 64-75 m).
 PITCH_LENGTH = 105.0
 PITCH_WIDTH = 68.0
 HALF_LENGTH = PITCH_LENGTH / 2.0  # outer edge of each goal line
 HALF_WIDTH = PITCH_WIDTH / 2.0  # outer edge of each touchline
-LINE_WIDTH = 0.12  # m, at most 12 cm; the posts and bar are as wide as the lines
-GOAL_WIDTH = 7.32  # m, between the inner edges of the posts
+LINE_WIDTH = 0.12  # m, at most 12 cm, every line the same (1.2); goal lines as wide as the posts
+GOAL_WIDTH = 7.32  # m, between the inner edges of the posts (1.10)
 GOAL_HALF_WIDTH = GOAL_WIDTH / 2.0
-GOAL_HEIGHT = 2.44  # m, from the ground to the lower edge of the crossbar
-POST_WIDTH = LINE_WIDTH  # m, depth and width of the posts and the crossbar
-# Round posts (Law 1 allows square, rectangular, round or elliptical ones) standing on the goal
+GOAL_HEIGHT = 2.44  # m, from the ground to the lower edge of the crossbar (1.10)
+POST_WIDTH = LINE_WIDTH  # m, depth and width of the posts and the crossbar, at most 12 cm (1.10)
+# Round posts (Law 1.10 allows square, rectangular, round, elliptical or hybrid ones) on the goal
 # line, their backs on its outer edge and their inner edges GOAL_WIDTH apart: centres at
 # (±POST_X, ±POST_Y).
 POST_RADIUS = POST_WIDTH / 2.0
 POST_X = HALF_LENGTH - POST_RADIUS
 POST_Y = GOAL_HALF_WIDTH + POST_RADIUS
 POSTS = np.array([[sx * POST_X, sy * POST_Y] for sx in (1, -1) for sy in (1, -1)])
-GOAL_AREA_DEPTH = 5.5  # m into the field, and 5.5 m out from the inside of each post
+GOAL_AREA_DEPTH = 5.5  # m into the field, and 5.5 m out from the inside of each post (1.5)
 GOAL_AREA_HALF_WIDTH = GOAL_HALF_WIDTH + GOAL_AREA_DEPTH  # 9.16 m
-PENALTY_AREA_DEPTH = 16.5  # m into the field, and 16.5 m out from the inside of each post
+PENALTY_AREA_DEPTH = 16.5  # m into the field, and 16.5 m out from the inside of each post (1.6)
 PENALTY_AREA_HALF_WIDTH = GOAL_HALF_WIDTH + PENALTY_AREA_DEPTH  # 20.16 m
-PENALTY_MARK_DISTANCE = 11.0  # m from the midpoint between the posts
-CENTRE_CIRCLE_RADIUS = 9.15  # m, around the centre mark
-PENALTY_ARC_RADIUS = 9.15  # m, around each penalty mark, drawn outside the penalty area
-CORNER_ARC_RADIUS = 1.0  # m, around each corner, inside the field
+PENALTY_MARK_DISTANCE = 11.0  # m from the midpoint between the posts (1.6)
+CENTRE_CIRCLE_RADIUS = 9.15  # m, around the centre mark (1.2)
+PENALTY_ARC_RADIUS = 9.15  # m, around each penalty mark, drawn outside the penalty area (1.6)
+CORNER_ARC_RADIUS = 1.0  # m, a quarter circle from each corner flagpost, inside the field (1.7)
 
 # --- Law 2, the ball ----------------------------------------------------------------------------
 BALL_CIRCUMFERENCE = (0.68, 0.70)  # m, Law 2.1
 BALL_RADIUS_RANGE = (BALL_CIRCUMFERENCE[0] / (2 * math.pi), BALL_CIRCUMFERENCE[1] / (2 * math.pi))
 BALL_RADIUS = 0.11  # m, the sim's ball (`sim.ball.BallParams.radius`), inside the range
+BALL_MASS_RANGE = (0.410, 0.450)  # kg at the start of the match, Law 2.1
 
 # --- Law 3, the players -------------------------------------------------------------------------
-PLAYERS_PER_TEAM = 11  # Law 3.1, at most eleven, one of them the goalkeeper
+PLAYERS_PER_TEAM = 11  # Law 3.1: at most eleven, one of them the goalkeeper (at least seven)
 KEEPERS_PER_TEAM = 1
 
 # --- Laws 8 and 13-17, restarts -----------------------------------------------------------------
-RESTART_DISTANCE = 9.15  # m: kick-off (8.1), free kicks (13.2), corner kicks (17.2, from the arc)
-THROW_IN_DISTANCE = 2.0  # m from the point on the touchline where the throw is taken (15.2)
+RESTART_DISTANCE = 9.15  # m: kick-off (8.1), free kicks (13.2), corner kicks (17.1, from the arc)
+THROW_IN_DISTANCE = 2.0  # m from the point on the touchline where the throw is taken (15.1)
 THROW_IN_PLACE_TOLERANCE = 1.0  # m: ours, how far from where the ball left a throw may be taken
 KICK_OFF_PLACE_TOLERANCE = 0.25  # m: ours, the ball on the centre mark
 RESTARTS = ("kick_off", "free_kick", "corner", "goal_kick", "throw_in")
@@ -133,9 +137,11 @@ def distance_outside(xy: np.ndarray) -> np.ndarray:
 def clip_to_field(xy: np.ndarray) -> np.ndarray:
     """Points moved onto the nearest line when they are off the field.
 
-    For offside a defender who has left the field counts as on his goal line or touchline, and an
-    attacker who steps back on from off the field counts as on the goal line (Law 11.1). Nobody in
-    the sim leaves with the referee's permission, so both are judged where they would stand.
+    For offside a defender who has left the field without permission counts as on his goal line
+    or touchline, until the next stoppage or until his team has played the ball toward the halfway
+    line and out of its penalty area; an attacker who comes back on from beyond the goal line and
+    becomes involved counts as on the goal line (Law 11.4). The sim keeps every player on the field
+    (`sim.movement.steer` with bounds), so this only guards the audit of older runs.
     """
     lo, hi = [-HALF_LENGTH, -HALF_WIDTH], [HALF_LENGTH, HALF_WIDTH]
     return np.clip(np.asarray(xy, dtype=float), lo, hi)
@@ -162,11 +168,14 @@ def nearest_corner(xy: np.ndarray) -> np.ndarray:
     return np.array([math.copysign(HALF_LENGTH, x), math.copysign(HALF_WIDTH, y)])
 
 
-def in_corner_area(xy: np.ndarray, corner: np.ndarray | None = None) -> bool:
-    """Whether a point is inside a corner area (on the field, within the corner arc)."""
+def in_corner_area(xy: np.ndarray, corner: np.ndarray | None = None, radius: float = 0.0) -> bool:
+    """Whether a point is inside a corner area (on the field, within the corner arc; Law 1.7).
+    With the ball's `radius`, whether the ball is placed in it: part of the ball over the arc is
+    enough (Law 17.1)."""
     xy = np.asarray(xy, dtype=float)[:2]
     corner = nearest_corner(xy) if corner is None else np.asarray(corner, dtype=float)
-    return bool(on_field(xy)) and float(np.linalg.norm(xy - corner)) <= CORNER_ARC_RADIUS
+    within = float(np.linalg.norm(xy - corner)) <= CORNER_ARC_RADIUS + radius
+    return within and bool(on_field(xy))
 
 
 def penalty_mark(team: int) -> np.ndarray:
@@ -328,11 +337,14 @@ def offside_offence(
     """How a player who was in an offside position when a teammate played the ball became
     involved in active play, which makes it an offence (Law 11.2), or None.
 
-    Being in an offside position is not an offence in itself. It becomes one when he plays or
-    touches the ball (interfering with play), or challenges an opponent for it or blocks the
-    keeper's view of it (interfering with an opponent). Receiving the ball directly from a goal
-    kick, a throw-in or a corner kick is never an offence (Law 11.3). The sim has no rebounds off
-    the woodwork or a save, so it cannot gain an advantage that way.
+    Being in an offside position is not an offence in itself (Law 11.1). It becomes one when he
+    plays or touches the ball (interfering with play); when he challenges an opponent for it, or
+    clearly blocks the keeper's line of vision (interfering with an opponent); or when he plays it
+    after it came back off the woodwork (gaining an advantage: the referee keeps his offside
+    watch across a post rebound, and a sim save always holds the ball). Two cases of interfering
+    with an opponent are judgement calls the sim has no data for, a clear attempt to play a close
+    ball and an obvious action, so it never gives them. Receiving the ball directly from a goal
+    kick, a throw-in or a corner kick is never an offence (Law 11.3).
     """
     if not in_position:
         return None
@@ -349,7 +361,9 @@ def offside_offence(
 
 
 def keeper_may_handle(xy: np.ndarray, team: int) -> bool:
-    """A goalkeeper may handle the ball only inside his own penalty area (Law 12.1)."""
+    """A goalkeeper may handle the ball only inside his own penalty area (Law 12.1). The sim's
+    keepers handle only to save an opponent's shot, never a team-mate's back pass or throw-in
+    (Law 12.2), and hold it far less than eight seconds (the corner kick of Law 12.3)."""
     return bool(in_penalty_area(np.asarray(xy, dtype=float)[:2], team))
 
 
@@ -370,7 +384,7 @@ def ball_first(tackler: np.ndarray, carrier: np.ndarray, ball: np.ndarray) -> bo
 class Breach:
     """One rule a restart breaks: a player too close, or the ball in the wrong place."""
 
-    law: str  # "8.1", "13.2", "15.2", "16.2", "17.2"
+    law: str  # "8.1", "13.2", "15.1", "16.1", "17.1"
     rule: str  # what the rule asks, in our words
     player: int | None  # index of the player who breaks it; None for the ball's place
     value: float  # what was measured (m)
@@ -391,7 +405,9 @@ def restart_breaches(
 
     `taker` is the player taking it (index), `out_at` where the ball left the field (throw-ins and
     corners). Distances are from the ball (kick-off, free kick), from the corner arc (corner), or
-    from the point on the touchline where the throw is taken (throw-in).
+    from the point on the touchline where the throw is taken (throw-in). An opponent left in the
+    penalty area at a goal kick, or at a free kick in the defenders' own area, may stay if he had
+    no time to leave (Laws 16.1, 13.3): that is the referee's judgement, so the check flags him.
     """
     if kind not in RESTARTS:
         raise ValueError(f"unknown restart {kind!r}")
@@ -417,7 +433,7 @@ def restart_breaches(
                                   float(depth(pos[j], int(team[j]))), 0.0))  # fmt: skip
         gap = np.linalg.norm(pos[opponents] - ball, axis=-1)
         too_close("8.1", "opponents 9.15 m from the ball", gap, RESTART_DISTANCE)
-    elif kind == "free_kick":  # Law 13.2
+    elif kind == "free_kick":  # Law 13.2 (a wall's 1 m needs a free kick the sim never plays)
         gap = np.linalg.norm(pos[opponents] - ball, axis=-1)
         # Defenders may stand on their own goal line between the posts for an indirect free kick
         # closer than 9.15 m to their goal.
@@ -431,30 +447,31 @@ def restart_breaches(
                 if in_penalty_area(pos[j], own):
                     out.append(Breach("13.2", "opponents outside the penalty area", int(j), 0.0,
                                       0.0))  # fmt: skip
-    elif kind == "corner":  # Law 17.2
+    elif kind == "corner":  # Law 17.1
         corner = nearest_corner(ball if out_at is None else np.asarray(out_at, dtype=float))
-        if not in_corner_area(ball, corner):
-            out.append(Breach("17.2", "ball in the corner area", None,
-                              float(np.linalg.norm(ball - corner)), CORNER_ARC_RADIUS))  # fmt: skip
+        if not in_corner_area(ball, corner, BALL_RADIUS):  # part of the ball over the arc will do
+            out.append(Breach("17.1", "ball in the corner area", None,
+                              float(np.linalg.norm(ball - corner)),
+                              CORNER_ARC_RADIUS + BALL_RADIUS))  # fmt: skip
         gap = np.maximum(np.linalg.norm(pos[opponents] - corner, axis=-1) - CORNER_ARC_RADIUS, 0.0)
-        too_close("17.2", "opponents 9.15 m from the corner arc", gap, RESTART_DISTANCE)
-    elif kind == "goal_kick":  # Law 16.2
+        too_close("17.1", "opponents 9.15 m from the corner arc", gap, RESTART_DISTANCE)
+    elif kind == "goal_kick":  # Law 16.1
         if not in_goal_area(ball, own):
-            out.append(Breach("16.2", "ball in the goal area", None, 0.0, 0.0))
+            out.append(Breach("16.1", "ball in the goal area", None, 0.0, 0.0))
         for j in opponents:
             if in_penalty_area(pos[j], own):
-                out.append(Breach("16.2", "opponents outside the penalty area", int(j), 0.0, 0.0))
-    elif kind == "throw_in":  # Law 15.2
+                out.append(Breach("16.1", "opponents outside the penalty area", int(j), 0.0, 0.0))
+    elif kind == "throw_in":  # Law 15.1
         spot = ball if out_at is None else np.asarray(out_at, dtype=float)[:2]
         spot = np.array([float(np.clip(spot[0], -HALF_LENGTH, HALF_LENGTH)),
                          math.copysign(HALF_WIDTH, float(spot[1]))])  # fmt: skip
         if out_at is not None:
             off = float(np.linalg.norm(ball - spot))
             if off > THROW_IN_PLACE_TOLERANCE:
-                out.append(Breach("15.2", "thrown from where the ball left the field", None, off,
+                out.append(Breach("15.1", "thrown from where the ball left the field", None, off,
                                   THROW_IN_PLACE_TOLERANCE))  # fmt: skip
         gap = np.linalg.norm(pos[opponents] - spot, axis=-1)
-        too_close("15.2", "opponents 2 m from the throw", gap, THROW_IN_DISTANCE)
+        too_close("15.1", "opponents 2 m from the throw", gap, THROW_IN_DISTANCE)
     return out
 
 

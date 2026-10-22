@@ -4,7 +4,8 @@ The engine calls him when a player kicks the ball, when a free ball is next cont
 it moves players. He judges with `sim.laws`, the same checks the audit (`eval/laws.py`) uses:
 - at every pass or shot he notes who is in an offside position (IFAB Laws of the Game, Law 11.1);
 - at the next touch he gives the offence if one of them became involved (Law 11.2, 11.3); the
-  engine then stops play with an indirect free kick to the defenders where it happened (Law 11.4);
+  engine then stops play with an indirect free kick to the defenders where it happened (Law 11.4).
+  A rebound off a post is no touch: the watch stays, so playing it is gaining an advantage;
 - he keeps attackers onside while a teammate has the ball (`hold_the_line`) and opponents out of
   a set piece's exclusion zone until it is taken (`keep_back`): players who know the law.
 The ball's Laws 9 and 10 (out of play, goals) are applied by the engine on every frame.
@@ -153,8 +154,8 @@ class Referee:
 
     def keep_back(self, sim: Simulation, target: np.ndarray) -> np.ndarray:
         """Until the run's opening set piece is taken, opponents' targets lie outside its zone:
-        9.15 m from the corner arc (Law 17.2) or from the ball (Laws 8.1, 13.2), 2 m from a
-        throw-in (Law 15.2), outside the penalty area at a goal kick (Law 16.2)."""
+        9.15 m from the corner arc (Law 17.1) or from the ball (Laws 8.1, 13.2), 2 m from a
+        throw-in (Law 15.1), outside the penalty area at a goal kick (Law 16.1)."""
         if self.restart is None or self.kicks > 0 or sim.owner < 0:
             return target
         taker = sim.owner
