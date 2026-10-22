@@ -77,7 +77,7 @@ def test_spoken_and_shown_text_brings_numbers_only_through_slots():
     for tid, title in spec["titles"].items():
         for key in ("params", "fallback"):
             for name, block in (title.get(key) or {}).items():
-                if name in ("url", "legal"):  # an address, or credit a licence wants verbatim
+                if name in ("url", "qr", "legal"):  # an address, or credit a licence wants verbatim
                     continue
                 texts += [(f"title {tid}.{key}.{name}", s) for s in _strings(block)]
     for where, text in texts:
