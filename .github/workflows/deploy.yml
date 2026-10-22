@@ -24,7 +24,7 @@ concurrency:
 jobs:
   api:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       IMAGE: ${{ vars.TTE_ACR }}.azurecr.io/tte-api
@@ -60,7 +60,7 @@ jobs:
 
   web:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
