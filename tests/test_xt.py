@@ -22,6 +22,7 @@ from analytics.xt import (
     xt_prior,
     xt_prior_for,
 )
+from tests import canonical
 
 CENTRAL = [4, 5, 6, 7]  # lanes either side of the long axis (12 lanes of 5.7 m)
 WINGS = [0, 1, 10, 11]
@@ -100,6 +101,7 @@ def test_without_enough_shots_the_whole_grid_is_the_prior():
 # --- acceptance: the fitted grid ----------------------------------------------------------
 
 
+@canonical.linux_only("xt")
 def test_the_cached_grid_is_a_real_fit_of_the_current_sim(cache):
     from eval.xt_fit import MIN_ACTIONS, MIN_SHOTS, SCENARIO, SEEDS, SYMMETRIC, sim_version
 

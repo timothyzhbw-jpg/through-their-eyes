@@ -20,6 +20,7 @@ import pytest
 from sim import dataset
 from sim.config import DT
 from sim.match import SEED_BASE, PossessionSpec, build_match
+from tests import canonical
 
 ROOT = Path(__file__).resolve().parents[1]
 SHORT_PLAN = (
@@ -365,10 +366,14 @@ def _generated_here(manifest: dict) -> bool:
 
 
 def test_the_committed_sample_regenerates_byte_for_byte(tmp_path):
-    """Only where it was made: the sim is byte-identical per platform and versions (SPEC 3.7)."""
+    """Only where it was made: the sim is byte-identical per platform and versions (SPEC 3.7).
+    It is made on Linux, the canonical platform (`tests/canonical.py`)."""
     manifest = json.loads((SAMPLE / "manifest.json").read_text())
     if not _generated_here(manifest):
-        pytest.skip(f"the sample was generated on {manifest['generated_with']}")
+        pytest.skip(
+            f"the sample was generated on {manifest['generated_with']}; "
+            + canonical.message("dataset")
+        )
     dataset.build_dataset([dataset.FIRST_SEED], tmp_path / "data")
     dataset.write_sample(
         tmp_path / "data", tmp_path / "sample", dataset.FIRST_SEED, dataset.SAMPLE_POSSESSION

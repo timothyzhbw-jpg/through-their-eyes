@@ -240,10 +240,11 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
   scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
 
-Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
-`tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
-files are generated, on macOS arm64; structurally elsewhere, as SPEC 3.7 promises no
-cross-platform identity).
+Regenerate them whenever `sim/`, `analytics/` or `explain/` change, on Linux, the canonical
+platform: `scripts/regen_linux.sh exports` runs these commands in `python:3.11-slim`
+([CONTRIBUTING.md](../docs/CONTRIBUTING.md#eval-before-merge)). `tests/test_committed_exports.py`
+fails on Linux when a committed file is stale, byte for byte, and skips elsewhere: the sim is
+byte-identical only within one OS (SPEC 3.7).
 
 ## How it fits together
 

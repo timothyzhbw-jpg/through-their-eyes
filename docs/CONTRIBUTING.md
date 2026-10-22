@@ -98,9 +98,22 @@ eval uses) runs them before it merges:
    `web/src/pitchControl/snapshots.json` changed, or every change is intended and the PR
    description says why, with the before and after numbers.
 
-Byte identity holds on the platform that generated the files (macOS on Apple silicon); SPEC 3.7
-promises no cross-platform identity, so CI checks the exports structurally. A change that moves a
-report's numbers also updates every place that quotes them (README, SPEC, [EVALS.md](EVALS.md)).
+**Linux is the canonical platform** for every committed generated artifact (exports, fixtures,
+`demo/hero.html`, the xT grid and its fingerprint, `data/sample`, the eval reports): CI and the
+live API run in `python:3.11-slim`. The sim is byte-identical only within one OS (SPEC 3.7): macOS
+and glibc differ in libm's last bits, which open play and the hero counterfactuals amplify to
+millimetres, so files made on a Mac fail CI. Generate them in the container (Docker; native arm64
+on a Mac equals amd64 Linux):
+
+```bash
+scripts/regen_linux.sh exports evals
+```
+
+Groups: `exports`, `xt` (the xT fit, about 25 min; then `exports` and `evals` again), `evals`,
+`season` (about an hour), `dataset`, or `all`. The checks that compare a committed artifact with a
+fresh run do it byte for byte on Linux and skip on other platforms with that command
+(`tests/canonical.py`). A change that moves a report's numbers also updates every place that
+quotes them (README, SPEC, [EVALS.md](EVALS.md)).
 Tuning happens on design or tuning seeds only; held-out seeds are run once the design is fixed
 ([eval/README.md](../eval/README.md#rules)).
 
