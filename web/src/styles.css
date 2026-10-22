@@ -474,6 +474,9 @@ optgroup {
   color: var(--floodlight);
   padding: 0 0.1em;
 }
+.lineup-club {
+  white-space: nowrap;
+}
 .lineup-pitch {
   margin: 0 0 20px;
   font: 400 16px/1.45 var(--font-display);
