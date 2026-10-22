@@ -1,22 +1,35 @@
-// The stadium around the pitch in the 3D view (first person and broadcast), all generated here:
-// a two-tier bowl under a roof, an instanced crowd (one draw call), four floodlight masts with a
-// glow, our own boards ("Through Their Eyes", "Synthetic match": no real brands), a night sky
-// gradient, and faint floodlight shadows under the players. It is background: dark, low
-// contrast and hazed by the fog, so the players and the look over the shoulder stay the subject.
-// Glow and shadows are faked (additive sprites, soft decals) instead of a bloom pass and shadow
-// maps, to keep 60 fps on integrated GPUs.
+// The stadium around the pitch in the 3D view (first person and broadcast): a two-tier bowl under
+// a roof, a crowd, four floodlight masts with a glow, our own boards ("Through Their Eyes",
+// "Synthetic match": no real brands), a night sky gradient, and faint floodlight shadows under
+// the players. It is background: dark, low contrast and hazed by the fog, so the players and the
+// look over the shoulder stay the subject. Glow and shadows are faked (additive sprites, soft
+// decals) instead of a bloom pass and shadow maps, to keep 60 fps on integrated GPUs.
+//
+// Two builds of the same bowl (stadiumGeometry.ts). The procedural one is generated here and
+// draws on the first frame. The baked one (bakedStadium.ts) is modelled in Blender with its
+// lighting baked in; it loads after the first frame and replaces the procedural bowl, crowd,
+// boards and masts when it is ready, and its baked light shapes the grass (Grass). The sky, the
+// lights for the players, the masts' glow and the gantry are shared.
 
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
+import { useStore } from "../store/store";
+import {
+  armBakedStadium,
+  grassMaterial,
+  groundLightFor,
+  roofLampsVisible,
+  setBoardWords,
+  stadium,
+} from "./bakedStadium";
 import { BROADCAST_CAMERA } from "./broadcast";
 import { BOARDS, BOWL, FLOODLIGHTS, hash01, loopAt, PROFILE, ROOF, seats } from "./stadiumGeometry";
-import { COLORS } from "./scene";
-import { useStore } from "../store/store";
+import { COLORS, getPitchTexture, PITCH } from "./scene";
 import { featuresOf, quality } from "../quality/quality";
-import { LOOK } from "../quality/look";
+import { grassTintAt, LOOK } from "../quality/look";
 
 /** Colours of the night: the fog and the sky's horizon match, so the stands fade into it. */
 export const NIGHT = { zenith: "#04070c", horizon: "#16212a", lamp: "#fff2d8" };
@@ -29,7 +42,10 @@ export const sceneClock: { now: () => number } = {
   now: () => performance.now() / 1000,
 };
 
+setBoardWords(boardTexture);
+
 export function Stadium() {
+  const model = useStore(stadium, (s) => s.model);
   return (
     <>
       <Sky />
@@ -38,13 +54,131 @@ export function Stadium() {
         <planeGeometry args={[2 * BOWL.halfX + 70, 2 * BOWL.halfY + 70]} />
         <meshStandardMaterial color="#121a17" roughness={1} />
       </mesh>
-      <Bowl />
-      <Crowd />
-      <Boards />
-      <Floodlights />
+      {model ? (
+        <BakedStadium />
+      ) : (
+        <>
+          <Bowl />
+          <Crowd />
+          <Boards />
+          <Masts />
+        </>
+      )}
+      <FloodlightGlow />
       <Gantry />
     </>
   );
+}
+
+/** The grass: the apron round the pitch and the pitch with its markings, lit by the scene's
+ * lights. Once the baked stadium is in, its baked light shapes them too (bakedStadium.ts). With
+ * the shared look (quality/look.ts) the pitch is tinted towards the Blender shots' green by the
+ * camera's height (a multiplier on the stripes, so the kits and the rim are untouched), with a
+ * hint of sheen; the grass never takes image-based light. */
+export function Grass() {
+  const light = useStore(stadium, (s) => s.model?.groundLight ?? null);
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  const baked = useMemo(() => {
+    if (!light) return null;
+    const sheen = look ? { specularIntensity: LOOK.grassSpecular } : undefined;
+    return {
+      apron: grassMaterial(
+        { color: look ? LOOK.apron : "#173826", envMapIntensity: 0 },
+        groundLightFor(light, 130, 92),
+        sheen,
+      ),
+      pitch: grassMaterial(
+        { map: getPitchTexture(), envMapIntensity: 0 },
+        groundLightFor(light, PITCH.length, PITCH.width),
+        sheen,
+      ),
+    };
+  }, [light, look]);
+  useEffect(
+    () => () => {
+      for (const m of baked ? [baked.apron, baked.pitch] : []) {
+        m.lightMap?.dispose();
+        m.dispose();
+      }
+    },
+    [baked],
+  );
+  const pitch = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(({ camera }) => {
+    if (!look) return;
+    (baked?.pitch ?? pitch.current)?.color.fromArray(grassTintAt(camera.position.y));
+  });
+  if (baked)
+    return (
+      <>
+        <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={baked.apron}>
+          <planeGeometry args={[130, 92]} />
+        </mesh>
+        <mesh rotation-x={-Math.PI / 2} material={baked.pitch}>
+          <planeGeometry args={[PITCH.length, PITCH.width]} />
+        </mesh>
+      </>
+    );
+  return (
+    <>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
+        <planeGeometry args={[130, 92]} />
+        {look ? (
+          <meshPhysicalMaterial
+            color={LOOK.apron}
+            specularIntensity={LOOK.grassSpecular}
+            envMapIntensity={0}
+          />
+        ) : (
+          <meshStandardMaterial color="#173826" />
+        )}
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[PITCH.length, PITCH.width]} />
+        {look ? (
+          <meshPhysicalMaterial
+            ref={pitch}
+            map={getPitchTexture()}
+            specularIntensity={LOOK.grassSpecular}
+            envMapIntensity={0}
+          />
+        ) : (
+          <meshStandardMaterial map={getPitchTexture()} />
+        )}
+      </mesh>
+    </>
+  );
+}
+
+/** The baked stadium: this canvas's clone of the loaded scene, its crowd bobbing. Asks for the
+ * file on its first frame, so the procedural stadium always draws first. */
+function BakedStadium() {
+  const model = useStore(stadium, (s) => s.model)!;
+  const scene = useMemo(() => model.scene.clone(true), [model]);
+  const roofLamps = useMemo(() => {
+    const out: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+      if (m?.userData.part === "roof_lamp") out.push(o);
+    });
+    return out;
+  }, [scene]);
+  useFrame(({ camera }) => {
+    model.time.value = sceneClock.now();
+    const show = roofLampsVisible(camera.position.y); // three's y is the height
+    for (const o of roofLamps) o.visible = show;
+  });
+  return <primitive object={scene} />;
+}
+
+/** Arms the baked stadium's load on the canvas's first frame (see bakedStadium.ts). */
+export function useArmBakedStadium() {
+  const armed = useRef(false);
+  useFrame(() => {
+    if (armed.current) return;
+    armed.current = true;
+    armBakedStadium();
+  });
 }
 
 // ---------- sky: a gradient dome that moves with the camera ----------
@@ -369,17 +503,14 @@ function flareTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function Floodlights() {
-  const glow = useMemo(glowTexture, []);
-  const flare = useMemo(flareTexture, []);
-  // The shared look (quality/look.ts): brighter lamp faces (the high tier blooms them), the glow
-  // capped at about three lamp heads, no wide halo and no flare streak.
+/** The procedural masts: a pole and a lamp bank facing the centre spot. With the shared look
+ * (quality/look.ts) the lamp faces are brighter: the high tier blooms them. */
+function Masts() {
   const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   const lamp = useMemo(
     () => new THREE.Color(NIGHT.lamp).multiplyScalar(look ? LOOK.lamp : 2.5),
     [look],
   );
-  const glowSize = look ? LOOK.glowScale : 34;
   return (
     <>
       {FLOODLIGHTS.map((m, k) => {
@@ -402,43 +533,49 @@ function Floodlights() {
                 </mesh>
               </group>
             </group>
-            <sprite position-y={m.height} scale={[glowSize, glowSize, 1]}>
-              <spriteMaterial
-                map={glow}
-                transparent
-                opacity={look ? LOOK.glowOpacity : 0.5}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
-            {/* The bloom: a wide, faint halo in the night air, and the lens's flare. */}
-            <sprite position-y={m.height} scale={[96, 96, 1]} visible={!look}>
-              <spriteMaterial
-                map={glow}
-                transparent
-                opacity={0.13}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
-            <sprite position-y={m.height} scale={[70, 2.6, 1]} visible={!look}>
-              <spriteMaterial
-                map={flare}
-                transparent
-                opacity={0.2}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-                fog={false}
-                toneMapped={false}
-              />
-            </sprite>
           </group>
         );
       })}
+    </>
+  );
+}
+
+/** The glow round each mast's lamps, for both stadiums: the lamps' glow, and the bloom (a wide,
+ * faint halo in the night air, and the lens's flare). With the shared look (quality/look.ts) the
+ * glow is capped at about three lamp heads, with no wide halo and no flare streak. */
+function FloodlightGlow() {
+  const glow = useMemo(glowTexture, []);
+  const flare = useMemo(flareTexture, []);
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
+  useArmBakedStadium();
+  const sprite = (map: THREE.Texture, opacity: number) => (
+    <spriteMaterial
+      map={map}
+      transparent
+      opacity={opacity}
+      blending={THREE.AdditiveBlending}
+      depthWrite={false}
+      fog={false}
+      toneMapped={false}
+    />
+  );
+  return (
+    <>
+      {FLOODLIGHTS.map((m, k) => (
+        <group key={k} position={[m.x, m.height, -m.y]}>
+          {look ? (
+            <sprite scale={[LOOK.glowScale, LOOK.glowScale, 1]}>
+              {sprite(glow, LOOK.glowOpacity)}
+            </sprite>
+          ) : (
+            <>
+              <sprite scale={[34, 34, 1]}>{sprite(glow, 0.5)}</sprite>
+              <sprite scale={[96, 96, 1]}>{sprite(glow, 0.13)}</sprite>
+              <sprite scale={[70, 2.6, 1]}>{sprite(flare, 0.2)}</sprite>
+            </>
+          )}
+        </group>
+      ))}
     </>
   );
 }

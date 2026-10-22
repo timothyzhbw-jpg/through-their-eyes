@@ -302,6 +302,7 @@ export function PovOptions() {
   const povPlayer = useStore(playback, (s) => s.povPlayer);
   const rigged = useStore(trial, (s) => s.rigged);
   const ghostsAvailable = povPlayer === hero.heroId;
+  const ghostsOn = useStore(playback, (s) => s.beliefGhosts);
   return (
     <section className="options-group">
       <h3 className="kicker">Playback and his eyes</h3>
@@ -321,7 +322,17 @@ export function PovOptions() {
           name="beliefGhosts"
           label="Belief ghosts"
           disabled={!ghostsAvailable}
-          title={ghostsAvailable ? "Where he believes each player is" : noBeliefs(hero)}
+          title={
+            ghostsAvailable
+              ? "Where he believes the runner is, from his look to his decision: a ring on the grass and a line to where the runner really is"
+              : noBeliefs(hero)
+          }
+        />
+        <Chip
+          name="ghostsAll"
+          label="All ghosts"
+          disabled={!ghostsAvailable || !ghostsOn}
+          title="Everyone his picture has a metre or more wrong, at any time, on the broadcast camera too"
         />
         <button
           type="button"

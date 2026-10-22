@@ -76,6 +76,7 @@ export class BreakdownRunner {
       povPlayer: this.moment.hero,
       cone: false,
       beliefGhosts: false,
+      ghostsAll: false,
       cfGhost: false,
       options: true,
       focus: "split",

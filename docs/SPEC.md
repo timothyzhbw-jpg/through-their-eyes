@@ -1541,6 +1541,39 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - *Extra motion (2026-10-21, Bowen approved the sources):* motion capture from the CMU
+    database, retargeted onto the same skeleton (which is unchanged) and shipped as an
+    animations-only GLB (`web/public/models/anims_extra.glb`, ~20 KB; sources, terms and the
+    acknowledgement in its README). A kick (`pass_short`) replaces the standing pass, its ball
+    contact on the pass event, in place, with the planted foot held still. At every sim `scan`
+    a shoulder check turns the trunk with the look, as an additive layer timed to the head's
+    turn (out, hold, back) and sized by how far the head turns from the body; it counts towards
+    the trunk's share of the look, so a look past 80° turns the trunk no further than before.
+    The head still points exactly along `head_yaw`. On by default (Bowen kept it on after the
+    before/after video, 2026-10-21); `?anims=base` turns it off;
+    under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
+    and not used.
+- **Stadium:** two builds of one bowl ([web/src/views/stadiumGeometry.ts](../web/src/views/stadiumGeometry.ts)).
+  - *Procedural* ([Stadium.tsx](../web/src/views/Stadium.tsx)): generated in the browser, drawn
+    on the first frame; it is the fallback.
+  - *Baked* ([bakedStadium.ts](../web/src/views/bakedStadium.ts),
+    `web/public/models/stadium_baked.glb`, about 0.8 MB): modelled in Blender from our own
+    procedural scripts on the same numbers (stepped terraces, 15,171 flat spectators, lattice
+    masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+    dugouts; no imported models or textures). Cycles bakes the four masts' floodlights, the roof
+    lamps, a hidden fill under the roof for the stands, the sky and the ambient occlusion into
+    a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a light map
+    for the grass. The floodlight spots' powers are fitted by least squares so the pitch
+    is evenly lit (5th percentile 0.73 of the median). Everything but the grass is unlit; the
+    grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
+    geometry, WebP textures.
+  - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of
+    memory (the browser's hints; Safari gives none). It is fetched at low priority a second
+    after the first frame, once the page is idle, and swapped in when ready; if it fails to load,
+    the procedural stadium stays. `?stadium=procedural` or `?stadium=baked` decides. Capture
+    (`?cine=1`) is ready only once the stadium has settled, so a shot never cuts between the
+    two. The bpy scripts stay outside the repo (Blender is GPL); only their output is committed
+    (`web/public/models/README.md`).
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
@@ -1815,6 +1848,11 @@ original visual identity.
 ### Real-footage overlay (cut)
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
+Motion capture of lab subjects is not match data or footage: Bowen allowed the CMU motion
+capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
+(`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
+the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+
 ### Acceptance checks — render
 - [x] *The run without the look, told:* which look was removed, what it cost and where each pass
       went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
@@ -1915,6 +1953,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Extra motion (mocap kick, shoulder checks):* the GLB binds every track to a bone of the
+      model without changing its joint frames; the kick plays at each pass event with its contact
+      on the event's frame and the kick along the pass; the shoulder check plays only during the
+      sim's scans, on the side the head turns, phased by the head; the head stays on `head_yaw`
+      (< 1e-3 rad) for every player; the feet stay on the ground; poses are history-free; reduced
+      motion drops the checks; fps unchanged.
+      — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts); `npm run fps` and
+      `npm run fps -- --anims base` alternating (2026-10-21, Apple M4 Pro, headless, 1920 × 1080):
+      60 fps capped in every row either way, median 16.7 ms, p95 16.7–16.8 ms.
 - [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
       ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
       55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
@@ -1933,6 +1980,24 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
+- [x] *Baked stadium:* the GLB is at most 3 MB on the wire, meshopt and WebP; its pitch, stands,
+      crowd, masts and boards sit on stadiumGeometry.ts's numbers (pitch coordinates as three.js
+      (x, height, -y)); the app's grass reads its light map with the file's own UVs; it is
+      fetched only after the first frame and never with `?stadium=procedural`; a missing or
+      broken file keeps the procedural stadium; capture waits until the stadium has settled.
+      — [web/src/views/bakedStadium.test.ts](../web/src/views/bakedStadium.test.ts) (the file
+      decoded with meshopt in Node: every one of the 30,342 crowd triangles stands 12 cm under a
+      rake of the app's profile; the lamps on FLOODLIGHTS; the boards on BOARDS),
+      [Stadium.test.tsx](../web/src/views/Stadium.test.tsx). 2026-10-21, production build,
+      Chrome on an Apple M4 Pro (loaded machine), median of 3 cold loads at Lighthouse's Slow 4G
+      (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
+      3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
+      (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
+      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
+      eval/reports/web_load.md). `npm run fps` 60
+      capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
+      245–299 → 339–344 fps broadcast.
 - [x] *Render tiers:* tier detection, link and viewer precedence, one look at every new tier with
       fidelity-only differences, depth of field only through the beat on the broadcast camera and
       never under reduced motion, the rim patch on and off, the automatic step-down; each tier
@@ -1941,7 +2006,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       (B−R +5), sky luma 12; lit pitch 33,61,36 (G/R 1.84) from eye height and 31,62,39 (G/R 1.98)
       from the broadcast camera, luma 53–54; coral G/R 0.50; top and low tiers within one level.
       `npm run fps` with the look (2026-10-21, M4 Pro, Metal): high and low 57.8–60.0 fps at
-      1080p; medium on the phone profile 60.0. *Open:* the art director's sign-off on app_v2.
+      1080p; medium on the phone profile 60.0. Approved by the art director (2026-10-21). With the
+      baked stadium the grass keeps its baked light and takes the look's tint and sheen.
       — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts),
       [look.test.ts](../web/src/quality/look.test.ts);
       `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;

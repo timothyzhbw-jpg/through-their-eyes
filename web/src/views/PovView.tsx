@@ -14,7 +14,8 @@ import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
-import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
+import { FIELD } from "./fieldMarkings";
+import { COLORS, LABEL, getLabelTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
@@ -22,14 +23,15 @@ import { pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { declutter, labelBox } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
-import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
+import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
 import { featuresOf, quality } from "../quality/quality";
-import { grassTintAt, LOOK } from "../quality/look";
+import { LOOK } from "../quality/look";
+import { BeliefRings } from "./BeliefRings";
 
 // The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
 const QualityLayer = lazy(() => import("../quality/QualityPost"));
@@ -47,6 +49,9 @@ const POV_FAR = 300;
 const LABEL_Y = 2.1;
 const LABEL_TEXT = 0.36;
 const LABEL_ASPECT = 1.6;
+// At most this tall on screen (px): a player a few metres away wore a number the size of his head.
+const LABEL_MAX_PX = 28;
+const labelScale = new Float32Array(32);
 const labelAt = new THREE.Vector3();
 /** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
 const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
@@ -112,7 +117,6 @@ function PovScene() {
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
-  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const labels = useRef<(THREE.Sprite | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
 
@@ -126,18 +130,6 @@ function PovScene() {
         side: THREE.DoubleSide,
         toneMapped: false,
       }),
-      ghost: new THREE.MeshBasicMaterial({
-        color: COLORS.fg,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-      }),
-      runnerGhost: new THREE.MeshBasicMaterial({
-        color: COLORS.gold,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-      }),
     }),
     [],
   );
@@ -150,7 +142,6 @@ function PovScene() {
     const broadcast = s.camera === "broadcast";
     const pov = hero.ids.indexOf(s.povPlayer);
     const me = broadcast ? -1 : pov; // whose body is hidden: nobody's on broadcast
-    const showGhosts = s.beliefGhosts && pov === hero.hero;
     const alerted = new Set(s.blindSide ? alertsAt(hero, run, s.frame).map((a) => a.target) : []);
     const beat = pulse(performance.now() / 1000);
     for (let j = 0; j < hero.n; j++) {
@@ -167,13 +158,6 @@ function PovScene() {
         body.position.set(x, 0, -y);
         body.visible = j !== me;
         poseToken(body, head, sample.body[j], sample.head[j]);
-      }
-      const ghost = ghosts.current[j];
-      if (ghost) {
-        const gx = sample.ghost[2 * j];
-        const gy = sample.ghost[2 * j + 1];
-        ghost.position.set(gx, BODY_CENTRE, -gy);
-        ghost.visible = showGhosts && j !== pov && Math.hypot(gx - x, gy - y) > 1.2;
       }
     }
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
@@ -227,14 +211,18 @@ function PovScene() {
         if (j === me || !labels.current[j]) return null;
         labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
         const box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
-        return box && { ...box, priority: j === hero.runner };
+        const k = box && box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        labelScale[j] = k;
+        return box && { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
       }),
     );
     placed.forEach(({ visible, lift }, j) => {
       const label = labels.current[j];
       if (!label) return;
+      const k = labelScale[j] || 1;
       label.visible = visible;
-      label.position.y = LABEL_Y + lift * LABEL_TEXT;
+      label.scale.set(0.75 * k, 0.75 * k, 1);
+      label.position.y = LABEL_Y + lift * LABEL_TEXT * k;
     });
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
@@ -303,17 +291,7 @@ function PovScene() {
           </sprite>
         </group>
       ))}
-      {hero.players.map((p, j) => (
-        <mesh
-          key={p.id}
-          ref={(m) => {
-            ghosts.current[j] = m;
-          }}
-          geometry={capsule}
-          material={j === hero.runner ? materials.runnerGhost : materials.ghost}
-          visible={false}
-        />
-      ))}
+      <BeliefRings sampleOf={() => sample} />
       {rigged && (
         <RiggedFallback>
           <Suspense fallback={null}>
@@ -341,60 +319,31 @@ function PovScene() {
 
 /** The apron, the marked pitch and the goals. The capture renderer films the same ground. */
 export function Ground() {
-  // With the shared look (quality/) the grass is tinted towards the Blender shots' green by the
-  // camera's height (a multiplier on the stripes, so the kits and the rim are untouched), with a
-  // hint of sheen. It never takes image-based light.
-  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
-  const pitch = useRef<THREE.MeshPhysicalMaterial>(null);
-  useFrame(({ camera }) => {
-    if (look) pitch.current?.color.fromArray(grassTintAt(camera.position.y));
-  });
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <planeGeometry args={[130, 92]} />
-        {look ? (
-          <meshPhysicalMaterial
-            color={LOOK.apron}
-            specularIntensity={LOOK.grassSpecular}
-            envMapIntensity={0}
-          />
-        ) : (
-          <meshStandardMaterial color="#173826" envMapIntensity={0} />
-        )}
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[PITCH.length, PITCH.width]} />
-        {look ? (
-          <meshPhysicalMaterial
-            ref={pitch}
-            map={getPitchTexture()}
-            specularIntensity={LOOK.grassSpecular}
-            envMapIntensity={0}
-          />
-        ) : (
-          <meshStandardMaterial map={getPitchTexture()} envMapIntensity={0} />
-        )}
-      </mesh>
+      <Grass />
       <Goals />
     </>
   );
 }
 
+/** Round posts on the goal line, inner edges 7.32 m apart, the bar's lower edge at 2.44 m (Law 1). */
 export function Goals() {
+  const { postRadius: r, postX, postY, barHeight } = FIELD;
+  const height = barHeight + r; // the posts reach the top of the bar
   const posts = [];
   for (const g of [-1, 1]) {
-    for (const y of [-3.66, 3.66]) {
+    for (const y of [-postY, postY]) {
       posts.push(
-        <mesh key={`${g}${y}`} position={[g * PITCH.halfLength, 1.22, -y]}>
-          <cylinderGeometry args={[0.06, 0.06, 2.44, 10]} />
+        <mesh key={`${g}${y}`} position={[g * postX, height / 2, -y]}>
+          <cylinderGeometry args={[r, r, height, 10]} />
           <meshStandardMaterial color="#f4f6f5" />
         </mesh>,
       );
     }
     posts.push(
-      <mesh key={`bar${g}`} position={[g * PITCH.halfLength, 2.44, 0]} rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[0.06, 0.06, 7.32, 10]} />
+      <mesh key={`bar${g}`} position={[g * postX, barHeight, 0]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[r, r, 2 * postY, 10]} />
         <meshStandardMaterial color="#f4f6f5" />
       </mesh>,
     );

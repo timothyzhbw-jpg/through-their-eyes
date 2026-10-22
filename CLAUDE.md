@@ -19,6 +19,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
    demo. Fictional clubs and players. No Premier League or club
    logos, real player names, broadcaster branding, or copyrighted music — in code, assets, or video.
    - The real-footage exception (approved 2026-10-19) was cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video.
+   - Bowen allowed CMU motion capture on 2026-10-21 (lab motion capture of real people, not match
+     data or footage) for animation only: the players' animation (`web/public/models/anims_extra.glb`)
+     and the trailer's Blender shots, always with the CMU acknowledgement credited (`docs/CREDITS.md`).
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework

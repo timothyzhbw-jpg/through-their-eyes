@@ -50,6 +50,8 @@ function turnAboutVertical(bone: THREE.Object3D, angle: number): void {
  * head points along head_yaw. The neck correction also cancels the clip's own shoulder and head
  * sway, so the head is exact whatever the gait. Where a clip swings the shoulders far round (the
  * pass), the neck would pass NECK_MAX: the trunk turns back by the excess instead.
+ * `trunkTwist`: what a shoulder check (extra.ts) has already turned the trunk towards the look; it
+ * counts towards the trunk's share, so the trunk does not turn twice.
  */
 export function aimLook(
   holder: THREE.Object3D,
@@ -57,11 +59,16 @@ export function aimLook(
   neck: THREE.Object3D,
   bodyYaw: number,
   headYaw: number,
+  trunkTwist = 0,
 ): LookSplit {
   const split = splitLook(bodyYaw, headYaw);
   holder.rotation.set(0, bodyYaw + split.hips, 0);
   holder.updateMatrixWorld(true);
-  turnAboutVertical(middle, split.trunk);
+  const trunk =
+    trunkTwist * split.trunk > 0
+      ? Math.sign(split.trunk) * Math.max(0, Math.abs(split.trunk) - Math.abs(trunkTwist))
+      : split.trunk;
+  turnAboutVertical(middle, trunk);
   const relative = wrapAngle(headYaw - worldYaw(middle)); // the neck angle the head needs
   const excess = relative - Math.max(-NECK_MAX, Math.min(NECK_MAX, relative));
   turnAboutVertical(middle, excess);

@@ -3029,6 +3029,23 @@ optgroup {
     top: 140px;
   }
 }
+/* A short screen with the board as the main view (a 720 px laptop, a tablet on its side): his eyes
+   ride along smaller and the card leaves out its description, so the card's buttons stay on screen
+   above them (at 960 x 720 "Get breakdown" had scrolled out of the card). */
+@media (min-width: 761px) and (max-height: 780px) {
+  .focus-tactical .slot.pip,
+  .focus-tactical .swap {
+    width: min(var(--card-w), 220px);
+  }
+  .focus-tactical .stage-card {
+    max-height: calc(
+      100% - var(--head-h) - var(--bar-h) - 48px - min(var(--card-w), 220px) * 9 / 16
+    );
+  }
+  .focus-tactical .moment-card .card-body {
+    display: none;
+  }
+}
 /* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
    to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
    call". The switch drops under the header row there too. */
@@ -3477,16 +3494,26 @@ optgroup {
   .stage-head .live {
     position: relative;
   }
+  /* In the band between the header's buttons (to y 68) and the run switch under them (from
+     y 84): a fixed 12 px line at 70-82 whatever the font. At 13 px below the pill a sprinter's name
+     ran into "With the look" from 1181 to about 1400 px; at 6 px, with Linux's taller line, into
+     "Your call". A long list of sprinters ends in an ellipsis. */
   .stage-head .live-status {
     position: absolute;
-    top: calc(100% + 13px);
+    top: calc(100% + 9px);
     left: 0;
+    height: 12px;
+    line-height: 12px;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 }
 
 /* ---------- motion ---------- */
-/* Text rises in by opacity and position only: no blur (LOOKDEV 2b: blur is uncomfortable). */
+/* Cards and captions rise and fade in, sharp from the first frame: no blur-in (Bowen: blur is
+   uncomfortable; styles.test.ts keeps keyframes blur-free). */
 @keyframes tt-rise {
   from {
     opacity: 0;

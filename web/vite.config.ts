@@ -24,7 +24,8 @@ export default defineConfig(({ mode }) => {
         }
       : undefined,
     build: {
-      // three.js alone is ~700 KB minified; one vendor chunk keeps app updates small.
+      // three.js alone is ~700 KB minified; one vendor chunk keeps app updates small. The meshopt
+      // decoder stays its own chunk: only the baked stadium loads it, after the first frame.
       chunkSizeWarningLimit: 1600,
       rollupOptions: {
         output: {
@@ -32,6 +33,7 @@ export default defineConfig(({ mode }) => {
           // render tiers in src/quality/, cine mode), off the first load.
           manualChunks: (id) =>
             id.includes("node_modules") &&
+            !id.includes("meshopt_decoder") &&
             !/three\/examples\/jsm\/(postprocessing|shaders)\//.test(id)
               ? "vendor"
               : undefined,
