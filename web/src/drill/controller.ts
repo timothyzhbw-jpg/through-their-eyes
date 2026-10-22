@@ -74,13 +74,16 @@ export interface DrillState {
 export interface Drill {
   session: Session;
   state: Store<DrillState>;
-  playback: PlaybackStore; // the stage's own playback
+  playback: PlaybackStore; // his eyes: the live run, the clock's frame
+  board: PlaybackStore; // the result's board: what he did, and the look's run as its ghost path
   unavailable: string | null; // why the drill cannot open here; null when it can
   looks(): Looks | null;
   /** Seconds until the ball reaches him, in tenths. */
   countdown(): number;
-  /** The session the stage renders: the live run, the call's picture or the result. */
+  /** His eyes: the live run, his head written in as the clock runs. */
   stage(): ViewSession | null;
+  /** The result's board: mounted (hidden) from the call on, so it shows at once. */
+  boardStage(): ViewSession | null;
   /** Your call's view and markers, for the call: his picture with the drill's look. */
   call(): YourCall | null;
   open(): void;
@@ -153,6 +156,21 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
     skeleton: false,
     comfort: false,
     motionBlur: false,
+    autoSlow: false,
+    playing: false,
+  });
+  // The result's board: what he did from his decision, with the look's run as the ghost path.
+  const board = createPlayback(hero);
+  board.set({
+    mode: "factual",
+    focus: "tactical",
+    cone: false,
+    beliefGhosts: false,
+    cfGhost: false,
+    options: false,
+    blindSide: false,
+    pitchControl: false,
+    skeleton: false,
     autoSlow: false,
     playing: false,
   });
@@ -229,7 +247,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
 
   const resultOf = (entry: LookEntry): ViewSession => {
     if (result?.entry === entry) return result.session;
-    result = { entry, session: lookSession(session, looks!, entry, playback) };
+    result = { entry, session: lookSession(session, looks!, entry, board) };
     return result.session;
   };
 
@@ -277,14 +295,16 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
     session,
     state,
     playback,
+    board,
     unavailable,
     looks: () => looks,
     countdown: () => (looks ? countdown(looks.reception, state.get().frame, hero.dt) : 0),
-    stage() {
+    stage: () => (looks ? liveOf(looks).session : null),
+    boardStage() {
       const s = state.get();
-      if (!looks) return null;
-      if (s.step === "result" && s.locked) return resultOf(s.locked.entry);
-      return liveOf(looks).session;
+      return looks && s.locked && (s.step === "calling" || s.step === "result")
+        ? resultOf(s.locked.entry)
+        : null;
     },
     call() {
       const s = state.get();
@@ -375,10 +395,8 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
       const entry = s.locked.entry;
       const end = entry.after.start + entry.after.frames - 1;
       const reduced = state.get().reduced;
-      playback.set({
-        mode: "factual",
+      board.set({
         whatIf: entry.id,
-        focus: "tactical",
         frame: reduced ? Math.min(end, hero.runs.factual.frames - 1) : looks!.decisionFrame,
         playing: !reduced,
         playUntil: null,
@@ -396,13 +414,14 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
         frame: looks!.window[0],
         head: 0,
       });
-      playback.set({ whatIf: null, focus: "pov", frame: looks!.window[0], playing: false });
+      playback.set({ frame: looks!.window[0], playing: false });
+      board.set({ whatIf: null, playing: false });
     },
     tick(dt) {
       const s = state.get();
       if (s.step === "result") {
-        const stage = api.stage();
-        if (stage) advance(playback, stage.hero, dt);
+        const stage = api.boardStage();
+        if (stage) advance(board, stage.hero, dt);
         return;
       }
       if (s.step !== "running" || !looks) return;
@@ -419,6 +438,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
       writeHead();
       if (frame >= looks.decisionFrame) {
         set({ step: "calling", frame: looks.decisionFrame, hold: 0, dragging: false });
+        board.set({ frame: looks.decisionFrame, whatIf: null, playing: false });
       }
       playback.set({ frame: state.get().frame });
     },

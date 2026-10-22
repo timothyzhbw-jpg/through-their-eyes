@@ -101,17 +101,13 @@ export function DrillStage({ scene = true }: { scene?: boolean }) {
   if (step === "closed") return null;
   return (
     <div className="dr-main">
-      {step === "calling" ? (
-        <CallStage d={d} scene={scene} markers={markers} />
-      ) : (
-        <DrillView d={d} scene={scene} />
-      )}
+      <DrillView d={d} scene={scene} markers={markers} />
       <Card d={d} pickByKeyboard={() => markers.current[0]?.focus()} />
     </div>
   );
 }
 
-// ---------- the view: his eyes with the countdown and his head; the board for the result ----------
+// ---------- the view: his eyes with the countdown and his head; the call; the result's board ----------
 
 /** His head in words: degrees to his right or left of the ball. */
 function headWords(head: number): string {
@@ -120,36 +116,54 @@ function headWords(head: number): string {
   return `${deg}° to his ${head > 0 ? "left" : "right"} of the ball`;
 }
 
-function DrillView({ d, scene }: { d: Drill; scene: boolean }) {
+/**
+ * His eyes stay mounted for the whole drill, and the result's board from the call on (hidden until
+ * the result, InstantFrame compiles it): no view is created at a cut, so none shows blank. The call
+ * is Your call's view over them; until its picture has drawn, his last frame shows through.
+ */
+function DrillView(props: {
+  d: Drill;
+  scene: boolean;
+  markers: RefObject<(HTMLButtonElement | null)[]>;
+}) {
+  const { d, scene, markers } = props;
   const step = useStore(d.state, (s) => s.step);
   const locked = useStore(d.state, (s) => s.locked);
-  // The stage changes with the step (the live run, then the result's): re-render with it.
   const stage = d.stage();
+  const board = d.boardStage();
+  const yc = step === "calling" ? d.call() : null;
   const result = step === "result";
   return (
     <figure
       className={`dr-view step-${step}`}
-      aria-label={result ? "What came of your look" : "His eyes"}
+      aria-label={result ? "What came of your look" : yc ? "Your call" : "His eyes"}
     >
       <div className="dr-stage">
         {scene && stage && (
           <SessionContext.Provider value={stage}>
-            <div className={result ? "dr-slot pip" : "dr-slot main"}>
+            <div className={result ? "dr-slot main gone" : "dr-slot main"}>
               <PovView />
             </div>
-            {result && (
-              <div className="dr-slot main">
-                <TacticalView />
-              </div>
-            )}
+          </SessionContext.Provider>
+        )}
+        {scene && board && (
+          <SessionContext.Provider value={board}>
+            <div className="dr-slot main">
+              <TacticalView hidden={!result} />
+            </div>
           </SessionContext.Provider>
         )}
         {(step === "ready" || step === "running") && <Overlay d={d} />}
-        <p className="dr-tag" aria-hidden="true">
-          {result
-            ? `Gold: ${locked?.cell ? "your look's" : "no look's"} run · his real run`
-            : "His eyes"}
-        </p>
+        {yc && (
+          <div className="dr-call">
+            <CallView yc={yc} scene={scene} buttons={markers} />
+          </div>
+        )}
+        {result && (
+          <p className="dr-tag" aria-hidden="true">
+            Gold: {locked?.cell ? "your look's" : "no look's"} run · his real run
+          </p>
+        )}
       </div>
     </figure>
   );
@@ -295,21 +309,6 @@ function HeadDial({ d }: { d: Drill }) {
       <line className="dr-needle" x1={c} y1={c} x2={hx} y2={hy} />
       <circle className="dr-me" cx={c} cy={c} r={4} />
     </svg>
-  );
-}
-
-/** At his decision: Your call's view of his picture with the drill's look. */
-function CallStage(props: {
-  d: Drill;
-  scene: boolean;
-  markers: RefObject<(HTMLButtonElement | null)[]>;
-}) {
-  const yc = props.d.call();
-  if (!yc) return <div className="dr-view" />;
-  return (
-    <div className="dr-call">
-      <CallView yc={yc} scene={props.scene} buttons={props.markers} />
-    </div>
   );
 }
 

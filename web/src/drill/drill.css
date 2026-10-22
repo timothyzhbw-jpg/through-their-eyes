@@ -19,8 +19,7 @@
   grid-template-rows: minmax(0, 1fr);
   gap: var(--gutter);
 }
-.dr-view,
-.dr-call > .yc-view {
+.dr-view {
   position: relative;
   margin: 0;
   background: var(--night-2);
@@ -32,10 +31,24 @@
   min-width: 0;
   min-height: 0;
 }
+/* the call: Your call's view over his eyes; until its picture has drawn, his last frame shows */
 .dr-call {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   display: grid;
-  min-width: 0;
-  min-height: 0;
+}
+.dr-call .yc-view {
+  border-radius: 0;
+  box-shadow: none;
+}
+.dr-call .yc-view.drawing {
+  background: transparent;
+}
+.dr-call .yc-canvas {
+  height: 100%;
+  aspect-ratio: auto;
+  max-height: none;
 }
 .dr-stage {
   position: absolute;
@@ -48,16 +61,8 @@
 .dr-slot.main {
   inset: 0;
 }
-.dr-slot.pip {
-  top: 12px;
-  right: 12px;
-  width: 30%;
-  aspect-ratio: 16 / 10;
-  z-index: 2;
-  border-radius: 12px;
-  box-shadow:
-    0 0 0 1px var(--hairline-strong),
-    0 16px 32px -12px rgba(0, 0, 0, 0.9);
+.dr-slot.gone {
+  visibility: hidden;
 }
 .dr-slot .view,
 .dr-slot .canvas-wrap {
@@ -80,9 +85,6 @@
   text-transform: uppercase;
   color: var(--chalk);
   pointer-events: none;
-}
-.dr-view:not(.step-result) .dr-tag {
-  display: none; /* the countdown says what this is */
 }
 
 /* over his eyes: the countdown, the lock, the dial, and the drag surface under them */
@@ -396,15 +398,9 @@
     aspect-ratio: 4 / 5;
     max-height: 72vh;
   }
-  .dr-slot.pip {
-    width: 42%;
-  }
-  /* the result is the board, which is wide: a wide frame, and no picture in picture over it */
+  /* the result is the board, which is wide: a wide frame */
   .dr-view.step-result {
     aspect-ratio: 4 / 3;
-  }
-  .dr-view.step-result .dr-slot.pip {
-    display: none;
   }
   .dr-locked {
     font-size: 15px;

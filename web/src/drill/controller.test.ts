@@ -187,6 +187,7 @@ describe("the call and the result", () => {
     expect(yc.options.map((o) => o.action).sort()).toEqual(
       entry.decision.options.map((o) => o.action).sort(),
     );
+    expect(d.boardStage()).not.toBeNull(); // mounted, hidden, while the viewer decides
     yc.aim("pass:H9");
     expect(yc.state.get().aim).toBe("pass:H9");
     yc.choose("nonsense");
@@ -195,9 +196,10 @@ describe("the call and the result", () => {
     expect(d.state.get().step).toBe("result");
     expect(d.state.get().pick).toBe("pass:H9");
     // the board plays what he really did with the look's run as the gold ghost
-    const stage = d.stage()!;
+    const stage = d.boardStage()!;
     expect(stage.kind === "hero" && stage.whatIfs!.options[0].run).toBe(entry.after);
-    expect(d.playback.get().whatIf).toBe(entry.id);
+    expect(d.board.get()).toMatchObject({ whatIf: entry.id, frame: DECISION, playing: true });
+    // his eyes stay at the decision, ready for another go
     expect(d.playback.get().frame).toBe(DECISION);
     d.again();
     expect(d.state.get().step).toBe("ready");
