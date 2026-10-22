@@ -981,6 +981,51 @@ data limb tracking reports; nothing in the API or the app calls it yet.
   - Generating a stream changes no run and no export.
   - Limbs beyond shoulders and hips are not generated: the sim has none.
 
+### 4.8 Tactics cards (2026-10-21)
+A teammate's tactics knowledge base (tactic → mechanism → data evidence → fan explanation) needs
+events the sim does not have for most rows (tackles, crosses, open play that shoots). Two cards
+are built from what it records; the rest of the table and what each row needs are in
+[docs/TACTICS.md](TACTICS.md). Kernels in [analytics/tactics.py](../analytics/tactics.py), the
+sentences in [explain/tactics.py](../explain/tactics.py), `GET /api/matches/<id>/tactics`.
+
+**Inputs: the live stream, as §4.6.** Pass cues from the stats timeline give the outcome from the
+feed and the pressing intensity on the passer at the kick. Tracking gives the ball and the
+players. The feed gives the intended receiver (`to`) and the shots. Each possession's restart
+comes from the export. The one exception is the decision model's recorded options (§3.5), which
+are sim records, labelled `sim` on screen.
+
+- **Why build from the back?** A build-up pass is a resolved pass kicked in the passer's own half.
+  - *Under pressure*: pressing intensity on the passer ≥ 0.7 at the kick, the lexicon's heavy
+    pressure.
+  - *Long*: to a teammate 32 m or more away at the kick (35 yards; the length to the intended
+    receiver, so a long ball cut out early is still long).
+  - *Line-breaking*: completed past ≥ 2 outfield opponents, as §5.1 counts them, on tracking.
+  - *xT added*: completed, xT where received minus where played; lost, minus the opponent's xT
+    where they won it, minus where played (§4.5's grid). *Handed over*: the opponent's xT
+    there.
+  - Per team: all, under pressure and not, short and long, short under pressure, line-breaking,
+    lost. The card's team is the one with more own-half passes (ties: home).
+  - Where the sim recorded a decision in the carrier's own half: his choice, his best short and
+    best long pass by the decision model's value, and his safest pass.
+- **Why focus on set pieces?** A corner is a possession whose restart is a corner. It is
+  *played* when its scenario begins with the corner (`sim.match.SET_PIECES`); otherwise the stitch
+  restarts it as open play.
+  - Shots after it: the corner team's shots in that possession. Their xG is the sim's distance
+    model (`sim.decision.distance_xg`).
+  - The match's shots and xG, and the share from set pieces.
+  - A passage's *peak*: the completed pass received where it was worth the most xT to the
+    receiving team. The card compares the best corner's peak with the open-play passages'.
+- **Sentences.** One per card, a claim (§5.3) with `en` and `zh` templates. Its slots are filled
+  from the card a viewer sees. `tactics_stat` measures the card again from the run's tracking and
+  events, with the stitched run's possessions, and the Verifier checks every slot before the line
+  renders. Percentages and decimals are checked to half a unit of the last digit shown.
+- **Honest limits, on the card.**
+  - Open-play passing is scripted (§3.6): the rates describe the sim's script under its press.
+  - A corner's possession ends after its cutback, before any shot (§3.1): set-piece xG is zero
+    by construction.
+  - Open play rarely reaches the final third, so the peak comparison favours the corner.
+- **Where.** The analyst's stats panel and the end-of-match recap (§7).
+
 ### Acceptance checks — analytics
 - [x] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
       pitch flip.
@@ -1049,6 +1094,17 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       0.923, recall 0.985);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
+
+- [x] *Tactics cards (§4.8):* the kernels give the known answers on a hand-built two-possession
+      match; the export and the run it came from give the same cards; same input, same bytes;
+      the pressure hero's recorded options and the corner hero's cutback read as the sim played
+      them; each sentence is supported, renders in `en` and `zh` with no number outside a slot,
+      and a wrong value in any slot is refuted.
+      — [tests/test_tactics.py](../tests/test_tactics.py) (19 cases),
+      [tests/test_tactics_api.py](../tests/test_tactics_api.py). On match-1 (2026-10-21, `main`
+      c947b42), Home completed 13 of 19 short build-up passes under pressure (68%), against 89%
+      without. Its one corner reached 0.29 xT in 4.4 s, more than any of the 17 open-play passages
+      (median 0.0035), with no shot after it.
 
 ## 5. Explain layer (`explain/`)
 
@@ -1874,6 +1930,14 @@ original visual identity.
   - Next, Back, Skip; arrow keys and Escape in the card. Reduced motion: no animated ring, no
     smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
     the viewer touches the app, so Your call and the evidence stay usable.
+- **Tactics cards** ([web/src/tactics/](../web/src/tactics/), §4.8): "Why build from the back?"
+  and "Why focus on set pieces?" in the analyst's stats panel (a match's: folded, with a note,
+  until full time, because they are whole-match numbers and the panel otherwise shows only what
+  is known at the playhead) and in the end-of-match recap, in its language.
+  - Measured numbers carry the `tracking` chip, the decision model's options the `sim` chip.
+  - Each card's sentence carries its claim kind, a verified stamp and Watch (seek to its
+    evidence).
+  - A hero moment opened from a match draws none: the match view has them.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 - **Key-moment beat** ([web/src/beat/](../web/src/beat/)): each key scan plays like a broadcast
   highlight. Free play and the live stream ease into slow motion (about 0.4×) as the scan begins,
@@ -2142,6 +2206,16 @@ the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or pl
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
       screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
       2026-10-21)
+
+- [x] *Tactics cards (§4.8, 7):* both cards in a hero moment with their verified sentences, the
+      `tracking` and `sim` chips and the honest-limits notes; the recap's language; folded in a
+      match's stats panel until full time; analyst only; nothing offline or in a hero opened from
+      a match; a sentence withheld unless every claim is supported, and no number in it that its
+      claims do not hold.
+      — [web/src/tactics/TacticsCards.test.tsx](../web/src/tactics/TacticsCards.test.tsx),
+      [tactics.test.ts](../web/src/tactics/tactics.test.ts) (on
+      [fixture.json](../web/src/tactics/fixture.json), written by `explain.tactics --fixture`;
+      `tests/test_tactics.py` fails when it is stale)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs

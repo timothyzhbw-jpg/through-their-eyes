@@ -4,3 +4,4 @@ public/data
 package-lock.json
 src/pitchControl/snapshots.json
 src/stats/fixture_seed3.json
+src/tactics/fixture.json
