@@ -141,7 +141,8 @@ on an LLM.
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
   - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
-    for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
+    for rhythm. The match is therefore at most 13:28 on any platform (780 s of caps and 27.8 s of
+    heroes). `possession_play` rarely
     puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
     passages reach their cap: on this Mac 2 of 15 end in a throw-in (4 before players were kept on
     the pitch, §3.2). Where the ball goes out depends on the platform (§3.7): on the live service
@@ -161,6 +162,19 @@ on an LLM.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
     never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
     look; without it, the counterfactual goes near post and A1 saves it (§3.6).
+  - *match-2* (`sim.match.MATCH_2`, 2026-10-21): three of match-1's heroes on other design seeds,
+    in another order: `press_escape` 1 from 0:25, `corner_blind_side` 2 from 3:22 and
+    `blind_side_run` 11 from 7:58. It has 17 possessions, 11:45 on this Mac and at most 12:23,
+    and no shooting hero, so it ends 0–0.
+    Each new seed passed the checks its demo seed passes: the hero moment and its lens are found,
+    the scenario's intervention changes the outcome (the decision; whether the man is marked as
+    the ball arrives; the possession after a forced carry), every claim is supported, and an
+    offline breakdown for every persona and language has no render violation. Of the seeds
+    screened, only `press_escape` 8 failed: its breakdown crashed in `runner_received` on an
+    intercepted pass (fixed in #89). The other seeds were picked for a typical size and a different
+    story: wide to H7 without the look; out to the full-back H3 under the press; 3.0 m with the
+    look and 8.1 m without, at the corner. The API serves it as `match-2` (`TTE_MATCHES=…,match:2`),
+    listed in the match picker; the default stays where it was.
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
     per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
     is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
@@ -193,7 +207,7 @@ on an LLM.
   every setup position is clamped to the pitch, and a player brakes for the line ahead (the
   exact discrete stopping envelope at the max decel, sharing the frame's accel/decel limit with
   the rest of his step), so keepers stay at or in front of their goal line and nobody crosses a
-  touchline (`tests/test_on_pitch.py`: every frame, 0.3 m tolerance; the measured worst is 0).
+  touchline (`tests/test_on_pitch.py`: every frame, 1e-6 m tolerance; the measured worst is 0).
   Clamping targets alone was not enough: a player who turns along a line keeps drifting over it.
   Before, the formation shift and a free ball's predicted path, which runs on past the lines, put
   the away keeper up to 8 m behind his goal line in `blind_side_run` (1.7 m on the demo seed) and
@@ -1583,6 +1597,15 @@ original visual identity.
   - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
     another is lifted one label up, else hidden; the runner's gold number always shows
     ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
+- **The run without the look, told** ([web/src/without/](../web/src/without/),
+  [explain/look_cost.py](../explain/look_cost.py); teammates' feedback, 2026-10-21): in the run
+  without the look, verified lines say which look was removed (which shoulder, how long before
+  the ball reached him), what losing it cost (played back instead of forward, or the ball lost),
+  and where each run's pass reached its receiver with the xT there. The removed look is marked on
+  the timeline, in the HUD and at the edge of his eyes on that shoulder's side; "How xT works"
+  draws the 16 × 12 grid with both passes' ends, valued by the verified line, and says how the
+  grid is fitted (§4.5). Bundled per scan hero by `sim.export --without-look`; not part of the
+  crew's evidence, so breakdown cache keys do not move.
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1646,6 +1669,39 @@ original visual identity.
     95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
+- **His looks, step by step** (2026-10-21, a teammate's request: the scans go by too fast;
+  [web/src/steps/](../web/src/steps/); "His looks" in the header, "Step through his looks" on the
+  moment; deep link `?play=steps`, a hero moment's only): each look the hero takes before the ball
+  reaches him is a freeze frame the viewer steps through, and the last step explains his decision.
+  - *Steps.* One per `scan` event of the hero that starts before his reception, from the run's own
+    events: `blind_side_run` seed 3 has 1 (the key scan), `press_escape` seed 0 has 2. In the run
+    without the key scan that look stays as a missing step at the same time. A look freezes his eyes
+    at the middle of its dwell (the frames his head is within the sim's `scan_out_tolerance` of
+    where it turned), or at his decision if it is still under way then. Precomputed per run by
+    `sim.export --steps` (`agents/steps.py`): no model call.
+  - *On a look.* His eyes, with the board in the corner: who came into his sight on it (out of it as
+    the look began, in it on a frame of the look up to his decision) is ringed and listed; dashed
+    arrows in the team's colour project where each player within 30 m of him is heading, his sim
+    velocity at that frame kept for a second, and are labelled as a projection.
+  - *Potential passes.* The options of the run's decision record, as lanes from the ball at his
+    decision to each option's target on his belief: width how likely he was to pick it, gold his
+    pick, brighter a receiver this look brought into sight. The decision model runs only at his
+    decision (§3.5), so a look shows the options he went on to weigh, and says so. No pass type:
+    every pass in the sim is along the ground (lofted and curled balls are not modelled).
+  - *His decision.* On the board, dimmed (never blurred: the picture stays clear) but round
+    exactly two players: a pass's receiver and the opponent nearest him, a carrier and the opponent
+    nearest him, a shooter and the keeper.
+  - *Words.* Only verified lines in en and zh, slot-filled and checked by the Verifier on the run
+    they describe: how many looks he takes, where and when each one goes (the side from the ball,
+    over his shoulder from 120°, as Take his eyes says it), who it brings into his sight, that his
+    head is still turning when he decides, or that he takes no look then; at the decision, the look
+    that found the player who mattered (the runner, else his receiver), how far off his picture of
+    that player was and how old, what he did, and the pair the freeze leaves lit with their
+    distance. Direction labels have no "behind": a scan turns at most 150° from the ball.
+  - *Controls.* Next, Back and Back to the replay; ← and → step, Escape leaves, a swipe on the
+    picture steps on a phone; the steps are buttons; the run switch keeps the same look. Reduced
+    motion: the dimming appears without fading in.
+  - A hero with no decision on the ball (`corner_blind_side`, `screened_shot`) has no steps.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -1660,12 +1716,13 @@ original visual identity.
   the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
   - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
     captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
-    number; Your call; another audience in another language (a casual fan, in Chinese); the
-    Producer's failure drill and bring-back; then the whole match, whose card links to
-    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
-    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
-    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
-    main.
+    number; Your call; Take his eyes (opened on his own look, the dial and the times out; the
+    viewer picks and presses Look, and the app keeps the keyboard); another audience in another
+    language (a casual fan, in Chinese); the Producer's failure drill and bring-back; then the
+    whole match, whose card links to `?match=match-1&play=recap&tour=recap`, where the tour goes
+    on at the full-time recap card. A step the page cannot show (no live service, no
+    counterfactual, no Your call, no bundled look grid; a match page shows only its recap) is left
+    out, not shown broken.
   - *It never takes over.* It only calls the app's own controls, and never presses anything that
     spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
     with the card's button. The overlay lets every click through, the card is a non-modal dialog,
@@ -1732,6 +1789,14 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
+- [x] *The run without the look, told:* which look was removed, what it cost and where each pass
+      went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
+      tampered with), rendered in en and zh with every number in a slot; the web shows only the
+      lines that pass `checkPayload`, in the caption's place in that run, on the timeline, in the
+      HUD and at the edge of his eyes; the explainer's two values are the verified line's.
+      — [tests/test_without_look.py](../tests/test_without_look.py) (16 cases),
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py),
+      [web/src/without/without.test.tsx](../web/src/without/without.test.tsx) (8).
 - [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
       moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
       the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt
@@ -1792,6 +1857,17 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
       [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
       [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
+- [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
+      scan events (a file whose looks are not the run's is refused), the dropped look missing in
+      the run without it; the freeze frame inside the dwell; movement arrows from the sim's
+      velocities; potential passes from the decision record; the decision dims all but exactly two
+      players, with no blur; every line verifies in en and zh; Next, Back, Exit, arrow keys, Escape, swipe
+      and the run switch.
+      — [web/src/steps/steps.test.ts](../web/src/steps/steps.test.ts),
+      [scansteps.test.tsx](../web/src/steps/scansteps.test.tsx);
+      [tests/test_steps.py](../tests/test_steps.py) (steps, dwell, velocities, every line verified,
+      the committed files current); `npm run smoke`, pages `link-steps`,
+      `link-steps-press-escape` and `phone-320-steps`
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every

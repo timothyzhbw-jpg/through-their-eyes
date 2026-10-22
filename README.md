@@ -303,7 +303,9 @@ Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cach
 about 12½ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
 pressure hero (`press_escape`) at 4:54, the shot hero (`far_post_finish`) scoring at 7:01 and the
 short corner (`corner_blind_side`) at 8:51, at 1–0 — with
-moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
+moments detected in every possession; breakdowns and what-ifs take the hero moment's id. `match-2`
+plays three of those heroes (pressure, corner, scan) on other seeds, in another order (17
+possessions, about 11¾ minutes; no shot, so 0–0). Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
 The container image for Azure Container Apps (main dependencies only, runs as a non-root user):

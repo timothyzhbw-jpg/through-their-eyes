@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { runLabels } from "../data/hero";
 import type { ViewSession } from "../session";
+import { takeEyesOf } from "../takeeyes/controller";
 import { yourCallOf } from "../yourcall/controller";
 import raw from "./steps.json";
 
@@ -17,6 +18,7 @@ export const CONDITIONS = [
   "keyScan",
   "counterfactual",
   "yourCall",
+  "takeEyes",
 ] as const;
 /** What a step does when it comes up (actions.ts). */
 export const ENTERS = [
@@ -26,6 +28,7 @@ export const ENTERS = [
   "openEvidence",
   "openTamper",
   "yourCall",
+  "takeEyes",
   "audience",
   "producer",
   "recap",
@@ -81,6 +84,7 @@ export function envOf(session: ViewSession): TourEnv {
       keyScan: !!hero.keyScan,
       counterfactual: !!hero.counterfactual,
       yourCall: session.kind === "hero" && !yourCallOf(session).unavailable,
+      takeEyes: session.kind === "hero" && !takeEyesOf(session).unavailable,
     },
     slots: { cf: labels.tag.counterfactual, cfTitle: labels.counterfactual },
   };
