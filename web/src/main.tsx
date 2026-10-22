@@ -93,6 +93,16 @@ async function main() {
         return !!p && !!LOOK_FILES[scenarioMatchId(p)];
       });
       if (link.play === "eyes" && eyes) session.controls.openBreakdown(eyes, "eyes");
+      // moment=<scenario>: that hero moment's breakdown, as its Breakdown button opens it.
+      const named = link.moment
+        ? session.match.moments.find(
+            (m) =>
+              m.hero &&
+              session.match.possessions.find((p) => p.index === m.possession)?.scenario ===
+                link.moment,
+          )
+        : undefined;
+      if (named) session.controls.openBreakdown(named);
       broadcast(session.controls);
       if (filming) {
         await showCine(session);

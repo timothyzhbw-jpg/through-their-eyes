@@ -173,11 +173,13 @@ describe("the first screen", () => {
           new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true }),
         );
       });
-    // Folded: the last control is the toggle, not a hidden button behind it.
-    tab(toggle);
+    // Folded: the last control is the last moment link, not a hidden button behind the toggle.
+    const lastMoment = [...page.querySelectorAll<HTMLAnchorElement>(".intro-moments a")].at(-1)!;
+    expect(lastMoment.textContent).toBe("Full match · live");
+    tab(lastMoment);
     expect(document.activeElement).toBe(start);
     tab(start, true);
-    expect(document.activeElement).toBe(toggle);
+    expect(document.activeElement).toBe(lastMoment);
     click(toggle);
     const full = button(page, "Full tour · 90 s");
     tab(full);
@@ -185,6 +187,32 @@ describe("the first screen", () => {
     expect(document.body.style.overflow).toBe("hidden");
     click(button(page, "Just watch"));
     expect(document.body.style.overflow).toBe(overflow);
+  });
+});
+
+describe("every moment from the first screen", () => {
+  it("links the moments and the full match, live, beside the tour; this one marked", () => {
+    const page = mount(offline());
+    const nav = page.querySelector<HTMLElement>('.intro-moments nav[aria-label="Moments"]')!;
+    const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
+    expect(links.map((a) => a.textContent)).toEqual([
+      "The look",
+      "Under pressure",
+      "The corner",
+      "The goal",
+      "Full match · live",
+    ]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "/?intro=0",
+      "/?match=press_escape-0&intro=0",
+      "/?match=match-1&moment=corner_blind_side",
+      "/?match=match-1&moment=far_post_finish",
+      "/?match=match-1&intro=0",
+    ]);
+    // Not behind Teams and more: shown with the hook and Start.
+    expect(nav.closest("[hidden]")).toBeNull();
+    expect(links[0].getAttribute("aria-current")).toBe("page"); // the blind-side run is on screen
+    expect(links.filter((a) => a.hasAttribute("aria-current"))).toHaveLength(1);
   });
 });
 

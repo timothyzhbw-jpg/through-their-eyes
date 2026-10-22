@@ -50,10 +50,15 @@
   border-radius: 50%;
   background: var(--chalk-3);
 }
-.live-chip[aria-pressed="true"] {
+a.live-chip {
+  text-decoration: none;
+}
+.live-chip[aria-pressed="true"],
+.live-chip.on {
   color: var(--chalk);
 }
-.live-chip[aria-pressed="true"] i {
+.live-chip[aria-pressed="true"] i,
+.live-chip.on i {
   background: var(--floodlight);
   animation: tt-beat 1.6s ease-out infinite;
 }
