@@ -120,7 +120,7 @@ export function Caption() {
   return (
     <>
       <p className="sr-only" aria-live={speaking ? "off" : "polite"}>
-        {line?.text}
+        {line ? renameIds(line.text) : null}
       </p>
       {narration && line && (
         <button

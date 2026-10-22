@@ -299,7 +299,7 @@ describe("the pre-match autoplay gate", () => {
     while (session.playback.get().mode !== "counterfactual" && t < 30) tick();
     expect(t, "seconds from the page opening to the run without the look").toBeLessThan(20);
     expect(container.querySelector(".stage-caption")?.textContent).toContain(
-      "Without that look, H8 would have passed to H4.",
+      "Without that look, J. Ferriday would have passed to K. Annersley.",
     );
   }, 20_000); // a few hundred rendered ticks: slow on a loaded machine
 

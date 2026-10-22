@@ -644,7 +644,7 @@ def export_without_look(scenario: str, seed: int) -> dict[str, Any]:
         raise ValueError(f"{scenario} {seed}: the other run is not a look removed")
     answers = {}
     for lang in WHAT_IF_LANGUAGES:
-        payload = look_cost_payload(ctx.evaluator, cf, lang)
+        payload = look_cost_payload(ctx.evaluator, cf, lang, ctx.names)  # by name (SPEC 4.6)
         if not payload.lines:
             raise ValueError(f"{scenario} {seed}: no line about the removed look in {lang}")
         answers[lang] = payload.model_dump(mode="json")

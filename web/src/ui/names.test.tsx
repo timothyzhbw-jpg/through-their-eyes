@@ -11,6 +11,7 @@ import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
 import { describeStep } from "./BreakdownPanel";
+import { Caption } from "./Narration";
 import { createApi } from "../api/client";
 import { parseHero, runLabels } from "../data/hero";
 import { clubName, renameIds, shortName } from "../data/roster";
@@ -114,6 +115,15 @@ describe("on screen, a player and a club go by their names", () => {
       expect(words(page), node.key!).toContain("Ferriday");
     }
     expect(optionLabel("pass:H4")).toBe("Pass to K. Annersley");
+  });
+
+  it("the caption a screen reader hears, from the bundled example too", () => {
+    const session = offline();
+    const page = mount(session, <Caption />);
+    act(() => session.controls.openLine("L2")); // "H8 scanned once…" in the bundled example
+    const heard = text(page.querySelector(".sr-only[aria-live]")!);
+    expect(heard).toContain("J. Ferriday");
+    expect(heard).not.toMatch(ID);
   });
 
   it("the telestration steps", () => {

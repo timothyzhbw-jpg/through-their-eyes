@@ -94,14 +94,14 @@ describe("on the live screen", () => {
     act(() => session.controls.setMode("counterfactual"));
     const note = page.querySelector("[aria-label='The run without the look']")!;
     expect(text(note)).toContain(
-      "Removed: H8's look over his right shoulder, 0.8 seconds before the ball reached him.",
+      "Removed: J. Ferriday's look over his right shoulder, 0.8 seconds before the ball reached him.",
     );
     expect(text(note)).toContain(
-      "Without that look, H8 would have played it back to H4 instead of forward to H9.",
+      "Without that look, J. Ferriday would have played it back to K. Annersley instead of forward to N. Varnhall.",
     );
     act(() => session.breakdown.set({ language: "zh" }));
     expect(text(page.querySelector("[aria-label='The run without the look']"))).toContain(
-      "去掉的是：球到之前0.8秒，H8向右后方的那一眼。",
+      "去掉的是：球到之前0.8秒，J. Ferriday向右后方的那一眼。",
     );
   });
 
@@ -141,8 +141,8 @@ describe("in the verdict", () => {
     const session = await loaded();
     const page = mount(session, <WithoutLookLines />);
     expect(text(page)).toContain(
-      "H8's pass reached H9 in the final third, right of centre: xT 0.133. Without that look it " +
-        "would have reached H4 in his own half, right of centre: xT 0.002.",
+      "J. Ferriday's pass reached N. Varnhall in the final third, right of centre: xT 0.133. Without that look it " +
+        "would have reached K. Annersley in his own half, right of centre: xT 0.002.",
     );
     const open = [...page.querySelectorAll("button")].find((b) => text(b) === "How xT works")!;
     act(() => open.click());

@@ -373,7 +373,9 @@ describe("keyboard and screen reader access", () => {
     expect(region().getAttribute("aria-live")).toBe("polite"); // there before any caption
     expect(textOf(region())).toBe("");
     act(() => session.controls.openLine("L3"));
-    expect(textOf(region())).toBe("Without that look, H8 would have passed to H4.");
+    expect(textOf(region())).toBe(
+      "Without that look, J. Ferriday would have passed to K. Annersley.",
+    );
     act(() => session.controls.setSound(true));
     // Sound on alone is not speech: the region stays polite until a clip actually plays.
     expect(region().getAttribute("aria-live")).toBe("polite");
@@ -394,7 +396,9 @@ describe("keyboard and screen reader access", () => {
     expect(sound(session)).toBe(true);
     expect(session.voice.state.get().status).toBe("failed");
     expect(region().getAttribute("aria-live")).toBe("polite");
-    expect(textOf(region())).toBe("Without that look, H8 would have passed to H4.");
+    expect(textOf(region())).toBe(
+      "Without that look, J. Ferriday would have passed to K. Annersley.",
+    );
   };
 
   it("still announces captions when the browser blocks the clip from playing", async () => {
