@@ -5,9 +5,11 @@
 // sleeves and gloves; models/README.md), approved by the art director on 2026-10-21; `?look=v1`
 // brings back the plain kits, for side-by-side review.
 // Kept out of the playback store on purpose: the rigged players stay removable by deleting players/.
-// The retargeted mocap clips (extra.ts: a kick at passes, a shoulder check at scans) are on by
-// default; `?anims=base` keeps the engine's clips only, for side-by-side review. If they cannot
-// load, the players fall back to the engine's clips.
+// The retargeted mocap clips (extra.ts: a kick at passes, a shoulder check at scans) and with them
+// the walk (walk.ts, at slow speeds) are on by default; `?anims=base` keeps the engine's clips
+// only, and `?walk=0` the extra clips without the walk, for side-by-side review. If the extra
+// clips cannot load, the players fall back to the engine's clips; if the walk cannot, to the
+// extra clips.
 
 import { createStore } from "../store/store";
 
@@ -18,6 +20,7 @@ export interface TrialState {
   rigged: boolean;
   look: Look;
   anims: Anims;
+  walk: boolean; // the walk (walk.ts), with anims "extra"
 }
 
 /** Rigged players unless the query string asks for the tokens with `rigged=0`. */
@@ -35,6 +38,11 @@ export function animsFromSearch(search: string): Anims {
   return new URLSearchParams(search).get("anims") === "base" ? "base" : "extra";
 }
 
+/** The walk unless the query string asks for the engine's slow gait with `walk=0`. */
+export function walkFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get("walk") !== "0";
+}
+
 function fromUrl(): TrialState {
   try {
     const search = window.location.search;
@@ -42,9 +50,10 @@ function fromUrl(): TrialState {
       rigged: riggedFromSearch(search),
       look: lookFromSearch(search),
       anims: animsFromSearch(search),
+      walk: walkFromSearch(search),
     };
   } catch {
-    return { rigged: true, look: "v2", anims: "extra" };
+    return { rigged: true, look: "v2", anims: "extra", walk: true };
   }
 }
 
