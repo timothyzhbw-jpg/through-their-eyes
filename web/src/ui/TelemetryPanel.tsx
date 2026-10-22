@@ -5,7 +5,7 @@
 // in viewBox units stretched to the row's width; strokes keep their pixel width
 // (non-scaling-stroke). The logic is in telemetry/.
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { runLabels, Sample } from "../data/hero";
 import type { RunName } from "../data/types";
 import { useSession } from "../session";
@@ -22,6 +22,7 @@ import {
   type KeyPoints,
   type Telemetry,
 } from "../telemetry/telemetry";
+import { useOnScreen, useStoreWhile } from "./onScreen";
 
 const NO_FEED = createStore({ latest: -1 }); // offline: there is no stream to wait for
 const THIN = { vectorEffect: "non-scaling-stroke" } as const;
@@ -32,12 +33,15 @@ const DETECTOR_NOTE =
 
 export function TelemetryPanel() {
   const { hero, playback, feed } = useSession();
+  // Below the live screen: off screen or in a hidden tab, it does not follow every frame.
+  const panel = useRef<HTMLElement>(null);
+  const shown = useOnScreen(panel);
   const mode = useStore(playback, (s) => s.mode);
-  const frame = useStore(playback, (s) => s.frame);
+  const frame = useStoreWhile(shown, playback, (s) => s.frame);
   const povPlayer = useStore(playback, (s) => s.povPlayer);
   const comfort = useStore(playback, (s) => s.comfort);
   const live = useStore(playback, (s) => s.live);
-  const latest = useStore(feed?.state ?? NO_FEED, (s) => s.latest);
+  const latest = useStoreWhile(shown, feed?.state ?? NO_FEED, (s) => s.latest);
   const run = hero.runs[mode];
   const otherName: RunName = mode === "factual" ? "counterfactual" : "factual";
   const known = live ? Math.min(latest, run.frames - 1) : run.frames - 1;
@@ -61,9 +65,22 @@ export function TelemetryPanel() {
   const threshold = t.thresholdDeg.toFixed(0);
   const beliefMax = Math.max(t.max.belief, o?.max.belief ?? 0); // one scale for both runs
   const row = { cursor, guides, axis: t.axis };
+  // The curves change with the run, the player and (live) the frames sent, not with the playhead.
+  const d = useMemo(
+    () => ({
+      head: linePath(t.headToBall, t.axis, 180, t.known),
+      headOther: o && linePath(o.headToBall, o.axis, 180, o.known),
+      speed: linePath(t.headSpeed, t.axis, t.max.speed, t.known - 1),
+      sight: linePath(t.inSight, t.axis, t.max.inSight, t.known),
+      belief: t.belief && linePath(t.belief.error, t.axis, beliefMax, t.known),
+      beliefOther: o?.belief && linePath(o.belief.error, o.axis, beliefMax, o.known),
+    }),
+    [t, o, beliefMax],
+  );
 
   return (
     <section
+      ref={panel}
       className="panel chapter telemetry"
       aria-label="Perception telemetry"
       data-player={player.id}
@@ -112,7 +129,7 @@ export function TelemetryPanel() {
             <path
               data-series="head-other"
               data-run={otherName}
-              d={linePath(o.headToBall, o.axis, 180, o.known)}
+              d={d.headOther!}
               className={`curve other run-${otherName}`}
               style={THIN}
             />
@@ -120,7 +137,7 @@ export function TelemetryPanel() {
           <path
             data-series="head"
             data-run={mode}
-            d={linePath(t.headToBall, t.axis, 180, t.known)}
+            d={d.head}
             className={`curve run-${mode}`}
             style={THIN}
           />
@@ -136,12 +153,7 @@ export function TelemetryPanel() {
           {...row}
         >
           <Detector t={t} />
-          <path
-            data-series="speed"
-            d={linePath(t.headSpeed, t.axis, t.max.speed, t.known - 1)}
-            className="curve"
-            style={THIN}
-          />
+          <path data-series="speed" d={d.speed} className="curve" style={THIN} />
         </Row>
 
         <Row
@@ -153,12 +165,7 @@ export function TelemetryPanel() {
           source="sim"
           {...row}
         >
-          <path
-            data-series="sight"
-            d={linePath(t.inSight, t.axis, t.max.inSight, t.known)}
-            className="curve"
-            style={THIN}
-          />
+          <path data-series="sight" d={d.sight} className="curve" style={THIN} />
         </Row>
 
         <Row
@@ -178,7 +185,7 @@ export function TelemetryPanel() {
             <path
               data-series="belief-other"
               data-run={otherName}
-              d={linePath(o.belief.error, o.axis, beliefMax, o.known)}
+              d={d.beliefOther!}
               className={`curve other run-${otherName}`}
               style={THIN}
             />
@@ -187,7 +194,7 @@ export function TelemetryPanel() {
             <path
               data-series="belief"
               data-run={mode}
-              d={linePath(t.belief.error, t.axis, beliefMax, t.known)}
+              d={d.belief!}
               className={`curve run-${mode}`}
               style={THIN}
             />

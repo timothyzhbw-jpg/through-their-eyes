@@ -15,7 +15,7 @@
       "dim": false,
       "enter": "replay",
       "needs": ["hero"],
-      "hold": 16
+      "hold": 14
     },
     {
       "id": "without",
@@ -25,7 +25,7 @@
       "dim": false,
       "enter": "counterfactual",
       "needs": ["hero", "counterfactual"],
-      "hold": 10
+      "hold": 8
     },
     {
       "id": "evidence",
@@ -46,7 +46,7 @@
       "enter": "openTamper",
       "act": "checkWrongNumber",
       "needs": ["hero", "api"],
-      "hold": 10
+      "hold": 8
     },
     {
       "id": "yourcall",
@@ -57,6 +57,17 @@
       "focus": "app",
       "enter": "yourCall",
       "needs": ["hero", "yourCall"],
+      "hold": 10
+    },
+    {
+      "id": "eyes",
+      "title": "Take his eyes",
+      "caption": "Now you choose when and where he looks: a time below, a direction round him, then Look. The sim re-runs the moment with that look as his only one.",
+      "target": ".te-view",
+      "dim": false,
+      "focus": "app",
+      "enter": "takeEyes",
+      "needs": ["hero", "takeEyes"],
       "hold": 12
     },
     {
@@ -68,7 +79,7 @@
       "enter": "audience",
       "act": "sound",
       "needs": ["hero", "api"],
-      "hold": 10
+      "hold": 8
     },
     {
       "id": "producer",
@@ -79,7 +90,7 @@
       "enter": "producer",
       "act": "drill",
       "needs": ["hero", "api"],
-      "hold": 12
+      "hold": 10
     },
     {
       "id": "match",
@@ -100,7 +111,7 @@
       "dim": false,
       "enter": "recap",
       "needs": ["match", "api"],
-      "hold": 10
+      "hold": 8
     },
     {
       "id": "end",

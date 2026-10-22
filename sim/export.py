@@ -37,6 +37,14 @@ its verified lines. Its own schema (LOOK_VERSION):
         --looks web/public/data/look_seed3.json
     uv run python -m sim.export --scenario press_escape --seed 0 \
         --looks web/public/data/look_press_escape_seed0.json
+
+`export_steps` writes the scan step-through (SPEC 7): each look of the hero before the ball reaches
+him and his decision, per run, with every player's sim velocity at those frames and the verified
+lines (`agents.steps`). Its own schema (`agents.steps.STEPS_VERSION`):
+    uv run python -m sim.export --scenario blind_side_run --seed 3 \
+        --steps web/public/data/steps_seed3.json
+    uv run python -m sim.export --scenario press_escape --seed 0 \
+        --steps web/public/data/steps_press_escape_seed0.json
 """
 
 from __future__ import annotations
@@ -904,6 +912,70 @@ def export_looks(scenario: str, seed: int) -> dict[str, Any]:
     }
 
 
+def export_steps(scenario: str, seed: int) -> dict[str, Any]:
+    """The scan step-through (SPEC 7) of a hero moment with a decision on the ball, per run: his
+    looks before the ball reaches him (a step each, the run without the key scan showing it as
+    missing) and his decision, with every player's velocity from the sim at each freeze frame
+    (mm/s) and the verified lines in en and zh. The options a step can show are the decision
+    record's, in the hero export. Refuses a line that does not verify."""
+    from agents.context import MomentContext  # the crew's evidence; heavy, so imported here
+    from agents.steps import STEPS_VERSION, answer_steps
+
+    ctx = MomentContext.load(scenario, seed)
+    answer = answer_steps(ctx)
+    runs: dict[str, Any] = {}
+    for name, rs in answer.runs.items():
+        payloads = answer.payloads[name]
+        for lang, payload in payloads.items():
+            if len(payload.lines) != len(rs.claims):
+                kept = {line.id for line in payload.lines}
+                lost = [c.id for c in rs.claims if c.id not in kept]
+                raise RuntimeError(f"{name} ({lang}): lines did not verify: {', '.join(lost)}")
+        runs[name] = {
+            "reception": rs.reception.frame,
+            "decision": rs.decision.frame,
+            "intro": rs.lines["intro"],
+            "steps": [
+                {
+                    "id": s.scan.id,
+                    "start": s.scan.frame,
+                    "end": int(s.scan.attrs["end"]),
+                    "frame": s.frame,
+                    "side": s.side,
+                    "over": s.over,
+                    "missing": s.missing,
+                    "sight": s.sight,
+                    "lines": rs.lines[s.scan.id],
+                    "vel": _mm(rs.run.vel[s.frame]),
+                }
+                for s in rs.steps
+            ],
+            "final": {
+                "frame": rs.decision.frame,
+                "chosen": rs.decision.chosen,
+                "forced": rs.forced,
+                "focus": list(rs.focus),
+                "lines": rs.lines["final"],
+                "vel": _mm(rs.run.vel[rs.decision.frame]),
+            },
+            "answers": {lang: p.model_dump(mode="json") for lang, p in payloads.items()},
+        }
+    return {
+        "version": STEPS_VERSION,
+        "scenario": scenario,
+        "seed": seed,
+        "dt": DT,
+        "units": {"velocity": "mm/s"},
+        "moment": ctx.card.id,
+        "hero": ctx.run.hero_decision().player,
+        "runs": runs,
+    }
+
+
+def steps_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+
+
 def _deg(result) -> int | None:
     return None if result.offset is None else round(float(np.rad2deg(result.offset)))
 
@@ -939,7 +1011,15 @@ def main() -> None:
         "--without-look", type=Path, help="also write the lines of the run without the look"
     )
     parser.add_argument("--looks", type=Path, help="also write the Take his eyes look grid")
+    parser.add_argument("--steps", type=Path, help="also write the scan step-through")
     args = parser.parse_args()
+    if args.steps:
+        steps = export_steps(args.scenario, args.seed)
+        args.steps.parent.mkdir(parents=True, exist_ok=True)
+        args.steps.write_text(steps_json(steps))
+        count = {name: len(r["steps"]) for name, r in steps["runs"].items()}
+        print(f"wrote {args.steps} ({args.steps.stat().st_size / 1024:.0f} KB): steps per run "
+              f"{count}")  # fmt: skip
     if args.looks:
         looks = export_looks(args.scenario, args.seed)
         args.looks.parent.mkdir(parents=True, exist_ok=True)
@@ -957,8 +1037,8 @@ def main() -> None:
         if args.out is None and not args.looks:
             return
     if args.out is None:
-        if not args.looks:
-            parser.error("--out is required, unless only --looks is written")
+        if not (args.looks or args.steps):
+            parser.error("--out is required, unless only --looks or --steps is written")
         return
     if args.match is not None:
         args.out.parent.mkdir(parents=True, exist_ok=True)

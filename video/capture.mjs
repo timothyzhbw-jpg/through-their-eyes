@@ -437,13 +437,15 @@ function previousShots(file, results) {
 
 // --- recording -----------------------------------------------------------------------------------
 
-async function newPage(browser, viewport) {
+async function newPage(browser, viewport, { reducedMotion = false } = {}) {
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: 1,
     locale: "en-US",
     colorScheme: "dark",
-    reducedMotion: "no-preference", // reduced motion would turn the app's autoplay off
+    // Reduced motion turns the app's autoplay off, and also its first-person head-whip blur: a
+    // shot that must be sharp through a head turn sets "reduced_motion" and presses Play itself.
+    reducedMotion: reducedMotion ? "reduce" : "no-preference",
   });
   // Headed Chromium draws scrollbars into the frames; hide them.
   await context.addInitScript(() => {
@@ -534,7 +536,7 @@ async function encode(ffmpeg, rec, fps, out) {
 }
 
 async function captureShot(browser, shot, opts, outDir) {
-  const page = await newPage(browser, shot.viewport);
+  const page = await newPage(browser, shot.viewport, { reducedMotion: shot.reduced_motion === true });
   const problems = [];
   page.on("pageerror", (err) => problems.push(`page error: ${err.message}`));
   page.on("console", (m) => m.type() === "error" && problems.push(`console: ${m.text()}`));

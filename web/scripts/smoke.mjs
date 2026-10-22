@@ -29,7 +29,7 @@ import { launchChrome } from "./gpu.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,press_escape:0";
+const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,match:2,press_escape:0";
 const TIMEOUT = 45_000; // per step: the first load fetches the export, fonts and models
 const SETTLE = 2_500; // after the checks, so late errors (models, stream, breakdown) surface
 const BLANK = 20_000; // bytes: a screenshot of the page's background alone; a drawn page is ~400K
@@ -61,6 +61,8 @@ const PAGES = [
   },
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
+  { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
+  { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
   { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
@@ -84,6 +86,14 @@ const PAGES = [
     path: "?play=eyes",
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
+  },
+  { name: "link-steps", path: "?play=steps", check: scanSteps },
+  { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
+  {
+    name: "phone-320-steps",
+    path: "?play=steps",
+    device: PHONE_320,
+    check: (p) => phone(p, scanSteps, { live: false }),
   },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
@@ -135,6 +145,20 @@ const PAGES = [
     name: "desktop-960-hero",
     path: "?intro=0",
     device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
+  },
+  // A laptop: the header's pills and the run switch over the picture must not meet (they did at
+  // 1440 px once "His looks" joined the header).
+  {
+    name: "desktop-1440-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 1440, height: 900 } },
+    check: (p) => phone(p, hero),
+  },
+  {
+    name: "desktop-1280-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 1280, height: 800 } },
     check: (p) => phone(p, hero),
   },
   {
@@ -254,16 +278,16 @@ async function tier(page, want) {
 /** How long the replay may take to reach a frame: a software renderer (SwiftShader on the CI
  * runner) draws far fewer frames, and the app's clock steps at most 0.1 s a frame. */
 const PLAY_MS = process.env.CI ? 60_000 : 20_000;
-/** The cut guard (beat/cut.ts) keeps blur off for 0.3 s of wall time after a cut; frames drawn
- * within this long of the click are read. A software renderer draws a frame every ~100 ms, so
- * later frames rightly have their blur back. */
-const CUT_READ_MS = 250;
+/** Frames read after each cut. The cut guard (beat/cut.ts) keeps blur off for 0.3 s and for at
+ * least its first 4 frames: on a software renderer one frame can outlast the 0.3 s, so the check
+ * counts frames, one short of the guard. */
+const CUT_READ_FRAMES = 3;
 
 /** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable). The replay
  * opens as H8 looks away (his head whips round over frames 50-59, holds at 60-62, and looks back
  * over 63-69): played to frame 60, the canvas stays sharp. Then, paused, "Motion blur" is turned
  * on in View options; played into the look back, the moment the blur shows the camera cuts to
- * the broadcast camera and back, and every frame drawn within CUT_READ_MS of each cut is sharp. */
+ * the broadcast camera and back, and the first CUT_READ_FRAMES frames after each cut are sharp. */
 async function cutNoBlur(page) {
   await hero(page);
   await page.getByRole("button", { name: "Play", exact: true }).click();
@@ -294,7 +318,7 @@ async function cutNoBlur(page) {
     throw new Error("Motion blur did not turn on");
   await page.keyboard.press("Escape");
   const after = await page.evaluate(
-    async ([limit, window]) => {
+    async ([limit, reads]) => {
       const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
       const el = document.querySelector(".view.pov canvas");
       document.querySelector('button[aria-label="Play"]').click();
@@ -304,30 +328,25 @@ async function cutNoBlur(page) {
         if (performance.now() - t0 > limit) return { blurred: false };
         await frame();
       }
-      const reads = [];
+      const cuts = [];
       for (const name of ["Broadcast", "His eyes"]) {
-        const clicked = performance.now();
         [...document.querySelectorAll('[aria-label="Camera"] button')]
           .find((b) => b.textContent.trim() === name)
           .click();
         const seen = [];
-        for (;;) {
+        for (let k = 0; k < reads; k++) {
           await frame();
-          if (performance.now() - clicked > window) break;
           // The head-whip blur and, at the medium and high tiers, the depth of field.
           seen.push(Number(el.dataset.blurSigma ?? 0) + Number(el.dataset.dof ?? 0));
         }
-        reads.push({ name, seen });
+        cuts.push({ name, seen });
       }
-      return { blurred: true, reads };
+      return { blurred: true, cuts };
     },
-    [PLAY_MS, CUT_READ_MS],
+    [PLAY_MS, CUT_READ_FRAMES],
   );
   if (!after.blurred) throw new Error("Motion blur on, but no blur as his head turned back");
-  for (const { name, seen } of after.reads) {
-    if (!seen.length) {
-      throw new Error(`no frame drawn within ${CUT_READ_MS} ms of the cut to ${name}`);
-    }
+  for (const { name, seen } of after.cuts) {
     if (seen.some((v) => v > 0)) {
       throw new Error(`expected no blur right after the cut to ${name}, got ${seen.join(", ")}`);
     }
@@ -395,6 +414,21 @@ async function takeEyes(page) {
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
+/** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
+ * frozen with its verified lines, the potential passes, then his decision with everything but two
+ * players dimmed. */
+async function scanSteps(page) {
+  await see(page.getByRole("region", { name: "His looks, step by step" }), "the step-through");
+  await see(page.getByRole("list", { name: "Steps" }), "the steps");
+  await see(page.getByRole("list", { name: "Verified lines" }), "a look's verified lines");
+  await page.getByRole("button", { name: "Potential passes" }).click();
+  await see(page.locator(".ss-board .ss-lane.chosen"), "his pick among the options", "attached");
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  while (await next.isVisible()) await next.click();
+  await see(page.getByRole("heading", { name: /His decision|The what-if/ }), "his decision");
+  await see(page.locator(".ss-focus[data-focus]"), "the dimming round two players", "attached");
+}
+
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
  * full-time card on the live screen, the recap card with a Watch per key moment, and the reel's
  * captions once it plays. */
@@ -460,8 +494,8 @@ async function lineup(page, shoot, button, then) {
   await then(page);
 }
 
-/** On a phone the page should scroll only up and down, and no two header controls overlap or run
- * off screen, with the live stream running (its status and the header's buttons are then all
+/** On a phone the page should scroll only up and down, and no two header controls (nor the run
+ * switch over the picture) overlap or run off screen, with the live stream running (its status and the header's buttons are then all
  * there). `live: false` for a screen that takes the live screen's place (Take his eyes). */
 async function phone(page, check, { live = true } = {}) {
   await check(page);
@@ -483,7 +517,7 @@ async function phone(page, check, { live = true } = {}) {
     const width = root.clientWidth;
     const found = [
       ...document.querySelectorAll(
-        ".stage-head :is(.brand, .live-chip, .live-status, button, select)",
+        ".stage-head :is(.brand, .live-chip, .live-status, button, select), .stage-run .seg",
       ),
     ].filter((el) => {
       if (el.closest(".popover")) return false;

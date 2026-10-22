@@ -486,6 +486,7 @@ export function BreakdownSource() {
     return (
       <>
         <ProvenanceChip provenance={origin.provenance} />
+        {origin.recordedAt && <RecordedBadge at={origin.recordedAt} />}
         {cached && origin.rateLimited && (
           <span
             className="plan-badge fallback"
@@ -544,8 +545,26 @@ export function BreakdownSource() {
           Daily cap reached
         </span>
       )}
+      {origin.recordedAt && <RecordedBadge at={origin.recordedAt} />}
     </>
   );
+}
+
+/** A limited drill or bring-back replayed from its recording (api/recorded.py). */
+function RecordedBadge({ at }: { at: string }) {
+  return (
+    <span className="plan-badge fallback" title={`A recording of the same drill, run at ${at}`}>
+      Recorded run · {recordedTime(at)}
+    </span>
+  );
+}
+
+/** "10-21 15:04 UTC" from the service's ISO time. */
+export function recordedTime(at: string): string {
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return at;
+  const iso = d.toISOString();
+  return `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC`;
 }
 
 /** Persona and language of the breakdown, and the voice. Offline only the bundled one exists. */
