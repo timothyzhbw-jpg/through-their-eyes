@@ -67,7 +67,7 @@ at Azure list prices of 2026-10-22.[^azure-prices]
   tracking feed and editorial review, not by the model. We set no price and quote no market size
   beyond the sources above.
 - **Still needed.** Tracking with head orientation from a rights holder (on synthetic keypoints
-  the scan detector keeps F1 0.962 at 20 mm of noise[^keypoints]), the rights to that data, a
+  the scan detector keeps F1 <!--num:A2-->0.962<!--/num--> at 20 mm of noise[^keypoints]), the rights to that data, a
   simulator calibrated on it, and human editorial review: the Verifier catches invented numbers,
   not omissions.
 
