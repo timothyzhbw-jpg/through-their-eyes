@@ -228,3 +228,20 @@ def test_full_backs_play_higher_than_centre_backs_in_possession(runs):
             depth = HALF_LENGTH + sign * run.pos[on, :, 0]
             gaps.append(depth[:, fb].mean() - depth[:, cb].mean())
     assert np.mean(gaps) > 5.0
+
+
+def test_the_away_team_can_have_the_first_ball_with_the_same_draws():
+    """`start_team` (for restarts the Laws award to the away team): the mirrored build-up player
+    has the ball and the away team starts in its attacking shape."""
+    from sim.scenarios.possession_play import PossessionPlay
+
+    home = Simulation.from_scenario("possession_play", 5)
+    scenario = PossessionPlay()
+    scenario.start_team = 1
+    away = Simulation(scenario, 5)
+    first = home.ids[home.owner]
+    assert first in ("H4", "H5", "H6") and away.ids[away.owner] == "A" + first[1:]
+    assert away.possession_team() == 1
+    spots = away.formation_spots()
+    rb, rcb = away.index("A2"), away.index("A4")  # the away full-back pushes on with the ball
+    assert abs(spots[rb, 0] - spots[rcb, 0]) > 5.0

@@ -101,6 +101,10 @@ class PossessionPlay(Scenario):
     team_shape = True
     formation = ("4-3-3", "4-2-3-1")
     slots = SLOTS
+    # Who has the first ball: 0 the home team, 1 the away team, whose build-up player mirrors the
+    # home one drawn (A4, A5 or A6 for H4, H5 or H6), so the draws are the same either way. A
+    # stitched match can set it so that a restart goes to the team the Laws award.
+    start_team: int = 0
 
     def setup(self, gen: np.random.Generator) -> Setup:
         rows = HOME + AWAY
@@ -111,7 +115,8 @@ class PossessionPlay(Scenario):
         self.marking_team, self.marks = -1, {}  # attacking team, defender -> attacker
         self.phases: dict[int, int] = {}  # defender -> frames into his first spell
         self.gaps: dict[tuple[int, int], float] = {}  # (defender, spell start) -> marking gap
-        owner = [p.id for p in players].index(str(gen.choice(["H4", "H5", "H6"])))
+        first = str(gen.choice(["H4", "H5", "H6"]))
+        owner = [p.id for p in players].index(first if self.start_team == 0 else "A" + first[1:])
         if not self.team_shape:
             return Setup(players=players, pos=pos + noise, ball_owner=owner)
         pos = self.lined_up(players, owner, pos[owner]) + noise
@@ -121,12 +126,13 @@ class PossessionPlay(Scenario):
         return Setup(players=players, pos=pos, ball_owner=owner)
 
     def lined_up(self, players: list, owner: int, ball: np.ndarray) -> np.ndarray:
-        """Every player on his slot, the home team on the ball and its carrier on his own slot."""
+        """Every player on his slot, the carrier's team on the ball and the carrier on his own
+        slot."""
         team = np.array([p.team for p in players])
         names = [self.slots[p.id] for p in players]
         form = team_shape.Formation.from_names(team, self.formation, names)
         for _ in range(3):  # the carrier's slot moves with the ball he carries
-            pos = team_shape.spots(form, ball, possession=0)
+            pos = team_shape.spots(form, ball, possession=int(team[owner]))
             ball = pos[owner]
         return pos
 
