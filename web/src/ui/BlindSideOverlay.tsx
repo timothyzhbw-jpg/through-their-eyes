@@ -9,6 +9,7 @@ import { boardZoom } from "../views/scene";
 import { Sample, sampleInto } from "../data/hero";
 import { toScreen } from "../options/passOptions";
 import { shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 export function BlindSideOverlay() {
   const { hero, playback } = useView();
@@ -47,9 +48,10 @@ export function BlindSideOverlay() {
         return (
           <div key={a.target} className="blind-tag" style={{ left: x, top: y }}>
             <b>{shortName(hero.ids[a.target])}</b> {unseenLabel(a.unseen)}
-            <span className="source" title="Live overlay from tracking, not a verified claim">
-              sim
-            </span>
+            <SourceChip
+              kind="tracking"
+              title="Live overlay from tracking (head yaw and positions), not a verified claim"
+            />
           </div>
         );
       })}

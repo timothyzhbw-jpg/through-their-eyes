@@ -27,6 +27,7 @@ import {
   type TeamBuildUp,
 } from "./tactics";
 import "./tactics.css";
+import { SourceChip } from "../provenance/SourceChip";
 
 const MEASURED =
   "Measured from tracking and the event feed (analytics/tactics.py): a metric, not a verified claim";
@@ -35,11 +36,7 @@ const SIM_RECORD =
   "not a verified claim";
 
 function Source() {
-  return (
-    <span className="source" title={MEASURED}>
-      tracking
-    </span>
-  );
+  return <SourceChip kind="tracking" title={MEASURED} />;
 }
 
 /** Where the cards are drawn: the stats panel follows the playhead, the recap is full time. */
@@ -211,10 +208,7 @@ function BuildUp({
       {cards.build_up.alternatives.length > 0 && (
         <div className="tactics-sim">
           <h4>
-            Where the sim records the options{" "}
-            <span className="source" title={SIM_RECORD}>
-              sim
-            </span>
+            Where the sim records the options <SourceChip kind="sim" title={SIM_RECORD} />
           </h4>
           {cards.build_up.alternatives.map((alt) => (
             <Options key={alt.id} alt={alt} />
