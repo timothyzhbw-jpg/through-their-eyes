@@ -552,7 +552,10 @@ async function tour(page, shoot, after = hero) {
 async function takeEyes(page) {
   await see(page.getByRole("region", { name: "Take his eyes" }), "Take his eyes");
   await see(page.getByRole("radiogroup", { name: "When he looks" }), "the times to look");
-  await see(page.getByRole("radiogroup", { name: /^Where [HA]\d+ looks$/ }), "the directions");
+  await see(
+    page.getByRole("radiogroup", { name: /^Where [A-Z]\. [A-Z][a-z]+ looks$/ }),
+    "the directions",
+  );
   await mainView(page, "board");
   await page.getByRole("button", { name: "Look", exact: true }).click();
   const play = page.getByRole("button", { name: "See what he does" });
@@ -624,7 +627,10 @@ async function coldLoad(page, shoot) {
 async function lineup(page, shoot, button, then) {
   const card = page.getByRole("dialog");
   await see(card, "the lineup card");
-  await see(card.getByRole("list", { name: "Home line-up" }), "the home line-up on the card");
+  await see(
+    card.getByRole("list", { name: "Kestrel Bay line-up" }),
+    "the home line-up on the card",
+  );
   await shoot("card");
   // The card also closes by itself after a few seconds (INTRO_MS), and a slow runner can reach
   // the button after that: a card that is already gone has closed, which is what this checks.

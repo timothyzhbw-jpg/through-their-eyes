@@ -23,6 +23,7 @@ import { createStore, useStore, type Store } from "../store/store";
 import { TacticsCards } from "../tactics/TacticsCards";
 import { Segmented } from "./Segmented";
 import "./stats.css";
+import { clubName } from "../data/roster";
 
 const DASH = "–";
 const SOURCE =
@@ -81,7 +82,7 @@ function SpeedNow({ stats, id }: { stats: Stats; id: string }) {
 }
 
 function TeamLine({ team }: { team: TeamTotals }) {
-  const name = team.team === 0 ? "Home" : "Away";
+  const name = clubName(team.team);
   return (
     <p className="stats-team" data-team={team.team}>
       <span className="dot" data-team={team.team} />
@@ -279,8 +280,8 @@ function PlayerCard({ stats, frame, id }: { stats: Stats; frame: number; id: str
         value={player.id}
         onChange={(e) => view.controls.setPovPlayer(e.target.value)}
       >
-        <optgroup label="Home">{home.map(option)}</optgroup>
-        <optgroup label="Away">{away.map(option)}</optgroup>
+        <optgroup label={clubName(0)}>{home.map(option)}</optgroup>
+        <optgroup label={clubName(1)}>{away.map(option)}</optgroup>
       </select>
       <header className="stats-player-id">
         <span className="dot" data-team={player.team} />

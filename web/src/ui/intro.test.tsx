@@ -299,7 +299,7 @@ describe("the pre-match autoplay gate", () => {
     while (session.playback.get().mode !== "counterfactual" && t < 30) tick();
     expect(t, "seconds from the page opening to the run without the look").toBeLessThan(20);
     expect(container.querySelector(".stage-caption")?.textContent).toContain(
-      "Without that look, H8 would have passed to H4.",
+      "Without that look, J. Ferriday would have passed to K. Annersley.",
     );
   }, 20_000); // a few hundred rendered ticks: slow on a loaded machine
 
@@ -342,7 +342,7 @@ describe("the pre-match autoplay gate", () => {
     expect(session.playback.get()).toMatchObject({ live: false, playing: false });
     // Not the default eyes, so the pick has to land on H8 without taking over the autoplay.
     act(() => session.playback.set({ povPlayer: "A5" }));
-    click(button(container, "H8 · CM The hero of this moment"));
+    click(button(container, "J. Ferriday · CM The hero of this moment"));
     expect(session.playback.get().povPlayer).toBe("H8");
     expect(intro.get().open).toBe(true);
     click(button(container, "Start watching"));

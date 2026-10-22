@@ -117,8 +117,10 @@ describe("asking the service for a breakdown", () => {
       languages: ["en"],
     });
     const html = render(session, <NarrationPanel />);
-    expect(html).toContain("What did he see? H8 checked his shoulder before the ball reached him.");
-    expect(html).toContain("Without that look, H8 would have passed to H4.");
+    expect(html).toContain(
+      "What did he see? J. Ferriday checked his shoulder before the ball reached him.",
+    );
+    expect(html).toContain("Without that look, J. Ferriday would have passed to K. Annersley.");
     expect(html).toContain("Counterfactual · inside the sim");
     // Where it came from, as the service said it (`provenance`).
     expect(html).toContain("Cached: a crew run from 21 Oct 2026, 19:31 UTC");

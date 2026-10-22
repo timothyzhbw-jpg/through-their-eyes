@@ -14,6 +14,7 @@ import type { MatchSession } from "../match/matchSession";
 import { useSession, useView } from "../session";
 import { useStore } from "../store/store";
 import "./match.css";
+import { clubName } from "../data/roster";
 
 /** Score, possession (n of N, its scenario) and restart at the playhead. */
 export function Scoreboard() {
@@ -29,12 +30,15 @@ function ScoreBug({ session }: { session: MatchSession }) {
   const heroCard = match.moments.find((m) => m.hero && m.possession === p.index);
   return (
     <section className="scoreboard" aria-label="Score and possession">
-      <div className="score" aria-label={`Home ${score.home}, away ${score.away}`}>
-        <span className="team home">Home</span>
+      <div
+        className="score"
+        aria-label={`${clubName(0)} ${score.home}, ${clubName(1)} ${score.away}`}
+      >
+        <span className="team home">{clubName(0)}</span>
         <b>{score.home}</b>
         <span className="dash">–</span>
         <b>{score.away}</b>
-        <span className="team away">Away</span>
+        <span className="team away">{clubName(1)}</span>
       </div>
       <div className="possession">
         <span className="count">

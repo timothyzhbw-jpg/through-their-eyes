@@ -213,7 +213,7 @@ def test_the_voices_lines_air_in_the_recaps_order(rc):
     both = [said for said in voices.values() if {"pbp", "color"} <= set(said)]
     assert both and all(said[0] == "pbp" for said in both)
     texts = [line.text for line in script.payload.lines]
-    seen = next(i for i, t in enumerate(texts) if "he saw H9" in t)
+    seen = next(i for i, t in enumerate(texts) if "he saw N. Varnhall" in t)
     assert "Without that look" in texts[seen + 1]
     assert [line.id for line in script.payload.lines] == [f"L{n + 1}" for n in range(len(texts))]
 
@@ -288,7 +288,7 @@ def test_a_match_with_a_goal_leads_its_recap_with_it():
     assert "goal" in r.moments[0].tags
     for script in r.scripts:
         texts = [line.text for line in script.payload.lines]
-        assert texts[0] == "Full time: Home 1, Away 0." and "H9 scored." in texts
+        assert texts[0] == "Full time: Home 1, Away 0." and "N. Varnhall scored." in texts
         assert check_payload(script.payload, rc.names) == []
         bug = script.cues.cues[0]
         assert (bug.data["home"], bug.data["away"]) == (1, 0)

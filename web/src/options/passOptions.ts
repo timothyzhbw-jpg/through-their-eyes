@@ -6,6 +6,7 @@
 import { isShot, shotPost, type Hero, type Run } from "../data/hero";
 import type { Vec2 } from "../data/types";
 import type { ClaimKind, Narration, PayloadClaim } from "../narration/payload";
+import { shortName } from "../data/roster";
 
 export const TOP_OPTIONS = 6;
 /** The layer is shown from just before the decision until the pass is on its way. */
@@ -30,7 +31,7 @@ export interface PassOption {
 }
 
 export function optionLabel(action: string): string {
-  if (action.startsWith("pass:")) return `Pass to ${action.slice(5)}`;
+  if (action.startsWith("pass:")) return `Pass to ${shortName(action.slice(5))}`;
   const post = shotPost(action); // a placed shot (Module A): "shot:near" / "shot:far"
   if (post) return `${post === "near" ? "Near" : "Far"}-post shot`;
   return action === "carry" ? "Carry" : action === "shot" ? "Shot" : action;

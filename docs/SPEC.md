@@ -945,6 +945,23 @@ a pass at its reception, interception or out; a sprint at its first frame back b
   - Bands for viewers: < 0.25 routine, < 0.5 moderate, < 0.75 hard, else very hard.
 - **Names.** Fictional names by player id ([sim/roster.py](../sim/roster.py)), never real
   players'; the export is unchanged.
+  - The same names appear everywhere a player is named: the stats, the narration and its voice,
+    and the app's own chips and labels (the lineup, the eyes picker, the HUD, moments, Your call,
+    the director).
+  - Narration renders his short name ("J. Ferriday") as a slot value (agents/context.py
+    `names`). The Verifier keeps names, surnames and the raw ids out of free text, with ASCII-only
+    word boundaries so a name next to a Chinese character is caught too.
+  - The two clubs are named too: Kestrel Bay (home) and Corvane Vale (away), both invented. The
+    recap's claims still say Home and Away (its cache key holds their templates); the API names
+    the clubs when it serves a recap.
+  - Ids stay the data: claims, evidence, events and URLs.
+  - A breakdown, recap or what-if answer cached before names were rendered is renamed when it is
+    read ([api/names.py](../api/names.py)). The Verifier allowed an id into a line only as a slot
+    value, so this is the same text rendered with names, and nothing is generated again.
+  - The web app mirrors the roster in [web/src/data/roster.ts](../web/src/data/roster.ts), and
+    `tests/test_roster_web.py` keeps the two equal.
+  - The what-if parser understands the names too ("What if he passed to Annersley?"), and the
+    export's suggested questions use them ([sim/export.py](../sim/export.py)).
 - **Serving.** `GET /api/matches/<id>/stats` (pydantic `MatchStats`: player and team totals, cues,
   definitions); `?frame=F` is the snapshot at frame F, `?tracks=true` adds per-frame ball speed,
   speeds above 19.8 km/h and per-second distance checkpoints for viewers. The live stream sends each
@@ -2206,6 +2223,14 @@ the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or pl
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
       screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
       2026-10-21)
+- [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
+      no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
+      slot is a render violation, in en and zh; values cached with ids are renamed when read, with
+      new voice keys.
+      — [tests/test_names.py](../tests/test_names.py),
+      [tests/test_roster_web.py](../tests/test_roster_web.py),
+      [web/src/ui/names.test.tsx](../web/src/ui/names.test.tsx), `tests/test_whatif.py` (names in
+      questions)
 
 - [x] *Tactics cards (§4.8, 7):* both cards in a hero moment with their verified sentences, the
       `tracking` and `sim` chips and the honest-limits notes; the recap's language; folded in a

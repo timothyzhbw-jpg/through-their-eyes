@@ -12,6 +12,7 @@ import { API, exportJson, fakeFetch, fakeSockets, render } from "../testing";
 import { TelemetryPanel } from "../ui/TelemetryPanel";
 import { Hud } from "../views/PovOverlay";
 import { DEG, frameX, keyPoints, telemetry } from "./telemetry";
+import { shortName } from "../data/roster";
 
 const hero = parseHero(raw);
 const key = hero.keyScan!; // the bundled scan hero has one
@@ -135,7 +136,7 @@ describe("belief error is the hero's only", () => {
     const s = offline();
     const html = at(s, { frame: key.end });
     expect(value(html, "belief")).toMatch(/^\d+\.\d m$/);
-    expect(row(html, "belief")).toContain("H9");
+    expect(row(html, "belief")).toContain("N. Varnhall"); // by name (data/roster.ts)
     expect(series(html, "belief")).toBeTruthy();
 
     const t = telemetry(hero, hero.runs.factual, "H8");
@@ -254,7 +255,7 @@ describe("key points on the shared time axis", () => {
     const axis = row(html, "axis");
     const marks = tags(axis, "data-key-point").map((t) => Number(attr(t, "data-key-point")));
     expect(marks).toEqual([hero.reception, hero.runs.factual.decision!.frame]);
-    expect(axis).toContain(`${hero.heroId} key scan`);
+    expect(axis).toContain(`${shortName(hero.heroId!)} key scan`);
     const frames = [key.start, key.end, hero.reception, hero.runs.factual.decision!.frame];
     for (const name of ROWS) {
       const guides = tags(row(html, name), "data-guide").map((t) => Number(attr(t, "data-guide")));

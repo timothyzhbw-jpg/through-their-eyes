@@ -24,7 +24,10 @@ describe("what-if answers", () => {
     const factual = whatIfs.options.filter((o) => o.factual);
     expect(factual.map((o) => o.action)).toEqual([decision.chosen]);
     expect(factual[0].run).toBeNull();
-    expect(h4.question).toEqual({ en: "What if he passed to H4?", zh: "如果他传给H4呢？" });
+    expect(h4.question).toEqual({
+      en: "What if he passed to K. Annersley?",
+      zh: "如果他传给K. Annersley呢？",
+    });
   });
 
   it("accepts every precomputed answer, in both languages, all counterfactual", () => {
@@ -38,7 +41,9 @@ describe("what-if answers", () => {
         }
       }
     }
-    expect(h4.answers.en!.lines[0].text).toBe("If H8 had passed to H4, H4 would have received it.");
+    expect(h4.answers.en!.lines[0].text).toBe(
+      "If J. Ferriday had passed to K. Annersley, K. Annersley would have received it.",
+    );
   });
 
   it("rejects an answer about another what-if and keeps the reason", () => {

@@ -28,6 +28,7 @@ import type { CallOption } from "./options";
 import { revealOf, type RevealLine } from "./reveal";
 import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
+import { renameIds, shortName } from "../data/roster";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
 // A text marker (carry, a shot) is a pill: its width from the label (11 px uppercase, tracked).
@@ -274,11 +275,15 @@ function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; button
             aria-hidden="true"
             style={{ left: carrierPx[0], top: carrierPx[1] + YOU_DROP_PX }}
           >
-            {carrier.id} · you
+            {shortName(carrier.id)} · you
           </p>
         )}
         {deciding && (
-          <div className="yc-markers" role="group" aria-label={`Options of ${carrier.id}`}>
+          <div
+            className="yc-markers"
+            role="group"
+            aria-label={`Options of ${shortName(carrier.id)}`}
+          >
             {markers.map(({ option: o, at }, k) => {
               const unseen = !!o.receiver && stale.has(o.receiver);
               const done = tried.includes(o.action);
@@ -399,7 +404,7 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
     (state.step === "deciding" ? heading.current : primary.current)?.focus({ preventScroll: true });
   }, [state.step]);
 
-  const heroId = session.hero.heroId ?? "the player";
+  const heroId = session.hero.heroId ? shortName(session.hero.heroId) : "the player";
   const playing = !!state.clip?.playing;
   const back = (
     <button type="button" className="btn btn-quiet" onClick={yc.close}>
@@ -479,7 +484,8 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
             </h2>
             {reveal.truth.moved.length > 0 ? (
               <p className="yc-lead">
-                Not where he pictured them: {reveal.truth.moved.join(", ")}. <SimTag />
+                Not where he pictured them: {reveal.truth.moved.map(shortName).join(", ")}.{" "}
+                <SimTag />
               </p>
             ) : (
               <p className="yc-lead">
@@ -570,7 +576,7 @@ function Lines({ lines }: { lines: RevealLine[] }) {
               <KindTag key={k} kind={k} />
             ))}
           </span>
-          <span className="yc-line">{l.text}</span>
+          <span className="yc-line">{renameIds(l.text)}</span>
           {l.source === "fixture" && <span className="source">sample</span>}
         </li>
       ))}
