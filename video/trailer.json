@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0.0,
       "from": 0.0,
-      "until": 97.867,
+      "until": 99.867,
       "gain_db": 4,
       "fade_in": 0.0,
       "fade_out": 0.0,
@@ -1080,7 +1080,7 @@
     },
     "crew": {
       "template": "lineup",
-      "dur": 2.5,
+      "dur": 1.4,
       "alpha": false,
       "params": {
         "header": "THE CREW",
@@ -1116,8 +1116,8 @@
             "glyph": "voice"
           }
         ],
-        "stagger": 0.28,
-        "start": 0.1
+        "stagger": 0.15,
+        "start": 0.08
       }
     },
     "redcard": {
@@ -3015,6 +3015,27 @@
       }
     },
     {
+      "id": "b29a-press-app",
+      "dur": 1.5,
+      "picture": {
+        "src": "capture",
+        "shot": "18-press-app",
+        "in": 6.85,
+        "push": [
+          1.0,
+          1.03
+        ]
+      },
+      "fx": [
+        "lift"
+      ],
+      "overlays": [],
+      "sfx": [],
+      "out": {
+        "type": "cut"
+      }
+    },
+    {
       "id": "b30-ch3",
       "dur": 0.75,
       "picture": {
@@ -3088,7 +3109,7 @@
     },
     {
       "id": "b33-crew",
-      "dur": 2.5,
+      "dur": 1.4,
       "picture": {
         "src": "title",
         "id": "crew"
@@ -3100,6 +3121,33 @@
           "text": "Behind every replay, a crew of agents."
         }
       ],
+      "sfx": [],
+      "out": {
+        "type": "cut"
+      }
+    },
+    {
+      "id": "b33a-crew-trace",
+      "dur": 1.6,
+      "picture": {
+        "src": "capture",
+        "shot": "19-crew-trace",
+        "in": 1.0,
+        "crop": [
+          760,
+          20,
+          1060,
+          596
+        ],
+        "push": [
+          1.0,
+          1.03
+        ]
+      },
+      "fx": [
+        "lift"
+      ],
+      "overlays": [],
       "sfx": [],
       "out": {
         "type": "cut"

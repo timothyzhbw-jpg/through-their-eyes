@@ -1376,9 +1376,9 @@ html.spec #stage {
   position: absolute;
   top: 28px; /* in the top bar of a 2.39:1 letterbox, level with the preview mark: off the picture */
   right: 64px;
-  color: rgba(239, 237, 229, 0.72);
-  font-size: 26px;
-  letter-spacing: 0.22em;
+  color: rgba(239, 237, 229, 0.78);
+  font-size: 33px; /* about 15 px tall at 720p: legible, still small */
+  letter-spacing: 0.2em;
 }
 
 /* --- namecard: freeze-frame player intro ------------------------------------ */

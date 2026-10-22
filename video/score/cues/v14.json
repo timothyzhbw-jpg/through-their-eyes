@@ -1,5 +1,5 @@
 {
-  "about": "Cue sheet for cut v14 (the edit after the outside review: the feature run cut to about sixteen seconds, the with / without split longer, panels zoomed, close-ups trimmed, a tagline card and an end card with a QR code; 97.867 s), otherwise as v13.",
+  "about": "Cue sheet for cut v14 (the edit after the outside review: the feature run cut to about sixteen seconds, the with / without split longer, panels zoomed, close-ups trimmed, a tagline card and an end card with a QR code; 99.867 s, an app beat after the press and the crew trace after the lineup), otherwise as v13.",
   "trailer_ref": null,
   "bpm": 140,
   "sections": [
@@ -255,32 +255,32 @@
     },
     {
       "type": "card",
-      "at": "b33-crew:+0.1",
+      "at": "b33-crew:+0.08",
       "note": "DIRECTOR"
     },
     {
       "type": "card",
-      "at": "b33-crew:+0.38",
+      "at": "b33-crew:+0.23",
       "note": "ANALYST"
     },
     {
       "type": "card",
-      "at": "b33-crew:+0.66",
+      "at": "b33-crew:+0.38",
       "note": "TELESTRATOR"
     },
     {
       "type": "card",
-      "at": "b33-crew:+0.94",
+      "at": "b33-crew:+0.53",
       "note": "NARRATOR"
     },
     {
       "type": "card",
-      "at": "b33-crew:+1.22",
+      "at": "b33-crew:+0.68",
       "note": "VERIFIER"
     },
     {
       "type": "card",
-      "at": "b33-crew:+1.5",
+      "at": "b33-crew:+0.83",
       "note": "VOICE"
     },
     {
@@ -434,6 +434,17 @@
       "from": "b05b-s2-push",
       "to": "b06-a1-pov:+1.35",
       "note": "the push onto the screen into the match-cut, building to the slam"
+    },
+    {
+      "type": "hit",
+      "at": "b33a-crew-trace",
+      "size": "small",
+      "note": "the crew's real run, in the app"
+    },
+    {
+      "type": "card",
+      "at": "b29a-press-app",
+      "note": "the press, in the app"
     }
   ]
 }
