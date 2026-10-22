@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0.0,
       "from": 0.0,
-      "until": 115.4,
+      "until": 110.867,
       "gain_db": 4,
       "fade_in": 0.0,
       "fade_out": 0.0,
@@ -376,7 +376,7 @@
       "shot": {
         "id": "pov-match",
         "run": "factual",
-        "duration": 3.0,
+        "duration": 5.0,
         "pov": "H8",
         "time": [
           {
@@ -386,6 +386,10 @@
           {
             "t": 3.0,
             "frame": 62
+          },
+          {
+            "t": 5.0,
+            "frame": 72
           }
         ],
         "camera": [
@@ -515,11 +519,11 @@
         "time": [
           {
             "t": 0,
-            "frame": 40
+            "frame": 182
           },
           {
             "t": 1.7,
-            "frame": 56
+            "frame": 198
           }
         ],
         "camera": [
@@ -559,11 +563,11 @@
         "time": [
           {
             "t": 0,
-            "frame": 56
+            "frame": 196
           },
           {
             "t": 1.6,
-            "frame": 80
+            "frame": 216
           }
         ],
         "camera": [
@@ -572,15 +576,15 @@
             "eye": {
               "at": "world",
               "p": [
-                40,
-                -18,
-                3
+                45.5,
+                -15.0,
+                1.7
               ]
             },
             "look": {
               "at": "ball"
             },
-            "fov": 40
+            "fov": 38
           }
         ],
         "bloom": {
@@ -590,6 +594,394 @@
         },
         "rings": true,
         "motionBlur": false
+      }
+    },
+    "ie-look": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": {
+        "id": "ie-look",
+        "run": "factual",
+        "duration": 4.2,
+        "time": [
+          {
+            "t": 0,
+            "frame": 38
+          },
+          {
+            "t": 0.45,
+            "frame": 43
+          },
+          {
+            "t": 2.0,
+            "frame": 58
+          },
+          {
+            "t": 3.6,
+            "frame": 68
+          },
+          {
+            "t": 4.2,
+            "frame": 71
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "player",
+              "id": "H8",
+              "orbit": {
+                "r": 3.4,
+                "az": 150,
+                "h": 0.8
+              },
+              "axes": "body"
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                0,
+                0.8,
+                1.3
+              ],
+              "axes": "body"
+            },
+            "fov": 40
+          },
+          {
+            "t": 1.4,
+            "eye": {
+              "at": "player",
+              "id": "H8",
+              "orbit": {
+                "r": 2.9,
+                "az": 125,
+                "h": 0.85
+              },
+              "axes": "body"
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                0,
+                0.7,
+                1.45
+              ],
+              "axes": "body"
+            },
+            "fov": 37,
+            "ease": "inOut"
+          },
+          {
+            "t": 1.97,
+            "eye": {
+              "at": "player",
+              "id": "H8",
+              "orbit": {
+                "r": 2.75,
+                "az": 118,
+                "h": 0.85
+              },
+              "axes": "body"
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                0,
+                0.7,
+                1.5
+              ],
+              "axes": "body"
+            },
+            "fov": 36
+          },
+          {
+            "t": 1.99,
+            "eye": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                -2.0,
+                -0.9,
+                1.9
+              ],
+              "axes": "world"
+            },
+            "look": {
+              "at": "player",
+              "id": "H9",
+              "offset": [
+                0,
+                0,
+                1.0
+              ]
+            },
+            "fov": 30
+          },
+          {
+            "t": 4.2,
+            "eye": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                -1.7,
+                -0.75,
+                1.85
+              ],
+              "axes": "world"
+            },
+            "look": {
+              "at": "player",
+              "id": "H9",
+              "offset": [
+                0,
+                0,
+                1.0
+              ]
+            },
+            "fov": 24,
+            "ease": "inOut"
+          }
+        ],
+        "cone": {
+          "id": "H8",
+          "opacity": 0.1,
+          "flash": 0
+        },
+        "smooth": 0.2,
+        "rings": true,
+        "labels": false,
+        "motionBlur": false,
+        "bloom": {
+          "strength": 0.6,
+          "radius": 0.5,
+          "threshold": 0.85
+        },
+        "fog": [
+          60,
+          220
+        ]
+      }
+    },
+    "ie-reveal": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": {
+        "id": "ie-reveal",
+        "run": "factual",
+        "duration": 4.2,
+        "time": [
+          {
+            "t": 0,
+            "frame": 60
+          },
+          {
+            "t": 0.65,
+            "frame": 75
+          },
+          {
+            "t": 3.2,
+            "frame": 137
+          },
+          {
+            "t": 4.2,
+            "frame": 152
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "world",
+              "p": [
+                -8,
+                -40,
+                15
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                0,
+                0,
+                1
+              ]
+            },
+            "fov": 44
+          },
+          {
+            "t": 0.65,
+            "eye": {
+              "at": "world",
+              "p": [
+                -6,
+                -40,
+                15
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                2,
+                0,
+                1
+              ]
+            },
+            "fov": 44,
+            "ease": "inOut"
+          },
+          {
+            "t": 3.2,
+            "eye": {
+              "at": "world",
+              "p": [
+                14,
+                -42,
+                16
+              ]
+            },
+            "look": {
+              "at": "ball"
+            },
+            "fov": 44,
+            "ease": "inOut"
+          },
+          {
+            "t": 4.2,
+            "eye": {
+              "at": "world",
+              "p": [
+                18,
+                -42,
+                16
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H9",
+              "offset": [
+                0,
+                0,
+                1
+              ]
+            },
+            "fov": 40,
+            "ease": "inOut"
+          }
+        ],
+        "smooth": 0.2,
+        "rings": true,
+        "labels": true,
+        "motionBlur": false,
+        "bloom": {
+          "strength": 0.8,
+          "radius": 0.6,
+          "threshold": 0.75
+        },
+        "fog": [
+          60,
+          220
+        ]
+      }
+    },
+    "ie-without": {
+      "url": "/?cine=1&intro=0&autoplay=0&offline=1",
+      "shot": {
+        "id": "ie-without",
+        "run": "counterfactual",
+        "duration": 3.4,
+        "time": [
+          {
+            "t": 0,
+            "frame": 60
+          },
+          {
+            "t": 1.2,
+            "frame": 75
+          },
+          {
+            "t": 3.4,
+            "frame": 130
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "world",
+              "p": [
+                -8,
+                -40,
+                15
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                0,
+                0,
+                1
+              ]
+            },
+            "fov": 44
+          },
+          {
+            "t": 1.2,
+            "eye": {
+              "at": "world",
+              "p": [
+                -8,
+                -40,
+                15
+              ]
+            },
+            "look": {
+              "at": "player",
+              "id": "H8",
+              "offset": [
+                -2,
+                0,
+                1
+              ]
+            },
+            "fov": 44,
+            "ease": "inOut"
+          },
+          {
+            "t": 3.4,
+            "eye": {
+              "at": "world",
+              "p": [
+                -14,
+                -40,
+                15
+              ]
+            },
+            "look": {
+              "at": "ball"
+            },
+            "fov": 44,
+            "ease": "inOut"
+          }
+        ],
+        "smooth": 0.2,
+        "rings": true,
+        "labels": true,
+        "motionBlur": false,
+        "bloom": {
+          "strength": 0.8,
+          "radius": 0.6,
+          "threshold": 0.75
+        },
+        "fog": [
+          60,
+          220
+        ]
       }
     }
   },
@@ -1006,215 +1398,15 @@
         "title": "THE CORNER"
       }
     },
-    "ph-s1a-receive": {
-      "template": "card",
-      "dur": 2.87,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE KID RECEIVES, BACK TO PLAY."
-          },
-          {
-            "text": "FREEZE: YOU ARE No. 14."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s1c-tackle": {
-      "template": "card",
-      "dur": 0.6,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE TACKLE."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
     "ph-s1d-fall": {
       "template": "card",
-      "dur": 1.8,
+      "dur": 1.167,
       "alpha": false,
       "params": {
         "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
         "lines": [
           {
-            "text": "HE GOES DOWN."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s1e-ground": {
-      "template": "card",
-      "dur": 1.0,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "ON THE GRASS."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s2-coach": {
-      "template": "card",
-      "dur": 6.0,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE COACH, TABLET IN HAND."
-          },
-          {
-            "text": "HARD CUT INTO THE APP."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-bl01a": {
-      "template": "card",
-      "dur": 1.35,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "H8 BEFORE THE LOOK."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-bl01b": {
-      "template": "card",
-      "dur": 4.05,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE LOOK."
-          },
-          {
-            "text": "H9 IN THE GLOW."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-bl01c": {
-      "template": "card",
-      "dur": 0.3,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE TOUCH."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-rw1": {
-      "template": "card",
-      "dur": 0.45,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "TAPE REWIND."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-bl02a": {
-      "template": "card",
-      "dur": 0.3,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE REVEAL."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-bl02b": {
-      "template": "card",
-      "dur": 3.6,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE REVEAL:"
-          },
-          {
-            "text": "THE PASS INTO H9'S RUN."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-rw2": {
-      "template": "card",
-      "dur": 1.15,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "TAPE REWIND."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-bl03": {
-      "template": "card",
-      "dur": 2.6,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "WITHOUT THE LOOK:"
-          },
-          {
-            "text": "HE PLAYS IT BACK."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-split": {
-      "template": "card",
-      "dur": 1.5,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "SPLIT: WITH THE LOOK"
-          },
-          {
-            "text": "AND WITHOUT."
+            "text": "HE STUMBLES."
           }
         ],
         "stagger": 0.15
@@ -1236,7 +1428,7 @@
     },
     "ph-s4b-check": {
       "template": "card",
-      "dur": 2.03,
+      "dur": 2.033,
       "alpha": false,
       "params": {
         "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
@@ -1313,9 +1505,9 @@
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-ie-3p03": {
+    "label-ie-3p033": {
       "template": "label",
-      "dur": 3.03,
+      "dur": 3.033,
       "alpha": true,
       "params": {
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
@@ -1398,90 +1590,293 @@
         ],
         "stagger": 0.15
       }
+    },
+    "ph-s1a-ots": {
+      "template": "card",
+      "dur": 2.433,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "OVER HIS SHOULDER."
+          },
+          {
+            "text": "FREEZE: YOU ARE No. 14."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1b-tail": {
+      "template": "card",
+      "dur": 0.334,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "HE NEVER LOOKS."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1c-steal": {
+      "template": "card",
+      "dur": 1.0,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE STEAL."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s2-ots": {
+      "template": "card",
+      "dur": 1.2,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE COACH, TABLET UP."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s2-push": {
+      "template": "card",
+      "dur": 1.6,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "PUSH ONTO THE SCREEN."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "label-ie-1p5": {
+      "template": "label",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "nc-h8-ie": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "H8",
+        "role": "THE MIDFIELDER",
+        "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
+        "spot": {
+          "x": 1290,
+          "y": 560,
+          "r": 220
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "nc-h9-ie": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "H9",
+        "role": "THE RUNNER",
+        "sub": "UNMARKED. FOR NOW.",
+        "spot": {
+          "x": 965,
+          "y": 565,
+          "r": 95
+        },
+        "side": "right",
+        "scrim": 0.5
+      }
+    },
+    "duo-split": {
+      "template": "duo",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "left": "WITH THE LOOK",
+        "right": "WITHOUT"
+      }
+    },
+    "back-to-h4": {
+      "template": "slam",
+      "dur": 1.35,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "HE PLAYS IT BACK TO H4.",
+            "color": "dusk",
+            "size": 110
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "label-ie-1p35": {
+      "template": "label",
+      "dur": 1.35,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-4p05": {
+      "template": "label",
+      "dur": 4.05,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-0p3": {
+      "template": "label",
+      "dur": 0.3,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-0p45": {
+      "template": "label",
+      "dur": 0.45,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-3p6": {
+      "template": "label",
+      "dur": 3.6,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-1p15": {
+      "template": "label",
+      "dur": 1.15,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-2p6": {
+      "template": "label",
+      "dur": 2.6,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
     }
   },
   "beats": [
     {
-      "id": "b01-s1a-receive",
-      "dur": 2.87,
+      "id": "b01-s1a-ots",
+      "story": "blender",
+      "section": "open",
+      "dur": 2.433,
       "picture": {
         "src": "title",
-        "id": "ph-s1a-receive"
+        "id": "ph-s1a-ots"
       },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
+      "overlays": []
     },
     {
-      "id": "b02-s1c-tackle",
-      "dur": 0.6,
+      "id": "b01b-s1b-tail",
+      "story": "blender",
+      "section": "open",
+      "dur": 0.334,
       "picture": {
         "src": "title",
-        "id": "ph-s1c-tackle"
+        "id": "ph-s1b-tail"
       },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
+      "overlays": []
+    },
+    {
+      "id": "b02-s1c-steal",
+      "story": "blender",
+      "section": "open",
+      "dur": 1.0,
+      "picture": {
+        "src": "title",
+        "id": "ph-s1c-steal"
+      },
+      "overlays": []
     },
     {
       "id": "b03-s1d-fall",
-      "dur": 1.8,
+      "story": "blender",
+      "section": "open",
+      "dur": 1.167,
       "picture": {
         "src": "title",
         "id": "ph-s1d-fall"
       },
       "overlays": [],
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 1.3,
-          "gain_db": -2
-        }
-      ],
-      "story": "blender"
-    },
-    {
-      "id": "b04-s1e-ground",
-      "dur": 1.0,
-      "picture": {
-        "src": "title",
-        "id": "ph-s1e-ground"
-      },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
-    },
-    {
-      "id": "b05-s2-coach",
-      "dur": 6.0,
-      "picture": {
-        "src": "title",
-        "id": "ph-s2-coach"
-      },
       "vo": [
         {
           "id": "vc1",
-          "at": 2.3,
+          "at": 0.67,
           "speaker": "coach",
           "text": "See this?",
           "style": "friendly"
-        },
+        }
+      ]
+    },
+    {
+      "id": "b05a-s2-ots",
+      "story": "blender",
+      "section": "open",
+      "dur": 1.2,
+      "picture": {
+        "src": "title",
+        "id": "ph-s2-ots"
+      },
+      "overlays": [],
+      "vo": [
         {
           "id": "vc2",
-          "at": 3.75,
+          "at": 0.58,
           "speaker": "coach",
           "text": "You know why you lost the ball?",
           "style": "friendly"
         }
-      ],
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
+      ]
+    },
+    {
+      "id": "b05b-s2-push",
+      "story": "blender",
+      "section": "open",
+      "dur": 1.6,
+      "picture": {
+        "src": "title",
+        "id": "ph-s2-push"
+      },
+      "overlays": []
     },
     {
       "id": "b01-app-s1-pov",
       "story": "app",
-      "dur": 2.87,
+      "dur": 2.4,
       "picture": {
         "src": "cine",
         "id": "press-pov-cf",
@@ -1492,27 +1887,28 @@
         "glue"
       ],
       "freeze": {
-        "at": 1.97
+        "at": 1.5
       },
       "overlays": [
         {
-          "title": "label-ie-2p87",
-          "at": 0.0
+          "title": "nc-you-app",
+          "at": 1.5
         },
         {
-          "title": "nc-you-app",
-          "at": 1.97
+          "title": "label-ie-2p4",
+          "at": 0.0
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b02-app-s1-tackle",
       "story": "app",
-      "dur": 2.4,
+      "dur": 1.5,
       "picture": {
         "src": "cine",
         "id": "press-cf",
-        "in": 0.6
+        "in": 1.1
       },
       "letterbox": 2.39,
       "fx": [
@@ -1520,10 +1916,11 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-2p4",
+          "title": "label-ie-1p5",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b03-app-s2-see",
@@ -1541,12 +1938,13 @@
           "text": "See this?",
           "style": "friendly"
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b04-app-s2-ui",
       "story": "app",
-      "dur": 6.0,
+      "dur": 2.834,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
@@ -1559,12 +1957,13 @@
       "vo": [
         {
           "id": "vc2",
-          "at": 3.75,
+          "at": 0.6,
           "speaker": "coach",
           "text": "You know why you lost the ball?",
           "style": "friendly"
         }
-      ]
+      ],
+      "section": "open"
     },
     {
       "id": "b06-a1-pov",
@@ -1572,7 +1971,7 @@
       "picture": {
         "src": "cine",
         "id": "pov-match",
-        "in": 0
+        "in": 2.0
       },
       "vo": [
         {
@@ -1592,12 +1991,12 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-3p0",
-          "at": 0.0
-        },
-        {
           "title": "studio",
           "at": 1.7
+        },
+        {
+          "title": "label-ie-3p0",
+          "at": 0.0
         }
       ],
       "sfx": [],
@@ -1619,10 +2018,27 @@
       "id": "b08-bl01a",
       "dur": 1.35,
       "picture": {
-        "src": "title",
-        "id": "ph-bl01a"
+        "src": "cine",
+        "id": "ie-look",
+        "in": 0
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 0.45
+      },
+      "overlays": [
+        {
+          "title": "nc-h8-ie",
+          "at": 0.45
+        },
+        {
+          "title": "label-ie-1p35",
+          "at": 0.0
+        }
+      ],
       "vo": [
         {
           "id": "vo30",
@@ -1636,10 +2052,27 @@
       "id": "b09-bl01b",
       "dur": 4.05,
       "picture": {
-        "src": "title",
-        "id": "ph-bl01b"
+        "src": "cine",
+        "id": "ie-look",
+        "in": 0.45
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 3.15
+      },
+      "overlays": [
+        {
+          "title": "nc-h9-ie",
+          "at": 3.15
+        },
+        {
+          "title": "label-ie-4p05",
+          "at": 0.0
+        }
+      ],
       "vo": [
         {
           "id": "vo31",
@@ -1658,20 +2091,44 @@
       "id": "b10-bl01c",
       "dur": 0.3,
       "picture": {
-        "src": "title",
-        "id": "ph-bl01c"
+        "src": "cine",
+        "id": "ie-look",
+        "in": 3.6,
+        "speed": 2
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-0p3",
+          "at": 0.0
+        }
+      ],
       "sfx": []
     },
     {
       "id": "b11-rw1",
       "dur": 0.45,
       "picture": {
-        "src": "title",
-        "id": "ph-rw1"
+        "src": "cine",
+        "id": "ie-look",
+        "in": 0,
+        "speed": 9.4,
+        "reverse": true
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "rewind",
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-0p45",
+          "at": 0.0
+        }
+      ],
       "vo": [
         {
           "id": "vo33",
@@ -1691,20 +2148,41 @@
       "id": "b12-bl02a",
       "dur": 0.3,
       "picture": {
-        "src": "title",
-        "id": "ph-bl02a"
+        "src": "cine",
+        "id": "ie-reveal",
+        "in": 0,
+        "speed": 2
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-0p3",
+          "at": 0.0
+        }
+      ],
       "sfx": []
     },
     {
       "id": "b13-bl02b",
       "dur": 3.6,
       "picture": {
-        "src": "title",
-        "id": "ph-bl02b"
+        "src": "cine",
+        "id": "ie-reveal",
+        "in": 0.6
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-3p6",
+          "at": 0.0
+        }
+      ],
       "sfx": [
         {
           "name": "touch",
@@ -1800,7 +2278,8 @@
         "push": [
           1.0,
           1.05
-        ]
+        ],
+        "fit": "contain"
       },
       "overlays": [
         {
@@ -1830,7 +2309,8 @@
         "push": [
           1.05,
           1.05
-        ]
+        ],
+        "fit": "contain"
       },
       "fx": [
         "rewind"
@@ -1841,11 +2321,24 @@
       "id": "b18-rw2",
       "dur": 1.15,
       "picture": {
-        "src": "title",
-        "id": "ph-rw2"
+        "src": "cine",
+        "id": "ie-look",
+        "in": 0,
+        "speed": 3.68,
+        "reverse": true
       },
+      "letterbox": 2.39,
+      "fx": [
+        "rewind",
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p15",
+          "at": 0.0
+        }
+      ],
       "sfx": [],
-      "overlays": [],
       "out": {
         "type": "fade",
         "dur": 0.3
@@ -1855,10 +2348,24 @@
       "id": "b19-bl03",
       "dur": 2.6,
       "picture": {
-        "src": "title",
-        "id": "ph-bl03"
+        "src": "cine",
+        "id": "ie-without",
+        "in": 0
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "back-to-h4",
+          "at": 1.2
+        },
+        {
+          "title": "label-ie-2p6",
+          "at": 0.0
+        }
+      ],
       "vo": [],
       "sfx": [
         {
@@ -1868,7 +2375,7 @@
         },
         {
           "name": "touch",
-          "at": 2.45,
+          "at": 1.18,
           "gain_db": -4
         }
       ],
@@ -1880,10 +2387,44 @@
       "id": "b20-split",
       "dur": 1.5,
       "picture": {
-        "src": "title",
-        "id": "ph-split"
+        "src": "split",
+        "left": {
+          "src": "cine",
+          "id": "ie-reveal",
+          "in": 1.0,
+          "crop": [
+            480,
+            138,
+            960,
+            804
+          ]
+        },
+        "right": {
+          "src": "cine",
+          "id": "ie-without",
+          "in": 1.9,
+          "crop": [
+            480,
+            138,
+            960,
+            804
+          ]
+        }
       },
-      "overlays": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "duo-split",
+          "at": 0.0
+        },
+        {
+          "title": "label-ie-1p5",
+          "at": 0.0
+        }
+      ],
       "sfx": []
     },
     {
@@ -2056,12 +2597,12 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-2p1",
-          "at": 0.0
-        },
-        {
           "title": "nc-a11",
           "at": 1.2
+        },
+        {
+          "title": "label-ie-2p1",
+          "at": 0.0
         }
       ],
       "vo": [],
@@ -2530,17 +3071,19 @@
         "src": "title",
         "id": "ph-s4a-pov"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b43-s4b-check",
       "story": "blender",
-      "dur": 2.03,
+      "dur": 2.033,
       "picture": {
         "src": "title",
         "id": "ph-s4b-check"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b44-s4c-drive",
@@ -2550,7 +3093,8 @@
         "src": "title",
         "id": "ph-s4c-drive"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b45-s4d-strike",
@@ -2567,7 +3111,8 @@
           "at": 0.05,
           "gain_db": -2
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b45a-s4e-net",
@@ -2577,7 +3122,8 @@
         "src": "title",
         "id": "ph-s4e-net"
       },
-      "overlays": []
+      "overlays": [],
+      "section": "close"
     },
     {
       "id": "b45b-s4f-celebrate",
@@ -2590,12 +3136,13 @@
       "overlays": [],
       "out": {
         "type": "cut"
-      }
+      },
+      "section": "close"
     },
     {
       "id": "b42-app-s4-check",
       "story": "app",
-      "dur": 3.03,
+      "dur": 3.033,
       "picture": {
         "src": "cine",
         "id": "press-pov-f",
@@ -2607,10 +3154,11 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-3p03",
+          "title": "label-ie-3p033",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b43-app-s4-escape",
@@ -2630,7 +3178,8 @@
           "title": "label-ie-1p8",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b44-app-s4-fp-look",
@@ -2650,7 +3199,8 @@
           "title": "label-ie-1p7",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b45-app-s4-fp-goal",
@@ -2670,7 +3220,8 @@
           "title": "label-ie-1p2",
           "at": 0.0
         }
-      ]
+      ],
+      "section": "close"
     },
     {
       "id": "b45a-app-s4-tag",
@@ -2682,7 +3233,8 @@
       },
       "out": {
         "type": "cut"
-      }
+      },
+      "section": "close"
     },
     {
       "id": "b46-spec",
@@ -2738,5 +3290,99 @@
       "pitch": "-6%"
     }
   },
-  "story": "blender"
+  "story": "blender",
+  "naming": "ids",
+  "named": {
+    "about": "Players by the app's fictional names (sim/roster.py, web/src/data/roster.ts) for when the app shows them; naming: \"names\" or --naming names. H4 Kofi Annersley, H8 Joss Ferriday, H9 Nico Varnhall, A11 Anders Vintergren.",
+    "vo": {
+      "vo30": {
+        "text": "Meet Joss Ferriday.",
+        "at": 0.2
+      },
+      "vo32": "Nobody's watching Nico Varnhall."
+    },
+    "titles": {
+      "freeze-with": {
+        "params": {
+          "title": "HIS PICTURE OF VARNHALL"
+        }
+      },
+      "verified": {
+        "params": {
+          "items": [
+            {
+              "before": "FERRIDAY CHECKED HIS SHOULDER BEFORE THE BALL",
+              "value": "",
+              "after": ""
+            },
+            {
+              "before": "VARNHALL'S RUN WAS ON HIS BLIND SIDE",
+              "value": "",
+              "after": ""
+            },
+            {
+              "before": "HIS PICTURE OF VARNHALL: OFF BY",
+              "value": "{belief_error.err}",
+              "after": "M"
+            },
+            {
+              "before": "THAT LOOK WAS WORTH",
+              "value": "{cf_value.dxt}",
+              "after": "xT"
+            }
+          ]
+        },
+        "fallback": {
+          "items": [
+            {
+              "before": "FERRIDAY CHECKED HIS SHOULDER BEFORE THE BALL",
+              "value": "",
+              "after": ""
+            },
+            {
+              "before": "VARNHALL'S RUN WAS ON HIS BLIND SIDE",
+              "value": "",
+              "after": ""
+            }
+          ]
+        }
+      },
+      "nc-a11": {
+        "params": {
+          "name": "VINTERGREN"
+        }
+      },
+      "nc-h8": {
+        "params": {
+          "name": "FERRIDAY"
+        }
+      },
+      "nc-h8-ie": {
+        "params": {
+          "name": "FERRIDAY"
+        }
+      },
+      "nc-h9": {
+        "params": {
+          "name": "VARNHALL"
+        }
+      },
+      "nc-h9-ie": {
+        "params": {
+          "name": "VARNHALL"
+        }
+      },
+      "back-to-h4": {
+        "params": {
+          "lines": [
+            {
+              "text": "HE PLAYS IT BACK TO ANNERSLEY.",
+              "color": "dusk",
+              "size": 96
+            }
+          ]
+        }
+      }
+    }
+  }
 }

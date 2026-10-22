@@ -3046,6 +3046,131 @@ optgroup {
     display: none;
   }
 }
+
+/* The board as the main view keeps the HUD (whose eyes, the director's suggestion, the stats
+   ticker) off it: floating over the board they hid the players in its top-left corner, and
+   trailer shot 04 (the board, cropped) filmed them. The pitch keeps 111:74 (BOARD_EXTENT), so
+   the HUD costs the board height or width:
+   - a band over the board (16:10 screens, tablets): picker and director on one row, the
+     suggestion shortened to fit, the ticker one line under them; the board starts 92 px under
+     the band's top and its panel is as wide as the pitch at that height, centred with the band;
+   - a column beside it (from 1181 px on screens wider than 5:3, where the board has width to
+     spare): the board keeps its height. */
+@media (min-width: 761px) {
+  .focus-tactical .stage-top {
+    display: grid;
+    grid-template-columns: auto minmax(0, max-content);
+    grid-template-areas:
+      "hud director"
+      "ticker ticker";
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  .focus-tactical .stage-top .stage-hud {
+    grid-area: hud;
+  }
+  .focus-tactical .stage-top .stage-director {
+    grid-area: director;
+    min-width: 0;
+  }
+  .focus-tactical .stage-director .director {
+    flex-wrap: nowrap;
+  }
+  .focus-tactical .stage-director .director-slot {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .focus-tactical .stage-director .chip.director-chip {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .focus-tactical .stage-top .stage-ticker {
+    grid-area: ticker;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .focus-tactical .stage-ticker .stat-chip:nth-child(n + 4) {
+    display: none;
+  }
+  .focus-tactical .slot.main {
+    top: calc(var(--head-h) + 92px);
+  }
+  .focus-tactical .slot.main .view.tac {
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 111 / 74;
+    margin-inline: auto;
+  }
+}
+/* the same 92 px under the band where it starts at 140 px (the rules above for .stage-top) */
+@media (max-width: 1760px) and (min-width: 1181px) {
+  .stage.focus-tactical:has(.stage-run) .slot.main {
+    top: 232px;
+  }
+}
+@media (max-width: 1400px) and (min-width: 1181px) {
+  .stage.focus-tactical:has(.live-chip.back) .slot.main {
+    top: 232px;
+  }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
+  .focus-tactical .slot.main {
+    top: 232px;
+  }
+  .focus-tactical .stage-ticker .stat-chip:nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (min-width: 1181px) and (min-aspect-ratio: 5 / 3) {
+  .focus-tactical .stage-top {
+    right: auto;
+    width: 296px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "hud"
+      "director"
+      "ticker";
+    justify-content: stretch;
+    justify-items: start;
+    align-content: start;
+  }
+  .focus-tactical .stage-director .director {
+    flex-wrap: wrap;
+  }
+  .focus-tactical .stage-director .director-slot {
+    flex: 1 1 100%;
+  }
+  .focus-tactical .stage-director .chip.director-chip {
+    white-space: normal;
+  }
+  .focus-tactical .stage-director .director-auto {
+    margin-left: 0;
+  }
+  .focus-tactical .stage-top .stage-ticker {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: visible;
+  }
+  .focus-tactical .slot.main,
+  .stage.focus-tactical:has(.stage-run) .slot.main,
+  .stage.focus-tactical:has(.live-chip.back) .slot.main {
+    top: var(--head-h);
+    left: calc(var(--gutter) + 312px);
+  }
+  .focus-tactical .stage-caption {
+    left: calc(var(--gutter) + 312px);
+  }
+}
+/* where the run switch drops under the header row, the board starts under it, with the column */
+@media (min-width: 1181px) and (max-width: 1760px) and (min-aspect-ratio: 5 / 3) {
+  .stage.focus-tactical:has(.stage-run) .slot.main {
+    top: 140px;
+  }
+}
 /* Up to 1760 px a hero moment's header (Your call, Take his eyes, the Sound switch while it asks
    to be tapped, who is watching) reaches the centred run switch: at 1440 px it covered "Your
    call". The switch drops under the header row there too. */

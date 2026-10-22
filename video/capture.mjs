@@ -199,6 +199,11 @@ const WAITS = {
 function locate(page, a) {
   const scope = a.within ? page.locator(a.within) : page;
   if (a.selector) return scope.locator(a.selector).first();
+  // A list of names: whichever the page shows (a button before and after the players are named).
+  if (a.role && Array.isArray(a.name)) {
+    const any = a.name.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    return scope.getByRole(a.role, { name: new RegExp(a.exact === false ? any : `^(?:${any})$`) });
+  }
   if (a.role) return scope.getByRole(a.role, { name: a.name, exact: a.exact ?? true });
   // Not exact by default: a <label> wrapping a <select> also holds the options' text.
   return scope.getByLabel(a.label, { exact: a.exact ?? false });

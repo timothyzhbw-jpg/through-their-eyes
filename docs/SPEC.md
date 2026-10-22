@@ -1654,8 +1654,23 @@ original visual identity.
     the trunk's share of the look, so a look past 80° turns the trunk no further than before.
     The head still points exactly along `head_yaw`. On by default (Bowen kept it on after the
     before/after video, 2026-10-21); `?anims=base` turns it off;
-    under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
-    and not used.
+    under reduced motion there are no shoulder checks. Of Quaternius' locomotion (CC0) only the
+    walk is used (below).
+  - *Walk (2026-10-21):* the engine has no walk (its slowest cycle is a 5.25 m/s jog, which
+    played walkers as a jog in miniature). A second animations-only GLB
+    (`web/public/models/anims_walk.glb`, ~12 KB, apart from the extra clips) holds a real walk,
+    Quaternius' `Walk_Loop` (Universal Animation Library 1, CC0), with its stride speed from the
+    pack's root-motion version and its left-foot strike lined up with the jog's. Players walk
+    below 1.7 m/s (idle to walk by speed, then the walk alone, its cadence rising) and keep the
+    engine's gait (idle and jog, then sprint) until they drop below 1.3 m/s; each change of gait
+    cross-fades over 0.25 s on one gait phase. A walk and a jog are not blended by speed: a
+    walking foot is down for 60% of the cycle and a jogging one for 30%, so a mix lets the
+    planted foot skate (measured 17–36 cm a step at 1.4–2.6 m/s). In the walking gait the model
+    is lifted by however far a blended pose would sink a boot into the ground. On with the extra
+    clips; `?walk=0` keeps the kick and the checks without the walk. Quaternius does not say how
+    the pack was made; Digital Production (2025-03-21) reports Xsens motion capture. Bowen allowed
+    the walk on 2026-10-22 on the same terms as the CMU clips: animation only, credited (hard
+    constraint 2).
 - **Stadium:** two builds of one bowl ([web/src/views/stadiumGeometry.ts](../web/src/views/stadiumGeometry.ts)).
   - *Procedural* ([Stadium.tsx](../web/src/views/Stadium.tsx)): generated in the browser, drawn
     on the first frame; it is the fallback.
@@ -1682,6 +1697,14 @@ original visual identity.
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
     fallback, Your call). On the tactical board a keeper's token keeps its team colour, which
     the board's other layers (pitch control) also use, with a band in his kit colour.
+  - Upgraded look, approved by the art director on 2026-10-21 and shared with the trailer's
+    Blender shots (`web/public/models/README.md`; `?look=v1` shows the plain kits). The model
+    gains only appended data (`demo/grf/reskin.py`): baked occlusion and the keepers' sleeve and
+    glove masks per vertex, and a cloth normal map, so the skeleton and clips stay byte for byte
+    (`web/src/players/lookModel.test.ts` poses both and compares every bone). Kit designs come
+    from one mask defined on the body in 3D: home side panels, away raglan sleeves, keepers'
+    tonal raglan with long sleeves and gloves, trims at the collar, cuffs, hems and socks; the
+    kit colours above are unchanged. Cost: +17 KB (+22 %) for the players; fps unchanged.
 - **Cameras:**
   - broadcast — high side angle, follows the ball, smoothed;
   - tactical — top-down;
@@ -1906,6 +1929,27 @@ original visual identity.
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, count-up or sting;
     the ring, the sweep and the stamp still show.
+- **Render tiers and one look** ([web/src/quality/](../web/src/quality/), behind `?quality=` until
+  the art director and Bowen approve): *classic* (`standard`) is the picture above, the default.
+  *low*, *medium* and *high* share one look with the Blender trailer shots, on the shared targets
+  of `~/tte-blender/LOOKDEV.md` §2a: AgX tone mapping, a Fresnel rim in the lamp colour from the
+  key floodlight on the players, the crowd tinted neutral-cool, the lamp glow capped at about three
+  lamp heads with no wide halo or flare streak, four decal shadows per player at 30 % each, and a
+  faint image-based light from a procedural night-stadium environment (≤ 0.3, never visible, not
+  on the grass; no HDRI download). The tiers differ in fidelity only: medium adds a post chain
+  (half-float HDR buffer, SMAA, depth of field through the beat on the broadcast camera, the
+  head-whip blur in it); high adds ambient occlusion (GTAO at half resolution) and bloom on the
+  lamp heads only. three.js's own addons (MIT), in a lazy chunk. Cine mode takes the look with
+  `&quality=` (AgX, the rim, the lamp-only bloom, the cone in `#ffd36b`), unchanged without it.
+  - Tier from the device (renderer string, memory, phone or not; software renderers and older
+    Intel graphics get low), `?quality=standard|low|medium|high|auto`, or the
+    View options switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s
+    steps it down (low is the floor).
+  - First person gets no depth of field: the shirt numbers float in front of the stands, and a
+    blur from the scene's depth would blur them with the stands. Depth of field and the post
+    chain's head-whip blur are off around a camera cut like the standard blur
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts); smoke page `cut-no-blur-high`). Depth of
+    field eases in and out over 0.6 s of wall time, a gentle focus pull, never a pop.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1934,6 +1978,9 @@ Motion capture of lab subjects is not match data or footage: Bowen allowed the C
 capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
 (`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
 the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+On 2026-10-22 he allowed Quaternius' Universal Animation Library walk on the same terms (CC0,
+reported to be Xsens motion capture; animation only): the players' walk
+(`web/public/models/anims_walk.glb`, §7 *Walk*), credited in [CREDITS.md](CREDITS.md).
 
 ### Acceptance checks — render
 - [x] *The run without the look, told:* which look was removed, what it cost and where each pass
@@ -2044,6 +2091,15 @@ the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or pl
       — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts); `npm run fps` and
       `npm run fps -- --anims base` alternating (2026-10-21, Apple M4 Pro, headless, 1920 × 1080):
       60 fps capped in every row either way, median 16.7 ms, p95 16.7–16.8 ms.
+- [x] *Walk:* the blend is a partition of one and the feet keep the sim speed (`footSpeed == v`)
+      at every speed, in either gait and through a change; the walk's left-foot strike lands on
+      the jog's (measured on the model: phase 0.155 vs 0.150); on the posed model the boot's
+      contact point moves back at 0.95–1.01 v from 0.3 to 1.65 m/s; the engine's gait poses the
+      body exactly as without the walk; walking players' heads stay on `head_yaw` (< 1e-3 rad),
+      their feet on the ground (none below it), and their poses are history-free; `?anims=base`
+      is unchanged (rig.test.ts untouched). — [web/src/players/players.test.ts](../web/src/players/players.test.ts),
+      [web/src/players/walk.test.ts](../web/src/players/walk.test.ts); posing 22 players costs
+      0.15 ms a frame against 0.11 ms with the engine's clips (match 1, a walking stretch).
 - [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
       ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
       55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
@@ -2080,6 +2136,25 @@ the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or pl
       eval/reports/web_load.md). `npm run fps` 60
       capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
       245–299 → 339–344 fps broadcast.
+- [x] *Render tiers:* tier detection, link and viewer precedence, one look at every new tier with
+      fidelity-only differences, depth of field only through the beat on the broadcast camera and
+      never under reduced motion, the rim patch on and off, the automatic step-down; each tier
+      holds 60 fps; first load no heavier; the look on the art director's shared targets
+      (`~/tte-blender/renders/review/app_v2_*`): black floor 5,8,6; first-person stands luma 22
+      (B−R +5), sky luma 12; lit pitch 33,61,36 (G/R 1.84) from eye height and 31,62,39 (G/R 1.98)
+      from the broadcast camera, luma 53–54; coral G/R 0.50; top and low tiers within one level.
+      `npm run fps` with the look (2026-10-21, M4 Pro, Metal): high and low 57.8–60.0 fps at
+      1080p; medium on the phone profile 60.0. Approved by the art director (2026-10-21). With the
+      baked stadium the grass keeps its baked light and takes the look's tint and sheen.
+      — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts),
+      [look.test.ts](../web/src/quality/look.test.ts);
+      `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;
+      `npm run fps -- --quality high|medium` (2026-10-21, Apple M4 Pro, Metal, headless):
+      1920 × 1080 high 60.0 fps p95 16.7–16.8 ms in every row; medium on a 402 × 874 @ 3 phone
+      profile 60.0 fps (this Mac's GPU, not a phone's). Uncapped at 1080p: standard 200–300 fps,
+      medium 140–160, high ≈ 128, so high costs ≈ 3–5 ms a frame here. Eager JS 467 kB gzipped
+      (469 before: the post passes left the vendor chunk); the tier chunk is 47 kB. Not measured
+      on a laptop iGPU or a real phone.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.

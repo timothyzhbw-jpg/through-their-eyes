@@ -6,7 +6,7 @@
 // shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
@@ -22,7 +22,7 @@ import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
-import { declutter, labelBox } from "./declutter";
+import { declutter, labelBox, labelHeight } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
@@ -30,7 +30,12 @@ import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
+import { featuresOf, quality } from "../quality/quality";
+import { LOOK } from "../quality/look";
 import { BeliefRings } from "./BeliefRings";
+
+// The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
+const QualityLayer = lazy(() => import("../quality/QualityPost"));
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -47,7 +52,12 @@ const LABEL_TEXT = 0.36;
 const LABEL_ASPECT = 1.6;
 // At most this tall on screen (px): a player a few metres away wore a number the size of his head.
 const LABEL_MAX_PX = 28;
+// A near player's number comes down to this far above his head (px) instead of floating 2.1 m up,
+// which from eye height put it in the stands over him (declutter.ts labelHeight).
+const LABEL_GAP_PX = 6;
+const HEAD_TOP = HEAD_CENTRE + HEAD_RADIUS;
 const labelScale = new Float32Array(32);
+const labelY = new Float32Array(32);
 const labelAt = new THREE.Vector3();
 /** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
 const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
@@ -104,6 +114,9 @@ function PovScene() {
   useRedrawOn(playback);
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
+  const tier = useStore(quality, (s) => s.tier);
+  const { look, post } = featuresOf(tier, false);
+  useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
@@ -162,7 +175,10 @@ function PovScene() {
     const now = performance.now() / 1000;
     cuts.note(viewKey(s), now);
     if (cuts.inCut(now)) invalidate(); // until the blur has eased back
-    [fog.near, fog.far] = FOG[s.camera];
+    // The shared look hazes the broadcast camera's far side as the Blender shots do.
+    [fog.near, fog.far] = featuresOf(quality.get().tier, false).look
+      ? LOOK.fog[s.camera]
+      : FOG[s.camera];
     if (broadcast) {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
@@ -201,10 +217,17 @@ function PovScene() {
       hero.players.map((_, j) => {
         if (j === me || !labels.current[j]) return null;
         labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
-        const box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
-        const k = box && box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        let box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
+        if (!box) return null;
+        const k = box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        const y = labelHeight(LABEL_Y, HEAD_TOP, box.h / LABEL_TEXT, LABEL_TEXT * k, LABEL_GAP_PX);
         labelScale[j] = k;
-        return box && { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
+        labelY[j] = y;
+        if (y < LABEL_Y) {
+          labelAt.y = y; // placed where it will be drawn
+          box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT) ?? box;
+        }
+        return { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
       }),
     );
     placed.forEach(({ visible, lift }, j) => {
@@ -213,7 +236,7 @@ function PovScene() {
       const k = labelScale[j] || 1;
       label.visible = visible;
       label.scale.set(0.75 * k, 0.75 * k, 1);
-      label.position.y = LABEL_Y + lift * LABEL_TEXT * k;
+      label.position.y = (labelY[j] || LABEL_Y) + lift * LABEL_TEXT * k;
     });
     if (alerted.size) invalidate(); // keep the blind-side pulse going
   }, -1);
@@ -234,6 +257,7 @@ function PovScene() {
         >
           <mesh
             position-y={BODY_CENTRE}
+            userData={{ player: true }}
             geometry={capsule}
             material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
@@ -256,7 +280,11 @@ function PovScene() {
             }}
             visible={!rigged}
           >
-            <mesh geometry={headGeometry} material={materials.shirts[kitSlot(p)]} />
+            <mesh
+              geometry={headGeometry}
+              material={materials.shirts[kitSlot(p)]}
+              userData={{ player: true }}
+            />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
           </group>
           <sprite
@@ -291,7 +319,14 @@ function PovScene() {
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
-      <MotionBlur hfov={POV_HFOV} />
+      {/* The post chain draws the frame itself at medium and high; until its chunk is here,
+          and at the other tiers, the motion-blur pass does. */}
+      {!post && <MotionBlur hfov={POV_HFOV} />}
+      {look && (
+        <Suspense fallback={post ? <MotionBlur hfov={POV_HFOV} /> : null}>
+          <QualityLayer sample={sample} hfov={POV_HFOV} />
+        </Suspense>
+      )}
     </>
   );
 }

@@ -105,9 +105,26 @@ const PAGES = [
     device: { ...DESKTOP, reducedMotion: "reduce" },
     check: (p) => beat(p, { push: 0 }),
   },
+  // The render tiers (SPEC 7, src/quality/): the post chain loads, draws, and says which tier.
+  { name: "quality-high", path: "?at=60&quality=high", check: (p) => tier(p, "high") },
+  {
+    name: "quality-high-broadcast",
+    path: "?at=66&camera=broadcast&quality=high",
+    check: (p) => tier(p, "high"),
+  },
+  {
+    name: "phone-quality-medium",
+    path: "?intro=0&quality=medium",
+    device: PHONE,
+    // The tier and the phone layout. Not the live stream: where the tier's chunk loads slowly (a
+    // software renderer) the stream has reached the hero moment and the cold-load show has taken
+    // over by then (SPEC 2). phone-hero checks the stream on a phone.
+    check: (p) => phone(p, (q) => tier(q, "medium"), { live: false }),
+  },
   // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
   // (beat/cut.ts).
   { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
+  { name: "cut-no-blur-high", path: "?autoplay=0&intro=0&quality=high", check: cutNoBlur },
   // Every camera switch lands on a frame drawn at its pane's size, with no new WebGL context
   // (views/InstantFrame.tsx): no blank, stretched or cleared frame at a cut.
   {
@@ -119,7 +136,29 @@ const PAGES = [
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
-    check: (p) => hero(p, { main: "board" }),
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
+  },
+  {
+    name: "desktop-1280-tactical",
+    path: "?at=56&view=tactical",
+    device: { viewport: { width: 1280, height: 800 } },
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
+  },
+  // Wider than 5:3: the HUD is a column beside the board (trailer shot 04 films this one).
+  {
+    name: "desktop-1920-tactical",
+    path: "?at=decision&view=tactical",
+    device: { viewport: { width: 1920, height: 1080 } },
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   {
@@ -226,6 +265,29 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   await mainView(page, main);
 }
 
+/** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
+ * buttons, the stats ticker) or the run switch over it. Floating over the board they hid the
+ * players in its top-left corner, and trailer shot 04, the board cropped, filmed them. */
+async function boardClear(page) {
+  const over = await page.evaluate(() => {
+    const board = document.querySelector(".slot.main .view.tac")?.getBoundingClientRect();
+    if (!board) return ["(no board as the main view)"];
+    return [
+      ...document.querySelectorAll(
+        ".stage-top :is(.eyes-picker, button, .stat-chip, .hud > span), .stage-run .seg",
+      ),
+    ]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        const across = Math.min(r.right, board.right) - Math.max(r.left, board.left);
+        const down = Math.min(r.bottom, board.bottom) - Math.max(r.top, board.top);
+        return r.width > 1 && r.height > 1 && across > 0.5 && down > 0.5;
+      })
+      .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+  });
+  if (over.length) throw new Error(`over the tactical board: ${over.join(", ")}`);
+}
+
 /** A stitched match: the score bug, its views, the live service and every possession's moments. */
 async function match(page) {
   await see(page.getByRole("group", { name: "Live stream" }), "the live stream control");
@@ -250,6 +312,22 @@ async function beat(page, { push }) {
   } catch {
     const data = await canvas.evaluate((el) => ({ ...el.dataset }));
     throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** A hero moment drawn at a render tier: the 3D canvas carries data-quality once the tier's
+ * chunk has loaded and taken over drawing. */
+async function tier(page, want) {
+  await hero(page);
+  const canvas = page.locator(".view.pov canvas");
+  try {
+    await page.waitForFunction(
+      ([el, t]) => el.dataset.quality === t,
+      [await canvas.elementHandle(), want],
+    );
+  } catch {
+    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
+    throw new Error(`expected the ${want} tier on the 3D canvas, got ${JSON.stringify(data)}`);
   }
 }
 
@@ -623,6 +701,34 @@ async function phone(page, check, { live = true } = {}) {
   if (wide > width) throw new Error(`scrolls sideways: ${wide} px wide in ${width} px`);
   if (overlaps.length) throw new Error(`header controls overlap: ${overlaps.join(", ")}`);
   if (offscreen.length) throw new Error(`header controls off screen: ${offscreen.join(", ")}`);
+  await beliefLegend(page);
+}
+
+/** Beside his eyes (a tablet or a desktop: a phone has no picture in picture), each label of the
+ * belief map's title and legend sits on one line inside the picture in picture: at 1280 px a
+ * full-height disc left the legend a 71 px column and "His options" broke onto two lines. */
+async function beliefLegend(page) {
+  const broken = await page.evaluate(() => {
+    const map = document.querySelector(".views .belief-map");
+    const box = map?.getBoundingClientRect();
+    if (!box || box.width < 1) return [];
+    const out = [];
+    const walk = document.createTreeWalker(map, NodeFilter.SHOW_TEXT);
+    for (let node = walk.nextNode(); node; node = walk.nextNode()) {
+      const text = node.textContent.trim();
+      if (!text || !node.parentElement.closest(".belief-title, .belief-legend")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+      const lines = new Set(rects.map((r) => Math.round(r.top))).size;
+      const r = range.getBoundingClientRect();
+      if (lines > 1) out.push(`"${text}" on ${lines} lines`);
+      else if (r.left < box.left - 0.5 || r.right > box.right + 0.5)
+        out.push(`"${text}" cut at the edge (${Math.round(r.right - box.right)} px)`);
+    }
+    return out;
+  });
+  if (broken.length) throw new Error(`belief map legend: ${broken.join(", ")}`);
 }
 
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */

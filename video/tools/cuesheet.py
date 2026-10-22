@@ -51,7 +51,14 @@ def picture(pic: dict) -> str:
 def sheet(commit: str) -> str:
     spec = json.loads(SPEC.read_text())
     story = spec.get("story", "blender")
-    beats = [b for b in spec["beats"] if b.get("story") in (None, story)]
+
+    def keep(b: dict) -> bool:
+        if b.get("story") is None:
+            return True
+        pick = story if isinstance(story, str) else story.get(b.get("section"), "blender")
+        return b["story"] == pick
+
+    beats = [b for b in spec["beats"] if keep(b)]
     rows, events = [], []
     t, chapter = 0.0, "Story (open)"
     for b in beats:

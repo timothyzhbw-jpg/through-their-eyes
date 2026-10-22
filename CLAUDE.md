@@ -22,6 +22,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
    - Bowen allowed CMU motion capture on 2026-10-21 (lab motion capture of real people, not match
      data or footage) for animation only: the players' animation (`web/public/models/anims_extra.glb`)
      and the trailer's Blender shots, always with the CMU acknowledgement credited (`docs/CREDITS.md`).
+     On 2026-10-22 he allowed Quaternius' Universal Animation Library walk (CC0; reported to be
+     Xsens motion capture) on the same terms: the players' walk (`web/public/models/anims_walk.glb`),
+     for animation only, credited (`docs/CREDITS.md`).
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
@@ -197,7 +200,8 @@ _Fill in as they come to exist._
   the hero moment
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
-  skeleton view off and on (`-- --headed` on a laptop's GPU)
+  skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a
+  render tier, SPEC 7)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
   including axe-core's WCAG 2.2 A/AA rules
 - `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core

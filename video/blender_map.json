@@ -3,14 +3,30 @@
   "approved": [],
   "pins": [
     {
-      "id": "bs2",
-      "clip": "out/video/blender/bs2.mp4",
-      "corners": "out/video/blender/bs2_screen_corners.json",
-      "matte": "out/video/blender/bs2_screen_matte",
+      "id": "bs2_ots",
+      "clip": "out/video/blender/bs2_ots.mp4",
+      "corners": "out/video/blender/bs2_ots_screen_corners.json",
+      "matte": "out/video/blender/bs2_ots_screen_matte",
       "source": {
         "cine": "pov-match"
       },
-      "source_offset_y": 138
+      "source_time": 2.0,
+      "source_offset_y": 138,
+      "ev": 2.0,
+      "ref_corners": "out/video/blender/bs2c_screen_corners.json"
+    },
+    {
+      "id": "bs2c",
+      "clip": "out/video/blender/bs2c.mp4",
+      "corners": "out/video/blender/bs2c_screen_corners.json",
+      "matte": "out/video/blender/bs2c_screen_matte",
+      "source": {
+        "cine": "pov-match"
+      },
+      "source_time": 2.0,
+      "source_offset_y": 138,
+      "ev": 2.0,
+      "ev_ramp_frames": 30
     }
   ],
   "titles": {
@@ -23,9 +39,9 @@
         "role": "",
         "sub": "YOU NEVER CHECK YOUR SHOULDER.",
         "spot": {
-          "x": 1026,
-          "y": 574,
-          "r": 170
+          "x": 960,
+          "y": 600,
+          "r": 220
         },
         "side": "left",
         "scrim": 0.5
@@ -40,9 +56,9 @@
         "role": "THE MIDFIELDER",
         "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
         "spot": {
-          "x": 1380,
-          "y": 600,
-          "r": 260
+          "x": 1305,
+          "y": 560,
+          "r": 230
         },
         "side": "left",
         "scrim": 0.5
@@ -57,11 +73,11 @@
         "role": "THE RUNNER",
         "sub": "UNMARKED. FOR NOW.",
         "spot": {
-          "x": 450,
-          "y": 660,
-          "r": 120
+          "x": 1500,
+          "y": 564,
+          "r": 90
         },
-        "side": "right",
+        "side": "left",
         "scrim": 0.5
       }
     },
@@ -114,10 +130,10 @@
   },
   "beats": [
     {
-      "beat": "b01-s1a-receive",
+      "beat": "b01-s1a-ots",
       "picture": {
         "src": "clip",
-        "path": "out/video/blender/bs1_pov.mp4",
+        "path": "out/video/blender/bs1_ots.mp4",
         "in": 0.0,
         "fit": "pad"
       },
@@ -126,31 +142,45 @@
         "glue"
       ],
       "freeze": {
-        "at": 1.97
+        "at": 1.533
       },
       "overlays": [
         {
           "title": "nc-you",
-          "at": 1.97
+          "at": 1.533
         }
       ],
-      "sfx": [],
       "label": "dramatisation"
     },
     {
-      "beat": "b02-s1c-tackle",
+      "beat": "b01b-s1b-tail",
       "picture": {
         "src": "clip",
-        "path": "out/video/blender/bs1_pov.mp4",
-        "in": 2.0,
+        "path": "out/video/blender/bs1_ots.mp4",
+        "in": 1.533,
         "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
         "glue"
       ],
-      "sfx": [],
-      "label": "dramatisation"
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b02-s1c-steal",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_steal.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "fit": true
     },
     {
       "beat": "b03-s1d-fall",
@@ -164,21 +194,21 @@
       "fx": [
         "glue"
       ],
+      "label": "dramatisation",
+      "fit": true,
       "sfx": [
         {
           "name": "touch",
-          "at": 1.3,
-          "gain_db": -2
+          "at": 0.05,
+          "gain_db": -3
         }
-      ],
-      "label": "dramatisation",
-      "fit": true
+      ]
     },
     {
-      "beat": "b04-s1e-ground",
+      "beat": "b05a-s2-ots",
       "picture": {
         "src": "clip",
-        "path": "out/video/blender/bs1_ground.mp4",
+        "path": "out/video/trailer/pins/bs2_ots.mp4",
         "in": 0.0,
         "fit": "pad"
       },
@@ -186,15 +216,14 @@
       "fx": [
         "glue"
       ],
-      "sfx": [],
       "label": "dramatisation",
       "fit": true
     },
     {
-      "beat": "b05-s2-coach",
+      "beat": "b05b-s2-push",
       "picture": {
         "src": "clip",
-        "path": "out/video/trailer/pins/bs2.mp4",
+        "path": "out/video/trailer/pins/bs2c.mp4",
         "in": 0.0,
         "fit": "pad"
       },
@@ -202,15 +231,15 @@
       "fx": [
         "glue"
       ],
-      "sfx": [],
-      "label": "dramatisation"
+      "label": "dramatisation",
+      "fit": true
     },
     {
       "beat": "b08-bl01a",
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
+        "in": 0.5,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -234,7 +263,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.45,
+        "in": 0.95,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -242,12 +271,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 3.15
+        "at": 3.0
       },
       "overlays": [
         {
           "title": "nc-h9",
-          "at": 3.15
+          "at": 3.0
         }
       ],
       "sfx": [],
@@ -258,9 +287,8 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 3.6,
-        "fit": "pad",
-        "speed": 2
+        "in": 3.93,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -276,7 +304,7 @@
         "path": "out/video/blender/bl01_look.mp4",
         "in": 0.0,
         "fit": "pad",
-        "speed": 9.4,
+        "speed": 8.8,
         "reverse": true
       },
       "letterbox": 2.39,
@@ -324,7 +352,7 @@
       "sfx": [
         {
           "name": "touch",
-          "at": 0.05,
+          "at": 2.32,
           "gain_db": -4
         }
       ],
@@ -336,7 +364,7 @@
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
         "in": 0.0,
-        "speed": 3.68,
+        "speed": 3.44,
         "reverse": true,
         "fit": "pad"
       },
@@ -374,7 +402,7 @@
         },
         {
           "name": "touch",
-          "at": 2.45,
+          "at": 2.0,
           "gain_db": -4
         }
       ],
@@ -387,9 +415,9 @@
         "left": {
           "src": "clip",
           "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.0,
+          "in": 1.9,
           "crop": [
-            0,
+            800,
             0,
             960,
             804
@@ -398,9 +426,9 @@
         "right": {
           "src": "clip",
           "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.9,
+          "in": 1.1,
           "crop": [
-            960,
+            780,
             0,
             960,
             804
