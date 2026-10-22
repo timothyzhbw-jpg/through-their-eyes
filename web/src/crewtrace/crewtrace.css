@@ -1,0 +1,403 @@
+/* The Crew trace (SPEC 6): the crew's run as lanes over time. Floodlight is the model, the
+   striped tag is a template (as on the plan badges), a chalk outline is code; Flare marks an
+   outage. Times are telemetry, set in Geist Mono like every other clock. */
+
+.crew-trace {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline-strong);
+}
+.crew-trace h3 {
+  margin: 0 0 10px;
+  font: 500 12px/1.2 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.trace-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 18px;
+  padding: 0;
+  list-style: none;
+  font: 500 11px/1.4 var(--font-data);
+  color: var(--chalk-2);
+}
+.trace-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.trace-legend .trace-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border-radius: 3px;
+}
+.trace-swatch.llm,
+.trace-bar.llm {
+  background: var(--floodlight);
+}
+.trace-swatch.template,
+.trace-bar.template {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(239, 237, 229, 0.5) 0 3px,
+    rgba(239, 237, 229, 0.12) 3px 6px
+  );
+}
+.trace-swatch.code,
+.trace-bar.code {
+  background: rgba(239, 237, 229, 0.08);
+  box-shadow: inset 0 0 0 1px var(--chalk-2);
+}
+.trace-run {
+  margin-bottom: 28px;
+}
+.trace-run-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--chalk-3);
+}
+.trace-run-head b {
+  font: 400 19px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--chalk);
+}
+.trace-grid {
+  display: grid;
+  gap: 2px;
+}
+.trace-lane {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+}
+.trace-lane-name {
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.04em;
+  color: var(--chalk-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trace-track {
+  position: relative;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(239, 237, 229, 0.03);
+}
+.trace-bar {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  min-width: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition:
+    transform var(--t-quick) var(--settle),
+    box-shadow var(--t-quick);
+}
+.trace-bar:hover {
+  transform: scaleY(1.25);
+}
+.trace-bar:focus-visible,
+.trace-bar[aria-pressed="true"] {
+  outline: 2px solid var(--chalk);
+  outline-offset: 2px;
+}
+.trace-bar.failed {
+  box-shadow: inset 0 0 0 2px var(--flare);
+}
+.trace-bar.resumed {
+  box-shadow: inset 0 0 0 2px var(--floodlight);
+}
+.trace-lane.trace-marks .trace-track {
+  background: none;
+}
+.trace-mark {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 2px;
+  background: var(--chalk-3);
+  transform: rotate(45deg);
+}
+.trace-mark.checkpoint {
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--chalk-3);
+}
+.trace-mark.down,
+.trace-mark.fallback {
+  background: var(--flare);
+}
+.trace-mark.waiting {
+  background: var(--dusk);
+}
+.trace-mark.back,
+.trace-mark.resumed {
+  background: var(--floodlight);
+}
+.trace-lane.trace-axis {
+  min-height: 16px;
+}
+.trace-lane.trace-axis .trace-track {
+  height: 14px;
+  background: none;
+  font: 500 10px/14px var(--font-data);
+  color: var(--chalk-3);
+}
+.trace-lane.trace-axis .trace-track span {
+  position: absolute;
+}
+.trace-events {
+  display: grid;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.trace-event {
+  display: grid;
+  grid-template-columns: 64px 100px minmax(0, 1fr);
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  color: var(--chalk-2);
+}
+.trace-event .t {
+  font: 500 11px/1.6 var(--font-data);
+  color: var(--chalk-3);
+}
+.trace-event.checkpoint {
+  color: var(--chalk-3);
+}
+.trace-kind {
+  font: 500 11px/1.6 var(--font-data);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.trace-kind.down,
+.trace-kind.fallback {
+  color: var(--flare);
+}
+.trace-kind.waiting {
+  color: var(--dusk);
+}
+.trace-kind.back,
+.trace-kind.resumed {
+  color: var(--floodlight);
+}
+.trace-keys {
+  color: var(--chalk-3);
+  overflow-wrap: anywhere;
+}
+.trace-step {
+  margin-top: 8px;
+  padding: 20px;
+  border-radius: var(--r-media);
+  background: var(--night-2);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.trace-step header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.trace-step h4 {
+  margin: 0 8px 0 0;
+  font: 400 23px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.trace-when {
+  margin: 8px 0 14px;
+  font: 500 12px/1.5 var(--font-data);
+  color: var(--chalk-3);
+}
+.trace-when b {
+  color: var(--chalk);
+}
+.trace-io {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+}
+.trace-io dt,
+.trace-step h5 {
+  margin: 0;
+  font: 500 11px/1.8 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.trace-io dd {
+  margin: 0;
+  min-width: 0;
+}
+.trace-io .trace-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.trace-io .trace-keys code,
+.trace-payload .type,
+.trace-calls code,
+.trace-lines code,
+.trace-tools .call {
+  font: 500 12px/1.6 var(--font-data);
+  color: var(--chalk);
+}
+.trace-io .trace-keys code {
+  padding: 0 6px;
+  border-radius: var(--r-tag);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+.trace-payload {
+  font-size: 13px;
+  color: var(--chalk-2);
+  overflow-wrap: anywhere;
+}
+.trace-payload + .trace-payload {
+  margin-top: 6px;
+}
+.trace-step details summary {
+  cursor: pointer;
+  font: 500 11px/1.8 var(--font-data);
+  color: var(--chalk-3);
+}
+.trace-step pre {
+  max-height: 260px;
+  overflow: auto;
+  margin: 4px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--night-deep);
+  font: 500 11px/1.45 var(--font-data);
+  color: var(--chalk-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.trace-block {
+  margin-top: 16px;
+}
+.trace-calls,
+.trace-tools,
+.trace-lines,
+.trace-notes {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--chalk-2);
+}
+.trace-calls li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.trace-tools small,
+.trace-lines small {
+  color: var(--chalk-3);
+}
+.trace-lines li {
+  display: grid;
+  gap: 2px;
+}
+.trace-lines q.before {
+  color: var(--chalk-3);
+  text-decoration: line-through;
+}
+.trace-notes {
+  margin-top: 14px;
+  font: 500 12px/1.5 var(--font-data);
+  color: var(--chalk-3);
+}
+.trace-step .none {
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+.trace-step .trace-id {
+  margin: 14px 0 0;
+}
+.trace-missing {
+  color: var(--chalk-2);
+}
+/* Open: chalk, hovered or not (`.btn:hover` would leave ink on the dark). */
+.btn.trace-open[aria-expanded="true"],
+.btn.trace-open[aria-expanded="true"]:hover {
+  color: var(--ink);
+  background: var(--chalk);
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .trace-lane {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .trace-event {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .trace-event .trace-kind {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .trace-event > span:last-child {
+    grid-column: 1 / -1;
+  }
+  .trace-step {
+    padding: 14px;
+  }
+  .trace-io {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .trace-io dd {
+    margin-bottom: 8px;
+  }
+}
+
+/* Why a crew: the crew-vs-single eval, cited with its costs. */
+.trace-why {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+.trace-why h4 {
+  margin: 0 0 6px;
+  font: 400 21px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.trace-why ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 12px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.trace-why a {
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--chalk);
+}

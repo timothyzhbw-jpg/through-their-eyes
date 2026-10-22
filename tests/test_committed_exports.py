@@ -19,11 +19,13 @@ from sim.export import (
     export_hero,
     export_looks,
     export_what_ifs,
+    export_without_look,
     hero_json,
     looks_json,
     payload_fixture_json,
     render_payload_fixture,
     what_ifs_json,
+    without_look_json,
 )
 
 SCENARIO, SEED = "blind_side_run", 3
@@ -96,6 +98,17 @@ def test_press_escape_what_ifs_are_current():
 )
 def test_look_grids_are_current(scenario, seed, name):
     _assert_current(looks_json(export_looks(scenario, seed)), name)
+
+
+def test_without_look_lines_are_current():
+    _assert_current(
+        without_look_json(export_without_look(SCENARIO, SEED)), "without_look_seed3.json"
+    )
+
+
+def test_far_post_finish_without_look_lines_are_current():
+    fresh = without_look_json(export_without_look("far_post_finish", 11))
+    _assert_current(fresh, "without_look_far_post_finish_seed11.json", SHOT_MM, SHOT_FLOAT_TOL)
 
 
 def test_far_post_finish_what_ifs_are_current():
