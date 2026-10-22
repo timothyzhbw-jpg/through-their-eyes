@@ -30,16 +30,20 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
-import { bindSound } from "./sound/bind";
+import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
+import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
+import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
+import { stepThroughOf } from "./steps/controller";
+import { ScanStepsButton, ScanStepsScreen, useStepThroughOpen } from "./steps/ScanSteps";
 import { takeEyesOf } from "./takeeyes/controller";
 import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
 import { yourCallOf } from "./yourcall/controller";
@@ -53,9 +57,11 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const evidence = useStore(playback, (s) => s.evidenceLine);
   const yourCall = useYourCallOpen();
   const takeEyes = useTakeEyesOpen();
+  const scanSteps = useStepThroughOpen();
   const start = onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />;
   const wasYourCall = useRef(false);
   const wasTakeEyes = useRef(false);
+  const wasScanSteps = useRef(false);
   const introOpen = useStore(intro, (s) => s.open);
 
   useEffect(() => startClock(session), [session]);
@@ -77,6 +83,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasTakeEyes.current = takeEyes;
   }, [takeEyes]);
+  useEffect(() => {
+    if (wasScanSteps.current && !scanSteps) {
+      const pill = document.getElementById("scan-steps-open");
+      const shown = pill && getComputedStyle(pill).display !== "none";
+      const opener = shown ? pill : document.getElementById("scan-steps-story");
+      opener?.focus({ preventScroll: true });
+    }
+    wasScanSteps.current = scanSteps;
+  }, [scanSteps]);
   // The autoplay waits for the lineup card: the key scan comes in the stream's first seconds and
   // must not play under it. Behind the card the picture rests on the first frame. Online: watch
   // live, then the show (the look, then the run without it) and the breakdown once the moment is
@@ -104,12 +119,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
         <YourCallScreen start={onBack ? start : null} />
       ) : takeEyes ? (
         <TakeEyesScreen start={onBack ? start : null} />
+      ) : scanSteps ? (
+        <ScanStepsScreen start={onBack ? start : null} />
       ) : (
         <LiveScreen
           start={start}
           end={
             <>
               <YourCallButton />
+              <ScanStepsButton />
               <TakeEyesButton />
               <SoundToggle icon />
               <ViewerMenu />
@@ -117,11 +135,16 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           }
           run={<RunToggle />}
           card={evidence ? <EvidenceCard /> : <MomentCard />}
-          caption={<Caption />}
+          caption={
+            <>
+              <Caption />
+              <WithoutLookNote />
+            </>
+          }
         />
       )}
 
-      {!yourCall && !takeEyes && (
+      {!yourCall && !takeEyes && !scanSteps && (
         <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
           <header className="moment-head">
             <p className="kicker accent">
@@ -159,6 +182,7 @@ function StoryCta() {
   const { controls } = session;
   const yc = yourCallOf(session);
   const te = takeEyesOf(session);
+  const steps = stepThroughOf(session);
   const { narration, persona, status } = useBreakdown();
   const checked = narration && !narration.fixture;
   return (
@@ -174,6 +198,20 @@ function StoryCta() {
         Watch it through his eyes
         <ArrowIcon />
       </button>
+      {!steps.unavailable && (
+        <button
+          id="scan-steps-story"
+          type="button"
+          className="btn"
+          title="Step through each look he took, frozen, then his decision"
+          onClick={() => {
+            window.scrollTo({ top: 0 });
+            steps.open();
+          }}
+        >
+          Step through his looks
+        </button>
+      )}
       {!yc.unavailable && (
         <button
           type="button"
@@ -226,11 +264,15 @@ function LiveScreen(props: {
   card: ReactNode;
   caption?: ReactNode;
 }) {
-  const { playback } = useView();
+  const session = useView();
+  const { playback } = session;
   const focus = useStore(playback, (s) => s.focus);
+  const camera = useStore(playback, (s) => s.camera);
   const introOpen = useStore(intro, (s) => s.open);
   const board = focus === "tactical";
   const pip = focus === "split" || board;
+  // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
+  const belief = pip && !board && beliefPip(session, camera);
   return (
     <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
@@ -240,7 +282,7 @@ function LiveScreen(props: {
             <PovView />
           </div>
           <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
-            <TacticalView />
+            {belief ? <BeliefMap /> : <TacticalView />}
           </div>
           <div className="shade top" aria-hidden="true" />
           <div className="shade bottom" aria-hidden="true" />
@@ -304,6 +346,10 @@ function MatchView() {
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
   useEffect(() => startClock(session), [session]);
+  useEffect(
+    () => (session.kind === "match" ? bindMatchSound(session.recap.voice, soundEngine) : undefined),
+    [session],
+  ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
@@ -314,6 +360,7 @@ function MatchView() {
             <MatchPicker />
           </>
         }
+        end={<SoundToggle icon />}
         card={
           <>
             <Scoreboard />

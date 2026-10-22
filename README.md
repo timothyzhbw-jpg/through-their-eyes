@@ -128,9 +128,12 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    airs its template plan, and the breakdown still plays. **Bring back** resumes the Agent
    Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
    plan replaces the template. The trace id is the run's operation_Id in Application Insights.
+   **Crew trace** opens the run as a timeline: each agent's lane, its typed input and output,
+   the shared state it read and wrote, the Analyst's MCP tool calls, the Verifier sending a line
+   back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
-   18 possessions on one clock of about 11½ minutes, opened where the scan hero's possession
+   19 possessions on one clock of about 11¾ minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
@@ -296,10 +299,13 @@ uv run ruff check .
 uv run uvicorn api.main:app --reload
 ```
 Live replay over WebSocket at `/ws/matches/blind_side_run-3/live`, moments, cached breakdowns and
-"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 18 possessions,
-about 11½ minutes on one clock — 15 open-play passages and three heroes: the scan hero at 0:30, the
-pressure hero (`press_escape`) at 4:33 and the short corner (`corner_blind_side`) at 8:21 — with
-moments detected in every possession; breakdowns and what-ifs take the hero moment's id. Without Microsoft Foundry configured, every agent step runs on its
+"What if…?" answers. `match-1` is a stitched match (`sim/match.py`, SPEC 3.1): 19 possessions,
+about 11¾ minutes on one clock — 15 open-play passages and four heroes: the scan hero at 0:30, the
+pressure hero (`press_escape`) at 4:33, the shot hero (`far_post_finish`) scoring at 6:41 and the
+short corner (`corner_blind_side`) at 8:30, at 1–0 — with
+moments detected in every possession; breakdowns and what-ifs take the hero moment's id. `match-2`
+plays three of those heroes (pressure, corner, scan) on other seeds, in another order (17
+possessions, about 11¾ minutes; no shot, so 0–0). Without Microsoft Foundry configured, every agent step runs on its
 deterministic template.
 
 The container image for Azure Container Apps (main dependencies only, runs as a non-root user):

@@ -1,0 +1,95 @@
+/* His live belief map, in the picture in picture beside his eyes (BeliefMap.tsx). */
+.belief-map {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 8px 10px;
+  background: radial-gradient(120% 100% at 30% 50%, #12201a, var(--night-deep));
+}
+.belief-map svg {
+  grid-row: 1 / 4;
+  height: 100%;
+  max-height: 100%;
+  aspect-ratio: 1;
+}
+/* row 1 stays clear for the picture in picture's swap button, top right */
+.belief-title {
+  grid-row: 2;
+  grid-column: 2;
+  margin: 0;
+  align-self: end;
+  color: var(--chalk-2);
+  font: 500 10.5px/1.2 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.belief-legend {
+  grid-row: 3;
+  grid-column: 2;
+  margin: 0;
+  align-self: end;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 6px;
+  align-items: center;
+  color: var(--chalk-2);
+  font-size: 11px;
+}
+.belief-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.belief-map .disc {
+  fill: rgba(30, 64, 42, 0.55);
+  stroke: rgba(239, 237, 229, 0.25);
+}
+.belief-map .pitch-line {
+  stroke: rgba(239, 237, 229, 0.28);
+  stroke-width: 0.8;
+}
+.belief-map .token {
+  stroke-width: 1.2;
+}
+.belief-map .token.other.mate {
+  fill: #8e938d;
+  stroke: #8e938d;
+}
+.belief-map .token.other.opp {
+  fill: rgba(8, 14, 11, 0.6);
+  stroke: #8e938d;
+}
+.belief-map .token.press,
+.belief-legend i.press {
+  fill: #ef5b4d;
+  stroke: #ef5b4d;
+  background: #ef5b4d;
+}
+.belief-map .token.option,
+.belief-legend i.option {
+  fill: #54c784;
+  stroke: #54c784;
+  background: #54c784;
+}
+/* out of his sight right now: where he remembers him */
+.belief-map .token.remembered {
+  fill-opacity: 0.35;
+  stroke-dasharray: 2 1.5;
+}
+.belief-map .ball {
+  fill: var(--chalk);
+}
+.belief-map .me {
+  fill: var(--floodlight);
+  stroke: var(--night);
+  stroke-width: 1.5;
+}
+.belief-map .look {
+  stroke: var(--floodlight);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}

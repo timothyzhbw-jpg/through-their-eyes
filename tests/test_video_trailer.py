@@ -11,6 +11,7 @@ VIDEO = ROOT / "video"
 SLOT = re.compile(r"\{[a-z_]+\.[a-z_]+\}")
 PAUSE = re.compile(r"\[pause \d+\]")
 PLAYER_ID = re.compile(r"\b[HA]\d{1,2}\b")
+SHIRT = re.compile(r"\bNo\.\s?\d{1,2}\b")  # a shirt number ("No. 14") is a name too
 NUMBER_WORDS = re.compile(
     r"\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|"
     r"forty|fifty|hundred|thousand|once|twice|half|dozen|percent)\b",
@@ -18,8 +19,12 @@ NUMBER_WORDS = re.compile(
 )
 
 
-def _spec() -> dict:
-    return json.loads((VIDEO / "trailer.json").read_text())
+def _spec(story: str | None = None) -> dict:
+    """The spec with one telling of the story: beats tagged with another `story` drop out."""
+    spec = json.loads((VIDEO / "trailer.json").read_text())
+    pick = story or spec.get("story", "blender")
+    spec["beats"] = [b for b in spec["beats"] if b.get("story") in (None, pick)]
+    return spec
 
 
 def _strings(value):
@@ -35,15 +40,22 @@ def _strings(value):
 
 
 def _bare(text: str) -> str:
-    """The text without slots, pause marks and player ids: what may not hold a number."""
-    return PLAYER_ID.sub("", PAUSE.sub("", SLOT.sub("", text)))
+    """The text without slots, pause marks, player ids and shirt numbers: what may not hold one."""
+    return SHIRT.sub("", PLAYER_ID.sub("", PAUSE.sub("", SLOT.sub("", text))))
 
 
 def test_the_trailer_is_under_two_minutes():
-    beats = _spec()["beats"]
-    assert beats, "the trailer has no beats"
-    total = sum(b["dur"] for b in beats)
-    assert 0 < total < 120, total
+    for story in ("blender", "app"):
+        beats = _spec(story)["beats"]
+        assert beats, "the trailer has no beats"
+        total = sum(b["dur"] for b in beats)
+        assert 0 < total < 120, (story, total)
+
+
+def test_both_tellings_of_the_story_are_the_same_length():
+    """Swapping the story's telling must not move the rest of the cut, or the score."""
+    lengths = {story: sum(b["dur"] for b in _spec(story)["beats"]) for story in ("blender", "app")}
+    assert abs(lengths["blender"] - lengths["app"]) < 1e-6, lengths
 
 
 def test_spoken_and_shown_text_brings_numbers_only_through_slots():
@@ -58,7 +70,7 @@ def test_spoken_and_shown_text_brings_numbers_only_through_slots():
     for tid, title in spec["titles"].items():
         for key in ("params", "fallback"):
             for name, block in (title.get(key) or {}).items():
-                if name == "url":  # the site's address is not a number claim
+                if name in ("url", "legal"):  # an address, or credit a licence wants verbatim
                     continue
                 texts += [(f"title {tid}.{key}.{name}", s) for s in _strings(block)]
     for where, text in texts:
@@ -78,9 +90,14 @@ def test_every_external_asset_is_cc0_or_public_domain_and_credited():
     ids = {a["id"] for a in assets}
     assert used <= ids, used - ids
     for a in assets:
+        assert a["page"] in credits, f"{a['id']} is not in video/CREDITS.md"
+        if a.get("local"):  # our own work (the original score), a file inside the repo
+            assert a["licence"] in {"Original", "CC0-1.0", "Public Domain"}, a["id"]
+            local = Path(a["local"])
+            assert not local.is_absolute() and ".." not in local.parts, a["id"]
+            continue
         assert a["licence"] in {"CC0-1.0", "Public Domain"}, a["id"]
         assert re.fullmatch(r"[0-9a-f]{64}", a["sha256"]), a["id"]
-        assert a["page"] in credits, f"{a['id']} is not in video/CREDITS.md"
 
 
 def test_the_fonts_ship_with_their_licences():

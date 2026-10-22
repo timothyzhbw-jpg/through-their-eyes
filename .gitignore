@@ -16,6 +16,7 @@ out/
 # Web
 node_modules/
 web/dist/
+web/dist-upload/
 
 # OS
 .DS_Store
