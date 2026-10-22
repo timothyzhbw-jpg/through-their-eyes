@@ -419,3 +419,38 @@ export function projectSegment(
 /** Whether a projected point is inside the view (with a margin in px). */
 export const inView = (p: Vec2 | null, w: number, h: number, margin = 0): p is Vec2 =>
   !!p && p[0] >= -margin && p[0] <= w + margin && p[1] >= -margin && p[1] <= h + margin;
+
+/** A name tag on the picture: its centre x and baseline y, and its width, in pixels. */
+export interface Tag {
+  x: number;
+  y: number;
+  w: number;
+}
+
+/**
+ * Rows for name tags under the players who came into sight, given nearest first: each keeps its
+ * place, or drops a row (up to `rows - 1`) when it would touch a tag already placed, else is left
+ * out (the card lists every name). With fictional names the tags are long, and players on nearly
+ * the same bearing put one name over another. Returns each tag's row, null when left out.
+ */
+export function stackTags(
+  tags: readonly Tag[],
+  rowH: number,
+  rows = 3,
+  pad = 4,
+): (number | null)[] {
+  const placed: Tag[] = [];
+  return tags.map((t) => {
+    for (let r = 0; r < rows; r++) {
+      const y = t.y + r * rowH;
+      const clash = placed.some(
+        (p) => Math.abs(p.x - t.x) < (p.w + t.w) / 2 + pad && Math.abs(p.y - y) < rowH,
+      );
+      if (!clash) {
+        placed.push({ x: t.x, y, w: t.w });
+        return r;
+      }
+    }
+    return null;
+  });
+}

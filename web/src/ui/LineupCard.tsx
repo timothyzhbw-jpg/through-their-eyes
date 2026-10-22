@@ -10,6 +10,7 @@ import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
 import { TourButton } from "../tour/Tour";
 import { clubName, shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 export const INTRO_MS = 5000; // the card closes by itself after this long
 
@@ -189,10 +190,7 @@ function OpenLineupCard() {
         <p className="lineup-note">
           A scan is a quick look away from the ball to check the space around him.{" "}
           {measured === "count" ? "Scans counted" : "Scans per minute, counted"} from the scan
-          events of this run ({playLength(runMinutes(hero))}).{" "}
-          <span className="source" title="Read from the sim export, not a verified claim">
-            sim
-          </span>
+          events of this run ({playLength(runMinutes(hero))}). <SourceChip kind="sim" />
         </p>
 
         <section className="lineup-watch" aria-labelledby={`${titleId}-eyes`}>

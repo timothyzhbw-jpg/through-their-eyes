@@ -16,6 +16,7 @@ import { useView, type ViewSession } from "../session";
 import { useStore } from "../store/store";
 import { FIELD, LAW1 } from "./fieldMarkings";
 import "./beliefMap.css";
+import { SourceChip } from "../provenance/SourceChip";
 
 export const DISC_RADIUS_M = 32; // how far around him the disc reaches
 export const PRESS_RADIUS_M = 25; // a defender farther than this from the carrier is not pressing
@@ -165,10 +166,7 @@ export function BeliefMap() {
   return (
     <div className="belief-map">
       <p className="belief-title">
-        His picture{" "}
-        <span className="source" title="Read from the sim export, not a verified claim">
-          sim
-        </span>
+        His picture <SourceChip kind="sim" />
       </p>
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={label}>
         <defs>
