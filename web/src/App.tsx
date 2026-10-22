@@ -30,14 +30,16 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
-import { bindSound } from "./sound/bind";
+import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
+import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
+import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
 import { takeEyesOf } from "./takeeyes/controller";
@@ -117,7 +119,12 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           }
           run={<RunToggle />}
           card={evidence ? <EvidenceCard /> : <MomentCard />}
-          caption={<Caption />}
+          caption={
+            <>
+              <Caption />
+              <WithoutLookNote />
+            </>
+          }
         />
       )}
 
@@ -226,11 +233,15 @@ function LiveScreen(props: {
   card: ReactNode;
   caption?: ReactNode;
 }) {
-  const { playback } = useView();
+  const session = useView();
+  const { playback } = session;
   const focus = useStore(playback, (s) => s.focus);
+  const camera = useStore(playback, (s) => s.camera);
   const introOpen = useStore(intro, (s) => s.open);
   const board = focus === "tactical";
   const pip = focus === "split" || board;
+  // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
+  const belief = pip && !board && beliefPip(session, camera);
   return (
     <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
@@ -240,7 +251,7 @@ function LiveScreen(props: {
             <PovView />
           </div>
           <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
-            <TacticalView />
+            {belief ? <BeliefMap /> : <TacticalView />}
           </div>
           <div className="shade top" aria-hidden="true" />
           <div className="shade bottom" aria-hidden="true" />
@@ -304,6 +315,10 @@ function MatchView() {
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
   useEffect(() => startClock(session), [session]);
+  useEffect(
+    () => (session.kind === "match" ? bindMatchSound(session.recap.voice, soundEngine) : undefined),
+    [session],
+  ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
@@ -314,6 +329,7 @@ function MatchView() {
             <MatchPicker />
           </>
         }
+        end={<SoundToggle icon />}
         card={
           <>
             <Scoreboard />
