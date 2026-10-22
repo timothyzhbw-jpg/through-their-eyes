@@ -43,6 +43,7 @@ import {
   type Lane,
   type LookStep,
   type Step,
+  stackTags,
 } from "./steps";
 import "./steps.css";
 
@@ -51,6 +52,8 @@ const SWIPE_PX = 50;
 const FOCUS_RADIUS_M = 4; // the undimmed circle round each of the two players on the board
 const FOCUS_MIN_PX = 26;
 const LANE_NEAR_M = 3; // first-person lanes start this far in front of his eyes
+const TAG_ROW_PX = 14; // a name tag's row under a ringed player (12 px type)
+const TAG_CHAR_PX = 7.2; // Geist Mono at 12 px
 
 /** The hero moment's step-through. */
 export function useStepThrough(): StepThrough {
@@ -282,6 +285,24 @@ function PovMarks(props: {
   const arrows = movementArrows(hero, run, f, step.vel);
   const lanes = passes ? potentialPasses(hero, run, step.missing ? [] : step.sight) : [];
   const rings = step.missing ? [] : step.sight.map((id) => hero.ids.indexOf(id));
+  // Ringed players, nearest first (lowest on the picture): their names stack instead of overlapping.
+  const seen = rings
+    .map((j) => {
+      const feet = project(pose, at(j), w, h, 0);
+      const head = project(pose, at(j), w, h, 2.0);
+      if (!inView(feet, w, h, 40) || !head) return null;
+      const name = shortName(hero.ids[j]);
+      // A name near the picture's edge moves in rather than being cut ("H. Talvis").
+      const half = (name.length * TAG_CHAR_PX + 6) / 2;
+      const x = Math.min(Math.max(feet[0], half + 2), w - half - 2);
+      return { j, feet, head, tall: Math.max(18, feet[1] - head[1]), name, x, half };
+    })
+    .filter((r) => r !== null)
+    .sort((a, b) => b.feet[1] - a.feet[1]);
+  const rows = stackTags(
+    seen.map(({ feet, x, half }) => ({ x, y: feet[1] + 16, w: 2 * half })),
+    TAG_ROW_PX,
+  );
   return (
     <svg className="ss-marks" width={w} height={h} aria-hidden="true">
       <Defs />
@@ -306,20 +327,16 @@ function PovMarks(props: {
           />
         );
       })}
-      {rings.map((j) => {
-        const feet = project(pose, at(j), w, h, 0);
-        const head = project(pose, at(j), w, h, 2.0);
-        if (!inView(feet, w, h, 40) || !head) return null;
-        const tall = Math.max(18, feet[1] - head[1]);
-        return (
-          <g key={j} className="ss-seen">
-            <ellipse cx={feet[0]} cy={(feet[1] + head[1]) / 2} rx={tall * 0.32} ry={tall * 0.62} />
-            <text x={feet[0]} y={feet[1] + 16}>
-              {shortName(hero.ids[j])}
+      {seen.map(({ j, feet, head, tall, name, x }, k) => (
+        <g key={j} className="ss-seen">
+          <ellipse cx={feet[0]} cy={(feet[1] + head[1]) / 2} rx={tall * 0.32} ry={tall * 0.62} />
+          {rows[k] !== null && (
+            <text x={x} y={feet[1] + 16 + rows[k]! * TAG_ROW_PX}>
+              {name}
             </text>
-          </g>
-        );
-      })}
+          )}
+        </g>
+      ))}
     </svg>
   );
 }
