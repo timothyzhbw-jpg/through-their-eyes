@@ -153,7 +153,7 @@ class Hybrid(Grime):
                     self._drum("snare", c.t, -16.0 + 12.0 * (k / max(1, remaining - 1)))
                 if k % 2 == 0:
                     self.score.note("music", "timpani", 41, c.t, 0.2, 60 + 6 * k, gain_db=0.0)
-        self.score.add("bass", s.start, sy.boom808(29, 1.6), -4.0)
+        self.score.add("bass", s.start, sy.boom808(29, min(1.6, s.end - s.start)), -4.0)
 
     def groove(self, s: Section, style: str) -> None:
         super().groove(s, style)

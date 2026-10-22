@@ -11,7 +11,7 @@ import path from "node:path";
 import { loudnormFilter, mixGraph, timelineOf } from "../lib/edit.mjs";
 
 function args(argv) {
-  const out = { gain: 0, duck: -9, lufs: -14, tp: -1.5, height: 720, crf: 23 };
+  const out = { gain: 0, duck: -9, lufs: -14, tp: -2, height: 720, crf: 23 }; // tp: the AAC encode overshoots by ~0.5 dB
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, "");
     out[key] = argv[i + 1];

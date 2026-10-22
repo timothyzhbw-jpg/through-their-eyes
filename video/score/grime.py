@@ -192,7 +192,7 @@ class Grime(Arranger):
                     self.kick(c.t, -2.0)
                 if k % 4 == 0:
                     self.sub_note(c.t, 29 + (0, 3, 5, 7)[(k // 4) % 4], 0.38, -4.0, kind="square")
-        self.score.add("bass", s.start, sy.boom808(29, 1.9), -1.0)
+        self.score.add("bass", s.start, sy.boom808(29, min(1.9, s.end - s.start)), -1.0)
 
     def section_look(self, s: Section) -> None:
         self.groove(s, "look")
