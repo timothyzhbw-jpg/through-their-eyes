@@ -105,6 +105,9 @@ const PAGES = [
     device: { ...DESKTOP, reducedMotion: "reduce" },
     check: (p) => beat(p, { push: 0 }),
   },
+  // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
+  // (beat/cut.ts).
+  { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
@@ -239,6 +242,73 @@ async function beat(page, { push }) {
   } catch {
     const data = await canvas.evaluate((el) => ({ ...el.dataset }));
     throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable): play through
+ * the key scan, where his head whips round, and the canvas stays sharp. Then turn "Motion blur"
+ * on in View options, play into the scan again, cut to the broadcast camera and back, and read
+ * the blur on the frames right after each cut: it must be 0. */
+async function cutNoBlur(page) {
+  await hero(page);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  // The replay opens inside the key scan (frames 50-70); play past its end.
+  const byDefault = await page.evaluate(async () => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+    const el = document.querySelector(".view.pov canvas");
+    const timeline = document.querySelector('input[aria-label="Timeline"]');
+    const t0 = performance.now();
+    let most = 0;
+    while (Number(timeline.value) < 72 && performance.now() - t0 < 20_000) {
+      await frame();
+      most = Math.max(most, Number(el.dataset.blurSigma ?? 0));
+    }
+    return { most, frame: Number(timeline.value) };
+  });
+  if (byDefault.frame < 72)
+    throw new Error(`play did not pass the key scan (frame ${byDefault.frame})`);
+  if (byDefault.most > 0) {
+    throw new Error(`expected no head-turn blur by default, got sigma ${byDefault.most} px`);
+  }
+
+  await page.getByRole("button", { name: "View options" }).click();
+  const blur = page.getByRole("button", { name: "Motion blur" });
+  await blur.click();
+  if ((await blur.getAttribute("aria-pressed")) !== "true")
+    throw new Error("Motion blur did not turn on");
+  await page.keyboard.press("Escape");
+  // Back to just before the key scan (the timeline's mark), playing.
+  await page.getByTitle("Jump to just before the key scan").click();
+  const play = page.getByRole("button", { name: "Play", exact: true });
+  if (await play.count()) await play.click();
+  const canvas = page.locator(".view.pov canvas");
+  // Turned on, the blur comes on as his head whips round.
+  await page.waitForFunction(
+    (el) => Number(el.dataset.blurSigma) > 0,
+    await canvas.elementHandle(),
+    {
+      timeout: 15_000,
+    },
+  );
+  const after = await page.evaluate(async () => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+    const el = document.querySelector(".view.pov canvas");
+    const pick = (name) =>
+      [...document.querySelectorAll('[aria-label="Camera"] button')]
+        .find((b) => b.textContent.trim() === name)
+        .click();
+    const seen = [];
+    for (const name of ["Broadcast", "His eyes"]) {
+      pick(name);
+      for (let k = 0; k < 4; k++) {
+        await frame();
+        seen.push(Number(el.dataset.blurSigma ?? 0));
+      }
+    }
+    return seen;
+  });
+  if (after.some((sigma) => sigma > 0)) {
+    throw new Error(`expected no blur right after a camera cut, got sigma ${after.join(", ")} px`);
   }
 }
 

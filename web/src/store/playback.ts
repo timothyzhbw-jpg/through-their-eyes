@@ -21,6 +21,7 @@ export interface PlaybackState {
   playUntil: number | null; // stop at this frame (plan segments)
   povPlayer: string; // whose eyes the first-person view uses; also owns the vision cone
   comfort: boolean; // eased POV yaw + slower playback while the head whips round (SPEC 7)
+  motionBlur: boolean; // the first-person head-turn blur: opt-in, off by default (SPEC 7)
   cone: boolean;
   beliefGhosts: boolean;
   cfGhost: boolean; // ghost path of the other run
@@ -72,6 +73,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     playUntil: null,
     povPlayer: openingPov(hero),
     comfort: false,
+    motionBlur: false, // Bowen, 2026-10-21: blur is uncomfortable; the viewer may turn it on
     cone: hero.vision !== null, // a match export has no vision model
     beliefGhosts: true,
     cfGhost: false,
