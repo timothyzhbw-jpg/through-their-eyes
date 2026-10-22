@@ -191,6 +191,7 @@
       ],
       "actions": [
         { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "scroll", "y": 0 },
         { "do": "wait", "for": "caption-with-evidence", "hold": 1 },
         { "do": "click", "selector": ".caption", "hold": 5, "still": true }
       ],
