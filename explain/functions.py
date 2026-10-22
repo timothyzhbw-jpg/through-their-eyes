@@ -37,6 +37,7 @@ from analytics.tactics import stat as tactics_value
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
 from analytics.xt import xt_for
 from explain.cards import MomentCard
+from sim import counterfactual as sim_cf
 from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
 from sim.counterfactual import (
     CounterfactualResult,
@@ -501,6 +502,61 @@ def turnover_at_resolution(ctx: EvalContext, run: MatchRun, event: str) -> float
     return float(out["cost"])
 
 
+def possession_result(ctx: EvalContext, run: MatchRun) -> str:
+    """What the hero's action did with the ball: kept, lost, open, shot or a shot's end
+    (`sim.counterfactual.possession_result`)."""
+    out = sim_cf.possession_result(run)
+    if out == "none":
+        raise Inconclusive("no decision on the ball in this run")
+    return out
+
+
+def possession_value(ctx: EvalContext, run: MatchRun) -> float:
+    """xT for the hero's team where his action ended, minus the opponents' if it was lost
+    (`sim.counterfactual.possession_value`, what the verdict's worth compares)."""
+    value = sim_cf.possession_value(run)
+    if not np.isfinite(value):
+        raise Inconclusive("no decision on the ball in this run")
+    return float(value)
+
+
+ACROSS_M = 5.0  # *tunable*: a pass or carry that gains or loses less ground than this goes across
+
+
+def action_end(ctx: EvalContext, run: MatchRun, part: str) -> str:
+    """Where the hero's action ended, as `possession_value` measures it: its `band` and `lane`
+    (as the metrics pitch_band and pitch_lane name a player's), or its `direction` from the ball
+    at his decision: forward, back or across (within ACROSS_M of where it started)."""
+    decision = run.hero_decision()
+    if decision is None:
+        raise Inconclusive("no decision on the ball in this run")
+    i = run.index(decision.player)
+    sign = 1.0 if run.players[i].team == 0 else -1.0
+    action = next(
+        (e for e in run.events if e.player == decision.player and e.frame == decision.frame
+         and e.type in ("pass", "shot")),
+        None,
+    )  # fmt: skip
+    if action is None:  # a carry: where a tackle won it off him, else where he ended up
+        tackle = next(
+            (e for e in run.events if e.type == "tackle" and e.frame > decision.frame
+             and e.attrs.get("won_from") == decision.player),
+            None,
+        )  # fmt: skip
+        end = np.array(tackle.attrs["at"]) if tackle is not None else run.pos[-1, i]
+    else:
+        end = np.array(action.attrs.get("end_at") or run.ball_pos[-1, :2])
+    x, y = (end[:2] * sign).tolist()
+    if part == "band":
+        return _band_at(x)
+    if part == "lane":
+        return _lane_at(y)
+    if part == "direction":
+        gained = x - float(run.ball_pos[decision.frame, 0]) * sign
+        return "forward" if gained > ACROSS_M else "back" if gained < -ACROSS_M else "across"
+    raise Inconclusive(f"action_end has no part {part!r}")
+
+
 _GRID: list[np.ndarray] = []
 
 
@@ -521,6 +577,9 @@ FUNCTIONS: dict[str, Callable[..., Any]] = {
     "scan_side": scan_side,
     "max_visibility": max_visibility,
     "opponents_bypassed": opponents_bypassed,
+    "possession_result": possession_result,
+    "possession_value": possession_value,
+    "action_end": action_end,
     "seconds_between": seconds_between,
     "turnover_at_resolution": turnover_at_resolution,
     "tactics_stat": tactics_stat,
@@ -632,15 +691,23 @@ def _attacking(run: MatchRun, i: int, f: int) -> np.ndarray:
     return run.pos[f, i] * (1.0 if run.players[i].team == 0 else -1.0)
 
 
-def _pitch_band(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
-    x = _attacking(run, ctx.player(run, player), f)[0]
+def _band_at(x: float) -> str:
+    """The band of the pitch's length at x, in attacking coordinates."""
     return BANDS[0 if x < -THIRD else 1 if x < 0 else 2 if x < THIRD else 3]
 
 
-def _pitch_lane(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
-    y = _attacking(run, ctx.player(run, player), f)[1]
+def _lane_at(y: float) -> str:
+    """The lane of the pitch's width at y, in attacking coordinates (+y: to his left)."""
     return LANES[0 if y < -3 * LANE else 1 if y < -LANE else 2 if y <= LANE else
                  3 if y <= 3 * LANE else 4]  # fmt: skip
+
+
+def _pitch_band(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
+    return _band_at(_attacking(run, ctx.player(run, player), f)[0])
+
+
+def _pitch_lane(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
+    return _lane_at(_attacking(run, ctx.player(run, player), f)[1])
 
 
 def _decision(ctx: EvalContext, run: MatchRun, f: int, player: str) -> Decision:

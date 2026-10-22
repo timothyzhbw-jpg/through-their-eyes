@@ -1,12 +1,15 @@
 // The Producer's desk in the breakdown panel (SPEC 6, failure drill). The rows are the crew's steps
 // and who answered each one: the model, its template, or code. "Take down" picks agents to fail
 // for the next run, and "Bring back" re-runs a downed agent from the workflow checkpoint. The
-// trace id names the run's spans in Application Insights.
+// trace id names the run's spans in Application Insights, and "Crew trace" opens the run's
+// timeline below.
 
 import { AGENTS, type Agent } from "../api/client";
+import { TraceButton } from "../crewtrace/CrewTrace";
 import { crewSteps, STEP_LABEL, type CrewStep } from "../producer/producer";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
+import { recordedTime } from "./Narration";
 
 const SOURCE = { llm: "Model", template: "Template", code: "Code" } as const;
 
@@ -71,7 +74,11 @@ function StepRow({ s, picked, busy }: { s: CrewStep; picked: boolean; busy: bool
   );
 }
 
-export function Producer() {
+export function Producer({
+  trace = null,
+}: {
+  trace?: { open: boolean; toggle: () => void } | null; // the crew trace, when there is a run
+}) {
   const { api, producer, controls } = useSession();
   const { origin, status } = useBreakdown();
   const { down, busy, error } = useStore(producer, (p) => p);
@@ -104,6 +111,7 @@ export function Producer() {
                 ? `Run with ${names(picked)} down`
                 : "Pick agents to take down"}
         </button>
+        {trace && <TraceButton open={trace.open} onClick={trace.toggle} />}
         {origin?.kind === "api" && (
           <span
             className="trace-id"
@@ -124,6 +132,21 @@ export function Producer() {
         )}
       </div>
       {error && <p className="note producer-error">{error}</p>}
+      {origin?.kind === "api" && origin.drill && origin.recordedAt && (
+        <p className="note producer-recorded">
+          Recorded run from {recordedTime(origin.recordedAt)}: new model runs are limited for now
+          (this address, or today&apos;s budget), so this is the same drill as it ran then.
+        </p>
+      )}
+      {origin?.kind === "api" &&
+        origin.drill &&
+        !origin.recordedAt &&
+        (origin.rateLimited || origin.capped) && (
+          <p className="note producer-recorded">
+            New model runs are limited for now, so this ran without the model: the steps it ran
+            aired their templates.
+          </p>
+        )}
       <p className="note">
         A downed agent's model calls fail as in an outage: the step retries once, then airs its
         template. Bring back resumes the workflow from its checkpoint and re-runs that step; only

@@ -84,5 +84,10 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Upload to the static website
-        # Gzipped batches, hashed assets cached for a year, index.html last (web/scripts/stage.mjs).
-        run: infra/upload_web.sh "${{ vars.TTE_SITE_ACCOUNT }}"
+        # Gzipped, every file read back from the site with its type and bytes before index.html
+        # goes up, then the page loaded in Chrome; the previous index.html comes back on failure
+        # (infra/upload_web.sh).
+        run: |
+          site=$(az storage account show -g "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            -n "${{ vars.TTE_SITE_ACCOUNT }}" --query primaryEndpoints.web -o tsv)
+          infra/upload_web.sh "${{ vars.TTE_SITE_ACCOUNT }}" "$site"

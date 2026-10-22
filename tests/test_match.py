@@ -8,11 +8,14 @@ from sim.config import DT
 from sim.export import export_match
 from sim.match import (
     DEFAULT_PLAN,
+    MATCH_2,
     SET_PIECES,
     PossessionSpec,
     build_match,
     global_id,
+    match_heroes,
     open_play_seed,
+    plan_for,
     restart_after,
     score_after,
 )
@@ -65,7 +68,9 @@ def test_time_is_continuous_across_possessions(match):
 
 def test_hero_possessions_keep_their_seeds_and_open_play_is_keyed_by_the_match(match):
     heroes = {p.scenario: p.seed for p in match.possessions if p.scenario != "possession_play"}
-    assert heroes == {"blind_side_run": 3, "press_escape": 0, "corner_blind_side": 0}
+    assert heroes == {
+        "blind_side_run": 3, "press_escape": 0, "far_post_finish": 11, "corner_blind_side": 0
+    }  # fmt: skip
     play = [p for p in match.possessions if p.scenario == "possession_play"]
     assert len({p.seed for p in play}) == len(play)
     assert all(p.seed >= 1_000_000 for p in play)  # never a design or eval seed
@@ -128,7 +133,10 @@ def test_the_score_counts_goals_and_carries_over(match):
     for p in match.possessions:
         assert p.score_before == score
         score = score_after(score, p.run.events)
-    assert match.score == score == (0, 0)
+    assert match.score == score == (1, 0)  # far_post_finish 11 scores (SPEC 3.3, 3.6)
+    goal = next(p for p in match.possessions if p.scenario == "far_post_finish")
+    after = match.possessions[goal.index + 1]
+    assert after.restart == "kick_off" and after.score_before == (1, 0)
 
 
 def test_event_ids_move_to_match_time():
@@ -153,7 +161,7 @@ def test_moments_are_detected_in_every_possession_and_lifted_to_match_time(match
         assert m["anchor_t"] == pytest.approx(m["anchor_frame"] * DT, abs=1e-4)
         assert m["id"] == global_id(m["local_id"], p.start)
     lenses = {m["actor"]: m["selected_lens"] for m in moments if m["hero"]}
-    assert lenses == {"H8": "scan", "H4": "pressure", "H5": "scan"}
+    assert lenses == {"H8": "scan", "H4": "pressure", "H9": "scan", "H5": "scan"}
 
 
 def test_the_match_export_is_the_hero_run_schema_plus_a_match_block(match, export):
@@ -211,3 +219,25 @@ def test_shot_frame_attrs_and_the_save_shot_id_move_to_match_time():
     shot = by_id[save["attrs"]["shot"]]
     assert shot["type"] == "shot"
     assert shot["attrs"]["outcome"] == "saved"
+
+
+def test_match_2_plays_the_same_heroes_on_other_gated_seeds_in_another_order():
+    # The seeds passed the demo seeds' per-seed gates (SPEC 3.1): hero moment and lens, the
+    # intervention changes the outcome, every claim supported, an offline breakdown.
+    assert plan_for(2) is MATCH_2 and plan_for(1) is DEFAULT_PLAN and plan_for(7) is DEFAULT_PLAN
+    assert match_heroes(2) == [
+        ("press_escape", 1),
+        ("corner_blind_side", 2),
+        ("blind_side_run", 11),
+    ]
+    assert match_heroes(1) == [(s.scenario, s.seed) for s in DEFAULT_PLAN if s.seed is not None]
+    assert 15 <= len(MATCH_2) <= 25
+    longest = sum(spec.max_s or 0.0 for spec in MATCH_2 if spec.seed is None)
+    assert longest + 3 * 7.0 <= 900  # a hero possession lasts about 6 s
+    m2 = build_match(2)
+    assert 600 <= m2.duration_s <= 900
+    assert [p.scenario for p in m2.possessions] == [s.scenario for s in MATCH_2]
+    first = next(p for p in m2.possessions if p.scenario != "possession_play")
+    assert first.start * DT <= 30
+    seeds1 = {open_play_seed(1, n) for n in range(len(DEFAULT_PLAN))}
+    assert seeds1.isdisjoint(p.seed for p in m2.possessions if p.scenario == "possession_play")

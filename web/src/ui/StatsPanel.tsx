@@ -357,7 +357,8 @@ export function StatsPanel() {
             Measured from tracking and the event feed, not verified claims. Sprint: above 25.2 km/h
             for 0.4 s; high-speed running: above 19.8 km/h (Gualtieri et al., 2023). Pass difficulty
             0–1: 40% interception risk along the lane, 20% each pressure on the passer, pressure on
-            the receiver and distance.
+            the receiver and distance. Tackles are not modelled yet (only the pressure hero has
+            them): the ball changes hands by interceptions and balls out of play.
           </p>
           {view.kind === "match" && (
             <Segmented

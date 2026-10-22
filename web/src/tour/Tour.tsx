@@ -46,13 +46,15 @@ const boxOf = (r: DOMRect): Box => ({ top: r.top, left: r.left, width: r.width, 
 const NOTHING = { target: null, keep: [] };
 
 /** What the card should leave visible, by weight: what the viewer reads (the caption, the
- * moment or evidence card, Your call's card, the board beside his eyes), then the controls. */
+ * moment or evidence card, Your call's and Take his eyes' cards, the board beside his eyes), then
+ * the controls. */
 const KEEP_CLEAR: [string, number][] = [
   [".stage-caption", 3],
   [".stage .views", 2], // the picture: on a phone it is only the top of the screen
   [".stage-card > *", 3],
   [".slot.pip", 3],
   [".yc-card", 3],
+  [".te-card", 3],
   [".stage-run", 2],
   [".header-end", 2],
   [".transport", 2],

@@ -48,6 +48,7 @@ const { values: opt } = parseArgs({
     runs: { type: "string", default: "3" },
     profiles: { type: "string", default: "desktop,phone,desktop-3g,phone-3g" },
     timeout: { type: "string", default: "90" }, // seconds per load
+    settle: { type: "string", default: "1.5" }, // seconds after the players, for late requests
     json: { type: "string" },
     software: { type: "boolean", default: false },
     headed: { type: "boolean", default: false },
@@ -91,6 +92,7 @@ function instrument() {
     offline: null,
     frames: [],
     longTasks: [],
+    lcp: [], // [time, area px², "tag.class text…"] per largest-contentful-paint entry
   };
   window.__ttePerf = T;
   new MutationObserver(() => {
@@ -105,6 +107,18 @@ function instrument() {
     }).observe({ type: "longtask", buffered: true });
   } catch {
     // no long-task timing in this browser
+  }
+  try {
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) {
+        const el = e.element;
+        const name = el ? `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}` : "?";
+        const text = (el?.textContent ?? "").trim().slice(0, 40);
+        T.lcp.push([e.startTime, e.size, `${name} ${text}`]);
+      }
+    }).observe({ type: "largest-contentful-paint", buffered: true });
+  } catch {
+    // no LCP timing in this browser
   }
   let calls = 0;
   for (const proto of [WebGLRenderingContext.prototype, WebGL2RenderingContext.prototype]) {
@@ -148,8 +162,11 @@ const TYPES = {
   ".woff2": "font/woff2",
 };
 
-/** blob path -> { file, encoding, cache }: a build as one batch (the headers the site sent until
- * the staged upload), or the batches of a staged upload (scripts/stage.mjs, batches.tsv). */
+/** blob path -> { file, encoding, cache, type }: a build as one batch (the headers the site sent
+ * before the staged upload), or the batches of a staged upload (scripts/stage.mjs, batches.tsv)
+ * with the Content-Type each names. A batch that names none gets what `az storage blob
+ * upload-batch` stores: a guess from the extension, or none at all (application/octet-stream)
+ * when it has a Content-Encoding, the #115 failure. */
 function blobsOf(dir) {
   const blobs = new Map();
   const walk = (base, sub, batch) => {
@@ -163,12 +180,13 @@ function blobsOf(dir) {
   };
   const tsv = join(dir, "batches.tsv");
   if (!existsSync(tsv)) {
-    walk(dir, "", { encoding: "", cache: "public, max-age=300" });
+    walk(dir, "", { encoding: "", cache: "public, max-age=300", type: null });
     return blobs;
   }
   for (const line of readFileSync(tsv, "utf8").split("\n").filter(Boolean)) {
-    const [sub, encoding, cache] = line.split("\t");
-    walk(join(dir, sub), "", { encoding: encoding === "-" ? "" : encoding, cache });
+    const [sub, encoding, cache, type = "-"] = line.split("\t");
+    const named = type === "-" ? (encoding === "-" ? null : "application/octet-stream") : type;
+    walk(join(dir, sub), "", { encoding: encoding === "-" ? "" : encoding, cache, type: named });
   }
   return blobs;
 }
@@ -205,7 +223,7 @@ function serveLikeAzure(dir) {
       const status = blobs.has(path) ? 200 : 404;
       const size = statSync(blob.file).size;
       const headers = {
-        "Content-Type": TYPES[extname(path)] ?? "application/octet-stream",
+        "Content-Type": blob.type ?? TYPES[extname(path)] ?? "application/octet-stream",
         "Content-Length": size,
         "Cache-Control": blob.cache,
         ETag: `"${size}-${statSync(blob.file).mtimeMs}"`,
@@ -285,7 +303,9 @@ async function load(browser, profile, url, timeoutS) {
       break;
     }
   }
-  await page.waitForTimeout(1500); // late requests of the first screen
+  // Late requests of the first screen; a longer --settle also sees later LCP candidates (a
+  // caption). LCP stops at the first input, which a judge gives within seconds; a lab run gives none.
+  await page.waitForTimeout(Number(opt.settle) * 1000);
   const perf = await page.evaluate(() => {
     const nav = performance.getEntriesByType("navigation")[0];
     const fcp = performance.getEntriesByName("first-contentful-paint")[0];
@@ -301,6 +321,7 @@ async function load(browser, profile, url, timeoutS) {
       canvas: T.canvas,
       firstDraw: T.firstDraw,
       longTasks: T.longTasks,
+      lcp: T.lcp,
       offline: badge,
     };
   });
@@ -330,16 +351,17 @@ function report(results, source) {
   const runs = Math.max(...results.map((r) => r.run)) + 1;
   console.log(`renderer: ${results[0]?.renderer}; ${runs} cold loads each, median; ${source}`);
   console.log(
-    "| profile | path | first paint s | first draw s | players s | TBT ms | total KB | JS KB | CSS KB | fonts KB | JSON KB | model KB | offline |",
+    "| profile | path | first paint s | first draw s | players s | LCP s | TBT ms | total KB | JS KB | CSS KB | fonts KB | JSON KB | model KB | offline |",
   );
-  console.log("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+  console.log("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
   const keys = [...new Set(results.map((r) => `${r.profile} ${r.path}`))];
   for (const key of keys) {
     const rs = results.filter((r) => `${r.profile} ${r.path}` === key);
     const m = (f) => median(rs.map(f));
     console.log(
       `| ${rs[0].profile} | \`${rs[0].path}\` | ${S(m((r) => r.fcp))} | ${S(m((r) => r.firstDraw))} | ` +
-        `${S(m((r) => r.players))} | ${m((r) => r.tbt)?.toFixed(0)} | ${KB(m((r) => r.bytes.total))} | ` +
+        `${S(m((r) => r.players))} | ${S(m((r) => r.lcp?.at(-1)?.[0] ?? null))} | ` +
+        `${m((r) => r.tbt)?.toFixed(0)} | ${KB(m((r) => r.bytes.total))} | ` +
         `${KB(m((r) => r.bytes.js ?? 0))} | ${KB(m((r) => r.bytes.css ?? 0))} | ` +
         `${KB(m((r) => r.bytes.font ?? 0))} | ${KB(m((r) => r.bytes.json ?? 0))} | ` +
         `${KB(m((r) => r.bytes.model ?? 0))} | ${rs.filter((r) => r.offline).length}/${rs.length} |`,

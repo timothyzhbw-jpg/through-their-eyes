@@ -10,7 +10,8 @@ import { SFX_NAMES } from "./sfx.mjs";
 import { estimateSpeechSeconds } from "./vo.mjs";
 
 const GRADES = new Set(["none", "night", "cool", "warm", "bleach", "mono", "danger"]);
-const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in"]);
+const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue"]);
+const FITS = new Set(["cover", "pad"]);
 const TRANSITIONS = new Set(["cut", "fade", "flash", "dip", "whip", "glitch"]);
 const CROPS = new Set(["pov", "tactical", "stage"]);
 const NUMBER_WORD =
@@ -22,8 +23,29 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
  * @param {{ root: string, shotIds: Set<string>, assets: object[], harvest?: Array<{ persona: string, language: string }> }} ctx
  * @returns {{ errors: string[], warnings: string[] }}
  */
+/**
+ * The beats of one telling of the story: `story` ("blender", the default, or "app") keeps the beats
+ * tagged with it and every untagged beat. The two tellings of each story section are the same
+ * length, so the rest of the cut, and the score, do not move.
+ * @param {{ story?: string, beats?: object[] }} spec
+ * @param {string} [story] overrides spec.story
+ */
+export function storyBeats(spec, story) {
+  const pick = story ?? spec?.story ?? "blender";
+  return (spec?.beats ?? []).filter((beat) => beat.story == null || beat.story === pick);
+}
+
 export function validateTrailer(spec, ctx) {
   const errors = [];
+  // `pins`: a cine shot corner-pinned onto a screen in a rendered clip (video/pin.py).
+  for (const [k, pin] of (Array.isArray(spec?.pins) ? spec.pins : []).entries()) {
+    const at = `pins[${k}]`;
+    if (!pin || typeof pin.id !== "string" || !/^[A-Za-z0-9_-]+$/.test(pin.id)) errors.push(`${at}: id is not a safe file name`);
+    for (const key of ["clip", "corners", "matte"]) {
+      if (typeof pin?.[key] !== "string" || !pin[key]) errors.push(`${at}: ${key} is required`);
+    }
+    if (!spec.cine?.[pin?.source?.cine]) errors.push(`${at}: source.cine must name a cine shot`);
+  }
   const warnings = [];
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
     return { errors: ["trailer.json: expected an object"], warnings };
@@ -135,9 +157,13 @@ function checkTitles(titles, errors) {
     if (!title?.params || typeof title.params !== "object" || Array.isArray(title.params)) {
       errors.push(`${where}: params must be an object`);
     } else {
-      // `url` is the site's address (it may hold digits), not a number claim.
-      const { url, ...shown } = title.params;
+      // `url` is the site's address (it may hold digits), not a number claim; `legal` holds credit
+      // lines that a licence requires verbatim (a grant number, say), not claims either.
+      const { url, legal, ...shown } = title.params;
       if (url != null && typeof url !== "string") errors.push(`${where}: url must be a string`);
+      if (legal != null && !(Array.isArray(legal) && legal.every((line) => typeof line === "string"))) {
+        errors.push(`${where}: legal must be a list of strings`);
+      }
       for (const text of stringsIn(shown)) {
         for (const issue of spokenIssues(text, { allowPause: false })) errors.push(`${where}: ${issue} in params`);
       }
@@ -206,7 +232,8 @@ function checkBeats(spec, ctx, errors, warnings) {
       if (!(beat.freeze.at >= 0) || !(beat.dur > 0) || beat.freeze.at >= beat.dur) {
         errors.push(`${where}: freeze.at must be inside the beat`);
       }
-      if (!(beat.freeze.punch > 0)) errors.push(`${where}: freeze.punch must be positive`);
+      // No punch is a plain hold: the sharp frame, unscaled (a freeze-frame name card).
+      if (beat.freeze.punch != null && !(beat.freeze.punch > 0)) errors.push(`${where}: freeze.punch must be positive`);
     }
     checkOverlays(beat, i, where, titles, warnings, errors);
     checkVo(beat, where, spec, ctx, voIds, cursor, planned, errors, warnings);
@@ -216,6 +243,9 @@ function checkBeats(spec, ctx, errors, warnings) {
   });
 
   if (total >= 120) errors.push(`total duration ${trim(total)}s is not under 120s`);
+  // A margin under the platform's 2:00 (encoding padding, a stray frame): output.max_s caps the plan.
+  const cap = spec?.output?.max_s;
+  if (typeof cap === "number" && total > cap) errors.push(`total duration ${trim(total)}s is over output.max_s (${cap}s)`);
   warnVoFit(planned, warnings);
 }
 
@@ -244,12 +274,39 @@ function checkPicture(beat, i, where, cine, titles, ctx, errors) {
     if (!ctx.shotIds.has(picture.shot)) errors.push(`${where}: unknown capture shot "${picture.shot}"`);
     if (picture.in != null && !(picture.in >= 0)) errors.push(`${where}: in must be >= 0`);
     if (picture.speed != null && !(picture.speed > 0)) errors.push(`${where}: speed must be positive`);
+    if (picture.reverse != null && typeof picture.reverse !== "boolean") errors.push(`${where}: reverse must be true or false`);
     checkCrop(picture.crop, where, errors);
     checkPush(picture.push, where, errors);
     return;
   }
   if (picture.src === "title") {
     if (!titles[picture.id]) errors.push(`${where}: unknown title id "${picture.id}"`);
+    return;
+  }
+  if (picture.src === "clip") {
+    // A video rendered outside the repo (out/video/blender/…, git-ignored): its file is checked
+    // when the edit runs, so --check passes in CI where it is absent.
+    if (!repoFile(ctx.root, picture.path)) errors.push(`${where}: clip path "${picture.path}" must stay inside the repo`);
+    if (picture.in != null && !(picture.in >= 0)) errors.push(`${where}: in must be >= 0`);
+    if (picture.speed != null && !(picture.speed > 0)) errors.push(`${where}: speed must be positive`);
+    if (picture.reverse != null && typeof picture.reverse !== "boolean") errors.push(`${where}: reverse must be true or false`);
+    if (picture.fit != null && !FITS.has(picture.fit)) errors.push(`${where}: fit must be one of ${[...FITS].join(", ")}`);
+    checkPush(picture.push, where, errors);
+    return;
+  }
+  if (picture.src === "split") {
+    // Two sources side by side, each cropped at its native size (no scaling), with a divider.
+    for (const side of ["left", "right"]) {
+      const part = picture[side];
+      if (!part || (part.src !== "clip" && part.src !== "capture")) {
+        errors.push(`${where}: split.${side} must be a clip or a capture`);
+        continue;
+      }
+      if (part.src === "clip" && !repoFile(ctx.root, part.path)) errors.push(`${where}: split.${side} clip path "${part.path}" must stay inside the repo`);
+      if (part.src === "capture" && !ctx.shotIds.has(part.shot)) errors.push(`${where}: split.${side}: unknown capture shot "${part.shot}"`);
+      if (part.in != null && !(part.in >= 0)) errors.push(`${where}: split.${side}.in must be >= 0`);
+      if (!Array.isArray(part.crop) || part.crop.length !== 4) errors.push(`${where}: split.${side}.crop must be [x, y, w, h]`);
+    }
     return;
   }
   if (picture.src === "image") {
@@ -465,6 +522,7 @@ export function spokenIssues(text, { allowPause }) {
   let bare = text.replace(/\{[a-z_]+\.[a-z_]+\}/g, "");
   if (allowPause) bare = bare.replace(/\[pause\s+\d+\]/g, "");
   bare = bare.replace(/\b[HA]\d{1,2}\b/g, "");
+  bare = bare.replace(/\bNo\.\s?\d{1,2}\b/g, ""); // a shirt number ("No. 14") is a name too
   if (/\d/.test(bare)) issues.push("a digit outside a slot");
   if (NUMBER_WORD.test(bare)) issues.push("a number word");
   return issues;

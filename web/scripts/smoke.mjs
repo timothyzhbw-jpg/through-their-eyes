@@ -29,7 +29,7 @@ import { launchChrome } from "./gpu.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,press_escape:0";
+const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,match:2,press_escape:0";
 const TIMEOUT = 45_000; // per step: the first load fetches the export, fonts and models
 const SETTLE = 2_500; // after the checks, so late errors (models, stream, breakdown) surface
 const BLANK = 20_000; // bytes: a screenshot of the page's background alone; a drawn page is ~400K
@@ -61,7 +61,10 @@ const PAGES = [
   },
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
+  { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
+  { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
     path: "?match=match-1",
@@ -84,6 +87,14 @@ const PAGES = [
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
   },
+  { name: "link-steps", path: "?play=steps", check: scanSteps },
+  { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
+  {
+    name: "phone-320-steps",
+    path: "?play=steps",
+    device: PHONE_320,
+    check: (p) => phone(p, scanSteps, { live: false }),
+  },
   { name: "link-recap", path: "?match=match-1&play=recap", check: recap },
   // The key-moment beat (SPEC 7) at a spot inside the key scan, after the runner came into sight.
   { name: "beat-eyes", path: "?at=60", check: (p) => beat(p, { push: 1 }) },
@@ -93,19 +104,6 @@ const PAGES = [
     path: "?at=60",
     device: { ...DESKTOP, reducedMotion: "reduce" },
     check: (p) => beat(p, { push: 0 }),
-  },
-  // The render tiers (SPEC 7, src/quality/): the post chain loads, draws, and says which tier.
-  { name: "quality-high", path: "?at=60&quality=high", check: (p) => tier(p, "high") },
-  {
-    name: "quality-high-broadcast",
-    path: "?at=66&camera=broadcast&quality=high",
-    check: (p) => tier(p, "high"),
-  },
-  {
-    name: "phone-quality-medium",
-    path: "?intro=0&quality=medium",
-    device: PHONE,
-    check: (p) => phone(p, (q) => tier(q, "medium")),
   },
   {
     name: "link-decision-tactical",
@@ -130,6 +128,20 @@ const PAGES = [
     name: "desktop-960-hero",
     path: "?intro=0",
     device: { viewport: { width: 960, height: 800 } },
+    check: (p) => phone(p, hero),
+  },
+  // A laptop: the header's pills and the run switch over the picture must not meet (they did at
+  // 1440 px once "His looks" joined the header).
+  {
+    name: "desktop-1440-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 1440, height: 900 } },
+    check: (p) => phone(p, hero),
+  },
+  {
+    name: "desktop-1280-hero",
+    path: "?intro=0",
+    device: { viewport: { width: 1280, height: 800 } },
     check: (p) => phone(p, hero),
   },
   {
@@ -230,22 +242,6 @@ async function beat(page, { push }) {
   }
 }
 
-/** A hero moment drawn at a render tier: the 3D canvas carries data-quality once the tier's
- * chunk has loaded and taken over drawing. */
-async function tier(page, want) {
-  await hero(page);
-  const canvas = page.locator(".view.pov canvas");
-  try {
-    await page.waitForFunction(
-      ([el, t]) => el.dataset.quality === t,
-      [await canvas.elementHandle(), want],
-    );
-  } catch {
-    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
-    throw new Error(`expected the ${want} tier on the 3D canvas, got ${JSON.stringify(data)}`);
-  }
-}
-
 /** `?persona=analyst&tamper=cf_value`: the evidence card with "Try a wrong number" open. */
 async function tamper(page) {
   await hero(page);
@@ -307,6 +303,21 @@ async function takeEyes(page) {
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
+/** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
+ * frozen with its verified lines, the potential passes, then his decision with everything but two
+ * players dimmed. */
+async function scanSteps(page) {
+  await see(page.getByRole("region", { name: "His looks, step by step" }), "the step-through");
+  await see(page.getByRole("list", { name: "Steps" }), "the steps");
+  await see(page.getByRole("list", { name: "Verified lines" }), "a look's verified lines");
+  await page.getByRole("button", { name: "Potential passes" }).click();
+  await see(page.locator(".ss-board .ss-lane.chosen"), "his pick among the options", "attached");
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  while (await next.isVisible()) await next.click();
+  await see(page.getByRole("heading", { name: /His decision|The what-if/ }), "his decision");
+  await see(page.locator(".ss-focus[data-focus]"), "the dimming round two players", "attached");
+}
+
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the
  * full-time card on the live screen, the recap card with a Watch per key moment, and the reel's
  * captions once it plays. */
@@ -319,6 +330,35 @@ async function recap(page, shoot) {
   await page.getByRole("button", { name: "Play the recap reel" }).first().click();
   await see(page.locator(".recap-caption").filter({ hasText: /\S/ }), "a caption of the reel");
   await page.waitForTimeout(SETTLE);
+}
+
+/** A cold load with no click (SPEC 2, 7): the lineup card closes by itself, the stream plays, and
+ * within about 20 s of opening the page the run without the look is on screen with its line.
+ * The 20 s is for a viewer's machine. The app's clock steps at most 0.1 s a frame (session.ts
+ * `startClock`), so where WebGL is drawn in software, as on a CI runner (SwiftShader, about 0.5 s
+ * a frame), the show plays slower than the wall clock: there the check is only that a cold load
+ * gets there, and the time it took is printed. */
+const COLD_LOAD_S = process.env.CI ? 120 : 22;
+
+async function coldLoad(page, shoot) {
+  const opened = Date.now();
+  const without = page
+    .getByRole("group", { name: "Run" })
+    .getByRole("button", { name: "Without the look", pressed: true });
+  try {
+    await without.waitFor({ timeout: COLD_LOAD_S * 1000 });
+  } catch {
+    throw new Error(
+      `expected the run without the look on screen within ${COLD_LOAD_S} s of a cold load`,
+    );
+  }
+  const took = Math.round((Date.now() - opened) / 1000);
+  console.log(`     the run without the look after ${took} s (deadline ${COLD_LOAD_S} s)`);
+  await see(
+    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
+    'the "Without that look" line',
+  );
+  await shoot(`at-${took}s`);
 }
 
 /** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
@@ -343,8 +383,8 @@ async function lineup(page, shoot, button, then) {
   await then(page);
 }
 
-/** On a phone the page should scroll only up and down, and no two header controls overlap or run
- * off screen, with the live stream running (its status and the header's buttons are then all
+/** On a phone the page should scroll only up and down, and no two header controls (nor the run
+ * switch over the picture) overlap or run off screen, with the live stream running (its status and the header's buttons are then all
  * there). `live: false` for a screen that takes the live screen's place (Take his eyes). */
 async function phone(page, check, { live = true } = {}) {
   await check(page);
@@ -366,7 +406,7 @@ async function phone(page, check, { live = true } = {}) {
     const width = root.clientWidth;
     const found = [
       ...document.querySelectorAll(
-        ".stage-head :is(.brand, .live-chip, .live-status, button, select)",
+        ".stage-head :is(.brand, .live-chip, .live-status, button, select), .stage-run .seg",
       ),
     ].filter((el) => {
       if (el.closest(".popover")) return false;

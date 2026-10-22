@@ -129,6 +129,8 @@ function Timeline() {
   const last = run.frames - 1;
   const X = (f: number) => 6 + ((width - 12) * f) / last;
   const key = hero.keyScan;
+  // The run without the look, through his eyes: the key scan is the look it leaves out.
+  const removed = mode === "counterfactual" && povPlayer === hero.heroId;
   const step = hero.keeperStep; // a keeper's key step instead of a key scan (screened_shot)
   const scans = run.scans.filter((s) => s.player === povPlayer);
   const marked = marker ? hero.runs.factual.scans.find((s) => s.id === marker) : undefined;
@@ -143,8 +145,8 @@ function Timeline() {
   // A decision inside or just after the key scan (a striker who looks while the ball comes): the
   // two labels would overlap, so "Key scan" ends where the scan starts and "Decision" starts at
   // its frame.
-  const tight =
-    !!key && width > 0 && X(decision) - X(key.start) < TIGHT_LABELS_PX && X(key.start) > 64;
+  const labelsPx = removed ? TIGHT_LABELS_PX + 32 : TIGHT_LABELS_PX; // "Removed look" is longer
+  const tight = !!key && width > 0 && X(decision) - X(key.start) < labelsPx && X(key.start) > 64;
 
   return (
     <div
@@ -236,15 +238,17 @@ function Timeline() {
           )}
           {mode === "counterfactual" && key && povPlayer === hero.heroId && (
             <rect
+              className="removed-look"
               x={X(key.start)}
               y={8}
               width={X(key.end) - X(key.start)}
               height={height - 16}
-              fill="none"
               stroke="var(--dusk)"
               strokeWidth={1.5}
               strokeDasharray="3 3"
-            />
+            >
+              <title>Removed look</title>
+            </rect>
           )}
           {marked && (
             <rect
@@ -311,9 +315,13 @@ function Timeline() {
               className={tight ? "mark key before" : "mark key"}
               style={at(key.start)}
               onClick={() => controls.seek(Math.max(0, key.start - 8))}
-              title="Jump to just before the key scan"
+              title={
+                removed
+                  ? "Jump to just before the look this run leaves out"
+                  : "Jump to just before the key scan"
+              }
             >
-              Key scan
+              {removed ? "Removed look" : "Key scan"}
             </button>
           )}
           <button

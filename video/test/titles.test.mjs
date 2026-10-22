@@ -16,13 +16,18 @@ const TEMPLATES = [
   { name: "freeze", alpha: true, params: ["items", "title"] },
   { name: "verified", alpha: true, params: ["kicker", "items", "stagger"] },
   { name: "refuted", alpha: true, params: ["before", "value", "after", "stamp", "kicker"] },
-  { name: "lineup", alpha: false, params: ["header", "cards", "highlight", "stagger"] },
+  { name: "lineup", alpha: false, params: ["header", "cards", "highlight", "stagger", "start"] },
   { name: "redcard", alpha: true, params: ["title", "sub"] },
   { name: "subboard", alpha: true, params: ["off", "on", "caption"] },
   { name: "tag", alpha: true, params: ["text", "sub"] },
   { name: "spec", alpha: false, params: ["header", "rows", "footer"] },
   { name: "end", alpha: false, params: ["name", "tagline", "url", "lines"] },
   { name: "countdown", alpha: true, params: ["label", "sub", "secs"] },
+  { name: "caption", alpha: true, params: ["text", "dur"] },
+  { name: "label", alpha: true, params: ["text"] },
+  { name: "namecard", alpha: true, params: ["name", "role", "sub", "spot", "side", "scrim"] },
+  { name: "chapter", alpha: false, params: ["label", "title"] },
+  { name: "duo", alpha: true, params: ["left", "right"] },
 ];
 
 const read = (file) => readFileSync(file, "utf8");
@@ -155,6 +160,8 @@ test("ffmpeg args for opaque H.264 and alpha ProRes", async () => {
     "medium",
     "-pix_fmt",
     "yuv420p",
+    "-threads",
+    "4",
     "-y",
     "out/card.mp4",
   ]);
@@ -177,6 +184,8 @@ test("ffmpeg args for opaque H.264 and alpha ProRes", async () => {
     "4444",
     "-pix_fmt",
     "yuva444p10le",
+    "-threads",
+    "4",
     "-y",
     "out/slam.mov",
   ]);
@@ -184,4 +193,10 @@ test("ffmpeg args for opaque H.264 and alpha ProRes", async () => {
   const { renderTitle } = await import("../lib/titles.mjs");
   assert.equal(typeof renderCine, "function");
   assert.equal(typeof renderTitle, "function");
+});
+
+test("no title animates a blur: sharp frames only", () => {
+  const css = read(path.join(TITLES, "titles.css"));
+  assert.doesNotMatch(css, /blur\(/, "titles.css uses blur()");
+  assert.doesNotMatch(read(path.join(TITLES, "titles.js")), /blur\(/, "titles.js uses blur()");
 });

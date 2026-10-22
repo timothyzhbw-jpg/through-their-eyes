@@ -267,7 +267,7 @@ api() {
     "TTE_COSMOS_ENDPOINT=${TTE_COSMOS_ENDPOINT:?}" "TTE_COSMOS_DATABASE=$COSMOS_DB" \
     "AZURE_CLIENT_ID=${TTE_API_CLIENT_ID:?run provision first}" \
     "TTE_WEB_ORIGIN=${TTE_WEB_ORIGIN:-*}" "TTE_DAILY_MODEL_CAP=${TTE_DAILY_MODEL_CAP:-40}" \
-    "TTE_MATCHES=${TTE_MATCHES:-blind_side_run:3,corner_blind_side:0,match:1,press_escape:0}" -o none
+    "TTE_MATCHES=${TTE_MATCHES:-blind_side_run:3,corner_blind_side:0,match:1,match:2,press_escape:0}" -o none
   az containerapp ingress update -g "$RG" -n "$APP" --target-port 8000 -o none
   echo "https://$(az containerapp show -g "$RG" -n "$APP" \
     --query properties.configuration.ingress.fqdn -o tsv)/health"
@@ -276,9 +276,9 @@ api() {
 web() {
   step "Build web/ (API: ${TTE_API_URL:-none, bundled data only})"
   (cd web && npm ci --no-audit --no-fund && VITE_API_URL="${TTE_API_URL:-}" npm run build)
-  step "Upload web/dist to $SITE (gzipped, hashed assets cached for a year)"
-  infra/upload_web.sh "$SITE"
-  echo "${TTE_WEB_URL:-$(az storage account show -g "$RG" -n "$SITE" --query primaryEndpoints.web -o tsv)}"
+  local url=${TTE_WEB_URL:-$(az storage account show -g "$RG" -n "$SITE" --query primaryEndpoints.web -o tsv)}
+  step "Upload web/dist to $SITE (gzipped, read back from $url before index.html goes up)"
+  infra/upload_web.sh "$SITE" "$url"
 }
 
 github() {
