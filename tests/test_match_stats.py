@@ -10,7 +10,6 @@ import pytest
 from eval.match_stats import (
     COLUMNS,
     NO_REFERENCE,
-    PENDING,
     SPEC_SOURCE,
     TeamPossession,
     measure,
@@ -160,7 +159,7 @@ def test_rows_pool_the_matches_and_scale_counts_to_90_minutes():
     # Home time 3.0 s + 2.0 s over 5.6 s + 4.0 s of team possession.
     assert rows["Home team's share of possession time (%)"].sim.startswith("52.1%")
     assert rows["Shots per 90 min"].sim.startswith("551 (0.5 ±")
-    assert rows["Shot outcomes (goals, saves, misses)"].sim == PENDING
+    assert rows["Shot outcomes (goals, saves, misses)"].sim == "0 goals of 1 shot"
     play = rows["Play per match (min)"]
     assert play.sim == "0.08 ± 0.02 (n = 2 matches)"  # (5.8 s + 4.0 s) / 2 / 60
     assert play.inside == "inconclusive"  # fewer than 10 matches

@@ -131,10 +131,11 @@ on an LLM.
   (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
-  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 18 possessions: 15 open-play
-  passages and three heroes. On this Mac it lasts 691.4 s (11:31), and the heroes start at 0:30
-  (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0) and 8:21 (the
-  set-piece hero `corner_blind_side` seed 0).
+  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
+  passages and four heroes. On this Mac it lasts 701.0 s (11:41) and ends 1–0. The heroes start
+  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0), 6:41 (the
+  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:30 (the set-piece hero
+  `corner_blind_side` seed 0, at 1–0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
@@ -142,7 +143,9 @@ on an LLM.
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
     for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
     puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 4 of 15 end in a throw-in.
+    passages reach their cap: on this Mac 4 of 15 end in a throw-in. Where the ball goes out
+    depends on the platform (§3.7): on the live service (Linux x86) the 18-possession version
+    ran 13:06 on 2026-10-21, against 11:31 on this Mac.
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -153,10 +156,11 @@ on an LLM.
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
-    1 kick-off, 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
+    2 kick-offs (the start, and after the goal), 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
-  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
-    possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
+  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
+    never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
+    look; without it, the counterfactual goes near post and A1 saves it (§3.6).
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
     per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
     is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
@@ -662,14 +666,14 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,855 passes attempted (79.4% of resolved ones completed), 371 possession changes
-      (354 interceptions, 18 out of play, no tackles), 485 team possessions of 11.1 s on average,
-      and no shots: no scenario of the default plan has the shot model on, so shot outcomes are
-      pending module A. None of these has a target to check: no range is configured, and no paper
-      in REFERENCES.md is recorded as printing one. The two rows that have a target are SPEC 3.1's,
-      and both are inside: 18 scenario possessions per match (target 15–25) and 12.31 min of play
-      (target 10–15). 340 of 360 scenario possessions start with the home team, which has 56.1% of
-      the possession time.
+      of play, 1,853 passes attempted (79.7% of resolved ones completed), 367 possession changes
+      (349 interceptions, 17 out of play, no tackles), 486 team possessions of 11.1 s on average,
+      and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
+      match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
+      has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
+      printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
+      scenario possessions per match (target 15–25) and 12.47 min of play (target 10–15). 360 of
+      380 scenario possessions start with the home team, which has 56.6% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
@@ -808,6 +812,8 @@ Kernels in [analytics/stats.py](../analytics/stats.py) (numpy reference), the ti
 the event feed (`pass`, `reception`, `interception`, `out`, `shot`). No sim velocities, beliefs
 or pass outcomes from the sim's own attributes. A stitched match's possessions are tracking
 segments: positions jump at a possession's first frame, so no speed, distance or pass spans one.
+**Tackles are not modelled yet** outside the pressure hero (`press_escape`): in a stitched match
+the ball changes hands only by interceptions and balls out of play, and the panel says so.
 
 **Causal.** Every value at frame f uses frames ≤ f only (tested by truncating the input), so it
 could run frame by frame on a live feed. Each cue carries the frame at which its value is final:
@@ -2002,7 +2008,7 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (19 possessions, 12.5 min) is inside §3.1's 15–25 and 10–15 min; its one shot per match is the shot hero's, a goal by construction |
 | §4 analytics | 8 | 0 | — |
 | §5 explain | 8 | 0 | — |
 | §7 render | 10 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |
