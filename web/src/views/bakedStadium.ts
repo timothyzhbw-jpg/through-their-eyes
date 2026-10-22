@@ -61,6 +61,8 @@ export const GROUND_LIGHT_EXTENT = { x: 130, y: 92 };
 /** How much of the baked light's variation the grass shows (1: all of it). */
 const GRASS_CONTRAST = 0.7;
 export const NIGHT_LAMP = "#fff2d8";
+/** The roof-edge lamps' colour, as a multiple of the lamp colour (see dress). */
+export const ROOF_LAMP_LEVEL = 0.2;
 
 export interface BakedModel {
   /** The dressed scene; every canvas shows its own clone (geometry and materials shared). */
@@ -333,7 +335,9 @@ export function dress(scene: THREE.Group, textures: AppTextures): BakedModel {
   let groundLight: THREE.Texture | null = null;
   const grass: THREE.Mesh[] = [];
   const lamp = new THREE.Color(NIGHT_LAMP).multiplyScalar(2.5);
-  const roofLamp = new THREE.Color(NIGHT_LAMP).multiplyScalar(1.4);
+  // The roof's lamps sit at the top of the first-person frame, behind the header and the HUD:
+  // dim, so they read as lamps but stay well below the HUD text (luma about 90 against 183).
+  const roofLamp = new THREE.Color(NIGHT_LAMP).multiplyScalar(ROOF_LAMP_LEVEL);
   const cache = new Map<string, THREE.Material>();
   const crowdMaps = new Map<number, THREE.Material>();
   const shared = (name: string, make: () => THREE.Material) => {
@@ -382,8 +386,8 @@ export function dress(scene: THREE.Group, textures: AppTextures): BakedModel {
         });
         break;
       case "tunnel_glow":
-        // Dark like the stands: a lit opening would read as an object of interest.
-        mesh.material = shared(old.name, () => new THREE.MeshBasicMaterial({ color: "#23292d" }));
+        // Near black: the tunnel reads as a dark opening, not a flat panel or an object of interest.
+        mesh.material = shared(old.name, () => new THREE.MeshBasicMaterial({ color: "#0b0e10" }));
         break;
       case "board":
       case "ribbon":

@@ -363,7 +363,16 @@ const textures = () => ({
 
 function fakeScene(): THREE.Group {
   const scene = new THREE.Group();
-  for (const name of ["stadium", "crowd", "baked_vc", "lamp", "board", "pitch", "apron"]) {
+  for (const name of [
+    "stadium",
+    "crowd",
+    "baked_vc",
+    "lamp",
+    "board",
+    "pitch",
+    "apron",
+    "roof_lamp",
+  ]) {
     const material = new THREE.MeshStandardMaterial({ name });
     if (name === "stadium" || name === "pitch" || name === "apron")
       material.map = new THREE.Texture();
@@ -454,7 +463,7 @@ describe("loading the baked stadium", () => {
     const model = dress(scene, textures());
     const meshes: THREE.Mesh[] = [];
     model.scene.traverse((o) => (o as THREE.Mesh).isMesh && meshes.push(o as THREE.Mesh));
-    expect(meshes).toHaveLength(5); // the pitch and the apron are not drawn
+    expect(meshes).toHaveLength(6); // the pitch and the apron are not drawn
     for (const m of meshes) expect(m.material).toBeInstanceOf(THREE.MeshBasicMaterial);
     expect(meshes[0].material).toMatchObject({ map: expect.any(THREE.Texture) }); // the stands
     expect(meshes[1].material).toMatchObject({ vertexColors: true, alphaTest: 0.5 }); // crowd
@@ -465,7 +474,13 @@ describe("loading the baked stadium", () => {
       "baked_vc",
       "lamp",
       "board",
+      "roof_lamp",
     ]);
     expect(model.groundLight).toBe(light.map);
+    // The roof's lamps sit behind the first-person HUD: dim, so the HUD never looks struck through
+    // (Bowen, 2026-10-22). They stay lamp-coloured and marked as lamps.
+    const roof = meshes[5].material as THREE.MeshBasicMaterial;
+    expect(Math.max(roof.color.r, roof.color.g, roof.color.b)).toBeLessThanOrEqual(0.25);
+    expect(roof.userData.lamp).toBe(true);
   });
 });
