@@ -3693,6 +3693,14 @@ optgroup {
     white-space: nowrap;
   }
 }
+/* Below 1181 px the status shares the header row with the Live pill and the buttons: only "streaming"
+   fits. The sprinters' names (names, since #126: "sprinting N. Varnhall") wrapped into a column
+   that reached the run switch at 960 px, so they are left out there. */
+@media (max-width: 1180px) {
+  .stage-head .live-status .sprint {
+    display: none;
+  }
+}
 
 /* ---------- motion ---------- */
 /* Cards and captions rise and fade in, sharp from the first frame: no blur-in (Bowen: blur is

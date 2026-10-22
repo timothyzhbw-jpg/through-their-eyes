@@ -18,6 +18,7 @@ import type {
   RunName,
   Vec2,
 } from "./types";
+import { shortName } from "./roster";
 
 export const SCHEMA_VERSION = 5;
 
@@ -440,7 +441,7 @@ export function runLabels(hero: Hero): RunLabels {
 /** A forced action as "if he …" and "… over …": ["carried it", "carrying it"]. */
 function forced(action: string): [string, string] {
   if (action.startsWith("pass:"))
-    return [`passed to ${action.slice(5)}`, `passing to ${action.slice(5)}`];
+    return [`passed to ${shortName(action.slice(5))}`, `passing to ${shortName(action.slice(5))}`];
   if (action === "carry") return ["carried it", "carrying it"];
   if (action === "shot") return ["shot", "shooting"];
   const post = shotPost(action);
@@ -597,7 +598,7 @@ export function easedHeadAt(hero: Hero, run: Run, j: number, f: number): number 
 // ---------- labels ----------
 
 export function actionLabel(action: string): string {
-  if (action.startsWith("pass:")) return `Pass to ${action.slice(5)}`;
+  if (action.startsWith("pass:")) return `Pass to ${shortName(action.slice(5))}`;
   if (action === "carry") return "Carry forward";
   if (action === "shot") return "Shoot";
   const post = shotPost(action);

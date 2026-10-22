@@ -166,6 +166,11 @@ def test_metadata_describes_teams_players_and_possessions(built, matches):
     assert meta["synthetic"] is True
     assert meta["frame_rate_hz"] == 25 and meta["pitch"]["length_m"] == 105
     assert [t["id"] for t in meta["teams"]] == [0, 1]
+    # The invented clubs of sim/roster.py, as the app names them (SPEC 4.6).
+    assert [(t["name"], t["side"]) for t in meta["teams"]] == [
+        ("Kestrel Bay", "home"),
+        ("Corvane Vale", "away"),
+    ]
     for p in meta["players"]:
         assert set(p) >= {"id", "team", "role", "number", "name"}
     for entry in meta["matches"]:

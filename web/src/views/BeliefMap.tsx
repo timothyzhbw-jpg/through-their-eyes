@@ -10,6 +10,7 @@
 import { useMemo } from "react";
 import type { Camera3D } from "../store/playback";
 import { isSeen, type Hero } from "../data/hero";
+import { shortName } from "../data/roster";
 import type { RunName } from "../data/types";
 import { useView, type ViewSession } from "../session";
 import { useStore } from "../store/store";
@@ -156,9 +157,10 @@ export function BeliefMap() {
   const look = p(b.me.x + 6 * Math.cos(b.me.head), b.me.y + 6 * Math.sin(b.me.head));
   const ball = p(b.ball.x, b.ball.y);
   const press = b.players.filter((q) => q.role === "press").length;
-  const options = b.players.filter((q) => q.role === "option").map((q) => q.id);
+  const options = b.players.filter((q) => q.role === "option").map((q) => shortName(q.id));
   const label =
-    `${hero.heroId}'s picture of the pitch: ${press} defenders closing on ${b.carrier}` +
+    `${shortName(hero.heroId!)}'s picture of the pitch: ${press} defenders closing on ` +
+    shortName(b.carrier) +
     (options.length ? `; his likeliest passes: ${options.join(", ")}` : "");
   return (
     <div className="belief-map">
@@ -199,7 +201,7 @@ export function BeliefMap() {
                 cy={s.y}
                 r={s.rim ? 3.6 : 4.6}
               >
-                <title>{q.id}</title>
+                <title>{shortName(q.id)}</title>
               </circle>
             );
           })}

@@ -114,6 +114,9 @@ describe("audiences", () => {
       value: `${fastest.top_kmh.toFixed(1)} km/h`,
     });
     expect(lines[0].who).toContain(fastest.short);
+    // The clubs go by their fictional names (SPEC 4.6).
+    const accuracy = lines.find((h) => h.key === "pass_accuracy");
+    expect(accuracy?.value).toMatch(/^Kestrel Bay (\d+%|–) · Corvane Vale (\d+%|–)$/);
     // Before the first pass is final, no headline is about passes.
     const firstPass = stats.raw.cues.find((c) => c.kind === "pass")!;
     expect(headlines(stats, firstPass.frame - 1).some((h) => h.key.includes("pass"))).toBe(false);

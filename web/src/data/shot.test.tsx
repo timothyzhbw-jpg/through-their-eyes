@@ -87,7 +87,7 @@ describe("a placed shot", () => {
     expect(factual).toContain("Goal.");
     const cf = render(session("counterfactual"), <StoryPanel />);
     expect(cf).toContain("Decision: shoot at the near post");
-    expect(cf).toContain("A1 saves it.");
+    expect(cf).toContain("H. Talvisto saves it.");
     const times = [...factual.matchAll(/class="t">([\d.]+) s</g)].map((m) => Number(m[1]));
     expect(times).toEqual([...times].sort((a, b) => a - b));
   });
@@ -95,7 +95,7 @@ describe("a placed shot", () => {
   it("compares where he shot and how it ended in each run", () => {
     const html = render(session("factual"), <VerdictPanel />);
     expect(html).toContain("Shoot at the far post · goal");
-    expect(html).toContain("Shoot at the near post · saved by A1");
+    expect(html).toContain("Shoot at the near post · saved by H. Talvisto");
   });
 
   it("has its own headline, blurb and label", () => {

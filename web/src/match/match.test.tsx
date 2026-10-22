@@ -180,12 +180,12 @@ describe("the live match", () => {
     expect(html).toContain("Possession 2 of 3");
     expect(html).toContain("Throw-in");
     expect(html).toContain("The blind-side run");
-    expect(html).toMatch(/Home.*0.*–.*0.*Away/s);
+    expect(html).toMatch(/Kestrel Bay.*0.*–.*0.*Corvane Vale/s);
     session.playback.set({ frame: PRESS_START + 5 });
     html = render(session, <Scoreboard />);
     expect(html).toContain("Possession 3 of 3");
     expect(html).toContain("Escaping the press");
-    expect(html).toMatch(/Home.*1.*–.*0.*Away/s);
+    expect(html).toMatch(/Kestrel Bay.*1.*–.*0.*Corvane Vale/s);
   });
 
   it("marks possession boundaries and hero moments on the timeline, on the match clock", () => {

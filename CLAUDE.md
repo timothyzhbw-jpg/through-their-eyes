@@ -152,6 +152,11 @@ _Fill in as they come to exist._
   only; `--scenario blind_side_run --seed 3 --web-fixture web/src/stats/fixture_seed3.json`
   rewrites the viewer's parity fixture (a test fails when it is stale). The API serves them at
   `GET /api/matches/<id>/stats` and as `stat` messages on the live stream
+- `uv run python -m explain.tactics --match 1` — the tactics cards (SPEC 4.8, docs/TACTICS.md):
+  "why build from the back?" and "why focus on set pieces?" with their verified sentences in `en`
+  and `zh`, about 10 s; `--scenario press_escape --seed 0` for a hero; `--fixture --web-fixture
+  web/src/tactics/fixture.json` rewrites the viewer's fixture (a test fails when it is stale).
+  The API serves them at `GET /api/matches/<id>/tactics`
 - `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
   passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
   `eval/reports/pass_difficulty.md`

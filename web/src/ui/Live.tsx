@@ -16,6 +16,7 @@ import { createStore, useStore, type Store } from "../store/store";
 import { Chapter } from "./Chapter";
 import { ChevronIcon } from "./icons";
 import "./live.css";
+import { shortName } from "../data/roster";
 
 /** "Offline data" without the live service; otherwise the Live button and the stream's state. */
 export function LiveBar() {
@@ -75,7 +76,7 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
           {/* a hero moment streams one possession: "match over" would oversell it */}
           {status === "ended" && kind === "hero" ? "stream ended" : STATUS[status]}
           {live && sprint.length > 0 && (
-            <span className="sprint"> · sprinting {sprint.join(", ")}</span>
+            <span className="sprint"> · sprinting {sprint.map(shortName).join(", ")}</span>
           )}
         </span>
       )}
@@ -97,7 +98,8 @@ export function momentLabel(
   { receiver = true }: { receiver?: boolean } = {},
 ): string {
   const kind = KIND[m.kind] ?? m.kind.replaceAll("_", " ");
-  return `${kind} · ${m.actor ?? "?"}${receiver && m.receiver ? ` → ${m.receiver}` : ""}`;
+  const who = (id: string) => shortName(id);
+  return `${kind} · ${m.actor ? who(m.actor) : "?"}${receiver && m.receiver ? ` → ${who(m.receiver)}` : ""}`;
 }
 
 /** A kind's name for a count of them: singular, plural. */

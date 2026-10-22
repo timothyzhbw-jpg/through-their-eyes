@@ -8,6 +8,7 @@ import { useStore } from "../store/store";
 import { boardZoom } from "../views/scene";
 import { Sample, sampleInto } from "../data/hero";
 import { toScreen } from "../options/passOptions";
+import { shortName } from "../data/roster";
 
 export function BlindSideOverlay() {
   const { hero, playback } = useView();
@@ -45,7 +46,7 @@ export function BlindSideOverlay() {
         );
         return (
           <div key={a.target} className="blind-tag" style={{ left: x, top: y }}>
-            <b>{hero.ids[a.target]}</b> {unseenLabel(a.unseen)}
+            <b>{shortName(hero.ids[a.target])}</b> {unseenLabel(a.unseen)}
             <span className="source" title="Live overlay from tracking, not a verified claim">
               sim
             </span>

@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import type { Persona } from "../api/client";
+import { clubName } from "../data/roster";
 
 const Parts = z.object({
   lane: z.number(),
@@ -396,7 +397,7 @@ export function headlines(
     lines.push({
       key: "pass_accuracy",
       label: "Pass accuracy",
-      value: `Home ${percent(totals.teams[0]?.accuracy ?? null)} · Away ${percent(totals.teams[1]?.accuracy ?? null)}`,
+      value: `${clubName(0)} ${percent(totals.teams[0]?.accuracy ?? null)} · ${clubName(1)} ${percent(totals.teams[1]?.accuracy ?? null)}`,
       who: "",
     });
   }

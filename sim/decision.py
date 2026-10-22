@@ -259,6 +259,12 @@ def _pass_option(
     return best
 
 
+def distance_xg(d_goal: float) -> float:
+    """Expected goals of an unplaced shot `d_goal` m from the goal centre: the sim's distance
+    model, used where the placed-shot model (`Scenario.shots`) is off."""
+    return float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
+
+
 def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
     """Every option with its success probability, value and softmax probability."""
     p = ctx.params
@@ -307,7 +313,7 @@ def evaluate_options(ctx: DecisionContext) -> list[OptionEval]:
     if d_goal <= p.shot_range and ctx.shots and ctx.keeper >= 0:
         options.extend(_placed_shot(ctx, ball, placement) for placement in PLACEMENTS)
     elif d_goal <= p.shot_range:
-        xg = float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
+        xg = distance_xg(d_goal)
         options.append(OptionEval("shot", "shot", None, (float(goal[0]), 0.0), xg, xg))
 
     temperature = ctx.temperature if ctx.temperature is not None else p.temperature
@@ -340,8 +346,7 @@ def option_success(ctx: DecisionContext, action: str, target: tuple[float, float
     if action == "carry":
         return _p_keep_carry(ctx, ball, point, opp)
     if action == "shot":
-        d_goal = float(np.linalg.norm(point - ball))
-        return float(min(0.6, 0.35 * math.exp(-(d_goal - 6.0) / 7.0)))
+        return distance_xg(float(np.linalg.norm(point - ball)))
     if action.startswith("shot:") and ctx.keeper >= 0:
         return _placed_shot(ctx, ball, action[5:]).p_success
     raise ValueError(f"unknown action {action!r}")

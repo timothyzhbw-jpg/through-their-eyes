@@ -136,7 +136,12 @@ describe("the disc", () => {
     act(() => session.controls.seek(70));
     const page = mount(session);
     const svg = page.querySelector("svg[role=img]")!;
-    expect(svg.getAttribute("aria-label")).toMatch(/H8's picture of the pitch/);
+    // Players by their fictional names (SPEC 4.6), in the label and each token's title.
+    expect(svg.getAttribute("aria-label")).toMatch(/^J\. Ferriday's picture of the pitch/);
+    expect(svg.getAttribute("aria-label")).not.toMatch(/(?<![A-Za-z0-9_:])[HA](?:1[01]|[1-9])\b/);
+    const titles = [...page.querySelectorAll("svg title")].map((t) => t.textContent ?? "");
+    expect(titles.length).toBeGreaterThan(0);
+    expect(titles.every((t) => /^[A-Z]\. [A-Z][a-z]+$/.test(t))).toBe(true);
     expect(page.querySelectorAll("circle.token.press").length).toBeGreaterThanOrEqual(2);
     expect(page.querySelectorAll("circle.token.option")).toHaveLength(1);
     expect(page.textContent).toContain("His picture");

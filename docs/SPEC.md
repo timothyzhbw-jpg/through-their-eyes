@@ -41,7 +41,9 @@ knew existed.
 | `coach` (stretch) | "Scanned vs didn't scan" side-by-side + one coaching cue | instructional |
 | `audio_description` | Blind and low-vision viewers: the moment told in the order it happened — where he got the ball, who he could not see, which way he looked, whom the look showed him, what he did — sound on by default, large-print captions | calm, slower voice at any tier; no xT or probabilities |
 
-All personas render the **same verified fact set**. Persona changes presentation, never facts.
+All personas render the **same verified fact set**. Persona changes presentation, never facts:
+which verified claims a script must cite and which it may not is fixed per persona in code (§6,
+"Persona rules").
 Languages: `en` and `zh` for the MVP; `es` is a stretch goal.
 
 ## 2. Architecture
@@ -943,6 +945,23 @@ a pass at its reception, interception or out; a sprint at its first frame back b
   - Bands for viewers: < 0.25 routine, < 0.5 moderate, < 0.75 hard, else very hard.
 - **Names.** Fictional names by player id ([sim/roster.py](../sim/roster.py)), never real
   players'; the export is unchanged.
+  - The same names appear everywhere a player is named: the stats, the narration and its voice,
+    and the app's own chips and labels (the lineup, the eyes picker, the HUD, moments, Your call,
+    the director).
+  - Narration renders his short name ("J. Ferriday") as a slot value (agents/context.py
+    `names`). The Verifier keeps names, surnames and the raw ids out of free text, with ASCII-only
+    word boundaries so a name next to a Chinese character is caught too.
+  - The two clubs are named too: Kestrel Bay (home) and Corvane Vale (away), both invented. The
+    recap's claims still say Home and Away (its cache key holds their templates); the API names
+    the clubs when it serves a recap.
+  - Ids stay the data: claims, evidence, events and URLs.
+  - A breakdown, recap or what-if answer cached before names were rendered is renamed when it is
+    read ([api/names.py](../api/names.py)). The Verifier allowed an id into a line only as a slot
+    value, so this is the same text rendered with names, and nothing is generated again.
+  - The web app mirrors the roster in [web/src/data/roster.ts](../web/src/data/roster.ts), and
+    `tests/test_roster_web.py` keeps the two equal.
+  - The what-if parser understands the names too ("What if he passed to Annersley?"), and the
+    export's suggested questions use them ([sim/export.py](../sim/export.py)).
 - **Serving.** `GET /api/matches/<id>/stats` (pydantic `MatchStats`: player and team totals, cues,
   definitions); `?frame=F` is the snapshot at frame F, `?tracks=true` adds per-frame ball speed,
   speeds above 19.8 km/h and per-second distance checkpoints for viewers. The live stream sends each
@@ -978,6 +997,51 @@ data limb tracking reports; nothing in the API or the app calls it yet.
     recovered head yaw as noisy as the sim's tracked yaw (2°).
   - Generating a stream changes no run and no export.
   - Limbs beyond shoulders and hips are not generated: the sim has none.
+
+### 4.8 Tactics cards (2026-10-21)
+A teammate's tactics knowledge base (tactic → mechanism → data evidence → fan explanation) needs
+events the sim does not have for most rows (tackles, crosses, open play that shoots). Two cards
+are built from what it records; the rest of the table and what each row needs are in
+[docs/TACTICS.md](TACTICS.md). Kernels in [analytics/tactics.py](../analytics/tactics.py), the
+sentences in [explain/tactics.py](../explain/tactics.py), `GET /api/matches/<id>/tactics`.
+
+**Inputs: the live stream, as §4.6.** Pass cues from the stats timeline give the outcome from the
+feed and the pressing intensity on the passer at the kick. Tracking gives the ball and the
+players. The feed gives the intended receiver (`to`) and the shots. Each possession's restart
+comes from the export. The one exception is the decision model's recorded options (§3.5), which
+are sim records, labelled `sim` on screen.
+
+- **Why build from the back?** A build-up pass is a resolved pass kicked in the passer's own half.
+  - *Under pressure*: pressing intensity on the passer ≥ 0.7 at the kick, the lexicon's heavy
+    pressure.
+  - *Long*: to a teammate 32 m or more away at the kick (35 yards; the length to the intended
+    receiver, so a long ball cut out early is still long).
+  - *Line-breaking*: completed past ≥ 2 outfield opponents, as §5.1 counts them, on tracking.
+  - *xT added*: completed, xT where received minus where played; lost, minus the opponent's xT
+    where they won it, minus where played (§4.5's grid). *Handed over*: the opponent's xT
+    there.
+  - Per team: all, under pressure and not, short and long, short under pressure, line-breaking,
+    lost. The card's team is the one with more own-half passes (ties: home).
+  - Where the sim recorded a decision in the carrier's own half: his choice, his best short and
+    best long pass by the decision model's value, and his safest pass.
+- **Why focus on set pieces?** A corner is a possession whose restart is a corner. It is
+  *played* when its scenario begins with the corner (`sim.match.SET_PIECES`); otherwise the stitch
+  restarts it as open play.
+  - Shots after it: the corner team's shots in that possession. Their xG is the sim's distance
+    model (`sim.decision.distance_xg`).
+  - The match's shots and xG, and the share from set pieces.
+  - A passage's *peak*: the completed pass received where it was worth the most xT to the
+    receiving team. The card compares the best corner's peak with the open-play passages'.
+- **Sentences.** One per card, a claim (§5.3) with `en` and `zh` templates. Its slots are filled
+  from the card a viewer sees. `tactics_stat` measures the card again from the run's tracking and
+  events, with the stitched run's possessions, and the Verifier checks every slot before the line
+  renders. Percentages and decimals are checked to half a unit of the last digit shown.
+- **Honest limits, on the card.**
+  - Open-play passing is scripted (§3.6): the rates describe the sim's script under its press.
+  - A corner's possession ends after its cutback, before any shot (§3.1): set-piece xG is zero
+    by construction.
+  - Open play rarely reaches the final third, so the peak comparison favours the corner.
+- **Where.** The analyst's stats panel and the end-of-match recap (§7).
 
 ### Acceptance checks — analytics
 - [x] Pitch control ∈ [0, 1] and sums to 1 across teams per cell; symmetric under team swap +
@@ -1047,6 +1111,17 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       0.923, recall 0.985);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
+
+- [x] *Tactics cards (§4.8):* the kernels give the known answers on a hand-built two-possession
+      match; the export and the run it came from give the same cards; same input, same bytes;
+      the pressure hero's recorded options and the corner hero's cutback read as the sim played
+      them; each sentence is supported, renders in `en` and `zh` with no number outside a slot,
+      and a wrong value in any slot is refuted.
+      — [tests/test_tactics.py](../tests/test_tactics.py) (19 cases),
+      [tests/test_tactics_api.py](../tests/test_tactics_api.py). On match-1 (2026-10-21, `main`
+      c947b42), Home completed 13 of 19 short build-up passes under pressure (68%), against 89%
+      without. Its one corner reached 0.29 xT in 4.4 s, more than any of the 17 open-play passages
+      (median 0.0035), with no shot after it.
 
 ## 5. Explain layer (`explain/`)
 
@@ -1253,7 +1328,7 @@ tools exposed by our own MCP server.
 
 | Agent | Input | Output (JSON schema) | Notes |
 |---|---|---|---|
-| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority |
+| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority, which is the breakdown's budget (below) |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
 | Commentator | Findings + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
@@ -1265,6 +1340,36 @@ tools exposed by our own MCP server.
 `speaker`. Both voices in a language are male: play-by-play `en-US-GuyNeural` and
 `zh-CN-YunjianNeural`, colour `en-US-DavisNeural` and `zh-CN-YunyeNeural`. If either fails, a
 single-narrator template takes over (failure policy below).
+
+**Persona rules** (`agents/persona_rules.py`). The red-team review found the cached model scripts
+of different personas were the same claims reordered (casual heard expected threat and no
+counterfactual; coach no counterfactual). Each persona now has claims it may not cite, groups of
+claims its script (both voices together) must cite one of, and a number budget:
+
+| Persona | Must cite (one of each group) | May not cite | Numbers |
+|---|---|---|---|
+| `casual` | the counterfactual (`cf_pass`, `cf_carry_lost`, `cf_lost_runner`, `cf_unmarked`, `cf_shot`) | xT and probabilities (`cf_value`, `cf_shot_value`, `pass_success`, `cf_pass_success`, `shot_thought_vs_was`) | ≤ 2 |
+| `analyst` | the look's value (`cf_value`, `cf_shot_value`); belief error; scan timing (scan lens) | – | – |
+| `player_fan` | his own look (scan lens); his decision (`pass_to_runner`, `runner_received`, `shot_placement`, `stayed_with_runner`) | – | – |
+| `coach` | the counterfactual; a coaching point (scan timing, `presser_distance`, `pressure_at_pass`, `keeper_near_side`) | – | – |
+| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`) | xT, probabilities, shares and pressing percentages | ≤ 2 |
+
+A group is required only when the moment has a supported claim in it, and a scan group only on
+the scan lens. Numbers are counted as the numeric slots of the cited claims (`{n:times}` counts;
+vocabulary slots do not). Enforcement, in order: the forbidden ids are not in that persona's
+schema enum, so the model cannot pick them; the prompt carries the rules (`must_include`,
+`max_numbers`, `start_with`, and for the co-commentator `still_missing`); tidy drops a forbidden
+line; the Verifier checks every script and sends one that breaks a rule back to both voices,
+whole, with the problems (a rewrite round, at most two); after the last round `repair` makes it
+comply with verified template lines (drops forbidden lines, adds the first supported claim of a
+missing group in story order, brings a spatial line first, trims numeric lines that cover no
+group). The templates go through the same `repair`. A recap tells several moments and keeps only
+the forbidden ids.
+The narration ablation (`eval/narration_ablation.py`) and the crew-vs-single eval
+(`eval/crew_vs_single.py`) run the Verifier with these script checks off (`LineVerifier`, line
+checks only), as when their reports were measured: with them on, the single agent's one call is
+redrafted whole and its calls and rewrites are no longer the ones the report counts. Arm D of
+crew-vs-single is therefore the crew with the line-check Verifier, not the deployed one.
 
 **Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
 MomentCard (lens |Δ|, outcome, phase), never from an LLM. Each line also has a role. `open` is a
@@ -1317,6 +1422,14 @@ Application Insights.
   placeholder (`{window_s|second}`) that rendered as literal braces. With anchored lines and the
   enum Analyst, two reruns aired 22 and 24 lines in four scripts (casual and analyst × en and zh)
   with no rewrites, no drops, no invented names, and every headline claim spoken.
+- **The Director's priority is the breakdown's budget** (`agents/budget.py`, 2026-10-21). The
+  agents after it read it: at high priority the Analyst inspects the moment with our MCP tools;
+  at normal and low it answers from the claims in its prompt, one request instead of a tool loop.
+  The priority also buys the replay a slot, 20, 16 or 12 s, never shorter than the moment's
+  template plan: the Telestrator is told it, and a plan that runs longer airs as the template
+  (`duration_s: over_slot`). With the Director on its template, the rule on the lens delta sets
+  the priority and the budget follows. *Why:* a red-team read found the priority was written and
+  never read. `tests/test_director_budget.py`.
 - Telestrator: Azure structured outputs reject the `oneOf` a discriminated union produces, so the
   model fills `PlanDraft` (a plain `anyOf` union) and `to_plan()` applies the full checks.
 - *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus; seed 3, `--mcp`, casual and
@@ -1849,6 +1962,14 @@ original visual identity.
   - Next, Back, Skip; arrow keys and Escape in the card. Reduced motion: no animated ring, no
     smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
     the viewer touches the app, so Your call and the evidence stay usable.
+- **Tactics cards** ([web/src/tactics/](../web/src/tactics/), §4.8): "Why build from the back?"
+  and "Why focus on set pieces?" in the analyst's stats panel (a match's: folded, with a note,
+  until full time, because they are whole-match numbers and the panel otherwise shows only what
+  is known at the playhead) and in the end-of-match recap, in its language.
+  - Measured numbers carry the `tracking` chip, the decision model's options the `sim` chip.
+  - Each card's sentence carries its claim kind, a verified stamp and Watch (seek to its
+    evidence).
+  - A hero moment opened from a match draws none: the match view has them.
 - POV clips ≤ 3 s with eased yaw to avoid motion sickness.
 - **Key-moment beat** ([web/src/beat/](../web/src/beat/)): each key scan plays like a broadcast
   highlight. Free play and the live stream ease into slow motion (about 0.4×) as the scan begins,
@@ -2129,6 +2250,24 @@ reported to be Xsens motion capture; animation only): the players' walk
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
       screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
       2026-10-21)
+- [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
+      no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
+      slot is a render violation, in en and zh; values cached with ids are renamed when read, with
+      new voice keys.
+      — [tests/test_names.py](../tests/test_names.py),
+      [tests/test_roster_web.py](../tests/test_roster_web.py),
+      [web/src/ui/names.test.tsx](../web/src/ui/names.test.tsx), `tests/test_whatif.py` (names in
+      questions)
+
+- [x] *Tactics cards (§4.8, 7):* both cards in a hero moment with their verified sentences, the
+      `tracking` and `sim` chips and the honest-limits notes; the recap's language; folded in a
+      match's stats panel until full time; analyst only; nothing offline or in a hero opened from
+      a match; a sentence withheld unless every claim is supported, and no number in it that its
+      claims do not hold.
+      — [web/src/tactics/TacticsCards.test.tsx](../web/src/tactics/TacticsCards.test.tsx),
+      [tactics.test.ts](../web/src/tactics/tactics.test.ts) (on
+      [fixture.json](../web/src/tactics/fixture.json), written by `explain.tactics --fixture`;
+      `tests/test_tactics.py` fails when it is stale)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -2273,8 +2412,8 @@ reported to be Xsens motion capture; animation only): the players' walk
   - Spans: one per breakdown, one child per workflow step (Director, Analyst with its MCP tool
     calls, Telestrator, each narration voice, Verifier rounds, Voice).
   - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
-    reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
-    ingestion.
+    reason, rewrites, dropped lines, scripts failing their persona rules and redrafts (§6), ms.
+    Ids and counts only, no prompt text, which also bounds ingestion.
   - Sampling: every span is kept (`sampling_ratio=1.0`). The distro's default, 5 spans/s decided
     span by span, dropped steps out of a breakdown's bursts: on 2026-10-20 two live traces lacked
     `voice`, one also `mcp`. The daily cap of the Log Analytics workspace bounds ingestion

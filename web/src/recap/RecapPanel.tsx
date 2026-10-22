@@ -15,9 +15,11 @@ import { SoundOffIcon, SoundOnIcon } from "../ui/icons";
 import { LANG_LABEL, PERSONA_LABEL } from "../ui/labels";
 import { momentLabel } from "../ui/Live";
 import { Segmented } from "../ui/Segmented";
+import { TacticsCards } from "../tactics/TacticsCards";
 import { LANGUAGES } from "../whatif/whatif";
 import type { Cue } from "./recap";
 import "./recap.css";
+import { clubName } from "../data/roster";
 
 const NOTHING = "Nothing verified to say about it.";
 
@@ -104,13 +106,13 @@ function Panel({ session }: { session: MatchSession }) {
 
             <div
               className="recap-score"
-              aria-label={`Home ${String(home ?? "")}, away ${String(away ?? "")}`}
+              aria-label={`${clubName(0)} ${String(home ?? "")}, ${clubName(1)} ${String(away ?? "")}`}
             >
-              <span className="team home">Home</span>
+              <span className="team home">{clubName(0)}</span>
               <b>{home ?? ""}</b>
               <span className="dash">–</span>
               <b>{away ?? ""}</b>
-              <span className="team away">Away</span>
+              <span className="team away">{clubName(1)}</span>
               {scoreLine && <p className="recap-score-line">{scoreLine.text}</p>}
             </div>
 
@@ -163,6 +165,8 @@ function Panel({ session }: { session: MatchSession }) {
                 ))}
               </ul>
             )}
+
+            <TacticsCards where="recap" language={state.language} />
 
             <div className="recap-actions">
               <button

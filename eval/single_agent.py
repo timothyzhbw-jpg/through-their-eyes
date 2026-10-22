@@ -390,8 +390,21 @@ class FreeTextSoloDirector(SoloDirector):
     lines: Lines = "free_text"
 
 
+class LineVerifier(Verifier):
+    """The shipped Verifier with the persona rules (agents/persona_rules.py) off: line checks
+    only, as when this eval's report was measured. The rules ask a script for claims the single
+    agent's one call was never told about, so with them on, its calls and rewrites are no longer
+    the ones the report counts. The narration ablation does the same."""
+
+    def script_problems(self, key, lines):
+        return []
+
+    def repair(self, key, lines):
+        return list(lines), [], []
+
+
 def solo_story(
-    lines: Lines = "anchored", verifier: type[Verifier] = Verifier, voice: type[Voice] = Voice
+    lines: Lines = "anchored", verifier: type[Verifier] = LineVerifier, voice: type[Voice] = Voice
 ) -> Story:
     """The single agent in the crew's graph: its call, then the crew's code for each part."""
     if lines == "anchored":

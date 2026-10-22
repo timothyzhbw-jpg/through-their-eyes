@@ -77,10 +77,11 @@ def test_the_shipped_crew_narrates_anchored_lines(ctx):
     assert sent == prompts.narration_prompt(ctx, r.findings, "analyst", "en", "pbp")
     assert "allowed_connectives" in sent and '"slots"' not in sent
     (script,) = r.scripts
-    assert [line.text for line in script.payload.lines] == [
-        "Watch this. H8 checked his shoulder before the ball reached him.",
-        "Without that look, H8 would have passed to H4.",
-    ]
+    texts = [line.text for line in script.payload.lines]
+    assert texts[0] == "Watch this. J. Ferriday checked his shoulder before the ball reached him."
+    assert "Without that look, J. Ferriday would have passed to K. Annersley." in texts
+    # The analyst's persona rules add their template lines (agents/persona_rules.py).
+    assert {"cf_value", "belief_error"} <= {c for line in script.lines for c in line.claims}
 
 
 def test_the_default_workflow_and_run_breakdown_use_the_shipped_narration():
@@ -164,14 +165,14 @@ def test_free_text_lines_are_scored_by_violation_kind(ctx):
     assert h9.made_up == ["H9"]
     (mistake,) = [line for line in s.first_pass if "mistake" in line.text]
     assert mistake.made_up == ["2"]
-    assert mistake.truth == ["Without that look, H8 would have passed to H4."]
+    assert mistake.truth == ["Without that look, J. Ferriday would have passed to K. Annersley."]
     assert s.made_up == 2
     # The same reply comes back on each rewrite, so the judgement line is dropped after two.
     assert s.rewrites == 2
     assert [d.kinds[0] for d in s.dropped] == ["number"]
     assert all("{" not in text and "mistake" not in text for text in s.aired)
     # The rewrites replaced the failing lines with a line that already airs, twice.
-    assert s.aired == ["H8 checked his shoulder before the ball reached him."] * 3
+    assert s.aired == ["J. Ferriday checked his shoulder before the ball reached him."] * 3
     assert s.aired_repeats == 2 and all(a.verbatim for a in s.aired_lines)
     assert calls == fake.calls["pbp"] + fake.calls["color"] == 6
 
@@ -185,14 +186,14 @@ def test_anchored_lines_pass_the_first_round(ctx):
     assert all(not line.kinds for line in s.first_pass) and sum(s.violations.values()) == 0
     assert s.made_up == 0 and s.aired_repeats == 0 and all(a.verbatim for a in s.aired_lines)
     assert s.aired == [
-        "Watch this. H8 checked his shoulder before the ball reached him.",
-        "Without that look, H8 would have passed to H4.",
+        "Watch this. J. Ferriday checked his shoulder before the ball reached him.",
+        "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert s.headline == ["scan_before_reception", "belief_error", "cf_pass"]
     assert s.headline_spoken == ["scan_before_reception", "cf_pass"]
     assert s.context == [
-        "H8 checked his shoulder before the ball reached him.",
-        "Without that look, H8 would have passed to H4.",
+        "J. Ferriday checked his shoulder before the ball reached him.",
+        "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
 
 
@@ -245,8 +246,8 @@ def test_number_values_and_own_words(ctx):
     own = PayloadLine(id="L1", text="The midfielder spotted a teammate open.",
                       claims=["scan_before_reception"])  # fmt: skip
     assert not _aired(ctx, own, "en").verbatim
-    template = PayloadLine(id="L2", text="Watch this. H8 checked his shoulder before the ball "
-                           "reached him.", claims=["scan_before_reception"])  # fmt: skip
+    template = PayloadLine(id="L2", text="Watch this. J. Ferriday checked his shoulder before the "
+                           "ball reached him.", claims=["scan_before_reception"])  # fmt: skip
     assert _aired(ctx, template, "en").verbatim
     assert _aired(ctx, PayloadLine(id="L3", text="注意看。", claims=[]), "zh").verbatim
 
@@ -263,8 +264,8 @@ def test_the_grammar_check_flags_count_words_that_do_not_agree():
 
 
 def test_a_written_out_id_counts_once_as_an_entity_in_both_languages(ctx):
-    """In zh the Verifier's `\\b` entity check misses H8 before a Chinese character, but still
-    rejects its digit as a number; the ablation counts it as the entity it is."""
+    """The Verifier rejects a written-out H8 as an entity (in zh too, next to a Chinese
+    character) and its digit as a number; the ablation counts it once, as the entity it is."""
     from eval.narration_ablation import _check
 
     for language, text in (("en", "H8 checked his shoulder before the ball reached him."),
@@ -277,7 +278,7 @@ def test_a_written_out_id_counts_once_as_an_entity_in_both_languages(ctx):
                        claims=["cf_pass"])  # fmt: skip
     checked = _check(ctx, wrong, "zh")
     assert checked.kinds == ["entity", "entity"] and checked.made_up == ["A5"]
-    assert checked.truth == ["如果没有那一眼，H8会把球传给H4。"]
+    assert checked.truth == ["如果没有那一眼，J. Ferriday会把球传给K. Annersley。"]
 
 
 def test_the_ablation_reuses_cached_seeds_and_keeps_to_the_call_budget(tmp_path):
