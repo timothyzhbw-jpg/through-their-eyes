@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // The stitched match's hero moments as the live service has them now, and the corner shot's
 // `at=` frame (SPEC 10). A sim fix can move the corner in match time; this keeps shot
-// 16-corner opening a fixed lead before the marker's look, instead of a hand-typed frame.
+// 16-corner opening a fixed lead before the marker's look (never before the corner is taken),
+// instead of a hand-typed frame, and checks every other match-1 `at=` is inside the match.
 //
 //   node video/tools/moments.mjs            # print the hero moments and the corner's at=
 //   node video/tools/moments.mjs --write    # also rewrite 16-corner's URL in shots.json
@@ -27,8 +28,21 @@ for (const m of heroes) {
 }
 const corner = heroes.find((m) => m.scenario === "corner_blind_side");
 if (!corner) throw new Error("no corner_blind_side hero moment in match-1");
-const at = Math.round((corner.anchor_t - LEAD_S) * FPS);
-console.log(`\n16-corner: at=${at} (the marker's look at ${corner.anchor_t.toFixed(2)} s, minus ${LEAD_S} s)`);
+// Never before the corner is taken: the lead would otherwise open in the previous possession.
+const exp = await fetch(`${API}/api/matches/match-1/export`, { signal: AbortSignal.timeout(60000) });
+if (!exp.ok) throw new Error(`export: ${exp.status} from ${API}`);
+const { match } = await exp.json();
+const restart = match.possessions[corner.possession];
+const at = Math.max(Math.round((corner.anchor_t - LEAD_S) * FPS), restart.start + 2);
+console.log(
+  `\n16-corner: at=${at} (the marker's look at ${corner.anchor_t.toFixed(2)} s minus ${LEAD_S} s, ` +
+    `not before possession ${corner.possession}'s ${restart.restart} at frame ${restart.start})`,
+);
+const frames = match.possessions.reduce((n, p) => Math.max(n, p.start + p.frames), 0);
+for (const [id, frame] of [...readFileSync(SHOTS, "utf8").matchAll(/"id": "([^"]+)"[^]*?"url": "[^"]*match=match-1[^"]*[?&]at=(\d+)/g)].map((m) => [m[1], Number(m[2])])) {
+  if (frame >= frames) throw new Error(`${id}: at=${frame} is past match-1's end (${frames} frames)`);
+}
+console.log(`match-1: ${frames} frames; every match-1 at= is inside it`);
 
 if (process.argv.includes("--write")) {
   const text = readFileSync(SHOTS, "utf8");
