@@ -1158,6 +1158,17 @@ optgroup {
   margin: 8px 14px 6px;
 }
 
+/* While a tour runs, its card is the one panel (tour/Tour.tsx): the HUD row (whose eyes, the
+   director's suggestions, the stats ticker) stands down, and in the quick tour the caption too,
+   whose lines the tour card carries. The picture, the run switch and the timeline stay. */
+.stage.touring .stage-top,
+.stage.touring-quick .stage-caption {
+  display: none;
+}
+.tour-home {
+  height: 0;
+}
+
 /* the card on the right: the moment, the evidence or the score */
 .stage-card {
   position: absolute;

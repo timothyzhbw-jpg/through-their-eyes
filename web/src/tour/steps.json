@@ -1,5 +1,5 @@
 {
-  "about": "The tours (SPEC 7). 'quick' is a first-time visitor's path in four steps: watch the look, remove it, compare the outcomes, make your own call; Start on the intro card opens it. 'steps' is the full judge tour, about ninety seconds through the signature features. Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
+  "about": "The tours (SPEC 7). 'quick' is a first-time visitor's path in four steps: watch the look, remove it, compare the outcomes, make your own call; Start on the intro card opens it. 'steps' is the full judge tour, about ninety seconds through the signature features. Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
   "steps": [
     {
       "id": "pov",
@@ -139,6 +139,7 @@
       "dim": false,
       "enter": "look",
       "act": "replayLook",
+      "say": "look",
       "needs": ["hero", "keyScan"],
       "hold": 10
     },
@@ -149,6 +150,7 @@
       "target": ".stage-run",
       "dim": false,
       "enter": "counterfactual",
+      "say": "without",
       "needs": ["hero", "keyScan", "counterfactual"],
       "hold": 10
     },
@@ -159,6 +161,7 @@
       "target": null,
       "dim": false,
       "enter": "compare",
+      "say": "compare",
       "needs": ["hero", "keyScan", "counterfactual"],
       "hold": 10
     },
