@@ -1642,19 +1642,19 @@ original visual identity.
     pick, brighter a receiver this look brought into sight. The decision model runs only at his
     decision (§3.5), so a look shows the options he went on to weigh, and says so. No pass type:
     every pass in the sim is along the ground (lofted and curled balls are not modelled).
-  - *His decision.* On the board, blurred and dimmed but round exactly two players: a pass's
-    receiver and the opponent nearest him, a carrier and the opponent nearest him, a shooter and
-    the keeper.
+  - *His decision.* On the board, dimmed (never blurred: the picture stays clear) but round
+    exactly two players: a pass's receiver and the opponent nearest him, a carrier and the opponent
+    nearest him, a shooter and the keeper.
   - *Words.* Only verified lines in en and zh, slot-filled and checked by the Verifier on the run
     they describe: how many looks he takes, where and when each one goes (the side from the ball,
     over his shoulder from 120°, as Take his eyes says it), who it brings into his sight, that his
     head is still turning when he decides, or that he takes no look then; at the decision, the look
     that found the player who mattered (the runner, else his receiver), how far off his picture of
-    that player was and how old, what he did, and the pair the freeze keeps sharp with their
+    that player was and how old, what he did, and the pair the freeze leaves lit with their
     distance. Direction labels have no "behind": a scan turns at most 150° from the ball.
   - *Controls.* Next, Back and Back to the replay; ← and → step, Escape leaves, a swipe on the
     picture steps on a phone; the steps are buttons; the run switch keeps the same look. Reduced
-    motion: the blur appears without fading in.
+    motion: the dimming appears without fading in.
   - A hero with no decision on the ball (`corner_blind_side`, `screened_shot`) has no steps.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
@@ -1805,8 +1805,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
 - [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
       scan events (a file whose looks are not the run's is refused), the dropped look missing in
       the run without it; the freeze frame inside the dwell; movement arrows from the sim's
-      velocities; potential passes from the decision record; the decision's blur keeps exactly two
-      players sharp; every line verifies in en and zh; Next, Back, Exit, arrow keys, Escape, swipe
+      velocities; potential passes from the decision record; the decision dims all but exactly two
+      players, with no blur; every line verifies in en and zh; Next, Back, Exit, arrow keys, Escape, swipe
       and the run switch.
       — [web/src/steps/steps.test.ts](../web/src/steps/steps.test.ts),
       [scansteps.test.tsx](../web/src/steps/scansteps.test.tsx);

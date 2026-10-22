@@ -2,7 +2,7 @@
 // Scan step-through (SPEC 7) on the page: loaded on first open, frozen at each look with its
 // verified lines and who came into his sight, Next / Back / Exit by button, arrow keys, Escape and
 // swipe, the run without the look showing that look as missing, the potential passes drawn from
-// the decision record, and the decision blurring everything but two players.
+// the decision record, and the decision dimming everything but two players (never blurring).
 // The 3D view and the board are left out (no WebGL here); the marks, steps and card are DOM.
 
 import { act, type ReactNode } from "react";
@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import stepsJson from "../../public/data/steps_seed3.json";
+import stepsCss from "./steps.css?raw";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
 import { applyDeepLink, parseDeepLink } from "../deeplink";
@@ -237,16 +238,18 @@ describe("His looks: the marks", () => {
     expect(textOf(el.querySelector(".ss-legend"))).toMatch(/along the ground/);
   });
 
-  it("blurs the board at his decision but round exactly two players", async () => {
+  it("dims the board at his decision but round exactly two players, with no blur", async () => {
     const { el } = await opened();
     expect(el.querySelector(".ss-focus")).toBeNull();
     click(button(el, "Next"));
-    const blur = el.querySelectorAll<HTMLElement>(".ss-focus");
-    expect(blur).toHaveLength(1);
-    expect(blur[0].dataset.sharp!.split(" ")).toEqual(["H9", "A5"]);
-    const mask = blur[0].style.maskImage || blur[0].style.getPropertyValue("-webkit-mask-image");
+    const dim = el.querySelectorAll<HTMLElement>(".ss-focus");
+    expect(dim).toHaveLength(1);
+    expect(dim[0].dataset.focus!.split(" ")).toEqual(["H9", "A5"]);
+    const mask = dim[0].style.maskImage || dim[0].style.getPropertyValue("-webkit-mask-image");
     expect(mask.match(/radial-gradient/g)).toHaveLength(2);
-    expect(el.querySelectorAll(".ss-board .ss-sharp-ring")).toHaveLength(2);
+    expect(el.querySelectorAll(".ss-board .ss-focus-ring")).toHaveLength(2);
+    // Bowen finds blur uncomfortable: the focus only dims (steps.css has no blur() for it).
+    expect(stepsCss).not.toMatch(/\.ss-focus\s*\{[^}]*blur\(/);
     // Only his pick is drawn until Potential passes adds the rest.
     expect(el.querySelectorAll(".ss-board .ss-lane")).toHaveLength(1);
   });

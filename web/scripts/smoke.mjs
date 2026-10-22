@@ -303,7 +303,7 @@ async function takeEyes(page) {
 
 /** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
  * frozen with its verified lines, the potential passes, then his decision with everything but two
- * players blurred. */
+ * players dimmed. */
 async function scanSteps(page) {
   await see(page.getByRole("region", { name: "His looks, step by step" }), "the step-through");
   await see(page.getByRole("list", { name: "Steps" }), "the steps");
@@ -313,7 +313,7 @@ async function scanSteps(page) {
   const next = page.getByRole("button", { name: "Next", exact: true });
   while (await next.isVisible()) await next.click();
   await see(page.getByRole("heading", { name: /His decision|The what-if/ }), "his decision");
-  await see(page.locator(".ss-focus[data-sharp]"), "the blur round two players", "attached");
+  await see(page.locator(".ss-focus[data-focus]"), "the dimming round two players", "attached");
 }
 
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the

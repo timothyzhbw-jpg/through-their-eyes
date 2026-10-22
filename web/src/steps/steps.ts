@@ -93,7 +93,7 @@ export interface DecisionStep {
   frame: number;
   chosen: string;
   forced: boolean; // a what-if forced it (press_escape's "if he carried it")
-  focus: [string, string]; // the two players the freeze keeps sharp
+  focus: [string, string]; // the two players the freeze leaves lit
   lines: string[];
   vel: Float32Array;
 }
@@ -315,14 +315,14 @@ export function potentialPasses(hero: Hero, run: Run, sight: string[] = []): Lan
   }));
 }
 
-// ---------- the decision's freeze: two players stay sharp ----------
+// ---------- the decision's freeze: two players stay lit ----------
 
-/** The player indices the decision's freeze keeps sharp: exactly two, the pair the decision turns
+/** The player indices the decision's freeze leaves lit (the rest is dimmed, never blurred): exactly two, the pair the decision turns
  * on (a pass's receiver and the opponent nearest him; a carrier and his; a shooter and the
  * keeper). */
-export function sharpPlayers(hero: Hero, step: DecisionStep): [number, number] {
+export function focusPlayers(hero: Hero, step: DecisionStep): [number, number] {
   const [a, b] = step.focus.map((id) => hero.ids.indexOf(id));
-  if (a < 0 || b < 0 || a === b) throw new Error(`no pair to keep sharp in ${step.focus.join()}`);
+  if (a < 0 || b < 0 || a === b) throw new Error(`no pair to keep lit in ${step.focus.join()}`);
   return [a, b];
 }
 

@@ -4,7 +4,7 @@
 // A look is shown through his eyes at the middle of its dwell, with the board beside it: who came
 // into his sight on it is ringed, dashed arrows project where the players near him are heading
 // (their sim velocity at that frame, a second ahead), and "Potential passes" draws the options of
-// his decision record. His decision is shown on the board with everything blurred and dimmed but
+// his decision record. His decision is shown on the board with everything dimmed (never blurred) but
 // the two players it turns on. The card speaks only in verified lines (agents/steps.py).
 
 import {
@@ -35,7 +35,7 @@ import {
   povPose,
   project,
   projectSegment,
-  sharpPlayers,
+  focusPlayers,
   stepTitle,
   type Arrow,
   type DecisionStep,
@@ -47,8 +47,8 @@ import "./steps.css";
 
 const FALLBACK_SIZE = { w: 640, h: 400 }; // before the view is measured (and in tests)
 const SWIPE_PX = 50;
-const SHARP_RADIUS_M = 4; // the clear circle round each of the two players on the board
-const SHARP_MIN_PX = 26;
+const FOCUS_RADIUS_M = 4; // the undimmed circle round each of the two players on the board
+const FOCUS_MIN_PX = 26;
 const LANE_NEAR_M = 3; // first-person lanes start this far in front of his eyes
 
 /** The hero moment's step-through. */
@@ -349,7 +349,7 @@ function LaneLine(props: {
   );
 }
 
-/** Over the board: the same marks top-down, and at the decision the blur that keeps two sharp. */
+/** Over the board: the same marks top-down, and at the decision the dimming that leaves two lit. */
 function BoardMarks(props: {
   hero: Hero;
   run: Run;
@@ -366,10 +366,10 @@ function BoardMarks(props: {
   const at = (j: number): Vec2 =>
     toScreen([run.pos[(f * n + j) * 2], run.pos[(f * n + j) * 2 + 1]], w, h, zoom);
   const look = step.kind === "look" ? step : null;
-  const sharp = step.kind === "decision" ? sharpPlayers(hero, step) : null;
-  // At his decision only the two players it turns on keep their arrows: the rest is blurred.
+  const focus = step.kind === "decision" ? focusPlayers(hero, step) : null;
+  // At his decision only the two players it turns on keep their arrows: the rest is dimmed.
   const arrows = movementArrows(hero, run, f, step.vel).filter(
-    (a) => !sharp || sharp.includes(a.player),
+    (a) => !focus || focus.includes(a.player),
   );
   // At his decision the board always shows the lane he chose; "Potential passes" adds the rest.
   const all = potentialPasses(hero, run, look && !look.missing ? look.sight : []);
@@ -377,7 +377,7 @@ function BoardMarks(props: {
   const rings = look && !look.missing ? look.sight.map((id) => hero.ids.indexOf(id)) : [];
   return (
     <>
-      {sharp && main && <FocusBlur hero={hero} step={step as DecisionStep} at={at} zoom={zoom} />}
+      {focus && main && <FocusDim hero={hero} step={step as DecisionStep} at={at} zoom={zoom} />}
       <svg className={main ? "ss-marks" : "ss-marks small"} width={w} height={h} aria-hidden="true">
         <Defs />
         {lanes.map((lane) => {
@@ -406,12 +406,12 @@ function BoardMarks(props: {
             <circle key={j} className="ss-seen-dot" cx={x} cy={y} r={Math.max(7, 1.6 * zoom)} />
           );
         })}
-        {sharp?.map((j) => {
+        {focus?.map((j) => {
           const [x, y] = at(j);
           return (
-            <g key={j} className="ss-sharp-ring">
-              <circle cx={x} cy={y} r={Math.max(SHARP_MIN_PX, SHARP_RADIUS_M * zoom)} />
-              <text x={x} y={y - Math.max(SHARP_MIN_PX, SHARP_RADIUS_M * zoom) - 6}>
+            <g key={j} className="ss-focus-ring">
+              <circle cx={x} cy={y} r={Math.max(FOCUS_MIN_PX, FOCUS_RADIUS_M * zoom)} />
+              <text x={x} y={y - Math.max(FOCUS_MIN_PX, FOCUS_RADIUS_M * zoom) - 6}>
                 {hero.ids[j]}
               </text>
             </g>
@@ -422,17 +422,17 @@ function BoardMarks(props: {
   );
 }
 
-/** Blur and dim the whole board but a clear circle round each of the two players the decision
- * turns on (a mask with two holes over a backdrop filter). */
-export function FocusBlur(props: {
+/** Dim the whole board but a circle round each of the two players the decision turns on (a mask
+ * with two holes over a backdrop filter). Dimmed, never blurred: the picture stays clear. */
+export function FocusDim(props: {
   hero: Hero;
   step: DecisionStep;
   at: (j: number) => Vec2;
   zoom: number;
 }) {
   const { hero, step, at, zoom } = props;
-  const pair = sharpPlayers(hero, step);
-  const r = Math.max(SHARP_MIN_PX, SHARP_RADIUS_M * zoom);
+  const pair = focusPlayers(hero, step);
+  const r = Math.max(FOCUS_MIN_PX, FOCUS_RADIUS_M * zoom);
   const holes = pair.map((j) => {
     const [x, y] = at(j);
     return `radial-gradient(circle ${r + 14}px at ${x}px ${y}px, transparent ${r}px, #000 ${r + 14}px)`;
@@ -441,7 +441,7 @@ export function FocusBlur(props: {
   return (
     <div
       className="ss-focus"
-      data-sharp={pair.map((j) => hero.ids[j]).join(" ")}
+      data-focus={pair.map((j) => hero.ids[j]).join(" ")}
       style={{ maskImage: mask, WebkitMaskImage: mask }}
     />
   );
@@ -473,7 +473,7 @@ function Legend({ step, passes }: { step: Step; passes: boolean }) {
       {!passes && step.kind === "decision" && (
         <li>
           <i className="ss-key-lane" aria-hidden="true" />
-          Gold lane: his pick. Sharp: the two players it turns on.
+          Gold lane: his pick. Lit: the two players it turns on; the rest is dimmed.
         </li>
       )}
     </ul>

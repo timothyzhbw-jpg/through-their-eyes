@@ -17,8 +17,8 @@ describes (`cf` for the counterfactual run). No model is called. Lines, in order
   it on some frame of the look; or, for a missing step, that he takes no look then;
 - at the decision: the look that brought the player who mattered into his sight; how far off his
   picture of that player was; what he did; and who the decision turns on (the two players the
-  final freeze keeps sharp): a pass's receiver and the opponent nearest him, a carrier and the
-  opponent nearest him, a shooter and the keeper.
+  final freeze leaves lit, the rest dimmed): a pass's receiver and the opponent nearest him, a
+  carrier and the opponent nearest him, a shooter and the keeper.
 
 The decision model runs only at the decision (SPEC 3.5), so the options a step can show are the
 decision record's: there is no record of options at the time of a look.
@@ -67,7 +67,7 @@ class RunSteps:
     reception: Event
     decision: Decision
     steps: list[Step]
-    focus: tuple[str, str]  # the two players the final freeze keeps sharp
+    focus: tuple[str, str]  # the two players the final freeze leaves lit
     claims: list[Claim] = field(default_factory=list)
     lines: dict[str, list[str]] = field(default_factory=dict)  # "intro", scan id, "final"
 
@@ -382,7 +382,7 @@ class _Builder:
                      evidence=self._decision_evidence())  # fmt: skip
 
     def pair(self) -> Claim | None:
-        """The two players the final freeze keeps sharp, in a line."""
+        """The two players the final freeze leaves lit, in a line."""
         rs = self.rs
         a, b = rs.focus
         if rs.decision.chosen.startswith("shot"):

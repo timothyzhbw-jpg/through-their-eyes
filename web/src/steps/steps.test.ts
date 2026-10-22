@@ -1,7 +1,7 @@
 // Scan step-through (SPEC 7): the bundled steps of the scan hero, checked against the hero export
 // they ride on. Written before the screen: steps resolve from the run's scan events, arrows come
 // from the sim's velocities, the options come from the decision record, and the decision's freeze
-// keeps exactly two players sharp. The file is sim.export.export_steps (tests/test_steps.py keeps
+// leaves exactly two players lit. The file is sim.export.export_steps (tests/test_steps.py keeps
 // it current).
 
 import { describe, expect, it } from "vitest";
@@ -21,7 +21,7 @@ import {
   projectSegment,
   PROJECTION_S,
   scanStepIds,
-  sharpPlayers,
+  focusPlayers,
   stepTitle,
   type DecisionStep,
   type LookStep,
@@ -163,11 +163,11 @@ describe("potential passes come from the decision record", () => {
   });
 });
 
-describe("the decision's freeze keeps exactly two players sharp", () => {
+describe("the decision's freeze leaves exactly two players lit", () => {
   it("the receiver of his pass and the opponent nearest him", () => {
     const d = fac.steps.at(-1) as DecisionStep;
     expect(d.kind).toBe("decision");
-    const pair = sharpPlayers(hero, d);
+    const pair = focusPlayers(hero, d);
     expect(pair).toHaveLength(2);
     expect(pair.map((j) => hero.ids[j])).toEqual(["H9", "A5"]);
     // A5 really is the opponent nearest to H9 at the decision.
@@ -178,12 +178,12 @@ describe("the decision's freeze keeps exactly two players sharp", () => {
     const opponents = hero.players.flatMap((p, j) => (p.team === 1 ? [j] : []));
     expect(Math.min(...opponents.map(dist))).toBe(dist(pair[1]));
     const without = cf.steps.at(-1) as DecisionStep;
-    expect(sharpPlayers(hero, without).map((j) => hero.ids[j])).toEqual(["H4", "A9"]);
+    expect(focusPlayers(hero, without).map((j) => hero.ids[j])).toEqual(["H4", "A9"]);
   });
 
   it("refuses a pair that is not two players", () => {
     const d = { ...(fac.steps.at(-1) as DecisionStep), focus: ["H9", "H9"] as [string, string] };
-    expect(() => sharpPlayers(hero, d)).toThrow();
+    expect(() => focusPlayers(hero, d)).toThrow();
   });
 });
 
