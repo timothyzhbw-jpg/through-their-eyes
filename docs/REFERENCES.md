@@ -165,11 +165,11 @@ conservatively), and no logos anywhere.
   role means without printing them.
 - **Jordet et al. (2013), MIT Sloan Sports Analytics Conference** — visual exploratory frequency
   of EPL midfielders/forwards; > 0.5 scans/s is very high.
-  Summaries: https://mojo.sport/coachs-corner/what-is-scanning ,
-  https://www.skysports.com/football/news/11096/11119387/what-gave-xavi-hernandez-and-andrea-pirlo-an-edge-on-the-rest-the-secret-to-his-vision
+  Summary: https://mojo.sport/coachs-corner/what-is-scanning (a second press summary we read
+  named real players in its address, so it is not linked).
   Paper: https://www.sloansportsconference.com/research-papers/the-hidden-foundation-of-field-vision-in-english-premier-league-epl-soccer-players
   — prints 0.27 (SD 0.22) and 0.33 (SD 0.25) searches/s for players without and with a major
-  award; "> 0.5 is very high" is the summaries' wording, not the paper's.
+  award; "> 0.5 is very high" is the press summaries' wording, not the paper's.
 - ***Visual Perception in Elite Football*** (NIH doctoral thesis, Aksum 2021) —
   https://nih.brage.unit.no/nih-xmlui/handle/11250/2828246
   → > 90% of scans last ≤ 0.66 s and very few include a fixation → peripheral-vision model.
