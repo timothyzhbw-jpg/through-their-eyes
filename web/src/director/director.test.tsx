@@ -195,7 +195,9 @@ describe("the chip", () => {
     act(() => chip(page)!.click());
     expect(session.playback.get()).toMatchObject({ camera: "pov", povPlayer: "H8" });
     expect(chip(page)).toBeNull(); // he is on screen now: the director holds the shot
-    expect(text(page.querySelector(".director-idle"))).toMatch(/^Pick any camera/);
+    expect(text(page.querySelector(".director-idle"))).toMatch(
+      /^When play gives a reason to switch cameras/,
+    );
   });
 
   it("offline, suggests the breakdown once the moment is over; the breakdown then directs", () => {
@@ -284,7 +286,9 @@ describe("between suggestions", () => {
     for (let f = 11; f <= 34; f++) at(session, f);
     expect(text(chip(page))).toBe("Switch to J. Ferriday's eyes: the ball is coming to him."); // 0.16 s on
     for (let f = 35; f <= 45; f++) at(session, f);
-    expect(text(page.querySelector(".director-idle"))).toMatch(/^Pick any camera/);
+    expect(text(page.querySelector(".director-idle"))).toMatch(
+      /^When play gives a reason to switch cameras/,
+    );
   });
 
   it("a suggestion held on the viewer's camera does not show late when he leaves it", () => {
