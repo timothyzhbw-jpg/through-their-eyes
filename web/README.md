@@ -375,12 +375,15 @@ src/
   options, off by default; it draws on the broadcast camera and the tactical board, one state for
   both. Per player it
   draws only sim data: the position, the torso line (shoulders, across `body`), a head ray from
-  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. The ray
-  lights up (detector green) while the scan detector marks a scan. The key's switch picks the
+  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. While
+  the scan detector marks a scan, a radar lies at the player's feet (`skeleton/radar.ts`: a 60°
+  Floodlight sector on his head yaw, eased in and out over about 150 ms of match time); the head
+  ray stays white. Without the skeleton, the key scan's player gets the radar during his key
+  scan, on the broadcast camera and the board. The key's switch picks the
   head yaw: true, or as tracked (2° sensor noise, the detector's input), rebuilt from the
   detector's exported angular velocity (`skeleton/skeleton.ts` says how; within 0.38° of the
   sim's tracked yaw on seed 3). A match export has no detector run, so there it is true yaw only
-  and the ray lights up during the sim's own scans (sight blue). No limbs: the sim has none.
+  and the radar shows during the sim's own scans. No limbs: the sim has none.
   `npm run fps` also measures it, over the broadcast camera.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
   voice steps name its line ids. Click a caption (or any line of the call) and the

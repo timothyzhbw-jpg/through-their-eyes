@@ -2167,14 +2167,18 @@ original visual identity.
   - the position; the torso line from `body` (the shoulders, across the torso's facing); a head
     ray from the head yaw; and a fan from torso to head that fills in as the head–torso angle
     grows. The key reads out that angle for the player whose eyes the first-person view uses.
-  - The head ray lights up while the scan detector (§4.7) marks a scan.
+  - While the scan detector (§4.7) marks a scan, a **radar** lies on the grass at the player's
+    feet: a 60° sector on his head yaw, turning with it, with a thin edge on the side his head
+    turned to, in Floodlight. It shows on exactly the frames flagged, easing in and out over about
+    150 ms of match time; the head ray stays the same white line. Without the skeleton, the key
+    scan's player gets the radar during his key scan, on the broadcast camera and the board.
   - A switch picks the head yaw: **true**, or **as tracked**, with the §3.4 sensor noise (the
     series the detector runs on). The export carries the tracked yaw only as the detector's
     angular velocity, so the web app integrates that and pins the constant to the circular mean of
     true minus integrated yaw. On blind_side_run seed 3 that is within 0.38° of the sim's
     `head_yaw_observed`, every player and both runs (the noise itself reaches 7.5°).
-  - A stitched match's export has no detector run: there the head yaw is the true one and the ray
-    lights up during the sim's own scans, and the key says so.
+  - A stitched match's export has no detector run: there the head yaw is the true one and the
+    radar shows during the sim's own scans, and the key says so.
   - Limbs are not sim data and are not drawn. On the broadcast camera the torso line sits at
     shoulder height and the ray at eye height; heights and the shoulder width are a drawing
     choice, not data.
