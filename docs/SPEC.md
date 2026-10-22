@@ -1720,6 +1720,11 @@ original visual identity.
 ### Real-footage overlay (cut)
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
+Motion capture of lab subjects is not match data or footage: Bowen allowed the CMU motion
+capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
+(`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
+the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+
 ### Acceptance checks — render
 - [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
       moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
