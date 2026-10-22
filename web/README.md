@@ -115,8 +115,10 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 `match-1` is 19 scenario possessions on one clock of about 11¾ minutes (`sim/match.py`, SPEC 3.1):
 open-play passages and four heroes (the blind-side run at 0:30, escaping the press at 4:33, the
-far-post finish at 6:41, which scores, and the short corner at 8:30). It exists only on the live service: offline, the bundled hero
-moment plays and the badge says why.
+far-post finish at 6:41, which scores, and the short corner at 8:30). `match-2` (`?match=match-2`,
+in the match picker) plays three of them on other seeds, in another order: escaping the press at
+0:25, the short corner at 3:22, the blind-side run at 7:58. Both exist only on the live service:
+offline, the bundled hero moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
   possession on screen (n of 19, its scenario) and how play restarted (kick-off, throw-in, …, or a
@@ -162,6 +164,8 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look we
 uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look web/public/data/without_look_far_post_finish_seed11.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --steps web/public/data/steps_seed3.json
+uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/data/steps_press_escape_seed0.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -198,6 +202,13 @@ uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/
   lines in en and zh, and the run from the decision on for the players on the ball (each distinct
   run once). `src/takeeyes/looks.ts` splices a look into the factual run; fetched when the mode
   first opens.
+
+- `steps_seed3.json`, `steps_press_escape_seed0.json`: His looks, step by step
+  (`sim.export.export_steps`, SPEC 7). Per run: each look of the hero before the ball reaches him
+  (the dropped one marked missing), its freeze frame, who came into his sight, every player's sim
+  velocity there (mm/s), and his decision with the two players it turns on; the verified lines in
+  en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
+  scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
 
 Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
 `tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the

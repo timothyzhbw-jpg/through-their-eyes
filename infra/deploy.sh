@@ -267,7 +267,7 @@ api() {
     "TTE_COSMOS_ENDPOINT=${TTE_COSMOS_ENDPOINT:?}" "TTE_COSMOS_DATABASE=$COSMOS_DB" \
     "AZURE_CLIENT_ID=${TTE_API_CLIENT_ID:?run provision first}" \
     "TTE_WEB_ORIGIN=${TTE_WEB_ORIGIN:-*}" "TTE_DAILY_MODEL_CAP=${TTE_DAILY_MODEL_CAP:-40}" \
-    "TTE_MATCHES=${TTE_MATCHES:-blind_side_run:3,corner_blind_side:0,match:1,press_escape:0}" -o none
+    "TTE_MATCHES=${TTE_MATCHES:-blind_side_run:3,corner_blind_side:0,match:1,match:2,press_escape:0}" -o none
   az containerapp ingress update -g "$RG" -n "$APP" --target-port 8000 -o none
   echo "https://$(az containerapp show -g "$RG" -n "$APP" \
     --query properties.configuration.ingress.fqdn -o tsv)/health"
