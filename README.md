@@ -20,12 +20,13 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 
 ## Judge it in 3 minutes
 1. **See what he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0):
-   press **Play**. Playback slows through the look (the KEY SCAN tag), and the runner H9 comes
-   into view.
+   press **Play**. Playback slows through the look (the KEY SCAN tag), and the runner N. Varnhall
+   (No. 9) comes into view.
 2. **Take the look away.** [Without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
-   the same moment re-simulated with that one scan removed. He no longer knows where H9 is, and
-   plays it back to H4; **With the look** switches back to the pass to H9. Without the look, 39 of
-   40 held-out seeds decide differently ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
+   the same moment re-simulated with that one scan removed. He no longer knows where Varnhall is,
+   and plays it back to K. Annersley (No. 4); **With the look** switches back to the pass to
+   Varnhall. Without the look, 33 of 40 held-out seeds decide differently
+   ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams in, and once the moment is detected the agent crew's breakdown plays
    (Microsoft Foundry; **Sound on** for Azure AI Speech). Click a caption to open its claims and
@@ -55,7 +56,7 @@ captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/re
 - **What it needs as input.** Player tracking at 25 Hz with head direction, the kind stadium
   limb tracking or broadcast pose models report. [analytics/keypoints.py](analytics/keypoints.py)
   turns COCO-style head, shoulder and hip keypoints into position and head yaw; on synthetic
-  keypoints the scan detector keeps a held-out F1 of 0.965 with 20 mm of noise per keypoint axis
+  keypoints the scan detector keeps a held-out F1 of 0.962 with 20 mm of noise per keypoint axis
   ([keypoint_ingest](eval/reports/keypoint_ingest.md)). The belief and the counterfactual need a
   simulator of the match around the moment; ours is that piece.
 - **What it hands a graphics engine.** Per moment, a `TelestrationPlan` (timed camera cuts,
@@ -65,7 +66,7 @@ captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/re
 - **Controls.** Code checks every number the crew says or captions before it airs; every verdict
   goes to an audit log (Cosmos DB, `GET /api/matches/<id>/audit`); model calls are rate-limited
   per client and capped per day, with deterministic templates and a cache behind them.
-- **Validated, and not.** The perception parameters are calibrated to published values: 10 of 16
+- **Validated, and not.** The perception parameters are calibrated to published values: 11 of 16
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
   only; see [Limitations](#limitations).
@@ -92,14 +93,14 @@ A simulated match with fictional players; no login. Each link opens the live sit
 players take a few seconds to load). URL parameters: [web/README.md](web/README.md#url-parameters).
 
 1. **What he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan):
-   H8, the midfielder, looks over his shoulder, away from the ball, just before he receives it
-   (the KEY SCAN badge). That look is the only time before his pass that the runner H9 is in
-   his sight. Press **Play**: playback slows through the look.
+   J. Ferriday (No. 8), the midfielder, looks over his shoulder, away from the ball, just before
+   he receives it (the KEY SCAN badge). That look is the only time before his pass that the
+   runner N. Varnhall (No. 9) is in his sight. Press **Play**: playback slows through the look.
 2. **With and without that look.** [Without the look, at his decision](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
-   the same moment re-simulated with that one scan removed. His picture of H9 is now 12 m off,
-   and his pass options point backwards; he plays it back to H4. Click **With the look**: one
-   thick line to H9. Over 40 held-out seeds, 39 decide differently without the look
-   ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
+   the same moment re-simulated with that one scan removed. His picture of Varnhall is now 12 m
+   off, and his pass options point backwards; he plays it back to K. Annersley (No. 4). Click
+   **With the look**: one thick line to Varnhall. Over 40 held-out seeds, 33 decide differently
+   without the look ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz; once the moment is detected, the agent crew's
    breakdown plays (Microsoft Foundry, cached after the first request). Click a caption to open
@@ -198,7 +199,7 @@ the deployed service. Nothing has been run on real tracking data.
 | Claim | Number | Report |
 |---|---|---|
 | Without one look, the hero decides differently | 33/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
-| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 40/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
+| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 34/40; 40/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
 | Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
 | … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
 | Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
@@ -217,12 +218,14 @@ the deployed service. Nothing has been run on real tracking data.
   is a re-simulation with our models of movement, perception and decisions; on real data it
   could only be an association.
 - **Pressure and scanning.** In the published data players scan less when an opponent is tight
-  on them (d = +0.57 between 10+ m and 0–1 m). Our simulator shows the opposite sign
-  (d = −0.12, 90% interval over seeds −0.30 to 0.04): one of the 6 statistics outside the
-  published range ([realism](eval/reports/realism.md)).
-- **No tackles yet.** Possession changes hands by interceptions and balls out of play only:
-  0 tackles per 90 minutes over 20 stitched matches ([match_stats](eval/reports/match_stats.md));
-  tackles are switched on in the pressure hero's scenario alone.
+  on them (d = +0.57 between 10+ m and 0–1 m). Our simulator has the same sign but a much
+  smaller effect (d = 0.18, 90% interval over seeds −0.02 to 0.38): one of the 5 statistics
+  outside the published range; the other four compare scan rates between roles
+  ([realism](eval/reports/realism.md)).
+- **No tackles yet.** In the stitched matches possession changes hands by interceptions only:
+  0 tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
+  matches ([match_stats](eval/reports/match_stats.md)); tackles are switched on in the pressure
+  hero's scenario alone.
 - **xT is our own grid**, fitted on synthetic open play, so a gain like "that look was worth … in
   expected threat" is a value inside the simulation.
 

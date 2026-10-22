@@ -72,7 +72,7 @@ The brief's pipeline, end to end, on a synthetic match:
 4. **Counterfactual.** We re-simulate the moment with that one look removed. Random draws are
    tied to each player and purpose, not to one shared sequence. So the two runs differ only
    because of the change. Without the look, the midfielder plays it back; with it, he finds the
-   runner. Over 40 held-out seeds, 39 decide differently without the look.[^flip]
+   runner. Over 40 held-out seeds, 33 decide differently without the look.[^flip]
 5. **Verified numbers.** Every number in the captions, the narration and the evidence cards is
    a claim computed from the match and checked by code before it airs. Viewers can open any
    caption's evidence, or try a wrong number and watch the Verifier refute it.[^verify] Other
@@ -133,14 +133,14 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 | Claim | Result | Source |
 |---|---|---|
 | Without the key look, the scan hero decides differently | 33 of 40 held-out seeds | [^flip] |
-| Lens selection picks the lens each hero is built for | scan hero 40/40; pressure hero 40/40 on fresh seeds | [^lens], [^press] |
+| Lens selection picks the lens each hero is built for | scan hero 34/40; pressure hero 40/40 on fresh seeds | [^lens], [^press] |
 | Forced to keep the ball, the pressure hero loses it; the possession outcome changes | 40/40 lost; 32/40 changed | [^press] |
 | Set-piece hero: unmarked without the look, marked within 5 m with it | 37/40 (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
 | Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.915, recall 0.943 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
-| Simulator statistics against published values | 10 inside the published range, 6 outside, 10 with no published value | [^realism] |
+| Simulator statistics against published values | 11 inside the published range, 5 outside, 10 with no published value | [^realism] |
 | GPU pitch-control shader against the numpy reference | max difference about 5e-5 (target < 0.02) | [^parity] |
 | Same seed, same output (same platform) | byte-identical | [^determinism] |
 | Test suites in CI on `main` | Python 1216 passed; web 595 passed; end-to-end smoke 15 of 15 pages | [^tests] |
@@ -224,18 +224,21 @@ Multi-Agent System (SPEC §0).
   counterfactual outcome depends on our models of movement, perception and decisions. On real
   data we could only claim association.
 - **Realism is partial.** Of the 16 simulator statistics we can check against a published
-  value, 6 fall outside the published range. All six compare scan rates between roles or
-  pressure levels. One has the opposite sign: published players scan less when an opponent is
-  tight on them (d = +0.57), our simulated players slightly more (d = −0.12).[^realism]
-- **No tackles yet.** The ball changes hands by interceptions and balls out of play only: 0
-  tackles per 90 minutes over 20 stitched matches. Tackles are switched on in the pressure
-  hero's scenario alone.[^matchstats]
+  value, 5 fall outside the published range. All five compare scan rates between roles or
+  pressure levels. Published players scan less when an opponent is tight on them (d = +0.57);
+  ours do too, but much less so (d = 0.18).[^realism]
+- **No tackles yet.** In the stitched matches the ball changes hands by interceptions only: 0
+  tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
+  matches. Tackles are switched on in the pressure hero's scenario alone.[^matchstats]
 - **xT is our own grid, not fitted to real football.** A gain such as "That look was worth … in
   expected threat" is a value inside the simulation.
 - **The stitched match has one goal, from its shot hero:** open play has no shots
   (`possession_play` scripts its passes), so the scoreline is the heroes' doing.[^match]
-- **Not yet measured:** no single-agent baseline (the narration ablation is the closest
-  comparison), no viewer study, and no frame-rate run on a laptop's integrated GPU.
+- **The crew does not write better lines than one agent.** Against a single agent doing all four
+  model roles in one call, on the same moments, tools and schemas, the crew aired no fewer wrong
+  facts (none in either) and scored the same groundedness; what it buys is recovery and
+  auditability, at about twice the cost per breakdown.[^crew]
+- **Not yet measured:** no viewer study, and no frame-rate run on a laptop's integrated GPU.
 - **Tactics: two cards, not a knowledge base.** The analyst's stats panel and the recap answer
   "why build from the back?" and "why focus on set pieces?" from the match's own data, each with
   one verified sentence. The rest of a tactics table (high press, counter-attack, wide overloads,
@@ -314,7 +317,11 @@ play that attacks the goal.
 [^tests]: CI run 39583678095 on main at 44c0bb5, 2026-10-21: pytest "1216 passed in 612.99s",
     vitest "Tests 595 passed", smoke "15 of 15 pages passed".
 [^matchstats]: [eval/reports/match_stats.md](../eval/reports/match_stats.md): possession changes
-    by tackle per 90 min 0 (n = 20 matches); "Tackles are on in press_escape only".
+    by tackle per 90 min 0 and out of play 0 (n = 20 matches); "Tackles are on in press_escape
+    only".
+[^crew]: [eval/reports/crew_vs_single.md](../eval/reports/crew_vs_single.md), 2026-10-21, six
+    moments × four audiences on Foundry `gpt-4.1-mini`: wrong facts aired 0 vs 0, groundedness
+    5.00 vs 5.00, $0.0046 vs $0.0090 per breakdown (single vs crew).
 [^ey]: EY for the Premier League, *Economic and Social Impact Report*, July 2026
     ([PDF](https://resources.premierleague.pulselive.com/premierleague/document/2026/07/31/8ee78e99-a3e3-4b81-ab38-cf76eae8dd94/Premier-League-Economic-and-Social-Impact-Report-2026.pdf)):
     "broadcast revenue exports totalling £1.8b in 2024/25"; "1.9b people follow the Premier
