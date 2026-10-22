@@ -28,6 +28,7 @@ import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
+import { BeliefRings } from "./BeliefRings";
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -104,7 +105,6 @@ function PovScene() {
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
   const alertRings = useRef<(THREE.Mesh | null)[]>([]);
-  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const labels = useRef<(THREE.Sprite | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null);
 
@@ -118,18 +118,6 @@ function PovScene() {
         side: THREE.DoubleSide,
         toneMapped: false,
       }),
-      ghost: new THREE.MeshBasicMaterial({
-        color: COLORS.fg,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-      }),
-      runnerGhost: new THREE.MeshBasicMaterial({
-        color: COLORS.gold,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-      }),
     }),
     [],
   );
@@ -142,7 +130,6 @@ function PovScene() {
     const broadcast = s.camera === "broadcast";
     const pov = hero.ids.indexOf(s.povPlayer);
     const me = broadcast ? -1 : pov; // whose body is hidden: nobody's on broadcast
-    const showGhosts = s.beliefGhosts && pov === hero.hero;
     const alerted = new Set(s.blindSide ? alertsAt(hero, run, s.frame).map((a) => a.target) : []);
     const beat = pulse(performance.now() / 1000);
     for (let j = 0; j < hero.n; j++) {
@@ -159,13 +146,6 @@ function PovScene() {
         body.position.set(x, 0, -y);
         body.visible = j !== me;
         poseToken(body, head, sample.body[j], sample.head[j]);
-      }
-      const ghost = ghosts.current[j];
-      if (ghost) {
-        const gx = sample.ghost[2 * j];
-        const gy = sample.ghost[2 * j + 1];
-        ghost.position.set(gx, BODY_CENTRE, -gy);
-        ghost.visible = showGhosts && j !== pov && Math.hypot(gx - x, gy - y) > 1.2;
       }
     }
     ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
@@ -287,17 +267,7 @@ function PovScene() {
           </sprite>
         </group>
       ))}
-      {hero.players.map((p, j) => (
-        <mesh
-          key={p.id}
-          ref={(m) => {
-            ghosts.current[j] = m;
-          }}
-          geometry={capsule}
-          material={j === hero.runner ? materials.runnerGhost : materials.ghost}
-          visible={false}
-        />
-      ))}
+      <BeliefRings sample={sample} />
       {rigged && (
         <RiggedFallback>
           <Suspense fallback={null}>
