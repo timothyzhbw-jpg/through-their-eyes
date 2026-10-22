@@ -1000,13 +1000,14 @@ a pass at its reception, interception or out; a sprint at its first frame back b
     `names`). The Verifier keeps names, surnames and the raw ids out of free text, with ASCII-only
     word boundaries so a name next to a Chinese character is caught too.
   - *In Chinese* (2026-10-22, zh QA) a player goes by his surname transliterated in Xinhua style
-    (`sim.roster.ZH_NAMES`: 费里戴, 瓦恩霍尔, 安纳斯利…), in zh captions, the zh voice, what-if
+    (`sim.roster.ZH_NAMES`: 费里迪, 瓦恩霍尔, 安纳斯利…), in zh captions, the zh voice, what-if
     questions and the what-if parser; the English UI and the pitch labels keep "J. Ferriday", as
     a Chinese commentator names players over an English world feed. *Why:* the zh voices read
     "J. Ferriday" as "G Faraday" and "N. Varnhall" as "嗯王安好" (live `/api/tts`, transcribed).
     The renderer picks the form by language (`explain.render.localized`), and the Verifier
     treats every written form of a player (id, short, full, surname, Chinese) outside a slot as
-    an entity. The zh voice also drops "（xT）", which it read as noise; the caption keeps it.
+    an entity. A zh line never holds the letters "xT" (the voice read "（xT）" as "Baxtee"):
+    expected threat is 预期威胁 in zh captions and voice; the UI's chips may keep "xT".
   - The two clubs are named too: Kestrel Bay (home) and Corvane Vale (away), both invented. The
     recap's claims still say Home and Away (its cache key holds their templates); the API names
     the clubs when it serves a recap.
@@ -2332,8 +2333,8 @@ reported to be Xsens motion capture; animation only): the players' walk
 - [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
       no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
       slot is a render violation, in en and zh; values cached with ids are renamed when read, with
-      new voice keys. In zh, players go by their Chinese names and no English but "xT" is left in a
-      line (captions, bundles, tactics cards); the zh voice says no English at all
+      new voice keys. In zh, players go by their Chinese names and no Latin letter is left in a
+      line, not even "xT" (captions, voice, bundles, tactics cards)
       ([tests/test_zh_narration.py](../tests/test_zh_narration.py)).
       — [tests/test_names.py](../tests/test_names.py),
       [tests/test_roster_web.py](../tests/test_roster_web.py),

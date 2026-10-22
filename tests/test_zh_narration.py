@@ -1,9 +1,10 @@
 """Chinese narration as a Chinese viewer reads and hears it (zh-qa, SPEC 5.3, 6).
 
 Players go by their Chinese names in zh text and speech (`sim.roster.ZH_NAMES`): the zh voices
-read "J. Ferriday" as "G Faraday". No English is left in a zh line but "xT", which the caption
-keeps and the voice drops. Counts of up to ten are words (一次, 两次). A wording or name change
-re-keys the cached texts it changes (`explain.render.render_fingerprint`).
+read "J. Ferriday" as "G Faraday". No Latin letter is left in a zh line, not even "xT" (the voice
+read "（xT）" as "Baxtee"): expected threat is 预期威胁. Counts of up to ten are words (一次,
+两次). A wording or name change re-keys the cached texts it changes
+(`explain.render.render_fingerprint`).
 """
 
 import asyncio
@@ -15,7 +16,6 @@ import pytest
 
 from agents import whatif
 from agents.context import MomentContext
-from agents.delivery import spoken
 from agents.workflow import breakdown
 from explain import lexicon
 from explain.claims import Slot
@@ -29,12 +29,11 @@ HEROES = [("blind_side_run", 3), ("press_escape", 0), ("far_post_finish", 11),
           ("corner_blind_side", 0)]  # fmt: skip
 PERSONAS = ("casual", "analyst", "player_fan", "coach", "audio_description")
 PLAYER_ID = re.compile(r"(?<![A-Za-z0-9_])[HA](?:1[01]|[1-9])(?![A-Za-z0-9_])")
-# Latin letters a zh line may hold: the xT abbreviation, nothing else.
-ENGLISH = re.compile(r"[A-Za-z]+")
+ENGLISH = re.compile(r"[A-Za-z]+")  # a zh line holds no Latin letter at all
 
 
 def _english(text: str) -> list[str]:
-    return [w for w in ENGLISH.findall(text) if w != "xT"]
+    return ENGLISH.findall(text)
 
 
 @pytest.fixture(scope="module", params=HEROES, ids=lambda h: f"{h[0]}-{h[1]}")
@@ -68,7 +67,7 @@ def test_every_template_line_in_chinese_names_players_in_chinese_and_holds_no_en
             assert not _english(line.text), (script.persona, line.text)
         for cue in script.voice:
             words = re.sub(r"<[^>]+>", " ", cue.ssml)
-            assert not ENGLISH.findall(words), (script.persona, words)  # not even xT is spoken
+            assert not ENGLISH.findall(words), (script.persona, words)
     texts = [line.text for s in zh.scripts for line in s.payload.lines]
     assert any(short_name(ctx.hero, "zh") in t for t in texts)
 
@@ -81,7 +80,7 @@ def test_every_supported_claim_reads_without_english_in_chinese(ctx):
         assert not _english(out.text), (cid, out.text)
 
 
-@pytest.mark.parametrize("written", ["J. Ferriday", "Ferriday", "费里戴", "H8"])
+@pytest.mark.parametrize("written", ["J. Ferriday", "Ferriday", "费里迪", "H8"])
 def test_a_name_in_any_form_outside_a_slot_is_an_entity_in_chinese(written):
     ctx = MomentContext.load("blind_side_run", 3)
     line = ScriptLine(id="L1", text=f"球到之前，{written}先回头看了一眼。",
@@ -95,14 +94,6 @@ def test_a_chinese_count_of_up_to_ten_is_said_in_words():
     said = {n: format_slot(Slot(value=n), "zh", fmt="times") for n in (1, 2, 3, 10, 11, 3079)}
     assert said == {1: "一次", 2: "两次", 3: "三次", 10: "十次", 11: "11次", 3079: "3079次"}
     assert format_slot(Slot(value=2), "en", fmt="times") == "twice"
-
-
-def test_the_chinese_voice_drops_xt_and_keeps_every_other_word():
-    assert spoken("那一眼价值0.17的预期威胁（xT）。", "zh") == "那一眼价值0.17的预期威胁。"
-    assert (
-        spoken("找到了瓦恩霍尔，预期威胁（xT）0.172。", "zh") == "找到了瓦恩霍尔，预期威胁0.172。"
-    )
-    assert spoken("That look was worth 0.17 xT.", "en") == "That look was worth 0.17 xT."
 
 
 def test_a_chinese_wording_change_rekeys_chinese_text_only():

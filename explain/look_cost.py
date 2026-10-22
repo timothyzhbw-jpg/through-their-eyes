@@ -176,8 +176,8 @@ def pass_zones(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim
         "Without that look it would have reached {cf_receiver} {cf_band:vocab}, "
         "{cf_lane:vocab}: xT {cf_xt}.",
         templates={"zh": "{player}的传球在{band:vocab}{lane:vocab}找到了{receiver}，"
-                         "预期威胁（xT）{xt}。如果没有那一眼，球会在{cf_band:vocab}{cf_lane:vocab}"
-                         "到{cf_receiver}脚下，预期威胁（xT）{cf_xt}。"},
+                         "预期威胁{xt}。如果没有那一眼，球会在{cf_band:vocab}{cf_lane:vocab}"
+                         "到{cf_receiver}脚下，预期威胁{cf_xt}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=r.hero_pass.attrs["to"]),
                "cf_receiver": Slot(ref=alt.attrs["to"]),
                "band": Slot(value=ctx.value(zone["band"])),

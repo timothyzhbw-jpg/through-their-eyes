@@ -191,7 +191,7 @@ describe("Your call: the reveal", () => {
 
   it("speaks the breakdown's language: the what-if answers in Chinese", () => {
     const r = reveal("pass:H4", narration, "zh");
-    expect(texts(r.outcome.lines)).toEqual(["如果费里戴把球传给安纳斯利，安纳斯利会接到球。"]);
+    expect(texts(r.outcome.lines)).toEqual(["如果费里迪把球传给安纳斯利，安纳斯利会接到球。"]);
   });
 
   it("without the breakdown yet, still has the re-simulated outcome and the comparison", () => {

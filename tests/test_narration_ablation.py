@@ -278,7 +278,7 @@ def test_a_written_out_id_counts_once_as_an_entity_in_both_languages(ctx):
                        claims=["cf_pass"])  # fmt: skip
     checked = _check(ctx, wrong, "zh")
     assert checked.kinds == ["entity", "entity"] and checked.made_up == ["A5"]
-    assert checked.truth == ["如果没有那一眼，费里戴会把球传给安纳斯利。"]
+    assert checked.truth == ["如果没有那一眼，费里迪会把球传给安纳斯利。"]
 
 
 def test_the_ablation_reuses_cached_seeds_and_keeps_to_the_call_budget(tmp_path):

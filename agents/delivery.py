@@ -212,23 +212,6 @@ _EMPHASIS_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 )
 _BREAK = "250ms"
 
-# What a caption shows but a voice would garble: Chinese voices read "（xT）" aloud as noise
-# ("Baxtee", zh-qa 2026-10-22). The zh caption keeps it for the analyst; the zh voice says only
-# 预期威胁, and a bare "xT" as 预期威胁.
-_UNSPOKEN: dict[Language, tuple[tuple[re.Pattern[str], str], ...]] = {
-    "zh": (
-        (re.compile(r"\s*[（(]xT[）)]"), ""),
-        (re.compile(r"(?<![A-Za-z])xT(?![A-Za-z])"), "预期威胁"),
-    ),
-}
-
-
-def spoken(text: str, language: Language) -> str:
-    """The words a voice says for a caption in `language` (SSML is built from these)."""
-    for pattern, said in _UNSPOKEN.get(language, ()):
-        text = pattern.sub(said, text)
-    return text
-
 
 # Tier rules on the selected lens's |delta| in xT, and the moment's tags.
 CLUTCH_DELTA = 0.15
@@ -390,7 +373,7 @@ def ssml_for_line(
     if described or not chosen:
         degree = None
     segments = _segments(
-        spoken(line.text, language), line.speaker, rate, pitch,
+        line.text, line.speaker, rate, pitch,
         emphasize=not described, counterfactual=counterfactual and not described,
     )  # fmt: skip
     if chosen:

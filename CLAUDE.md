@@ -81,7 +81,7 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
 - LLM calls return schema-validated JSON. **LLMs never write digits** — numbers are slot-filled
   from verified values.
 - zh narration names players by their Chinese names (`sim.roster.ZH_NAMES`, one table) and holds
-  no English but "xT" (`tests/test_zh_narration.py`). A zh template is written the way a Chinese
+  no Latin letters, not even "xT" (预期威胁) (`tests/test_zh_narration.py`). A zh template is written the way a Chinese
   commentator would say it, not translated word for word.
 - Secrets only via environment variables; document every variable in `.env.example`.
 - Commits: small, imperative mood, reference the SPEC section

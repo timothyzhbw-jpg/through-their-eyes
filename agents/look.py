@@ -423,7 +423,7 @@ def _value(look: LookResult) -> Claim | None:
         id="look_value",
         template=f"That is worth {{dxt}} {'less' if better else 'more'} in expected threat than "
                  "what he really did.",
-        templates={"zh": f"这样处理，预期威胁（xT）比他实际的选择{'低' if better else '高'}"
+        templates={"zh": f"这样处理，预期威胁比他实际的选择{'低' if better else '高'}"
                            "{dxt}。"},
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=fn("cf_delta", of="possession_value", scan=look.id),

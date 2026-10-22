@@ -399,7 +399,7 @@ def counterfactual_value(
         return Claim(
             id="cf_value",
             template="That look was worth {dxt} in expected threat.",
-            templates={"zh": "那一眼价值{dxt}的预期威胁（xT）。"},
+            templates={"zh": "那一眼价值{dxt}的预期威胁。"},
             slots={"dxt": _num(ctx.value(delta), 2)},
             predicate=_approx(delta, slot("dxt"), 2),
             evidence=[cf.scan_id],
@@ -415,7 +415,7 @@ def counterfactual_value(
         template=f"What {{player}} did was worth {{dxt}} {'more' if more else 'less'} in "
         f"expected threat than {instead[0]}.",
         templates={"zh": f"{{player}}这样处理，比{instead[1]}{'多' if more else '少'}创造了"
-                         "{dxt}的预期威胁（xT）。"},
+                         "{dxt}的预期威胁。"},
         slots={"player": Slot(ref=r.hero), "dxt": _num(abs(value), 2)},
         predicate=Predicate(op="all", args=[
             _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
@@ -1307,7 +1307,7 @@ def marker_cf_value(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -
     return Claim(
         id="cf_value",
         template="That look was worth {dxt} in expected threat.",
-        templates={"zh": "那一眼价值{dxt}的预期威胁（xT）。"},
+        templates={"zh": "那一眼价值{dxt}的预期威胁。"},
         slots={"dxt": _num(ctx.value(delta), 2)},
         predicate=_approx(delta, slot("dxt"), 2),
         evidence=[cf.scan_id],

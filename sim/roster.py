@@ -4,7 +4,7 @@ Names are presentation only and are not in the export: the sim, the claims and t
 the ids (H8, A5) and the teams (0 home, 1 away). Narration renders players by their short names
 (agents/context.py `names`, slot values the Verifier checks) and the clubs by theirs. In
 Chinese they go by `ZH_NAMES`, as a Chinese commentator names a player over an English world
-feed: the screen's labels stay "J. Ferriday", the zh captions and voice say 费里戴.
+feed: the screen's labels stay "J. Ferriday", the zh captions and voice say 费里迪.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ ZH_NAMES: dict[str, str] = {
     "H5": "韦尔坎普",
     "H6": "索尔顿比",
     "H7": "卡斯特兰",
-    "H8": "费里戴",
+    "H8": "费里迪",
     "H9": "瓦恩霍尔",
     "H10": "布拉克韦尔",
     "H11": "奥孔德鲁",
@@ -76,7 +76,7 @@ ZH_NAMES: dict[str, str] = {
 
 
 def short_name(pid: str, lang: str = "en") -> str:
-    """'J. Ferriday'; '费里戴' in Chinese (`lang` "zh"); an unknown id is returned unchanged."""
+    """'J. Ferriday'; '费里迪' in Chinese (`lang` "zh"); an unknown id is returned unchanged."""
     if lang == "zh" and pid in ZH_NAMES:
         return ZH_NAMES[pid]
     found = ROSTER.get(pid)

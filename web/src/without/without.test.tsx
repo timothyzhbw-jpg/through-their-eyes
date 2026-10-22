@@ -101,7 +101,7 @@ describe("on the live screen", () => {
     );
     act(() => session.breakdown.set({ language: "zh" }));
     expect(text(page.querySelector("[aria-label='The run without the look']"))).toContain(
-      "拿掉的，是球到之前0.8秒、费里戴扭头看向右后方的那一眼。",
+      "拿掉的，是球到之前0.8秒、费里迪扭头看向右后方的那一眼。",
     );
   });
 

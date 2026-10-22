@@ -324,7 +324,7 @@ def check_caption(
         for m in re.finditer(r"[{}]", text)
     ]
     # A player is named only by a slot. Outside one, his id, his on-screen name ("J. Ferriday"),
-    # his surname alone or in his full name and his Chinese name (费里戴) are entities, each
+    # his surname alone or in his full name and his Chinese name (费里迪) are entities, each
     # written-out name once. ASCII boundaries: `\b` would miss a name next to a Chinese character
     # (a word character to it).
     entities: set[str] = set()
