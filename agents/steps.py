@@ -196,7 +196,7 @@ class _Builder:
             slots["n"] = Slot(value=n)
             rhs = slot("n")
             template = "Before the ball reaches {player}, he takes {n|look|looks} away from it."
-            zh = "球到达之前，{player}把视线从球上移开了{n}次。"
+            zh = "球到达之前，{player}把视线从球上移开了{n:times}。"
         return Claim(id="steps_count", template=template, templates={"zh": zh}, slots=slots,
                      predicate=Predicate(op="eq", lhs=count, rhs=rhs),
                      evidence=[rs.reception.id])  # fmt: skip
@@ -205,7 +205,7 @@ class _Builder:
         rs, e = self.rs, step.scan
         where_en = f"over his {step.side} shoulder" if step.over else f"to his {step.side}"
         where_zh = {
-            ("left", True): "越过左肩向后看", ("right", True): "越过右肩向后看",
+            ("left", True): "扭头看向左后方", ("right", True): "扭头看向右后方",
             ("left", False): "向左看", ("right", False): "向右看",
         }[(step.side, step.over)]  # fmt: skip
         seconds = round((rs.reception.frame - e.frame) * rs.run.dt, 1)
@@ -305,7 +305,7 @@ class _Builder:
         k, step = hit
         where_en = f"over his {step.side} shoulder" if step.over else f"to his {step.side}"
         where_zh = {
-            ("left", True): "越过左肩向后看", ("right", True): "越过右肩向后看",
+            ("left", True): "扭头看向左后方", ("right", True): "扭头看向右后方",
             ("left", False): "向左看", ("right", False): "向右看",
         }[(step.side, step.over)]  # fmt: skip
         e = step.scan
@@ -341,7 +341,7 @@ class _Builder:
                 "When he decides, he pictures {mate} {err} m from where he really is: "
                 "he last saw him {age} s earlier."
             )
-            zh = "做决定时，他脑海中{mate}的位置与实际相差{err}米：他上一次看到他是在{age}秒前。"
+            zh = "做决定时，他脑海中{mate}的位置与实际相差{err}米：他上一次看到对方是在{age}秒前。"
         else:
             checks.append(Predicate(op="lt", lhs=aged, rhs=0.05))
             template = "When he decides, he has {mate} in sight, and pictures him {err} m off."

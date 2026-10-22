@@ -55,7 +55,8 @@ def removed_look(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Cla
         id="removed_look",
         template="Removed: {player}'s look over his {side:vocab} shoulder, "
         "{before|second|seconds} before the ball reached him.",
-        templates={"zh": "去掉的是：球到之前{before}秒，{player}向{side:vocab}后方的那一眼。"},
+        templates={"zh": "拿掉的，是球到之前{before}秒、{player}扭头看向{side:vocab}后方的"
+                         "那一眼。"},
         slots={"player": Slot(ref=r.hero), "scan": Slot(ref=cf.scan_id),
                "side": Slot(value=ctx.value(side, values)),
                "before": _num(ctx.value(before, values), 1)},
@@ -174,9 +175,9 @@ def pass_zones(ctx: EvalContext, r: HeroRefs, cf: CounterfactualResult) -> Claim
         template="{player}'s pass reached {receiver} {band:vocab}, {lane:vocab}: xT {xt}. "
         "Without that look it would have reached {cf_receiver} {cf_band:vocab}, "
         "{cf_lane:vocab}: xT {cf_xt}.",
-        templates={"zh": "{player}的传球在{band:vocab}{lane:vocab}找到了{receiver}：xT {xt}。"
-                         "如果没有那一眼，球会在{cf_band:vocab}{cf_lane:vocab}到{cf_receiver}脚下："
-                         "xT {cf_xt}。"},
+        templates={"zh": "{player}的传球在{band:vocab}{lane:vocab}找到了{receiver}，"
+                         "预期威胁{xt}。如果没有那一眼，球会在{cf_band:vocab}{cf_lane:vocab}"
+                         "到{cf_receiver}脚下，预期威胁{cf_xt}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=r.hero_pass.attrs["to"]),
                "cf_receiver": Slot(ref=alt.attrs["to"]),
                "band": Slot(value=ctx.value(zone["band"])),

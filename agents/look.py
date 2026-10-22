@@ -147,7 +147,7 @@ def _when(look: LookResult, ctx: MomentContext, d: _Decided) -> Claim | None:
     over = abs(turn) >= OVER_THE_SHOULDER
     where_en = f"over his {side} shoulder" if over else f"to his {side}"
     where_zh = {
-        ("left", True): "越过左肩向后看", ("right", True): "越过右肩向后看",
+        ("left", True): "扭头看向左后方", ("right", True): "扭头看向右后方",
         ("left", False): "向左看", ("right", False): "向右看",
     }[(side, over)]  # fmt: skip
     since = fn("metric_at", metric="time_since_last_scan", anchor=reception.id, player=hero, cf=cf)
@@ -423,7 +423,8 @@ def _value(look: LookResult) -> Claim | None:
         id="look_value",
         template=f"That is worth {{dxt}} {'less' if better else 'more'} in expected threat than "
                  "what he really did.",
-        templates={"zh": f"这比他实际的选择{'少' if better else '多'}{{dxt}}的预期威胁（xT）。"},
+        templates={"zh": f"这样处理，预期威胁比他实际的选择{'低' if better else '高'}"
+                           "{dxt}。"},
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=fn("cf_delta", of="possession_value", scan=look.id),
                             rhs=slot("dxt", scale=1.0 if better else -1.0), abs_tol=0.005),

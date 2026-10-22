@@ -262,7 +262,7 @@ def blind_side_run(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="blind_side",
         template="{runner}'s run was on {player}'s blind side.",
-        templates={"zh": "{runner}的跑位在{player}的盲区。"},
+        templates={"zh": "{runner}的跑位在{player}的视野盲区。"},
         slots={"runner": Slot(ref=r.runner), "player": Slot(ref=r.hero)},
         predicate=pred,
         terms=["blind side"],
@@ -329,7 +329,7 @@ def pass_success(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         id="pass_success",
         template="{player} thought the pass to {receiver} had a {p_belief} chance of arriving; "
         "it was {p_true}.",
-        templates={"zh": "{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。"},
+        templates={"zh": "{player}判断传给{receiver}的成功率是{p_belief}，实际是{p_true}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=receiver),
                "p_belief": _num(ctx.value(belief, values), 2),
                "p_true": _num(ctx.value(truth, values), 2)},
@@ -354,7 +354,7 @@ def counterfactual_pass_success(
         id="cf_pass_success",
         template="Without that look, {player} thought the pass to {receiver} had a {p_belief} "
         "chance of arriving; it was {p_true}.",
-        templates={"zh": "如果没有那一眼，{player}会以为传给{receiver}的球能到的概率是{p_belief}，"
+        templates={"zh": "如果没有那一眼，{player}会以为传给{receiver}的成功率是{p_belief}，"
                          "实际是{p_true}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=r.runner),
                "p_belief": _num(ctx.value(belief, values), 2),
@@ -399,7 +399,7 @@ def counterfactual_value(
         return Claim(
             id="cf_value",
             template="That look was worth {dxt} in expected threat.",
-            templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
+            templates={"zh": "那一眼价值{dxt}的预期威胁。"},
             slots={"dxt": _num(ctx.value(delta), 2)},
             predicate=_approx(delta, slot("dxt"), 2),
             evidence=[cf.scan_id],
@@ -407,15 +407,15 @@ def counterfactual_value(
     # A forced option (SPEC 3.7): what he did against what he was made to do instead.
     value = ctx.value(delta)
     more = value >= 0
-    instead = {"carry": ("keeping the ball", "持球")}.get(
-        cf.action, ("the other option", "另一种处理")
+    instead = {"carry": ("keeping the ball", "继续持球")}.get(
+        cf.action, ("the other option", "另一种选择")
     )  # fmt: skip
     return Claim(
         id="cf_value",
         template=f"What {{player}} did was worth {{dxt}} {'more' if more else 'less'} in "
         f"expected threat than {instead[0]}.",
-        templates={"zh": f"{{player}}的处理比{instead[1]}{'多' if more else '少'}{{dxt}}的预期"
-                         "威胁（xT）。"},
+        templates={"zh": f"{{player}}这样处理，比{instead[1]}{'多' if more else '少'}创造了"
+                         "{dxt}的预期威胁。"},
         slots={"player": Slot(ref=r.hero), "dxt": _num(abs(value), 2)},
         predicate=Predicate(op="all", args=[
             _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
@@ -728,7 +728,7 @@ def keeper_seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="keeper_seen_in_scan",
         template="When {player} looked up, he saw {keeper}.",
-        templates={"zh": "{player}抬头的那一眼，看到了{keeper}。"},
+        templates={"zh": "{player}抬头的那一眼，看到了门将{keeper}。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper),
                "scan": Slot(ref=r.key_scan.id)},
         predicate=Predicate(op="all", args=[
@@ -753,7 +753,7 @@ def keeper_near_side(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="keeper_near_side",
         template="When {player} looked up, {keeper} stood {m|metre|metres} toward his near post.",
-        templates={"zh": "{player}抬头时，{keeper}站在偏向近门柱{m}米的位置。"},
+        templates={"zh": "{player}抬头时，门将{keeper}的站位向近门柱一侧偏出{m}米。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper),
                "scan": Slot(ref=r.key_scan.id), "m": _num(value, 1)},
         predicate=Predicate(op="all", args=[
@@ -813,7 +813,7 @@ def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="shot_saved",
         template="{keeper} saved {player}'s shot.",
-        templates={"zh": "{keeper}扑出了{player}的射门。"},
+        templates={"zh": "门将{keeper}扑出了{player}的射门。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=shot.attrs["keeper"])},
         predicate=Predicate(op="all", args=[
             *is_shot, _eq(fn("event_attr", event=r.at_action, attr="keeper"), slot("keeper")),
@@ -929,7 +929,7 @@ def counterfactual_keeper_age(
         id="cf_keeper_age",
         template="Without the look, his last sight of {keeper} is {secs|second|seconds} old when "
         "{player} shoots.",
-        templates={"zh": "如果没有那一眼，{player}射门时距上次看到{keeper}已有{secs}秒。"},
+        templates={"zh": "如果没有那一眼，{player}射门时距上次看到门将{keeper}已有{secs}秒。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper), "secs": _num(value, 1)},
         predicate=_approx(age, slot("secs"), 1),
         evidence=[cf.scan_id],
@@ -1082,7 +1082,7 @@ def marker_blind_side(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
     return Claim(
         id="blind_side",
         template="{runner} was on {player}'s blind side when he looked.",
-        templates={"zh": "{player}回头时，{runner}在他的盲区。"},
+        templates={"zh": "{player}回头时，{runner}在他的视野盲区。"},
         slots={"runner": Slot(ref=r.man), "player": Slot(ref=r.marker)},
         predicate=pred,
         terms=["blind side"],
@@ -1307,7 +1307,7 @@ def marker_cf_value(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -
     return Claim(
         id="cf_value",
         template="That look was worth {dxt} in expected threat.",
-        templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
+        templates={"zh": "那一眼价值{dxt}的预期威胁。"},
         slots={"dxt": _num(ctx.value(delta), 2)},
         predicate=_approx(delta, slot("dxt"), 2),
         evidence=[cf.scan_id],

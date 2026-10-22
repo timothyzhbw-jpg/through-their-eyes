@@ -42,7 +42,7 @@ from explain.render import ScriptLine as RenderLine
 from explain.verifier import Verifier
 from sim.counterfactual import WhatIfResult, what_if_id
 from sim.model import Decision
-from sim.roster import ROSTER, full_name
+from sim.roster import ROSTER, full_name, short_name
 from sim.run import MatchRun
 
 PICK = """Picking a receiver:
@@ -86,11 +86,12 @@ CENTRE_M = 5.0  # m across: closer than this to the long axis, he stood in the m
 _ACTIONS = {"carry": "run with the ball", "shot": "shoot at goal"}
 _PLAYER = re.compile(r"(?<![A-Z0-9])([HA]\d{1,2})(?!\d)", re.IGNORECASE)
 # A player by the fictional name the screen shows (sim/roster.py): "K. Annersley", "Kofi Annersley"
-# or "Annersley"; the longest form first, so a short name is one cue, not two.
+# or "Annersley", or the Chinese name zh lines give him (安纳斯利); the longest form first, so a
+# short name is one cue, not two.
 _NAME_OF = {
     form.lower(): pid
     for pid, (first, last) in ROSTER.items()
-    for form in (f"{first} {last}", f"{first[0]}. {last}", last)
+    for form in (f"{first} {last}", f"{first[0]}. {last}", last, short_name(pid, "zh"))
 }
 _NAME = re.compile(
     r"(?<![A-Za-z])("
@@ -500,8 +501,8 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
         id="whatif_value",
         template=f"That option would have been worth {{dxt}} {'less' if better else 'more'} in "
                  "expected threat than what he did.",
-        templates={"zh": "这个选择比他实际的选择少{dxt}的预期威胁（xT）。" if better
-                   else "这个选择比他实际的选择多{dxt}的预期威胁（xT）。"},
+        templates={"zh": "这样处理，预期威胁比他实际的选择低{dxt}。" if better
+                   else "这样处理，预期威胁比他实际的选择高{dxt}。"},
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=delta, rhs=slot("dxt", scale=1.0 if better else -1.0),
                             abs_tol=0.005),

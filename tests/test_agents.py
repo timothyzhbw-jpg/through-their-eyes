@@ -595,12 +595,12 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert [line.text for line in zh.payload.lines] == [
-        "J. Ferriday在对方半场中路偏右接球。",
-        "N. Varnhall的跑位在J. Ferriday的盲区。",
-        "球到之前，J. Ferriday扭头看向了右后方。",
-        "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
-        "J. Ferriday一脚38米的传球找到了N. Varnhall。",
-        "如果没有那一眼，J. Ferriday会把球传给K. Annersley。",
+        "费里迪在对方半场中路偏右接球。",
+        "瓦恩霍尔的跑位在费里迪的视野盲区。",
+        "球到之前，费里迪扭头看向了右后方。",
+        "球到之前回头的那一眼，费里迪看到了瓦恩霍尔。",
+        "费里迪一脚38米的传球找到了瓦恩霍尔。",
+        "如果没有那一眼，费里迪会把球传给安纳斯利。",
     ]
     assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
 
@@ -629,9 +629,9 @@ def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx
                                 {"claim": "scan_side", "connective": None}]}  # fmt: skip
     replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None}]}
     for language, texts in {
-        "zh": ["J. Ferriday在对方半场中路偏右接球。",
-               "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
-               "球到之前，J. Ferriday扭头看向了右后方。"],
+        "zh": ["费里迪在对方半场中路偏右接球。",
+               "球到之前回头的那一眼，费里迪看到了瓦恩霍尔。",
+               "球到之前，费里迪扭头看向了右后方。"],
         "en": ["J. Ferriday received the ball in the opponents' half, right of centre.",
                "When J. Ferriday looked over his shoulder before the ball arrived, he saw "
                "N. Varnhall.",
@@ -782,12 +782,12 @@ _SNAPSHOT_LINES = (
      "that look", True),
     ("analyst", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None, False),
     ("casual", "zh", "他看到了什么？", "open", None, False),
-    ("casual", "zh", "球到之前，J. Ferriday先回头看了一眼。", "build", "回头看了一眼", False),
-    ("casual", "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", "盲区", False),
-    ("casual", "zh", "如果没有那一眼，J. Ferriday会把球传给K. Annersley。", "why", "那一眼", True),
-    ("analyst", "zh", "J. Ferriday一脚38米的传球找到了N. Varnhall。", "peak", None, False),
+    ("casual", "zh", "球到之前，费里迪先回头看了一眼。", "build", "回头看了一眼", False),
+    ("casual", "zh", "瓦恩霍尔的跑位在费里迪的视野盲区。", "why", "盲区", False),
+    ("casual", "zh", "如果没有那一眼，费里迪会把球传给安纳斯利。", "why", "那一眼", True),
+    ("analyst", "zh", "费里迪一脚38米的传球找到了瓦恩霍尔。", "peak", None, False),
     (AD, "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", None, False),
-    (AD, "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", None, False),
+    (AD, "zh", "瓦恩霍尔的跑位在费里迪的视野盲区。", "why", None, False),
 )  # fmt: skip
 _PERSONAS = ("casual", "analyst", "player_fan", "coach", AD)
 _SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",

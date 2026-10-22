@@ -49,8 +49,11 @@ The full list of messages and limits is in the docstrings of [`main.py`](main.py
   Matches are regenerated from their seeds, never stored.
 - **Live:** frames come from the precomputed export; live play never waits on a model.
 - **Breakdowns:** the cache key is `content_key` of the moment card's `content_hash()`, the
-  sorted personas and languages, `PROMPT_VERSION`, `PIPELINE_VERSION`, the model deployment and
-  whether the Analyst had MCP tools. A hit is served at once; a miss runs `agents.run_crew` (the
+  sorted personas and languages, `PROMPT_VERSION`, `PIPELINE_VERSION`, the model deployment,
+  whether the Analyst had MCP tools, and the rendered text's fingerprint
+  (`explain.render.render_fingerprint`: the claims' templates and the names in those languages),
+  so a wording or name fix is never hidden behind a cached text. What-if answers and recaps carry
+  the fingerprint too. A hit is served at once; a miss runs `agents.run_crew` (the
   Analyst with our MCP server as a subprocess when `TTE_ANALYST_MCP` is on), or the offline
   templates when no model is configured or the client is limited.
 - **Stores:** JSON files under `TTE_CACHE_DIR` by default; Cosmos DB containers `cache` and
