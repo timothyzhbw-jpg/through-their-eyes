@@ -88,7 +88,14 @@ _Fill in as they come to exist._
 - `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
-  CI run on main.
+  CI run on main. Both upload web/ through `infra/upload_web.sh <account> <site url>`: gzipped,
+  every Content-Type named, each file read back from the site before `index.html` goes up, then
+  the page loaded in headless Chrome, the previous `index.html` restored on failure
+- `cd web && npm run build && npm run loadperf` — cold-load timings of the live site (SPEC 8):
+  first paint, first draw, players drawn, LCP and bytes, laptop and phone, plain and on Fast 3G
+  with a 4× CPU slowdown; `-- --serve dist-upload` measures a staged build (`node
+  scripts/stage.mjs`) served as Storage would on the site's origin. Report:
+  `eval/reports/web_load.md`
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,

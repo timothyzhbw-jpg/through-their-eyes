@@ -2018,6 +2018,21 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
   keys; the API allows the site's origin only.
+  - *Compression and caching:* Storage sends each blob as stored and never compresses, so the site
+    sent 1.6 MB of JS raw. `infra/upload_web.sh` uploads a staged build (`web/scripts/stage.mjs`):
+    text gzipped (`Content-Encoding: gzip`), every batch's `Content-Type` named, 5-minute cache,
+    `index.html` with `no-cache`. No Azure setting changes: these are blob properties set at upload.
+  - *Checked deploys:* `index.html` goes up last, only after every other file reads back from the
+    site with the right type, encoding and bytes (`web/scripts/check-site.mjs`); then the page must
+    draw in headless Chrome, or the previous `index.html` goes back up. The first gzip upload (#115,
+    2026-10-21) stored every gzipped file as `application/octet-stream` (`az storage blob
+    upload-batch` guesses a type only without an encoding); browsers refused the scripts until the
+    PR desk reverted it (#138). Hashed files are named `[name].[hash]` since, so no browser keeps
+    that deploy's year-cached copies; a longer cache waits until the check has run clean on a few
+    deploys.
+  - *Load time:* cold loads before and after, laptop and phone, plain and on Fast 3G with a 4× CPU
+    slowdown, in [eval/reports/web_load.md](../eval/reports/web_load.md) (`cd web && npm run
+    loadperf`): on a phone on Fast 3G the players are drawn at 8.1 s instead of 18.2 s.
   - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
     2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
     none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
