@@ -1011,11 +1011,11 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       — [tests/test_stats_kernels.py](../tests/test_stats_kernels.py),
       [tests/test_live_stats.py](../tests/test_live_stats.py),
       [tests/test_stats_api.py](../tests/test_stats_api.py);
-      [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-21,
-      `possession_play` seeds 300–399: 1 439 passes, AUC 0.737, 95% interval 0.712–0.763,
-      supported). Reported, not tuned: the distance part alone ranks the other way (AUC 0.257),
-      because an intercepted pass is measured to where it was won, and the "very hard" band (50
-      passes) completes more often than "hard".
+      [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-22, with
+      the team shape, §3.2: `possession_play` seeds 300–399: 1 605 passes, AUC 0.748, 95% interval
+      0.722–0.772, supported). Reported, not tuned: the distance part alone ranks the other way
+      (AUC 0.258), because an intercepted pass is measured to where it was won, and the "very
+      hard" band (44 passes) completes more often than "hard".
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision
       ≥ 0.8 and recall ≥ 0.7 on held-out seeds that no design decision has seen (*tunable*);

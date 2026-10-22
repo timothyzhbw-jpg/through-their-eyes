@@ -1,10 +1,10 @@
 # Laws of the Game audit (SPEC 3.9)
 
-`uv run python -m eval.laws`. Every scenario on design seeds 0–99 and held-out seeds 100–139 and 200–239, each hero scenario's own intervention on the same seeds, and the stitched matches 1, 2, judged with `sim/laws.py` (IFAB Laws of the Game, cited by law; the rules are restated in our own words there). `possession_play` and `open_play` run 45 s. Runs: 900 design, 720 held-out, 1260 intervention, 19 match 1, 19 match 2 (2,918 in all).
+`uv run python -m eval.laws`. Every scenario on design seeds 0–99 and held-out seeds 100–139 and 200–239, each hero scenario's own intervention on the same seeds, and the stitched matches 1, 2, judged with `sim/laws.py` (IFAB Laws of the Game, cited by law; the rules are restated in our own words there). `possession_play` and `open_play` run 45 s. Runs: 900 design, 720 held-out, 1260 intervention, 19 match 1, 17 match 2 (2,916 in all).
 
 A **breach** is something a law forbids; it is **called** when the referee stopped play for it and **unpunished** otherwise. A **wrong call** stops play or gives a goal where the Laws do not, an **early call** is the right call before the whole ball had crossed, and **not modelled** is what the sim has no physics for (the woodwork).
 
-**237 unpunished breaches**, 0 called, 0 wrong calls, 144 early calls, 79 not modelled.
+**218 unpunished breaches**, 0 called, 0 wrong calls, 116 early calls, 79 not modelled.
 
 - `blind_side_run` 3 (in the stitched match): H9 offside offence, played the ball: H8's pass at frame 75, 2.84 m beyond the second-last opponent A4.
 - `press_escape` 0 (in the stitched match): no breach.
@@ -15,10 +15,10 @@ A **breach** is something a law forbids; it is **called** when the referee stopp
 
 | Law | What is checked | Checked | Breaches | Called | Unpunished | Wrong calls | Early calls | Not modelled |
 |---|---|---|---|---|---|---|---|---|
-| 3.1 | line-ups: eleven a side, one keeper | 2,918 runs | 0 | 0 | 0 | 0 | 0 | 0 |
-| 9.1 | frames in play: the whole ball over a line stops play | 793,232 frames | 10 | 0 | 10 | 0 | 105 | 0 |
-| 10.1 | whole-ball crossings of a goal line, and every goal given | 862 goal-line crossings | 18 | 0 | 18 | 0 | 39 | 79 |
-| 11.2 | passes and shots: offside position, then involvement | 11,134 kicks | 182 | 0 | 182 | 0 | 0 | 0 |
+| 3.1 | line-ups: eleven a side, one keeper | 2,916 runs | 0 | 0 | 0 | 0 | 0 | 0 |
+| 9.1 | frames in play: the whole ball over a line stops play | 815,341 frames | 0 | 0 | 0 | 0 | 77 | 0 |
+| 10.1 | whole-ball crossings of a goal line, and every goal given | 841 goal-line crossings | 8 | 0 | 8 | 0 | 39 | 79 |
+| 11.2 | passes and shots: offside position, then involvement | 11,788 kicks | 183 | 0 | 183 | 0 | 0 | 0 |
 | 12.1 | keeper handling (saves) and tackles | 414 saves and tackles | 27 | 0 | 27 | 0 | 0 | 0 |
 | 13-17 | simulated restarts: distances and the ball's place | 362 restarts | 0 | 0 | 0 | 0 | 0 | 0 |
 
@@ -26,13 +26,12 @@ A **breach** is something a law forbids; it is **called** when the referee stopp
 
 | Finding | Law | Category | design | held-out | intervention | match 1 | match 2 |
 |---|---|---|---|---|---|---|---|
-| ball out, play on | 9.1 | breach | 4 | 6 | 0 | 0 | 0 |
-| out called before the whole ball crossed | 9.1 | early call | 37 | 39 | 25 | 3 | 1 |
-| goal not given | 10.1 | breach | 8 | 10 | 0 | 0 | 0 |
+| out called before the whole ball crossed | 9.1 | early call | 27 | 25 | 25 | 0 | 0 |
+| goal not given | 10.1 | breach | 6 | 2 | 0 | 0 | 0 |
 | goal given before the whole ball crossed | 10.1 | early call | 13 | 14 | 12 | 0 | 0 |
 | ball through the woodwork, given as a goal | 10.1 | not modelled | 6 | 13 | 10 | 0 | 0 |
 | ball through the woodwork, played on | 10.1 | not modelled | 10 | 12 | 28 | 0 | 0 |
-| offside offence | 11.2 | breach | 100 | 80 | 0 | 1 | 1 |
+| offside offence | 11.2 | breach | 100 | 80 | 0 | 2 | 1 |
 | tackle through the man | 12.1 | breach | 15 | 12 | 0 | 0 | 0 |
 
 ## Unpunished breaches by scenario
@@ -58,17 +57,16 @@ Runs with at least one unpunished breach, of all runs, per scenario and run set;
 | `far_post_finish` | held-out | 0 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `far_post_finish` | intervention | 0 | 180 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `far_post_finish` | match 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| `far_post_finish` | match 2 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `keeper_switch` | design | 0 | 100 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `keeper_switch` | held-out | 0 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `keeper_switch` | intervention | 0 | 180 | 0 | 0 | 0 | 0 | 0 | 0 |
-| `open_play` | design | 9 | 100 | 0 | 2 | 8 | 0 | 0 | 0 |
-| `open_play` | held-out | 15 | 80 | 0 | 6 | 10 | 0 | 0 | 0 |
-| `possession_play` | design | 1 | 100 | 0 | 1 | 0 | 0 | 0 | 0 |
+| `open_play` | design | 6 | 100 | 0 | 0 | 6 | 0 | 0 | 0 |
+| `open_play` | held-out | 2 | 80 | 0 | 0 | 2 | 0 | 0 | 0 |
+| `possession_play` | design | 0 | 100 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `possession_play` | held-out | 0 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
-| `possession_play` | match 1 | 0 | 15 | 0 | 0 | 0 | 0 | 0 | 0 |
-| `possession_play` | match 2 | 0 | 15 | 0 | 0 | 0 | 0 | 0 | 0 |
-| `press_escape` | design | 16 | 100 | 0 | 1 | 0 | 0 | 15 | 0 |
+| `possession_play` | match 1 | 1 | 15 | 0 | 0 | 0 | 1 | 0 | 0 |
+| `possession_play` | match 2 | 0 | 14 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `press_escape` | design | 15 | 100 | 0 | 0 | 0 | 0 | 15 | 0 |
 | `press_escape` | held-out | 12 | 80 | 0 | 0 | 0 | 0 | 12 | 0 |
 | `press_escape` | intervention | 0 | 180 | 0 | 0 | 0 | 0 | 0 | 0 |
 | `press_escape` | match 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -131,22 +129,16 @@ How each possession of a match begins (its label), what the Laws award after the
 
 | Match | Restarts | Label as the Laws award | Played in the sim | Edits | … to the awarded team |
 |---|---|---|---|---|---|
-| 1 | 6 of 19 stitches | 18/19 | 0 | 6 | 2/6 |
-| 2 | 3 of 19 stitches | 18/19 | 0 | 3 | 2/3 |
+| 1 | 2 of 19 stitches | 18/19 | 0 | 2 | 1/2 |
+| 2 | 1 of 17 stitches | 16/17 | 0 | 1 | 1/1 |
 
 | Match | # | Scenario | Label | The Laws award | To team | First team on the ball | Played |
 |---|---|---|---|---|---|---|---|
 | 1 | 0 | `possession_play` | kick_off | kick_off | — | 0 | no (edit) |
-| 1 | 5 | `possession_play` | throw_in | throw_in | 0 | 0 | no (edit) |
-| 1 | 6 | `possession_play` | throw_in | throw_in | 1 | 0 | no (edit) |
-| 1 | 10 | `possession_play` | throw_in | throw_in | 1 | 0 | no (edit) |
 | 1 | 12 | `possession_play` | kick_off | kick_off | 1 | 0 | no (edit) |
 | 1 | 14 | `corner_blind_side` | corner | cut | — | 1 | yes |
-| 1 | 17 | `possession_play` | throw_in | throw_in | 1 | 0 | no (edit) |
 | 2 | 0 | `possession_play` | kick_off | kick_off | — | 0 | no (edit) |
-| 2 | 3 | `possession_play` | throw_in | throw_in | 0 | 0 | no (edit) |
-| 2 | 12 | `possession_play` | kick_off | kick_off | 1 | 0 | no (edit) |
-| 2 | 14 | `corner_blind_side` | corner | cut | — | 1 | yes |
+| 2 | 6 | `corner_blind_side` | corner | cut | — | 1 | yes |
 
 ## Players off the field while the ball is in play (informational)
 
@@ -154,36 +146,10 @@ Not a breach by itself: players may leave the field in the course of play, and f
 
 | Scenario | Run set | Runs with one | Runs | Furthest (m) | Who |
 |---|---|---|---|---|---|
-| `blind_side_run` | design | 98 | 100 | 9.14 | blind_side_run 64: A1 (GK) at frame 151 |
-| `blind_side_run` | held-out | 77 | 80 | 8.50 | blind_side_run 133: A1 (GK) at frame 154 |
-| `blind_side_run` | intervention | 59 | 180 | 4.81 | blind_side_run 119 (drop_scan): A1 (GK) at frame 166 |
-| `blind_side_run` | match 1 | 1 | 1 | 1.68 | match 1 #1 blind_side_run 3: A1 (GK) at frame 121 |
-| `blind_side_run` | match 2 | 1 | 1 | 1.68 | match 2 #1 blind_side_run 3: A1 (GK) at frame 121 |
-| `corner_blind_side` | design | 12 | 100 | 0.30 | corner_blind_side 21: H1 (GK) at frame 0 |
-| `corner_blind_side` | held-out | 19 | 80 | 0.30 | corner_blind_side 112: H1 (GK) at frame 0 |
-| `corner_blind_side` | intervention | 31 | 180 | 0.30 | corner_blind_side 21 (drop_scan): H1 (GK) at frame 0 |
-| `open_play` | design | 86 | 100 | 10.47 | open_play 53: A1 (GK) at frame 951 |
-| `open_play` | held-out | 68 | 80 | 10.89 | open_play 216: A1 (GK) at frame 888 |
-| `possession_play` | design | 90 | 100 | 8.34 | possession_play 90: A1 (GK) at frame 510 |
-| `possession_play` | held-out | 69 | 80 | 8.13 | possession_play 119: A1 (GK) at frame 1055 |
-| `possession_play` | match 1 | 13 | 15 | 6.64 | match 1 #12 possession_play 53682912: A1 (GK) at frame 1023 |
-| `possession_play` | match 2 | 14 | 15 | 5.44 | match 2 #6 possession_play 2078170090: A1 (GK) at frame 758 |
-| `press_escape` | design | 44 | 100 | 2.35 | press_escape 26: H2 (FB) at frame 146 |
-| `press_escape` | held-out | 43 | 80 | 2.28 | press_escape 220: H2 (FB) at frame 138 |
-| `press_escape` | match 1 | 1 | 1 | 0.53 | match 1 #7 press_escape 0: H2 (FB) at frame 139 |
-| `press_escape` | match 2 | 1 | 1 | 0.53 | match 2 #7 press_escape 0: H2 (FB) at frame 139 |
 
 ## Examples
 
 Up to five per finding, in run order.
-
-**ball out, play on** (Law 9.1, breach)
-
-- open_play 50, frame 375 H1: over the goal line, carried by H1, centre 0.40 m beyond; the run ends
-- open_play 91, frame 421 A3: over the touchline, carried by A3, centre 0.27 m beyond; play stopped at frame 427
-- open_play 116, frame 180 H11: over the touchline, carried by H11, centre 0.23 m beyond; play stopped at frame 186
-- open_play 222, frame 952 H1: over the goal line, carried by H1, centre 0.12 m beyond; the run ends
-- open_play 224, frame 333 H1: over the goal line, carried by H1, centre 0.12 m beyond; play stopped at frame 1040
 
 **out called before the whole ball crossed** (Law 9.1, early call)
 
@@ -195,11 +161,11 @@ Up to five per finding, in run order.
 
 **goal not given** (Law 10.1, breach)
 
-- open_play 18, frame 1056: whole ball over the goal line at y +0.06 m (inside the posts: |y| ≤ 3.55); a goal for team 0
-- open_play 45, frame 838: whole ball over the goal line at y -0.31 m (inside the posts: |y| ≤ 3.55); a goal for team 0
-- open_play 50, frame 375: whole ball over the goal line at y -0.68 m (inside the posts: |y| ≤ 3.55); a goal for team 1
+- open_play 41, frame 1035: whole ball over the goal line at y +0.07 m (inside the posts: |y| ≤ 3.55); a goal for team 0
 - open_play 51, frame 273: whole ball over the goal line at y -0.79 m (inside the posts: |y| ≤ 3.55); a goal for team 1
 - open_play 54, frame 635: whole ball over the goal line at y -0.03 m (inside the posts: |y| ≤ 3.55); a goal for team 1
+- open_play 55, frame 855: whole ball over the goal line at y +0.60 m (inside the posts: |y| ≤ 3.55); a goal for team 1
+- open_play 62, frame 868: whole ball over the goal line at y -0.49 m (inside the posts: |y| ≤ 3.55); a goal for team 0
 
 **goal given before the whole ball crossed** (Law 10.1, early call)
 
