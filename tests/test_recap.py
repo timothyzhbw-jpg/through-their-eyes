@@ -9,6 +9,7 @@ import pytest
 from agents import prompts
 from agents.delivery import ANALYST_NUMBERS
 from agents.recap import (
+    DIRECTOR,
     MAX_MOMENTS,
     MIN_MOMENTS,
     MOMENT_LINES,
@@ -86,6 +87,14 @@ def test_an_offline_recap_runs_the_whole_crew_graph(rc, offline):
     assert {(s.persona, s.language) for s in offline.scripts} == {
         (p, lg) for p in ALL for lg in ("en", "zh")
     }
+
+
+def test_the_ranking_is_told_as_editorial_not_pure_impact(rc, offline):
+    """Hero moments lead the candidates (explain.recap.rank_moments); the template's reason and
+    the Director's instructions say so, so the trace never presents it as an impact ranking."""
+    assert [c.hero for c in rc.candidates[:3]] == [True] * 3
+    assert offline.request.reason.startswith("Template: the hero moments first")
+    assert "editorial order" in DIRECTOR and "hero moments" in DIRECTOR
 
 
 def test_every_number_on_air_and_on_the_card_comes_from_a_verified_slot(rc, offline):

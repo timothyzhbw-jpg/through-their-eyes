@@ -1390,14 +1390,18 @@ Application Insights.
   stitched match: `POST /api/recaps`, `agents/recap.py`, `uv run python -m agents.recap --seed 1`.
   - *The same graph, its own steps.* `build_workflow(story=RECAP)`: each step is a subclass of
     the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
-    - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
-      ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
-      pressure; a moment whose shot went in first, then the scenario heroes' moments, so the
-      moments a match is built around lead whatever its open play does; live-only overlays
-      never), at most 8. The
-      model may name only candidates (an enum); the template takes the largest impacts (at least
-      3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
-      on those moments only.
+    - Director: picks 3–5 key moments from the candidates, the match's moments (live-only
+      overlays never), at most 8. **Hero moments first, then by counterfactual impact:** an
+      editorial rule, as a broadcaster leads with the story of the match, not a pure impact
+      ranking. A moment whose shot went in comes first; then the scenario heroes' moments; then
+      the rest. Each group is by counterfactual impact (|Δ| of the selected lens in xT; exact ties
+      scan > space > pressure). The Director's prompt and the template's reason say so.
+      - *Why (2026-10-21, #144):* once players stayed on the pitch, one open-play passage of
+        match-1 produced an A4 line-breaking pass (pressure, |Δ| 0.223) that outranked the
+        flagship H8 scan hero (0.131) and pushed it out of the template's five.
+      - The model may name only candidates (an enum). The template takes them in rank order (at
+        least 3, those ≥ 0.01 xT, at most 5).
+      - The reel plays them in match order, and the crew then works on those moments only.
     - Analyst: picks the headline claims, reading the match through our MCP tools
       (`get_match_stats`, `list_key_moments`, `list_recap_claims`; `agents.mcp_server --recap
       <evidence file>`, which the API writes so the server starts without simulating). The card

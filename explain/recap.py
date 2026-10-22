@@ -7,12 +7,13 @@ recap needs both views:
 - its key moments, each told by claims checked on its possession's own run: observed facts built
   here (`moment_claims`) for any moment, and for a hero moment its MomentContext's claims too.
 
-`rank_moments` orders the candidates for the Director: by counterfactual impact, the |Δ| of the
-selected lens in xT (SPEC 5.2), exact ties scan > space > pressure, then match order. A moment
-that scored (`scored_moments`: its action is a shot whose outcome is a goal, or it is tagged
-`goal`) ranks first, then the scenario heroes' moments (a match card's `hero`), so the moments
-the match was built around lead the recap whatever open play around them does. Live-only
-overlays (sprints) are never key moments.
+`rank_moments` orders the candidates for the Director by an editorial rule, as a broadcaster
+leads with the story of the match: a moment that scored first (`scored_moments`: its action is a
+shot whose outcome is a goal, or it is tagged `goal`), then the hero moments (a match card's
+`hero`: the moments the match is built around), then the rest. Within each group, by
+counterfactual impact, the |Δ| of the selected lens in xT (SPEC 5.2); exact ties scan > space >
+pressure, then match order. It is not a pure impact ranking. Live-only overlays (sprints) are
+never key moments.
 
 Nothing here calls a model, and nothing here is new verification logic: the claims are `Claim`s,
 checked by the same `Verifier` as every breakdown.
