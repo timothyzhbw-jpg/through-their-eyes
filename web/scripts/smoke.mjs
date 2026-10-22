@@ -108,6 +108,14 @@ const PAGES = [
   // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
   // (beat/cut.ts).
   { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
+  // Every camera switch lands on a frame drawn at its pane's size, with no new WebGL context
+  // (views/InstantFrame.tsx): no blank, stretched or cleared frame at a cut.
+  {
+    name: "instant-cuts",
+    path: "?autoplay=0&intro=0&at=60",
+    init: watchCanvases,
+    check: instantCuts,
+  },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
@@ -309,6 +317,97 @@ async function cutNoBlur(page) {
   });
   if (after.some((sigma) => sigma > 0)) {
     throw new Error(`expected no blur right after a camera cut, got sigma ${after.join(", ")} px`);
+  }
+}
+
+/** In the page before the app: when each canvas was last resized (which clears it) and last
+ * drawn to, and how many WebGL contexts the page has made. */
+function watchCanvases() {
+  window.__canvases = { contexts: 0 };
+  for (const dim of ["width", "height"]) {
+    const own = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, dim);
+    Object.defineProperty(HTMLCanvasElement.prototype, dim, {
+      configurable: true,
+      get() {
+        return own.get.call(this);
+      },
+      set(value) {
+        this.__resizedAt = performance.now();
+        own.set.call(this, value);
+      },
+    });
+  }
+  for (const gl of [WebGLRenderingContext, WebGL2RenderingContext]) {
+    for (const name of [
+      "drawArrays",
+      "drawElements",
+      "drawArraysInstanced",
+      "drawElementsInstanced",
+    ]) {
+      const draw = gl.prototype[name];
+      if (!draw) continue;
+      gl.prototype[name] = function (...args) {
+        this.canvas.__drawnAt = performance.now();
+        return draw.apply(this, args);
+      };
+    }
+  }
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    const context = getContext.call(this, type, ...rest);
+    if (context && String(type).startsWith("webgl") && !this.__counted) {
+      this.__counted = true;
+      window.__canvases.contexts++;
+    }
+    return context;
+  };
+}
+
+/** Camera switches are clean cuts (SPEC 7): in the first frame painted after each switch, every
+ * canvas on show has the size of its pane and was drawn after its last resize; no switch makes a
+ * WebGL context (the board waits under his belief map instead of being built again). */
+async function instantCuts(page) {
+  await hero(page);
+  await page.waitForFunction(() => window.__canvases.contexts >= 1, null, { timeout: 20_000 });
+  await page.waitForTimeout(1000); // the board's context too, if it is built up front
+  const contexts = await page.evaluate(() => window.__canvases.contexts);
+  for (const name of ["Broadcast", "Tactical", "His eyes", "Tactical", "Broadcast", "His eyes"]) {
+    const wrong = await page.evaluate(
+      (name) =>
+        new Promise((done) => {
+          [...document.querySelectorAll('[aria-label="Camera"] button')]
+            .find((b) => b.textContent.trim() === name)
+            .click();
+          // After the first frame's paint: what that frame showed.
+          requestAnimationFrame(() =>
+            setTimeout(() => {
+              const dpr = Math.min(2, Math.max(1, window.devicePixelRatio));
+              const wrong = [];
+              for (const canvas of document.querySelectorAll(".views canvas")) {
+                const box = canvas.parentElement.getBoundingClientRect();
+                if (box.width === 0 || getComputedStyle(canvas).visibility === "hidden") continue;
+                const view = canvas.closest("figure")?.getAttribute("aria-label") ?? "a canvas";
+                const w = Math.floor(box.width * dpr);
+                const h = Math.floor(box.height * dpr);
+                if (Math.abs(canvas.width - w) > 1 || Math.abs(canvas.height - h) > 1) {
+                  wrong.push(
+                    `${view} drawn at ${canvas.width}x${canvas.height} in a ${w}x${h} pane`,
+                  );
+                } else if (!((canvas.__drawnAt ?? -1) >= (canvas.__resizedAt ?? 0))) {
+                  wrong.push(`${view} cleared by a resize and not drawn again`);
+                }
+              }
+              done(wrong);
+            }, 0),
+          );
+        }),
+      name,
+    );
+    if (wrong.length) throw new Error(`the first frame after "${name}": ${wrong.join("; ")}`);
+  }
+  const after = await page.evaluate(() => window.__canvases.contexts);
+  if (after !== contexts) {
+    throw new Error(`camera switches made ${after - contexts} new WebGL context(s)`);
   }
 }
 
@@ -650,6 +749,7 @@ async function visit(browser, base, page) {
     notes.push(`${name}: a blank capture, retaken${again.length < BLANK ? ", blank again" : ""}`);
   };
   try {
+    if (page.init) await tab.addInitScript(page.init);
     await tab.goto(new URL(page.path, base).href);
     const checks = page.check(tab, shoot, (n) => notes.push(n));
     checks.catch(() => {}); // left behind if the page throws first
