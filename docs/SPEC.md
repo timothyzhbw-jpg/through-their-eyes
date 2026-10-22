@@ -70,6 +70,23 @@ server-side). AI breakdowns run asynchronously once a moment is detected and are
 replay window (target p95 < 12 s), the way broadcast replays follow a goal. Live play never waits
 on an LLM.
 
+**The cold load** (a judge who opens the page and only watches; web/src/App.tsx,
+[web/src/autoplay/](../web/src/autoplay/)):
+- The lineup card opens first. Behind it the picture rests on the stream's first frame. The hero
+  moment's stream starts only when the card closes, by itself after 5 s or on a click: its key
+  scan comes in the first seconds and must not play under the card. A stitched match's stream
+  plays behind the card; its first possession is open play.
+- When the stream detects the hero moment, the show plays at once; it does not wait for the
+  breakdown:
+  1. the look, replayed (slowed around the scan);
+  2. the same seconds re-simulated without it, the other run's path as a ghost on the board.
+- Each part shows its verified line from the breakdown as soon as the breakdown is there ("Without
+  that look, H8 would have passed to H4.").
+- Then the breakdown plays.
+- Any viewer action ends the show.
+- Measured: the run without the look and its line are on screen 16–17 s after opening the page
+  (local API, headless Chrome).
+
 *Implemented (`api/`, M3):* FastAPI.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
   `moment` and `end` messages (`full_time: true` when it reached the last frame); clients can
@@ -79,7 +96,14 @@ on an LLM.
   `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
   is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
   audited, rate-limited per client, no model call), `POST /api/recaps` and
-  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6).
+  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, §6).
+- Every breakdown, drill and recap answer says where it came from (`provenance`): `live` (the
+  crew ran for this request), `cached` (a crew run from `ran_at`, UTC), or `template` (no model
+  call, with the reason: `rate_limited`, `capped` or `model_unavailable`). The web shows it as a
+  chip on the moment card, the narration, the recap and the crew trace, exactly as given: it is
+  never worked out from `cached` or `source`, so a cached or template answer never reads as a
+  fresh crew run. An answer from an older service without it makes no claim about who wrote it.
 - The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
   key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
   allows a few streams per client and a session length, and closes on a malformed control
@@ -107,18 +131,22 @@ on an LLM.
   (kick-off, throw-in, goal kick, corner): 10–15 min of play in total, not 90 min of free play.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
-  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 18 possessions: 15 open-play
-  passages and three heroes. On this Mac it lasts 691.4 s (11:31), and the heroes start at 0:30
-  (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0) and 8:21 (the
-  set-piece hero `corner_blind_side` seed 0).
+  *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
+  passages and four heroes. On this Mac it lasts 751.8 s (12:32) and ends 1–0. The heroes start
+  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0), 7:01 (the
+  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:51 (the set-piece hero
+  `corner_blind_side` seed 0, at 1–0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
   - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
-    for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
+    for rhythm. The match is therefore at most 13:28 on any platform (780 s of caps and 27.8 s of
+    heroes). `possession_play` rarely
     puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 4 of 15 end in a throw-in.
+    passages reach their cap: on this Mac 2 of 15 end in a throw-in (4 before players were kept on
+    the pitch, §3.2). Where the ball goes out depends on the platform (§3.7): on the live service
+    (Linux x86) the 18-possession version ran 13:06 on 2026-10-21, against 11:31 on this Mac.
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -129,10 +157,24 @@ on an LLM.
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
-    1 kick-off, 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
+    2 kick-offs (the start, and after the goal), 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
-  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3). None of match-1's
-    possessions shoots yet, so it stays 0–0; the shot hero `far_post_finish` comes next.
+  - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
+    never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
+    look; without it, the counterfactual goes near post and A1 saves it (§3.6).
+  - *match-2* (`sim.match.MATCH_2`, 2026-10-21): three of match-1's heroes on other design seeds,
+    in another order: `press_escape` 1 from 0:25, `corner_blind_side` 2 from 3:22 and
+    `blind_side_run` 11 from 7:58. It has 17 possessions, 11:45 on this Mac and at most 12:23,
+    and no shooting hero, so it ends 0–0.
+    Each new seed passed the checks its demo seed passes: the hero moment and its lens are found,
+    the scenario's intervention changes the outcome (the decision; whether the man is marked as
+    the ball arrives; the possession after a forced carry), every claim is supported, and an
+    offline breakdown for every persona and language has no render violation. Of the seeds
+    screened, only `press_escape` 8 failed: its breakdown crashed in `runner_received` on an
+    intercepted pass (fixed in #89). The other seeds were picked for a typical size and a different
+    story: wide to H7 without the look; out to the full-back H3 under the press; 3.0 m with the
+    look and 8.1 m without, at the corner. The API serves it as `match-2` (`TTE_MATCHES=…,match:2`),
+    listed in the match picker; the default stays where it was.
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
     per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
     is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball
@@ -161,6 +203,17 @@ on an LLM.
   line height are team-style knobs.
 - Steering toward targets with limits — *tunable*: max speed by role 8.0–9.5 m/s, max accel
   ≈ 3.5 m/s², max decel ≈ 5 m/s², turn-rate limit.
+- Pitch bounds (2026-10-21, `sim/engine.py`, `sim/movement.py`): every movement target and
+  every setup position is clamped to the pitch, and a player brakes for the line ahead (the
+  exact discrete stopping envelope at the max decel, sharing the frame's accel/decel limit with
+  the rest of his step), so keepers stay at or in front of their goal line and nobody crosses a
+  touchline (`tests/test_on_pitch.py`: every frame, 1e-6 m tolerance; the measured worst is 0).
+  Clamping targets alone was not enough: a player who turns along a line keeps drifting over it.
+  Before, the formation shift and a free ball's predicted path, which runs on past the lines, put
+  the away keeper up to 8 m behind his goal line in `blind_side_run` (1.7 m on the demo seed) and
+  full-backs and wingers past the touchline in open play. No restart is simulated (§3.1), so no
+  player ever needs to stand outside. Fewer balls go out as a result: 1.0 per stitched match
+  instead of 2.4 ([match_stats](../eval/reports/match_stats.md)).
 - Separation steering to avoid overlaps (Python-RVO2 optional, see REFERENCES).
 - Pressing: the nearest 1–2 defenders converge on the ball carrier when a team pressing trigger fires.
 - Marking (`possession_play`): every other outfield defender takes an attacker in his zone and stays
@@ -638,14 +691,14 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,855 passes attempted (79.4% of resolved ones completed), 371 possession changes
-      (354 interceptions, 18 out of play, no tackles), 485 team possessions of 11.1 s on average,
-      and no shots: no scenario of the default plan has the shot model on, so shot outcomes are
-      pending module A. None of these has a target to check: no range is configured, and no paper
-      in REFERENCES.md is recorded as printing one. The two rows that have a target are SPEC 3.1's,
-      and both are inside: 18 scenario possessions per match (target 15–25) and 12.31 min of play
-      (target 10–15). 340 of 360 scenario possessions start with the home team, which has 56.1% of
-      the possession time.
+      of play, 1,851 passes attempted (80.5% of resolved ones completed), 351 possession changes
+      (344 interceptions, 7 out of play, no tackles), 474 team possessions of 11.4 s on average,
+      and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
+      match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
+      has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
+      printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
+      scenario possessions per match (target 15–25) and 13.15 min of play (target 10–15). 360 of
+      380 scenario possessions start with the home team, which has 56.5% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
@@ -784,6 +837,8 @@ Kernels in [analytics/stats.py](../analytics/stats.py) (numpy reference), the ti
 the event feed (`pass`, `reception`, `interception`, `out`, `shot`). No sim velocities, beliefs
 or pass outcomes from the sim's own attributes. A stitched match's possessions are tracking
 segments: positions jump at a possession's first frame, so no speed, distance or pass spans one.
+**Tackles are not modelled yet** outside the pressure hero (`press_escape`): in a stitched match
+the ball changes hands only by interceptions and balls out of play, and the panel says so.
 
 **Causal.** Every value at frame f uses frames ≤ f only (tested by truncating the input), so it
 could run frame by frame on a live feed. Each cue carries the frame at which its value is final:
@@ -927,7 +982,7 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.920, recall 0.985);
+      0.917, recall 0.984);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
@@ -1299,6 +1354,40 @@ Application Insights.
       trace entries and the narration payload are unchanged.
     - An API process killed during narration resumes after a restart without calling the
       Director or the Analyst again.
+- **Crew trace** (2026-10-21, for the Best Multi-Agent System criteria: distinct roles, shared
+  state and handoffs, recovery, an outcome no single agent makes). Every crew run records its
+  own timeline as the workflow runs (`agents/crewtrace.py`), with no model call: per step its
+  start and end (ms since the run started), the typed message it handled and the ones it sent
+  (a summary and the JSON), the shared state it read and wrote, its model calls (or its
+  template, or code), the Analyst's MCP tool calls with the model's arguments and our server's
+  results, and the Verifier's rejections with the rewrites they asked for. Run events show the
+  drill: an agent taken down, its fallback, its request to be brought back, every checkpoint
+  with the state it saved, and the bring-back resuming from one.
+  - *Shared state, as built.* Reads are the evidence every agent works from (`MomentContext`,
+    verified before any model runs), noted as each step reads it. Writes are each step's output
+    on the workflow's state (Agent Framework `State`: `request`, `findings`, `plan`, `drafts`,
+    `verdicts`, `scripts`, `voice`; the recap's Director also writes `evidence`, its focus),
+    which every checkpoint saves. The handoffs themselves stay typed messages on the edges.
+  - *Stored and served.* The API stores the trace with the cached breakdown, recap or drill and
+    serves it by key (`GET /api/breakdowns/<key>/trace`, `GET /api/recaps/<key>/trace`); a POST
+    answer says whether it has one (`traced`). A bring-back continues the drill's trace with a
+    new run; a run resumed after an interruption continues the trace saved on its checkpoint.
+    Breakdowns cached before traces were recorded answer `recorded: false` and the web says
+    "trace not recorded for this cached run". The cache keys did not move (`PIPELINE_VERSION`
+    unchanged); `infra.prewarm` reports such views as "no crew trace", and
+    `--regenerate-degraded` runs them again.
+  - *Public, like the breakdown.* Ids, counts, verified templates with their placeholders,
+    reason codes and error classes; model text only where the breakdown already shows it (the
+    Director's reason, the Analyst's angle) and in tool-call arguments, labelled as the model's.
+    Every time and duration is telemetry and the web labels it so; each step has its span id,
+    and each run its trace id (operation_Id in Application Insights).
+  - *Web.* "Crew trace" on the Producer desk, in the breakdown's head and under the recap opens
+    the timeline (`web/src/crewtrace/`): a lane per step in the graph's order for each run, bars
+    filled by who answered (model, template, code), the drill's events, and the picked step's
+    details.
+  - *Evidence:* `tests/test_crew_trace.py`, `tests/test_api_trace.py`,
+    `web/src/crewtrace/crewtrace.test.tsx` (on a fixture the backend recorded:
+    `uv run python -m agents.crewtrace`).
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
@@ -1361,12 +1450,18 @@ Application Insights.
   stitched match: `POST /api/recaps`, `agents/recap.py`, `uv run python -m agents.recap --seed 1`.
   - *The same graph, its own steps.* `build_workflow(story=RECAP)`: each step is a subclass of
     the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
-    - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
-      ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
-      pressure; a moment whose shot went in first; live-only overlays never), at most 8. The
-      model may name only candidates (an enum); the template takes the largest impacts (at least
-      3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
-      on those moments only.
+    - Director: picks 3–5 key moments from the candidates, the match's moments (live-only
+      overlays never), at most 8. **Hero moments first, then by counterfactual impact:** an
+      editorial rule, as a broadcaster leads with the story of the match, not a pure impact
+      ranking. A moment whose shot went in comes first; then the scenario heroes' moments; then
+      the rest. Each group is by counterfactual impact (|Δ| of the selected lens in xT; exact ties
+      scan > space > pressure). The Director's prompt and the template's reason say so.
+      - *Why (2026-10-21, #144):* once players stayed on the pitch, one open-play passage of
+        match-1 produced an A4 line-breaking pass (pressure, |Δ| 0.223) that outranked the
+        flagship H8 scan hero (0.131) and pushed it out of the template's five.
+      - The model may name only candidates (an enum). The template takes them in rank order (at
+        least 3, those ≥ 0.01 xT, at most 5).
+      - The reel plays them in match order, and the crew then works on those moments only.
     - Analyst: picks the headline claims, reading the match through our MCP tools
       (`get_match_stats`, `list_key_moments`, `list_recap_claims`; `agents.mcp_server --recap
       <evidence file>`, which the API writes so the server starts without simulating). The card
@@ -1446,6 +1541,18 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - *Extra motion (2026-10-21, Bowen approved the sources):* motion capture from the CMU
+    database, retargeted onto the same skeleton (which is unchanged) and shipped as an
+    animations-only GLB (`web/public/models/anims_extra.glb`, ~20 KB; sources, terms and the
+    acknowledgement in its README). A kick (`pass_short`) replaces the standing pass, its ball
+    contact on the pass event, in place, with the planted foot held still. At every sim `scan`
+    a shoulder check turns the trunk with the look, as an additive layer timed to the head's
+    turn (out, hold, back) and sized by how far the head turns from the body; it counts towards
+    the trunk's share of the look, so a look past 80° turns the trunk no further than before.
+    The head still points exactly along `head_yaw`. On by default (Bowen kept it on after the
+    before/after video, 2026-10-21); `?anims=base` turns it off;
+    under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
+    and not used.
 - **Stadium:** two builds of one bowl ([web/src/views/stadiumGeometry.ts](../web/src/views/stadiumGeometry.ts)).
   - *Procedural* ([Stadium.tsx](../web/src/views/Stadium.tsx)): generated in the browser, drawn
     on the first frame; it is the fallback.
@@ -1486,6 +1593,12 @@ original visual identity.
     default; `web/src/pitchControl/`);
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
+  - **his belief map** ([web/src/views/BeliefMap.tsx](../web/src/views/BeliefMap.tsx); teammates'
+    feedback, 2026-10-21): the corner beside his eyes is a disc of where he believes everyone is,
+    around him and attacking up, corrected by each scan as the replay plays; red: the two or
+    three defenders nearest the ball carrier in his belief; green: his likeliest receivers at his
+    decision (pass options he gave at least 0.05); out of his sight now: drawn as remembered.
+    The sim's readout, labelled so; a stitched match keeps the board there;
   - counterfactual ghost path;
   - *M4:* **blind-side alert** (§4.4): the target's token pulses and a thin line points to the
     observer's blind side, with how long he has gone unseen; it clears when he is seen;
@@ -1517,6 +1630,15 @@ original visual identity.
   - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
     another is lifted one label up, else hidden; the runner's gold number always shows
     ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
+- **The run without the look, told** ([web/src/without/](../web/src/without/),
+  [explain/look_cost.py](../explain/look_cost.py); teammates' feedback, 2026-10-21): in the run
+  without the look, verified lines say which look was removed (which shoulder, how long before
+  the ball reached him), what losing it cost (played back instead of forward, or the ball lost),
+  and where each run's pass reached its receiver with the xT there. The removed look is marked on
+  the timeline, in the HUD and at the edge of his eyes on that shoulder's side; "How xT works"
+  draws the 16 × 12 grid with both passes' ends, valued by the verified line, and says how the
+  grid is fitted (§4.5). Bundled per scan hero by `sim.export --without-look`; not part of the
+  crew's evidence, so breakdown cache keys do not move.
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1580,6 +1702,39 @@ original visual identity.
     95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
+- **His looks, step by step** (2026-10-21, a teammate's request: the scans go by too fast;
+  [web/src/steps/](../web/src/steps/); "His looks" in the header, "Step through his looks" on the
+  moment; deep link `?play=steps`, a hero moment's only): each look the hero takes before the ball
+  reaches him is a freeze frame the viewer steps through, and the last step explains his decision.
+  - *Steps.* One per `scan` event of the hero that starts before his reception, from the run's own
+    events: `blind_side_run` seed 3 has 1 (the key scan), `press_escape` seed 0 has 2. In the run
+    without the key scan that look stays as a missing step at the same time. A look freezes his eyes
+    at the middle of its dwell (the frames his head is within the sim's `scan_out_tolerance` of
+    where it turned), or at his decision if it is still under way then. Precomputed per run by
+    `sim.export --steps` (`agents/steps.py`): no model call.
+  - *On a look.* His eyes, with the board in the corner: who came into his sight on it (out of it as
+    the look began, in it on a frame of the look up to his decision) is ringed and listed; dashed
+    arrows in the team's colour project where each player within 30 m of him is heading, his sim
+    velocity at that frame kept for a second, and are labelled as a projection.
+  - *Potential passes.* The options of the run's decision record, as lanes from the ball at his
+    decision to each option's target on his belief: width how likely he was to pick it, gold his
+    pick, brighter a receiver this look brought into sight. The decision model runs only at his
+    decision (§3.5), so a look shows the options he went on to weigh, and says so. No pass type:
+    every pass in the sim is along the ground (lofted and curled balls are not modelled).
+  - *His decision.* On the board, dimmed (never blurred: the picture stays clear) but round
+    exactly two players: a pass's receiver and the opponent nearest him, a carrier and the opponent
+    nearest him, a shooter and the keeper.
+  - *Words.* Only verified lines in en and zh, slot-filled and checked by the Verifier on the run
+    they describe: how many looks he takes, where and when each one goes (the side from the ball,
+    over his shoulder from 120°, as Take his eyes says it), who it brings into his sight, that his
+    head is still turning when he decides, or that he takes no look then; at the decision, the look
+    that found the player who mattered (the runner, else his receiver), how far off his picture of
+    that player was and how old, what he did, and the pair the freeze leaves lit with their
+    distance. Direction labels have no "behind": a scan turns at most 150° from the ball.
+  - *Controls.* Next, Back and Back to the replay; ← and → step, Escape leaves, a swipe on the
+    picture steps on a phone; the steps are buttons; the run switch keeps the same look. Reduced
+    motion: the dimming appears without fading in.
+  - A hero with no decision on the ball (`corner_blind_side`, `screened_shot`) has no steps.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a
@@ -1594,12 +1749,13 @@ original visual identity.
   the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
   - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
     captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
-    number; Your call; another audience in another language (a casual fan, in Chinese); the
-    Producer's failure drill and bring-back; then the whole match, whose card links to
-    `?match=match-1&play=recap&tour=recap`, where the tour goes on at the full-time recap card.
-    A step the page cannot show (no live service, no counterfactual, no Your call; a match page
-    shows only its recap) is left out, not shown broken. "Take his eyes" joins once it is on
-    main.
+    number; Your call; Take his eyes (opened on his own look, the dial and the times out; the
+    viewer picks and presses Look, and the app keeps the keyboard); another audience in another
+    language (a casual fan, in Chinese); the Producer's failure drill and bring-back; then the
+    whole match, whose card links to `?match=match-1&play=recap&tour=recap`, where the tour goes
+    on at the full-time recap card. A step the page cannot show (no live service, no
+    counterfactual, no Your call, no bundled look grid; a match page shows only its recap) is left
+    out, not shown broken.
   - *It never takes over.* It only calls the app's own controls, and never presses anything that
     spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
     with the card's button. The overlay lets every click through, the card is a non-modal dialog,
@@ -1631,7 +1787,12 @@ original visual identity.
   - Sound ([web/src/sound/](../web/src/sound/), synthesized in code, [CREDITS](CREDITS.md)): a
     low crowd bed that muffles through the beat, a whoosh as each scan of the POV player begins,
     a sting at the "without the look" reveal; all ducked under the narration voice, all off with
-    the Sound switch.
+    the Sound switch. The narration plays through the same AudioContext, made and woken by the tap
+    on the switch: Safari and every iOS browser start an `<audio>` element only from a tap, and a
+    line starts long after it (teammates heard nothing, 2026-10-21). On an iPhone the page plays
+    as media, past the silent switch. A stitched match, its recap and every breakdown opened from
+    it share one switch, on the match's live screen too; until it has been on once it reads "Tap
+    for sound", and a line that could not be spoken says "No voice" beside it.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
@@ -1660,7 +1821,20 @@ original visual identity.
 ### Real-footage overlay (cut)
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
+Motion capture of lab subjects is not match data or footage: Bowen allowed the CMU motion
+capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
+(`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
+the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+
 ### Acceptance checks — render
+- [x] *The run without the look, told:* which look was removed, what it cost and where each pass
+      went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
+      tampered with), rendered in en and zh with every number in a slot; the web shows only the
+      lines that pass `checkPayload`, in the caption's place in that run, on the timeline, in the
+      HUD and at the edge of his eyes; the explainer's two values are the verified line's.
+      — [tests/test_without_look.py](../tests/test_without_look.py) (16 cases),
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py),
+      [web/src/without/without.test.tsx](../web/src/without/without.test.tsx) (8).
 - [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
       moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
       the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt
@@ -1721,6 +1895,17 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
       [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
       [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
+- [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
+      scan events (a file whose looks are not the run's is refused), the dropped look missing in
+      the run without it; the freeze frame inside the dwell; movement arrows from the sim's
+      velocities; potential passes from the decision record; the decision dims all but exactly two
+      players, with no blur; every line verifies in en and zh; Next, Back, Exit, arrow keys, Escape, swipe
+      and the run switch.
+      — [web/src/steps/steps.test.ts](../web/src/steps/steps.test.ts),
+      [scansteps.test.tsx](../web/src/steps/scansteps.test.tsx);
+      [tests/test_steps.py](../tests/test_steps.py) (steps, dwell, velocities, every line verified,
+      the committed files current); `npm run smoke`, pages `link-steps`,
+      `link-steps-press-escape` and `phone-320-steps`
 - [x] Every caption line in the breakdown player opens its claims and seeks the replay to their
       evidence.
       — [web/src/narration/narration.test.ts](../web/src/narration/narration.test.ts) ("every
@@ -1741,6 +1926,20 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Extra motion (mocap kick, shoulder checks):* the GLB binds every track to a bone of the
+      model without changing its joint frames; the kick plays at each pass event with its contact
+      on the event's frame and the kick along the pass; the shoulder check plays only during the
+      sim's scans, on the side the head turns, phased by the head; the head stays on `head_yaw`
+      (< 1e-3 rad) for every player; the feet stay on the ground; poses are history-free; reduced
+      motion drops the checks; fps unchanged.
+      — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts); `npm run fps` and
+      `npm run fps -- --anims base` alternating (2026-10-21, Apple M4 Pro, headless, 1920 × 1080):
+      60 fps capped in every row either way, median 16.7 ms, p95 16.7–16.8 ms.
+- [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
+      ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
+      55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
+      his likeliest receivers (H9 with the look; H4, H1, H5 without); remembered players dashed.
+      — [web/src/views/beliefMap.test.tsx](../web/src/views/beliefMap.test.tsx) (8 cases).
 - [x] *Key-moment beat:* slow motion starts as the key scan begins and ends by the release, the
       accent holds at the sighting, the run without the look slows with no accent, plans and the
       recap keep their speeds, reduced motion turns it off, the live playhead never jumps inside a
@@ -1779,6 +1978,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
+- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
+      without the look and its verified line are on screen within 20 s of opening the page, and
+      any viewer action ends the show.
+      — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
+      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
+      2026-10-21)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -1799,6 +2005,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   - Per-client limits key on the last `X-Forwarded-For` hop, the address the Container Apps
     ingress appends; earlier hops come from the client. Live streams also have a ceiling per
     process (`TTE_LIVE_MAX_TOTAL`), and uvicorn refuses WebSocket frames over 4 KiB.
+  - Egress: every response body and live message counts against a per-client budget
+    (`TTE_EGRESS_PER_CLIENT`, 500 MB an hour) and a daily total (`TTE_DAILY_EGRESS_GB`, 10 GB),
+    since Azure bills internet egress past 100 GB a month; the live stream plays at most 8x. At
+    most `TTE_CREW_CONCURRENCY` crew runs with a model at once (each starts an MCP subprocess).
+    The audit, a local load test and what happens when a quota runs out: docs/OPERATIONS.md.
+  - Judging window (`TTE_JUDGING_WINDOW`, 2026-10-27 to 2026-11-10, UTC days): 8 model runs per
+    client per 10 min and 100 a day, so a judge's tour (what-if, drill, bring-back, recap) fits,
+    two judges behind one NAT too. A limited drill or bring-back replays the recording of the
+    same run, labelled with its time, or runs without the model: never a dead end.
   - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
     at $40 if the offer supports budgets.
 - **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
@@ -1812,7 +2027,8 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   | Application Insights / Log Analytics | daily cap 0.1 GB | $0 (under 5 GB/month free) | $0 |
   | Storage static website (`web`) | StorageV2, LRS, hot | ≈ $0.1 | < $1 |
   | Azure AI Speech | F0, audio cached by content hash | $0 | $0; captions only once the free quota is used |
-  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $9: cap of 40 per day, every day |
+  | Foundry `gpt-4.1-mini` | ≈ $0.01 per four-script breakdown (measured ≈ 22K tokens and 12 requests; $0.40 / $1.60 per M input / output; estimated at first as 60K + 5K) | ≈ $1 (100 regenerations) | ≈ $21: cap of 40 a day to 10/26, 100 a day in the judging window |
+  | Internet egress (API + site) | first 100 GB a month free; API capped at 10 GB a day | $0 (≈ 0.6 GB a day on 10/20–21) | ≈ $1: the cap every day (10 GB over the free 100 in October) |
   | Our own dev and eval runs | | ≈ $3 | ≈ $5 |
   | **Total** | | **≈ $15** | **≈ $50** |
 - **Subscription guard.** The deploy script (`infra/deploy.sh`) has the same guard as
@@ -1885,6 +2101,21 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
   keys; the API allows the site's origin only.
+  - *Compression and caching:* Storage sends each blob as stored and never compresses, so the site
+    sent 1.6 MB of JS raw. `infra/upload_web.sh` uploads a staged build (`web/scripts/stage.mjs`):
+    text gzipped (`Content-Encoding: gzip`), every batch's `Content-Type` named, 5-minute cache,
+    `index.html` with `no-cache`. No Azure setting changes: these are blob properties set at upload.
+  - *Checked deploys:* `index.html` goes up last, only after every other file reads back from the
+    site with the right type, encoding and bytes (`web/scripts/check-site.mjs`); then the page must
+    draw in headless Chrome, or the previous `index.html` goes back up. The first gzip upload (#115,
+    2026-10-21) stored every gzipped file as `application/octet-stream` (`az storage blob
+    upload-batch` guesses a type only without an encoding); browsers refused the scripts until the
+    PR desk reverted it (#138). Hashed files are named `[name].[hash]` since, so no browser keeps
+    that deploy's year-cached copies; a longer cache waits until the check has run clean on a few
+    deploys.
+  - *Load time:* cold loads before and after, laptop and phone, plain and on Fast 3G with a 4× CPU
+    slowdown, in [eval/reports/web_load.md](../eval/reports/web_load.md) (`cd web && npm run
+    loadperf`): on a phone on Fast 3G the players are drawn at 8.1 s instead of 18.2 s.
   - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
     2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
     none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
@@ -1960,7 +2191,7 @@ checks, 2026-10-21 (merged with main): `uv run pytest` 1196 passed, `npm test` 5
 
 | Section | Ticked | Open | Open items |
 |---|---:|---:|---|
-| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (18 possessions, 12.3 min) is inside §3.1's 15–25 and 10–15 min; no shot is taken, as no scenario of the plan has the shot model on |
+| §3 sim | 12 | 1 | passes, shots and possession changes per match vs targets: measured ([match_stats](../eval/reports/match_stats.md)), but none has a target range; the match (19 possessions, 12.5 min) is inside §3.1's 15–25 and 10–15 min; its one shot per match is the shot hero's, a goal by construction |
 | §4 analytics | 8 | 0 | — |
 | §5 explain | 8 | 0 | — |
 | §7 render | 10 | 1 | 60 fps on an integrated GPU with the pitch-control shader on (needs a laptop run of `npm run fps -- --headed`) |

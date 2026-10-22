@@ -2,13 +2,14 @@
 // The judge tour on the page (SPEC 7): every step finds what it points at on the hero moment and
 // does what it says with the app's own controls; Next, Back, Skip and Escape; it starts from its
 // buttons; closing it at any step leaves the app usable; keyboard and reduced motion.
-// The 3D views are left out (no WebGL here).
+// The 3D views are left out (no WebGL here); Take his eyes gets its look grid from the bundle.
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
+import lookJson from "../../public/data/look_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App, MatchApp } from "../App";
 import { createApi } from "../api/client";
@@ -16,7 +17,7 @@ import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { BACK_NOTE } from "../producer/producer";
 import { createMatchSession } from "../match/matchSession";
-import { createSession, SessionContext, type ViewSession } from "../session";
+import { createSession, SessionContext, type Session, type ViewSession } from "../session";
 import {
   API,
   breakdownResponse,
@@ -30,6 +31,7 @@ import {
   telestratorDownTrace,
   verifyResponse,
 } from "../testing";
+import { takeEyesOf, type Fetch } from "../takeeyes/controller";
 import { intro } from "../ui/intro";
 import { LineupCard } from "../ui/LineupCard";
 import { yourCallOf } from "../yourcall/controller";
@@ -78,7 +80,18 @@ function mount(session: ViewSession, node: ReactNode = <App autoplay={false} />)
   return container;
 }
 
-const offline = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson);
+// Take his eyes fetches its look grid (a static file) on first open: here, the bundled one.
+const looksServed: Fetch = async (url) => ({
+  ok: url.endsWith("look_seed3.json"),
+  json: async () => lookJson,
+});
+const withLooks = (session: Session) => {
+  takeEyesOf(session, looksServed, "/data/");
+  return session;
+};
+const eyesOf = (session: Session) => takeEyesOf(session).state.get().step;
+
+const offline = () => withLooks(createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson));
 
 function online() {
   const fetch = fakeFetch({
@@ -114,9 +127,11 @@ function online() {
       ),
     "POST /api/verify": (body) => json(verifyResponse((body as { value: number }).value)),
   });
-  const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
-    api: createApi(API, "blind_side_run-3", fetch),
-  });
+  const session = withLooks(
+    createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+      api: createApi(API, "blind_side_run-3", fetch),
+    }),
+  );
   return { session, fetch };
 }
 
@@ -148,7 +163,7 @@ async function start(at: string | null = null) {
 }
 
 describe("every step resolves on the hero moment", () => {
-  it("offline: the replay, the run switch, the evidence and Your call, then the end", async () => {
+  it("offline: the replay, the run switch, the evidence, Your call and Take his eyes, then the end", async () => {
     const session = offline();
     mount(session);
     await start();
@@ -162,7 +177,7 @@ describe("every step resolves on the hero moment", () => {
       if (id === "end") break;
       await next();
     }
-    expect(seen).toEqual(["pov", "without", "evidence", "yourcall", "end"]);
+    expect(seen).toEqual(["pov", "without", "evidence", "yourcall", "eyes", "end"]);
   });
 
   it("each step does what it says with the app's own controls", async () => {
@@ -186,7 +201,18 @@ describe("every step resolves on the hero moment", () => {
     expect(yourCallOf(session).state.get().step).not.toBe("closed");
     expect(document.querySelector(".yc-view")).not.toBeNull();
 
-    await next(); // the end: Your call is closed again, the live screen is back
+    await next(); // Take his eyes: Your call closed, his own look picked; the look is the viewer's
+    expect(yourCallOf(session).state.get().step).toBe("closed");
+    expect(eyesOf(session)).toBe("choosing");
+    const eyes = STEPS.find((s) => s.id === "eyes")!;
+    expect(targetOf(eyes)).toBe(document.querySelector(".te-view"));
+    expect(document.querySelector(".te-dial")).not.toBeNull();
+    await click(buttonIn(document.querySelector(".te-card"), "Look"));
+    expect(eyesOf(session)).toBe("looking");
+    expect(stepId()).toBe("eyes");
+
+    await next(); // the end: Take his eyes is closed again, the live screen is back
+    expect(eyesOf(session)).toBe("closed");
     expect(yourCallOf(session).state.get().step).toBe("closed");
     expect(document.querySelector(".stage-run")).not.toBeNull();
   });
@@ -212,8 +238,14 @@ describe("every step resolves on the hero moment", () => {
     expect(textOf(document.querySelector(".tamper-result"))).toContain("Refuted");
 
     await next(); // Your call
+    const sent = fetch.calls.length;
+    await next(); // Take his eyes: its looks are a static file, nothing goes to the service
+    expect(stepId()).toBe("eyes");
+    expect(eyesOf(session)).toBe("choosing");
+    expect(fetch.calls).toHaveLength(sent);
     await next(); // another audience in another language: a casual fan, in Chinese, at once
     expect(stepId()).toBe("language");
+    expect(eyesOf(session)).toBe("closed");
     expect(session.breakdown.get()).toMatchObject({ persona: "casual", language: "zh" });
     const asked = fetch.calls.filter((c) => c.path === "/api/breakdowns").at(-1)!;
     expect(asked.body).toMatchObject({ personas: ["casual"], languages: ["zh"] });
@@ -308,9 +340,31 @@ describe("moving and leaving", () => {
     expect(session.playback.get().evidenceLine).toBe("L2");
   });
 
+  it("Back to Take his eyes opens it again; Back from it closes it for Your call", async () => {
+    const session = offline();
+    mount(session);
+    await start("end");
+    expect(eyesOf(session)).toBe("closed");
+    await click(buttonIn(card(), "Back"));
+    expect(stepId()).toBe("eyes");
+    expect(eyesOf(session)).toBe("choosing");
+    expect(targetOf(STEPS.find((s) => s.id === "eyes")!)).not.toBeNull();
+    // The viewer's pick stays through a step back and forth.
+    act(() => takeEyesOf(session).pick({ frame: 40 }));
+    await click(buttonIn(card(), "Back"));
+    expect(stepId()).toBe("yourcall");
+    expect(eyesOf(session)).toBe("closed");
+    expect(yourCallOf(session).state.get().step).not.toBe("closed");
+    expect(document.querySelector(".yc-view")).not.toBeNull();
+    await next();
+    expect(stepId()).toBe("eyes");
+    expect(yourCallOf(session).state.get().step).toBe("closed");
+    expect(takeEyesOf(session).state.get()).toMatchObject({ step: "choosing", frame: 40 });
+  });
+
   it("Skip and Escape close it at any step, and the app stays usable", async () => {
     for (const how of ["skip", "escape"] as const) {
-      for (const id of ["pov", "without", "evidence", "yourcall", "end"]) {
+      for (const id of ["pov", "without", "evidence", "yourcall", "eyes", "end"]) {
         const session = offline();
         const container = mount(session);
         await start(id);
@@ -324,6 +378,11 @@ describe("moving and leaving", () => {
         if (id === "yourcall") {
           await click(buttonIn(container, "Back to the replay"));
           expect(yourCallOf(session).state.get().step).toBe("closed");
+        }
+        if (id === "eyes") {
+          expect(eyesOf(session), `${how} at ${id}`).toBe("choosing");
+          await click(buttonIn(container.querySelector(".te-card"), "Back to the replay"));
+          expect(eyesOf(session)).toBe("closed");
         }
         await click(buttonIn(container.querySelector(".stage-run"), "With the look"));
         expect(session.playback.get().mode).toBe("factual");
@@ -376,7 +435,7 @@ describe("on a phone", () => {
       await settle();
     });
     await next();
-    expect(stepId()).toBe("end");
+    expect(stepId()).toBe("eyes");
     expect(card()!.classList.contains("folded")).toBe(false);
   });
 
@@ -477,14 +536,34 @@ describe("keyboard and motion", () => {
     expect(stepId()).toBe("pov");
   });
 
-  it("leaves the keyboard with Your call on its step, and takes it back after", async () => {
+  it("leaves the keyboard with Your call and Take his eyes on their steps, and takes it back after", async () => {
     const container = mount(offline());
     await start("yourcall");
     expect(card()!.contains(document.activeElement)).toBe(false);
     expect(container.querySelector(".yc-view")).not.toBeNull();
     await next();
-    // Closing Your call hands its pill the focus; the tour's card takes it after that.
+    // Take his eyes has its own heading focused, not the tour's card.
+    expect(stepId()).toBe("eyes");
+    expect(card()!.contains(document.activeElement)).toBe(false);
+    expect(document.activeElement).toBe(container.querySelector("#te-title"));
+    await next();
+    // Closing Take his eyes hands its pill the focus; the tour's card takes it after that.
     expect(textOf(document.activeElement)).toBe("Done");
+  });
+
+  it("leaves the keyboard with Take his eyes on its step: its arrow keys pick, the tour stays", async () => {
+    const session = offline();
+    const container = mount(session);
+    await start("eyes");
+    expect(card()!.contains(document.activeElement)).toBe(false);
+    expect(document.activeElement).toBe(container.querySelector("#te-title"));
+    const times = container.querySelector('[role="radiogroup"][aria-label="When he looks"]')!;
+    const on = times.querySelector<HTMLElement>('[aria-checked="true"]')!;
+    const before = takeEyesOf(session).state.get().frame;
+    press("ArrowLeft", on);
+    await act(settle);
+    expect(takeEyesOf(session).state.get().frame).not.toBe(before);
+    expect(stepId()).toBe("eyes");
   });
 
   it("is a labelled, non-modal dialog whose caption is announced", async () => {

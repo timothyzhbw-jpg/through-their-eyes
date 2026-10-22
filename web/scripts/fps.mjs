@@ -10,6 +10,7 @@
 //   npm run fps -- --headed                 a window on this machine's GPU (laptop check)
 //   npm run fps -- --width 1440 --height 900 --dpr 2 --seconds 4 --runs 3
 //   npm run fps -- --query stadium=baked     extra URL parameters for every page (e.g. a stadium)
+//   npm run fps -- --anims base            the engine's player clips only (?anims=base)
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
@@ -28,6 +29,7 @@ const { values: opt } = parseArgs({
     runs: { type: "string", default: "3" },
     cine: { type: "boolean", default: false },
     query: { type: "string", default: "" },
+    anims: { type: "string", default: "" }, // "base": without the retargeted clips (players/extra.ts)
   },
 });
 
@@ -54,7 +56,8 @@ if (opt.cine) {
     });
     const page = await context.newPage();
     const button = (name) => page.getByRole("button", { name, exact: true });
-    await page.goto(`${base}?offline=1&autoplay=0&intro=0${extra}`);
+    const anims = opt.anims ? `&anims=${encodeURIComponent(opt.anims)}` : "";
+    await page.goto(`${base}?offline=1&autoplay=0&intro=0${extra}${anims}`);
     await button("Play").waitFor();
     await page.waitForFunction(() => document.querySelectorAll("canvas").length >= 2);
     await page.waitForTimeout(1500); // models and textures
@@ -110,7 +113,7 @@ if (opt.cine) {
 
     const rows = [];
     for (const [overlay, camera] of [
-      ["pitch control", "His eyes"],
+      ["pitch control", "Tactical"], // the board: beside his eyes the corner is his belief map
       ["skeleton", "Broadcast"], // the skeleton is drawn on the broadcast camera and the board
     ]) {
       await button(camera).click();

@@ -32,6 +32,7 @@ workflow's output). [`docs/architecture.svg`](../docs/architecture.svg) draws th
 | [`delivery.py`](delivery.py) | delivery tier from rules on the card (never a model), SSML per line, voice cue keys |
 | [`whatif.py`](whatif.py) | "What if…?": map a question to one evaluated option (model or rule parser), force it, re-simulate, answer with verified counterfactual claims |
 | [`telemetry.py`](telemetry.py) | one OpenTelemetry span per breakdown and one per step; ids and counts only, never prompt or narration text |
+| [`crewtrace.py`](crewtrace.py) | the crew trace: `CrewTrace` (pydantic) and the `Recorder` the workflow fills as it runs: per step its times, typed input and output, shared state read and written, model and MCP tool calls, the Verifier's rejections and rewrites; the drill's events and checkpoints. `python -m agents.crewtrace` writes the web's fixture |
 | [`testing.py`](testing.py) | `FakeChatClient` and `ToolCallingFakeChatClient`: scripted replies routed by the `ROLE:` line, for tests and offline demos |
 | [`run.py`](run.py) | the command line |
 
@@ -44,6 +45,8 @@ workflow's output). [`docs/architecture.svg`](../docs/architecture.svg) draws th
   language a `ScriptResult` (approved lines, the render payload of SPEC 5.3, dropped lines,
   rewrite rounds, voice cues with SSML), a trace of every step (source `llm`, `template` or
   `code`, attempts, timings) and the trace id. `api/` caches it; `web/` plays it.
+- `run_crew` also returns the run's `CrewTrace` (`CrewRun.trace`): the timeline the web's
+  "Crew trace" draws, stored by the API with the breakdown. A drill's bring-back continues it.
 - With `use_mcp`, the Analyst starts `python -m agents.mcp_server` as a subprocess and calls the
   tools over stdio; the deployed API does this for every uncached model breakdown
   (`TTE_ANALYST_MCP`).
@@ -100,6 +103,9 @@ real MCP tool calls over stdio.
   template, plan validation matches the web rules, the Analyst calls tools over MCP.
 - [`test_crew_recovery.py`](../tests/test_crew_recovery.py): take down, bring back, resume after
   an interrupted run, and which steps run again.
+- [`test_crew_trace.py`](../tests/test_crew_trace.py): the crew trace: every step with its typed
+  input and output, shared state, model and MCP tool calls, the Verifier loop, and the drill's
+  down, fallback, waiting, checkpoints and bring-back.
 - [`test_telemetry.py`](../tests/test_telemetry.py): one trace per breakdown, a span per step, a
   timeout as a `template` span with its error class.
 - [`test_whatif.py`](../tests/test_whatif.py): forcing the chosen action reproduces the run; an

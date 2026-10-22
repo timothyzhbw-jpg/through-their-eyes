@@ -7,10 +7,13 @@ recap needs both views:
 - its key moments, each told by claims checked on its possession's own run: observed facts built
   here (`moment_claims`) for any moment, and for a hero moment its MomentContext's claims too.
 
-`rank_moments` orders the candidates for the Director: by counterfactual impact, the |Δ| of the
-selected lens in xT (SPEC 5.2), exact ties scan > space > pressure, then match order. A moment
-that scored (`scored_moments`: its action is a shot whose outcome is a goal, or it is tagged
-`goal`) ranks first. Live-only overlays (sprints) are never key moments.
+`rank_moments` orders the candidates for the Director by an editorial rule, as a broadcaster
+leads with the story of the match: a moment that scored first (`scored_moments`: its action is a
+shot whose outcome is a goal, or it is tagged `goal`), then the hero moments (a match card's
+`hero`: the moments the match is built around), then the rest. Within each group, by
+counterfactual impact, the |Δ| of the selected lens in xT (SPEC 5.2); exact ties scan > space >
+pressure, then match order. It is not a pure impact ranking. Live-only overlays (sprints) are
+never key moments.
 
 Nothing here calls a model, and nothing here is new verification logic: the claims are `Claim`s,
 checked by the same `Verifier` as every breakdown.
@@ -106,10 +109,11 @@ def rank_moments(
     """Key-moment candidates, most important first (see the module docstring)."""
 
     def key(c: Mapping[str, Any]):
-        first = 0 if set(FIRST_TAGS) & set(c.get("tags", ())) or c["id"] in scored else 1
+        goal = set(FIRST_TAGS) & set(c.get("tags", ())) or c["id"] in scored
+        tier = 0 if goal else 1 if c.get("hero") else 2
         lens = c.get("selected_lens")
         order = LENS_ORDER.index(lens) if lens in LENS_ORDER else len(LENS_ORDER)
-        return (first, -round(impact(c), 9), order, c["anchor_frame"], c["id"])
+        return (tier, -round(impact(c), 9), order, c["anchor_frame"], c["id"])
 
     return sorted((c for c in cards if not c.get("live_only")), key=key)
 

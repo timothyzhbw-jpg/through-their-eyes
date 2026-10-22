@@ -98,34 +98,30 @@
     {
       "id": "04-with-without",
       "spec_beat": "0:20-0:55",
-      "title": "Toggle With / Without the look: without it he passes back (counterfactual ghost)",
+      "title": "With / Without the look at the decision, on the board: the pass options flip from H9 to H4, and H9 goes unseen",
       "status": "ready",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?at=decision&view=tactical",
       "viewport": { "width": 1920, "height": 1080 },
-      "target_s": 10,
-      "crop": "stage",
+      "target_s": 6,
+      "crop": "tactical",
       "setup": [
-        { "do": "wait", "for": "assets" },
-        { "do": "click", "role": "button", "name": "Ask now" },
-        {
-          "do": "wait",
-          "for": "breakdown",
-          "persona": "casual",
-          "language": "en",
-          "timeout_s": 90
-        },
-        { "do": "click", "role": "button", "name": "Decision" }
+        { "do": "wait", "for": "selector", "selector": ".view.tac canvas", "timeout_s": 40 },
+        { "do": "hold", "s": 2 }
       ],
       "actions": [
-        { "do": "hold", "s": 2 },
-        { "do": "click", "role": "button", "name": "Without the look", "hold": 2.5, "still": true },
-        { "do": "click", "role": "button", "name": "With the look", "hold": 1.5 },
-        { "do": "click", "role": "button", "name": "Without the look", "hold": 0.5 },
-        { "do": "click", "role": "button", "name": "View options", "hold": 0.4 },
-        { "do": "click", "role": "button", "name": "Ghost: with the look", "hold": 0.5 },
-        { "do": "click", "role": "button", "name": "Play", "exact": true, "hold": 3 }
+        { "do": "hold", "s": 1.5, "still": true },
+        {
+          "do": "click",
+          "role": "button",
+          "name": "Without the look",
+          "exact": true,
+          "hold": 2.2,
+          "still": true
+        },
+        { "do": "click", "role": "button", "name": "With the look", "exact": true, "hold": 1.4 },
+        { "do": "click", "role": "button", "name": "Without the look", "exact": true, "hold": 1.6 }
       ],
-      "vo": "Now take that look away and re-run the simulation. Without it, he plays it safe and passes back. That look was worth {cf_value.dxt} in expected threat.",
+      "vo": "Now take that look away and re-run the simulation. Without it, he plays it safe and passes back.",
       "vo_fallback": "Now take that look away and re-run the simulation. Without it, he plays it safe and passes back.",
       "notes": "The highlight of the video. Frozen at the decision, the pass options flip between the runs; then the run without the look plays on with the other run's ghost path."
     },
@@ -367,7 +363,7 @@
       ],
       "actions": [
         { "do": "hold", "s": 3, "still": true },
-        { "do": "click", "role": "button", "name": "Pass to H4", "hold": 3.5 },
+        { "do": "click", "role": "button", "name": "Pass to H4", "exact": false, "hold": 3.5 },
         { "do": "click", "role": "button", "name": "See the truth", "hold": 3.5, "still": true },
         { "do": "click", "role": "button", "name": "What he did", "hold": 3.5 },
         { "do": "click", "role": "button", "name": "Compare", "hold": 3 }
@@ -467,6 +463,47 @@
         }
       ],
       "vo": "At the final whistle, the crew writes the recap."
+    },
+    {
+      "id": "16-corner",
+      "spec_beat": "trailer, chapter III",
+      "title": "The corner: the stitched match paused before the short corner, then the centre-back's hero moment in his eyes, with its verified caption",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&intro=0&at=14150",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 5,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "selector", "selector": "text=The corner", "timeout_s": 60 },
+        { "do": "hold", "s": 1.5 }
+      ],
+      "actions": [
+        { "do": "hold", "s": 1.2, "still": true },
+        { "do": "click", "role": "button", "name": "hero moment", "exact": false, "hold": 7 }
+      ],
+      "vo": "At a corner, it is the marker who has to look."
+    },
+    {
+      "id": "17-pov-scan",
+      "spec_beat": "trailer, the match-cut from the coach's tablet",
+      "title": "The crew's replay in his eyes, sharp: the key scan in first person with the head-turn blur off (reduced motion), finding H9",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?autoplay=0&intro=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 4,
+      "crop": "stage",
+      "reduced_motion": true,
+      "setup": [
+        { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "Ask now" },
+        { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
+      ],
+      "actions": [
+        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "scroll", "y": 0 },
+        { "do": "hold", "s": 6 }
+      ],
+      "vo": "Through his eyes: the look that found the runner."
     }
   ]
 }
