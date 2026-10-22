@@ -38,17 +38,15 @@ Hero moments, by scenario (the hero's decision or, for a marker, his look):
 | Hero | Hero moment detected | Selected lens | Breakdown built | Failures |
 |---|---|---|---|---|
 | `blind_side_run` | 380/380 = 100.0% (99.0–100.0%) | scan 376, space 4 | 380/380 = 100.0% (99.0–100.0%) | 0 |
-| `press_escape` | 380/380 = 100.0% (99.0–100.0%) | pressure 379, space 1 | 319/380 = 83.9% (79.9–87.3%) | 61 |
+| `press_escape` | 380/380 = 100.0% (99.0–100.0%) | pressure 379, space 1 | 380/380 = 100.0% (99.0–100.0%) | 0 |
 | `corner_blind_side` | 380/380 = 100.0% (99.0–100.0%) | scan 380 | 380/380 = 100.0% (99.0–100.0%) | 0 |
 
-Breakdowns that failed, by cause:
-
-- `press_escape`, 61×: StopIteration in runner_received (explain/builders.py:513) Seeds 904009532, 1811291785, 146844577, 1186044885, 1053389533, 1429287199, 466562860, 99978600 ….
+Every detected hero moment's breakdown built without an error.
 
 ## 2. Claims and the Verifier
 
-- Breakdowns built: 1079, each with 5 personas × 2 languages: 10790 scripts.
-- Claims checked by the Verifier: 18227 (supported 18227 = 100.0%).
+- Breakdowns built: 1140, each with 5 personas × 2 languages: 11400 scripts.
+- Claims checked by the Verifier: 18943 (supported 18943 = 100.0%).
 - Claims on a viewer's payload that the Verifier did not support: 0 (target 0).
 - Render violations when every payload is re-checked (`check_payload`: a number with no verified claim behind it, an unsupported term, a placeholder): 0 (target 0).
 - Lines the checks dropped before a payload was built: 0; crew steps with an error: 0.
@@ -58,8 +56,8 @@ Breakdowns that failed, by cause:
 | Moments | Measured on | Changed |
 |---|---|---|
 | Hero `blind_side_run` | decision | 374/380 = 98.4% (96.6–99.3%) |
+| Hero `press_escape` | possession | 319/380 = 83.9% (79.9–87.3%) |
 | Hero `corner_blind_side` | man marked (≤ 5 m) as it arrives | 375/380 = 98.7% (97.0–99.4%) |
-| Hero `press_escape` | possession | 319/319 = 100.0% (98.8–100.0%) |
 | Open play `marker_scan` | scan lens | 0/10 = 0.0% (0.0–27.8%) |
 
 Heroes: the scenario's own intervention (`MomentContext.cf`): the key scan dropped (the decision, or for a marker whether his man is marked as the ball arrives) or the forced action (the possession's result). Open play: the selected lens's counterfactual, which drops the most informative scan. Open play has no decisions on the ball (`possession_play` scripts its passes), so only a marker's look has an outcome to change there; 14143 open-play moments with a lens have no such counterfactual.

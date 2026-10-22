@@ -34,6 +34,7 @@ import type { PlaybackState } from "../store/playback";
 import { useStore } from "../store/store";
 import { ballPath, ghostAt, involvedPlayers, optionOf } from "../whatif/whatif";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
+import { isKeeper, kitOf } from "../players/kit";
 import { BlindSideOverlay } from "../ui/BlindSideOverlay";
 import { pathTagPx, placePathTag } from "./boardLabels";
 import {
@@ -56,6 +57,8 @@ import { BeatBoardLayer } from "../beat/BeatLayers";
 import { motion } from "../beat/beat";
 
 const TOKEN_R = 0.95; // m
+/** A keeper's token keeps its team colour with a band in his kit's colour (players/kit.ts). */
+const GK_BAND = [0.55, 0.77] as const; // m, inner and outer radius
 const MIN_TOKEN_PX = 6; // tokens never shrink below this radius on small screens
 const NAME_PX = 20; // on-screen height of a name label
 const TAG_PX = 24; // on-screen height of a tag such as "shoulder check"
@@ -669,6 +672,12 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
                 <circleGeometry args={[TOKEN_R, 32]} />
                 <meshBasicMaterial color={teamColor(p.team)} {...flat} />
               </mesh>
+              {isKeeper(p) && (
+                <mesh rotation-x={lie} renderOrder={LAYER.token + 0.5}>
+                  <ringGeometry args={[...GK_BAND, 32]} />
+                  <meshBasicMaterial color={kitOf(p).shirt} {...flat} />
+                </mesh>
+              )}
               {outline && (
                 <mesh rotation-x={lie} renderOrder={LAYER.outline}>
                   <ringGeometry args={[TOKEN_R - 0.1, TOKEN_R + 0.16, 32]} />
@@ -825,7 +834,7 @@ function WhatIfGhost({ hero, shared, scale, px }: WhatIfGhostProps) {
   const tagH = Math.max(2.4, TAG_PX * px);
   const [ex, , ez] = path[path.length - 1];
   const what = actionLabel(option.action);
-  const label = getLabelTexture(`what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
+  const label = getLabelTexture(option.tag ?? `what if: ${what[0].toLowerCase()}${what.slice(1)}`, {
     ...LABEL.tag,
     color: COLORS.gold,
   });

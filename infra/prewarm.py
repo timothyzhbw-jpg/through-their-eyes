@@ -134,14 +134,17 @@ def views(http: Http) -> list[View]:
 
 
 def problems(res: dict[str, Any]) -> list[str]:
-    """Why a served breakdown is not a clean model breakdown; empty when it is."""
+    """Why a served breakdown is not a clean model breakdown; empty when it is. One cached before
+    the crew recorded its trace (`traced` false) has no Crew trace to show: `--regenerate-degraded`
+    runs it again, which records one."""
     if res.get("source") != "model":
         return [f"source {res.get('source')}"]
     result = res.get("result") or {}
     plan = result.get("plan_source", result.get("reel_source"))  # a recap's plan is its reel
     out = ["plan from template"] if plan != "agent" else []
-    return out + [f"{s['step']} from template" for s in result.get("trace", ())
-                  if s.get("source") == "template"]  # fmt: skip
+    out += [f"{s['step']} from template" for s in result.get("trace", ())
+            if s.get("source") == "template"]  # fmt: skip
+    return out + (["no crew trace"] if res.get("traced") is False else [])
 
 
 def _cues(res: dict[str, Any]) -> list[str]:

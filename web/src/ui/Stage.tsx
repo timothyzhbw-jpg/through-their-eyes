@@ -18,6 +18,7 @@ import { DESCRIBED, PERSONAS, type Persona } from "../api/client";
 import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
+import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { TourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { useStore } from "../store/store";
@@ -533,13 +534,12 @@ function CrewStatus() {
     );
   } else if (status === "ready" || status === "failed") {
     const steps = origin?.kind === "api" ? crewSteps(origin) : [];
+    // Who wrote it is what the service said (provenance), never a guess from the other fields.
     const note = !narration
       ? "No narration: the breakdown failed its checks"
       : narration.fixture
         ? "Bundled example · not checked by the verifier"
-        : origin?.kind === "api"
-          ? "Written by the crew · every number checked in code"
-          : "Every number checked in code";
+        : "Every number checked in code";
     body = (
       <>
         {steps.length > 0 && (
@@ -549,6 +549,7 @@ function CrewStatus() {
             ))}
           </span>
         )}
+        {origin?.kind === "api" && <ProvenanceChip provenance={origin.provenance} />}
         <span className="crew-note">{note}</span>
       </>
     );

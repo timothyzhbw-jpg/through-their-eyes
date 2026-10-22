@@ -41,6 +41,7 @@ import {
   type SocketFactory,
 } from "./live/feed";
 import { claimRun, lineOf, primaryClaim, RenderPayload } from "./narration/payload";
+import { Comparison } from "./autoplay/comparison";
 import { heroMoment, type MomentContext } from "./plan/moment";
 import { BreakdownRunner } from "./plan/runner";
 import { IDLE_PRODUCER, toggled, type ProducerState } from "./producer/producer";
@@ -113,6 +114,7 @@ export interface Session {
   moment: MomentContext;
   playback: PlaybackStore;
   runner: BreakdownRunner;
+  comparison: Comparison; // the cold load's show: the look, then the run without it (autoplay/)
   breakdown: Store<BreakdownState>; // narration, plan and voice for the chosen persona/language
   producer: Store<ProducerState>; // the failure drill: agents to take down, a request in flight
   whatIfs: WhatIfs | null; // precomputed "What if…?" answers; null hides the box
@@ -197,6 +199,7 @@ export function createSession(
     moment,
     playback,
     runner,
+    comparison: new Comparison(playback, hero, moment.decisionFrame),
     breakdown,
     producer: createStore<ProducerState>(IDLE_PRODUCER),
     whatIfs,
@@ -385,6 +388,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     moment,
     playback,
     runner,
+    comparison,
     breakdown,
     producer,
     whatIfs,
@@ -394,8 +398,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     voice,
     possession,
   } = s;
-  let auto = false; // autoplay: play the breakdown by itself once the moment is detected
-  let momentSeen = false; // the stream has detected the hero moment
+  let auto = false; // autoplay: the show, then the breakdown, by itself once the moment is detected
   let playWhenReady = false; // the viewer pressed play before the breakdown arrived
   let asking = false; // a breakdown request is in flight
   let askAgain = false; // the viewer chose again meanwhile: ask for that one next
@@ -408,6 +411,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
    * ends the autoplay. */
   const takeOver = () => {
     runner.stop();
+    comparison.stop();
     auto = false;
     playWhenReady = false;
   };
@@ -429,6 +433,20 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     leaveLive();
     voice.stop();
     runner.start(breakdown.get().resolved.plan);
+  };
+  /** After the show: the breakdown, or as soon as it arrives. */
+  const breakdownNext = () => {
+    const status = breakdown.get().status;
+    if (status === "ready" || status === "failed") startBreakdown();
+    else playWhenReady = true;
+  };
+  /** The autoplay: the look again, then the same seconds without it (autoplay/comparison.ts),
+   * then the breakdown. It does not wait for the breakdown: its lines go up when it is here. A
+   * moment with no re-simulated run goes straight to the breakdown. */
+  const startShow = () => {
+    leaveLive();
+    voice.stop();
+    if (!comparison.start(() => breakdown.get().narration, breakdownNext)) breakdownNext();
   };
   const resetTamper = () => {
     tamperTurn += 1;
@@ -494,7 +512,7 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     resetTamper();
     breakdown.set(next);
     openLinkedTamper();
-    if (playWhenReady || (auto && momentSeen)) {
+    if (playWhenReady) {
       playWhenReady = false;
       auto = false;
       startBreakdown();
@@ -640,20 +658,24 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
       void produce(agent, () => api.bringBack({ key: origin.key, step: agent }));
     },
 
-    /** Autoplay online: watch live, then play the breakdown once the moment is detected. */
+    /** Autoplay online: watch live, then the show and the breakdown once the moment is detected. */
     startLive() {
       transport.goLive();
       auto = s.feed !== null;
     },
+    /** Autoplay with no stream (offline, after the lineup card): the show, then the breakdown;
+     * online and not here yet, it is asked for now. */
+    autoplay() {
+      if (breakdown.get().status === "waiting") void requestBreakdown();
+      startShow();
+    },
     /** A moment arrived on the stream; the hero moment's breakdown is asked for now (SPEC 2). */
     momentDetected(card: LiveMoment) {
       if (card.id !== moment.id) return;
-      momentSeen = true;
-      const status = breakdown.get().status;
-      if (status === "waiting") void requestBreakdown();
-      else if (auto && (status === "ready" || status === "failed")) {
+      if (breakdown.get().status === "waiting") void requestBreakdown();
+      if (auto) {
         auto = false;
-        startBreakdown();
+        startShow();
       }
     },
 
@@ -842,8 +864,10 @@ export function tickSession(session: ViewSession, dt: number): void {
     if (next !== s.frame) playback.set({ frame: next });
     return;
   }
-  if (session.kind === "hero") session.runner.tick(dt);
-  else session.recap.tick(dt); // the end-of-match recap's reel, while it plays
+  if (session.kind === "hero") {
+    session.runner.tick(dt);
+    session.comparison.tick(dt);
+  } else session.recap.tick(dt); // the end-of-match recap's reel, while it plays
   advance(playback, hero, dt);
 }
 
