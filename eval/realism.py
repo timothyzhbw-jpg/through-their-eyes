@@ -815,6 +815,7 @@ class ShapeRow:
     source: str = "—"
     inside: str = "—"
     note: str = ""
+    before_inside: str = "—"  # the before column's verdict against the same range
 
     @property
     def label(self) -> str:  # every row with a printed value was fitted on tuning seeds
@@ -844,11 +845,12 @@ def shape_rows(
             sd = _wsd(x[mask], pool.weights("shape", np.ones(pool.n_seeds))[mask])
             a, b = pool.interval(stat)
             seconds = mask.sum() * SHAPE_EVERY * dt
-            then = "—"
+            then, then_value = "—", math.nan
             if before is not None:
                 bt = before.tables["shape"]
                 bm = (bt["phase"] == k) & np.isfinite(bt[metric])
-                then = f"{_num(_wmean(bt[metric][bm], np.ones(bm.sum())), fmt)}"
+                then_value = _wmean(bt[metric][bm], np.ones(bm.sum()))
+                then = _num(then_value, fmt)
             row = ShapeRow(
                 label,
                 phase_label,
@@ -861,6 +863,8 @@ def shape_rows(
                 row.published, row.source, row.note = ref.published, ref.source, ref.note
                 row.range = f"{_span(ref.lo, ref.hi, fmt)} ({ref.label})"
                 row.inside = _verdict(value, ref.lo, ref.hi, mask.sum() >= MIN_GROUP)
+                if before is not None:
+                    row.before_inside = _verdict(then_value, ref.lo, ref.hi)
             if metric == "line_height" and phase == team_shape.ATTACK:
                 ball = np.median(table["ball_depth"][table["phase"] == k])
                 row.note += (
@@ -883,6 +887,21 @@ def render_shape(rows: list[ShapeRow]) -> list[str]:
         f"inconclusive, {no_ref} with no published reference.**",
         "",
     ]
+    before = [r for r in rows if r.before_inside in (INSIDE, OUTSIDE)]
+    if before:
+        missed = [r for r in before if r.before_inside == OUTSIDE]
+        lines += [
+            f"Without the team shape (*Before: anchors*), the same seeds land inside on "
+            f"{len(before) - len(missed)} of these {len(before)}"
+            + (
+                ": outside on "
+                + "; ".join(f"{r.metric.lower()}, {r.phase} ({r.before})" for r in missed)
+                if missed
+                else ""
+            )
+            + ".",
+            "",
+        ]
     outside = [r for r in rows if r.inside == OUTSIDE]
     if outside:
         lines += ["Outside the published range:", ""]
