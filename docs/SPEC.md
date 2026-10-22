@@ -1986,6 +1986,48 @@ original visual identity.
     95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
+- **Academy drill** (2026-10-22, Bowen: a light, game-like scan trainer with no sim change;
+  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment; deep link `?play=drill`, with
+  `?match=press_escape-0` for the harder moment, or in a stitched match its first hero moment with a
+  look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
+  pass reaches him, check your shoulder, then make the pass with only what your look showed. It
+  wraps Take his eyes' grid and Your call's picture: every look was re-simulated ahead of time, so
+  no live re-simulation and no model call.
+  - *The look.* After Start a countdown runs from the pass to him to the reception in the moment's
+    own time ("Ball arrives in 1.6 s"; half speed by default, match speed on request: the
+    countdown always counts the moment's time). A sideways drag on his eyes (a touch on a phone) or
+    a held ← / → turns his head live, at most 150° from the ball either way and no faster than a
+    scan turns (404°/s of match time, §3.4); his eyes are the first-person view of the run with no
+    look, his head written in, so the view shows what that head would see (before his decision a
+    look changes only his head and his picture, §3.7). Letting go ends the look, and so does the
+    ball's arrival. One look: a turn that never reaches 35° (half the shortest scan) is no look and
+    may be retried before the ball arrives.
+  - *The snap* ([snap.ts](../web/src/drill/snap.ts)). The look's time is the frame his head began to
+    turn, its direction the widest angle it reached, clamped into the scan range (70–150°): the
+    nearest grid time (a tie goes earlier) and the nearest grid direction on that side (a tie, 120°,
+    goes over the shoulder, as the grid's labels say). A cell where no look can start gives way to
+    the nearest time that can. Said in the grid's values: "Your look: 1.2 s before the ball, 150°
+    over his right shoulder".
+  - *The call.* At his decision, Your call's view (§7) of his picture with that look: everyone where
+    he believed them in the look's run, those he had not seen for 1.5 s grey, a marker per option of
+    the look's decision record, listed across the pitch. No option is marked as his.
+  - *The result* ([result.ts](../web/src/drill/result.ts)). Checks in words: whether he looked
+    before the ball arrived, whether the runner was fresh in the picture (a hero with a runner),
+    whether the pass is the one he played. Then the look, whom it brought into his sight (its
+    verified line), the viewer's call rated on that picture in words from the decision record (no
+    number), the look's verified lines (his picture of the player who mattered, the sim's call with
+    that look, what came of it, its value), and three calls side by side: with your look, what he
+    did (and where his own looks went), with no look. The board plays what he did with the look's
+    run as the gold ghost path. Every number on screen is the grid's: its times, its directions, its
+    verified lines.
+  - *Levels* are the moments with a bundled look grid (`LOOK_FILES`): Blind side
+    (`blind_side_run` seed 3, easier) and Under pressure (`press_escape` seed 0, harder). There is
+    no free control of the reception distance or time: each would need new sim runs and their
+    gates after the sim freeze (2026-10-24). A grid bundled later joins the list.
+  - Keyboard: his head is a slider (its value his head from the ball); Start focuses it; the
+    markers as in Your call. "No clock?" opens Take his eyes, which chooses the time and the
+    direction without one. No blur, no flashes: the countdown changes in place and the card is
+    opaque. Reduced motion: the result's board cuts to its end.
 - **His looks, step by step** (2026-10-21, a teammate's request: the scans go by too fast;
   [web/src/steps/](../web/src/steps/); "His looks" in the header, "Step through his looks" on the
   moment; deep link `?play=steps`, a hero moment's only): each look the hero takes before the ball
@@ -2256,6 +2298,17 @@ reported to be Xsens motion capture; animation only): the players' walk
       [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
       [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
       [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
+- [x] Academy drill: any turn maps to the nearest cell of the grid (its start to the nearest
+      time, its widest angle, clamped to 70–150°, to the nearest direction on its side), on both
+      bundled grids; the live head never passes 150° nor turns faster than a scan; the countdown is
+      the moment's time to the reception at either pace and reaches 0 there; the look locks on
+      letting go or at the ball's arrival; the call's picture is the look's belief; the result's
+      calls and lines equal the grid's for every look and every option; the drill opens from its
+      deep link and from the moment, and Escape returns focus. — [web/src/drill/snap.test.ts](../web/src/drill/snap.test.ts),
+      [result.test.ts](../web/src/drill/result.test.ts),
+      [controller.test.ts](../web/src/drill/controller.test.ts),
+      [drill.test.tsx](../web/src/drill/drill.test.tsx); `npm run smoke`, pages `link-drill`,
+      `link-drill-press-escape`, `phone-375-drill` (a drill completed on each)
 - [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
       scan events (a file whose looks are not the run's is refused), the dropped look missing in
       the run without it; the freeze frame inside the dwell; movement arrows from the sim's

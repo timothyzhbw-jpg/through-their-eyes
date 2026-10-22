@@ -154,7 +154,17 @@ type Buttons = RefObject<(HTMLButtonElement | null)[]>;
 
 // ---------- the view: his picture, the markers, the dotted path, the swipe ----------
 
-function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; buttons: Buttons }) {
+/** His picture from behind him with a marker per option; the academy drill (drill/) calls from it
+ * with a look of the grid. */
+export function CallView({
+  yc,
+  scene,
+  buttons,
+}: {
+  yc: YourCall;
+  scene: boolean;
+  buttons: Buttons;
+}) {
   const { options, picture } = yc;
   const step = useStore(yc.state, (s) => s.step);
   const aim = useStore(yc.state, (s) => s.aim);
