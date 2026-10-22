@@ -163,6 +163,12 @@ _Fill in as they come to exist._
 - `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
   passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
   `eval/reports/pass_difficulty.md`
+- `uv run python -m eval.persona_distinctness` — persona distinctness (SPEC 6, "Persona specs"):
+  the four served heroes × five personas × `en`, `zh`, offline, about 10 s: claim Jaccard between
+  personas, lines, words, numbers, jargon, first lines, each persona's plan; before/after against
+  `eval/reports/persona_distinctness_before.json`; `--runs <BreakdownResult files>` scores model
+  breakdowns apart. Writes `eval/reports/persona_distinctness.md`; the gate is
+  `tests/test_persona_distinctness.py`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
