@@ -2,7 +2,10 @@
 // open-licence motion retargeted onto the Gameplay Football skeleton, in
 // web/public/models/anims_extra.glb (no mesh: animations bound to grf_player.glb's bones by name;
 // models/README.md has the sources and credits).
-// - pass_short: a mocap kick (CMU), replacing the engine's standing pass at every sim pass event;
+// - pass_short: a mocap kick (CMU), replacing the engine's standing pass at every sim pass and
+//   shot event; its arms are damped halfway to the idle's, and its meta says where the plant
+//   foot stands and the ball is struck, so the body can stand on that foot and the ball sit on
+//   the kicking foot (gait.ts, rig.ts);
 // - shoulder_check_l / _r: the trunk's share of a look over the shoulder (CMU), played as an
 //   additive layer at every sim scan, timed to the head's own turn: out, hold, back.
 // The head stays the sim's: the checks have no neck track, and look.ts points the neck along
@@ -21,6 +24,12 @@ interface ExtraClipMeta {
   duration_s: number;
   touch_s?: number;
   ball_yaw_deg?: number;
+  plant_s?: number;
+  plant_m?: [number, number];
+  contact_m?: [number, number];
+  land_s?: number;
+  root_fps?: number;
+  root_m?: [number, number][];
   reach_s?: number;
   leave_s?: number;
   back_s?: number;
@@ -73,6 +82,10 @@ export function extraClips(gltf: GLTF): ExtraClips {
       duration: pass.duration_s,
       touch: pass.touch_s!,
       kickYaw: pass.ball_yaw_deg! * DEG,
+      plant: { time: pass.plant_s!, at: pass.plant_m! },
+      contact: pass.contact_m!,
+      land: pass.land_s!,
+      root: { fps: pass.root_fps!, xz: pass.root_m! },
     },
     passClip: find("pass_short"),
     check: {

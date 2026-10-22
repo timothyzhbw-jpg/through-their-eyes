@@ -79,7 +79,13 @@ Clips:
 
 - `pass_short`: CMU Motion Capture Database, subject 10, trial 02 ("soccer - kick ball"),
   120 Hz, from 0.40 s before to 0.55 s after ball contact. The whole body, in place: the root
-  keeps only its height, and planted feet are held still with two-bone IK.
+  keeps only its height, and planted feet are held still with two-bone IK, solved with the
+  capture's hip travel over the plant foot. That travel (`root_m`, from the plant on) goes in the
+  scene extras instead of the clip, with where the plant foot stands (`plant_m`, from `plant_s`),
+  the ball's centre at the contact (`contact_m`) and when the kicking foot is down (`land_s`): the
+  web app moves the body by it, anchored on the plant foot (`web/src/players/gait.ts`). The arms
+  are eased halfway back to the engine's idle arms: the capture's counter-balance spread read as
+  a mannequin's on this body.
 - `shoulder_check_r`: CMU Motion Capture Database, subject 139, trial 04 ("Looking Around"),
   0.68–1.50 s. Only the trunk joint (`middle`); the head stays the sim's.
 - `shoulder_check_l`: the same, mirrored left to right.

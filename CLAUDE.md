@@ -203,6 +203,10 @@ _Fill in as they come to exist._
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
   the hero moment
+- `uv run pytest tests/test_doc_numbers.py` — the numbers the judge-facing docs quote match their
+  reports (SPEC 11): each is wrapped in `<!--num:ID-->…<!--/num-->` (ids and readers in the test,
+  every place in docs/NUMBERS.md); after a sim change regenerates the reports, it names each doc
+  line to update
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a

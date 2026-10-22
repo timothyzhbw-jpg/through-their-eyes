@@ -42,11 +42,10 @@ checks every number in its captions and narration before it airs.
   Microsoft plans questions and answers in fans' native languages.[^pl-microsoft]
 - **What we bring to that.** Through Their Eyes explains one moment for five audiences, in
   English or Chinese, and hands its overlays to a graphics engine as timecoded, machine-readable
-  cues. AI output on air needs an audit trail: ESPN's AI-generated recap of a retiring star's
-  final match left her out, although each recap was to be reviewed by a human editor.[^espn]
-  Code checks every number our crew says or captions before it airs, and every verdict is
-  logged. It does not judge what a recap leaves out, and it runs on synthetic matches only, so it
-  shows the workflow, not accuracy on real matches.
+  cues. AI output on air needs an audit trail: code checks every number our crew says or
+  captions before it airs, and every verdict is logged. It does not judge what a recap leaves
+  out, and it runs on synthetic matches only, so it shows the workflow, not accuracy on real
+  matches.
 
 ## What it does
 
@@ -72,7 +71,7 @@ The brief's pipeline, end to end, on a synthetic match:
 4. **Counterfactual.** We re-simulate the moment with that one look removed. Random draws are
    tied to each player and purpose, not to one shared sequence. So the two runs differ only
    because of the change. Without the look, the midfielder plays it back; with it, he finds the
-   runner. Over 40 held-out seeds, 39 decide differently without the look.[^flip]
+   runner. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently without the look.[^flip]
 5. **Verified numbers.** Every number in the captions, the narration and the evidence cards is
    a claim computed from the match and checked by code before it airs. Viewers can open any
    caption's evidence, or try a wrong number and watch the Verifier refute it.[^verify] Other
@@ -82,9 +81,9 @@ The brief's pipeline, end to end, on a synthetic match:
 **Three hero moments.**
 - **Scan hero:** a midfielder's one look over his shoulder shows him the runner. Live in the app.
 - **Pressure hero:** a centre-back under a high press. Re-simulated with him forced to keep the
-  ball, he loses it in 40 of 40 fresh seeds.[^press] Live in the app.
+  ball, he loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds.[^press] Live in the app.
 - **Set-piece hero:** at a corner, a defender marks the striker where he *believes* the striker
-  is. In 37 of 40 held-out seeds, the striker is unmarked at the cutback without the defender's
+  is. In <!--num:H7-->37 of 40<!--/num--> held-out seeds, the striker is unmarked at the cutback without the defender's
   look, and marked with it.[^marking] That headline uses a gate revised during design; the
   original plan's checks, reported in the same file, are not met. Live in the app, as the
   stitched match's third hero.
@@ -113,7 +112,8 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 
 - **Shared state and handoffs.** Every step reads one shared moment context: the run, the
   counterfactual, the claims, the verdicts and the audit log. Steps pass typed messages along
-  the workflow's edges. The Telestrator and narration run in parallel.
+  the workflow's edges. The Telestrator and narration run in parallel, and narration drafts
+  every audience and language at once.
 - **Failure recovery.** Each model step has a timeout, one retry, then its deterministic
   template, so a breakdown always airs.[^spec6] The live app makes this visible as a
   **failure drill**: in the Producer desk, take the Telestrator down and run the crew. It fails
@@ -128,19 +128,44 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
   lines (34 of 66) named a player or a number that no claim holds; the Verifier stopped every one.
   Anchored narration, where the model picks claim ids, had 0 of 111.[^ablation]
 
+### Why a crew, not one agent
+
+We measured it. One Foundry agent doing the four model roles in one call, with the same tools,
+schemas and checks, against the crew, on six moments for four audiences each.[^crew]
+
+- **Not better lines.** Both aired no wrong fact and scored the same groundedness. The Verifier
+  and the anchored schema keep the facts right, whichever structure writes the lines. The crew
+  costs about twice as much per breakdown.
+- **Recovery that keeps the rest.** With one agent down, the crew still aired three of its four
+  model roles; the single agent lost all four, because its one call is every role. Bringing the
+  Telestrator back cost the crew one model request; the single agent had to redo everything.
+  Bringing the Analyst back costs the crew more than the single agent's redo, because every
+  later step reads the Analyst and runs again. TODO(multi-agent-evidence): recovery when the
+  model service itself fails.
+- **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
+  timeout; every single-agent call did, so deployed it would have aired its templates.
+- **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
+  back to the voice that wrote it, told why; the plan and the other lines stand. TODO(multi-agent-evidence):
+  rewrites per breakdown.
+- **Audiences in parallel.** Each audience and language is its own narration call, run at once.
+  TODO(multi-agent-evidence): seconds to air for four audiences against one.
+- **Auditable per agent.** Every breakdown carries its crew trace: each step's input and output,
+  the state it read and wrote, the Analyst's tool calls, the verdicts, and whether each part came
+  from the model or a template. **Crew trace** in the app shows it as a timeline.
+
 ## Evidence
 
 | Claim | Result | Source |
 |---|---|---|
-| Without the key look, the scan hero decides differently | 33 of 40 held-out seeds | [^flip] |
-| Lens selection picks the lens each hero is built for | scan hero 40/40; pressure hero 40/40 on fresh seeds | [^lens], [^press] |
-| Forced to keep the ball, the pressure hero loses it; the possession outcome changes | 40/40 lost; 32/40 changed | [^press] |
-| Set-piece hero: unmarked without the look, marked within 5 m with it | 37/40 (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
+| Without the key look, the scan hero decides differently | <!--num:H1-->33 of 40<!--/num--> held-out seeds | [^flip] |
+| Lens selection picks the lens each hero is built for | scan hero <!--num:H2-->34/40<!--/num-->; pressure hero <!--num:H3-->40/40<!--/num--> on fresh seeds | [^lens], [^press] |
+| Forced to keep the ball, the pressure hero loses it; the possession outcome changes | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [^press] |
+| Set-piece hero: unmarked without the look, marked within 5 m with it | <!--num:H7-->37/40<!--/num--> (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
 | Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.915, recall 0.943 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
-| Simulator statistics against published values | 10 inside the published range, 6 outside, 10 with no published value | [^realism] |
+| Simulator statistics against published values | <!--num:R3.inside-->11<!--/num--> inside the published range, <!--num:R3.outside-->5<!--/num--> outside, <!--num:R3.none-->10<!--/num--> with no published value | [^realism] |
 | GPU pitch-control shader against the numpy reference | max difference about 5e-5 (target < 0.02) | [^parity] |
 | Same seed, same output (same platform) | byte-identical | [^determinism] |
 | Test suites in CI on `main` | Python 1216 passed; web 595 passed; end-to-end smoke 15 of 15 pages | [^tests] |
@@ -166,16 +191,16 @@ development used (SPEC §11).
 Development: built with Claude Code. GitHub Copilot, the Azure MCP Server and Microsoft Fabric
 were not used.[^devtools]
 
-## How this differs from FIFA AI Pro
+## How this relates to FIFA AI Pro
 
-FIFA AI Pro, the assistant Lenovo built with FIFA for the 2026 World Cup teams, answers what
-happened from statistics (Lenovo reports more than 2,000 metrics), before and after a match but
-not during live play, behind a "validated" label.[^fifa-ai-pro] Through Their Eyes answers what
-the player saw and what he believed while the synthetic match streams live: every number in the
-captions and narration is a verified claim that viewers can open and challenge with **Try a wrong
-number**, and every "What if…?" is re-simulated in the simulator, not estimated.[^how-we-differ]
-Lenovo's figures for its Referee View camera show that fans want first person, but it shows what
-a camera captured; we show what the player perceived.
+FIFA AI Pro, the assistant Lenovo built with FIFA for the 2026 World Cup teams, answers analysts'
+questions about matches from official data (Lenovo reports more than 2,000 metrics), before and
+after a match.[^fifa-ai-pro] Through Their Eyes works on a different question: what the player
+saw and what he believed, while the synthetic match streams live. Every number in its captions
+and narration is a verified claim that viewers can open and challenge with **Try a wrong
+number**, and every "What if…?" is re-simulated in the simulator.[^how-we-differ] Lenovo's
+Referee View camera brings fans a first-person view of what a camera captured; we show what the
+player perceived.
 
 [^fifa-ai-pro]: [docs/REFERENCES.md](REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026):
     the FIFA and Lenovo press releases; every FIFA and Lenovo figure is company-reported.
@@ -205,7 +230,8 @@ No login, free, live until 2026-11-10.
   live heroes and the camera director.
 - Model-backed breakdowns are rate-limited per visitor and capped per day. Past that, the
   service serves the cache or the deterministic template, so the demo keeps working.
-- TODO(Bowen): add the video URL and the public repository URL.
+- **Code:** https://github.com/timothyzhbw-jpg/through-their-eyes (public, MIT).
+- TODO(Bowen): add the video URL.
 
 ## Team
 
@@ -224,18 +250,21 @@ Multi-Agent System (SPEC §0).
   counterfactual outcome depends on our models of movement, perception and decisions. On real
   data we could only claim association.
 - **Realism is partial.** Of the 16 simulator statistics we can check against a published
-  value, 6 fall outside the published range. All six compare scan rates between roles or
-  pressure levels. One has the opposite sign: published players scan less when an opponent is
-  tight on them (d = +0.57), our simulated players slightly more (d = −0.12).[^realism]
-- **No tackles yet.** The ball changes hands by interceptions and balls out of play only: 0
-  tackles per 90 minutes over 20 stitched matches. Tackles are switched on in the pressure
-  hero's scenario alone.[^matchstats]
+  value, <!--num:R3.outside-->5<!--/num--> fall outside the published range. All five compare scan rates between roles or
+  pressure levels. Published players scan less when an opponent is tight on them (d = +0.57);
+  ours do too, but much less so (d = <!--num:R4.d-->0.18<!--/num-->).[^realism]
+- **No tackles yet.** In the stitched matches the ball changes hands by interceptions only: 0
+  tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
+  matches. Tackles are switched on in the pressure hero's scenario alone.[^matchstats]
 - **xT is our own grid, not fitted to real football.** A gain such as "That look was worth … in
   expected threat" is a value inside the simulation.
 - **The stitched match has one goal, from its shot hero:** open play has no shots
   (`possession_play` scripts its passes), so the scoreline is the heroes' doing.[^match]
-- **Not yet measured:** no single-agent baseline (the narration ablation is the closest
-  comparison), no viewer study, and no frame-rate run on a laptop's integrated GPU.
+- **The crew does not write better lines than one agent.** Against a single agent doing all four
+  model roles in one call, on the same moments, tools and schemas, the crew aired no fewer wrong
+  facts (none in either) and scored the same groundedness; what it buys is recovery and
+  auditability, at about twice the cost per breakdown.[^crew]
+- **Not yet measured:** no viewer study, and no frame-rate run on a laptop's integrated GPU.
 - **Tactics: two cards, not a knowledge base.** The analyst's stats panel and the recap answer
   "why build from the back?" and "why focus on set pieces?" from the match's own data, each with
   one verified sentence. The rest of a tactics table (high press, counter-attack, wide overloads,
@@ -279,17 +308,17 @@ play that attacks the goal.
     analyst/en).
 [^spec31]: [docs/SPEC.md](SPEC.md) §3.1: 25 Hz frames, per-player body and head yaw.
 [^flip]: [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md):
-    seeds 100–139, decision changed without the key scan in 33/40.
+    seeds 100–139, decision changed without the key scan in <!--num:H1-->33/40<!--/num-->.
 [^verify]: [tests/test_api.py](../tests/test_api.py)
     `test_a_wrong_number_is_refuted_and_its_line_would_not_air` and
     `test_the_verified_number_is_supported_and_its_line_airs`.
 [^press]: [eval/reports/hero_lens_press_escape.md](../eval/reports/hero_lens_press_escape.md):
-    fresh seeds 200–239, pressure lens 40/40, ball lost after the forced carry 40/40, outcome
-    changed 32/40.
+    fresh seeds 200–239, pressure lens <!--num:H3-->40/40<!--/num-->, ball lost after the forced carry <!--num:H4-->40/40<!--/num-->, outcome
+    changed <!--num:H5-->32/40<!--/num-->.
 [^lens]: [eval/reports/hero_lens_blind_side_run.md](../eval/reports/hero_lens_blind_side_run.md):
-    seeds 100–139, scan lens selected 34/40.
+    seeds 100–139, scan lens selected <!--num:H2-->34/40<!--/num-->.
 [^marking]: [eval/reports/hero_marking_corner_blind_side.md](../eval/reports/hero_marking_corner_blind_side.md):
-    seeds 100–139, 37/40; median separation 3.3 m with the look, 8.5 m without.
+    seeds 100–139, <!--num:H7-->37/40<!--/num-->; median separation 3.3 m with the look, 8.5 m without.
 [^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
     possessions and "808.3 s, 1-0" on a Mac (2026-10-22 CT, with the referee and the team shape). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
@@ -300,7 +329,7 @@ play that attacks the goal.
 [^latency]: [docs/SPEC.md](SPEC.md) §8, "Deployed 2026-10-20": the same request from the
     cache took 0.15 s; "Live on Container Apps": 12.9 s uncached on a warm replica, 25.9 s for
     the first request after a new revision.
-[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 0.991
+[^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 <!--num:A1-->0.991<!--/num-->
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
     0.915, recall 0.943, and the upper-bound note.
@@ -314,7 +343,13 @@ play that attacks the goal.
 [^tests]: CI run 39583678095 on main at 44c0bb5, 2026-10-21: pytest "1216 passed in 612.99s",
     vitest "Tests 595 passed", smoke "15 of 15 pages passed".
 [^matchstats]: [eval/reports/match_stats.md](../eval/reports/match_stats.md): possession changes
-    by tackle per 90 min 0 (n = 20 matches); "Tackles are on in press_escape only".
+    by tackle per 90 min 0 and out of play 0 (n = 20 matches); "Tackles are on in press_escape
+    only".
+[^crew]: [eval/reports/crew_vs_single.md](../eval/reports/crew_vs_single.md), 2026-10-21, six
+    moments × four audiences on Foundry `gpt-4.1-mini` (single vs crew): wrong facts aired 0 vs
+    0, groundedness 5.00 vs 5.00; with the Analyst or the Telestrator down, model roles kept 0 of
+    4 vs 3 of 4; bringing back the Telestrator 1.7 vs 1.0 model requests, the Analyst 1.7 vs
+    11.0; agent runs over 8 s 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 per breakdown.
 [^ey]: EY for the Premier League, *Economic and Social Impact Report*, July 2026
     ([PDF](https://resources.premierleague.pulselive.com/premierleague/document/2026/07/31/8ee78e99-a3e3-4b81-ab38-cf76eae8dd94/Premier-League-Economic-and-Social-Impact-Report-2026.pdf)):
     "broadcast revenue exports totalling £1.8b in 2024/25"; "1.9b people follow the Premier
@@ -330,10 +365,5 @@ play that attacks the goal.
     ([announcement](https://news.microsoft.com/source/2025/07/01/premier-league-and-microsoft-announce-five-year-strategic-partnership-to-personalize-the-fan-experience-with-ai-for-1-8-billion-people/)):
     "open-text questions and answers in fans' native languages through text and audio
     translation".
-[^espn]: Awful Announcing, 9 Sep 2024
-    ([article](https://awfulannouncing.com/espn/alex-morgan-ai-generated-recap-mention.html)):
-    the recap by "ESPN Generative AI Services" of the 8 Sep 2024 match did not mention the
-    retiring player until it was updated the next morning; ESPN had said "each AI-generated recap
-    will be reviewed by a human editor".
 [^devtools]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#development-tools): git history and all pull
     requests checked on 2026-10-20.

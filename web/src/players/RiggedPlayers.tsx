@@ -4,8 +4,10 @@
 // - position from the sim; the body faces body_yaw (plus the hips' share of a look, look.ts);
 // - gait: idle / walk / sprint blended by the sim speed, the playback rate matched to it so the
 //   feet do not slide (gait.ts), the phase integrated along the run;
-// - the standing pass clip with its ball contact on each pass event, the body turned so the
-//   kick goes along the pass while it plays (the sim's passer may face anywhere);
+// - a kick at each pass and shot event, its ball contact on the event's frame: the body turns to
+//   the pass first, then winds up, stands on the plant foot through the strike, and the 3D
+//   views' ball sits on the kicking foot (gait.ts, kickBall.ts; the sim's passer may face
+//   anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
 // - the extra clips (extra.ts; `?anims=base` turns them off): a mocap kick at every pass instead
 //   of the standing pass, the trunk joining every scan's look over the shoulder (not under
@@ -22,11 +24,12 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { Sample, sampleInto } from "../data/hero";
+import { type Hero, Sample, sampleInto } from "../data/hero";
 import type { ExportPlayer, RunName } from "../data/types";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
+import { type KickBallOffset, clearKickBall, setKickBall } from "./kickBall";
 import { type Look, trial } from "./trial";
 import { WALK_URL, type WalkClips, walkClips } from "./walk";
 import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
@@ -36,6 +39,7 @@ import {
   type Motion,
   type Rig,
   PLAYER_HEIGHT,
+  kickBall,
   makeRig,
   modelClips,
   poseRig,
@@ -203,24 +207,31 @@ function Rigged({
   const meta = gltf.scene.userData as ModelMeta;
   const reduced = useReducedMotion();
   const clips = useMemo(() => modelClips(meta, extra, walk), [meta, extra, walk]);
+  const scale = PLAYER_HEIGHT / meta.height_m;
   const motion = useMemo<Record<RunName, Motion>>(() => {
-    const check = clips.extra?.check ?? null;
-    const factual = runMotion(hero, hero.runs.factual, clips.gait, check);
+    const factual = runMotion(hero, hero.runs.factual, clips, scale);
     // A stitched match has one run under both names: its motion is computed once.
     const cf = hero.runs.counterfactual;
     return {
       factual,
-      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips.gait, check),
+      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips, scale),
     };
-  }, [hero, clips]);
+  }, [hero, clips, scale]);
+  useEffect(() => {
+    // The first-person view's own kicks leave the ball where the sim has it: his body is hidden.
+    const offset: KickBallOffset = (mode, frame, out) =>
+      kickBall(motion[mode], frame, hero.dt, out, hiddenPlayer(hero, playback.get()));
+    setKickBall(offset);
+    return () => clearKickBall(offset);
+  }, [motion, hero, playback]);
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {
-        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra, walk);
+        const rig = makeRig(gltf, scale, clips.extra, walk);
         const materials = mask ? dressLook(rig, p, j, mask, kitNormalMap(gltf)) : dress(rig, p, j);
         return { rig, materials };
       }),
-    [gltf, hero, meta, clips, mask, walk],
+    [gltf, hero, scale, clips, mask, walk],
   );
   useEffect(
     () => () => {
@@ -237,7 +248,7 @@ function Rigged({
     const s = playback.get();
     const run = hero.runs[s.mode];
     sampleInto(sample, hero, run, s.frame, s.comfort);
-    const me = s.camera === "broadcast" ? -1 : hero.ids.indexOf(s.povPlayer); // hidden: his own
+    const me = hiddenPlayer(hero, s); // his own body, in his eyes
     for (let j = 0; j < hero.n; j++) {
       const { rig } = rigs[j];
       rig.holder.visible = j !== me;
@@ -267,6 +278,11 @@ function Rigged({
       ))}
     </>
   );
+}
+
+/** Whose body is not drawn: the first-person view's own (nobody's on the broadcast camera). */
+function hiddenPlayer(hero: Hero, s: { camera: string; povPlayer: string }): number {
+  return s.camera === "broadcast" ? -1 : hero.ids.indexOf(s.povPlayer);
 }
 
 /** If the extra clips cannot load, keep the rigged players on the engine's clips. */

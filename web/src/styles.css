@@ -505,6 +505,9 @@ optgroup {
   color: var(--floodlight);
   padding: 0 0.1em;
 }
+.lineup-club {
+  white-space: nowrap;
+}
 .lineup-pitch {
   margin: 0 0 20px;
   font: 400 16px/1.45 var(--font-display);
@@ -620,6 +623,9 @@ optgroup {
   flex-wrap: wrap;
   gap: 8px 12px;
   margin-top: 20px;
+}
+.lineup-actions:empty {
+  display: none;
 }
 @media (max-width: 760px) {
   /* A sheet at the bottom, over the playback controls, under the picture. */
@@ -1184,6 +1190,17 @@ optgroup {
 }
 .viewer-panel .note {
   margin: 8px 14px 6px;
+}
+
+/* While a tour runs, its card is the one panel (tour/Tour.tsx): the HUD row (whose eyes, the
+   director's suggestions, the stats ticker) stands down, and in the quick tour the caption too,
+   whose lines the tour card carries. The picture, the run switch and the timeline stay. */
+.stage.touring .stage-top,
+.stage.touring-quick .stage-caption {
+  display: none;
+}
+.tour-home {
+  height: 0;
 }
 
 /* the card on the right: the moment, the evidence or the score */
