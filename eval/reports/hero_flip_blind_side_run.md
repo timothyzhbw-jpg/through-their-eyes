@@ -40,7 +40,7 @@ Seeds 100–139 (40). Counterfactual: drop the key scan of `H8` and re-simulate 
 | 126 | `pass:H9` | 0.99 | complete | `pass:H4` | 0.00 | 0.3 | 12.6 | +0.154 |
 | 127 | `pass:H9` | 0.90 | complete | `pass:H4` | 0.00 | 0.4 | 10.9 | +0.151 |
 | 128 | `pass:H9` | 0.95 | complete | `pass:H1` | 0.00 | 0.3 | 10.9 | +0.134 |
-| 129 | `pass:H9` | 0.98 | complete | `pass:H4` | 0.00 | 0.3 | 12.6 | +0.136 |
+| 129 | `pass:H9` | 0.98 | complete | `pass:H4` | 0.00 | 0.3 | 12.6 | +0.137 |
 | 130 | `pass:H9` | 0.99 | complete | `pass:H4` | 0.00 | 0.4 | 12.6 | +0.113 |
 | 131 | `pass:H9` | 0.94 | complete | `pass:H4` | 0.00 | 0.4 | 13.0 | +0.116 |
 | 132 | `pass:H9` | 0.96 | complete | `pass:H7` | 0.00 | 0.4 | 12.6 | +0.122 |
@@ -48,6 +48,6 @@ Seeds 100–139 (40). Counterfactual: drop the key scan of `H8` and re-simulate 
 | 134 | `pass:H9` | 0.82 | complete | `carry` | 0.00 | 0.6 | 11.1 | +0.141 |
 | 135 | `pass:H9` | 0.93 | complete | `carry` | 0.00 | 0.2 | 9.7 | +0.155 |
 | 136 | `pass:H9` | 0.93 | complete | `pass:H5` | 0.00 | 0.5 | 13.2 | +0.151 |
-| 137 | `pass:H9` | 0.93 | complete | `pass:H1` | 0.00 | 0.5 | 12.3 | +0.154 |
+| 137 | `pass:H9` | 0.93 | complete | `pass:H1` | 0.00 | 0.5 | 12.3 | +0.155 |
 | 138 | `pass:H9` | 0.95 | complete | `carry` | 0.00 | 0.4 | 10.5 | +0.133 |
 | 139 | `pass:H9` | 0.96 | complete | `pass:H2` | 0.00 | 0.3 | 11.9 | +0.138 |

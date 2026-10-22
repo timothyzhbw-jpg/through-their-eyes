@@ -4,15 +4,15 @@
 
 | Input to the detector | Keypoint noise (per axis) | Head-yaw RMS error vs truth | TP | FP | FN | P | R | F1 |
 |---|---|---|---|---|---|---|---|---|
-| tracked head yaw (sim) | — | 2.00° | 7008 | 55 | 71 | 0.992 | 0.990 | **0.991** |
-| keypoints, the sim's noise | 4.7 mm | 2.00° | 7004 | 57 | 75 | 0.992 | 0.989 | **0.991** |
-| keypoints, 10 mm (stress) | 10.0 mm | 4.31° | 6988 | 132 | 91 | 0.981 | 0.987 | **0.984** |
-| keypoints, 20 mm (stress) | 20.0 mm | 8.75° | 6927 | 397 | 152 | 0.946 | 0.979 | **0.962** |
+| tracked head yaw (sim) | — | 2.00° | 7009 | 55 | 69 | 0.992 | 0.990 | **0.991** |
+| keypoints, the sim's noise | 4.7 mm | 2.00° | 7004 | 57 | 74 | 0.992 | 0.990 | **0.991** |
+| keypoints, 10 mm (stress) | 10.0 mm | 4.31° | 6990 | 132 | 88 | 0.981 | 0.988 | **0.985** |
+| keypoints, 20 mm (stress) | 20.0 mm | 8.75° | 6926 | 395 | 152 | 0.946 | 0.979 | **0.962** |
 
 ## Reading
 
 - **The matched row is a consistency check, not evidence.** The baseline and the keypoint route start from the same true head yaw at the same noise level (2° of sensor noise; the 4.7 mm per keypoint axis is chosen to give it), so equal F1 (0.991 vs 0.991) is expected by construction. It shows that the adapter adds no bias or extra noise on the way to the detector. The evidence that the ingest works is the round trip in `tests/test_keypoints.py` (exact without noise, a hand-built frame, collapsed and missing points) and the head-yaw RMS column here.
-- **The stress rows test the detector, not the ingest.** From the sim's noise to 10 and 20 mm, false positives go 57 → 132 → 397 while recall goes 0.989 → 0.987 → 0.979: with more head-yaw noise, more noise-driven onsets clear the detector's excursion gate. No tracking system was measured to have this keypoint noise here; the rows show how much head-yaw noise the detector tolerates, not how any real system performs.
+- **The stress rows test the detector, not the ingest.** From the sim's noise to 10 and 20 mm, false positives go 57 → 132 → 395 while recall goes 0.990 → 0.988 → 0.979: with more head-yaw noise, more noise-driven onsets clear the detector's excursion gate. No tracking system was measured to have this keypoint noise here; the rows show how much head-yaw noise the detector tolerates, not how any real system performs.
 - Only the head and torso enter the schema. Limbs are not in the sim, so none are generated or claimed.
 
 ## Method

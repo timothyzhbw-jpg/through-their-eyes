@@ -50,8 +50,8 @@ from sim.engine import Simulation
 from sim.run import MatchRun
 
 SCENARIO = "open_play"
-# 6000 seeds: with keepers on their spot (SPEC 3.2) they claim most balls in the goal area, and
-# its central cells reach MIN_ACTIONS only from 6000 seeds on (20 actions; 8 in 0-1999).
+# 6000 seeds: with keepers on their spot (SPEC 3.2) they claim most balls in the goal area, whose
+# central cells had 8 actions in seeds 0-1999; with 6000 they reach MIN_ACTIONS.
 SEEDS = range(0, 6000)
 PARAMS = replace(SimParams(), max_duration_s=45.0)
 MIN_ACTIONS = 20  # a cell with fewer actions keeps the prior's value

@@ -16,9 +16,9 @@ A **breach** is something a law forbids; it is **called** when the referee stopp
 | Law | What is checked | Checked | Breaches | Called | Unpunished | Wrong calls | Early calls | Not modelled |
 |---|---|---|---|---|---|---|---|---|
 | 3.1 | line-ups: eleven a side, one keeper | 3,096 runs | 0 | 0 | 0 | 0 | 0 | 0 |
-| 9.1 | frames in play: the whole ball over a line stops play | 870,307 frames | 0 | 0 | 0 | 0 | 0 | 0 |
-| 10.1 | whole-ball crossings of a goal line, and every goal given | 793 goal-line crossings | 0 | 0 | 0 | 0 | 0 | 0 |
-| 11.2 | passes and shots: offside position, then involvement | 12,663 kicks | 0 | 0 | 0 | 0 | 0 | 0 |
+| 9.1 | frames in play: the whole ball over a line stops play | 871,849 frames | 0 | 0 | 0 | 0 | 0 | 0 |
+| 10.1 | whole-ball crossings of a goal line, and every goal given | 794 goal-line crossings | 0 | 0 | 0 | 0 | 0 | 0 |
+| 11.2 | passes and shots: offside position, then involvement | 12,691 kicks | 0 | 0 | 0 | 0 | 0 | 0 |
 | 12.1 | keeper handling (saves) and tackles | 388 saves and tackles | 0 | 0 | 0 | 0 | 0 | 0 |
 | 13-17 | simulated restarts: distances and the ball's place | 362 restarts | 0 | 0 | 0 | 0 | 0 | 0 |
 

@@ -69,9 +69,9 @@ None.
 | 19 | `blind_side` | `swap_player` | player: H8 → H10 | supported | eq(True, True) holds |
 | 3 | `scans_before_reception` | `swap_player` | player: H8 → H11 | supported | eq(1, 1) holds |
 | 2 | `seen_in_scan` | `swap_player` | runner: H9 → H4 | supported | all 4 conditions hold |
-| 16 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.076226463549844, 11.1) holds |
+| 16 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.076226463549839, 11.1) holds |
 | 9 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
-| 17 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.216022835485385, 12.2) holds |
+| 17 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.216022835485376, 12.2) holds |
 
 ## Excluded: not decidable from the recording
 

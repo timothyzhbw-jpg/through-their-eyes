@@ -466,11 +466,11 @@ new mechanism.
 - **Acceptance** (`eval/hero_flip.py --scenario cutback_scan`; designed on seeds 0–39, held-out
   100–139): dropping the key scan changes H7's decision in 38/40 (95%, target ≥ 60%: met; 34/40
   on the design seeds). With the look he cuts the ball back to H8 in 38/40, and all 38 are
-  completed; mean ΔxT +0.144 on the fitted xT grid (§4; +0.092 on the prior). Without it he
+  completed; mean ΔxT +0.145 on the fitted xT grid (§4; +0.092 on the prior). Without it he
   carries (32) or shoots from the angle (8): the near-post ball to the marked H9 that the design
   expected never wins. Report: [hero_flip_cutback_scan.md](../eval/reports/hero_flip_cutback_scan.md).
   On the same seeds `eval/hero_lens.py` selects `scan` 38/40 (median margin over the next lens
-  0.16 xT, 0.10 on the prior; [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
+  0.165 xT, 0.10 on the prior; [hero_lens_cutback_scan.md](../eval/reports/hero_lens_cutback_scan.md)). Tests
   ([tests/test_cutback_scan.py](../tests/test_cutback_scan.py), design seeds): the design rule,
   role speed and acceleration limits, and at least 0.7 m between every pair of players before H7
   acts.
@@ -538,7 +538,7 @@ the defending side.
   0–39, run once on 100–139 ([hero_lens_corner_blind_side.md](../eval/reports/hero_lens_corner_blind_side.md)):
   the look is detected as the moment 40/40; the scan lens is selected 40/40, which is by
   construction, since the other two lenses need a decision on the ball; its Δ is positive in 39/40
-  (median +0.099 xT on the fitted grid, §4; +0.063 on the prior); the lens's most informative
+  (median +0.0995 xT on the fitted grid, §4; +0.063 on the prior); the lens's most informative
   scan is the key scan 40/40; and the outcome
   changes in 37/40 (the gate above). The one negative Δ, seed 103, is the gate's miss there:
   without the look another defender is 4.9 m from A9, so the pressure on him is higher.
@@ -768,9 +768,9 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,992 passes attempted (77.2% of resolved ones completed), 442 possession changes
+      of play, 1,990 passes attempted (77.3% of resolved ones completed), 440 possession changes
       (all interceptions: with the team shape no ball goes out in open play, §3.2; no tackles),
-      569 team possessions of 9.5 s on average,
+      567 team possessions of 9.5 s on average,
       and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
       match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
       has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
@@ -954,8 +954,9 @@ about 100 lines). socceraction is not used: it is no longer maintained and would
 for a few lines of maths. Cache the grid per sim version.
 *Implemented (2026-10-20):* `analytics/xt.py`, fitted by `eval/xt_fit.py`.
 - Data: `open_play` tuning seeds 0–5999 (0–1999 until 2026-10-22: with keepers on their spot,
-  §3.2, they claim most balls in the goal area, whose central cells reach the 20 actions a fitted
-  cell needs only from 6,000 seeds on) — `possession_play`'s shape, pressing and marking, but
+  §3.2, they claim most balls in the goal area, whose central cells had 8 actions in seeds 0–1999
+  and need 20 to be fitted; with 6,000 seeds they are) — `possession_play`'s shape, pressing and
+  marking, but
   every ball carrier decides with the decision model (§3.5), so play reaches the box and ends in
   shots. The scripted scenarios cannot carry the fit: `possession_play` and `blind_side_run` have
   no shots at all. A shot scores its expected goals under the sim's shot model (the decision
@@ -1157,10 +1158,10 @@ are sim records, labelled `sim` on screen.
       Eval: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md) runs the
       detector on the adapter's output on its held-out seeds: F1 0.991, as on the tracked yaw.
       That is equal by construction at matched noise, a consistency check, not evidence. The
-      0.984 and 0.962 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
+      0.985 and 0.962 at 10 and 20 mm of keypoint noise test the detector's noise tolerance, not
       the ingest. [tests/test_keypoint_ingest_eval.py](../tests/test_keypoint_ingest_eval.py)
 - [x] xT grid increases toward goal (sanity plot saved).
-      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.002 → 0.127, central
+      — [eval/reports/xt_fit.md](../eval/reports/xt_fit.md) (column means 0.002 → 0.126, central
       lanes ≥ 0.17 above the wings in the last three columns; plot
       [xt_fit.svg](../eval/reports/xt_fit.svg));
       [tests/test_xt.py](../tests/test_xt.py)::`test_fitted_grid_increases_toward_the_attacked_goal`,
@@ -1178,9 +1179,9 @@ are sim records, labelled `sim` on screen.
       [tests/test_live_stats.py](../tests/test_live_stats.py),
       [tests/test_stats_api.py](../tests/test_stats_api.py);
       [eval/reports/pass_difficulty.md](../eval/reports/pass_difficulty.md) (2026-10-22, with
-      the team shape, §3.2, and the keeper spot: `possession_play` seeds 300–399: 1 599 passes,
-      AUC 0.725, 95% interval 0.699–0.751, supported). Reported, not tuned: the distance part alone
-      ranks the other way (AUC 0.263), because an intercepted pass is measured to where it was won,
+      the team shape, §3.2, and the keeper spot: `possession_play` seeds 300–399: 1 598 passes,
+      AUC 0.729, 95% interval 0.701–0.754, supported). Reported, not tuned: the distance part alone
+      ranks the other way (AUC 0.261), because an intercepted pass is measured to where it was won,
       and the "very hard" band (43 passes) completes more often than "hard".
 - [x] Blind-side alerts vs the sim's ground truth: episodes of a stale belief (> 3 m) about a
       watched target within 35 m who runs (≥ 4 m/s) at least once during the episode. Precision

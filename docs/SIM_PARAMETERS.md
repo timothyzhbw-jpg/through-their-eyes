@@ -163,7 +163,7 @@ in open play; the numbers below are from before it.* On `possession_play` seeds 
 teams' outfield players span 40.3 m along the pitch and 41.9 m across it (53.6 and 50.1 m before),
 with the team centroids 9.7 m apart (16.4 m before). The defending line follows the 0.46 m per
 metre regression (measured 0.41; 0.23 before). The shape changes with possession: 41.3 m wide
-and 37.3 m long with the ball, 37.9 and 32.2 m without it (held-out seeds 100–199). The deepest
+and 37.3 m long with the ball, 37.9 and 32.3 m without it (held-out seeds 100–199). The deepest
 player (32.6 m) and the keeper's gap (21.9 m with the keeper spot, SPEC 3.2) are still short of
 the LaLiga means: see
 [realism.md](../eval/reports/realism.md), Team shape.

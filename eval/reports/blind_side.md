@@ -9,7 +9,7 @@
 | Fresh held-out recall | **0.946** — ✅ meets the target ≥ 0.7 |
 | `possession_play` alone (the general-play overlay) | precision **0.904**, recall 0.942 |
 | Tuning seeds, same thresholds | precision 0.910, recall 0.935 |
-| Fresh held-out data | `possession_play` 200–219 (20), `blind_side_run` 200–239 (40): 19.2 min of play, 2431 truth episodes, 2528 alerts |
+| Fresh held-out data | `possession_play` 200–219 (20), `blind_side_run` 200–239 (40): 19.2 min of play, 2429 truth episodes, 2526 alerts |
 
 **An upper bound for real tracking.** The truth is the sim's belief, which carries the last-seen velocity on for up to 1 s — the same constant-velocity extrapolation the alert's expectation (`expect_s`) uses. The alert and the truth share that model of what a player expects, so these numbers are an upper bound for real tracking, where nobody knows how a player extrapolates. The *best without expectation* rows do not share it.
 
@@ -19,17 +19,17 @@
 
 | Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.5 m | 0.914 | 0.946 | **0.930** | 2528 | 2431 | 0.903 | 0.747 |
-| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.853 | 0.931 | **0.890** | 2665 | 2431 | 0.850 | 0.740 |
-| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.704 | 0.955 | **0.811** | 3316 | 2431 | 0.711 | 0.781 |
-| chosen, 25 m range for alert and truth | 0.912 | 0.946 | **0.929** | 1978 | 1898 | 0.866 | 0.751 |
-| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.839 | 0.977 | **0.903** | 2528 | 2194 | 0.572 | 0.901 |
-| chosen; truth variant: target ≥ 2 m/s on every frame | 0.918 | 0.379 | **0.536** | 2528 | 6327 | 0.824 | 0.370 |
+| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.5 m | 0.914 | 0.946 | **0.930** | 2526 | 2429 | 0.903 | 0.747 |
+| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.853 | 0.931 | **0.890** | 2663 | 2429 | 0.850 | 0.740 |
+| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.704 | 0.955 | **0.810** | 3314 | 2429 | 0.711 | 0.781 |
+| chosen, 25 m range for alert and truth | 0.912 | 0.946 | **0.929** | 1976 | 1896 | 0.865 | 0.751 |
+| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.840 | 0.977 | **0.903** | 2526 | 2194 | 0.573 | 0.902 |
+| chosen; truth variant: target ≥ 2 m/s on every frame | 0.918 | 0.378 | **0.536** | 2526 | 6327 | 0.824 | 0.370 |
 
 | Scenario | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| `possession_play`, chosen | 0.904 | 0.942 | **0.923** | 2218 | 2122 | 0.901 | 0.736 |
-| `possession_play`, best without expectation | 0.846 | 0.931 | **0.887** | 2344 | 2122 | 0.855 | 0.733 |
+| `possession_play`, chosen | 0.904 | 0.942 | **0.923** | 2216 | 2120 | 0.901 | 0.737 |
+| `possession_play`, best without expectation | 0.846 | 0.931 | **0.887** | 2342 | 2120 | 0.855 | 0.733 |
 | `blind_side_run`, chosen | 0.981 | 0.977 | **0.979** | 310 | 309 | 0.916 | 0.852 |
 | `blind_side_run`, best without expectation | 0.900 | 0.929 | **0.914** | 321 | 309 | 0.811 | 0.812 |
 
@@ -55,17 +55,17 @@ Alerts that match no truth episode (fresh held-out, chosen thresholds):
 
 | Thresholds | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.5 m | 0.917 | 0.940 | **0.928** | 2712 | 2645 | 0.913 | 0.734 |
-| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.859 | 0.926 | **0.891** | 2850 | 2645 | 0.861 | 0.725 |
-| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.696 | 0.944 | **0.801** | 3589 | 2645 | 0.717 | 0.761 |
-| chosen, 25 m range for alert and truth | 0.912 | 0.946 | **0.929** | 2141 | 2067 | 0.864 | 0.743 |
-| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.849 | 0.972 | **0.906** | 2712 | 2402 | 0.581 | 0.902 |
-| chosen; truth variant: target ≥ 2 m/s on every frame | 0.919 | 0.406 | **0.563** | 2712 | 6448 | 0.834 | 0.395 |
+| **chosen**: expectation 1.0 s, unseen ≥ 1.2 s, moved ≥ 3.5 m | 0.918 | 0.940 | **0.929** | 2704 | 2640 | 0.913 | 0.732 |
+| best without expectation: no expectation, unseen ≥ 1.5 s, moved ≥ 1.5 m | 0.860 | 0.925 | **0.892** | 2842 | 2640 | 0.861 | 0.725 |
+| SPEC 4.4 starting values: no expectation, unseen ≥ 1.0 s, moved ≥ 3.0 m | 0.696 | 0.945 | **0.802** | 3589 | 2640 | 0.714 | 0.759 |
+| chosen, 25 m range for alert and truth | 0.912 | 0.946 | **0.929** | 2136 | 2062 | 0.866 | 0.742 |
+| chosen; truth variant: target ≥ 4.0 m/s on every frame | 0.850 | 0.972 | **0.907** | 2704 | 2397 | 0.584 | 0.901 |
+| chosen; truth variant: target ≥ 2 m/s on every frame | 0.920 | 0.406 | **0.563** | 2704 | 6437 | 0.836 | 0.393 |
 
 | Scenario | Precision | Recall | F1 | Alerts | Truth intervals | Frame P | Frame R |
 |---|---|---|---|---|---|---|---|
-| `possession_play`, chosen | 0.913 | 0.936 | **0.924** | 2432 | 2375 | 0.913 | 0.727 |
-| `possession_play`, best without expectation | 0.851 | 0.927 | **0.888** | 2583 | 2375 | 0.862 | 0.722 |
+| `possession_play`, chosen | 0.914 | 0.936 | **0.925** | 2424 | 2370 | 0.913 | 0.725 |
+| `possession_play`, best without expectation | 0.852 | 0.927 | **0.888** | 2575 | 2370 | 0.862 | 0.722 |
 | `blind_side_run`, chosen | 0.954 | 0.974 | **0.964** | 280 | 270 | 0.913 | 0.839 |
 | `blind_side_run`, best without expectation | 0.936 | 0.911 | **0.924** | 267 | 270 | 0.852 | 0.775 |
 
