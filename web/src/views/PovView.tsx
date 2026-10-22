@@ -14,7 +14,7 @@ import { trial } from "../players/trial";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
-import { COLORS, LABEL, PITCH, getLabelTexture, useRedrawOn } from "./scene";
+import { COLORS, LABEL, getLabelTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
