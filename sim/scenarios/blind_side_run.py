@@ -8,6 +8,11 @@ key scan) just before the ball arrives.
 Hero design rule: the free runner is visible to H8 only during the key scan. H8's previous sighting
 of H9 shows him standing next to A5. With the scan, H8 believes the runner is free and plays him
 in; without it, he believes H9 is still marked and plays safe.
+
+The run is onside by construction (SPEC 3.9, IFAB Laws of the Game, Law 11.1): H9 starts deep, and
+his run is timed so that he is ONSIDE_AT_PASS short of the second-last defender as H8 plays, at
+speed, and goes past the line only once the ball is on its way. (Until 2026-10-22 he stood about
+3 m offside at the pass on every seed; `eval/reports/laws.md`.)
 """
 
 from __future__ import annotations
@@ -17,11 +22,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from analytics.vision import wrap_angle
+from sim import laws
 from sim.ball import flight_time
 from sim.config import DT
 from sim.decision import pass_speed
 from sim.engine import DRIBBLE_OFFSET
 from sim.perception import ForcedScan
+from sim.referee import HOLD_MARGIN
 from sim.scenarios.base import ForcedPass, Scenario, Setup, make_player
 
 if TYPE_CHECKING:
@@ -39,7 +46,7 @@ HOME = [
     ("H10", "CM", 6.0, 14.0),
     ("H7", "W", 14.0, -29.0),
     ("H11", "W", 16.0, 26.0),
-    ("H9", "ST", 24.0, -2.0),
+    ("H9", "ST", 19.0, -2.0),
 ]
 AWAY = [
     ("A1", "GK", 47.0, 0.0),
@@ -56,7 +63,10 @@ AWAY = [
 ]
 
 RUN_TARGET = np.array([38.0, -11.0])
-MARKER_OFFSET = np.array([1.4, -0.8])  # A5 goal-side of H9
+RUN_SPEED = 8.5  # m/s, flat out
+# The run is timed to reach the offside line this far short of it as H8 plays (SPEC 3.9).
+ONSIDE_AT_PASS = HOLD_MARGIN
+MARKER_OFFSET = np.array([1.4, 0.0])  # A5 goal-side of H9
 SCAN_STOP_SHORT = np.deg2rad(40.0)  # the head stops this far short of pointing at the runner
 
 
@@ -102,9 +112,28 @@ class BlindSideRun(Scenario):
         if frame < self.run_start:
             out[self.i_runner] = (self.runner_home, 2.0)
         else:
-            out[self.i_runner] = (self.run_target, 8.5)
+            out[self.i_runner] = (self.run_target, self._timed_speed(sim, frame))
         out[self.i_marker] = (self.marker_hold, 2.5)
         return out
+
+    def _pass_frame(self, sim: Simulation) -> int:
+        """When H8 plays: his first touch after the planned reception, or the decision the engine
+        has pending once he has the ball."""
+        if sim.pending_decision is not None and sim.pending_decision[0] == self.i_hero:
+            return sim.pending_decision[1]
+        return self.reception_frame + round(sim.params.first_touch_s / DT)
+
+    def _timed_speed(self, sim: Simulation, frame: int) -> float:
+        """The runner's speed for a timed run (SPEC 3.9, Law 11.1): flat out while he has room,
+        slower when he would reach the offside line before H8 plays, so that he is
+        ONSIDE_AT_PASS short of it then and goes past it once the ball is played."""
+        me = sim.pos[self.i_runner]
+        line = laws.second_last_depth(sim.pos, sim.team, 0)  # the home team attacks +x
+        t = max((self._pass_frame(sim) - frame) * DT, DT)
+        u = self.run_target - me
+        u_x = max(float(u[0] / max(np.linalg.norm(u), 1e-9)), 0.2)
+        room = line - ONSIDE_AT_PASS - float(me[0])
+        return float(np.clip(room / t / u_x, 0.0, RUN_SPEED))
 
     def forced_pass(self, sim: Simulation, frame: int) -> ForcedPass | None:
         if frame == self.kick_frame:
