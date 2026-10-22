@@ -167,6 +167,16 @@ def test_the_store_wrapper_renames_on_read_and_stores_as_given():
     assert wrapped.get("missing") is None
 
 
+def test_the_crew_trace_stays_as_recorded():
+    """A cached value's trace is the record of what the crew did: a rejected line keeps the id it
+    was rejected for, next to its problem."""
+    rejected = {"line": "L2", "text": "H8 saw H9.", "problems": ["entity: H8", "entity: H9"]}
+    value = {**_legacy_breakdown(), "trace": {"runs": [{"steps": [{"rejected": [rejected]}]}]}}
+    got = rename(value, clubs=True)
+    assert got["trace"] is value["trace"]
+    assert got["result"]["scripts"][0]["payload"]["lines"][0]["text"].startswith("J. Ferriday")
+
+
 def test_a_recap_cached_with_home_and_away_names_the_clubs_when_read():
     legacy = {"result": {"scripts": [{"payload": {"lines": [
         {"id": "S", "text": "Full time: Home 0, Away 0."},

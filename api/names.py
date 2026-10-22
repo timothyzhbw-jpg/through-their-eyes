@@ -22,6 +22,9 @@ from sim.roster import rename_clubs, rename_ids
 # Keys whose string values are words a viewer reads or hears; everything else is data.
 _TEXT = "text"
 _SSML = "ssml"
+# The crew's trace is the record of what it did (a rejected line next to the id it was rejected
+# for): it stays as recorded.
+_RECORD = "trace"
 
 
 def rename(value: Any, *, clubs: bool = False) -> Any:
@@ -41,8 +44,10 @@ def rename(value: Any, *, clubs: bool = False) -> Any:
         changed = False
         out: dict[str, Any] = {}
         for k, v in node.items():
-            if k in (_TEXT, _SSML) and isinstance(v, str):
-                new: Any = words(v)
+            if k == _RECORD:
+                new: Any = v
+            elif k in (_TEXT, _SSML) and isinstance(v, str):
+                new = words(v)
             else:
                 new = walk(v)
             changed = changed or new is not v and new != v
