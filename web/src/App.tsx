@@ -38,6 +38,7 @@ import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
+import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
 import { takeEyesOf } from "./takeeyes/controller";
@@ -226,11 +227,15 @@ function LiveScreen(props: {
   card: ReactNode;
   caption?: ReactNode;
 }) {
-  const { playback } = useView();
+  const session = useView();
+  const { playback } = session;
   const focus = useStore(playback, (s) => s.focus);
+  const camera = useStore(playback, (s) => s.camera);
   const introOpen = useStore(intro, (s) => s.open);
   const board = focus === "tactical";
   const pip = focus === "split" || board;
+  // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
+  const belief = pip && !board && beliefPip(session, camera);
   return (
     <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
@@ -240,7 +245,7 @@ function LiveScreen(props: {
             <PovView />
           </div>
           <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
-            <TacticalView />
+            {belief ? <BeliefMap /> : <TacticalView />}
           </div>
           <div className="shade top" aria-hidden="true" />
           <div className="shade bottom" aria-hidden="true" />
