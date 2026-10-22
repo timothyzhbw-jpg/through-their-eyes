@@ -20,7 +20,7 @@ import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
-import { declutter, labelBox } from "./declutter";
+import { declutter, labelBox, labelHeight } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { NIGHT, PlayerShadows, Stadium } from "./Stadium";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
@@ -44,7 +44,12 @@ const LABEL_TEXT = 0.36;
 const LABEL_ASPECT = 1.6;
 // At most this tall on screen (px): a player a few metres away wore a number the size of his head.
 const LABEL_MAX_PX = 28;
+// A near player's number comes down to this far above his head (px) instead of floating 2.1 m up,
+// which from eye height put it in the stands over him (declutter.ts labelHeight).
+const LABEL_GAP_PX = 6;
+const HEAD_TOP = HEAD_CENTRE + HEAD_RADIUS;
 const labelScale = new Float32Array(32);
+const labelY = new Float32Array(32);
 const labelAt = new THREE.Vector3();
 /** Fog (m): in first person the stands fade into the night; the broadcast camera is further out. */
 const FOG = { pov: [45, 120], broadcast: [130, 300] } as const;
@@ -223,10 +228,17 @@ function PovScene() {
       hero.players.map((_, j) => {
         if (j === me || !labels.current[j]) return null;
         labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
-        const box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
-        const k = box && box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        let box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
+        if (!box) return null;
+        const k = box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
+        const y = labelHeight(LABEL_Y, HEAD_TOP, box.h / LABEL_TEXT, LABEL_TEXT * k, LABEL_GAP_PX);
         labelScale[j] = k;
-        return box && { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
+        labelY[j] = y;
+        if (y < LABEL_Y) {
+          labelAt.y = y; // placed where it will be drawn
+          box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT) ?? box;
+        }
+        return { ...box, w: box.w * k, h: box.h * k, priority: j === hero.runner };
       }),
     );
     placed.forEach(({ visible, lift }, j) => {
@@ -235,7 +247,7 @@ function PovScene() {
       const k = labelScale[j] || 1;
       label.visible = visible;
       label.scale.set(0.75 * k, 0.75 * k, 1);
-      label.position.y = LABEL_Y + lift * LABEL_TEXT * k;
+      label.position.y = (labelY[j] || LABEL_Y) + lift * LABEL_TEXT * k;
     });
     if (moving) invalidate();
     if (alerted.size) invalidate(); // keep the blind-side pulse going
