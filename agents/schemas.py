@@ -112,7 +112,8 @@ class Play(_Step):
 
 class Camera(_Step):
     do: Literal["camera"]
-    mode: Literal["split", "pov", "tactical", "broadcast"]
+    # player_lock: the broadcast camera following the moment's hero instead of the ball (SPEC 7)
+    mode: Literal["split", "pov", "tactical", "broadcast", "player_lock"]
 
 
 class Pov(_Step):
@@ -133,7 +134,9 @@ class ScanMarker(_Step):
 
 class Zone(_Step):
     do: Literal["zone"]
-    layer: Literal["vision"]
+    # vision: the player's vision cone; pitch_control: the teams' pitch control on the board;
+    # options: his pass options at the decision (SPEC 4, 7)
+    layer: Literal["vision", "pitch_control", "options"]
     player: PlayerId
 
 
@@ -201,15 +204,21 @@ def _enum(values: list[str] | tuple[str, ...]):
     return Literal[tuple(values)] if values else Literal["__none__"]
 
 
-def anchored_draft_model(claim_ids: list[str], language: Language) -> type[BaseModel]:
+def anchored_draft_model(
+    claim_ids: list[str], language: Language, connectives: tuple[str, ...] | None = None
+) -> type[BaseModel]:
     """What a narration agent may return: per line, a verified claim id or an allowed connective.
 
     The ids and connectives are enums in the JSON schema, so structured outputs cannot contain
-    free text: the spoken sentence of a claim is its verified template (SPEC 6).
+    free text: the spoken sentence of a claim is its verified template (SPEC 6). `connectives`:
+    the persona's (agents/persona_rules.py `connectives`), or the general ones; none at all (audio
+    description) leaves the field null.
     """
+    allowed = CONNECTIVES[language] if connectives is None else connectives
+    connective = (_enum(allowed) | None, ...) if allowed else (None, ...)
     line = create_model(
-        "AnchoredLine", __base__=Strict,
-        claim=(_enum(claim_ids) | None, ...), connective=(_enum(CONNECTIVES[language]) | None, ...),
+        "AnchoredLine", __base__=Strict, claim=(_enum(claim_ids) | None, ...),
+        connective=connective,
     )  # fmt: skip
     return create_model("AnchoredDraft", __base__=Strict, lines=(list[line], Field(max_length=8)))
 
@@ -261,6 +270,9 @@ class ScriptResult(Strict):
     dropped: list[DroppedLine]
     rewrites: int  # rewrite rounds the Verifier requested
     voice: list[VoiceCue]
+    # The plan this persona plays: the breakdown's, re-cut for its audience in code
+    # (agents/plan.py `persona_plan`). None in breakdowns cached before it was: play `plan`.
+    plan: TelestrationPlan | None = None
 
 
 class StepTrace(Strict):

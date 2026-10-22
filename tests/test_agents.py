@@ -36,20 +36,34 @@ def _offered(prompt: str) -> tuple[set[str], dict]:
 
 
 def _good_pbp(prompt: str) -> dict:
-    """The play-by-play: the shoulder check; for audio description, where it happened first."""
+    """The play-by-play as a model following the persona rules (agents/persona_rules.py) would:
+    where it happened first for audio description, a number first for the analyst, otherwise the
+    first story claim with the persona's opener."""
+    data, _ = json.JSONDecoder().raw_decode(prompt)
     offered, rules = _offered(prompt)
     if start := rules.get("start_with"):
         return {"lines": [{"claim": start[0], "connective": None}]}
-    return {"lines": [{"claim": "scan_before_reception", "connective": "Watch this."}]}
+    if rules.get("start_with_number"):
+        first = next(c for c in rules["claims_with_numbers"] if c in offered)
+        return {"lines": [{"claim": first, "connective": None}]}
+    groups = rules.get("must_include", [])
+    claim = groups[0]["one_of"][0] if groups else "scan_before_reception"
+    allowed = data["allowed_connectives"]
+    connective = rules.get("opener") or ("Watch this." if "Watch this." in allowed else None)
+    return {"lines": [{"claim": claim, "connective": connective}]}
 
 
 def _good_color(prompt: str) -> dict:
     """The co-commentator: the counterfactual, then one claim of each group of the persona rules
-    the play-by-play left missing (agents/persona_rules.py), as a model following them would."""
+    the play-by-play left missing (agents/persona_rules.py), then the coach's cue, as a model
+    following them would."""
     offered, rules = _offered(prompt)
     ids = ["cf_pass"] if "cf_pass" in offered else []
     ids += [g["one_of"][0] for g in rules.get("still_missing", []) if g["one_of"][0] not in ids]
-    return {"lines": [{"claim": cid, "connective": None} for cid in ids]}
+    lines = [{"claim": cid, "connective": None} for cid in ids]
+    if cue := rules.get("cue"):
+        lines.append({"claim": None, "connective": cue})
+    return {"lines": lines}
 
 
 def _good_replies(ctx):
@@ -115,15 +129,16 @@ def test_agent_outputs_are_used_through_verified_claims(ctx):
     assert r.findings.headline == ["scan_before_reception", "belief_error"]
     (script,) = r.scripts
     assert [line.text for line in script.payload.lines][:2] == [
-        "Watch this. J. Ferriday checked his shoulder before the ball reached him.",
+        "J. Ferriday scanned once in the 2 seconds before receiving.",
         "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
-    # The analyst's rules (agents/persona_rules.py): the look's xT, belief error, scan timing.
+    # The analyst's rules (agents/persona_rules.py): a number first, then the look's xT, belief
+    # error, the options' chances and the space he saw.
     assert [line.claims for line in script.lines] == [
-        ["scan_before_reception"], ["cf_pass"], ["cf_value"], ["belief_error"],
-        ["scans_before_reception"],
+        ["scans_before_reception"], ["cf_pass"], ["cf_value"], ["belief_error"],
+        ["pass_success"], ["observed_share"],
     ]  # fmt: skip
-    assert [line.speaker for line in script.lines] == ["pbp"] + ["color"] * 4
+    assert [line.speaker for line in script.lines] == ["pbp"] + ["color"] * 5
     assert script.rewrites == 0
 
 
@@ -425,10 +440,13 @@ def test_plan_validation_matches_the_web_rules(ctx):
     bad["steps"][-1]["t"] = 0.1  # goes back in time
     assert validate_plan(bad, ctx)
     assert validate_plan({"moment": data["moment"], "steps": []}, ctx)  # shape
-    for mode in ("split", "pov", "tactical", "broadcast"):  # the cameras of SPEC 7 that exist
+    # the cameras of SPEC 7 that exist
+    for mode in ("split", "pov", "tactical", "broadcast", "player_lock"):
         assert errors_with({"t": end, "do": "camera", "mode": mode}) == []
     assert errors_with({"t": end, "do": "camera", "mode": "drone"})
-    assert errors_with({"t": end, "do": "camera", "mode": "player_lock"})  # not built yet
+    for layer in ("vision", "pitch_control", "options"):
+        assert errors_with({"t": end, "do": "zone", "layer": layer, "player": "H8"}) == []
+    assert errors_with({"t": end, "do": "zone", "layer": "pressing", "player": "H8"})
 
 
 # --- delivery: tiers from rules, SSML only with supported styles ----------------------------------
@@ -712,9 +730,12 @@ def test_audio_description_is_voiced_calm_and_slower_whatever_the_tier(tier, lan
                              counterfactual=True)  # fmt: skip
         root = ET.fromstring(ssml)
         (prosody,) = [e for e in root.iter() if e.tag.endswith("prosody")]
-        assert prosody.get("rate") == "-10%" and prosody.get("pitch") == "+0%"
+        assert prosody.get("rate") == "-15%" and prosody.get("pitch") == "+0%"
         assert prosody.get("volume") is None  # no emphasis, even on "looked over his shoulder"
-        assert "<break" not in ssml and "styledegree" not in ssml
+        assert "styledegree" not in ssml
+        # No reveal break (the counterfactual one), but a pause after the line.
+        breaks = [e.get("time") for e in root.iter() if e.tag.endswith("break")]
+        assert breaks == ["600ms"] and ssml.index("<break") > ssml.index("shoulder.")
         assert not any(f'style="{s}"' in ssml for s in EXCITED_STYLES)
         if styles == ALL_STYLES:
             assert 'style="narration-relaxed"' in ssml
@@ -722,7 +743,7 @@ def test_audio_description_is_voiced_calm_and_slower_whatever_the_tier(tier, lan
             assert "express-as" not in ssml  # no calm style on offer: prosody only
     other = ssml_for_line(line, language, tier, set(), persona="casual")
     assert 'rate="+6%"' in other and 'pitch="+3%"' in other  # open, not the AD rate
-    assert 'rate="-10%"' not in other
+    assert 'rate="-15%"' not in other
 
 
 def _with_delta(ctx, delta: float):
@@ -769,24 +790,39 @@ _LINE = {
     "peak": (("sports-commentary-excited", "excited", "cheerful"), "2", "+14%", "+6%"),
     "why": (("cheerful", "excited"), None, "+2%", "+2%"),
 }
-_AD_LINE = (("narration-relaxed", "narration-professional", "calm", "newscast"), "-10%", "+0%")
+_AD_LINE = (("narration-relaxed", "narration-professional", "calm", "newscast"), "-15%", "+0%")
+# The analyst's and the coach's reads ignore the role and the tier (SPEC 6, "Persona specs").
+_PERSONA_LINE = {
+    "analyst": (("newscast", "documentary-narration", "serious"), None, "+0%", "+0%"),
+    "coach": (("friendly", "narration-relaxed", "calm", "serious"), None, "-6%", "+0%"),
+}
+_FAN_STYLES = ("excited", "sports-commentary-excited", "cheerful", "hopeful")
+_OPENER_BREAK, _CLAUSE_BREAK, _LINE_BREAK = "400ms", "300ms", "600ms"
 _EMPH = {"pbp": ("+0%", "+8%", "+15%"), "color": ("-10%", "+5%", "+10%")}
 # persona, language, text, role, emphasis span (audio description: none), counterfactual
 _SNAPSHOT_LINES = (
-    ("casual", "en", "What did he see?", "open", None, False),
-    ("casual", "en", "J. Ferriday checked his shoulder before the ball reached him.", "build",
-     "checked his shoulder", False),
-    ("casual", "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", "blind side",
-     False),
+    ("casual", "en", "Watch his head. When J. Ferriday looked over his shoulder before the ball "
+     "arrived, he saw N. Varnhall.", "build", "looked over his shoulder", False),
+    ("casual", "en", "N. Varnhall took the pass from J. Ferriday.", "peak", None, False),
     ("casual", "en", "Without that look, J. Ferriday would have passed to K. Annersley.", "why",
      "that look", True),
-    ("analyst", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None, False),
-    ("casual", "zh", "他看到了什么？", "open", None, False),
-    ("casual", "zh", "球到之前，费里迪先回头看了一眼。", "build", "回头看了一眼", False),
-    ("casual", "zh", "瓦恩霍尔的跑位在费里迪的视野盲区。", "why", "盲区", False),
+    ("casual", "zh", "注意看他回头。球到之前回头的那一眼，费里迪看到了瓦恩霍尔。", "build",
+     "那一眼", False),
     ("casual", "zh", "如果没有那一眼，费里迪会把球传给安纳斯利。", "why", "那一眼", True),
-    ("analyst", "zh", "费里迪一脚38米的传球找到了瓦恩霍尔。", "peak", None, False),
-    (AD, "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", None, False),
+    ("analyst", "en", "J. Ferriday scanned once in the 2 seconds before receiving.", "build", None,
+     False),
+    ("analyst", "en", "That look was worth 0.17 in expected threat.", "why", "That look", True),
+    ("analyst", "zh", "接球前2秒内，费里迪回头观察了一次。", "build", None, False),
+    ("player_fan", "en", "Lovely from him. Before the ball reached him, J. Ferriday looked over "
+     "his right shoulder.", "build", "looked over his right shoulder", False),
+    ("player_fan", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None,
+     False),
+    ("coach", "en", "Coaching point. J. Ferriday had last checked his shoulder 0.8 seconds before "
+     "the ball arrived.", "build", "checked his shoulder", False),
+    ("coach", "en", "Teach it: check your shoulder before the ball arrives.", "why", None, False),
+    ("coach", "zh", "要教的就是这一点：球到之前，先回头看。", "why", None, False),
+    (AD, "en", "J. Ferriday received the ball in the opponents' half, right of centre.", "build",
+     None, False),
     (AD, "zh", "瓦恩霍尔的跑位在费里迪的视野盲区。", "why", None, False),
 )  # fmt: skip
 _PERSONAS = ("casual", "analyst", "player_fan", "coach", AD)
@@ -819,7 +855,30 @@ def _spoken(ssml):
     return voice.get("name"), style, degree, events
 
 
-def _assert_spoken(ssml, voice, speaker, text, role, emphasis, counterfactual, persona):
+def _expected_breaks(persona, language, text, counterfactual):
+    """Where the pauses go, as (index the pause follows, time): audio description after every
+    clause and the line; otherwise after the persona's opener, and the reveal after the first
+    comma of a counterfactual line."""
+    import re
+
+    from agents.persona_rules import OPENERS
+
+    if persona == AD:
+        at = [(m.end(), _CLAUSE_BREAK) for m in re.finditer(r"[,;:](?= )|[，；：、]", text)
+              if m.end() < len(text)]  # fmt: skip
+        return at + [(len(text), _LINE_BREAK)]
+    out = {}
+    for phrase in OPENERS.get(persona, {}).get(language, {}).values():
+        if text.startswith(phrase) and len(text) > len(phrase):
+            out[len(phrase)] = _OPENER_BREAK
+    if counterfactual:
+        found = [i for i in (text.find(", "), text.find("，")) if i != -1]
+        if found:
+            out.setdefault(min(found) + 1, "250ms")
+    return sorted(out.items())
+
+
+def _assert_spoken(ssml, voice, speaker, text, role, emphasis, counterfactual, persona, language):
     from agents.delivery import VOICE_STYLES
 
     name, style, degree, events = _spoken(ssml)
@@ -828,6 +887,11 @@ def _assert_spoken(ssml, voice, speaker, text, role, emphasis, counterfactual, p
     if persona == AD:
         prefs, rate, pitch = _AD_LINE
         want_degree = None
+    elif persona in _PERSONA_LINE:
+        prefs, want_degree, rate, pitch = _PERSONA_LINE[persona]
+    elif persona == "player_fan":
+        _, want_degree, rate, booth_pitch = _LINE[role]
+        prefs, pitch = _FAN_STYLES, f"{int(booth_pitch.rstrip('%')) + 3:+d}%"
     else:
         prefs, want_degree, rate, pitch = _LINE[role]
     assert style == next((s for s in prefs if s in VOICE_STYLES[voice]), None)
@@ -842,19 +906,13 @@ def _assert_spoken(ssml, voice, speaker, text, role, emphasis, counterfactual, p
     for kind, _, attrs in events:
         if kind == "prosody" and "volume" in attrs:
             assert (attrs.get("rate"), attrs.get("pitch"), attrs.get("volume")) == (er, ep, ev)
-    sep = None
-    for index, _token in ((text.find(", "), ", "), (text.find("，"), "，")):
-        if index != -1 and (sep is None or index < sep[0]):
-            sep = (index, _token)
-    breaks = [i for i, (kind, _, _) in enumerate(events) if kind == "break"]
-    if persona == AD or not counterfactual or sep is None:
-        assert breaks == []
-        return
-    (at,) = breaks
-    before = "".join(piece for kind, piece, _ in events[:at] if kind == "prosody")
-    after = "".join(piece for kind, piece, _ in events[at + 1 :] if kind == "prosody")
-    assert before == text[: sep[0] + 1] and after == text[sep[0] + 1 :]
-    assert events[at][2]["time"] == "250ms"
+    got = []
+    for i, (kind, _, attrs) in enumerate(events):
+        if kind == "break":
+            before = "".join(piece for k, piece, _ in events[:i] if k == "prosody")
+            assert text.startswith(before)
+            got.append((len(before), attrs["time"]))
+    assert got == _expected_breaks(persona, language, text, counterfactual)
 
 
 @pytest.fixture(scope="module")
@@ -952,7 +1010,7 @@ def test_broadcast_lines_follow_the_role_table(booth):
         line, cue = _cue_for(hero, persona, language, text)
         _assert_spoken(
             cue.ssml, VOICES[(language, cue.speaker)], cue.speaker, line.text, role, emphasis,
-            counterfactual, persona,
+            counterfactual, persona, language,
         )  # fmt: skip
 
 
@@ -991,11 +1049,11 @@ def test_every_cue_speaks_the_payload_line(booth):
                     assert cue.style in VOICE_STYLES[cue.voice]
                 if script.persona != AD:
                     continue
-                assert "<break" not in cue.ssml and "volume=" not in cue.ssml
-                assert cue.style not in EXCITED_STYLES
+                assert "volume=" not in cue.ssml and cue.style not in EXCITED_STYLES
+                assert cue.ssml.count(f'<break time="{_LINE_BREAK}"/>') == 1  # after the line
                 prosody = [e for e in ET.fromstring(cue.ssml).iter() if e.tag.endswith("prosody")]
                 assert prosody and all(
-                    e.get("rate") == "-10%" and e.get("pitch") == "+0%" and e.get("volume") is None
+                    e.get("rate") == "-15%" and e.get("pitch") == "+0%" and e.get("volume") is None
                     for e in prosody
                 )  # fmt: skip
 
@@ -1013,7 +1071,7 @@ def test_line_roles_on_the_offline_breakdowns(booth):
                 role = line_role(speaker, line.claims, evidence, script.payload.moment)
                 if speaker == "color":
                     assert role == "why", line.text
-                elif not line.claims:
+                elif not line.claims:  # openers ride on a claim line now; none stands alone
                     assert role == "open" and speaker == "pbp", line.text
                     opens += 1
                 elif set(line.claims) & _PEAK_CLAIMS:
@@ -1025,7 +1083,7 @@ def test_line_roles_on_the_offline_breakdowns(booth):
                     if marker in line.text:
                         assert role == "peak" and speaker == "pbp", line.text
                         seen.add(marker)
-    assert seen == set(_PEAK_LINES) and opens > 0 and scans > 0
+    assert seen == set(_PEAK_LINES) and opens == 0 and scans > 0
 
 
 def test_revoice_agrees_with_the_voice_step_and_repairs_old_cues(offline):
