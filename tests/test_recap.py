@@ -71,7 +71,9 @@ def test_every_persona_has_a_recap_template_and_a_brief():
 
 def test_recap_prompts_leave_breakdown_cache_keys_alone():
     # Recap instructions have their own version: a breakdown's key must not move with them.
-    assert prompts.PROMPT_VERSION == "998360964f7f" and PIPELINE_VERSION == 5
+    # Moved on purpose with the Director's budget (agents/budget.py) and the persona rules
+    # (agents/persona_rules.py): PIPELINE_VERSION 6.
+    assert prompts.PROMPT_VERSION == "451f64ac88e9" and PIPELINE_VERSION == 6
 
 
 def test_an_offline_recap_runs_the_whole_crew_graph(rc, offline):

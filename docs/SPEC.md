@@ -41,7 +41,9 @@ knew existed.
 | `coach` (stretch) | "Scanned vs didn't scan" side-by-side + one coaching cue | instructional |
 | `audio_description` | Blind and low-vision viewers: the moment told in the order it happened — where he got the ball, who he could not see, which way he looked, whom the look showed him, what he did — sound on by default, large-print captions | calm, slower voice at any tier; no xT or probabilities |
 
-All personas render the **same verified fact set**. Persona changes presentation, never facts.
+All personas render the **same verified fact set**. Persona changes presentation, never facts:
+which verified claims a script must cite and which it may not is fixed per persona in code (§6,
+"Persona rules").
 Languages: `en` and `zh` for the MVP; `es` is a stretch goal.
 
 ## 2. Architecture
@@ -1253,7 +1255,7 @@ tools exposed by our own MCP server.
 
 | Agent | Input | Output (JSON schema) | Notes |
 |---|---|---|---|
-| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority |
+| Director | MomentCard stream, budget | `BreakdownRequest` (moment, personas, languages, priority) | rate-limits breakdowns; picks replay slots; the audiences come from the request, the model sets only priority, which is the breakdown's budget (below) |
 | Analyst | BreakdownRequest + MCP tools | `Findings` (lens, ranked facts as Claims) | tools: `get_moment`, `get_vision`, `get_pitch_control`, `run_counterfactual`, `get_xt`, `get_pressing` |
 | Telestrator | Findings | `TelestrationPlan` | camera moves, freeze/rewind, arrows, zones, ghosts, POV segments, timecodes |
 | Commentator | Findings + persona + language | anchored lines (claim id and/or connective), become `Script` lines with `speaker: "pbp"` | play-by-play voice: what happened, short and paced |
@@ -1265,6 +1267,36 @@ tools exposed by our own MCP server.
 `speaker`. Both voices in a language are male: play-by-play `en-US-GuyNeural` and
 `zh-CN-YunjianNeural`, colour `en-US-DavisNeural` and `zh-CN-YunyeNeural`. If either fails, a
 single-narrator template takes over (failure policy below).
+
+**Persona rules** (`agents/persona_rules.py`). The red-team review found the cached model scripts
+of different personas were the same claims reordered (casual heard expected threat and no
+counterfactual; coach no counterfactual). Each persona now has claims it may not cite, groups of
+claims its script (both voices together) must cite one of, and a number budget:
+
+| Persona | Must cite (one of each group) | May not cite | Numbers |
+|---|---|---|---|
+| `casual` | the counterfactual (`cf_pass`, `cf_carry_lost`, `cf_lost_runner`, `cf_unmarked`, `cf_shot`) | xT and probabilities (`cf_value`, `cf_shot_value`, `pass_success`, `cf_pass_success`, `shot_thought_vs_was`) | ≤ 2 |
+| `analyst` | the look's value (`cf_value`, `cf_shot_value`); belief error; scan timing (scan lens) | – | – |
+| `player_fan` | his own look (scan lens); his decision (`pass_to_runner`, `runner_received`, `shot_placement`, `stayed_with_runner`) | – | – |
+| `coach` | the counterfactual; a coaching point (scan timing, `presser_distance`, `pressure_at_pass`, `keeper_near_side`) | – | – |
+| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`) | xT, probabilities, shares and pressing percentages | ≤ 2 |
+
+A group is required only when the moment has a supported claim in it, and a scan group only on
+the scan lens. Numbers are counted as the numeric slots of the cited claims (`{n:times}` counts;
+vocabulary slots do not). Enforcement, in order: the forbidden ids are not in that persona's
+schema enum, so the model cannot pick them; the prompt carries the rules (`must_include`,
+`max_numbers`, `start_with`, and for the co-commentator `still_missing`); tidy drops a forbidden
+line; the Verifier checks every script and sends one that breaks a rule back to both voices,
+whole, with the problems (a rewrite round, at most two); after the last round `repair` makes it
+comply with verified template lines (drops forbidden lines, adds the first supported claim of a
+missing group in story order, brings a spatial line first, trims numeric lines that cover no
+group). The templates go through the same `repair`. A recap tells several moments and keeps only
+the forbidden ids.
+The narration ablation (`eval/narration_ablation.py`) and the crew-vs-single eval
+(`eval/crew_vs_single.py`) run the Verifier with these script checks off (`LineVerifier`, line
+checks only), as when their reports were measured: with them on, the single agent's one call is
+redrafted whole and its calls and rewrites are no longer the ones the report counts. Arm D of
+crew-vs-single is therefore the crew with the line-check Verifier, not the deployed one.
 
 **Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
 MomentCard (lens |Δ|, outcome, phase), never from an LLM. Each line also has a role. `open` is a
@@ -1317,6 +1349,14 @@ Application Insights.
   placeholder (`{window_s|second}`) that rendered as literal braces. With anchored lines and the
   enum Analyst, two reruns aired 22 and 24 lines in four scripts (casual and analyst × en and zh)
   with no rewrites, no drops, no invented names, and every headline claim spoken.
+- **The Director's priority is the breakdown's budget** (`agents/budget.py`, 2026-10-21). The
+  agents after it read it: at high priority the Analyst inspects the moment with our MCP tools;
+  at normal and low it answers from the claims in its prompt, one request instead of a tool loop.
+  The priority also buys the replay a slot, 20, 16 or 12 s, never shorter than the moment's
+  template plan: the Telestrator is told it, and a plan that runs longer airs as the template
+  (`duration_s: over_slot`). With the Director on its template, the rule on the lens delta sets
+  the priority and the budget follows. *Why:* a red-team read found the priority was written and
+  never read. `tests/test_director_budget.py`.
 - Telestrator: Azure structured outputs reject the `oneOf` a discriminated union produces, so the
   model fills `PlanDraft` (a plain `anyOf` union) and `to_plan()` applies the full checks.
 - *Measured (M0, `gpt-4.1-mini` GlobalStandard, northcentralus; seed 3, `--mcp`, casual and
@@ -2246,8 +2286,8 @@ the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or pl
   - Spans: one per breakdown, one child per workflow step (Director, Analyst with its MCP tool
     calls, Telestrator, each narration voice, Verifier rounds, Voice).
   - Attributes: moment, persona, language, model, attempts, source (`llm` / `template`), fallback
-    reason, rewrites, dropped lines, ms. Ids and counts only, no prompt text, which also bounds
-    ingestion.
+    reason, rewrites, dropped lines, scripts failing their persona rules and redrafts (§6), ms.
+    Ids and counts only, no prompt text, which also bounds ingestion.
   - Sampling: every span is kept (`sampling_ratio=1.0`). The distro's default, 5 spans/s decided
     span by span, dropped steps out of a breakdown's bursts: on 2026-10-20 two live traces lacked
     `voice`, one also `mcp`. The daily cap of the Log Analytics workspace bounds ingestion

@@ -6,6 +6,7 @@ invalid output. Templates only use verified claims, so their output always passe
 
 from __future__ import annotations
 
+from agents import persona_rules
 from agents.context import MomentContext
 from agents.schemas import (
     BreakdownRequest,
@@ -14,6 +15,7 @@ from agents.schemas import (
     Language,
     Persona,
     Priority,
+    ScriptLine,
     Speaker,
 )
 
@@ -75,9 +77,10 @@ MARKER_HEADLINE = ["marker_scan", "stayed_with_runner", "cf_lost_runner"]
 MARKER_SUPPORTING = ["blind_side", "seen_in_scan", "marker_unseen", "runner_pressure",
                      "cf_unmarked", "cf_belief_error", "cf_value", "runner_received"]  # fmt: skip
 MARKER_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]] = {
+    # Casual says at most two numbers (agents/persona_rules.py): the unmarked runner, not the gap.
     "casual": [("pbp", None), ("color", "blind_side"), ("pbp", "marker_scan"),
                ("color", "seen_in_scan"), ("pbp", "stayed_with_runner"),
-               ("color", ("cf_lost_runner", "cf_unmarked"))],
+               ("color", ("cf_unmarked", "cf_lost_runner"))],
     "analyst": [("pbp", None), ("color", "marker_unseen"), ("pbp", "marker_scan"),
                 ("color", "seen_in_scan"), ("pbp", "stayed_with_runner"),
                 ("color", "runner_pressure"), ("color", "cf_belief_error"),
@@ -110,9 +113,10 @@ SHOT_SEQUENCES: dict[Persona, list[tuple[Speaker, str | tuple[str, ...] | None]]
                 ("color", "shot_thought_vs_was"), ("pbp", "shot_speed"),
                 ("color", "cf_keeper_age"), ("color", "cf_shot"), ("color", "cf_shot_value")],
     "player_fan": [("pbp", None), ("pbp", "scan_at_goal"), ("color", "keeper_seen_in_scan"),
-                   ("pbp", ("shot_scored", "shot_saved", "shot_wide")), ("color", "cf_shot")],
+                   ("pbp", "shot_placement"), ("pbp", ("shot_scored", "shot_saved", "shot_wide")),
+                   ("color", "cf_shot")],
     "coach": [("pbp", "scans_before_reception"), ("pbp", "time_since_last_scan"),
-              ("color", "keeper_near_side"), ("color", "cf_shot_value")],
+              ("color", "keeper_near_side"), ("color", "cf_shot"), ("color", "cf_shot_value")],
     # For listeners, in the order it happened: where he got it, which way he looked, whom he saw,
     # where he put it, what came of it, and the shot without the look. No probabilities.
     "audio_description": [("pbp", "reception_zone"), ("pbp", ("scan_side", "scan_at_goal")),
@@ -177,7 +181,11 @@ def analyst(ctx: MomentContext) -> Findings:
 def narration(
     ctx: MomentContext, persona: Persona, language: Language, speaker: Speaker | None = None
 ) -> list[tuple[Speaker, DraftLine]]:
-    """Template lines in speaking order; only one speaker's lines when `speaker` is given."""
+    """Template lines in speaking order; only one speaker's lines when `speaker` is given.
+
+    The sequence then goes through the persona rules' repair (agents/persona_rules.py), so a
+    moment whose claims the sequence did not foresee still gets a script that follows them.
+    """
     pressure = ctx.card.selected_lens == "pressure"
     sequence = (PRESSURE_SEQUENCES if pressure else SEQUENCES)[persona]
     if ctx.card.kind == "marker_scan":
@@ -185,15 +193,21 @@ def narration(
     elif not pressure and _placed_shot_moment(ctx):
         sequence = SHOT_SEQUENCES[persona]
     connective = (PRESSURE_CONNECTIVE if pressure else CONNECTIVE)[language]
-    out = []
+    lines = []
     for who, ids in sequence:
-        if speaker is not None and who != speaker:
-            continue
         if ids is None:
-            out.append((who, DraftLine(text=connective, claims=[])))
+            lines.append(ScriptLine(id=f"L{len(lines) + 1}", speaker=who, text=connective,
+                                    claims=[]))  # fmt: skip
             continue
         cid = next((c for c in (ids if isinstance(ids, tuple) else (ids,)) if c in ctx.supported),
                    None)  # fmt: skip
         if cid is not None:
-            out.append((who, DraftLine(text=ctx.claims[cid].template_for(language), claims=[cid])))
-    return out
+            text = ctx.claims[cid].template_for(language)
+            lines.append(ScriptLine(id=f"L{len(lines) + 1}", speaker=who, text=text, claims=[cid]))
+    lines, _, _ = persona_rules.repair(persona, lines, ctx.supported, ctx.card.selected_lens,
+                                       language)  # fmt: skip
+    return [
+        (line.speaker, DraftLine(text=line.text, claims=line.claims))
+        for line in lines
+        if speaker is None or line.speaker == speaker
+    ]

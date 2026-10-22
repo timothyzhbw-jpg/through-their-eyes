@@ -25,6 +25,7 @@ ATTRIBUTES = {
     "tte.moment", "tte.personas", "tte.languages", "tte.persona", "tte.language", "tte.speaker",
     "tte.model", "tte.attempts", "tte.source", "tte.error_class", "tte.rewrites", "tte.dropped",
     "tte.ms", "tte.round", "tte.failed", "tte.lines", "tte.down", "tte.bring_back", "tte.resumed",
+    "tte.scripts_failed", "tte.redraft",
 }  # fmt: skip
 ID = re.compile(r"^[\w:.\-]+$")  # ids, names and classes: no spaces, so no sentences
 
@@ -150,7 +151,8 @@ def test_a_telestrator_timeout_is_a_template_span_with_the_error_class(ctx, expo
 
 
 def test_rewrites_are_narration_spans_and_each_verifier_round_has_a_span(ctx, exporter):
-    """A stale claim fails the render check every round: two rewrites, then the line is dropped."""
+    """A stale claim fails the render check every round: two rewrites, then the line is dropped.
+    Casual, whose rules the rest of the script follows, so only the line is rewritten."""
     import copy
 
     stale = copy.copy(ctx)
@@ -159,9 +161,10 @@ def test_rewrites_are_narration_spans_and_each_verifier_round_has_a_span(ctx, ex
         update={"template": "{runner} ran on the blind side of {player} today."}
     )
     replies = _good_replies(ctx)
-    replies["color"] = {"lines": [{"claim": "blind_side", "connective": None}]}
+    replies["color"] = {"lines": [{"claim": "blind_side", "connective": None},
+                                  {"claim": "cf_pass", "connective": None}]}  # fmt: skip
     exporter.clear()
-    breakdown(stale, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
+    breakdown(stale, client=FakeChatClient(replies), personas=("casual",), languages=("en",))
     root, steps, _ = _trace(exporter)
     rounds = [s.attributes for s in steps if s.name == "verifier"]
     assert [(v["tte.round"], v["tte.failed"], v["tte.dropped"]) for v in rounds] == [
