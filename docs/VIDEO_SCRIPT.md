@@ -42,7 +42,9 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
 
 ## Timeline
 
-The story shots are staged in Blender and labelled "DRAMATISATION · RENDERED IN BLENDER"; the hero shots from the simulation carry "RENDERED IN BLENDER FROM OUR
+The story shots are staged in Blender and labelled "DRAMATISATION · RENDERED IN BLENDER" (in rework:
+every Blender beat is a placeholder card of the same length until approved finals land; `story: "app"`
+swaps in an in-engine telling of the story, the same length); the hero shots from the simulation carry "RENDERED IN BLENDER FROM OUR
 SIMULATION DATA" and the cinematic-mode shots "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA".
 No frame is blurred: hard cuts, flashes or a plain fade only; the rewind is colour split,
 noise and scanlines; the cine shots render without motion blur or peripheral blur. Freeze-frame
@@ -146,15 +148,12 @@ The cut follows the data where a requested beat does not hold:
 
 ## Music
 
-To be picked by Bowen. Candidates, all CC0 1.0 with their pages in
-[video/CREDITS.md](../video/CREDITS.md) and files with SHA-256 in
-[video/assets.json](../video/assets.json): Skill Test and Pantheon (HoliznaCC0, dark trap and
-phonk), Shortcuts (Zane Little Music, breakbeat), Unsolicited trailer music and Generic trailer
-music (Emma_MA, trailer builds), and Sirens in Darkness (cynicmusic, tense pads for the story's
-opening). The spec allows several `music` entries, so the story can sit on one track and the
-chapters on another. An original score composed in code (the score session) may replace them.
-The cut today uses Unsolicited trailer music from the match-cut on; the story has only the
-stadium hum.
+The original score composed for this project in code (`video/score/`, MIT), hybrid variant
+(orchestral and percussion), Bowen's pick on 2026-10-21. It is rendered to this cut's cue sheet
+(beat ids plus offsets) and plays from 0:00 as a local asset, ducked under the voice. It already
+carries the hits, the tape rewinds, the scan ducks and the clocks, so the edit's own sound effects
+on those moments are gone; the ball touches, the drill's ticks, the shutter and the stamps stay.
+The CC0 candidates remain listed in `video/assets.json` and `video/CREDITS.md`.
 
 ## Open
 
