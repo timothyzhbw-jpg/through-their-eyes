@@ -3,9 +3,8 @@
 ## Hackathon
 - Official rules: https://aka.ms/insidethegame/rules, which redirects to
   https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md.
-  **Checked 2026-10-19:** matches the participant-hosted mirror the plan was built from
-  (https://github.com/faizalkhan24/Microsoft-Premier-League-Hackathon-Official-Rules/blob/main/OFFICIAL%20RULES.md);
-  the rules file last changed 2026-09-28. Amendments are posted on the hackathon website (§11.5).
+  **Checked 2026-10-19:** matches the participant-hosted mirror the plan was built from; the
+  rules file last changed 2026-09-28. Amendments are posted on the hackathon website (§11.5).
   Facts that shape the plan:
   - registration closes 2026-10-20 12:00 PT; submissions close 2026-10-27 23:59 PT; judging until
     2026-11-10, and the project must stay testable free of charge until then;
@@ -26,31 +25,23 @@ Checked 2026-10-19; the winners list and the official brief were not reachable. 
 code is copied (CLAUDE.md rule 1).
 - **AgentDunker** (silver): 3D tactical sketches of screens and runs, freeze at the shot with xFG,
   commentary in a pro style with an in-house voice model.
-  https://www.xiaohongshu.com/explore/6ad1e6e7000000000a027f1b
-- **GameBuddy** (silver, MIT): one evidence store; a small RL-trained model returns evidence ids
-  only; numbers copied from source records and checked programmatically (subject, metric, unit,
-  period, source); a 23.8 s play expanded to 55 s with freeze / rewind / slow motion; two-voice
-  commentary; shareable MP4. https://github.com/imhaojie/BroadcastCode-2026
-- **NBA_AWS_Broadcast12** (entry, MIT): seeded synthetic trajectories, labelled as such; key plays
-  scored on five dimensions; four-layer SVG tactics board; commentary tiers calm / excited /
-  clutch; overlay on/off comparison as the highlight.
-  https://github.com/CodeGanHaoZ/NBA_AWS_Broadcast12
+- **GameBuddy** (silver, MIT, public repository `BroadcastCode-2026`): one evidence store; a small
+  RL-trained model returns evidence ids only; numbers copied from source records and checked
+  programmatically (subject, metric, unit, period, source); a 23.8 s play expanded to 55 s with
+  freeze / rewind / slow motion; two-voice commentary; shareable MP4.
+- **NBA_AWS_Broadcast12** (entry, MIT, public repository of that name): seeded synthetic
+  trajectories, labelled as such; key plays scored on five dimensions; four-layer SVG tactics
+  board; commentary tiers calm / excited / clutch; overlay on/off comparison as the highlight.
 → What we took: belief-vs-truth probability at the action freeze (§5.1), two voices and delivery
   tiers (§6), the With / Without toggle as the video highlight (§10), clip export as a stretch (§7).
-  None of them models perception or counterfactuals (§0).
+  Perception and counterfactuals are what we add (§0).
 
 ### Competing entries (Inside the Game, public repos, checked 2026-10-19)
-14 public entry repos were created after 2026-09-29; four were read. Ideas only, no code copied.
-- **Matchday Companion** — https://github.com/ogu83/inside-the-game-hackathon — deployed on ACA,
-  video done; interruptible AI co-commentator (push to talk); a fact-checker evaluated with Foundry
-  groundedness; English and Turkish; a table of proof numbers at the top of the README.
-- **Shield** — https://github.com/digitaladaption/shield — "What he sees": every passing lane from
-  a selected player (open / contested / blocked), drawn on the true state, with no vision or
-  belief; a "without him" counterfactual estimated from other plays, not re-simulated.
-- **Tactical Intelligence Live** — https://github.com/Harvare1/tactical-intelligence-live — event
-  stream with rolling-window rules; no tracking data.
-- **StudioLens** — https://github.com/Josephjbassey/inside-the-game — narrative, tactics and
-  recaps; Azure Translator for languages.
+14 public entry repos were created after 2026-09-29; we read four. Ideas only, no code copied, and
+we name none of them here. Ideas they share: AI co-commentators, fact-checking evaluated with
+Foundry groundedness, fan and analyst modes, several languages, passing lanes drawn from a
+selected player, and event streams with rolling-window rules. So SPEC §0 leads with what we add:
+a model of what the player saw and believed, and the moment re-simulated without one look.
 
 ### Related products judges may know: FIFA AI Pro and Referee View (World Cup 2026)
 Checked 2026-10-21. Our build environment could not open these pages (the proxy refused them), so
@@ -65,9 +56,7 @@ conservatively), and no logos anywhere.
   described in FIFA's Football Language (FIFA's standard vocabulary for football data). Lenovo
   reports that it orchestrates several agents over more than 2,000 metrics. Answers come as
   text, graphs, video clips and 3D recreations with player avatars. It is for pre- and
-  post-match analysis and is not used during live play. FIFA calls its output "validated
-  insights" and Lenovo "data-validated"; in the excerpts we read, neither says how a figure is
-  checked. Lenovo reports that all 48 teams at the 2026 World Cup used it, in 16 languages, with
+  post-match analysis and is not used during live play. Lenovo reports that all 48 teams at the 2026 World Cup used it, in 16 languages, with
   thousands of queries from over 300 individual users.
 - **Referee View**: the referee's body camera as a first-person broadcast feed, its footage
   smoothed in real time by Lenovo's AI stabilisation. Lenovo reports that the feed's footage of
@@ -91,8 +80,8 @@ conservatively), and no logos anywhere.
     2026-01-07) —
     https://www.computerweekly.com/news/366636909/Lenovo-taps-AI-and-digital-twins-to-power-World-Cup-2026
 → How we differ (README, docs/SUBMISSION.md). Each point was checked against main on 2026-10-21:
-  - FIFA AI Pro answers *what happened*, from statistics, before and after a match, behind a
-    "validated" label. We answer *what he saw and what he believed*, on the live stream:
+  - FIFA AI Pro answers *what happened*, from statistics, before and after a match. We answer
+    *what he saw and what he believed*, on the live stream:
     `api/live.py` streams the synthetic match at 25 Hz with every player's head yaw and the
     blind-side alerts and announces each moment as its window closes; the web app then plays
     the moment's breakdown.
