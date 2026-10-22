@@ -190,5 +190,25 @@
   },
   "label": {
     "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+  },
+  "namecard": {
+    "name": "HERO",
+    "role": "THE MIDFIELDER",
+    "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
+    "spot": {
+      "x": 1300,
+      "y": 560,
+      "r": 180
+    },
+    "side": "left",
+    "scrim": 0.5
+  },
+  "chapter": {
+    "label": "CH. I",
+    "title": "THE LOOK"
+  },
+  "duo": {
+    "left": "WITH THE LOOK",
+    "right": "WITHOUT"
   }
 }

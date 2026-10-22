@@ -44,6 +44,7 @@ describe("the step list", () => {
       "evidence",
       "tamper",
       "yourcall",
+      "eyes",
       "language",
       "producer",
       "match",
@@ -85,7 +86,14 @@ describe("the step list", () => {
 
 describe("the steps a page can show", () => {
   it("on the hero moment, offline: everything but what needs the live service", () => {
-    expect(ids(envOf(offline()))).toEqual(["pov", "without", "evidence", "yourcall", "end"]);
+    expect(ids(envOf(offline()))).toEqual([
+      "pov",
+      "without",
+      "evidence",
+      "yourcall",
+      "eyes",
+      "end",
+    ]);
   });
 
   it("on the hero moment with the live service: every step but the match's own", () => {
@@ -104,11 +112,20 @@ describe("the steps a page can show", () => {
       "without",
       "evidence",
       "tamper",
+      "eyes",
       "language",
       "producer",
       "match",
       "end",
     ]);
+  });
+
+  it("on a moment with no bundled look grid: no Take his eyes", () => {
+    const other = { ...pressureExport(), seed: 7 }; // press_escape has a grid on seed 0 only
+    const env = envOf(createSession(parseHero(other), null, null, null, { api: api() }));
+    expect(env.has.takeEyes).toBe(false);
+    expect(ids(env)).not.toContain("eyes");
+    expect(envOf(offline()).has.takeEyes).toBe(true);
   });
 
   it("on a stitched match: its recap, then the end", () => {
@@ -126,7 +143,9 @@ describe("the steps a page can show", () => {
     const steps = resolveSteps(envOf(offline())); // no tamper, language or producer
     expect(steps[indexOf(steps, "evidence")].id).toBe("evidence");
     expect(steps[indexOf(steps, "tamper")].id).toBe("yourcall");
+    expect(steps[indexOf(steps, "language")].id).toBe("end");
     expect(steps[indexOf(steps, "producer")].id).toBe("end");
+    expect(steps[indexOf(steps, "eyes")].id).toBe("eyes");
     expect(indexOf(steps, null)).toBe(0);
     expect(indexOf(steps, "nope")).toBe(0);
   });
