@@ -1,0 +1,527 @@
+{
+  "about": "How each Blender beat is filled once its approved final lands in out/video/blender/ (video/tools/blender_fit.mjs). picture/freeze/overlays as in the beat; `label` adds the corner label for the beat's length: dramatisation (the story) or simulation (the hero shots). Only clips listed in `approved` are used: the rejected renders share file names with the finals, so a clip goes in this list when Bowen has approved it.",
+  "approved": [],
+  "pins": [
+    {
+      "id": "bs2",
+      "clip": "out/video/blender/bs2.mp4",
+      "corners": "out/video/blender/bs2_screen_corners.json",
+      "matte": "out/video/blender/bs2_screen_matte",
+      "source": {
+        "cine": "pov-match"
+      },
+      "source_offset_y": 138
+    }
+  ],
+  "titles": {
+    "nc-you": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "YOU ARE No. 14.",
+        "role": "",
+        "sub": "YOU NEVER CHECK YOUR SHOULDER.",
+        "spot": {
+          "x": 1026,
+          "y": 574,
+          "r": 170
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "nc-h8": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "H8",
+        "role": "THE MIDFIELDER",
+        "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
+        "spot": {
+          "x": 1380,
+          "y": 600,
+          "r": 260
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "nc-h9": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "H9",
+        "role": "THE RUNNER",
+        "sub": "UNMARKED. FOR NOW.",
+        "spot": {
+          "x": 450,
+          "y": 660,
+          "r": 120
+        },
+        "side": "right",
+        "scrim": 0.5
+      }
+    },
+    "duo-split": {
+      "template": "duo",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "left": "WITH THE LOOK",
+        "right": "WITHOUT"
+      }
+    },
+    "tagline": {
+      "template": "slam",
+      "dur": 1.2,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "EVERY TOUCH",
+            "size": 96
+          },
+          {
+            "text": "STARTS WITH A LOOK.",
+            "color": "gold",
+            "size": 96
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.15,
+        "backdrop": true
+      }
+    },
+    "back-to-h4": {
+      "template": "slam",
+      "dur": 1.35,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "HE PLAYS IT BACK TO H4.",
+            "color": "dusk",
+            "size": 110
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    }
+  },
+  "beats": [
+    {
+      "beat": "b01-s1a-receive",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_pov.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 1.97
+      },
+      "overlays": [
+        {
+          "title": "nc-you",
+          "at": 1.97
+        }
+      ],
+      "sfx": [],
+      "label": "dramatisation"
+    },
+    {
+      "beat": "b02-s1c-tackle",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_pov.mp4",
+        "in": 2.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [],
+      "label": "dramatisation"
+    },
+    {
+      "beat": "b03-s1d-fall",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_fall.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 1.3,
+          "gain_db": -2
+        }
+      ],
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b04-s1e-ground",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_ground.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [],
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b05-s2-coach",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/trailer/pins/bs2.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [],
+      "label": "dramatisation"
+    },
+    {
+      "beat": "b08-bl01a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 0.45
+      },
+      "overlays": [
+        {
+          "title": "nc-h8",
+          "at": 0.45
+        }
+      ],
+      "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b09-bl01b",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.45,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 3.15
+      },
+      "overlays": [
+        {
+          "title": "nc-h9",
+          "at": 3.15
+        }
+      ],
+      "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b10-bl01c",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 3.6,
+        "fit": "pad",
+        "speed": 2
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b11-rw1",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.0,
+        "fit": "pad",
+        "speed": 9.4,
+        "reverse": true
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "rewind",
+        "glue"
+      ],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.0,
+          "gain_db": -3
+        }
+      ],
+      "label": "simulation"
+    },
+    {
+      "beat": "b12-bl02a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl02_reveal.mp4",
+        "in": 0.0,
+        "fit": "pad",
+        "speed": 2
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b13-bl02b",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl02_reveal.mp4",
+        "in": 0.6,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.05,
+          "gain_db": -4
+        }
+      ],
+      "label": "simulation"
+    },
+    {
+      "beat": "b18-rw2",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.0,
+        "speed": 3.68,
+        "reverse": true,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "rewind",
+        "glue"
+      ],
+      "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b19-bl03",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl03_without.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "back-to-h4",
+          "at": 1.2
+        }
+      ],
+      "sfx": [
+        {
+          "name": "shutter",
+          "at": 1.2,
+          "gain_db": -5
+        },
+        {
+          "name": "touch",
+          "at": 2.45,
+          "gain_db": -4
+        }
+      ],
+      "label": "simulation"
+    },
+    {
+      "beat": "b20-split",
+      "picture": {
+        "src": "split",
+        "left": {
+          "src": "clip",
+          "path": "out/video/blender/bl02_reveal.mp4",
+          "in": 1.0,
+          "crop": [
+            0,
+            0,
+            960,
+            804
+          ]
+        },
+        "right": {
+          "src": "clip",
+          "path": "out/video/blender/bl03_without.mp4",
+          "in": 1.9,
+          "crop": [
+            960,
+            0,
+            960,
+            804
+          ]
+        }
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "duo-split",
+          "at": 0.0
+        }
+      ],
+      "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b42-s4a-pov",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_pov_a.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b43-s4b-check",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_check.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b44-s4c-drive",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_drive.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b45-s4d-strike",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_strike.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.05,
+          "gain_db": -2
+        }
+      ],
+      "fit": true
+    },
+    {
+      "beat": "b45a-s4e-net",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_net.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "fit": true
+    },
+    {
+      "beat": "b45b-s4f-celebrate",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs4_celebrate.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "overlays": [
+        {
+          "title": "tagline",
+          "at": 0.3
+        }
+      ],
+      "fit": true
+    }
+  ]
+}

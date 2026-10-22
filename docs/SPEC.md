@@ -132,20 +132,21 @@ on an LLM.
   Making 22 free agents look like football is the biggest time sink, and hero moments must be
   controllable anyway. Rates in the realism report are normalised per 90 min.
   *Implemented (2026-10-21, `sim/match.py`):* `match-1` has 19 possessions: 15 open-play
-  passages and four heroes. On this Mac it lasts 701.0 s (11:41) and ends 1–0. The heroes start
-  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:33 (`press_escape` seed 0), 6:41 (the
-  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:30 (the set-piece hero
+  passages and four heroes. On this Mac it lasts 751.8 s (12:32) and ends 1–0. The heroes start
+  at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 4:54 (`press_escape` seed 0), 7:01 (the
+  shot hero `far_post_finish` seed 11, who scores at the far post) and 8:51 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
   - *Caps.* An open-play passage plays until the ball goes out or its cap. The caps are fixed in
     the plan: 30 s for the kick-off passage, so the first hero comes early, then 40–70 s, varied
-    for rhythm. The match is therefore at most 13:18 on any platform. `possession_play` rarely
+    for rhythm. The match is therefore at most 13:28 on any platform (780 s of caps and 27.8 s of
+    heroes). `possession_play` rarely
     puts the ball out, about once per 285 s of play (32 of 160 candidates within 60 s), so most
-    passages reach their cap: on this Mac 4 of 15 end in a throw-in. Where the ball goes out
-    depends on the platform (§3.7): on the live service (Linux x86) the 18-possession version
-    ran 13:06 on 2026-10-21, against 11:31 on this Mac.
+    passages reach their cap: on this Mac 2 of 15 end in a throw-in (4 before players were kept on
+    the pitch, §3.2). Where the ball goes out depends on the platform (§3.7): on the live service
+    (Linux x86) the 18-possession version ran 13:06 on 2026-10-21, against 11:31 on this Mac.
   - *Not kept: picking passages by how they end (tried 2026-10-21).* Each passage was the first
     keyed candidate that ended out of play after 25–60 s, with the attempts pinned per match
     seed, so every stitch after open play was a stoppage. It is not portable. The sim is byte
@@ -156,7 +157,7 @@ on an LLM.
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
     kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
-    2 kick-offs (the start, and after the goal), 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
+    2 kick-offs (the start, and after the goal), 2 throw-ins, 1 corner, 14 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
     never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
@@ -202,6 +203,17 @@ on an LLM.
   line height are team-style knobs.
 - Steering toward targets with limits — *tunable*: max speed by role 8.0–9.5 m/s, max accel
   ≈ 3.5 m/s², max decel ≈ 5 m/s², turn-rate limit.
+- Pitch bounds (2026-10-21, `sim/engine.py`, `sim/movement.py`): every movement target and
+  every setup position is clamped to the pitch, and a player brakes for the line ahead (the
+  exact discrete stopping envelope at the max decel, sharing the frame's accel/decel limit with
+  the rest of his step), so keepers stay at or in front of their goal line and nobody crosses a
+  touchline (`tests/test_on_pitch.py`: every frame, 1e-6 m tolerance; the measured worst is 0).
+  Clamping targets alone was not enough: a player who turns along a line keeps drifting over it.
+  Before, the formation shift and a free ball's predicted path, which runs on past the lines, put
+  the away keeper up to 8 m behind his goal line in `blind_side_run` (1.7 m on the demo seed) and
+  full-backs and wingers past the touchline in open play. No restart is simulated (§3.1), so no
+  player ever needs to stand outside. Fewer balls go out as a result: 1.0 per stitched match
+  instead of 2.4 ([match_stats](../eval/reports/match_stats.md)).
 - Separation steering to avoid overlaps (Python-RVO2 optional, see REFERENCES).
 - Pressing: the nearest 1–2 defenders converge on the ball carrier when a team pressing trigger fires.
 - Marking (`possession_play`): every other outfield defender takes an attacker in his zone and stays
@@ -679,14 +691,14 @@ is a step.
       target ranges (table written to `eval/`).
       — *Open: measured, not met.* [eval/reports/match_stats.md](../eval/reports/match_stats.md)
       (`eval/match_stats.py`: the stitched match, held-out match seeds 100–119) counts, per 90 min
-      of play, 1,853 passes attempted (79.7% of resolved ones completed), 367 possession changes
-      (349 interceptions, 17 out of play, no tackles), 486 team possessions of 11.1 s on average,
+      of play, 1,851 passes attempted (80.5% of resolved ones completed), 351 possession changes
+      (344 interceptions, 7 out of play, no tackles), 474 team possessions of 11.4 s on average,
       and one shot per match: the shot hero's (`far_post_finish` 11, the same seed in every
       match), 20 goals from 20 shots by construction, not a measured scoring rate. None of these
       has a target to check: no range is configured, and no paper in REFERENCES.md is recorded as
       printing one. The two rows that have a target are SPEC 3.1's, and both are inside: 19
-      scenario possessions per match (target 15–25) and 12.47 min of play (target 10–15). 360 of
-      380 scenario possessions start with the home team, which has 56.6% of the possession time.
+      scenario possessions per match (target 15–25) and 13.15 min of play (target 10–15). 360 of
+      380 scenario possessions start with the home team, which has 56.5% of the possession time.
       [tests/test_match_stats.py](../tests/test_match_stats.py) pins the arithmetic on a
       hand-made match.
 - [x] Scan statistics on 20 seeds: mean scans in the 10 s before reception within ±25% of target;
@@ -970,7 +982,7 @@ data limb tracking reports; nothing in the API or the app calls it yet.
       table in `eval/`. On `blind_side_run` the alert for H9 behind H8 is on before the key scan
       and clears during it.
       — [eval/reports/blind_side.md](../eval/reports/blind_side.md) (fresh held-out precision
-      0.920, recall 0.985);
+      0.917, recall 0.984);
       [tests/test_blind_side_eval.py](../tests/test_blind_side_eval.py)::`test_fresh_held_out_precision_and_recall_meet_the_spec`;
       [tests/test_blind_side_moments.py](../tests/test_blind_side_moments.py)::`test_the_alert_for_h9_behind_h8_is_on_before_the_key_scan_and_clears_during_it`
 
@@ -1438,12 +1450,18 @@ Application Insights.
   stitched match: `POST /api/recaps`, `agents/recap.py`, `uv run python -m agents.recap --seed 1`.
   - *The same graph, its own steps.* `build_workflow(story=RECAP)`: each step is a subclass of
     the breakdown's, so the handoffs, retries, templates, trace and Verifier are the breakdown's.
-    - Director: picks 3–5 key moments from the candidates. Candidates are the match's moments
-      ranked by counterfactual impact (|Δ| of the selected lens in xT; exact ties scan > space >
-      pressure; a moment whose shot went in first; live-only overlays never), at most 8. The
-      model may name only candidates (an enum); the template takes the largest impacts (at least
-      3, those ≥ 0.01 xT, at most 5). The reel plays them in match order, and the crew then works
-      on those moments only.
+    - Director: picks 3–5 key moments from the candidates, the match's moments (live-only
+      overlays never), at most 8. **Hero moments first, then by counterfactual impact:** an
+      editorial rule, as a broadcaster leads with the story of the match, not a pure impact
+      ranking. A moment whose shot went in comes first; then the scenario heroes' moments; then
+      the rest. Each group is by counterfactual impact (|Δ| of the selected lens in xT; exact ties
+      scan > space > pressure). The Director's prompt and the template's reason say so.
+      - *Why (2026-10-21, #144):* once players stayed on the pitch, one open-play passage of
+        match-1 produced an A4 line-breaking pass (pressure, |Δ| 0.223) that outranked the
+        flagship H8 scan hero (0.131) and pushed it out of the template's five.
+      - The model may name only candidates (an enum). The template takes them in rank order (at
+        least 3, those ≥ 0.01 xT, at most 5).
+      - The reel plays them in match order, and the crew then works on those moments only.
     - Analyst: picks the headline claims, reading the match through our MCP tools
       (`get_match_stats`, `list_key_moments`, `list_recap_claims`; `agents.mcp_server --recap
       <evidence file>`, which the API writes so the server starts without simulating). The card
@@ -1523,6 +1541,18 @@ original visual identity.
     the broadcast camera uses them too; the tactical board keeps tokens. The trial's three
     render-side choices stand: the hips open once the head is more than 130° off the body, the
     passer turns into the pass for 0.3 s either side of the clip, and the neck stops at 80°.
+  - *Extra motion (2026-10-21, Bowen approved the sources):* motion capture from the CMU
+    database, retargeted onto the same skeleton (which is unchanged) and shipped as an
+    animations-only GLB (`web/public/models/anims_extra.glb`, ~20 KB; sources, terms and the
+    acknowledgement in its README). A kick (`pass_short`) replaces the standing pass, its ball
+    contact on the pass event, in place, with the planted foot held still. At every sim `scan`
+    a shoulder check turns the trunk with the look, as an additive layer timed to the head's
+    turn (out, hold, back) and sized by how far the head turns from the body; it counts towards
+    the trunk's share of the look, so a look past 80° turns the trunk no further than before.
+    The head still points exactly along `head_yaw`. On by default (Bowen kept it on after the
+    before/after video, 2026-10-21); `?anims=base` turns it off;
+    under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
+    and not used.
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
@@ -1770,6 +1800,11 @@ original visual identity.
 ### Real-footage overlay (cut)
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
+Motion capture of lab subjects is not match data or footage: Bowen allowed the CMU motion
+capture database on 2026-10-21 for animation only, the players' kick and shoulder checks
+(`web/public/models/anims_extra.glb`, §7 *Extra motion*) and the trailer's Blender shots, with
+the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or player is in it.
+
 ### Acceptance checks — render
 - [x] *The run without the look, told:* which look was removed, what it cost and where each pass
       went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
@@ -1870,6 +1905,15 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *Extra motion (mocap kick, shoulder checks):* the GLB binds every track to a bone of the
+      model without changing its joint frames; the kick plays at each pass event with its contact
+      on the event's frame and the kick along the pass; the shoulder check plays only during the
+      sim's scans, on the side the head turns, phased by the head; the head stays on `head_yaw`
+      (< 1e-3 rad) for every player; the feet stay on the ground; poses are history-free; reduced
+      motion drops the checks; fps unchanged.
+      — [web/src/players/extra.test.ts](../web/src/players/extra.test.ts); `npm run fps` and
+      `npm run fps -- --anims base` alternating (2026-10-21, Apple M4 Pro, headless, 1920 × 1080):
+      60 fps capped in every row either way, median 16.7 ms, p95 16.7–16.8 ms.
 - [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
       ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
       55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
