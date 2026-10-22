@@ -1566,6 +1566,15 @@ original visual identity.
   - Shirt numbers in the 3D view are placed nearest first each frame: one that would sit on
     another is lifted one label up, else hidden; the runner's gold number always shows
     ([web/src/views/declutter.ts](../web/src/views/declutter.ts)).
+- **The run without the look, told** ([web/src/without/](../web/src/without/),
+  [explain/look_cost.py](../explain/look_cost.py); teammates' feedback, 2026-10-21): in the run
+  without the look, verified lines say which look was removed (which shoulder, how long before
+  the ball reached him), what losing it cost (played back instead of forward, or the ball lost),
+  and where each run's pass reached its receiver with the xT there. The removed look is marked on
+  the timeline, in the HUD and at the edge of his eyes on that shoulder's side; "How xT works"
+  draws the 16 × 12 grid with both passes' ends, valued by the verified line, and says how the
+  grid is fitted (§4.5). Bundled per scan hero by `sim.export --without-look`; not part of the
+  crew's evidence, so breakdown cache keys do not move.
 - *M4:* **"What if…?" box**: suggested questions from the hero's options plus free text; the
   answer plays as a ghost path with its verified lines (§6).
 - **Your call** (fan interaction, [web/src/yourcall/](../web/src/yourcall/); deep link
@@ -1715,6 +1724,14 @@ original visual identity.
 Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video. The segment, its code (`demo/realfeed/`, OpenCV group) and its checks were removed; see git history before the removal for the design.
 
 ### Acceptance checks — render
+- [x] *The run without the look, told:* which look was removed, what it cost and where each pass
+      went in xT are verified claims (supported on `blind_side_run` seed 3, refuted when a slot is
+      tampered with), rendered in en and zh with every number in a slot; the web shows only the
+      lines that pass `checkPayload`, in the caption's place in that run, on the timeline, in the
+      HUD and at the edge of his eyes; the explainer's two values are the verified line's.
+      — [tests/test_without_look.py](../tests/test_without_look.py) (16 cases),
+      [tests/test_committed_exports.py](../tests/test_committed_exports.py),
+      [web/src/without/without.test.tsx](../web/src/without/without.test.tsx) (8).
 - [x] Live QA sweep #1: a match's hero moments come first in its Moments panel and its other
       moments fold by kind and lens; the viewer menu stays open across picks; the phone header shows
       the name and the synthetic-match note with no overlap at 320 and 375 px; overlapping shirt

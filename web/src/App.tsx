@@ -34,6 +34,7 @@ import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
+import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
@@ -118,7 +119,12 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           }
           run={<RunToggle />}
           card={evidence ? <EvidenceCard /> : <MomentCard />}
-          caption={<Caption />}
+          caption={
+            <>
+              <Caption />
+              <WithoutLookNote />
+            </>
+          }
         />
       )}
 
