@@ -30,7 +30,7 @@ import {
   SwapViews,
   ViewerMenu,
 } from "./ui/Stage";
-import { bindSound } from "./sound/bind";
+import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
 import { StatsTicker } from "./ui/StatsTicker";
@@ -38,6 +38,7 @@ import { TelemetryPanel } from "./ui/TelemetryPanel";
 import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
+import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
 import { TacticalView } from "./views/TacticalView";
 import { takeEyesOf } from "./takeeyes/controller";
@@ -78,17 +79,23 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasTakeEyes.current = takeEyes;
   }, [takeEyes]);
-  // Online: play behind the card. Not `introOpen`: closing the card must not restart the stream.
+  // The autoplay waits for the lineup card: the key scan comes in the stream's first seconds and
+  // must not play under it. Behind the card the picture rests on the first frame. Online: watch
+  // live, then the show (the look, then the run without it) and the breakdown once the moment is
+  // detected. Offline: the show and the bundled breakdown at once. Once per session: the card
+  // never opens again.
+  const started = useRef(false);
   useEffect(() => {
-    if (!autoplay || !session.feed) return;
-    controls.startLive();
-    return () => session.feed?.stop();
-  }, [autoplay, controls, session]);
-  // The bundled breakdown still waits for the card so the viewer sees it from its first line.
-  useEffect(() => {
-    if (!autoplay || session.feed || introOpen) return;
-    controls.playBreakdown();
-  }, [autoplay, controls, introOpen, session]);
+    if (!autoplay || started.current) return;
+    if (introOpen) {
+      if (playback.get().frame !== 0) playback.set({ frame: 0 });
+      return;
+    }
+    started.current = true;
+    if (session.feed) controls.startLive();
+    else controls.autoplay();
+  }, [autoplay, controls, introOpen, playback, session]);
+  useEffect(() => () => session.feed?.stop(), [session]);
 
   return (
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
@@ -221,11 +228,15 @@ function LiveScreen(props: {
   card: ReactNode;
   caption?: ReactNode;
 }) {
-  const { playback } = useView();
+  const session = useView();
+  const { playback } = session;
   const focus = useStore(playback, (s) => s.focus);
+  const camera = useStore(playback, (s) => s.camera);
   const introOpen = useStore(intro, (s) => s.open);
   const board = focus === "tactical";
   const pip = focus === "split" || board;
+  // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
+  const belief = pip && !board && beliefPip(session, camera);
   return (
     <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
@@ -235,7 +246,7 @@ function LiveScreen(props: {
             <PovView />
           </div>
           <div className={board ? "slot main" : pip ? "slot pip" : "slot hidden"}>
-            <TacticalView />
+            {belief ? <BeliefMap /> : <TacticalView />}
           </div>
           <div className="shade top" aria-hidden="true" />
           <div className="shade bottom" aria-hidden="true" />
@@ -299,6 +310,10 @@ function MatchView() {
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
   useEffect(() => startClock(session), [session]);
+  useEffect(
+    () => (session.kind === "match" ? bindMatchSound(session.recap.voice, soundEngine) : undefined),
+    [session],
+  ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
@@ -309,6 +324,7 @@ function MatchView() {
             <MatchPicker />
           </>
         }
+        end={<SoundToggle icon />}
         card={
           <>
             <Scoreboard />

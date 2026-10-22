@@ -137,6 +137,9 @@ def test_a_breakdown_with_a_template_step_is_degraded():
         {"step": "analyst", "source": "template"}]}}  # fmt: skip
     assert prewarm.problems(bad) == ["plan from template", "analyst from template"]
     assert prewarm.problems({"source": "offline", "result": {}}) == ["source offline"]
+    # Cached before the crew recorded its trace: regenerating it records one (SPEC 6).
+    assert prewarm.problems({**clean, "traced": False}) == ["no crew trace"]
+    assert prewarm.problems({**clean, "traced": True}) == []
 
 
 def test_tts_speaks_every_cue_once(tmp_path, replies, speech, clock):

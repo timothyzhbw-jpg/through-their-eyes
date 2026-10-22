@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
-// The pre-match card owns only the first page opening. An offline breakdown waits for its
-// dismissal; a live stream plays behind the card. Switching between a stitched match and a hero
-// breakdown never opens the card again.
+// The pre-match card owns only the first page opening. A hero moment waits for its dismissal,
+// online and offline: its key scan comes in the stream's first seconds and must not play under
+// the card. A stitched match's stream plays behind it. Switching between a stitched match and a
+// hero breakdown never opens the card again.
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -13,7 +14,7 @@ import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
-import { createSession, SessionContext } from "../session";
+import { createSession, SessionContext, tickSession } from "../session";
 import {
   API,
   breakdownResponse,
@@ -100,9 +101,9 @@ function button(page: Element, name: string): HTMLButtonElement {
 const click = (el: HTMLElement) => act(() => el.click());
 
 describe("the pre-match autoplay gate", () => {
-  it("holds the offline hero breakdown until the card closes", () => {
+  it("holds the offline hero's show and breakdown until the card closes", () => {
     const session = heroSession();
-    const play = vi.spyOn(session.controls, "playBreakdown").mockImplementation(() => {});
+    const play = vi.spyOn(session.controls, "autoplay").mockImplementation(() => {});
     intro.set({ open: true });
     mount(
       <SessionContext.Provider value={session}>
@@ -116,7 +117,7 @@ describe("the pre-match autoplay gate", () => {
     expect(play).toHaveBeenCalledOnce();
   });
 
-  it("plays the online hero stream behind the card and keeps its unmount cleanup", () => {
+  it("starts the online hero stream when the card closes, never under it, and keeps its unmount cleanup", () => {
     const session = heroSession(true);
     const start = vi.spyOn(session.controls, "startLive").mockImplementation(() => {});
     const stop = vi.spyOn(session.feed!, "stop");
@@ -127,8 +128,9 @@ describe("the pre-match autoplay gate", () => {
       </SessionContext.Provider>,
     );
     expect(container.querySelector("[role=dialog]")).not.toBeNull();
-    expect(start).toHaveBeenCalledOnce();
-    expect(stop).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+    // Behind the card the picture rests on the stream's first frame, not on the key scan.
+    expect(session.playback.get().frame).toBe(0);
 
     act(() => intro.set({ open: false }));
     expect(start).toHaveBeenCalledOnce();
@@ -245,20 +247,61 @@ describe("the pre-match autoplay gate", () => {
         <App autoplay />
       </SessionContext.Provider>,
     );
-    expect(sockets.sockets, "the live stream starts behind the open card").toHaveLength(1);
+    expect(sockets.sockets, "no stream under the open card").toHaveLength(0);
+    act(() => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(container.querySelector("[role=dialog]")).toBeNull();
+    expect(sockets.sockets, "the live stream starts as the card closes").toHaveLength(1);
     const ws = sockets.sockets[0];
     act(() => {
       ws.open();
       ws.push(hello(), frameMsg(0), frameMsg(1), frameMsg(2));
     });
-    act(() => {
-      vi.advanceTimersByTime(6000);
-    });
-    expect(container.querySelector("[role=dialog]")).toBeNull();
     expect(intro.get().open).toBe(false);
     expect(session.playback.get()).toMatchObject({ live: true, playing: true });
     expect(session.feed!.state.get().status).toBe("streaming");
   });
+
+  it("on a cold load with no input, the run without the look is on screen and said within 20 s", async () => {
+    vi.useFakeTimers();
+    const { session, sockets } = onlineHero();
+    intro.set({ open: true });
+    const { container } = mount(
+      <SessionContext.Provider value={session}>
+        <App autoplay />
+      </SessionContext.Provider>,
+    );
+    let t = 0;
+    const DT = 1 / 20;
+    const tick = () =>
+      act(() => {
+        tickSession(session, DT);
+        vi.advanceTimersByTime(DT * 1000);
+        t += DT;
+      });
+    // The card counts down; nothing streams under it.
+    while (intro.get().open && t < 10) tick();
+    expect(t).toBeLessThan(5.5);
+    const ws = sockets.sockets[0];
+    const last = hero.runs.factual.frames - 1;
+    act(() => {
+      ws.open();
+      ws.push(hello());
+      for (let f = 0; f <= last; f++) ws.push(frameMsg(f));
+    });
+    // The stream plays at 1x; the moment is announced when its window closes, at the last frame.
+    while (session.playback.get().frame < last - 0.5 && t < 30) tick();
+    act(() => ws.push(momentMsg(HERO_MOMENT, last)));
+    vi.useRealTimers();
+    await act(settle);
+    vi.useFakeTimers();
+    while (session.playback.get().mode !== "counterfactual" && t < 30) tick();
+    expect(t, "seconds from the page opening to the run without the look").toBeLessThan(20);
+    expect(container.querySelector(".stage-caption")?.textContent).toContain(
+      "Without that look, H8 would have passed to H4.",
+    );
+  }, 20_000); // a few hundred rendered ticks: slow on a loaded machine
 
   it("on a cold load of a stitched match, the card is gone and the stream plays by 6 s", () => {
     vi.useFakeTimers();
@@ -296,7 +339,7 @@ describe("the pre-match autoplay gate", () => {
       </SessionContext.Provider>,
     );
     expect(container.querySelector("[role=dialog]")).not.toBeNull();
-    expect(session.playback.get()).toMatchObject({ live: true, playing: true });
+    expect(session.playback.get()).toMatchObject({ live: false, playing: false });
     // Not the default eyes, so the pick has to land on H8 without taking over the autoplay.
     act(() => session.playback.set({ povPlayer: "A5" }));
     click(button(container, "J. Ferriday · CM The hero of this moment"));
@@ -313,7 +356,8 @@ describe("the pre-match autoplay gate", () => {
       ws.push(momentMsg(HERO_MOMENT, 16));
     });
     await act(settle);
-    expect(session.runner.status.get().status).toBe("running");
+    // The show comes first (the look, then the run without it), then the breakdown.
+    expect(session.comparison.status.get().phase).toBe("with");
     expect(session.playback.get().povPlayer).toBe("H8");
   });
 });

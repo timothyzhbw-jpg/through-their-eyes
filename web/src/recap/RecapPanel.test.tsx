@@ -241,3 +241,80 @@ describe("the recap button", () => {
     expect(session.recap.state.get().status).toBe("ready");
   });
 });
+
+describe("the recap's crew trace", () => {
+  it("opens the trace of the crew run that wrote the recap, or says it was not recorded", async () => {
+    const key = fixture.key;
+    const { session, fetch } = online({
+      [`GET /api/recaps/${key}/trace`]: () =>
+        json({
+          key,
+          recorded: false,
+          trace: null,
+          detail: "trace not recorded for this cached run",
+        }),
+    });
+    await ready(session);
+    const page = mount(session, <RecapPanel />);
+    const open = button(page, "Crew trace")!;
+    expect(open.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => {
+      open.click();
+      await settle();
+    });
+    expect(fetch.calls.at(-1)).toMatchObject({ method: "GET", path: `/api/recaps/${key}/trace` });
+    expect(open.getAttribute("aria-expanded")).toBe("true");
+    expect(page.querySelector(".crew-trace")!.textContent).toContain(
+      "Trace not recorded for this cached run",
+    );
+    expect(page.querySelector(".trace-bar")).toBeNull(); // nothing made up
+  });
+});
+
+describe("where the recap came from", () => {
+  const recapWith = (patch: Parameters<typeof recapFixture>[3]) =>
+    online({ "POST /api/recaps": () => json(recapFixture(raw, "casual", "en", patch)) });
+
+  async function page(patch: Parameters<typeof recapFixture>[3]) {
+    const { session } = recapWith(patch);
+    await ready(session);
+    return mount(session, <RecapPanel />).textContent!.replace(/\s+/g, " ");
+  }
+
+  it("a template recap says no model call and the API's reason, not who wrote it", async () => {
+    const text = await page({
+      source: "offline",
+      rate_limited: true,
+      provenance: { kind: "template", ran_at: null, reason: "rate_limited" },
+    });
+    expect(text).toContain(
+      "Offline template: no model call (rate-limited: too many new requests from this address)",
+    );
+    expect(text).not.toContain("budget");
+    expect(text).not.toMatch(/Written by the (agent )?crew/);
+  });
+
+  it("past the daily cap it says the budget is used up", async () => {
+    const text = await page({
+      source: "offline",
+      capped: true,
+      provenance: { kind: "template", ran_at: null, reason: "capped" },
+    });
+    expect(text).toContain("Offline template: no model call (today's model budget is used up)");
+  });
+
+  it("a crew run made now is live; a cached one shows its time", async () => {
+    const live = await page({
+      source: "model",
+      provenance: { kind: "live", ran_at: "2026-10-21T19:31:12+00:00", reason: null },
+    });
+    expect(live).toContain("Live: written by the crew just now");
+    const cached = await page({
+      source: "model",
+      cached: true,
+      provenance: { kind: "cached", ran_at: "2026-10-21T19:31:12+00:00", reason: null },
+    });
+    expect(cached).toContain("Cached: a crew run from 21 Oct 2026, 19:31 UTC");
+    expect(cached).not.toContain("just now");
+  });
+});
