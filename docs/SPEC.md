@@ -771,8 +771,10 @@ is a step.
 The sim plays by the IFAB Laws of the Game as hard rules: it never breaks a law without the
 referee calling it. Bowen asked for it on 2026-10-22 ("把足球裁判员手册写进sim写死"), after he saw that
 the flagship pass H8 → H9 of `blind_side_run` was offside. The audit found it offside on every
-seed. The Laws are cited as "IFAB Laws of the Game, Law 11.2" and restated in our own words; no
-text, diagram or figure of the Laws is in the repo.
+seed. The source is the IFAB *Laws of the Game 2026/27* on theifab.com, read law by law on
+2026-10-22 ([REFERENCES.md](REFERENCES.md#the-laws-of-the-game-spec-39)): where the Laws and
+intuition differ, the Laws win. Each rule is cited by law and section ("IFAB Laws of the Game,
+Law 11.2") and restated in our own words; no text, diagram or figure of the Laws is in the repo.
 
 - **Where.**
   - `sim/laws.py`: constants and pure checks over a frame or an event, with no engine imports.
@@ -786,23 +788,23 @@ text, diagram or figure of the Laws is in the repo.
     wrong or early call).
   - The web's pitch is checked against `sim/laws.py` by `tests/test_pitch_geometry.py`.
 - **Body model.** Players are points: the centre of the body on the ground. For offside the Laws
-  count head, body and feet, never arms, and compare the attacker's part nearest the goal line
+  count head, body and feet, never the hands or arms (Law 11.1), and compare the attacker's part nearest the goal line
   with the second-last opponent's. Every player has the same body, so its depth cancels and the
   comparison is point against point; the ball counts by its centre. "Level" means within 1 mm,
   the resolution positions are written at (§3.7).
 
 | Law | What the sim does |
 |---|---|
-| 1, the field | 105 × 68 m. Goal 7.32 m between the inner edges of the posts, 2.44 m to the bar's lower edge. Goal area 5.5 m, penalty area 16.5 m, penalty mark 11 m, centre circle and penalty arc 9.15 m, corner arc 1 m, lines 12 cm. Round posts on the goal line, their backs on its outer edge (Law 1 allows round ones). `sim.config`, `sim.shots`, `analytics.xt` and the web app use these numbers (tests). |
-| 2, the ball | Radius 0.11 m, inside the 68–70 cm circumference (0.108–0.111 m). |
-| 3, the players | Eleven a side, one goalkeeper each, in every scenario (test). |
-| 8, kick-off | Not simulated: a match's kick-offs are stitches (§3.1). `laws.restart_breaches` checks one. |
-| 9, ball in and out of play | Out once the whole ball is over a goal line or a touchline, carried or rolling, on the first frame it has wholly crossed. Until 2026-10-22 it was out when its centre crossed, and a carried ball never went out. |
-| 10, a goal | Any ball that wholly crossed the goal line between the posts and under the bar, whoever touched it last. An own goal counts for the attacking team (`own_goal`). A ball that meets a post bounces off it (`sim.ball.post_contact`, restitution 0.5, tunable and uncited). Until then a ball through the post counted as a goal or as wide, and a pass that rolled in was called out. |
-| 11, offside | At every pass or shot the referee notes who is in an offside position: in the opponents' half, nearer their goal line than the ball and the second-last opponent. Off-field players count as on the line. It is an offence when that player plays the ball, challenges an opponent for it (within the 1 m control radius), or stands in the keeper's line of sight at a shot. There is no offence straight from a goal kick, throw-in or corner. Play stops with an `offside` event and an indirect free kick to the defenders where he became involved; the pass's outcome is `offside` and the stitched match restarts with `free_kick`. |
+| 1, the field | 105 × 68 m, inside the international range (1.4). Lines 12 cm, each belonging to the area it bounds (1.2). Goal area 5.5 m (1.5); penalty area 16.5 m, penalty mark 11 m, penalty arc 9.15 m (1.6); centre circle 9.15 m (1.2); corner arc 1 m (1.7). Goal 7.32 m between the inner edges of the posts, 2.44 m to the bar's lower edge; round posts on the goal line, their backs on its outer edge (1.10 allows round ones). `sim.config`, `sim.shots`, `analytics.xt` and the web app use these numbers (tests). |
+| 2, the ball | Radius 0.11 m, inside the 68–70 cm circumference (0.108–0.111 m), and 0.43 kg, inside 410–450 g (2.1). |
+| 3, the players | Eleven a side, one goalkeeper each, in every scenario (3.1; test). |
+| 8, kick-off | Not simulated: a match's kick-offs are stitches (§3.1). `laws.restart_breaches` checks one (8.1). |
+| 9, ball in and out of play | Out once the whole ball is over a goal line or a touchline, carried or rolling, on the first frame it has wholly crossed (9.1). A ball back off a post stays in play (9.2). Until 2026-10-22 it was out when its centre crossed, and a carried ball never went out. |
+| 10, a goal | Any ball that wholly crossed the goal line between the posts and under the bar, whoever touched it last, and only if the scoring team committed no offence first (10.1). An own goal counts for the attacking team (`own_goal`). A ball that meets a post bounces off it (`sim.ball.post_contact`, restitution 0.5, tunable and uncited). Until then a ball through the post counted as a goal or as wide, and a pass that rolled in was called out. |
+| 11, offside | At the first contact of a team-mate's pass or shot the referee notes who is in an offside position: in the opponents' half (the halfway line excluded), nearer their goal line than the ball and the second-last opponent; level is onside (11.1). Off-field players count as on the line (11.4). The offence needs involvement in active play (11.2): he plays or touches the ball, including after it came back off a post (gaining an advantage: the watch survives the rebound); he challenges an opponent for it (within the 1 m control radius); or he clearly blocks the keeper's line of vision at a shot. A clear attempt to play a close ball and an obvious action are judgement calls the sim has no data for. No offence straight from a goal kick, throw-in or corner (11.3). Play stops with an `offside` event and an indirect free kick to the defenders where he became involved (11.4); the pass's outcome is `offside` and the stitched match restarts with `free_kick`. |
 | 11, players who know it | Attackers without the ball hold HOLD_MARGIN (1 m) short of the line while their team has the ball, except the intended receiver of a pass in flight (`Referee.hold_the_line`). A scripted run is timed by its scenario. The decision model multiplies a pass's P(success) by 1 − P(offside) on the carrier's belief, with the belief's position spread (§3.5), so a clear offside pass is worth about losing the ball there; only a belief error or the softmax picks it. `possession_play`'s passer never picks an offside receiver. |
-| 12, fouls | A keeper handles (saves) only inside his own penalty area. A tackle counts only ball-first: the tackler is nearer the ball than the carrier (`press_escape`, the only scenario with tackles). Players are points with no contact model, so the sim has no other fouls to call. |
-| 13–17, restarts | The only simulated restart is `corner_blind_side`'s corner (`Scenario.restart`). The ball is in the corner arc, and opponents keep 9.15 m from the arc until it is taken (`Referee.keep_back`). The receiver of a corner cannot be offside. Throw-ins, goal kicks and kick-offs between possessions are stitches (§3.1); `eval/laws.py` lists what the Laws award and to which team. |
+| 12, fouls | A keeper handles (saves) only inside his own penalty area (12.1); he never handles a team-mate's back pass or throw-in (12.2), and never holds the ball for eight seconds (12.3). A tackle counts only ball-first: the tackler is nearer the ball than the carrier, our stand-in for a careless challenge (12.1; `press_escape`, the only scenario with tackles). Players are points with no contact model, so the sim has no other fouls to call. |
+| 13–17, restarts | The only simulated restart is `corner_blind_side`'s corner (`Scenario.restart`): the ball in the corner area, part of it over the arc being enough, and opponents 9.15 m from the arc until it is taken (17.1; `Referee.keep_back`). The receiver of a corner cannot be offside (11.3). Checks for the others (13.2–13.3, 15.1, 16.1) are in `laws.restart_breaches`; throw-ins, goal kicks and kick-offs between possessions are stitches (§3.1), and `eval/laws.py` lists what the Laws award and to which team. |
 
 - **The flagship pass, onside by construction.** `blind_side_run`'s H9 starts 5 m deeper
   (19, −2), with A5 straight goal-side of him. His run is timed so that he is 1 m short of the

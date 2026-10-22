@@ -1,6 +1,6 @@
 # Laws of the Game audit (SPEC 3.9)
 
-`uv run python -m eval.laws`. Every scenario on design seeds 0–99 and held-out seeds 100–139 and 200–239, each hero scenario's own intervention on the same seeds, and the stitched matches 1, 2, judged with `sim/laws.py` (IFAB Laws of the Game, cited by law; the rules are restated in our own words there). `possession_play` and `open_play` run 45 s. Runs: 900 design, 720 held-out, 1260 intervention, 19 match 1, 17 match 2 (2,916 in all).
+`uv run python -m eval.laws`. Every scenario on design seeds 0–99 and held-out seeds 100–139 and 200–239, each hero scenario's own intervention on the same seeds, and the stitched matches 1, 2 (each on its own plan, `sim.match.plan_for`), judged with `sim/laws.py`: the IFAB *Laws of the Game 2026/27* (theifab.com), each rule cited by law and section and restated in our own words there. `possession_play` and `open_play` run 45 s. Runs: 900 design, 720 held-out, 1260 intervention, 19 match 1, 17 match 2 (2,916 in all).
 
 A **breach** is something a law forbids; it is **called** when the referee stopped play for it and **unpunished** otherwise. A **wrong call** stops play or gives a goal where the Laws do not, an **early call** is the right call before the whole ball had crossed, and **not modelled** is what the sim has no physics for (the woodwork).
 

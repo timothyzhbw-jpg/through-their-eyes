@@ -131,6 +131,28 @@ conservatively), and no logos anywhere.
 - Amazon Prime Vision live alerts for NFL —
   https://www.aboutamazon.com/news/entertainment/thursday-night-football-amazon-prime-video-ai-features
 
+## The Laws of the Game (SPEC 3.9)
+- The International Football Association Board (IFAB), *Laws of the Game 2026/27*,
+  https://www.theifab.com/laws/latest/ (the edition the site serves as "latest"; changes listed at
+  https://www.theifab.com/law-changes/latest/). **Read law by law on 2026-10-22:** Laws 1, 2, 3,
+  8, 9, 10, 11, 12, 13, 15, 16 and 17, the laws the sim can express.
+- How we use it: `sim/laws.py` restates each rule in our own words and cites it by law and
+  section ("Law 11.2"); `sim/referee.py` enforces it in the frame loop; `eval/laws.py` audits every
+  run against it. No text, diagram or figure of the Laws is in the repo. The Laws are © IFAB.
+- Section map we cite (2026/27): 1.2 markings, 1.3–1.4 dimensions, 1.5 goal area, 1.6 penalty
+  area, mark and arc, 1.7 corner area, 1.10 goals; 2.1 the ball's size and weight; 3.1 number of
+  players; 8.1 kick-off; 9.1–9.2 out of and in play; 10.1 goal; 11.1 offside position, 11.2
+  offence, 11.3 no offence, 11.4 sanctions and players off the field; 12.1 direct free kick
+  (tackles, handling), 12.2 indirect free kick (the keeper's back-pass and throw-in offences),
+  12.3 corner kick (the keeper holding the ball over eight seconds);
+  13.2 free-kick procedure, 13.3 sanctions; 15.1, 16.1 and 17.1 the throw-in, goal kick and
+  corner procedures.
+- Not expressed, and why: offside's "clearly attempting to play a close ball" and "an obvious
+  action" need a judgement the sim has no data for; the free-kick wall (13.2) needs a free kick the
+  sim never plays; the dropped ball (8.2), the eight-second keeper rule (12.3) and the
+  crossbar need situations the sim never creates (no match officials, keepers hold the ball for
+  under a second, every ball is on the ground).
+
 ## Papers and how we use them
 
 ### Perception and scanning
