@@ -151,9 +151,9 @@
         "role": "THE PRESSER",
         "sub": "HERE TO TAKE IT OFF YOU.",
         "spot": {
-          "x": 1290,
-          "y": 560,
-          "r": 120
+          "x": 1313,
+          "y": 553,
+          "r": 150
         },
         "side": "left",
         "scrim": 0.5
