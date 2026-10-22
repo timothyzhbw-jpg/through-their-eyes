@@ -161,6 +161,19 @@ on an LLM.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
     never set. Only `far_post_finish` shoots in match-1. Seed 11 scores at the far post with the
     look; without it, the counterfactual goes near post and A1 saves it (§3.6).
+  - *match-2* (`sim.match.MATCH_2`, 2026-10-21): three of match-1's heroes on other design seeds,
+    in another order: `press_escape` 1 from 0:25, `corner_blind_side` 2 from 3:22 and
+    `blind_side_run` 11 from 7:58. It has 17 possessions, 11:45 on this Mac and at most 12:23,
+    and no shooting hero, so it ends 0–0.
+    Each new seed passed the checks its demo seed passes: the hero moment and its lens are found,
+    the scenario's intervention changes the outcome (the decision; whether the man is marked as
+    the ball arrives; the possession after a forced carry), every claim is supported, and an
+    offline breakdown for every persona and language has no render violation. Of the seeds
+    screened, only `press_escape` 8 failed: its breakdown crashed in `runner_received` on an
+    intercepted pass (fixed in #89). The other seeds were picked for a typical size and a different
+    story: wide to H7 without the look; out to the full-back H3 under the press; 3.0 m with the
+    look and 8.1 m without, at the corner. The API serves it as `match-2` (`TTE_MATCHES=…,match:2`),
+    listed in the match picker; the default stays where it was.
   - Each possession stays its own `MatchRun`: moments, lenses, counterfactuals and breakdowns run
     per possession and are lifted to match time (`explain/match.py`). A possession's hero moment
     is `explain.moments.hero_card`: the hero's decision, or for the corner hero, who has no ball

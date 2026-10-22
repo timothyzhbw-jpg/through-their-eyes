@@ -29,7 +29,7 @@ import { launchChrome } from "./gpu.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,press_escape:0";
+const MATCHES = "blind_side_run:3,corner_blind_side:0,match:1,match:2,press_escape:0";
 const TIMEOUT = 45_000; // per step: the first load fetches the export, fonts and models
 const SETTLE = 2_500; // after the checks, so late errors (models, stream, breakdown) surface
 const BLANK = 20_000; // bytes: a screenshot of the page's background alone; a drawn page is ~400K
@@ -61,6 +61,8 @@ const PAGES = [
   },
   { name: "match-1", path: "?match=match-1&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
+  { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
+  { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
   { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
   { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {

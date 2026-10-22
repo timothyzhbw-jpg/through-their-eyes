@@ -115,8 +115,10 @@ TTE_API_PROXY=https://tte-api.whiteground-bd319324.northcentralus.azurecontainer
 
 `match-1` is 19 scenario possessions on one clock of about 11¾ minutes (`sim/match.py`, SPEC 3.1):
 open-play passages and four heroes (the blind-side run at 0:30, escaping the press at 4:33, the
-far-post finish at 6:41, which scores, and the short corner at 8:30). It exists only on the live service: offline, the bundled hero
-moment plays and the badge says why.
+far-post finish at 6:41, which scores, and the short corner at 8:30). `match-2` (`?match=match-2`,
+in the match picker) plays three of them on other seeds, in another order: escaping the press at
+0:25, the short corner at 3:22, the blind-side run at 7:58. Both exist only on the live service:
+offline, the bundled hero moment plays and the badge says why.
 
 - **Live view.** The whole match streams like a hero moment. The score bug shows the score, the
   possession on screen (n of 19, its scenario) and how play restarted (kick-off, throw-in, …, or a
