@@ -11,7 +11,7 @@ import { estimateSpeechSeconds } from "./vo.mjs";
 
 const GRADES = new Set(["none", "night", "cool", "warm", "bleach", "mono", "danger"]);
 const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue"]);
-const FITS = new Set(["cover", "pad"]);
+const FITS = new Set(["cover", "pad", "contain"]);
 const TRANSITIONS = new Set(["cut", "fade", "flash", "dip", "whip", "glitch"]);
 const CROPS = new Set(["pov", "tactical", "stage"]);
 const NUMBER_WORD =
@@ -316,6 +316,7 @@ function checkPicture(beat, i, where, cine, titles, ctx, errors) {
     if (picture.reverse != null && typeof picture.reverse !== "boolean") errors.push(`${where}: reverse must be true or false`);
     checkCrop(picture.crop, where, errors);
     checkPush(picture.push, where, errors);
+    if (picture.fit != null && !FITS.has(picture.fit)) errors.push(`${where}: fit must be one of ${[...FITS].join(", ")}`);
     return;
   }
   if (picture.src === "title") {

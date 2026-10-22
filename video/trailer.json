@@ -2278,7 +2278,8 @@
         "push": [
           1.0,
           1.05
-        ]
+        ],
+        "fit": "contain"
       },
       "overlays": [
         {
@@ -2308,7 +2309,8 @@
         "push": [
           1.05,
           1.05
-        ]
+        ],
+        "fit": "contain"
       },
       "fx": [
         "rewind"
