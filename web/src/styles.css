@@ -3708,11 +3708,15 @@ optgroup {
     color: var(--chalk-2);
   }
   .stage-director .director-chip {
+    text-align: left;
+  }
+  /* Its words clamp to two lines, not the chip: a clamp clips at the padding's edge, so the
+     clamped chip showed a third line in its padding ("…before the ball… arrives"). */
+  .stage-director .director-chip .director-text {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
-    text-align: left;
   }
   /* On the board the one live stat sits on its bottom edge, where the pass options' key is: the
      key goes up a line while a stat shows (they were text on text). */
