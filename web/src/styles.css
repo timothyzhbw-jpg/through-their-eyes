@@ -3494,37 +3494,44 @@ optgroup {
   .stage-head .live {
     position: relative;
   }
+  /* In the band between the header's buttons (to y 68) and the run switch under them (from
+     y 84): a fixed 12 px line at 70-82 whatever the font. At 13 px below the pill a sprinter's name
+     ran into "With the look" from 1181 to about 1400 px; at 6 px, with Linux's taller line, into
+     "Your call". A long list of sprinters ends in an ellipsis. */
   .stage-head .live-status {
     position: absolute;
-    top: calc(100% + 13px);
+    top: calc(100% + 9px);
     left: 0;
+    height: 12px;
+    line-height: 12px;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 }
 
 /* ---------- motion ---------- */
+/* Cards and captions rise and fade in, sharp from the first frame: no blur-in (Bowen: blur is
+   uncomfortable; styles.test.ts keeps keyframes blur-free). */
 @keyframes tt-rise {
   from {
     opacity: 0;
     transform: translateY(14px);
-    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-cap {
   from {
     opacity: 0;
     transform: translateY(10px);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-beat {
