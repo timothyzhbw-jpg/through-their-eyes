@@ -174,10 +174,14 @@ describe("belief error is the hero's only", () => {
   it("labels every value as a computed sim metric, never a verified claim", () => {
     const html = at(offline(), { frame: key.start });
     for (const name of ROWS) {
-      expect(row(html, name)).toMatch(/class="source"[^>]*title="[^"]*not a verified claim/);
+      expect(row(html, name)).toMatch(/class="source"[^>]*title="[^"]*: not AI narration\./);
     }
     expect(html).not.toContain("source verified");
-    expect(html).not.toContain("✓");
+    // No verified mark: the only ✓ is in the words saying how the ✓ lines differ from these.
+    const shown = html
+      .replace(/title="[^"]*"/g, "")
+      .replace(/<details class="how-checked">[\s\S]*?<\/details>/, "");
+    expect(shown).not.toContain("✓");
   });
 });
 

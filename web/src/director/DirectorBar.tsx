@@ -63,7 +63,8 @@ export function DirectorBar() {
               ? "The breakdown is choosing the cameras."
               : auto
                 ? "Auto director on: it cuts when play gives a reason."
-                : "Pick any camera. A suggestion shows here when play gives a reason to switch."}
+                : // Says nothing of where the cameras are: on a phone they sit in View options.
+                  "When play gives a reason to switch cameras, a suggestion shows here."}
           </span>
         )}
       </div>

@@ -28,12 +28,14 @@ import {
 } from "./tactics";
 import "./tactics.css";
 import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
 
-const MEASURED =
-  "Measured from tracking and the event feed (analytics/tactics.py): a metric, not a verified claim";
-const SIM_RECORD =
-  "The decision model's options as the sim recorded them (SPEC 3.5): not on the live stream, " +
-  "not a verified claim";
+const MEASURED = computed(
+  "Measured from the match's tracking and event feed (analytics/tactics.py)",
+);
+const SIM_RECORD = computed(
+  "The decision model's options as the simulation recorded them (SPEC 3.5), not on the live stream",
+);
 
 function Source() {
   return <SourceChip kind="tracking" title={MEASURED} />;
