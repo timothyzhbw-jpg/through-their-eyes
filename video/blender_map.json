@@ -185,21 +185,6 @@
       "label": "dramatisation"
     },
     {
-      "beat": "b01b-s1b-tail",
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_ots.mp4",
-        "in": 1.533,
-        "fit": "pad"
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "label": "dramatisation",
-      "fit": true
-    },
-    {
       "beat": "b02-s1c-steal",
       "picture": {
         "src": "clip",
@@ -212,7 +197,19 @@
         "glue"
       ],
       "label": "dramatisation",
-      "fit": true
+      "fit": true,
+      "sfx": [
+        {
+          "name": "impact",
+          "at": 0.533,
+          "gain_db": -4
+        },
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -3
+        }
+      ]
     },
     {
       "beat": "b03-s1d-fall",
@@ -228,13 +225,7 @@
       ],
       "label": "dramatisation",
       "fit": true,
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 0.05,
-          "gain_db": -3
-        }
-      ]
+      "sfx": []
     },
     {
       "beat": "b05a-s2-ots",

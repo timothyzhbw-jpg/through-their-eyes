@@ -1,5 +1,5 @@
 {
-  "about": "Cue sheet for cut v14 (the edit after the outside review: the feature run cut to about sixteen seconds, the with / without split longer, panels zoomed, close-ups trimmed, a tagline card and an end card with a QR code; 99.867 s, an app beat after the press and the crew trace after the lineup), otherwise as v13.",
+  "about": "Cue sheet for cut v14 (the edit after the outside review: the feature run cut to about sixteen seconds, the with / without split longer, panels zoomed, close-ups trimmed, a tagline card and an end card with a QR code; 99.199 s, the S1 shoulder charge v14, an app beat after the press and the crew trace after the lineup), otherwise as v13.",
   "trailer_ref": null,
   "bpm": 140,
   "sections": [
@@ -69,10 +69,10 @@
     },
     {
       "type": "hit",
-      "at": "b03-s1d-fall",
+      "at": "b02-s1c-steal:+0.533",
       "size": "big",
       "snap": false,
-      "note": "the tackle: hard cut on the contact"
+      "note": "the shoulder charge: contact (frame 17)"
     },
     {
       "type": "card",
@@ -411,21 +411,21 @@
       "type": "window",
       "mood": "hush",
       "from": "b02-s1c-steal",
-      "to": "b03-s1d-fall:+0.3",
-      "note": "the steal"
+      "to": "b02-s1c-steal:+0.533",
+      "note": "the charge"
     },
     {
       "type": "window",
       "mood": "gap",
-      "from": "b03-s1d-fall:+0.3",
-      "to": "b03-s1d-fall:+0.67",
+      "from": "b03-s1d-fall:+0.05",
+      "to": "b03-s1d-fall:+0.4",
       "snap": false,
       "note": "silence before the coach's line"
     },
     {
       "type": "window",
       "mood": "hush",
-      "from": "b03-s1d-fall:+0.67",
+      "from": "b03-s1d-fall:+0.4",
       "to": "b05b-s2-push",
       "note": "under the coach"
     },

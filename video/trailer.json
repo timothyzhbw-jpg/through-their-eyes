@@ -28,12 +28,12 @@
   "music": [
     {
       "asset": "music-score-hybrid",
-      "at": 0.0,
-      "from": 0.0,
-      "until": 99.867,
+      "at": 0,
+      "from": 0,
+      "until": 99.199,
       "gain_db": 4,
-      "fade_in": 0.0,
-      "fade_out": 0.0,
+      "fade_in": 0,
+      "fade_out": 0,
       "duck_db": -9
     }
   ],
@@ -1991,6 +1991,22 @@
       "params": {
         "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
       }
+    },
+    "label-dr-0p966": {
+      "template": "label",
+      "dur": 0.966,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-0p867": {
+      "template": "label",
+      "dur": 0.867,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
     }
   },
   "beats": [
@@ -2024,32 +2040,10 @@
       }
     },
     {
-      "id": "b01b-s1b-tail",
-      "story": "blender",
-      "section": "open",
-      "dur": 0.334,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_ots.mp4",
-        "in": 1.533,
-        "fit": "pad"
-      },
-      "overlays": [
-        {
-          "title": "label-dr-0p334",
-          "at": 0
-        }
-      ],
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ]
-    },
-    {
       "id": "b02-s1c-steal",
       "story": "blender",
       "section": "open",
-      "dur": 1,
+      "dur": 0.966,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_steal.mp4",
@@ -2058,20 +2052,32 @@
       },
       "overlays": [
         {
-          "title": "label-dr-1",
+          "title": "label-dr-0p966",
           "at": 0
         }
       ],
       "letterbox": 2.39,
       "fx": [
         "glue"
+      ],
+      "sfx": [
+        {
+          "name": "impact",
+          "at": 0.533,
+          "gain_db": -4
+        },
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -3
+        }
       ]
     },
     {
       "id": "b03-s1d-fall",
       "story": "blender",
       "section": "open",
-      "dur": 1.167,
+      "dur": 0.867,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_fall.mp4",
@@ -2080,14 +2086,14 @@
       },
       "overlays": [
         {
-          "title": "label-dr-1p167",
+          "title": "label-dr-0p867",
           "at": 0
         }
       ],
       "vo": [
         {
           "id": "vc1",
-          "at": 0.67,
+          "at": 0.4,
           "speaker": "coach",
           "text": "See this?",
           "style": "friendly"
@@ -2097,13 +2103,7 @@
       "fx": [
         "glue"
       ],
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 0.05,
-          "gain_db": -3
-        }
-      ]
+      "sfx": []
     },
     {
       "id": "b05a-s2-ots",
@@ -2229,7 +2229,7 @@
     {
       "id": "b04-app-s2-ui",
       "story": "app",
-      "dur": 2.834,
+      "dur": 2.166,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
