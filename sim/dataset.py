@@ -275,7 +275,8 @@ def _xy(attrs: dict, key: str) -> tuple[float | None, float | None]:
 
 
 LOCATION = {"pass": "start", "shot": "start", "reception": "at", "interception": "at",
-            "tackle": "at", "out": "at", "goal": "at", "save": "at"}  # fmt: skip
+            "tackle": "at", "out": "at", "goal": "at", "save": "at", "offside": "at",
+            "post": "at"}  # fmt: skip
 
 
 def _event_row(match_id: int, e, p: Possession) -> dict[str, Any]:

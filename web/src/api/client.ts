@@ -144,6 +144,8 @@ export const BreakdownResponse = z.object({
   // Where it came from, as the service says it: shown as given, never worked out from the rest.
   provenance: Provenance.nullish(),
   drill: Drill.nullish(), // a failure drill; absent or null for a normal breakdown
+  // A limited drill or bring-back: the recording of the same run, and when it ran (ISO, UTC).
+  recorded: z.object({ at: z.string() }).nullish(),
   result: z.object({
     plan: z.unknown(), // a TelestrationPlan, validated like any other before it plays
     plan_source: z.enum(["agent", "template"]),

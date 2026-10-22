@@ -173,12 +173,6 @@
     return root;
   }
 
-  function flash(stage, at) {
-    const node = el("div", "fx-flash");
-    setAt(node, at);
-    stage.append(node);
-  }
-
   function kinetic(params, options = {}) {
     const align = ALIGNS.has(params.align) ? params.align : "center";
     const stage = prepare(null, align);
@@ -227,7 +221,6 @@
       setAt(head, at);
       row.append(head);
       stack.append(row);
-      if (text) flash(stage, at + 0.11);
     });
 
     const rule = el("i", "underline");
@@ -278,7 +271,6 @@
     bracket.append(row);
     wrap.append(bracket);
     stage.append(wrap);
-    if (items.length) flash(stage, 0.24);
   }
 
   function verified(params) {
@@ -309,11 +301,9 @@
       const mark = el("span", "mark");
       setAt(mark, stampAt);
       mark.append(checkMark());
-      const burst = el("i", "mini-flash");
-      setAt(burst, stampAt + 0.12);
       // The stamp lands after the line, never over the number, so the value stays readable.
       const stampBox = el("span", "stamp-box");
-      stampBox.append(ring, mark, burst);
+      stampBox.append(ring, mark);
       line.append(hold);
       if (item && item.after) line.append(el("span", "v-after", item.after));
       line.append(stampBox);
@@ -350,7 +340,6 @@
     setAt(cross, 0.5);
     cross.append(crossMark());
     stage.append(cross);
-    flash(stage, 0.62);
   }
 
   function lineup(params) {
@@ -361,12 +350,13 @@
     stage.append(header);
     const row = el("div", "crew-row");
     const stagger = num(params.stagger, 0.18);
+    const start = num(params.start, 0.16); // when the first card lands, s
     const highlight = params.highlight ? String(params.highlight).trim() : "";
     list(params.cards, 6).forEach((card, i) => {
       const name = card && card.name != null ? String(card.name) : "";
       const on = highlight !== "" && name.trim() === highlight;
       const node = el("article", on ? "crew-card highlight" : "crew-card");
-      const at = 0.16 + i * stagger;
+      const at = start + i * stagger;
       setAt(node, at);
       node.style.setProperty("--tilt", TILTS[i] || "-4deg");
       node.style.setProperty("--ty", on ? "-28px" : "0px");
@@ -394,7 +384,6 @@
     setAt(sub, 0.9);
     copy.append(title, sub);
     stage.append(copy);
-    flash(stage, 0.36);
   }
 
   function subboard(params) {
@@ -511,6 +500,15 @@
       });
       wrap.append(block);
     }
+    // Credit lines a licence requires word for word, in smaller type under the others.
+    const legal = list(params.legal, 4);
+    if (legal.length) {
+      const block = el("div", "end-legal");
+      legal.forEach((line) => block.append(el("div", "legal bebas fx-fade", line)));
+      setAt(block, 0.95 + lines.length * 0.16);
+      for (const node of block.children) setAt(node, 0.95 + lines.length * 0.16);
+      wrap.append(block);
+    }
     stage.append(wrap);
   }
 
@@ -601,7 +599,49 @@
   // cinematic shots, so no one mistakes them for the app's screens.
   function label(params) {
     const stage = prepare("free", null);
-    stage.append(el("div", "corner-label bebas", params.text || ""));
+    const corner = params.corner === "top-left" ? "corner-label corner-tl bebas" : "corner-label bebas";
+    stage.append(el("div", corner, params.text || ""));
+  }
+
+  // Freeze-frame name card: everything but the player drops about a stop under a scrim with a
+  // clear circle at `spot`, and the card slams in over two frames. Hard in, hard out: the clip
+  // simply ends at its length.
+  function namecard(params) {
+    const stage = prepare("free", null);
+    const spot = params.spot || {};
+    const x = num(spot.x, 960);
+    const y = num(spot.y, 540);
+    const r = num(spot.r, 160);
+    const scrim = el("div", "nc-scrim");
+    const dark = Math.min(1, Math.max(0, num(params.scrim, 0.5)));
+    scrim.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent ${r}px, rgba(8, 14, 11, ${dark}) ${Math.round(r * 1.5)}px)`;
+    const card = el("div", params.side === "right" ? "nc-card nc-right" : "nc-card");
+    const head = el("div", "nc-head anton");
+    head.append(el("span", "nc-name", params.name || ""));
+    if (params.role) head.append(el("span", "nc-role", ` · ${params.role}`));
+    card.append(head, el("span", "nc-rule"));
+    if (params.sub) card.append(el("div", "nc-sub bebas", params.sub));
+    stage.append(scrim, card);
+    card.animate([{ transform: "scale(1.12)" }, { transform: "scale(1)" }], {
+      duration: 66,
+      easing: "linear",
+      fill: "both",
+    });
+  }
+
+  // Chapter card: a small Floodlight label and the title in Anton on Night, no motion, so it cuts
+  // in and out hard on a downbeat.
+  function chapter(params) {
+    const stage = prepare("free", null);
+    const box = el("div", "chapter");
+    box.append(el("div", "chapter-label bebas", params.label || ""), el("div", "chapter-title anton", params.title || ""));
+    stage.append(box);
+  }
+
+  // Labels for a split-screen beat: the left half's in Floodlight, the right half's in Dusk.
+  function duo(params) {
+    const stage = prepare("free", null);
+    stage.append(el("div", "duo duo-left bebas", params.left || ""), el("div", "duo duo-right bebas", params.right || ""));
   }
 
   window.__titleBuild = {
@@ -618,6 +658,9 @@
     countdown,
     caption,
     label,
+    namecard,
+    chapter,
+    duo,
   };
 
   window.__title = {

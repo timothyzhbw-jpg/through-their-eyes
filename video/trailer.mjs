@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { assetFileName, downloadAsset, validateAssets } from "./lib/assets.mjs";
+import { assetFileName, copyLocalAsset, downloadAsset, validateAssets } from "./lib/assets.mjs";
 import { digest, isCached, storeHash } from "./lib/cache.mjs";
 import { burnArgs, captionSides, captionTimeline } from "./lib/captions.mjs";
 import { claimTable, resolveTitle, resolveVo } from "./lib/claims.mjs";
@@ -31,7 +31,7 @@ import {
 import { parseDuration, parseEbur128, parseLoudnorm, runFfmpeg, runProcess } from "./lib/ffmpeg.mjs";
 import { renderReport } from "./lib/report.mjs";
 import { SFX_DEFAULT_DUR, conflictingSfx, writeSfx } from "./lib/sfx.mjs";
-import { validateTrailer } from "./lib/spec.mjs";
+import { namedSpec, storyBeats, validateTrailer } from "./lib/spec.mjs";
 import { buildSsml, estimateSpeechSeconds, voiceFor, voRoomWarnings, wavSeconds } from "./lib/vo.mjs";
 import { encodeWav16Mono, readWav, trimSilence } from "./lib/wav.mjs";
 
@@ -44,7 +44,7 @@ const ENGINE = digest(
   ),
 );
 
-const STEPS = ["assets", "capture", "cine", "titles", "vo", "sfx", "edit", "sheet", "report"];
+const STEPS = ["assets", "capture", "cine", "pin", "titles", "vo", "sfx", "edit", "sheet", "report"];
 
 const USAGE = `Usage: node video/trailer.mjs [options]
 
@@ -54,6 +54,8 @@ const USAGE = `Usage: node video/trailer.mjs [options]
   --step <names>       run only these steps, comma-separated
   --force              ignore caches
   --only <ids>         edit: re-render these beats (ids or prefixes); reuse the others
+  --story <name>       blender (default) or app: which telling of the story to cut
+  --naming <name>      ids (default) or names: players as H8, or by the app's fictional names
   --base-url <url>     site passed to cine and to the capture kit
   --out <dir>          work directory (default: out/video/trailer)
   --headed             show the browser for cine and titles
@@ -80,6 +82,8 @@ async function main() {
         force: { type: "boolean", default: false },
         only: { type: "string" },
         "base-url": { type: "string" },
+        story: { type: "string" },
+        naming: { type: "string" },
         out: { type: "string" },
         headed: { type: "boolean", default: false },
         ffmpeg: { type: "string", default: "ffmpeg" },
@@ -101,6 +105,10 @@ async function main() {
 
   const specPath = path.resolve(args.spec ?? path.join(HERE, "trailer.json"));
   const spec = readJson(specPath);
+  if (args.story && !["blender", "app"].includes(args.story)) throw new Error(`--story must be blender or app`);
+  spec.beats = storyBeats(spec, args.story); // one telling of the story; the other's beats drop out
+  if (args.naming && !["ids", "names"].includes(args.naming)) throw new Error(`--naming must be ids or names`);
+  Object.assign(spec, namedSpec(spec, args.naming)); // player ids (H8) or the app's fictional names
   const shots = readJson(path.join(HERE, "shots.json"));
   const assets = readJson(path.join(HERE, "assets.json"));
   const credits = readFileSync(path.join(HERE, "CREDITS.md"), "utf8");
@@ -156,6 +164,7 @@ const STEP = {
   assets: stepAssets,
   capture: stepCapture,
   cine: stepCine,
+  pin: stepPin,
   titles: stepTitles,
   vo: stepVo,
   sfx: stepSfx,
@@ -174,14 +183,60 @@ async function stepAssets(ctx) {
   }
   for (const asset of ctx.assets) {
     const dest = path.join(dir, assetFileName(asset));
-    const hash = digest(["asset-v1", asset]);
+    const source = asset.local ? path.resolve(ctx.root, asset.local) : null;
+    const hash = digest(["asset-v1", asset, source ? fileStamp(source) : null]);
     if (fresh(dest, hash, ctx.force)) {
       console.log(`  ${asset.id}: cached`);
       continue;
     }
-    console.log(`  ${asset.id}: download`);
-    await downloadAsset(asset, dest);
+    if (source) {
+      console.log(`  ${asset.id}: copy ${asset.local}`);
+      copyLocalAsset(asset, ctx.root, dest);
+    } else {
+      console.log(`  ${asset.id}: download`);
+      await downloadAsset(asset, dest);
+    }
     storeHash(dest, hash);
+  }
+}
+
+/**
+ * Corner-pin a picture onto a screen in a rendered clip (video/pin.py): the coach's tablet shows
+ * a cine shot, mapped so its last frame matches that shot full frame. Output: <out>/pins/<id>.mp4.
+ */
+async function stepPin(ctx) {
+  const pins = ctx.spec.pins ?? [];
+  if (!pins.length) {
+    console.log("  no pins");
+    return;
+  }
+  const dir = path.join(ctx.outDir, "pins");
+  mkdirSync(dir, { recursive: true });
+  for (const pin of pins) {
+    const out = path.join(dir, `${pin.id}.mp4`);
+    const clip = path.resolve(ctx.root, pin.clip);
+    const corners = path.resolve(ctx.root, pin.corners);
+    const matte = path.resolve(ctx.root, pin.matte);
+    const source = path.join(ctx.outDir, "cine", `${pin.source.cine}.mp4`);
+    for (const f of [clip, corners, matte, source]) {
+      if (!existsSync(f)) throw new Error(`pin ${pin.id}: missing ${path.relative(ctx.root, f)}`);
+    }
+    const mattes = readdirSync(matte).filter((f) => f.endsWith(".png")).sort();
+    const hash = digest(["pin-v2", pin, fileStamp(clip), fileStamp(corners), fileStamp(source), mattes.length,
+      fileStamp(path.join(matte, mattes[mattes.length - 1] ?? "")), fileStamp(path.join(HERE, "pin.py"))]);
+    if (fresh(out, hash, ctx.force)) {
+      console.log(`  ${pin.id}: cached`);
+      continue;
+    }
+    const extra = [];
+    if (pin.source_time) extra.push("--source-time", String(pin.source_time));
+    if (pin.ev) extra.push("--ev", String(pin.ev));
+    if (pin.ev_ramp_frames) extra.push("--ev-ramp-frames", String(pin.ev_ramp_frames));
+    if (pin.ref_corners) extra.push("--ref-corners", path.resolve(ctx.root, pin.ref_corners));
+    await runProcess("uv", ["run", "--no-sync", "python", "video/pin.py", "--clip", clip, "--corners", corners,
+      "--matte", matte, "--source", source, "--source-offset-y", String(pin.source_offset_y ?? 0), ...extra, "--out", out],
+      { cwd: ctx.root, inherit: true });
+    storeHash(out, hash);
   }
 }
 
@@ -207,9 +262,11 @@ async function stepCapture(ctx) {
 }
 
 async function stepCine(ctx) {
-  const ids = [
-    ...new Set(ctx.spec.beats.filter((b) => b.picture?.src === "cine").map((b) => b.picture.id)),
-  ];
+  // Cine pictures, and the cine halves of split screens.
+  const parts = ctx.spec.beats.flatMap((b) =>
+    b.picture?.src === "split" ? [b.picture.left, b.picture.right] : [b.picture ?? {}],
+  );
+  const ids = [...new Set(parts.filter((p) => p?.src === "cine").map((p) => p.id))];
   if (!ids.length) {
     console.log("  no cine shots");
     return;
@@ -297,7 +354,7 @@ async function stepVo(ctx) {
       console.log(`  ${line.id}: dropped`);
       continue;
     }
-    const voice = voiceFor(ctx.spec, line.lang);
+    const voice = voiceFor(ctx.spec, line.lang, line.speaker);
     const ssml = buildSsml({ text: line.text, voice, style: line.style, degree: line.degree });
     const out = path.join(dir, `${line.id}.wav`);
     const ssmlPath = path.join(dir, `${line.id}.ssml`);
@@ -398,6 +455,7 @@ async function stepEdit(ctx) {
       built.env.cropBox ?? null,
       built.env.sourceDuration ?? null,
       fileStamp(built.env.file),
+      ...(built.env.files ?? []).map(fileStamp),
       ...(built.env.overlays ?? []).map((overlay) => fileStamp(overlay.file)), // a re-rendered title re-renders its beats
       ctx.spec.output,
     ]);
@@ -506,7 +564,7 @@ async function stepEdit(ctx) {
  */
 async function burnCaptions(ctx, timeline, joined) {
   const opts = ctx.spec.captions ?? {};
-  if (opts.enabled === false) return joined;
+  if (opts.enabled === false && !ctx.spec.watermark) return joined;
   const skip = new Set(opts.skip_languages ?? ["zh"]);
   const { table, doc } = loadClaims(ctx);
   const lines = resolveLines(ctx.spec, table, doc)
@@ -560,10 +618,11 @@ async function burnCaptions(ctx, timeline, joined) {
     }
   }
   console.log(`  captions: ${cues.length} lines (${todo.length} rendered)`);
+  const watermark = ctx.spec.watermark ? await watermarkStill(ctx, ctx.spec.watermark) : null;
   const out = path.join(ctx.outDir, "captioned.mp4");
-  const hash = digest(["captioned-v1", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)])]);
+  const hash = digest(["captioned-v2", ENGINE, fileStamp(joined), ...cues.map((c) => [c.start, fileStamp(c.file)]), watermark ? fileStamp(watermark) : null]);
   if (!fresh(out, hash, ctx.force)) {
-    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps }));
+    await runFfmpeg(ctx.ffmpeg, burnArgs(joined, cues, out, { fps, watermark, duration: timeline.duration }));
     storeHash(out, hash);
   }
   writeFileSync(path.join(ctx.outDir, "captions.json"), `${JSON.stringify(cues.map(({ file, hash, ...c }) => c), null, 2)}\n`);
@@ -592,6 +651,31 @@ function lowerLeftWindows(spec, timeline) {
     }
   });
   return out;
+}
+
+/** A still of the watermark (the label template, top left) as a PNG with alpha. */
+async function watermarkStill(ctx, text) {
+  const dir = path.join(ctx.outDir, "captions");
+  mkdirSync(dir, { recursive: true });
+  const mov = path.join(dir, "watermark.mov");
+  const png = path.join(dir, "watermark.png");
+  const page = ["titles.css", "titles.js", "label.html"].map((f) => fileStamp(path.join(HERE, "titles", f)));
+  const hash = digest(["watermark-v1", text, ctx.spec.output, ...page]);
+  if (!fresh(png, hash, ctx.force)) {
+    const { renderTitle } = await import("./lib/titles.mjs");
+    const { chromium } = await import("playwright");
+    const browser = await chromium.launch({ args: ["--hide-scrollbars"] });
+    try {
+      const { width, height, fps } = ctx.spec.output;
+      const title = { template: "label", dur: 0.2, alpha: true, params: { text, corner: "top-left" } };
+      await renderTitle({ browser, id: "watermark", title, fps, width, height, outFile: mov, ffmpeg: ctx.ffmpeg, log: () => {} });
+    } finally {
+      await browser.close();
+    }
+    await runFfmpeg(ctx.ffmpeg, ["-y", "-hide_banner", "-loglevel", "error", "-i", mov, "-frames:v", "1", "-pix_fmt", "rgba", png]);
+    storeHash(png, hash);
+  }
+  return png;
 }
 
 /** Whether this ffmpeg build has an encoder (`ffmpeg -encoders`). */
@@ -676,6 +760,10 @@ async function stepReport(ctx) {
   const measured = await runFfmpeg(ctx.ffmpeg, measureArgs(finalMp4));
   const loudness = parseEbur128(measured.stderr);
   const duration = parseDuration(measured.stderr) ?? timelineOf(ctx.spec.beats).duration;
+  // The film as encoded must stay clear of 2:00: fail at output.fail_at_s (default 117 s) of
+  // measured length, after the report is written so it shows what ran long.
+  const failAt = ctx.spec.output?.fail_at_s ?? 117;
+  const encoded = await probe(ctx.ffmpeg, finalMp4);
   const { table, doc } = loadClaims(ctx);
   const titles = resolveUsedTitles(ctx.spec, table);
   const lines = resolveLines(ctx.spec, table, doc);
@@ -701,11 +789,26 @@ async function stepReport(ctx) {
     used: title.used,
     missing: title.missing,
   }));
-  writeFileSync(out, renderReport({ timeline, spoken, shown, warnings, loudness, duration }));
+  // Photosensitivity (WCAG 2.3.1): flashes per second on the encoded film, and any red flash.
+  const flashes = await filmFlashes(ctx, finalMp4);
+  const flashLine =
+    `Flashes (WCAG 2.3.1, whole frame and each quarter): at most ${flashes.general.maxPerSecond} in any 1 s ` +
+    `(limit 3)${flashes.general.at != null ? `, at ${flashes.general.at.toFixed(2)} s` : ""}; ` +
+    `${flashes.general.flashes} in all; saturated-red flashes: ${flashes.red.flashes} (limit 0).`;
+  writeFileSync(out, renderReport({ timeline, spoken, shown, warnings, loudness, duration }).replace(/\n## Timeline/, `\n${flashLine}\n\n## Timeline`));
   storeHash(out, hash);
   console.log(
     `  ${duration.toFixed(2)}s, ${loudness.integrated.toFixed(1)} LUFS, true peak ${loudness.truePeak.toFixed(1)} dBFS`,
   );
+  console.log(`  flashes: max ${flashes.general.maxPerSecond}/s, red ${flashes.red.flashes}`);
+  if (flashes.general.maxPerSecond > 3 || flashes.red.flashes > 0) {
+    rmSync(`${out}.hash`, { force: true });
+    throw new Error(`out/video/trailer.mp4 fails the photosensitivity guard: ${flashLine}`);
+  }
+  if (encoded >= failAt) {
+    rmSync(`${out}.hash`, { force: true }); // run the check again next time
+    throw new Error(`out/video/trailer.mp4 is ${encoded.toFixed(2)} s, at or over the ${failAt} s limit (output.fail_at_s)`);
+  }
 }
 
 /** Picture inputs for one beat: which file, how long the source is, which overlays survived. */
@@ -714,6 +817,8 @@ async function beatEnv(ctx, beat, titles, manifest) {
   let file;
   let sourceDuration;
   let cropBox = null;
+  let files;
+  let sourceDurations;
   if (picture.src === "cine") {
     file = path.join(ctx.outDir, "cine", `${picture.id}.mp4`);
     sourceDuration = await probe(ctx.ffmpeg, file);
@@ -730,6 +835,17 @@ async function beatEnv(ctx, beat, titles, manifest) {
     }
   } else if (picture.src === "image") {
     file = path.resolve(ctx.root, picture.path);
+  } else if (picture.src === "split") {
+    const sideFile = (part) =>
+      part.src === "clip"
+        ? path.resolve(ctx.root, part.path)
+        : part.src === "cine"
+          ? path.join(ctx.outDir, "cine", `${part.id}.mp4`)
+          : path.join(ctx.finalsDir, `${part.shot}.webm`);
+    files = [sideFile(picture.left), sideFile(picture.right)];
+    for (const f of files) if (!existsSync(f)) throw new Error(`beat ${beat.id}: missing ${path.relative(ctx.root, f)}`);
+    sourceDurations = [await probe(ctx.ffmpeg, files[0]), await probe(ctx.ffmpeg, files[1])];
+    file = files[0];
   } else if (picture.src === "clip") {
     file = path.resolve(ctx.root, picture.path);
     if (!existsSync(file)) throw new Error(`beat ${beat.id}: missing clip ${picture.path} (rendered outside the repo; see video/README.md)`);
@@ -742,10 +858,22 @@ async function beatEnv(ctx, beat, titles, manifest) {
     if (!existsSync(title.file)) throw new Error(`missing ${title.file}; run the titles step`);
     overlays.push({ file: title.file, at: overlay.at });
   }
-  return { picture, env: { file, sourceDuration, cropBox, overlays } };
+  return { picture, env: { file, files, sourceDuration, sourceDurations, cropBox, overlays } };
 }
 
 /** Voice, effects and music, in the order mixGraph numbers its inputs. */
+/** A beat's `muffle` windows (beat time) as absolute seconds. */
+function muffleWindows(spec, timeline) {
+  const out = [];
+  spec.beats.forEach((beat, i) => {
+    for (const w of beat.muffle ?? []) {
+      const start = timeline.beats[i].start + w.at;
+      out.push({ start, end: start + w.dur });
+    }
+  });
+  return out;
+}
+
 async function mixPlan(ctx, timeline) {
   const { table, doc } = loadClaims(ctx);
   const lines = resolveLines(ctx.spec, table, doc).filter((line) => !line.drop);
@@ -753,7 +881,7 @@ async function mixPlan(ctx, timeline) {
   for (const line of lines) {
     const file = path.join(ctx.outDir, "vo", `${line.id}.wav`);
     if (!existsSync(file)) throw new Error(`missing ${file}; run the vo step`);
-    vo.push({ start: line.beatStart + line.at, file });
+    vo.push({ start: line.beatStart + line.at, file, fx: voiceFor(ctx.spec, line.lang, line.speaker).fx ?? null });
   }
   const sfx = [];
   for (const row of timeline.beats) {
@@ -761,7 +889,7 @@ async function mixPlan(ctx, timeline) {
     for (const effect of beat.sfx ?? []) {
       const file = path.join(ctx.outDir, "sfx", `${effect.name}.wav`);
       if (!existsSync(file)) throw new Error(`missing ${file}; run the sfx step`);
-      sfx.push({ start: row.start + effect.at, gainDb: effect.gain_db ?? 0, file });
+      sfx.push({ start: row.start + effect.at, gainDb: effect.gain_db ?? 0, file, bed: effect.name === "hum" });
     }
   }
   const music = [];
@@ -783,7 +911,7 @@ async function mixPlan(ctx, timeline) {
   const files = [...vo.map((c) => c.file), ...sfx.map((c) => c.file), ...music.map((c) => c.file)];
   return {
     files,
-    graph: mixGraph({ videoDuration: timeline.duration, voiceFx: ctx.spec.voice?.fx, vo, sfx, music }),
+    graph: mixGraph({ videoDuration: timeline.duration, voiceFx: ctx.spec.voice?.fx, vo, sfx, music, muffle: muffleWindows(ctx.spec, timeline) }),
   };
 }
 
@@ -910,6 +1038,22 @@ function titleUses(spec, id) {
     }
   }
   return uses.join(", ") || "unused";
+}
+
+/** Decode the film to tiny frames and count its flashes (lib/flashes.mjs). */
+async function filmFlashes(ctx, file) {
+  const { spawnSync } = await import("node:child_process");
+  const { measureFlashes } = await import("./lib/flashes.mjs");
+  const width = 32;
+  const height = 18;
+  const fps = ctx.spec.output.fps;
+  const res = spawnSync(
+    ctx.ffmpeg,
+    ["-v", "error", "-i", file, "-vf", `fps=${fps},scale=${width}:${height}:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+    { maxBuffer: 256 * 1024 * 1024 },
+  );
+  if (res.status !== 0) throw new Error(`could not decode ${file} for the flash check`);
+  return measureFlashes(res.stdout, { width, height, fps });
 }
 
 async function probe(ffmpeg, file) {

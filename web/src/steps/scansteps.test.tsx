@@ -87,12 +87,12 @@ describe("His looks: opening", () => {
     expect(st.playback.get()).toMatchObject({ mode: "factual", frame: 60, playing: false });
     expect(document.activeElement).toBe(el.querySelector(".ss-card h2"));
     expect(lines(el)).toEqual([
-      "Before the ball reaches J. Ferriday, he takes 1 look away from it.",
-      "J. Ferriday looks over his right shoulder 0.8 s before the ball reaches him.",
-      "That look brings S. Brannagh, N. Varnhall, S. Okondru, H. Talvisto, Y. Pellard, T. Mardelius, B. Coulvard, I. Fenmore, C. Brunvald and J. Kestrell into his sight.",
+      "Before the ball reaches H8, he takes 1 look away from it.",
+      "H8 looks over his right shoulder 0.8 s before the ball reaches him.",
+      "That look brings H3, H9, H11, A1, A2, A5, A6, A7, A8 and A10 into his sight.",
     ]);
     const chips = [...el.querySelectorAll(".ss-sight li")].map((c) => textOf(c));
-    expect(chips).toContain("N. Varnhall");
+    expect(chips).toContain("H9");
   });
 
   it("takes over the replay: parked at the decision, not playing", async () => {
@@ -137,10 +137,10 @@ describe("His looks: stepping", () => {
     expect(textOf(el.querySelector(".ss-card h2"))).toBe("His decision");
     expect(st.playback.get()).toMatchObject({ frame: 75, focus: "tactical" });
     expect(lines(el)).toEqual([
-      "It is his look over his right shoulder that brings N. Varnhall into his sight.",
-      "When he decides, he pictures N. Varnhall 0.3 m from where he really is: he last saw him 0.5 s earlier.",
-      "So he passes to N. Varnhall.",
-      "T. Mardelius is the opponent nearest to N. Varnhall, 11.0 m from him.",
+      "It is his look over his right shoulder that brings H9 into his sight.",
+      "When he decides, he pictures H9 0.3 m from where he really is: he last saw him 0.4 s earlier.",
+      "So he passes to H9.",
+      "A5 is the opponent nearest to H9, 11.6 m from him.",
     ]);
     click(button(el, "Back"));
     expect(st.state.get().index).toBe(0);
@@ -203,12 +203,12 @@ describe("His looks: without the look", () => {
     expect(textOf(el.querySelector(".ss-kicker"))).toBe("Look 1 · not taken in this run");
     expect(el.querySelector(".ss-dot.missing")).not.toBeNull();
     expect(lines(el)).toEqual([
-      "J. Ferriday does not look away from the ball before it reaches him.",
-      "Without that look, J. Ferriday takes no look from then until the ball reaches him.",
+      "H8 does not look away from the ball before it reaches him.",
+      "Without that look, H8 takes no look from then until the ball reaches him.",
     ]);
     expect(el.querySelector(".ss-sight")).toBeNull();
     click(button(el, "Next"));
-    expect(lines(el)).toContain("So he passes to K. Annersley.");
+    expect(lines(el)).toContain("So he passes to H4.");
     // Back to the run with the look: the same step, the decision.
     click(button(el, "With the look"));
     expect(st.state.get()).toMatchObject({ mode: "factual", index: 1 });
@@ -234,7 +234,7 @@ describe("His looks: the marks", () => {
     const options = hero.runs.factual.decision!.options;
     expect(el.querySelectorAll(".ss-board .ss-lane")).toHaveLength(options.length);
     expect(el.querySelectorAll(".ss-board .ss-lane.chosen")).toHaveLength(1);
-    expect(textOf(el.querySelector(".ss-board .ss-lane.chosen text"))).toBe("N. Varnhall");
+    expect(textOf(el.querySelector(".ss-board .ss-lane.chosen text"))).toBe("H9");
     expect(textOf(el.querySelector(".ss-legend"))).toMatch(/along the ground/);
   });
 

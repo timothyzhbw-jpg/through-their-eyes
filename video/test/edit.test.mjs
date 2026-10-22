@@ -11,6 +11,7 @@ import {
   duckFilter,
   joinFilter,
   loudnormFilter,
+  muffleFilter,
   measureArgs,
   mixGraph,
   muxArgs,
@@ -145,7 +146,7 @@ test("grades, effects, letterbox and overlays are present", () => {
     assert.ok(filter.includes(fragment), `${name}: ${filter}`);
   }
   const rewind = beatGraph(beat({ fx: ["rewind"] })).filter;
-  assert.match(rewind, /boxblur=8:1/);
+  assert.doesNotMatch(rewind, /blur/); // sharp frames only: no blur anywhere in the film
   assert.match(rewind, /drawgrid=width=iw:height=6/);
   const shake = beatGraph(beat({ fx: ["shake"] })).filter;
   assert.match(shake, /scale=1997:1123/);
@@ -266,4 +267,41 @@ test("a clip plays from its in-point, reversed on request, padded to the frame a
   assert.match(clip, /scale=1920:-2,pad=1920:1080:\(ow-iw\)\/2:\(oh-ih\)\/2:color=black/);
   assert.doesNotMatch(clip, /force_original_aspect_ratio=increase/); // never cropped to cover
   assert.match(clip, /vignette=angle=PI\/7,colorlevels=romin=0\.020/);
+});
+
+test("a split puts two native crops side by side with a divider, padded into the frame", () => {
+  const split = beatGraph(
+    beat({
+      dur: 1.3,
+      picture: {
+        src: "split",
+        left: { src: "clip", path: "a.mp4", in: 0.6, crop: [0, 0, 960, 804] },
+        right: { src: "clip", path: "b.mp4", in: 2.4, crop: [960, 0, 960, 804] },
+      },
+    }),
+    { ...size, files: ["a.mp4", "b.mp4"], sourceDurations: [4.2, 2.6] },
+  );
+  assert.equal(split.inputs.length, 2);
+  assert.match(split.filter, /crop=960:804:0:0/);
+  assert.match(split.filter, /crop=960:804:960:0/);
+  assert.match(split.filter, /hstack=inputs=2,pad=1920:1080:0:\(oh-ih\)\/2/);
+  assert.match(split.filter, /drawbox=x=958:y=0:w=4/);
+  assert.doesNotMatch(split.filter, /scale=/); // native pixels
+});
+
+test("the perception duck crossfades a dry and an 800 Hz copy over each window", () => {
+  const f = muffleFilter([{ start: 10, end: 11.5 }, { start: 30, end: 31 }], "m0");
+  assert.match(f, /lowpass=f=800/);
+  assert.match(f, /volume='0\.316\*\(max\(clip\(\(t-10\)\/0\.08,0,1\)/);
+  assert.match(f, /amix=inputs=2:normalize=0\[m0\]$/);
+});
+
+test("fit contain keeps the whole picture on the page colour, and a push zooms the padded frame", () => {
+  const graph = beatGraph(
+    { id: "b1", dur: 2, picture: { src: "capture", shot: "04", crop: "tactical", fit: "contain", push: [1, 1.05] } },
+    { file: "x.webm", sourceDuration: 6, cropBox: { x: 344, y: 96, w: 1128, h: 784 }, fps: 30, width: 1920, height: 1080 },
+  );
+  assert.match(graph.filter, /crop=1128:784:344:96/);
+  assert.match(graph.filter, /force_original_aspect_ratio=decrease:force_divisible_by=2,pad=1920:1080:\(ow-iw\)\/2:\(oh-ih\)\/2:color=0x050707/);
+  assert.ok(graph.filter.indexOf("pad=1920:1080") < graph.filter.indexOf("eval=frame"), "the push comes after the pad");
 });

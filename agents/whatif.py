@@ -578,8 +578,12 @@ async def answer_question(
     language: Language = "en",
     persona: Persona = "analyst",
     client: Any | None = None,
+    *,
+    mapped: tuple[str | None, str] | None = None,
 ) -> WhatIfAnswer:
-    action, source = await map_question(ctx, question, client)
+    """`mapped`: the question's (action, source) when the caller has mapped it already (the API
+    keeps the model's mappings), so it is not mapped again."""
+    action, source = mapped if mapped is not None else await map_question(ctx, question, client)
     factual = ctx.run.hero_decision()
     if action is None:
         refusal = (REFUSAL if factual is not None else NO_DECISION_REFUSAL)[language]

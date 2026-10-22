@@ -8,13 +8,13 @@
 | Chosen minimum excursion | **55°** |
 | Held-out F1, nuisance on | **0.993** — ✅ meets the SPEC target ≥ 0.85 |
 | Held-out F1, sensor noise only / clean | 0.998 / 0.998 |
-| Held-out data, nuisance on | 18.9 min of play, 22 players, 7121 scans, 3583 head turns (partial scans) |
+| Held-out data, nuisance on | 19.0 min of play, 22 players, 7122 scans, 3619 head turns (partial scans) |
 
 ## Reading
 
 - **The threshold barely matters once the excursion gate is in.** Held-out F1 stays between 0.990 and 0.993 over 125–300°/s. Every genuine sim scan turns at its own peak speed, 404 ± 51°/s and never below 250°/s (Kokubu et al. 2026), so below that floor the threshold only decides which noise-driven onsets get looked at, and above it the slowest scans start to be missed; the choice of 200°/s is weakly determined (it wins the tie-break).
-- **The literature's over-count is reproduced without the gate**: a velocity-only detector finds 3.06 detections per true scan at 125°/s and 1.44 at 300°/s (sensor noise and partial scans).
-- **What limits the score is the sim, not the detector.** Partial scans turn 10–50° and full scans at least 70°, and the tuned 55° gate sits in that gap. Close the gap and F1 falls (worst stress row: 0.901, partial scans up to 90° (overlap full scans)). Real tracking has no such gap by construction, so read 0.993 as the score on this sim, not as a claim about real data.
+- **The literature's over-count is reproduced without the gate**: a velocity-only detector finds 3.07 detections per true scan at 125°/s and 1.44 at 300°/s (sensor noise and partial scans).
+- **What limits the score is the sim, not the detector.** Partial scans turn 10–50° and full scans at least 70°, and the tuned 55° gate sits in that gap. Close the gap and F1 falls (worst stress row: 0.900, partial scans up to 90° (overlap full scans)). Real tracking has no such gap by construction, so read 0.993 as the score on this sim, not as a claim about real data.
 
 ## Method
 
@@ -31,27 +31,27 @@
 
 | Threshold (°/s) | P | R | F1 — full nuisance | P | R | F1 — sensor noise only | P | R | F1 — clean |
 |---|---|---|---|---|---|---|---|---|---|
-| 125 | 0.993 | 0.992 | **0.992** | 0.997 | 0.998 | **0.997** | 0.998 | 0.998 | **0.998** |
+| 125 | 0.992 | 0.992 | **0.992** | 0.997 | 0.998 | **0.998** | 0.998 | 0.998 | **0.998** |
 | 150 | 0.993 | 0.992 | **0.993** | 0.998 | 0.998 | **0.998** | 0.998 | 0.998 | **0.998** |
 | 175 | 0.994 | 0.992 | **0.993** | 0.998 | 0.998 | **0.998** | 0.998 | 0.998 | **0.998** |
 | 200 ⬅ | 0.994 | 0.992 | **0.993** | 0.999 | 0.998 | **0.998** | 0.998 | 0.998 | **0.998** |
-| 225 | 0.995 | 0.991 | **0.993** | 0.999 | 0.997 | **0.998** | 0.999 | 0.998 | **0.998** |
+| 225 | 0.994 | 0.992 | **0.993** | 0.999 | 0.998 | **0.998** | 0.999 | 0.998 | **0.998** |
 | 250 | 0.995 | 0.991 | **0.993** | 0.999 | 0.997 | **0.998** | 0.999 | 0.997 | **0.998** |
-| 275 | 0.995 | 0.990 | **0.992** | 0.999 | 0.997 | **0.998** | 0.999 | 0.992 | **0.996** |
-| 300 | 0.994 | 0.987 | **0.990** | 0.998 | 0.995 | **0.997** | 0.999 | 0.977 | **0.988** |
+| 275 | 0.995 | 0.990 | **0.992** | 0.999 | 0.997 | **0.998** | 0.999 | 0.993 | **0.996** |
+| 300 | 0.994 | 0.987 | **0.990** | 0.998 | 0.995 | **0.996** | 0.999 | 0.977 | **0.988** |
 
 ## Tuning seeds: best minimum excursion per threshold (nuisance on)
 
 | Threshold (°/s) | Best min. excursion (°) | P | R | F1 |
 |---|---|---|---|---|
-| 125 | 55 | 0.991 | 0.994 | **0.992** |
+| 125 | 55 | 0.992 | 0.994 | **0.993** |
 | 150 | 55 | 0.993 | 0.994 | **0.993** |
-| 175 | 55 | 0.993 | 0.994 | **0.993** |
+| 175 | 55 | 0.994 | 0.994 | **0.994** |
 | 200 | 55 | 0.994 | 0.994 | **0.994** |
-| 225 | 55 | 0.994 | 0.993 | **0.993** |
-| 250 | 55 | 0.994 | 0.993 | **0.993** |
+| 225 | 55 | 0.994 | 0.993 | **0.994** |
+| 250 | 55 | 0.994 | 0.993 | **0.994** |
 | 275 | 55 | 0.994 | 0.992 | **0.993** |
-| 300 | 55 | 0.993 | 0.989 | **0.991** |
+| 300 | 55 | 0.994 | 0.990 | **0.992** |
 
 ## Ablation: velocity threshold only (held-out, nuisance on)
 
@@ -59,28 +59,28 @@ No excursion gate: any turn away from the ball faster than the threshold that co
 
 | Threshold (°/s) | P | R | F1 | Detections per true scan |
 |---|---|---|---|---|
-| 125 | 0.295 | 0.903 | **0.444** | 3.06 |
-| 150 | 0.412 | 0.927 | **0.570** | 2.25 |
-| 175 | 0.519 | 0.944 | **0.670** | 1.82 |
-| 200 | 0.590 | 0.956 | **0.730** | 1.62 |
-| 225 | 0.629 | 0.963 | **0.761** | 1.53 |
-| 250 | 0.649 | 0.967 | **0.777** | 1.49 |
-| 275 | 0.663 | 0.970 | **0.788** | 1.46 |
-| 300 | 0.675 | 0.972 | **0.797** | 1.44 |
+| 125 | 0.294 | 0.903 | **0.443** | 3.07 |
+| 150 | 0.410 | 0.927 | **0.569** | 2.26 |
+| 175 | 0.517 | 0.944 | **0.668** | 1.82 |
+| 200 | 0.588 | 0.956 | **0.728** | 1.63 |
+| 225 | 0.627 | 0.963 | **0.759** | 1.54 |
+| 250 | 0.646 | 0.966 | **0.775** | 1.49 |
+| 275 | 0.661 | 0.970 | **0.786** | 1.47 |
+| 300 | 0.673 | 0.971 | **0.795** | 1.44 |
 
 ## Chosen detector (200°/s, 55°): matching tolerance and scenarios (held-out, nuisance on)
 
 | Tolerance (frames) | P | R | F1 |
 |---|---|---|---|
 | ±1 | 0.992 | 0.990 | **0.991** |
-| ±2 | 0.994 | 0.991 | **0.993** |
+| ±2 | 0.994 | 0.992 | **0.993** |
 | ±3 | 0.994 | 0.992 | **0.993** |
 | ±5 | 0.994 | 0.992 | **0.993** |
 
 | Scenario | Scans | P | R | F1 |
 |---|---|---|---|---|
-| `possession_play` | 6309 | 0.994 | 0.991 | **0.992** |
-| `blind_side_run` | 812 | 0.996 | 0.999 | **0.998** |
+| `possession_play` | 6361 | 0.994 | 0.991 | **0.992** |
+| `blind_side_run` | 761 | 0.996 | 1.000 | **0.998** |
 
 ## Stress test: harder head motion (held-out, chosen detector, not re-tuned)
 
@@ -88,15 +88,15 @@ Each row changes one setting of the default (full nuisance) sim.
 
 | Change | P | R | F1 |
 |---|---|---|---|
-| partial scans up to 70° (the smallest full scan) | 0.892 | 0.991 | **0.939** |
-| partial scans up to 90° (overlap full scans) | 0.826 | 0.991 | **0.901** |
+| partial scans up to 70° (the smallest full scan) | 0.893 | 0.992 | **0.940** |
+| partial scans up to 90° (overlap full scans) | 0.825 | 0.991 | **0.900** |
 | twice as many partial scans | 0.993 | 0.993 | **0.993** |
-| drift std 15° | 0.955 | 0.943 | **0.949** |
-| sensor noise 5° | 0.979 | 0.991 | **0.985** |
+| drift std 15° | 0.956 | 0.944 | **0.950** |
+| sensor noise 5° | 0.979 | 0.992 | **0.985** |
 
 ## Where the errors are (chosen detector, held-out, nuisance on)
 
 | | Count | On a `head_turn` | Ball moving > 2 m/s |
 |---|---|---|---|
-| False positives | 41 | 12 | 35 |
-| Missed scans | 58 | — | 44 |
+| False positives | 43 | 13 | 36 |
+| Missed scans | 56 | — | 44 |

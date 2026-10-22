@@ -241,7 +241,7 @@ export function breakdownResponse(
           },
           { t: 1.5, do: "ghost", kind: "belief", cf: null },
           { t: 4.5, do: "camera", mode: "split" },
-          { t: 4.7, do: "play", to: 3.5, speed: 1.0 },
+          { t: 4.7, do: "play", to: 3.4, speed: 1.0 },
           { t: 7.5, do: "ghost", kind: "counterfactual", cf: "cf1" },
         ],
       },
@@ -442,7 +442,7 @@ export function pressureExport(): HeroExport {
   };
 }
 
-export const MARKER_MOMENT = "m:marker_scan:H8:0139";
+export const MARKER_MOMENT = "m:marker_scan:H8:0136";
 export const MARKER_SHIFT_M = 6; // how much further from his man the marker is without the look
 
 /**
@@ -483,7 +483,7 @@ export const markerCards = (delta: number | null = 0.09596) => [
     kind: "marker_scan",
     actor: "H8",
     receiver: "H9",
-    anchor_frame: 139,
+    anchor_frame: 136,
     selected_lens: "scan",
     lenses: [
       { lens: "scan", available: delta !== null, delta_xt: delta, metrics: {} },
@@ -642,7 +642,8 @@ export const OPEN_FRAMES = 60; // the opening open-play possession: the bundled 
 export const BLIND_START = OPEN_FRAMES; // possession 1: blind_side_run 3
 export const PRESS_START = OPEN_FRAMES + exportJson.runs.factual.frames; // possession 2: press_escape 0
 export const MATCH_HERO = "m:decision_after_scan:H8:0135"; // HERO_MOMENT in match time
-export const MATCH_PRESS = "m:pressed_decision:H8:0300"; // PRESS_MOMENT in match time
+// PRESS_MOMENT in match time: after the bundled run, however long the sim makes it.
+export const MATCH_PRESS = `m:pressed_decision:H8:${String(PRESS_START + 75).padStart(4, "0")}`;
 export const GOAL_FRAME = BLIND_START + 150; // a home goal late in possession 1
 
 /** sim.match.global_id: "<...>:<frame>" moved to match time. */

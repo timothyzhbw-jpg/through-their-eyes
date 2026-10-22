@@ -152,7 +152,7 @@ describe("Your call: the reveal", () => {
     ]);
     expect(r.outcome.lines[0]).toMatchObject({ kinds: ["counterfactual"], source: "verified" });
     expect(texts(r.compare.lines)).toEqual([
-      "That option would have been worth 0.13 less in expected threat than what he did.",
+      "That option would have been worth 0.17 less in expected threat than what he did.",
     ]);
     expect(r.truth.lines.map((l) => l.id)).toEqual(["L3", "L6"]); // his picture, he thought / it was
     expect(r.truth.moved).toEqual(["A3", "A4", "H10", "H7"]);

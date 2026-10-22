@@ -7,18 +7,28 @@
 // - the standing pass clip with its ball contact on each pass event, the body turned so the
 //   kick goes along the pass while it plays (the sim's passer may face anywhere);
 // - the neck turned so the head points along head_yaw (look.ts): scans are visible;
+// - the extra clips (extra.ts; `?anims=base` turns them off): a mocap kick at every pass instead
+//   of the standing pass, and the trunk joining every scan's look over the shoulder (not under
+//   prefers-reduced-motion);
 // - kits in the fictional clubs' colours, keepers in their own (kit.ts).
+// By default (trial.ts; `?look=v1` for the plain kits) it loads the re-skinned copy,
+// grf_player_look.glb (same skeleton and clips byte for byte): kit designs from
+// models/kit_mask.webp, a cloth normal map, and baked occlusion plus the keepers' sleeves and
+// gloves from its `_LOOK` attribute (shading.ts). index.html preloads both files.
 // The tokens' shirt numbers and blind-side rings stay on (PovView); only their bodies hide.
 
-import { useFrame, useLoader } from "@react-three/fiber";
-import { Component, type ReactNode, useEffect, useMemo } from "react";
+import { useFrame, useLoader, useThree } from "@react-three/fiber";
+import { Component, type ReactNode, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Sample, sampleInto } from "../data/hero";
 import type { ExportPlayer, RunName } from "../data/types";
 import { useView } from "../session";
-import { trial } from "./trial";
-import { BOOTS, hairColour, kitTexture, skinTone } from "./kit";
+import { useStore } from "../store/store";
+import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
+import { type Look, trial } from "./trial";
+import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
+import { withLook } from "./shading";
 import {
   type ModelMeta,
   type Motion,
@@ -31,6 +41,9 @@ import {
 } from "./rig";
 
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player.glb`;
+export const LOOK_MODEL_URL = `${import.meta.env.BASE_URL}models/grf_player_look.glb`;
+export const KIT_MASK_URL = `${import.meta.env.BASE_URL}models/kit_mask.webp`;
+const NORMAL_STRENGTH = 1;
 
 /** Kit in the club's colours (the keeper's own kit) with the shirt number; flat skin, hair and
  * boots. */
@@ -44,6 +57,42 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
     hair: new THREE.MeshStandardMaterial({ color: hairColour(j), roughness: 0.9 }),
     boots: new THREE.MeshStandardMaterial({ color: BOOTS, roughness: 0.5 }),
   };
+  return assign(rig, byName);
+}
+
+/** The v2 look: the kit's design and cloth normals, occlusion everywhere, the keeper's long
+ * sleeves and gloves, a light sole edge on the boots. */
+function dressLook(
+  rig: Rig,
+  player: ExportPlayer,
+  j: number,
+  mask: HTMLImageElement,
+  normalMap: THREE.Texture | null,
+): THREE.Material[] {
+  const kit = kitOf(player);
+  const byName: Record<string, THREE.Material> = {
+    kit: withLook(
+      new THREE.MeshStandardMaterial({
+        map: kitTexture(player, mask),
+        normalMap,
+        // glTF's normal maps with three.js's derivative tangents: y flips, as GLTFLoader does.
+        normalScale: new THREE.Vector2(NORMAL_STRENGTH, -NORMAL_STRENGTH),
+        roughness: 0.8,
+      }),
+    ),
+    skin: withLook(new THREE.MeshStandardMaterial({ color: skinTone(j), roughness: 0.6 }), {
+      g: kit.sleeve,
+      b: kit.glove,
+    }),
+    hair: withLook(new THREE.MeshStandardMaterial({ color: hairColour(j), roughness: 0.9 })),
+    boots: withLook(new THREE.MeshStandardMaterial({ color: BOOTS, roughness: 0.45 }), {
+      g: SOLE,
+    }),
+  };
+  return assign(rig, byName);
+}
+
+function assign(rig: Rig, byName: Record<string, THREE.Material>): THREE.Material[] {
   rig.model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
     if (!mesh.isSkinnedMesh) return;
@@ -53,27 +102,96 @@ function dress(rig: Rig, player: ExportPlayer, j: number): THREE.Material[] {
   return Object.values(byName);
 }
 
+/** prefers-reduced-motion, kept current; a change redraws the view. */
+function useReducedMotion() {
+  const invalidate = useThree((s) => s.invalidate);
+  const reduced = useRef(false);
+  useEffect(() => {
+    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!query) return;
+    const update = () => {
+      reduced.current = query.matches;
+      invalidate();
+    };
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, [invalidate]);
+  return reduced;
+}
+
 export function RiggedPlayers() {
+  const look = useStore(trial, (s) => s.look);
+  const anims = useStore(trial, (s) => s.anims);
+  if (anims !== "extra") return <Dressed look={look} extra={null} />;
+  // Fetched alongside the clips, not after them.
+  useLoader.preload(GLTFLoader, look === "v2" ? LOOK_MODEL_URL : MODEL_URL);
+  return (
+    <ExtraFallback>
+      <WithExtra look={look} />
+    </ExtraFallback>
+  );
+}
+
+function WithExtra({ look }: { look: Look }) {
+  const gltf = useLoader(GLTFLoader, EXTRA_URL);
+  const extra = useMemo(() => extraClips(gltf), [gltf]);
+  return <Dressed look={look} extra={extra} />;
+}
+
+/** The look's files: the re-skinned model with its kit mask (v2), or the plain model (v1). The
+ * extra clips bind to either: both have the same skeleton, byte for byte. */
+function Dressed({ look, extra }: { look: Look; extra: ExtraClips | null }) {
+  return look === "v2" ? <LookPlayers extra={extra} /> : <Rigged url={MODEL_URL} extra={extra} />;
+}
+
+function LookPlayers({ extra }: { extra: ExtraClips | null }) {
+  const mask = useLoader(THREE.ImageLoader, KIT_MASK_URL);
+  return <Rigged url={LOOK_MODEL_URL} mask={mask} extra={extra} />;
+}
+
+/** The kit material's normal map in the loaded model, if it has one. */
+function kitNormalMap(gltf: { scene: THREE.Object3D }): THREE.Texture | null {
+  let found: THREE.Texture | null = null;
+  gltf.scene.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (m?.name === "kit" && m.normalMap) found = m.normalMap;
+  });
+  return found;
+}
+
+function Rigged({
+  url,
+  mask,
+  extra,
+}: {
+  url: string;
+  mask?: HTMLImageElement;
+  extra: ExtraClips | null;
+}) {
   const { hero, playback } = useView();
-  const gltf = useLoader(GLTFLoader, MODEL_URL);
+  const gltf = useLoader(GLTFLoader, url);
   const meta = gltf.scene.userData as ModelMeta;
-  const clips = useMemo(() => modelClips(meta), [meta]);
+  const reduced = useReducedMotion();
+  const clips = useMemo(() => modelClips(meta, extra), [meta, extra]);
   const motion = useMemo<Record<RunName, Motion>>(() => {
-    const factual = runMotion(hero, hero.runs.factual, clips.gait);
+    const check = clips.extra?.check ?? null;
+    const factual = runMotion(hero, hero.runs.factual, clips.gait, check);
     // A stitched match has one run under both names: its motion is computed once.
     const cf = hero.runs.counterfactual;
     return {
       factual,
-      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips.gait),
+      counterfactual: cf === hero.runs.factual ? factual : runMotion(hero, cf, clips.gait, check),
     };
   }, [hero, clips]);
   const rigs = useMemo(
     () =>
       hero.players.map((p, j) => {
-        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m);
-        return { rig, materials: dress(rig, p, j) };
+        const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m, clips.extra);
+        const materials = mask ? dressLook(rig, p, j, mask, kitNormalMap(gltf)) : dress(rig, p, j);
+        return { rig, materials };
       }),
-    [gltf, hero, meta],
+    [gltf, hero, meta, clips, mask],
   );
   useEffect(
     () => () => {
@@ -108,6 +226,7 @@ export function RiggedPlayers() {
         y,
         sample.body[j],
         sample.head[j],
+        !reduced.current,
       );
     }
   });
@@ -119,6 +238,21 @@ export function RiggedPlayers() {
       ))}
     </>
   );
+}
+
+/** If the extra clips cannot load, keep the rigged players on the engine's clips. */
+class ExtraFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("Extra animations failed to load; using the engine's clips.", error);
+    trial.set({ anims: "base" });
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /** If the model cannot load, switch the rigged players off: the tokens come back. */

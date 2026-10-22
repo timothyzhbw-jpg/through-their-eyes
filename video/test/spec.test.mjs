@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { spokenIssues, validateTrailer } from "../lib/spec.mjs";
+import { namedSpec, spokenIssues, storyBeats, validateTrailer } from "../lib/spec.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const shots = JSON.parse(readFileSync(path.join(REPO, "video/shots.json"), "utf8"));
@@ -28,7 +28,7 @@ test("the mini fixture and the real trailer spec are valid", () => {
   const miniResult = check(mini);
   assert.deepEqual(miniResult.errors, [], miniResult.errors.join("\n"));
   assert.deepEqual(miniResult.warnings, [], miniResult.warnings.join("\n"));
-  const realResult = check(real, JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8")));
+  const realResult = check({ ...real, beats: storyBeats(real) }, JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8")));
   assert.deepEqual(realResult.errors, [], realResult.errors.join("\n"));
 });
 
@@ -174,4 +174,61 @@ test("a clip must stay inside the repo and may be absent at --check", () => {
   const { errors } = check(spec);
   assert.ok(errors.some((e) => e.includes('clip path "../outside.mp4" must stay inside the repo')), errors.join("\n"));
   assert.ok(errors.some((e) => e.includes("fit must be one of cover, pad")), errors.join("\n"));
+});
+
+test("a shirt number is a name, like a player id", () => {
+  assert.deepEqual(spokenIssues("YOU ARE No. 14.", { allowPause: false }), []);
+  assert.deepEqual(spokenIssues("H9 · THE RUNNER", { allowPause: false }), []);
+  assert.deepEqual(spokenIssues("YOU ARE 14.", { allowPause: false }), ["a digit outside a slot"]);
+});
+
+test("both tellings of the story are valid and the same length", () => {
+  const assets = JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8"));
+  const lengths = {};
+  for (const story of ["blender", "app"]) {
+    const spec = { ...clone(real), beats: storyBeats(real, story) };
+    const { errors } = check(spec, assets);
+    assert.deepEqual(errors, [], `${story}: ${errors.join("\n")}`);
+    lengths[story] = spec.beats.reduce((sum, b) => sum + b.dur, 0);
+  }
+  assert.ok(Math.abs(lengths.blender - lengths.app) < 1e-6, JSON.stringify(lengths));
+});
+
+test("output.max_s caps the planned film under 2:00", () => {
+  const spec = clone();
+  spec.output = { ...spec.output, max_s: 5 };
+  const { errors } = check(spec);
+  assert.ok(errors.some((e) => e.includes("is over output.max_s (5s)")), errors.join("\n"));
+});
+
+test("every Blender beat in blender_map.json is a beat of the trailer, in the Blender telling", () => {
+  const map = JSON.parse(readFileSync(path.join(REPO, "video/blender_map.json"), "utf8"));
+  const ids = new Map(real.beats.map((b) => [b.id, b]));
+  for (const entry of map.beats) {
+    const beat = ids.get(entry.beat);
+    assert.ok(beat, `${entry.beat} is not in trailer.json`);
+    assert.ok(beat.story == null || beat.story === "blender", `${entry.beat} is not in the Blender telling`);
+  }
+  assert.ok(Array.isArray(map.approved), "blender_map.json lists the approved clips");
+});
+
+test("naming: names swaps the named lines (with their own ids) and titles; ids leaves the spec as written", () => {
+  const assets = JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8"));
+  const base = { ...clone(real), beats: storyBeats(real) };
+  assert.equal(namedSpec(base, "ids"), base);
+  const named = namedSpec(base, "names");
+  const { errors } = check(named, assets);
+  assert.deepEqual(errors, [], errors.join("\n"));
+  const lines = named.beats.flatMap((b) => b.vo ?? []);
+  for (const [id, over] of Object.entries(real.named.vo)) {
+    assert.ok(!lines.some((l) => l.id === id), `${id} keeps its ids voicing`);
+    assert.equal(lines.find((l) => l.id === `${id}n`)?.text, typeof over === "string" ? over : over.text);
+  }
+  // No player id is left in a line or a title param this cut shows.
+  const ids = /\b[HA]\d{1,2}\b/;
+  for (const line of lines) if (line.text) assert.doesNotMatch(line.text, ids, line.id); // app lines come named
+  for (const key of Object.keys(real.named.titles)) {
+    if (named.titles[key]) assert.doesNotMatch(JSON.stringify(named.titles[key].params), ids, key);
+  }
+  assert.equal(named.titles["nc-a11"].params.role, real.titles["nc-a11"].params.role); // merged, not replaced
 });

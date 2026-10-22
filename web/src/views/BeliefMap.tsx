@@ -14,6 +14,7 @@ import { shortName } from "../data/roster";
 import type { RunName } from "../data/types";
 import { useView, type ViewSession } from "../session";
 import { useStore } from "../store/store";
+import { FIELD, LAW1 } from "./fieldMarkings";
 import "./beliefMap.css";
 
 export const DISC_RADIUS_M = 32; // how far around him the disc reaches
@@ -182,8 +183,8 @@ export function BeliefMap() {
           {line(-HALF_L, -HALF_W, -HALF_L, HALF_W, "g1")}
           {line(HALF_L, -HALF_W, HALF_L, HALF_W, "g2")}
           {line(0, -HALF_W, 0, HALF_W, "half")}
-          {box(sign, 16.5, 20.16, "pa")}
-          {box(-sign, 16.5, 20.16, "pb")}
+          {box(sign, LAW1.penaltyAreaDepth, FIELD.penaltyAreaHalfWidth, "pa")}
+          {box(-sign, LAW1.penaltyAreaDepth, FIELD.penaltyAreaHalfWidth, "pb")}
           {b.players.map((q) => {
             const s = onDisc(p(q.x, q.y));
             return (

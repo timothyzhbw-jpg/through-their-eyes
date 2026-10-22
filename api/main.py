@@ -9,18 +9,24 @@ what-if answers are computed once and cached by a content hash of everything tha
 regeneration is rate-limited per client and capped per UTC day across all clients
 (`TTE_DAILY_MODEL_CAP`, SPEC 8); past either, the cached answer or the offline template is served,
 flagged `rate_limited` or `capped`. With a model, the Analyst inspects the moment through our MCP
-tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0).
+tool server, a subprocess per breakdown (`TTE_ANALYST_MCP`, on unless set to 0); at most
+`TTE_CREW_CONCURRENCY` crew runs with a model run at once. A what-if question the model mapped
+is kept by its normalised text, so asking it again costs no model call and no unit of the cap.
 
 Speech speaks only voice cues the crew wrote, by key (api/tts.py); a cached breakdown is re-voiced
 on read before those cues are recorded. The live stream, request bodies and response headers are
-bounded for a public service (api/live.py, api/guard.py).
+bounded for a public service (api/live.py, api/guard.py), and every response body and live
+message counts against a per-client and a daily egress budget (api/egress.py).
 
 Failure drill (SPEC 6): a breakdown request with `fail` takes those agents down for one fresh run,
 kept under its own key and never under the cache keys of normal breakdowns. It counts against
 the per-client limit and, with a model, the daily model cap; offline, drills have their own daily
-cap (`DAILY_OFFLINE_DRILLS`). Past any of them: 429. No model is called for a downed step.
+cap (`DAILY_OFFLINE_DRILLS`). No model is called for a downed step.
 `POST /api/breakdowns/{key}/bring-back` re-runs one downed step from the run's checkpoint, at most
-`MAX_BRING_BACKS` times per drill.
+`MAX_BRING_BACKS` times per drill. Every drill and bring-back is recorded (api/recorded.py). A
+limited one is never a dead end: the recording of the same drill in the same state is replayed,
+labelled with when it ran, else the crew runs without the model (counted against the offline
+drills' cap), flagged `rate_limited` or `capped`. Only past that cap too: 429.
 
 End-of-match recap (SPEC 6): `POST /api/recaps` runs the crew on a whole stitched match, cached
 and limited exactly like a breakdown (the same per-client limit and daily model cap; past them,
@@ -59,8 +65,10 @@ import hashlib
 import json
 import re
 import shutil
+import unicodedata
 import uuid
-from contextlib import asynccontextmanager, suppress
+from contextlib import AbstractAsyncContextManager, asynccontextmanager, nullcontext, suppress
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -81,8 +89,10 @@ from agents.schemas import AgentStep, Language, Persona
 from agents.telemetry import configure_tracing
 from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
 from api import guard, tts
+from api.egress import MB, Egress, EgressLimit
 from api.live import Slots, stream
 from api.names import Renamed, rename
+from api.recorded import Recordings, now, recording_key
 from api.settings import Settings
 from api.store import (
     DailyCap,
@@ -100,6 +110,8 @@ VERSION = "0.5.0"
 DRILLS_KEPT = 50  # failure drills kept on disk for a bring-back
 MAX_BRING_BACKS = 5  # per drill; with at most 8 supersteps each, well under MAX_SUPERSTEPS
 DAILY_OFFLINE_DRILLS = 200  # drills and bring-backs per UTC day without a model, all clients
+RECORDINGS_KEPT = 200  # recorded drills and bring-backs, served when a viewer is limited
+LIMITED = ("rate_limited", "capped")
 KEY = re.compile(r"[0-9a-f]{32}")  # content_key()
 WHATIF_VERSION = hashlib.sha256(whatif.WHATIF.encode()).hexdigest()[:12]
 MAX_LIST = 8  # personas or languages in one request, before duplicates are dropped
@@ -110,6 +122,7 @@ def _unique(items: list) -> list:
     return list(dict.fromkeys(items))
 
 
+Name = Annotated[str, Field(max_length=100)]  # a match or moment id
 Personas = Annotated[
     list[Persona], Field(min_length=1, max_length=MAX_LIST), AfterValidator(_unique)
 ]
@@ -119,8 +132,8 @@ Languages = Annotated[
 
 
 class BreakdownBody(BaseModel):
-    match: str
-    moment: str | None = None
+    match: Name
+    moment: Name | None = None
     personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
     languages: Languages = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
@@ -132,15 +145,15 @@ class BringBackBody(BaseModel):
 
 
 class RecapBody(BaseModel):
-    match: str
+    match: Name
     personas: Personas = Field(default_factory=lambda: ["casual", "analyst"])
     languages: Languages = Field(default_factory=lambda: ["en", "zh"])
     regenerate: bool = False
 
 
 class WhatIfBody(BaseModel):
-    match: str
-    moment: str | None = None  # which hero moment, in a match with several; default the first
+    match: Name
+    moment: Name | None = None  # which hero moment, in a match with several; default the first
     question: str = Field(min_length=1, max_length=300)
     language: Language = "en"
     persona: Persona = "analyst"
@@ -154,12 +167,19 @@ class TtsBody(BaseModel):
 
 
 class VerifyBody(BaseModel):
-    match: str
-    moment: str | None = None  # which hero moment, in a match with several; default the first
+    match: Name
+    moment: Name | None = None  # which hero moment, in a match with several; default the first
     claim: str = Field(max_length=100)
     slot: str = Field(max_length=100)
     value: float = Field(strict=True, allow_inf_nan=False)  # a JSON number: no strings, no bools
     language: Language = "en"
+
+
+def _question(text: str) -> str:
+    """A what-if question as its mapping is cached: case, spacing and the closing punctuation do
+    not change what it asks."""
+    text = " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+    return text.rstrip(" ?!.")
 
 
 NO_LIMITS = {"rate_limited": False, "capped": False}
@@ -251,12 +271,17 @@ def create_app(
     checkpoint_dir = Path(settings.cache_dir) / "checkpoints"
     runs_dir = checkpoint_dir / "runs"
     drills = DrillStore(checkpoint_dir / "drills", DRILLS_KEPT)
+    recordings = Recordings(checkpoint_dir / "recordings", RECORDINGS_KEPT)
     locks = KeyedLocks()  # one crew run per key at a time
     speech_limiter = RateLimiter(*settings.tts_rate_limit)  # POST /api/tts per client
     speech_cap = DailyCap(settings.daily_tts_cap)  # Azure Speech syntheses per UTC day
     speech_calls = asyncio.Semaphore(settings.tts_concurrency)  # Azure Speech calls in flight
     synthesizing = KeyedLocks()  # one synthesis per cue key at a time
     slots = Slots(settings.live_per_client, settings.live_max_total)
+    per_client_mb, egress_window_s = settings.egress_per_client
+    egress = Egress(per_client_mb * MB, egress_window_s, int(settings.daily_egress_gb * 1000 * MB))
+    # Crew runs with a model at once: each starts an MCP server subprocess (about 90 MB).
+    crew_slots = asyncio.Semaphore(settings.crew_concurrency)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -270,6 +295,7 @@ def create_app(
             await close()
 
     app = FastAPI(title="Through Their Eyes", version=VERSION, lifespan=lifespan)
+    app.add_middleware(EgressLimit, egress=egress, client_ip=_client_ip)
     guard.install(app)
     app.add_middleware(
         CORSMiddleware,
@@ -288,7 +314,9 @@ def create_app(
         """Whether a model-backed regeneration may run now: "model", "capped" or "rate_limited".
 
         The daily cap is checked first, so a capped request does not use up the client's quota.
+        On the judging window's UTC days, its limits apply (`Settings.limits_on`).
         """
+        (limiter.count, limiter.window_s), cap.count = settings.limits_on(datetime.now(UTC).date())
         if cap.left() <= 0:
             return "capped"
         if not limiter.allow(_client_ip(request)):
@@ -296,22 +324,72 @@ def create_app(
         cap.take()
         return "model"
 
-    def drill_allowed(request: Request) -> None:
-        """A drill or a bring-back runs the crew: it counts against the per-client limit and a
-        daily cap, the model's or, offline, the drills' own. Past any of them: 429."""
+    def crew_slot(llm: Any) -> AbstractAsyncContextManager[Any]:
+        """A slot for a crew run with a model (`crew_slots`); a run without one needs none."""
+        return crew_slots if llm is not None else nullcontext()
+
+    def drill_verdict(request: Request) -> str:
+        """Whether a drill or a bring-back may run the crew now: "model", "offline",
+        "rate_limited" or "capped". It counts against the per-client limit and a daily cap, the
+        model's or, offline, the drills' own."""
         if client is not None:
-            verdict = regeneration(request)
-        elif drill_cap.left() <= 0:
-            verdict = "capped"
-        elif not limiter.allow(_client_ip(request)):
-            verdict = "rate_limited"
-        else:
-            drill_cap.take()
-            verdict = "offline"
-        if verdict == "rate_limited":
-            raise HTTPException(429, "rate_limited: try again in a few minutes")
-        if verdict == "capped":
+            return regeneration(request)
+        if drill_cap.left() <= 0:
+            return "capped"
+        if not limiter.allow(_client_ip(request)):
+            return "rate_limited"
+        drill_cap.take()
+        return "offline"
+
+    def limited_run(verdict: str, rk: str) -> dict[str, Any] | None:
+        """A limited drill or bring-back is never a dead end: the recording of the same drill in
+        the same state if there is one, else None and the crew runs offline (no model, counted
+        against the offline drills' cap). Past that cap too: 429."""
+        if (shown := replay(rk, verdict)) is not None:
+            return shown
+        if not drill_cap.take():
+            if verdict == "rate_limited":
+                raise HTTPException(429, "rate_limited: try again in a few minutes")
             raise HTTPException(429, "capped: today's budget is used up; try again tomorrow (UTC)")
+        return None
+
+    def flags(verdict: str) -> dict[str, bool]:
+        return {"rate_limited": verdict == "rate_limited", "capped": verdict == "capped"}
+
+    def rec_parts(ctx: MomentContext, asked: dict[str, Any], down0: list[str]) -> dict[str, Any]:
+        """What shapes a drill's recordings, but for its path (api/recorded.py)."""
+        return {"card": ctx.card.content_hash(), "personas": asked["personas"],
+                "languages": asked["languages"], "prompts": PROMPT_VERSION,
+                "pipeline": PIPELINE_VERSION, "down": down0}  # fmt: skip
+
+    def replay(rk: str, verdict: str) -> dict[str, Any] | None:
+        """Recording `rk`, labelled with the time it ran. Its pending agents are the ones whose
+        bring-back was recorded too, so every button it offers leads somewhere."""
+        rec = recordings.get(rk)
+        if rec is None:
+            return None
+        response = rec["response"]
+        cues.add_drill(response)  # its voice cues may be spoken, like any served breakdown
+
+        def recorded(step: str) -> bool:
+            return recordings.has(recording_key(**rec["parts"], path=[*rec["path"], step]))
+
+        pending = [step for step in response["drill"]["pending"] if recorded(step)]
+        ran = {"source": response["source"], "ran_at": rec["at"]}
+        return {**response, "key": rk, "cached": True, **flags(verdict),
+                "drill": {**response["drill"], "pending": pending},
+                "provenance": _provenance(ran, cached=True, limits=flags(verdict)),
+                "recorded": {"at": rec["at"]}}  # fmt: skip
+
+    def record_run(ctx: MomentContext, record: dict[str, Any], response: dict[str, Any]) -> None:
+        """Record a drill or a bring-back that ran, under the drill's history."""
+        parts = rec_parts(ctx, record["result"]["request"], record["history"]["down0"])
+        path = record["history"]["path"]
+        public = {k: v for k, v in response.items()
+                  if k not in ("key", "rate_limited", "capped", "provenance")}  # fmt: skip
+        recordings.put(recording_key(**parts, path=path),
+                       {"at": record.get("ran_at") or now(), "parts": parts, "path": path,
+                        "response": public, "trace": record.get("trace")})  # fmt: skip
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -382,12 +460,13 @@ def create_app(
             await ws.close(code=4404)
             return
         ip = _client_ip(ws)
-        if refused := slots.take(ip):
+        if refused := egress.refused(ip) or slots.take(ip):
             await ws.send_json({"type": "error", "detail": refused})
             await ws.close(code=4429)
             return
         try:
-            await stream(ws, match, speed, start, settings.live_max_s)
+            await stream(ws, match, speed, start, settings.live_max_s,
+                         sent=lambda n: egress.charge(ip, n))  # fmt: skip
         finally:
             slots.give(ip)
 
@@ -406,10 +485,15 @@ def create_app(
                                **extra)  # fmt: skip
 
         if body.fail:  # a fresh run under its own key: never a cache hit, never cached for others
-            drill_allowed(request)
             down = sorted(set(body.fail))
-            k = key(model, fail=down, run=uuid.uuid4().hex)
-            return await _drill(m, ctx, body, down, k, where)
+            verdict = drill_verdict(request)
+            asked = {"personas": body.personas, "languages": body.languages}
+            rk = recording_key(**rec_parts(ctx, asked, down), path=[])
+            if verdict in LIMITED and (shown := limited_run(verdict, rk)) is not None:
+                return shown
+            llm = client if verdict == "model" else None
+            k = key(model if llm is not None else "offline", fail=down, run=uuid.uuid4().hex)
+            return await _drill(m, ctx, body, down, k, where, llm, flags(verdict))
         # The Analyst's tools shape a model breakdown, so they are part of its key.
         model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
         offline_key = key("offline")
@@ -439,7 +523,7 @@ def create_app(
     ) -> dict[str, Any]:
         """Run the crew and cache the result. A run of this key that was interrupted resumes from
         its checkpoint; once the result is cached, the checkpoints go."""
-        async with locks.hold(k):
+        async with locks.hold(k), crew_slot(llm):
             run = await run_crew(ctx, client=llm, personas=tuple(body.personas),
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
                                  checkpoints=FileCheckpointStorage(runs_dir / k))  # fmt: skip
@@ -453,12 +537,15 @@ def create_app(
                     empty.rmdir()
         return {**_answer(k, value, cached=False, limits=limits), "drill": None}
 
-    def _drill_response(k: str, record: dict[str, Any]) -> dict[str, Any]:
+    def _drill_response(
+        k: str, record: dict[str, Any], limits: dict[str, bool] = NO_LIMITS
+    ) -> dict[str, Any]:
         public = {name: record[name] for name in ("source", "result", "drill")}
         cues.add_drill(public)  # its voice cues may be spoken, like any served breakdown
         where = {"possession": record["possession"]} if "possession" in record else {}
         stored = {**public, "trace": record.get("trace"), "ran_at": record.get("ran_at")}
-        return {**_answer(k, stored, cached=False), **where}  # every drill runs the crew afresh
+        # Every drill runs the crew afresh; `limits`: why it ran without the model.
+        return {**_answer(k, stored, cached=False, limits=limits), **where}
 
     async def _drill(
         m: Match,
@@ -467,24 +554,39 @@ def create_app(
         down: list[str],
         k: str,
         where: dict[str, Any],
+        llm: Any,
+        limits: dict[str, bool] = NO_LIMITS,
     ) -> dict[str, Any]:
-        """The crew with `down` taken down, checkpointed for a bring-back (SPEC 6)."""
-        async with locks.hold(k):
-            run = await run_crew(ctx, client=client, personas=tuple(body.personas),
+        """The crew with `down` taken down, checkpointed for a bring-back and recorded (SPEC 6).
+        `llm`: the model, or None for an offline run."""
+        async with locks.hold(k), crew_slot(llm):
+            run = await run_crew(ctx, client=llm, personas=tuple(body.personas),
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
                                  down=down, checkpoints=drills.checkpoints(k))  # fmt: skip
-            record = {"source": "model" if client is not None else "offline",
+            record = {"source": "model" if llm is not None else "offline",
                       "result": run.result.model_dump(mode="json", by_alias=True),
                       "drill": {"down": down, "pending": run.pending}, "match": m.id,
                       "moment": body.moment, "bring_backs": 0,
+                      "history": {"down0": down, "path": []},
                       "trace": run.trace.model_dump(mode="json"),
                       "ran_at": run.trace.runs[-1].started, **where}  # fmt: skip
             drills.put(k, record)
-        return _drill_response(k, record)
+        response = _drill_response(k, record, limits)
+        record_run(ctx, record, response)
+        return response
 
     @app.post("/api/breakdowns/{key}/bring-back")
     async def bring_back(key: str, body: BringBackBody, request: Request) -> dict[str, Any]:
-        """Re-run one downed step of a drill from its checkpoint; the rest is kept (SPEC 6)."""
+        """Re-run one downed step of a drill from its checkpoint; the rest is kept (SPEC 6).
+
+        Limited, it replays the recording of the same bring-back, else runs it offline. On a
+        recorded drill (its key is a recording's), it replays the recorded bring-back."""
+        if KEY.fullmatch(key) and drills.get(key) is None and (rec := recordings.get(key)):
+            child = recording_key(**rec["parts"], path=[*rec["path"], body.step])
+            if (shown := replay(child, "")) is None:
+                raise HTTPException(404, f"this recorded run has no bring-back of the "
+                                         f"{body.step}: run a new drill")  # fmt: skip
+            return shown
         if not KEY.fullmatch(key) or drills.get(key) is None:
             raise HTTPException(404, "no failure drill with this key (drills last until the API "
                                      "restarts or redeploys): run the drill again")  # fmt: skip
@@ -500,33 +602,47 @@ def create_app(
                                          "run a new drill")  # fmt: skip
             if not drills.has_checkpoints(key):
                 raise HTTPException(410, "this drill's checkpoints are gone: run the drill again")
-            drill_allowed(request)
+            verdict = drill_verdict(request)
             m = await match_or_404(record["match"])
             ctx = m.context(record.get("moment"))
             if ctx is None:
                 raise HTTPException(410, "this drill's moment is no longer served: run it again")
             asked = record["result"]["request"]
+            history = record.get("history") or {"down0": drill["down"], "path": []}
+            path = [*history["path"], body.step]
+            rk = recording_key(**rec_parts(ctx, asked, history["down0"]), path=path)
+            if verdict in LIMITED and (shown := limited_run(verdict, rk)) is not None:
+                return shown
+            llm = client if verdict == "model" else None  # limited: the step comes back offline
             down = [d for d in drill["down"] if d != body.step]
             try:
-                run = await run_crew(ctx, client=client, personas=tuple(asked["personas"]),
-                                     languages=tuple(asked["languages"]),
-                                     use_mcp=settings.analyst_mcp, down=down,
-                                     checkpoints=drills.checkpoints(key), bring_back=body.step,
-                                     trace=_trace_of(record))  # fmt: skip
+                async with crew_slot(llm):
+                    run = await run_crew(ctx, client=llm, personas=tuple(asked["personas"]),
+                                         languages=tuple(asked["languages"]),
+                                         use_mcp=settings.analyst_mcp, down=down,
+                                         checkpoints=drills.checkpoints(key),
+                                         bring_back=body.step, trace=_trace_of(record))  # fmt: skip
             except NotWaiting as e:
                 raise HTTPException(410, f"{e}: run the drill again") from e
+            on_model = llm is not None and record["source"] == "model"
             record = {**record, "result": run.result.model_dump(mode="json", by_alias=True),
+                      "source": "model" if on_model else "offline",
                       "drill": {"down": down, "pending": run.pending},
                       "bring_backs": record["bring_backs"] + 1,
+                      "history": {"down0": history["down0"], "path": path},
                       "trace": run.trace.model_dump(mode="json"),
                       "ran_at": run.trace.runs[-1].started}  # fmt: skip
             drills.put(key, record)
-        return _drill_response(key, record)
+        response = _drill_response(key, record, flags(verdict))
+        record_run(ctx, record, response)
+        return response
 
     @app.get("/api/breakdowns/{key}/trace")
     async def breakdown_trace(key: str) -> dict[str, Any]:
         """The crew trace of a breakdown or a drill this service ran (SPEC 6)."""
-        value = (drills.get(key) or storage.breakdowns.get(key)) if KEY.fullmatch(key) else None
+        value = None
+        if KEY.fullmatch(key):  # a drill, a cached breakdown, or a recorded drill (api/recorded.py)
+            value = drills.get(key) or storage.breakdowns.get(key) or recordings.get(key)
         if value is None:
             raise HTTPException(404, "no breakdown with this key: request it with "
                                      "POST /api/breakdowns")  # fmt: skip
@@ -585,9 +701,10 @@ def create_app(
                 if not path.exists():
                     path.write_text(json.dumps(rc.evidence(), ensure_ascii=False))
                 rc = dataclasses.replace(rc, evidence_path=str(path))
-            run = await run_recap_crew(rc, client=llm, personas=tuple(body.personas),
-                                       languages=tuple(body.languages),
-                                       use_mcp=settings.analyst_mcp)  # fmt: skip
+            async with crew_slot(llm):
+                run = await run_recap_crew(rc, client=llm, personas=tuple(body.personas),
+                                           languages=tuple(body.languages),
+                                           use_mcp=settings.analyst_mcp)  # fmt: skip
             # Its claims say Home and Away (their templates are in the cache key): name the clubs.
             value = rename({"source": source, "result": run.result.model_dump(mode="json"),
                             "trace": run.trace.model_dump(mode="json"),
@@ -612,9 +729,20 @@ def create_app(
         ctx = m.context(body.moment)
         if ctx is None:
             raise HTTPException(404, f"what-ifs are available for {', '.join(m.contexts)}")
-        verdict = regeneration(request) if client is not None else "offline"
-        use_model, capped = verdict == "model", verdict == "capped"
-        action, _ = await whatif.map_question(ctx, body.question, client if use_model else None)
+        # The model maps a question once: asked again, in any case or spacing, its mapping is
+        # read back, with no model call and no unit of the daily cap.
+        qkey = content_key(kind="whatif-question", match=m.id, moment=ctx.card.id,
+                           question=_question(body.question), version=WHATIF_VERSION,
+                           model=model)  # fmt: skip
+        if client is not None and (known := answers.get(qkey)) is not None:
+            verdict, (action, source) = "mapped", (known["action"], "llm")
+        else:
+            verdict = regeneration(request) if client is not None else "offline"
+            llm = client if verdict == "model" else None
+            action, source = await whatif.map_question(ctx, body.question, llm)
+            if source == "llm":
+                answers.put(qkey, {"action": action})
+        capped = verdict == "capped"
         if action is not None:
             # A match with one hero keeps its cache keys; with several, the moment is part of it.
             moment = {"moment": ctx.card.id} if len(m.contexts) > 1 else {}
@@ -624,7 +752,7 @@ def create_app(
                 return {"key": k, "cached": True, "capped": capped,
                         "answer": {**hit, "question": body.question}}  # fmt: skip
         answer = await whatif.answer_question(ctx, body.question, body.language, body.persona,
-                                              client if use_model else None)  # fmt: skip
+                                              mapped=(action, source))  # fmt: skip
         data = answer.model_dump(mode="json")
         if action is None or answer.action is None:
             return {"key": None, "cached": False, "capped": capped, "answer": data}

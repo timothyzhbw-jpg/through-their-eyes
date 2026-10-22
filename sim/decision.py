@@ -16,6 +16,12 @@ An opponent wins the ball in either of two ways, both from the time-to-intercept
   intercept only counts arrivals after the reaction time, so it misses him. The sim wins the ball
   by the same radius (`SimParams.control_radius`: control of a free ball, tackles).
 
+A pass to a teammate in an offside position is an illegal option (SPEC 3.9, IFAB Laws of the Game,
+Law 11): if he plays it the referee gives the ball to the opponents. The carrier judges it on his
+belief, with its position uncertainty, and the chance of the flag multiplies P(success). A clear
+offside pass is worth about what losing the ball there is; only a belief error or the softmax
+noise picks it.
+
 xT here is the smooth prior (`analytics.xt.xt_prior_for`), not the fitted grid: the grid is fitted
 on play this model drives (SPEC 4.5), and valuing options with it would change its own data.
 """
@@ -30,7 +36,7 @@ import numpy as np
 from analytics.pitch_control import control_from_times, logistic
 from analytics.tti import REACTION_S, V_MAX, time_to_intercept
 from analytics.xt import GOAL_X, xt_prior_for
-from sim import shots
+from sim import laws, shots
 from sim.ball import BallParams, flight_time, launch_speed, path_distances
 from sim.config import HALF_LENGTH, HALF_WIDTH, SimParams
 
@@ -214,7 +220,25 @@ def _pass_success(
     reach = float(
         logistic(np.pi / (np.sqrt(3.0) * sigma_j) * (t_flight + p.reach_slack_s - t_receiver))
     )
-    return p_clear * control * reach
+    return p_clear * control * reach * (1.0 - p_offside(ctx, j, ball, opp))
+
+
+def p_offside(ctx: DecisionContext, j: int, ball: np.ndarray, opp: np.ndarray) -> float:
+    """P(teammate j is in an offside position if the ball is played now), on the state `ctx`
+    holds (SPEC 3.9, Law 11.1): how far he is beyond the line, the furthest of the halfway line,
+    the ball and the second-last opponent, against the spread of the believed positions (0.3 m
+    + 1 m per second of age, for him and for that opponent). Off-field players count as on the
+    line."""
+    if len(opp) < 2:  # no second-last opponent (a hand-built context): no offside line
+        return 0.0
+    p, sign = ctx.params, ctx.attack_sign
+    x = sign * np.clip(ctx.pos[:, 0], -HALF_LENGTH, HALF_LENGTH)
+    k = opp[np.argsort(x[opp], kind="stable")[-2]]
+    line = max(0.0, float(sign * ball[0]), float(x[k]))
+    spread = p.uncertainty0 + p.uncertainty_growth * ctx.age_s
+    sigma = math.hypot(spread[j], spread[k] if line == x[k] else 0.0)
+    z = (float(x[j]) - line - laws.LEVEL_TOLERANCE) / sigma
+    return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
 
 
 def _pass_option(

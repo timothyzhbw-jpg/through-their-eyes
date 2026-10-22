@@ -57,3 +57,10 @@ test("a caption moves right while a title holds the lower left, and stays centre
     ],
   );
 });
+
+test("a watermark still is looped over the whole film, on top of the captions", () => {
+  const args = burnArgs("film.mp4", [{ file: "c.mov", start: 1 }], "out.mp4", { fps: 30, watermark: "wm.png", duration: 115.4 });
+  const joined = args.join(" ");
+  assert.match(joined, /-loop 1 -t 115\.4 -i wm\.png/);
+  assert.match(joined, /\[v0\]\[wm\]overlay=0:0:shortest=1/);
+});

@@ -18,7 +18,7 @@ import {
   smoothedSpeeds,
 } from "./gait";
 import { NECK_MAX, TRUNK_MAX, aimLook, splitLook } from "./look";
-import { riggedFromSearch } from "./trial";
+import { lookFromSearch, riggedFromSearch } from "./trial";
 
 const CLIPS: GaitClips = { walkSpeed: 5.25, sprintSpeed: 7.0, cycle: 0.48 };
 const DEG = Math.PI / 180;
@@ -30,6 +30,14 @@ describe("animated players switch", () => {
     expect(riggedFromSearch("?seed=3")).toBe(true);
     expect(riggedFromSearch("?rigged=0")).toBe(false);
     expect(riggedFromSearch("?seed=3&rigged=0")).toBe(false);
+  });
+
+  it("wears the upgraded look by default; only ?look=v1 brings back the plain kits", () => {
+    expect(lookFromSearch("")).toBe("v2");
+    expect(lookFromSearch("?look=v2")).toBe("v2");
+    expect(lookFromSearch("?look=other&seed=3")).toBe("v2");
+    expect(lookFromSearch("?look=v1")).toBe("v1");
+    expect(lookFromSearch("?rigged=1&look=v1")).toBe("v1");
   });
 });
 
@@ -129,7 +137,7 @@ describe("pass clip", () => {
     const passes = passEvents(hero.runs.factual.events, hero.ids);
     const h8 = passes[hero.ids.indexOf("H8")];
     expect(h8.map((p) => p.frame)).toEqual([75]);
-    expect(h8[0].yaw / DEG).toBeCloseTo(-4.5, 0); // forward to H9
+    expect(h8[0].yaw / DEG).toBeCloseTo(-1.7, 0); // forward to H9
     expect(passes[hero.ids.indexOf("H4")].map((p) => p.frame)).toEqual([15]);
   });
   it("turns the body so the kick goes along the pass while the clip plays, else body_yaw", () => {

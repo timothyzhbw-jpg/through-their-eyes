@@ -29,7 +29,10 @@ const raw = markerExport();
 const hero = parseHero(raw);
 const h = raw.players.findIndex((p) => p.id === "H8");
 const r = raw.players.findIndex((p) => p.id === "H9");
-const RESOLVED = 139; // reception:H9:0139, the end of pass:H8:0075
+// The end of pass:H8:0075: H9's reception in the bundled run (frame 136 since the run is onside).
+const RESOLVED = raw.runs.factual.events.find(
+  (e) => e.type === "reception" && e.player === "H9",
+)!.frame;
 
 /** Marker to man at a frame of an exported run, m (the export is in mm). */
 function separation(run: "factual" | "counterfactual", f: number): number {

@@ -58,3 +58,16 @@ test("a sha256 mismatch names the expected and the actual hash", async () => {
 test("the download file name keeps the URL extension", () => {
   assert.equal(assetFileName(asset()), "bed.ogg");
 });
+
+test("a local asset (our own score) needs a path inside the repo and an Original or CC0 licence", () => {
+  const credits = "https://example.com/score";
+  const ok = { id: "score", kind: "music", title: "Score", author: "Us", page: "https://example.com/score", local: "out/video/score/score.wav", licence: "Original", checked_on: "2026-10-22" };
+  assert.deepEqual(validateAssets([ok], credits).errors, []);
+  assert.equal(assetFileName(ok), "score.wav");
+  const bad = { ...ok, local: "../elsewhere.wav", licence: "CC-BY-4.0" };
+  const errors = validateAssets([bad], credits).errors;
+  assert.ok(errors.some((e) => e.includes("local must be a path inside the repo")), errors.join("\n"));
+  assert.ok(errors.some((e) => e.includes("is not Original, CC0-1.0 or Public Domain")), errors.join("\n"));
+  const downloaded = { ...ok, local: undefined, file: "https://example.com/a.mp3", licence: "Original", sha256: "0".repeat(64) };
+  assert.ok(validateAssets([downloaded], credits).errors.some((e) => e.includes('licence "Original"')));
+});

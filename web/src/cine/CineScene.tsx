@@ -2,12 +2,16 @@
 // Optional pieces (rings, labels, ghosts, the vision cone) read the shot from cineRuntime
 // inside the frame, so load() does not have to wait for React to render them.
 
+import { useStore } from "../store/store";
+import { featuresOf, quality } from "../quality/quality";
+import { LookRig } from "../quality/QualityPost";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, halfCone, sampleInto, speedAt } from "../data/hero";
 import { trial } from "../players/trial";
 import { useView } from "../session";
+import { BeliefRings } from "../views/BeliefRings";
 import { COLORS, LABEL, getLabelTexture, teamColor } from "../views/scene";
 import { NIGHT, PlayerShadows, Stadium, sceneClock } from "../views/Stadium";
 import { Ground } from "../views/PovView";
@@ -240,65 +244,9 @@ function Rings() {
   );
 }
 
+/** Belief ghosts as the app draws them (views/BeliefRings.tsx): the trailer's ghosts match. */
 function Ghosts() {
-  const { hero, playback } = useView();
-  const meshes = useRef<(THREE.Mesh | null)[]>([]);
-  const materials = useMemo(
-    () => ({
-      ghost: new THREE.MeshBasicMaterial({
-        color: COLORS.fg,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-      }),
-      runner: new THREE.MeshBasicMaterial({
-        color: COLORS.gold,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-      }),
-    }),
-    [],
-  );
-  useEffect(
-    () => () => {
-      materials.ghost.dispose();
-      materials.runner.dispose();
-    },
-    [materials],
-  );
-  useFrame(() => {
-    const sample = stageSample;
-    if (!sample) return;
-    const s = playback.get();
-    const pov = hero.ids.indexOf(s.povPlayer);
-    const show = s.beliefGhosts && pov === hero.hero;
-    for (let j = 0; j < hero.n; j++) {
-      const ghost = meshes.current[j];
-      if (!ghost) continue;
-      const x = sample.pos[2 * j];
-      const y = sample.pos[2 * j + 1];
-      const gx = sample.ghost[2 * j];
-      const gy = sample.ghost[2 * j + 1];
-      ghost.position.set(gx, BODY_CENTRE, -gy);
-      ghost.visible = show && j !== pov && Math.hypot(gx - x, gy - y) > 1.2;
-    }
-  });
-  return (
-    <>
-      {hero.players.map((p, j) => (
-        <mesh
-          key={p.id}
-          ref={(m) => {
-            meshes.current[j] = m;
-          }}
-          geometry={CAPSULE}
-          material={j === hero.runner ? materials.runner : materials.ghost}
-          visible={false}
-        />
-      ))}
-    </>
-  );
+  return <BeliefRings sampleOf={() => stageSample} />;
 }
 
 function Cone() {
@@ -337,6 +285,10 @@ function Cone() {
       fan.visible = false;
       return;
     }
+    // With the shared look the cone is the live view's look-sweep gold.
+    material.uniforms.uColor.value.set(
+      featuresOf(quality.get().tier, false).look ? COLORS.gold : COLORS.sight,
+    );
     const s = playback.get();
     const run = hero.runs[s.mode];
     const j = hero.ids.indexOf(shot.cone.id);
@@ -414,8 +366,10 @@ function CameraRig() {
 }
 
 export function CineScene() {
+  const look = useStore(quality, (s) => featuresOf(s.tier, false).look);
   return (
     <>
+      {look && <LookRig />}
       <CrowdClock />
       <Stage />
       <Stadium />

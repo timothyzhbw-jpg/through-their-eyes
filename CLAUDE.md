@@ -19,6 +19,9 @@ Pipeline required by the brief: **Ingest → Interpret → Explain → Render �
    demo. Fictional clubs and players. No Premier League or club
    logos, real player names, broadcaster branding, or copyrighted music — in code, assets, or video.
    - The real-footage exception (approved 2026-10-19) was cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo video.
+   - Bowen allowed CMU motion capture on 2026-10-21 (lab motion capture of real people, not match
+     data or footage) for animation only: the players' animation (`web/public/models/anims_extra.glb`)
+     and the trailer's Blender shots, always with the CMU acknowledgement credited (`docs/CREDITS.md`).
 3. **English** for everything in the repo (code, comments, docs, commits, UI). Only localized
    narration may be non-English.
 4. **Microsoft stack, meaningfully used:** Microsoft Foundry (models), Microsoft Agent Framework
@@ -88,7 +91,14 @@ _Fill in as they come to exist._
 - `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
-  CI run on main.
+  CI run on main. Both upload web/ through `infra/upload_web.sh <account> <site url>`: gzipped,
+  every Content-Type named, each file read back from the site before `index.html` goes up, then
+  the page loaded in headless Chrome, the previous `index.html` restored on failure
+- `cd web && npm run build && npm run loadperf` — cold-load timings of the live site (SPEC 8):
+  first paint, first draw, players drawn, LCP and bytes, laptop and phone, plain and on Fast 3G
+  with a 4× CPU slowdown; `-- --serve dist-upload` measures a staged build (`node
+  scripts/stage.mjs`) served as Storage would on the site's origin. Report:
+  `eval/reports/web_load.md`
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
@@ -187,7 +197,8 @@ _Fill in as they come to exist._
   the hero moment
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
-  skeleton view off and on (`-- --headed` on a laptop's GPU)
+  skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a
+  render tier, SPEC 7)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
   including axe-core's WCAG 2.2 A/AA rules
 - `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core
@@ -221,6 +232,10 @@ _Fill in as they come to exist._
   Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
+- `docker run -d --name tte-load --cpus 0.5 --memory 1g -p 8797:8000 tte-api`, then
+  `uv run python -m infra.loadtest --container tte-load` — local load test (SPEC 8,
+  docs/OPERATIONS.md): 50 live viewers and a burst of breakdowns and what-ifs on the deployed
+  0.5 vCPU / 1 GiB, offline; frame lag, latency, memory. It refuses any host but localhost
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo
   video capture kit (SPEC 10): records every shot of `video/shots.json` from the live site into
   `out/video/` (WebM clips, stills, contact sheet, voice-over with numbers read off verified claims)

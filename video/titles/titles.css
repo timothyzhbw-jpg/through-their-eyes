@@ -116,19 +116,16 @@ html.alpha #stage {
 @keyframes slam-in {
   0% {
     transform: scale(1.25);
-    filter: blur(9px);
     opacity: 0;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   88% {
     transform: scale(0.965);
-    filter: blur(0);
     opacity: 1;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   100% {
     transform: scale(1);
-    filter: blur(0);
     opacity: 1;
   }
 }
@@ -173,20 +170,6 @@ html.alpha #stage {
   }
 }
 
-@keyframes impact-flash {
-  0% {
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.88;
-  }
-  55% {
-    opacity: 0.88;
-  }
-  100% {
-    opacity: 0;
-  }
-}
 
 @keyframes fade-out {
   from {
@@ -209,12 +192,10 @@ html.alpha #stage {
 @keyframes slam-out {
   0% {
     transform: scale(1);
-    filter: blur(0);
     opacity: 1;
   }
   100% {
     transform: scale(1.2);
-    filter: blur(10px);
     opacity: 0;
   }
 }
@@ -223,12 +204,10 @@ html.alpha #stage {
   from {
     opacity: 0;
     transform: translateY(18px);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
@@ -247,19 +226,16 @@ html.alpha #stage {
   0% {
     transform: scale(2) rotate(-10deg);
     opacity: 0;
-    filter: blur(4px);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   86% {
     transform: scale(0.94) rotate(-4deg);
     opacity: 1;
-    filter: blur(0);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   100% {
     transform: scale(1) rotate(-4deg);
     opacity: 1;
-    filter: blur(0);
   }
 }
 
@@ -293,18 +269,15 @@ html.alpha #stage {
 @keyframes card-in {
   0% {
     opacity: 0;
-    filter: blur(8px);
     transform: translate(-240px, 70px) rotate(var(--tilt)) scale(0.96);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   92% {
     opacity: 1;
-    filter: blur(0);
     transform: translate(12px, var(--ty)) rotate(var(--tilt)) scale(var(--scale));
   }
   100% {
     opacity: 1;
-    filter: blur(0);
     transform: translate(0, var(--ty)) rotate(var(--tilt)) scale(var(--scale));
   }
 }
@@ -412,16 +385,6 @@ html.alpha #stage {
   animation-delay: var(--at);
 }
 
-.fx-flash {
-  position: absolute;
-  inset: 0;
-  background: #fff;
-  z-index: 8;
-  pointer-events: none;
-  opacity: 0;
-  animation: impact-flash 0.09s linear both;
-  animation-delay: var(--at);
-}
 
 .fx-line {
   animation: line-in 0.22s var(--ease) both;
@@ -720,10 +683,6 @@ html.alpha #stage {
 
 .mark,
 .ring,
-.mini-flash {
-  position: absolute;
-  pointer-events: none;
-}
 
 .mark {
   width: 64px;
@@ -755,12 +714,6 @@ html.alpha #stage {
   animation-delay: var(--at);
 }
 
-.mini-flash {
-  inset: -20% -30%;
-  background: #fff;
-  animation: impact-flash 0.09s linear both;
-  animation-delay: var(--at);
-}
 
 .refuted {
   gap: 8px;
@@ -1337,11 +1290,6 @@ html.spec #stage {
   margin: -55px 0 0 -55px;
 }
 
-.stamp-box .mini-flash {
-  inset: -60%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.85), transparent 68%);
-}
 
 /* --- caption: burned-in voice-over text ------------------------------------- */
 
@@ -1381,9 +1329,124 @@ html.spec #stage {
 
 .corner-label {
   position: absolute;
-  top: 158px; /* below the top bar of a 2.39:1 letterbox */
+  top: 28px; /* in the top bar of a 2.39:1 letterbox, level with the preview mark: off the picture */
   right: 64px;
   color: rgba(239, 237, 229, 0.72);
   font-size: 26px;
   letter-spacing: 0.22em;
+}
+
+/* --- namecard: freeze-frame player intro ------------------------------------ */
+
+.nc-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.nc-card {
+  position: absolute;
+  left: 120px;
+  bottom: 200px; /* above the bottom letterbox bar and the captions */
+  transform-origin: left bottom;
+}
+
+.nc-card.nc-right {
+  left: auto;
+  right: 120px;
+  text-align: right;
+  transform-origin: right bottom;
+}
+
+.nc-head {
+  font-size: 112px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--chalk);
+}
+
+.nc-name {
+  color: var(--gold);
+}
+
+.nc-rule {
+  display: block;
+  height: 6px;
+  margin: 14px 0 16px;
+  background: var(--gold);
+}
+
+.nc-sub {
+  font-size: 54px;
+  letter-spacing: 0.06em;
+  color: var(--chalk);
+}
+
+/* --- chapter card ---------------------------------------------------------- */
+
+html.opaque .chapter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--night);
+}
+
+.chapter-label {
+  font-size: 56px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin-bottom: 18px;
+}
+
+.chapter-title {
+  font-size: 200px;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: var(--chalk);
+}
+
+/* --- duo: split-screen labels ------------------------------------------------ */
+
+.duo {
+  position: absolute;
+  top: 214px; /* under the top letterbox bar and clear of the corner label */
+  font-size: 64px;
+  letter-spacing: 0.12em;
+}
+
+.duo-left {
+  left: 72px;
+  color: var(--gold);
+}
+
+.duo-right {
+  right: 72px;
+  color: var(--dusk);
+}
+
+/* --- end card: verbatim licence credits ------------------------------------- */
+
+.end-legal {
+  margin-top: 18px;
+  max-width: 1400px;
+  text-align: center;
+}
+
+.legal {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  color: rgba(239, 237, 229, 0.62);
+}
+
+/* A watermark in the top-left corner, clear of the corner label on the right. */
+.corner-label.corner-tl {
+  top: 22px;
+  right: auto;
+  left: 24px;
+  padding: 6px 12px 4px;
+  background: rgba(5, 8, 6, 0.7);
+  border-radius: 4px;
+  color: rgba(246, 213, 102, 0.95);
 }

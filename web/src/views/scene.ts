@@ -5,6 +5,7 @@ import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import * as THREE from "three";
 import type { Store } from "../store/store";
+import { FIELD, LAW1 } from "./fieldMarkings";
 
 export const COLORS = {
   bg: "#0b1210",
@@ -20,7 +21,12 @@ export const COLORS = {
 export const teamColor = (team: number) => (team === 0 ? COLORS.home : COLORS.away);
 
 // Pitch (x, y) in metres maps to three.js (x, height, -y): y is up and the pitch lies in XZ.
-export const PITCH = { length: 105, width: 68, halfLength: 52.5, halfWidth: 34 };
+export const PITCH = {
+  length: LAW1.length,
+  width: LAW1.width,
+  halfLength: FIELD.halfLength,
+  halfWidth: FIELD.halfWidth,
+};
 /** What the tactical board shows: the pitch plus a 3 m apron, centred on the centre spot. */
 export const BOARD_EXTENT = { x: 111, y: 74 };
 
@@ -29,7 +35,7 @@ export function boardZoom(width: number, height: number): number {
   return Math.max(1e-3, Math.min(width / BOARD_EXTENT.x, height / BOARD_EXTENT.y));
 }
 
-/** Pitch markings drawn once into a canvas texture (20 px per metre). */
+/** Pitch markings drawn once into a canvas texture (20 px per metre), by Law 1 (fieldMarkings). */
 let pitchTexture: THREE.CanvasTexture | null = null;
 export function getPitchTexture(): THREE.CanvasTexture {
   if (pitchTexture) return pitchTexture;
@@ -44,24 +50,60 @@ export function getPitchTexture(): THREE.CanvasTexture {
   }
   const X = (x: number) => (x + PITCH.halfLength) * s;
   const Y = (y: number) => (PITCH.halfWidth - y) * s;
+  const L = FIELD.halfLength;
+  const W = FIELD.halfWidth;
+  // A line belongs to the area it bounds: the outer edges of the touchlines and goal lines are
+  // the edge of the field, so each line is drawn half its width inside its coordinate.
+  const half = LAW1.lineWidth / 2;
   c.strokeStyle = "rgba(255,255,255,0.85)";
   c.fillStyle = "rgba(255,255,255,0.85)";
-  c.lineWidth = 0.12 * s;
-  c.strokeRect(X(-52.5) + 2, Y(34) + 2, PITCH.length * s - 4, PITCH.width * s - 4);
+  c.lineWidth = LAW1.lineWidth * s;
+  c.strokeRect(
+    X(-L + half),
+    Y(W - half),
+    (PITCH.length - LAW1.lineWidth) * s,
+    (PITCH.width - LAW1.lineWidth) * s,
+  );
   c.beginPath();
-  c.moveTo(X(0), Y(34));
-  c.lineTo(X(0), Y(-34));
+  c.moveTo(X(0), Y(W));
+  c.lineTo(X(0), Y(-W));
   c.stroke();
   c.beginPath();
-  c.arc(X(0), Y(0), 9.15 * s, 0, 2 * Math.PI);
+  c.arc(X(0), Y(0), LAW1.centreCircle * s, 0, 2 * Math.PI);
   c.stroke();
-  for (const g of [-1, 1]) {
-    const gx = g * PITCH.halfLength;
-    c.strokeRect(Math.min(X(gx), X(gx - g * 16.5)), Y(20.16), 16.5 * s, 40.32 * s);
-    c.strokeRect(Math.min(X(gx), X(gx - g * 5.5)), Y(9.16), 5.5 * s, 18.32 * s);
+  const dot = (x: number, y: number) => {
     c.beginPath();
-    c.arc(X(gx - g * 11), Y(0), 0.25 * s, 0, 2 * Math.PI);
+    c.arc(X(x), Y(y), 0.12 * s, 0, 2 * Math.PI);
     c.fill();
+  };
+  dot(0, 0); // the centre mark
+  for (const g of [-1, 1]) {
+    const gx = g * L;
+    const box = (depth: number, halfWidth: number) =>
+      c.strokeRect(Math.min(X(gx), X(gx - g * depth)), Y(halfWidth), depth * s, 2 * halfWidth * s);
+    box(LAW1.penaltyAreaDepth, FIELD.penaltyAreaHalfWidth);
+    box(LAW1.goalAreaDepth, FIELD.goalAreaHalfWidth);
+    const mark = gx - g * LAW1.penaltyMark;
+    dot(mark, 0);
+    // The penalty arc, outside the penalty area, facing the centre of the field. On the canvas
+    // the y axis points down, so the angle is measured on mirrored y.
+    const facing = g > 0 ? Math.PI : 0;
+    c.beginPath();
+    c.arc(
+      X(mark),
+      Y(0),
+      LAW1.penaltyArc * s,
+      facing - FIELD.penaltyArcHalfAngle,
+      facing + FIELD.penaltyArcHalfAngle,
+    );
+    c.stroke();
+    // A quarter circle of 1 m in each corner, inside the field.
+    for (const h of [-1, 1]) {
+      const toCentre = Math.atan2(h, -g); // canvas angle toward the field from corner (gx, h·W)
+      c.beginPath();
+      c.arc(X(gx), Y(h * W), LAW1.cornerArc * s, toCentre - Math.PI / 4, toCentre + Math.PI / 4);
+      c.stroke();
+    }
   }
   pitchTexture = new THREE.CanvasTexture(cv);
   pitchTexture.colorSpace = THREE.SRGBColorSpace;
@@ -73,8 +115,9 @@ export interface LabelStyle {
   color: string;
   font: string;
   outline?: string; // dark stroke behind the text
-  width?: number; // canvas px; the plane showing it should have the same aspect ratio
+  width?: number; // canvas px; the plane showing it takes the texture's aspect (labelAspect)
   height?: number;
+  maxWidth?: number; // the canvas widens up to this for a long text, then the text shrinks
 }
 
 export const LABEL = {
@@ -95,32 +138,57 @@ export const LABEL = {
     outline: "rgba(11,18,16,0.92)",
     width: 512,
     height: 96,
+    maxWidth: 1024,
   },
 } satisfies Record<string, Omit<LabelStyle, "color">>;
 
-/** A text texture (shirt number, name, tag), cached by content and style. */
+const OUTLINE_PX = 10; // the dark stroke behind a label's text
+const LABEL_PAD_PX = 2; // kept clear at each end of the canvas
+
+/** `font` with its pixel size scaled down so a text `measured` px wide at `font` fits `room` px;
+ * unchanged when it already fits. */
+export function fitFont(font: string, measured: number, room: number): string {
+  if (measured <= room) return font;
+  return font.replace(/(\d+(?:\.\d+)?)px/, (_, px: string) => {
+    return `${Math.floor((Number(px) * room) / measured)}px`;
+  });
+}
+
+/** Width over height of a label texture's canvas: the plane showing it keeps this aspect. */
+export function labelAspect(tex: THREE.CanvasTexture): number {
+  const cv = tex.image as HTMLCanvasElement;
+  return cv.width / cv.height;
+}
+
+/** A text texture (shirt number, name, tag), cached by content and style. A text too long for
+ * the canvas widens it up to `maxWidth`, then is drawn smaller: never cut at both ends (with
+ * fictional names Take his eyes' "your look: pass to K. Annersley" needs ~860 px of a 512 px tag
+ * canvas). */
 const labels = new Map<string, THREE.CanvasTexture>();
 export function getLabelTexture(text: string, style: LabelStyle): THREE.CanvasTexture {
   const { color, font, outline, width = 128, height = 128 } = style;
-  const key = [text, color, font, outline, width, height].join("|");
+  const key = [text, color, font, outline, width, height, style.maxWidth].join("|");
   const hit = labels.get(key);
   if (hit) return hit;
   const cv = document.createElement("canvas");
-  cv.width = width;
-  cv.height = height;
   const c = cv.getContext("2d")!;
   c.font = font;
+  const measured = c.measureText(text).width;
+  const pad = 2 * LABEL_PAD_PX + (outline ? OUTLINE_PX : 0);
+  cv.width = Math.min(style.maxWidth ?? width, Math.max(width, Math.ceil(measured + pad)));
+  cv.height = height; // sizing the canvas resets the context: set the font after it
+  c.font = fitFont(font, measured, cv.width - pad);
   c.textAlign = "center";
   c.textBaseline = "middle";
   const y = height * 0.53;
   if (outline) {
-    c.lineWidth = 10;
+    c.lineWidth = OUTLINE_PX;
     c.lineJoin = "round";
     c.strokeStyle = outline;
-    c.strokeText(text, width / 2, y);
+    c.strokeText(text, cv.width / 2, y);
   }
   c.fillStyle = color;
-  c.fillText(text, width / 2, y);
+  c.fillText(text, cv.width / 2, y);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   labels.set(key, tex);

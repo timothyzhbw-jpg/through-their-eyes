@@ -4,11 +4,12 @@ The match's counterpart of `agents.context.MomentContext`: every claim the recap
 verified before any model sees it, and the key-moment candidates the Director chooses from.
 
 - Match claims (`final_score`, `passes_home`, ...) are checked on the stitched run, in match frames.
-- Candidates are the match's moments in `explain.recap.rank_moments` order, at most
-  `MAX_CANDIDATES`. Candidate `k<n>` (n = its rank among all ranked moments) owns the claims
-  `k<n>.<id>`: a hero moment's MomentContext claims, re-verified under that id on the hero's own
-  evaluator (the renamed claim has its own fingerprint and audit record), and the observed facts
-  of `explain.recap.moment_claims` on the possession's run. A candidate with nothing verified to say
+- Candidates are the match's moments in `explain.recap.rank_moments` order (goals, then hero
+  moments, then the rest, each by counterfactual impact), at most `MAX_CANDIDATES`. Candidate
+  `k<n>` (n = its rank among all ranked moments) owns the claims `k<n>.<id>`: a hero moment's
+  MomentContext claims, re-verified under that id on the hero's own evaluator (the renamed claim
+  has its own fingerprint and audit record), and the observed facts of
+  `explain.recap.moment_claims` on the possession's run. A candidate with nothing verified to say
   is left out.
 - After the Director picks the key moments, the crew works on `focused(moments)`: `claims` and
   `supported` then hold the match claims and the chosen moments' claims only, so a line that cites
@@ -63,7 +64,7 @@ class Candidate:
     """A moment the Director may pick, in match frames."""
 
     id: str  # the moment's id on the match clock
-    rank: int  # among every ranked moment, 1 = the largest counterfactual impact
+    rank: int  # in `rank_moments` order: goals, hero moments, then the rest, each by impact
     kind: str
     tags: list[str]
     actor: str

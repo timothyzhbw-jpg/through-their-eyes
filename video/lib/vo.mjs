@@ -15,9 +15,16 @@ import { readWav } from "./wav.mjs";
  * uses `voices[lang]`, keeping the main voice's rate and pitch when the override omits them.
  * @param {{ voice: Voice, voices?: Record<string, Partial<Voice>> }} spec
  * @param {string | undefined} lang
+ * @param {string} [speaker] a key of `spec.speakers`
  * @returns {Voice}
  */
-export function voiceFor(spec, lang) {
+export function voiceFor(spec, lang, speaker) {
+  // A named speaker (e.g. the coach in the story) has a voice of its own, untouched by the
+  // narrator's rate, pitch and trailer processing.
+  if (speaker && spec.speakers?.[speaker]) {
+    const who = spec.speakers[speaker];
+    return { name: who.name, lang: who.lang ?? "en-US", rate: who.rate ?? "0%", pitch: who.pitch ?? "0%", fx: who.fx };
+  }
   const base = spec.voice;
   const code = lang || base.lang;
   const same =

@@ -105,10 +105,60 @@ const PAGES = [
     device: { ...DESKTOP, reducedMotion: "reduce" },
     check: (p) => beat(p, { push: 0 }),
   },
+  // The render tiers (SPEC 7, src/quality/): the post chain loads, draws, and says which tier.
+  { name: "quality-high", path: "?at=60&quality=high", check: (p) => tier(p, "high") },
+  {
+    name: "quality-high-broadcast",
+    path: "?at=66&camera=broadcast&quality=high",
+    check: (p) => tier(p, "high"),
+  },
+  {
+    name: "phone-quality-medium",
+    path: "?intro=0&quality=medium",
+    device: PHONE,
+    // The tier and the phone layout. Not the live stream: where the tier's chunk loads slowly (a
+    // software renderer) the stream has reached the hero moment and the cold-load show has taken
+    // over by then (SPEC 2). phone-hero checks the stream on a phone.
+    check: (p) => phone(p, (q) => tier(q, "medium"), { live: false }),
+  },
+  // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
+  // (beat/cut.ts).
+  { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
+  { name: "cut-no-blur-high", path: "?autoplay=0&intro=0&quality=high", check: cutNoBlur },
+  // Every camera switch lands on a frame drawn at its pane's size, with no new WebGL context
+  // (views/InstantFrame.tsx): no blank, stretched or cleared frame at a cut.
+  {
+    name: "instant-cuts",
+    path: "?autoplay=0&intro=0&at=60",
+    init: watchCanvases,
+    check: instantCuts,
+  },
   {
     name: "link-decision-tactical",
     path: "?at=decision&view=tactical",
-    check: (p) => hero(p, { main: "board" }),
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
+  },
+  {
+    name: "desktop-1280-tactical",
+    path: "?at=56&view=tactical",
+    device: { viewport: { width: 1280, height: 800 } },
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
+  },
+  // Wider than 5:3: the HUD is a column beside the board (trailer shot 04 films this one).
+  {
+    name: "desktop-1920-tactical",
+    path: "?at=decision&view=tactical",
+    device: { viewport: { width: 1920, height: 1080 } },
+    check: async (p) => {
+      await hero(p, { main: "board" });
+      await boardClear(p);
+    },
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   {
@@ -215,6 +265,29 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   await mainView(page, main);
 }
 
+/** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
+ * buttons, the stats ticker) or the run switch over it. Floating over the board they hid the
+ * players in its top-left corner, and trailer shot 04, the board cropped, filmed them. */
+async function boardClear(page) {
+  const over = await page.evaluate(() => {
+    const board = document.querySelector(".slot.main .view.tac")?.getBoundingClientRect();
+    if (!board) return ["(no board as the main view)"];
+    return [
+      ...document.querySelectorAll(
+        ".stage-top :is(.eyes-picker, button, .stat-chip, .hud > span), .stage-run .seg",
+      ),
+    ]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        const across = Math.min(r.right, board.right) - Math.max(r.left, board.left);
+        const down = Math.min(r.bottom, board.bottom) - Math.max(r.top, board.top);
+        return r.width > 1 && r.height > 1 && across > 0.5 && down > 0.5;
+      })
+      .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+  });
+  if (over.length) throw new Error(`over the tactical board: ${over.join(", ")}`);
+}
+
 /** A stitched match: the score bug, its views, the live service and every possession's moments. */
 async function match(page) {
   await see(page.getByRole("group", { name: "Live stream" }), "the live stream control");
@@ -239,6 +312,191 @@ async function beat(page, { push }) {
   } catch {
     const data = await canvas.evaluate((el) => ({ ...el.dataset }));
     throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** A hero moment drawn at a render tier: the 3D canvas carries data-quality once the tier's
+ * chunk has loaded and taken over drawing. */
+async function tier(page, want) {
+  await hero(page);
+  const canvas = page.locator(".view.pov canvas");
+  try {
+    await page.waitForFunction(
+      ([el, t]) => el.dataset.quality === t,
+      [await canvas.elementHandle(), want],
+    );
+  } catch {
+    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
+    throw new Error(`expected the ${want} tier on the 3D canvas, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** How long the replay may take to reach a frame: a software renderer (SwiftShader on the CI
+ * runner) draws far fewer frames, and the app's clock steps at most 0.1 s a frame. */
+const PLAY_MS = process.env.CI ? 60_000 : 20_000;
+/** Frames read after each cut. The cut guard (beat/cut.ts) keeps blur off for 0.3 s and for at
+ * least its first 4 frames: on a software renderer one frame can outlast the 0.3 s, so the check
+ * counts frames, one short of the guard. */
+const CUT_READ_FRAMES = 3;
+
+/** The first-person head-turn blur is off by default (Bowen: blur is uncomfortable). The replay
+ * opens as H8 looks away (his head whips round over frames 50-59, holds at 60-62, and looks back
+ * over 63-69): played to frame 60, the canvas stays sharp. Then, paused, "Motion blur" is turned
+ * on in View options; played into the look back, the moment the blur shows the camera cuts to
+ * the broadcast camera and back, and the first CUT_READ_FRAMES frames after each cut are sharp. */
+async function cutNoBlur(page) {
+  await hero(page);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  const byDefault = await page.evaluate(async (limit) => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+    const el = document.querySelector(".view.pov canvas");
+    const timeline = document.querySelector('input[aria-label="Timeline"]');
+    const t0 = performance.now();
+    let most = 0;
+    while (Number(timeline.value) < 60 && performance.now() - t0 < limit) {
+      await frame();
+      most = Math.max(most, Number(el.dataset.blurSigma ?? 0));
+    }
+    document.querySelector('button[aria-label="Pause"]')?.click(); // before the look back
+    return { most, frame: Number(timeline.value) };
+  }, PLAY_MS);
+  if (byDefault.frame < 60) {
+    throw new Error(`play did not pass the look away (frame ${byDefault.frame})`);
+  }
+  if (byDefault.most > 0) {
+    throw new Error(`expected no head-turn blur by default, got sigma ${byDefault.most} px`);
+  }
+
+  await page.getByRole("button", { name: "View options" }).click();
+  const blur = page.getByRole("button", { name: "Motion blur" });
+  await blur.click();
+  if ((await blur.getAttribute("aria-pressed")) !== "true")
+    throw new Error("Motion blur did not turn on");
+  await page.keyboard.press("Escape");
+  const after = await page.evaluate(
+    async ([limit, reads]) => {
+      const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+      const el = document.querySelector(".view.pov canvas");
+      document.querySelector('button[aria-label="Play"]').click();
+      // Turned on, the blur comes on as his head whips back.
+      const t0 = performance.now();
+      while (!(Number(el.dataset.blurSigma) > 0)) {
+        if (performance.now() - t0 > limit) return { blurred: false };
+        await frame();
+      }
+      const cuts = [];
+      for (const name of ["Broadcast", "His eyes"]) {
+        [...document.querySelectorAll('[aria-label="Camera"] button')]
+          .find((b) => b.textContent.trim() === name)
+          .click();
+        const seen = [];
+        for (let k = 0; k < reads; k++) {
+          await frame();
+          // The head-whip blur and, at the medium and high tiers, the depth of field.
+          seen.push(Number(el.dataset.blurSigma ?? 0) + Number(el.dataset.dof ?? 0));
+        }
+        cuts.push({ name, seen });
+      }
+      return { blurred: true, cuts };
+    },
+    [PLAY_MS, CUT_READ_FRAMES],
+  );
+  if (!after.blurred) throw new Error("Motion blur on, but no blur as his head turned back");
+  for (const { name, seen } of after.cuts) {
+    if (seen.some((v) => v > 0)) {
+      throw new Error(`expected no blur right after the cut to ${name}, got ${seen.join(", ")}`);
+    }
+  }
+}
+
+/** In the page before the app: when each canvas was last resized (which clears it) and last
+ * drawn to, and how many WebGL contexts the page has made. */
+function watchCanvases() {
+  window.__canvases = { contexts: 0 };
+  for (const dim of ["width", "height"]) {
+    const own = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, dim);
+    Object.defineProperty(HTMLCanvasElement.prototype, dim, {
+      configurable: true,
+      get() {
+        return own.get.call(this);
+      },
+      set(value) {
+        this.__resizedAt = performance.now();
+        own.set.call(this, value);
+      },
+    });
+  }
+  for (const gl of [WebGLRenderingContext, WebGL2RenderingContext]) {
+    for (const name of [
+      "drawArrays",
+      "drawElements",
+      "drawArraysInstanced",
+      "drawElementsInstanced",
+    ]) {
+      const draw = gl.prototype[name];
+      if (!draw) continue;
+      gl.prototype[name] = function (...args) {
+        this.canvas.__drawnAt = performance.now();
+        return draw.apply(this, args);
+      };
+    }
+  }
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    const context = getContext.call(this, type, ...rest);
+    if (context && String(type).startsWith("webgl") && !this.__counted) {
+      this.__counted = true;
+      window.__canvases.contexts++;
+    }
+    return context;
+  };
+}
+
+/** Camera switches are clean cuts (SPEC 7): in the first frame painted after each switch, every
+ * canvas on show has the size of its pane and was drawn after its last resize; no switch makes a
+ * WebGL context (the board waits under his belief map instead of being built again). */
+async function instantCuts(page) {
+  await hero(page);
+  await page.waitForFunction(() => window.__canvases.contexts >= 1, null, { timeout: 20_000 });
+  await page.waitForTimeout(1000); // the board's context too, if it is built up front
+  const contexts = await page.evaluate(() => window.__canvases.contexts);
+  for (const name of ["Broadcast", "Tactical", "His eyes", "Tactical", "Broadcast", "His eyes"]) {
+    const wrong = await page.evaluate(
+      (name) =>
+        new Promise((done) => {
+          [...document.querySelectorAll('[aria-label="Camera"] button')]
+            .find((b) => b.textContent.trim() === name)
+            .click();
+          // After the first frame's paint: what that frame showed.
+          requestAnimationFrame(() =>
+            setTimeout(() => {
+              const dpr = Math.min(2, Math.max(1, window.devicePixelRatio));
+              const wrong = [];
+              for (const canvas of document.querySelectorAll(".views canvas")) {
+                const box = canvas.parentElement.getBoundingClientRect();
+                if (box.width === 0 || getComputedStyle(canvas).visibility === "hidden") continue;
+                const view = canvas.closest("figure")?.getAttribute("aria-label") ?? "a canvas";
+                const w = Math.floor(box.width * dpr);
+                const h = Math.floor(box.height * dpr);
+                if (Math.abs(canvas.width - w) > 1 || Math.abs(canvas.height - h) > 1) {
+                  wrong.push(
+                    `${view} drawn at ${canvas.width}x${canvas.height} in a ${w}x${h} pane`,
+                  );
+                } else if (!((canvas.__drawnAt ?? -1) >= (canvas.__resizedAt ?? 0))) {
+                  wrong.push(`${view} cleared by a resize and not drawn again`);
+                }
+              }
+              done(wrong);
+            }, 0),
+          );
+        }),
+      name,
+    );
+    if (wrong.length) throw new Error(`the first frame after "${name}": ${wrong.join("; ")}`);
+  }
+  const after = await page.evaluate(() => window.__canvases.contexts);
+  if (after !== contexts) {
+    throw new Error(`camera switches made ${after - contexts} new WebGL context(s)`);
   }
 }
 
@@ -449,6 +707,34 @@ async function phone(page, check, { live = true } = {}) {
   if (wide > width) throw new Error(`scrolls sideways: ${wide} px wide in ${width} px`);
   if (overlaps.length) throw new Error(`header controls overlap: ${overlaps.join(", ")}`);
   if (offscreen.length) throw new Error(`header controls off screen: ${offscreen.join(", ")}`);
+  await beliefLegend(page);
+}
+
+/** Beside his eyes (a tablet or a desktop: a phone has no picture in picture), each label of the
+ * belief map's title and legend sits on one line inside the picture in picture: at 1280 px a
+ * full-height disc left the legend a 71 px column and "His options" broke onto two lines. */
+async function beliefLegend(page) {
+  const broken = await page.evaluate(() => {
+    const map = document.querySelector(".views .belief-map");
+    const box = map?.getBoundingClientRect();
+    if (!box || box.width < 1) return [];
+    const out = [];
+    const walk = document.createTreeWalker(map, NodeFilter.SHOW_TEXT);
+    for (let node = walk.nextNode(); node; node = walk.nextNode()) {
+      const text = node.textContent.trim();
+      if (!text || !node.parentElement.closest(".belief-title, .belief-legend")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+      const lines = new Set(rects.map((r) => Math.round(r.top))).size;
+      const r = range.getBoundingClientRect();
+      if (lines > 1) out.push(`"${text}" on ${lines} lines`);
+      else if (r.left < box.left - 0.5 || r.right > box.right + 0.5)
+        out.push(`"${text}" cut at the edge (${Math.round(r.right - box.right)} px)`);
+    }
+    return out;
+  });
+  if (broken.length) throw new Error(`belief map legend: ${broken.join(", ")}`);
 }
 
 /** The match live, then each hero moment's breakdown from the Moments panel and back. */
@@ -586,6 +872,7 @@ async function visit(browser, base, page) {
     notes.push(`${name}: a blank capture, retaken${again.length < BLANK ? ", blank again" : ""}`);
   };
   try {
+    if (page.init) await tab.addInitScript(page.init);
     await tab.goto(new URL(page.path, base).href);
     const checks = page.check(tab, shoot, (n) => notes.push(n));
     checks.catch(() => {}); // left behind if the page throws first
