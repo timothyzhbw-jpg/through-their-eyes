@@ -1,34 +1,45 @@
 // One rigged player, without React or the DOM: clone the converted model, and pose it at a
-// fractional playback frame (gait, walk, pass, shoulder check, look). RiggedPlayers.tsx dresses and
+// fractional playback frame (gait, walk, kick, shoulder check, look). RiggedPlayers.tsx dresses and
 // draws the rigs; rig.test.ts poses the committed model the same way and checks where it faces
 // and looks.
 
 import * as THREE from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import type { Hero, Run } from "../data/hero";
+import { type Hero, type Run, wrapAngle } from "../data/hero";
 import {
   type GaitClips,
+  type Kick,
   type Pass,
   type PassClip,
+  HOLD_MIN,
+  LEAVE_GAP,
+  TURN_MAX,
+  WINDUP,
   gaitBlend,
   gaitPhase,
   gaitRun,
+  holdEnd,
+  kickBallWeight,
+  kickFacing,
+  kickHop,
+  kickPose,
   passEvents,
-  passFacing,
-  passPose,
+  rootAt,
   smoothedSpeeds,
   strollTime,
+  turnAngle,
+  turnSide,
+  turnTime,
 } from "./gait";
 import {
-  type CheckClip,
   type ExtraClips,
   type ShoulderCheck,
   checkPose,
   checkTwist,
   shoulderChecks,
 } from "./extra";
-import { type LookSplit, aimLook } from "./look";
+import { type LookSplit, aimLook, kickLook, splitLook } from "./look";
 import type { WalkClips } from "./walk";
 
 /** Rendered height, as the tokens (1.80 m); the source model stands 1.885 m. */
@@ -77,34 +88,137 @@ export function modelClips(
   };
 }
 
-/** Per-run motion of every player, computed once: speeds, gait phase, passes, shoulder checks. */
+/** Per-run motion of every player, computed once: speeds, gait phase, kicks, shoulder checks. */
 export interface Motion {
   speeds: Float32Array[]; // per player, per frame, m/s
   run: Float32Array[]; // per player, the engine gait's weight per frame (0 walking, gait.ts)
   phase: Float64Array[]; // per player, cumulative gait cycles per frame
-  passes: Pass[][]; // per player, pass events
+  kicks: Kick[][]; // per player, his pass and shot events as the kick clip plays them
   checks: ShoulderCheck[][]; // per player, scans as shoulder checks (empty without the clip)
 }
 
-export function runMotion(
+const travel: [number, number] = [0, 0];
+
+/** A point in the model's frame (x forward, z right, m at the model's scale) on the pitch, for a
+ * body facing `yaw`: x along the facing, z to its right. */
+function onPitch(at: [number, number], yaw: number, scale: number): [number, number] {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  return [scale * (at[0] * c + at[1] * s), scale * (at[0] * s - at[1] * c)];
+}
+
+/**
+ * Player j's kicks in a run, from his pass and shot events and the sim's body yaw: the facing
+ * that sends the clip's kick along the pass, the turn to it (from body_yaw as the wind-up
+ * starts, a half-turn round the way his head looks then), the follow-through (to the kicking
+ * foot's landing, shorter when the sim has him run on) and the turn back to body_yaw after it,
+ * and with the retargeted kick the plant foot's spot (where the clip plants it, from where the
+ * sim has him as the wind-up starts, turned to the facing) and the ball's move onto the kicking
+ * foot at the contact. `scale`: the model's.
+ */
+export function kicksOf(
   hero: Hero,
   run: Run,
-  clips: GaitClips,
-  check: CheckClip | null = null,
-): Motion {
+  j: number,
+  passes: Pass[],
+  clip: PassClip,
+  scale: number,
+): Kick[] {
+  const n = hero.n;
+  const at = (f: number) => Math.max(0, Math.min(run.frames - 1, Math.round(f)));
+  return passes.map((pass) => {
+    const facing = wrapAngle(pass.yaw - clip.kickYaw);
+    const windup = at(pass.frame - WINDUP / hero.dt);
+    const before = run.body[windup * n + j];
+    // Where he looks over the longest turn's time, relative to the body (a circular mean).
+    let sin = 0;
+    let cos = 0;
+    for (let f = at(windup - TURN_MAX / hero.dt); f <= windup; f++) {
+      const look = run.head[f * n + j] - run.body[f * n + j];
+      sin += Math.sin(look);
+      cos += Math.cos(look);
+    }
+    const side = turnSide(wrapAngle(facing - before), Math.atan2(sin, cos));
+    const sweep = turnAngle(before, facing, side);
+    // The follow-through: to the kicking foot's landing, or until he runs on (pass and move).
+    let hold = holdEnd(clip);
+    const k0 = (at(pass.frame) * n + j) * 2;
+    for (let f = pass.frame + 1; f < run.frames && (f - pass.frame) * hero.dt < hold; f++) {
+      const k = (f * n + j) * 2;
+      if (Math.hypot(run.pos[k] - run.pos[k0], run.pos[k + 1] - run.pos[k0 + 1]) >= LEAVE_GAP) {
+        hold = Math.max(HOLD_MIN, (f - pass.frame) * hero.dt);
+        break;
+      }
+    }
+    const after = run.body[at(pass.frame + hold / hero.dt) * n + j];
+    let anchor: [number, number] | null = null;
+    let ball: [number, number] = [0, 0];
+    if (clip.plant) {
+      // Where the sim has him as the wind-up starts: the body travels from there.
+      const x = run.pos[(windup * n + j) * 2];
+      const y = run.pos[(windup * n + j) * 2 + 1];
+      const plant = onPitch(clip.plant.at, facing, scale);
+      anchor = [x + plant[0], y + plant[1]];
+      if (clip.contact) {
+        const c = onPitch(clip.contact, facing, scale);
+        ball = [x + c[0] - pass.start[0], y + c[1] - pass.start[1]];
+      }
+    }
+    return {
+      frame: pass.frame,
+      facing,
+      side,
+      sweep,
+      turn: turnTime(sweep),
+      hold,
+      release: turnTime(wrapAngle(after - facing)),
+      anchor,
+      ball,
+    };
+  });
+}
+
+/** `scale`: the rigs' (PLAYER_HEIGHT / the model's height), for where the kicks plant. */
+export function runMotion(hero: Hero, run: Run, clips: ModelClips, scale: number): Motion {
+  const gait = clips.gait;
+  const check = clips.extra?.check ?? null;
   const speeds = hero.players.map((_, j) =>
     smoothedSpeeds(run.pos, hero.n, j, run.frames, hero.dt),
   );
   const gaits = speeds.map((s) =>
-    clips.stroll ? gaitRun(s, hero.dt) : new Float32Array(s.length).fill(1),
+    gait.stroll ? gaitRun(s, hero.dt) : new Float32Array(s.length).fill(1),
   );
+  const passes = passEvents(run.events, hero.ids);
   return {
     speeds,
     run: gaits,
-    phase: speeds.map((s, j) => gaitPhase(s, hero.dt, clips, gaits[j])),
-    passes: passEvents(run.events, hero.ids),
+    phase: speeds.map((s, j) => gaitPhase(s, hero.dt, gait, gaits[j])),
+    kicks: passes.map((p, j) => kicksOf(hero, run, j, p, clips.pass, scale)),
     checks: hero.players.map((_, j) => (check ? shoulderChecks(hero, run, j, check) : [])),
   };
+}
+
+/**
+ * Where to draw the ball at fractional frame f (m, added to the sim's): on the kicking foot while
+ * a rigged player kicks it (gait.ts), else nothing. `out` is returned.
+ */
+export function kickBall(
+  motion: Motion,
+  f: number,
+  dt: number,
+  out: [number, number],
+): [number, number] {
+  out[0] = 0;
+  out[1] = 0;
+  for (const kicks of motion.kicks) {
+    for (const kick of kicks) {
+      const w = kickBallWeight(f, kick, dt);
+      if (w <= 0) continue;
+      out[0] += w * kick.ball[0];
+      out[1] += w * kick.ball[1];
+    }
+  }
+  return out;
 }
 
 export interface Rig {
@@ -245,7 +359,9 @@ function setAction(a: THREE.AnimationAction, weight: number, time: number): void
 /**
  * Pose player j at fractional frame f of a run: x, y on the pitch (m), body and head yaw (rad,
  * world) as sampled for the views. `checks: false` (reduced motion) leaves the shoulder checks
- * out; the head points along head_yaw either way. Returns the look split for checks.
+ * out; the head points along head_yaw either way, but for a kick's: no further round than the
+ * neck and trunk turn (look.ts kickLook). While a kick's plant foot holds, the body stands where
+ * that foot stays put (the sim's spot otherwise). Returns the look split for checks.
  */
 export function poseRig(
   rig: Rig,
@@ -265,13 +381,28 @@ export function poseRig(
   const i0 = Math.floor(c);
   const i1 = Math.min(frames - 1, i0 + 1);
   const t = c - i0;
-  rig.holder.position.set(x, 0, -y);
+  const p = kickPose(c, motion.kicks[j], dt, clips.pass);
+  const facing = kickFacing(bodyYaw, p);
+  const head = p.kick ? kickLook(facing, headYaw, p.facing) : headYaw;
+  const plant = clips.pass.plant;
+  if (p.lock > 0 && p.kick?.anchor && plant) {
+    // The holder turns about its origin (to facing plus the hips' share of the look, as aimLook
+    // will); place it so the plant foot is on its spot: a pivot on that foot. The clip is in
+    // place: the foot is at plant.at less the body's travel so far (gait.ts rootAt).
+    const yaw = facing + splitLook(facing, head).hips;
+    const r = rootAt(clips.pass, p.time, travel);
+    const foot = onPitch([plant.at[0] - r[0], plant.at[1] - r[1]], yaw, rig.model.scale.x);
+    const ax = p.kick.anchor[0] - foot[0];
+    const ay = p.kick.anchor[1] - foot[1];
+    rig.holder.position.set(x + (ax - x) * p.lock, 0, -(y + (ay - y) * p.lock));
+  } else {
+    rig.holder.position.set(x, 0, -y);
+  }
   const speed = motion.speeds[j][i0] + (motion.speeds[j][i1] - motion.speeds[j][i0]) * t;
   const phase = motion.phase[j][i0] + (motion.phase[j][i1] - motion.phase[j][i0]) * t;
   const run = motion.run[j][i0] + (motion.run[j][i1] - motion.run[j][i0]) * t;
   const cycleTime = (phase - Math.floor(phase)) * clips.gait.cycle;
   const g = gaitBlend(speed, clips.gait, run);
-  const p = passPose(c, motion.passes[j], dt, clips.pass);
   const k = 1 - p.weight;
   setAction(rig.idle, k * g.idle, 0);
   setAction(rig.walk, k * g.walk, cycleTime);
@@ -297,15 +428,9 @@ export function poseRig(
   rig.animated.middle.copy(rig.middle.quaternion);
   rig.animated.neck.copy(rig.neck.quaternion);
   const twist = s && extra ? checkTwist(extra.check, s.time, cw, s.side) : 0;
-  rig.model.position.y = 0;
-  const split = aimLook(
-    rig.holder,
-    rig.middle,
-    rig.neck,
-    passFacing(bodyYaw, p, clips.pass),
-    headYaw,
-    twist,
-  );
+  // A kick's turn and cross-fades lift the feet off the grass (gait.ts kickHop).
+  rig.model.position.y = p.kick ? kickHop(c, p.kick, dt) : 0;
+  const split = aimLook(rig.holder, rig.middle, rig.neck, facing, head, twist);
   // The walking gait stands its feet on the ground: blended with idle at the slowest speeds, and
   // with the jog through a change of gait (the walk's straight stance leg averaged with the jog's
   // bent one, up to 7 cm into the ground), the lowest boot point can sink; lift the model by
@@ -313,7 +438,7 @@ export function poseRig(
   if (rig.soles && run < 1) {
     const sink = -lowestSole(rig.soles) * (1 - run);
     if (sink > 0) {
-      rig.model.position.y = sink;
+      rig.model.position.y += sink;
       rig.model.updateMatrixWorld(true);
     }
   }
