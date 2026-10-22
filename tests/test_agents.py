@@ -91,8 +91,8 @@ def test_agent_outputs_are_used_through_verified_claims(ctx):
     assert r.findings.headline == ["scan_before_reception", "belief_error"]
     (script,) = r.scripts
     assert [line.text for line in script.payload.lines] == [
-        "Watch this. H8 checked his shoulder before the ball reached him.",
-        "Without that look, H8 would have passed to H4.",
+        "Watch this. J. Ferriday checked his shoulder before the ball reached him.",
+        "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert [line.speaker for line in script.lines] == ["pbp", "color"]
 
@@ -149,7 +149,7 @@ def test_a_line_the_verifier_rejects_is_rewritten_or_dropped(ctx):
     assert r.plan_source == "agent"  # the plan waits at the join while narration is rewritten
     (script,) = r.scripts
     assert script.rewrites == 1 and script.dropped == []
-    assert "Without that look, H8 would have passed to H4." in [
+    assert "Without that look, J. Ferriday would have passed to K. Annersley." in [
         line.text for line in script.payload.lines
     ]
     replies["color"] = {"lines": [{"claim": "blind_side", "connective": None}]}
@@ -554,20 +554,20 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
     assert {"reception_zone", "scan_side", "seen_in_scan", "blind_side"} <= set(claims)
     assert set(claims) <= DESCRIBING and not set(claims) & NUMBERS_FOR_ANALYSTS
     assert [line.text for line in en.payload.lines] == [
-        "H8 received the ball in the opponents' half, right of centre.",
-        "H9's run was on H8's blind side.",
-        "Before the ball reached him, H8 looked over his right shoulder.",
-        "When H8 looked over his shoulder before the ball arrived, he saw H9.",
-        "H8 found H9 with a 38-metre pass.",
-        "Without that look, H8 would have passed to H4.",
+        "J. Ferriday received the ball in the opponents' half, right of centre.",
+        "N. Varnhall's run was on J. Ferriday's blind side.",
+        "Before the ball reached him, J. Ferriday looked over his right shoulder.",
+        "When J. Ferriday looked over his shoulder before the ball arrived, he saw N. Varnhall.",
+        "J. Ferriday found N. Varnhall with a 38-metre pass.",
+        "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert [line.text for line in zh.payload.lines] == [
-        "H8在对方半场中路偏右接球。",
-        "H9的跑位在H8的盲区。",
-        "球到之前，H8扭头看向了右后方。",
-        "球到之前回头的那一眼，H8看到了H9。",
-        "H8一脚38米的传球找到了H9。",
-        "如果没有那一眼，H8会把球传给H4。",
+        "J. Ferriday在对方半场中路偏右接球。",
+        "N. Varnhall的跑位在J. Ferriday的盲区。",
+        "球到之前，J. Ferriday扭头看向了右后方。",
+        "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
+        "J. Ferriday一脚38米的传球找到了N. Varnhall。",
+        "如果没有那一眼，J. Ferriday会把球传给K. Annersley。",
     ]
     assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
 
@@ -596,11 +596,13 @@ def test_a_model_draft_for_audio_description_still_airs_only_verified_claims(ctx
                                 {"claim": "scan_side", "connective": None}]}  # fmt: skip
     replies["color"] = {"lines": [{"claim": "seen_in_scan", "connective": None}]}
     for language, texts in {
-        "zh": ["H8在对方半场中路偏右接球。", "球到之前回头的那一眼，H8看到了H9。",
-               "球到之前，H8扭头看向了右后方。"],
-        "en": ["H8 received the ball in the opponents' half, right of centre.",
-               "When H8 looked over his shoulder before the ball arrived, he saw H9.",
-               "Before the ball reached him, H8 looked over his right shoulder."],
+        "zh": ["J. Ferriday在对方半场中路偏右接球。",
+               "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
+               "球到之前，J. Ferriday扭头看向了右后方。"],
+        "en": ["J. Ferriday received the ball in the opponents' half, right of centre.",
+               "When J. Ferriday looked over his shoulder before the ball arrived, he saw "
+               "N. Varnhall.",
+               "Before the ball reached him, J. Ferriday looked over his right shoulder."],
     }.items():  # fmt: skip
         r = breakdown(ctx, client=FakeChatClient(replies), personas=(AD,), languages=(language,))
         (script,) = r.scripts
@@ -732,27 +734,29 @@ _EMPH = {"pbp": ("+0%", "+8%", "+15%"), "color": ("-10%", "+5%", "+10%")}
 # persona, language, text, role, emphasis span (audio description: none), counterfactual
 _SNAPSHOT_LINES = (
     ("casual", "en", "What did he see?", "open", None, False),
-    ("casual", "en", "H8 checked his shoulder before the ball reached him.", "build",
+    ("casual", "en", "J. Ferriday checked his shoulder before the ball reached him.", "build",
      "checked his shoulder", False),
-    ("casual", "en", "H9's run was on H8's blind side.", "why", "blind side", False),
-    ("casual", "en", "Without that look, H8 would have passed to H4.", "why", "that look", True),
-    ("analyst", "en", "H8 found H9 with a 38-metre pass.", "peak", None, False),
+    ("casual", "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", "blind side",
+     False),
+    ("casual", "en", "Without that look, J. Ferriday would have passed to K. Annersley.", "why",
+     "that look", True),
+    ("analyst", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None, False),
     ("casual", "zh", "他看到了什么？", "open", None, False),
-    ("casual", "zh", "球到之前，H8先回头看了一眼。", "build", "回头看了一眼", False),
-    ("casual", "zh", "H9的跑位在H8的盲区。", "why", "盲区", False),
-    ("casual", "zh", "如果没有那一眼，H8会把球传给H4。", "why", "那一眼", True),
-    ("analyst", "zh", "H8一脚38米的传球找到了H9。", "peak", None, False),
-    (AD, "en", "H9's run was on H8's blind side.", "why", None, False),
-    (AD, "zh", "H9的跑位在H8的盲区。", "why", None, False),
+    ("casual", "zh", "球到之前，J. Ferriday先回头看了一眼。", "build", "回头看了一眼", False),
+    ("casual", "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", "盲区", False),
+    ("casual", "zh", "如果没有那一眼，J. Ferriday会把球传给K. Annersley。", "why", "那一眼", True),
+    ("analyst", "zh", "J. Ferriday一脚38米的传球找到了N. Varnhall。", "peak", None, False),
+    (AD, "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", None, False),
+    (AD, "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", None, False),
 )  # fmt: skip
 _PERSONAS = ("casual", "analyst", "player_fan", "coach", AD)
 _SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",
                 "time_since_last_scan"}  # fmt: skip
 _PEAK_CLAIMS = {"pass_to_runner", "runner_received", "pressure_at_pass"}
 _PEAK_LINES = (
-    "found H9 with a 38-metre pass",
+    "found N. Varnhall with a 38-metre pass",
     "took the pass",
-    "Pressing intensity on H4 was 95% when he released the ball",
+    "Pressing intensity on K. Annersley was 95% when he released the ball",
 )
 
 
