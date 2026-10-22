@@ -113,7 +113,8 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 
 - **Shared state and handoffs.** Every step reads one shared moment context: the run, the
   counterfactual, the claims, the verdicts and the audit log. Steps pass typed messages along
-  the workflow's edges. The Telestrator and narration run in parallel.
+  the workflow's edges. The Telestrator and narration run in parallel, and narration drafts
+  every audience and language at once.
 - **Failure recovery.** Each model step has a timeout, one retry, then its deterministic
   template, so a breakdown always airs.[^spec6] The live app makes this visible as a
   **failure drill**: in the Producer desk, take the Telestrator down and run the crew. It fails
@@ -127,6 +128,29 @@ Director → Analyst (+ our MCP tools) → ┬─ Telestrator ──────
 - **Why anchor the narration.** On the same moments, about half of the free-text first-draft
   lines (34 of 66) named a player or a number that no claim holds; the Verifier stopped every one.
   Anchored narration, where the model picks claim ids, had 0 of 111.[^ablation]
+
+### Why a crew, not one agent
+
+We measured it. One Foundry agent doing the four model roles in one call, with the same tools,
+schemas and checks, against the crew, on six moments for four audiences each.[^crew]
+
+- **Not better lines.** Both aired no wrong fact and scored the same groundedness. The Verifier
+  and the anchored schema keep the facts right, whichever structure writes the lines. The crew
+  costs about twice as much per breakdown.
+- **Recovery that keeps the rest.** With one agent down, the crew still aired three of its four
+  model roles; the single agent lost all four, because its one call is every role. Bringing the
+  Telestrator back cost the crew one model request; the single agent had to redo everything.
+  TODO(multi-agent-evidence): recovery when the model service itself fails.
+- **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
+  timeout; every single-agent call did, so deployed it would have aired its templates.
+- **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
+  back to the voice that wrote it, told why; the plan and the other lines stand. TODO(multi-agent-evidence):
+  rewrites per breakdown.
+- **Audiences in parallel.** Each audience and language is its own narration call, run at once.
+  TODO(multi-agent-evidence): seconds to air for four audiences against one.
+- **Auditable per agent.** Every breakdown carries its crew trace: each step's input and output,
+  the state it read and wrote, the Analyst's tool calls, the verdicts, and whether each part came
+  from the model or a template. **Crew trace** in the app shows it as a timeline.
 
 ## Evidence
 
@@ -320,8 +344,10 @@ play that attacks the goal.
     by tackle per 90 min 0 and out of play 0 (n = 20 matches); "Tackles are on in press_escape
     only".
 [^crew]: [eval/reports/crew_vs_single.md](../eval/reports/crew_vs_single.md), 2026-10-21, six
-    moments × four audiences on Foundry `gpt-4.1-mini`: wrong facts aired 0 vs 0, groundedness
-    5.00 vs 5.00, $0.0046 vs $0.0090 per breakdown (single vs crew).
+    moments × four audiences on Foundry `gpt-4.1-mini` (single vs crew): wrong facts aired 0 vs
+    0, groundedness 5.00 vs 5.00; with the Analyst or the Telestrator down, model roles kept 0 of
+    4 vs 3 of 4; the Telestrator's bring-back 1.7 vs 1.0 model requests; agent runs over 8 s 6 of
+    6 vs 0 of 66; $0.0046 vs $0.0090 per breakdown.
 [^ey]: EY for the Premier League, *Economic and Social Impact Report*, July 2026
     ([PDF](https://resources.premierleague.pulselive.com/premierleague/document/2026/07/31/8ee78e99-a3e3-4b81-ab38-cf76eae8dd94/Premier-League-Economic-and-Social-Impact-Report-2026.pdf)):
     "broadcast revenue exports totalling £1.8b in 2024/25"; "1.9b people follow the Premier

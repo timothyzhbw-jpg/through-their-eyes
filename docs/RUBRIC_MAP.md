@@ -1,74 +1,155 @@
 # Rubric map
 
-Each judging criterion (20% each, [SPEC §0](SPEC.md#0-pitch-and-judging-alignment)) and each
-point of the Best Multi-Agent System category, with the evidence for it: files, tests, eval
-reports, pull requests, and a live trace. **Missing** marks what is not there; **Partial** marks
-evidence that covers less than the claim.
+The five judging criteria of the hackathon's official rules (§6.2 of
+[OFFICIAL RULES.md](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md),
+last changed 2026-09-28; 20% each), each question the judges are asked to look at
+(paraphrased), and the points of the Best Multi-Agent System category (§4.2). For each one, the
+evidence: a link into the live app, a report, the trailer beat, then the files, tests and pull
+requests behind it. **Missing** marks what is not there; **Partial** marks evidence that covers
+less than the claim.
 
-State on 2026-10-21: `main` at `febaa08`. CI on `main` at `44c0bb5` (run 39583678095): pytest
-1216 passed, `npm test` in `web/` 595 passed, the end-to-end smoke test 15 of 15 pages. Live site:
-https://ttesite1ff906.z14.web.core.windows.net. Pull requests are in
-`timothyzhbw-jpg/through-their-eyes`; work committed straight to `main` is cited by commit.
+- **Live app:** https://ttesite1ff906.z14.web.core.windows.net (no login). Each deep link opens it
+  at a spot; the parameters are in [web/README.md](../web/README.md#url-parameters).
+- **Trailer:** beats and times from [VIDEO_SCRIPT](VIDEO_SCRIPT.md) (the v13 cut, 1:57).
+  TODO(freeze): the published cut's times and URL ([NUMBERS](NUMBERS.md) D6).
+- **Numbers:** each number below is listed in [NUMBERS](NUMBERS.md) with the report or command
+  that produces it.
+- **State:** 2026-10-22, `main` at `39aaf27`. The last CI counts recorded: run 39583678095 on
+  `44c0bb5` (2026-10-21), pytest 1216 passed, `npm test` in `web/` 595 passed, the end-to-end
+  smoke test 15 of 15 pages. TODO(freeze): the counts on the submitted commit (NUMBERS D3).
+  Pull requests are in `timothyzhbw-jpg/through-their-eyes`; work committed straight to `main`
+  is cited by commit.
 
 ## 1. Technological implementation
 
-| Claim | Evidence | Status |
-|---|---|---|
-| Physics-based synthetic tracking at 25 Hz, with head and body yaw | [sim/engine.py](../sim/engine.py), [sim/movement.py](../sim/movement.py), [sim/ball.py](../sim/ball.py); [tests/test_sim_m1.py](../tests/test_sim_m1.py) `test_players_respect_role_speed_and_acceleration_limits`, `test_ball_energy_never_increases_between_contacts`; commit `96abf36` | ✅ |
-| Perception calibrated to published values | [sim/perception.py](../sim/perception.py); [scan_calibration](../eval/reports/scan_calibration.md) fits head speed, scan dwell, pressure and role scan rates to Kokubu et al. 2026, Aksum et al. 2021 and Jordet et al. 2020; PRs #20, #23, #29 | ✅ |
-| Sim statistics checked against the papers | [realism](../eval/reports/realism.md): 10 inside the published range, 6 outside (all six are effect sizes between roles or pressure bins), 10 with no published reference; PR #14 | Partial: 6 outside |
-| Determinism and counterfactual re-simulation | keyed randomness [sim/rng.py](../sim/rng.py); [tests/test_sim_m1.py](../tests/test_sim_m1.py) `test_same_seed_twice_in_the_same_environment_is_byte_identical`, `test_an_override_on_one_player_leaves_every_draw_of_other_players_unchanged`; [tests/test_whatif.py](../tests/test_whatif.py) `test_forcing_the_action_actually_chosen_reproduces_the_factual_run`; [hero_flip](../eval/reports/hero_flip_blind_side_run.md): 33/40 held-out seeds decide differently without the key scan | ✅ |
-| Analytics kernels | [analytics/](../analytics/): time to intercept, pitch control, pressing (PRs #1, #4), vision after Bekkers 2026, scan detector (held-out F1 0.991, [scan_detector](../eval/reports/scan_detector.md), PR #3), blind-side alerts (fresh held-out precision 0.915, recall 0.943, [blind_side](../eval/reports/blind_side.md), PRs #10, #13), xT (our own) | Partial: the fitted xT grid's sanity plot is open (SPEC §4) |
-| numpy ↔ GLSL parity-tested kernels (SPEC §0) | Pitch control: the tactical board's per-pixel shader ([web/src/pitchControl/](../web/src/pitchControl/)) against [analytics/pitch_control.py](../analytics/pitch_control.py) in headless Chrome on CI, max abs diff about 5e-5 on 10 hero-moment snapshots (SPEC §4 asks < 0.02), [pitchControl.gpu.test.ts](../web/src/pitchControl/pitchControl.gpu.test.ts). The vision cone is a fragment shader of the sim's field-of-view model ([web/src/views/TacticalView.tsx](../web/src/views/TacticalView.tsx)), without occlusion | Partial: the vision cone has no parity test |
-| CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml): ruff, pytest, shell syntax; web licences, typecheck, prettier, vitest, build. [deploy.yml](../.github/workflows/deploy.yml) redeploys on green `main` with OIDC, no stored Azure secret | Partial: the eval reports are generated locally and committed, not rerun in CI |
-| Microsoft stack, each piece used | README [table](../README.md#microsoft-technologies-where-they-are-used): Foundry, Agent Framework, MCP, Azure AI Speech, Container Apps, Storage static website, Cosmos DB, Foundry evaluation, Application Insights, GitHub Actions | ✅ |
+The judges ask about synthetic data that is creative and well made, sound software practice
+(cloud best practices included), how well the hero technologies are used, and code that is
+structured, documented and maintainable.
+
+| Question | Claim | Evidence | Status |
+|---|---|---|---|
+| Synthetic data | Physics-based synthetic tracking at 25 Hz, with head and body yaw | Live: [the stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751), **View options** → **Skeleton**. Trailer: `pov-look` 0:26. [sim/engine.py](../sim/engine.py), [sim/movement.py](../sim/movement.py), [sim/ball.py](../sim/ball.py); [tests/test_sim_m1.py](../tests/test_sim_m1.py) `test_players_respect_role_speed_and_acceleration_limits`, `test_ball_energy_never_increases_between_contacts`; commit `96abf36` | ✅ |
+| Synthetic data | Perception calibrated to published values | [sim/perception.py](../sim/perception.py); [scan_calibration](../eval/reports/scan_calibration.md) fits head speed, scan dwell, pressure and role scan rates to Kokubu et al. 2026, Aksum et al. 2021 and Jordet et al. 2020; PRs #20, #23, #29; the parameter dossier [SIM_PARAMETERS](SIM_PARAMETERS.md) (PR #146) | ✅ |
+| Synthetic data | Sim statistics checked against the papers | [realism](../eval/reports/realism.md): scans 11 inside the published range, 5 outside (4 role effect sizes and the pressure effect, which has the published sign but is too small), 10 with no published reference; team shape 8 inside, 6 outside, 23 with no reference (PR #150) | Partial: 5 + 6 outside |
+| Synthetic data | The Laws of the Game hold in every run | [laws](../eval/reports/laws.md): 0 unpunished breaches and 0 wrong or early calls in 2,916 runs, against 237 unpunished on `main` before the referee; offside, the whole ball over a line, restarts, keeper handling. [sim/laws.py](../sim/laws.py), [sim/referee.py](../sim/referee.py); PR #161 | ✅ |
+| Synthetic data | A dataset others can use | [DATASET](DATASET.md): 10 stitched matches, events, 25 Hz tracking with head yaw, and at every reception the receiver's scans and beliefs; a datasheet; one possession committed in [data/sample/](../data/sample/), read by [examples/dataset_quickstart.py](../examples/dataset_quickstart.py); PR #108 | Partial: the archive is not released yet (its `gh release create` step in DATASET) |
+| Synthetic data | Determinism and counterfactual re-simulation | keyed randomness [sim/rng.py](../sim/rng.py); [tests/test_sim_m1.py](../tests/test_sim_m1.py) `test_same_seed_twice_in_the_same_environment_is_byte_identical`, `test_an_override_on_one_player_leaves_every_draw_of_other_players_unchanged`; [tests/test_whatif.py](../tests/test_whatif.py) `test_forcing_the_action_actually_chosen_reproduces_the_factual_run`; [hero_flip](../eval/reports/hero_flip_blind_side_run.md): 33/40 held-out seeds decide differently without the key scan. Byte-identical within one OS; the committed artifacts are generated on Linux, where CI and the API run (SPEC 3.7) | ✅ |
+| Synthetic data | Analytics kernels | [analytics/](../analytics/): time to intercept, pitch control, pressing (PRs #1, #4), vision after Bekkers 2026, scan detector (held-out F1 0.991, [scan_detector](../eval/reports/scan_detector.md), PR #3), blind-side alerts (fresh held-out precision 0.915, recall 0.943, [blind_side](../eval/reports/blind_side.md), PRs #10, #13), xT, our own, fitted on synthetic open play with its acceptance checks passed ([xt_fit](../eval/reports/xt_fit.md), [plot](../eval/reports/xt_fit.svg)) | ✅ |
+| Software practice | numpy ↔ GLSL parity-tested kernels (SPEC §0) | Pitch control: the tactical board's per-pixel shader ([web/src/pitchControl/](../web/src/pitchControl/)) against [analytics/pitch_control.py](../analytics/pitch_control.py) in headless Chrome on CI, max abs diff about 5e-5 on 10 hero-moment snapshots (SPEC §4 asks < 0.02), [pitchControl.gpu.test.ts](../web/src/pitchControl/pitchControl.gpu.test.ts). The vision cone is a fragment shader of the sim's field-of-view model ([web/src/views/TacticalView.tsx](../web/src/views/TacticalView.tsx)), without occlusion | Partial: the vision cone has no parity test |
+| Software practice | CI and deploy | [.github/workflows/ci.yml](../.github/workflows/ci.yml): ruff, pytest, shell syntax; web licences, typecheck, prettier, vitest, build; the end-to-end smoke test with axe-core's WCAG 2.2 rules; prose-only changes skip the heavy jobs (PR #162). [deploy.yml](../.github/workflows/deploy.yml) redeploys on green `main` with OIDC, no stored Azure secret | Partial: the eval reports are generated outside CI and committed |
+| Software practice | Cloud practice: identity, limits, health, load | Foundry keyless with a managed identity ([agents/llm.py](../agents/llm.py)); per-client rate limit and daily model cap with the cache and templates behind them (PR #19); a non-root image with `GET /health` ([Dockerfile](../Dockerfile)); a local load test on the deployed size, 0.5 vCPU / 1 GiB: 50 live viewers and a burst of breakdowns and what-ifs, all answered ([OPERATIONS](OPERATIONS.md#load-test-local-never-the-live-service)) | ✅ |
+| Hero technologies | The Microsoft stack, each piece used | README [table](../README.md#microsoft-technologies-where-they-are-used): Foundry, Agent Framework, MCP, Azure AI Speech, Container Apps, Storage static website, Cosmos DB, Foundry evaluation, Application Insights, GitHub Actions | ✅ |
+| Structure and docs | Code that is structured and documented | one package per stage of the brief's pipeline (README [Layout](../README.md#layout)), each with a README on its modules, data flow, invariants and tests; [SPEC](SPEC.md) with acceptance checks written before the code; [CONTRIBUTING](CONTRIBUTING.md); the architecture diagram is generated from the code and [tests/test_architecture.py](../tests/test_architecture.py) fails when it drifts | ✅ |
 
 ## 2. Agentic design and innovation
 
-| Claim | Evidence | Status |
-|---|---|---|
-| A production crew as an Agent Framework workflow | [agents/workflow.py](../agents/workflow.py): Director → Analyst → (Telestrator ∥ narration) → Verifier ⇄ narration → Voice, built with `WorkflowBuilder` (fan-out, fan-in, rewrite loop); commit `2fa870a`, parallel lanes PR #11 | ✅ |
-| Models choose, code states the facts | [agents/schemas.py](../agents/schemas.py): the Analyst and the narrators answer with structured outputs whose claim ids are an enum of verified claims, so a model cannot add a number; [tests/test_agents.py](../tests/test_agents.py) `test_a_model_cannot_add_its_own_words_or_unknown_claims`, `test_model_free_text_with_a_number_is_rejected` | ✅ |
-| Deterministic verification of every claim | [explain/verifier.py](../explain/verifier.py), [explain/claims.py](../explain/claims.py) (PR #6); [corruption](../eval/reports/corruption.md): 90/90 perturbed claims refuted (a number off by one unit or by 20%, a swapped player, a wrong order), 0 unsupported claims rendered | ✅ |
-| Anchoring beats free text | [narration_ablation](../eval/reports/narration_ablation.md) (PR #25): about half of the free-text first-draft lines (34 of 66) name a player or a number that no claim holds, and none passes the Verifier (counting format violations too, 58 of 66 fail it); anchored 0 of 111; groundedness of the scripts that aired 4.90 vs 5.00 (Foundry `GroundednessEvaluator`) | ✅ |
-| Moments chosen by counterfactual impact, perception first | [explain/moments.py](../explain/moments.py), [explain/lenses.py](../explain/lenses.py) (PR #1); the hero lens is perception | ✅ |
-| Tools over MCP | [agents/mcp_server.py](../agents/mcp_server.py), started by the deployed API for each uncached model breakdown (PR #41, `TTE_ANALYST_MCP`); [tests/test_api.py](../tests/test_api.py) `test_a_model_breakdown_gives_the_analyst_the_mcp_tools_when_on`; [tests/test_agents.py](../tests/test_agents.py) `test_the_analyst_calls_tools_over_mcp_and_its_trace_names_them` (a real stdio round trip); the live trace below: `execute_tool` and `tools/call` spans under `analyst` | ✅ |
+The judges ask how creatively agentic patterns are applied, whether orchestration, MCP
+integration and multi-agent collaboration are sophisticated, and whether the AI is novel or
+meaningfully better than existing approaches.
 
-## 3. Real-world impact
+| Question | Claim | Evidence | Status |
+|---|---|---|---|
+| Orchestration | A production crew as an Agent Framework workflow | [agents/workflow.py](../agents/workflow.py): Director → Analyst → (Telestrator ∥ narration) → Verifier ⇄ narration → Voice, built with `WorkflowBuilder` (fan-out, fan-in, rewrite loop, checkpoints); commit `2fa870a`, parallel lanes PR #11. Live: [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0), **Behind the replay** → **Crew trace**. Trailer: `crew` 1:06 | ✅ |
+| Orchestration | The Director's call has consequences | the Director's priority is the breakdown's budget: at high priority the Analyst gets the MCP tools and a 20 s replay slot, lower priorities run without tools in a shorter slot, and the Telestrator is told the slot ([agents/budget.py](../agents/budget.py), PR #123) | ✅ |
+| Patterns | Models choose, code states the facts | [agents/schemas.py](../agents/schemas.py): the Analyst and the narrators answer with structured outputs whose claim ids are an enum of verified claims, so a model cannot add a number; [tests/test_agents.py](../tests/test_agents.py) `test_a_model_cannot_add_its_own_words_or_unknown_claims`, `test_model_free_text_with_a_number_is_rejected` | ✅ |
+| Patterns | Deterministic verification of every line, per step | [explain/verifier.py](../explain/verifier.py), [explain/claims.py](../explain/claims.py) (PR #6); per-audience rules, required and forbidden claims, enforced in the schema and the Verifier (PR #127); [corruption](../eval/reports/corruption.md): 90/90 perturbed claims refuted, 0 unsupported claims rendered. Live: [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value). Trailer: `verified` 1:12, `wrong` 1:17 | ✅ |
+| Better than existing approaches | Anchoring beats free text | [narration_ablation](../eval/reports/narration_ablation.md) (PR #25): about half of the free-text first-draft lines (34 of 66) name a player or a number that no claim holds, and none passes the Verifier (counting format violations too, 58 of 66 fail it); anchored 0 of 111; groundedness of the scripts that aired 4.90 vs 5.00 (Foundry `GroundednessEvaluator`) | ✅ |
+| Novel | Moments chosen by counterfactual impact, perception first | [explain/moments.py](../explain/moments.py), [explain/lenses.py](../explain/lenses.py) (PR #1); the hero lens is perception. Live: [without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical), [Take his eyes](https://ttesite1ff906.z14.web.core.windows.net/?play=eyes), [Your call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall). Trailer: `toggle` 0:32, `eyes-drag` 0:41, `yc-decide` 0:47 | ✅ |
+| Novel | A viewer's own question, answered by re-simulation | `POST /api/whatif`: Foundry maps a free question to one of his options, the sim forces it and re-simulates, and the answer is verified lines ([agents/whatif.py](../agents/whatif.py)). Live: [a question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F) | ✅ |
+| MCP integration | Tools over MCP | [agents/mcp_server.py](../agents/mcp_server.py), started by the deployed API for each uncached model breakdown (PR #41, `TTE_ANALYST_MCP`); [tests/test_api.py](../tests/test_api.py) `test_a_model_breakdown_gives_the_analyst_the_mcp_tools_when_on`; [tests/test_agents.py](../tests/test_agents.py) `test_the_analyst_calls_tools_over_mcp_and_its_trace_names_them` (a real stdio round trip); the live trace below: `execute_tool` and `tools/call` spans under `analyst`. The match recap's Analyst reads the match stats through its own MCP tools ([agents/recap.py](../agents/recap.py)) | ✅ |
 
-| Claim | Evidence | Status |
-|---|---|---|
-| Perception analytics from tracking alone | the scan detector and blind-side alerts read only head yaw and positions, the inputs pose tracking provides ([analytics/scan_detector.py](../analytics/scan_detector.py), [analytics/blind_side.py](../analytics/blind_side.py)); ReSpo.Vision's broadcast tracking carries head, shoulder and hip angles (Bekkers 2026, [REFERENCES](REFERENCES.md#perception-and-scanning)) | **Missing:** never run on real tracking (synthetic data only, by the rules) |
-| Machine-readable, timecoded overlay cues | `TelestrationPlan`: [agents/schemas.py](../agents/schemas.py), [web/src/plan/schema.ts](../web/src/plan/schema.ts); validated on both sides, [tests/test_agents.py](../tests/test_agents.py) `test_plan_validation_matches_the_web_rules`; invalid plans fall back to the template (`?offline=1&plan=invalid`) | ✅ |
-| An audit log of every verified claim | [explain/audit.py](../explain/audit.py), Cosmos DB `claims_audit` (PR #21); live: [`/api/matches/blind_side_run-3/audit`](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5); corruption eval: 568/568 verdicts logged | ✅ |
-| Runs within a student budget and survives quota loss | cache by content hash, per-client rate limit, daily model cap (PR #19), Cosmos cache (PR #21); [tests/test_api.py](../tests/test_api.py) `test_past_the_daily_cap_breakdowns_serve_the_cache_or_the_template`; ≈ $15 expected to 2026-11-10 (SPEC §8) | ✅ |
-| Viewers understand the play better | — | **Missing:** the optional viewer pilot (SPEC §9) has not run |
+## 3. Real-world impact and applicability
 
-## 4. UX and presentation
+The judges ask how significant the problem is, whether the solution could run in production, and
+what it means for developers, businesses and end users.
 
-| Claim | Evidence | Status |
-|---|---|---|
-| First-person replay and a tactical board | [web/](../web/) (PR #5), head and body yaw on every player (PR #7), animated players (PRs #26, #27), comfort mode | ✅ |
-| Overlays | pass options with "he thought / it was" (PR #8), blind-side alerts (PR #12), What if… ghost paths (PR #9), pitch control on the tactical board (toggle, off by default) | ✅ |
-| Live, with persona and language switching | live WebSocket replay, breakdowns per persona (casual, analyst, player fan, coach) × language (en, zh), Azure AI Speech (PR #24); the first request per persona and language runs the crew (12.9 s on a warm replica, [SPEC §8](SPEC.md#8-platform-and-deploy)), later ones come from the cache | ✅ |
-| Every caption opens its evidence | [web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx): claims with kind, verdict, values and evidence events; seeks the replay | ✅ |
-| Three-minute tour with deep links | README ["Judge it in 3 minutes"](../README.md#judge-it-in-3-minutes) and ["The full tour"](../README.md#the-full-tour), [web/src/deeplink.ts](../web/src/deeplink.ts), [web/README.md](../web/README.md#url-parameters) | ✅ |
-| Broadcast camera | [web/src/views/broadcast.ts](../web/src/views/broadcast.ts), `?camera=broadcast` (PR #32); the camera director that suggests and cuts cameras (PR #56) | ✅ |
-| A control to try a wrong number against the verifier | Evidence card **Try a wrong number** ([web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx), [web/src/tamper/](../web/src/tamper/)) → `POST /api/verify` ([api/tamper.py](../api/tamper.py)): the real Verifier on the claim with the viewer's number, not audited; tests in [tests/test_api.py](../tests/test_api.py) (every numeric slot of the hero claims of `blind_side_run` seed 3: true value supported, changed value not; nothing reaches the audit log or Cosmos DB) and [web/src/tamper/tamper.test.tsx](../web/src/tamper/tamper.test.tsx); deep link `?persona=analyst&tamper=cf_value` | ✅ after this PR deploys |
-| 60 fps on an integrated GPU with the pitch-control shader on | `cd web && npm run build && npm run fps -- --headed` measures it; so far run on SwiftShader only (no GPU), see SPEC §7 | **Missing:** no laptop GPU measured yet |
-| The 2-minute video | storyboard in [SPEC §10](SPEC.md#10-demo-video-storyboard--200); the trailer edit in PR #93 | **Partial:** not merged or published yet |
+| Question | Claim | Evidence | Status |
+|---|---|---|---|
+| The problem | Replays show where the ball went, not what the player knew; AI commentary makes up numbers; one game is broadcast to very different audiences | [IMPACT](IMPACT.md); [SUBMISSION](SUBMISSION.md) "The problem" and "Why it matters", with the sources (EY for the Premier League 2026; Microsoft and the Premier League 2025; Amazon Prime Vision; ESPN) | ✅ |
+| Production | Perception analytics from tracking alone | the scan detector and blind-side alerts read only head yaw and positions, the inputs pose tracking provides ([analytics/scan_detector.py](../analytics/scan_detector.py), [analytics/blind_side.py](../analytics/blind_side.py)); limb-tracking keypoints in: held-out F1 0.991 at the sim's noise, 0.962 at 20 mm per axis ([keypoint_ingest](../eval/reports/keypoint_ingest.md)); ReSpo.Vision's broadcast tracking carries head, shoulder and hip angles (Bekkers 2026, [REFERENCES](REFERENCES.md#perception-and-scanning)) | **Missing:** never run on real tracking (synthetic data only, by the rules) |
+| Production | Machine-readable, timecoded overlay cues | `TelestrationPlan`: [agents/schemas.py](../agents/schemas.py), [web/src/plan/schema.ts](../web/src/plan/schema.ts); validated on both sides, [tests/test_agents.py](../tests/test_agents.py) `test_plan_validation_matches_the_web_rules`; invalid plans fall back to the template (`?offline=1&plan=invalid`). The recap's cue sheet at 25 fps: `GET /api/recaps/<key>/cues`; live: [the match recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap) → **Overlay cues (JSON)**. Trailer: `impact` 1:36 | ✅ |
+| Production | An audit log of every verified claim | [explain/audit.py](../explain/audit.py), Cosmos DB `claims_audit` (PR #21); live: [`/api/matches/blind_side_run-3/audit`](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5); corruption eval: 568/568 verdicts logged | ✅ |
+| Production | Runs within a student budget and survives quota loss | cache by content hash, per-client rate limit, daily model cap (PR #19), Cosmos cache (PR #21); [tests/test_api.py](../tests/test_api.py) `test_past_the_daily_cap_breakdowns_serve_the_cache_or_the_template`; the judging window's cost and what happens when a quota runs out: [OPERATIONS](OPERATIONS.md#when-a-quota-runs-out); ≈ $15 expected to 2026-11-10 (SPEC §8) | ✅ |
+| End users | One moment for five audiences, two languages | casual, analyst, player fan, coach, and audio description for blind and low-vision fans, in English and Chinese; Azure AI Speech with two voices. Live: [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0), [audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0). Trailer: `casual` 1:28, `zh` 1:31. Accessibility audit: [ACCESSIBILITY](ACCESSIBILITY.md) | ✅ |
+| Businesses and developers | Live stats for coaches, an open dataset for developers | `GET /api/matches/<id>/stats`: per player distance, speeds, sprints, passes with accuracy and difficulty, from tracking and events only ([analytics/live_stats.py](../analytics/live_stats.py)); [DATASET](DATASET.md) | Partial: the dataset is not released yet |
+| End users | Viewers understand the play better | — | **Missing:** the optional viewer pilot (SPEC §9) has not run |
+
+## 4. User experience and presentation
+
+The judges ask whether the experience is well designed and intuitive, whether the demo video
+communicates the project's value, and whether frontend and backend are balanced.
+
+| Question | Claim | Evidence | Status |
+|---|---|---|---|
+| Intuitive | A first-time visitor has one path | the intro card is one line and **Start** (PR #177); one panel per tour step (PR #179); the ten-step judge tour, [from its first step](https://ttesite1ff906.z14.web.core.windows.net/?tour=1). README ["Judge it in 3 minutes"](../README.md#judge-it-in-3-minutes) and ["The full tour"](../README.md#the-full-tour); the team's live-demo script, `docs/DEMO_SCRIPT.md` | Partial: the four-step quick tour (`?tour=quick`) is PR #178, not merged |
+| Well designed | First-person replay and a tactical board | [web/](../web/) (PR #5), head and body yaw on every player (PR #7), animated players (PRs #26, #27), comfort mode. Live: [first person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0). Trailer: `pov-look` 0:26 | ✅ |
+| Well designed | Overlays | pass options with "he thought / it was" (PR #8), blind-side alerts (PR #12), What if… ghost paths (PR #9), pitch control on the tactical board (toggle, off by default), the scan step-through (PR #136), the run without the look told in verified lines (PR #139) | ✅ |
+| Well designed | Live, with persona and language switching | live WebSocket replay, breakdowns per persona × language (en, zh), Azure AI Speech (PR #24); the first request per persona and language runs the crew (12.9 s on a warm replica, [SPEC §8](SPEC.md#8-platform-and-deploy), 2026-10-20), later ones come from the cache | ✅ |
+| Well designed | Every caption opens its evidence | [web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx): claims with kind, verdict, values and evidence events; seeks the replay; every number on screen says where it comes from (PR #173) | ✅ |
+| Well designed | Broadcast camera and a camera director | [web/src/views/broadcast.ts](../web/src/views/broadcast.ts), `?camera=broadcast` (PR #32); the director that suggests and cuts cameras (PR #56). Live: [the stitched match](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751) | ✅ |
+| Well designed | A control to try a wrong number against the verifier | Evidence card **Try a wrong number** ([web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx), [web/src/tamper/](../web/src/tamper/)) → `POST /api/verify` ([api/tamper.py](../api/tamper.py)): the real Verifier on the claim with the viewer's number, not audited; tests in [tests/test_api.py](../tests/test_api.py) and [web/src/tamper/tamper.test.tsx](../web/src/tamper/tamper.test.tsx). Live: [`?persona=analyst&tamper=cf_value`](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value) | ✅ |
+| Well designed | Accessible and fast on a phone | axe-core WCAG 2.2 A/AA on 13 screens at 1440×900 and 375×812, and in every CI smoke page ([ACCESSIBILITY](ACCESSIBILITY.md)); cold-load timings of the live site on laptop and phone, plain and on Fast 3G ([web_load](../eval/reports/web_load.md)) | ✅; nothing tested with a real screen reader |
+| Well designed | 60 fps on an integrated GPU with the pitch-control shader on | `cd web && npm run build && npm run fps -- --headed`; 60 fps capped on an Apple M4 Pro, headless (SPEC §7, 2026-10-21) | Partial: no run on a PC laptop's integrated GPU with the shader on |
+| The video | The demo video communicates the value | [VIDEO_SCRIPT](VIDEO_SCRIPT.md): a staged story (labelled a dramatisation), then the app in three chapters, the crew, the verifier, the drill, the audiences; numbers only from verified claims; burned-in captions; PRs #170, #171, v14 in #182 | Partial: TODO(Bowen): the public video URL |
+| Balance | Frontend and backend | front: React, three.js and GLSL shaders in [web/](../web/) with its own test suite; back: the simulator, analytics, explain layer, the agent crew and the API in Python ([architecture](../README.md#architecture)); the two meet in typed schemas validated on both sides (`TelestrationPlan`, the claims) | ✅ |
 
 ## 5. Category adherence: Best Multi-Agent System
 
+The category asks for specialised agents with distinct roles, coordination through shared state
+and handoffs, recovery from failures, and "an end-to-end outcome a single agent could not achieve
+as effectively". The last point is the one we measured against a single agent
+([crew_vs_single](../eval/reports/crew_vs_single.md)); what it showed is in
+[Why a crew](#why-a-crew) below.
+
 | Point | Evidence | Status |
 |---|---|---|
-| Distinct roles | Director (whether and why to explain the moment), Analyst (lens and headline claims), Telestrator (the `TelestrationPlan`), narration (two voices, play-by-play and colour, per persona and language), Verifier and Voice. Prompts: [agents/prompts.py](../agents/prompts.py) | ✅; Verifier and Voice are deterministic code by design, not models |
-| Shared state | `MomentContext` ([agents/context.py](../agents/context.py)): the run, the counterfactual, moment cards, claims, verdicts and the audit sink, read by every step; `Crew` ([agents/workflow.py](../agents/workflow.py)) holds the step trace and spans | ✅ |
+| Distinct roles | Director (whether and why to explain the moment, and so its budget), Analyst (lens and headline claims, with MCP tools), Telestrator (the `TelestrationPlan`), narration (two voices, play-by-play and colour, per persona and language), Verifier and Voice. Prompts: [agents/prompts.py](../agents/prompts.py). Live: **Crew trace** shows each agent's lane | ✅; Verifier and Voice are deterministic code by design, not models |
+| Shared state | `MomentContext` ([agents/context.py](../agents/context.py)): the run, the counterfactual, moment cards, claims, verdicts and the audit sink, read by every step; `Crew` ([agents/workflow.py](../agents/workflow.py)) holds the step trace and spans; the Crew trace shows which state each step read and wrote (PR #112, [tests/test_crew_trace.py](../tests/test_crew_trace.py)) | ✅ |
 | Handoffs | typed messages on the workflow's edges (`Briefing`, `Planned`, `Drafts`, `Rewrite`, `Approved` in [agents/workflow.py](../agents/workflow.py)); [tests/test_agents.py](../tests/test_agents.py) `test_telestrator_and_narration_run_concurrently`; [tests/test_telemetry.py](../tests/test_telemetry.py) `test_the_parallel_lanes_overlap_and_stay_children_of_the_breakdown` | ✅ |
-| Failure recovery | [tests/test_agents.py](../tests/test_agents.py) `test_a_failing_or_slow_agent_falls_back_to_its_template`, `test_an_invalid_agent_plan_is_replaced_by_the_template`, `test_a_line_the_verifier_rejects_is_rewritten_or_dropped`; [tests/test_telemetry.py](../tests/test_telemetry.py) `test_a_telestrator_timeout_is_a_template_span_with_the_error_class`; the API serves the cache or the template when rate-limited or capped; the web app plays bundled data when the API is down ([web/src/api/client.test.tsx](../web/src/api/client.test.tsx)). The failure drill (SPEC §6): the Producer desk takes agents down and brings one back from the Agent Framework workflow checkpoint, which re-runs only that step; an interrupted breakdown resumes from its last superstep, after a restart too ([tests/test_crew_recovery.py](../tests/test_crew_recovery.py), [tests/test_api_drill.py](../tests/test_api_drill.py), [web/src/producer/producer.test.tsx](../web/src/producer/producer.test.tsx)) | Partial: no transaction-view screenshot in the repo (SPEC §8 asks for one); a drill lives on the replica's disk, so every restart or redeploy (each green `main`) drops it, and bring-back then answers 404 |
-| End-to-end output a single agent can't produce as well | one `BreakdownResult` = a validated plan + verified scripts per persona and language + timed SSML cues, played by the web app | Partial: no single-agent baseline was measured; the closest is the narration ablation above (one model writing free text vs the crew's anchored lines) |
+| Failure recovery | Each model step: a timeout, one retry, then its template. The failure drill (SPEC §6): the Producer desk takes an agent down and brings it back from the Agent Framework workflow checkpoint, which re-runs only that step and the one after it; an interrupted breakdown resumes from its last superstep, after a restart too ([tests/test_crew_recovery.py](../tests/test_crew_recovery.py), [tests/test_api_drill.py](../tests/test_api_drill.py), [web/src/producer/producer.test.tsx](../web/src/producer/producer.test.tsx)). Measured: with the Analyst or the Telestrator down, the crew aired a valid, verified breakdown 3 of 3 times with 3 of 4 model roles intact; one agent doing all four roles kept 0 of 4 ([crew_vs_single](../eval/reports/crew_vs_single.md), "Failure drill"). Outage of the model service: TODO(multi-agent-evidence) (NUMBERS MA7). Live: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer). Trailer: `redcard` 1:21, `bringback` 1:24 | Partial: a drill lives on the replica's disk, so every restart or redeploy drops it, and bring-back then answers 404 |
+| End-to-end outcome | one `BreakdownResult` = a validated plan + verified scripts per persona and language + timed SSML cues, played by the web app; measured against a single agent on the same inputs ([crew_vs_single](../eval/reports/crew_vs_single.md)): see [Why a crew](#why-a-crew) | Partial: the crew's lines are no better than one agent's; its advantage is recovery, timing and auditability |
+
+### Why a crew
+
+We ran one Foundry agent doing the four model roles in one call (the crew's schemas side by
+side, the same MCP tools, the same code after the model) against the crew, on six moments × four
+audiences, each with and without the Verifier
+([crew_vs_single](../eval/reports/crew_vs_single.md), 2026-10-21).
+
+**What the crew does not buy.** Better lines. Both aired 0 wrong facts, both scored 5.00 for
+groundedness, and the Verifier rejected no anchored line in either structure. On free-text lines
+the separate voices wrote more wrong facts than the single agent (12 vs 3 on one moment); the
+Verifier, not the crew, stopped all of them. The crew costs about twice as much per breakdown
+($0.0090 vs $0.0046).
+
+**What it does buy:**
+- **Recovery that keeps the rest of the work.** One agent down: the crew still aired 3 of 4 roles
+  from the model, the single agent 0 of 4, since its one call is every role. Bringing the
+  Telestrator back cost the crew 1 model request (about 2.1k tokens); the single agent re-ran
+  everything (1.7 requests, about 11.7k tokens). Outage of the model service:
+  TODO(multi-agent-evidence).
+- **Steps that fit the deployed timeout.** The API gives each model step 8 s. The eval allowed
+  30 s, and 0 of 66 crew agent runs took longer than 8 s, against 6 of 6 single-agent runs: under
+  the deployed timeout the single agent would have fallen back to its templates on every
+  moment.
+- **A Verifier per step, and a rewrite sent to the line's author.** A rejected line goes back to
+  the voice that wrote it, told why; the other lines and the plan stand
+  ([agents/workflow.py](../agents/workflow.py)). Rewrites and drops per breakdown:
+  TODO(multi-agent-evidence) (NUMBERS MA8).
+- **Audiences in parallel.** Narration drafts every persona × language script at once, and
+  rewrites only the scripts that broke a rule. Seconds to air for four audiences against one:
+  TODO(multi-agent-evidence) (NUMBERS MA9).
+- **An audit trail per agent.** Every breakdown carries its trace: each step's typed input and
+  output, the state it read and wrote, the Analyst's MCP calls, the Verifier's verdicts, and
+  whether a line came from the model or a template. The **Crew trace** shows it in the app, and
+  Application Insights has the same run as spans (below).
+- **Plans that validate.** 6 of 6 crew plans passed the web app's rules, against 5 of 6 from the
+  single agent (one named a scan that does not exist).
 
 ### The live trace
+
+TODO(freeze): re-capture after the last deploy (NUMBERS D2). This one predates the Director's
+budget (PR #123), the names (PR #126) and the persona rules (PR #127).
 
 One model-backed breakdown (coach, en) on the deployed API, from Application Insights,
 2026-10-20 21:34:51 UTC (revision `tte-api--0000017`, image `6e58a48`), 15.5 s inside the
@@ -134,4 +215,5 @@ union dependencies, requests
 
 Built with Claude Code. GitHub Copilot, the Azure MCP Server and Microsoft Fabric were not used:
 no commit, file or pull request mentions them (git history and all 30 pull requests checked on
-2026-10-20), so no Copilot usage file is included.
+2026-10-20; TODO(freeze): re-check every pull request, NUMBERS D4), so no Copilot usage file is
+included.
