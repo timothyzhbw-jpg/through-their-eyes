@@ -260,6 +260,28 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
     defence–attack 23.50 ± 5.88 / 23.33 ± 6.05 m.
   - `analytics/team_shape.py` finds the lines the same way, once per possession spell (our runs are
     shorter than 15 minutes). *Read:* full text (the dissertation's reprint).
+- **Castellano & Álvarez (2013). *Uso defensivo del espacio de interacción en fútbol* [Defensive
+  use of the interaction space in soccer].** RICYDE 9(32):126–136, doi:10.5232/ricyde2013.03203
+  (in Spanish) — https://cafyd.com/REVISTA/ojs/index.php/ricyde/article/download/560/303
+  → **The defending line's height is this paper's regression.** The same six La Liga matches as
+  Castellano et al. (2013), every touch with the opponents on the ball; goalkeepers excluded
+  (p. 128). DDP, the deepest defender's distance to the goal he defends, on DBP, the ball's
+  distance to that goal: DDP = 6.30 m (SE 0.209) + 0.46 (SE 0.003) × DBP, explaining about 74% of
+  the variance (p. 132, Tabla 2); r = 0.859 (Tabla 1). Out of possession: width 36.8 ± 7.0 m,
+  length 33.8 ± 7.6 m, DDP 33.0 ± 12.8 m (Resultados, p. 130). `ShapeParams.defence` uses 6.30 and
+  0.46 as the back line's target; the realism report checks the regression it produces.
+  *Read:* full text. Found by the sim-parameters dossier (`docs/SIM_PARAMETERS.md`, PR #146).
+- **Errekagorri, Fernandez-Navarro, López-Del Campo, Resta & Castellano (2024). *An eight-season
+  analysis of the teams' performance in the Spanish LaLiga according to the final league
+  ranking.*** PLoS ONE 19(2):e0299242, doi:10.1371/journal.pone.0299242
+  (Errekagorri et al. (2024) in the realism report.)
+  → **A large modern check, both phases together.** 5,518 team-match performances, 2011–12 to
+  2018–19 (Mediacoach); per-match means with the ball in play, goalkeepers excluded from width,
+  length and height (Table 1). Table 4 intercepts (the mean of the four league-table groups), with
+  the match-to-match residual SD: width 43.423 (2.053) m, length 36.854 (1.659) m, height (the
+  deepest outfield player to his goal line) 37.323 (2.977) m, keeper to the nearest defender
+  24.969 (1.716) m. Not fitted to: its teams are wider, longer and higher than Castellano et al.'s
+  (2013) one team, and the sim cannot match both. *Read:* full text (Europe PMC, PMC10901331).
 - **Shaw & Glickman. *Dynamic analysis of team strategy in professional football.*** Barça Sports
   Analytics Summit (cited as 2019; no DOI) —
   https://www.sportperformanceanalysis.com/s/Dynamic-analysis-of-team-strategy-in-professional-football-By-Laurie-Shaw-And-Mark-Glickman.pdf
@@ -311,7 +333,10 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
   no unit and sample counts that disagree.
 - **Ours, not cited (style knobs):** the slot depths and laterals, how far the wide players tuck in
   and the full-backs push on, the keeper's depth as a share of the back line's, the zonal marking
-  radii and leash, and the five seconds the report counts as transition.
+  radii and leash, the in-possession line (a set distance behind the ball; no paper prints a
+  relation for it), the block's one-second lag behind the ball, the jog to a slot (3 m/s, below
+  the 19.8 km/h high-speed running entry speed of Gualtieri et al. 2023), and the five seconds the
+  report counts as transition.
 
 ### Space and value
 - **Spearman (2018). *Beyond Expected Goals.*** MIT Sloan — pitch control, time to intercept.

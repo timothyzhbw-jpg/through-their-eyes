@@ -90,6 +90,7 @@ SHAPE_METRICS = (
     ("width", "Team width (m)", ".1f"),
     ("lpw", "Length per width", ".2f"),
     ("line_height", "Defensive line height: deepest outfield player to own goal line (m)", ".1f"),
+    ("keeper_gap", "Keeper to his nearest outfield team-mate (m)", ".1f"),
     ("defence_midfield", "Distance from the defensive to the midfield line (m)", ".1f"),
     ("midfield_attack", "Distance from the midfield to the forward line (m)", ".1f"),
 )
@@ -99,6 +100,7 @@ SHAPE_PHASES = (
     (team_shape.TRANSITION_ATTACK, "just won the ball"),
     (team_shape.TRANSITION_DEFENCE, "just lost the ball"),
 )
+ALL_PHASES = ("all", "all phases")  # every sampled team-frame, as per-match means pool them
 TRANSITION_S = 5.0  # s after a change of possession counted as transition
 SHAPE_WARM_UP_S = 5.0  # the first seconds of a run, while the players leave their setup spots
 SHAPE_EVERY = 5  # frames: the shape is sampled at 5 Hz
@@ -154,6 +156,22 @@ SOURCES = {
         "matches of 2005-06 (AMISCO), 6,793 touches; one reference team (EQ1) and its six "
         "opponents (EQ2); goalkeepers excluded.",
         "https://ddd.uab.cat/pub/revpsidep/revpsidep_a2013v22n2/revpsidep_a2013v22n2p437.pdf",
+    ),
+    "castellano2013b": Source(
+        "Castellano & Álvarez (2013)",
+        "Castellano, Álvarez. Uso defensivo del espacio de interacción en fútbol. RICYDE 9(32):"
+        "126–136, doi:10.5232/ricyde2013.03203 (in Spanish). The same six La Liga matches as "
+        "Castellano et al. (2013), out of possession; goalkeepers excluded.",
+        "https://doi.org/10.5232/ricyde2013.03203",
+    ),
+    "errekagorri2024": Source(
+        "Errekagorri et al. (2024)",
+        "Errekagorri, Fernandez-Navarro, López-Del Campo, Resta, Castellano. An eight-season "
+        "analysis of the teams' performance in the Spanish LaLiga according to the final league "
+        "ranking. PLoS ONE 19(2):e0299242. 5,518 team-match performances, 2011–12 to 2018–19 "
+        "(Mediacoach optical tracking); per-match means with the ball in play, goalkeepers "
+        "excluded from width, length and height, both phases together.",
+        "https://doi.org/10.1371/journal.pone.0299242",
     ),
     "forcher2024": Source(
         "Forcher et al. (2024)",
@@ -724,13 +742,14 @@ def evaluate(
 
 @dataclass(frozen=True)
 class ShapeReference:
-    """Two printed means ± SD (two teams, or two groups of plays); the range checked spans both
-    means ± 1 SD."""
+    """Printed means ± SD (one, or two for two teams or two groups of plays); the range checked
+    spans every mean ± 1 SD."""
 
-    printed: tuple[tuple[str, str], tuple[str, str]]  # as printed: (mean, SD)
+    printed: tuple[tuple[str, str], ...]  # as printed: (mean, SD) for each team or group
     source: str  # "<cite>, <where>"
     label: str
     note: str = ""
+    fitted: bool = True  # the shape's parameters were fitted to it on tuning seeds
 
     @property
     def published(self) -> str:
@@ -749,7 +768,44 @@ class ShapeReference:
 # themselves (docs/REFERENCES.md, "Team shape"); every other row says it has none.
 CASTELLANO_TEAMS = "EQ1, the reference team, and EQ2, its opponents"
 FORCHER_PLAYS = "successful and unsuccessful defensive plays"
+ERREKAGORRI = (
+    "Per-match means over 5,518 team-matches, both phases together; the range is the mean ± "
+    "the match-to-match SD within a team (the model's residual SD). Its teams are wider, longer "
+    "and higher than Castellano et al.'s (2013) one team, to whose in and out of possession "
+    "means the shape is fitted."
+)
 SHAPE_PUBLISHED: dict[tuple[str, str], ShapeReference] = {
+    ("width", "all"): ShapeReference(
+        (("43.423", "2.053"),),
+        "Errekagorri et al. (2024), Table 4",
+        "mean ± match SD",
+        ERREKAGORRI,
+        fitted=False,
+    ),
+    ("length", "all"): ShapeReference(
+        (("36.854", "1.659"),),
+        "Errekagorri et al. (2024), Table 4",
+        "mean ± match SD",
+        ERREKAGORRI,
+        fitted=False,
+    ),
+    ("line_height", "all"): ShapeReference(
+        (("37.323", "2.977"),),
+        "Errekagorri et al. (2024), Table 4",
+        "mean ± match SD",
+        f"{ERREKAGORRI} The paper's Height: the deepest outfield player to the goal line he "
+        "defends.",
+        fitted=False,
+    ),
+    ("keeper_gap", "all"): ShapeReference(
+        (("24.969", "1.716"),),
+        "Errekagorri et al. (2024), Table 4",
+        "mean ± match SD",
+        "Per-match means over 5,518 team-matches; the paper's GkDef, the keeper to the nearest "
+        "defender of his team, read here as his nearest outfield team-mate. The sim's keeper "
+        "stands at most 15.5 m out (sim/team_shape.py), so a high line leaves him far behind it.",
+        fitted=False,
+    ),
     ("length", team_shape.ATTACK): ShapeReference(
         (("36.4", "6.8"), ("36.2", "6.7")),
         "Castellano et al. (2013), Table 1",
@@ -816,10 +872,11 @@ class ShapeRow:
     inside: str = "—"
     note: str = ""
     before_inside: str = "—"  # the before column's verdict against the same range
+    fitted: bool = False  # the shape's parameters were fitted to this value on tuning seeds
 
     @property
-    def label(self) -> str:  # every row with a printed value was fitted on tuning seeds
-        return self.metric if self.published == NO_REFERENCE else f"{self.metric} †"
+    def label(self) -> str:
+        return f"{self.metric} †" if self.fitted else self.metric
 
 
 def shape_rows(
@@ -834,8 +891,9 @@ def shape_rows(
     table = pool.tables["shape"]
     rows = []
     for metric, label, fmt in SHAPE_METRICS:
-        for k, (phase, phase_label) in enumerate(SHAPE_PHASES):
-            mask = (table["phase"] == k) & np.isfinite(table[metric])
+        for k, (phase, phase_label) in enumerate((*SHAPE_PHASES, ALL_PHASES)):
+            k = None if phase == ALL_PHASES[0] else k
+            mask = _phase_mask(table, k) & np.isfinite(table[metric])
             x = table[metric]
 
             def stat(w, x=x, mask=mask):
@@ -848,7 +906,7 @@ def shape_rows(
             then, then_value = "—", math.nan
             if before is not None:
                 bt = before.tables["shape"]
-                bm = (bt["phase"] == k) & np.isfinite(bt[metric])
+                bm = _phase_mask(bt, k) & np.isfinite(bt[metric])
                 then_value = _wmean(bt[metric][bm], np.ones(bm.sum()))
                 then = _num(then_value, fmt)
             row = ShapeRow(
@@ -861,6 +919,7 @@ def shape_rows(
             ref = SHAPE_PUBLISHED.get((metric, phase))
             if ref is not None:
                 row.published, row.source, row.note = ref.published, ref.source, ref.note
+                row.fitted = ref.fitted
                 row.range = f"{_span(ref.lo, ref.hi, fmt)} ({ref.label})"
                 row.inside = _verdict(value, ref.lo, ref.hi, mask.sum() >= MIN_GROUP)
                 if before is not None:
@@ -874,6 +933,79 @@ def shape_rows(
                     "47.5 m from its own."
                 )
             rows.append(row)
+    rows += line_regression_rows(pool, before)
+    return rows
+
+
+def _phase_mask(table: dict[str, np.ndarray], k: int | None) -> np.ndarray:
+    """Samples of phase index k, or of every phase for None."""
+    return table["phase"] >= 0 if k is None else table["phase"] == k
+
+
+# Castellano & Álvarez (2013), Tabla 2: out of possession, the deepest defender's distance to his
+# goal regressed on the ball's: B = 0.46 (SE 0.003), constant 6.30 m (SE 0.209); r = 0.859
+# (Tabla 1).
+LINE_REGRESSION = (("slope", "0.46", "0.003", ".3f"), ("intercept", "6.30", "0.209", ".2f"))
+OUT_OF_POSSESSION = (
+    [k for k, (p, _) in enumerate(SHAPE_PHASES) if p == team_shape.DEFENCE][0],
+    [k for k, (p, _) in enumerate(SHAPE_PHASES) if p == team_shape.TRANSITION_DEFENCE][0],
+)
+
+
+def _wfit(x: np.ndarray, y: np.ndarray, w: np.ndarray) -> tuple[float, float]:
+    """Weighted least squares y = a + b x: (b, a)."""
+    if np.sum(w) <= 0:
+        return math.nan, math.nan
+    mx, my = _wmean(x, w), _wmean(y, w)
+    b = float(np.sum(w * (x - mx) * (y - my)) / np.sum(w * (x - mx) ** 2))
+    return b, my - b * mx
+
+
+def line_regression_rows(pool: Pool, before: Pool | None) -> list[ShapeRow]:
+    """The deepest outfield player's height regressed on the ball's distance from the goal
+    defended, out of possession (settled and just lost), as Castellano & Álvarez (2013) fit it."""
+
+    def fit(table, w):
+        mask = np.isin(table["phase"], OUT_OF_POSSESSION) & np.isfinite(table["line_height"])
+        return _wfit(table["ball_depth"][mask], table["line_height"][mask], w[mask])
+
+    table = pool.tables["shape"]
+    mask = np.isin(table["phase"], OUT_OF_POSSESSION) & np.isfinite(table["line_height"])
+    r = float(np.corrcoef(table["ball_depth"][mask], table["line_height"][mask])[0, 1])
+    then = (math.nan, math.nan)
+    if before is not None:
+        bt = before.tables["shape"]
+        then = fit(bt, np.ones(len(bt["phase"])))
+    rows = []
+    for i, (name, coef, se, fmt) in enumerate(LINE_REGRESSION):
+
+        def stat(w, i=i):
+            return fit(table, pool.weights("shape", w))[i]
+
+        value = pool.pooled(stat)
+        a, b = pool.interval(stat)
+        lo, hi = float(coef) - 1.96 * float(se), float(coef) + 1.96 * float(se)
+        unit = "" if name == "slope" else " m"
+        rows.append(
+            ShapeRow(
+                f"Defensive line height on the ball's distance from the goal defended: {name}",
+                "out of possession",
+                f"{_num(value, fmt)}{unit} (r = {_num(r, '.3f')}, {int(mask.sum())} samples)",
+                _span(a, b, fmt),
+                _num(then[i], fmt),
+                f"{coef}{unit} (SE {se}; r = 0.859)",
+                f"{_span(lo, hi, fmt)} (95% CI from the printed SE)",
+                "Castellano & Álvarez (2013), Tabla 2",
+                _verdict(value, lo, hi, mask.sum() >= MIN_GROUP),
+                "Ordinary least squares on every sampled team-frame without the ball (settled and "
+                "just lost), as the paper fits it on every touch with the opponents on the ball: "
+                "the deepest outfield player's distance to the goal he defends on the ball's "
+                "distance to it. The sim's defending line targets this regression "
+                "(sim/team_shape.py), so the check is how much of it survives marking, pressing "
+                "and the block's lag behind the ball.",
+                _verdict(then[i], lo, hi),
+            )
+        )
     return rows
 
 
@@ -929,10 +1061,13 @@ def render_shape(rows: list[ShapeRow]) -> list[str]:
         "- **Before: anchors**: the same seeds without the team shape (`Scenario.team_shape` "
         "off): every player's setup spot shifted with the ball, as every scenario still moves "
         "(the pooled mean).",
-        "- **Range checked**: both printed means ± 1 SD (two teams, or successful and "
-        "unsuccessful defending). **†**: the shape's parameters (sim/team_shape.py `ShapeParams`) "
+        "- **Range checked**: every printed mean ± 1 SD (two teams, or successful and "
+        "unsuccessful defending); for Errekagorri et al. (2024), whose values are per-match means, "
+        "the mean ± the match-to-match SD; for the regression, the 95% CI computed from the "
+        "printed standard error. **†**: the shape's parameters (sim/team_shape.py `ShapeParams`) "
         "were fitted by hand to these printed means on `possession_play` tuning seeds 0–39; the "
-        "seeds here are held out.",
+        "seeds here are held out. The rows without † were not fitted to.",
+        "- **All phases** pools every sampled team-frame, as a per-match mean does.",
         "- **Length per width** is checked against nothing: no 11 v 11 source prints it (the "
         "youth small-sided Folgado et al. 2014 is read in abstract only, which prints none). The "
         "ratios of the printed means are 0.87–0.89 in possession and 0.87–0.93 out of it "

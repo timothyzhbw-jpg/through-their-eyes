@@ -6,8 +6,15 @@ import numpy as np
 import pytest
 
 from eval.realism import (
+    ALL_PHASES,
     COLUMNS,
+    LINE_REGRESSION,
     NO_REFERENCE,
+    SHAPE_COLUMNS,
+    SHAPE_EVERY,
+    SHAPE_METRICS,
+    SHAPE_PHASES,
+    SHAPE_WARM_UP_S,
     SOURCES,
     VERDICTS,
     cohens_d,
@@ -15,7 +22,13 @@ from eval.realism import (
     out_of_frame_s,
     possession_start,
     render,
+    shape_rows,
+    shape_table,
+    simulate,
+    simulate_anchors,
 )
+from sim.config import DT
+from sim.engine import Simulation
 
 REFERENCES = (Path(__file__).parents[1] / "docs" / "REFERENCES.md").read_text()
 SEEDS = [100, 101, 102]
@@ -108,8 +121,6 @@ def test_out_of_frame_time_runs_from_first_frame_out_to_first_frame_back():
 
 @pytest.fixture(scope="module")
 def shape_report():
-    from eval.realism import shape_rows, simulate, simulate_anchors
-
     observed = [simulate(s) for s in SEEDS]
     anchors = [simulate_anchors(s) for s in SEEDS]
     rows = shape_rows(observed, anchors)
@@ -117,23 +128,20 @@ def shape_report():
 
 
 def test_team_shape_table_has_every_metric_in_every_phase(shape_report):
-    from eval.realism import SHAPE_COLUMNS, SHAPE_METRICS, SHAPE_PHASES
-
     rows, markdown = shape_report
     header, body = _table(markdown, after="## Team shape")
     assert header == list(SHAPE_COLUMNS)
-    assert len(body) == len(rows) == len(SHAPE_METRICS) * len(SHAPE_PHASES)
-    assert {(c[0].removesuffix(" †"), c[1]) for c in body} == {
-        (m, p) for _, m, _ in SHAPE_METRICS for _, p in SHAPE_PHASES
-    }
+    phases = [p for _, p in (*SHAPE_PHASES, ALL_PHASES)]
+    assert len(body) == len(rows) == len(SHAPE_METRICS) * len(phases) + len(LINE_REGRESSION)
+    pairs = {(c[0].removesuffix(" †"), c[1]) for c in body}
+    assert {(m, p) for _, m, _ in SHAPE_METRICS for p in phases} <= pairs
+    assert sum("regressed" in c[0] or "on the ball's distance" in c[0] for c in body) == 2
     # The scan table above it is unchanged in shape.
     header, body = _table(markdown)
     assert header == list(COLUMNS)
 
 
 def test_every_team_shape_row_is_cited_with_a_location_or_says_it_has_none(shape_report):
-    from eval.realism import SHAPE_COLUMNS
-
     _, markdown = shape_report
     _, body = _table(markdown, after="## Team shape")
     col = {name: i for i, name in enumerate(SHAPE_COLUMNS)}
@@ -151,10 +159,6 @@ def test_every_team_shape_row_is_cited_with_a_location_or_says_it_has_none(shape
 
 
 def test_the_shape_table_samples_both_teams_after_the_warm_up():
-    from eval.realism import SHAPE_EVERY, SHAPE_WARM_UP_S, shape_table
-    from sim.config import DT
-    from sim.engine import Simulation
-
     run = Simulation.from_scenario("possession_play", 100).run()
     table = shape_table(run)
     frames = len(range(round(SHAPE_WARM_UP_S / DT), len(run.owner), SHAPE_EVERY))
