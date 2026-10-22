@@ -2156,11 +2156,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       tries another option or closes; the reveal shows no number outside a verified line, each line
       once; the camera frames every option on desktop and phone; markers are focusable named
       buttons (arrow keys, Enter, Escape) and a swipe picks the option it points at; reduced
-      motion cuts to the end; it works on both heroes with a decision and inside `?match=`.
+      motion cuts to the end; it works on both heroes with a decision and inside `?match=`; after
+      the pick it says what he had seen and how his picture rated the call, with no digit.
       — [web/src/yourcall/flow.test.ts](../web/src/yourcall/flow.test.ts),
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
-      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+      [why.test.ts](../web/src/yourcall/why.test.ts),
+      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx); `npm run smoke`, pages
+      `link-yourcall` and `phone-375-yourcall` (axe on the reveal)
 - [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
       live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
       and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
