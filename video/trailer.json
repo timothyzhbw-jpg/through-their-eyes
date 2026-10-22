@@ -1056,9 +1056,9 @@
             "after": ""
           },
           {
-            "before": "HIS PICTURE OF H9: OFF BY",
-            "value": "{belief_error.err}",
-            "after": "M"
+            "before": "HE FOUND H9 WITH A",
+            "value": "{pass_to_runner.dist}",
+            "after": "M PASS"
           },
           {
             "before": "THAT LOOK WAS WORTH",
@@ -2861,7 +2861,7 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 17.3,
+        "in": 0.2,
         "crop": [
           700,
           260,
@@ -2901,7 +2901,7 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 28.2,
+        "in": 2.9,
         "crop": [
           700,
           260,
@@ -2995,7 +2995,7 @@
       "picture": {
         "src": "capture",
         "shot": "06-language",
-        "in": 4.45,
+        "in": 1.0,
         "push": [
           1.0,
           1.04
@@ -3011,12 +3011,12 @@
       "vo": [
         {
           "id": "vo17",
-          "at": 0.2,
+          "at": 0.3,
           "lang": "zh",
           "line": {
             "persona": "casual",
             "language": "zh",
-            "index": 2
+            "index": 0
           },
           "style": "sports-commentary",
           "degree": 1.3
@@ -3291,7 +3291,7 @@
     }
   },
   "story": "blender",
-  "naming": "ids",
+  "naming": "names",
   "named": {
     "about": "Players by the app's fictional names (sim/roster.py, web/src/data/roster.ts) for when the app shows them; naming: \"names\" or --naming names. H4 Kofi Annersley, H8 Joss Ferriday, H9 Nico Varnhall, A11 Anders Vintergren.",
     "vo": {
@@ -3321,9 +3321,9 @@
               "after": ""
             },
             {
-              "before": "HIS PICTURE OF VARNHALL: OFF BY",
-              "value": "{belief_error.err}",
-              "after": "M"
+              "before": "HE FOUND VARNHALL WITH A",
+              "value": "{pass_to_runner.dist}",
+              "after": "M PASS"
             },
             {
               "before": "THAT LOOK WAS WORTH",

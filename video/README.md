@@ -267,6 +267,14 @@ tellings are equal and under `output.max_s`, re-time the score (copy `video/scor
 new sheet, set its `trailer_ref` to the commit, `uv run video/score/score.py --cues ...`), copy
 its `hybrid/score.wav` to `video/score/out/`, and run the trailer.
 
+**Cover still.** `node video/tools/cover.mjs` writes `out/cover_16x9_v3.png` (1920×1080) from
+the live site: one cine frame through H8's eyes as the ball reaches him, aimed up so the crowd
+fills the freeze card "THAT LOOK WAS WORTH {cf_value.dxt} / EXPECTED THREAT" and the players sit
+below it, H9 ringed on the right third. Only H9 keeps his shirt-number label (the frame is
+rendered with and without labels, and his gold one is copied across). The number comes from
+`out/video/claims.json` (run the capture kit first); without the claim the tool stops.
+`--frame`, `--aim`, `--lift` and `--fov` move the shot.
+
 **Naming.** `naming: "ids"` (default) says and shows players as H8, H9; `"names"` (or
 `--naming names`) uses the fictional names the app shows once its players are named
 (`sim/roster.py`). `named.vo` holds the lines that change (a string, or `{ text, at }`), each
