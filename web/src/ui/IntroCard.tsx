@@ -193,8 +193,10 @@ function Lineup() {
   const highest = Math.max(0, ...teams.home.concat(teams.away).map(size));
   return (
     <>
+      {/* A club's name never breaks across lines; the line breaks around the "v". */}
       <h3 className="lineup-clubs">
-        {clubName(0)} <em>v</em> {clubName(1)}
+        <span className="lineup-club">{clubName(0)}</span> <em>v</em>{" "}
+        <span className="lineup-club">{clubName(1)}</span>
       </h3>
       <p className="lineup-pitch">
         <em>See what they saw.</em> An AI studio that explains key moments through the player's own
