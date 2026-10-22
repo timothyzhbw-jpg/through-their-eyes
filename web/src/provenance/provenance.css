@@ -1,5 +1,6 @@
 /* Where an answer came from: Floodlight for a crew run made now, chalk for one served from the
-   cache, the striped template tag for no model call. */
+   cache, the striped template tag for no model call. Shaped as the numbers' source chips
+   (.source, SourceChip.tsx): square corners, a 1 px line, the data face. */
 
 .provenance-chip {
   display: inline-flex;
@@ -7,7 +8,7 @@
   gap: 8px;
   max-width: 100%;
   padding: 3px 10px 3px 8px;
-  border-radius: 10px; /* it wraps on a narrow card: a pill's ends would bulge */
+  border-radius: 4px; /* it wraps on a narrow card: a pill's ends would bulge */
   font: 500 11px/1.4 var(--font-data);
   letter-spacing: 0.02em;
   color: var(--chalk-2);

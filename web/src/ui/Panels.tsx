@@ -27,6 +27,7 @@ import { Chapter, Title } from "./Chapter";
 import { CheckIcon } from "./icons";
 import { LineText } from "./Narration";
 import { renameIds, shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 interface Beat {
   from: number; // frame
@@ -351,10 +352,7 @@ export function StoryPanel() {
       lede="Every beat of the move on the match clock. Choose one to replay from there."
       aside={
         <p className="note">
-          <span className="source" title="Read from the sim export, not a verified claim">
-            sim
-          </span>{" "}
-          Timings, distances and probabilities read from the sim export.
+          <SourceChip kind="sim" /> Timings, distances and probabilities read from the sim export.
         </p>
       }
     >
@@ -400,18 +398,14 @@ export function DecisionPanel() {
             </p>
             <figcaption>
               His picture of {shortName(runner)} was off by this much when he decided.{" "}
-              <span className="source" title="Read from the sim export, not a verified claim">
-                sim
-              </span>
+              <SourceChip kind="sim" />
             </figcaption>
           </figure>
         )}
         <div className="options-figure">
           <p className="kicker">
             {shortName(hero.heroId ?? "He")}'s options at {at} s, on his belief{" "}
-            <span className="source" title="Read from the sim export, not a verified claim">
-              sim
-            </span>
+            <SourceChip kind="sim" />
           </p>
           <div className="options">
             {dec.options.slice(0, 6).map((o) => (
@@ -562,17 +556,11 @@ export function VerdictPanel() {
               </span>
             ) : pending ? null : hero.deltaSource === "lens" ? (
               <>
-                <span className="source" title="From the moment's scan lens, not a verified claim">
-                  lens
-                </span>{" "}
-                From the moment's scan lens, not a verified claim.
+                <SourceChip kind="lens" /> From the moment's scan lens, not a verified claim.
               </>
             ) : (
               <>
-                <span className="source" title="Read from the sim export, not a verified claim">
-                  sim
-                </span>{" "}
-                Read from the sim export, not a verified claim.
+                <SourceChip kind="sim" /> Read from the sim export, not a verified claim.
               </>
             )}{" "}
             {step
