@@ -55,11 +55,41 @@ def bilinear(img: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray,
     return top * (1 - fy) + bot * fy, inside
 
 
-def frames(path: Path, width: int, height: int, pix: str = "rgb24", count: int | None = None):
+def srgb_to_linear(c: np.ndarray) -> np.ndarray:
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def linear_to_srgb(c: np.ndarray) -> np.ndarray:
+    c = np.clip(c, 0.0, 1.0)
+    return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+
+
+def frames(
+    path: Path,
+    width: int,
+    height: int,
+    pix: str = "rgb24",
+    count: int | None = None,
+    start: float = 0.0,
+):
     depth = 3 if pix == "rgb24" else 1
     limit = ["-frames:v", str(count)] if count else []
+    seek = ["-ss", f"{start:.3f}"] if start else []
     proc = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-i", str(path), *limit, "-f", "rawvideo", "-pix_fmt", pix, "-"],
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            *seek,
+            "-i",
+            str(path),
+            *limit,
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            pix,
+            "-",
+        ],
         stdout=subprocess.PIPE,
     )
     size = width * height * depth
@@ -78,6 +108,21 @@ def main() -> None:
     ap.add_argument("--matte", required=True, type=Path, help="directory of f_0001.png ...")
     ap.add_argument("--source", required=True, type=Path, help="the picture to pin (first frame)")
     ap.add_argument("--source-offset-y", type=int, default=0, help="clip row 0 in source rows")
+    ap.add_argument("--source-time", type=float, default=0.0, help="the source frame to pin, in s")
+    ap.add_argument(
+        "--ev", type=float, default=0.0, help="exposure for the screen, in stops (linear light)"
+    )
+    ap.add_argument(
+        "--ev-ramp-frames",
+        type=int,
+        default=0,
+        help="ramp the exposure back to 0 over the clip's last N frames (for a seamless cut)",
+    )
+    ap.add_argument(
+        "--ref-corners",
+        type=Path,
+        help="map against another clip's last frame, so two clips of a screen show one picture",
+    )
     ap.add_argument("--out", required=True, type=Path)
     args = ap.parse_args()
 
@@ -86,7 +131,8 @@ def main() -> None:
     rows = meta["frames"]
     unit = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=np.float64)
     quad = lambda r: np.array([r[k][:2] for k in ("tl", "tr", "br", "bl")], dtype=np.float64)  # noqa: E731
-    h_last = homography(unit, quad(rows[-1]))
+    ref_rows = json.loads(args.ref_corners.read_text())["frames"] if args.ref_corners else rows
+    h_last = homography(unit, quad(ref_rows[-1]))
 
     probe = (
         subprocess.run(
@@ -110,7 +156,8 @@ def main() -> None:
         .split(",")
     )
     sw, sh = int(probe[0]), int(probe[1])
-    source = next(frames(args.source, sw, sh, count=1)).astype(np.float32)
+    source = next(frames(args.source, sw, sh, count=1, start=args.source_time)).astype(np.float32)
+    source_linear = srgb_to_linear(source / 255)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     enc = subprocess.Popen(
@@ -157,7 +204,11 @@ def main() -> None:
                 (y0, x0), (y1, x1) = box.min(0), box.max(0) + 1
                 g = h_last @ np.linalg.inv(homography(unit, quad(row)))
                 sx, sy = apply(g, xs[y0:y1, x0:x1], ys[y0:y1, x0:x1])
-                sample, inside = bilinear(source, sx, sy + args.source_offset_y)
+                left = len(rows) - 1 - i  # frames to the clip's end
+                ramp = args.ev_ramp_frames
+                ev = args.ev * (min(1.0, left / ramp) if ramp else 1.0)
+                lit = source if ev == 0 else linear_to_srgb(source_linear * 2.0**ev) * 255
+                sample, inside = bilinear(lit, sx, sy + args.source_offset_y)
                 a = (matte[y0:y1, x0:x1] * inside)[..., None]
                 out = frame.astype(np.float32)
                 out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - a) + sample * a

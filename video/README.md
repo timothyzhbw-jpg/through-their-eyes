@@ -267,6 +267,16 @@ tellings are equal and under `output.max_s`, re-time the score (copy `video/scor
 new sheet, set its `trailer_ref` to the commit, `uv run video/score/score.py --cues ...`), copy
 its `hybrid/score.wav` to `video/score/out/`, and run the trailer.
 
+A preview from candidates before approval: `--preview --dir <folder of candidates> --write
+out/video/trailer_preview.json` leaves `trailer.json` alone, takes the clips from that folder and
+burns "PREVIEW · BLENDER SHOTS PENDING APPROVAL" in the top-left corner (`watermark`); render it
+with `node video/trailer.mjs --spec out/video/trailer_preview.json`. `--drop a.mp4,b.mp4` sends
+the sections of dropped shots back to the in-engine telling. For the final, add the approved
+names to `approved` and run `--apply --fit --final`. A pin can take its source from a later
+frame (`source_time`), light the screen (`ev`, stops in linear light, ramped back to 0 over the
+last `ev_ramp_frames` so the cut to the full-frame shot is seamless) and map against another
+clip's last frame (`ref_corners`, so two shots of one screen show the same picture).
+
 **Numbers.** A voice-over line and a title param may not contain a digit or a number word
 (`zero` through `twelve`, the tens, `hundred`, `thousand`, `once`, `twice`, `half`, `dozen`,
 `percent`). A number arrives only as a `{claim.value}` slot, filled from `out/video/claims.json`

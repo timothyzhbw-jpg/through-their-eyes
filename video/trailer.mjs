@@ -218,14 +218,19 @@ async function stepPin(ctx) {
       if (!existsSync(f)) throw new Error(`pin ${pin.id}: missing ${path.relative(ctx.root, f)}`);
     }
     const mattes = readdirSync(matte).filter((f) => f.endsWith(".png")).sort();
-    const hash = digest(["pin-v1", pin, fileStamp(clip), fileStamp(corners), fileStamp(source), mattes.length,
+    const hash = digest(["pin-v2", pin, fileStamp(clip), fileStamp(corners), fileStamp(source), mattes.length,
       fileStamp(path.join(matte, mattes[mattes.length - 1] ?? "")), fileStamp(path.join(HERE, "pin.py"))]);
     if (fresh(out, hash, ctx.force)) {
       console.log(`  ${pin.id}: cached`);
       continue;
     }
+    const extra = [];
+    if (pin.source_time) extra.push("--source-time", String(pin.source_time));
+    if (pin.ev) extra.push("--ev", String(pin.ev));
+    if (pin.ev_ramp_frames) extra.push("--ev-ramp-frames", String(pin.ev_ramp_frames));
+    if (pin.ref_corners) extra.push("--ref-corners", path.resolve(ctx.root, pin.ref_corners));
     await runProcess("uv", ["run", "--no-sync", "python", "video/pin.py", "--clip", clip, "--corners", corners,
-      "--matte", matte, "--source", source, "--source-offset-y", String(pin.source_offset_y ?? 0), "--out", out],
+      "--matte", matte, "--source", source, "--source-offset-y", String(pin.source_offset_y ?? 0), ...extra, "--out", out],
       { cwd: ctx.root, inherit: true });
     storeHash(out, hash);
   }

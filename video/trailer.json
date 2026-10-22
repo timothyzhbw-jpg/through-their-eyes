@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0.0,
       "from": 0.0,
-      "until": 115.4,
+      "until": 110.867,
       "gain_db": 4,
       "fade_in": 0.0,
       "fade_out": 0.0,
@@ -376,7 +376,7 @@
       "shot": {
         "id": "pov-match",
         "run": "factual",
-        "duration": 3.0,
+        "duration": 5.0,
         "pov": "H8",
         "time": [
           {
@@ -386,6 +386,10 @@
           {
             "t": 3.0,
             "frame": 62
+          },
+          {
+            "t": 5.0,
+            "frame": 72
           }
         ],
         "camera": [
@@ -1006,77 +1010,15 @@
         "title": "THE CORNER"
       }
     },
-    "ph-s1a-receive": {
-      "template": "card",
-      "dur": 2.87,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE KID RECEIVES, BACK TO PLAY."
-          },
-          {
-            "text": "FREEZE: YOU ARE No. 14."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s1c-tackle": {
-      "template": "card",
-      "dur": 0.6,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE TACKLE."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
     "ph-s1d-fall": {
       "template": "card",
-      "dur": 1.8,
+      "dur": 1.167,
       "alpha": false,
       "params": {
         "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
         "lines": [
           {
-            "text": "HE GOES DOWN."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s1e-ground": {
-      "template": "card",
-      "dur": 1.0,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "ON THE GRASS."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s2-coach": {
-      "template": "card",
-      "dur": 6.0,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE COACH, TABLET IN HAND."
-          },
-          {
-            "text": "HARD CUT INTO THE APP."
+            "text": "HE STUMBLES."
           }
         ],
         "stagger": 0.15
@@ -1236,7 +1178,7 @@
     },
     "ph-s4b-check": {
       "template": "card",
-      "dur": 2.03,
+      "dur": 2.033,
       "alpha": false,
       "params": {
         "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
@@ -1313,9 +1255,9 @@
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-ie-3p03": {
+    "label-ie-3p033": {
       "template": "label",
-      "dur": 3.03,
+      "dur": 3.033,
       "alpha": true,
       "params": {
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
@@ -1398,95 +1340,178 @@
         ],
         "stagger": 0.15
       }
+    },
+    "ph-s1a-ots": {
+      "template": "card",
+      "dur": 2.433,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "OVER HIS SHOULDER."
+          },
+          {
+            "text": "FREEZE: YOU ARE No. 14."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1b-tail": {
+      "template": "card",
+      "dur": 0.334,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "HE NEVER LOOKS."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s1c-steal": {
+      "template": "card",
+      "dur": 1.0,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE STEAL."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s2-ots": {
+      "template": "card",
+      "dur": 1.2,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE COACH, TABLET UP."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s2-push": {
+      "template": "card",
+      "dur": 1.6,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "PUSH ONTO THE SCREEN."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "label-ie-1p5": {
+      "template": "label",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
     }
   },
   "beats": [
     {
-      "id": "b01-s1a-receive",
-      "dur": 2.87,
+      "id": "b01-s1a-ots",
+      "story": "blender",
+      "section": "open",
+      "dur": 2.433,
       "picture": {
         "src": "title",
-        "id": "ph-s1a-receive"
+        "id": "ph-s1a-ots"
       },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender",
-      "section": "open"
+      "overlays": []
     },
     {
-      "id": "b02-s1c-tackle",
-      "dur": 0.6,
+      "id": "b01b-s1b-tail",
+      "story": "blender",
+      "section": "open",
+      "dur": 0.334,
       "picture": {
         "src": "title",
-        "id": "ph-s1c-tackle"
+        "id": "ph-s1b-tail"
       },
-      "overlays": [],
-      "sfx": [],
+      "overlays": []
+    },
+    {
+      "id": "b02-s1c-steal",
       "story": "blender",
-      "section": "open"
+      "section": "open",
+      "dur": 1.0,
+      "picture": {
+        "src": "title",
+        "id": "ph-s1c-steal"
+      },
+      "overlays": []
     },
     {
       "id": "b03-s1d-fall",
-      "dur": 1.8,
+      "story": "blender",
+      "section": "open",
+      "dur": 1.167,
       "picture": {
         "src": "title",
         "id": "ph-s1d-fall"
       },
       "overlays": [],
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 1.3,
-          "gain_db": -2
-        }
-      ],
-      "story": "blender",
-      "section": "open"
-    },
-    {
-      "id": "b04-s1e-ground",
-      "dur": 1.0,
-      "picture": {
-        "src": "title",
-        "id": "ph-s1e-ground"
-      },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender",
-      "section": "open"
-    },
-    {
-      "id": "b05-s2-coach",
-      "dur": 6.0,
-      "picture": {
-        "src": "title",
-        "id": "ph-s2-coach"
-      },
       "vo": [
         {
           "id": "vc1",
-          "at": 2.3,
+          "at": 0.67,
           "speaker": "coach",
           "text": "See this?",
           "style": "friendly"
-        },
+        }
+      ]
+    },
+    {
+      "id": "b05a-s2-ots",
+      "story": "blender",
+      "section": "open",
+      "dur": 1.2,
+      "picture": {
+        "src": "title",
+        "id": "ph-s2-ots"
+      },
+      "overlays": [],
+      "vo": [
         {
           "id": "vc2",
-          "at": 3.75,
+          "at": 0.58,
           "speaker": "coach",
           "text": "You know why you lost the ball?",
           "style": "friendly"
         }
-      ],
-      "overlays": [],
-      "sfx": [],
+      ]
+    },
+    {
+      "id": "b05b-s2-push",
       "story": "blender",
-      "section": "open"
+      "section": "open",
+      "dur": 1.6,
+      "picture": {
+        "src": "title",
+        "id": "ph-s2-push"
+      },
+      "overlays": []
     },
     {
       "id": "b01-app-s1-pov",
       "story": "app",
-      "dur": 2.87,
+      "dur": 2.4,
       "picture": {
         "src": "cine",
         "id": "press-pov-cf",
@@ -1497,16 +1522,16 @@
         "glue"
       ],
       "freeze": {
-        "at": 1.97
+        "at": 1.5
       },
       "overlays": [
         {
-          "title": "label-ie-2p87",
+          "title": "label-ie-2p4",
           "at": 0.0
         },
         {
           "title": "nc-you-app",
-          "at": 1.97
+          "at": 1.5
         }
       ],
       "section": "open"
@@ -1514,11 +1539,11 @@
     {
       "id": "b02-app-s1-tackle",
       "story": "app",
-      "dur": 2.4,
+      "dur": 1.5,
       "picture": {
         "src": "cine",
         "id": "press-cf",
-        "in": 0.6
+        "in": 1.1
       },
       "letterbox": 2.39,
       "fx": [
@@ -1526,7 +1551,7 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-2p4",
+          "title": "label-ie-1p5",
           "at": 0.0
         }
       ],
@@ -1554,7 +1579,7 @@
     {
       "id": "b04-app-s2-ui",
       "story": "app",
-      "dur": 6.0,
+      "dur": 2.834,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
@@ -1567,7 +1592,7 @@
       "vo": [
         {
           "id": "vc2",
-          "at": 3.75,
+          "at": 0.6,
           "speaker": "coach",
           "text": "You know why you lost the ball?",
           "style": "friendly"
@@ -1581,7 +1606,7 @@
       "picture": {
         "src": "cine",
         "id": "pov-match",
-        "in": 0
+        "in": 2.0
       },
       "vo": [
         {
@@ -2545,7 +2570,7 @@
     {
       "id": "b43-s4b-check",
       "story": "blender",
-      "dur": 2.03,
+      "dur": 2.033,
       "picture": {
         "src": "title",
         "id": "ph-s4b-check"
@@ -2610,7 +2635,7 @@
     {
       "id": "b42-app-s4-check",
       "story": "app",
-      "dur": 3.03,
+      "dur": 3.033,
       "picture": {
         "src": "cine",
         "id": "press-pov-f",
@@ -2622,7 +2647,7 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-3p03",
+          "title": "label-ie-3p033",
           "at": 0.0
         }
       ],

@@ -7,6 +7,8 @@
 //   node video/tools/blender_fit.mjs --apply       # fill every beat whose clips are approved and in place,
 //                                                  # keeping lengths (list approved files in the map's `approved`)
 //   node video/tools/blender_fit.mjs --apply --fit # and give "fit" beats their clip's length
+//   node video/tools/blender_fit.mjs --apply --fit --preview --dir out/video/blender_v3 \
+//       --write out/video/trailer_preview.json      # a preview cut from candidates, trailer.json untouched
 //
 // After --fit: check the totals it prints (both tellings equal, under output.max_s), then
 // re-time the score (video/score/cues, trailer_ref) and run the trailer.
@@ -36,8 +38,22 @@ const final = argv.includes("--final");
 const dropAt = argv.indexOf("--drop");
 const dropped = new Set(dropAt >= 0 ? (argv[dropAt + 1] ?? "").split(",").filter(Boolean) : []);
 const WATERMARK = "PREVIEW · BLENDER SHOTS PENDING APPROVAL";
+// --dir <path>: take the clips from another folder inside the repo (candidates for a preview).
+const dirAt = argv.indexOf("--dir");
+const clipDir = dirAt >= 0 ? argv[dirAt + 1].replace(/\/$/, "") : null;
+// --write <path>: write the result there instead of over trailer.json (a preview cut).
+const writeAt = argv.indexOf("--write");
+const target = writeAt >= 0 ? path.resolve(ROOT, argv[writeAt + 1]) : SPEC;
+const relocate = (p) => (clipDir && typeof p === "string" ? p.replace(/^out\/video\/blender\//, `${clipDir}/`) : p);
 const spec = JSON.parse(readFileSync(SPEC, "utf8"));
 const map = JSON.parse(readFileSync(MAP, "utf8"));
+for (const pin of map.pins ?? []) for (const key of ["clip", "corners", "matte", "ref_corners"]) pin[key] = relocate(pin[key]);
+for (const entry of map.beats) {
+  if (entry.picture.src === "split") {
+    entry.picture.left.path = relocate(entry.picture.left.path);
+    entry.picture.right.path = relocate(entry.picture.right.path);
+  } else entry.picture.path = relocate(entry.picture.path);
+}
 const pins = new Map((map.pins ?? []).map((pin) => [`out/video/trailer/pins/${pin.id}.mp4`, pin]));
 
 const seconds = (file) => {
@@ -110,8 +126,8 @@ const app = length("app");
 console.log(`\ntotal: this cut ${blender} s, in-engine telling ${app} s; cap ${spec.output?.max_s ?? 120} s`);
 if (changed) {
   spec.music = (spec.music ?? []).map((m) => ({ ...m, until: blender }));
-  writeFileSync(SPEC, `${JSON.stringify(spec, null, 2)}\n`);
-  console.log("trailer.json updated");
+  writeFileSync(target, `${JSON.stringify(spec, null, 2)}\n`);
+  console.log(`${path.relative(ROOT, target)} written`);
 }
 let bad = false;
 if (Math.abs(blender - app) > 1e-6) {
