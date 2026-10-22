@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0.0,
       "from": 0.0,
-      "until": 110.867,
+      "until": 97.867,
       "gain_db": 4,
       "fade_in": 0.0,
       "fade_out": 0.0,
@@ -559,15 +559,15 @@
       "shot": {
         "id": "fp-finish",
         "run": "factual",
-        "duration": 1.6,
+        "duration": 2.2,
         "time": [
           {
             "t": 0,
             "frame": 196
           },
           {
-            "t": 1.6,
-            "frame": 216
+            "t": 2.2,
+            "frame": 223.5
           }
         ],
         "camera": [
@@ -1039,7 +1039,7 @@
     },
     "verified": {
       "template": "verified",
-      "dur": 3.6,
+      "dur": 3.5,
       "alpha": true,
       "params": {
         "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
@@ -1065,7 +1065,8 @@
             "value": "{cf_value.dxt}",
             "after": "xT"
           }
-        ]
+        ],
+        "note": "EXPECTED THREAT = THE CHANCE THIS ATTACK ENDS IN A GOAL"
       },
       "fallback": {
         "kicker": "EVERY LINE CHECKED BEFORE IT AIRS",
@@ -1097,7 +1098,7 @@
     },
     "crew": {
       "template": "lineup",
-      "dur": 4.5,
+      "dur": 2.5,
       "alpha": false,
       "params": {
         "header": "THE CREW",
@@ -1133,13 +1134,13 @@
             "glyph": "voice"
           }
         ],
-        "stagger": 0.6429,
-        "start": 0.2143
+        "stagger": 0.28,
+        "start": 0.1
       }
     },
     "redcard": {
       "template": "redcard",
-      "dur": 2.8,
+      "dur": 1.8,
       "alpha": true,
       "params": {
         "title": "TELESTRATOR DOWN",
@@ -1148,7 +1149,7 @@
     },
     "subboard": {
       "template": "subboard",
-      "dur": 3.0,
+      "dur": 2.3,
       "alpha": true,
       "params": {
         "off": "TEMPLATE",
@@ -1158,7 +1159,7 @@
     },
     "tag-casual": {
       "template": "tag",
-      "dur": 1.4,
+      "dur": 0.9,
       "alpha": true,
       "params": {
         "text": "CASUAL FAN"
@@ -1166,7 +1167,7 @@
     },
     "tag-analyst": {
       "template": "tag",
-      "dur": 1.4,
+      "dur": 0.9,
       "alpha": true,
       "params": {
         "text": "ANALYST"
@@ -1174,7 +1175,7 @@
     },
     "tag-zh": {
       "template": "tag",
-      "dur": 2.6,
+      "dur": 1.2,
       "alpha": true,
       "params": {
         "text": "中文",
@@ -1183,7 +1184,7 @@
     },
     "spec": {
       "template": "spec",
-      "dur": 5.5,
+      "dur": 2.5,
       "alpha": false,
       "params": {
         "header": "UNDER THE HOOD",
@@ -1230,7 +1231,7 @@
     },
     "end": {
       "template": "end",
-      "dur": 5.25,
+      "dur": 6.5,
       "alpha": false,
       "params": {
         "name": "THROUGH THEIR EYES",
@@ -1244,7 +1245,9 @@
         ],
         "legal": [
           "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217."
-        ]
+        ],
+        "cta": "TRY THE REPLAY",
+        "qr": "https://ttesite1ff906.z14.web.core.windows.net"
       }
     },
     "press-wins": {
@@ -1299,27 +1302,6 @@
       "params": {
         "text": "TAKE HIS EYES",
         "sub": "YOU CHOOSE THE LOOK"
-      }
-    },
-    "impact": {
-      "template": "slam",
-      "dur": 3.6,
-      "alpha": true,
-      "params": {
-        "kicker": "WHO IT'S FOR",
-        "lines": [
-          {
-            "text": "BROADCASTERS.",
-            "size": 104
-          },
-          {
-            "text": "COACHES.",
-            "color": "gold",
-            "size": 104
-          }
-        ],
-        "align": "lower-left",
-        "backdrop": true
       }
     },
     "label-3p75": {
@@ -1474,7 +1456,7 @@
     },
     "card-every-touch": {
       "template": "card",
-      "dur": 1.3,
+      "dur": 1.5,
       "alpha": false,
       "params": {
         "lines": [
@@ -1708,7 +1690,7 @@
     },
     "duo-split": {
       "template": "duo",
-      "dur": 1.5,
+      "dur": 2.75,
       "alpha": true,
       "params": {
         "left": "WITH THE LOOK",
@@ -2002,6 +1984,30 @@
         "stagger": 0.15,
         "backdrop": true
       }
+    },
+    "label-dr-1p833": {
+      "template": "label",
+      "dur": 1.833,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-bl-3p1": {
+      "template": "label",
+      "dur": 3.1,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-2p75": {
+      "template": "label",
+      "dur": 2.75,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
     }
   },
   "beats": [
@@ -2009,20 +2015,20 @@
       "id": "b01-s1a-ots",
       "story": "blender",
       "section": "open",
-      "dur": 2.433,
+      "dur": 1.833,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_ots.mp4",
-        "in": 0,
+        "in": 0.6,
         "fit": "pad"
       },
       "overlays": [
         {
           "title": "nc-you",
-          "at": 1.533
+          "at": 0.933
         },
         {
-          "title": "label-dr-2p433",
+          "title": "label-dr-1p833",
           "at": 0
         }
       ],
@@ -2031,7 +2037,7 @@
         "glue"
       ],
       "freeze": {
-        "at": 1.533
+        "at": 0.933
       }
     },
     {
@@ -2172,26 +2178,26 @@
     {
       "id": "b01-app-s1-pov",
       "story": "app",
-      "dur": 2.4,
+      "dur": 1.8,
       "picture": {
         "src": "cine",
         "id": "press-pov-cf",
-        "in": 0
+        "in": 0.6
       },
       "letterbox": 2.39,
       "fx": [
         "glue"
       ],
       "freeze": {
-        "at": 1.5
+        "at": 0.9
       },
       "overlays": [
         {
           "title": "nc-you-app",
-          "at": 1.5
+          "at": 0.9
         },
         {
-          "title": "label-ie-2p4",
+          "title": "label-ie-1p8",
           "at": 0.0
         }
       ],
@@ -2259,7 +2265,10 @@
           "style": "friendly"
         }
       ],
-      "section": "open"
+      "section": "open",
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b06-a1-pov",
@@ -2316,7 +2325,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.5,
+        "in": 1.3,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -2339,7 +2348,7 @@
       "vo": [
         {
           "id": "vo30",
-          "at": 0.5,
+          "at": 0.3,
           "text": "Meet H8."
         }
       ],
@@ -2347,11 +2356,11 @@
     },
     {
       "id": "b09-bl01b",
-      "dur": 4.05,
+      "dur": 3.1,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.95,
+        "in": 1.75,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -2359,27 +2368,27 @@
         "glue"
       ],
       "freeze": {
-        "at": 3
+        "at": 2.2
       },
       "overlays": [
         {
           "title": "nc-h9",
-          "at": 3
+          "at": 2.2
         },
         {
-          "title": "label-bl-4p05",
+          "title": "label-bl-3p1",
           "at": 0
         }
       ],
       "vo": [
         {
           "id": "vo31",
-          "at": 0.2,
+          "at": 0.0,
           "text": "He gets a single look."
         },
         {
           "id": "vo32",
-          "at": 1.9,
+          "at": 1.35,
           "text": "Nobody's watching H9."
         }
       ],
@@ -2595,7 +2604,10 @@
           "text": "Take that look away, and re-run the match."
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b17-board-rewind",
@@ -2614,6 +2626,7 @@
         "fit": "contain"
       },
       "fx": [
+        "lift",
         "rewind"
       ],
       "sfx": []
@@ -2688,13 +2701,13 @@
     },
     {
       "id": "b20-split",
-      "dur": 1.5,
+      "dur": 2.75,
       "picture": {
         "src": "split",
         "left": {
           "src": "clip",
           "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.9,
+          "in": 1.4,
           "crop": [
             800,
             0,
@@ -2705,7 +2718,7 @@
         "right": {
           "src": "clip",
           "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.1,
+          "in": 0.55,
           "crop": [
             780,
             0,
@@ -2724,7 +2737,7 @@
           "at": 0
         },
         {
-          "title": "label-bl-1p5",
+          "title": "label-bl-2p75",
           "at": 0
         }
       ],
@@ -2761,7 +2774,10 @@
           "text": "Or take his eyes yourself."
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b22-eyes-pov",
@@ -2788,11 +2804,14 @@
           "at": 0.3,
           "text": "Look the other way… he plays it safe."
         }
+      ],
+      "fx": [
+        "lift"
       ]
     },
     {
       "id": "b23-eyes-result",
-      "dur": 1.5,
+      "dur": 2.0,
       "picture": {
         "src": "capture",
         "shot": "13-take-his-eyes",
@@ -2818,7 +2837,10 @@
       ],
       "out": {
         "type": "cut"
-      }
+      },
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b24-yc-decide",
@@ -2829,7 +2851,13 @@
         "in": 0.0,
         "push": [
           1.0,
-          1.06
+          1.04
+        ],
+        "crop": [
+          700,
+          40,
+          1220,
+          686
         ]
       },
       "overlays": [
@@ -2850,18 +2878,27 @@
           "text": "You only know what he knew."
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b25-yc-truth",
-      "dur": 2.6,
+      "dur": 3.6,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
         "in": 10.0,
         "push": [
-          1.02,
-          1.07
+          1.0,
+          1.04
+        ],
+        "crop": [
+          640,
+          90,
+          1260,
+          709
         ]
       },
       "vo": [
@@ -2874,7 +2911,10 @@
       "out": {
         "type": "cut"
       },
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b26-ch2",
@@ -3019,7 +3059,10 @@
           "text": "At a corner, it's the marker who has to look."
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b32-corner-b",
@@ -3036,11 +3079,14 @@
       "out": {
         "type": "cut"
       },
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b33-crew",
-      "dur": 4.5,
+      "dur": 2.5,
       "picture": {
         "src": "title",
         "id": "crew"
@@ -3048,7 +3094,7 @@
       "vo": [
         {
           "id": "vo12",
-          "at": 0.1,
+          "at": 0.05,
           "text": "Behind every replay, a crew of agents."
         }
       ],
@@ -3059,7 +3105,7 @@
     },
     {
       "id": "b34-verified",
-      "dur": 3.75,
+      "dur": 3.6,
       "picture": {
         "src": "capture",
         "shot": "07-evidence",
@@ -3076,6 +3122,7 @@
         ]
       },
       "fx": [
+        "lift",
         "vignette"
       ],
       "overlays": [
@@ -3087,7 +3134,7 @@
       "vo": [
         {
           "id": "vo09",
-          "at": 0.3,
+          "at": 0.2,
           "text": "Every line is checked against the simulation before it airs."
         }
       ],
@@ -3119,26 +3166,26 @@
     },
     {
       "id": "b35-wrong",
-      "dur": 3.75,
+      "dur": 3.5,
       "picture": {
         "src": "capture",
         "shot": "09-verifier",
-        "in": 0.0,
+        "in": 0.3,
         "crop": [
-          569,
-          80,
-          1351,
-          760
+          960,
+          330,
+          960,
+          540
         ],
         "push": [
           1.0,
-          1.06
+          1.04
         ]
       },
       "overlays": [
         {
           "title": "refuted",
-          "at": 1.4
+          "at": 1.1
         }
       ],
       "vo": [
@@ -3149,18 +3196,21 @@
         },
         {
           "id": "vo11",
-          "at": 2.3,
+          "at": 1.7,
           "text": "and it never airs."
         }
       ],
       "sfx": [],
       "out": {
         "type": "cut"
-      }
+      },
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b36-redcard",
-      "dur": 3.0,
+      "dur": 2.0,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
@@ -3186,7 +3236,7 @@
       "vo": [
         {
           "id": "vo14",
-          "at": 0.3,
+          "at": 0.25,
           "text": "Take an agent down…"
         }
       ],
@@ -3196,15 +3246,18 @@
           "at": 0.1,
           "gain_db": -9
         }
+      ],
+      "fx": [
+        "lift"
       ]
     },
     {
       "id": "b37-bringback",
-      "dur": 3.75,
+      "dur": 2.6,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 2.9,
+        "in": 3.0,
         "crop": [
           700,
           260,
@@ -3219,35 +3272,38 @@
       "overlays": [
         {
           "title": "subboard",
-          "at": 0.6
+          "at": 0.3
         }
       ],
       "vo": [
         {
           "id": "vo15",
-          "at": 0.1,
+          "at": 0.0,
           "text": "bring it back, and it picks up where it left off."
         }
       ],
       "sfx": [
         {
           "name": "tick",
-          "at": 0.72,
+          "at": 0.42,
           "gain_db": -6
         },
         {
           "name": "tick",
-          "at": 1.12,
+          "at": 0.82,
           "gain_db": -6
         }
       ],
       "out": {
         "type": "cut"
-      }
+      },
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b38-casual",
-      "dur": 1.5,
+      "dur": 1.0,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
@@ -3267,14 +3323,18 @@
         {
           "id": "vo16",
           "at": 0.1,
-          "text": "The same moment, for every fan, in every language."
+          "text": "The same moment, for every fan, in every language.",
+          "caption": "top"
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b39-analyst",
-      "dur": 1.5,
+      "dur": 1.0,
       "picture": {
         "src": "capture",
         "shot": "05-personas",
@@ -3290,11 +3350,14 @@
           "at": 0.1
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b40-zh",
-      "dur": 4.5,
+      "dur": 1.3,
       "picture": {
         "src": "capture",
         "shot": "06-language",
@@ -3311,60 +3374,13 @@
           "at": 0.1
         }
       ],
-      "vo": [
-        {
-          "id": "vo17",
-          "at": 0.3,
-          "lang": "zh",
-          "line": {
-            "persona": "casual",
-            "language": "zh",
-            "index": 0
-          },
-          "style": "sports-commentary",
-          "degree": 1.3
-        }
-      ],
       "out": {
         "type": "cut"
       },
-      "sfx": []
-    },
-    {
-      "id": "b41-impact",
-      "dur": 4.5,
-      "picture": {
-        "src": "capture",
-        "shot": "14-stats",
-        "in": 0.3,
-        "crop": [
-          300,
-          170,
-          1320,
-          742
-        ],
-        "push": [
-          1.0,
-          1.06
-        ]
-      },
-      "overlays": [
-        {
-          "title": "impact",
-          "at": 0.1
-        }
-      ],
-      "vo": [
-        {
-          "id": "vo26i",
-          "at": 0.2,
-          "text": "Timecoded cues for broadcasters, every player's numbers for coaches."
-        }
-      ],
-      "out": {
-        "type": "cut"
-      },
-      "sfx": []
+      "sfx": [],
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b42-s4a-pov",
@@ -3486,7 +3502,7 @@
     {
       "id": "b45b-s4f-celebrate",
       "story": "blender",
-      "dur": 1.7,
+      "dur": 1.0,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs4_celebrate.mp4",
@@ -3495,11 +3511,7 @@
       },
       "overlays": [
         {
-          "title": "tagline",
-          "at": 0.3
-        },
-        {
-          "title": "label-dr-1p7",
+          "title": "label-dr-1",
           "at": 0
         }
       ],
@@ -3578,7 +3590,7 @@
     {
       "id": "b45-app-s4-fp-goal",
       "story": "app",
-      "dur": 1.2,
+      "dur": 1.8,
       "picture": {
         "src": "cine",
         "id": "fp-finish",
@@ -3590,28 +3602,28 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-1p2",
+          "title": "label-ie-1p8",
           "at": 0.0
         }
       ],
       "section": "close"
     },
     {
-      "id": "b45a-app-s4-tag",
-      "story": "app",
-      "dur": 1.3,
+      "id": "b45c-tagline",
+      "dur": 1.5,
       "picture": {
         "src": "title",
         "id": "card-every-touch"
       },
+      "overlays": [],
+      "sfx": [],
       "out": {
         "type": "cut"
-      },
-      "section": "close"
+      }
     },
     {
       "id": "b46-spec",
-      "dur": 5.5,
+      "dur": 2.5,
       "picture": {
         "src": "title",
         "id": "spec"
@@ -3619,8 +3631,8 @@
       "vo": [
         {
           "id": "vo26",
-          "at": 0.25,
-          "text": "Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech."
+          "at": 0.05,
+          "text": "Built on Microsoft Foundry and Agent Framework."
         }
       ],
       "sfx": [],
@@ -3630,7 +3642,7 @@
     },
     {
       "id": "b47-end",
-      "dur": 5.25,
+      "dur": 6.5,
       "picture": {
         "src": "title",
         "id": "end"
@@ -3638,7 +3650,7 @@
       "vo": [
         {
           "id": "vo27",
-          "at": 0.2,
+          "at": 1.0,
           "text": "Through Their Eyes. [pause 500] See what they saw.",
           "style": "excited",
           "degree": 0.6
@@ -3670,7 +3682,7 @@
     "vo": {
       "vo30": {
         "text": "Meet Joss Ferriday.",
-        "at": 0.2
+        "at": 0.05
       },
       "vo32": "Nobody's watching Nico Varnhall."
     },

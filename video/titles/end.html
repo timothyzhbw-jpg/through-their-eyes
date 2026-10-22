@@ -6,8 +6,9 @@
   <link rel="stylesheet" href="titles.css">
 </head>
 <body>
-  <!-- params: name, tagline, url, lines, legal (licence credits, verbatim) -->
+  <!-- params: name, tagline, url, lines, legal (licence credits, verbatim), cta, qr (an address) -->
   <div id="stage"></div>
+  <script src="../node_modules/qrcode-generator/dist/qrcode.js"></script>
   <script src="titles.js"></script>
   <script>
     function build(params) {

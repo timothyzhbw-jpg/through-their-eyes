@@ -595,6 +595,9 @@ function fxFilter(name, w, h, fps) {
     return `scale=${W}:${H},crop=${w}:${h}:x='(in_w-${w})/2+8*sin(n*0.7)':y='(in_h-${h})/2+6*sin(n*1.1)'`;
   }
   if (name === "flash-in") return `fade=t=in:st=0:d=${num(4 / fps)}:c=white`;
+  // The app's screens a little brighter in the cut: mid-grey up about 0.4 EV (sRGB 0.5 -> 0.57),
+  // black and white pinned, so no detail is lost and nothing flashes.
+  if (name === "lift") return "curves=all='0/0 0.5/0.57 1/1'";
   // The shared finish on every 3D shot (the Blender clips and the cine captures, not the app's
   // screens): a light vignette, blacks lifted to about (5, 8, 6) so they never sit at 0, fine grain.
   if (name === "glue") {

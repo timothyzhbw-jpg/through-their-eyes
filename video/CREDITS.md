@@ -36,6 +36,7 @@ composed for this project". No samples from existing songs and no AI music gener
 | Drums, basses, synths and effects | synthesised in numpy by [`score/synth.py`](score/synth.py); no recorded samples | MIT |
 | Strings, brass, horns, choir, timpani, orchestra hit | Fluid (R3) General MIDI SoundFont by Frank Wen, `FluidR3_GM.sf2` from Debian's `fluid-soundfont` 3.1 source package (https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz; SHA-256 in [`score/assets.json`](score/assets.json)) | MIT |
 | Rendering of the SoundFont parts | FluidSynth 2.6 (Homebrew), run as a tool, not distributed | LGPL-2.1 |
+| The end card's QR code | qrcode-generator 2.0.4 (Kazuhiko Arase), a video-tooling dependency | MIT |
 | MIDI files, signal processing | pretty_midi and mido (MIT), numpy and scipy (BSD-3-Clause) | MIT / BSD |
 
 The SoundFont's notice, from the package's `COPYING`: "Copyright (c) 2000-2002, 2008 Frank Wen

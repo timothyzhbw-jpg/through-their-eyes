@@ -309,6 +309,12 @@
       line.append(stampBox);
       wrap.append(line);
     });
+    // note: one plain line under the checked lines (what a unit means), no number of its own.
+    if (params.note) {
+      const note = el("div", "v-note bebas fx-fade", params.note);
+      setAt(note, lineBase + items.length * stagger);
+      wrap.append(note);
+    }
     stage.append(wrap);
   }
 
@@ -490,6 +496,19 @@
       setAt(url, 0.62);
       wrap.append(url);
     }
+    // qr: the demo's address as a QR code (qrcode-generator, drawn in the page), under cta.
+    if (params.qr && typeof window.qrcode === "function") {
+      const code = window.qrcode(0, "M");
+      code.addData(String(params.qr));
+      code.make();
+      const box = el("div", "end-qr fx-fade");
+      if (params.cta) box.append(el("div", "end-cta bebas", params.cta));
+      const square = el("div", "qr-square");
+      square.innerHTML = code.createSvgTag({ cellSize: 8, margin: 16, scalable: true });
+      box.append(square);
+      setAt(box, 0.62);
+      stage.append(box);
+    }
     const lines = list(params.lines, 8);
     if (lines.length) {
       const block = el("div", "end-lines");
@@ -567,7 +586,7 @@
   function caption(params) {
     const stage = prepare("free", null);
     const right = params.side === "right";
-    const box = el("div", right ? "cap cap-right" : "cap");
+    const box = el("div", right ? "cap cap-right" : params.side === "top" ? "cap cap-top" : "cap");
     const line = el("p", "cap-text bebas");
     for (const part of String(params.text || "").split(/(\d+(?:[.,]\d+)?)/)) {
       if (!part) continue;

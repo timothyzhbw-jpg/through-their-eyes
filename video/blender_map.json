@@ -98,7 +98,7 @@
     },
     "duo-split": {
       "template": "duo",
-      "dur": 1.5,
+      "dur": 2.75,
       "alpha": true,
       "params": {
         "left": "WITH THE LOOK",
@@ -149,7 +149,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_ots.mp4",
-        "in": 0.0,
+        "in": 0.6,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -157,12 +157,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 1.533
+        "at": 0.933
       },
       "overlays": [
         {
           "title": "nc-you",
-          "at": 1.533
+          "at": 0.933
         }
       ],
       "label": "dramatisation"
@@ -254,7 +254,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.5,
+        "in": 1.3,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -278,7 +278,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.95,
+        "in": 1.75,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -286,12 +286,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 3.0
+        "at": 2.2
       },
       "overlays": [
         {
           "title": "nc-h9",
-          "at": 3.0
+          "at": 2.2
         }
       ],
       "sfx": [],
@@ -430,7 +430,7 @@
         "left": {
           "src": "clip",
           "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.9,
+          "in": 1.4,
           "crop": [
             800,
             0,
@@ -441,7 +441,7 @@
         "right": {
           "src": "clip",
           "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.1,
+          "in": 0.55,
           "crop": [
             780,
             0,
@@ -558,13 +558,8 @@
         "glue"
       ],
       "label": "dramatisation",
-      "overlays": [
-        {
-          "title": "tagline",
-          "at": 0.3
-        }
-      ],
-      "fit": true
+      "overlays": [],
+      "fit": false
     }
   ]
 }
