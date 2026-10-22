@@ -176,7 +176,11 @@ def test_metadata_describes_teams_players_and_possessions(built, matches):
     for entry in meta["matches"]:
         m = matches[entry["match_id"]]
         assert entry["frames"] == m.frames
-        assert [p["scenario"] for p in entry["possessions"]] == [s.scenario for s in SHORT_PLAN]
+        # The scenario that ran: the plan's, or its away variant when the restart before an
+        # open-play passage went to the away team (SPEC 3.1).
+        names = [p["scenario"] for p in entry["possessions"]]
+        assert names == [p.scenario for p in m.possessions]
+        assert [n.removesuffix("_away") for n in names] == [s.scenario for s in SHORT_PLAN]
         assert [p["start_frame"] for p in entry["possessions"]] == [p.start for p in m.possessions]
         assert entry["score"] == {"home": m.score[0], "away": m.score[1]}
 

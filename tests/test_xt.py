@@ -200,12 +200,18 @@ def test_in_open_play_every_pass_and_shot_is_a_decision(open_run):
 
 
 def test_in_open_play_the_carrier_decides_again_after_a_carry(open_run):
+    from eval.xt_fit import PARAMS, SCENARIO
     from sim.decision import DecisionParams
+    from sim.engine import Simulation
 
     steps = round(DecisionParams().carry_time / open_run.dt)
-    frames = {(d.player, d.frame) for d in open_run.decisions}
-    carries = [d for d in open_run.decisions if d.chosen == "carry"
-               and d.frame + steps < len(open_run.owner) - 1]  # fmt: skip
-    assert carries
-    for d in carries:
-        assert (d.player, d.frame + steps) in frames
+    checked = 0
+    # Seed 0 may end without a carry; seed 1 carries too.
+    for run in (open_run, Simulation.from_scenario(SCENARIO, 1, params=PARAMS).run()):
+        frames = {(d.player, d.frame) for d in run.decisions}
+        carries = [d for d in run.decisions if d.chosen == "carry"
+                   and d.frame + steps < len(run.owner) - 1]  # fmt: skip
+        for d in carries:
+            assert (d.player, d.frame + steps) in frames
+        checked += len(carries)
+    assert checked

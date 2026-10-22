@@ -35,9 +35,12 @@ BALL_GAP = 1.0  # m, he stays at least this much nearer his goal line than the b
 
 
 def defensive_line(pos: np.ndarray, team: np.ndarray, roles: list[str], t: int) -> float:
-    """Depth (m from his own goal line) of team `t`'s deepest outfield player."""
+    """Depth (m from his own goal line) of team `t`'s deepest outfield player; the pitch's length
+    when he has no outfield team-mates (a test set-up), so nothing holds him back."""
     team = np.asarray(team)
     outfield = (team == t) & np.array([r != "GK" for r in roles])
+    if not outfield.any():
+        return laws.PITCH_LENGTH
     own = -laws.attack_sign(t) * laws.HALF_LENGTH  # x of the goal line team t defends
     return float(np.min(laws.attack_sign(t) * (np.asarray(pos)[outfield, 0] - own)))
 

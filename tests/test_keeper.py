@@ -64,6 +64,8 @@ def test_the_defensive_line_is_his_teams_deepest_outfield_player():
     pos = np.array([[-50.0, 0], [-30.0, 0], [10.0, 0], [50.0, 0], [20.0, 0], [35.0, 0]])
     assert keeper.defensive_line(pos, team, roles, 0) == pytest.approx(22.5)  # H CB at -30
     assert keeper.defensive_line(pos, team, roles, 1) == pytest.approx(17.5)  # A CB at 35
+    alone = keeper.defensive_line(pos[:1], team[:1], roles[:1], 0)  # a keeper with no team-mates
+    assert alone == laws.PITCH_LENGTH
 
 
 def test_engine_keepers_take_their_spot_when_no_script_moves_them():
