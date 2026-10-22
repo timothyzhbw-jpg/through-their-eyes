@@ -8,6 +8,7 @@ import type { Agent, Persona } from "../api/client";
 import type { Narration } from "../narration/payload";
 import type { MatchSession } from "../match/matchSession";
 import type { Session, ViewSession } from "../session";
+import { takeEyesOf } from "../takeeyes/controller";
 import { numericValues } from "../tamper/tamper";
 import type { Language } from "../whatif/whatif";
 import { yourCallOf } from "../yourcall/controller";
@@ -48,10 +49,16 @@ export function tourClaim(
   return first;
 }
 
-/** Close what one step leaves open that would cover the next: Your call, the evidence card. */
-function clear(s: Session, keep: { evidence?: boolean; yourCall?: boolean } = {}): void {
+/** Close what one step leaves open that would cover the next: Your call, Take his eyes, the
+ * evidence card. */
+function clear(
+  s: Session,
+  keep: { evidence?: boolean; yourCall?: boolean; takeEyes?: boolean } = {},
+): void {
   const yc = yourCallOf(s);
   if (!keep.yourCall && yc.state.get().step !== "closed") yc.close();
+  const te = takeEyesOf(s);
+  if (!keep.takeEyes && te.state.get().step !== "closed") te.close();
   if (!keep.evidence && s.playback.get().evidenceLine) s.controls.closeEvidence();
 }
 
@@ -159,6 +166,15 @@ const ENTER: Record<Exclude<EnterName, "recap">, Enter> = {
     clear(s, { yourCall: true });
     const yc = yourCallOf(s);
     if (yc.state.get().step === "closed") yc.open();
+  },
+
+  /** Take his eyes on his own look, the dial and the times out; choosing and Look are the
+   * viewer's. Every look was re-simulated ahead of time: opening it fetches that static grid
+   * once, nothing from the service. */
+  takeEyes(s) {
+    clear(s, { takeEyes: true });
+    const te = takeEyesOf(s);
+    if (te.state.get().step === "closed") te.open();
   },
 
   /** The same moment for another audience in another language, played (asked for at once). */

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en" class="alpha">
+<head>
+  <meta charset="utf-8">
+  <title>namecard</title>
+  <link rel="stylesheet" href="titles.css">
+</head>
+<body>
+  <!-- params: name, role, sub, spot ({x, y, r} in px of 1920x1080), side (left | right), scrim -->
+  <div id="stage"></div>
+  <script src="titles.js"></script>
+  <script>
+    function build(params) {
+      window.__titleBuild.namecard(params);
+    }
+  </script>
+</body>
+</html>

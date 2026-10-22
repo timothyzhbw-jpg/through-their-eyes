@@ -15,6 +15,7 @@
     "test": "vitest run",
     "licenses": "node scripts/check-licenses.mjs",
     "fps": "node scripts/fps.mjs",
+    "loadperf": "node scripts/loadperf.mjs",
     "smoke": "node scripts/smoke.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -76,7 +76,12 @@ def test_a_drill_counts_against_the_rate_limit(tmp_path, replies):
         limited = c.post("/api/breakdowns", json={**BODY, "fail": ["analyst"]})
         later = c.post(f"/api/breakdowns/{key}/bring-back", json={"step": "telestrator"})
     assert first.status_code == back.status_code == 200
-    assert limited.status_code == 429 and later.status_code == 429
+    # Limited, and nothing recorded for these runs: they run without the model, flagged.
+    limited, later = limited.json(), later.json()
+    assert limited["rate_limited"] is True and limited["source"] == "offline"
+    assert later["rate_limited"] is True and later["source"] == "offline"
+    assert "recorded" not in limited and "recorded" not in later
+    assert later["drill"] == {"down": [], "pending": []}  # it did come back, on its template
     assert fake.calls["director"] == 1 and fake.calls["analyst"] == 1  # the bring-back's call
     assert fake.calls["telestrator"] == 0  # down throughout
 
@@ -183,7 +188,7 @@ def test_drills_stay_out_of_cosmos_db(tmp_path, replies):
     assert cosmos.databases["tte"].containers["cache"].items == {}
 
 
-def test_an_offline_drill_past_the_limit_or_the_daily_cap_is_429(tmp_path, monkeypatch):
+def test_an_offline_drill_past_its_limits_replays_its_recording_or_is_429(tmp_path, monkeypatch):
     import api.main
 
     monkeypatch.setattr(api.main, "DAILY_OFFLINE_DRILLS", 2)
@@ -196,11 +201,16 @@ def test_an_offline_drill_past_the_limit_or_the_daily_cap_is_429(tmp_path, monke
     with TestClient(app) as c:
         first = c.post("/api/breakdowns", json=body, headers=ip(1))
         limited = c.post("/api/breakdowns", json=body, headers=ip(1))
-        second = c.post("/api/breakdowns", json=body, headers=ip(2))
-        capped = c.post("/api/breakdowns", json=body, headers=ip(3))
-    assert first.status_code == second.status_code == 200
-    assert limited.status_code == 429 and limited.json()["detail"].startswith("rate_limited")
+        other = c.post("/api/breakdowns", json={**body, "fail": ["analyst"]}, headers=ip(1))
+        capped = c.post("/api/breakdowns", json={**body, "fail": ["narration"]}, headers=ip(3))
+        replayed = c.post("/api/breakdowns", json=body, headers=ip(4))
+    assert first.status_code == 200 and "recorded" not in first.json()
+    limited = limited.json()  # the same drill, recorded: replayed
+    assert limited["rate_limited"] is True and limited["recorded"]["at"]
+    assert limited["result"] == first.json()["result"]
+    assert other.json()["rate_limited"] is True and "recorded" not in other.json()  # cap's 2nd
     assert capped.status_code == 429 and capped.json()["detail"].startswith("capped")
+    assert replayed.json()["capped"] is True and replayed.json()["recorded"]
 
 
 def test_two_bring_backs_at_once_run_one_after_the_other(tmp_path, replies):
