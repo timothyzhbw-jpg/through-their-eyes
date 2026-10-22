@@ -141,6 +141,23 @@
         "align": "lower-left",
         "backdrop": true
       }
+    },
+    "nc-a11": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "A11",
+        "role": "THE PRESSER",
+        "sub": "HERE TO TAKE IT OFF YOU.",
+        "spot": {
+          "x": 1290,
+          "y": 560,
+          "r": 120
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
     }
   },
   "beats": [
@@ -461,6 +478,99 @@
         }
       ],
       "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b27-press-a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl04a_press.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "freeze": {
+        "at": 1.2
+      },
+      "overlays": [
+        {
+          "title": "nc-a11",
+          "at": 1.2
+        }
+      ]
+    },
+    {
+      "beat": "b28-press-b",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl04b_escape.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation"
+    },
+    {
+      "beat": "b29-press-cf",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl05_press_cf.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "freeze": {
+        "at": 2.0
+      },
+      "overlays": [
+        {
+          "title": "if-kept",
+          "at": 0.05
+        },
+        {
+          "title": "press-wins",
+          "at": 2.0
+        }
+      ]
+    },
+    {
+      "beat": "b31-corner-a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl06a_corner.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "caption": "bottom"
+    },
+    {
+      "beat": "b32a-corner-look",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl06b_look.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
       "label": "simulation"
     },
     {

@@ -219,63 +219,40 @@
             "eye": {
               "at": "world",
               "p": [
-                -39.4,
-                -14.2,
-                0.9
+                -54,
+                -27,
+                8.5
               ]
             },
             "look": {
-              "at": "player",
-              "id": "A11",
-              "offset": [
-                0,
-                0,
-                1.3
+              "at": "world",
+              "p": [
+                -33.5,
+                -11.5,
+                1.0
               ]
             },
-            "fov": 36
+            "fov": 30
           },
           {
-            "t": 1.7,
+            "t": 2.3,
             "eye": {
               "at": "world",
               "p": [
-                -39.55,
-                -14.55,
-                0.97
+                -54,
+                -27,
+                8.5
               ]
             },
             "look": {
-              "at": "player",
-              "id": "A11",
-              "offset": [
-                0,
-                0,
-                1.3
-              ]
-            },
-            "fov": 37,
-            "ease": "inOut"
-          },
-          {
-            "t": 2.6,
-            "eye": {
               "at": "world",
               "p": [
-                -39.7,
-                -14.9,
-                1.05
+                -34.5,
+                -12.0,
+                1.0
               ]
             },
-            "look": {
-              "at": "ball",
-              "offset": [
-                0,
-                0,
-                0.6
-              ]
-            },
-            "fov": 38,
+            "fov": 30,
             "ease": "inOut"
           },
           {
@@ -283,9 +260,9 @@
             "eye": {
               "at": "world",
               "p": [
-                -39.9,
-                -15.3,
-                1.15
+                -53.5,
+                -27.5,
+                8.5
               ]
             },
             "look": {
@@ -296,7 +273,7 @@
                 0.6
               ]
             },
-            "fov": 40,
+            "fov": 31,
             "ease": "inOut"
           }
         ],
@@ -1326,9 +1303,9 @@
         "role": "THE PRESSER",
         "sub": "HERE TO TAKE IT OFF YOU.",
         "spot": {
-          "x": 960,
-          "y": 520,
-          "r": 220
+          "x": 1094,
+          "y": 498,
+          "r": 110
         },
         "side": "right",
         "scrim": 0.5
@@ -3072,14 +3049,32 @@
       ]
     },
     {
-      "id": "b32-corner-b",
-      "dur": 2.25,
+      "id": "b32a-corner-look",
+      "dur": 0.9,
       "picture": {
         "src": "capture",
         "shot": "16-corner",
-        "in": 5.4,
+        "in": 3.3,
         "push": [
           1.0,
+          1.02
+        ]
+      },
+      "fx": [
+        "lift"
+      ],
+      "overlays": [],
+      "sfx": []
+    },
+    {
+      "id": "b32b-corner-app",
+      "dur": 1.35,
+      "picture": {
+        "src": "capture",
+        "shot": "16-corner",
+        "in": 4.2,
+        "push": [
+          1.02,
           1.04
         ]
       },
