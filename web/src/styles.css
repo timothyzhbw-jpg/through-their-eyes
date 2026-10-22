@@ -489,6 +489,9 @@ optgroup {
 .intro-more-toggle[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
+.intro-moments .kicker {
+  margin: 0 0 8px;
+}
 .intro-more {
   padding-top: 16px;
   border-top: 1px solid var(--hairline-strong);

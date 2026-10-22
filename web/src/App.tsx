@@ -50,6 +50,7 @@ import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/Take
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
+import { MomentRail } from "./moments/MomentRail";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
@@ -121,6 +122,8 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
       {/* Your call takes the live screen, and hides what would give his decision away until the
           viewer has made theirs: the director, the telemetry and the whole moment below. */}
+      {/* Every moment in reach, above the live screen (not over Your call and the other modes). */}
+      {!yourCall && !takeEyes && !scanSteps && <MomentRail hidden={introOpen} />}
       {yourCall ? (
         // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
         <YourCallScreen start={onBack ? start : null} />
@@ -383,6 +386,7 @@ function MatchView() {
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
+      <MomentRail hidden={introOpen} />
       <LiveScreen
         start={
           <>

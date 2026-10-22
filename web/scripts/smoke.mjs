@@ -88,6 +88,13 @@ const PAGES = [
     check: (p) => phone(p, takeEyes, { live: false }),
   },
   { name: "link-yourcall", path: "?play=yourcall", check: (p, shoot) => yourCall(p, shoot) },
+  { name: "moment-links", path: "?intro=0", check: (p, shoot) => momentLinks(p, shoot) },
+  {
+    name: "phone-375-moment-links",
+    path: "?intro=0",
+    device: PHONE_375,
+    check: (p, shoot) => momentLinks(p, shoot),
+  },
   {
     name: "phone-375-yourcall",
     path: "?play=yourcall",
@@ -576,6 +583,43 @@ async function takeEyes(page) {
   await see(play, "the look playing through his eyes");
   await play.click();
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
+/** The moment links (SPEC 7, moments/): from the hero page, each chip of the rail above the live
+ * screen loads its moment, told by its own lede, with its chip marked current and no sideways
+ * scroll; the corner and the goal open inside the full match, with the way back. The page's
+ * console errors fail it, as on every page. */
+const MOMENT_PAGES = [
+  ["The look", /the midfielder saw/],
+  ["Under pressure", /centre-back saw with an opponent closing in/],
+  ["The corner", /A short corner/, { inMatch: true }],
+  ["The goal", /the striker saw of the keeper/, { inMatch: true }],
+  ["Full match · live", /A whole match of \d+ possessions/],
+];
+
+async function momentLinks(page, shoot) {
+  for (const [label, lede, { inMatch = false } = {}] of MOMENT_PAGES) {
+    const chip = page.locator(".moment-rail a", { hasText: label });
+    await see(chip, `the "${label}" link on the rail`);
+    await Promise.all([page.waitForEvent("load"), chip.click()]);
+    await see(
+      page.locator(".moment-head .lede").filter({ hasText: lede }),
+      `"${label}": its moment`,
+    );
+    if (inMatch) {
+      await see(page.getByRole("button", { name: /Back to the match/ }), "Back to the match");
+    }
+    await see(
+      page.locator('.moment-rail a[aria-current="page"]', { hasText: label }),
+      `"${label}" marked current`,
+    );
+    const [wide, width] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    if (wide > width) throw new Error(`"${label}": the page scrolls sideways (${wide} > ${width})`);
+    await shoot(label.toLowerCase().replace(/[^a-z]+/g, "-"));
+  }
 }
 
 /** `?play=yourcall`: Your call (SPEC 7). A pick, then the reveal: why it went this way (what he
