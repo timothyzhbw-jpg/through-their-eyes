@@ -155,7 +155,8 @@ on an LLM.
   - *Restarts.* A restart is how a possession begins. The first kicks off, and so does one after
     a goal. A scenario that opens with a set piece begins with it (`corner_blind_side`: a
     corner). Otherwise play restarts the way the previous possession stopped: a throw-in, goal
-    kick or corner when the ball went out, a `cut` when it ended in play. On this Mac:
+    kick or corner when the whole ball went out, an indirect free kick after an offside call
+    (§3.9), a `cut` when it ended in play. On this Mac:
     2 kick-offs (the start, and after the goal), 4 throw-ins, 1 corner, 12 cuts. The next scenario sets up its own situation: the
     stitch is an edit, not a simulated restart.
   - *Score.* Goals are `goal` events, from scenarios with shots on (§3.3): the score is counted,
@@ -173,7 +174,7 @@ on an LLM.
 - Per frame, per player: `id, team, role, x, y, vx, vy, body_yaw, head_yaw` (world frame), `has_ball`.
 - Ball: `x, y, z, vx, vy, vz, owner`.
 - Events: `pass, reception, carry, shot, tackle, interception, pressure, possession_change, out,
-  goal, scan, head_turn` with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed,
+  goal, offside, post, scan, head_turn` (`offside` and `post`: §3.9) with `id, t, frame, player, team, attrs` (e.g. pass start/end, speed,
   outcome, difficulty). Ids are `<type>:<player>:<frame>`, stable across factual and
   counterfactual runs.
 - `scan` events are **ground truth** from the sim. The analytics scan detector must recover them
@@ -734,6 +735,59 @@ is a step.
       — [tests/test_look.py](../tests/test_look.py) (23 sim cases); the factual runs, the
       committed exports and every eval report regenerate unchanged with the override in the engine
       (`git status -s eval/` after re-running every eval that calls no model, 2026-10-21)
+- [x] The sim never breaks a Law of the Game without the referee calling it (§3.9): no
+      unpunished breach, wrong call or early call in the audit, and every hero moment on its demo
+      seed is onside.
+      — [eval/reports/laws.md](../eval/reports/laws.md) (before the referee, on main 3b9480e:
+      237 unpunished breaches in 2,918 runs, 182 of them offside);
+      [tests/test_laws.py](../tests/test_laws.py), [tests/test_laws_checks.py](../tests/test_laws_checks.py)
+
+### 3.9 Laws of the Game (2026-10-22)
+The sim plays by the IFAB Laws of the Game as hard rules: it never breaks a law without the
+referee calling it. Bowen asked for it on 2026-10-22 ("把足球裁判员手册写进sim写死"), after he saw that
+the flagship pass H8 → H9 of `blind_side_run` was offside. The audit found it offside on every
+seed. The Laws are cited as "IFAB Laws of the Game, Law 11.2" and restated in our own words; no
+text, diagram or figure of the Laws is in the repo.
+
+- **Where.**
+  - `sim/laws.py`: constants and pure checks over a frame or an event, with no engine imports.
+  - `sim/referee.py`: the referee in the frame loop, called by `sim/engine.py`.
+  - `eval/laws.py`: the audit of every scenario on design and held-out seeds, each hero's
+    intervention, and both served matches, written to
+    [eval/reports/laws.md](../eval/reports/laws.md).
+  - Tests: [tests/test_laws_checks.py](../tests/test_laws_checks.py) (hand-built snapshots,
+    every offside edge case), [tests/test_laws_audit.py](../tests/test_laws_audit.py) and
+    [tests/test_laws.py](../tests/test_laws.py) (the invariant sweep: no unpunished breach, no
+    wrong or early call).
+  - The web's pitch is checked against `sim/laws.py` by `tests/test_pitch_geometry.py`.
+- **Body model.** Players are points: the centre of the body on the ground. For offside the Laws
+  count head, body and feet, never arms, and compare the attacker's part nearest the goal line
+  with the second-last opponent's. Every player has the same body, so its depth cancels and the
+  comparison is point against point; the ball counts by its centre. "Level" means within 1 mm,
+  the resolution positions are written at (§3.7).
+
+| Law | What the sim does |
+|---|---|
+| 1, the field | 105 × 68 m. Goal 7.32 m between the inner edges of the posts, 2.44 m to the bar's lower edge. Goal area 5.5 m, penalty area 16.5 m, penalty mark 11 m, centre circle and penalty arc 9.15 m, corner arc 1 m, lines 12 cm. Round posts on the goal line, their backs on its outer edge (Law 1 allows round ones). `sim.config`, `sim.shots`, `analytics.xt` and the web app use these numbers (tests). |
+| 2, the ball | Radius 0.11 m, inside the 68–70 cm circumference (0.108–0.111 m). |
+| 3, the players | Eleven a side, one goalkeeper each, in every scenario (test). |
+| 8, kick-off | Not simulated: a match's kick-offs are stitches (§3.1). `laws.restart_breaches` checks one. |
+| 9, ball in and out of play | Out once the whole ball is over a goal line or a touchline, carried or rolling, on the first frame it has wholly crossed. Until 2026-10-22 it was out when its centre crossed, and a carried ball never went out. |
+| 10, a goal | Any ball that wholly crossed the goal line between the posts and under the bar, whoever touched it last. An own goal counts for the attacking team (`own_goal`). A ball that meets a post bounces off it (`sim.ball.post_contact`, restitution 0.5, tunable and uncited). Until then a ball through the post counted as a goal or as wide, and a pass that rolled in was called out. |
+| 11, offside | At every pass or shot the referee notes who is in an offside position: in the opponents' half, nearer their goal line than the ball and the second-last opponent. Off-field players count as on the line. It is an offence when that player plays the ball, challenges an opponent for it (within the 1 m control radius), or stands in the keeper's line of sight at a shot. There is no offence straight from a goal kick, throw-in or corner. Play stops with an `offside` event and an indirect free kick to the defenders where he became involved; the pass's outcome is `offside` and the stitched match restarts with `free_kick`. |
+| 11, players who know it | Attackers without the ball hold HOLD_MARGIN (1 m) short of the line while their team has the ball, except the intended receiver of a pass in flight (`Referee.hold_the_line`). A scripted run is timed by its scenario. The decision model multiplies a pass's P(success) by 1 − P(offside) on the carrier's belief, with the belief's position spread (§3.5), so a clear offside pass is worth about losing the ball there; only a belief error or the softmax picks it. `possession_play`'s passer never picks an offside receiver. |
+| 12, fouls | A keeper handles (saves) only inside his own penalty area. A tackle counts only ball-first: the tackler is nearer the ball than the carrier (`press_escape`, the only scenario with tackles). Players are points with no contact model, so the sim has no other fouls to call. |
+| 13–17, restarts | The only simulated restart is `corner_blind_side`'s corner (`Scenario.restart`). The ball is in the corner arc, and opponents keep 9.15 m from the arc until it is taken (`Referee.keep_back`). The receiver of a corner cannot be offside. Throw-ins, goal kicks and kick-offs between possessions are stitches (§3.1); `eval/laws.py` lists what the Laws award and to which team. |
+
+- **The flagship pass, onside by construction.** `blind_side_run`'s H9 starts 5 m deeper
+  (19, −2), with A5 straight goal-side of him. His run is timed so that he is 1 m short of the
+  second-last defender as H8 plays, at speed, and crosses the line only once the ball is on its
+  way. The new layout was chosen on design seeds 0–99 (onside 100/100, flips 84/100), then run
+  once on held-out 100–139: flips 33/40 (82%, target ≥ 60%). Seed 3: H9 1.50 m onside at
+  7.75 m/s; the pass is completed.
+- **Not yet.** Live match stats skip a pass that ends in an offside call (§4.6: their outcomes
+  are complete, intercepted, out). Stitched restarts after a throw-in or a goal often start with
+  the other team (audit, "Stitched matches").
 
 ## 4. Analytics kernels (`analytics/`)
 Every kernel: numpy reference + unit tests. GLSL versions in `web/` must match the numpy reference
