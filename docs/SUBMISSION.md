@@ -141,18 +141,21 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
   model roles; the single agent lost all four, because its one call is every role. Bringing the
   Telestrator back cost the crew one model request; the single agent had to redo everything.
   Bringing the Analyst back costs the crew more than the single agent's redo, because every
-  later step reads the Analyst and runs again. TODO(multi-agent-evidence): recovery when the
-  model service itself fails.
+  later step reads the Analyst and runs again. When the model service itself fails, every
+  request is still answered with a verified breakdown, on templates.[^crew-evidence]
 - **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
   timeout; every single-agent call did, so deployed it would have aired its templates.
 - **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
-  back to the voice that wrote it, told why; the plan and the other lines stand. TODO(multi-agent-evidence):
-  rewrites per breakdown.
-- **Audiences in parallel.** Each audience and language is its own narration call, run at once.
-  TODO(multi-agent-evidence): seconds to air for four audiences against one.
+  back to the voice that wrote it, told why; the plan and the other lines stand. Of 2,837
+  deliberately broken lines, none aired with the Verifier; 2,823 would have without it, 888 of
+  them false.[^crew-evidence]
+- **Audiences in parallel.** Each audience and language is its own narration call, run at once:
+  ten scripts take about as long as one (3.5 s against 3.4 s), though the whole crew is not
+  faster than one agent.[^crew-evidence]
 - **Auditable per agent.** Every breakdown carries its crew trace: each step's input and output,
   the state it read and wrote, the Analyst's tool calls, the verdicts, and whether each part came
-  from the model or a template. **Crew trace** in the app shows it as a timeline.
+  from the model or a template. **Crew trace** in the app shows it as a timeline. Every aired line
+  in our offline run traced back this way (394 of 394).[^crew-evidence]
 
 ## Evidence
 
@@ -322,6 +325,10 @@ play that attacks the goal.
 [^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
     possessions and "808.3 s, 1-0" on a Mac (2026-10-22 CT, with the referee and the team shape). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
+[^crew-evidence]: [eval/reports/crew_evidence.md](../eval/reports/crew_evidence.md) (PR #195):
+    offline, a scripted model answering through the real Agent Framework workflow, schemas and
+    Verifier, on the 7 hero moments the site serves × 5 audiences × 2 languages, generated in
+    `python:3.11-slim`; times simulated at Foundry's median latency per role.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).
 [^trace]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#the-live-trace): 2026-10-20 21:34:51 UTC, revision
