@@ -17,6 +17,7 @@ reimplemented from its paper (`docs/REFERENCES.md`); no code is copied.
 | [`xt.py`](xt.py) | `xt_prior`, `xt_for`: a smooth expected-threat surface; the fitted 16 × 12 grid of SPEC 4.5 is not on `main` yet | decisions, lenses, claims |
 | [`scan_detector.py`](scan_detector.py) | `detect_scans`, `trace_scans`, `detect_all`: an onset faster than 200°/s that turns away from the ball, an excursion of at least 55°, a return | `sim.export` (the telemetry panel), the evals |
 | [`blind_side.py`](blind_side.py) | `detect_alerts`: an observer has lost sight of a target on the move (unseen for 1.2 s, 3 m from where he was expected, running at 4 m/s or more, within 35 m) | `explain.moments` (blind-side moments), `sim.export` (the alerts the live stream and the views show) |
+| [`team_shape.py`](team_shape.py) | `shape`, `phases`, `possession_by_frame`: a team's length, width, length per width, back-line height, last defender and the distances between its lines, per frame, and each frame's phase (in or out of possession, the seconds after a change of possession) | `eval/realism.py` (team shape), `tests/test_team_shape.py` |
 | [`keypoints.py`](keypoints.py) | `pose_from_keypoints`, `KeypointFrame`: position, head yaw and torso yaw from a COCO keypoint subset | `eval/keypoint_ingest.py`; nothing in the API or the app calls it yet |
 
 ## Data flow
