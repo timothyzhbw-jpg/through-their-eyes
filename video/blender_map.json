@@ -1,6 +1,21 @@
 {
   "about": "How each Blender beat is filled once its approved final lands in out/video/blender/ (video/tools/blender_fit.mjs). picture/freeze/overlays as in the beat; `label` adds the corner label for the beat's length: dramatisation (the story) or simulation (the hero shots). Only clips listed in `approved` are used: the rejected renders share file names with the finals, so a clip goes in this list when Bowen has approved it.",
-  "approved": [],
+  "approved": [
+    "bl01_look.mp4",
+    "bl02_reveal.mp4",
+    "bl03_without.mp4",
+    "bs1_fall.mp4",
+    "bs1_ots.mp4",
+    "bs1_steal.mp4",
+    "bs2_ots.mp4",
+    "bs2c.mp4",
+    "bs4_celebrate.mp4",
+    "bs4_check.mp4",
+    "bs4_drive.mp4",
+    "bs4_net.mp4",
+    "bs4_pov_a.mp4",
+    "bs4_strike.mp4"
+  ],
   "pins": [
     {
       "id": "bs2_ots",
