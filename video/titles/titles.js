@@ -595,8 +595,9 @@
     box.append(line);
     stage.append(box);
     const dur = num(params.dur, 2);
-    // The centred box is placed with translateX(-50%), so the rise keeps it.
-    const x = right ? "0" : "-50%";
+    // The centred box is placed with translateX(-50%), so the rise keeps it; the right and top
+    // boxes are placed by their edges.
+    const x = right || params.side === "top" ? "0" : "-50%";
     const rise = [
       { opacity: 0, transform: `translate(${x}, 10px)` },
       { opacity: 1, transform: `translate(${x}, 0)` },
