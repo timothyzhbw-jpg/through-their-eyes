@@ -6,7 +6,7 @@
 // shows where they look.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
@@ -30,7 +30,12 @@ import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
 import { Grade } from "../beat/Grade";
+import { featuresOf, quality } from "../quality/quality";
+import { LOOK } from "../quality/look";
 import { BeliefRings } from "./BeliefRings";
+
+// The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
+const QualityLayer = lazy(() => import("../quality/QualityPost"));
 
 export const EYE_HEIGHT = 1.72; // m
 export const POV_HFOV = (95 * Math.PI) / 180;
@@ -109,6 +114,9 @@ function PovScene() {
   useRedrawOn(playback);
   useRedrawOn(trial);
   const rigged = useStore(trial, (s) => s.rigged);
+  const tier = useStore(quality, (s) => s.tier);
+  const { look, post } = featuresOf(tier, false);
+  useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
@@ -167,7 +175,10 @@ function PovScene() {
     const now = performance.now() / 1000;
     cuts.note(viewKey(s), now);
     if (cuts.inCut(now)) invalidate(); // until the blur has eased back
-    [fog.near, fog.far] = FOG[s.camera];
+    // The shared look hazes the broadcast camera's far side as the Blender shots do.
+    [fog.near, fog.far] = featuresOf(quality.get().tier, false).look
+      ? LOOK.fog[s.camera]
+      : FOG[s.camera];
     if (broadcast) {
       // The key-moment beat pushes in on whoever looks, then opens to the player he sees
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
@@ -246,6 +257,7 @@ function PovScene() {
         >
           <mesh
             position-y={BODY_CENTRE}
+            userData={{ player: true }}
             geometry={capsule}
             material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
@@ -268,7 +280,11 @@ function PovScene() {
             }}
             visible={!rigged}
           >
-            <mesh geometry={headGeometry} material={materials.shirts[kitSlot(p)]} />
+            <mesh
+              geometry={headGeometry}
+              material={materials.shirts[kitSlot(p)]}
+              userData={{ player: true }}
+            />
             <mesh position-y={0.02} geometry={visorGeometry} material={materials.visor} />
           </group>
           <sprite
@@ -303,7 +319,14 @@ function PovScene() {
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
       <BroadcastLayers sample={sample} />
-      <MotionBlur hfov={POV_HFOV} />
+      {/* The post chain draws the frame itself at medium and high; until its chunk is here,
+          and at the other tiers, the motion-blur pass does. */}
+      {!post && <MotionBlur hfov={POV_HFOV} />}
+      {look && (
+        <Suspense fallback={post ? <MotionBlur hfov={POV_HFOV} /> : null}>
+          <QualityLayer sample={sample} hfov={POV_HFOV} />
+        </Suspense>
+      )}
     </>
   );
 }

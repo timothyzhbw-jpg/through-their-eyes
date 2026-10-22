@@ -297,12 +297,17 @@ function boardWords(): THREE.Texture | null {
  * sky's tint, its sheen), and the baked light shapes it: the map's luminance over the pitch's
  * median, softened by GRASS_CONTRAST, multiplies it (its hue stays the grass's own). So the pitch looks as it did at its
  * median, with the floodlights' pools, the darker edges and the boards' glow added. The light
- * map is only read here (lightMapIntensity 0 keeps three from adding it as light). */
+ * map is only read here (lightMapIntensity 0 keeps three from adding it as light). With
+ * `physical` (the shared look's sheen, quality/look.ts) it is a physical material. */
 export function grassMaterial(
   params: THREE.MeshStandardMaterialParameters,
   lightMap: THREE.Texture,
-) {
-  const m = new THREE.MeshStandardMaterial({ ...params, lightMap, lightMapIntensity: 0 });
+  physical?: THREE.MeshPhysicalMaterialParameters,
+): THREE.MeshStandardMaterial {
+  const all = { ...params, lightMap, lightMapIntensity: 0 };
+  const m = physical
+    ? new THREE.MeshPhysicalMaterial({ ...all, ...physical })
+    : new THREE.MeshStandardMaterial(all);
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uBake = { value: GROUND_GAIN / GRASS_MEDIAN };
     shader.uniforms.uContrast = { value: GRASS_CONTRAST };

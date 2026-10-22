@@ -29,8 +29,14 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1600,
       rollupOptions: {
         output: {
+          // three.js's post-processing addons stay with the lazy chunks that use them (the
+          // render tiers in src/quality/, cine mode), off the first load.
           manualChunks: (id) =>
-            id.includes("node_modules") && !id.includes("meshopt_decoder") ? "vendor" : undefined,
+            id.includes("node_modules") &&
+            !id.includes("meshopt_decoder") &&
+            !/three\/examples\/jsm\/(postprocessing|shaders)\//.test(id)
+              ? "vendor"
+              : undefined,
         },
       },
     },

@@ -105,9 +105,26 @@ const PAGES = [
     device: { ...DESKTOP, reducedMotion: "reduce" },
     check: (p) => beat(p, { push: 0 }),
   },
+  // The render tiers (SPEC 7, src/quality/): the post chain loads, draws, and says which tier.
+  { name: "quality-high", path: "?at=60&quality=high", check: (p) => tier(p, "high") },
+  {
+    name: "quality-high-broadcast",
+    path: "?at=66&camera=broadcast&quality=high",
+    check: (p) => tier(p, "high"),
+  },
+  {
+    name: "phone-quality-medium",
+    path: "?intro=0&quality=medium",
+    device: PHONE,
+    // The tier and the phone layout. Not the live stream: where the tier's chunk loads slowly (a
+    // software renderer) the stream has reached the hero moment and the cold-load show has taken
+    // over by then (SPEC 2). phone-hero checks the stream on a phone.
+    check: (p) => phone(p, (q) => tier(q, "medium"), { live: false }),
+  },
   // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
   // (beat/cut.ts).
   { name: "cut-no-blur", path: "?autoplay=0&intro=0", check: cutNoBlur },
+  { name: "cut-no-blur-high", path: "?autoplay=0&intro=0&quality=high", check: cutNoBlur },
   // Every camera switch lands on a frame drawn at its pane's size, with no new WebGL context
   // (views/InstantFrame.tsx): no blank, stretched or cleared frame at a cut.
   {
@@ -295,6 +312,22 @@ async function beat(page, { push }) {
   } catch {
     const data = await canvas.evaluate((el) => ({ ...el.dataset }));
     throw new Error(`expected the beat with push ${push} and a ring, got ${JSON.stringify(data)}`);
+  }
+}
+
+/** A hero moment drawn at a render tier: the 3D canvas carries data-quality once the tier's
+ * chunk has loaded and taken over drawing. */
+async function tier(page, want) {
+  await hero(page);
+  const canvas = page.locator(".view.pov canvas");
+  try {
+    await page.waitForFunction(
+      ([el, t]) => el.dataset.quality === t,
+      [await canvas.elementHandle(), want],
+    );
+  } catch {
+    const data = await canvas.evaluate((el) => ({ ...el.dataset }));
+    throw new Error(`expected the ${want} tier on the 3D canvas, got ${JSON.stringify(data)}`);
   }
 }
 
