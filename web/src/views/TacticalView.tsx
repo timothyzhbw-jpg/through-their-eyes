@@ -6,6 +6,7 @@
 
 import { Line } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { InstantFrame } from "./InstantFrame";
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
 import * as THREE from "three";
 import {
@@ -92,14 +93,22 @@ interface Shared {
   me: number;
 }
 
-export function TacticalView() {
+/**
+ * The board. `hidden`: it stays mounted under another view (his belief map, beside his eyes) but
+ * neither shows nor draws, so a cut back to it needs no new WebGL context (InstantFrame).
+ */
+export function TacticalView({ hidden = false }: { hidden?: boolean }) {
   const { kind } = useView();
   return (
-    <figure className="view tac" aria-label="Tactical view from above">
+    <figure
+      className="view tac"
+      aria-label="Tactical view from above"
+      style={hidden ? { visibility: "hidden" } : undefined}
+    >
       <div className="canvas-wrap">
         <Canvas
           orthographic
-          frameloop="demand"
+          frameloop={hidden ? "never" : "demand"}
           flat
           dpr={[1, 2]}
           gl={{ antialias: true }}
@@ -107,6 +116,7 @@ export function TacticalView() {
           fallback={<p className="no-webgl">This view needs WebGL.</p>}
         >
           <TacticalScene />
+          <InstantFrame visible={!hidden} />
         </Canvas>
         {kind === "hero" && <OptionsOverlay />}
         <BlindSideOverlay />

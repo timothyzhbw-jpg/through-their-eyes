@@ -16,6 +16,7 @@ import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { COLORS, LABEL, PITCH, getLabelTexture, getPitchTexture, useRedrawOn } from "./scene";
 import { PovOverlay } from "./PovOverlay";
+import { InstantFrame } from "./InstantFrame";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
 import { pathFor, type Shot } from "./broadcast";
@@ -69,6 +70,7 @@ export function PovView() {
           fallback={<p className="no-webgl">This view needs WebGL.</p>}
         >
           <PovScene />
+          <InstantFrame />
         </Canvas>
         <Grade />
         <PovOverlay />
