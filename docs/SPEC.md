@@ -1668,7 +1668,12 @@ original visual identity.
   - Sound ([web/src/sound/](../web/src/sound/), synthesized in code, [CREDITS](CREDITS.md)): a
     low crowd bed that muffles through the beat, a whoosh as each scan of the POV player begins,
     a sting at the "without the look" reveal; all ducked under the narration voice, all off with
-    the Sound switch.
+    the Sound switch. The narration plays through the same AudioContext, made and woken by the tap
+    on the switch: Safari and every iOS browser start an `<audio>` element only from a tap, and a
+    line starts long after it (teammates heard nothing, 2026-10-21). On an iPhone the page plays
+    as media, past the silent switch. A stitched match, its recap and every breakdown opened from
+    it share one switch, on the match's live screen too; until it has been on once it reads "Tap
+    for sound", and a line that could not be spoken says "No voice" beside it.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
