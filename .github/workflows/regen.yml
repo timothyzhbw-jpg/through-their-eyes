@@ -1,6 +1,6 @@
 name: regen
 
-# Regenerates the committed generated artifacts of a branch on CI's own platform, ubuntu on
+# Regenerates the committed generated artifacts of a branch on CI's own platform, ubuntu 24.04 on
 # linux/amd64: the canonical one (SPEC 3.7). Started by hand; it commits nothing, it uploads what
 # changed for review:
 #   gh workflow run regen.yml -f ref=<branch> -f groups="exports evals"
@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   regen:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 340
     steps:
       - uses: actions/checkout@v7
