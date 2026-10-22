@@ -124,9 +124,12 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
 
 **What it does buy:**
 - **Recovery that keeps the rest of the work.** One agent down: the crew still aired 3 of 4 roles
-  from the model, the single agent 0 of 4, since its one call is every role. Bringing the
-  Telestrator back cost the crew 1 model request (about 2.1k tokens); the single agent re-ran
-  everything (1.7 requests, about 11.7k tokens). Outage of the model service:
+  from the model, the single agent 0 of 4, since its one call is every role. Bringing an agent
+  back depends on where it sits. The Telestrator, which nothing downstream reads, cost the crew 1
+  model request (about 2.1k tokens) against the single agent's full re-run (1.7 requests, about
+  11.7k tokens). The Analyst, whose findings every later step reads, cost the crew more: 11.0
+  requests (about 21.6k tokens), because the steps after it run again, against the same 1.7
+  requests and about 11.7k tokens for the single agent. Outage of the model service:
   TODO(multi-agent-evidence).
 - **Steps that fit the deployed timeout.** The API gives each model step 8 s. The eval allowed
   30 s, and 0 of 66 crew agent runs took longer than 8 s, against 6 of 6 single-agent runs: under
