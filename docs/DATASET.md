@@ -39,7 +39,8 @@ A worked example that reads the files:
 ## Composition
 
 - **Instances.** A match is 19 possessions on one clock. 15 are open-play passages
-  (`possession_play`), each until the ball goes out or a fixed cap of 30–70 s. Four are scripted
+  (`possession_play`, or `possession_play_away` when the restart before it goes to the away team),
+  each until the ball goes out or a fixed cap of 30–70 s. Four are scripted
   hero scenarios: `blind_side_run`, `press_escape`, `far_post_finish` and `corner_blind_side`
   (sim/README.md). The layout is `sim.dataset.LAYOUT`. Each possession is simulated on its own
   and placed after the previous one (SPEC 3.1).
@@ -318,9 +319,12 @@ The simulator simplifies football heavily. Read the data as the output of these 
   - Positions jump at every stitch, and beliefs reset there.
   - A restart's `kind` describes how the previous possession stopped. The next possession is not
     a simulated restart.
-  - 18 of 19 possessions start with the home team on the ball. Only the corner (`corner_blind_side`)
-    starts with the away team. So the home team has most of the ball, and a throw-in "won" by
-    the away team can be followed by a home possession.
+  - An open-play passage starts with the team the Laws award the restart to: the side that
+    conceded kicks off, a throw-in goes to the opponents of the last player to touch the ball, a
+    goal kick to the defenders, a corner to the attackers, the free kick after offside to the
+    defenders. After a cut no law awards the ball, and the home team starts. The four heroes are
+    built around a home player (the corner, `corner_blind_side`, is the away team's), so the home
+    team still has most of the ball.
   - About 12.5 min of play per match, not 90.
 - **Open play is a rule, not a decision.** In `possession_play` the carrier holds the ball for
   0.6–1.6 s, then passes to a teammate 8–35 m away. The teammate is picked by how much space he
