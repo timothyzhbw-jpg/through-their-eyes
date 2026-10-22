@@ -26,7 +26,7 @@ from analytics.tti import time_to_intercept
 from analytics.vision import player_visibility, visibility, wrap_angle
 from sim import laws, shots
 from sim.ball import BallParams, advance, bounce, path_distances, post_contact
-from sim.config import DT, SimParams
+from sim.config import DT, HALF_LENGTH, HALF_WIDTH, SimParams
 from sim.decision import (
     DecisionContext,
     DecisionParams,
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
 DRIBBLE_OFFSET = 0.3  # m, ball ahead of the carrier
 PREDICTION_FRAMES = 100  # free-ball path prediction horizon (4 s)
 RECEIVER_EXTRAPOLATION_S = 1.5  # how far a receiver's run is projected when a pass is played
+PITCH_HALF = np.array([HALF_LENGTH, HALF_WIDTH])  # movement targets stay within ± this
 
 
 class Simulation:
@@ -82,7 +83,9 @@ class Simulation:
         n = len(self.players)
 
         self.frame = 0
-        self.pos = np.array(setup.pos, dtype=float)
+        # On the pitch from the first frame (SPEC 3.2): a scenario's noise can put a keeper or a
+        # man on the post a few cm behind his line.
+        self.pos = np.clip(np.array(setup.pos, dtype=float), -PITCH_HALF, PITCH_HALF)
         self.vel = np.zeros((n, 2))
         self.owner = setup.ball_owner
         carrier = self.pos[self.owner]
@@ -268,7 +271,7 @@ class Simulation:
         target, cap = self._movement_targets(f)
         a_max, d_max = self._limits(f)
         self.pos, self.vel = steer(
-            self.pos, self.vel, target, np.minimum(cap, self.v_max), a_max, d_max, DT
+            self.pos, self.vel, target, np.minimum(cap, self.v_max), a_max, d_max, DT, PITCH_HALF
         )
         moving = np.linalg.norm(self.vel, axis=-1) > 1.0
         body_target = np.where(moving, np.arctan2(self.vel[:, 1], self.vel[:, 0]), ball_dir)
@@ -422,7 +425,12 @@ class Simulation:
             if start <= f <= until:
                 target[k], cap[k] = t, shots.KEEPER.v_dive_max
         # Back from a set piece until it is taken (SPEC 3.9).
-        return self.referee.keep_back(self, target), cap
+        target = self.referee.keep_back(self, target)
+        # Every target lies on the pitch (SPEC 3.2): keepers at or in front of their goal line,
+        # nobody past a touchline. The formation shift and a free ball's predicted path (which
+        # runs on past the lines) can both point outside; no restart is ever simulated (SPEC 3.1),
+        # so nobody needs to stand there.
+        return np.clip(target, -PITCH_HALF, PITCH_HALF), cap
 
     def _kick_pass(self, i: int, target: np.ndarray, intended: int, f: int) -> None:
         ball = self.ball_pos[:2].copy()

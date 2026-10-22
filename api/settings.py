@@ -10,7 +10,8 @@ from pathlib import Path
 # possessions are served on their own too, listed here or not (api/store.py MatchStore): the web
 # app opens their breakdowns from those exports.
 DEFAULT_MATCHES = [
-    ("blind_side_run", 3), ("corner_blind_side", 0), ("match", 1), ("press_escape", 0)
+    ("blind_side_run", 3), ("corner_blind_side", 0), ("match", 1), ("match", 2),
+    ("press_escape", 0),
 ]  # fmt: skip
 
 
