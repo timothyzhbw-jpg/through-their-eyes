@@ -221,7 +221,7 @@ the deployed service. Nothing has been run on real tracking data.
   could only be an association.
 - **Pressure and scanning.** In the published data players scan less when an opponent is tight
   on them (d = +0.57 between 10+ m and 0–1 m). Our simulator has the same sign but a much
-  smaller effect (d = <!--num:R4.d-->0.18<!--/num-->, 90% interval over seeds <!--num:R4.lo-->−0.02<!--/num--> to <!--num:R4.hi-->0.38<!--/num-->): one of the <!--num:R3.outside-->5<!--/num--> statistics
+  smaller effect (d = <!--num:R4.d-->0.15<!--/num-->, 90% interval over seeds <!--num:R4.lo-->−0.06<!--/num--> to <!--num:R4.hi-->0.36<!--/num-->): one of the <!--num:R3.outside-->5<!--/num--> statistics
   outside the published range; the other four compare scan rates between roles
   ([realism](eval/reports/realism.md)).
 - **No tackles yet.** In the stitched matches possession changes hands by interceptions only:

@@ -278,7 +278,7 @@ Multi-Agent System (SPEC §0).
 - **Realism is partial.** Of the 16 simulator statistics we can check against a published
   value, <!--num:R3.outside-->5<!--/num--> fall outside the published range. All five compare scan rates between roles or
   pressure levels. Published players scan less when an opponent is tight on them (d = +0.57);
-  ours do too, but much less so (d = <!--num:R4.d-->0.18<!--/num-->).[^realism]
+  ours do too, but much less so (d = <!--num:R4.d-->0.15<!--/num-->).[^realism]
 - **No tackles yet.** In the stitched matches the ball changes hands by interceptions only: 0
   tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
   matches. Tackles are switched on in the pressure hero's scenario alone.[^matchstats]
