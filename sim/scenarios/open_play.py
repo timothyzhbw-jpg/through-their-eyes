@@ -25,6 +25,9 @@ if TYPE_CHECKING:
 class OpenPlay(PossessionPlay):
     name = "open_play"
     hero = None
+    # The xT grid (`analytics/xt_grid.json`, every moment's ΔxT) is fitted on this scenario, so it
+    # keeps the anchors shifted with the ball until the grid is refitted (SPEC 4.5).
+    team_shape = False
 
     def forced_pass(self, sim: Simulation, frame: int) -> ForcedPass | None:
         return None

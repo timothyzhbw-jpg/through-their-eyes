@@ -75,6 +75,12 @@ class Scenario:
     # Placed shots, keepers on the bisector who react when they see the ball, and the save model
     # (`sim.shots`, Module A). Off unless a scenario needs it, so the others keep their runs.
     shots: bool = False
+    # Formation-based team shape (`sim.team_shape`, SPEC 3.2): every slot placed relative to its
+    # team's block, by phase. Off unless a scenario sets it, so the others keep their runs.
+    team_shape: bool = False
+    # With `team_shape`: (home formation, away formation) and each player's slot by id.
+    formation: tuple[str, str] = ("4-3-3", "4-2-3-1")
+    slots: dict[str, str] = {}
 
     def setup(self, gen: np.random.Generator) -> Setup:
         raise NotImplementedError
