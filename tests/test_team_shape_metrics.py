@@ -24,6 +24,7 @@ def test_length_width_line_height_of_a_team_attacking_plus_x():
     assert s["defence_midfield"][0] == pytest.approx(-10.0 - -28.0)
     assert s["midfield_attack"][0] == pytest.approx(6.0 - -10.0)
     assert s["centroid_depth"][0] == pytest.approx(52.5 + np.mean([-30, -26, -12, -8, 4, 8]))
+    assert s["keeper_gap"][0] == pytest.approx(np.hypot(20.0, 5.0))  # to the defender at -30
 
 
 def test_depths_are_measured_from_the_goal_line_the_team_defends_when_it_attacks_minus_x():

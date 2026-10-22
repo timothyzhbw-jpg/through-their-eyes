@@ -9,6 +9,8 @@ papers the realism report compares with (docs/REFERENCES.md, "Team shape"):
 - **length per width**: length / width (Folgado et al. 2014's LpW ratio);
 - **defensive line height**: the deepest player's distance from the goal line the team defends
   (Castellano et al. 2013's "defensive height");
+- **keeper gap**: the keeper's distance to his nearest outfield team-mate (Errekagorri et al.
+  2024's GkDef);
 - **lines**: defence, midfield and attack, found as Forcher et al. (2024) do: k-means with three
   clusters on each player's mean depth, assigned anew for every possession (here, every spell
   with one team on the ball); the inter-line distances are the distances between the lines' mean
@@ -89,7 +91,8 @@ def shape(pos: np.ndarray, keeper: np.ndarray, attack_sign: int,
     attack_sign: +1 if the team attacks +x, else -1; spell: (F,) possession spell ids
     (`spells`) for the lines, which are found once per spell (frames with -1 have none).
     """
-    outfield = ~np.asarray(keeper, dtype=bool)
+    keeper = np.asarray(keeper, dtype=bool)
+    outfield = ~keeper
     depth = HALF_LENGTH + attack_sign * pos[:, outfield, 0]
     y = pos[:, outfield, 1]
     length = depth.max(axis=1) - depth.min(axis=1)
@@ -101,9 +104,13 @@ def shape(pos: np.ndarray, keeper: np.ndarray, attack_sign: int,
         "line_height": depth.min(axis=1),
         "centroid_depth": depth.mean(axis=1),
         "centroid_y": y.mean(axis=1),
+        "keeper_gap": np.full(len(depth), np.nan),
         "defence_midfield": np.full(len(depth), np.nan),
         "midfield_attack": np.full(len(depth), np.nan),
     }
+    if keeper.any():
+        gap = np.linalg.norm(pos[:, outfield] - pos[:, keeper][:, :1], axis=-1)
+        out["keeper_gap"] = gap.min(axis=1)
     if spell is None:
         spell = np.zeros(len(depth), dtype=np.int64)
     for s in np.unique(spell[spell >= 0]):

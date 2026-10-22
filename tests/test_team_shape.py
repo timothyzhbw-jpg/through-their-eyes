@@ -49,6 +49,8 @@ def test_only_possession_play_keeps_a_team_shape():
 
 def test_the_defending_back_four_is_one_line_that_steps_up_and_drops_with_the_ball(form):
     d = ts.SHAPE.defence
+    # Out of possession the line is Castellano & Alvarez's (2013) regression on the ball.
+    assert (d.line_at_goal, d.line_slope) == (6.30, 0.46)
     defenders = [i for i, s in enumerate(form.slots) if form.team[i] == 1 and s.line == "defence"]
     depths = []
     for ball_x in (-40.0, -20.0, 0.0, 20.0, 40.0):  # home on the ball; away defends +x
@@ -56,7 +58,8 @@ def test_the_defending_back_four_is_one_line_that_steps_up_and_drops_with_the_ba
         depth = HALF_LENGTH - p[defenders, 0]
         assert np.ptp(depth) < 1e-9  # one line
         ball_depth = HALF_LENGTH - ball_x
-        assert depth[0] == pytest.approx(np.clip(ball_depth - d.gap, d.line_min, d.line_max))
+        line = d.line_at_goal + d.line_slope * ball_depth
+        assert depth[0] == pytest.approx(np.clip(line, d.line_min, d.line_max))
         depths.append(depth[0])
     # As the ball comes toward the away goal the line drops; as it goes away it steps up.
     assert np.all(np.diff(depths) <= 1e-9) and depths[0] > depths[-1]
@@ -184,8 +187,9 @@ def test_a_team_is_shorter_and_narrower_out_of_possession_than_in_it(runs):
                 for k in values:
                     values[k].append(s[k][phase == ph])
     mean = {ph: {k: np.concatenate(v).mean() for k, v in d.items()} for ph, d in pooled.items()}
-    assert mean[metrics.DEFENCE]["length"] < mean[metrics.ATTACK]["length"] - 3.0
-    assert mean[metrics.DEFENCE]["width"] < mean[metrics.ATTACK]["width"] - 3.0
+    # Castellano et al. (2013, Table 1): 1.7-3.3 m shorter and 4.5-4.8 m narrower without the ball.
+    assert mean[metrics.DEFENCE]["length"] < mean[metrics.ATTACK]["length"] - 2.0
+    assert mean[metrics.DEFENCE]["width"] < mean[metrics.ATTACK]["width"] - 2.0
 
 
 def test_the_defending_block_follows_the_ball_across_and_along_the_pitch(runs):
@@ -203,7 +207,7 @@ def test_the_defending_block_follows_the_ball_across_and_along_the_pitch(runs):
     left, right = np.concatenate(left), np.concatenate(right)
     assert left.size > 100 and right.size > 100
     assert left.mean() > right.mean() + 6.0
-    # The line drops as the ball comes toward its goal (it is capped at line_max further out).
+    # The line drops as the ball comes toward its goal.
     near, far = np.concatenate(near), np.concatenate(far)
     assert near.size > 100 and far.size > 100
     assert near.mean() < far.mean() - 5.0

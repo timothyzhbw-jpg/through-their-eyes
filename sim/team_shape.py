@@ -10,9 +10,12 @@ it attacks. The block is where those slots land on the pitch, per team and frame
   kicker) is in its attacking shape, the other in its defending shape. The phase switches on the
   frame possession changes; the players then move there under the engine's speed and acceleration
   limits, so a transition is the movement between the two shapes, not a third template.
-- **Back line.** The back line's depth (metres from the team's own goal line) stays `gap` metres
-  goal-side of the ball, within `[line_min, line_max]`: the line steps up as the ball goes
-  forward and drops as it comes back, every defender on the same depth.
+- **Back line.** The back line's depth (metres from the team's own goal line) is
+  `line_at_goal + line_slope` × the ball's distance from that goal line, within
+  `[line_min, line_max]`: the line steps up as the ball goes forward and drops as it comes back,
+  every defender on the same depth. Without the ball it is the regression Castellano & Álvarez
+  (2013) fit on La Liga matches, 6.30 m + 0.46 × the ball's distance; with it, the line stays a
+  set distance behind the ball (no paper prints a relation for it).
 - **Length.** The front line is `length` metres ahead of the back line, but never beyond the
   opponents' back line (where an offside line would be) unless the ball is beyond it.
 - **Width and side.** The slots span `width` metres across, centred `shift` × the ball's y, and
@@ -101,26 +104,31 @@ FORMATIONS: dict[str, dict[str, Slot]] = {
 class PhaseShape:
     length: float  # m, back line to front line
     width: float  # m, across the slots at lateral -1 and +1
-    gap: float  # m the back line stays goal-side of the ball
+    line_at_goal: float  # m: the back line's depth with the ball on the team's own goal line
+    line_slope: float  # m of line depth per m of the ball's distance from that goal line
     line_min: float  # m from the own goal line: the deepest the back line goes
     line_max: float  # m from the own goal line: the highest
     shift: float  # block centre's y as a share of the ball's y
 
 
-# Fitted by hand on possession_play tuning seeds 0-39 so that the measured shape (eval/realism.py,
-# team shape) lands on the published means: length, width and the deepest player's height in and
-# out of possession (Castellano et al. 2013, Table 1 and Results), and out of possession the
-# length, width and inter-line distances of settled defence (Forcher et al. 2024, Table 7.1). The
-# templates are larger than what is measured: pressing, marking and runs pull players off their
-# slots, and the offside cap shortens the block. The realism report checks held-out seeds.
+# The defending line is the published regression (Castellano & Álvarez 2013, RICYDE 9(32), Tabla
+# 2: 6.30 m + 0.46 × the ball's distance from the goal defended). The rest is fitted by hand on
+# possession_play tuning seeds 0-39 so that the measured shape (eval/realism.py, team shape) lands
+# on the published means: length, width and the deepest player's height in and out of possession
+# (Castellano et al. 2013, Table 1 and Results), and out of possession the length, width and
+# inter-line distances of settled defence (Forcher et al. 2024, Table 7.1). The templates are
+# larger than what is measured: pressing, marking and runs pull players off their slots, and the
+# offside cap shortens the block. The realism report checks held-out seeds.
 @dataclass(frozen=True)
 class ShapeParams:
     attack: PhaseShape = PhaseShape(
-        length=46.0, width=41.5, gap=16.0, line_min=22.0, line_max=50.0, shift=0.3
-    )
+        length=42.0, width=41.5, line_at_goal=-14.0, line_slope=1.0, line_min=22.0,
+        line_max=50.0, shift=0.3,
+    )  # fmt: skip
     defence: PhaseShape = PhaseShape(
-        length=31.0, width=34.5, gap=15.0, line_min=12.0, line_max=37.0, shift=0.5
-    )
+        length=29.5, width=34.5, line_at_goal=6.30, line_slope=0.46, line_min=0.0,
+        line_max=PITCH_LENGTH, shift=0.5,
+    )  # fmt: skip
     # A player making for his slot jogs when he is near it and runs harder the further out of
     # position he is, at full speed from `sprint_distance` (style knobs). The jog is below the
     # 19.8 km/h (5.5 m/s) entry speed of high-speed running most studies use (Gualtieri et al.
@@ -177,7 +185,8 @@ def spots(
     ball_depth = HALF_LENGTH + signs * ball[0]  # per team, from its own goal line
     shapes = [params.attack if t == possession else params.defence for t in (0, 1)]
     back = np.array([
-        np.clip(ball_depth[t] - s.gap, s.line_min, s.line_max) for t, s in enumerate(shapes)
+        np.clip(s.line_at_goal + s.line_slope * ball_depth[t], s.line_min, s.line_max)
+        for t, s in enumerate(shapes)
     ])  # fmt: skip
     for t, s in enumerate(shapes):
         sign, mine = signs[t], form.team == t
