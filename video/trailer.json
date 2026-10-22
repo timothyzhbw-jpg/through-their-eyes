@@ -2861,7 +2861,7 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 17.3,
+        "in": 0.2,
         "crop": [
           700,
           260,
@@ -2901,7 +2901,7 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 28.2,
+        "in": 2.9,
         "crop": [
           700,
           260,
@@ -2995,7 +2995,7 @@
       "picture": {
         "src": "capture",
         "shot": "06-language",
-        "in": 4.45,
+        "in": 5.2,
         "push": [
           1.0,
           1.04
@@ -3011,12 +3011,12 @@
       "vo": [
         {
           "id": "vo17",
-          "at": 0.2,
+          "at": 0.3,
           "lang": "zh",
           "line": {
             "persona": "casual",
             "language": "zh",
-            "index": 2
+            "index": 3
           },
           "style": "sports-commentary",
           "degree": 1.3
