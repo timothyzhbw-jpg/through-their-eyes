@@ -233,26 +233,24 @@ const VIEWS = {
     shoulder: 1.55, // half the torso line: out past the token (radius 0.95)
     rayFrom: 1.0, // from the token's edge
     ray: 3.2,
-    litRay: 4.6,
     fan: 2.3,
     shoulderH: 0,
     eyeH: 0,
     fanH: 0,
     spine: false,
-    widths: { torso: 3, spine: 0, ray: 2, lit: 3.5 },
+    widths: { torso: 3, spine: 0, ray: 2 },
     order: { fan: 7.6, torso: 7.7, ray: 9.5 }, // TacticalView: under the token (8), over its ring
   },
   broadcast: {
     shoulder: 0.32, // wider than real shoulders, to read at broadcast distance
     rayFrom: 0.12,
     ray: 2.4,
-    litRay: 3.4,
     fan: 1.3,
     shoulderH: 1.42,
     eyeH: 1.68,
     fanH: 0.06, // just over the grass graphics (0.05 m)
     spine: true,
-    widths: { torso: 4, spine: 1.5, ray: 2.5, lit: 4 },
+    widths: { torso: 4, spine: 1.5, ray: 2.5 },
     order: { fan: 1, torso: 15, ray: 15 }, // over the players, under the live tags (20)
   },
 } as const;
@@ -283,7 +281,9 @@ export class SkeletonGeometry {
     this.torso = new Segments(n, w.torso, COLORS.fg, 0.95);
     this.spine = new Segments(v.spine ? n : 0, w.spine, COLORS.fg, 0.55);
     this.rays = new Segments(n, w.ray, COLORS.fg, 0.9);
-    this.lit = new Segments(n, w.lit, DETECTOR_COLOR, 1);
+    // A scanning player's head ray is the same line in the scan colour, not a longer one: a long
+    // bright line off a player read as an arrow (Bowen, 10/22: "这个箭头是什么").
+    this.lit = new Segments(n, w.ray, DETECTOR_COLOR, 1);
     this.torso.object.renderOrder = v.order.torso;
     this.spine.object.renderOrder = v.order.torso;
     this.rays.object.renderOrder = v.order.ray;
@@ -340,7 +340,7 @@ export class SkeletonGeometry {
       const s = Math.sin(pose.yaw[j]);
       const ray = pose.lit[j] ? this.lit : this.rays;
       const from = v.rayFrom * k;
-      const to = (pose.lit[j] ? v.litRay : v.ray) * k;
+      const to = v.ray * k;
       ray.push(x + from * c, v.eyeH, -(y + from * s), x + to * c, v.eyeH, -(y + to * s));
 
       // The fan: FAN_STEPS triangles from the position, torso facing to head yaw.

@@ -16,7 +16,8 @@ import { createPlayback } from "../store/playback";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport, render } from "../testing";
 import { PovOptions, TacticalOptions } from "../ui/Stage";
 import { SkeletonLayer } from "./SkeletonLayer";
-import { SkeletonLegend } from "./SkeletonLegend";
+import { shortName } from "../data/roster";
+import { keyCorner, SkeletonLegend, StageSkeletonKey } from "./SkeletonLegend";
 import {
   fanEdges,
   litBy,
@@ -26,6 +27,7 @@ import {
   shoulders,
   SkeletonGeometry,
   trackedHead,
+  DETECTOR_COLOR,
 } from "./skeleton";
 
 // useFrame needs a Canvas; the geometry is tested through SkeletonGeometry instead.
@@ -318,6 +320,18 @@ describe("the geometry", () => {
     expect(Math.atan2(-(bz - az), bx - ax)).toBeCloseTo(pose.yaw[H8], 4);
   });
 
+  it("a lit ray is his head ray in the scan colour: no longer, no wider (it read as an arrow)", () => {
+    for (const variant of ["board", "broadcast"] as const) {
+      const { g } = drawn(variant, 60);
+      const length = (seg: number[]) => Math.hypot(seg[3] - seg[0], seg[5] - seg[2]);
+      expect(g.lit.count).toBeGreaterThan(0);
+      expect(g.rays.count).toBeGreaterThan(0);
+      expect(length(g.lit.segment(0))).toBeCloseTo(length(g.rays.segment(0)), 4); // Float32 buffers
+      expect(g.lit.material.linewidth).toBe(g.rays.material.linewidth);
+      expect(`#${g.lit.material.color.getHexString()}`).toBe(DETECTOR_COLOR);
+    }
+  });
+
   it("the fan's opacity grows with the head-torso angle", () => {
     const { g, pose } = drawn("board", 60);
     let most = 0;
@@ -348,7 +362,7 @@ describe("the legend", () => {
     expect(button(html, "True")?.pressed).toBe("true");
     expect(button(html, "As tracked")).toMatchObject({ pressed: "false", disabled: false });
     const text = plain(html);
-    expect(text).toContain("lit: scan detector");
+    expect(text).toContain("green: scanning now (head turned away from the ball)");
     expect(text).toMatch(/limbs/i);
     expect(text).toContain("not data");
     s.controls.setSkeletonSource("tracked");
@@ -365,7 +379,9 @@ describe("the legend", () => {
     const sample = sampleInto(new Sample(hero.n), hero, run, 60);
     const pose = poseInto(new Pose(hero.n), hero, run, sample, 60, "true");
     const deg = Math.round(Math.abs(pose.twist[H8]) * DEG);
-    expect(plain(render(s, <SkeletonLegend />))).toContain(`H8: head ${deg}° off the torso`);
+    expect(plain(render(s, <SkeletonLegend />))).toContain(
+      `${shortName("H8")}: head ${deg}° off the torso`,
+    );
   });
 
   it("in a stitched match: true yaw only, lit by the sim's scans", () => {
@@ -376,7 +392,59 @@ describe("the legend", () => {
     expect(button(html, "True")?.pressed).toBe("true");
     expect(button(html, "As tracked")).toMatchObject({ pressed: "false", disabled: true });
     expect(button(html, "As tracked")?.title).toContain("hero moment");
-    expect(plain(html)).toContain("lit: sim's own scans");
+    expect(plain(html)).toContain("gold: scanning now (head turned away from the ball)");
+  });
+});
+
+describe("where the key sits", () => {
+  it("in the live screen's top-left column with the skeleton on the broadcast camera or the board", () => {
+    const s = heroSession();
+    expect(render(s, <StageSkeletonKey />)).toBe("");
+    s.controls.toggle("skeleton");
+    expect(render(s, <StageSkeletonKey />)).toBe(""); // his eyes: no skeleton drawn there
+    s.controls.setCamera("broadcast");
+    s.controls.setFocus("broadcast");
+    expect(plain(render(s, <StageSkeletonKey />))).toContain("Skeleton");
+    // the board as the main view: a phone's row under the picture (wider, the board's own key)
+    s.controls.setCamera("pov");
+    s.controls.setFocus("tactical");
+    expect(plain(render(s, <StageSkeletonKey />))).toContain("Skeleton");
+  });
+
+  it("on the board, in the top corner the clip leaves emptiest: one place for the whole clip", () => {
+    const s = heroSession();
+    s.controls.toggle("skeleton");
+    // the run and the pass go to the top right of the board: the key takes the top left
+    expect(keyCorner(hero)).toBe("left");
+    expect(render(s, <SkeletonLegend />)).toContain('class="skeleton-key at-left"');
+    s.controls.seek(140);
+    expect(render(s, <SkeletonLegend />)).toContain('class="skeleton-key at-left"');
+  });
+
+  it("the clip mirrored left to right takes the other corner; nobody in the top half: the left", () => {
+    const mirror = (h: Hero): Hero => {
+      const runs = Object.fromEntries(
+        Object.entries(h.runs).map(([name, run]) => {
+          const pos = run.pos.slice();
+          const ball = run.ball.slice();
+          for (let k = 0; k < pos.length; k += 2) pos[k] = -pos[k];
+          for (let k = 0; k < ball.length; k += 2) ball[k] = -ball[k];
+          return [name, { ...run, pos, ball }];
+        }),
+      ) as Hero["runs"];
+      return { ...h, runs };
+    };
+    expect(keyCorner(mirror(hero))).toBe("right");
+    const low = Object.fromEntries(
+      Object.entries(hero.runs).map(([name, run]) => {
+        const pos = run.pos.slice();
+        const ball = run.ball.slice();
+        for (let k = 1; k < pos.length; k += 2) pos[k] = -Math.abs(pos[k]);
+        for (let k = 1; k < ball.length; k += 2) ball[k] = -Math.abs(ball[k]);
+        return [name, { ...run, pos, ball }];
+      }),
+    ) as Hero["runs"];
+    expect(keyCorner({ ...hero, runs: low })).toBe("left");
   });
 });
 
