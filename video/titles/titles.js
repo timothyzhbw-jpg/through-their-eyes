@@ -442,6 +442,12 @@
 
   function spec(params) {
     const stage = prepare("free", null);
+    // backdrop: the sheet over a picture (the crew trace), dark on the left where the rows are;
+    // the page drops its own opaque ground so the picture shows through on the right.
+    if (flag(params.backdrop)) {
+      document.documentElement.classList.replace("opaque", "alpha");
+      stage.append(el("div", "spec-backdrop fx-fade"));
+    }
     const sheet = el("div", "sheet");
     const head = el("h1", "spec-head anton fx-slam", params.header || "");
     setAt(head, 0);

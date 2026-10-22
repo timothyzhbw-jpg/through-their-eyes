@@ -1078,12 +1078,22 @@ html.spec #stage {
   background-size: 64px 64px;
 }
 
+html.spec.alpha #stage {
+  background: transparent; /* the sheet over a picture: its backdrop does the darkening */
+}
+
 .sheet {
   position: absolute;
   inset: 90px 120px 80px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.spec-backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(5, 8, 6, 0.93) 0%, rgba(5, 8, 6, 0.9) 50%, rgba(5, 8, 6, 0) 74%);
 }
 
 .spec-head {

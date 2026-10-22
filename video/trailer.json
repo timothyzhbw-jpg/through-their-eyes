@@ -1167,7 +1167,7 @@
     "spec": {
       "template": "spec",
       "dur": 2.5,
-      "alpha": false,
+      "alpha": true,
       "params": {
         "header": "UNDER THE HOOD",
         "rows": [
@@ -1208,7 +1208,8 @@
             "value": "GITHUB ACTIONS"
           }
         ],
-        "footer": "SYNTHETIC MATCH ENGINE · PERCEPTION MODEL · VERIFIED CLAIMS"
+        "footer": "SYNTHETIC MATCH ENGINE · PERCEPTION MODEL · VERIFIED CLAIMS",
+        "backdrop": true
       }
     },
     "end": {
@@ -1948,7 +1949,7 @@
     },
     "tagline": {
       "template": "slam",
-      "dur": 1.2,
+      "dur": 1.5,
       "alpha": true,
       "params": {
         "lines": [
@@ -3662,21 +3663,45 @@
       "id": "b45c-tagline",
       "dur": 1.5,
       "picture": {
-        "src": "title",
-        "id": "card-every-touch"
+        "src": "capture",
+        "shot": "17-pov-scan",
+        "in": 1.6,
+        "crop": [
+          0,
+          60,
+          1440,
+          810
+        ],
+        "push": [
+          1.0,
+          1.03
+        ]
       },
-      "overlays": [],
+      "overlays": [
+        {
+          "title": "tagline",
+          "at": 0.0
+        }
+      ],
       "sfx": [],
       "out": {
         "type": "cut"
-      }
+      },
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b46-spec",
       "dur": 2.5,
       "picture": {
-        "src": "title",
-        "id": "spec"
+        "src": "capture",
+        "shot": "19-crew-trace",
+        "in": 2.2,
+        "push": [
+          1.0,
+          1.02
+        ]
       },
       "vo": [
         {
@@ -3688,7 +3713,16 @@
       "sfx": [],
       "out": {
         "type": "cut"
-      }
+      },
+      "fx": [
+        "lift"
+      ],
+      "overlays": [
+        {
+          "title": "spec",
+          "at": 0.0
+        }
+      ]
     },
     {
       "id": "b47-end",
