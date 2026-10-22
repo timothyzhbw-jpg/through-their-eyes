@@ -145,6 +145,9 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   Application Insights has the same run as spans (below).
 - **Plans that validate.** 6 of 6 crew plans passed the web app's rules, against 5 of 6 from the
   single agent (one named a scan that does not exist).
+- **More of the headline spoken.** The crew's scripts carried 92% of the Analyst's headline
+  claims, the single agent's 81%; the crew's scripts are also longer (about 24 lines against
+  18), and the paired interval reaches zero (+0.11, 95% interval −0.00 to +0.24).
 
 ### The live trace
 
