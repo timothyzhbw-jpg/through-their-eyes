@@ -28,17 +28,6 @@
   }
 }
 
-/* With "His looks" the header's pills reach the centred run switch up to about 1740 px: it drops
-   under the header row there, as it does inside a match (styles.css). */
-@media (max-width: 1760px) and (min-width: 1181px) {
-  .stage:has(#scan-steps-open) .stage-run {
-    top: 84px;
-  }
-  .stage:has(#scan-steps-open) .stage-top {
-    top: 140px;
-  }
-}
-
 .scansteps {
   position: absolute;
   inset: var(--head-h) var(--gutter) var(--gutter);

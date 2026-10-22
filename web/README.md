@@ -31,7 +31,6 @@ npm run fps          # after a build: fps with pitch control and the skeleton of
 npm run smoke        # end to end: a local API, the build, every page in headless Chromium (below)
 npm run a11y -- --url <site>  # axe-core on every screen, desktop and phone (docs/ACCESSIBILITY.md)
 npm run contrast -- --url <site>  # contrast of the text over the 3D views, 72 renders (same doc)
-npm run loadperf     # cold-load timings and bytes, laptop and phone, plain and on Fast 3G (below)
 ```
 
 ## URL parameters
@@ -66,28 +65,6 @@ no breakdown on load unless `tamper` needs one. If no line of the breakdown carr
 claim, the first claim with a number opens instead (`analyst` narrations carry the most).
 Without them, the app watches live and then plays the breakdown, in the linked `persona` and
 `lang` if given. Values the app does not know are ignored and listed in the console.
-
-## Hosting and load time (SPEC 8)
-
-Azure Storage sends each file exactly as uploaded and never compresses on the fly, so
-`infra/upload_web.sh` (used by `infra/deploy.sh web` and the deploy workflow) uploads a staged
-copy of the build (`scripts/stage.mjs`): text files gzipped with `Content-Encoding: gzip`
-(1.6 MB of JS becomes 0.44 MB on the wire), hashed files under `assets/` cached for a year
-(`immutable`), `data/` and `models/` for 5 minutes, and `index.html` last with `no-cache`, so a
-visitor never gets a page whose scripts are not uploaded yet. gzip rather than Brotli because
-Storage cannot choose an encoding per request and every browser and proxy takes gzip.
-`index.html` also shows "Loading the match…" before any script runs, opens the API's connection
-(`preconnect`, added at build time from `VITE_API_URL`) and fetches the players' model while the
-scripts load. The telemetry panel, the costliest below the live screen, stops following the
-playhead while it is off screen or the tab is hidden (`src/ui/onScreen.ts`), and builds its curves
-once per run and player instead of on every frame.
-
-`npm run loadperf` measures cold loads of the live site (a fresh Chrome per load): first paint,
-first WebGL draw, when the rigged players are drawn, main-thread blocking time and bytes by kind,
-on a laptop (1440 × 900) and a phone (375 × 812), plain and throttled to DevTools' "Fast 3G" with
-a 4× CPU slowdown. `--serve dist-upload` serves a staged build as Storage would, on the site's
-own origin (inside Chrome only), so the API, the stream and the fonts behave as live. Results:
-[eval/reports/web_load.md](../eval/reports/web_load.md).
 
 ## The live service (`VITE_API_URL`)
 

@@ -88,12 +88,7 @@ _Fill in as they come to exist._
 - `infra/deploy.sh provision | api | web | github` — hosting (SPEC 8): create the Azure resources,
   build and roll out the API image, upload web/, set the deploy workflow's repo variables. Same
   subscription guard as M0. After that, `.github/workflows/deploy.yml` redeploys on every green
-  CI run on main. Both upload web/ through `infra/upload_web.sh` (gzipped, hashed assets cached
-  for a year, `index.html` last with `no-cache`)
-- `cd web && npm run build && npm run loadperf` — cold-load timings of the live site (SPEC 8):
-  first paint, first draw, players drawn and bytes, laptop and phone, plain and on Fast 3G with a
-  4× CPU slowdown; `-- --serve dist-upload` measures a staged build (`node scripts/stage.mjs`)
-  served as Storage would on the site's origin. Report: `eval/reports/web_load.md`
+  CI run on main.
 - `uv run python -m infra.prewarm --api <API URL> [--tts]` — fill the deployed breakdown cache
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
@@ -188,8 +183,7 @@ _Fill in as they come to exist._
   the hero moment
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
-  skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a
-  render tier, SPEC 7)
+  skeleton view off and on (`-- --headed` on a laptop's GPU)
 - `cd web && npm run smoke` — end-to-end smoke test of every page (SPEC 7, 8; CI job `smoke`),
   including axe-core's WCAG 2.2 A/AA rules
 - `cd web && npm run a11y -- --url <site>` — accessibility audit (docs/ACCESSIBILITY.md): axe-core
@@ -216,7 +210,11 @@ _Fill in as they come to exist._
 - `uv run uvicorn api.main:app --reload` — the API service (SPEC 2): `/ws/matches/<id>/live`,
   `/api/matches/<id>/moments`, `POST /api/breakdowns` (cached; `fail` runs the failure drill),
   `POST /api/breakdowns/<key>/bring-back` (SPEC 6), `POST /api/whatif`, `POST /api/tts`,
-  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6)
+  `POST /api/recaps` and `GET /api/recaps/<key>/cues` (the end-of-match recap, SPEC 6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, SPEC 6)
+- `uv run python -m agents.crewtrace` — rewrite the web's Crew trace fixture
+  (`web/src/crewtrace/fixture.json`, SPEC 6): a drill with a scripted model, MCP tool calls, a
+  Verifier rewrite and a bring-back; `tests/test_crew_trace.py` checks it against the schema
 - `docker build -t tte-api . && docker run --rm -p 8000:8000 tte-api` — the API image (SPEC 8):
   main dependencies only, non-root, `GET /health`
 - `cd video && npm ci && npx playwright install chromium` once, then `npm run capture` — demo

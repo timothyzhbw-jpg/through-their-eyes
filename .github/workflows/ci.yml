@@ -65,7 +65,7 @@ jobs:
   # fails it; the screenshots are kept as an artifact.
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25  # the smoke suite passed 10 minutes on a loaded runner (29 pages, axe on each)
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0

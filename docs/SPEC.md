@@ -70,6 +70,23 @@ server-side). AI breakdowns run asynchronously once a moment is detected and are
 replay window (target p95 < 12 s), the way broadcast replays follow a goal. Live play never waits
 on an LLM.
 
+**The cold load** (a judge who opens the page and only watches; web/src/App.tsx,
+[web/src/autoplay/](../web/src/autoplay/)):
+- The lineup card opens first. Behind it the picture rests on the stream's first frame. The hero
+  moment's stream starts only when the card closes, by itself after 5 s or on a click: its key
+  scan comes in the first seconds and must not play under the card. A stitched match's stream
+  plays behind the card; its first possession is open play.
+- When the stream detects the hero moment, the show plays at once; it does not wait for the
+  breakdown:
+  1. the look, replayed (slowed around the scan);
+  2. the same seconds re-simulated without it, the other run's path as a ghost on the board.
+- Each part shows its verified line from the breakdown as soon as the breakdown is there ("Without
+  that look, H8 would have passed to H4.").
+- Then the breakdown plays.
+- Any viewer action ends the show.
+- Measured: the run without the look and its line are on screen 16–17 s after opening the page
+  (local API, headless Chrome).
+
 *Implemented (`api/`, M3):* FastAPI.
 - `WS /ws/matches/<id>/live?speed=1` replays the factual run at 25 Hz with `frame`, `event`,
   `moment` and `end` messages (`full_time: true` when it reached the last frame); clients can
@@ -79,7 +96,14 @@ on an LLM.
   `POST /api/breakdowns/<key>/bring-back`, `POST /api/whatif`, `POST /api/tts` (503 until Speech
   is configured), `POST /api/verify` (one claim re-checked with one numeric slot changed; not
   audited, rate-limited per client, no model call), `POST /api/recaps` and
-  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6).
+  `GET /api/recaps/<key>/cues` (the end-of-match recap and its overlay cue sheet, §6),
+  `GET /api/breakdowns/<key>/trace` and `GET /api/recaps/<key>/trace` (the crew trace, §6).
+- Every breakdown, drill and recap answer says where it came from (`provenance`): `live` (the
+  crew ran for this request), `cached` (a crew run from `ran_at`, UTC), or `template` (no model
+  call, with the reason: `rate_limited`, `capped` or `model_unavailable`). The web shows it as a
+  chip on the moment card, the narration, the recap and the crew trace, exactly as given: it is
+  never worked out from `cached` or `source`, so a cached or template answer never reads as a
+  fresh crew run. An answer from an older service without it makes no claim about who wrote it.
 - The service is public with no login (§8), so it is bounded: `POST /api/tts` takes a voice cue
   key from a breakdown it served, never SSML, and is rate-limited per client; the live stream
   allows a few streams per client and a session length, and closes on a malformed control
@@ -1299,6 +1323,40 @@ Application Insights.
       trace entries and the narration payload are unchanged.
     - An API process killed during narration resumes after a restart without calling the
       Director or the Analyst again.
+- **Crew trace** (2026-10-21, for the Best Multi-Agent System criteria: distinct roles, shared
+  state and handoffs, recovery, an outcome no single agent makes). Every crew run records its
+  own timeline as the workflow runs (`agents/crewtrace.py`), with no model call: per step its
+  start and end (ms since the run started), the typed message it handled and the ones it sent
+  (a summary and the JSON), the shared state it read and wrote, its model calls (or its
+  template, or code), the Analyst's MCP tool calls with the model's arguments and our server's
+  results, and the Verifier's rejections with the rewrites they asked for. Run events show the
+  drill: an agent taken down, its fallback, its request to be brought back, every checkpoint
+  with the state it saved, and the bring-back resuming from one.
+  - *Shared state, as built.* Reads are the evidence every agent works from (`MomentContext`,
+    verified before any model runs), noted as each step reads it. Writes are each step's output
+    on the workflow's state (Agent Framework `State`: `request`, `findings`, `plan`, `drafts`,
+    `verdicts`, `scripts`, `voice`; the recap's Director also writes `evidence`, its focus),
+    which every checkpoint saves. The handoffs themselves stay typed messages on the edges.
+  - *Stored and served.* The API stores the trace with the cached breakdown, recap or drill and
+    serves it by key (`GET /api/breakdowns/<key>/trace`, `GET /api/recaps/<key>/trace`); a POST
+    answer says whether it has one (`traced`). A bring-back continues the drill's trace with a
+    new run; a run resumed after an interruption continues the trace saved on its checkpoint.
+    Breakdowns cached before traces were recorded answer `recorded: false` and the web says
+    "trace not recorded for this cached run". The cache keys did not move (`PIPELINE_VERSION`
+    unchanged); `infra.prewarm` reports such views as "no crew trace", and
+    `--regenerate-degraded` runs them again.
+  - *Public, like the breakdown.* Ids, counts, verified templates with their placeholders,
+    reason codes and error classes; model text only where the breakdown already shows it (the
+    Director's reason, the Analyst's angle) and in tool-call arguments, labelled as the model's.
+    Every time and duration is telemetry and the web labels it so; each step has its span id,
+    and each run its trace id (operation_Id in Application Insights).
+  - *Web.* "Crew trace" on the Producer desk, in the breakdown's head and under the recap opens
+    the timeline (`web/src/crewtrace/`): a lane per step in the graph's order for each run, bars
+    filled by who answered (model, template, code), the drill's events, and the picked step's
+    details.
+  - *Evidence:* `tests/test_crew_trace.py`, `tests/test_api_trace.py`,
+    `web/src/crewtrace/crewtrace.test.tsx` (on a fixture the backend recorded:
+    `uv run python -m agents.crewtrace`).
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
@@ -1465,6 +1523,12 @@ original visual identity.
     default; `web/src/pitchControl/`);
   - vision cone + occlusion (shader);
   - belief ghosts (translucent "where he thought they were");
+  - **his belief map** ([web/src/views/BeliefMap.tsx](../web/src/views/BeliefMap.tsx); teammates'
+    feedback, 2026-10-21): the corner beside his eyes is a disc of where he believes everyone is,
+    around him and attacking up, corrected by each scan as the replay plays; red: the two or
+    three defenders nearest the ball carrier in his belief; green: his likeliest receivers at his
+    decision (pass options he gave at least 0.05); out of his sight now: drawn as remembered.
+    The sim's readout, labelled so; a stitched match keeps the board there;
   - counterfactual ghost path;
   - *M4:* **blind-side alert** (§4.4): the target's token pulses and a thin line points to the
     observer's blind side, with how long he has gone unseen; it clears when he is seen;
@@ -1643,23 +1707,16 @@ original visual identity.
   - Sound ([web/src/sound/](../web/src/sound/), synthesized in code, [CREDITS](CREDITS.md)): a
     low crowd bed that muffles through the beat, a whoosh as each scan of the POV player begins,
     a sting at the "without the look" reveal; all ducked under the narration voice, all off with
-    the Sound switch.
+    the Sound switch. The narration plays through the same AudioContext, made and woken by the tap
+    on the switch: Safari and every iOS browser start an `<audio>` element only from a tap, and a
+    line starts long after it (teammates heard nothing, 2026-10-21). On an iPhone the page plays
+    as media, past the silent switch. A stitched match, its recap and every breakdown opened from
+    it share one switch, on the match's live screen too; until it has been on once it reads "Tap
+    for sound", and a line that could not be spoken says "No voice" beside it.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
     the ring, the sweep and the stamp still show.
-- **Render tiers** ([web/src/quality/](../web/src/quality/), behind `?quality=` until they beat
-  the standard picture): *standard* draws the scene straight to the canvas as above; *medium* adds
-  a post chain (half-float HDR buffer, bloom on the lamps, depth of field through the beat on the
-  broadcast camera only, the head-whip blur, one tone mapping at the end, SMAA) and image-based
-  light from a procedural night-stadium environment (no HDRI download; the grass takes none of
-  it); *high* adds ambient occlusion (GTAO at half resolution) and a soft shadow map from the key
-  floodlight in place of the decal shadows. three.js's own addons (MIT), in a lazy chunk.
-  - Tier from the device (renderer string, memory, phone or not; software renderers and older
-    Intel graphics get standard), `?quality=high|medium|standard|auto`, or the View options
-    switch, in rising precedence. On an automatic tier, play under 45 fps for 2.5 s steps it down.
-  - First person gets no depth of field: the shirt numbers float in front of the stands, and a
-    blur from the scene's depth would blur them with the stands.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
 - *Optional, first in the cut order (§9):* **skeleton data**, the "Skeleton" toggle on the
@@ -1776,6 +1833,11 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `npm run fps` (2026-10-21, Apple M4 Pro, headless): 60 fps capped in every row; with the
       stats loaded on the broadcast camera 57.3 / 60.0 / 60.0 fps (the first run warming up), p95
       16.7–16.8 ms, as offline.
+- [x] *His belief map:* beside his eyes the corner shows his belief, frame by frame (the export's
+      ghost positions), corrected by his scan (`blind_side_run` seed 3: H9 off by 6.1 m at frame
+      55, 0.2 m at 70 with the look, 10.6 m without); red the defenders nearest the carrier, green
+      his likeliest receivers (H9 with the look; H4, H1, H5 without); remembered players dashed.
+      — [web/src/views/beliefMap.test.tsx](../web/src/views/beliefMap.test.tsx) (8 cases).
 - [x] *Key-moment beat:* slow motion starts as the key scan begins and ends by the release, the
       accent holds at the sighting, the run without the look slows with no accent, plans and the
       recap keep their speeds, reduced motion turns it off, the live playhead never jumps inside a
@@ -1788,17 +1850,6 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
-- [x] *Render tiers:* tier detection, link and viewer precedence, features per tier, depth of field
-      only through the beat on the broadcast camera and never under reduced motion, the
-      automatic step-down; each tier holds 60 fps; first load no heavier.
-      — [web/src/quality/quality.test.ts](../web/src/quality/quality.test.ts) (24 cases);
-      `npm run smoke` pages `quality-high`, `quality-high-broadcast`, `phone-quality-medium`;
-      `npm run fps -- --quality high|medium` (2026-10-21, Apple M4 Pro, Metal, headless):
-      1920 × 1080 high 60.0 fps p95 16.7–16.8 ms in every row; medium on a 402 × 874 @ 3 phone
-      profile 60.0 fps (this Mac's GPU, not a phone's). Uncapped at 1080p: standard 200–300 fps,
-      medium 140–160, high ≈ 128, so high costs ≈ 3–5 ms a frame here. Eager JS 467 kB gzipped
-      (469 before: the post passes left the vendor chunk); the tier chunk is 47 kB. Not measured
-      on a laptop iGPU or a real phone.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
@@ -1807,6 +1858,13 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
+- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
+      without the look and its verified line are on screen within 20 s of opening the page, and
+      any viewer action ends the show.
+      — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
+      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
+      2026-10-21)
 
 ## 8. Platform and deploy
 - **Budget.** The organisers provide no Azure credit (rules checked 2026-10-19), so everything runs
@@ -1913,13 +1971,6 @@ Cut by Bowen on 2026-10-20: no real data or footage anywhere, including the demo
   Central US, HTTPS on its `web.core.windows.net` endpoint, `index.html` also as the error page
   so client routes work). Uploads go through Entra ID roles (`--auth-mode login`), not account
   keys; the API allows the site's origin only.
-  - *Compression and caching (2026-10-21):* Storage sends each blob as stored and never
-    compresses, so the site sent 1.6 MB of JS raw. `infra/upload_web.sh` uploads a staged build
-    (`web/scripts/stage.mjs`): text gzipped (`Content-Encoding: gzip`), hashed assets
-    `max-age=31536000, immutable`, `data/` and `models/` `max-age=300`, `index.html` last with
-    `no-cache`. No Azure setting changes: these are blob properties set at upload. Cold loads
-    before and after, laptop and phone, plain and on Fast 3G with a 4× CPU slowdown:
-    [eval/reports/web_load.md](../eval/reports/web_load.md) (`cd web && npm run loadperf`).
   - *Why not Static Web Apps:* Bowen decided on 2026-10-20. Static Web Apps runs only in West US
     2, Central US, East US 2, West Europe and East Asia, and the Azure for Students policy allows
     none of them; creating one was refused. CLAUDE.md hard rule 4 says the same.
