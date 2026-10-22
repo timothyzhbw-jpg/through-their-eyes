@@ -46,7 +46,9 @@ The story shots are staged in Blender and labelled "DRAMATISATION · RENDERED IN
 every Blender beat is a placeholder card of the same length until approved finals land; `story: "app"`
 swaps in an in-engine telling of the story, the same length); the hero shots from the simulation carry "RENDERED IN BLENDER FROM OUR
 SIMULATION DATA" and the cinematic-mode shots "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA".
-No frame is blurred: hard cuts, flashes or a plain fade only; the rewind is colour split,
+No frame is blurred and nothing flashes: hard cuts or a plain fade only (the report step fails the
+render on more than three flashes in any second or any red flash, WCAG 2.3.1, measured on the
+encoded film); the rewind is colour split,
 noise and scanlines; the cine shots render without motion blur or peripheral blur. Freeze-frame
 name cards hold a sharp frame under a one-stop scrim; ramps drop frames, slow motion comes only
 from rendered frames. While a player scans, music and crowd drop about 10 dB under an 800 Hz

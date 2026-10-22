@@ -752,11 +752,22 @@ async function stepReport(ctx) {
     used: title.used,
     missing: title.missing,
   }));
-  writeFileSync(out, renderReport({ timeline, spoken, shown, warnings, loudness, duration }));
+  // Photosensitivity (WCAG 2.3.1): flashes per second on the encoded film, and any red flash.
+  const flashes = await filmFlashes(ctx, finalMp4);
+  const flashLine =
+    `Flashes (WCAG 2.3.1, whole frame and each quarter): at most ${flashes.general.maxPerSecond} in any 1 s ` +
+    `(limit 3)${flashes.general.at != null ? `, at ${flashes.general.at.toFixed(2)} s` : ""}; ` +
+    `${flashes.general.flashes} in all; saturated-red flashes: ${flashes.red.flashes} (limit 0).`;
+  writeFileSync(out, renderReport({ timeline, spoken, shown, warnings, loudness, duration }).replace(/\n## Timeline/, `\n${flashLine}\n\n## Timeline`));
   storeHash(out, hash);
   console.log(
     `  ${duration.toFixed(2)}s, ${loudness.integrated.toFixed(1)} LUFS, true peak ${loudness.truePeak.toFixed(1)} dBFS`,
   );
+  console.log(`  flashes: max ${flashes.general.maxPerSecond}/s, red ${flashes.red.flashes}`);
+  if (flashes.general.maxPerSecond > 3 || flashes.red.flashes > 0) {
+    rmSync(`${out}.hash`, { force: true });
+    throw new Error(`out/video/trailer.mp4 fails the photosensitivity guard: ${flashLine}`);
+  }
   if (encoded >= failAt) {
     rmSync(`${out}.hash`, { force: true }); // run the check again next time
     throw new Error(`out/video/trailer.mp4 is ${encoded.toFixed(2)} s, at or over the ${failAt} s limit (output.fail_at_s)`);
@@ -986,6 +997,22 @@ function titleUses(spec, id) {
     }
   }
   return uses.join(", ") || "unused";
+}
+
+/** Decode the film to tiny frames and count its flashes (lib/flashes.mjs). */
+async function filmFlashes(ctx, file) {
+  const { spawnSync } = await import("node:child_process");
+  const { measureFlashes } = await import("./lib/flashes.mjs");
+  const width = 32;
+  const height = 18;
+  const fps = ctx.spec.output.fps;
+  const res = spawnSync(
+    ctx.ffmpeg,
+    ["-v", "error", "-i", file, "-vf", `fps=${fps},scale=${width}:${height}:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+    { maxBuffer: 256 * 1024 * 1024 },
+  );
+  if (res.status !== 0) throw new Error(`could not decode ${file} for the flash check`);
+  return measureFlashes(res.stdout, { width, height, fps });
 }
 
 async function probe(ffmpeg, file) {

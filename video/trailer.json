@@ -1723,7 +1723,6 @@
       },
       "letterbox": 2.39,
       "fx": [
-        "flash-in",
         "glue"
       ],
       "vo": [
@@ -1974,8 +1973,7 @@
         }
       ],
       "out": {
-        "type": "flash",
-        "dur": 0.12
+        "type": "cut"
       }
     },
     {
@@ -2192,8 +2190,7 @@
         ]
       },
       "out": {
-        "type": "flash",
-        "dur": 0.12
+        "type": "cut"
       },
       "sfx": []
     },
@@ -2213,8 +2210,7 @@
       ],
       "sfx": [],
       "out": {
-        "type": "flash",
-        "dur": 0.12
+        "type": "cut"
       }
     },
     {
@@ -2274,8 +2270,7 @@
         }
       ],
       "out": {
-        "type": "flash",
-        "dur": 0.12
+        "type": "cut"
       }
     },
     {
@@ -2594,8 +2589,7 @@
       },
       "overlays": [],
       "out": {
-        "type": "flash",
-        "dur": 0.12
+        "type": "cut"
       }
     },
     {
@@ -2687,8 +2681,7 @@
         "id": "card-every-touch"
       },
       "out": {
-        "type": "flash",
-        "dur": 0.12
+        "type": "cut"
       }
     },
     {
@@ -2707,8 +2700,7 @@
       ],
       "sfx": [],
       "out": {
-        "type": "flash",
-        "dur": 0.15
+        "type": "cut"
       }
     },
     {

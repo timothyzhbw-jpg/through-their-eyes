@@ -170,20 +170,6 @@ html.alpha #stage {
   }
 }
 
-@keyframes impact-flash {
-  0% {
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.88;
-  }
-  55% {
-    opacity: 0.88;
-  }
-  100% {
-    opacity: 0;
-  }
-}
 
 @keyframes fade-out {
   from {
@@ -399,16 +385,6 @@ html.alpha #stage {
   animation-delay: var(--at);
 }
 
-.fx-flash {
-  position: absolute;
-  inset: 0;
-  background: #fff;
-  z-index: 8;
-  pointer-events: none;
-  opacity: 0;
-  animation: impact-flash 0.09s linear both;
-  animation-delay: var(--at);
-}
 
 .fx-line {
   animation: line-in 0.22s var(--ease) both;
@@ -707,10 +683,6 @@ html.alpha #stage {
 
 .mark,
 .ring,
-.mini-flash {
-  position: absolute;
-  pointer-events: none;
-}
 
 .mark {
   width: 64px;
@@ -742,12 +714,6 @@ html.alpha #stage {
   animation-delay: var(--at);
 }
 
-.mini-flash {
-  inset: -20% -30%;
-  background: #fff;
-  animation: impact-flash 0.09s linear both;
-  animation-delay: var(--at);
-}
 
 .refuted {
   gap: 8px;
@@ -1324,11 +1290,6 @@ html.spec #stage {
   margin: -55px 0 0 -55px;
 }
 
-.stamp-box .mini-flash {
-  inset: -60%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.85), transparent 68%);
-}
 
 /* --- caption: burned-in voice-over text ------------------------------------- */
 

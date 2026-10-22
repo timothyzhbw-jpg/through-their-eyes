@@ -173,12 +173,6 @@
     return root;
   }
 
-  function flash(stage, at) {
-    const node = el("div", "fx-flash");
-    setAt(node, at);
-    stage.append(node);
-  }
-
   function kinetic(params, options = {}) {
     const align = ALIGNS.has(params.align) ? params.align : "center";
     const stage = prepare(null, align);
@@ -227,7 +221,6 @@
       setAt(head, at);
       row.append(head);
       stack.append(row);
-      if (text) flash(stage, at + 0.11);
     });
 
     const rule = el("i", "underline");
@@ -278,7 +271,6 @@
     bracket.append(row);
     wrap.append(bracket);
     stage.append(wrap);
-    if (items.length) flash(stage, 0.24);
   }
 
   function verified(params) {
@@ -309,11 +301,9 @@
       const mark = el("span", "mark");
       setAt(mark, stampAt);
       mark.append(checkMark());
-      const burst = el("i", "mini-flash");
-      setAt(burst, stampAt + 0.12);
       // The stamp lands after the line, never over the number, so the value stays readable.
       const stampBox = el("span", "stamp-box");
-      stampBox.append(ring, mark, burst);
+      stampBox.append(ring, mark);
       line.append(hold);
       if (item && item.after) line.append(el("span", "v-after", item.after));
       line.append(stampBox);
@@ -350,7 +340,6 @@
     setAt(cross, 0.5);
     cross.append(crossMark());
     stage.append(cross);
-    flash(stage, 0.62);
   }
 
   function lineup(params) {
@@ -395,7 +384,6 @@
     setAt(sub, 0.9);
     copy.append(title, sub);
     stage.append(copy);
-    flash(stage, 0.36);
   }
 
   function subboard(params) {

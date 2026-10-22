@@ -229,7 +229,7 @@ it as `<file>.hash`, has not changed. `--force` ignores the hashes.
 | `sfx` | synthesize each effect the beats name | `<out>/sfx/<name>.wav` |
 | `edit` | one silent intermediate per beat, then join, burn in the captions, mix, normalise and mux | `<out>/beats/<id>.mp4`, `<out>/captions/<id>.mov`, `<out>/captions.json`, `<out>/mix.wav`, and `out/video/trailer.mp4` |
 | `sheet` | one frame from the middle of each beat, four columns | `out/video/trailer_contact.jpg` |
-| `report` | the timeline, the spoken and shown lines, fallbacks, warnings, loudness | `out/video/trailer_report.md` |
+| `report` | the timeline, the spoken and shown lines, fallbacks, warnings, loudness; fails on a film of `output.fail_at_s` or more, or on more than three flashes in any second or any saturated-red flash (WCAG 2.3.1, `lib/flashes.mjs`, measured on the encoded film) | `out/video/trailer_report.md` |
 
 `<out>` is `--out`, default `out/video/trailer/` at the repo root. The finished film, the contact
 sheet and the report always land in `out/video/`, next to the capture kit. `--step a,b` runs only
