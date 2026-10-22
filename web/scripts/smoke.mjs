@@ -116,7 +116,10 @@ const PAGES = [
     name: "phone-quality-medium",
     path: "?intro=0&quality=medium",
     device: PHONE,
-    check: (p) => phone(p, (q) => tier(q, "medium")),
+    // The tier and the phone layout. Not the live stream: where the tier's chunk loads slowly (a
+    // software renderer) the stream has reached the hero moment and the cold-load show has taken
+    // over by then (SPEC 2). phone-hero checks the stream on a phone.
+    check: (p) => phone(p, (q) => tier(q, "medium"), { live: false }),
   },
   // No head-turn blur unless the viewer turns it on, and none right after a camera cut, even then
   // (beat/cut.ts).
