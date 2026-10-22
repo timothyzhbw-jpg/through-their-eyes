@@ -638,7 +638,7 @@ function BeliefGhosts({
       </lineSegments>
       {tagMap && (
         <mesh ref={tag} rotation-x={lie} renderOrder={LAYER.name} visible={false}>
-          <planeGeometry args={[tagH * TAG_ASPECT, tagH]} />
+          <planeGeometry args={[tagH * labelAspect(tagMap), tagH]} />
           <meshBasicMaterial map={tagMap} opacity={0} {...flat} />
         </mesh>
       )}
