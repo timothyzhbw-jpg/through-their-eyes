@@ -283,7 +283,8 @@ def test_a_match_with_a_goal_leads_its_recap_with_it():
     rc = RecapContext.build("match-7", match, cards, heroes)
     r = _recap(rc, personas=("casual", "audio_description"), languages=("en",))
     assert r.score == {"home": 1, "away": 0} and r.tier in ("excited", "clutch")
-    assert "goal" in r.moments[0].tags
+    # The recap lists its moments in match order; the goal is the one it ranks first.
+    assert "goal" in min(r.moments, key=lambda m: m.rank).tags
     for script in r.scripts:
         texts = [line.text for line in script.payload.lines]
         assert texts[0] == "Full time: Home 1, Away 0." and "H9 scored." in texts
