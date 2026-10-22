@@ -150,8 +150,8 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
   deliberately broken lines, none aired with the Verifier; 2,823 would have without it, 888 of
   them false.[^crew-evidence]
 - **Audiences in parallel.** Each audience and language is its own narration call, run at once:
-  ten scripts take about as long as one (3.5 s against 3.4 s), though the whole crew is not
-  faster than one agent.[^crew-evidence]
+  ten scripts take about as long as one (about 3.5 s), though the whole crew is not faster than
+  one agent.[^crew-evidence]
 - **Auditable per agent.** Every breakdown carries its crew trace: each step's input and output,
   the state it read and wrote, the Analyst's tool calls, the verdicts, and whether each part came
   from the model or a template. **Crew trace** in the app shows it as a timeline. Every aired line

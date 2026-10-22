@@ -130,14 +130,16 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   11.7k tokens). The Analyst, whose findings every later step reads, cost the crew more: 11.0
   requests (about 21.6k tokens), because the steps after it run again, against the same 1.7
   requests and about 11.7k tokens for the single agent. Offline at Foundry's median latencies,
-  the Telestrator is back in 3.7 s and the Analyst in 8.0 s; the single agent's only way back is
-  its whole call, 9.5 s, and under the deployed 8 s step timeout it never comes back ([crew_evidence](../eval/reports/crew_evidence.md),
-  PR #195, a scripted model through the real workflow).
+  the Telestrator is back in about 4 s and the Analyst in about 8 s; the single agent's only way
+  back is its whole call, about 9.5 s, and under the deployed 8 s step timeout it never comes
+  back ([crew_evidence](../eval/reports/crew_evidence.md), PR #195, a scripted model through the
+  real workflow; its wall times move by up to half a second from run to run, its counts do
+  not).
 - **Steps that fit the deployed timeout.** The API gives each model step 8 s. The eval allowed
   30 s, and 0 of 66 crew agent runs took longer than 8 s, against 6 of 6 single-agent runs: under
   the deployed timeout the single agent would have fallen back to its templates on every
   moment. Offline, under that timeout its call times out twice and the breakdown airs on
-  templates after 16.3 s (crew_evidence).
+  templates after about 16 s (crew_evidence).
 - **A Verifier per step, and a rewrite sent to the line's author.** A rejected line goes back to
   the voice that wrote it, told why; the other lines and the plan stand
   ([agents/workflow.py](../agents/workflow.py)). Of 2,837 deliberately broken lines (a number or
@@ -147,9 +149,9 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   errors (crew_evidence).
 - **Audiences in parallel.** Narration drafts every persona × language script at once, and
   rewrites only the scripts that broke a rule. Offline at Foundry's median latencies, narration
-  took 3.5 s for ten scripts and 3.4 s for one; one call at a time the breakdown would take
-  21.7 s instead of 8.6 s. It is still not faster than one agent: 8.6 s against 9.2 s there,
-  13.8 s against 14.4 s on Foundry (crew_evidence, crew_vs_single).
+  takes about 3.5 s for ten scripts as for one; one call at a time the breakdown would take
+  about 22 s instead of about 9 s. It is still not faster than one agent: about 9 s either way
+  offline, 13.8 s against 14.4 s on Foundry (crew_evidence, crew_vs_single).
 - **An audit trail per agent.** Every breakdown carries its trace: each step's typed input and
   output, the state it read and wrote, the Analyst's MCP calls, the Verifier's verdicts, and
   whether a line came from the model or a template. The **Crew trace** shows it in the app, and
