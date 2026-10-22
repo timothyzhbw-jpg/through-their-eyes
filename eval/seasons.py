@@ -440,6 +440,14 @@ def realism_section(seasons: list[Results], roots: list[int]) -> list[str]:
 # --- running it -----------------------------------------------------------------------------------
 
 
+def report_name(roots: list[int], matches: int, default: bool) -> str:
+    """seasons_intervals.md, or with the roots and size for another run. Not eval.season
+    --seasons's seasons_<first>-<last>.md, which shows the same caches side by side."""
+    if default:
+        return "seasons_intervals.md"
+    return f"seasons_intervals_{roots[0]}-{roots[-1]}_{matches}.md"
+
+
 def _cache(root: int, matches: int) -> Path:
     return Path("out") / f"season_{root}_{matches}.pickle"  # the name eval/season.py writes
 
@@ -471,8 +479,7 @@ def main() -> None:
     report = render(seasons, same, roots)
     REPORTS.mkdir(exist_ok=True)
     default = (args.seasons, args.first_root, args.matches) == (len(ROOTS), ROOTS[0], MATCHES)
-    name = "seasons.md" if default else f"seasons_{roots[0]}-{roots[-1]}_{args.matches}.md"
-    path = REPORTS / name
+    path = REPORTS / report_name(roots, args.matches, default)
     path.write_text(report)
     print(report.split("\n## Realism")[0])
     print(f"\nwrote {path} in {time.time() - t0:.0f} s on {args.workers} workers")

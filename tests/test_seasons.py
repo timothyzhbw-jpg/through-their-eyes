@@ -42,8 +42,11 @@ def test_the_roots_are_fresh_and_their_seasons_share_no_match():
     assert sum(map(len, drawn)) == len(set().union(*drawn))
 
 
-def test_a_season_is_cached_under_season_pys_name():
+def test_a_season_is_cached_under_season_pys_name_and_reported_under_its_own():
     assert seasons._cache(2027, 380) == Path("out") / "season_2027_380.pickle"
+    # eval.season --seasons writes seasons_<first>-<last>[_<n>].md from the same caches.
+    assert seasons.report_name([2027, 2031], 380, True) == "seasons_intervals.md"
+    assert seasons.report_name([2027, 2028], 2, False) == "seasons_intervals_2027-2028_2.md"
 
 
 def _season(small, n, restart=None):
@@ -75,3 +78,14 @@ def test_the_report_has_every_section_within_across_and_pooled(small):
     flip = next(line for line in report.splitlines() if line.startswith("| Hero `blind_side_run`"))
     assert "100.0% (100.0 to 100.0%)" in flip and "6/6 = 100.0%" in flip
     assert "2/2 = 100.0%" in report  # determinism, pooled over the seasons' re-runs
+
+
+def test_season_md_says_goals_come_from_the_shooting_hero_once_the_plan_scores(small):
+    from eval.season import render
+
+    quiet = render([small], {0: True})
+    assert "match-1's plan has none yet" in quiet
+    scored = copy.deepcopy(small)
+    scored["goals"] = 1
+    text = render([scored], {0: True})
+    assert "built to score with its look" in text and "has none yet" not in text

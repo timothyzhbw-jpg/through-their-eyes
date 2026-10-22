@@ -148,7 +148,8 @@ _Fill in as they come to exist._
 - `uv run python -m eval.seasons` — `eval.season` on 5 independent seasons (roots 2027–2031,
   5 × 380 matches): every metric per season with its own interval, across seasons (t-interval)
   and pooled; about 30 CPU-hours (`--workers N`; a cloud session runs it), or `--from-cache`
-  after `eval.season --season-seed 2027 --seasons 5`; writes `eval/reports/seasons.md`
+  after `eval.season --season-seed 2027 --seasons 5`; writes
+  `eval/reports/seasons_intervals.md`
 - `uv run python -m eval.match_stats` — match statistics (SPEC 3.1, 9): passes, possession
   changes, team possessions and shots per stitched match and per 90 min of play, on held-out
   match seeds 100–119, about 30 s on all cores; writes `eval/reports/match_stats.md`

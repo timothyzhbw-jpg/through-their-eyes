@@ -335,11 +335,17 @@ def render(
     for k in kinds:
         values = per_match(lambda r, k=k: r["restarts"][k])
         lines.append(f"| Restarts: {RESTART_NAMES.get(k, k)} | {_mean(values)} |")
+    goals = (
+        "Goals come only from a shooting hero, whose scenario is built to score with its look, so "
+        "they are not a measured scoring rate."
+        if any(r["goals"] for r in results)
+        else "Goals come only from a shooting hero; match-1's plan has none yet, so the count is "
+        "zero by construction, not a measurement."
+    )
     lines += [
         "",
-        "Goals come only from a shooting hero; match-1's plan has none yet, so the count is zero "
-        "by construction, not a measurement. Restarts are counted after the kick-off: a cut "
-        "follows every hero and every passage that reached its cap in play.",
+        f"{goals} Restarts are counted after the kick-off: a cut follows every hero and every "
+        "passage that reached its cap in play.",
         "",
         "## 1. Moments",
         "",
