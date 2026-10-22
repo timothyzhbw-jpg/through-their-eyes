@@ -3512,28 +3512,26 @@ optgroup {
 }
 
 /* ---------- motion ---------- */
+/* Cards and captions rise and fade in, sharp from the first frame: no blur-in (Bowen: blur is
+   uncomfortable; styles.test.ts keeps keyframes blur-free). */
 @keyframes tt-rise {
   from {
     opacity: 0;
     transform: translateY(14px);
-    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-cap {
   from {
     opacity: 0;
     transform: translateY(10px);
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 @keyframes tt-beat {
