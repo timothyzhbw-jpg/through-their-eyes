@@ -598,10 +598,14 @@ function fxFilter(name, w, h, fps) {
   // The app's screens a little brighter in the cut: mid-grey up about 0.4 EV (sRGB 0.5 -> 0.57),
   // black and white pinned, so no detail is lost and nothing flashes.
   if (name === "lift") return "curves=all='0/0 0.5/0.57 1/1'";
+  // A high camera sees the grass a deeper, red-starved green than the low shots around it:
+  // a little of the green into red (and blue) brings the pitch back to their colour.
+  if (name === "warm") return "colorchannelmixer=rr=1:rg=0.12:gg=0.96:bg=0.04:bb=1";
   // The shared finish on every 3D shot (the Blender clips and the cine captures, not the app's
-  // screens): a light vignette, blacks lifted to about (5, 8, 6) so they never sit at 0, fine grain.
+  // screens): a light vignette, blacks lifted to about (5, 8, 6) so they never sit at 0, whites
+  // rolled off to about 0.93 so an emissive ring or a floodlight never clips, fine grain.
   if (name === "glue") {
-    return "vignette=angle=PI/7,colorlevels=romin=0.020:gomin=0.031:bomin=0.024,noise=alls=5:allf=t+u";
+    return "vignette=angle=PI/7,colorlevels=romin=0.020:gomin=0.031:bomin=0.024,curves=all='0/0 0.8/0.8 1/0.93',noise=alls=5:allf=t+u";
   }
   return "";
 }

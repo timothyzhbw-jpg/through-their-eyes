@@ -202,29 +202,27 @@
       "shot": {
         "id": "press-low",
         "run": "factual",
-        "duration": 3.0,
+        "duration": 3.9,
         "time": [
           {
             "t": 0,
             "frame": 48
           },
           {
-            "t": 3.0,
-            "frame": 70
+            "t": 3.9,
+            "frame": 76.6
           }
         ],
         "camera": [
           {
             "t": 0,
             "eye": {
-              "at": "player",
-              "id": "H4",
-              "offset": [
-                -2.6,
-                -1.0,
+              "at": "world",
+              "p": [
+                -39.4,
+                -14.2,
                 0.9
-              ],
-              "axes": "body"
+              ]
             },
             "look": {
               "at": "player",
@@ -238,16 +236,57 @@
             "fov": 36
           },
           {
-            "t": 3.0,
+            "t": 1.7,
             "eye": {
+              "at": "world",
+              "p": [
+                -39.55,
+                -14.55,
+                0.97
+              ]
+            },
+            "look": {
               "at": "player",
-              "id": "H4",
+              "id": "A11",
               "offset": [
-                -3.4,
-                -1.6,
-                1.1
-              ],
-              "axes": "body"
+                0,
+                0,
+                1.3
+              ]
+            },
+            "fov": 37,
+            "ease": "inOut"
+          },
+          {
+            "t": 2.6,
+            "eye": {
+              "at": "world",
+              "p": [
+                -39.7,
+                -14.9,
+                1.05
+              ]
+            },
+            "look": {
+              "at": "ball",
+              "offset": [
+                0,
+                0,
+                0.6
+              ]
+            },
+            "fov": 38,
+            "ease": "inOut"
+          },
+          {
+            "t": 3.9,
+            "eye": {
+              "at": "world",
+              "p": [
+                -39.9,
+                -15.3,
+                1.15
+              ]
             },
             "look": {
               "at": "ball",
@@ -274,13 +313,10 @@
           "aperture": 0.0015,
           "maxBlur": 0.004
         },
-        "bloom": {
-          "strength": 0.8,
-          "radius": 0.6,
-          "threshold": 0.75
-        },
+        "bloom": null,
         "rings": true,
-        "motionBlur": false
+        "motionBlur": false,
+        "smooth": 0.3
       }
     },
     "press-cf": {
@@ -362,13 +398,10 @@
           "aperture": 0.001,
           "maxBlur": 0.004
         },
-        "bloom": {
-          "strength": 0.7,
-          "radius": 0.6,
-          "threshold": 0.8
-        },
+        "bloom": null,
         "rings": true,
-        "motionBlur": false
+        "motionBlur": false,
+        "exposure": 1.35
       }
     },
     "pov-match": {
@@ -455,11 +488,7 @@
           45,
           160
         ],
-        "bloom": {
-          "strength": 0.7,
-          "radius": 0.6,
-          "threshold": 0.8
-        },
+        "bloom": null,
         "motionBlur": false,
         "rings": true
       }
@@ -500,11 +529,7 @@
           45,
           160
         ],
-        "bloom": {
-          "strength": 0.7,
-          "radius": 0.6,
-          "threshold": 0.8
-        },
+        "bloom": null,
         "motionBlur": false,
         "rings": true
       }
@@ -545,11 +570,7 @@
           45,
           160
         ],
-        "bloom": {
-          "strength": 0.7,
-          "radius": 0.6,
-          "threshold": 0.8
-        },
+        "bloom": null,
         "motionBlur": false,
         "rings": true
       }
@@ -587,11 +608,7 @@
             "fov": 38
           }
         ],
-        "bloom": {
-          "strength": 0.8,
-          "radius": 0.6,
-          "threshold": 0.75
-        },
+        "bloom": null,
         "rings": true,
         "motionBlur": false
       }
@@ -755,11 +772,7 @@
         "rings": true,
         "labels": false,
         "motionBlur": false,
-        "bloom": {
-          "strength": 0.6,
-          "radius": 0.5,
-          "threshold": 0.85
-        },
+        "bloom": null,
         "fog": [
           60,
           220
@@ -877,11 +890,7 @@
         "rings": true,
         "labels": true,
         "motionBlur": false,
-        "bloom": {
-          "strength": 0.8,
-          "radius": 0.6,
-          "threshold": 0.75
-        },
+        "bloom": null,
         "fog": [
           60,
           220
@@ -973,11 +982,7 @@
         "rings": true,
         "labels": true,
         "motionBlur": false,
-        "bloom": {
-          "strength": 0.8,
-          "radius": 0.6,
-          "threshold": 0.75
-        },
+        "bloom": null,
         "fog": [
           60,
           220
@@ -2960,7 +2965,7 @@
       "picture": {
         "src": "cine",
         "id": "press-low",
-        "in": 1.2
+        "in": 2.1
       },
       "grade": "night",
       "letterbox": 2.39,
@@ -2993,6 +2998,7 @@
       "grade": "danger",
       "letterbox": 2.39,
       "fx": [
+        "warm",
         "glue"
       ],
       "freeze": {
@@ -3056,7 +3062,8 @@
         {
           "id": "vo34",
           "at": 0.2,
-          "text": "At a corner, it's the marker who has to look."
+          "text": "At a corner, it's the marker who has to look.",
+          "caption": "top"
         }
       ],
       "sfx": [],

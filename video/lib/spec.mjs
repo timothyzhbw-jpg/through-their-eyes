@@ -10,7 +10,7 @@ import { SFX_NAMES } from "./sfx.mjs";
 import { estimateSpeechSeconds } from "./vo.mjs";
 
 const GRADES = new Set(["none", "night", "cool", "warm", "bleach", "mono", "danger"]);
-const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue", "lift"]);
+const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue", "lift", "warm"]);
 const FITS = new Set(["cover", "pad", "contain"]);
 const TRANSITIONS = new Set(["cut", "fade", "flash", "dip", "whip", "glitch"]);
 const CROPS = new Set(["pov", "tactical", "stage"]);
