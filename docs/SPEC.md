@@ -1609,6 +1609,29 @@ Application Insights.
   - *Evidence:* `tests/test_crew_trace.py`, `tests/test_api_trace.py`,
     `web/src/crewtrace/crewtrace.test.tsx` (on a fixture the backend recorded:
     `uv run python -m agents.crewtrace`).
+- **Why a crew, measured** (2026-10-22, Best Multi-Agent System; `eval/crew_evidence.py`,
+  [`eval/reports/crew_evidence.md`](../eval/reports/crew_evidence.md)). crew_vs_single found no
+  narration-quality win of the crew over one agent, so the case rests on what the architecture
+  provides, measured offline with a scripted model that answers every agent with its template's
+  choices through Agent Framework, on every hero moment the site serves × every persona and
+  language:
+  - *Fault tolerance and recovery.* With any one agent down, every script airs, verified, with
+    the other three roles from the model (the single agent keeps none); bringing the agent back
+    re-runs only the steps that read its output and gives the fault-free breakdown.
+  - *Verification by construction.* No free-text field accepts a number, every number aired is a
+    verified slot's value, and perturbed lines (a number or player the model writes, an unbacked
+    term, a broken placeholder, an unknown or forbidden claim, a tampered claim) never air with
+    the Verifier; without it they all do. The Foundry drafts cached by crew_vs_single
+    (`eval/fixtures/crew_vs_single_cache.json`) are re-checked by today's Verifier.
+  - *Auditability.* Every aired line traces to verified claims with an audit record, the voice
+    call that chose it, the Verifier round that passed it and its voice cue. Found: the trace
+    keeps 4,000 characters of a tool result (`MAX_RESULT`), which cuts the Analyst's
+    `list_claims` result on the larger moments.
+  - *Limits, measured.* The lanes run at once and more audiences cost requests, not time, but the
+    crew is not faster than one agent's call; its short steps are what fit the 8 s step timeout.
+    Found: in a model outage the API caches the all-template run under the model's key and labels
+    it `live`, then `cached`.
+  - *Tests:* `tests/test_crew_evidence.py`.
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
