@@ -50,8 +50,8 @@ const { defaultBrowserType: _, ...PHONE } = devices["iPhone 17"];
 const { defaultBrowserType: _se, ...PHONE_320 } = devices["iPhone SE"]; // 320 px
 const { defaultBrowserType: _mini, ...PHONE_375 } = devices["iPhone 13 Mini"]; // 375 px
 
-/** The README's tour for judges, and the pages around it. `intro=0` skips the lineup card, which
- * the two lineup pages open and close as a visitor does. */
+/** The README's tour for judges, and the pages around it. `intro=0` skips the intro card, which
+ * the two intro pages open and close as a visitor does. */
 const PAGES = [
   { name: "hero", path: "?autoplay=0&intro=0", check: (p) => hero(p) },
   {
@@ -63,12 +63,12 @@ const PAGES = [
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
-  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Just watch", hero) },
   { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
     path: "?match=match-1",
-    check: (p, shoot) => lineup(p, shoot, "Start watching", match),
+    check: (p, shoot) => lineup(p, shoot, "Start", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
   { name: "link-eyes", path: "?play=eyes", check: takeEyes },
@@ -86,6 +86,13 @@ const PAGES = [
     path: "?play=eyes",
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
+  },
+  { name: "link-yourcall", path: "?play=yourcall", check: (p, shoot) => yourCall(p, shoot) },
+  {
+    name: "phone-375-yourcall",
+    path: "?play=yourcall",
+    device: PHONE_375,
+    check: (p, shoot) => phone(p, (q) => yourCall(q, shoot), { live: false }),
   },
   { name: "link-steps", path: "?play=steps", check: scanSteps },
   { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
@@ -161,6 +168,13 @@ const PAGES = [
     },
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
+  { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
+  {
+    name: "phone-375-quick-tour",
+    path: "?tour=quick",
+    device: PHONE_375,
+    check: (p, shoot) => quickTour(p, shoot),
+  },
   {
     name: "tour-recap",
     path: "?match=match-1&play=recap&tour=recap",
@@ -564,6 +578,26 @@ async function takeEyes(page) {
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
+/** `?play=yourcall`: Your call (SPEC 7). A pick, then the reveal: why it went this way (what he
+ * had seen, how his picture rated the call), what it led to, then each beat to the comparison. */
+async function yourCall(page, shoot = async () => {}) {
+  await see(page.getByRole("region", { name: "Your call" }), "Your call");
+  const markers = page.getByRole("group", { name: /^Options of / }).getByRole("button");
+  await see(markers.first(), "Your call's markers");
+  await page
+    .getByRole("button", { name: /^Pass to / })
+    .first()
+    .click();
+  await see(page.getByRole("list", { name: "Reveal" }), "the reveal's steps");
+  await see(page.locator('dl[aria-label="Why it went this way"]'), "why it went this way");
+  await see(page.getByText("What it led to in the sim"), "what it led to");
+  await shoot("why");
+  for (const name of ["See the truth", "What he did", "Compare"]) {
+    await page.getByRole("button", { name, exact: true }).click();
+  }
+  await see(page.getByRole("button", { name: "Try another call" }), "the comparison");
+}
+
 /** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
  * frozen with its verified lines, the potential passes, then his decision with everything but two
  * players dimmed. */
@@ -593,56 +627,140 @@ async function recap(page, shoot) {
   await page.waitForTimeout(SETTLE);
 }
 
-/** A cold load with no click (SPEC 2, 7): the lineup card closes by itself, the stream plays, and
- * within about 20 s of opening the page the run without the look is on screen with its line.
- * The 20 s is for a viewer's machine. The app's clock steps at most 0.1 s a frame (session.ts
- * `startClock`), so where WebGL is drawn in software, as on a CI runner (SwiftShader, about 0.5 s
- * a frame), the show plays slower than the wall clock: there the check is only that a cold load
- * gets there, and the time it took is printed. */
+/** A cold load (SPEC 2, 7): the intro card waits for the viewer, with nothing playing under it;
+ * Start opens the quick tour on the look, and its next step, within about 20 s of Start, puts the
+ * run without the look on screen with its line. The 20 s is for a viewer's machine. The app's
+ * clock steps at most 0.1 s a frame (session.ts `startClock`), so where WebGL is drawn in software,
+ * as on a CI runner (SwiftShader, about 0.5 s a frame), the look plays slower than the wall clock:
+ * there the check is only that it gets there, and the time it took is printed. */
 const COLD_LOAD_S = process.env.CI ? 120 : 22;
+const CARD_WAITS_MS = 7000; // longer than the old card's 5 s countdown
+const LOOK_S = 8; // a viewer watches the look before pressing Next
 
 async function coldLoad(page, shoot) {
-  const opened = Date.now();
+  const card = page.getByRole("dialog");
+  await see(card, "the intro card");
+  await page.waitForTimeout(CARD_WAITS_MS);
+  if (!(await card.isVisible())) throw new Error("expected the intro card to wait for the viewer");
+  const clock = (await page.locator(".transport .clock").first().textContent()) ?? "";
+  if (!/frame 0\b/.test(clock)) {
+    throw new Error(`expected the picture to rest on the first frame under the card: "${clock}"`);
+  }
+  await card.getByRole("button", { name: "Start", exact: true }).click();
+  const started = Date.now();
+  const tourCard = page.getByRole("dialog").filter({ hasText: /^Quick tour · 1 of / });
+  await see(tourCard, "the quick tour's first step");
+  await page.waitForTimeout(LOOK_S * 1000);
+  await tourCard.getByRole("button", { name: "Next" }).click();
   const without = page
     .getByRole("group", { name: "Run" })
     .getByRole("button", { name: "Without the look", pressed: true });
   try {
     await without.waitFor({ timeout: COLD_LOAD_S * 1000 });
   } catch {
-    throw new Error(
-      `expected the run without the look on screen within ${COLD_LOAD_S} s of a cold load`,
-    );
+    throw new Error(`expected the run without the look on screen within ${COLD_LOAD_S} s of Start`);
   }
-  const took = Math.round((Date.now() - opened) / 1000);
-  console.log(`     the run without the look after ${took} s (deadline ${COLD_LOAD_S} s)`);
+  const took = Math.round((Date.now() - started) / 1000);
+  console.log(`     the run without the look ${took} s after Start (deadline ${COLD_LOAD_S} s)`);
+  // The quick tour's card carries the step's verified lines (the caption stands down).
   await see(
-    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
-    'the "Without that look" line',
+    page.locator(".tour-card .tour-lines").filter({ hasText: /without that look/i }),
+    'the "Without that look" line in the tour card',
   );
   await shoot(`at-${took}s`);
 }
 
-/** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
- * spot: shown, closed with `button` ("Start watching" or "Skip"), then the page's main view. */
+/** The quick tour (SPEC 7): four steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, then Your call, which Done leaves open. */
+async function quickTour(page, shoot) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 4/ });
+  const expect = [
+    ["Watch the look", () => mainView(page, "eyes")],
+    [
+      "Now remove it",
+      () =>
+        see(
+          page.getByRole("group", { name: "Run" }).getByRole("button", {
+            name: "Without the look",
+            pressed: true,
+          }),
+          "the run without the look",
+        ),
+    ],
+    [
+      "Compare the outcomes",
+      async () => {
+        await mainView(page, "board");
+        // One panel, clear of what it explains: the card leaves the board's pitch uncovered.
+        const board = page.getByRole("figure", { name: "Tactical view from above" });
+        const [a, b] = await Promise.all([
+          board.locator("canvas").boundingBox(),
+          card.boundingBox(),
+        ]);
+        const cover =
+          a && b
+            ? Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+              Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+            : 0;
+        if (a && cover > 0.25 * a.width * a.height) {
+          throw new Error(
+            `expected the tour card clear of the board: it covers ${Math.round(cover)} px²`,
+          );
+        }
+      },
+    ],
+    ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
+  ];
+  for (const [k, [title, shows]] of expect.entries()) {
+    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 4`) });
+    await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
+    await shows();
+    if (await page.locator(".moment-card").isVisible()) {
+      throw new Error("expected the moment card to stand down while the quick tour runs");
+    }
+    await cardOnScreen(page, step, k + 1);
+    await shoot(`step-${k + 1}`);
+    if (k < expect.length - 1) await step.getByRole("button", { name: "Next" }).click();
+  }
+  await card.getByRole("button", { name: "Done" }).click();
+  try {
+    await card.waitFor({ state: "detached" });
+  } catch {
+    throw new Error('expected "Done" to close the quick tour');
+  }
+  await see(page.getByRole("region", { name: "Your call" }), "Your call, left open");
+}
+
+/** A tour card inside the screen, and no sideways scroll. */
+async function cardOnScreen(page, card, k) {
+  const [box, [w, h, wide]] = await Promise.all([
+    card.boundingBox(),
+    page.evaluate(() => [innerWidth, innerHeight, document.documentElement.scrollWidth]),
+  ]);
+  if (!box || box.x < 0 || box.y < 0 || box.x + box.width > w || box.y + box.height > h) {
+    throw new Error(`expected the tour's step ${k} card on screen, got ${JSON.stringify(box)}`);
+  }
+  if (wide > w) throw new Error(`expected no sideways scroll at step ${k}: ${wide} px in ${w}`);
+}
+
+/** The intro card (SPEC 7): one line and Start, clear of the picture; the line-ups behind "Teams
+ * and more". Shown, opened, closed with `button` ("Start" or "Skip"), then the page's main view. */
 async function lineup(page, shoot, button, then) {
   const card = page.getByRole("dialog");
-  await see(card, "the lineup card");
+  await see(card, "the intro card");
+  await see(card.getByRole("button", { name: "Start", exact: true }), "Start on the card");
+  await shoot("card");
+  await card.getByRole("button", { name: "Teams and more" }).click();
   await see(
     card.getByRole("list", { name: "Kestrel Bay line-up" }),
-    "the home line-up on the card",
+    "the home line-up behind Teams and more",
   );
-  await shoot("card");
-  // The card also closes by itself after a few seconds (INTRO_MS), and a slow runner can reach
-  // the button after that: a card that is already gone has closed, which is what this checks.
-  try {
-    await card.getByRole("button", { name: button }).click({ timeout: 2000 });
-  } catch {
-    /* closed by itself, or the click is retried by the wait below */
-  }
+  await shoot("teams");
+  await card.getByRole("button", { name: button, exact: true }).click();
   try {
     await card.first().waitFor({ state: "detached", timeout: 15_000 });
   } catch {
-    throw new Error(`expected "${button}" or the timer to close the lineup card`);
+    throw new Error(`expected "${button}" to close the intro card`);
   }
   await then(page);
 }

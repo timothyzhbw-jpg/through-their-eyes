@@ -1786,6 +1786,222 @@
       "params": {
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
+    },
+    "label-dr-2p433": {
+      "template": "label",
+      "dur": 2.433,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "nc-you": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "YOU ARE No. 14.",
+        "role": "",
+        "sub": "YOU NEVER CHECK YOUR SHOULDER.",
+        "spot": {
+          "x": 960,
+          "y": 600,
+          "r": 220
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "label-dr-0p334": {
+      "template": "label",
+      "dur": 0.334,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1": {
+      "template": "label",
+      "dur": 1,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p167": {
+      "template": "label",
+      "dur": 1.167,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p2": {
+      "template": "label",
+      "dur": 1.2,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p6": {
+      "template": "label",
+      "dur": 1.6,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-bl-1p35": {
+      "template": "label",
+      "dur": 1.35,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "nc-h8": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "H8",
+        "role": "THE MIDFIELDER",
+        "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
+        "spot": {
+          "x": 1305,
+          "y": 560,
+          "r": 230
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "label-bl-4p05": {
+      "template": "label",
+      "dur": 4.05,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "nc-h9": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "H9",
+        "role": "THE RUNNER",
+        "sub": "UNMARKED. FOR NOW.",
+        "spot": {
+          "x": 1500,
+          "y": 564,
+          "r": 90
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
+    },
+    "label-bl-0p3": {
+      "template": "label",
+      "dur": 0.3,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-0p45": {
+      "template": "label",
+      "dur": 0.45,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-3p6": {
+      "template": "label",
+      "dur": 3.6,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-1p15": {
+      "template": "label",
+      "dur": 1.15,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-2p6": {
+      "template": "label",
+      "dur": 2.6,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-1p5": {
+      "template": "label",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-dr-2p033": {
+      "template": "label",
+      "dur": 2.033,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p8": {
+      "template": "label",
+      "dur": 1.8,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p5": {
+      "template": "label",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-1p7": {
+      "template": "label",
+      "dur": 1.7,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "tagline": {
+      "template": "slam",
+      "dur": 1.2,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "EVERY TOUCH",
+            "size": 96
+          },
+          {
+            "text": "STARTS WITH A LOOK.",
+            "color": "gold",
+            "size": 96
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.15,
+        "backdrop": true
+      }
     }
   },
   "beats": [
@@ -1795,10 +2011,28 @@
       "section": "open",
       "dur": 2.433,
       "picture": {
-        "src": "title",
-        "id": "ph-s1a-ots"
+        "src": "clip",
+        "path": "out/video/blender/bs1_ots.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": []
+      "overlays": [
+        {
+          "title": "nc-you",
+          "at": 1.533
+        },
+        {
+          "title": "label-dr-2p433",
+          "at": 0
+        }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 1.533
+      }
     },
     {
       "id": "b01b-s1b-tail",
@@ -1806,21 +2040,43 @@
       "section": "open",
       "dur": 0.334,
       "picture": {
-        "src": "title",
-        "id": "ph-s1b-tail"
+        "src": "clip",
+        "path": "out/video/blender/bs1_ots.mp4",
+        "in": 1.533,
+        "fit": "pad"
       },
-      "overlays": []
+      "overlays": [
+        {
+          "title": "label-dr-0p334",
+          "at": 0
+        }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b02-s1c-steal",
       "story": "blender",
       "section": "open",
-      "dur": 1.0,
+      "dur": 1,
       "picture": {
-        "src": "title",
-        "id": "ph-s1c-steal"
+        "src": "clip",
+        "path": "out/video/blender/bs1_steal.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": []
+      "overlays": [
+        {
+          "title": "label-dr-1",
+          "at": 0
+        }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b03-s1d-fall",
@@ -1828,10 +2084,17 @@
       "section": "open",
       "dur": 1.167,
       "picture": {
-        "src": "title",
-        "id": "ph-s1d-fall"
+        "src": "clip",
+        "path": "out/video/blender/bs1_fall.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
+      "overlays": [
+        {
+          "title": "label-dr-1p167",
+          "at": 0
+        }
+      ],
       "vo": [
         {
           "id": "vc1",
@@ -1839,6 +2102,17 @@
           "speaker": "coach",
           "text": "See this?",
           "style": "friendly"
+        }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.05,
+          "gain_db": -3
         }
       ]
     },
@@ -1848,10 +2122,17 @@
       "section": "open",
       "dur": 1.2,
       "picture": {
-        "src": "title",
-        "id": "ph-s2-ots"
+        "src": "clip",
+        "path": "out/video/trailer/pins/bs2_ots.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
+      "overlays": [
+        {
+          "title": "label-dr-1p2",
+          "at": 0
+        }
+      ],
       "vo": [
         {
           "id": "vc2",
@@ -1860,6 +2141,10 @@
           "text": "You know why you lost the ball?",
           "style": "friendly"
         }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
       ]
     },
     {
@@ -1868,10 +2153,21 @@
       "section": "open",
       "dur": 1.6,
       "picture": {
-        "src": "title",
-        "id": "ph-s2-push"
+        "src": "clip",
+        "path": "out/video/trailer/pins/bs2c.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": []
+      "overlays": [
+        {
+          "title": "label-dr-1p6",
+          "at": 0
+        }
+      ],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b01-app-s1-pov",
@@ -2018,9 +2314,10 @@
       "id": "b08-bl01a",
       "dur": 1.35,
       "picture": {
-        "src": "cine",
-        "id": "ie-look",
-        "in": 0
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -2031,12 +2328,12 @@
       },
       "overlays": [
         {
-          "title": "nc-h8-ie",
+          "title": "nc-h8",
           "at": 0.45
         },
         {
-          "title": "label-ie-1p35",
-          "at": 0.0
+          "title": "label-bl-1p35",
+          "at": 0
         }
       ],
       "vo": [
@@ -2052,25 +2349,26 @@
       "id": "b09-bl01b",
       "dur": 4.05,
       "picture": {
-        "src": "cine",
-        "id": "ie-look",
-        "in": 0.45
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 0.95,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
         "glue"
       ],
       "freeze": {
-        "at": 3.15
+        "at": 3
       },
       "overlays": [
         {
-          "title": "nc-h9-ie",
-          "at": 3.15
+          "title": "nc-h9",
+          "at": 3
         },
         {
-          "title": "label-ie-4p05",
-          "at": 0.0
+          "title": "label-bl-4p05",
+          "at": 0
         }
       ],
       "vo": [
@@ -2091,10 +2389,10 @@
       "id": "b10-bl01c",
       "dur": 0.3,
       "picture": {
-        "src": "cine",
-        "id": "ie-look",
-        "in": 3.6,
-        "speed": 2
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
+        "in": 3.93,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -2102,8 +2400,8 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-0p3",
-          "at": 0.0
+          "title": "label-bl-0p3",
+          "at": 0
         }
       ],
       "sfx": []
@@ -2112,10 +2410,11 @@
       "id": "b11-rw1",
       "dur": 0.45,
       "picture": {
-        "src": "cine",
-        "id": "ie-look",
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
         "in": 0,
-        "speed": 9.4,
+        "fit": "pad",
+        "speed": 8.8,
         "reverse": true
       },
       "letterbox": 2.39,
@@ -2125,21 +2424,21 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-0p45",
-          "at": 0.0
+          "title": "label-bl-0p45",
+          "at": 0
         }
       ],
       "vo": [
         {
           "id": "vo33",
-          "at": 0.0,
+          "at": 0,
           "text": "Here's what he saw."
         }
       ],
       "sfx": [
         {
           "name": "touch",
-          "at": 0.0,
+          "at": 0,
           "gain_db": -3
         }
       ]
@@ -2148,9 +2447,10 @@
       "id": "b12-bl02a",
       "dur": 0.3,
       "picture": {
-        "src": "cine",
-        "id": "ie-reveal",
+        "src": "clip",
+        "path": "out/video/blender/bl02_reveal.mp4",
         "in": 0,
+        "fit": "pad",
         "speed": 2
       },
       "letterbox": 2.39,
@@ -2159,8 +2459,8 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-0p3",
-          "at": 0.0
+          "title": "label-bl-0p3",
+          "at": 0
         }
       ],
       "sfx": []
@@ -2169,9 +2469,10 @@
       "id": "b13-bl02b",
       "dur": 3.6,
       "picture": {
-        "src": "cine",
-        "id": "ie-reveal",
-        "in": 0.6
+        "src": "clip",
+        "path": "out/video/blender/bl02_reveal.mp4",
+        "in": 0.6,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -2179,14 +2480,14 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-3p6",
-          "at": 0.0
+          "title": "label-bl-3p6",
+          "at": 0
         }
       ],
       "sfx": [
         {
           "name": "touch",
-          "at": 0.05,
+          "at": 2.32,
           "gain_db": -4
         }
       ]
@@ -2321,11 +2622,12 @@
       "id": "b18-rw2",
       "dur": 1.15,
       "picture": {
-        "src": "cine",
-        "id": "ie-look",
+        "src": "clip",
+        "path": "out/video/blender/bl01_look.mp4",
         "in": 0,
-        "speed": 3.68,
-        "reverse": true
+        "speed": 3.44,
+        "reverse": true,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -2334,8 +2636,8 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-1p15",
-          "at": 0.0
+          "title": "label-bl-1p15",
+          "at": 0
         }
       ],
       "sfx": [],
@@ -2348,9 +2650,10 @@
       "id": "b19-bl03",
       "dur": 2.6,
       "picture": {
-        "src": "cine",
-        "id": "ie-without",
-        "in": 0
+        "src": "clip",
+        "path": "out/video/blender/bl03_without.mp4",
+        "in": 0,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -2362,8 +2665,8 @@
           "at": 1.2
         },
         {
-          "title": "label-ie-2p6",
-          "at": 0.0
+          "title": "label-bl-2p6",
+          "at": 0
         }
       ],
       "vo": [],
@@ -2375,7 +2678,7 @@
         },
         {
           "name": "touch",
-          "at": 1.18,
+          "at": 2,
           "gain_db": -4
         }
       ],
@@ -2389,23 +2692,23 @@
       "picture": {
         "src": "split",
         "left": {
-          "src": "cine",
-          "id": "ie-reveal",
-          "in": 1.0,
+          "src": "clip",
+          "path": "out/video/blender/bl02_reveal.mp4",
+          "in": 1.9,
           "crop": [
-            480,
-            138,
+            800,
+            0,
             960,
             804
           ]
         },
         "right": {
-          "src": "cine",
-          "id": "ie-without",
-          "in": 1.9,
+          "src": "clip",
+          "path": "out/video/blender/bl03_without.mp4",
+          "in": 1.1,
           "crop": [
-            480,
-            138,
+            780,
+            0,
             960,
             804
           ]
@@ -2418,11 +2721,11 @@
       "overlays": [
         {
           "title": "duo-split",
-          "at": 0.0
+          "at": 0
         },
         {
-          "title": "label-ie-1p5",
-          "at": 0.0
+          "title": "label-bl-1p5",
+          "at": 0
         }
       ],
       "sfx": []
@@ -3066,45 +3369,85 @@
     {
       "id": "b42-s4a-pov",
       "story": "blender",
-      "dur": 1.0,
+      "dur": 1,
       "picture": {
-        "src": "title",
-        "id": "ph-s4a-pov"
+        "src": "clip",
+        "path": "out/video/blender/bs4_pov_a.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
-      "section": "close"
+      "overlays": [
+        {
+          "title": "label-dr-1",
+          "at": 0
+        }
+      ],
+      "section": "close",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b43-s4b-check",
       "story": "blender",
       "dur": 2.033,
       "picture": {
-        "src": "title",
-        "id": "ph-s4b-check"
+        "src": "clip",
+        "path": "out/video/blender/bs4_check.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
-      "section": "close"
+      "overlays": [
+        {
+          "title": "label-dr-2p033",
+          "at": 0
+        }
+      ],
+      "section": "close",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b44-s4c-drive",
       "story": "blender",
       "dur": 1.8,
       "picture": {
-        "src": "title",
-        "id": "ph-s4c-drive"
+        "src": "clip",
+        "path": "out/video/blender/bs4_drive.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
-      "section": "close"
+      "overlays": [
+        {
+          "title": "label-dr-1p8",
+          "at": 0
+        }
+      ],
+      "section": "close",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b45-s4d-strike",
       "story": "blender",
-      "dur": 1.0,
+      "dur": 1,
       "picture": {
-        "src": "title",
-        "id": "ph-s4d-strike"
+        "src": "clip",
+        "path": "out/video/blender/bs4_strike.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
+      "overlays": [
+        {
+          "title": "label-dr-1",
+          "at": 0
+        }
+      ],
       "sfx": [
         {
           "name": "touch",
@@ -3112,32 +3455,62 @@
           "gain_db": -2
         }
       ],
-      "section": "close"
+      "section": "close",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b45a-s4e-net",
       "story": "blender",
       "dur": 1.5,
       "picture": {
-        "src": "title",
-        "id": "ph-s4e-net"
+        "src": "clip",
+        "path": "out/video/blender/bs4_net.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
-      "section": "close"
+      "overlays": [
+        {
+          "title": "label-dr-1p5",
+          "at": 0
+        }
+      ],
+      "section": "close",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b45b-s4f-celebrate",
       "story": "blender",
       "dur": 1.7,
       "picture": {
-        "src": "title",
-        "id": "ph-s4f-celebrate"
+        "src": "clip",
+        "path": "out/video/blender/bs4_celebrate.mp4",
+        "in": 0,
+        "fit": "pad"
       },
-      "overlays": [],
+      "overlays": [
+        {
+          "title": "tagline",
+          "at": 0.3
+        },
+        {
+          "title": "label-dr-1p7",
+          "at": 0
+        }
+      ],
       "out": {
         "type": "cut"
       },
-      "section": "close"
+      "section": "close",
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
     },
     {
       "id": "b42-app-s4-check",
@@ -3384,5 +3757,33 @@
         }
       }
     }
-  }
+  },
+  "pins": [
+    {
+      "id": "bs2_ots",
+      "clip": "out/video/blender/bs2_ots.mp4",
+      "corners": "out/video/blender/bs2_ots_screen_corners.json",
+      "matte": "out/video/blender/bs2_ots_screen_matte",
+      "source": {
+        "cine": "pov-match"
+      },
+      "source_time": 2,
+      "source_offset_y": 138,
+      "ev": 2,
+      "ref_corners": "out/video/blender/bs2c_screen_corners.json"
+    },
+    {
+      "id": "bs2c",
+      "clip": "out/video/blender/bs2c.mp4",
+      "corners": "out/video/blender/bs2c_screen_corners.json",
+      "matte": "out/video/blender/bs2c_screen_matte",
+      "source": {
+        "cine": "pov-match"
+      },
+      "source_time": 2,
+      "source_offset_y": 138,
+      "ev": 2,
+      "ev_ramp_frames": 30
+    }
+  ]
 }

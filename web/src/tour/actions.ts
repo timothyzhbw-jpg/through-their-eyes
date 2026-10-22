@@ -5,6 +5,7 @@
 // for the tour card's own button (TourActs.tsx).
 
 import type { Agent, Persona } from "../api/client";
+import { comparisonWindow } from "../autoplay/comparison";
 import type { Narration } from "../narration/payload";
 import type { MatchSession } from "../match/matchSession";
 import type { Session, ViewSession } from "../session";
@@ -116,8 +117,62 @@ function openRecap(s: MatchSession): void {
   s.recap.openAtFullTime(null, null);
 }
 
+/** The seconds around the look, in his eyes, slowed around the scan as free play is, then
+ * paused a little after his decision with the pass on its way (the cold-load show's first part).
+ * The breakdown is asked for, so the step's verified line can come up. */
+export function playTheLook(s: Session): void {
+  clear(s);
+  const { controls, playback, hero, moment } = s;
+  controls.leaveLive();
+  if (s.breakdown.get().status === "waiting") controls.requestBreakdown();
+  if (hero.heroId) controls.setPovPlayer(hero.heroId);
+  controls.setCamera("pov");
+  if (playback.get().focus !== "split") controls.setFocus("split");
+  const { from, to } = comparisonWindow(hero, moment.decisionFrame);
+  playback.set({
+    mode: "factual",
+    frame: Math.max(0, from - Math.round(LEAD_IN_S / hero.dt)),
+    playing: true,
+    playUntil: to,
+    speed: 1,
+    autoSlow: true,
+    cfGhost: false,
+    whatIf: null,
+    captionLine: null,
+    scanMarker: null,
+  });
+}
+
+const LEAD_IN_S = 1; // seconds of play before the window opens: time to find his eyes
+
+/** The frame both runs' actions have ended by: each pass has reached its man. */
+function bothEnded(s: Session): number {
+  const { factual, counterfactual } = s.hero.runs;
+  const end = (r: typeof factual) => r.action?.end ?? r.frames - 1;
+  return Math.min(
+    Math.max(end(factual), end(counterfactual)),
+    factual.frames - 1,
+    counterfactual.frames - 1,
+  );
+}
+
 const ENTER: Record<Exclude<EnterName, "recap">, Enter> = {
   none: (s) => clear(s),
+
+  /** The quick tour's first step: the look, in his eyes (playTheLook). */
+  look: playTheLook,
+
+  /** The quick tour's third step: the board from above, paused once both passes have arrived,
+   * with the run without the look as the gold ghost path over what he really did. */
+  compare(s) {
+    clear(s);
+    const { controls, playback } = s;
+    controls.leaveLive();
+    controls.setMode("factual");
+    if (!playback.get().cfGhost) controls.toggle("cfGhost");
+    controls.setFocus("tactical");
+    controls.seek(bothEnded(s));
+  },
 
   /** The Telestrator's breakdown with the Analyst's commentary: the first-person replay with its
    * key scan, and captions whose numbers are verified. */

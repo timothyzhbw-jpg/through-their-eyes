@@ -1,4 +1,4 @@
-// The pre-match lineup card's data (the lineup card, ui/LineupCard.tsx): both line-ups from the
+// The intro card's line-ups (ui/IntroCard.tsx, behind "Teams and more"): both line-ups from the
 // export (shirt numbers and roles) and each player's scanning habit, measured from this run's scan
 // events, and whose eyes to watch: the hero of the moment, or each possession's hero in a match.
 

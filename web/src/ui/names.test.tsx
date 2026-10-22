@@ -21,7 +21,7 @@ import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type ViewSession } from "../session";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport, pressureExport } from "../testing";
 import { intro } from "./intro";
-import { LineupCard } from "./LineupCard";
+import { IntroCard } from "./IntroCard";
 import { LiveBar, momentLabel, MomentsPanel } from "./Live";
 import { Scoreboard } from "./Match";
 import { DecisionPanel, StoryPanel } from "./Panels";
@@ -86,7 +86,7 @@ describe("the names", () => {
 describe("on screen, a player and a club go by their names", () => {
   it("the lineup card: the clubs and every player", () => {
     intro.set({ open: true });
-    const page = mount(offline(), <LineupCard />);
+    const page = mount(offline(), <IntroCard />);
     const card = text(page);
     expect(card).toContain("Kestrel Bay v Corvane Vale");
     expect(card).toContain("J. Ferriday");

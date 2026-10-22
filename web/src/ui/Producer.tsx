@@ -4,6 +4,7 @@
 // trace id names the run's spans in Application Insights, and "Crew trace" opens the run's
 // timeline below.
 
+import { HowItWorks } from "./Chapter";
 import { AGENTS, type Agent } from "../api/client";
 import { TraceButton } from "../crewtrace/CrewTrace";
 import { crewSteps, STEP_LABEL, type CrewStep } from "../producer/producer";
@@ -148,10 +149,16 @@ export function Producer({
           </p>
         )}
       <p className="note">
-        A downed agent's model calls fail as in an outage: the step retries once, then airs its
-        template. Bring back resumes the workflow from its checkpoint and re-runs that step; only
-        the steps that read its output run again.
+        Take an agent down as in an outage: the breakdown still airs, with that step's template.
+        Bring it back, and only that step and what depends on it run again.
       </p>
+      <HowItWorks>
+        <p>
+          A downed agent's model calls fail; its step retries once, then airs its template. Bring
+          back resumes the Agent Framework workflow from its checkpoint and re-runs that step; only
+          the steps that read its output run again.
+        </p>
+      </HowItWorks>
     </section>
   );
 }

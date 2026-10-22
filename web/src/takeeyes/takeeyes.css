@@ -293,6 +293,13 @@
   outline: none;
   text-wrap: balance;
 }
+.te-sub {
+  margin: -6px 0 0;
+  font: 500 11px/1.3 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--floodlight);
+}
 .te-lead {
   margin: 0;
   font: 400 15px/1.5 var(--font-body);

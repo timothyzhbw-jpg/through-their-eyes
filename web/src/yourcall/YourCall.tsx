@@ -26,9 +26,11 @@ import { startYourCallClock, yourCallOf, type YourCall } from "./controller";
 import { BEATS, isBeat, type Beat } from "./flow";
 import type { CallOption } from "./options";
 import { revealOf, type RevealLine } from "./reveal";
+import { whyOf, type Why } from "./why";
 import { YourCallScene } from "./YourCallScene";
 import "./yourcall.css";
 import { renameIds, shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
 
 const MARKER_PX = 36; // markers closer than this are pushed apart
 // A text marker (carry, a shot) is a pill: its width from the label (11 px uppercase, tracked).
@@ -397,6 +399,10 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
         : null,
     [session, options, narration, lang, state.pick],
   );
+  const why = useMemo(
+    () => (state.pick ? whyOf(session.hero, options, state.pick) : null),
+    [session, options, state.pick],
+  );
   const primary = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   // Each step moves the focus: to its main button in the reveal, to the heading while deciding.
@@ -473,6 +479,10 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
               <p className="yc-lead">
                 The sim plays on from the decision with your call. Causal inside the sim only.
               </p>
+            )}
+            {why && <WhyBlock why={why} />}
+            {reveal.outcome.lines.length > 0 && (
+              <h3 className="yc-sub">What it led to in the sim</h3>
             )}
             <Lines lines={reveal.outcome.lines} />
           </>
@@ -556,13 +566,43 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
 const labelOf = (options: CallOption[]) => (action: string) =>
   options.find((o) => o.action === action)?.label ?? action;
 
+/** What he could see and how his picture rated the call (why.ts): read from the sim export, so
+ * no number, and marked so. */
+function WhyBlock({ why }: { why: Why }) {
+  const names = (ids: string[]) => ids.map(shortName).join(", ");
+  const receiver = why.receiver
+    ? why.receiver.seen
+      ? `${shortName(why.receiver.id)} was fresh in his picture. `
+      : `He had not seen ${shortName(why.receiver.id)} lately: his picture of him was old. `
+    : "";
+  return (
+    <dl className="yc-why" aria-label="Why it went this way">
+      <div>
+        <dt>He had just seen</dt>
+        <dd>
+          {why.seen.length ? names(why.seen) : "none of his teammates"}. <SimTag />
+        </dd>
+      </div>
+      {why.unseen.length > 0 && (
+        <div>
+          <dt>Not seen lately</dt>
+          <dd>{names(why.unseen)}.</dd>
+        </div>
+      )}
+      <div>
+        <dt>On his picture</dt>
+        <dd>
+          {receiver}
+          {why.picture} <SimTag />
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
 /** Marks a statement read from the sim export rather than a verified claim, for screen readers too. */
 function SimTag() {
-  return (
-    <span className="source" title="Read from the sim export, not a verified claim">
-      sim<span className="sr-only"> (read from the sim export, not a verified claim)</span>
-    </span>
-  );
+  return <SourceChip kind="sim" spoken />;
 }
 
 function Lines({ lines }: { lines: RevealLine[] }) {
@@ -577,7 +617,7 @@ function Lines({ lines }: { lines: RevealLine[] }) {
             ))}
           </span>
           <span className="yc-line">{renameIds(l.text)}</span>
-          {l.source === "fixture" && <span className="source">sample</span>}
+          {l.source === "fixture" && <SourceChip kind="sample" />}
         </li>
       ))}
     </ul>
