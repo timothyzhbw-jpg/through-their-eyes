@@ -267,7 +267,7 @@ function PovScene() {
           </sprite>
         </group>
       ))}
-      <BeliefRings sample={sample} />
+      <BeliefRings sampleOf={() => sample} />
       {rigged && (
         <RiggedFallback>
           <Suspense fallback={null}>

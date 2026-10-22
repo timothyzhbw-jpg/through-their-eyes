@@ -149,6 +149,7 @@ const cineApi: CineApi = {
       camera: shot.pov ? "pov" : "broadcast",
       ...(shot.pov ? { povPlayer: shot.pov } : {}),
       beliefGhosts: shot.ghosts,
+      ghostsAll: false, // the runner's, as the app shows by default
     });
     advance(t * 1000);
     const drawn = cineRuntime.drawn as DrawnPose | null; // set by the camera rig inside advance()

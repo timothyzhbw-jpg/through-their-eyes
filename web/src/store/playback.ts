@@ -23,7 +23,8 @@ export interface PlaybackState {
   comfort: boolean; // eased POV yaw + slower playback while the head whips round (SPEC 7)
   motionBlur: boolean; // the first-person head-turn blur: opt-in, off by default (SPEC 7)
   cone: boolean;
-  beliefGhosts: boolean;
+  beliefGhosts: boolean; // where he believes players are: by default the runner's, in the moment
+  ghostsAll: boolean; // everyone's belief ghosts, any time, on the broadcast camera too (views/ghosts.ts)
   cfGhost: boolean; // ghost path of the other run
   options: boolean; // pass options at the decision (shown around the decision frame only)
   blindSide: boolean; // blind-side alerts, live (SPEC 4.4)
@@ -76,6 +77,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     motionBlur: false, // Bowen, 2026-10-21: blur is uncomfortable; the viewer may turn it on
     cone: hero.vision !== null, // a match export has no vision model
     beliefGhosts: true,
+    ghostsAll: false,
     cfGhost: false,
     options: true,
     blindSide: true,
