@@ -42,11 +42,10 @@ checks every number in its captions and narration before it airs.
   Microsoft plans questions and answers in fans' native languages.[^pl-microsoft]
 - **What we bring to that.** Through Their Eyes explains one moment for five audiences, in
   English or Chinese, and hands its overlays to a graphics engine as timecoded, machine-readable
-  cues. AI output on air needs an audit trail: ESPN's AI-generated recap of a retiring star's
-  final match left her out, although each recap was to be reviewed by a human editor.[^espn]
-  Code checks every number our crew says or captions before it airs, and every verdict is
-  logged. It does not judge what a recap leaves out, and it runs on synthetic matches only, so it
-  shows the workflow, not accuracy on real matches.
+  cues. AI output on air needs an audit trail: code checks every number our crew says or
+  captions before it airs, and every verdict is logged. It does not judge what a recap leaves
+  out, and it runs on synthetic matches only, so it shows the workflow, not accuracy on real
+  matches.
 
 ## What it does
 
@@ -166,16 +165,16 @@ development used (SPEC §11).
 Development: built with Claude Code. GitHub Copilot, the Azure MCP Server and Microsoft Fabric
 were not used.[^devtools]
 
-## How this differs from FIFA AI Pro
+## How this relates to FIFA AI Pro
 
-FIFA AI Pro, the assistant Lenovo built with FIFA for the 2026 World Cup teams, answers what
-happened from statistics (Lenovo reports more than 2,000 metrics), before and after a match but
-not during live play, behind a "validated" label.[^fifa-ai-pro] Through Their Eyes answers what
-the player saw and what he believed while the synthetic match streams live: every number in the
-captions and narration is a verified claim that viewers can open and challenge with **Try a wrong
-number**, and every "What if…?" is re-simulated in the simulator, not estimated.[^how-we-differ]
-Lenovo's figures for its Referee View camera show that fans want first person, but it shows what
-a camera captured; we show what the player perceived.
+FIFA AI Pro, the assistant Lenovo built with FIFA for the 2026 World Cup teams, answers analysts'
+questions about matches from official data (Lenovo reports more than 2,000 metrics), before and
+after a match.[^fifa-ai-pro] Through Their Eyes works on a different question: what the player
+saw and what he believed, while the synthetic match streams live. Every number in its captions
+and narration is a verified claim that viewers can open and challenge with **Try a wrong
+number**, and every "What if…?" is re-simulated in the simulator.[^how-we-differ] Lenovo's
+Referee View camera brings fans a first-person view of what a camera captured; we show what the
+player perceived.
 
 [^fifa-ai-pro]: [docs/REFERENCES.md](REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026):
     the FIFA and Lenovo press releases; every FIFA and Lenovo figure is company-reported.
@@ -205,7 +204,8 @@ No login, free, live until 2026-11-10.
   live heroes and the camera director.
 - Model-backed breakdowns are rate-limited per visitor and capped per day. Past that, the
   service serves the cache or the deterministic template, so the demo keeps working.
-- TODO(Bowen): add the video URL and the public repository URL.
+- **Code:** https://github.com/timothyzhbw-jpg/through-their-eyes (public, MIT).
+- TODO(Bowen): add the video URL.
 
 ## Team
 
@@ -330,10 +330,5 @@ play that attacks the goal.
     ([announcement](https://news.microsoft.com/source/2025/07/01/premier-league-and-microsoft-announce-five-year-strategic-partnership-to-personalize-the-fan-experience-with-ai-for-1-8-billion-people/)):
     "open-text questions and answers in fans' native languages through text and audio
     translation".
-[^espn]: Awful Announcing, 9 Sep 2024
-    ([article](https://awfulannouncing.com/espn/alex-morgan-ai-generated-recap-mention.html)):
-    the recap by "ESPN Generative AI Services" of the 8 Sep 2024 match did not mention the
-    retiring player until it was updated the next morning; ESPN had said "each AI-generated recap
-    will be reviewed by a human editor".
 [^devtools]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#development-tools): git history and all pull
     requests checked on 2026-10-20.
