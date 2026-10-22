@@ -28,7 +28,7 @@
       "asset": "music-score-hybrid",
       "at": 0.0,
       "from": 0.0,
-      "until": 117.3,
+      "until": 118.05,
       "gain_db": 4,
       "fade_in": 0.0,
       "fade_out": 0.0,
@@ -502,6 +502,93 @@
         "motionBlur": false,
         "rings": true
       }
+    },
+    "fp-pov": {
+      "url": "/?cine=1&intro=0&autoplay=0&match=far_post_finish-11",
+      "shot": {
+        "id": "fp-pov",
+        "run": "factual",
+        "duration": 1.7,
+        "pov": "H9",
+        "time": [
+          {
+            "t": 0,
+            "frame": 40
+          },
+          {
+            "t": 1.7,
+            "frame": 56
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "eyes",
+              "id": "H9"
+            },
+            "look": {
+              "at": "eyes",
+              "id": "H9"
+            }
+          }
+        ],
+        "periphery": 0,
+        "labels": true,
+        "fog": [
+          45,
+          160
+        ],
+        "bloom": {
+          "strength": 0.7,
+          "radius": 0.6,
+          "threshold": 0.8
+        },
+        "motionBlur": false,
+        "rings": true
+      }
+    },
+    "fp-finish": {
+      "url": "/?cine=1&intro=0&autoplay=0&match=far_post_finish-11",
+      "shot": {
+        "id": "fp-finish",
+        "run": "factual",
+        "duration": 1.6,
+        "time": [
+          {
+            "t": 0,
+            "frame": 56
+          },
+          {
+            "t": 1.6,
+            "frame": 80
+          }
+        ],
+        "camera": [
+          {
+            "t": 0,
+            "eye": {
+              "at": "world",
+              "p": [
+                40,
+                -18,
+                3
+              ]
+            },
+            "look": {
+              "at": "ball"
+            },
+            "fov": 40
+          }
+        ],
+        "bloom": {
+          "strength": 0.8,
+          "radius": 0.6,
+          "threshold": 0.75
+        },
+        "rings": true,
+        "motionBlur": false
+      }
     }
   },
   "titles": {
@@ -616,7 +703,7 @@
     },
     "crew": {
       "template": "lineup",
-      "dur": 6.75,
+      "dur": 4.5,
       "alpha": false,
       "params": {
         "header": "THE CREW",
@@ -1162,37 +1249,6 @@
         "stagger": 0.15
       }
     },
-    "ph-s4c-escape": {
-      "template": "card",
-      "dur": 1.8,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "HE TURNS. HE'S AWAY."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
-    "ph-s4d-run": {
-      "template": "card",
-      "dur": 1.2,
-      "alpha": false,
-      "params": {
-        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
-        "lines": [
-          {
-            "text": "THE COACH NODS."
-          },
-          {
-            "text": "EVERY TOUCH STARTS WITH A LOOK."
-          }
-        ],
-        "stagger": 0.15
-      }
-    },
     "nc-you-app": {
       "template": "namecard",
       "dur": 0.9,
@@ -1224,7 +1280,7 @@
     },
     "card-every-touch": {
       "template": "card",
-      "dur": 1.2,
+      "dur": 1.3,
       "alpha": false,
       "params": {
         "lines": [
@@ -1261,6 +1317,84 @@
       "alpha": true,
       "params": {
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-1p7": {
+      "template": "label",
+      "dur": 1.7,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-1p2": {
+      "template": "label",
+      "dur": 1.2,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "ph-s4c-drive": {
+      "template": "card",
+      "dur": 1.8,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "HE TURNS AND DRIVES"
+          },
+          {
+            "text": "AT THE GOAL."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4d-strike": {
+      "template": "card",
+      "dur": 1.0,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "THE STRIKE."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4e-net": {
+      "template": "card",
+      "dur": 1.5,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "NET CAM: IT'S IN."
+          }
+        ],
+        "stagger": 0.15
+      }
+    },
+    "ph-s4f-celebrate": {
+      "template": "card",
+      "dur": 1.7,
+      "alpha": false,
+      "params": {
+        "kicker": "PLACEHOLDER · BLENDER SHOT IN REWORK",
+        "lines": [
+          {
+            "text": "HE CELEBRATES. THE COACH NODS."
+          },
+          {
+            "text": "EVERY TOUCH STARTS WITH A LOOK."
+          }
+        ],
+        "stagger": 0.15
       }
     }
   },
@@ -2063,7 +2197,7 @@
     },
     {
       "id": "b33-crew",
-      "dur": 6.75,
+      "dur": 4.5,
       "picture": {
         "src": "title",
         "id": "crew"
@@ -2073,11 +2207,6 @@
           "id": "vo12",
           "at": 0.1,
           "text": "Behind every replay, a crew of agents."
-        },
-        {
-          "id": "vo13",
-          "at": 2.75,
-          "text": "Director, Analyst, Telestrator, Narrator, Verifier, Voice."
         }
       ],
       "sfx": [],
@@ -2398,51 +2527,67 @@
     },
     {
       "id": "b42-s4a-pov",
+      "story": "blender",
       "dur": 1.0,
       "picture": {
         "src": "title",
         "id": "ph-s4a-pov"
       },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
+      "overlays": []
     },
     {
       "id": "b43-s4b-check",
+      "story": "blender",
       "dur": 2.03,
       "picture": {
         "src": "title",
         "id": "ph-s4b-check"
       },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
+      "overlays": []
     },
     {
-      "id": "b44-s4c-escape",
+      "id": "b44-s4c-drive",
+      "story": "blender",
       "dur": 1.8,
       "picture": {
         "src": "title",
-        "id": "ph-s4c-escape"
+        "id": "ph-s4c-drive"
       },
-      "overlays": [],
-      "sfx": [],
-      "story": "blender"
+      "overlays": []
     },
     {
-      "id": "b45-s4d-run",
-      "dur": 1.2,
+      "id": "b45-s4d-strike",
+      "story": "blender",
+      "dur": 1.0,
       "picture": {
         "src": "title",
-        "id": "ph-s4d-run"
+        "id": "ph-s4d-strike"
+      },
+      "overlays": []
+    },
+    {
+      "id": "b45a-s4e-net",
+      "story": "blender",
+      "dur": 1.5,
+      "picture": {
+        "src": "title",
+        "id": "ph-s4e-net"
+      },
+      "overlays": []
+    },
+    {
+      "id": "b45b-s4f-celebrate",
+      "story": "blender",
+      "dur": 1.7,
+      "picture": {
+        "src": "title",
+        "id": "ph-s4f-celebrate"
       },
       "overlays": [],
       "out": {
         "type": "flash",
         "dur": 0.12
-      },
-      "sfx": [],
-      "story": "blender"
+      }
     },
     {
       "id": "b42-app-s4-check",
@@ -2485,9 +2630,49 @@
       ]
     },
     {
-      "id": "b44-app-s4-tag",
+      "id": "b44-app-s4-fp-look",
+      "story": "app",
+      "dur": 1.7,
+      "picture": {
+        "src": "cine",
+        "id": "fp-pov",
+        "in": 0
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p7",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b45-app-s4-fp-goal",
       "story": "app",
       "dur": 1.2,
+      "picture": {
+        "src": "cine",
+        "id": "fp-finish",
+        "in": 0.4
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p2",
+          "at": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b45a-app-s4-tag",
+      "story": "app",
+      "dur": 1.3,
       "picture": {
         "src": "title",
         "id": "card-every-touch"
