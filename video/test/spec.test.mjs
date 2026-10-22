@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { spokenIssues, storyBeats, validateTrailer } from "../lib/spec.mjs";
+import { namedSpec, spokenIssues, storyBeats, validateTrailer } from "../lib/spec.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const shots = JSON.parse(readFileSync(path.join(REPO, "video/shots.json"), "utf8"));
@@ -210,4 +210,25 @@ test("every Blender beat in blender_map.json is a beat of the trailer, in the Bl
     assert.ok(beat.story == null || beat.story === "blender", `${entry.beat} is not in the Blender telling`);
   }
   assert.ok(Array.isArray(map.approved), "blender_map.json lists the approved clips");
+});
+
+test("naming: names swaps the named lines (with their own ids) and titles; ids leaves the spec as written", () => {
+  const assets = JSON.parse(readFileSync(path.join(REPO, "video/assets.json"), "utf8"));
+  const base = { ...clone(real), beats: storyBeats(real) };
+  assert.equal(namedSpec(base, "ids"), base);
+  const named = namedSpec(base, "names");
+  const { errors } = check(named, assets);
+  assert.deepEqual(errors, [], errors.join("\n"));
+  const lines = named.beats.flatMap((b) => b.vo ?? []);
+  for (const [id, over] of Object.entries(real.named.vo)) {
+    assert.ok(!lines.some((l) => l.id === id), `${id} keeps its ids voicing`);
+    assert.equal(lines.find((l) => l.id === `${id}n`)?.text, typeof over === "string" ? over : over.text);
+  }
+  // No player id is left in a line or a title param this cut shows.
+  const ids = /\b[HA]\d{1,2}\b/;
+  for (const line of lines) if (line.text) assert.doesNotMatch(line.text, ids, line.id); // app lines come named
+  for (const key of Object.keys(real.named.titles)) {
+    if (named.titles[key]) assert.doesNotMatch(JSON.stringify(named.titles[key].params), ids, key);
+  }
+  assert.equal(named.titles["nc-a11"].params.role, real.titles["nc-a11"].params.role); // merged, not replaced
 });

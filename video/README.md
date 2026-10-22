@@ -267,6 +267,16 @@ tellings are equal and under `output.max_s`, re-time the score (copy `video/scor
 new sheet, set its `trailer_ref` to the commit, `uv run video/score/score.py --cues ...`), copy
 its `hybrid/score.wav` to `video/score/out/`, and run the trailer.
 
+**Naming.** `naming: "ids"` (default) says and shows players as H8, H9; `"names"` (or
+`--naming names`) uses the fictional names the app shows once its players are named
+(`sim/roster.py`). `named.vo` holds the lines that change (a string, or `{ text, at }`), each
+voiced under its own id (`vo30` → `vo30n`) so both namings stay synthesized; `named.titles`
+overrides the titles' params key by key. Shot 12's button takes either label.
+
+Chapter I without Blender: its beats default to in-engine cine shots of seed 3 (`ie-look`,
+`ie-reveal`, `ie-without`), the same beats and lengths, so the score fits either; approved
+Blender finals replace them through `blender_map.json`.
+
 A preview from candidates before approval: `--preview --dir <folder of candidates> --write
 out/video/trailer_preview.json` leaves `trailer.json` alone, takes the clips from that folder and
 burns "PREVIEW · BLENDER SHOTS PENDING APPROVAL" in the top-left corner (`watermark`); render it

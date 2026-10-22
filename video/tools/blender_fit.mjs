@@ -100,7 +100,7 @@ for (const entry of map.beats) {
   if (entry.label) {
     const key = `label-${entry.label === "simulation" ? "bl" : "dr"}-${String(beat.dur).replace(".", "p")}`;
     spec.titles[key] = { template: "label", dur: beat.dur, alpha: true, params: { text: LABELS[entry.label] } };
-    overlays.unshift({ title: key, at: 0.0 });
+    overlays.push({ title: key, at: 0.0 }); // last: on top of a name card's scrim
   }
   beat.overlays = overlays;
   for (const o of overlays) if (map.titles?.[o.title]) spec.titles[o.title] = map.titles[o.title];

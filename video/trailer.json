@@ -1891,12 +1891,12 @@
       },
       "overlays": [
         {
-          "title": "label-ie-2p4",
-          "at": 0.0
-        },
-        {
           "title": "nc-you-app",
           "at": 1.5
+        },
+        {
+          "title": "label-ie-2p4",
+          "at": 0.0
         }
       ],
       "section": "open"
@@ -1991,12 +1991,12 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-3p0",
-          "at": 0.0
-        },
-        {
           "title": "studio",
           "at": 1.7
+        },
+        {
+          "title": "label-ie-3p0",
+          "at": 0.0
         }
       ],
       "sfx": [],
@@ -2031,12 +2031,12 @@
       },
       "overlays": [
         {
-          "title": "label-ie-1p35",
-          "at": 0.0
-        },
-        {
           "title": "nc-h8-ie",
           "at": 0.45
+        },
+        {
+          "title": "label-ie-1p35",
+          "at": 0.0
         }
       ],
       "vo": [
@@ -2065,12 +2065,12 @@
       },
       "overlays": [
         {
-          "title": "label-ie-4p05",
-          "at": 0.0
-        },
-        {
           "title": "nc-h9-ie",
           "at": 3.15
+        },
+        {
+          "title": "label-ie-4p05",
+          "at": 0.0
         }
       ],
       "vo": [
@@ -2356,12 +2356,12 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-2p6",
-          "at": 0.0
-        },
-        {
           "title": "back-to-h4",
           "at": 1.2
+        },
+        {
+          "title": "label-ie-2p6",
+          "at": 0.0
         }
       ],
       "vo": [],
@@ -2415,11 +2415,11 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-1p5",
+          "title": "duo-split",
           "at": 0.0
         },
         {
-          "title": "duo-split",
+          "title": "label-ie-1p5",
           "at": 0.0
         }
       ],
@@ -2595,12 +2595,12 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-2p1",
-          "at": 0.0
-        },
-        {
           "title": "nc-a11",
           "at": 1.2
+        },
+        {
+          "title": "label-ie-2p1",
+          "at": 0.0
         }
       ],
       "vo": [],
@@ -3288,5 +3288,99 @@
       "pitch": "-6%"
     }
   },
-  "story": "blender"
+  "story": "blender",
+  "naming": "ids",
+  "named": {
+    "about": "Players by the app's fictional names (sim/roster.py, web/src/data/roster.ts) for when the app shows them; naming: \"names\" or --naming names. H4 Kofi Annersley, H8 Joss Ferriday, H9 Nico Varnhall, A11 Anders Vintergren.",
+    "vo": {
+      "vo30": {
+        "text": "Meet Joss Ferriday.",
+        "at": 0.2
+      },
+      "vo32": "Nobody's watching Nico Varnhall."
+    },
+    "titles": {
+      "freeze-with": {
+        "params": {
+          "title": "HIS PICTURE OF VARNHALL"
+        }
+      },
+      "verified": {
+        "params": {
+          "items": [
+            {
+              "before": "FERRIDAY CHECKED HIS SHOULDER BEFORE THE BALL",
+              "value": "",
+              "after": ""
+            },
+            {
+              "before": "VARNHALL'S RUN WAS ON HIS BLIND SIDE",
+              "value": "",
+              "after": ""
+            },
+            {
+              "before": "HIS PICTURE OF VARNHALL: OFF BY",
+              "value": "{belief_error.err}",
+              "after": "M"
+            },
+            {
+              "before": "THAT LOOK WAS WORTH",
+              "value": "{cf_value.dxt}",
+              "after": "xT"
+            }
+          ]
+        },
+        "fallback": {
+          "items": [
+            {
+              "before": "FERRIDAY CHECKED HIS SHOULDER BEFORE THE BALL",
+              "value": "",
+              "after": ""
+            },
+            {
+              "before": "VARNHALL'S RUN WAS ON HIS BLIND SIDE",
+              "value": "",
+              "after": ""
+            }
+          ]
+        }
+      },
+      "nc-a11": {
+        "params": {
+          "name": "VINTERGREN"
+        }
+      },
+      "nc-h8": {
+        "params": {
+          "name": "FERRIDAY"
+        }
+      },
+      "nc-h8-ie": {
+        "params": {
+          "name": "FERRIDAY"
+        }
+      },
+      "nc-h9": {
+        "params": {
+          "name": "VARNHALL"
+        }
+      },
+      "nc-h9-ie": {
+        "params": {
+          "name": "VARNHALL"
+        }
+      },
+      "back-to-h4": {
+        "params": {
+          "lines": [
+            {
+              "text": "HE PLAYS IT BACK TO ANNERSLEY.",
+              "color": "dusk",
+              "size": 96
+            }
+          ]
+        }
+      }
+    }
+  }
 }

@@ -56,9 +56,9 @@
         "role": "THE MIDFIELDER",
         "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
         "spot": {
-          "x": 1380,
-          "y": 600,
-          "r": 260
+          "x": 1305,
+          "y": 560,
+          "r": 230
         },
         "side": "left",
         "scrim": 0.5
@@ -73,11 +73,11 @@
         "role": "THE RUNNER",
         "sub": "UNMARKED. FOR NOW.",
         "spot": {
-          "x": 450,
-          "y": 660,
-          "r": 120
+          "x": 1500,
+          "y": 564,
+          "r": 90
         },
-        "side": "right",
+        "side": "left",
         "scrim": 0.5
       }
     },
@@ -239,7 +239,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
+        "in": 0.5,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -263,7 +263,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.45,
+        "in": 0.95,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -271,12 +271,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 3.15
+        "at": 3.0
       },
       "overlays": [
         {
           "title": "nc-h9",
-          "at": 3.15
+          "at": 3.0
         }
       ],
       "sfx": [],
@@ -287,9 +287,8 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 3.6,
-        "fit": "pad",
-        "speed": 2
+        "in": 3.93,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
@@ -305,7 +304,7 @@
         "path": "out/video/blender/bl01_look.mp4",
         "in": 0.0,
         "fit": "pad",
-        "speed": 9.4,
+        "speed": 8.8,
         "reverse": true
       },
       "letterbox": 2.39,
@@ -353,7 +352,7 @@
       "sfx": [
         {
           "name": "touch",
-          "at": 0.05,
+          "at": 2.32,
           "gain_db": -4
         }
       ],
@@ -365,7 +364,7 @@
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
         "in": 0.0,
-        "speed": 3.68,
+        "speed": 3.44,
         "reverse": true,
         "fit": "pad"
       },
@@ -403,7 +402,7 @@
         },
         {
           "name": "touch",
-          "at": 2.45,
+          "at": 2.0,
           "gain_db": -4
         }
       ],
@@ -416,9 +415,9 @@
         "left": {
           "src": "clip",
           "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.0,
+          "in": 1.9,
           "crop": [
-            0,
+            800,
             0,
             960,
             804
@@ -427,9 +426,9 @@
         "right": {
           "src": "clip",
           "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.9,
+          "in": 1.1,
           "crop": [
-            960,
+            780,
             0,
             960,
             804

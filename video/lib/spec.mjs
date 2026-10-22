@@ -39,6 +39,36 @@ export function storyBeats(spec, story) {
   return (spec?.beats ?? []).filter((beat) => beat.story == null || beat.story === pick(beat));
 }
 
+/**
+ * The trailer under one naming of the players (SPEC 10): `ids` as written (H8, A11), or `names`,
+ * the fictional names the app shows once its players are named. `named.vo` swaps a line's text
+ * (a string, or { text, at } when the new line needs another start) and gives it its own id (`<id>n`), so both voicings stay synthesized side by side;
+ * `named.titles` overrides a title's params (and its fallback), key by key. A title this cut
+ * does not have (a Blender name card before its clip is in) is skipped.
+ */
+export function namedSpec(spec, naming) {
+  const choice = naming ?? spec?.naming ?? "ids";
+  if (choice !== "names") return spec;
+  const named = spec.named ?? {};
+  const voice = (line) => {
+    const over = named.vo?.[line.id];
+    if (over == null) return line;
+    return { ...line, ...(typeof over === "string" ? { text: over } : over), id: `${line.id}n` };
+  };
+  const beats = (spec.beats ?? []).map((beat) => (beat.vo ? { ...beat, vo: beat.vo.map(voice) } : beat));
+  const titles = { ...(spec.titles ?? {}) };
+  for (const [key, over] of Object.entries(named.titles ?? {})) {
+    const title = titles[key];
+    if (!title) continue;
+    titles[key] = {
+      ...title,
+      params: { ...title.params, ...(over.params ?? {}) },
+      ...(over.fallback ? { fallback: { ...title.fallback, ...over.fallback } } : {}),
+    };
+  }
+  return { ...spec, beats, titles };
+}
+
 export function validateTrailer(spec, ctx) {
   const errors = [];
   // `pins`: a cine shot corner-pinned onto a screen in a rendered clip (video/pin.py).
@@ -53,6 +83,11 @@ export function validateTrailer(spec, ctx) {
   const warnings = [];
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
     return { errors: ["trailer.json: expected an object"], warnings };
+  }
+  if (spec.naming != null && !["ids", "names"].includes(spec.naming)) errors.push(`naming must be "ids" or "names"`);
+  const voIds = new Set((spec.beats ?? []).flatMap((b) => (b.vo ?? []).map((v) => v.id.replace(/n$/, ""))));
+  for (const id of Object.keys(spec.named?.vo ?? {})) {
+    if (!voIds.has(id)) errors.push(`named.vo.${id}: no voice line has that id`);
   }
   if (spec.version !== 1) errors.push(`version: expected 1, got ${JSON.stringify(spec.version)}`);
   checkOutput(spec.output, errors);
