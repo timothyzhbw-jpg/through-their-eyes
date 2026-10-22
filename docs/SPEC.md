@@ -1553,6 +1553,27 @@ original visual identity.
     before/after video, 2026-10-21); `?anims=base` turns it off;
     under reduced motion there are no shoulder checks. Quaternius' locomotion (CC0) was compared
     and not used.
+- **Stadium:** two builds of one bowl ([web/src/views/stadiumGeometry.ts](../web/src/views/stadiumGeometry.ts)).
+  - *Procedural* ([Stadium.tsx](../web/src/views/Stadium.tsx)): generated in the browser, drawn
+    on the first frame; it is the fallback.
+  - *Baked* ([bakedStadium.ts](../web/src/views/bakedStadium.ts),
+    `web/public/models/stadium_baked.glb`, about 0.8 MB): modelled in Blender from our own
+    procedural scripts on the same numbers (stepped terraces, 15,171 flat spectators, lattice
+    masts, roof trusses, a row of lamps along the roof's edge, a players' tunnel and two
+    dugouts; no imported models or textures). Cycles bakes the four masts' floodlights, the roof
+    lamps, a hidden fill under the roof for the stands, the sky and the ambient occlusion into
+    a strip lightmap (stands and roof), vertex colours (crowd, masts, props) and a light map
+    for the grass. The floodlight spots' powers are fitted by least squares so the pitch
+    is evenly lit (5th percentile 0.73 of the median). Everything but the grass is unlit; the
+    grass keeps its material, lighting and markings, and the baked light only shapes it. Meshopt
+    geometry, WebP textures.
+  - It is the default, except with Data Saver, a connection slower than 4G or under 4 GB of
+    memory (the browser's hints; Safari gives none). It is fetched at low priority a second
+    after the first frame, once the page is idle, and swapped in when ready; if it fails to load,
+    the procedural stadium stays. `?stadium=procedural` or `?stadium=baked` decides. Capture
+    (`?cine=1`) is ready only once the stadium has settled, so a shot never cuts between the
+    two. The bpy scripts stay outside the repo (Blender is GPL); only their output is committed
+    (`web/public/models/README.md`).
   - Keepers (`role` `GK`) wear their own kits, as in the trailer's Blender shots: home teal
     `#2ec4b6`, away violet `#c062e8` (`web/src/players/kit.ts`), clear of both teams, the pitch
     and the reserved data colours. Every 3D body follows the kit (rigged players, the capsule
@@ -1756,10 +1777,16 @@ original visual identity.
   side (the sim's field of view is wider than 95°). The live playhead may fall behind the stream
   by what the beats added and catches up at the next possession's cut. Timing is a function of
   the frame only: no position, event or number changes.
-  - Switching between his eyes and the broadcast camera flies between them (0.8 s) unless the
-    auto director cuts or the playhead jumped; the 3D view and the board morph into each other's
-    place (View Transitions API). The other run's ghost path draws itself on and its dashes march
-    with the playhead.
+  - Every camera switch is a clean cut (Bowen, 2026-10-21: no blur when the camera switches):
+    his eyes, the broadcast camera, the tactical board and the director's cuts change the
+    picture at once, with no camera move or morph between them, and for 0.3 s after a cut, and
+    at least its first 4 frames (one slow frame can outlast 0.3 s), no blur pass runs (the
+    head-whip blur, depth of field), easing back over 0.25 s
+    ([web/src/beat/cut.ts](../web/src/beat/cut.ts)). The beat's push-in moves no blur. The
+    first-person head-whip blur itself is off by default and opt-in (View options, "Motion
+    blur"), and subtle when on (90° shutter, at most 0.3% of the width); text rises in by
+    opacity and position only, never a blur. The other
+    run's ghost path draws itself on and its dashes march with the playhead.
   - Verified numbers in a caption count up from zero the first time they come up and take a
     check stamp; the verdict's verified numeral does so when scrolled into view. Cosmetic: the
     page's text is the verified value throughout.
@@ -1774,7 +1801,7 @@ original visual identity.
     for sound", and a line that could not be spoken says "No voice" beside it.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
-  - `prefers-reduced-motion`: no slow motion, push-in, camera move, morph, count-up or sting;
+  - `prefers-reduced-motion`: no slow motion, push-in, count-up or sting;
     the ring, the sweep and the stamp still show.
 - *Stretch:* export a breakdown as a short shareable clip in the browser (canvas + MediaRecorder,
   WebM); also usable as raw footage for the video.
@@ -1925,12 +1952,31 @@ the database's acknowledgement in [CREDITS.md](CREDITS.md). No match, club or pl
       beat and catches up at the next cut; sound ducks under the voice, follows the Sound switch
       and drops the sting under reduced motion; count-ups end on the verified text; fps unchanged.
       — [web/src/beat/beat.test.ts](../web/src/beat/beat.test.ts) (18 cases),
-      [cameraBlend.test.ts](../web/src/beat/cameraBlend.test.ts) (5),
+      [cut.test.ts](../web/src/beat/cut.test.ts) (no blur around a camera cut; smoke page
+      `cut-no-blur`: 0 px on the frames after a switch, 27.9 px with the guard taken out),
       [web/src/sound/sound.test.ts](../web/src/sound/sound.test.ts) (10),
       [web/src/ui/countUp.test.tsx](../web/src/ui/countUp.test.tsx) (14); `npm run smoke` pages
       `beat-eyes`, `beat-broadcast`, `beat-reduced-motion` (pushed in and ringed; ringed, not
       pushed) with screenshots; `npm run fps` (2026-10-21, Apple M4 Pro, Metal, headless,
       1920 × 1080): 59.3–60.0 fps, p95 16.7–16.8 ms in every row, as before.
+- [x] *Baked stadium:* the GLB is at most 3 MB on the wire, meshopt and WebP; its pitch, stands,
+      crowd, masts and boards sit on stadiumGeometry.ts's numbers (pitch coordinates as three.js
+      (x, height, -y)); the app's grass reads its light map with the file's own UVs; it is
+      fetched only after the first frame and never with `?stadium=procedural`; a missing or
+      broken file keeps the procedural stadium; capture waits until the stadium has settled.
+      — [web/src/views/bakedStadium.test.ts](../web/src/views/bakedStadium.test.ts) (the file
+      decoded with meshopt in Node: every one of the 30,342 crowd triangles stands 12 cm under a
+      rake of the app's profile; the lamps on FLOODLIGHTS; the boards on BOARDS),
+      [Stadium.test.tsx](../web/src/views/Stadium.test.tsx). 2026-10-21, production build,
+      Chrome on an Apple M4 Pro (loaded machine), median of 3 cold loads at Lighthouse's Slow 4G
+      (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
+      3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
+      (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
+      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
+      eval/reports/web_load.md). `npm run fps` 60
+      capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
+      245–299 → 339–344 fps broadcast.
 - [x] *Optional skeleton view:* off by default, one toggle for the broadcast camera and the board;
       draws only position, torso yaw, head yaw (true or as tracked) and the detector's marks; works
       in a hero moment and in a stitched match; 60 fps with 22 players.
