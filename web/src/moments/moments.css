@@ -1,0 +1,94 @@
+/* The moment links (MomentRail.tsx): a slim rail above the live screen and a row on the intro
+   card. Small chips, one line; on a phone the rail scrolls sideways. */
+:root {
+  --rail-h: 44px;
+}
+.moment-rail {
+  display: flex;
+  align-items: center;
+  height: var(--rail-h);
+  padding: 0 var(--gutter);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--night);
+}
+.moment-rail.hidden {
+  visibility: hidden;
+}
+/* The live screen gives the rail its height, so the playback bar stays on the first screen. */
+.app:has(> .moment-rail) > .stage {
+  height: calc(100svh - var(--rail-h));
+}
+.moment-chips ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.moment-rail .moment-chips {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.moment-rail .moment-chips ul {
+  flex-wrap: nowrap;
+}
+.moment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-control);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+  color: var(--chalk-2);
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    color var(--t-quick) var(--settle),
+    box-shadow var(--t-quick) var(--settle);
+}
+.moment-chip:hover {
+  color: var(--chalk);
+  box-shadow: inset 0 0 0 1px var(--chalk-3);
+}
+.moment-chip[aria-current="page"] {
+  color: var(--night);
+  background: var(--chalk);
+  box-shadow: none;
+}
+/* The full match is live: a dot as on the Live pill. */
+.moment-chip.match i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--floodlight);
+}
+.moment-chip.match[aria-current="page"] i {
+  background: var(--night);
+}
+@media (max-width: 760px) {
+  .moment-rail {
+    padding: 0 16px;
+  }
+  /* One row on a phone, on the rail and on the intro card's sheet (it must stay short): more chips
+     than the width scroll sideways, the last ones fading at the edge so the row reads as such. */
+  .moment-chips {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  }
+  .moment-chips ul {
+    flex-wrap: nowrap;
+  }
+  .moment-chips li:last-child {
+    padding-right: 24px; /* the last chip can scroll out of the fade */
+  }
+  .app:has(> .moment-rail) > .stage {
+    height: auto;
+  }
+}
