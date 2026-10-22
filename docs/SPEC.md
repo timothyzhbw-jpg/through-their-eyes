@@ -1199,6 +1199,11 @@ comply with verified template lines (drops forbidden lines, adds the first suppo
 missing group in story order, brings a spatial line first, trims numeric lines that cover no
 group). The templates go through the same `repair`. A recap tells several moments and keeps only
 the forbidden ids.
+The narration ablation (`eval/narration_ablation.py`) and the crew-vs-single eval
+(`eval/crew_vs_single.py`) run the Verifier with these script checks off (`LineVerifier`, line
+checks only), as when their reports were measured: with them on, the single agent's one call is
+redrafted whole and its calls and rewrites are no longer the ones the report counts. Arm D of
+crew-vs-single is therefore the crew with the line-check Verifier, not the deployed one.
 
 **Delivery tiers.** Each moment gets `calm | excited | clutch` from deterministic rules on the
 MomentCard (lens |Δ|, outcome, phase), never from an LLM. Each line also has a role. `open` is a

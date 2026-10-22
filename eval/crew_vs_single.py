@@ -8,6 +8,8 @@ same moments, audiences, model, MCP tools, schemas and deterministic code:
 - A. single agent, no Verifier: one Foundry call does the four agents' jobs (eval/single_agent.py),
   and its lines air as drafted;
 - B. single agent + the Verifier, with the crew's rewrite budget (two rounds, then drops);
+  "the Verifier" here checks lines (`eval.single_agent.LineVerifier`): the persona rules'
+  whole-script checks (agents/persona_rules.py, SPEC 6) are off, as when this eval was measured;
 - C. the crew without the Verifier loop: Director → Analyst → Telestrator ∥ narration → Voice;
 - D. the full crew, as deployed (agents/workflow.py).
 A and B are one run (B's first draft is what A airs), and so are C and D: the Verifier runs after
