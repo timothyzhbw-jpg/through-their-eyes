@@ -591,7 +591,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "N. Varnhall's run was on J. Ferriday's blind side.",
         "Before the ball reached him, J. Ferriday looked over his right shoulder.",
         "When J. Ferriday looked over his shoulder before the ball arrived, he saw N. Varnhall.",
-        "J. Ferriday found N. Varnhall with a 38-metre pass.",
+        "J. Ferriday found N. Varnhall with a 39-metre pass.",
         "Without that look, J. Ferriday would have passed to K. Annersley.",
     ]
     assert [line.text for line in zh.payload.lines] == [
@@ -599,7 +599,7 @@ def test_audio_description_says_who_where_which_way_and_what_he_saw(described):
         "N. Varnhall的跑位在J. Ferriday的盲区。",
         "球到之前，J. Ferriday扭头看向了右后方。",
         "球到之前回头的那一眼，J. Ferriday看到了N. Varnhall。",
-        "J. Ferriday一脚38米的传球找到了N. Varnhall。",
+        "J. Ferriday一脚39米的传球找到了N. Varnhall。",
         "如果没有那一眼，J. Ferriday会把球传给K. Annersley。",
     ]
     assert [line.claims for line in zh.lines] == [line.claims for line in en.lines]
@@ -780,12 +780,12 @@ _SNAPSHOT_LINES = (
      False),
     ("casual", "en", "Without that look, J. Ferriday would have passed to K. Annersley.", "why",
      "that look", True),
-    ("analyst", "en", "J. Ferriday found N. Varnhall with a 38-metre pass.", "peak", None, False),
+    ("analyst", "en", "J. Ferriday found N. Varnhall with a 39-metre pass.", "peak", None, False),
     ("casual", "zh", "他看到了什么？", "open", None, False),
     ("casual", "zh", "球到之前，J. Ferriday先回头看了一眼。", "build", "回头看了一眼", False),
     ("casual", "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", "盲区", False),
     ("casual", "zh", "如果没有那一眼，J. Ferriday会把球传给K. Annersley。", "why", "那一眼", True),
-    ("analyst", "zh", "J. Ferriday一脚38米的传球找到了N. Varnhall。", "peak", None, False),
+    ("analyst", "zh", "J. Ferriday一脚39米的传球找到了N. Varnhall。", "peak", None, False),
     (AD, "en", "N. Varnhall's run was on J. Ferriday's blind side.", "why", None, False),
     (AD, "zh", "N. Varnhall的跑位在J. Ferriday的盲区。", "why", None, False),
 )  # fmt: skip
@@ -794,7 +794,7 @@ _SCAN_CLAIMS = {"scan_before_reception", "scans_before_reception", "scan_side",
                 "time_since_last_scan"}  # fmt: skip
 _PEAK_CLAIMS = {"pass_to_runner", "runner_received", "pressure_at_pass"}
 _PEAK_LINES = (
-    "found N. Varnhall with a 38-metre pass",
+    "found N. Varnhall with a 39-metre pass",
     "took the pass",
     "Pressing intensity on K. Annersley was 95% when he released the ball",
 )

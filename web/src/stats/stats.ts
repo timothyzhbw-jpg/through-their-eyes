@@ -430,7 +430,7 @@ export function headlines(
     lines.push({
       key: "longest_pass",
       label: "Longest pass",
-      value: `${Math.round(best.distance_m)} m`,
+      value: `${best.distance_m.toFixed(0)} m`,
       who: passer ? who(passer) : best.player,
     });
   }
@@ -491,7 +491,7 @@ export function statTags(s: Stats, frame: number, owner: number): StatTag[] {
         player: cue.receiver,
         kind: "pass",
         label: "PASS",
-        text: `${Math.round(cue.distance_m)} m · ${cue.band}`,
+        text: `${cue.distance_m.toFixed(0)} m · ${cue.band}`,
       });
     }
   }

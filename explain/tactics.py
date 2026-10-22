@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
+from analytics.stats import display
 from analytics.tactics import (
     DecisionRecord,
     Passage,
@@ -66,8 +66,9 @@ def _near(lhs: Any, rhs: Any, decimals: int) -> Predicate:
 
 
 def _round(value: float, decimals: int) -> float:
-    """Half up, as a reader rounds (Python's round is half to even)."""
-    return math.floor(value * 10**decimals + 0.5) / 10**decimals
+    """As every number on screen is rounded (`analytics.stats.display`): ties away from zero, as
+    a reader rounds (Python's round is half to even)."""
+    return display(value, decimals)
 
 
 def _pct(ratio: float) -> int:

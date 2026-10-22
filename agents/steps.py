@@ -34,6 +34,7 @@ import numpy as np
 from agents.context import MomentContext
 from agents.look import ACTION_WORDS, OVER_THE_SHOULDER, SEEN
 from agents.schemas import Language, Persona
+from analytics.stats import display
 from analytics.vision import wrap_angle
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.render import RenderPayload, build_payload
@@ -208,7 +209,7 @@ class _Builder:
             ("left", True): "越过左肩向后看", ("right", True): "越过右肩向后看",
             ("left", False): "向左看", ("right", False): "向右看",
         }[(step.side, step.over)]  # fmt: skip
-        seconds = round((rs.reception.frame - e.frame) * rs.run.dt, 1)
+        seconds = display((rs.reception.frame - e.frame) * rs.run.dt, 1)
         checks = [
             Predicate(op="eq", lhs=self.fn("scan_side", scan=e.id, against="ball"), rhs=step.side),
             Predicate(op="ge" if step.over else "lt",
@@ -333,9 +334,9 @@ class _Builder:
         error = self.at_decision("belief_error", observer=self.hero, target=slot("mate"))
         aged = self.at_decision("belief_age", observer=self.hero, target=slot("mate"))
         checks = [Predicate(op="approx", lhs=error, rhs=slot("err"), abs_tol=0.05)]
-        slots = {"mate": Slot(ref=mate), "err": Slot(value=round(err, 1), decimals=1)}
-        if round(age, 1) >= 0.1:
-            slots["age"] = Slot(value=round(age, 1), decimals=1)
+        slots = {"mate": Slot(ref=mate), "err": Slot(value=display(err, 1), decimals=1)}
+        if display(age, 1) >= 0.1:
+            slots["age"] = Slot(value=display(age, 1), decimals=1)
             checks.append(Predicate(op="approx", lhs=aged, rhs=slot("age"), abs_tol=0.05))
             template = (
                 "When he decides, he pictures {mate} {err} m from where he really is: "
@@ -400,7 +401,7 @@ class _Builder:
             )  # fmt: skip
         f = rs.decision.frame
         d = float(np.linalg.norm(rs.run.pos[f, rs.run.index(a)] - rs.run.pos[f, rs.run.index(b)]))
-        slots = {"opponent": Slot(ref=b), "d": Slot(value=round(d, 1), decimals=1)}
+        slots = {"opponent": Slot(ref=b), "d": Slot(value=display(d, 1), decimals=1)}
         if a == self.hero:
             who: object = self.hero
             template = "{opponent} is the opponent nearest to him, {d} m away."

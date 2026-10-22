@@ -8,9 +8,13 @@ corruption eval (`eval/corruption.py`).
 A hero with no decision on the ball (a marker, `marker_scan` moment) has his own builders
 (`MARKER_BUILDERS`): his look, whether he stayed with his man, and the run without the look.
 
-Numbers are rounded to the precision they are shown at, and `approx` tolerates exactly half a
-display unit: "41 metres" claims 40.5–41.5 m. With the moment's card in the context, claims anchor
-on `<card>.<anchor>` (SPEC 5.1); evidence always lists plain event ids, for the viewer to seek to.
+Numbers are rounded to the precision they are shown at, by the one rule every number on screen
+follows (`analytics.stats.display`: ties away from zero, as the web's `toFixed`), and `approx`
+tolerates exactly half a display unit: "41 metres" claims 40.5–41.5 m. A quantity a chip also
+shows is measured as the chip measures it (a pass's length and speed and a shot's speed on the
+tracked ball, `event_attr`), so the two read the same (SPEC 4.6, 5.3). With the moment's card in
+the context, claims anchor on `<card>.<anchor>` (SPEC 5.1); evidence always lists plain event
+ids, for the viewer to seek to.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from analytics.stats import display
 from explain import lexicon
 from explain.cards import MomentCard
 from explain.claims import Claim, Predicate, Slot, event, fn, slot
@@ -111,7 +116,8 @@ def _approx(lhs, rhs, decimals: int, scale: float = 1.0) -> Predicate:
 
 
 def _rounded(value: float, decimals: int) -> int | float:
-    return round(value) if decimals == 0 else round(value, decimals)
+    shown = display(value, decimals)
+    return int(shown) if decimals == 0 else shown
 
 
 def _num(value: float, decimals: int) -> Slot:
@@ -185,7 +191,7 @@ def pass_to_runner(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     if r.hero_pass is None or r.hero_pass.type != "pass":
         return None
     p = r.hero_pass
-    dist = fn("event_attr", event=r.at_action, attr="distance")
+    dist = fn("event_attr", event=r.at_action, attr="length")
     return Claim(
         id="pass_to_runner",
         template="{passer} found {receiver} with a {dist}-metre pass.",
@@ -204,16 +210,14 @@ def pass_to_runner(ctx: EvalContext, r: HeroRefs) -> Claim | None:
 def pass_speed(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     if r.hero_pass is None or r.hero_pass.type != "pass":
         return None
-    speed = fn("event_attr", event=r.at_action, attr="speed")
-    kmh = ctx.value(speed) * 3.6
+    kmh = fn("event_attr", event=r.at_action, attr="release_kmh")
     return Claim(
         id="pass_speed",
         template="{passer}'s pass left his foot at {kmh} km/h.",
         templates={"zh": "{passer}这脚传球的出球时速为{kmh}公里。"},
-        slots={"passer": Slot(ref=r.hero_pass.player), "kmh": _num(kmh, 0)},
+        slots={"passer": Slot(ref=r.hero_pass.player), "kmh": _num(ctx.value(kmh), 1)},
         predicate=Predicate(op="all", args=[
-            _pass_by("passer", r),
-            _approx(speed, slot("kmh", scale=1 / 3.6), 0, scale=1 / 3.6),
+            _pass_by("passer", r), _approx(kmh, slot("kmh"), 1),
         ]),
         evidence=[r.hero_pass.id],
     )  # fmt: skip
@@ -826,15 +830,15 @@ def shot_speed(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     shot = _placed_shot(r)
     if shot is None:
         return None
-    speed = fn("event_attr", event=r.at_action, attr="speed")
+    kmh = fn("event_attr", event=r.at_action, attr="release_kmh")
     return Claim(
         id="shot_speed",
         template="{player} hit it at {kmh} km/h.",
         templates={"zh": "{player}这脚射门的球速为每小时{kmh}公里。"},
-        slots={"player": Slot(ref=r.hero), "kmh": _num(ctx.value(speed) * 3.6, 0)},
+        slots={"player": Slot(ref=r.hero), "kmh": _num(ctx.value(kmh), 1)},
         predicate=Predicate(op="all", args=[
             _eq(fn("event_attr", event=r.at_action, attr="player"), slot("player")),
-            _approx(speed, slot("kmh", scale=1 / 3.6), 0, scale=1 / 3.6),
+            _approx(kmh, slot("kmh"), 1),
         ]),
         evidence=[shot.id],
     )  # fmt: skip

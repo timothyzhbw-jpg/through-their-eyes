@@ -35,6 +35,7 @@ from agents.context import MomentContext
 from agents.llm import DEFAULT_TIMEOUT_S, ask, client_from_env
 from agents.prompts import CREW
 from agents.schemas import Language, Persona, Strict
+from analytics.stats import display
 from explain.builders import POST
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.render import RenderPayload, build_payload
@@ -494,7 +495,7 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
     if w.action.startswith("shot:"):
         return out + _shot_claims(ctx, w)
     delta = fn("cf_delta", of="possession_value", scan=w.id)
-    value = round(abs(w.delta_xt), 2)
+    value = display(abs(w.delta_xt), 2)
     better = w.delta_xt >= 0  # what he did was worth more than the forced option
     out.append(Claim(
         id="whatif_value",
@@ -561,8 +562,8 @@ def _shot_claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
                      "{p_his}.",
             templates={"zh": f"打{post_zh}的进球概率是{{p_new}}，打{his_zh}是{{p_his}}。"},
             slots={"player": Slot(ref=hero),
-                   "p_new": Slot(value=round(ctx.evaluator.value(p_new, values), 2), decimals=2),
-                   "p_his": Slot(value=round(ctx.evaluator.value(p_his, values), 2), decimals=2)},
+                   "p_new": Slot(value=display(ctx.evaluator.value(p_new, values), 2), decimals=2),
+                   "p_his": Slot(value=display(ctx.evaluator.value(p_his, values), 2), decimals=2)},
             predicate=Predicate(op="all", args=[
                 Predicate(op="approx", lhs=p_new, rhs=slot("p_new"), abs_tol=0.005),
                 Predicate(op="approx", lhs=p_his, rhs=slot("p_his"), abs_tol=0.005),

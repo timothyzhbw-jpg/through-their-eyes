@@ -79,7 +79,7 @@ describe("a keeper's step", () => {
     expect(html).toContain("Take the step");
     expect(html).toContain("He saves it");
     expect(html).toContain("M. Quillan scores");
-    expect(html).toContain("+0.700");
+    expect(html).toContain("+0.70"); // at the claim's precision (2 decimals)
     expect(html).toContain("Chance of saving it gained by the step, on the true positions.");
     expect(html).not.toContain("Expected threat is");
   });

@@ -110,7 +110,7 @@ describe("a marker's look", () => {
       session("factual", { deltaXt: 0.09596, deltaSource: "lens" }),
       <VerdictPanel />,
     );
-    expect(html).toContain("+0.096");
+    expect(html).toContain("+0.10"); // at the claim's precision (cf_value: 2 decimals)
     expect(html).toContain("scan lens");
     expect(runLabels(hero).gain).toBe("Worth of the look to his side");
   });

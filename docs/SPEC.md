@@ -968,6 +968,28 @@ a pass at its reception, interception or out; a sprint at its first frame back b
 - **Ball and shot speed.** Release speed: the mean ball speed over the first 0.2 s after the kick
   (|b(k + m) − b(k)| / (m·dt), m = min(5, frames to the resolution)); shots too, once shot events
   exist (§3.3). The live ball speed is the smoothed speed above.
+- **One quantity, one number** (2026-10-22). A quantity a claim states and a chip, card or panel
+  also shows has one definition and one rounding rule, so the two read the same digit. *Why:* the
+  red team found the live chip "PASS 39 m" over the claim "a 38-metre pass" for the same pass: the
+  chip measured the ball's travel (39.38 m), the claim the distance to where it was aimed
+  (38.05 m), and the two were rounded twice in different ways.
+  - Pass length is the distance above, on the tracked ball to the mm (`analytics.stats.
+    pass_length`); pass and shot speed are the release speeds above. The claims `pass_to_runner`,
+    `pass_speed` and `shot_speed` and the moment card's `pass_distance_m` and `pass_speed_mps`
+    measure them with the same functions on the same mm track (`event_attr` `length`,
+    `release_kmh`), not from the sim's aim or its kick speed.
+  - One rounding rule, `analytics.stats.display`: the exact value to the digits shown, ties away
+    from zero (what the web's `toFixed` prints). Claim slots and the live payload are rounded
+    once by it; the web prints them as they are. A pass's length is in whole metres in both the
+    payload and the claim, speeds to 0.1 km/h.
+  - Where the web shows a number a claim also states, it shows it to the claim's precision: the
+    verdict's worth before the claim airs (2 decimals, not 3), the last sighting's age (1).
+  - *Evidence:* `tests/test_one_number.py` — for every served hero moment (and match-1's heroes
+    on the match clock) each such number equals the claim's rendered value: the PASS chip and
+    `pass_to_runner`, the pass log and `pass_speed`, the SHOT chip and `shot_speed`, the belief
+    numeral and `belief_error`, P(arrives) and `pass_success`, the verdict and `cf_value`, a
+    marker's card and `stayed_with_runner` / `cf_lost_runner`; and the recap's pass counts equal
+    the stats panel's team line. `web/src/stats/stats.test.ts` checks the chip prints the payload.
 - **Pass difficulty** ∈ [0, 1], a fixed formula from our kernels, set before any check of it and
   not fitted to our outcomes:
   `difficulty = 0.4·lane + 0.2·passer + 0.2·receiver + 0.2·min(d / 50 m, 1)`.

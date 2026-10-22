@@ -31,6 +31,7 @@ import numpy as np
 
 from analytics.blind_side import DEFAULT_PARAMS, BlindSideAlerts, BlindSideParams, detect_alerts
 from analytics.pressing import frame_pressing
+from analytics.stats import feed_track, pass_length, release_speed
 from analytics.vision import player_visibility
 from analytics.xt import xt_for
 from explain.cards import LensName, MomentCard, MomentKind, Scalar
@@ -155,11 +156,14 @@ def bypassed_opponents(run: MatchRun, event: Event) -> list[str]:
 def _pass_metrics(run: MatchRun, event: Event, bypassed: list[str]) -> dict[str, Scalar]:
     start, end = np.array(event.attrs["start"]), np.array(event.attrs["end_at"])
     s = _attack_sign(event.team)
+    # Length and speed as the live stats and the claims measure them (SPEC 4.6).
+    ball = feed_track(run.ball_pos[:, :2])
+    last = min(int(event.attrs["end"]), len(ball) - 1)
     return {
         "opponents_bypassed": len(bypassed),
-        "pass_distance_m": _r(np.linalg.norm(end - start), 2),
+        "pass_distance_m": _r(pass_length(ball, event.frame, last), 2),
         "pass_progression_m": _r(s * (end[0] - start[0]), 2),
-        "pass_speed_mps": _r(event.attrs["speed"], 2),
+        "pass_speed_mps": _r(release_speed(ball, event.frame, last, run.dt), 2),
         "pass_xt_gain": _r(xt_for(end, s) - xt_for(start, s)),
     }
 

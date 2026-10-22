@@ -110,7 +110,7 @@ describe("a placed shot", () => {
     expect(placedShot(hero)).toBe(true);
     expect(hero.deltaXt).toBeNull();
     const html = render(session("factual"), <VerdictPanel />);
-    expect(html).not.toContain(raw.delta_xt!.toFixed(3));
+    expect(html).not.toContain(`+${raw.delta_xt!.toFixed(2)}`);
     expect(html).not.toContain("(xT)");
     expect(runLabels(hero).gain).toBe("Chance of scoring gained by looking");
   });
@@ -120,7 +120,7 @@ describe("a placed shot", () => {
       session("factual", { deltaXt: 0.523342, deltaSource: "lens" }),
       <VerdictPanel />,
     );
-    expect(html).toContain("+0.523");
+    expect(html).toContain("+0.52"); // at the claim's precision (cf_shot_value: 2 decimals)
     expect(html).toContain("Chance of scoring gained by looking, on the true positions.");
     expect(html).toContain("scan lens");
     expect(html).not.toContain("Expected threat is");
@@ -151,6 +151,6 @@ describe("a placed shot", () => {
     const html = render(s, <VerdictPanel />);
     expect(html).toContain("0.26 → 0.79");
     expect(html).toContain("checked by the verifier");
-    expect(html).not.toContain("+0.523");
+    expect(html).not.toContain("+0.52");
   });
 });
