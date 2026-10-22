@@ -1329,7 +1329,7 @@ html.spec #stage {
 
 .corner-label {
   position: absolute;
-  top: 158px; /* below the top bar of a 2.39:1 letterbox */
+  top: 28px; /* in the top bar of a 2.39:1 letterbox, level with the preview mark: off the picture */
   right: 64px;
   color: rgba(239, 237, 229, 0.72);
   font-size: 26px;

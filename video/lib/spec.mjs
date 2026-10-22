@@ -302,11 +302,12 @@ function checkPicture(beat, i, where, cine, titles, ctx, errors) {
     // Two sources side by side, each cropped at its native size (no scaling), with a divider.
     for (const side of ["left", "right"]) {
       const part = picture[side];
-      if (!part || (part.src !== "clip" && part.src !== "capture")) {
-        errors.push(`${where}: split.${side} must be a clip or a capture`);
+      if (!part || !["clip", "capture", "cine"].includes(part.src)) {
+        errors.push(`${where}: split.${side} must be a clip, a capture or a cine shot`);
         continue;
       }
       if (part.src === "clip" && !repoFile(ctx.root, part.path)) errors.push(`${where}: split.${side} clip path "${part.path}" must stay inside the repo`);
+      if (part.src === "cine" && !cine[part.id]) errors.push(`${where}: split.${side}: unknown cine id "${part.id}"`);
       if (part.src === "capture" && !ctx.shotIds.has(part.shot)) errors.push(`${where}: split.${side}: unknown capture shot "${part.shot}"`);
       if (part.in != null && !(part.in >= 0)) errors.push(`${where}: split.${side}.in must be >= 0`);
       if (!Array.isArray(part.crop) || part.crop.length !== 4) errors.push(`${where}: split.${side}.crop must be [x, y, w, h]`);

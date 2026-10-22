@@ -258,9 +258,11 @@ async function stepCapture(ctx) {
 }
 
 async function stepCine(ctx) {
-  const ids = [
-    ...new Set(ctx.spec.beats.filter((b) => b.picture?.src === "cine").map((b) => b.picture.id)),
-  ];
+  // Cine pictures, and the cine halves of split screens.
+  const parts = ctx.spec.beats.flatMap((b) =>
+    b.picture?.src === "split" ? [b.picture.left, b.picture.right] : [b.picture ?? {}],
+  );
+  const ids = [...new Set(parts.filter((p) => p?.src === "cine").map((p) => p.id))];
   if (!ids.length) {
     console.log("  no cine shots");
     return;
@@ -831,7 +833,11 @@ async function beatEnv(ctx, beat, titles, manifest) {
     file = path.resolve(ctx.root, picture.path);
   } else if (picture.src === "split") {
     const sideFile = (part) =>
-      part.src === "clip" ? path.resolve(ctx.root, part.path) : path.join(ctx.finalsDir, `${part.shot}.webm`);
+      part.src === "clip"
+        ? path.resolve(ctx.root, part.path)
+        : part.src === "cine"
+          ? path.join(ctx.outDir, "cine", `${part.id}.mp4`)
+          : path.join(ctx.finalsDir, `${part.shot}.webm`);
     files = [sideFile(picture.left), sideFile(picture.right)];
     for (const f of files) if (!existsSync(f)) throw new Error(`beat ${beat.id}: missing ${path.relative(ctx.root, f)}`);
     sourceDurations = [await probe(ctx.ffmpeg, files[0]), await probe(ctx.ffmpeg, files[1])];
