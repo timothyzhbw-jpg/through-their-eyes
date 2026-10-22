@@ -155,7 +155,8 @@
 }
 
 /* Reduced motion: the ring and the card cut to their places, and nothing pulses. */
-.tour.reduced .tour-ring {
+.tour.reduced .tour-ring,
+.tour.scrolling .tour-ring {
   transition: none;
 }
 .tour.reduced .tour-ring::after,
