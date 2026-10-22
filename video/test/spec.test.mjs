@@ -200,3 +200,14 @@ test("output.max_s caps the planned film under 2:00", () => {
   const { errors } = check(spec);
   assert.ok(errors.some((e) => e.includes("is over output.max_s (5s)")), errors.join("\n"));
 });
+
+test("every Blender beat in blender_map.json is a beat of the trailer, in the Blender telling", () => {
+  const map = JSON.parse(readFileSync(path.join(REPO, "video/blender_map.json"), "utf8"));
+  const ids = new Map(real.beats.map((b) => [b.id, b]));
+  for (const entry of map.beats) {
+    const beat = ids.get(entry.beat);
+    assert.ok(beat, `${entry.beat} is not in trailer.json`);
+    assert.ok(beat.story == null || beat.story === "blender", `${entry.beat} is not in the Blender telling`);
+  }
+  assert.ok(Array.isArray(map.approved), "blender_map.json lists the approved clips");
+});

@@ -250,6 +250,23 @@ moves to the right while a title holds the lower left (a lower-left slam, a tag,
 **Machine load.** Every ffmpeg the edit runs is capped at `TTE_FFMPEG_THREADS` threads (default
 4), so a render can share the machine; run it under `nice -n 10` to keep it out of the way.
 
+**After a deploy, and when the Blender finals land.**
+
+```bash
+node video/tools/moments.mjs --write        # the hero moments' live times; re-aims shot 16-corner
+cd video && node capture.mjs --only 03,04,05,06,07,09,10,12,13,14,16 && cd ..
+node video/tools/blender_fit.mjs            # which approved finals are in, and their lengths
+node video/tools/blender_fit.mjs --apply --fit
+python3 video/tools/cuesheet.py "$(git rev-parse --short HEAD)" > /tmp/cue-sheet.md
+```
+
+`blender_map.json` says how each Blender beat is filled (clip, in-point, freeze, name cards,
+corner label). A clip is used only once its file name is in the map's `approved` list: the
+rejected renders share the finals' names. After `--fit` changes lengths, check that both
+tellings are equal and under `output.max_s`, re-time the score (copy `video/score/cues/` to a
+new sheet, set its `trailer_ref` to the commit, `uv run video/score/score.py --cues ...`), copy
+its `hybrid/score.wav` to `video/score/out/`, and run the trailer.
+
 **Numbers.** A voice-over line and a title param may not contain a digit or a number word
 (`zero` through `twelve`, the tens, `hundred`, `thousand`, `once`, `twice`, `half`, `dozen`,
 `percent`). A number arrives only as a `{claim.value}` slot, filled from `out/video/claims.json`
