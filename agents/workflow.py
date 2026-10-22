@@ -24,6 +24,11 @@ message it handled and its trace entry. `bring_back` resumes the run from its la
 with the answer (`AgentBack`): that step runs again on its last input. Only the steps that read its
 output follow, and Voice speaks the revised breakdown. A run that was interrupted resumes from its
 last completed superstep the same way.
+
+Crew trace (SPEC 6). Every run also records its timeline (agents/crewtrace.py): per step, when it
+ran, the typed message it handled and the ones it sent, the evidence it read and what it wrote on
+the workflow's state, its model calls, tool calls and the Verifier's rejections, plus the drill's
+events and the checkpoints. `run_crew` returns it with the breakdown; no model call makes it.
 """
 
 from __future__ import annotations
@@ -31,8 +36,8 @@ from __future__ import annotations
 import asyncio
 import sys
 import time
-from collections.abc import Collection
-from contextlib import AsyncExitStack
+from collections.abc import Collection, Iterator
+from contextlib import AsyncExitStack, contextmanager, nullcontext, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -49,8 +54,9 @@ from agent_framework import (
 )
 from pydantic import BaseModel, ValidationError
 
-from agents import fallbacks, prompts, schemas, telemetry
+from agents import crewtrace, fallbacks, prompts, schemas, telemetry
 from agents.context import MomentContext
+from agents.crewtrace import CrewTrace, ModelCall, Recorder, Rejected, Rewritten, StepRecord
 from agents.delivery import DESCRIBED, VOICE_STYLES, delivery_tier, voice_cues, withheld
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, Outage, ask, describe
 from agents.plan import shape_errors, template_plan, validate_plan, voice_times
@@ -94,6 +100,11 @@ AGENTS: tuple[AgentStep, ...] = ("director", "analyst", "telestrator", "narratio
 ROLE_STEP = {"pbp": "narration", "color": "narration"}  # narration's two voices
 NAME = "breakdown"  # the workflow's name, under which its checkpoints are filed
 BACK = "re-run from the checkpoint: the agent is back"
+# What each message a step sends puts on the workflow's state, the crew's shared board, under
+# which key. Every checkpoint saves the board, and the crew trace shows who wrote what.
+BOARD = {"Analyze": "request", "Briefing": "findings", "Planned": "plan", "Drafts": "drafts",
+         "Rewrite": "verdicts", "Approved": "scripts", "BreakdownResult": "voice",
+         "RecapResult": "voice"}  # fmt: skip
 
 Key = tuple[Persona, Language]
 
@@ -177,6 +188,19 @@ class Crew:
     trace: list[StepTrace] = field(default_factory=list)
     span: Any | None = None  # the breakdown's span; every step span is its child
     down: frozenset[str] = frozenset()  # agent steps taken down (the failure drill)
+    recorder: Recorder | None = None  # the crew trace of this run (agents/crewtrace.py)
+    checkpointed: bool = False  # the workflow checkpoints: the trace so far goes on its state
+
+    def __getattribute__(self, name: str) -> Any:
+        # Inside a step being traced, `ctx` is the evidence as that step sees it: each field it
+        # reads is noted on its trace entry.
+        value = object.__getattribute__(self, name)
+        return crewtrace.watched(value) if name == "ctx" else value
+
+    @property
+    def evidence(self) -> Any:
+        """The evidence itself, read without noting it on a step's trace."""
+        return object.__getattribute__(self, "ctx")
 
     @property
     def model(self) -> str:
@@ -191,11 +215,15 @@ class Crew:
         step = ROLE_STEP.get(role, role)
         return Outage(step) if step in self.down else self.client
 
-    def step(self, name: str, llm: bool = True, **attributes: Any):
+    @contextmanager
+    def step(self, name: str, llm: bool = True, **attributes: Any) -> Iterator[Any]:
         """The span of one workflow step; `llm` steps also name the model."""
         if llm:
             attributes["model"] = self.model
-        return telemetry.span(name, self.span, moment=self.ctx.card.id, **attributes)
+        with telemetry.span(name, self.span, moment=self.evidence.card.id, **attributes) as span:
+            if (rec := crewtrace.current()) is not None and rec.span_id is None:
+                rec.span_id = crewtrace.span_id(span)
+            yield span
 
     async def ask(self, role: str, instructions: str, prompt: str, schema, tools=None) -> Attempt:
         return await ask(
@@ -209,10 +237,21 @@ class Crew:
     def put(self, entry: StepTrace) -> None:
         """The step's trace entry, replacing the one from an earlier run of the step."""
         self.trace = [e for e in self.trace if e.step != entry.step] + [entry]
+        if (rec := crewtrace.current()) is not None and rec.step == entry.step:
+            rec.source, rec.attempts, rec.error = entry.source, entry.attempts, entry.error
+            rec.notes = list(entry.notes)
 
     def record(
-        self, step: str, attempt: Attempt | None, notes: list[str], used_llm: bool, span=None
+        self,
+        step: str,
+        attempt: Attempt | None,
+        notes: list[str],
+        used_llm: bool,
+        span=None,
+        calls: bool = True,
     ) -> None:
+        """The step's trace entry. `calls`: `attempt` is the step's one model call (narration
+        notes each of its calls itself)."""
         entry = StepTrace(
             step=step,
             source="llm" if used_llm else "template",
@@ -225,6 +264,16 @@ class Crew:
         if span is not None:
             telemetry.annotate(span, source=entry.source, attempts=entry.attempts, ms=entry.ms,
                                error=entry.error)  # fmt: skip
+        if attempt is not None and calls:
+            if (rec := crewtrace.current()) is not None:
+                rec.tools += attempt.tool_calls
+            crewtrace.call(ModelCall(role=step, source="llm" if attempt.value is not None
+                                     else "template", attempts=attempt.attempts,
+                                     ms=entry.ms, error=attempt.error))  # fmt: skip
+            if attempt.error and self.recorder is not None:
+                self.recorder.event("fallback", step, f"ran on its template after "
+                                    f"{attempt.attempts} attempts: "
+                                    f"{telemetry.error_class(attempt.error)}")  # fmt: skip
 
 
 # --- executors ------------------------------------------------------------------------------------
@@ -255,6 +304,38 @@ class Step(Executor):
         if errors:
             await ctx.request_info(AgentDown(self.id, errors[0]), AgentBack,
                                    request_id=f"down:{self.id}")  # fmt: skip
+            if self.crew.recorder is not None:
+                self.crew.recorder.event("waiting", self.id, f"asks to be brought back "
+                                         f"(workflow request down:{self.id})")  # fmt: skip
+
+    @contextmanager
+    def tracing(
+        self, ctx: WorkflowContext, message: Any, round: int | None = None, resumed: bool = False
+    ) -> Iterator[StepRecord | None]:
+        """Record this step on the crew trace while the block runs. With checkpoints, the trace so
+        far then goes on the workflow's state, so a run resumed from a checkpoint continues it."""
+        recorder = self.crew.recorder
+        if recorder is None:
+            yield None
+            return
+        with recorder.step(self.id, message, round=round, resumed=resumed) as rec:
+            yield rec
+        if self.crew.checkpointed:
+            ctx.set_state(crewtrace.STATE_KEY, recorder.trace.model_dump(mode="json"))
+
+    def wrote(self, ctx: WorkflowContext, message: Any) -> None:
+        """Note a message this step sent (or yielded) on its trace, and put it on the board."""
+        if (rec := crewtrace.current()) is None:
+            return
+        sent = crewtrace.payload(message)
+        rec.output.append(sent)
+        if (key := BOARD.get(type(message).__name__)) is not None:
+            ctx.set_state(key, sent.data)
+            rec.writes = [w for w in rec.writes if w != key] + [key]
+
+    async def send(self, ctx: WorkflowContext, message: Any) -> None:
+        await ctx.send_message(message)
+        self.wrote(ctx, message)
 
 
 class Director(Step):
@@ -264,11 +345,13 @@ class Director(Step):
     @handler
     async def run(self, job: Job, ctx: WorkflowContext[Analyze]) -> None:
         self.last = job
-        await self._direct(job, ctx)
+        with self.tracing(ctx, job):
+            await self._direct(job, ctx)
 
     @response_handler
     async def back(self, down: AgentDown, back: AgentBack, ctx: WorkflowContext[Analyze]) -> None:
-        await self._direct(self.last, ctx, resumed=True)
+        with self.tracing(ctx, self.last, resumed=True):
+            await self._direct(self.last, ctx, resumed=True)
 
     async def _direct(self, job: Job, ctx: WorkflowContext[Analyze], resumed: bool = False) -> None:
         crew, mc = self.crew, self.crew.ctx
@@ -288,7 +371,7 @@ class Director(Step):
                     )
             used = attempt is not None and attempt.value is not None
             crew.record("director", attempt, notes, used, span)
-        await ctx.send_message(Analyze(request))
+        await self.send(ctx, Analyze(request))
         await self.wait_if_down([attempt], ctx)
 
 
@@ -307,11 +390,13 @@ class Analyst(Step):
     @handler
     async def run(self, msg: Analyze, ctx: WorkflowContext[Briefing]) -> None:
         self.last = msg
-        await self._analyze(msg, ctx)
+        with self.tracing(ctx, msg):
+            await self._analyze(msg, ctx)
 
     @response_handler
     async def back(self, down: AgentDown, back: AgentBack, ctx: WorkflowContext[Briefing]) -> None:
-        await self._analyze(self.last, ctx, resumed=True)
+        with self.tracing(ctx, self.last, resumed=True):
+            await self._analyze(self.last, ctx, resumed=True)
 
     async def _analyze(
         self, msg: Analyze, ctx: WorkflowContext[Briefing], resumed: bool = False
@@ -348,7 +433,7 @@ class Analyst(Step):
                     else:
                         notes.append("no usable headline or lens: template findings")
             crew.record("analyst", attempt, notes, used, span)
-        await ctx.send_message(Briefing(msg.request, findings, rev=self.sent))
+        await self.send(ctx, Briefing(msg.request, findings, rev=self.sent))
         self.sent += 1
         await self.wait_if_down([attempt], ctx)
 
@@ -360,11 +445,13 @@ class Telestrator(Step):
     @handler
     async def run(self, msg: Briefing, ctx: WorkflowContext[Planned]) -> None:
         self.last = msg
-        await self._plan(msg, ctx)
+        with self.tracing(ctx, msg):
+            await self._plan(msg, ctx)
 
     @response_handler
     async def back(self, down: AgentDown, back: AgentBack, ctx: WorkflowContext[Planned]) -> None:
-        await self._plan(self.last, ctx, resumed=True)
+        with self.tracing(ctx, self.last, resumed=True):
+            await self._plan(self.last, ctx, resumed=True)
 
     async def _plan(
         self, msg: Briefing, ctx: WorkflowContext[Planned], resumed: bool = False
@@ -393,7 +480,7 @@ class Telestrator(Step):
             notes = [BACK] if resumed else []
             notes += [f"invalid plan, template used: {e}" for e in public]
             crew.record("telestrator", attempt, notes, used, span)
-        await ctx.send_message(Planned(plan, source, public, rev=msg.rev))
+        await self.send(ctx, Planned(plan, source, public, rev=msg.rev))
         await self.wait_if_down([attempt], ctx)
 
 
@@ -458,6 +545,9 @@ class Narration(Step):
             telemetry.annotate(span, source="llm" if lines else "template",
                                attempts=attempt.attempts, ms=round(attempt.ms, 1),
                                error=attempt.error, lines=len(lines or template))  # fmt: skip
+        crewtrace.call(ModelCall(role=speaker, persona=persona, language=language,
+                                 source="llm" if lines else "template", attempts=attempt.attempts,
+                                 ms=round(attempt.ms, 1), error=attempt.error))  # fmt: skip
         return (lines or template), attempt
 
     async def _script(
@@ -471,6 +561,8 @@ class Narration(Step):
                 with self.crew.step("narration", **attrs) as span:
                     telemetry.annotate(span, source="template", attempts=0, ms=0.0,
                                        lines=sum(who == speaker for who, _ in ordered))  # fmt: skip
+                crewtrace.call(ModelCall(role=speaker, persona=persona, language=language,
+                                         source="template", attempts=0, ms=0.0))  # fmt: skip
             return [
                 ScriptLine(id=f"L{i + 1}", speaker=who, text=d.text, claims=d.claims)
                 for i, (who, d) in enumerate(ordered)
@@ -490,13 +582,15 @@ class Narration(Step):
     @handler
     async def draft(self, base: Briefing, ctx: WorkflowContext[Drafts]) -> None:
         self.last = base
-        await self._draft(base, ctx)
+        with self.tracing(ctx, base, round=0):
+            await self._draft(base, ctx)
 
     @response_handler
     async def back(self, down: AgentDown, back: AgentBack, ctx: WorkflowContext[Drafts]) -> None:
         self.resumed = True
         try:
-            await self._draft(self.last, ctx)
+            with self.tracing(ctx, self.last, round=0, resumed=True):
+                await self._draft(self.last, ctx)
         finally:
             self.resumed = False
 
@@ -518,12 +612,21 @@ class Narration(Step):
         for key, (lines, _) in zip(keys, results, strict=True):
             scripts[key], dropped = tidy(self.crew.ctx, lines, key[1], key[0])
             notes += [f"{key[0]}/{key[1]} {d}" for d in dropped]
-        self.crew.record("narration", summary, notes, bool(attempts) and not fell_back)
-        await ctx.send_message(Drafts(base, scripts))
+        self.crew.record("narration", summary, notes, bool(attempts) and not fell_back,
+                         calls=False)  # fmt: skip
+        if fell_back and self.crew.recorder is not None:
+            self.crew.recorder.event("fallback", "narration", f"{len(fell_back)} of "
+                                     f"{len(attempts)} voices ran on their templates: "
+                                     f"{telemetry.error_class(fell_back[0].error)}")  # fmt: skip
+        await self.send(ctx, Drafts(base, scripts))
         await self.wait_if_down(attempts, ctx)
 
     @handler
     async def rewrite(self, msg: Rewrite, ctx: WorkflowContext[Drafts]) -> None:
+        with self.tracing(ctx, msg, round=msg.drafts.round + 1) as rec:
+            await self._rewrite(msg, ctx, rec)
+
+    async def _rewrite(self, msg: Rewrite, ctx: WorkflowContext[Drafts], rec: StepRecord | None):
         drafts = msg.drafts
         jobs = []
         for key, failed in msg.failed.items():
@@ -547,15 +650,34 @@ class Narration(Step):
                 telemetry.annotate(span, source="llm", attempts=attempt.attempts,
                                    ms=round(attempt.ms, 1), error=attempt.error,
                                    lines=min(len(new), len(mine)))  # fmt: skip
+            crewtrace.call(ModelCall(role=speaker, persona=persona, language=language,
+                                     source="llm" if new else "template",
+                                     attempts=attempt.attempts, ms=round(attempt.ms, 1),
+                                     error=attempt.error))  # fmt: skip
             return key, {line.id: d for (line, _), d in zip(mine, new, strict=False)}
 
-        for key, replaced in await asyncio.gather(*(redo(*job) for job in jobs)):
+        done = await asyncio.gather(*(redo(*job) for job in jobs))
+        for (key, _, mine), (_, replaced) in zip(jobs, done, strict=True):
+            for line, _ in mine if rec is not None else ():
+                new = replaced.get(line.id)
+                rec.rewritten.append(Rewritten(
+                    persona=key[0], language=key[1], line=line.id, speaker=line.speaker,
+                    before=line.text, after=new.text if new else None,
+                    claims_before=list(line.claims),
+                    claims_after=list(new.claims) if new else list(line.claims),
+                ))  # fmt: skip
             drafts.scripts[key] = [
                 _replace(line, replaced[line.id]) if line.id in replaced else line
                 for line in drafts.scripts[key]
             ]
+        if rec is not None:
+            answered = [c for c in rec.calls if c.source == "llm"]
+            rec.source = "llm" if answered else "template"
+            rec.attempts = sum(c.attempts for c in rec.calls)
+            rec.error = next((c.error for c in rec.calls if c.error), None)
+            rec.notes = [f"{len(answered)} of {len(rec.calls)} voices rewrote their lines"]
         drafts.round += 1
-        await ctx.send_message(drafts)
+        await self.send(ctx, drafts)
 
 
 def tidy(
@@ -664,20 +786,36 @@ class Verifier(Step):
 
     @handler
     async def check(self, drafts: Drafts, ctx: WorkflowContext[Rewrite | Approved]) -> None:
-        started = time.perf_counter()
-        with self.crew.step("verifier", llm=False, round=drafts.round) as span:
-            message, failing = self._round(drafts)
-            approved = isinstance(message, Approved)
-            telemetry.annotate(
-                span, source="code", ms=round((time.perf_counter() - started) * 1000, 1),
-                failed=failing, rewrites=sum(drafts.rewrites.values()),
-                dropped=sum(len(s.dropped) for s in message.scripts) if approved else 0,
-            )  # fmt: skip
-        await ctx.send_message(message)
+        with self.tracing(ctx, drafts, round=drafts.round) as rec:
+            started = time.perf_counter()
+            with self.crew.step("verifier", llm=False, round=drafts.round) as span:
+                message, failed = self._round(drafts)
+                approved = isinstance(message, Approved)
+                telemetry.annotate(
+                    span, source="code", ms=round((time.perf_counter() - started) * 1000, 1),
+                    failed=sum(len(lines) for lines in failed.values()),
+                    rewrites=sum(drafts.rewrites.values()),
+                    dropped=sum(len(s.dropped) for s in message.scripts) if approved else 0,
+                )  # fmt: skip
+            if rec is not None:
+                rec.source, rec.attempts = "code", 1
+                rec.rejected = [
+                    Rejected(persona=p, language=lg, line=line.id, speaker=line.speaker,
+                             text=line.text, problems=problems)
+                    for (p, lg), lines in failed.items() for line, problems in lines
+                ]  # fmt: skip
+                if not approved:
+                    n = len(rec.rejected)
+                    rec.notes = [f"{n} {'line' if n == 1 else 'lines'} sent back to the voices "
+                                 f"that wrote them (rewrite {drafts.round + 1} of at most "
+                                 f"{MAX_REWRITES})"]  # fmt: skip
+            await self.send(ctx, message)
 
-    def _round(self, drafts: Drafts) -> tuple[Rewrite | Approved, int]:
+    def _round(
+        self, drafts: Drafts
+    ) -> tuple[Rewrite | Approved, dict[Key, list[tuple[ScriptLine, list[str]]]]]:
         """One round: the failing lines go back for a rewrite, or the rest airs. Also returns
-        how many lines failed."""
+        the lines that failed, with their problems."""
         failed: dict[Key, list[tuple[ScriptLine, list[str]]]] = {}
         for key, lines in drafts.scripts.items():
             bad = [(line, res) for line in lines if not (res := self._check(line, key)).ok]
@@ -685,11 +823,10 @@ class Verifier(Step):
                 failed[key] = [
                     (line, [f"{v.kind}: {v.detail}" for v in res.violations]) for line, res in bad
                 ]
-        failing = sum(len(lines) for lines in failed.values())
         if failed and drafts.round < MAX_REWRITES and self.crew.uses_model("narration"):
             for key in failed:
                 drafts.rewrites[key] = drafts.rewrites.get(key, 0) + 1
-            return Rewrite(drafts, failed), failing
+            return Rewrite(drafts, failed), failed
 
         notes, results = [], []
         for (persona, language), lines in drafts.scripts.items():
@@ -717,7 +854,7 @@ class Verifier(Step):
         rounds = Attempt(None, drafts.round + 1, None, 0.0)
         self.crew.put(StepTrace(step="verifier", source="code", attempts=rounds.attempts, ms=0.0,
                                 error=None, notes=notes))  # fmt: skip
-        return Approved(drafts.base, results), failing
+        return Approved(drafts.base, results), failed
 
 
 class Voice(Step):
@@ -745,24 +882,29 @@ class Voice(Step):
     @handler
     async def plan(self, msg: Planned, ctx: WorkflowContext[None, BreakdownResult]) -> None:
         self.planned = msg
-        await self._join(ctx)
+        await self._join(ctx, msg)
 
     @handler
     async def scripts(self, msg: Approved, ctx: WorkflowContext[None, BreakdownResult]) -> None:
         self.approved = msg
-        await self._join(ctx)
+        await self._join(ctx, msg)
 
-    async def _join(self, ctx: WorkflowContext[None, BreakdownResult]) -> None:
+    async def _join(self, ctx: WorkflowContext[None, BreakdownResult], msg: Any) -> None:
         planned, approved = self.planned, self.approved
         if planned is None or approved is None or planned.rev != approved.base.rev:
             return  # the other lane has not answered this Briefing yet
-        started = time.perf_counter()
-        with self.crew.step("voice", llm=False) as span:
-            result = self._speak(planned, approved)
-            telemetry.annotate(span, source="code", attempts=1,
-                               ms=round((time.perf_counter() - started) * 1000, 1),
-                               lines=sum(len(s.voice) for s in result.scripts))  # fmt: skip
-        await ctx.yield_output(result)
+        with self.tracing(ctx, msg) as rec:
+            started = time.perf_counter()
+            with self.crew.step("voice", llm=False) as span:
+                result = self._speak(planned, approved)
+                telemetry.annotate(span, source="code", attempts=1,
+                                   ms=round((time.perf_counter() - started) * 1000, 1),
+                                   lines=sum(len(s.voice) for s in result.scripts))  # fmt: skip
+            if rec is not None:
+                held = "plan" if msg is approved else "approved scripts"
+                rec.notes.append(f"joined with the {held} it already held (rev {planned.rev})")
+            await ctx.yield_output(result)
+            self.wrote(ctx, result)
 
     def _speak(self, planned: Planned, msg: Approved) -> BreakdownResult:
         started = time.perf_counter()
@@ -857,6 +999,7 @@ def build_workflow(
 class CrewRun:
     result: BreakdownResult
     pending: list[str]  # agent steps that fell back after an error and wait to be brought back
+    trace: CrewTrace | None = None  # the crew trace: this run, after the runs it continues
 
 
 class NotWaiting(LookupError):
@@ -880,6 +1023,7 @@ async def run_crew(
     checkpoints: CheckpointStorage | None = None,
     bring_back: str | None = None,
     story: Story = BREAKDOWN,
+    trace: CrewTrace | None = None,
 ) -> CrewRun:
     """Run the crew on the moment (`story`: on what the story tells, e.g. a whole match).
 
@@ -888,11 +1032,14 @@ async def run_crew(
       did not finish, that run resumes from it instead of starting over.
     - `bring_back`: resume the run in `checkpoints` that waits on this step; the step runs again.
       Raises `NotWaiting` if no run there waits on it.
+    - `trace`: the crew trace of the runs this one continues (a drill's, for its bring-back). A
+      resumed run without it continues the trace saved on its checkpoint.
     """
     crew = Crew(ctx, client, step_timeout_s, voice_styles=voice_styles or {},
-                down=frozenset(down))  # fmt: skip
+                down=frozenset(down), checkpointed=checkpoints is not None)  # fmt: skip
     job = Job(tuple(personas), tuple(languages))
     start = await _start(checkpoints, bring_back, job, story.name)
+    crew.recorder = await _recorder(crew, story, start, checkpoints, bring_back, trace)
     attrs = {"moment": ctx.card.id, "personas": personas, "languages": languages,
              "model": crew.model, "down": sorted(down) or None, "bring_back": bring_back,
              "resumed": "checkpoint_id" in start or None}  # fmt: skip
@@ -907,7 +1054,42 @@ async def run_crew(
         telemetry.annotate(span, ms=result.total_ms,
                            rewrites=sum(s.rewrites for s in result.scripts),
                            dropped=sum(len(s.dropped) for s in result.scripts))  # fmt: skip
+    if checkpoints is not None:
+        crew.recorder.checkpoints(await checkpoints.list_checkpoints(workflow_name=story.name))
+    out.trace = crew.recorder.finish(out.pending, result.trace_id)
     return out
+
+
+async def _recorder(
+    crew: Crew,
+    story: Story,
+    start: dict[str, Any],
+    checkpoints: CheckpointStorage | None,
+    bring_back: str | None,
+    trace: CrewTrace | None,
+) -> Recorder:
+    """The crew trace for this run: a new one, or the one it continues, with how it started."""
+    resumed = start.get("checkpoint_id")
+    checkpoint = None
+    if resumed is not None and checkpoints is not None:
+        with suppress(Exception):  # only the trace's account of the checkpoint needs it
+            checkpoint = await checkpoints.load(resumed)
+    if trace is None and checkpoint is not None:
+        with suppress(ValidationError, TypeError):
+            trace = CrewTrace.model_validate(checkpoint.state.get(crewtrace.STATE_KEY))
+    kind = "bring_back" if bring_back else "resume" if resumed else "run"
+    evidence = crew.evidence
+    subject = getattr(evidence, "match_id", None) or evidence.card.id
+    recorder = Recorder(story.name, subject, crew.model, sorted(crew.down), kind, bring_back,
+                        previous=trace)  # fmt: skip
+    if resumed is not None:
+        superstep = getattr(checkpoint, "iteration_count", None)
+        at = f"checkpoint {resumed[:8]}" + (f" (superstep {superstep})" if superstep else "")
+        detail = (f"is back: the workflow resumes from {at} and re-runs it"
+                  if bring_back else f"an interrupted run resumes from {at}")  # fmt: skip
+        recorder.event("back" if bring_back else "resumed", bring_back, detail,
+                       checkpoint=resumed, superstep=superstep, t_ms=0.0)  # fmt: skip
+    return recorder
 
 
 async def _connect_mcp(crew: Crew, stack: AsyncExitStack) -> list[Any] | None:
@@ -921,15 +1103,22 @@ async def _connect_mcp(crew: Crew, stack: AsyncExitStack) -> list[Any] | None:
     tool = MCPStdioTool(
         name="moment", command=sys.executable, args=["-m", "agents.mcp_server", *args]
     )
-    with crew.step("mcp", llm=False) as span:
-        started = time.perf_counter()
-        try:
-            await stack.enter_async_context(tool)
-        except Exception as e:
-            crew.mcp_error = describe(e)
-        ms = round((time.perf_counter() - started) * 1000, 1)
-        telemetry.annotate(span, source="code", ms=ms, tools=[f.name for f in tool.functions],
-                           error=crew.mcp_error)  # fmt: skip
+    with crew.recorder.step("mcp") if crew.recorder else nullcontext() as rec:
+        with crew.step("mcp", llm=False) as span:
+            started = time.perf_counter()
+            try:
+                await stack.enter_async_context(tool)
+            except Exception as e:
+                crew.mcp_error = describe(e)
+            ms = round((time.perf_counter() - started) * 1000, 1)
+            names = [f.name for f in tool.functions]
+            telemetry.annotate(span, source="code", ms=ms, tools=names,
+                               error=crew.mcp_error)  # fmt: skip
+        if rec is not None:
+            rec.attempts, rec.error = 1, crew.mcp_error
+            summary = f"our MCP server over stdio: {len(names)} tools"
+            rec.output = [crewtrace.Payload(type="MCPStdioTool", summary=summary,
+                                            data={"tools": names})]  # fmt: skip
     return None if crew.mcp_error else [tool]
 
 
@@ -975,6 +1164,8 @@ async def _run(
         # an older shape). Start over without it, so it cannot fail this key on every request.
         await _discard(checkpoints, story.name)
         crew.trace = []
+        if crew.recorder is not None:  # the trace starts over too
+            crew.recorder = await _recorder(crew, story, {}, None, None, None)
         if crew.span is not None:
             telemetry.annotate(crew.span, resumed=False)
         result = await build_workflow(crew, checkpoints=checkpoints, story=story).run(job)
