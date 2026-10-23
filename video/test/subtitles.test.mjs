@@ -1,7 +1,10 @@
 // YouTube captions (tools/captions.mjs): SRT timing order, line limits, every spoken line once.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MAX_CHARS, MAX_LINES, buildCues, spokenLines, toSrt, toVtt } from "../tools/captions.mjs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { MAX_CHARS, MAX_LINES, buildCues, main, spokenLines, toSrt, toVtt } from "../tools/captions.mjs";
 
 const spec = {
   beats: [
@@ -84,4 +87,37 @@ test("Chinese lines split at clause marks into 42-character lines", () => {
   const out = buildCues([{ id: "zh", start: 0, text }], () => 6);
   for (const cue of out) for (const line of cue.lines) assert.ok(line.length <= MAX_CHARS);
   assert.equal(out.flatMap((c) => c.lines).join(""), text);
+});
+
+test("the CLI writes .srt and .vtt for the chosen --story and --naming, and --require-vo refuses estimates", (t) => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "warn", () => {});
+  t.mock.method(console, "error", () => {});
+  const dir = mkdtempSync(path.join(tmpdir(), "captions-"));
+  try {
+    const cli = {
+      beats: [
+        { id: "a", dur: 5, story: "app", vo: [{ id: "app1", at: 0, text: "In the app." }] },
+        { id: "b", dur: 5, story: "blender", vo: [{ id: "blend1", at: 0, text: "In the engine." }] },
+        { id: "c", dur: 5, vo: [{ id: "c1", at: 0, text: "H8 looks." }] },
+      ],
+      named: { vo: { c1: "Rivera looks." } },
+    };
+    const specFile = path.join(dir, "spec.json");
+    writeFileSync(specFile, JSON.stringify(cli));
+    const out = path.join(dir, "out");
+    const run = (...extra) => main(["--spec", specFile, "--story", "app", "--naming", "names", "--out", out, ...extra]);
+
+    assert.equal(run("--require-vo"), 1); // no wav, no claims.json: lengths and numbers would be guesses
+    assert.ok(!existsSync(path.join(out, "trailer.srt")));
+
+    assert.equal(run(), 0);
+    const srt = readFileSync(path.join(out, "trailer.srt"), "utf8");
+    assert.match(srt, /In the app\./);
+    assert.match(srt, /Rivera looks\./);
+    assert.doesNotMatch(srt, /In the engine|H8/);
+    assert.ok(readFileSync(path.join(out, "trailer.vtt"), "utf8").startsWith("WEBVTT"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

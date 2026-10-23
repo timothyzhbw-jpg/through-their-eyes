@@ -6,7 +6,11 @@
 // clause boundaries.
 //
 //   node tools/captions.mjs [--spec trailer.json] [--story blender|app] [--naming ids|names]
-//                           [--vo-dir out/video/trailer/vo] [--out out/video]
+//                           [--vo-dir out/video/trailer/vo] [--out out/video] [--require-vo]
+//
+// --require-vo is the release check: it exits 1, writing nothing, when a line has no synthesized
+// voice (its length would be an estimate) or out/video/claims.json is missing (a line with a
+// number would show its fallback text, not what the voice says).
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -178,15 +182,16 @@ function round3(n) {
   return Math.round(n * 1000) / 1000;
 }
 
-function main() {
+export function main(argv = process.argv.slice(2)) {
   const { values: args } = parseArgs({
-    args: process.argv.slice(2),
+    args: argv,
     options: {
       spec: { type: "string" },
       story: { type: "string" },
       naming: { type: "string" },
       "vo-dir": { type: "string" },
       out: { type: "string" },
+      "require-vo": { type: "boolean" },
     },
     strict: true,
   });
@@ -201,6 +206,9 @@ function main() {
   const doc = existsSync(claimsFile) ? JSON.parse(readFileSync(claimsFile, "utf8")) : null;
   const table = doc ? (doc.claims && typeof doc.claims === "object" ? doc.claims : claimTable(doc.sources ?? [])) : {};
 
+  if (!doc) {
+    console.warn(`captions: ${path.relative(process.cwd(), claimsFile)} not found; lines with numbers show their fallback text`);
+  }
   let planned = 0;
   const duration = (line) => {
     const wav = path.join(voDir, `${line.id}.wav`);
@@ -209,11 +217,16 @@ function main() {
     return estimateSpeechSeconds(line.text);
   };
   const cues = buildCues(spokenLines(spec, table, doc), duration, timelineOf(spec.beats).duration);
+  if (args["require-vo"] && (planned || !doc)) {
+    console.error(`captions: --require-vo: ${planned} lines have no synthesized voice${doc ? "" : " and claims.json is missing"}; nothing written`);
+    return 1;
+  }
   mkdirSync(finals, { recursive: true });
   writeFileSync(path.join(finals, "trailer.srt"), toSrt(cues));
   writeFileSync(path.join(finals, "trailer.vtt"), toVtt(cues));
   console.log(`captions: ${cues.length} cues -> ${path.relative(process.cwd(), finals)}/trailer.{srt,vtt}`);
   if (planned) console.log(`  ${planned} lines have no synthesized voice yet; their length is estimated`);
+  return 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exitCode = main();
