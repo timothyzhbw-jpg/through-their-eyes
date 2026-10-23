@@ -1,5 +1,6 @@
-// The tours' step lists (steps.json, SPEC 7): the quick tour, a first-time visitor's four steps,
-// the full judge tour, and the Full story (one moment through the journey's five steps, journey/). Their schema, which steps this page can show, and each step's words with
+// The tours' step lists (steps.json, SPEC 7): the quick tour, a first-time visitor's five steps,
+// the full judge tour, and the Full story (one moment through the journey's five steps, journey/).
+// Their schema, which steps this page can show, and each step's words with
 // their slots filled from the moment's own data. A step this page cannot show (no live service, a
 // hero with no counterfactual, a stitched match) is left out, never shown broken.
 
@@ -31,6 +32,7 @@ export const ENTERS = [
   "counterfactual",
   "openEvidence",
   "openTamper",
+  "tamperAuto",
   "yourCall",
   "takeEyes",
   "audience",

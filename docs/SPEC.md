@@ -2298,20 +2298,25 @@ original visual identity.
 - **Quick tour** (2026-10-22, outside UX review: a first-time visitor met too many concepts and
   buttons at once; [web/src/tour/](../web/src/tour/), the `quick` list of
   [steps.json](../web/src/tour/steps.json); Start on the intro card, "Quick tour" on the moment
-  card, the link `?tour=quick`): one path in four steps, under a minute, on the app's own
+  card, the link `?tour=quick`): one path in five steps, under a minute, on the app's own
   features: watch the look (his eyes, slowed around it, paused a little after his decision; "Watch
   it again"), remove it (the run without the look), compare the outcomes (the board from above
-  once both passes have arrived, the run without the look as the gold ghost path), make your call
-  (Your call). Its words carry no number. It opens only on a hero moment with a key scan and the
-  run without it; elsewhere Start starts watching. Its last step offers the full tour.
+  once both passes have arrived, the run without the look as the gold ghost path), every number is
+  checked (the evidence card on the tour's claim in the Analyst's commentary, a wrong number typed
+  by the tour and marked as such, the Verifier's refusal with its reason; online only, deterministic,
+  no model call, from cached breakdowns), make your call (Your call). Its words carry no number. It
+  opens only on a hero moment with a key scan and the run without it; elsewhere Start starts
+  watching. Its last step offers the full tour.
   - *One panel per step.* While a tour runs its card is the one panel: the moment card and the
     HUD row (whose eyes, the director's suggestions, the stats ticker) stand down; the evidence
-    card stays for the full tour, which points at it. In the quick tour the caption stands down
-    too, and the card carries the step's verified lines instead (the breakdown's line for the
-    look; the bundled "without the look" lines, else the breakdown's, for the run without it and
-    the comparison, with "How xT works" on demand). It sits in the moment card's place on a wide
-    screen and under the picture on a phone, so the player and the pass stay in view; on a phone
-    the Your call step starts as a bar, since Your call's own card tells it.
+    card stays when a step opens it (the full tour, and the quick tour's check). In the quick tour
+    the caption stands down too, and the card carries the step's verified lines instead (the
+    breakdown's line for the look; the bundled "without the look" lines, else the breakdown's, for
+    the run without it and the comparison, with "How xT works" on demand). It sits in the moment
+    card's place on a wide screen and, on a step that keeps the picture in view, under the picture
+    on a phone, so the player and the pass stay in view; a step that dims the page is placed clear
+    of the card it points at. On a phone the Your call step starts as a bar, since Your call's own
+    card tells it.
 - **Judge tour**, the full tour ([web/src/tour/](../web/src/tour/); "Full tour · 90 s" behind
   "Teams and more" on the intro card, in the story and at the end of the quick tour, and the link
   `?tour=1`, or `?tour=<step id>`): an optional walk of about ninety seconds, so a judge with
@@ -2500,11 +2505,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
       `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
       no sideways scroll
-- [x] Quick tour: Start on the intro card opens it on the hero moment; four steps (the look in
+- [x] Quick tour: Start on the intro card opens it on the hero moment; five steps (the look in
       his eyes, the run without it, the board with both passes arrived and the other run's ghost
-      path, Your call), each on the app's own controls; it takes under a minute of holds, its
-      words carry no number, and it does not open on a page without a key scan and the run
-      without it. — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
+      path, every number is checked — the evidence card on the tour's claim in the Analyst's
+      commentary, a wrong number typed by the tour and marked as such, the Verifier's refusal with
+      its reason; online only, deterministic, no model call, from cached breakdowns — and Your
+      call), each on the app's own controls; it takes under a minute of holds, its words carry no
+      number, and it does not open on a page without a key scan and the run without it.
+      — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
       [tour.test.tsx](../web/src/tour/tour.test.tsx) ("the quick tour"),
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx); `npm run smoke`, pages
       `quick-tour`, `phone-375-quick-tour` (the moment card stood down at every step, the card

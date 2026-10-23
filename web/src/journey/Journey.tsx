@@ -131,7 +131,7 @@ function JourneyBar({ step }: { step: JourneyStep }) {
         ))}
       </div>
       {/* A phone: the same five steps as a stepper, one at a time. */}
-      <div className="journey-stepper" onKeyDown={onKeyDown}>
+      <div className="journey-stepper">
         <button
           type="button"
           className="btn"

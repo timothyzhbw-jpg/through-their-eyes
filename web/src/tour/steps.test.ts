@@ -41,7 +41,7 @@ describe("the step list", () => {
     expect(() => StepList.parse(stepsJson)).not.toThrow();
     const all = [...STEP_IDS, ...QUICK_IDS];
     expect(new Set(all).size).toBe(all.length);
-    expect(QUICK_IDS.map(kindOf)).toEqual(["quick", "quick", "quick", "quick"]);
+    expect(QUICK_IDS.map(kindOf)).toEqual(["quick", "quick", "quick", "quick", "quick"]);
     expect(STEP_IDS.map(kindOf).every((k) => k === "full")).toBe(true);
   });
 
@@ -93,13 +93,14 @@ describe("the step list", () => {
 });
 
 describe("the quick tour", () => {
-  it("is one path in four steps: the look, without it, the outcomes compared, your call", () => {
-    expect(QUICK_IDS).toEqual(["look", "remove", "compare", "call"]);
+  it("is one path in five steps: the look, without it, the outcomes compared, every number checked, your call", () => {
+    expect(QUICK_IDS).toEqual(["look", "remove", "compare", "verify", "call"]);
     const env = envOf(offline());
     expect(QUICK_STEPS.map((s) => wordsOf(s, env).title)).toEqual([
       "Watch the look",
       "Now remove it",
       "Compare the outcomes",
+      "Every number is checked",
       "Now make your call",
     ]);
     expect(wordsOf(QUICK_STEPS[0], env).caption).toContain("J. Ferriday's view");
@@ -111,7 +112,14 @@ describe("the quick tour", () => {
   });
 
   it("fits a hero moment with a key scan and the run without it, and nothing else", () => {
-    expect(resolveSteps(envOf(offline()), QUICK_STEPS).map((s) => s.id)).toEqual(QUICK_IDS);
+    // The check needs the live service, so offline the path is the other four.
+    expect(resolveSteps(envOf(offline()), QUICK_STEPS).map((s) => s.id)).toEqual([
+      "look",
+      "remove",
+      "compare",
+      "call",
+    ]);
+    expect(resolveSteps(envOf(online()), QUICK_STEPS).map((s) => s.id)).toEqual(QUICK_IDS);
     expect(quickTourFits(envOf(offline()))).toBe(true);
     // No bundled what-ifs: no Your call, the rest still tells the look.
     const plain = envOf(createSession(hero, EXAMPLE_PLAN, payloadJson));
@@ -137,6 +145,9 @@ describe("the quick tour", () => {
     const steps = resolveSteps(envOf(createSession(hero, EXAMPLE_PLAN, payloadJson)), QUICK_STEPS);
     expect(steps[indexOf(steps, "compare")].id).toBe("compare");
     expect(steps[indexOf(steps, "call")].id).toBe("look"); // no Your call here: from the start
+    // No service: verify is left out, and the next step this page shows is Your call.
+    const shown = resolveSteps(envOf(offline()), QUICK_STEPS);
+    expect(shown[indexOf(shown, "verify")].id).toBe("call");
   });
 });
 

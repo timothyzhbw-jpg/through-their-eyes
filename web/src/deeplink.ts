@@ -19,7 +19,7 @@
 //                                              with the full-time card on the live screen
 //   ?tour=1|<step id>                          the full judge tour (tour/), from its first step
 //                                              or from that one
-//   ?tour=quick|<step id>                      the quick tour (four steps), from its first step
+//   ?tour=quick|<step id>                      the quick tour (five steps), from its first step
 //                                              or from that one
 //   ?tour=story|<step id>                      the Full story (the journey's five steps, about
 //                                              ninety seconds), from its first step or that one

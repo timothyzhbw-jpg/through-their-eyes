@@ -296,6 +296,30 @@ describe("the bar and its panels", () => {
     expect(new Set(badges)).toEqual(new Set([DEMO_DATA]));
   });
 
+  it("no simulated figure renders without the badge beside it", async () => {
+    const { container } = mount();
+    openAt(container, "value");
+    await shown(container, ".studio-sponsors");
+    const p = panel(container);
+    const metrics = [...p.querySelectorAll(".studio-metric")];
+    expect(metrics.length).toBeGreaterThan(0);
+    for (const m of metrics) expect(m.querySelector(".demo-badge")?.textContent).toBe(DEMO_DATA);
+    for (const block of p.querySelectorAll(".studio-business, .studio-sponsors")) {
+      expect(block.querySelector(".demo-badge")?.textContent).toBe(DEMO_DATA);
+    }
+  });
+
+  it("a phone's stepper has no arrow-key handling, so focus never lands on a hidden tab", () => {
+    const { container } = mount();
+    const stepper = container.querySelector<HTMLElement>(".journey-stepper")!;
+    const next = [...stepper.querySelectorAll("button")].find((b) => b.textContent === "Next")!;
+    act(() => {
+      next.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    });
+    expect(panel(container).dataset.step).toBe("event");
+    expect(window.location.search).toBe("");
+  });
+
   it("a phone's stepper says where it is and moves on", () => {
     const { container } = mount();
     const stepper = container.querySelector<HTMLElement>(".journey-stepper")!;
