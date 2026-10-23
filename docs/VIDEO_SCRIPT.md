@@ -9,7 +9,7 @@ early. Decide early."). The coach's tablet shows the app's board with the blind 
 film cuts into the app: the look, frozen scan by scan in the app's step-through, with and without
 it; the same vision under pressure and at a corner in one montage; the crew, the verifier, the
 drill and the personas; who would pay; and the player's callback goal before "GET YOUR VISION."
-It runs **1:51** and is rendered end to end by code from
+It runs **1:54** and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -107,26 +107,27 @@ last frame is the board full frame: the cut is exact.
 | 1:06.72 | 3.6 | yc-truth | app | He saw the run. Would you? |
 | 1:10.32 | 1.4 | crew | card | Behind every replay, a crew of agents. |
 | 1:11.72 | 1.6 | crew-trace | app |  |
-| 1:13.32 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
-| 1:16.92 | 4 | wrong · {verifier_offline.kept} OF {verifier_offline.total} BROKEN LINES / KEPT OFF THE AIR | app | Try a wrong number… and it never airs. |
-| 1:20.92 | 0.9 | redcard (take the Telestrator down) | app | Take an agent down… |
-| 1:21.82 | 1.6 | down · TELESTRATOR DOWN / THE BREAKDOWN STILL AIRS, VERIFIED. | app |  |
-| 1:23.42 | 0.7 | bringback | app | bring it back, and it picks up where it left off. |
-| 1:24.12 | 2.1 | back · OFFLINE TEST / ONLY THAT STEP RE-RUNS / FAULT-FREE IN {drill_back.back} OF {drill_back.total} DRILLS | app |  |
-| 1:26.22 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
-| 1:29.02 | 1.3 | zh · 中文 | app |  |
-| 1:30.32 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
-| 1:32.82 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
-| 1:34.82 | 1 | s4a-pov | story (Blender, dramatisation) |  |
-| 1:35.82 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
-| 1:37.85 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
-| 1:39.65 | 1 | s4d-strike | story (Blender, dramatisation) |  |
-| 1:40.65 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
-| 1:42.15 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
-| 1:43.15 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
-| 1:45.15 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
+| 1:13.32 | 2.2 | workflow · the crew workflow as Agent Framework's WorkflowViz draws it (docs/crew_workflow-dark.svg, PR #211) | diagram |  |
+| 1:15.52 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
+| 1:19.12 | 4 | wrong · {verifier_offline.kept} OF {verifier_offline.total} BROKEN LINES / KEPT OFF THE AIR | app | Try a wrong number… and it never airs. |
+| 1:23.12 | 0.9 | redcard (take the Telestrator down) | app | Take an agent down… |
+| 1:24.02 | 1.6 | down · TELESTRATOR DOWN / THE BREAKDOWN STILL AIRS, VERIFIED. | app |  |
+| 1:25.62 | 0.7 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:26.32 | 2.1 | back · OFFLINE TEST / ONLY THAT STEP RE-RUNS / FAULT-FREE IN {drill_back.back} OF {drill_back.total} DRILLS | app |  |
+| 1:28.42 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
+| 1:31.22 | 1.3 | zh · 中文 | app |  |
+| 1:32.52 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
+| 1:35.02 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
+| 1:37.02 | 1 | s4a-pov | story (Blender, dramatisation) |  |
+| 1:38.02 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
+| 1:40.05 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
+| 1:41.85 | 1 | s4d-strike | story (Blender, dramatisation) |  |
+| 1:42.85 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
+| 1:44.35 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
+| 1:45.35 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
+| 1:47.35 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
 
-Total 111.65 s. The score session composes to the cue sheet generated from this spec.
+Total 113.85 s. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 

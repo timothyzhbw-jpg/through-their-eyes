@@ -1,5 +1,5 @@
 {
-  "about": "Cue sheet for cut v15, \"GET YOUR VISION\" (Bowen's restructure, 2026-10-22): one story line, the lesson, the evidence, the product, the business case. The coach's mantra cards, the board on the tablet, the scan step-through, one montage for the press and the corner, personas as a split, a business card; 111.649 s. Re-cut after the competitor scan: perception said in the first ten seconds, the live match with its moment links, the Verifier's offline result read off the report. The drill as it runs live: down, the breakdown still airs, back from its checkpoint.",
+  "about": "Cue sheet for cut v15, \"GET YOUR VISION\" (Bowen's restructure, 2026-10-22): one story line, the lesson, the evidence, the product, the business case. The coach's mantra cards, the board on the tablet, the scan step-through, one montage for the press and the corner, personas as a split, a business card; 113.849 s. Re-cut after the competitor scan: perception said in the first ten seconds, the live match with its moment links, the Verifier's offline result read off the report. The drill as it runs live: down, the breakdown still airs, back from its checkpoint.",
   "trailer_ref": null,
   "bpm": 140,
   "sections": [
@@ -501,6 +501,12 @@
       "at": "b05b-s2-push:+0.2",
       "snap": false,
       "note": "WHAT HE SAW. WHAT HE BELIEVED."
+    },
+    {
+      "type": "hit",
+      "at": "b33b-workflow",
+      "size": "small",
+      "note": "the crew's workflow, drawn by Agent Framework"
     }
   ]
 }

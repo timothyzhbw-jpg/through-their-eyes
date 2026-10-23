@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0,
       "from": 0,
-      "until": 111.649,
+      "until": 113.849,
       "gain_db": 4,
       "fade_in": 0,
       "fade_out": 0,
@@ -1783,6 +1783,14 @@
         "stagger": 0.25,
         "backdrop": false
       }
+    },
+    "label-wf-2p2": {
+      "template": "label",
+      "dur": 2.2,
+      "alpha": true,
+      "params": {
+        "text": "DRAWN BY MICROSOFT AGENT FRAMEWORK FROM OUR WORKFLOW CODE"
+      }
     }
   },
   "beats": [
@@ -3046,6 +3054,30 @@
         "lift"
       ],
       "overlays": [],
+      "sfx": [],
+      "out": {
+        "type": "cut"
+      }
+    },
+    {
+      "id": "b33b-workflow",
+      "dur": 2.2,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/stills/crew_workflow.mp4",
+        "in": 0.0,
+        "fit": "pad",
+        "push": [
+          1.0,
+          1.04
+        ]
+      },
+      "overlays": [
+        {
+          "title": "label-wf-2p2",
+          "at": 0.0
+        }
+      ],
       "sfx": [],
       "out": {
         "type": "cut"
