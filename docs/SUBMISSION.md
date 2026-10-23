@@ -174,8 +174,8 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
   timeout; every single-agent call did, so deployed it would have aired its templates.
 - **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
   back to the voice that wrote it, told why; the plan and the other lines stand. Of 2,837
-  deliberately broken lines, none aired with the Verifier; 2,823 would have without it, 888 of
-  them false.[^crew-evidence]
+  deliberately broken lines, the Verifier kept every one off the air; without it, 2,823 would have
+  aired, 888 of them stating something false.[^crew-evidence]
 - **Audiences in parallel.** Each audience and language is its own narration call, run at once:
   ten scripts take about as long as one (about 3.5 s), though the whole crew is not faster than
   one agent.[^crew-evidence]

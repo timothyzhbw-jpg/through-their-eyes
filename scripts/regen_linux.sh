@@ -69,6 +69,7 @@ if has evals; then
   for m in hero_shot hero_save hero_marking realism match_stats pass_difficulty blind_side \
            scan_detector keypoint_ingest corruption scan_calibration; do run python -m "eval.$m"; done
   run python -m eval.hero_shot --seeds 100-139
+  run python -m eval.hero_gates
   for s in blind_side_run press_escape; do run python -m eval.look_grid --scenario "$s"; done
   run python -m eval.laws --workers "$WORKERS"
 fi
