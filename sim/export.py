@@ -70,6 +70,7 @@ from sim.counterfactual import (
     look_overrides,
     possession_result,
     possession_value,
+    two_more_looks,
 )
 from sim.engine import Simulation
 from sim.match import Possession, StitchedMatch, build_match, global_id
@@ -645,7 +646,6 @@ def export_without_look(scenario: str, seed: int) -> dict[str, Any]:
     (`explain.look_cost`), with the xT grid the explainer draws (16 x 12, 1e-4, attacking +x).
     For a hero whose other run is a look removed; a static file, so no model call and no cache."""
     from agents.context import MomentContext  # the crew's evidence; heavy, so imported here
-    from analytics.xt import LENGTH, NX, NY, WIDTH, fitted_grid, xt_prior_for
     from explain.look_cost import look_cost_payload
 
     ctx = MomentContext.load(scenario, seed)
@@ -659,12 +659,6 @@ def export_without_look(scenario: str, seed: int) -> dict[str, Any]:
             raise ValueError(f"{scenario} {seed}: no line about the removed look in {lang}")
         answers[lang] = payload.model_dump(mode="json")
     scan = cf.factual.event(cf.scan_id)
-    grid = fitted_grid()
-    fitted = grid is not None
-    if grid is None:
-        x = (np.arange(NX) + 0.5) / NX * LENGTH - LENGTH / 2
-        y = (np.arange(NY) + 0.5) / NY * WIDTH - WIDTH / 2
-        grid = xt_prior_for(np.stack(np.meshgrid(x, y, indexing="ij"), axis=-1), 1)
     return {
         "version": WITHOUT_LOOK_VERSION,
         "scenario": scenario,
@@ -673,18 +667,71 @@ def export_without_look(scenario: str, seed: int) -> dict[str, Any]:
         "hero": scan.player,
         "removed": {"id": scan.id, "start": scan.frame, "end": int(scan.attrs["end"])},
         "answers": answers,
-        "xt": {
-            "units": "1e-4",
-            "cols": NX,
-            "rows": NY,
-            "fitted": fitted,  # False: the smooth prior (no cached fit)
-            "grid": np.rint(np.asarray(grid) * 1e4).astype(int).tolist(),
-        },
+        "xt": _xt_grid(),
+    }
+
+
+def _xt_grid() -> dict[str, Any]:
+    """The xT grid the explainer draws: 16 x 12, in 1e-4, for a team attacking +x."""
+    from analytics.xt import LENGTH, NX, NY, WIDTH, fitted_grid, xt_prior_for
+
+    grid = fitted_grid()
+    fitted = grid is not None
+    if grid is None:
+        x = (np.arange(NX) + 0.5) / NX * LENGTH - LENGTH / 2
+        y = (np.arange(NY) + 0.5) / NY * WIDTH - WIDTH / 2
+        grid = xt_prior_for(np.stack(np.meshgrid(x, y, indexing="ij"), axis=-1), 1)
+    return {
+        "units": "1e-4",
+        "cols": NX,
+        "rows": NY,
+        "fitted": fitted,  # False: the smooth prior (no cached fit)
+        "grid": np.rint(np.asarray(grid) * 1e4).astype(int).tolist(),
     }
 
 
 def without_look_json(data: dict[str, Any]) -> str:
     return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+
+
+EXTRA_LOOKS_VERSION = 1
+EXTRA_LOOKS_REPORT = "eval/reports/extra_looks_{scenario}.md"
+
+
+def export_extra_looks(scenario: str, seed: int) -> dict[str, Any]:
+    """The run with two more looks, told (SPEC 5.3, 7), the opposite of `export_without_look`:
+    the hero keeps his own looks and adds two (`sim.counterfactual.two_more_looks`). Which looks
+    were added, whom he passed to with them and where the pass went in expected threat, as
+    verified payloads in en and zh (`explain.extra_looks`); the without-look bundle's format
+    with `added` in place of `removed`, plus the eval report that has the held-out numbers."""
+    from agents.context import MomentContext  # the crew's evidence; heavy, so imported here
+    from explain.extra_looks import extra_looks_payload
+
+    ctx = MomentContext.load(scenario, seed)
+    cf = two_more_looks(scenario, seed, probe=ctx.run)
+    answers = {}
+    for lang in WHAT_IF_LANGUAGES:
+        payload = extra_looks_payload(ctx.evaluator, cf, lang, ctx.names)  # by name (SPEC 4.6)
+        if not payload.lines:
+            raise ValueError(f"{scenario} {seed}: no line about the added looks in {lang}")
+        answers[lang] = payload.model_dump(mode="json")
+    added = [cf.counterfactual.event(sid) for sid in cf.added]
+    return {
+        "version": EXTRA_LOOKS_VERSION,
+        "scenario": scenario,
+        "seed": seed,
+        "moment": ctx.card.id,
+        "hero": cf.player,
+        "id": cf.id,
+        "added": [
+            {"id": e.id, "start": e.frame, "end": int(e.attrs["end"]), "body_deg": deg}
+            for e, (_, deg) in zip(added, cf.looks, strict=True)
+        ],
+        "kept_own": not cf.missing,  # every look of his own still happened
+        "report": EXTRA_LOOKS_REPORT.format(scenario=scenario),
+        "answers": answers,
+        "xt": _xt_grid(),
+    }
 
 
 LOOK_VERSION = 1
@@ -1014,6 +1061,9 @@ def main() -> None:
     parser.add_argument(
         "--without-look", type=Path, help="also write the lines of the run without the look"
     )
+    parser.add_argument(
+        "--extra-looks", type=Path, help="also write the lines of the run with two more looks"
+    )
     parser.add_argument("--looks", type=Path, help="also write the Take his eyes look grid")
     parser.add_argument("--steps", type=Path, help="also write the scan step-through")
     args = parser.parse_args()
@@ -1032,6 +1082,14 @@ def main() -> None:
         size = args.looks.stat().st_size / 1024
         print(f"wrote {args.looks} ({size:.0f} KB): {s['available']}/{s['cells']} looks, "
               f"{s['changed']} change his decision")  # fmt: skip
+    if args.extra_looks:
+        data = export_extra_looks(args.scenario, args.seed)
+        args.extra_looks.parent.mkdir(parents=True, exist_ok=True)
+        args.extra_looks.write_text(without_look_json(data))
+        lines = [line["id"] for line in data["answers"]["en"]["lines"]]
+        print(f"wrote {args.extra_looks}: {', '.join(lines)}")
+        if args.out is None and not (args.looks or args.steps or args.without_look):
+            return
     if args.without_look:
         data = export_without_look(args.scenario, args.seed)
         args.without_look.parent.mkdir(parents=True, exist_ok=True)

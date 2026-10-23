@@ -209,6 +209,13 @@ _Fill in as they come to exist._
   web/public/data/without_look_seed3.json` (and `far_post_finish` seed 11) — the run without the
   look, told (SPEC 7): which look was removed, what it cost, where the pass went in xT, verified
   in en and zh (`explain/look_cost.py`); a test fails when a committed file is stale
+- `uv run python -m eval.extra_looks` — With two more looks (SPEC 3.7), the opposite of the run
+  without the look: the scan hero keeps his own looks and adds one to his left and one to his
+  right before the ball arrives (`ForceScans`, `two_more_looks`); belief error at reception,
+  decision, reception position, pass target and xT on held-out seeds 100–139 with Wilson
+  intervals, about 30 s; writes `eval/reports/extra_looks_blind_side_run.md`. `uv run python -m
+  sim.export --scenario blind_side_run --seed 3 --extra-looks web/public/data/extra_looks_seed3.json`
+  rewrites the web's verified lines (`explain/extra_looks.py`)
 - `uv run python -m eval.look_grid --scenario blind_side_run` (or `press_escape`) — Take his
   eyes (SPEC 3.7, 7): which looks change the hero's decision on the demo seed and on held-out
   seeds, about a minute each; writes `eval/reports/look_grid_<scenario>.md`.

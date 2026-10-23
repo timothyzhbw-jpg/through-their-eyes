@@ -758,6 +758,17 @@ is a step.
   - Ids: `look:H8:0050:-150` (a look at frame 50, 150° clockwise of the ball: over his right
     shoulder as he faces it) and `look:H8:none`; `what_if_from_id` and the Verifier re-simulate
     them like `force:` ids.
+- **More looks** (2026-10-23, "With two more looks", §7): `force_scans(player, [(frame,
+  direction)])` (`sim.overrides.ForceScans`) adds scans on top of his own, each in a direction
+  from where his body faces (left, right, behind, forward, or degrees). It takes the forced scans'
+  path like `add_scan`: keyed peak speed, median dwell, and no wider than the widest scan (150°
+  from the ball; a direction past it stops there); a direction within 70° of the ball keeps it in
+  view and is not a scan. No random draw is consumed or shifted (`tests/test_extra_looks.py`).
+  `extra_looks_counterfactual` takes (seconds before he receives the ball, direction); ids
+  `extra:H8:0005:+090,0023:-090`. A look under way when one of his own is due cancels it, so the
+  result lists his own scans that did not happen. The timing rule of the eval
+  (`two_more_looks`, `eval/extra_looks.py`): left 2.6 s before the reception, right as soon as
+  his head is free again; both end before the key scan, which every held-out seed keeps.
 - A counterfactual result = alternative decision + outcome + ΔxT / Δ shot probability.
 - **Seed registry.** Scenario seeds and match seeds are separate inputs, but no range below is
   reused for another purpose.
