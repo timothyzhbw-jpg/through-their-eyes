@@ -1,0 +1,122 @@
+name: seasons
+
+# The five-season study (SPEC 3, 5, 6): eval/season.py once per root seed, one season per runner
+# in parallel, then eval/seasons.py renders the five together with intervals across seasons.
+# About 30 CPU-hours in all; a season is about 6 on one 4-core runner. Run it by hand from the
+# Actions tab; `matches: 2` is a smoke run that takes minutes. Nothing is committed or pushed:
+# the reports come out as the `seasons-reports` artifact, and whoever freezes the numbers copies
+# them into eval/reports/ (docs/NUMBERS.md).
+#
+# The runners are the canonical platform for generated numbers (linux/amd64, numpy's X86_V4 tier
+# off, as in ci.yml and tests/canonical.py), so these reports are byte-comparable with the
+# committed ones.
+
+on:
+  workflow_dispatch:
+    inputs:
+      matches:
+        description: Matches per season (2 is a smoke run)
+        default: "380"
+        required: true
+      roots:
+        description: Season root seeds, consecutive and comma-separated
+        default: "2027,2028,2029,2030,2031"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  NPY_DISABLE_CPU_FEATURES: X86_V4 AVX512_ICL AVX512_SPR
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      roots: ${{ steps.check.outputs.roots }}
+      first: ${{ steps.check.outputs.first }}
+      count: ${{ steps.check.outputs.count }}
+    steps:
+      - id: check
+        env:
+          MATCHES: ${{ inputs.matches }}
+          ROOTS: ${{ inputs.roots }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, re, sys
+          matches, roots = os.environ["MATCHES"], os.environ["ROOTS"].replace(" ", "")
+          if not re.fullmatch(r"[1-9][0-9]*", matches):
+              sys.exit(f"matches must be a positive integer, got {matches!r}")
+          if not re.fullmatch(r"[0-9]+(,[0-9]+)*", roots):
+              sys.exit(f"roots must be comma-separated integers, got {roots!r}")
+          seeds = [int(r) for r in roots.split(",")]
+          # eval.seasons renders consecutive roots (--first-root, --seasons)
+          if seeds != list(range(seeds[0], seeds[0] + len(seeds))):
+              sys.exit(f"roots must be consecutive, got {seeds}")
+          if len(seeds) > 20:
+              sys.exit("at most 20 seasons (a matrix holds 256 jobs; this is a sanity cap)")
+          print(f"roots={json.dumps(seeds)}")
+          print(f"first={seeds[0]}")
+          print(f"count={len(seeds)}")
+          PY
+
+  season:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJSON(needs.plan.outputs.roots) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Season ${{ matrix.root }}
+        env:
+          MATCHES: ${{ inputs.matches }}
+        run: |
+          echo "cores: $(nproc)"
+          uv run python -m eval.season --season-seed "${{ matrix.root }}" \
+            --matches "$MATCHES" --workers "$(nproc)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: season-${{ matrix.root }}
+          path: out/season_${{ matrix.root }}_${{ inputs.matches }}.pickle
+          if-no-files-found: error
+          retention-days: 30
+
+  combine:
+    needs: [plan, season]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: season-*
+          path: out
+          merge-multiple: true
+      - name: Combine
+        env:
+          MATCHES: ${{ inputs.matches }}
+          FIRST: ${{ needs.plan.outputs.first }}
+          COUNT: ${{ needs.plan.outputs.count }}
+        run: |
+          ls -l out
+          uv run python -m eval.seasons --from-cache --first-root "$FIRST" \
+            --seasons "$COUNT" --matches "$MATCHES"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: seasons-reports
+          path: eval/reports/seasons_intervals*.md
+          if-no-files-found: error
+          retention-days: 90

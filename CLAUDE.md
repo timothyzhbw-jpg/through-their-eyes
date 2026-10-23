@@ -163,6 +163,10 @@ _Fill in as they come to exist._
   and `zh`, about 10 s; `--scenario press_escape --seed 0` for a hero; `--fixture --web-fixture
   web/src/tactics/fixture.json` rewrites the viewer's fixture (a test fails when it is stale).
   The API serves them at `GET /api/matches/<id>/tactics`
+- Actions tab → `seasons` (`workflow_dispatch`; inputs `matches`, 380 or 2 for a smoke run, and
+  `roots`, 2027–2031): the five-season study (SPEC 3, 5, 6), one season per runner on CI's
+  canonical x86, then `eval.seasons --from-cache` into the `seasons-reports` artifact
+  (`seasons_intervals.md`); nothing is committed. Locally `uv run python -m eval.seasons`
 - `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
   passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
   `eval/reports/pass_difficulty.md`
