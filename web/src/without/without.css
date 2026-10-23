@@ -81,6 +81,38 @@
   gap: 8px;
   margin-top: 12px;
 }
+/* what his look is compared with: the run without it, or with two more (no blur, no motion) */
+.compare-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
+}
+.compare-switch button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r-control);
+  font: 500 13px/1 var(--font-body);
+  color: var(--chalk-2);
+}
+.compare-switch button:hover {
+  color: var(--chalk);
+}
+.compare-switch button[aria-pressed="true"] {
+  background: var(--dusk);
+  color: var(--ink);
+}
+.compare-switch button:focus-visible {
+  outline: 2px solid var(--chalk);
+  outline-offset: 2px;
+}
 .without-basis {
   margin: 0;
   max-width: 52ch;
