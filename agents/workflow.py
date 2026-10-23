@@ -58,11 +58,11 @@ from agents import crewtrace, fallbacks, persona_rules, prompts, schemas, teleme
 from agents.budget import budget, replay_slot, slot_errors
 from agents.context import MomentContext
 from agents.crewtrace import CrewTrace, ModelCall, Recorder, Rejected, Rewritten, StepRecord
-from agents.delivery import DESCRIBED, VOICE_STYLES, delivery_tier, voice_cues, withheld
+from agents.delivery import DESCRIBED, VOICE_STYLES, delivery_tier, voice_cues
 from agents.llm import DEFAULT_TIMEOUT_S, Attempt, Outage, ask, describe
-from agents.plan import shape_errors, template_plan, validate_plan, voice_times
+from agents.persona_rules import off_palette
+from agents.plan import persona_plan, shape_errors, template_plan, validate_plan, voice_times
 from agents.schemas import (
-    CONNECTIVES,
     AgentStep,
     AnalystChoice,
     BreakdownRequest,
@@ -92,8 +92,12 @@ MAX_REWRITES = 2  # SPEC 6: refuted line → rewrite (max 2) → drop the line
 # API's cache key, so cached breakdowns from the older code are not served again.
 # 2: tidy() keeps each connective once; 3: plan errors are reason codes; 4: audio-description
 # delivery; 5: rendered narration lines; 6: the Director's priority sets the budget
-# (agents/budget.py) and per-persona required and forbidden claims (agents/persona_rules.py)
-PIPELINE_VERSION = 6
+# (agents/budget.py) and per-persona required and forbidden claims (agents/persona_rules.py);
+# 7: one quantity, one number: a pass's length and speed and a shot's speed are measured on the
+# tracked ball as the chips measure them, every slot rounded by `analytics.stats.display`;
+# 8: persona specs (SPEC 6): palettes, openers, the coach's cue, line caps, a plan and a voice per
+# persona
+PIPELINE_VERSION = 8
 
 # The order of `BreakdownResult.trace`: the graph's order, the Telestrator before narration. The two
 # lanes finish in either order, so the trace is sorted into this order before it is returned.
@@ -524,9 +528,12 @@ class Narration(Step):
         return prompts.rewrite_prompt(base, failed)
 
     def schema(self, language: Language, persona: Persona | None = None) -> type[BaseModel]:
-        """The anchored schema: the persona's forbidden claims are not in its enum."""
-        off = persona_rules.forbidden(persona)
-        return anchored_draft_model([c for c in self.crew.ctx.supported if c not in off], language)
+        """The anchored schema: only the persona's palette is in its claim enum, and only its own
+        connectives (its opener, the coach's cue) in the connective enum."""
+        mc = self.crew.ctx
+        off = persona_rules.excluded(persona)
+        conns = persona_rules.connectives(persona, language, mc.supported, mc.card.selected_lens)
+        return anchored_draft_model([c for c in mc.supported if c not in off], language, conns)
 
     def to_lines(self, value: Any, language: Language) -> list[DraftLine]:
         return compose(self.crew.ctx, value, language)
@@ -717,7 +724,7 @@ def tidy(
 ) -> tuple[list[ScriptLine], list[str]]:
     """Deterministic clean-up of model lines before the Verifier.
 
-    - A line with a claim the persona must not hear (agents/persona_rules.py: xT and
+    - A line with a claim off the persona's palette (agents/persona_rules.py: e.g. xT and
       probabilities for casual and audio description) is dropped, whatever the model picked.
     - A bare placeholder ({n}) is given the full form its claim's template uses ({n:times}): same
       slot, so the value is unchanged, only its wording.
@@ -727,11 +734,11 @@ def tidy(
     """
     out, notes, stated, texts, opened = [], [], set(), set(), set()
     for line in lines:
-        if persona is not None and (held := withheld(persona, line.claims)):
+        if persona is not None and (held := off_palette(persona, line.claims)):
             notes.append(f"{line.id} dropped: {', '.join(held)} not for {persona}")
             continue
         if line.claims:
-            for c in CONNECTIVES[language]:
+            for c in persona_rules.all_connectives(language):
                 if line.text.startswith(c) and len(line.text) > len(c):
                     if c in opened:
                         line = line.model_copy(update={"text": line.text[len(c) :].lstrip()})
@@ -809,7 +816,7 @@ class Verifier(Step):
     def _check(self, line: ScriptLine, key: Key) -> RenderResult:
         mc = self.crew.ctx
         persona, language = key
-        if held := withheld(persona, line.claims):  # a rewrite may bring one back past tidy()
+        if held := off_palette(persona, line.claims):  # a rewrite may bring one back past tidy()
             violation = Violation("persona", f"{', '.join(held)}: not for {persona}")
             return RenderResult(ok=False, text=None, lang=language, line_id=line.id,
                                 claims=line.claims, violations=[violation])  # fmt: skip
@@ -974,7 +981,9 @@ class Voice(Step):
         scripts = []
         for script in msg.scripts:
             speaker_of = {line.id: line.speaker for line in script.lines}
-            times = voice_times(planned.plan, len(script.payload.lines))
+            # Each audience sees its own cut of the plan (SPEC 6, "Persona specs").
+            plan = persona_plan(planned.plan, script.persona, mc)
+            times = voice_times(plan, len(script.payload.lines))
             lines = [
                 {"id": line.id, "text": line.text, "claims": list(line.claims),
                  "speaker": speaker_of[line.id]}
@@ -984,7 +993,7 @@ class Voice(Step):
                 script.persona, script.language, tier, script.payload.moment, lines,
                 script.payload.claims, times, given,
             )  # fmt: skip
-            scripts.append(script.model_copy(update={"voice": cues}))
+            scripts.append(script.model_copy(update={"voice": cues, "plan": plan}))
         unknown = given is None and any(
             cue.voice not in VOICE_STYLES for script in scripts for cue in script.voice
         )

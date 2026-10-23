@@ -78,6 +78,9 @@ const ScriptResult = z.object({
   language: z.string(),
   payload: z.unknown(), // a render payload (SPEC 5.3), checked against the moment before use
   voice: z.array(VoiceCue),
+  // The plan this audience plays (agents/plan.py persona_plan), validated like any other; absent
+  // or null in breakdowns cached before it was: the breakdown's plan plays.
+  plan: z.unknown().optional(),
 });
 
 /** GET /api/matches: the matches the service plays (TTE_MATCHES). */

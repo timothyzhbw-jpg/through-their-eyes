@@ -388,7 +388,7 @@ describe("who is watching", () => {
     expect(text(open)).toContain("Watching as Casual fan · English");
     click(open);
     const dialog = page.querySelector("[role=dialog][aria-label='Who is watching']")!;
-    const analyst = button(dialog, "Analyst The mechanism, with the numbers.");
+    const analyst = button(dialog, "Analyst The board, pitch control and every number.");
     expect(pressed(analyst)).toBe("false");
     click(analyst);
     await act(settle);
@@ -417,13 +417,13 @@ describe("who is watching", () => {
     const dialog = () => page.querySelector("[role=dialog][aria-label='Who is watching']");
     click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    const coach = button(dialog()!, "Coach Shapes, distances, decisions.");
+    const coach = button(dialog()!, "Coach When he looked, and what to teach.");
     act(() => coach.focus()); // as a press or Enter on it would
     click(coach);
     await act(settle);
     expect(dialog()).not.toBeNull();
     // The keyboard stays where it was: on the audience just picked, now pressed.
-    const picked = button(dialog()!, "Coach Shapes, distances, decisions.");
+    const picked = button(dialog()!, "Coach When he looked, and what to teach.");
     expect(pressed(picked)).toBe("true");
     expect(document.activeElement).toBe(picked);
     // Escape closes it and hands the keyboard back to the toggle.
@@ -503,7 +503,8 @@ describe("the counterfactual verdict", () => {
 
   function expectSim(page: HTMLElement) {
     const worth = page.querySelector(".worth")!;
-    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt!.toFixed(3)}`);
+    // At the claim's precision, so the number holds when the verified claim replaces it.
+    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt!.toFixed(2)}`);
     expect(text(worth)).not.toContain("9.87");
     expect(worth.classList.contains("verified")).toBe(false);
     expect(worth.querySelector(".checked")).toBeNull();

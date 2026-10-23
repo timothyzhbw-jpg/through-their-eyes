@@ -26,8 +26,8 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
   its fallback, which has no number, or is dropped; the report (`out/video/trailer_report.md`)
   lists every number and the claim it came from. The cut shows two, from the current build's
   claims (live after #161, 2026-10-22): the length of the pass that found the runner
-  (`pass_to_runner.dist`, 38 m) and the look's value (`cf_value.dxt`, 0.16 xT since the keeper
-  spot, 0.17 before, at the precision
+  (`pass_to_runner.dist`, 39 m since #200, which measures it as the live chip does; 38 m before)
+  and the look's value (`cf_value.dxt`, 0.16 xT since the keeper spot, 0.17 before, at the precision
   the claim states). The app's
   own panels in the footage (scan counts, live stats, the score) show what the app shows; the app
   labels them as not claims, so the cut never says the verifier checks every number on screen,

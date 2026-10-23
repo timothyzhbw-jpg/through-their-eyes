@@ -435,7 +435,7 @@ export function DecisionPanel() {
             <div className="facts">
               <Fact
                 label={`Last saw ${shortName(runner)}`}
-                value={`${dec.belief_age[runner].toFixed(2)} s ago`}
+                value={`${dec.belief_age[runner].toFixed(1)} s ago`}
               />
               <Fact
                 label={`P(pass to ${shortName(runner)} arrives), as he sees it`}
@@ -503,7 +503,7 @@ export function VerdictPanel() {
       ? `${p0.toFixed(2)} \u2192 ${p1.toFixed(2)}`
       : hero.deltaXt === null
         ? "\u2014"
-        : signed(hero.deltaXt, 3);
+        : signed(hero.deltaXt, 2); // the claim's precision, so the number holds when it airs
   const pending = !claim && hero.deltaXt === null; // nothing measured yet
   const unit = shot || step ? "on the true positions" : "in expected threat (xT)";
   const look = !!hero.keyScan;

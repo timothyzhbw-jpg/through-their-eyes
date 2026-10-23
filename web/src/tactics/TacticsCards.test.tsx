@@ -47,8 +47,8 @@ describe("the tactics cards", () => {
     expect(html).toContain('data-card="set_pieces"');
     expect(html).toContain("Why build from the back?");
     expect(html).toContain("Why focus on set pieces?");
-    expect(html).toContain("Building short under pressure, Home kept the ball on");
-    expect(html).toContain("A9 got the ball");
+    expect(html).toContain("Building short under pressure, Kestrel Bay kept the ball on");
+    expect(html).toContain("M. Quillan got the ball");
     expect(count(html, ">verified<")).toBe(2);
     expect(html).toContain("kind-computed");
     expect(html).not.toContain("<details");

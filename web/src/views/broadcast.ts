@@ -238,6 +238,31 @@ export function pathFor(run: Run, dt: number): BroadcastPath {
   return path;
 }
 
+const locked = new WeakMap<Run, Map<number, BroadcastPath>>();
+
+/**
+ * The camera path locked on player `j` (of `n`) instead of the ball: the same operator, aiming at
+ * him (the player fan's camera, SPEC 6 "Persona specs"). Computed on first use, like `pathFor`.
+ */
+export function lockPathFor(run: Run, dt: number, j: number, n: number): BroadcastPath {
+  let byPlayer = locked.get(run);
+  if (!byPlayer) {
+    byPlayer = new Map();
+    locked.set(run, byPlayer);
+  }
+  let path = byPlayer.get(j);
+  if (!path) {
+    const track = new Float32Array(2 * run.frames);
+    for (let f = 0; f < run.frames; f++) {
+      track[2 * f] = run.pos[2 * (f * n + j)];
+      track[2 * f + 1] = run.pos[2 * (f * n + j) + 1];
+    }
+    path = broadcastPath(track, dt);
+    byPlayer.set(j, path);
+  }
+  return path;
+}
+
 export interface CameraPose {
   position: [number, number, number]; // three.js
   target: [number, number, number];

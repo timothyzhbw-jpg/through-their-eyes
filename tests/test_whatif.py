@@ -24,6 +24,7 @@ from explain.render import check_payload
 from sim.counterfactual import force_action_counterfactual, what_if_id
 from sim.engine import Simulation
 from sim.overrides import ForceAction
+from sim.roster import short_name
 
 SCENARIO, SEED = "blind_side_run", 3
 
@@ -351,7 +352,8 @@ def test_a_what_if_answer_is_verified_counterfactual_narration(ctx, language):
     assert {c.kind for c in a.payload.claims} == {"counterfactual"}
     assert all(c.verdict == "supported" for c in a.payload.claims)
     text = " ".join(line.text for line in a.payload.lines)
-    assert "K. Annersley" in text and "H4" not in text  # by his fictional name (sim/roster.py)
+    name = short_name("H4", language)  # K. Annersley; 安纳斯利 in Chinese (sim/roster.py)
+    assert name in text and "H4" not in text
 
 
 def test_an_impossible_question_gets_a_refusal_not_narration(ctx):

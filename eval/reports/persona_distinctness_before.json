@@ -1,0 +1,2173 @@
+{
+ "label": "before (main 7c424f3d + #191)",
+ "model_digits": 0,
+ "scripts": [
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "casual",
+   "language": "en",
+   "lines": 5,
+   "length": 42,
+   "numbers": 0,
+   "numbered_lines": 0,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "scan_before_reception",
+    "blind_side",
+    "cf_pass",
+    "runner_received"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "J. Ferriday checked his shoulder before the ball reached him.",
+    "N. Varnhall's run was on J. Ferriday's blind side.",
+    "Without that look, J. Ferriday would have passed to K. Annersley.",
+    "N. Varnhall took the pass from J. Ferriday."
+   ],
+   "verified": true,
+   "problems": [
+    "5 lines, at most 3 for casual",
+    "start with the opener \"Watch his head.\"",
+    "5 lines, spec 2–3"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "casual",
+   "language": "zh",
+   "lines": 5,
+   "length": 68,
+   "numbers": 0,
+   "numbered_lines": 0,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "scan_before_reception",
+    "blind_side",
+    "cf_pass",
+    "runner_received"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "球到之前，费里迪先回头看了一眼。",
+    "瓦恩霍尔的跑位在费里迪的视野盲区。",
+    "如果没有那一眼，费里迪会把球传给安纳斯利。",
+    "瓦恩霍尔接到了费里迪的传球。"
+   ],
+   "verified": true,
+   "problems": [
+    "5 lines, at most 3 for casual",
+    "start with the opener \"注意看他回头。\"",
+    "5 lines, spec 2–3"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "analyst",
+   "language": "en",
+   "lines": 7,
+   "length": 74,
+   "numbers": 7,
+   "numbered_lines": 5,
+   "jargon_lines": 4,
+   "jargon": [
+    "belief error",
+    "pitch control",
+    "scan",
+    "xT"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "observed_share",
+    "belief_error",
+    "pass_to_runner",
+    "cf_pass",
+    "cf_value"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "J. Ferriday scanned once in the 2 seconds before receiving.",
+    "In the 1 second before receiving, J. Ferriday saw 61% of the space the opponents controlled.",
+    "When he played the pass, J. Ferriday's picture of N. Varnhall was off by 0.3 metres.",
+    "J. Ferriday found N. Varnhall with a 38-metre pass.",
+    "Without that look, J. Ferriday would have passed to K. Annersley.",
+    "That look was worth 0.17 in expected threat."
+   ],
+   "verified": true,
+   "problems": [
+    "missing the options' chances: what he gave his pass or shot against what it was: cite one of pass_success, cf_pass_success",
+    "start with a number: the first line cites a claim that says one"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "analyst",
+   "language": "zh",
+   "lines": 7,
+   "length": 110,
+   "numbers": 7,
+   "numbered_lines": 5,
+   "jargon_lines": 4,
+   "jargon": [
+    "belief error",
+    "pitch control",
+    "scan",
+    "xT"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "observed_share",
+    "belief_error",
+    "pass_to_runner",
+    "cf_pass",
+    "cf_value"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "接球前2秒内，费里迪回头观察了一次。",
+    "接球前1秒内，费里迪看到了对手控制区域的61%。",
+    "出球时，费里迪对瓦恩霍尔位置的判断偏差为0.3米。",
+    "费里迪一脚38米的传球找到了瓦恩霍尔。",
+    "如果没有那一眼，费里迪会把球传给安纳斯利。",
+    "那一眼价值0.17的预期威胁。"
+   ],
+   "verified": true,
+   "problems": [
+    "missing the options' chances: what he gave his pass or shot against what it was: cite one of pass_success, cf_pass_success",
+    "start with a number: the first line cites a claim that says one"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "player_fan",
+   "language": "en",
+   "lines": 5,
+   "length": 49,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 1,
+   "jargon": [
+    "belief error"
+   ],
+   "claims": [
+    "scan_before_reception",
+    "belief_error",
+    "cf_pass",
+    "runner_received"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "J. Ferriday checked his shoulder before the ball reached him.",
+    "When he played the pass, J. Ferriday's picture of N. Varnhall was off by 0.3 metres.",
+    "Without that look, J. Ferriday would have passed to K. Annersley.",
+    "N. Varnhall took the pass from J. Ferriday."
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: belief_error, cf_pass, runner_received",
+    "missing his decision: cite one of pass_to_runner",
+    "5 lines, at most 4 for player_fan",
+    "start with the opener \"Lovely from him.\"",
+    "5 lines, spec 3–4",
+    "1 jargon lines, spec ≤ 0"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "player_fan",
+   "language": "zh",
+   "lines": 5,
+   "length": 73,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 1,
+   "jargon": [
+    "belief error"
+   ],
+   "claims": [
+    "scan_before_reception",
+    "belief_error",
+    "cf_pass",
+    "runner_received"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "球到之前，费里迪先回头看了一眼。",
+    "出球时，费里迪对瓦恩霍尔位置的判断偏差为0.3米。",
+    "如果没有那一眼，费里迪会把球传给安纳斯利。",
+    "瓦恩霍尔接到了费里迪的传球。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: belief_error, cf_pass, runner_received",
+    "missing his decision: cite one of pass_to_runner",
+    "5 lines, at most 4 for player_fan",
+    "start with the opener \"这一下漂亮！\"",
+    "5 lines, spec 3–4",
+    "1 jargon lines, spec ≤ 0"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "coach",
+   "language": "en",
+   "lines": 4,
+   "length": 50,
+   "numbers": 4,
+   "numbered_lines": 3,
+   "jargon_lines": 2,
+   "jargon": [
+    "belief error",
+    "scan"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "time_since_last_scan",
+    "belief_error",
+    "cf_pass"
+   ],
+   "first_line": "J. Ferriday scanned once in the 2 seconds before receiving.",
+   "texts": [
+    "J. Ferriday scanned once in the 2 seconds before receiving.",
+    "J. Ferriday had last checked his shoulder 0.8 seconds before the ball arrived.",
+    "When he played the pass, J. Ferriday's picture of N. Varnhall was off by 0.3 metres.",
+    "Without that look, J. Ferriday would have passed to K. Annersley."
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: belief_error, scans_before_reception",
+    "4 numbers, at most 3 for coach",
+    "start with the opener \"Coaching point.\"",
+    "end with the cue \"Teach it: check your shoulder before the ball arrives.\"",
+    "2 jargon lines, spec ≤ 1"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "coach",
+   "language": "zh",
+   "lines": 4,
+   "length": 76,
+   "numbers": 4,
+   "numbered_lines": 3,
+   "jargon_lines": 2,
+   "jargon": [
+    "belief error",
+    "scan"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "time_since_last_scan",
+    "belief_error",
+    "cf_pass"
+   ],
+   "first_line": "接球前2秒内，费里迪回头观察了一次。",
+   "texts": [
+    "接球前2秒内，费里迪回头观察了一次。",
+    "球到脚下时，费里迪距上次回头观察已过去0.8秒。",
+    "出球时，费里迪对瓦恩霍尔位置的判断偏差为0.3米。",
+    "如果没有那一眼，费里迪会把球传给安纳斯利。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: belief_error, scans_before_reception",
+    "4 numbers, at most 3 for coach",
+    "start with the opener \"教学要点。\"",
+    "end with the cue \"要教的就是这一点：球到之前，先回头看。\"",
+    "2 jargon lines, spec ≤ 1"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "audio_description",
+   "language": "en",
+   "lines": 6,
+   "length": 68,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "reception_zone",
+    "blind_side",
+    "scan_side",
+    "seen_in_scan",
+    "pass_to_runner",
+    "cf_pass"
+   ],
+   "first_line": "J. Ferriday received the ball in the opponents' half, right of centre.",
+   "texts": [
+    "J. Ferriday received the ball in the opponents' half, right of centre.",
+    "N. Varnhall's run was on J. Ferriday's blind side.",
+    "Before the ball reached him, J. Ferriday looked over his right shoulder.",
+    "When J. Ferriday looked over his shoulder before the ball arrived, he saw N. Varnhall.",
+    "J. Ferriday found N. Varnhall with a 38-metre pass.",
+    "Without that look, J. Ferriday would have passed to K. Annersley."
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H8:0075",
+   "persona": "audio_description",
+   "language": "zh",
+   "lines": 6,
+   "length": 101,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "reception_zone",
+    "blind_side",
+    "scan_side",
+    "seen_in_scan",
+    "pass_to_runner",
+    "cf_pass"
+   ],
+   "first_line": "费里迪在对方半场中路偏右接球。",
+   "texts": [
+    "费里迪在对方半场中路偏右接球。",
+    "瓦恩霍尔的跑位在费里迪的视野盲区。",
+    "球到之前，费里迪扭头看向了右后方。",
+    "球到之前回头的那一眼，费里迪看到了瓦恩霍尔。",
+    "费里迪一脚38米的传球找到了瓦恩霍尔。",
+    "如果没有那一眼，费里迪会把球传给安纳斯利。"
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 10.0
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "casual",
+   "language": "en",
+   "lines": 6,
+   "length": 65,
+   "numbers": 2,
+   "numbered_lines": 2,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "blind_side",
+    "marker_scan",
+    "seen_in_scan",
+    "stayed_with_runner",
+    "cf_unmarked"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "M. Quillan was on D. Velkamp's blind side when he looked.",
+    "D. Velkamp looked over his shoulder 0.4 seconds before A. Vintergren played the ball to M. Quillan.",
+    "When D. Velkamp looked over his shoulder, he saw M. Quillan.",
+    "D. Velkamp was 2.9 metres from M. Quillan when the ball reached him.",
+    "Without the look, M. Quillan receives the ball unmarked."
+   ],
+   "verified": true,
+   "problems": [
+    "not for casual: marker_scan",
+    "2 numbers, at most 1 for casual",
+    "6 lines, at most 3 for casual",
+    "start with the opener \"Watch his head.\"",
+    "6 lines, spec 2–3",
+    "65 words, spec ≤ 45"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "casual",
+   "language": "zh",
+   "lines": 6,
+   "length": 92,
+   "numbers": 2,
+   "numbered_lines": 2,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "blind_side",
+    "marker_scan",
+    "seen_in_scan",
+    "stayed_with_runner",
+    "cf_unmarked"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "韦尔坎普回头时，奎兰在他的视野盲区。",
+    "温特格伦把球传给奎兰之前0.4秒，韦尔坎普回头看了一眼。",
+    "韦尔坎普回头的那一眼，看到了奎兰。",
+    "球到奎兰脚下时，韦尔坎普离他2.9米。",
+    "如果没有那一眼，奎兰接球时无人盯防。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for casual: marker_scan",
+    "2 numbers, at most 1 for casual",
+    "6 lines, at most 3 for casual",
+    "start with the opener \"注意看他回头。\"",
+    "6 lines, spec 2–3",
+    "92 characters, spec ≤ 80"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "analyst",
+   "language": "en",
+   "lines": 9,
+   "length": 116,
+   "numbers": 7,
+   "numbered_lines": 7,
+   "jargon_lines": 3,
+   "jargon": [
+    "belief error",
+    "pressing",
+    "xT"
+   ],
+   "claims": [
+    "marker_unseen",
+    "marker_scan",
+    "seen_in_scan",
+    "stayed_with_runner",
+    "runner_pressure",
+    "cf_belief_error",
+    "cf_lost_runner",
+    "cf_value"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "Before he looked, D. Velkamp had not seen M. Quillan for 1.8 seconds.",
+    "D. Velkamp looked over his shoulder 0.4 seconds before A. Vintergren played the ball to M. Quillan.",
+    "When D. Velkamp looked over his shoulder, he saw M. Quillan.",
+    "D. Velkamp was 2.9 metres from M. Quillan when the ball reached him.",
+    "When the ball reached M. Quillan, pressing intensity on him was 95%.",
+    "Without the look, D. Velkamp's picture of M. Quillan is off by 3.0 metres when the ball is played.",
+    "Without the look, D. Velkamp loses his man: he is 7.9 metres from M. Quillan when the ball arrives.",
+    "That look was worth 0.22 in expected threat."
+   ],
+   "verified": true,
+   "problems": [
+    "9 lines, at most 7 for analyst",
+    "start with a number: the first line cites a claim that says one",
+    "9 lines, spec 5–7"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "analyst",
+   "language": "zh",
+   "lines": 9,
+   "length": 160,
+   "numbers": 7,
+   "numbered_lines": 7,
+   "jargon_lines": 3,
+   "jargon": [
+    "belief error",
+    "pressing",
+    "xT"
+   ],
+   "claims": [
+    "marker_unseen",
+    "marker_scan",
+    "seen_in_scan",
+    "stayed_with_runner",
+    "runner_pressure",
+    "cf_belief_error",
+    "cf_lost_runner",
+    "cf_value"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "回头之前，韦尔坎普已经有1.8秒没看到奎兰了。",
+    "温特格伦把球传给奎兰之前0.4秒，韦尔坎普回头看了一眼。",
+    "韦尔坎普回头的那一眼，看到了奎兰。",
+    "球到奎兰脚下时，韦尔坎普离他2.9米。",
+    "球到奎兰脚下时，他承受的逼抢强度为95%。",
+    "如果没有那一眼，出球时韦尔坎普对奎兰位置的判断会偏差3.0米。",
+    "如果没有那一眼，韦尔坎普会跟丢奎兰：球到时他已在7.9米开外。",
+    "那一眼价值0.22的预期威胁。"
+   ],
+   "verified": true,
+   "problems": [
+    "9 lines, at most 7 for analyst",
+    "start with a number: the first line cites a claim that says one",
+    "9 lines, spec 5–7"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "player_fan",
+   "language": "en",
+   "lines": 5,
+   "length": 64,
+   "numbers": 3,
+   "numbered_lines": 3,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "marker_scan",
+    "seen_in_scan",
+    "stayed_with_runner",
+    "cf_lost_runner"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "D. Velkamp looked over his shoulder 0.4 seconds before A. Vintergren played the ball to M. Quillan.",
+    "When D. Velkamp looked over his shoulder, he saw M. Quillan.",
+    "D. Velkamp was 2.9 metres from M. Quillan when the ball reached him.",
+    "Without the look, D. Velkamp loses his man: he is 7.9 metres from M. Quillan when the ball arrives."
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: cf_lost_runner, seen_in_scan",
+    "5 lines, at most 4 for player_fan",
+    "start with the opener \"Lovely from him.\"",
+    "5 lines, spec 3–4",
+    "64 words, spec ≤ 60"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "player_fan",
+   "language": "zh",
+   "lines": 5,
+   "length": 86,
+   "numbers": 3,
+   "numbered_lines": 3,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "marker_scan",
+    "seen_in_scan",
+    "stayed_with_runner",
+    "cf_lost_runner"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "温特格伦把球传给奎兰之前0.4秒，韦尔坎普回头看了一眼。",
+    "韦尔坎普回头的那一眼，看到了奎兰。",
+    "球到奎兰脚下时，韦尔坎普离他2.9米。",
+    "如果没有那一眼，韦尔坎普会跟丢奎兰：球到时他已在7.9米开外。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: cf_lost_runner, seen_in_scan",
+    "5 lines, at most 4 for player_fan",
+    "start with the opener \"这一下漂亮！\"",
+    "5 lines, spec 3–4"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "coach",
+   "language": "en",
+   "lines": 5,
+   "length": 70,
+   "numbers": 5,
+   "numbered_lines": 5,
+   "jargon_lines": 1,
+   "jargon": [
+    "xT"
+   ],
+   "claims": [
+    "marker_unseen",
+    "marker_scan",
+    "stayed_with_runner",
+    "cf_lost_runner",
+    "cf_value"
+   ],
+   "first_line": "Before he looked, D. Velkamp had not seen M. Quillan for 1.8 seconds.",
+   "texts": [
+    "Before he looked, D. Velkamp had not seen M. Quillan for 1.8 seconds.",
+    "D. Velkamp looked over his shoulder 0.4 seconds before A. Vintergren played the ball to M. Quillan.",
+    "D. Velkamp was 2.9 metres from M. Quillan when the ball reached him.",
+    "Without the look, D. Velkamp loses his man: he is 7.9 metres from M. Quillan when the ball arrives.",
+    "That look was worth 0.22 in expected threat."
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: cf_value",
+    "5 numbers, at most 3 for coach",
+    "start with the opener \"Coaching point.\"",
+    "end with the cue \"Teach it: find your man before the ball is played.\""
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "coach",
+   "language": "zh",
+   "lines": 5,
+   "length": 95,
+   "numbers": 5,
+   "numbered_lines": 5,
+   "jargon_lines": 1,
+   "jargon": [
+    "xT"
+   ],
+   "claims": [
+    "marker_unseen",
+    "marker_scan",
+    "stayed_with_runner",
+    "cf_lost_runner",
+    "cf_value"
+   ],
+   "first_line": "回头之前，韦尔坎普已经有1.8秒没看到奎兰了。",
+   "texts": [
+    "回头之前，韦尔坎普已经有1.8秒没看到奎兰了。",
+    "温特格伦把球传给奎兰之前0.4秒，韦尔坎普回头看了一眼。",
+    "球到奎兰脚下时，韦尔坎普离他2.9米。",
+    "如果没有那一眼，韦尔坎普会跟丢奎兰：球到时他已在7.9米开外。",
+    "那一眼价值0.22的预期威胁。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: cf_value",
+    "5 numbers, at most 3 for coach",
+    "start with the opener \"教学要点。\"",
+    "end with the cue \"要教的就是这一点：球传出之前，先找到你盯的人。\""
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "audio_description",
+   "language": "en",
+   "lines": 6,
+   "length": 73,
+   "numbers": 2,
+   "numbered_lines": 2,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "blind_side",
+    "scan_side",
+    "seen_in_scan",
+    "reception_zone",
+    "stayed_with_runner",
+    "cf_lost_runner"
+   ],
+   "first_line": "M. Quillan was on D. Velkamp's blind side when he looked.",
+   "texts": [
+    "M. Quillan was on D. Velkamp's blind side when he looked.",
+    "D. Velkamp looked over his right shoulder.",
+    "When D. Velkamp looked over his shoulder, he saw M. Quillan.",
+    "M. Quillan received the ball in the final third, in the centre.",
+    "D. Velkamp was 2.9 metres from M. Quillan when the ball reached him.",
+    "Without the look, D. Velkamp loses his man: he is 7.9 metres from M. Quillan when the ball arrives."
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:marker_scan:H5:0121",
+   "persona": "audio_description",
+   "language": "zh",
+   "lines": 6,
+   "length": 95,
+   "numbers": 2,
+   "numbered_lines": 2,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "blind_side",
+    "scan_side",
+    "seen_in_scan",
+    "reception_zone",
+    "stayed_with_runner",
+    "cf_lost_runner"
+   ],
+   "first_line": "韦尔坎普回头时，奎兰在他的视野盲区。",
+   "texts": [
+    "韦尔坎普回头时，奎兰在他的视野盲区。",
+    "韦尔坎普扭头看向了右后方。",
+    "韦尔坎普回头的那一眼，看到了奎兰。",
+    "奎兰在前场三区中路接球。",
+    "球到奎兰脚下时，韦尔坎普离他2.9米。",
+    "如果没有那一眼，韦尔坎普会跟丢奎兰：球到时他已在7.9米开外。"
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief"
+    ],
+    "duration_s": 11.48
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "casual",
+   "language": "en",
+   "lines": 6,
+   "length": 49,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "scan_at_goal",
+    "keeper_seen_in_scan",
+    "shot_placement",
+    "shot_scored",
+    "cf_shot"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "N. Varnhall looked up 0.4 seconds before the ball reached him.",
+    "When N. Varnhall looked up, he saw H. Talvisto.",
+    "N. Varnhall went for the far post.",
+    "N. Varnhall scored.",
+    "Without the look, N. Varnhall goes for the near post, and H. Talvisto saves it."
+   ],
+   "verified": true,
+   "problems": [
+    "not for casual: scan_at_goal",
+    "6 lines, at most 3 for casual",
+    "start with the opener \"Watch his head.\"",
+    "6 lines, spec 2–3",
+    "49 words, spec ≤ 45"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "casual",
+   "language": "zh",
+   "lines": 6,
+   "length": 84,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "scan_at_goal",
+    "keeper_seen_in_scan",
+    "shot_placement",
+    "shot_scored",
+    "cf_shot"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "球到之前0.4秒，瓦恩霍尔抬头看了一眼。",
+    "瓦恩霍尔抬头的那一眼，看到了门将塔尔维斯托。",
+    "瓦恩霍尔选择打远角。",
+    "瓦恩霍尔破门得分。",
+    "如果没有那一眼，瓦恩霍尔会选择打近角，被塔尔维斯托扑出。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for casual: scan_at_goal",
+    "6 lines, at most 3 for casual",
+    "start with the opener \"注意看他这一抬头。\"",
+    "6 lines, spec 2–3",
+    "84 characters, spec ≤ 80"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "analyst",
+   "language": "en",
+   "lines": 8,
+   "length": 93,
+   "numbers": 9,
+   "numbered_lines": 6,
+   "jargon_lines": 3,
+   "jargon": [
+    "probability",
+    "scan"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "keeper_near_side",
+    "shot_thought_vs_was",
+    "shot_speed",
+    "cf_keeper_age",
+    "cf_shot",
+    "cf_shot_value"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "N. Varnhall scanned once in the 2 seconds before receiving.",
+    "When N. Varnhall looked up, H. Talvisto stood 1.9 metres toward his near post.",
+    "N. Varnhall gave the far post a 0.77 chance of going in; it was 0.79.",
+    "N. Varnhall hit it at 99 km/h.",
+    "Without the look, his last sight of H. Talvisto is 7.9 seconds old when N. Varnhall shoots.",
+    "Without the look, N. Varnhall goes for the near post, and H. Talvisto saves it.",
+    "The look raised his chance of scoring from 0.26 to 0.79."
+   ],
+   "verified": true,
+   "problems": [
+    "8 lines, at most 7 for analyst",
+    "start with a number: the first line cites a claim that says one",
+    "8 lines, spec 5–7"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "analyst",
+   "language": "zh",
+   "lines": 8,
+   "length": 160,
+   "numbers": 9,
+   "numbered_lines": 6,
+   "jargon_lines": 3,
+   "jargon": [
+    "probability",
+    "scan"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "keeper_near_side",
+    "shot_thought_vs_was",
+    "shot_speed",
+    "cf_keeper_age",
+    "cf_shot",
+    "cf_shot_value"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "接球前2秒内，瓦恩霍尔回头观察了一次。",
+    "瓦恩霍尔抬头时，门将塔尔维斯托的站位向近门柱一侧偏出1.9米。",
+    "瓦恩霍尔以为打远角的进球概率是0.77，实际是0.79。",
+    "瓦恩霍尔这脚射门的球速为每小时99公里。",
+    "如果没有那一眼，瓦恩霍尔射门时距上次看到门将塔尔维斯托已有7.9秒。",
+    "如果没有那一眼，瓦恩霍尔会选择打近角，被塔尔维斯托扑出。",
+    "那一眼把他的进球概率从0.26提高到了0.79。"
+   ],
+   "verified": true,
+   "problems": [
+    "8 lines, at most 7 for analyst",
+    "start with a number: the first line cites a claim that says one",
+    "8 lines, spec 5–7"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "player_fan",
+   "language": "en",
+   "lines": 6,
+   "length": 49,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "scan_at_goal",
+    "keeper_seen_in_scan",
+    "shot_placement",
+    "shot_scored",
+    "cf_shot"
+   ],
+   "first_line": "What did he see?",
+   "texts": [
+    "What did he see?",
+    "N. Varnhall looked up 0.4 seconds before the ball reached him.",
+    "When N. Varnhall looked up, he saw H. Talvisto.",
+    "N. Varnhall went for the far post.",
+    "N. Varnhall scored.",
+    "Without the look, N. Varnhall goes for the near post, and H. Talvisto saves it."
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: cf_shot, keeper_seen_in_scan",
+    "6 lines, at most 4 for player_fan",
+    "start with the opener \"Lovely from him.\"",
+    "6 lines, spec 3–4"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "player_fan",
+   "language": "zh",
+   "lines": 6,
+   "length": 84,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "scan_at_goal",
+    "keeper_seen_in_scan",
+    "shot_placement",
+    "shot_scored",
+    "cf_shot"
+   ],
+   "first_line": "他看到了什么？",
+   "texts": [
+    "他看到了什么？",
+    "球到之前0.4秒，瓦恩霍尔抬头看了一眼。",
+    "瓦恩霍尔抬头的那一眼，看到了门将塔尔维斯托。",
+    "瓦恩霍尔选择打远角。",
+    "瓦恩霍尔破门得分。",
+    "如果没有那一眼，瓦恩霍尔会选择打近角，被塔尔维斯托扑出。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: cf_shot, keeper_seen_in_scan",
+    "6 lines, at most 4 for player_fan",
+    "start with the opener \"这一下漂亮！\"",
+    "6 lines, spec 3–4"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "coach",
+   "language": "en",
+   "lines": 5,
+   "length": 63,
+   "numbers": 6,
+   "numbered_lines": 4,
+   "jargon_lines": 2,
+   "jargon": [
+    "probability",
+    "scan"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "time_since_last_scan",
+    "keeper_near_side",
+    "cf_shot",
+    "cf_shot_value"
+   ],
+   "first_line": "N. Varnhall scanned once in the 2 seconds before receiving.",
+   "texts": [
+    "N. Varnhall scanned once in the 2 seconds before receiving.",
+    "N. Varnhall had last checked his shoulder 0.4 seconds before the ball arrived.",
+    "When N. Varnhall looked up, H. Talvisto stood 1.9 metres toward his near post.",
+    "Without the look, N. Varnhall goes for the near post, and H. Talvisto saves it.",
+    "The look raised his chance of scoring from 0.26 to 0.79."
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: cf_shot_value, scans_before_reception",
+    "6 numbers, at most 3 for coach",
+    "start with the opener \"Coaching point.\"",
+    "end with the cue \"Teach it: look at the goal before the ball arrives.\"",
+    "2 jargon lines, spec ≤ 1"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "coach",
+   "language": "zh",
+   "lines": 5,
+   "length": 107,
+   "numbers": 6,
+   "numbered_lines": 4,
+   "jargon_lines": 2,
+   "jargon": [
+    "probability",
+    "scan"
+   ],
+   "claims": [
+    "scans_before_reception",
+    "time_since_last_scan",
+    "keeper_near_side",
+    "cf_shot",
+    "cf_shot_value"
+   ],
+   "first_line": "接球前2秒内，瓦恩霍尔回头观察了一次。",
+   "texts": [
+    "接球前2秒内，瓦恩霍尔回头观察了一次。",
+    "球到脚下时，瓦恩霍尔距上次回头观察已过去0.4秒。",
+    "瓦恩霍尔抬头时，门将塔尔维斯托的站位向近门柱一侧偏出1.9米。",
+    "如果没有那一眼，瓦恩霍尔会选择打近角，被塔尔维斯托扑出。",
+    "那一眼把他的进球概率从0.26提高到了0.79。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: cf_shot_value, scans_before_reception",
+    "6 numbers, at most 3 for coach",
+    "start with the opener \"教学要点。\"",
+    "end with the cue \"要教的就是这一点：球到之前，先抬头看球门。\"",
+    "2 jargon lines, spec ≤ 1"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "audio_description",
+   "language": "en",
+   "lines": 6,
+   "length": 58,
+   "numbers": 0,
+   "numbered_lines": 0,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "reception_zone",
+    "scan_side",
+    "keeper_seen_in_scan",
+    "shot_placement",
+    "shot_scored",
+    "cf_shot"
+   ],
+   "first_line": "N. Varnhall received the ball in the final third, in the centre.",
+   "texts": [
+    "N. Varnhall received the ball in the final third, in the centre.",
+    "Before the ball reached him, N. Varnhall looked over his left shoulder.",
+    "When N. Varnhall looked up, he saw H. Talvisto.",
+    "N. Varnhall went for the far post.",
+    "N. Varnhall scored.",
+    "Without the look, N. Varnhall goes for the near post, and H. Talvisto saves it."
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:decision_after_scan:H9:0198",
+   "persona": "audio_description",
+   "language": "zh",
+   "lines": 6,
+   "length": 91,
+   "numbers": 0,
+   "numbered_lines": 0,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "reception_zone",
+    "scan_side",
+    "keeper_seen_in_scan",
+    "shot_placement",
+    "shot_scored",
+    "cf_shot"
+   ],
+   "first_line": "瓦恩霍尔在前场三区中路接球。",
+   "texts": [
+    "瓦恩霍尔在前场三区中路接球。",
+    "球到之前，瓦恩霍尔扭头看向了左后方。",
+    "瓦恩霍尔抬头的那一眼，看到了门将塔尔维斯托。",
+    "瓦恩霍尔选择打远角。",
+    "瓦恩霍尔破门得分。",
+    "如果没有那一眼，瓦恩霍尔会选择打近角，被塔尔维斯托扑出。"
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "scan marker",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "scan marker",
+     "ghost belief",
+     "camera split"
+    ],
+    "duration_s": 8.88
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "casual",
+   "language": "en",
+   "lines": 4,
+   "length": 35,
+   "numbers": 0,
+   "numbered_lines": 0,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "heavy_pressure",
+    "runner_received",
+    "cf_carry_lost"
+   ],
+   "first_line": "Watch this.",
+   "texts": [
+    "Watch this.",
+    "K. Annersley was under heavy pressure when he released the ball.",
+    "R. Castellane took the pass from K. Annersley.",
+    "Had K. Annersley kept the ball, A. Vintergren would have won it off him."
+   ],
+   "verified": true,
+   "problems": [
+    "4 lines, at most 3 for casual",
+    "4 lines, spec 2–3"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "casual",
+   "language": "zh",
+   "lines": 4,
+   "length": 49,
+   "numbers": 0,
+   "numbered_lines": 0,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "heavy_pressure",
+    "runner_received",
+    "cf_carry_lost"
+   ],
+   "first_line": "注意看。",
+   "texts": [
+    "注意看。",
+    "安纳斯利是在重压之下出球的。",
+    "卡斯特兰接到了安纳斯利的传球。",
+    "如果安纳斯利继续持球，温特格伦会把球抢走。"
+   ],
+   "verified": true,
+   "problems": [
+    "4 lines, at most 3 for casual",
+    "4 lines, spec 2–3"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "analyst",
+   "language": "en",
+   "lines": 7,
+   "length": 80,
+   "numbers": 5,
+   "numbered_lines": 5,
+   "jargon_lines": 3,
+   "jargon": [
+    "pressing",
+    "xT"
+   ],
+   "claims": [
+    "pressure_at_pass",
+    "presser_distance",
+    "pass_to_runner",
+    "receiver_pressure",
+    "cf_carry_lost",
+    "cf_value"
+   ],
+   "first_line": "Watch this.",
+   "texts": [
+    "Watch this.",
+    "Pressing intensity on K. Annersley was 95% when he released the ball.",
+    "The nearest opponent, A. Vintergren, was 5.2 metres from K. Annersley when he released the ball.",
+    "K. Annersley found R. Castellane with a 34-metre pass.",
+    "When the pass reached R. Castellane, pressing intensity on him was 0%.",
+    "Had K. Annersley kept the ball, A. Vintergren would have won it off him.",
+    "What K. Annersley did was worth 0.14 more in expected threat than keeping the ball."
+   ],
+   "verified": true,
+   "problems": [
+    "missing the options' chances: what he gave his pass or shot against what it was: cite one of pass_success",
+    "start with a number: the first line cites a claim that says one"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "analyst",
+   "language": "zh",
+   "lines": 7,
+   "length": 121,
+   "numbers": 5,
+   "numbered_lines": 5,
+   "jargon_lines": 3,
+   "jargon": [
+    "pressing",
+    "xT"
+   ],
+   "claims": [
+    "pressure_at_pass",
+    "presser_distance",
+    "pass_to_runner",
+    "receiver_pressure",
+    "cf_carry_lost",
+    "cf_value"
+   ],
+   "first_line": "注意看。",
+   "texts": [
+    "注意看。",
+    "出球时，安纳斯利承受的逼抢强度为95%。",
+    "安纳斯利出球时，离他最近的对手是温特格伦，相距5.2米。",
+    "安纳斯利一脚34米的传球找到了卡斯特兰。",
+    "球到卡斯特兰脚下时，他承受的逼抢强度为0%。",
+    "如果安纳斯利继续持球，温特格伦会把球抢走。",
+    "安纳斯利这样处理，比继续持球多创造了0.14的预期威胁。"
+   ],
+   "verified": true,
+   "problems": [
+    "missing the options' chances: what he gave his pass or shot against what it was: cite one of pass_success",
+    "start with a number: the first line cites a claim that says one"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "player_fan",
+   "language": "en",
+   "lines": 5,
+   "length": 51,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "heavy_pressure",
+    "presser_distance",
+    "runner_received",
+    "cf_carry_lost"
+   ],
+   "first_line": "Watch this.",
+   "texts": [
+    "Watch this.",
+    "K. Annersley was under heavy pressure when he released the ball.",
+    "The nearest opponent, A. Vintergren, was 5.2 metres from K. Annersley when he released the ball.",
+    "R. Castellane took the pass from K. Annersley.",
+    "Had K. Annersley kept the ball, A. Vintergren would have won it off him."
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: cf_carry_lost, runner_received",
+    "missing his decision: cite one of pass_to_runner",
+    "5 lines, at most 4 for player_fan",
+    "start with the opener \"Lovely from him.\"",
+    "5 lines, spec 3–4"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "player_fan",
+   "language": "zh",
+   "lines": 5,
+   "length": 72,
+   "numbers": 1,
+   "numbered_lines": 1,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "heavy_pressure",
+    "presser_distance",
+    "runner_received",
+    "cf_carry_lost"
+   ],
+   "first_line": "注意看。",
+   "texts": [
+    "注意看。",
+    "安纳斯利是在重压之下出球的。",
+    "安纳斯利出球时，离他最近的对手是温特格伦，相距5.2米。",
+    "卡斯特兰接到了安纳斯利的传球。",
+    "如果安纳斯利继续持球，温特格伦会把球抢走。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for player_fan: cf_carry_lost, runner_received",
+    "missing his decision: cite one of pass_to_runner",
+    "5 lines, at most 4 for player_fan",
+    "start with the opener \"这一下漂亮！\"",
+    "5 lines, spec 3–4"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "coach",
+   "language": "en",
+   "lines": 4,
+   "length": 57,
+   "numbers": 3,
+   "numbered_lines": 3,
+   "jargon_lines": 2,
+   "jargon": [
+    "pressing",
+    "xT"
+   ],
+   "claims": [
+    "pressure_at_pass",
+    "presser_distance",
+    "cf_carry_lost",
+    "cf_value"
+   ],
+   "first_line": "Pressing intensity on K. Annersley was 95% when he released the ball.",
+   "texts": [
+    "Pressing intensity on K. Annersley was 95% when he released the ball.",
+    "The nearest opponent, A. Vintergren, was 5.2 metres from K. Annersley when he released the ball.",
+    "Had K. Annersley kept the ball, A. Vintergren would have won it off him.",
+    "What K. Annersley did was worth 0.14 more in expected threat than keeping the ball."
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: cf_value, pressure_at_pass",
+    "start with the opener \"Coaching point.\"",
+    "end with the cue \"Teach it: move the ball before the press arrives.\"",
+    "2 jargon lines, spec ≤ 1"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "coach",
+   "language": "zh",
+   "lines": 4,
+   "length": 81,
+   "numbers": 3,
+   "numbered_lines": 3,
+   "jargon_lines": 2,
+   "jargon": [
+    "pressing",
+    "xT"
+   ],
+   "claims": [
+    "pressure_at_pass",
+    "presser_distance",
+    "cf_carry_lost",
+    "cf_value"
+   ],
+   "first_line": "出球时，安纳斯利承受的逼抢强度为95%。",
+   "texts": [
+    "出球时，安纳斯利承受的逼抢强度为95%。",
+    "安纳斯利出球时，离他最近的对手是温特格伦，相距5.2米。",
+    "如果安纳斯利继续持球，温特格伦会把球抢走。",
+    "安纳斯利这样处理，比继续持球多创造了0.14的预期威胁。"
+   ],
+   "verified": true,
+   "problems": [
+    "not for coach: cf_value, pressure_at_pass",
+    "start with the opener \"教学要点。\"",
+    "end with the cue \"要教的就是这一点：对手逼上来之前，先把球传出去。\"",
+    "2 jargon lines, spec ≤ 1"
+   ],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "audio_description",
+   "language": "en",
+   "lines": 5,
+   "length": 62,
+   "numbers": 2,
+   "numbered_lines": 2,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "reception_zone",
+    "heavy_pressure",
+    "presser_distance",
+    "pass_to_runner",
+    "cf_carry_lost"
+   ],
+   "first_line": "K. Annersley received the ball in his own third, right of centre.",
+   "texts": [
+    "K. Annersley received the ball in his own third, right of centre.",
+    "K. Annersley was under heavy pressure when he released the ball.",
+    "The nearest opponent, A. Vintergren, was 5.2 metres from K. Annersley when he released the ball.",
+    "K. Annersley found R. Castellane with a 34-metre pass.",
+    "Had K. Annersley kept the ball, A. Vintergren would have won it off him."
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  },
+  {
+   "moment": "m:pressed_decision:H4:0066",
+   "persona": "audio_description",
+   "language": "zh",
+   "lines": 5,
+   "length": 88,
+   "numbers": 2,
+   "numbered_lines": 2,
+   "jargon_lines": 0,
+   "jargon": [],
+   "claims": [
+    "reception_zone",
+    "heavy_pressure",
+    "presser_distance",
+    "pass_to_runner",
+    "cf_carry_lost"
+   ],
+   "first_line": "安纳斯利在后场三区中路偏右接球。",
+   "texts": [
+    "安纳斯利在后场三区中路偏右接球。",
+    "安纳斯利是在重压之下出球的。",
+    "安纳斯利出球时，离他最近的对手是温特格伦，相距5.2米。",
+    "安纳斯利一脚34米的传球找到了卡斯特兰。",
+    "如果安纳斯利继续持球，温特格伦会把球抢走。"
+   ],
+   "verified": true,
+   "problems": [],
+   "plan": {
+    "cameras": [
+     "pov",
+     "split"
+    ],
+    "overlays": [
+     "belief ghost",
+     "counterfactual ghost",
+     "vision"
+    ],
+    "first": [
+     "zone vision",
+     "camera pov",
+     "pov ×0.5",
+     "ghost belief"
+    ],
+    "duration_s": 11.6
+   }
+  }
+ ]
+}

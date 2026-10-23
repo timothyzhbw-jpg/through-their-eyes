@@ -21,7 +21,7 @@ import { PovOverlay } from "./PovOverlay";
 import { InstantFrame } from "./InstantFrame";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
-import { pathFor, type Shot } from "./broadcast";
+import { lockPathFor, pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { declutter, labelBox, labelHeight } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
@@ -184,9 +184,11 @@ function PovScene() {
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
       // and the vignette closes in instead (beat/Grade.tsx).
       const look = pushedBy(hero, run, s.frame);
+      // Locked on a player (the player fan's camera, SPEC 6), the operator follows him.
+      const locked = s.lock === null ? -1 : hero.ids.indexOf(s.lock);
       filmBroadcast(
         camera,
-        pathFor(run, hero.dt),
+        locked >= 0 ? lockPathFor(run, hero.dt, locked, hero.ids.length) : pathFor(run, hero.dt),
         s.frame,
         aspect,
         shot,
