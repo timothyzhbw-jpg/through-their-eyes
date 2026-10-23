@@ -73,6 +73,19 @@ at Azure list prices of 2026-10-22.[^azure-prices]
   simulator calibrated on it, and human editorial review: the Verifier catches invented numbers,
   not omissions.
 
+## Who uses it
+
+- **Broadcasters.** A "through his eyes" studio segment: the replay of a moment from the player's
+  side, with every number checked before it airs and the overlays handed over as timecoded cues.
+- **Coaches and academies.** The academy drill asks the trainee where to look before the ball
+  arrives, then shows what that look would have caught. Jordet et al. (2020) link scanning before
+  receiving to a small gain in pass completion in Premier League players; that is an association
+  in match data, and we have not tested whether the drill changes anyone's scanning.
+- **Blind and low-vision fans.** The audio description audience we ship: where he got the ball,
+  which way he looked and whom he saw, as verified lines in calm, slower speech.
+
+The offers, costs and what is still missing are in [Business model](#business-model).
+
 ## What it does
 
 The brief's pipeline, end to end, on a synthetic match:

@@ -25,6 +25,7 @@ import { createSoundSwitch, type MakeAudio, type SoundSwitch } from "../voice/vo
 import { drillOf } from "../drill/controller";
 import { takeEyesOf } from "../takeeyes/controller";
 import { yourCallOf } from "../yourcall/controller";
+import { heroGatesOf } from "../without/gates";
 import { withoutLookOf } from "../without/without";
 import { scenarioMatchId, type MatchInfo, type MatchMoment } from "./match";
 
@@ -205,8 +206,10 @@ export function createMatchSession(hero: Hero, options: MatchSessionOptions): Ma
         },
       );
       heroes.set(p.index, session);
-      // "Without the look", told (without/): the possession hero's bundled lines, if it has any.
+      // "Without the look", told (without/): the possession hero's bundled lines, if it has any,
+      // and how often the held-out seeds change when that look is removed.
       void withoutLookOf(session, options.fetch, options.dataUrl).load();
+      void heroGatesOf(session, options.fetch, options.dataUrl).load();
       if (screen.get().opening === card.id) show(session, card.id, play);
     } catch (err) {
       if (screen.get().opening === card.id) {

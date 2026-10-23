@@ -1,7 +1,7 @@
 // Slot filling. A missing claim uses a slot-free fallback, or the line is dropped.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { claimTable, fill, fillDeep, narrationText, resolveTitle, resolveVo } from "../lib/claims.mjs";
+import { claimTable, fill, fillDeep, narrationText, reportFacts, resolveTitle, resolveVo } from "../lib/claims.mjs";
 
 const claims = {
   belief_error: {
@@ -142,4 +142,18 @@ test("claimTable keeps a claim only when every sighting agrees and is supported"
     },
   ]);
   assert.equal(fixture.belief_error.usable, false);
+});
+
+test("report facts read numbers off a committed report, with thousands separators", () => {
+  const report = "## Headline\n- Of 2837 perturbed lines (11 kinds), 2837 were kept off the air with the Verifier (14 by tidy).";
+  const facts = {
+    verifier_offline: { file: "eval/reports/x.md", pattern: "Of (\\d+) perturbed lines \\([^)]*\\), (\\d+) were kept off", values: ["total", "kept"] },
+    gone: { file: "eval/reports/x.md", pattern: "no such line (\\d+)", values: ["n"] },
+  };
+  const table = reportFacts((file) => (file === "eval/reports/x.md" ? report : null), facts);
+  assert.deepEqual(table.verifier_offline.values, { total: "2,837", kept: "2,837" });
+  assert.equal(table.verifier_offline.usable, true);
+  assert.match(table.verifier_offline.seen[0], /^eval\/reports\/x\.md L2: "Of 2837/);
+  assert.equal(table.gone.usable, false); // the title takes its fallback
+  assert.equal(fill("{verifier_offline.kept} OF {verifier_offline.total}", table).text, "2,837 OF 2,837");
 });
