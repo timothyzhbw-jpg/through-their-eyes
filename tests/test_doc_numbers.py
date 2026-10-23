@@ -85,6 +85,7 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| … refuted by the verifier \| \*\*{NUM}/{NUM} \({NUM}%\)\*\*",
         ("k", "n", "pct"),
     ),
+    "A6": ("laws.md", rf"\*\*{NUM} unpunished breaches\*\*", ("unpunished",)),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",

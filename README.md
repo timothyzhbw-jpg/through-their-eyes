@@ -73,6 +73,21 @@ captions before it airs (<!--num:A5-->90 of 90<!--/num--> perturbed claims refut
 - **Business model.** Who would pay and for what, what one explained moment costs us to serve
   (about a cent of model calls), and what is still missing: [SUBMISSION](docs/SUBMISSION.md#business-model).
 
+## Who uses it
+- **Broadcasters.** A "through his eyes" studio segment: the analyst plays the replay of a moment
+  and the audience sees what the player saw, with every number checked before it airs. The
+  overlays arrive as timecoded cues a graphics engine can render.
+- **Coaches and academies.** The [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
+  asks the trainee where to look before the ball arrives, then shows what that look would have
+  caught. Jordet et al. (2020) link scanning before receiving to a small gain in pass completion
+  in Premier League players ([REFERENCES](docs/REFERENCES.md#perception-and-scanning)). That is an
+  association in match data; we have not tested whether the drill changes anyone's scanning.
+- **Blind and low-vision fans.** The audio description audience we ship: where he got the ball,
+  which way he looked and whom he saw, as verified lines in calm, slower speech, with large-print
+  captions and named controls ([ACCESSIBILITY](docs/ACCESSIBILITY.md)).
+
+Who would pay, and what a moment costs to serve: [Business model](docs/SUBMISSION.md#business-model).
+
 ## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
 Status: **live on Azure**, redeployed from `main` by GitHub Actions: the sim, analytics, explain
@@ -213,6 +228,20 @@ the deployed service. Nothing has been run on real tracking data.
 | One uncached model breakdown on the deployed API (one audience, one language, the Analyst on MCP): on a warm replica; the first request after a deploy; from the cache | 12.9 s; 23.8–25.9 s; 0.15 s | [SPEC §8](docs/SPEC.md#8-platform-and-deploy), [live trace](docs/RUBRIC_MAP.md#the-live-trace) |
 | Audio description for blind and low-vision viewers: where he got the ball, which way he looked, whom he saw, each a verified claim; calm, slower SSML at any tier; in the web app sound on, large-print captions, narration and playback controls named and focusable | 6/6 template lines verified, 0 dropped (seed 3, en + zh) | [test_agents](tests/test_agents.py), [access.test](web/src/ui/access.test.tsx) |
 
+## Engineering
+| Practice | What it is | Where |
+|---|---|---|
+| Deterministic sim | The same seed gives byte-identical output. Randomness is keyed per `(match_seed, entity, purpose)`, so a counterfactual differs from the factual run only through its intervention | [sim/rng.py](sim/rng.py), [tests/test_sim_m1.py](tests/test_sim_m1.py) |
+| One canonical platform | Committed artifacts (exports, reports, the xT grid) are generated on linux/amd64 in `python:3.11-slim`, with numpy's X86_V4 tier off: where CI and the live API run. macOS and Linux differ in the last bits of libm | [scripts/regen_linux.sh](scripts/regen_linux.sh), [tests/canonical.py](tests/canonical.py) |
+| CI gates | ruff and pytest; web typecheck, prettier and vitest, which includes the GPU shader parity test in headless Chrome; the end-to-end smoke test of every page with axe-core's WCAG 2.2 rules. Deploy runs only after the full CI is green on `main` | [ci.yml](.github/workflows/ci.yml), [deploy.yml](.github/workflows/deploy.yml) |
+| Infrastructure as scripts | The Azure resources come from two scripts, each refusing a non-personal subscription; the web upload reads every file back before `index.html` switches | [infra/m0_provision.sh](infra/m0_provision.sh), [infra/deploy.sh](infra/deploy.sh) |
+| OIDC deploy | GitHub Actions signs in to Azure with a federated identity: no Azure secret is stored | [deploy.yml](.github/workflows/deploy.yml) |
+| Traces | OpenTelemetry spans per agent step in Application Insights, each with its source (model or template) and timing | [agents/telemetry.py](agents/telemetry.py), [live trace](docs/RUBRIC_MAP.md#the-live-trace) |
+| The demo survives quota loss | A per-client rate limit, a daily model cap and a content-hash cache, with deterministic templates behind them: past a limit the API serves the cached result or the template, flagged | [OPERATIONS](docs/OPERATIONS.md#when-a-quota-runs-out) |
+| Laws-of-the-Game audit | Offside, the ball over a line, restarts and keeper handling are checked in every run: <!--num:A6-->0<!--/num--> unpunished breaches | [laws](eval/reports/laws.md) |
+| Held-out seeds | Every hero gate is tuned on design seeds and reported on others: the scan hero <!--num:H1-->33/40<!--/num-->, the pressure hero's lens <!--num:H3-->40/40<!--/num-->, the corner hero <!--num:H7-->37/40<!--/num--> | [Evidence](#evidence) |
+| Tests | pytest, vitest and smoke-page counts on the submitted commit: TODO(freeze) | [NUMBERS](docs/NUMBERS.md) D3 |
+
 ## Limitations
 - **Synthetic data only.** Nothing has been run on real tracking data, which the hackathon rules
   do not allow anyway. The detectors' scores are scores on our simulator.
@@ -267,6 +296,18 @@ reads the files.
 uv run python -m sim.dataset --matches 10 --out out/dataset/
 uv run python examples/dataset_quickstart.py --data out/dataset
 ```
+
+## The challenge's pipeline
+The brief asks for Ingest → Interpret → Explain → Render → Personalize. The whole match streams
+live at 1×. The [diagram](docs/architecture.svg) shows how the stages meet the Azure services.
+
+| Stage | Module | One concrete thing it does |
+|---|---|---|
+| Ingest | `sim/`, `api/` | the simulator makes 22 fictional players at 25 Hz with head and body yaw; the API replays them over a WebSocket at 1× |
+| Interpret | `analytics/` | a scan detector reads head yaw alone and finds each look; blind-side alerts flag a runner he has not seen |
+| Explain | `explain/` | re-simulates a moment with one look removed and turns the result into claims a deterministic Verifier checks |
+| Render | `web/` | first-person replay through his eyes, and a GPU pitch-control overlay on the tactical board |
+| Personalize | `agents/` | a crew writes the breakdown for five audiences in English or Chinese; Azure AI Speech voices it |
 
 ## Layout
 Each package's README covers what it does, its modules and data flow, the invariants it keeps
