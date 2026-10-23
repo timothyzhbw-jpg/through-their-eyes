@@ -194,7 +194,7 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 | Set-piece hero: unmarked without the look, marked within 5 m with it | <!--num:H7-->37/40<!--/num--> (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
 | Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.914, recall 0.946 | [^blind] |
-| Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
+| Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order); true claims it wrongly rejected | <!--num:A5-->90 of 90<!--/num-->; <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
 | Simulator statistics against published values | <!--num:R3.inside-->11<!--/num--> inside the published range, <!--num:R3.outside-->5<!--/num--> outside, <!--num:R3.none-->10<!--/num--> with no published value | [^realism] |
 | GPU pitch-control shader against the numpy reference | max difference about 5e-5 (target < 0.02) | [^parity] |
@@ -387,8 +387,8 @@ play that attacks the goal.
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
     0.914, recall 0.946, and the upper-bound note.
-[^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): 90/90 false
-    perturbations refuted; 468/468 generated claims supported.
+[^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): <!--num:A5-->90/90<!--/num--> false
+    perturbations refuted; <!--num:A5b-->468/468<!--/num--> generated claims supported, so <!--num:A5b.rejected-->0<!--/num--> wrongly rejected.
 [^parity]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md) §1;
     [web/src/pitchControl/pitchControl.gpu.test.ts](../web/src/pitchControl/pitchControl.gpu.test.ts),
     10 hero-moment snapshots in headless Chrome.

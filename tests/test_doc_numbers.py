@@ -92,6 +92,11 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| … refuted by the verifier \| \*\*{NUM}/{NUM} \({NUM}%\)\*\*",
         ("k", "n", "pct"),
     ),
+    "A5b": (
+        "corruption.md",
+        rf"\| Generated claims verified `supported` \| {NUM}/{NUM} \({NUM}%\)",
+        ("supported", "n", "pct"),
+    ),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",
@@ -117,6 +122,10 @@ def numbers(text: str) -> list[float]:
     ]
 
 
+# Fields worked out from a reader's own fields: "0 of 468 true claims wrongly rejected".
+DERIVED = {"A5b": lambda v: {"rejected": v["n"] - v["supported"]}}
+
+
 def report_values(key: str) -> dict[str, float]:
     report, pattern, fields = READERS[key]
     text = (REPORTS / report).read_text(encoding="utf-8")
@@ -124,7 +133,8 @@ def report_values(key: str) -> dict[str, float]:
     assert found, (
         f"{report}: no line matches the reader for {key} (did the report's wording change?)"
     )
-    return {f: float(v.replace("−", "-")) for f, v in zip(fields, found.groups(), strict=True)}
+    values = {f: float(v.replace("−", "-")) for f, v in zip(fields, found.groups(), strict=True)}
+    return values | DERIVED.get(key, lambda _: {})(values)
 
 
 def markers() -> list[tuple[str, int, str, str | None, str]]:
