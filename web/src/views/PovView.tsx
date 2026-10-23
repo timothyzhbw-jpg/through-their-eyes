@@ -13,6 +13,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { kickBallOffset } from "../players/kickBall";
+import { Separation } from "../players/separate";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
@@ -119,6 +120,7 @@ function PovScene() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const separation = useMemo(() => new Separation(hero.n), [hero]);
   const shot = useMemo<Shot>(() => ({ x: 0, y: 0, width: 0 }), []);
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);
@@ -145,6 +147,9 @@ function PovScene() {
     const s = playback.get();
     const run = hero.runs[s.mode];
     sampleInto(sample, hero, run, s.frame, s.comfort);
+    // Where the meshes stand: bodies drawn apart where the sim has them closer than a body is
+    // wide (players/separate.ts). Overlays and every number read `sample`, the true spots.
+    const { off, ball: ballOff } = separation.update(run, s.frame);
     const broadcast = s.camera === "broadcast";
     const pov = hero.ids.indexOf(s.povPlayer);
     const me = broadcast ? -1 : pov; // whose body is hidden: nobody's on broadcast
@@ -161,13 +166,17 @@ function PovScene() {
       const body = bodies.current[j];
       const head = heads.current[j];
       if (body && head) {
-        body.position.set(x, 0, -y);
+        body.position.set(x + off[2 * j], 0, -(y + off[2 * j + 1]));
         body.visible = j !== me;
         poseToken(body, head, sample.body[j], sample.head[j]);
       }
     }
     const kick = kickBallOffset(s.mode, s.frame); // on the kicking foot (rigged players)
-    ball.current?.position.set(sample.ball[0] + kick[0], 0.11, -(sample.ball[1] + kick[1]));
+    ball.current?.position.set(
+      sample.ball[0] + kick[0] + ballOff[0],
+      0.11,
+      -(sample.ball[1] + kick[1] + ballOff[1]),
+    );
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
     // A switch of camera or view is a clean cut: the camera is on its new pose at once, and the
@@ -206,8 +215,8 @@ function PovScene() {
         camera.aspect = aspect;
         camera.updateProjectionMatrix();
       }
-      const hx = sample.pos[2 * me];
-      const hy = sample.pos[2 * me + 1];
+      const hx = sample.pos[2 * me] + off[2 * me]; // his eyes: where his body would stand
+      const hy = sample.pos[2 * me + 1] + off[2 * me + 1];
       const yaw = sample.head[me];
       camera.position.set(hx, EYE_HEIGHT, -hy);
       camera.lookAt(hx + LOOK_AHEAD * Math.cos(yaw), 1.3, -(hy + LOOK_AHEAD * Math.sin(yaw)));
@@ -218,7 +227,11 @@ function PovScene() {
     const placed = declutter(
       hero.players.map((_, j) => {
         if (j === me || !labels.current[j]) return null;
-        labelAt.set(sample.pos[2 * j], LABEL_Y, -sample.pos[2 * j + 1]);
+        labelAt.set(
+          sample.pos[2 * j] + off[2 * j],
+          LABEL_Y,
+          -(sample.pos[2 * j + 1] + off[2 * j + 1]),
+        );
         let box = labelBox(camera, labelAt, LABEL_TEXT, size, LABEL_ASPECT);
         if (!box) return null;
         const k = box.h > LABEL_MAX_PX ? LABEL_MAX_PX / box.h : 1;
@@ -320,7 +333,7 @@ function PovScene() {
         <meshStandardMaterial color="#ffffff" />
       </mesh>
       <BeatLayer3D sample={sample} half={hero.vision?.halfCone ?? 0} />
-      <BroadcastLayers sample={sample} />
+      <BroadcastLayers sample={sample} off={separation.off} />
       {/* The post chain draws the frame itself at medium and high; until its chunk is here,
           and at the other tiers, the motion-blur pass does. */}
       {!post && <MotionBlur hfov={POV_HFOV} />}

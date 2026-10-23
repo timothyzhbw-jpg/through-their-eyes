@@ -13,7 +13,8 @@
 //   of the standing pass, the trunk joining every scan's look over the shoulder (not under
 //   prefers-reduced-motion), and with them a real walk at slow speeds (walk.ts; `?walk=0` leaves
 //   it out), cross-fading into the jog on one gait phase (gait.ts);
-// - kits in the fictional clubs' colours, keepers in their own (kit.ts).
+// - kits in the fictional clubs' colours, keepers in their own (kit.ts);
+// - bodies closer than a body is wide are drawn apart, render only (separate.ts).
 // By default (trial.ts; `?look=v1` for the plain kits) it loads the re-skinned copy,
 // grf_player_look.glb (same skeleton and clips byte for byte): kit designs from
 // models/kit_mask.webp, a cloth normal map, and baked occlusion plus the keepers' sleeves and
@@ -30,6 +31,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
 import { type KickBallOffset, clearKickBall, setKickBall } from "./kickBall";
+import { Separation } from "./separate";
 import { type Look, trial } from "./trial";
 import { WALK_URL, type WalkClips, walkClips } from "./walk";
 import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
@@ -243,11 +245,13 @@ function Rigged({
     [rigs],
   );
   const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const separation = useMemo(() => new Separation(hero.n), [hero]);
 
   useFrame(() => {
     const s = playback.get();
     const run = hero.runs[s.mode];
     sampleInto(sample, hero, run, s.frame, s.comfort);
+    const { off } = separation.update(run, s.frame);
     const me = hiddenPlayer(hero, s); // his own body, in his eyes
     for (let j = 0; j < hero.n; j++) {
       const { rig } = rigs[j];
@@ -268,6 +272,10 @@ function Rigged({
         sample.head[j],
         !reduced.current,
       );
+      // Render only: the body stands where the others leave room for it (separate.ts); the
+      // pose above, and every number and overlay, stay on the sim's spot.
+      rig.holder.position.x += off[2 * j];
+      rig.holder.position.z -= off[2 * j + 1];
     }
   });
 

@@ -5,6 +5,7 @@
 // (x, y) -> (x cos yaw - y sin yaw, x sin yaw + y cos yaw).
 
 import { Sample, sampleInto, type Hero, type Run, type Scan } from "../data/hero";
+import { Separation } from "../players/separate";
 import { EYE_HEIGHT } from "../views/PovView";
 import type { Anchor, Vec3 } from "./shot";
 
@@ -15,6 +16,15 @@ const LOOK_HEIGHT = 1.3;
 /** Ball centre height, the sphere PovView draws. */
 const BALL_HEIGHT = 0.11;
 const SMOOTH_SAMPLES = 9;
+
+/** One per hero: the eyes sit where the body is drawn (players/separate.ts), not on the sim's spot. */
+const separations = new WeakMap<Hero, Separation>();
+
+function renderOffset(hero: Hero, run: Run, frame: number): Float32Array {
+  let separation = separations.get(hero);
+  if (!separation) separations.set(hero, (separation = new Separation(hero.n)));
+  return separation.update(run, frame).off;
+}
 
 export interface Pose {
   x: number;
@@ -105,14 +115,17 @@ export function anchorPoint(
   if (j < 0) throw new Error(`unknown player "${anchor.id}"`);
   const pose = smoothedPose(hero, run, j, frame, smooth, scratch);
   if (anchor.at === "eyes") {
+    const off = renderOffset(hero, run, frame);
+    const x = pose.x + off[2 * j];
+    const y = pose.y + off[2 * j + 1];
     if (role === "look") {
       return [
-        pose.x + LOOK_AHEAD * Math.cos(pose.head),
-        pose.y + LOOK_AHEAD * Math.sin(pose.head),
+        x + LOOK_AHEAD * Math.cos(pose.head),
+        y + LOOK_AHEAD * Math.sin(pose.head),
         LOOK_HEIGHT,
       ];
     }
-    return [pose.x, pose.y, EYE_HEIGHT];
+    return [x, y, EYE_HEIGHT];
   }
   const yaw = anchor.axes === "body" ? pose.body : anchor.axes === "head" ? pose.head : 0;
   let localX = 0;
