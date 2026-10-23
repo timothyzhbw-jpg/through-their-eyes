@@ -88,6 +88,19 @@ const PAGES = [
     check: (p) => phone(p, takeEyes, { live: false }),
   },
   { name: "link-yourcall", path: "?play=yourcall", check: (p, shoot) => yourCall(p, shoot) },
+  // The academy drill (SPEC 7), on both moments with a look grid, and on a phone.
+  { name: "link-drill", path: "?play=drill", check: (p) => drill(p, "Blind side") },
+  {
+    name: "link-drill-press-escape",
+    path: "?match=press_escape-0&play=drill",
+    check: (p) => drill(p, "Under pressure"),
+  },
+  {
+    name: "phone-375-drill",
+    path: "?play=drill",
+    device: PHONE_375,
+    check: (p) => phone(p, (q) => drill(q, "Blind side"), { live: false }),
+  },
   { name: "moment-links", path: "?intro=0", check: (p, shoot) => momentLinks(p, shoot) },
   {
     name: "phone-375-moment-links",
@@ -735,6 +748,54 @@ async function takeEyes(page) {
   await see(play, "the look playing through his eyes");
   await play.click();
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
+/** `?play=drill`: the academy drill (SPEC 7) on `level`, completed: start, look over his shoulder
+ * with the arrow keys (his head is a slider), let go, make the pass from his picture when the ball
+ * has arrived, then the result's verified lines and the comparison. */
+async function drill(page, level) {
+  await see(page.getByRole("region", { name: "Academy drill" }), "the academy drill");
+  await see(page.locator(".dr-kicker", { hasText: level }), `the drill on ${level}`);
+  await mainView(page, "eyes");
+  await accessible(page, "the drill, ready"); // the page's own check runs on the result
+  await page.getByRole("button", { name: "Start" }).click(); // half speed, the default
+  const head = page.getByRole("slider", { name: /'s head$/ });
+  await see(head, "his head as a slider");
+  // Held until his head is well round to his right (a software renderer's frames are slow, and
+  // the head turns with the clock), then let go: the look.
+  await head.focus();
+  await page.keyboard.down("ArrowRight");
+  try {
+    await page.waitForFunction(
+      () => Number(document.querySelector('[role="slider"]')?.getAttribute("aria-valuenow")) >= 100,
+      null,
+      { timeout: 15_000 },
+    );
+  } catch {
+    throw new Error("expected the arrow key to turn his head");
+  } finally {
+    await page.keyboard.up("ArrowRight");
+  }
+  await see(
+    page.locator(".dr-locked", { hasText: /^Your look: / }),
+    "the look snapped to the grid",
+  );
+  await see(page.getByRole("heading", { name: "Your call" }), "the call at his decision");
+  const options = page.getByRole("group", { name: /^Options of / }).getByRole("button");
+  await see(options, "a marker per option");
+  await accessible(page, "the drill's call");
+  await options.first().click();
+  await see(page.getByRole("list", { name: "Your drill" }), "the drill's checks");
+  await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+  await see(page.locator(".dr-versus"), "his real look and no look beside yours");
+}
+
+/** axe's WCAG 2.2 A/AA rules on a state a page passes through: a serious or critical violation
+ * fails it, as at the page's end. */
+async function accessible(page, what) {
+  const { violations } = await axe(page, { tags: WCAG });
+  const blocking = violations.filter((v) => BLOCKING.has(v.impact));
+  if (blocking.length) throw new Error(`${what}: ${describe(blocking).join("; ")}`);
 }
 
 /** The moment links (SPEC 7, moments/): from the hero page, each chip of the rail above the live

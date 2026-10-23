@@ -26,6 +26,10 @@
 //                                              a bundled look grid
 //   ?play=steps                                open the scan step-through (steps/) on his first
 //                                              look (a hero moment's only)
+//   ?play=drill                                open the academy drill (drill/), ready to start;
+//                                              with ?match=, on that moment (press_escape-0), or
+//                                              in a stitched match on its first hero moment that
+//                                              has a bundled look grid
 //   ?match=match-1&moment=<scenario>           open that hero moment's breakdown inside the
 //                                              match (corner_blind_side, far_post_finish:
 //                                              the moment links, moments/)
@@ -51,11 +55,12 @@ import { LANGUAGES, type Language } from "./whatif/whatif";
 import { stepThroughOf } from "./steps/controller";
 import { takeEyesOf } from "./takeeyes/controller";
 import { yourCallOf } from "./yourcall/controller";
+import { drillOf } from "./drill/controller";
 
 const RUNS = ["factual", "counterfactual"] as const satisfies readonly RunName[];
 const VIEWS = ["pov", "tactical", "split"] as const satisfies readonly Focus[];
 const NAMED_FRAMES = ["key-scan", "decision"] as const;
-const PLAYS = ["yourcall", "recap", "eyes", "steps"] as const;
+const PLAYS = ["yourcall", "recap", "eyes", "steps", "drill"] as const;
 const CLAIM_ID = /^[a-z][a-z0-9_]{0,63}$/; // explain/builders.py ids, e.g. cf_value
 
 export type View = (typeof VIEWS)[number];
@@ -74,7 +79,7 @@ export interface DeepLink {
   at: At | null;
   ask: string | null;
   tamper: string | null; // a claim id
-  play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"; steps: his looks, step by step
+  play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"; steps: his looks, step by step; drill: the academy drill
   tour: string | null; // the judge tour's step to start at (tour=1: its first)
   moment: string | null; // with a stitched match: the hero moment of this scenario, its breakdown
   rail: boolean; // the moment links above the live screen; rail=0 hides them (filming)
@@ -189,6 +194,7 @@ export function applyDeepLink(session: Session, link: DeepLink): void {
   if (link.play === "yourcall") yourCallOf(session).open();
   if (link.play === "eyes") takeEyesOf(session).open();
   if (link.play === "steps") stepThroughOf(session).open();
+  if (link.play === "drill") drillOf(session).open();
 }
 
 /** The link the page was opened with; components read prefills from it. */

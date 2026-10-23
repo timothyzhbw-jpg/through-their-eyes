@@ -86,13 +86,14 @@ async function main() {
       if (link.tour) startTour(link.tour, kindOf(link.tour)); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
-      // play=eyes: the first hero moment whose possession has a bundled look grid.
+      // play=eyes, play=drill: the first hero moment whose possession has a bundled look grid.
       const eyes = session.match.moments.find((m) => {
         if (!m.hero) return false;
         const p = session.match.possessions.find((x) => x.index === m.possession);
         return !!p && !!LOOK_FILES[scenarioMatchId(p)];
       });
       if (link.play === "eyes" && eyes) session.controls.openBreakdown(eyes, "eyes");
+      if (link.play === "drill" && eyes) session.controls.openBreakdown(eyes, "drill");
       // moment=<scenario>: that hero moment's breakdown, as its Breakdown button opens it.
       const named = link.moment
         ? session.match.moments.find(

@@ -1,0 +1,416 @@
+/* Academy drill (SPEC 7): his eyes with the countdown and his head, Your call's picture for the
+   call, the board for the result, and the card, in the live screen's place. Laid out like Take
+   his eyes (takeeyes.css). Floodlit: Floodlight is the look and what he saw. No blur and no
+   flashes: the card is opaque, the countdown changes in place. */
+
+.dr-open[aria-pressed="true"] {
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
+}
+.stage-head .dr-open {
+  background: rgba(8, 14, 11, 0.55);
+}
+
+.dr-main {
+  position: absolute;
+  inset: var(--head-h) var(--gutter) var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--card-w);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--gutter);
+}
+.dr-view {
+  position: relative;
+  margin: 0;
+  background: var(--night-2);
+  border-radius: var(--r-board);
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 24px 48px -20px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+/* the call: Your call's view over his eyes; until its picture has drawn, his last frame shows */
+.dr-call {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+}
+.dr-call .yc-view {
+  border-radius: 0;
+  box-shadow: none;
+}
+.dr-call .yc-view.drawing {
+  background: transparent;
+}
+.dr-call .yc-canvas {
+  height: 100%;
+  aspect-ratio: auto;
+  max-height: none;
+}
+.dr-stage {
+  position: absolute;
+  inset: 0;
+}
+.dr-slot {
+  position: absolute;
+  overflow: hidden;
+}
+.dr-slot.main {
+  inset: 0;
+}
+.dr-slot.gone {
+  visibility: hidden;
+}
+.dr-slot .view,
+.dr-slot .canvas-wrap {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+.dr-tag {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 3;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-tag);
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+  font: 500 11px/1 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  pointer-events: none;
+}
+
+/* over his eyes: the countdown, the lock, the dial, and the drag surface under them */
+.dr-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.dr-surface {
+  position: absolute;
+  inset: 0;
+  touch-action: pan-y; /* a sideways drag turns his head; up and down still scrolls the page */
+  outline: none;
+}
+.dr-surface.live {
+  cursor: ew-resize;
+}
+.dr-surface:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--floodlight);
+  border-radius: var(--r-board);
+}
+.dr-countdown,
+.dr-locked {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: var(--r-tag);
+  background: var(--night);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+  color: var(--chalk);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+.dr-countdown {
+  top: 14px;
+  font: 500 13px/1 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dr-countdown b {
+  display: inline-block;
+  min-width: 3ch;
+  margin: 0 2px;
+  font: 600 22px/1 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--floodlight);
+}
+.dr-locked {
+  top: 60px;
+  font: italic 400 17px/1.2 var(--font-display);
+  color: var(--floodlight);
+  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
+}
+.dr-dial {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+.dr-dial-face {
+  fill: rgba(8, 14, 11, 0.86);
+  stroke: var(--hairline-strong);
+}
+.dr-reach {
+  fill: none;
+  stroke: rgba(246, 213, 102, 0.4);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.dr-tick {
+  stroke: var(--chalk-3);
+  stroke-width: 2;
+}
+.dr-tick.on {
+  stroke: var(--floodlight);
+  stroke-width: 4;
+}
+.dr-ball {
+  stroke: var(--chalk-2);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}
+.dr-needle {
+  stroke: var(--floodlight);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.dr-me {
+  fill: var(--floodlight);
+}
+
+/* the card: opaque, like the intro card */
+.dr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: start;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  padding: 22px 22px 22px 24px;
+  border-radius: var(--r-card);
+  background: var(--night-2);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  color: var(--chalk);
+}
+.dr-card h2 {
+  font: 400 28px/1.1 var(--font-display);
+  letter-spacing: -0.01em;
+  margin: 0;
+  outline: none;
+  text-wrap: balance;
+}
+.dr-kicker {
+  margin: 0 0 -6px;
+  font: 500 11px/1.3 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--floodlight);
+}
+.dr-lead {
+  margin: 0;
+  font: 400 15px/1.5 var(--font-body);
+  color: var(--chalk-2);
+}
+.dr-hint {
+  margin: 0;
+  color: var(--chalk-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dr-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--floodlight);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.dr-levels ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dr-level {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+  color: var(--chalk-2);
+  font: 400 13px/1 var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+.dr-level[aria-current="page"] {
+  background: var(--chalk);
+  color: var(--ink);
+  box-shadow: none;
+}
+.dr-level.off {
+  color: var(--chalk-3);
+}
+.dr-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.dr-checks li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font: 400 15px/1.35 var(--font-body);
+  color: var(--chalk-2);
+}
+.dr-checks li.ok {
+  color: var(--chalk);
+}
+.dr-mark {
+  flex: none;
+  width: 1.2em;
+  font-weight: 600;
+  color: var(--chalk-3);
+}
+.dr-checks li.ok .dr-mark {
+  color: var(--floodlight);
+}
+.dr-you {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.dr-you div {
+  display: grid;
+  gap: 4px;
+}
+.dr-you dt,
+.dr-versus dt {
+  font: 500 10px/1.2 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.dr-you dd {
+  margin: 0;
+  font: 400 15px/1.45 var(--font-body);
+}
+.dr-you dd .kind-tags {
+  margin-right: 6px;
+}
+.dr-sub {
+  margin: 4px 0 -4px;
+  font: 500 11px/1.3 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.dr-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.dr-lines li {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--night-3);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.dr-line {
+  font: 400 16px/1.35 var(--font-display);
+}
+.dr-versus {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.dr-versus div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--night-3);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.dr-versus .yours {
+  box-shadow: inset 0 0 0 1px var(--floodlight);
+}
+.dr-versus .yours dt {
+  color: var(--floodlight);
+}
+.dr-versus dd {
+  margin: 6px 0 0;
+  font: italic 400 16px/1.2 var(--font-display);
+}
+.dr-versus dd.dr-how {
+  font: 400 12px/1.3 var(--font-body);
+  font-style: normal;
+  color: var(--chalk-3);
+}
+.dr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* a phone or a narrow tablet: the header, the view, then the card */
+@media (max-width: 880px) {
+  .stage.dr-screen {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .dr-screen .stage-head {
+    position: relative;
+  }
+  .dr-main {
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 0 var(--gutter) var(--gutter);
+  }
+  .dr-view {
+    aspect-ratio: 4 / 5;
+    max-height: 72vh;
+  }
+  /* the result is the board, which is wide: a wide frame */
+  .dr-view.step-result {
+    aspect-ratio: 4 / 3;
+  }
+  .dr-locked {
+    font-size: 15px;
+    white-space: normal;
+    width: max-content;
+    max-width: calc(100% - 24px);
+    text-align: center;
+  }
+  .dr-card {
+    max-height: none;
+    overflow: visible;
+  }
+}
