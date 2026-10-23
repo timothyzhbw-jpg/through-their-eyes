@@ -26,7 +26,6 @@ import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { declutter, labelBox, labelHeight } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
-import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
@@ -90,7 +89,6 @@ export function PovView() {
         </Canvas>
         <Grade />
         <PovOverlay />
-        {broadcast && <SkeletonLegend />}
       </div>
     </figure>
   );

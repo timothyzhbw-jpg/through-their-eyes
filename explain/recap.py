@@ -287,6 +287,83 @@ def moment_claims(ctx: EvalContext, card: Mapping[str, Any], start: int) -> list
     return out
 
 
+POST = {"near": ("near post", "近角"), "far": ("far post", "远角")}  # as explain/builders.py
+
+
+def goal_templates(assist: bool, look: bool, post: str | None, keeper: bool) -> tuple[str, str]:
+    """A goal's line in en and zh, with only the parts verified on the run: the pass that found
+    the scorer (`assister`), his look before it reached him (`secs`), the post it went in at, and
+    the keeper it beat. A part that is not there is left out, never guessed."""
+    look_en = "looked up {secs|second|seconds} before the ball reached him"
+    finish = ("scored" + (f" at the {POST[post][0]}" if post else "")
+              + (" past {keeper}" if keeper else "") + ".")  # fmt: skip
+    head = "{assister} found {shooter}, who " if assist else "{shooter} "
+    en = head + (f"{look_en} and " if look else "") + finish
+    parts = ["{assister}传球找到{shooter}"] if assist else []
+    if look:
+        parts.append("球到之前{secs}秒" + ("他" if assist else "{shooter}") + "抬头看了一眼")
+    at = f"打{POST[post][1]}" if post else ""
+    if parts:
+        end = f"随后{at}破门" + ("，攻破了{keeper}把守的球门" if keeper else "")
+    else:
+        end = "{shooter}" + at + ("破门，攻破了{keeper}把守的球门" if keeper else "破门得分")
+    return en, "，".join([*parts, end]) + "。"
+
+
+def _goal_claim(
+    ctx: EvalContext, shot: Event, checks: list[Predicate], evidence: list[str]
+) -> Claim:
+    """A goal as it was made (SPEC 6, recap): the pass that found the scorer, his look before it
+    reached him, where it went in and past whom, each checked on the run like any claim. *Why:*
+    the recap told the match's only goal as "N. Varnhall scored." (red team, 2026-10-22)."""
+    a, shooter, run = shot.id, shot.player, ctx.run
+    reception = max((e for e in run.events if e.type == "reception" and e.player == shooter
+                     and e.frame <= shot.frame), key=lambda e: e.frame, default=None)  # fmt: skip
+    assist = None if reception is None else next(
+        (e for e in run.events if e.type == "pass" and e.team == shot.team
+         and e.attrs.get("receiver") == shooter and e.attrs.get("end") == reception.frame),
+        None,
+    )  # fmt: skip
+    slots = {"shooter": Slot(ref=shooter)}
+    if assist is not None:
+        slots["assister"] = Slot(ref=assist.player)
+        checks += [
+            _eq(fn("event_attr", event=assist.id, attr="player"), slot("assister")),
+            _eq(fn("event_attr", event=assist.id, attr="receiver"), slot("shooter")),
+            _eq(fn("event_attr", event=assist.id, attr="outcome"), "complete"),
+            _eq(fn("event_attr", event=assist.id, attr="end"), reception.frame),
+        ]
+        evidence.append(assist.id)
+    scan = None
+    if reception is not None:
+        window = round(SCAN_WINDOW_S / run.dt)
+        scan = max((e for e in run.events if e.type == "scan" and e.player == shooter
+                    and reception.frame - window <= e.frame <= reception.frame),
+                   key=lambda e: e.frame, default=None)  # fmt: skip
+    secs = None if scan is None else round(ctx.value(
+        fn("seconds_between", a=scan.id, b=reception.id)), 1)  # fmt: skip
+    if secs:  # a look that rounds to 0.0 s is not "before the ball reached him"
+        lead = fn("seconds_between", a=slot("scan"), b=reception.id)
+        slots |= {"scan": Slot(ref=scan.id), "secs": Slot(value=secs, decimals=1)}
+        checks += [
+            _eq(fn("event_attr", event=slot("scan"), attr="type"), "scan"),
+            _eq(fn("event_attr", event=slot("scan"), attr="player"), slot("shooter")),
+            _eq(fn("event_attr", event=reception.id, attr="player"), slot("shooter")),
+            Predicate(op="approx", lhs=lead, rhs=slot("secs"), abs_tol=0.05),
+        ]
+        evidence += [scan.id, reception.id]
+    post = shot.attrs.get("placement") if shot.attrs.get("placement") in POST else None
+    if post is not None:
+        checks.append(_eq(fn("event_attr", event=a, attr="placement"), post))
+    keeper = shot.attrs.get("keeper")
+    if keeper is not None:
+        slots["keeper"] = Slot(ref=keeper)
+        checks.append(_eq(fn("event_attr", event=a, attr="keeper"), slot("keeper")))
+    en, zh = goal_templates(assist is not None, bool(secs), post, keeper is not None)
+    return Claim(id="goal", template=en, templates={"zh": zh}, slots=slots,
+                 predicate=Predicate(op="all", args=checks), evidence=evidence)  # fmt: skip
+
+
 def _shot_claim(ctx: EvalContext, shot: Event) -> Claim | None:
     """How the moment's shot ended: scored, saved, blocked or wide (SPEC 3.3)."""
     a = shot.id
@@ -299,17 +376,8 @@ def _shot_claim(ctx: EvalContext, shot: Event) -> Claim | None:
         goal = next((e for e in after if e.type == "goal" and e.player == shot.player), None)
         if goal is None:
             return None
-        return Claim(
-            id="goal",
-            template="{shooter} scored.",
-            templates={"zh": "{shooter}进球了。"},
-            slots=slots,
-            predicate=Predicate(op="all", args=[
-                by, ended,
-                _eq(fn("count_events", type="goal", player=slot("shooter"), anchor=goal.id), 1),
-            ]),
-            evidence=[a, goal.id],
-        )  # fmt: skip
+        scored = _eq(fn("count_events", type="goal", player=slot("shooter"), anchor=goal.id), 1)
+        return _goal_claim(ctx, shot, [by, ended, scored], [a, goal.id])
     if outcome == "saved":
         save = next((e for e in after if e.type == "save" and e.attrs.get("shot") == a), None)
         if save is None:

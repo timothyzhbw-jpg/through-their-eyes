@@ -289,7 +289,10 @@ def test_a_match_with_a_goal_leads_its_recap_with_it():
     assert "goal" in min(r.moments, key=lambda m: m.rank).tags
     for script in r.scripts:
         texts = [line.text for line in script.payload.lines]
-        assert texts[0] == "Full time: Home 1, Away 0." and "N. Varnhall scored." in texts
+        assert texts[0] == "Full time: Home 1, Away 0."
+        # The goal is told with its assist, the look before it and the finish (explain/recap.py).
+        assert any("found N. Varnhall, who looked up" in t and "scored at the far post" in t
+                   for t in texts)  # fmt: skip
         assert check_payload(script.payload, rc.names) == []
         bug = script.cues.cues[0]
         assert (bug.data["home"], bug.data["away"]) == (1, 0)
