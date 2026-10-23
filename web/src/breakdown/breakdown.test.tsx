@@ -62,6 +62,21 @@ describe("the service's breakdown, checked like the bundled one", () => {
     expect(times).toEqual([...times].sort((a, b) => a - b));
   });
 
+  it("plays the audience's own cut of the plan when its script has one", () => {
+    const own = structuredClone(res.result.plan) as { steps: { do: string; mode?: string }[] };
+    for (const step of own.steps) if (step.do === "camera") step.mode = "tactical";
+    const cut = {
+      ...res,
+      result: { ...res.result, scripts: [{ ...res.result.scripts[0], plan: own }] },
+    };
+    const cameras = (r: typeof res) =>
+      apiBreakdown(r, "casual", "en", moment, hero)
+        .resolved.plan.steps.filter((s) => s.do === "camera")
+        .map((s) => (s as { mode: string }).mode);
+    expect(cameras(cut)).toEqual(["tactical", "tactical"]);
+    expect(cameras(res)).toEqual(["pov", "split"]); // no plan of its own: the breakdown's
+  });
+
   it("rejects a payload whose evidence is not in the replay", () => {
     const bad = BreakdownResponse.parse(
       breakdownResponse(
@@ -165,6 +180,53 @@ describe("asking the service for a breakdown", () => {
       persona: "coach",
       language: "zh",
     });
+  });
+
+  it("switching the persona shows its view at once: camera and overlays (SPEC 6)", async () => {
+    const { session } = online();
+    session.controls.requestBreakdown();
+    await settle();
+    session.controls.setPersona("analyst");
+    expect(session.playback.get()).toMatchObject({
+      focus: "tactical",
+      pitchControl: true,
+      options: true,
+      cone: true,
+      lock: null,
+    });
+    session.controls.setPersona("player_fan");
+    expect(session.playback.get()).toMatchObject({
+      focus: "broadcast",
+      camera: "broadcast",
+      lock: "H8",
+      pitchControl: false,
+    });
+    session.controls.setCamera("pov"); // the viewer's own camera unlocks it
+    expect(session.playback.get().lock).toBeNull();
+    session.controls.setPersona("casual");
+    expect(session.playback.get()).toMatchObject({
+      focus: "pov",
+      camera: "pov",
+      options: false,
+      cone: false,
+      beliefGhosts: true,
+    });
+    session.controls.setPersona("audio_description");
+    expect(session.playback.get()).toMatchObject({ focus: "broadcast", cone: false, lock: null });
+    await settle();
+  });
+
+  it("a breakdown that was playing plays on in the new audience's cut", async () => {
+    const { session } = online();
+    session.controls.playBreakdown();
+    await settle();
+    expect(session.runner.status.get().status).toBe("running");
+    session.controls.setPersona("coach");
+    expect(session.runner.status.get().status).toBe("stopped");
+    await settle();
+    expect(session.breakdown.get().persona).toBe("coach");
+    expect(session.runner.status.get().status).toBe("running");
+    expect(session.playback.get().options).toBe(true); // the coach's breakdown starts with them
   });
 
   it("plays it when the viewer pressed play before it arrived", async () => {

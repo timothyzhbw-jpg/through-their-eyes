@@ -25,12 +25,13 @@ workflow's output). [`docs/architecture.svg`](../docs/architecture.svg) draws th
 | [`context.py`](context.py) | `MomentContext.load(scenario, seed)`: the run, the scenario's counterfactual (`cf1`), the explained cards and the **verified** claims, built once per breakdown |
 | [`schemas.py`](schemas.py) | the typed handoffs; what a model may return (`DirectorChoice`, `analyst_model`, `PlanDraft`, `anchored_draft_model`); `TelestrationPlan` (mirrors `web/src/plan/schema.ts`); `BreakdownResult` with its `StepTrace`s |
 | [`prompts.py`](prompts.py) | instructions per role and persona; `PROMPT_VERSION`, a hash of every instruction |
+| [`persona_rules.py`](persona_rules.py) | what each audience may cite (its palette), must cite, how many numbers and lines, how it opens and (the coach) ends; `problems` for the Verifier, `repair` after the last rewrite and for templates; `SPECS`, the yardstick of `eval/persona_distinctness.py` (SPEC 6, "Persona rules" and "Persona specs") |
 | [`fallbacks.py`](fallbacks.py) | a deterministic template for every model step, built from verified claims only |
 | [`budget.py`](budget.py) | what the Director's priority buys: the Analyst's MCP tools (high only) and the replay slot the Telestrator's plan must fit |
-| [`plan.py`](plan.py) | `validate_plan` (the rules of `web/src/plan/validate.ts`, as `PlanError` codes) and `template_plan` (a port of `web/src/plan/template.ts`) |
+| [`plan.py`](plan.py) | `validate_plan` (the rules of `web/src/plan/validate.ts`, as `PlanError` codes), `template_plan` (a port of `web/src/plan/template.ts`) and `persona_plan`: each audience's cut of the plan (cameras and overlays, `VIEWS`), in code, valid when the plan is |
 | [`llm.py`](llm.py) | `ask`: per-step timeout (8 s), one retry, then give up; `client_from_env` (Foundry, keyless) or `None`; `Outage` for a downed agent |
 | [`tools.py`](tools.py), [`mcp_server.py`](mcp_server.py) | the Analyst's tools as plain functions, and our MCP server (stdio) that exposes exactly those: `get_moment`, `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`, `run_counterfactual`, `list_options`, `what_if` |
-| [`delivery.py`](delivery.py) | delivery tier from rules on the card (never a model), SSML per line, voice cue keys |
+| [`delivery.py`](delivery.py) | delivery tier from rules on the card (never a model), SSML per line and persona (the booth, the analyst's measured read, the coach's steady one, audio description's slow one with pauses), voice cue keys |
 | [`whatif.py`](whatif.py) | "What if…?": map a question to one evaluated option (model or rule parser), force it, re-simulate, answer with verified counterfactual claims |
 | [`telemetry.py`](telemetry.py) | one OpenTelemetry span per breakdown and one per step; ids and counts only, never prompt or narration text |
 | [`crewtrace.py`](crewtrace.py) | the crew trace: `CrewTrace` (pydantic) and the `Recorder` the workflow fills as it runs: per step its times, typed input and output, shared state read and written, model and MCP tool calls, the Verifier's rejections and rewrites; the drill's events and checkpoints. `python -m agents.crewtrace` writes the web's fixture |
@@ -73,7 +74,10 @@ workflow's output). [`docs/architecture.svg`](../docs/architecture.svg) draws th
   breakdowns ([api/README.md](../api/README.md)).
 - **Cache keys move with the code.** `PROMPT_VERSION` changes with any instruction, and
   `PIPELINE_VERSION` in `workflow.py` must be bumped when code that shapes a breakdown changes
-  without a prompt change; both are part of the API's cache key.
+  without a prompt change; both are part of the API's cache key. So is the rendered text's
+  fingerprint (`explain.render.render_fingerprint`), which follows the claims' templates and the
+  names by itself; bump `RENDER_VERSION` there for a change to slot formatting or to a what-if,
+  look or steps template.
 - **Telemetry carries no content**: spans hold ids, counts, sources and timings. Keep Agent
   Framework's `ENABLE_SENSITIVE_DATA` off.
 

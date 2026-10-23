@@ -107,7 +107,7 @@ which runs on Linux. The trailer reads them off the live page (`out/video/claims
 | C2 | `pass_success`: he thought · it was | same, `pass_success` | 0.67 · 0.85 | 0.65 · 0.83 | TODO(freeze) | the app's "he thought / it was"; DEMO_SCRIPT (read off the screen) |
 | C3 | `cf_belief_error.err`: his picture of the runner without the look, m | same, `cf_belief_error` | 12.3 | 12.3 | TODO(freeze) | README "The full tour" 2 ("12 m off") |
 | C4 | xT where the pass arrives, with · without the look | the third English line of `web/public/data/without_look_seed3.json` | 0.172 · 0.002 | 0.157 · 0.002 | TODO(freeze) | the app's "Without the look" panel |
-| C5 | `pass_to_runner.dist`, m | the live API's claims (`out/video/claims.json`) | 38 | TODO(freeze) | TODO(freeze) | VIDEO_SCRIPT "Numbers"; the trailer |
+| C5 | `pass_to_runner.dist`, m | the live API's claims (`out/video/claims.json`) | 39 (38 before #200: it measured the aim point, the chip the ball's travel; one definition now, SPEC 4.6) | TODO(freeze) | TODO(freeze) | VIDEO_SCRIPT "Numbers"; the trailer |
 
 ## D. Measured on the deployed service, or on the repository (dated)
 

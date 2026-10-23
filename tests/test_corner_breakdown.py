@@ -141,7 +141,9 @@ def test_every_persona_tells_the_look_in_both_languages(ctx, breakdown):
         lines = script.payload.lines
         claims = {c for line in lines for c in line.claims}
         assert lines and not script.dropped, (script.persona, script.language)
-        assert "stayed_with_runner" in claims
+        # Each audience hears the look and what it did, in its own claims (SPEC 6).
+        assert claims & {"marker_scan", "seen_in_scan", "scan_side", "marker_unseen"}
+        assert claims & {"stayed_with_runner", "cf_unmarked", "cf_lost_runner"}
         if script.persona == "audio_description":
             assert not claims & ANALYST_NUMBERS
             assert "blind_side" in claims

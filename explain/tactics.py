@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
+from analytics.stats import display
 from analytics.tactics import (
     DecisionRecord,
     Passage,
@@ -35,11 +35,13 @@ from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.functions import EvalContext
 from explain.render import RenderPayload, ScriptLine, build_payload
 from explain.verifier import Verdict, Verifier
+from sim.roster import club_name, short_name
 from sim.run import MatchRun
 
 LANGUAGES = ("en", "zh")
-TEAM = {0: "Home", 1: "Away"}
-TEAM_ZH = {0: "主队", 1: "客队"}
+# The clubs by their fictional names (sim/roster.py), as the score bug and the recap name them.
+TEAM = {t: club_name(t) for t in (0, 1)}
+TEAM_ZH = {t: club_name(t, "zh") for t in (0, 1)}
 WEB_FIXTURE = Path(__file__).resolve().parents[1] / "web/src/tactics/fixture.json"
 
 
@@ -66,8 +68,9 @@ def _near(lhs: Any, rhs: Any, decimals: int) -> Predicate:
 
 
 def _round(value: float, decimals: int) -> float:
-    """Half up, as a reader rounds (Python's round is half to even)."""
-    return math.floor(value * 10**decimals + 0.5) / 10**decimals
+    """As every number on screen is rounded (`analytics.stats.display`): ties away from zero, as
+    a reader rounds (Python's round is half to even)."""
+    return display(value, decimals)
 
 
 def _pct(ratio: float) -> int:
@@ -93,7 +96,7 @@ def build_up_claim(cards: TacticsCards) -> Claim | None:
         _near(_stat("build_up.pressed_short.completion", team), slot("pct", 0.01), 2),
     ]
     en = f"Building short under pressure, {name} kept the ball on {{done}} of {{n|pass|passes}}"
-    cn = f"{zh}在压力下短传出球{{n}}次，保住球权{{done}}次"
+    cn = f"{zh}在压力下短传出球{{n:times}}，保住球权{{done:times}}"
     base = t.unpressed_short.completion
     if base is not None and t.unpressed_short.passes:
         slots["base"] = Slot(value=_pct(base))
@@ -154,19 +157,19 @@ def set_piece_claim(cards: TacticsCards) -> Claim | None:
         "From {c|corner|corners}, {player} got the ball {s} seconds after the kick at a spot"
         " worth {xt} in expected threat"
     )
-    cn = "{c}次角球中，{player}在开出{s}秒后拿到球，那个位置的预期威胁是{xt}"
+    cn = "{c}个角球中，{player}在角球开出{s}秒后拿到球，那个位置的预期威胁是{xt}"
     if sp.open_play:
         slots["n"] = Slot(value=sp.open_play)
         checks.append(_eq(_stat("set_pieces.open_play"), slot("n")))
         if sp.below_best == sp.open_play:
             checks.append(_eq(_stat("set_pieces.below_best"), slot("n")))
             en += ", more than any of the {n} open-play passages ever reached"
-            cn += "，比全部{n}段运动战达到过的最高威胁都高"
+            cn += "，超过了全部{n}段运动战进攻的最高威胁"
         else:
             slots["k"] = Slot(value=sp.below_best)
             checks.append(_eq(_stat("set_pieces.below_best"), slot("k")))
             en += ", more than {k} of the {n} open-play passages ever reached"
-            cn += "，比{n}段运动战中的{k}段达到过的最高威胁都高"
+            cn += "，超过了{n}段运动战进攻中{k}段的最高威胁"
     if sp.shots_from_corners == 0:
         checks.append(_eq(_stat("set_pieces.shots_from_corners"), 0))
         en += "; no shot followed, so corners added {xg} expected goals."
@@ -175,7 +178,7 @@ def set_piece_claim(cards: TacticsCards) -> Claim | None:
         slots["shots"] = Slot(value=sp.shots_from_corners)
         checks.append(_eq(_stat("set_pieces.shots_from_corners"), slot("shots")))
         en += "; {shots|shot|shots} followed, worth {xg} expected goals."
-        cn += "；之后射门{shots}次，预期进球{xg}。"
+        cn += "；之后射门{shots:times}，预期进球{xg}。"
     return Claim(
         id="tactics_set_pieces",
         template=en,
@@ -199,7 +202,10 @@ def tactics_view(
     names: Mapping[str, str] | None = None,
 ) -> TacticsView:
     """The cards of `run` (one scenario's run, or a stitched match with its `passages`) and their
-    sentences, each verified on the run before it is rendered."""
+    sentences, each verified on the run before it is rendered. Players go by their fictional
+    names (`names`, by default the roster's), never by id."""
+    if names is None:
+        names = {pid: short_name(pid) for pid in run.ids}
     cards = tactics_from_run(run, match_id, passages, decisions)
     ctx = EvalContext(run, resimulate=False, passages=tuple(passages or ()))
     claims = {c.id: c for c in tactics_claims(cards)}

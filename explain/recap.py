@@ -385,7 +385,7 @@ def _shot_claim(ctx: EvalContext, shot: Event) -> Claim | None:
         return Claim(
             id="saved",
             template="{keeper} saved {shooter}'s shot.",
-            templates={"zh": "{keeper}扑出了{shooter}的射门。"},
+            templates={"zh": "门将{keeper}扑出了{shooter}的射门。"},
             slots={**slots, "keeper": Slot(ref=save.player), "save": Slot(ref=save.id)},
             predicate=Predicate(op="all", args=[
                 by, ended,

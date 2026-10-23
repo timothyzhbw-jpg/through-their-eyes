@@ -13,7 +13,6 @@ from agents import persona_rules
 from agents.budget import BUDGETS
 from agents.context import MomentContext
 from agents.schemas import (
-    CONNECTIVES,
     BreakdownRequest,
     Findings,
     Language,
@@ -65,22 +64,34 @@ You are the Telestrator. Turn the findings into a TelestrationPlan: a timed cue 
 - Start with a freeze, show the key scan in first person (when there is no key scan, the moments
   before the decision), then the outcome, then the counterfactual ghost."""
 
+# Each audience's brief (SPEC 6, "Persona specs"). `rules` in the prompt carries what a check
+# enforces; this is the style around it. The same brief serves both languages: the sentences are
+# the claims' verified templates and the persona's fixed phrases, in the script's language.
 PERSONAS: dict[Persona, str] = {
-    "casual": "Audience: casual fans. Plain words and few numbers: prefer claims without numeric "
-    "slots, never expected threat or probabilities, and always say what he would have done "
-    "without the look (the counterfactual). At most two lines.",
-    "analyst": "Audience: analysts. Dense and precise; numbers are welcome through claims: what "
-    "the look was worth in expected threat, his belief error, and when he scanned. Up to four "
-    "lines.",
-    "player_fan": "Audience: fans of the player on the ball. Keep the focus on him: his own "
-    "look, his picture of the pitch, his decision. Up to three lines.",
-    "coach": "Audience: coaches. Instructional: the counterfactual, and one coaching point a "
-    "player can copy (when he scanned, or how close the press was). Up to three lines.",
+    "casual": "Audience: casual fans, who want the story in a few seconds. Tell it like a mate "
+    "on the sofa: he looked, he saw the runner (or felt the press), he picked the pass, and what "
+    "he would have done without the look. Two or three short lines, at most one number, no jargon "
+    "(no expected threat, probabilities, pressing percentages, scan counts). Open with the "
+    "opener in `rules`.",
+    "analyst": "Audience: analysts, who want the mechanism and the numbers. Dense and precise: "
+    "open straight on a number (how often and when he scanned), then the space he saw or the "
+    "press around him, his belief error, the options' chances (what he gave his pass against "
+    "what it was, with and without the look) and what the look was worth in expected threat. "
+    "Five to seven lines, no filler.",
+    "player_fan": "Audience: fans of the player on the ball. It is about him: open with the "
+    "opener in `rules` (praise), then his own look, his pass or shot and its numbers (how far, "
+    "how fast). Proud, warm and personal; no expected threat, probabilities or what-ifs. Three "
+    "or four lines.",
+    "coach": "Audience: coaches and young players, who want what to teach. Open with the opener "
+    "in `rules`, then the coaching point: when he looked against the ball (or how close the "
+    "press was), the cue that called for it (a runner on his blind side), and what happens "
+    "without the look, as the lesson. End with the teaching cue in `rules`. Three to five lines.",
     "audio_description": "Audience: blind and low-vision viewers, who hear the moment instead of "
-    "seeing it (audio description). Tell it in the order it happened: who has the ball and where, "
-    "who he could not see, which way he looked, whom the look showed him, what he did. Use the "
-    "preferred claims, in their order; leave out expected threat and probabilities. Calm and "
-    "clear; no connectives; start with where it happened; numbers sparingly. Up to six lines.",
+    "seeing it (audio description). Tell it in the order it happened, as positions: who has the "
+    "ball and where, who he could not see, which way he looked, whom the look showed him, what "
+    "he did. Use the preferred claims, in their order; leave out expected threat and "
+    'probabilities, and never refer to the picture (nothing like "as you can see"). Calm and '
+    "clear; no connectives; start with where it happened; numbers sparingly. Four to six lines.",
 }
 
 # Claims a persona should build from, in telling order; the narration prompt lists the supported
@@ -88,8 +99,8 @@ PERSONAS: dict[Persona, str] = {
 # and could not see, then what he did with it.
 PREFERRED_CLAIMS: dict[Persona, tuple[str, ...]] = {
     "audio_description": ("reception_zone", "blind_side", "scan_side", "scan_before_reception",
-                          "seen_in_scan", "pass_to_runner", "runner_received", "gap_to_marker",
-                          "unmarked", "cf_pass"),
+                          "seen_in_scan", "keeper_near_side", "pass_to_runner", "runner_received",
+                          "shot_placement", "gap_to_marker", "unmarked", "cf_pass"),
 }  # fmt: skip
 
 SPEAKERS: dict[Speaker, str] = {
@@ -105,9 +116,13 @@ NARRATION_RULES = """How to build the script:
 - Use each claim at most once in the whole script. The co-commentator never repeats a claim the
   play-by-play already used; it adds the claims that explain why.
 - Follow `rules`, which a check enforces on the whole script (both voices): cite one claim from
-  every `must_include` group, keep the numbers the chosen claims say within `max_numbers`, and
-  start with a `start_with` claim when given. The co-commentator covers whatever the play-by-play
-  left in `still_missing`.
+  every `must_include` group, keep the numbers the chosen claims say within `max_numbers` and the
+  lines within `max_lines` (your voice writes at most `max_lines_this_voice` of them), and start
+  with a `start_with` claim when given. `opener`: the
+  play-by-play's first line is that connective together with its first claim. `start_with_number`:
+  the play-by-play's first line is a claim from `claims_with_numbers`, with no connective. `cue`:
+  the co-commentator's last line is that connective alone. The co-commentator covers whatever the
+  play-by-play left in `still_missing`.
 - Keep to the persona's length."""
 
 
@@ -195,19 +210,35 @@ def _rules(
     if rule is None:
         return {}
     lens = ctx.card.selected_lens
+    off = persona_rules.excluded(persona)
     groups = persona_rules.missing(persona, [], ctx.supported, lens)
     out: dict = {"must_include": [{"what": g.name, "one_of": ids} for g, ids in groups]}
-    if rule.max_numbers is not None:
+    if rule.max_numbers is not None or rule.numeric_first:
         numbered = [
             c for c in ctx.supported
-            if c not in rule.forbidden and persona_rules.numbers(ctx.supported[c], language)
+            if c not in off and persona_rules.numbers(ctx.supported[c], language)
         ]  # fmt: skip
-        out["max_numbers"] = rule.max_numbers
+        if rule.max_numbers is not None:
+            out["max_numbers"] = rule.max_numbers
         out["claims_with_numbers"] = {
             c: persona_rules.numbers(ctx.supported[c], language) for c in numbered
         }
+    if rule.max_lines is not None:
+        out["max_lines"] = rule.max_lines
+        # Each voice's share, so the two together keep to it without a rewrite: the
+        # play-by-play about half, the co-commentator what the play-by-play left.
+        if pbp_lines is None:
+            out["max_lines_this_voice"] = (rule.max_lines + 1) // 2
+        else:
+            out["max_lines_this_voice"] = max(1, rule.max_lines - len(pbp_lines))
     if rule.spatial_first and (spatial := [c for c in persona_rules.SPATIAL if c in ctx.supported]):
         out["start_with"] = spatial
+    if rule.numeric_first:
+        out["start_with_number"] = True
+    if phrase := persona_rules.opener(persona, language, ctx.supported, lens):
+        out["opener"] = phrase
+    if phrase := persona_rules.cue(persona, language, ctx.supported, lens):
+        out["cue"] = phrase
     if pbp_lines is not None:
         left = persona_rules.missing(persona, pbp_lines, ctx.supported, lens)
         out["still_missing"] = [{"what": g.name, "one_of": ids} for g, ids in left]
@@ -222,7 +253,7 @@ def narration_prompt(
     speaker: Speaker,
     pbp_lines: list[ScriptLine] | None = None,
 ) -> str:
-    off = persona_rules.forbidden(persona)  # not in the schema's enum either
+    off = persona_rules.excluded(persona)  # not in the schema's enum either
 
     def allowed(ids: list[str]) -> list[str]:
         return [c for c in ids if c not in off]
@@ -238,7 +269,9 @@ def narration_prompt(
             allowed([c for c in ctx.supported if c not in findings.headline + findings.supporting]),
             language,
         ),
-        "allowed_connectives": list(CONNECTIVES[language]),
+        "allowed_connectives": list(
+            persona_rules.connectives(persona, language, ctx.supported, ctx.card.selected_lens)
+        ),
     }
     if rules := _rules(ctx, persona, language, pbp_lines if speaker == "color" else None):
         data["rules"] = rules

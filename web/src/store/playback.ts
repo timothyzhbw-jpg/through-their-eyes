@@ -33,6 +33,7 @@ export interface PlaybackState {
   skeletonSource: YawSource; // its head yaw: true, or as a tracking system reports it
   focus: Focus; // which view gets the space
   camera: Camera3D; // the 3D view's camera
+  lock: string | null; // the broadcast camera follows this player instead of the ball (SPEC 6, 7)
   scanMarker: string | null; // scan id highlighted by a plan
   captionLine: string | null; // id of the narration line on screen (a plan voice step)
   evidenceLine: string | null; // narration line whose claims and evidence are open
@@ -86,6 +87,7 @@ export function createPlayback(hero: Hero): PlaybackStore {
     skeletonSource: "true",
     focus: "split",
     camera: "pov",
+    lock: null,
     scanMarker: null,
     captionLine: null,
     evidenceLine: null,

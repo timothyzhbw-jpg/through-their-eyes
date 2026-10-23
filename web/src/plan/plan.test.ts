@@ -73,11 +73,18 @@ describe("plan validation", () => {
 
   it("accepts every camera of SPEC 7 that exists, and nothing else", () => {
     const camera = EXAMPLE_PLAN.steps.findIndex((s) => s.do === "camera");
-    for (const mode of ["split", "pov", "tactical", "broadcast"]) {
+    for (const mode of ["split", "pov", "tactical", "broadcast", "player_lock"]) {
       expect(errorsOf(withStep(EXAMPLE_PLAN, camera, { mode }))).toEqual([]);
     }
     expect(errorsOf(withStep(EXAMPLE_PLAN, camera, { mode: "drone" }))).not.toEqual([]);
-    expect(errorsOf(withStep(EXAMPLE_PLAN, camera, { mode: "player_lock" }))).not.toEqual([]);
+  });
+
+  it("accepts the overlay layers a persona's plan turns on, and nothing else", () => {
+    const zone = EXAMPLE_PLAN.steps.findIndex((s) => s.do === "zone");
+    for (const layer of ["vision", "pitch_control", "options"]) {
+      expect(errorsOf(withStep(EXAMPLE_PLAN, zone, { layer }))).toEqual([]);
+    }
+    expect(errorsOf(withStep(EXAMPLE_PLAN, zone, { layer: "pressing" }))).not.toEqual([]);
   });
 
   it("rejects a plan for another moment", () => {
@@ -167,6 +174,40 @@ describe("plan executor", () => {
     playback.set({ camera: "broadcast", focus: "broadcast" });
     runner.start({ moment: moment.id, duration_s: 3, steps: [pov] } as never);
     expect(playback.get().camera).toBe("pov");
+  });
+
+  it("locks the broadcast camera on the hero, and any other camera unlocks it", () => {
+    const split = EXAMPLE_PLAN.steps.findIndex((s) => s.do === "camera" && s.mode === "split");
+    const plan = withStep(EXAMPLE_PLAN, split, { mode: "player_lock" }) as Plan;
+    const { playback, runner, until } = start(plan);
+    expect(playback.get().lock).toBeNull();
+    const cut = until(plan.steps[split].t + 0.05);
+    expect(cut).toMatchObject({ focus: "broadcast", camera: "broadcast", lock: moment.hero });
+    const back = { t: 0, do: "camera", mode: "broadcast" };
+    runner.start({ moment: moment.id, duration_s: 1, steps: [back] } as never);
+    expect(playback.get()).toMatchObject({ camera: "broadcast", lock: null });
+  });
+
+  it("turns on pitch control and the pass options from zone steps; starts from the audience's", () => {
+    const playback = createPlayback(hero);
+    const runner = new BreakdownRunner(playback, hero, moment);
+    playback.set({ pitchControl: true });
+    runner.start({ moment: moment.id, duration_s: 1, steps: [{ t: 0, do: "freeze" }] });
+    expect(playback.get()).toMatchObject({ options: true, pitchControl: true }); // left alone
+    runner.start(
+      { moment: moment.id, duration_s: 1, steps: [{ t: 0, do: "freeze" }] },
+      { options: false, pitchControl: false },
+    );
+    expect(playback.get()).toMatchObject({ options: false, pitchControl: false, cone: false });
+    const zones = [
+      { t: 0, do: "zone", layer: "pitch_control", player: "H8" },
+      { t: 0, do: "zone", layer: "options", player: "H8" },
+    ];
+    runner.start({ moment: moment.id, duration_s: 1, steps: zones } as never, {
+      options: false,
+      pitchControl: false,
+    });
+    expect(playback.get()).toMatchObject({ options: true, pitchControl: true, cone: false });
   });
 
   it("plays the template plan to the end too", () => {

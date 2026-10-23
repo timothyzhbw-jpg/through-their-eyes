@@ -504,8 +504,8 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
             </h2>
             {reveal.truth.moved.length > 0 ? (
               <p className="yc-lead">
-                Not where he pictured them: {reveal.truth.moved.map(shortName).join(", ")}.{" "}
-                <SimTag />
+                Not where he pictured them:{" "}
+                {reveal.truth.moved.map((id) => shortName(id)).join(", ")}. <SimTag />
               </p>
             ) : (
               <p className="yc-lead">
@@ -579,7 +579,7 @@ const labelOf = (options: CallOption[]) => (action: string) =>
 /** What he could see and how his picture rated the call (why.ts): read from the sim export, so
  * no number, and marked so. */
 function WhyBlock({ why }: { why: Why }) {
-  const names = (ids: string[]) => ids.map(shortName).join(", ");
+  const names = (ids: string[]) => ids.map((id) => shortName(id)).join(", ");
   const receiver = why.receiver
     ? why.receiver.seen
       ? `${shortName(why.receiver.id)} was fresh in his picture. `

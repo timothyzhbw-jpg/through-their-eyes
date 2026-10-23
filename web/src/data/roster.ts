@@ -31,11 +31,41 @@ export const ROSTER: Readonly<Record<string, readonly [string, string]>> = {
 /** Home (team 0) and away (team 1): name, three-letter code, Chinese name. Invented. */
 export const CLUBS: Readonly<Record<0 | 1, { name: string; code: string; zh: string }>> = {
   0: { name: "Kestrel Bay", code: "KES", zh: "红隼湾" },
-  1: { name: "Corvane Vale", code: "COR", zh: "科尔瓦恩谷" },
+  1: { name: "Corvane Vale", code: "COR", zh: "科尔文谷" },
 };
 
-/** "J. Ferriday"; an id with no name (a stand-in in a test) is itself. */
-export function shortName(id: string): string {
+/** Each surname as Chinese text and the zh voice write it (sim/roster.py `ZH_NAMES`, Xinhua style):
+ * a Chinese line says 费里迪, never "J. Ferriday". */
+export const ZH_NAMES: Readonly<Record<string, string>> = {
+  H1: "奥伊斯特维尔特",
+  H2: "马伦科",
+  H3: "布兰纳",
+  H4: "安纳斯利",
+  H5: "韦尔坎普",
+  H6: "索尔顿比",
+  H7: "卡斯特兰",
+  H8: "费里迪",
+  H9: "瓦恩霍尔",
+  H10: "布拉克韦尔",
+  H11: "奥孔德鲁",
+  A1: "塔尔维斯托",
+  A2: "佩拉德",
+  A3: "温德霍尔姆",
+  A4: "格雷夫霍尔特",
+  A5: "马德利乌斯",
+  A6: "库尔瓦尔",
+  A7: "芬莫尔",
+  A8: "布伦瓦尔德",
+  A9: "奎兰",
+  A10: "凯斯特雷尔",
+  A11: "温特格伦",
+};
+
+export type NameLanguage = "en" | "zh";
+
+/** "J. Ferriday"; "费里迪" in Chinese; an id with no name (a stand-in in a test) is itself. */
+export function shortName(id: string, lang: NameLanguage = "en"): string {
+  if (lang === "zh" && ZH_NAMES[id]) return ZH_NAMES[id];
   const found = ROSTER[id];
   return found ? `${found[0].charAt(0)}. ${found[1]}` : id;
 }
@@ -55,7 +85,11 @@ export function clubName(team: number): string {
 // event id (scan:H8:0050); a CJK character next to it is a boundary.
 const ID = /(?<![A-Za-z0-9_:])[HA](?:1[01]|[1-9])(?![A-Za-z0-9_:])/g;
 
-/** Every player id in `text` as his short name: for words the app writes with ids in them. */
-export function renameIds(text: string): string {
-  return text.replace(ID, (id) => shortName(id));
+const HAN = /\p{Script=Han}/u;
+
+/** Every player id in `text` as his short name: for words the app writes with ids in them. A
+ * Chinese sentence (`lang`, by default: any Han character in it) names him in Chinese. */
+export function renameIds(text: string, lang?: NameLanguage): string {
+  const as = lang ?? (HAN.test(text) ? "zh" : "en");
+  return text.replace(ID, (id) => shortName(id, as));
 }
