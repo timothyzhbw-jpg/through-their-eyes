@@ -43,7 +43,7 @@ export function WhatIfPanel() {
       className="whatif"
       kicker="Ask the replay"
       title={ASK_TITLE}
-      lede="Each answer forces that choice and re-simulates the moment: the outcome is causal inside the sim only. Suggested answers were computed ahead of time by the same verifier as the narration; your own questions are answered by the live service."
+      lede="Each answer forces that choice and re-simulates the moment in the same simulation, with the same random draws and what each player could see: the outcome is causal inside the sim only. Suggested answers were computed ahead of time by the same verifier as the narration; your own questions are answered by the live service."
       aside={
         <Segmented
           label="Answer language"
