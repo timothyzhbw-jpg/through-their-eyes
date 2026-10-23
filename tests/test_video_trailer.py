@@ -112,3 +112,15 @@ def test_the_fonts_ship_with_their_licences():
     for name in ("Anton", "BebasNeue"):
         assert (fonts / f"{name}-Regular.ttf").exists(), name
         assert "SIL Open Font License" in (fonts / f"{name}-OFL.txt").read_text(), name
+
+
+def test_every_blender_clip_the_cut_names_is_in_the_approved_set():
+    """The clips are not committed (out/), so a name outside `approved` would only fail at render
+    time: the rejected renders share file names with the finals."""
+    pattern = re.compile(r"out/video/blender/([A-Za-z0-9_]+\.mp4)")
+    approved = set(json.loads((VIDEO / "blender_map.json").read_text())["approved"])
+    named = set()
+    for name in ("blender_map.json", "trailer.json"):
+        named |= set(pattern.findall((VIDEO / name).read_text()))
+    assert named, "no Blender clip named: the pattern is stale"
+    assert named <= approved, sorted(named - approved)

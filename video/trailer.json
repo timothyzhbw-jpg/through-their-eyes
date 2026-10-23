@@ -1652,14 +1652,6 @@
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-ie-1p3": {
-      "template": "label",
-      "dur": 1.3,
-      "alpha": true,
-      "params": {
-        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
-      }
-    },
     "label-dr-1p633": {
       "template": "label",
       "dur": 1.633,
