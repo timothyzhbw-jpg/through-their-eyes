@@ -3,17 +3,21 @@
 // - where the caption goes, in the run without the look while no caption is up: which look was
 //   removed and what that cost;
 // - at the edge of his eyes, on that shoulder's side, while the look would have lasted;
-// - in the verdict: where each run's pass went, in expected threat, with an explainer that draws
-//   the xT grid and both passes' ends. The two values on the grid are the verified line's.
+// - in the verdict: what was held constant, how often the held-out seeds change (gates.ts), and
+//   where each run's pass went, in expected threat, with an explainer that draws the xT grid and
+//   both passes' ends. The two values on the grid are the verified line's. Every count on the
+//   held-out line is read from hero_gates.json.
 
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Hero } from "../data/hero";
 import type { Narration, PayloadLine } from "../narration/payload";
+import { SourceChip } from "../provenance/SourceChip";
 import { useView } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { KindTags, LineText } from "../ui/Narration";
 import type { Language } from "../whatif/whatif";
+import { heroGatesOf, type HeroGate, type HeroGatesState } from "./gates";
 import { withoutLookOf, type WithoutLook, type WithoutLookState } from "./without";
 import "./without.css";
 
@@ -21,6 +25,10 @@ const NONE: Store<WithoutLookState> = createStore<WithoutLookState>({
   status: "none",
   data: null,
   error: null,
+});
+const NO_GATES: Store<HeroGatesState> = createStore<HeroGatesState>({
+  status: "none",
+  gate: null,
 });
 const NO_LANGUAGE: Store<{ language: Language }> = createStore({ language: "en" as Language });
 
@@ -30,6 +38,41 @@ function useWithoutLook(): WithoutLook | null {
   const session = useView();
   const c = session.kind === "hero" ? withoutLookOf(session) : null;
   return useStore(c?.state ?? NONE, (s) => s.data);
+}
+
+/** This hero's held-out count, once the session has loaded it; null when the file is missing. */
+function useHeroGate(): HeroGate | null {
+  const session = useView();
+  const c = session.kind === "hero" ? heroGatesOf(session) : null;
+  return useStore(c?.state ?? NO_GATES, (s) => s.gate);
+}
+
+/** The held-out sentence. Every count is the entry's; the wording follows what changed. */
+function heldOutText(gate: HeroGate): string {
+  const [first, last] = gate.seeds;
+  const span = `${first}–${last}`;
+  const changed =
+    gate.what === "decision"
+      ? `he decides differently in ${gate.changed}`
+      : `he places the shot differently in ${gate.changed}`;
+  return `Over ${gate.n} held-out seeds (${span}), ${changed}; in ${gate.same} he doesn't.`;
+}
+
+/** What the comparison kept the same, then — when the file has this hero — how often it changes. */
+function ComparisonBasis({ gate }: { gate: HeroGate | null }) {
+  return (
+    <>
+      <p className="without-basis">
+        Held constant: the same match and the same seed; only this one look is removed.
+      </p>
+      {gate && (
+        <p className="without-basis">
+          {heldOutText(gate)}{" "}
+          <SourceChip kind="sim" title={`Eval result from ${gate.report}`} spoken />
+        </p>
+      )}
+    </>
+  );
 }
 
 /** The narration in the breakdown's language, else English; and its lines by id. */
@@ -88,29 +131,36 @@ export function WithoutLookNote() {
   );
 }
 
-/** In the verdict: what it cost and where each pass went, with the xT explainer. */
+/** In the verdict: what was held constant, the held-out count, what it cost and where each pass
+ * went, with the xT explainer. */
 export function WithoutLookLines() {
   const w = useWithoutLook();
+  const gate = useHeroGate();
   const { narration, line } = useNarration(w);
   const [explain, setExplain] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
-  if (!narration) return null;
-  const shown = [line("look_cost"), line("pass_zones")].filter((l): l is PayloadLine => !!l);
-  if (!shown.length) return null;
-  const zones = line("pass_zones");
+  const shown = narration
+    ? [line("look_cost"), line("pass_zones")].filter((l): l is PayloadLine => !!l)
+    : [];
+  // The comparison, once this hero has bundled lines or a held-out count. The count is hidden
+  // when its entry is missing; what was held constant stays.
+  if (!narration && !gate) return null;
+  const zones = narration ? line("pass_zones") : undefined;
   return (
     <div className="without-lines">
-      {shown.map((l) => (
-        <p key={l.id} className={`worth-line ${l.id}`}>
-          <LineText text={l.text} verified /> <KindTags narration={narration} line={l} />
-        </p>
-      ))}
+      <ComparisonBasis gate={gate} />
+      {narration &&
+        shown.map((l) => (
+          <p key={l.id} className={`worth-line ${l.id}`}>
+            <LineText text={l.text} verified /> <KindTags narration={narration} line={l} />
+          </p>
+        ))}
       {zones && (
         <button ref={opener} type="button" className="btn" onClick={() => setExplain(true)}>
           How xT works
         </button>
       )}
-      {explain && w && zones && (
+      {explain && w && zones && narration && (
         <XtExplainer
           w={w}
           narration={narration}
