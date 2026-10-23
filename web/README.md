@@ -52,8 +52,11 @@ Deep links for the README's tour for judges, and for testing and filming
 | `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                                                 |
 | `play`     | `yourcall`, `recap`                                             | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused; `recap` (with a stitched `match`): its end-of-match recap for `persona` and `lang`, offered as at full time |
 | `play`     | `eyes`                                                          | open "Take his eyes" on his own look; with `match`, on its first hero moment that has a bundled look grid; counts as a spot: opens paused                                                                                                       |
+| `tour`     | `quick`, `1`, a step id                                         | open a tour paused, with no intro card: `quick` the quick tour (four steps: the look, without it, the outcomes compared, Your call), `1` the full judge tour, a step id that step of its tour                                                   |
+| `moment`   | `corner_blind_side`, `far_post_finish`                          | with `match=match-1`: open that hero moment's breakdown inside the match (the moment links); counts as a spot                                                                                                                                   |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                                         |
 | `intro`    | `0`                                                             | skip the intro card (one line and Start; the line-ups behind Teams and more); links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                       |
+| `rail`     | `0`                                                             | leave out the moment links above the live screen (filming: the demo video's captures keep their framing)                                                                                                                                        |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                                               |
 | `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                                               |
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                           |
@@ -240,10 +243,11 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
   scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
 
-Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
-`tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
-files are generated, on macOS arm64; structurally elsewhere, as SPEC 3.7 promises no
-cross-platform identity).
+Regenerate them whenever `sim/`, `analytics/` or `explain/` change, on Linux, the canonical
+platform: `scripts/regen_linux.sh exports` runs these commands in `python:3.11-slim`
+([CONTRIBUTING.md](../docs/CONTRIBUTING.md#eval-before-merge)). `tests/test_committed_exports.py`
+fails on Linux when a committed file is stale, byte for byte, and skips elsewhere: the sim is
+byte-identical only within one OS (SPEC 3.7).
 
 ## How it fits together
 

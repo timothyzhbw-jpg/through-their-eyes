@@ -72,7 +72,7 @@ BOOTSTRAP = 1000
 BOOTSTRAP_SEED = 20261021
 PERSONAS: tuple[Persona, ...] = get_args(Persona)
 LANGUAGES: tuple[Language, ...] = get_args(Language)
-OPEN_PLAY = "possession_play"
+OPEN_PLAY = ("possession_play", "possession_play_away")  # with the home or away team first
 RESTART_NAMES = {"kick_off": "kick-off", "throw_in": "throw-in", "goal_kick": "goal kick"}
 
 
@@ -200,13 +200,13 @@ def play_match(
         for c in cards:
             moments.append({
                 "kind": c.kind, "lens": c.selected_lens, "live_only": c.live_only,
-                "hero": card is not None and c.id == card.id, "open_play": p.scenario == OPEN_PLAY,
+                "hero": card is not None and c.id == card.id, "open_play": p.scenario in OPEN_PLAY,
             })  # fmt: skip
-            if p.scenario == OPEN_PLAY and c.selected_lens:
+            if p.scenario in OPEN_PLAY and c.selected_lens:
                 open_flips.append({"kind": c.kind, "lens": c.selected_lens, "flip": lens_flip(c)})
         if p.run.hero is not None:
             heroes.append(hero_result(p, card))
-        if p.scenario == OPEN_PLAY:
+        if p.scenario in OPEN_PLAY:
             observed.append(realism.tables(p.run))
             off = replace(SimParams(), pressure_scan_factor=1.0)
             if spec.max_s is not None:

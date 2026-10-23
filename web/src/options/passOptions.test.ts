@@ -82,10 +82,10 @@ describe("encodings", () => {
 describe("he thought / it was", () => {
   it("takes the numbers from the claims, per run", () => {
     const f = thoughtVsWas(narration, hero, hero.runs.factual)!;
-    expect(f).toMatchObject({ action: "pass:H9", pBelief: "0.67", pTrue: "0.85" });
+    expect(f).toMatchObject({ action: "pass:H9", pBelief: "0.65", pTrue: "0.83" });
     expect(f.claim.kind).toBe("computed");
     const c = thoughtVsWas(narration, hero, hero.runs.counterfactual)!;
-    expect(c).toMatchObject({ action: "pass:H9", pBelief: "0.02", pTrue: "0.85" });
+    expect(c).toMatchObject({ action: "pass:H9", pBelief: "0.02", pTrue: "0.83" });
     expect(c.claim.kind).toBe("counterfactual");
   });
 
@@ -103,7 +103,7 @@ describe("hover", () => {
     expect(h9.rows.map((r) => [r.label, r.value, r.source, r.kind])).toEqual([
       ["Chance he picked it", "0.00", "sim", undefined],
       ["He thought it would arrive", "0.02", "claim", "counterfactual"],
-      ["It was", "0.85", "claim", "counterfactual"],
+      ["It was", "0.83", "claim", "counterfactual"],
       ["Value, as he saw it", "-0.019 xT", "sim", undefined],
     ]);
     const h4 = hoverContent(find(without, "pass:H4"), verified);

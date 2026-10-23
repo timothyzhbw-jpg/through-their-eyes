@@ -90,6 +90,9 @@ BODY_RADIUS = 0.3
 # attacker in an offside position this close to the ball when an opponent plays it was challenging
 # him for it (Law 11.2, interfering with an opponent).
 CHALLENGE_RADIUS = 1.0
+# A player's centre stays this far from a post's: his body (BODY_RADIUS) does not overlap the post.
+# A defender on the post at a corner stands just outside it, at about 0.4-0.5 m.
+POST_CLEARANCE = BODY_RADIUS + POST_RADIUS
 
 LAWS = {
     "1": "the field of play",
@@ -118,6 +121,28 @@ def depth(xy: np.ndarray, team: int) -> np.ndarray:
 
 
 # --- geometry -----------------------------------------------------------------------------------
+
+
+def post_distance(xy: np.ndarray) -> np.ndarray:
+    """Distance (m) from each point to the nearest goalpost's centre (Law 1.10)."""
+    xy = np.asarray(xy, dtype=float)[..., :2]
+    return np.linalg.norm(xy[..., None, :] - POSTS, axis=-1).min(axis=-1)
+
+
+def in_goal(xy: np.ndarray) -> np.ndarray:
+    """Whether each point is inside a goal: beyond the goal line, between the posts (Law 1.10)."""
+    xy = np.asarray(xy, dtype=float)
+    return (np.abs(xy[..., 0]) > HALF_LENGTH) & (np.abs(xy[..., 1]) < GOAL_HALF_WIDTH)
+
+
+def along_line_past_posts(xy: np.ndarray, speed: np.ndarray) -> np.ndarray:
+    """Whether a player runs (over 2 m/s) along a goal line (within 1 m of it), more than a body
+    outside the posts: a keeper sweeping his line past his post, where nothing in the Laws or the
+    game puts him (`tests/test_goal_frame.py`)."""
+    xy = np.asarray(xy, dtype=float)
+    on_line = HALF_LENGTH - np.abs(xy[..., 0]) < 1.0
+    outside = np.abs(xy[..., 1]) > POST_Y + BODY_RADIUS
+    return on_line & outside & (np.asarray(speed) > 2.0)
 
 
 def on_field(xy: np.ndarray) -> np.ndarray:

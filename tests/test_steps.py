@@ -5,25 +5,22 @@ the scan's dwell, velocities are the sim's, every line verifies, and the final f
 exactly the two players the decision turns on.
 """
 
-import json
-import platform
 from pathlib import Path
 
 import numpy as np
 import pytest
-from test_committed_exports import GENERATED_ON, _assert_close
 
 from agents.context import MomentContext
 from agents.steps import DWELL_TOLERANCE, answer_steps, build_steps, dwell_frame, focus_pair
 from analytics.vision import wrap_angle
 from sim.export import export_steps, steps_json
+from tests import canonical
 
 DATA = Path(__file__).parent.parent / "web" / "public" / "data"
 FILES = {
     ("blind_side_run", 3): "steps_seed3.json",
     ("press_escape", 0): "steps_press_escape_seed0.json",
 }
-VEL_TOL = 2  # mm/s: a last-bit difference on another platform (SPEC 3.7)
 
 
 @pytest.fixture(scope="module")
@@ -135,23 +132,9 @@ def test_a_hero_with_no_decision_on_the_ball_has_no_steps():
         build_steps(MomentContext.load("corner_blind_side", 0))
 
 
-def _split_vel(data):
-    """The velocities of every step and decision, taken out to compare with a tolerance."""
-    out = []
-    for run in data["runs"].values():
-        for block in [*run["steps"], run["final"]]:
-            out.append(block.pop("vel"))
-    return out
-
-
+@canonical.linux_only()
 @pytest.mark.parametrize(("key", "name"), list(FILES.items()))
 def test_committed_steps_files_are_current(key, name):
     fresh = steps_json(export_steps(*key))
     committed = (DATA / name).read_text()
-    if (platform.system(), platform.machine()) == GENERATED_ON:
-        assert fresh == committed, f"web/public/data/{name} is stale: regenerate it (web/README.md)"
-        return
-    a, b = json.loads(fresh), json.loads(committed)
-    va, vb = _split_vel(a), _split_vel(b)
-    _assert_close(a, b, name)
-    assert np.allclose(np.array(va), np.array(vb), atol=VEL_TOL, rtol=0)
+    assert fresh == committed, f"web/public/data/{name} is stale: {canonical.message()}"

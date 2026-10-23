@@ -9,6 +9,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, halfCone, sampleInto, speedAt } from "../data/hero";
+import { kickBallOffset } from "../players/kickBall";
 import { trial } from "../players/trial";
 import { useView } from "../session";
 import { BeliefRings } from "../views/BeliefRings";
@@ -321,11 +322,14 @@ function Cone() {
 }
 
 function Ball() {
+  const { playback } = useView();
   const ref = useRef<THREE.Mesh>(null);
   useFrame(() => {
     const sample = stageSample;
     if (!sample || !ref.current) return;
-    ref.current.position.set(sample.ball[0], 0.11, -sample.ball[1]);
+    const s = playback.get();
+    const kick = kickBallOffset(s.mode, s.frame); // on the kicking foot (rigged players)
+    ref.current.position.set(sample.ball[0] + kick[0], 0.11, -(sample.ball[1] + kick[1]));
   });
   return (
     <mesh ref={ref}>

@@ -16,6 +16,7 @@ from analytics import stats
 from analytics.live_stats import MatchStats, compute_stats, stats_from_run
 from sim.export import export_hero, export_match
 from sim.roster import ROSTER, full_name, short_name
+from tests import canonical
 
 DT = 0.04
 WEB_FIXTURE = Path(__file__).resolve().parents[1] / "web/src/stats/fixture_seed3.json"
@@ -359,6 +360,7 @@ def test_stats_from_a_sim_run_equal_the_stats_from_its_export(hero, hero_stats):
     )
 
 
+@canonical.linux_only()
 def test_the_web_fixture_is_current(hero_stats):
     """The viewer's parity test (web/src/stats/stats.test.ts) runs on this output."""
     from analytics.live_stats import FIXTURE_FRAMES, web_fixture

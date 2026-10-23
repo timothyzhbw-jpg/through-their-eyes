@@ -1,5 +1,5 @@
 {
-  "about": "The judge tour (SPEC 7): about ninety seconds through the signature features. Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title.",
+  "about": "The tours (SPEC 7). 'quick' is a first-time visitor's path in four steps: watch the look, remove it, compare the outcomes, make your own call; Start on the intro card opens it. 'steps' is the full judge tour, about ninety seconds through the signature features. Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
   "steps": [
     {
       "id": "pov",
@@ -128,6 +128,54 @@
       "enter": "none",
       "needs": [],
       "hold": 4
+    }
+  ],
+  "quick": [
+    {
+      "id": "look",
+      "title": "Watch the look",
+      "caption": "This is {hero}'s view, slowed down. The gold mark on the timeline is the look that matters: one glance before the ball reaches him.",
+      "target": [".transport .mark.key", ".transport .timeline"],
+      "dim": false,
+      "enter": "look",
+      "act": "replayLook",
+      "say": "look",
+      "needs": ["hero", "keyScan"],
+      "hold": 10
+    },
+    {
+      "id": "remove",
+      "title": "Now remove it",
+      "caption": "The same seconds, re-simulated {cf}. Same seed, same players: that one look is the only change.",
+      "target": ".stage-run",
+      "dim": false,
+      "enter": "counterfactual",
+      "say": "without",
+      "needs": ["hero", "keyScan", "counterfactual"],
+      "hold": 10
+    },
+    {
+      "id": "compare",
+      "title": "Compare the outcomes",
+      "caption": "From above: where his pass went with the look, and the dashed gold path where it would have gone without it.",
+      "target": null,
+      "dim": false,
+      "enter": "compare",
+      "say": "compare",
+      "needs": ["hero", "keyScan", "counterfactual"],
+      "hold": 10
+    },
+    {
+      "id": "call",
+      "title": "Now make your call",
+      "caption": "You are {hero}, with only what he knew. Pick a teammate, then see what really happened and why.",
+      "target": ".yc-view",
+      "dim": false,
+      "focus": "app",
+      "enter": "yourCall",
+      "act": "fullTour",
+      "needs": ["hero", "yourCall"],
+      "hold": 14
     }
   ]
 }

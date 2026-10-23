@@ -23,7 +23,7 @@ const v2 = await loadModel("grf_player_look.glb");
 function bones(gltf: GLTF, id: string, f: number): Map<string, THREE.Matrix4> {
   const meta = gltf.scene.userData as ModelMeta;
   const clips = modelClips(meta);
-  const motion = runMotion(hero, run, clips.gait);
+  const motion = runMotion(hero, run, clips, PLAYER_HEIGHT / meta.height_m);
   const j = hero.ids.indexOf(id);
   const rig = makeRig(gltf, PLAYER_HEIGHT / meta.height_m);
   const n = hero.n;

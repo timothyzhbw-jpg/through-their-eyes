@@ -52,12 +52,14 @@ beforeAll(async () => {
   await page.goto(server.url);
   await page.waitForFunction(() => window.pitchControlHarness !== undefined);
   renderer = await rendererOf(page);
-}, 60_000);
+  // Starting Vite, Chrome and the harness page took more than 60 s on a loaded runner (main's CI
+  // failed once on this hook): the parity checks themselves stay strict, only their set-up waits.
+}, 180_000);
 
 afterAll(async () => {
   await browser?.close();
   await server?.close();
-});
+}, 60_000);
 
 const control = (home: Rows, away: Rows) =>
   page.evaluate(([h, a]) => window.pitchControlHarness!.control(h, a), [home, away] as const);

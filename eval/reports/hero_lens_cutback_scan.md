@@ -10,50 +10,50 @@ Seeds 100–139 (40). Intended lens `scan`; intervention `drop_scan` on `H7`, re
 | … factual action kept the ball | 40/40 | — |
 | … the ball is lost after the intervention | 0/40 | — |
 | Selected lens: scan · space · pressure | 38 · 2 · 0 | — |
-| Median margin of `scan` over the next lens (xT) | 0.2003 | — |
-| Mean realised ΔxT (factual − intervention) | +0.2329 | — |
+| Median margin of `scan` over the next lens (xT) | 0.1650 | — |
+| Mean realised ΔxT (factual − intervention) | +0.1454 | — |
 
 Δ per lens in xT of the hero's team (SPEC 5.2); — when the lens is unavailable (e.g. no scan before the decision). Result: `kept` or `lost` possession after the hero's action.
 
 | Seed | Selected | Δscan | Δspace | Δpressure | Factual | Result | Intervention | Result | ΔxT |
 |---|---|---|---|---|---|---|---|---|---|
-| 100 | scan | +0.2880 | +0.0814 | +0.0073 | `pass:H8` | kept | `carry` | kept | +0.227 |
-| 101 | scan | +0.2870 | +0.0771 | -0.0232 | `pass:H8` | kept | `carry` | kept | +0.222 |
-| 102 | scan | +0.2866 | +0.0831 | -0.0318 | `pass:H8` | kept | `carry` | kept | +0.234 |
-| 103 | scan | +0.2873 | +0.0875 | -0.0028 | `pass:H8` | kept | `carry` | kept | +0.229 |
-| 104 | scan | +0.2862 | +0.0917 | +0.0398 | `pass:H8` | kept | `carry` | kept | +0.230 |
-| 105 | scan | +0.2445 | +0.0813 | -0.0368 | `pass:H8` | kept | `shot` | shot | +0.298 |
-| 106 | scan | +0.2876 | +0.0780 | -0.0136 | `pass:H8` | kept | `carry` | kept | +0.235 |
-| 107 | scan | +0.2854 | +0.0841 | +0.0138 | `pass:H8` | kept | `carry` | kept | +0.231 |
-| 108 | scan | +0.2826 | +0.0838 | -0.0268 | `pass:H8` | kept | `carry` | kept | +0.229 |
-| 109 | scan | +0.2823 | +0.0814 | +0.0016 | `pass:H8` | kept | `carry` | kept | +0.226 |
-| 110 | scan | +0.2833 | +0.0888 | -0.0400 | `pass:H8` | kept | `carry` | kept | +0.219 |
-| 111 | space | +0.0000 | -0.2797 | +0.0166 | `carry` | kept | `carry` | kept | +0.000 |
-| 112 | scan | +0.2442 | +0.0861 | -0.0070 | `pass:H8` | kept | `shot` | shot | +0.303 |
-| 113 | space | +0.0000 | -0.2842 | +0.0192 | `carry` | kept | `carry` | kept | +0.000 |
-| 114 | scan | +0.2851 | +0.0827 | +0.0385 | `pass:H8` | kept | `carry` | kept | +0.231 |
-| 115 | scan | +0.2838 | +0.0847 | -0.0078 | `pass:H8` | kept | `carry` | kept | +0.234 |
-| 116 | scan | +0.2817 | +0.0871 | +0.0237 | `pass:H8` | kept | `carry` | kept | +0.232 |
-| 117 | scan | +0.2878 | +0.0804 | -0.0204 | `pass:H8` | kept | `carry` | kept | +0.228 |
-| 118 | scan | +0.2849 | +0.0914 | +0.0500 | `pass:H8` | kept | `carry` | kept | +0.227 |
-| 119 | scan | +0.2855 | +0.0834 | -0.0145 | `pass:H8` | kept | `carry` | kept | +0.222 |
-| 120 | scan | +0.2859 | +0.0814 | -0.0162 | `pass:H8` | kept | `carry` | kept | +0.231 |
-| 121 | scan | +0.2843 | +0.0747 | +0.0245 | `pass:H8` | kept | `carry` | kept | +0.230 |
-| 122 | scan | +0.2459 | +0.0726 | -0.0122 | `pass:H8` | kept | `shot` | shot | +0.301 |
-| 123 | scan | +0.2832 | +0.0761 | -0.0040 | `pass:H8` | kept | `carry` | kept | +0.231 |
-| 124 | scan | +0.2781 | +0.0828 | -0.0132 | `pass:H8` | kept | `carry` | kept | +0.229 |
-| 125 | scan | +0.2459 | +0.0793 | -0.0017 | `pass:H8` | kept | `shot` | shot | +0.306 |
-| 126 | scan | +0.2450 | +0.0804 | +0.0025 | `pass:H8` | kept | `shot` | shot | +0.305 |
-| 127 | scan | +0.2836 | +0.0795 | +0.0413 | `pass:H8` | kept | `carry` | kept | +0.232 |
-| 128 | scan | +0.2434 | +0.0859 | -0.0226 | `pass:H8` | kept | `shot` | shot | +0.300 |
-| 129 | scan | +0.2835 | +0.0842 | +0.0190 | `pass:H8` | kept | `carry` | kept | +0.233 |
-| 130 | scan | +0.2444 | +0.0852 | -0.0196 | `pass:H8` | kept | `shot` | shot | +0.305 |
-| 131 | scan | +0.2821 | +0.0809 | -0.0128 | `pass:H8` | kept | `carry` | kept | +0.230 |
-| 132 | scan | +0.2853 | +0.0829 | +0.0367 | `pass:H8` | kept | `carry` | kept | +0.227 |
-| 133 | scan | +0.2810 | +0.0818 | -0.0187 | `pass:H8` | kept | `carry` | kept | +0.233 |
-| 134 | scan | +0.2845 | +0.0866 | -0.0158 | `pass:H8` | kept | `carry` | kept | +0.231 |
-| 135 | scan | +0.2876 | +0.0759 | +0.0002 | `pass:H8` | kept | `carry` | kept | +0.233 |
-| 136 | scan | +0.2860 | +0.0752 | +0.0292 | `pass:H8` | kept | `carry` | kept | +0.233 |
-| 137 | scan | +0.2441 | +0.0898 | -0.0469 | `pass:H8` | kept | `shot` | shot | +0.302 |
-| 138 | scan | +0.2884 | +0.0839 | +0.0282 | `pass:H8` | kept | `carry` | kept | +0.234 |
-| 139 | scan | +0.2850 | +0.0811 | +0.0429 | `pass:H8` | kept | `carry` | kept | +0.232 |
+| 100 | scan | +0.1929 | +0.0031 | +0.0191 | `pass:H8` | kept | `carry` | kept | +0.134 |
+| 101 | scan | +0.1922 | -0.0008 | -0.0027 | `pass:H8` | kept | `carry` | kept | +0.135 |
+| 102 | scan | +0.1913 | +0.0050 | -0.0115 | `pass:H8` | kept | `carry` | kept | +0.142 |
+| 103 | scan | +0.1918 | +0.0123 | +0.0101 | `pass:H8` | kept | `carry` | kept | +0.140 |
+| 104 | scan | +0.1909 | +0.0157 | +0.0414 | `pass:H8` | kept | `carry` | kept | +0.137 |
+| 105 | scan | +0.1480 | +0.0021 | -0.0096 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 106 | scan | +0.1928 | -0.0009 | +0.0008 | `pass:H8` | kept | `carry` | kept | +0.144 |
+| 107 | scan | +0.1902 | +0.0035 | +0.0238 | `pass:H8` | kept | `carry` | kept | +0.138 |
+| 108 | scan | +0.1883 | +0.0095 | +0.0007 | `pass:H8` | kept | `carry` | kept | +0.137 |
+| 109 | scan | +0.1876 | +0.0022 | +0.0161 | `pass:H8` | kept | `carry` | kept | +0.135 |
+| 110 | scan | +0.1890 | +0.0133 | -0.0117 | `pass:H8` | kept | `carry` | kept | +0.133 |
+| 111 | space | +0.0000 | -0.1865 | +0.0155 | `carry` | kept | `carry` | kept | +0.000 |
+| 112 | scan | +0.1473 | +0.0113 | +0.0093 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 113 | space | +0.0000 | -0.1892 | +0.0177 | `carry` | kept | `carry` | kept | +0.000 |
+| 114 | scan | +0.1899 | +0.0037 | +0.0401 | `pass:H8` | kept | `carry` | kept | +0.138 |
+| 115 | scan | +0.1886 | +0.0094 | +0.0055 | `pass:H8` | kept | `carry` | kept | +0.142 |
+| 116 | scan | +0.1872 | +0.0086 | +0.0293 | `pass:H8` | kept | `carry` | kept | +0.140 |
+| 117 | scan | +0.1929 | +0.0025 | -0.0014 | `pass:H8` | kept | `carry` | kept | +0.136 |
+| 118 | scan | +0.1896 | +0.0151 | +0.0502 | `pass:H8` | kept | `carry` | kept | +0.133 |
+| 119 | scan | +0.1910 | +0.0062 | +0.0041 | `pass:H8` | kept | `carry` | kept | +0.135 |
+| 120 | scan | +0.1915 | +0.0035 | +0.0036 | `pass:H8` | kept | `carry` | kept | +0.139 |
+| 121 | scan | +0.1902 | -0.0018 | +0.0290 | `pass:H8` | kept | `carry` | kept | +0.138 |
+| 122 | scan | +0.1490 | -0.0067 | +0.0023 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 123 | scan | +0.1883 | -0.0023 | +0.0101 | `pass:H8` | kept | `carry` | kept | +0.141 |
+| 124 | scan | +0.1842 | +0.0086 | +0.0034 | `pass:H8` | kept | `carry` | kept | +0.138 |
+| 125 | scan | +0.1491 | +0.0010 | +0.0114 | `pass:H8` | kept | `shot` | shot | +0.209 |
+| 126 | scan | +0.1488 | +0.0028 | +0.0162 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 127 | scan | +0.1886 | +0.0011 | +0.0409 | `pass:H8` | kept | `carry` | kept | +0.139 |
+| 128 | scan | +0.1467 | +0.0106 | -0.0014 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 129 | scan | +0.1891 | +0.0048 | +0.0255 | `pass:H8` | kept | `carry` | kept | +0.141 |
+| 130 | scan | +0.1480 | +0.0114 | +0.0001 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 131 | scan | +0.1881 | +0.0032 | +0.0057 | `pass:H8` | kept | `carry` | kept | +0.138 |
+| 132 | scan | +0.1908 | +0.0087 | +0.0400 | `pass:H8` | kept | `carry` | kept | +0.134 |
+| 133 | scan | +0.1870 | +0.0082 | -0.0002 | `pass:H8` | kept | `carry` | kept | +0.141 |
+| 134 | scan | +0.1896 | +0.0097 | +0.0022 | `pass:H8` | kept | `carry` | kept | +0.142 |
+| 135 | scan | +0.1932 | -0.0029 | +0.0117 | `pass:H8` | kept | `carry` | kept | +0.141 |
+| 136 | scan | +0.1912 | -0.0018 | +0.0312 | `pass:H8` | kept | `carry` | kept | +0.140 |
+| 137 | scan | +0.1480 | +0.0150 | -0.0187 | `pass:H8` | kept | `shot` | shot | +0.208 |
+| 138 | scan | +0.1935 | +0.0082 | +0.0309 | `pass:H8` | kept | `carry` | kept | +0.141 |
+| 139 | scan | +0.1908 | +0.0021 | +0.0425 | `pass:H8` | kept | `carry` | kept | +0.140 |

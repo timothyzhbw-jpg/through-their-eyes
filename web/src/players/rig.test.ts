@@ -1,6 +1,6 @@
 // The committed model, posed as RiggedPlayers poses it (rig.ts), on the seed-3 export: the head
-// points along head_yaw, the neck stays within its limit, the feet stay on the ground, and at
-// H8's pass the kick goes along the pass.
+// points along head_yaw (as near as a kick lets it), the neck stays within its limit, the feet
+// stay on the ground, and at H8's pass the kick goes along the pass.
 
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
@@ -8,7 +8,8 @@ import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 import raw from "../../public/data/hero_seed3.json";
 import { parseHero, wrapAngle } from "../data/hero";
 import { worldYaw } from "../views/tokens";
-import { NECK_MAX } from "./look";
+import { kickFacing, kickPose, passEvents } from "./gait";
+import { NECK_MAX, kickLook } from "./look";
 import { type ModelMeta, PLAYER_HEIGHT, makeRig, modelClips, poseRig, runMotion } from "./rig";
 
 const hero = parseHero(raw);
@@ -31,7 +32,7 @@ async function loadModel(): Promise<GLTF> {
 const gltf = await loadModel();
 const meta = gltf.scene.userData as ModelMeta;
 const clips = modelClips(meta);
-const motion = runMotion(hero, run, clips.gait);
+const motion = runMotion(hero, run, clips, PLAYER_HEIGHT / meta.height_m);
 
 function pose(id: string, f: number) {
   const j = hero.ids.indexOf(id);
@@ -41,7 +42,10 @@ function pose(id: string, f: number) {
   const head = run.head[f * n + j];
   const split = poseRig(rig, motion, clips, j, f, hero.dt, 0, 0, body, head);
   rig.holder.updateMatrixWorld(true);
-  return { rig, body, head, split };
+  // Where the head points: head_yaw, or as near as a kick lets it (look.ts kickLook).
+  const p = kickPose(f, motion.kicks[j], hero.dt, clips.pass);
+  const aim = p.kick ? kickLook(kickFacing(body, p), head, p.facing) : head;
+  return { rig, body, head, split, aim };
 }
 
 /** Facing of a joint: the pitch yaw of its local +x (the model faces +x). */
@@ -59,8 +63,8 @@ describe("the committed rigged player, posed on seed 3", () => {
   it("points every player's head along head_yaw with the neck within its limit", () => {
     for (const f of [20, 50, 57, 64, 70, 75, 100, 140]) {
       for (const id of hero.ids) {
-        const { rig, head } = pose(id, f);
-        expect(Math.abs(wrapAngle(yawOf(rig.neck) - head))).toBeLessThan(1e-3);
+        const { rig, aim } = pose(id, f);
+        expect(Math.abs(wrapAngle(yawOf(rig.neck) - aim))).toBeLessThan(1e-3);
         expect(Math.abs(wrapAngle(yawOf(rig.neck) - yawOf(rig.middle)))).toBeLessThan(
           NECK_MAX + 0.02,
         );
@@ -68,22 +72,23 @@ describe("the committed rigged player, posed on seed 3", () => {
     }
   });
 
-  it("H8's key scan: the head turns over the shoulder, the hips stay on body_yaw", () => {
-    // Frame 58: the head is at −124°, before the turn into the pass (from ~0.3 s before the clip)
-    // starts opening the hips; the scan's hold, frames 59–62, overlaps that turn since the sim's
-    // head speed was calibrated (#20).
+  it("H8's key scan: the head turns over the shoulder, the hips stay out of it", () => {
+    // Frame 58: the head is at −124° from body_yaw; the body has begun its half-turn into the
+    // pass (from frame 55, 0.5 s before the wind-up), and the neck and trunk take all of the look.
     const { rig, body, head, split } = pose("H8", 58);
     expect(wrapAngle(head - body) / DEG).toBeCloseTo(-124, 0);
-    expect(Math.abs(split.hips)).toBe(0);
-    expect(Math.abs(wrapAngle(yawOf(rig.holder) - body))).toBeLessThan(1e-6);
+    expect(Math.abs(split.hips)).toBeLessThan(1e-12);
+    expect(Math.abs(wrapAngle(yawOf(rig.neck) - head))).toBeLessThan(1e-3);
   });
 
   it("H8's pass: at the contact the kick goes along the pass to H9", () => {
-    const pass = motion.passes[hero.ids.indexOf("H8")][0];
+    const pass = passEvents(run.events, hero.ids)[hero.ids.indexOf("H8")][0];
     const { rig, split } = pose("H8", pass.frame);
     const pelvis = rig.model.getObjectByName("body")!;
-    // The model turns so that the clip's kick direction lines up with the pass (hips included).
-    const kick = yawOf(rig.holder) - split.hips + clips.pass.kickYaw;
+    // The model turns so that the clip's kick direction lines up with the pass (no hips: a kick
+    // keeps the head within the neck's and trunk's reach).
+    expect(Math.abs(split.hips)).toBeLessThan(1e-12);
+    const kick = yawOf(rig.holder) + clips.pass.kickYaw;
     expect(Math.abs(wrapAngle(kick - pass.yaw))).toBeLessThan(1e-6);
     console.log(
       "H8 at the pass: holder %s°, pelvis %s°, trunk %s°, head %s°, pass %s°",

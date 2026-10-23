@@ -354,10 +354,11 @@ def rows_for(per_match: list[dict[str, dict[str, np.ndarray]]]) -> list[Row]:
         "Home team's share of possession time (%)", "home_time", "spell_time",
         "s of team possession",
         f"{int(np.sum(sc['home_start']))} of {len(sc['name'])} scenario possessions start with the "
-        "home team: possession_play gives the ball to H4, H5 or H6, and the hero scenarios are "
-        "built around a home player. So the away team has the ball only after winning it, and "
-        f"at {int(np.sum(m['cut_switches']))} of the {int(np.sum(m['cuts']))} cuts the cut "
-        "itself took the ball from the away team.",
+        "home team: the hero scenarios are built around a home player, and open play gives the "
+        "ball to H4, H5 or H6 unless the restart before it was awarded to the away team "
+        "(`possession_play_away`: A4, A5 or A6). So the away team has the ball after winning it "
+        f"or after such a restart, and at {int(np.sum(m['cut_switches']))} of the "
+        f"{int(np.sum(m['cuts']))} cuts the cut itself took the ball from the away team.",
     )  # fmt: skip
 
     # Shots.
