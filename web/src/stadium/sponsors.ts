@@ -25,8 +25,8 @@ export const SPONSORS: readonly Sponsor[] = [
     mark: "wave",
   },
   {
-    id: "ambervale",
-    name: "AMBERVALE OATS",
+    id: "krelwick",
+    name: "KRELWICK OATS",
     line: "Breakfast for the long game",
     bg: "#2a1d0e",
     fg: "#f6ecd9",

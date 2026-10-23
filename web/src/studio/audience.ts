@@ -23,7 +23,7 @@ import assumptions from "./audience-assumptions.json";
 export const DEMO_LABEL = DEMO_DATA; // the one legend (journey/DemoBadge.tsx)
 
 /** The invented sponsor whose board is in frame (no real brand). */
-export const SPONSOR = "Brindlewick Water";
+export const SPONSOR = "Vrenwick Water";
 
 export interface Range {
   min: number;
