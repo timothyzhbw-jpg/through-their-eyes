@@ -4,6 +4,7 @@
     "bl01_look.mp4",
     "bl02_reveal.mp4",
     "bl03_without.mp4",
+    "bs1_eyes.mp4",
     "bs1_fall.mp4",
     "bs1_ots.mp4",
     "bs1_steal.mp4",
@@ -23,11 +24,11 @@
       "corners": "out/video/blender/bs2_ots_screen_corners.json",
       "matte": "out/video/blender/bs2_ots_screen_matte",
       "source": {
-        "cine": "pov-match"
+        "capture": "22-board-blind"
       },
-      "source_time": 2.0,
+      "source_time": 2.8,
       "source_offset_y": 138,
-      "ev": 2.0,
+      "ev": 0.5,
       "ref_corners": "out/video/blender/bs2c_screen_corners.json"
     },
     {
@@ -36,11 +37,11 @@
       "corners": "out/video/blender/bs2c_screen_corners.json",
       "matte": "out/video/blender/bs2c_screen_matte",
       "source": {
-        "cine": "pov-match"
+        "capture": "22-board-blind"
       },
-      "source_time": 2.0,
+      "source_time": 2.8,
       "source_offset_y": 138,
-      "ev": 2.0,
+      "ev": 0.5,
       "ev_ramp_frames": 30
     }
   ],
@@ -141,32 +142,30 @@
         "align": "lower-left",
         "backdrop": true
       }
-    },
-    "nc-a11": {
-      "template": "namecard",
-      "dur": 0.9,
-      "alpha": true,
-      "params": {
-        "name": "A11",
-        "role": "THE PRESSER",
-        "sub": "HERE TO TAKE IT OFF YOU.",
-        "spot": {
-          "x": 1313,
-          "y": 553,
-          "r": 150
-        },
-        "side": "left",
-        "scrim": 0.5
-      }
     }
   },
   "beats": [
+    {
+      "beat": "b00-s0-eyes",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_eyes.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "sfx": []
+    },
     {
       "beat": "b01-s1a-ots",
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_ots.mp4",
-        "in": 0.6,
+        "in": 1.333,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -174,12 +173,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 0.933
+        "at": 0.2
       },
       "overlays": [
         {
           "title": "nc-you",
-          "at": 0.933
+          "at": 0.2
         }
       ],
       "label": "dramatisation"
@@ -432,46 +431,6 @@
       "label": "simulation"
     },
     {
-      "beat": "b20-split",
-      "picture": {
-        "src": "split",
-        "left": {
-          "src": "clip",
-          "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.4,
-          "crop": [
-            800,
-            0,
-            960,
-            804
-          ]
-        },
-        "right": {
-          "src": "clip",
-          "path": "out/video/blender/bl03_without.mp4",
-          "in": 0.55,
-          "crop": [
-            780,
-            0,
-            960,
-            804
-          ]
-        }
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "duo-split",
-          "at": 0.0
-        }
-      ],
-      "sfx": [],
-      "label": "simulation"
-    },
-    {
       "beat": "b27-press-a",
       "picture": {
         "src": "clip",
@@ -483,16 +442,7 @@
       "fx": [
         "glue"
       ],
-      "label": "simulation",
-      "freeze": {
-        "at": 1.2
-      },
-      "overlays": [
-        {
-          "title": "nc-a11",
-          "at": 1.2
-        }
-      ]
+      "label": "simulation"
     },
     {
       "beat": "b28-press-b",

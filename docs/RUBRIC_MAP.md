@@ -73,6 +73,7 @@ what it means for developers, businesses and end users.
 | End users | One moment for five audiences, two languages | casual, analyst, player fan, coach, and audio description for blind and low-vision fans, in English and Chinese; Azure AI Speech with two voices. Live: [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0), [audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0). Trailer: `casual` 1:28, `zh` 1:31. Accessibility audit: [ACCESSIBILITY](ACCESSIBILITY.md) | ✅ |
 | Businesses and developers | Live stats for coaches, an open dataset for developers | `GET /api/matches/<id>/stats`: per player distance, speeds, sprints, passes with accuracy and difficulty, from tracking and events only ([analytics/live_stats.py](../analytics/live_stats.py)); [DATASET](DATASET.md) | Partial: the dataset is not released yet |
 | Businesses | Who pays, for what, and the cost to serve | [SUBMISSION, Business model](SUBMISSION.md#business-model): the offers as hypotheses (broadcasters, clubs, the league's fan apps; no betting); measured cost per breakdown (about $0.01, [crew_vs_single](../eval/reports/crew_vs_single.md)), speech per line and hosting per month at Azure list prices of 2026-10-22 | Partial: no customer has seen it, no price is set, and the cache's share of views is not measured yet |
+| End users | Three named users: broadcasters, coaches and academies, blind and low-vision fans | [SUBMISSION, Who uses it](SUBMISSION.md#who-uses-it); the academy drill, the cue sheet and the audio-description audience are all in the live app | Partial: the Jordet et al. (2020) link is an association, and whether the drill changes anyone's scanning is untested |
 | End users | Viewers understand the play better | — | **Missing:** the optional viewer pilot (SPEC §9) has not run |
 
 ## 4. User experience and presentation
@@ -127,7 +128,7 @@ for four things; each has a measured number ([docs/NUMBERS.md](../docs/NUMBERS.m
 
 The crew has model agents (Director, Analyst, Telestrator, and narration with its two voices) and code steps
 (Verifier, Voice), each with its own schema, timeout and template. The Verifier is a separate gate
-that can veto. Of <!--num:MA8.n-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false ([crew_evidence](../eval/reports/crew_evidence.md), MA8).
+that can veto. Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false ([crew_evidence](../eval/reports/crew_evidence.md), MA8).
 
 #### "Coordinate through shared state and effective handoffs"
 
@@ -192,7 +193,7 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   the voice that wrote it, told why; the other lines and the plan stand
   ([agents/workflow.py](../agents/workflow.py)). The broken lines are a number or
   player the model wrote, an unbacked term, a broken placeholder, an unknown, forbidden or
-  tampered claim. Of <!--num:MA8.n-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false. On
+  tampered claim. Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false. On
   the Foundry drafts it rejected 0 of 234 anchored lines: the schema already prevents those
   errors (crew_evidence).
 - **Audiences in parallel.** Narration drafts every persona × language script at once, and

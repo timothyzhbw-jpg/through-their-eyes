@@ -2205,9 +2205,9 @@ original visual identity.
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
 - **Academy drill** (2026-10-22, Bowen: a light, game-like scan trainer with no sim change;
-  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment; deep link `?play=drill`, with
-  `?match=press_escape-0` for the harder moment, or in a stitched match its first hero moment with a
-  look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
+  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment, the moment rail and the intro
+  card; deep link `?play=drill`, with `?match=press_escape-0` for the harder moment, or in a
+  stitched match its first hero moment with a look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
   pass reaches him, check your shoulder, then make the pass with only what your look showed. It
   wraps Take his eyes' grid and Your call's picture: every look was re-simulated ahead of time, so
   no live re-simulation and no model call.
@@ -2291,8 +2291,8 @@ original visual identity.
   chapters do: The look (`blind_side_run` seed 3), Under pressure (`press_escape` seed 0), The
   corner and The goal (`corner_blind_side`, `far_post_finish`: hero moments inside match-1, opened
   as their breakdowns there with `?match=match-1&moment=<scenario>`, where they are cached), and
-  Full match · live (match-1's stream). The page on screen is marked; a phone scrolls the row
-  sideways. While the intro card is up the rail keeps its place, hidden; it stays off Your call,
+  Full match · live (match-1's stream), then, set apart, the Academy drill (`?play=drill`). The
+  page on screen is marked; a phone scrolls the row sideways. While the intro card is up the rail keeps its place, hidden; it stays off Your call,
   Take his eyes and the step-through, which have their own way back; `rail=0` leaves it out (the
   demo video's framing). On a hero page the Live pill opens the full match's stream.
 - **Quick tour** (2026-10-22, outside UX review: a first-time visitor met too many concepts and
