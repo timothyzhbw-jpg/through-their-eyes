@@ -15,6 +15,7 @@ from explain.render import ScriptLine as RenderLine
 from explain.render import build_payload, check_payload, render_claim
 from explain.verifier import Verifier
 from sim.match import PossessionSpec, build_match, global_id
+from sim.roster import ZH_NAMES
 
 
 @pytest.fixture(scope="module")
@@ -244,8 +245,9 @@ def test_a_goal_is_in_the_score_and_its_moment_leads_the_candidates(scoring):
     assert out.text == (f"{h7} found N. Varnhall, who looked up 0.6 seconds before the ball "
                         f"reached him and scored at the far post past {a1}.")  # fmt: skip
     zh = render_claim(rc.all_claims[cid], rc.verdicts[cid], "zh", rc.names)
-    assert zh.text == (f"{h7}传球找到N. Varnhall，球到之前0.6秒他抬头看了一眼，"
-                       f"随后打远角破门，攻破了{a1}把守的球门。")  # fmt: skip
+    # zh names players by their Chinese names (sim.roster.ZH_NAMES, #191).
+    assert zh.text == (f"{ZH_NAMES['H7']}传球找到{ZH_NAMES['H9']}，球到之前0.6秒他抬头看了一眼，"
+                       f"随后打远角破门，攻破了{ZH_NAMES['A1']}把守的球门。")  # fmt: skip
     for language in ("en", "zh"):
         line = RenderLine(id="L1", text=rc.all_claims[cid].template_for(language), claims=[cid])
         built = build_payload("recap", "casual", language, [line], rc.all_claims, rc.verdicts,

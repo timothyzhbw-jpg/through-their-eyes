@@ -62,10 +62,9 @@ from pydantic import ValidationError
 from agents import fallbacks, prompts
 from agents.context import MomentContext
 from agents.llm import DEFAULT_TIMEOUT_S
-from agents.persona_rules import forbidden
+from agents.persona_rules import all_connectives, excluded
 from agents.plan import template_plan, validate_plan
 from agents.schemas import (
-    CONNECTIVES,
     PLAYER_ID,
     BreakdownResult,
     DirectorChoice,
@@ -142,7 +141,8 @@ def anchored_lines(ctx: MomentContext, persona: Persona, language: Language, spe
         if not draft.claims:
             out.append({"claim": None, "connective": text})
             continue
-        connective = next((c for c in CONNECTIVES[language]
+        # The persona's own connectives too: its opener rides on its first claim line.
+        connective = next((c for c in all_connectives(language)
                            if text.startswith(c) and len(text) > len(c)), None)  # fmt: skip
         out.append({"claim": draft.claims[0], "connective": connective})
     return {"lines": out}
@@ -725,8 +725,9 @@ def _perturb(ctx: MomentContext, line: ScriptLine, persona: Persona, language: L
     if kind == "unknown_claim":
         return (ctx, edit(update={"claims": ["made_up_claim"]})) if line.claims else None
     if kind == "forbidden_claim":
-        off = [c for c in forbidden(persona) if c in ctx.supported]
-        if not off or line.claims:  # one per script: replaces the script's first connective
+        # Off the persona's palette (agents/persona_rules.py): the forbidden ids and the rest.
+        off = sorted(c for c in excluded(persona) if c in ctx.supported)
+        if not off:  # one per script: replaces the script's first line
             return None
         return ctx, edit(update={"text": ctx.claims[off[0]].template_for(language),
                                  "claims": [off[0]]})  # fmt: skip
@@ -748,15 +749,15 @@ def perturbations(
     ctx: MomentContext, scripts: Iterable[Any], kinds: Sequence[str] = PERTURBATIONS
 ) -> list[Outcome]:
     """Every aired line of `scripts`, perturbed by each kind that applies to it, through both
-    pipelines. `forbidden_claim` replaces a script's first connective line (one per script)."""
+    pipelines. `forbidden_claim` replaces a script's first line (one per script)."""
     out = []
     for s in scripts:
         persona, language = s.persona, s.language
-        first_connective = next((x.id for x in s.lines if not x.claims), None)
+        first_line = s.lines[0].id if s.lines else None
         aired = {x.id: x.text for x in s.payload.lines}
         for line in s.lines:
             for kind in kinds:
-                if kind == "forbidden_claim" and line.id != first_connective:
+                if kind == "forbidden_claim" and line.id != first_line:
                     continue
                 made = perturb(ctx, line, persona, language, kind)
                 if made is None:
@@ -852,7 +853,7 @@ def _redraft(ctx: MomentContext, line: dict, language: Language) -> ScriptLine |
     """An anchored draft line as the model returned it (a claim id and/or a connective), composed
     again with today's verified templates; None when today's evidence does not support its claim."""
     text, claims = line["text"], list(line["claims"])
-    connective = next((c for c in CONNECTIVES[language] if text.startswith(c)), None)
+    connective = next((c for c in all_connectives(language) if text.startswith(c)), None)
     if not claims:
         return ScriptLine(id=line["id"], speaker=line["speaker"], text=connective or text,
                           claims=[])  # fmt: skip

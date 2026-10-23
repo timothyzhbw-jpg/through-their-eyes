@@ -104,7 +104,7 @@ Event types:
 
 | `type` | `source` | `player` | `x`, `y` | Notable `attrs` |
 |---|---|---|---|---|
-| `pass` | sim | passer | ball at the kick | `to`, `target` (aim point, m), `speed` (launch speed, m/s), `distance` (m), `receiver`, `end`, `end_at` |
+| `pass` | sim | passer | ball at the kick | `to`, `target` (aim point, m), `speed` (launch speed, m/s), `distance` (to the aim point, m; the app's pass length is how far the tracked ball moved from the kick to `end`, SPEC 4.6), `receiver`, `end`, `end_at` |
 | `reception` | sim | a teammate of the passer who controls the ball | ball | `at` |
 | `interception` | sim | an opponent who controls the free ball | ball | `at` |
 | `possession_change` | sim | who won the ball (interception or tackle), same frame | — | |
