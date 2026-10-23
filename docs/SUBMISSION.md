@@ -17,9 +17,7 @@ commit you submit and update [^tests] and [^match]. -->
 player's own perception: where he looked before the ball arrived, who was in sight, and what he
 believed. It replays the moment through his eyes, then re-simulates it without the one look that
 made the play: over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently.[^flip] Every line the
-crew says or captions is checked by code before it airs: in an offline stress test, of <!--num:V1.total-->2,837<!--/num--> deliberately broken
-lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired,
-<!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence] Around it: the whole match streams live at
+crew says or captions is checked by code before it airs: in an offline stress test. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence] Around it: the whole match streams live at
 1×, with a rail of its moments, the match recap, the tactics cards, five audiences, and English
 and Chinese.
 
@@ -186,7 +184,7 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 - **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
   timeout; every single-agent call did, so deployed it would have aired its templates.
 - **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
-  back to the voice that wrote it, told why; the plan and the other lines stand. Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false.[^crew-evidence]
+  back to the voice that wrote it, told why; the plan and the other lines stand. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence]
 - **Audiences in parallel.** Each audience and language is its own narration call, run at once:
   ten scripts take about as long as one (about 3.5 s), though the whole crew is not faster than
   one agent.[^crew-evidence]

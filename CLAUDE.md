@@ -287,6 +287,9 @@ _Fill in as they come to exist._
   server, Verifier rewrite loop, failure drill and checkpoint bring-back): `docs/crew_workflow.mmd`,
   `.dot`, `.svg` and `-dark.svg`; the SVGs need Graphviz `dot` (render in python:3.11-slim with
   `apt-get install graphviz`); `--check`; `tests/test_crew_workflow_diagram.py` fails when they drift.
+- `.github/workflows/uptime.yml` — hourly GET-only health check of the public demo (API `/health`,
+  `/api/matches`, moments, web root, a `/data/` file) until 2026-11-11 (SPEC 8); a failure opens an
+  `uptime` issue, a green run closes it; run it by hand with `gh workflow run uptime`
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)

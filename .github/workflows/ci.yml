@@ -110,7 +110,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25  # the smoke suite passed 10 minutes on a loaded runner (29 pages, axe on each)
+    timeout-minutes: 45  # 25 cut the suite off at the journey pages; with axe on each page it takes 25+ min on a loaded runner
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0

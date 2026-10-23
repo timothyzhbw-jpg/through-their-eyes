@@ -83,7 +83,7 @@ communicates the project's value, and whether frontend and backend are balanced.
 
 | Question | Claim | Evidence | Status |
 |---|---|---|---|
-| Intuitive | A first-time visitor has one path | the intro card is one line and **Start** (PR #177); one panel per tour step (PR #179); the ten-step judge tour, [from its first step](https://ttesite1ff906.z14.web.core.windows.net/?tour=1). README ["Judge it in 3 minutes"](../README.md#judge-it-in-3-minutes) and ["The full tour"](../README.md#the-full-tour); the team's live-demo script, `docs/DEMO_SCRIPT.md` | Partial: the four-step quick tour (`?tour=quick`) is PR #178, not merged |
+| Intuitive | A first-time visitor has one path | the intro card is one line and **Start** (PR #177); one panel per tour step (PR #179); the ten-step judge tour, [from its first step](https://ttesite1ff906.z14.web.core.windows.net/?tour=1). README ["Judge it in 3 minutes"](../README.md#judge-it-in-3-minutes) and ["The full tour"](../README.md#the-full-tour); the team's live-demo script, `docs/DEMO_SCRIPT.md` | Partial: the quick tour (`?tour=quick`) is PR #178, not merged |
 | Well designed | First-person replay and a tactical board | [web/](../web/) (PR #5), head and body yaw on every player (PR #7), animated players (PRs #26, #27), comfort mode. Live: [first person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0). Trailer: `pov-look` 0:26 | ✅ |
 | Well designed | Overlays | pass options with "he thought / it was" (PR #8), blind-side alerts (PR #12), What if… ghost paths (PR #9), pitch control on the tactical board (toggle, off by default), the scan step-through (PR #136), the run without the look told in verified lines (PR #139) | ✅ |
 | Well designed | Live, with persona and language switching | live WebSocket replay, breakdowns per persona × language (en, zh), Azure AI Speech (PR #24); the first request per persona and language runs the crew (12.9 s on a warm replica, [SPEC §8](SPEC.md#8-platform-and-deploy), 2026-10-20), later ones come from the cache | ✅ |
@@ -193,7 +193,7 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   the voice that wrote it, told why; the other lines and the plan stand
   ([agents/workflow.py](../agents/workflow.py)). The broken lines are a number or
   player the model wrote, an unbacked term, a broken placeholder, an unknown, forbidden or
-  tampered claim. Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false. On
+  tampered claim. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false. On
   the Foundry drafts it rejected 0 of 234 anchored lines: the schema already prevents those
   errors (crew_evidence).
 - **Audiences in parallel.** Narration drafts every persona × language script at once, and

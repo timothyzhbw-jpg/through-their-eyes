@@ -1,8 +1,10 @@
-// The tours (SPEC 7). The quick tour is a first-time visitor's one path, four steps: watch the
-// look, remove it, compare the outcomes, make your own call (Start on the intro card, "Quick tour"
-// on the moment card, ?tour=quick). The full tour is an optional walk of about ninety seconds
-// through the signature features, so a judge with three minutes sees each of them without
-// exploring ("Full tour" on the intro card and the story, ?tour=1). Each step lights up one thing
+// The tours (SPEC 7). The quick tour is a first-time visitor's one path, five steps: watch the
+// look, remove it, compare the outcomes, see every number checked, make your own call (Start on
+// the intro card, "Quick tour" on the moment card, ?tour=quick). The full tour is an optional walk
+// of about ninety seconds through the signature features, so a judge with three minutes sees each
+// of them without exploring ("Full tour" on the intro card and the story, ?tour=1). The Full story
+// walks one moment through the journey's five steps in about ninety seconds, opening each step's
+// panel ("Full story" on the journey bar, ?tour=story; journey/). Each step lights up one thing
 // the app already draws (a ring, the page dimmed around it where the picture is not the point),
 // says one plain line, and sets the app up with the app's own controls (actions.ts).
 //
@@ -13,6 +15,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useView, type ViewSession } from "../session";
+import { openStep } from "../journey/state";
 import { useStore } from "../store/store";
 import { intro } from "../ui/intro";
 import { prefersReducedMotion } from "../yourcall/controller";
@@ -23,6 +26,7 @@ import {
   indexOf,
   quickTourFits,
   resolveSteps,
+  secondsOf,
   stepsOf,
   targetOf,
   wordsOf,
@@ -52,6 +56,9 @@ function arrive(session: ViewSession, step: TourStep, seq: number) {
   cancel?.();
   cancel = null;
   cancel = enterStep(step.enter, session) ?? null;
+  // The Full story's steps open the journey's panel for theirs (the tour brings its target into
+  // view itself).
+  if (step.journey && session.kind === "hero") openStep(step.journey, { reveal: false });
 }
 
 const viewport = (): Size => ({ w: window.innerWidth, h: window.innerHeight });
@@ -185,7 +192,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
     target: Box | null;
     keep: Keep[];
     home: Box | null;
-    floor: number | null; // a phone in the quick tour: the bottom of the picture
+    floor: number | null; // phone, quick tour, picture kept in view: the bottom of the picture
   }>(NOTHING);
 
   // Set the step up once per arrival, then hand the keyboard to the card: after the app's own
@@ -255,7 +262,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
       const home = homeBox();
       const views = document.querySelector(".stage .views")?.getBoundingClientRect();
       const floor =
-        kind === "quick" && innerWidth < PHONE_MAX && views && views.height > 0
+        kind === "quick" && !step.dim && innerWidth < PHONE_MAX && views && views.height > 0
           ? Math.round(views.bottom)
           : null;
       const key = JSON.stringify([box, keep, home, floor]);
@@ -310,8 +317,9 @@ function TourOverlay({ session }: { session: ViewSession }) {
     width: target.width + 2 * RING_PAD,
     height: target.height + 2 * RING_PAD,
   };
-  // The quick tour keeps the picture clear: on a wide screen in the moment card's place, on a
-  // phone under the picture (scrolling inside when a small phone has too little room there).
+  // The quick tour keeps the picture clear on a step that leaves it undimmed: on a wide screen in
+  // the moment card's place, on a phone under the picture (scrolling inside when a small phone has
+  // too little room there). A dim step is placed clear of the evidence card it points at.
   const under = seen.floor !== null && view.h - seen.floor - GUTTER >= PHONE_ROOM;
   const place: { top: number; left: number; width: number; maxHeight?: number } =
     seen.home && !phone
@@ -366,7 +374,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
         <div aria-live="polite" className="tour-say">
           <div key={seq} className="tour-words">
             <p className="kicker accent">
-              {kind === "quick" ? "Quick tour" : "Tour"} · {index + 1} of {steps.length}
+              {KICKER[kind]} · {index + 1} of {steps.length}
             </p>
             <h2 id="tour-title" className="tour-title">
               {title}
@@ -439,9 +447,14 @@ export function FirstTourButton({ className }: { className?: string }) {
 const TOUR_LABEL: Record<TourKind, string> = {
   quick: "Quick tour",
   full: "Full tour · 90 s",
+  story: `Full story · ${secondsOf("story")} s`, // its steps' holds (steps.json)
 };
 
-/** Start a tour at its first step ("Quick tour", "Full tour · 90 s"); closes the intro card. */
+/** The tour card's kicker. */
+const KICKER: Record<TourKind, string> = { quick: "Quick tour", full: "Tour", story: "Full story" };
+
+/** Start a tour at its first step ("Quick tour", "Full tour · 90 s", "Full story"); closes the
+ * intro card. */
 export function TourButton({
   className = "btn btn-quiet",
   kind = "full",

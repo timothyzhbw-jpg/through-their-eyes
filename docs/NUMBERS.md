@@ -115,7 +115,7 @@ which runs on Linux. The trailer reads them off the live page (`out/video/claims
 |---|---|---|---|---|---|
 | D1 | One uncached model breakdown, warm replica · first request after a deploy · from the cache | right after the last deploy, before `infra.prewarm`: `curl -s -o /dev/null -w '%{time_total}\n' -X POST <API>/api/breakdowns -H 'content-type: application/json' -d '{"match": "blind_side_run-3", "personas": ["coach"], "languages": ["en"]}'` (first = cold); again with another persona (warm); the first again (cached). Each uncached call counts against the daily cap | 12.9 s · 23.8–25.9 s · 0.15 s (SPEC §8, 2026-10-20, revision 0000017) | TODO(freeze) | README Evidence; SUBMISSION [^latency]; RUBRIC_MAP §4 |
 | D2 | The live trace: total, MCP start, crew; spans | the Kusto query in RUBRIC_MAP "The live trace", on the first model breakdown after the last deploy | 15.5 s · 5.1 s · 9.9 s (2026-10-20, before #123's Director budget, #126 names, #127 persona claims) | TODO(freeze) | RUBRIC_MAP "The live trace"; SUBMISSION "Observed live", [^trace]; README and RUBRIC_MAP §5 "the four asks": a screenshot slot for one breakdown's trace (agent spans and handoffs), TODO(freeze) after the 10/24 prewarm |
-| D3 | Tests in CI on the submitted commit: pytest · vitest · smoke pages | `gh run view <run id> --log \| grep -E -e 'passed in [0-9.]+s' -e 'Tests +[0-9]+ passed' -e 'pages passed'` | 1216 · 595 · 15 of 15 (run 39583678095, `44c0bb5`, 2026-10-21) | TODO(freeze) | RUBRIC_MAP header; SUBMISSION Evidence, [^tests] |
+| D3 | Tests in CI on the submitted commit: pytest · vitest · smoke pages | `gh run view <run id> --log \| grep -E -e 'passed in [0-9.]+s' -e 'Tests +[0-9]+ passed' -e 'pages passed'` | TODO(freeze): 1216 · 595 · 15 of 15 was run 39583678095, `44c0bb5`, 2026-10-21, before the journey's tests and four new smoke pages | TODO(freeze) | RUBRIC_MAP header; SUBMISSION Evidence, [^tests] |
 | D4 | Pull requests checked for Copilot, Azure MCP Server, Fabric | `gh pr list --state all --limit 500 --json number,title,body \| jq length`; `git log --all -i --grep copilot` | 30 PRs (2026-10-20) | TODO(freeze) | RUBRIC_MAP "Development tools"; SUBMISSION [^devtools] |
 | D5 | Expected Azure cost to 2026-11-10 | SPEC §8 budget; Cost Management for `rg-through-their-eyes` | ≈ $15 | TODO(freeze) | RUBRIC_MAP §3 |
 | D6 | The trailer: length, timeline | `cd video && npm run trailer` report (`out/video/trailer_report.md`) | 1:57, 117.30 s (v13) | TODO(freeze) (v14, #182) | VIDEO_SCRIPT; Innovation Studio page |
@@ -155,6 +155,12 @@ freeze (`curl -sG https://prices.azure.com/api/retail/prices --data-urlencode "\
 | B3 | Hosting per 30 days, idle to busy | Container Apps 0.5 vCPU / 1 GiB × 2,592,000 s at the list prices; ACR Basic; SPEC §8 for the rest | $17–46 | TODO(freeze) | SUBMISSION "Business model" |
 | B4 | Share of breakdown views served from the cache | Application Insights over the judging window: `POST /api/breakdowns` requests on the deployed API against the `breakdown` spans of crew runs (the query in RUBRIC_MAP "The live trace", grouped by operation) | not measured: only 2026-10-22's telemetry is kept, 14 requests | TODO(freeze) | SUBMISSION "Business model" |
 | B5 | Twenty moments × five audiences × two languages: model · speech | B1 × 50 breakdowns; B2 × 50 | about $0.50 · $1.40 | TODO(freeze) | SUBMISSION "Business model" |
+
+## S. Simulated, not measured
+
+| Id | What | Source | Label | Where |
+|---|---|---|---|---|
+| S1 | The audience and sponsor figures in "Publish this moment" and the journey's Value step: impressions, engagement, click-through, sponsor impressions, recall proxy | invented ranges and factors in `web/src/studio/audience-assumptions.json` (every entry `"source": "none, invented"`), drawn by a seeded model in `web/src/studio/audience.ts`; no real audience exists | every figure carries the badge "Demo data: simulated audience, not real results" (`web/src/journey/DemoBadge.tsx`) | web README "Publish this moment" and "From event to value"; SUBMISSION "Business model" |
 
 ## X. Pictures and text that hold numbers or names
 

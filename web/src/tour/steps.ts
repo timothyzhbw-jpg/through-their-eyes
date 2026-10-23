@@ -1,10 +1,12 @@
-// The tours' step lists (steps.json, SPEC 7): the quick tour, a first-time visitor's four steps,
-// and the full judge tour. Their schema, which steps this page can show, and each step's words with
+// The tours' step lists (steps.json, SPEC 7): the quick tour, a first-time visitor's five steps,
+// the full judge tour, and the Full story (one moment through the journey's five steps, journey/).
+// Their schema, which steps this page can show, and each step's words with
 // their slots filled from the moment's own data. A step this page cannot show (no live service, a
 // hero with no counterfactual, a stitched match) is left out, never shown broken.
 
 import { z } from "zod";
 import { runLabels } from "../data/hero";
+import { JOURNEY_STEPS } from "../journey/steps";
 import { shortName } from "../data/roster";
 import type { ViewSession } from "../session";
 import { takeEyesOf } from "../takeeyes/controller";
@@ -30,6 +32,7 @@ export const ENTERS = [
   "counterfactual",
   "openEvidence",
   "openTamper",
+  "tamperAuto",
   "yourCall",
   "takeEyes",
   "audience",
@@ -70,6 +73,7 @@ const Step = z.strictObject({
   enter: z.enum(ENTERS),
   act: z.enum(ACTS).optional(),
   say: z.enum(SAYS).optional(), // the verified lines its panel carries
+  journey: z.enum(JOURNEY_STEPS).optional(), // the journey step whose panel it opens (journey/)
   needs: z.array(When),
   hold: z.number().positive(), // suggested seconds on the step
 });
@@ -78,22 +82,30 @@ export const StepList = z.strictObject({
   about: z.string(),
   steps: z.array(Step).min(1), // the full judge tour
   quick: z.array(Step).min(1), // the quick tour
+  story: z.array(Step).min(1), // the Full story: one moment through the journey's five steps
 });
 
 export type TourStep = z.infer<typeof Step>;
-export type TourKind = "quick" | "full";
+export type TourKind = "quick" | "full" | "story";
 
 const LISTS = StepList.parse(raw);
 export const STEPS: TourStep[] = LISTS.steps;
 export const STEP_IDS: string[] = STEPS.map((s) => s.id);
 export const QUICK_STEPS: TourStep[] = LISTS.quick;
 export const QUICK_IDS: string[] = QUICK_STEPS.map((s) => s.id);
+export const STORY_STEPS: TourStep[] = LISTS.story;
+export const STORY_IDS: string[] = STORY_STEPS.map((s) => s.id);
 
 /** A tour's steps, all of them, in order. */
-export const stepsOf = (kind: TourKind): TourStep[] => (kind === "quick" ? QUICK_STEPS : STEPS);
+export const stepsOf = (kind: TourKind): TourStep[] =>
+  kind === "quick" ? QUICK_STEPS : kind === "story" ? STORY_STEPS : STEPS;
 
-/** The tour a step id belongs to (ids are unique across both). */
-export const kindOf = (id: string): TourKind => (QUICK_IDS.includes(id) ? "quick" : "full");
+/** The tour a step id belongs to (ids are unique across the three). */
+export const kindOf = (id: string): TourKind =>
+  QUICK_IDS.includes(id) ? "quick" : STORY_IDS.includes(id) ? "story" : "full";
+
+/** A tour's length in seconds: the sum of its steps' suggested holds. */
+export const secondsOf = (kind: TourKind): number => stepsOf(kind).reduce((t, s) => t + s.hold, 0);
 
 /** What this page has, and the words the slots take: read from the session, never written in. */
 export interface TourEnv {
@@ -142,7 +154,7 @@ export function indexOf(steps: TourStep[], id: string | null): number {
   if (id === null) return 0;
   const exact = steps.findIndex((s) => s.id === id);
   if (exact >= 0) return exact;
-  const ids = kindOf(id) === "quick" ? QUICK_IDS : STEP_IDS;
+  const ids = stepsOf(kindOf(id)).map((s) => s.id);
   const order = ids.indexOf(id);
   const after = steps.findIndex((s) => ids.indexOf(s.id) > order);
   return order >= 0 && after >= 0 ? after : 0;

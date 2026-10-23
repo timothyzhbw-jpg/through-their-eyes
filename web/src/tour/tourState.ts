@@ -7,7 +7,7 @@ import type { TourKind } from "./steps";
 
 export interface TourState {
   open: boolean;
-  kind: TourKind; // the quick tour (a first-time visitor's four steps) or the full judge tour
+  kind: TourKind; // the quick tour (a first-time visitor's five steps) or the full judge tour
   at: string | null; // the step asked for; null: the first this page shows
   seq: number; // bumps on every start and move
 }
