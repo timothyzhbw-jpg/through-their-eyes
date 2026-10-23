@@ -71,8 +71,9 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const wasScanSteps = useRef(false);
   const wasDrill = useRef(false);
   const introOpen = useStore(intro, (s) => s.open);
-  // While a tour runs its card is the one panel: the moment card stands down (the evidence card
-  // stays, the full tour points at it); the quick tour's card takes its place.
+  // While a tour runs its card is the one panel: the moment card stands down. An open evidence
+  // card stays (the full tour points at it, and the quick tour's check does too); otherwise the
+  // quick tour's card takes the moment card's place.
   const touring = useStore(tour, (s) => (s.open ? s.kind : null));
 
   useEffect(() => startClock(session), [session]);
@@ -161,7 +162,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           }
           run={<RunToggle />}
           card={
-            evidence && touring !== "quick" ? (
+            evidence ? (
               <EvidenceCard />
             ) : touring === "quick" ? (
               <div className="tour-home" aria-hidden="true" />

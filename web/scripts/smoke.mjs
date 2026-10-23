@@ -952,10 +952,11 @@ async function coldLoad(page, shoot) {
   await shoot(`at-${took}s`);
 }
 
-/** The quick tour (SPEC 7): four steps, each card on screen with no sideways scroll; the look in
- * his eyes, the run without it, the board, then Your call, which Done leaves open. */
+/** The quick tour (SPEC 7): five steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, the Verifier refusing a wrong number, then Your call,
+ * which Done leaves open. */
 async function quickTour(page, shoot) {
-  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 4/ });
+  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 5/ });
   const expect = [
     ["Watch the look", () => mainView(page, "eyes")],
     [
@@ -991,10 +992,18 @@ async function quickTour(page, shoot) {
         }
       },
     ],
+    [
+      "Every number is checked",
+      () =>
+        see(
+          page.locator("section.evidence .tamper-result.held"),
+          "the Verifier refusing the tour's wrong number",
+        ),
+    ],
     ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
   ];
   for (const [k, [title, shows]] of expect.entries()) {
-    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 4`) });
+    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 5`) });
     await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
     await shows();
     if (await page.locator(".moment-card").isVisible()) {
