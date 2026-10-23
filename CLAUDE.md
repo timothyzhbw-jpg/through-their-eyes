@@ -273,6 +273,11 @@ _Fill in as they come to exist._
   chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full
   Chrome's `--headless` crops it). `tests/test_architecture.py` fails when any of them is stale
   or the diagram drifts from the code
+- `uv run python docs/crew_workflow.py` — the crew's workflow diagram drawn by Microsoft Agent
+  Framework's `WorkflowViz` from `build_workflow` (SPEC 6), with code-derived annotations (MCP tool
+  server, Verifier rewrite loop, failure drill and checkpoint bring-back): `docs/crew_workflow.mmd`,
+  `.dot`, `.svg` and `-dark.svg`; the SVGs need Graphviz `dot` (render in python:3.11-slim with
+  `apt-get install graphviz`); `--check`; `tests/test_crew_workflow_diagram.py` fails when they drift.
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)

@@ -332,6 +332,54 @@ uv run --env-file .env python -m infra.smoke
 deployment, plus an Azure AI Speech resource, then writes the settings to `.env` (git-ignored).
 Every variable is documented in [.env.example](.env.example).
 
+## Best Multi-Agent System
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/crew_workflow-dark.svg">
+  <img src="docs/crew_workflow.svg" alt="The crew's workflow as Microsoft Agent Framework draws it: Director → Analyst, which calls the MCP tool server and its ten tools → Telestrator ∥ narration ⇄ Verifier (a refuted line goes back for a rewrite at most twice, then is dropped) → Voice. Dashed edges from the Director, Analyst, Telestrator and narration to the failure drill and back: taken down, the agent runs on its template and waits; brought back, it runs again from the latest checkpoint.">
+</picture>
+
+Agent Framework's own `WorkflowViz` draws this graph from the workflow the API runs
+(`build_workflow`); the MCP tool server, the Verifier's rewrite loop and the failure drill's
+bring-back are added from the code ([docs/crew_workflow.py](docs/crew_workflow.py), checked by
+[tests/test_crew_workflow_diagram.py](tests/test_crew_workflow_diagram.py)). The category asks
+for four things; each has a measured number ([docs/NUMBERS.md](docs/NUMBERS.md), rows MA).
+
+### "Distinct roles"
+
+Four model agents (Director, Analyst, Telestrator, and narration with its two voices) and two code steps
+(Verifier, Voice), each with its own schema, timeout and template. The Verifier is a separate gate
+that can veto: of 2,837 broken lines it kept 2,837 off the air; without it 2,823 aired, 888 of
+them false ([crew_evidence](eval/reports/crew_evidence.md), MA8).
+
+### "Coordinate through shared state and effective handoffs"
+
+Typed messages on the workflow's edges, and one verified body of evidence every step reads. The
+crew trace records each handoff: 394 of 394 aired lines trace to their verified claims, the voice
+call that chose them, the Verifier round that passed them and their voice cue
+([crew_evidence](eval/reports/crew_evidence.md), MA10).
+
+### "Recover from failures"
+
+With any one agent taken down, 280/280 scripts still aired, with 3 of 4 roles still from the
+model; one agent doing all four roles kept 0 of 4. Bringing the agent back from the Agent
+Framework checkpoint restored the fault-free breakdown in 70/70 drills ([crew_evidence](eval/reports/crew_evidence.md),
+MA7). Try it on the live site: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer).
+
+### "An end-to-end outcome a single agent could not achieve as effectively"
+
+What the crew buys is a breakdown that finishes inside the step budget, survives a fault and
+recovers cheaply. Under the deployed 8 s step timeout, 0 of 66 crew agent runs would have timed
+out, against 6 of 6 for one agent doing the four roles in one call (MA3). Bringing the Telestrator
+back cost 1.0 model request (about 2.1k tokens) against the single agent's re-run, 1.7 requests
+(about 11.7k tokens) (MA2); the Analyst costs more, 11.0 requests, because every step after it
+runs again (MA2b). What it does not buy is better lines: both structures aired 0 wrong facts and
+scored 5.00 for groundedness ([crew_vs_single](eval/reports/crew_vs_single.md), MA5).
+
+<!-- TODO(freeze): a screenshot of one live breakdown's trace in Application Insights (the agent
+spans and their handoffs), taken after the 10/24 prewarm; save it as
+docs/screenshots/appinsights-trace.png and show it here (docs/NUMBERS.md D2). -->
+
 ## Architecture
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">

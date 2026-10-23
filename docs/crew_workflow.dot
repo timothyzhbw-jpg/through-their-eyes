@@ -1,0 +1,33 @@
+digraph Workflow {
+  rankdir=TD;
+  node [shape=box, style=filled, fillcolor=lightblue];
+  edge [color=black, arrowhead=vee];
+
+  "director" [fillcolor=lightgreen, label="director\n(Start)"];
+  "analyst" [label="analyst"];
+  "telestrator" [label="telestrator"];
+  "narration" [label="narration"];
+  "verifier" [label="verifier"];
+  "voice" [label="voice"];
+  "director" -> "analyst";
+  "analyst" -> "telestrator";
+  "analyst" -> "narration";
+  "narration" -> "verifier";
+  "verifier" -> "narration";
+  "telestrator" -> "voice";
+  "verifier" -> "voice";
+
+  // Annotations from the code (agents/…), not drawn by WorkflowViz:
+  "mcp" [label="MCP tool server (stdio)\nget_moment\nlist_claims\nget_vision\nget_pitch_control\nget_xt\nget_pressing\nget_live_stats\nrun_counterfactual\nlist_options\nwhat_if", style="filled,dashed", fillcolor="#fff8e1", fontcolor="#13201a"];
+  "rewrite" [label="rewrite ≤ 2 rounds, then drop the line", style="filled,dashed", fillcolor="#fff8e1", fontcolor="#13201a"];
+  "drill" [label="Producer desk failure drill · Agent Framework checkpoint storage (every superstep)\n→ down: template, then request_info(AgentDown)\n← AgentBack: re-run from the latest checkpoint", style="filled,dashed", fillcolor="#fff8e1", fontcolor="#13201a"];
+  { rank=same; "analyst"; "mcp"; }
+  { rank=same; "verifier"; "rewrite"; }
+  { rank=sink; "drill"; }
+  "analyst" -> "mcp" [style=dashed, dir=both, label="tool calls (high priority)"];
+  "rewrite" -> "verifier" [style=dotted, arrowhead=none];
+  "director" -> "drill" [style=dashed, dir=both, constraint=false];
+  "analyst" -> "drill" [style=dashed, dir=both, constraint=false];
+  "telestrator" -> "drill" [style=dashed, dir=both, constraint=false];
+  "narration" -> "drill" [style=dashed, dir=both, constraint=false];
+}
