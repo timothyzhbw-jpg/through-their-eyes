@@ -33,6 +33,11 @@
 //   ?match=match-1&moment=<scenario>           open that hero moment's breakdown inside the
 //                                              match (corner_blind_side, far_post_finish:
 //                                              the moment links, moments/)
+//   ?team=KES|COR                              follow a club (personal/): its moments first, the
+//                                              board and the summary say so
+//   ?player=<roster id, e.g. H8>               follow a player: ringed in the 3D view and on the
+//                                              board, his moments first
+// (?persona and ?lang above also fill "Your view"; the four are kept in localStorage too.)
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no moment
 // links above the live screen: the framing of the demo video's captures), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
@@ -52,6 +57,7 @@ import { IN_MATCH_MOMENTS } from "./moments/moments";
 import { QUICK_IDS, STEP_IDS } from "./tour/steps";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
+import { parsePlayer, parseTeam, type Team } from "./personal/follow";
 import { stepThroughOf } from "./steps/controller";
 import { takeEyesOf } from "./takeeyes/controller";
 import { yourCallOf } from "./yourcall/controller";
@@ -74,6 +80,8 @@ export interface DeepLink {
   invalidPlan: boolean; // plan=invalid: load the broken plan to show the template fallback
   persona: Persona | null;
   language: Language | null;
+  team: Team | null; // the club followed (personal/); null: none in the address
+  player: string | null; // the player followed, a roster id
   run: RunName | null;
   view: View | null;
   at: At | null;
@@ -93,6 +101,8 @@ export const NO_LINK: DeepLink = {
   invalidPlan: false,
   persona: null,
   language: null,
+  team: null,
+  player: null,
   run: null,
   view: null,
   at: null,
@@ -127,6 +137,8 @@ export function parseDeepLink(search: string): DeepLink {
   }
   const persona = read("persona", (v) => oneOf(PERSONAS, v));
   const language = read("lang", (v) => oneOf(LANGUAGES, v));
+  const team = read("team", parseTeam);
+  const player = read("player", parsePlayer);
   const run = read("run", (v) => oneOf(RUNS, v));
   const view = read("view", (v) => oneOf(VIEWS, v));
   const at = read("at", parseAt);
@@ -156,6 +168,8 @@ export function parseDeepLink(search: string): DeepLink {
     invalidPlan: params.get("plan") === "invalid",
     persona,
     language,
+    team,
+    player,
     run,
     view,
     at,

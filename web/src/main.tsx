@@ -18,6 +18,8 @@ import { LOOK_FILES } from "./takeeyes/looks";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
+import { mergeChoices, readSaved } from "./personal/persist";
+import { personal, persistOnChange } from "./personal/state";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
 import { kindOf } from "./tour/steps";
@@ -29,7 +31,12 @@ import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
-  const link = parseDeepLink(window.location.search);
+  const parsed = parseDeepLink(window.location.search);
+  // "Your view" (personal/): the address over what an earlier visit saved, then kept up to date.
+  const chosen = mergeChoices(parsed, readSaved());
+  personal.set(chosen);
+  persistOnChange(personal);
+  const link = { ...parsed, persona: chosen.persona, language: chosen.language };
   const filming = new URLSearchParams(window.location.search).get("cine") === "1";
   intro.set({ open: link.intro });
   if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
@@ -75,6 +82,13 @@ async function main() {
         whatIfs: loaded.whatIfs,
       });
       // A match has no audience, run or named frames of its own: its view and a frame apply.
+      if (link.persona || link.language) {
+        // Only what the recap will ask for; nothing is requested until the viewer asks.
+        session.recap.state.set({
+          ...(link.persona && { persona: link.persona }),
+          ...(link.language && { language: link.language }),
+        });
+      }
       if (link.view) session.controls.setFocus(link.view);
       if (typeof link.at === "number") session.controls.seek(link.at);
       // play=yourcall: the first hero moment whose possession has bundled what-ifs, in Your call.
