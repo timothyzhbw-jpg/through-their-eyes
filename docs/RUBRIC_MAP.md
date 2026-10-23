@@ -143,9 +143,9 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   templates after about 16 s (crew_evidence).
 - **A Verifier per step, and a rewrite sent to the line's author.** A rejected line goes back to
   the voice that wrote it, told why; the other lines and the plan stand
-  ([agents/workflow.py](../agents/workflow.py)). Of 2,837 deliberately broken lines (a number or
-  player the model wrote, an unbacked term, a broken placeholder, an unknown, forbidden or
-  tampered claim), none aired with the Verifier; without it 2,823 aired, 888 of them false. On
+  ([agents/workflow.py](../agents/workflow.py)). Of 2,837 deliberately broken lines, the
+  Verifier kept every one off the air; without it, 2,823 would have aired, 888 of them stating
+  something false. On
   the Foundry drafts it rejected 0 of 234 anchored lines: the schema already prevents those
   errors (crew_evidence).
 - **Audiences in parallel.** Narration drafts every persona × language script at once, and

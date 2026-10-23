@@ -68,6 +68,8 @@ function ComparisonBasis({ gate }: { gate: HeroGate | null }) {
       {gate && (
         <p className="without-basis">
           {heldOutText(gate)}{" "}
+          {/* SourceChip has no eval-report kind; "sim" is the nearest, and the title says this
+              is an eval result read from a committed report, not a live sim value. */}
           <SourceChip kind="sim" title={`Eval result from ${gate.report}`} spoken />
         </p>
       )}

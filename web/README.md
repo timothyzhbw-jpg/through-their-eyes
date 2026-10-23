@@ -228,8 +228,9 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   not move. `src/without/` checks the payloads against the replay and shows them under "Without
   the look", on the timeline, at the edge of his eyes and in the verdict; fetched when the session is made.
 
-- `hero_gates.json` (held-out evidence for the comparison panels, from the eval reports, `uv run python -m eval.hero_gates`).
-
+- `hero_gates.json`: held-out evidence for the comparison panels, read from the eval reports
+  (`eval.hero_gates`, SPEC 3.6, 7; `uv run python -m eval.hero_gates`). `src/without/gates.ts`
+  loads it for "Without the look".
 - `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
   SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
   only one between the pass and his decision: his head, sight and belief over the window (the

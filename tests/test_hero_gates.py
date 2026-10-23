@@ -30,6 +30,20 @@ def test_blind_side_run_matches_the_doc_number():
     assert entry["n"] == report_values("H1")["n"]
 
 
+def test_far_post_finish_matches_the_doc_number():
+    entry = build()["heroes"]["far_post_finish"]
+    assert entry["changed"] == report_values("H8")["k"]
+    assert entry["n"] == report_values("H8")["n"]
+
+
+def test_the_real_reports_parse_with_their_seeds():
+    heroes = build()["heroes"]
+    assert heroes["blind_side_run"]["what"] == "decision"
+    assert heroes["blind_side_run"]["seeds"] == [100, 139]
+    assert heroes["far_post_finish"]["what"] == "placement"
+    assert heroes["far_post_finish"]["seeds"] == [200, 239]
+
+
 def test_a_report_without_the_row_is_refused(tmp_path: Path):
     reports = tmp_path / "reports"
     reports.mkdir()
