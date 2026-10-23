@@ -53,8 +53,10 @@ Deep links for the README's tour for judges, and for testing and filming
 | `play`     | `yourcall`, `recap`                                             | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused; `recap` (with a stitched `match`): its end-of-match recap for `persona` and `lang`, offered as at full time |
 | `play`     | `eyes`                                                          | open "Take his eyes" on his own look; with `match`, on its first hero moment that has a bundled look grid; counts as a spot: opens paused                                                                                                       |
 | `tour`     | `quick`, `1`, a step id                                         | open a tour paused, with no intro card: `quick` the quick tour (four steps: the look, without it, the outcomes compared, Your call), `1` the full judge tour, a step id that step of its tour                                                   |
+| `moment`   | `corner_blind_side`, `far_post_finish`                          | with `match=match-1`: open that hero moment's breakdown inside the match (the moment links); counts as a spot                                                                                                                                   |
 | `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                                         |
 | `intro`    | `0`                                                             | skip the intro card (one line and Start; the line-ups behind Teams and more); links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                       |
+| `rail`     | `0`                                                             | leave out the moment links above the live screen (filming: the demo video's captures keep their framing)                                                                                                                                        |
 | `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                                               |
 | `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                                               |
 | `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                           |
@@ -241,10 +243,11 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
   scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
 
-Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
-`tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
-files are generated, on macOS arm64; structurally elsewhere, as SPEC 3.7 promises no
-cross-platform identity).
+Regenerate them whenever `sim/`, `analytics/` or `explain/` change, on Linux, the canonical
+platform: `scripts/regen_linux.sh exports` runs these commands in `python:3.11-slim`
+([CONTRIBUTING.md](../docs/CONTRIBUTING.md#eval-before-merge)). `tests/test_committed_exports.py`
+fails on Linux when a committed file is stale, byte for byte, and skips elsewhere: the sim is
+byte-identical only within one OS (SPEC 3.7).
 
 ## How it fits together
 
@@ -374,12 +377,15 @@ src/
   options, off by default; it draws on the broadcast camera and the tactical board, one state for
   both. Per player it
   draws only sim data: the position, the torso line (shoulders, across `body`), a head ray from
-  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. The ray
-  lights up (detector green) while the scan detector marks a scan. The key's switch picks the
+  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. While
+  the scan detector marks a scan, a radar lies at the player's feet (`skeleton/radar.ts`: a 60°
+  Floodlight sector on his head yaw, eased in and out over about 150 ms of match time); the head
+  ray stays white. Without the skeleton, the key scan's player gets the radar during his key
+  scan, on the broadcast camera and the board. The key's switch picks the
   head yaw: true, or as tracked (2° sensor noise, the detector's input), rebuilt from the
   detector's exported angular velocity (`skeleton/skeleton.ts` says how; within 0.38° of the
   sim's tracked yaw on seed 3). A match export has no detector run, so there it is true yaw only
-  and the ray lights up during the sim's own scans (sight blue). No limbs: the sim has none.
+  and the radar shows during the sim's own scans. No limbs: the sim has none.
   `npm run fps` also measures it, over the broadcast camera.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
   voice steps name its line ids. Click a caption (or any line of the call) and the

@@ -56,6 +56,13 @@ The full list of messages and limits is in the docstrings of [`main.py`](main.py
   the fingerprint too. A hit is served at once; a miss runs `agents.run_crew` (the
   Analyst with our MCP server as a subprocess when `TTE_ANALYST_MCP` is on), or the offline
   templates when no model is configured or the client is limited.
+- **Degraded runs:** a model run in which a step fell back to its template (a Foundry error or
+  timeout, or a Telestrator plan that aired as the template) is cached marked `degraded` with
+  those steps, and every answer lists them. While the model is available it is run again, at most
+  once per key per `TTE_DEGRADED_RETRY_S` (600 s), under the per-client limit and the daily cap;
+  until then, and while the client is limited or the cap is reached, it is served as it is,
+  labelled by its steps' sources. A retry that comes back more degraded does not replace it.
+  Recaps follow the same rule. `infra.prewarm --refresh-degraded` re-runs every degraded view.
 - **Stores:** JSON files under `TTE_CACHE_DIR` by default; Cosmos DB containers `cache` and
   `claims_audit` when `TTE_COSMOS_ENDPOINT` is set. Workflow checkpoints and drills stay on the
   replica's disk.
@@ -110,8 +117,8 @@ dependencies and `agents`, `analytics`, `api`, `explain`, `sim`, and runs as a n
 
 ```bash
 uv run pytest tests/test_api.py tests/test_api_match.py tests/test_api_drill.py \
-  tests/test_api_hardening.py tests/test_cosmos_store.py tests/test_dockerfile.py \
-  tests/test_env_example.py
+  tests/test_api_hardening.py tests/test_api_degraded.py tests/test_cosmos_store.py \
+  tests/test_dockerfile.py tests/test_env_example.py
 ```
 
 - [`test_api.py`](../tests/test_api.py): the live stream and its limits, the cache, the rate
@@ -120,6 +127,9 @@ uv run pytest tests/test_api.py tests/test_api_match.py tests/test_api_drill.py 
 - [`test_api_hardening.py`](../tests/test_api_hardening.py): the egress budget (exports, live
   streams, the daily total), the 8x speed cap, what-if mappings kept and not re-asked, crew run
   slots, bounded ids, no secret, URL, path or id in the public trace.
+- [`test_api_degraded.py`](../tests/test_api_degraded.py): a run with a template step is cached
+  as degraded, run again while the model is available (once per interval, never replaced by a
+  worse one), served labelled while it is not; recaps alike; drills stay out of the cache.
 - [`test_api_drill.py`](../tests/test_api_drill.py): a drill is a fresh run under its own key,
   counts against the limits, stays out of Cosmos DB, is brought back at most five times.
 - [`test_cosmos_store.py`](../tests/test_cosmos_store.py): the Cosmos cache and audit sink, the

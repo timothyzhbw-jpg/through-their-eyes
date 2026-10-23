@@ -39,7 +39,7 @@ and a whole stitched match.
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show
 what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
-turns his head on a schedule calibrated to published scan rates (2.79 scans in the 10 s before
+turns his head on a schedule calibrated to published scan rates (2.77 scans in the 10 s before
 receiving, against 3.0 ± 2.1 in Jordet et al. 2020: [realism](eval/reports/realism.md)), sees
 only what falls in his field of view, and decides on his *belief*: everyone where he last saw
 them, carried forward. Other tools show the passing lanes that existed; we show the ones he knew
@@ -70,6 +70,8 @@ captions before it airs (<!--num:A5-->90 of 90<!--/num--> perturbed claims refut
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
   only; see [Limitations](#limitations).
+- **Business model.** Who would pay and for what, what one explained moment costs us to serve
+  (about a cent of model calls), and what is still missing: [SUBMISSION](docs/SUBMISSION.md#business-model).
 
 ## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
@@ -219,7 +221,7 @@ the deployed service. Nothing has been run on real tracking data.
   could only be an association.
 - **Pressure and scanning.** In the published data players scan less when an opponent is tight
   on them (d = +0.57 between 10+ m and 0–1 m). Our simulator has the same sign but a much
-  smaller effect (d = <!--num:R4.d-->0.18<!--/num-->, 90% interval over seeds <!--num:R4.lo-->−0.02<!--/num--> to <!--num:R4.hi-->0.38<!--/num-->): one of the <!--num:R3.outside-->5<!--/num--> statistics
+  smaller effect (d = <!--num:R4.d-->0.15<!--/num-->, 90% interval over seeds <!--num:R4.lo-->−0.06<!--/num--> to <!--num:R4.hi-->0.36<!--/num-->): one of the <!--num:R3.outside-->5<!--/num--> statistics
   outside the published range; the other four compare scan rates between roles
   ([realism](eval/reports/realism.md)).
 - **No tackles yet.** In the stitched matches possession changes hands by interceptions only:

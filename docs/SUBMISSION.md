@@ -47,6 +47,29 @@ checks every number in its captions and narration before it airs.
   out, and it runs on synthetic matches only, so it shows the workflow, not accuracy on real
   matches.
 
+## Business model
+
+Hypotheses, not sales: no customer has seen it. The costs are our own measurements at demo scale,
+at Azure list prices of 2026-10-22.[^azure-prices]
+
+- **Who would pay.** Broadcasters' studios and alternate streams (a per-match or per-season
+  licence for the explainers and their timecoded cues), clubs' analysis departments (per-seat
+  review of scanning and decisions on their own tracking), and the league's fan apps (explainers
+  in many languages, as its Microsoft partnership plans[^pl-microsoft]). No betting use.
+- **Cost to serve.** One moment in four scripts: about $0.01 of Foundry `gpt-4.1-mini` (12
+  requests, 22K tokens)[^crew] and about $0.03 of speech if every line is voiced ($0.0012 a
+  line).[^tts] Hosting at demo scale: $17–46 a month, idle to busy.[^hosting] A re-watch costs
+  no model call: breakdowns are cached by content and served in 0.15 s.[^latency] The cache's
+  share of views: TODO(freeze).
+- **What a licence must cover (hypothesis).** Twenty moments in five audiences and two languages
+  cost about $0.50 of model calls and $1.40 of speech, so a per-match price is set by hosting, the
+  tracking feed and editorial review, not by the model. We set no price and quote no market size
+  beyond the sources above.
+- **Still needed.** Tracking with head orientation from a rights holder (on synthetic keypoints
+  the scan detector keeps F1 <!--num:A2-->0.962<!--/num--> at 20 mm of noise[^keypoints]), the rights to that data, a
+  simulator calibrated on it, and human editorial review: the Verifier catches invented numbers,
+  not omissions.
+
 ## What it does
 
 The brief's pipeline, end to end, on a synthetic match:
@@ -140,18 +163,21 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
   model roles; the single agent lost all four, because its one call is every role. Bringing the
   Telestrator back cost the crew one model request; the single agent had to redo everything.
   Bringing the Analyst back costs the crew more than the single agent's redo, because every
-  later step reads the Analyst and runs again. TODO(multi-agent-evidence): recovery when the
-  model service itself fails.
+  later step reads the Analyst and runs again. When the model service itself fails, every
+  request is still answered with a verified breakdown, on templates.[^crew-evidence]
 - **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
   timeout; every single-agent call did, so deployed it would have aired its templates.
 - **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
-  back to the voice that wrote it, told why; the plan and the other lines stand. TODO(multi-agent-evidence):
-  rewrites per breakdown.
-- **Audiences in parallel.** Each audience and language is its own narration call, run at once.
-  TODO(multi-agent-evidence): seconds to air for four audiences against one.
+  back to the voice that wrote it, told why; the plan and the other lines stand. Of 2,837
+  deliberately broken lines, none aired with the Verifier; 2,823 would have without it, 888 of
+  them false.[^crew-evidence]
+- **Audiences in parallel.** Each audience and language is its own narration call, run at once:
+  ten scripts take about as long as one (about 3.5 s), though the whole crew is not faster than
+  one agent.[^crew-evidence]
 - **Auditable per agent.** Every breakdown carries its crew trace: each step's input and output,
   the state it read and wrote, the Analyst's tool calls, the verdicts, and whether each part came
-  from the model or a template. **Crew trace** in the app shows it as a timeline.
+  from the model or a template. **Crew trace** in the app shows it as a timeline. Every aired line
+  in our offline run traced back this way (394 of 394).[^crew-evidence]
 
 ## Evidence
 
@@ -162,7 +188,7 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 | Forced to keep the ball, the pressure hero loses it; the possession outcome changes | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [^press] |
 | Set-piece hero: unmarked without the look, marked within 5 m with it | <!--num:H7-->37/40<!--/num--> (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
-| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.915, recall 0.943 | [^blind] |
+| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.914, recall 0.946 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
 | Simulator statistics against published values | <!--num:R3.inside-->11<!--/num--> inside the published range, <!--num:R3.outside-->5<!--/num--> outside, <!--num:R3.none-->10<!--/num--> with no published value | [^realism] |
@@ -252,7 +278,7 @@ Multi-Agent System (SPEC §0).
 - **Realism is partial.** Of the 16 simulator statistics we can check against a published
   value, <!--num:R3.outside-->5<!--/num--> fall outside the published range. All five compare scan rates between roles or
   pressure levels. Published players scan less when an opponent is tight on them (d = +0.57);
-  ours do too, but much less so (d = <!--num:R4.d-->0.18<!--/num-->).[^realism]
+  ours do too, but much less so (d = <!--num:R4.d-->0.15<!--/num-->).[^realism]
 - **No tackles yet.** In the stitched matches the ball changes hands by interceptions only: 0
   tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
   matches. Tackles are switched on in the pressure hero's scenario alone.[^matchstats]
@@ -279,10 +305,10 @@ Multi-Agent System (SPEC §0).
 Teammates who play proposed a tactics knowledge base: each tactic, its mechanism, the data that
 shows it and a sentence for a fan. We built the two rows our simulator truly supports.
 
-- **Why build from the back?** Under pressure, Home completed 25 of 34 short passes out from the
-  back in match-1 (74%, against 86% without). The pressure hero's recorded options show his
+- **Why build from the back?** Under pressure, Home completed 30 of 38 short passes out from the
+  back in match-1 (79%, against 86% without). The pressure hero's recorded options show his
   safest pass was back to the keeper.
-- **Why focus on set pieces?** The one corner reached 0.29 xT in 4.4 seconds, more than any of
+- **Why focus on set pieces?** The one corner reached 0.20 xT in 4.4 seconds, more than 17 of
   the 18 open-play passages. No shot followed: the stitched match cuts the corner before one
   could.
 
@@ -295,7 +321,7 @@ play that attacks the goal.
 ---
 
 [^realism]: [eval/reports/realism.md](../eval/reports/realism.md): scans in the 10 s before
-    receiving, sim 2.79 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
+    receiving, sim 2.77 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
     vs 404.2 ± 50.7 (Kokubu et al. 2026); "11 inside, 5 outside, 0 inconclusive, 10 with no
     published reference".
 [^ablation]: [eval/reports/narration_ablation.md](../eval/reports/narration_ablation.md): free
@@ -306,6 +332,25 @@ play that attacks the goal.
     Groundedness (1–5) of the scripts that aired after the rewrites: 4.90 vs 5.00. The
     "1.2 metres" line is quoted from its section "Free-text failures, verbatim" (seed 3,
     analyst/en).
+[^azure-prices]: Azure Retail Prices API (https://prices.azure.com/api/retail/prices), region
+    `northcentralus`, queried 2026-10-22: `gpt-4.1-mini` global $0.40 / $0.10 / $1.60 per 1M
+    input / cached input / output tokens; Azure AI Speech S1 neural text to speech $15 per 1M
+    characters; Container Apps consumption $0.000024 per active vCPU-second, $0.000003 per idle
+    vCPU-second and per GiB-second; Container Registry Basic $0.1666 a day. The same prices on
+    the pricing pages:
+    [Azure OpenAI](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/),
+    [Speech](https://azure.microsoft.com/pricing/details/cognitive-services/speech-services/),
+    [Container Apps](https://azure.microsoft.com/pricing/details/container-apps/).
+[^tts]: [docs/SPEC.md](SPEC.md) §8: a narration line bills about 80 characters (the SSML markup
+    counts, a Chinese character twice); [crew_vs_single](../eval/reports/crew_vs_single.md): 23.5
+    lines per four-script breakdown. 80 × $15 per 1M characters = $0.0012. The demo runs on the
+    free F0 tier (500K characters a month).
+[^hosting]: One API replica of 0.5 vCPU and 1 GiB, always on, for 30 days: $11.66 idle, $38.88
+    active the whole time, before the monthly free grant; Container Registry Basic $5.00; Cosmos
+    DB serverless, the static site and egress under $2 together at our traffic
+    ([docs/SPEC.md](SPEC.md) §8 cost table, [docs/OPERATIONS.md](OPERATIONS.md)).
+[^keypoints]: [eval/reports/keypoint_ingest.md](../eval/reports/keypoint_ingest.md), the 20 mm
+    stress row.
 [^spec31]: [docs/SPEC.md](SPEC.md) §3.1: 25 Hz frames, per-player body and head yaw.
 [^flip]: [eval/reports/hero_flip_blind_side_run.md](../eval/reports/hero_flip_blind_side_run.md):
     seeds 100–139, decision changed without the key scan in <!--num:H1-->33/40<!--/num-->.
@@ -322,6 +367,10 @@ play that attacks the goal.
 [^match]: [docs/SPEC.md](SPEC.md) §3.1; `uv run python -m sim.match --seed 1` prints 19
     possessions and "808.3 s, 1-0" on a Mac (2026-10-22 CT, with the referee and the team shape). Where open play goes out
     differs by platform (SPEC 3.7), so the live match's details can differ.
+[^crew-evidence]: [eval/reports/crew_evidence.md](../eval/reports/crew_evidence.md) (PR #195):
+    offline, a scripted model answering through the real Agent Framework workflow, schemas and
+    Verifier, on the 7 hero moments the site serves × 5 audiences × 2 languages, generated in
+    `python:3.11-slim`; times simulated at Foundry's median latency per role.
 [^spec6]: [docs/SPEC.md](SPEC.md) §6, failure policy; `DEFAULT_TIMEOUT_S = 8.0` and `RETRIES = 1`
     in [agents/llm.py](../agents/llm.py).
 [^trace]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#the-live-trace): 2026-10-20 21:34:51 UTC, revision
@@ -332,7 +381,7 @@ play that attacks the goal.
 [^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 <!--num:A1-->0.991<!--/num-->
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
-    0.915, recall 0.943, and the upper-bound note.
+    0.914, recall 0.946, and the upper-bound note.
 [^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): 90/90 false
     perturbations refuted; 468/468 generated claims supported.
 [^parity]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md) §1;

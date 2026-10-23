@@ -141,7 +141,7 @@ describe("in the verdict", () => {
     const session = await loaded();
     const page = mount(session, <WithoutLookLines />);
     expect(text(page)).toContain(
-      "J. Ferriday's pass reached N. Varnhall in the final third, right of centre: xT 0.172. Without that look it " +
+      "J. Ferriday's pass reached N. Varnhall in the final third, right of centre: xT 0.157. Without that look it " +
         "would have reached K. Annersley in his own half, right of centre: xT 0.002.",
     );
     const open = [...page.querySelectorAll("button")].find((b) => text(b) === "How xT works")!;
@@ -153,7 +153,7 @@ describe("in the verdict", () => {
     expect(ends).toHaveLength(2);
     // The two values on the grid are the verified line's, nothing else.
     expect([...dialog.querySelectorAll(".xt-end-label")].map((l) => text(l))).toEqual([
-      "xT 0.172",
+      "xT 0.157",
       "xT 0.002",
     ]);
     expect(text(dialog)).toMatch(/value iteration/);

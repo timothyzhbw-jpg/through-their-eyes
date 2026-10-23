@@ -1,4 +1,5 @@
-/* The skeleton's key, bottom left over the broadcast camera or the tactical board (SPEC 7). */
+/* The skeleton's key (SPEC 7): on the board in a top corner, in the live screen's column over the
+   broadcast camera (styles.css). */
 .skeleton-key {
   position: absolute;
   z-index: 1;
@@ -50,6 +51,10 @@
 .skeleton-key .sk-marks li {
   white-space: nowrap;
 }
+/* the radar's line says what it means in plain words: it wraps inside the key */
+.skeleton-key .sk-marks li.sk-radar {
+  white-space: normal;
+}
 .skeleton-key .sw {
   display: inline-block;
   width: 12px;
@@ -68,13 +73,15 @@
   border-bottom: 9px solid rgba(230, 238, 233, 0.45);
   width: 0;
 }
-.skeleton-key .sw.lit.detector {
-  height: 4px;
-  background: var(--detector);
-}
-.skeleton-key .sw.lit.sim {
-  height: 4px;
-  background: var(--sight);
+/* the radar (radar.ts): a 60 degree sector in Floodlight with its edge on one side */
+.skeleton-key .sw.radar {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  vertical-align: -2px;
+  background:
+    conic-gradient(from 28deg, var(--floodlight) 0 3deg, transparent 3deg),
+    conic-gradient(from -30deg, rgba(246, 213, 102, 0.42) 0 60deg, transparent 60deg);
 }
 .skeleton-key .sk-readout {
   margin: 4px 0 0;
@@ -84,10 +91,4 @@
 .skeleton-key .sk-note {
   margin: 3px 0 0;
   color: var(--muted);
-}
-/* Phones: no key to the marks; the switch, the reading and what is not data stay. */
-@media (max-width: 600px) {
-  .skeleton-key .sk-marks {
-    display: none;
-  }
 }

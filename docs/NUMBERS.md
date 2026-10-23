@@ -36,9 +36,8 @@ instead.
 4. Dated rows (D): measure after the last deploy, then re-run `uv run python -m infra.prewarm`.
 5. Commit as `docs: numbers at the sim freeze (SPEC 11)`, with this file's Freeze column filled.
 
-`TODO(freeze)` marks a value pending the freeze; `TODO(multi-agent-evidence)` a value the
-multi-agent evidence session is measuring. Neither is a number yet, and neither goes on a judge
-page.
+`TODO(freeze)` marks a value pending the freeze. It is not a number yet, and does not go on a
+judge page.
 
 ## H. Hero moments (held-out seeds)
 
@@ -125,7 +124,9 @@ which runs on Linux. The trailer reads them off the live page (`out/video/claims
 ## MA. The crew against one agent (Best Multi-Agent System)
 
 From [crew_vs_single](../eval/reports/crew_vs_single.md) (2026-10-21, Foundry `gpt-4.1-mini`,
-six moments × four audiences) and the multi-agent evidence session, whose numbers are pending.
+six moments × four audiences) and [crew_evidence](../eval/reports/crew_evidence.md) (PR #195,
+offline: a scripted model through the real workflow, seven served moments × five audiences × two
+languages, generated in `python:3.11-slim`).
 
 | Id | Number | Source | Value | Freeze | Quoted in |
 |---|---|---|---|---|---|
@@ -136,11 +137,24 @@ six moments × four audiences) and the multi-agent evidence session, whose numbe
 | MA4 | Model plans that validate, crew vs single | same | 6/6 vs 5/6 | TODO(freeze) | RUBRIC_MAP §5 |
 | MA5 | Wrong facts aired · groundedness, crew vs single (no difference) | same | 0 vs 0 · 5.00 vs 5.00 | TODO(freeze) | SUBMISSION Limitations, [^crew]; RUBRIC_MAP §5 |
 | MA6 | Cost per breakdown, crew vs single | same | $0.0090 vs $0.0046 | TODO(freeze) | SUBMISSION [^crew]; RUBRIC_MAP §5 |
-| MA7 | Recovery under an outage of the model service | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew"; DEMO_SCRIPT |
-| MA8 | Per-step Verifier: lines sent back and rewritten or dropped | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
-| MA9 | Personas in parallel: seconds to air for N audiences vs one | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
-| MA10 | Crew trace: steps a viewer can audit per breakdown | TODO(multi-agent-evidence) | TODO(multi-agent-evidence) | TODO(freeze) | RUBRIC_MAP §5 |
+| MA7 | One agent down, offline (28 drills): scripts aired · roles from the model, crew vs single · fault-free breakdown after bring-back · model outage | [crew_evidence](../eval/reports/crew_evidence.md) (PR #195) ← `uv run python -m eval.crew_evidence` | 280/280 · 3 of 4 vs 0 of 4 · 70/70 · every request answered, on templates | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew"; DEMO_SCRIPT |
+| MA8 | Broken lines kept off the air with the Verifier · aired without it · of them false; anchored Foundry lines rejected | crew_evidence, section 2 | 2,837 of 2,837 · 2,823 · 888; 0 of 234 | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
+| MA9 | Narration for 10 scripts · for 1; the breakdown one call at a time · in parallel · single agent; time to recover, Telestrator · Analyst · single | crew_evidence, sections 1 and 4 (simulated Foundry median latencies; wall times move by 0.1–0.5 s from run to run, so the docs quote them rounded) | 3.5 s · 3.4 s; 21.7 s · 8.6 s · 9.2 s; 3.7 s · 8.0 s · 9.5 s (report at 7ba2027); quoted as about 3.5 s; about 22 s · about 9 s · about 9 s; about 4 s · about 8 s · about 9.5 s; 16.3 s as about 16 s | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
+| MA10 | Aired lines traced to claims, audit record, voice call, Verifier round and cue · claim lines whose stored tool result is cut | crew_evidence, section 3 | 394 of 394 · 52 of 352 | TODO(freeze) | RUBRIC_MAP §5; SUBMISSION "Why a crew" |
 | MA11 | Headline claims spoken, crew vs single (paired difference and interval) | crew_vs_single, four arms | 92% vs 81% (+0.11, −0.00 to +0.24) | TODO(freeze) | RUBRIC_MAP §5 |
+
+## B. Business model (SUBMISSION "Business model")
+
+Unit prices from the Azure Retail Prices API, `northcentralus`, 2026-10-22; re-query them at the
+freeze (`curl -sG https://prices.azure.com/api/retail/prices --data-urlencode "\$filter=..."`).
+
+| Id | Number | Source | Value | Freeze | Quoted in |
+|---|---|---|---|---|---|
+| B1 | Model cost of one four-script breakdown | crew_vs_single (requests, tokens) × the `gpt-4.1-mini` list price; OPERATIONS "The judging window's cost" | $0.0090 (12 requests, 22K tokens); about $0.012 with the Analyst's MCP tools | TODO(freeze) | SUBMISSION "Business model"; README "Path to production"; RUBRIC_MAP §3 |
+| B2 | Speech per narration line · per four-script breakdown | SPEC §8 (about 80 billed characters a line) × $15 per 1M characters; crew_vs_single 23.5 lines | $0.0012 · about $0.03 | TODO(freeze) | SUBMISSION "Business model" |
+| B3 | Hosting per 30 days, idle to busy | Container Apps 0.5 vCPU / 1 GiB × 2,592,000 s at the list prices; ACR Basic; SPEC §8 for the rest | $17–46 | TODO(freeze) | SUBMISSION "Business model" |
+| B4 | Share of breakdown views served from the cache | Application Insights over the judging window: `POST /api/breakdowns` requests on the deployed API against the `breakdown` spans of crew runs (the query in RUBRIC_MAP "The live trace", grouped by operation) | not measured: only 2026-10-22's telemetry is kept, 14 requests | TODO(freeze) | SUBMISSION "Business model" |
+| B5 | Twenty moments × five audiences × two languages: model · speech | B1 × 50 breakdowns; B2 × 50 | about $0.50 · $1.40 | TODO(freeze) | SUBMISSION "Business model" |
 
 ## X. Pictures and text that hold numbers or names
 

@@ -314,7 +314,8 @@ The spec is version 1: `output` (fps, size, LUFS, true peak), `site`, `voice` / 
 repo, such as the Blender shots in `out/video/blender/` (git-ignored; the edit stops with a
 message naming the file when one is missing, `--check` does not look for it); it takes `in`,
 `speed`, `reverse` and `fit: "pad"` (keep a 2.39:1 render as it is, inside the bars, instead of
-cropping it to fill the frame). `fx: ["glue"]` is the shared finish of every 3D shot. Its `out` is `cut`, `fade`, `flash`, `dip`,
+cropping it to fill the frame). `fx: ["glue"]` is the shared finish of every 3D shot; `"lift"` brightens
+the app's screens (mid-grey up about 0.4 EV, black and white pinned). Its `out` is `cut`, `fade`, `flash`, `dip`,
 `whip` or `glitch`. The validator names the beat when something does not resolve
 (`beats[3] (b04-pov): unknown cine id "pov2"`). The planned film must be under two minutes (and under `output.max_s`, 116 s, for a margin), the
 report step fails when the encoded film measures `output.fail_at_s` (117 s) or more, and

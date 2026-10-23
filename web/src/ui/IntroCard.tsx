@@ -19,6 +19,7 @@ import { envOf, quickTourFits } from "../tour/steps";
 import { startTour } from "../tour/tourState";
 import { clubName, shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
+import { MomentChips } from "../moments/MomentRail";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
 export function playLength(minutes: number): string {
@@ -160,6 +161,11 @@ function OpenIntroCard() {
             Teams and more
             <ChevronIcon />
           </button>
+        </div>
+        {/* Every moment in reach from the first screen: the tour is one path, not the only one. */}
+        <div className="intro-moments">
+          <p className="kicker">Or jump to a moment</p>
+          <MomentChips label="Moments" />
         </div>
         <div className="intro-more" id={moreId} hidden={!more}>
           <Lineup />

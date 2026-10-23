@@ -103,6 +103,9 @@ for (const entry of map.beats) {
     overlays.push({ title: key, at: 0.0 }); // last: on top of a name card's scrim
   }
   beat.overlays = overlays;
+  // caption: "bottom" — a line set to sit at the top over an app screen goes back to the
+  // letterbox bar once a Blender shot replaces that screen.
+  if (entry.caption === "bottom") for (const line of beat.vo ?? []) delete line.caption;
   for (const o of overlays) if (map.titles?.[o.title]) spec.titles[o.title] = map.titles[o.title];
   if (pins.has(entry.picture.path)) {
     spec.pins = spec.pins ?? [];

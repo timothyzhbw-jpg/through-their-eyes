@@ -489,6 +489,9 @@ optgroup {
 .intro-more-toggle[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
+.intro-moments .kicker {
+  margin: 0 0 8px;
+}
 .intro-more {
   padding-top: 16px;
   border-top: 1px solid var(--hairline-strong);
@@ -3016,10 +3019,28 @@ optgroup {
   background: var(--chalk);
   color: var(--ink);
 }
-.slot.main .view.pov .skeleton-key {
-  top: calc(var(--head-h) + 52px);
+/* Over the broadcast camera the key is the last item of the top-left column (App.tsx), under the
+   eyes picker, the director's suggestion and the stats: in the view at a fixed height it sat on the
+   director's "Switch to …" prompt. On the board it takes the top corner the clip leaves emptiest
+   (keyCorner): the bottom edge is the pass options' key's and the live stat's, and the HUD sits
+   above the board. Wider than a phone the board's key is in the board, so the column's stands
+   down. */
+.stage-top .skeleton-key {
+  position: static;
+  pointer-events: auto;
+}
+.view.tac .skeleton-key {
+  top: 8px;
   bottom: auto;
-  left: var(--gutter);
+}
+.view.tac .skeleton-key.at-right {
+  left: auto;
+  right: 8px;
+}
+@media (min-width: 761px) {
+  .stage.focus-tactical .stage-top .skeleton-key {
+    display: none;
+  }
 }
 
 /* ---------- legend ---------- */
@@ -3673,7 +3694,18 @@ optgroup {
       "bar"
       "run"
       "director"
+      "skel"
       "card";
+  }
+  /* the skeleton's key, when it is on: its own row under the director's, never on the picture (on
+     the board it covered the bottom half), so it has room for the key to the marks */
+  .stage-top .skeleton-key {
+    grid-area: skel;
+    max-width: none;
+    margin: 10px 16px 0;
+  }
+  .view.tac .skeleton-key {
+    display: none;
   }
   .stage-head {
     grid-area: head;
@@ -3705,11 +3737,15 @@ optgroup {
     color: var(--chalk-2);
   }
   .stage-director .director-chip {
+    text-align: left;
+  }
+  /* Its words clamp to two lines, not the chip: a clamp clips at the padding's edge, so the
+     clamped chip showed a third line in its padding ("…before the ball… arrives"). */
+  .stage-director .director-chip .director-text {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
-    text-align: left;
   }
   /* On the board the one live stat sits on its bottom edge, where the pass options' key is: the
      key goes up a line while a stat shows (they were text on text). */
