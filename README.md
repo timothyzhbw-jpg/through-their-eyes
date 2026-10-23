@@ -7,8 +7,15 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
 > **See what they saw.** An AI studio that explains key football moments through the player's own
-> perception — the scans before the ball arrived, what was visible, what he believed — and checks
-> every number the crew says or captions before it airs.
+> perception — where he looked before the ball arrived, what he saw, what he believed — and
+> re-simulates the moment without the look that made the play: over 40 held-out seeds,
+> <!--num:H1.k-->33<!--/num--> decide differently.
+
+**Every line the crew says is checked before it airs.** In an offline stress test, with the
+Verifier all <!--num:V1-->2,837 of 2,837<!--/num--> deliberately broken lines were kept off the air; without it,
+<!--num:V1.aired-->2,823<!--/num--> aired, <!--num:V1.false-->888<!--/num--> of them false ([crew_evidence](eval/reports/crew_evidence.md)).
+Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
+tactics cards, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
@@ -48,7 +55,8 @@ the run is the same up to that scan and differs only through what he no longer s
 ([test](tests/test_export.py#L37)), so what he would have done without it is re-simulated, not
 guessed. Under all of it runs the backbone a broadcast needs: a crew of agents writes the
 breakdown for each audience and language, and code checks every number the crew says or
-captions before it airs (<!--num:A5-->90 of 90<!--/num--> perturbed claims refuted: [corruption](eval/reports/corruption.md)).
+captions before it airs (all <!--num:A5.k-->90<!--/num--> falsified claims refuted, and <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> true claims wrongly
+rejected: [corruption](eval/reports/corruption.md)).
 
 ## Path to production
 - **Who it is for.** A broadcaster's studio analyst explaining a replay on air, and a club's
@@ -123,8 +131,10 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    its claims and the evidence frame; **Tap for sound** to hear it in Azure AI Speech.
 4. **Your own "What if…?"** [A question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
    press **Ask**. The API maps the question to one of his options, forces it, re-simulates the
-   moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
-   are rate-limited per client.
+   moment and answers with verified lines; the forced run plays as a gold ghost. It is a
+   re-simulation, not an estimate: the same simulation, the same keyed random draws and the same
+   model of what each player can see; nothing is sampled from other plays or scored by geometry.
+   Free questions are rate-limited per client.
 5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
    the evidence card opens on "That look was worth … in expected threat." with a wrong value
    filled in. Press **Check**: the API runs the real verifier on that claim with your number,
@@ -136,7 +146,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    number no claim holds, for example "H8's picture of A5 was off by 1.2 metres" where the claim
    holds H9 and 0.5, and none of them passed the Verifier
    ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)). It also
-   refuted <!--num:A5-->90 of 90<!--/num--> perturbed claims: a number off by one unit or by 20%, a swapped player, a
+   refuted <!--num:A5-->90 of 90<!--/num--> perturbed claims, and wrongly rejected <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> true ones: a number off by one unit or by 20%, a swapped player, a
    wrong order ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
 6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0):
@@ -221,7 +231,7 @@ the deployed service. Nothing has been run on real tracking data.
 | Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | <!--num:H7-->37/40<!--/num--> | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
 | Scans detected from head yaw alone, nuisance head motion on (held-out F1) | <!--num:A1-->0.991<!--/num--> | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
-| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded) | <!--num:A5-->90/90<!--/num--> | [corruption](eval/reports/corruption.md) |
+| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded); true claims it wrongly rejected | <!--num:A5-->90/90<!--/num-->; <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> | [corruption](eval/reports/corruption.md) |
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
 | Free-text vs anchored narration, same moment and seeds: first-draft lines naming a player or number that no claim holds (none passed the verifier); groundedness of the scripts that aired (1–5, Foundry evaluator) | 34 of 66 vs 0 of 111; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
 | The crew against one agent doing its four model roles in one call, same moments, tools and schemas (single vs crew): wrong facts aired; model roles kept with the Analyst or the Telestrator down; agent runs over the deployed 8 s step timeout; cost per breakdown | 0 vs 0; 0 of 4 vs 3 of 4; 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 | [crew_vs_single](eval/reports/crew_vs_single.md) |

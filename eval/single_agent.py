@@ -27,7 +27,7 @@ from typing import Any, Literal
 from agent_framework import WorkflowContext, handler
 from pydantic import BaseModel, ValidationError, create_model
 
-from agents import fallbacks, prompts
+from agents import fallbacks, persona_rules, prompts
 from agents.llm import Attempt, Outage, ask
 from agents.plan import shape_errors, template_plan, validate_plan
 from agents.schemas import (
@@ -161,10 +161,15 @@ def prompt(ctx, personas: list[Persona], languages: list[Language], lines: Lines
     )  # fmt: skip
 
 
-def voice_model(ctx, lines: Lines, language: Language) -> type[BaseModel]:
-    """One voice's lines: the schema the crew's narration asks for (`Narration.schema`)."""
+def voice_model(
+    ctx, lines: Lines, language: Language, persona: Persona | None = None
+) -> type[BaseModel]:
+    """One voice's lines: the schema the crew's narration asks for (`Narration.schema`): the
+    persona's palette and its own connectives."""
     if lines == "anchored":
-        return anchored_draft_model(list(ctx.supported), language)
+        off = persona_rules.excluded(persona)
+        conns = persona_rules.connectives(persona, language, ctx.supported, ctx.card.selected_lens)
+        return anchored_draft_model([c for c in ctx.supported if c not in off], language, conns)
     return NarrationDraft
 
 
@@ -175,10 +180,10 @@ def reply_model(
     narration's own draft schema."""
     scripts = {}
     for language in languages:
-        voice = voice_model(ctx, lines, language)
-        script = create_model(f"Script_{language}", __base__=Strict,
-                              pbp=(voice, ...), color=(voice, ...))  # fmt: skip
         for persona in personas:
+            voice = voice_model(ctx, lines, language, persona)
+            script = create_model(f"Script_{persona}_{language}", __base__=Strict,
+                                  pbp=(voice, ...), color=(voice, ...))  # fmt: skip
             scripts[audience(persona, language)] = (script, ...)
     return create_model(
         "SoloBreakdown", __base__=Strict,
@@ -188,7 +193,7 @@ def reply_model(
 
 
 def rewrite_model(ctx, lines: Lines, failed: list[tuple[Key, Speaker]]) -> type[BaseModel]:
-    fields = {f"{audience(*key)}_{speaker}": (voice_model(ctx, lines, key[1]), ...)
+    fields = {f"{audience(*key)}_{speaker}": (voice_model(ctx, lines, key[1], key[0]), ...)
               for key, speaker in failed}  # fmt: skip
     return create_model("SoloRewrite", __base__=Strict, **fields)
 
@@ -324,7 +329,9 @@ class SoloNarration(Narration):
     def _voice(self, reply: dict, key: Key, speaker: Speaker) -> list[DraftLine] | None:
         """The voice's lines in the reply; None when it has none usable."""
         language = key[1]
-        draft = self.schema(language).model_validate(reply["scripts"][audience(*key)][speaker])
+        draft = self.schema(language, key[0]).model_validate(
+            reply["scripts"][audience(*key)][speaker]
+        )
         return self.to_lines(draft, language) or None
 
     async def _draft(self, base: Briefing, ctx: WorkflowContext[Drafts]) -> None:

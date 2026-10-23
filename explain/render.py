@@ -7,21 +7,25 @@ final caption (`check_caption`):
 - every number (digits or number words, any language) lies inside a slot span;
 - every lexicon term is backed by a supported claim referenced on the line;
 - no banned evaluative term appears ("mistake", "should have", 失误, ...);
-- every player name lies inside a slot span (names come from refs, not free text);
-and a line that references no claim must be a connective phrase.
+- every player name lies inside a slot span (names come from refs, not free text), in any of his
+  written forms (`sim.roster.name_forms`: id, short, full and Chinese name);
+and a line that references no claim must be a connective phrase. Names are given by id in English;
+a Chinese line writes each player by his Chinese name (`localized`, `sim.roster.ZH_NAMES`).
 
 `build_payload` turns a script into what a viewer receives for one breakdown (SPEC 5.3): the
 lines that passed, and for each claim its kind, verdict, filled values, evidence and seek frame.
 `check_payload` re-runs every check on that final payload before it is sent.
 
 Placeholders: `{name}` (a slot of the line's only claim that has it) or `{claim.name}`, with an
-optional format — `{n:times}` (once / twice / 3 times; 3次), `{n:words}` (three; 三), `{lane:vocab}`
-(a categorical value in words from `VOCABULARY`: right of centre; 中路偏右) — and an optional
-plural noun, `{n|second|seconds}` → "1 second", "6 seconds".
+optional format — `{n:times}` (once / twice / 3 times; 一次 … 十次, 11次), `{n:words}` (three;
+三), `{lane:vocab}` (a categorical value in words from `VOCABULARY`: right of centre; 中路偏右) —
+and an optional plural noun, `{n|second|seconds}` → "1 second", "6 seconds".
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -34,6 +38,7 @@ from explain.claims import PLACEHOLDER, Claim, ClaimKind, Slot
 from explain.functions import EVENT_ID, is_number
 from explain.numbers import ONES, TENS, number_tokens
 from explain.verifier import Verdict
+from sim.roster import ZH_NAMES, name_forms, short_name
 
 
 class ScriptLine(BaseModel):
@@ -127,6 +132,47 @@ def _digits(value: float, decimals: int | None) -> str:
     return text
 
 
+# Bump with a change to how a slot is written (`format_slot`), or to a template built in code
+# outside a moment's claims (what-if, look and steps answers): it is part of `render_fingerprint`.
+RENDER_VERSION = 1
+
+
+def render_fingerprint(
+    languages: Iterable[str],
+    claims: Mapping[str, Claim] | None = None,
+    names: Mapping[str, str] | None = None,
+) -> str:
+    """Everything a cached text was rendered from besides its values: per language each claim's
+    template and the players' names, the connectives, the vocabulary and `RENDER_VERSION`. Part of
+    the cache key of every rendered breakdown, recap and what-if answer (SPEC 2), so a wording or
+    name fix reaches viewers instead of the text cached before it."""
+    data = {
+        "version": RENDER_VERSION,
+        "vocabulary": VOCABULARY,
+        "connectives": sorted(lexicon.CONNECTIVES),
+        "languages": {
+            lang: {
+                "claims": {cid: c.template_for(lang) for cid, c in sorted((claims or {}).items())},
+                "names": sorted((localized(names, lang) or {}).items()),
+            }
+            for lang in sorted(set(languages))
+        },
+    }
+    blob = json.dumps(data, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(blob.encode()).hexdigest()[:12]
+
+
+def localized(names: Mapping[str, str] | None, lang: str) -> Mapping[str, str] | None:
+    """Players' names (by id) as a line in `lang` writes them: in Chinese, the roster's Chinese
+    name for each player named by his roster short name; a name given otherwise is kept."""
+    if not names or lang != "zh":
+        return names
+    return {
+        pid: ZH_NAMES[pid] if pid in ZH_NAMES and name == short_name(pid) else name
+        for pid, name in names.items()
+    }
+
+
 def format_slot(
     s: Slot,
     lang: str,
@@ -157,8 +203,8 @@ def format_slot(
     elif fmt == "times":
         if not whole:
             raise _Unrenderable(f"{value} is not a count")
-        if lang == "zh":
-            return f"{text}次"
+        if lang == "zh":  # 一次, 两次 … 十次 as a commentator says them; a larger count in digits
+            return f"{_words(int(value), lang) if 0 < value <= 10 else text}次"
         return {1: "once", 2: "twice"}.get(int(value), f"{text} times")
     elif fmt is not None:
         raise _Unrenderable(f"unknown format {fmt!r}")
@@ -186,6 +232,7 @@ def render_line(
     def fail(violations: list[Violation]) -> RenderResult:
         return RenderResult(False, None, lang, line.id, list(line.claims), [], violations)
 
+    names = localized(names, lang)
     violations: list[Violation] = []
     for cid in line.claims:
         claim, verdict = claims.get(cid), verdicts.get(cid)
@@ -276,12 +323,13 @@ def check_caption(
         Violation("placeholder", "unrendered brace", m.start(), m.end())
         for m in re.finditer(r"[{}]", text)
     ]
-    # A player is named only by a slot. Outside one, his id, his on-screen name ("J. Ferriday")
-    # and his surname alone or in his full name are entities, each written-out name once. ASCII
-    # boundaries: `\b` would miss a name next to a Chinese character (a word character to it).
+    # A player is named only by a slot. Outside one, his id, his on-screen name ("J. Ferriday"),
+    # his surname alone or in his full name and his Chinese name (费里迪) are entities, each
+    # written-out name once. ASCII boundaries: `\b` would miss a name next to a Chinese character
+    # (a word character to it).
     entities: set[str] = set()
     for pid, name in (names or {}).items():
-        entities |= {pid, name}
+        entities |= {pid, name} | name_forms(pid)
         if ". " in name:
             entities.add(name.rsplit(" ", 1)[1])
     found = []

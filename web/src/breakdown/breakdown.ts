@@ -127,11 +127,13 @@ export function apiBreakdown(
   const narration = checked.ok ? checked.narration : null;
   const lines = scriptOf(narration);
   const voice = (script?.voice ?? []).filter((c) => c.line in lines);
+  // Each audience has its own cut of the plan (SPEC 6, "Persona specs"); older breakdowns have one.
+  const plan = script?.plan ?? result.plan;
   return {
     narration,
     payloadErrors: checked.ok ? [] : checked.errors,
     script: lines,
-    resolved: resolvePlan(webPlan(result.plan, voice), moment, lines),
+    resolved: resolvePlan(webPlan(plan, voice), moment, lines),
     voice,
     origin,
   };

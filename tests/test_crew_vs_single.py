@@ -15,7 +15,7 @@ from agent_framework import ChatMiddlewareLayer, InMemoryCheckpointStorage
 from agents import prompts
 from agents.context import MomentContext
 from agents.plan import template_plan, validate_plan
-from agents.schemas import DirectorChoice, PlanDraft, anchored_draft_model
+from agents.schemas import DirectorChoice, PlanDraft
 from agents.testing import Call, FakeChatClient, ToolCallingFakeChatClient
 from agents.workflow import breakdown, run_crew
 from eval import crew_vs_single as cvs
@@ -110,7 +110,13 @@ def test_reply_schema_is_the_crews_step_schemas(ctx):
     assert fields["director"].annotation is DirectorChoice
     assert fields["plan"].annotation is PlanDraft
     script = fields["scripts"].annotation.model_fields["casual_en"].annotation
-    crew_voice = anchored_draft_model(list(ctx.supported), "en").model_json_schema()
+    from types import SimpleNamespace
+
+    from agents.workflow import Narration
+
+    narration = Narration.__new__(Narration)
+    narration.crew = SimpleNamespace(ctx=ctx)
+    crew_voice = narration.schema("en", "casual").model_json_schema()  # the persona's own
     assert script.model_fields["pbp"].annotation.model_json_schema() == crew_voice
     assert fields["analyst"].annotation.model_json_schema()["properties"]["headline"]["items"][
         "enum"
@@ -141,7 +147,8 @@ def test_a_digit_in_its_free_text_fails_the_whole_reply(ctx):
 
 
 def test_free_text_rewrites_take_one_call_per_round(ctx):
-    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["scans_before_reception"]}]}
+    # A claim on both personas' palettes (agents/persona_rules.py): tidy drops a line off it.
+    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["blind_side"]}]}
     good = {"lines": [{"text": "{player} checked his shoulder before the ball reached him.",
                        "claims": ["scan_before_reception"]}]}  # fmt: skip
     scripts = {solo.audience(p, lg): {"pbp": bad, "color": good} for p, lg in AUDIENCES}
@@ -153,7 +160,8 @@ def test_free_text_rewrites_take_one_call_per_round(ctx):
 
 
 def test_rewrites_stop_after_the_crews_budget(ctx):
-    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["scans_before_reception"]}]}
+    # A claim on both personas' palettes (agents/persona_rules.py): tidy drops a line off it.
+    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["blind_side"]}]}
     worse = {"lines": [{"text": "He was free by 3 metres.", "claims": ["unmarked"]}]}
     scripts = {solo.audience(p, lg): {"pbp": bad, "color": worse} for p, lg in AUDIENCES}
     still = {f"{solo.audience(p, lg)}_{s}": v for p, lg in AUDIENCES
@@ -249,7 +257,8 @@ def test_digits_are_counted_only_in_the_models_own_words():
 
 
 def test_without_the_verifier_the_first_drafts_air(ctx, tmp_path):
-    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["scans_before_reception"]}]}
+    # A claim on both personas' palettes (agents/persona_rules.py): tidy drops a line off it.
+    bad = {"lines": [{"text": "He looked 2 times.", "claims": ["blind_side"]}]}
     good = {"lines": [{"text": "{player} checked his shoulder before the ball reached him.",
                        "claims": ["scan_before_reception"]}]}  # fmt: skip
     scripts = {solo.audience(p, lg): {"pbp": bad, "color": good} for p, lg in AUDIENCES}

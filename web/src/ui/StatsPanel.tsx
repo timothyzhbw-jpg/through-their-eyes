@@ -139,7 +139,7 @@ function PassLog({ stats, frame }: { stats: Stats; frame: number }) {
                 {passer} → {to}
               </span>
               <span className="meta">
-                {Math.round(cue.distance_m)} m · {cue.ball_kmh.toFixed(1)} km/h ·{" "}
+                {cue.distance_m.toFixed(0)} m · {cue.ball_kmh.toFixed(1)} km/h ·{" "}
                 {cue.difficulty.toFixed(2)} {cue.band}
               </span>
               <span className="parts">
@@ -317,7 +317,7 @@ function PlayerCard({ stats, frame, id }: { stats: Stats; frame: number; id: str
       {pass && (
         <p className="stats-last">
           Last pass {stats.players.get(pass.player)?.short ?? pass.player} → {to} ·{" "}
-          {Math.round(pass.distance_m)} m · {pass.difficulty.toFixed(2)} {pass.band}
+          {pass.distance_m.toFixed(0)} m · {pass.difficulty.toFixed(2)} {pass.band}
         </p>
       )}
     </div>

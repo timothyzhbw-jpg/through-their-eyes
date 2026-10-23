@@ -35,6 +35,7 @@ from agents.context import MomentContext
 from agents.llm import DEFAULT_TIMEOUT_S, ask, client_from_env
 from agents.prompts import CREW
 from agents.schemas import Language, Persona, Strict
+from analytics.stats import display
 from explain.builders import POST
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.render import RenderPayload, build_payload
@@ -42,7 +43,7 @@ from explain.render import ScriptLine as RenderLine
 from explain.verifier import Verifier
 from sim.counterfactual import WhatIfResult, what_if_id
 from sim.model import Decision
-from sim.roster import ROSTER, full_name
+from sim.roster import ROSTER, full_name, short_name
 from sim.run import MatchRun
 
 PICK = """Picking a receiver:
@@ -86,11 +87,12 @@ CENTRE_M = 5.0  # m across: closer than this to the long axis, he stood in the m
 _ACTIONS = {"carry": "run with the ball", "shot": "shoot at goal"}
 _PLAYER = re.compile(r"(?<![A-Z0-9])([HA]\d{1,2})(?!\d)", re.IGNORECASE)
 # A player by the fictional name the screen shows (sim/roster.py): "K. Annersley", "Kofi Annersley"
-# or "Annersley"; the longest form first, so a short name is one cue, not two.
+# or "Annersley", or the Chinese name zh lines give him (安纳斯利); the longest form first, so a
+# short name is one cue, not two.
 _NAME_OF = {
     form.lower(): pid
     for pid, (first, last) in ROSTER.items()
-    for form in (f"{first} {last}", f"{first[0]}. {last}", last)
+    for form in (f"{first} {last}", f"{first[0]}. {last}", last, short_name(pid, "zh"))
 }
 _NAME = re.compile(
     r"(?<![A-Za-z])("
@@ -494,14 +496,14 @@ def _claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
     if w.action.startswith("shot:"):
         return out + _shot_claims(ctx, w)
     delta = fn("cf_delta", of="possession_value", scan=w.id)
-    value = round(abs(w.delta_xt), 2)
+    value = display(abs(w.delta_xt), 2)
     better = w.delta_xt >= 0  # what he did was worth more than the forced option
     out.append(Claim(
         id="whatif_value",
         template=f"That option would have been worth {{dxt}} {'less' if better else 'more'} in "
                  "expected threat than what he did.",
-        templates={"zh": "这个选择比他实际的选择少{dxt}的预期威胁（xT）。" if better
-                   else "这个选择比他实际的选择多{dxt}的预期威胁（xT）。"},
+        templates={"zh": "这样处理，预期威胁比他实际的选择低{dxt}。" if better
+                   else "这样处理，预期威胁比他实际的选择高{dxt}。"},
         slots={"dxt": Slot(value=value, decimals=2)},
         predicate=Predicate(op="approx", lhs=delta, rhs=slot("dxt", scale=1.0 if better else -1.0),
                             abs_tol=0.005),
@@ -561,8 +563,8 @@ def _shot_claims(ctx: MomentContext, w: WhatIfResult) -> list[Claim]:
                      "{p_his}.",
             templates={"zh": f"打{post_zh}的进球概率是{{p_new}}，打{his_zh}是{{p_his}}。"},
             slots={"player": Slot(ref=hero),
-                   "p_new": Slot(value=round(ctx.evaluator.value(p_new, values), 2), decimals=2),
-                   "p_his": Slot(value=round(ctx.evaluator.value(p_his, values), 2), decimals=2)},
+                   "p_new": Slot(value=display(ctx.evaluator.value(p_new, values), 2), decimals=2),
+                   "p_his": Slot(value=display(ctx.evaluator.value(p_his, values), 2), decimals=2)},
             predicate=Predicate(op="all", args=[
                 Predicate(op="approx", lhs=p_new, rhs=slot("p_new"), abs_tol=0.005),
                 Predicate(op="approx", lhs=p_his, rhs=slot("p_his"), abs_tol=0.005),

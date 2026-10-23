@@ -59,6 +59,7 @@ import numpy as np
 from analytics.blind_side import visible_mask
 from analytics.scan_detector import DEFAULT_PARAMS as DETECTOR
 from analytics.scan_detector import trace_scans
+from analytics.stats import display
 from analytics.vision import VisionParams, player_visibility, wrap_angle
 from explain.functions import same_target_on_truth, true_options
 from explain.moments import blind_side_alerts
@@ -471,13 +472,13 @@ def render_payload_fixture(data: dict[str, Any]) -> dict[str, Any]:
         if e["type"] == "reception" and e["player"] == receiver and e["frame"] >= action["frame"]
     )  # fmt: skip
     cf_receiver = cf_decision["chosen"].removeprefix("pass:")
-    err = round(decision["belief_error"][runner], 1)
-    cf_err = round(cf_decision["belief_error"][runner], 1)
-    dxt = round(data["delta_xt"], 2)
+    err = display(decision["belief_error"][runner], 1)
+    cf_err = display(cf_decision["belief_error"][runner], 1)
+    dxt = display(data["delta_xt"], 2)
 
     def thought_vs_was(dec: dict, action: str) -> dict[str, float]:
         o = next(o for o in dec["options"] if o["action"] == action)
-        return {"p_belief": round(o["p_success"], 2), "p_true": round(o["p_success_true"], 2)}
+        return {"p_belief": display(o["p_success"], 2), "p_true": display(o["p_success_true"], 2)}
 
     chosen = thought_vs_was(decision, decision["chosen"])
     cf_runner = thought_vs_was(cf_decision, f"pass:{runner}")
@@ -555,9 +556,10 @@ WHAT_IF_LANGUAGES = ("en", "zh")
 
 def what_if_question(action: str, language: str) -> str:
     """The suggested question for an option, in words the what-if parser maps back to it. A
-    player goes by his short name, as everywhere on screen (SPEC 4.6)."""
+    player goes by his short name, as everywhere on screen (SPEC 4.6), in Chinese by his Chinese
+    name, as the zh lines say it."""
     if action.startswith("pass:"):
-        target = short_name(action.removeprefix("pass:"))
+        target = short_name(action.removeprefix("pass:"), language)
         return f"What if he passed to {target}?" if language == "en" else f"如果他传给{target}呢？"
     if action == "carry":
         return "What if he carried it?" if language == "en" else "如果他带球呢？"

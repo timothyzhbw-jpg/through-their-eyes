@@ -1,8 +1,11 @@
-"""Delivery: how a line is spoken (SPEC 6, "Two voices" and "Delivery tiers").
+"""Delivery: how a line is spoken (SPEC 6, "Two voices", "Delivery tiers" and "Persona specs").
 
 The tier comes from rules on the MomentCard, never from a model. Each line also has a role
 (open, build, peak, why). Role and tier pick a speaking style the voice has, and prosody always
-wraps the words. Audio description (SPEC 1) is spoken calm and slower whatever the tier.
+wraps the words. Each audience has its own delivery: the casual fan hears the broadcast booth,
+the analyst a measured read, the coach a steady one with a pause after the coaching point, the
+player fan a warmer, higher booth, and audio description (SPEC 1) a calm, slower read with pauses
+at every clause and after every line, whatever the tier.
 """
 
 from __future__ import annotations
@@ -185,11 +188,22 @@ _PEAK: dict[Tier, _Prosody] = {
     "clutch": (("sports-commentary-excited", "excited", "cheerful"), "2", "+14%", "+6%"),
 }
 _AD_STYLES = ("narration-relaxed", "narration-professional", "calm", "newscast")
+# The analyst's read: measured, the same at every tier; the numbers carry it.
+_ANALYST: _Prosody = (("newscast", "documentary-narration", "serious"), None, "+0%", "+0%")
+# The coach's: steady and a little slower, so the point lands.
+_COACH: _Prosody = (("friendly", "narration-relaxed", "calm", "serious"), None, "-6%", "+0%")
+# The player fan's: the booth, warmer and higher (pride in the player).
+_FAN_STYLES = ("excited", "sports-commentary-excited", "cheerful", "hopeful")
+_FAN_PITCH = 3  # percentage points over the booth's pitch
 
 # Audio description (SPEC 1) is read calm and clear whatever the moment's tier: a calm style when
-# the voice has one, never an excited one, and always a slower rate, so every name and place lands.
+# the voice has one, never an excited one, and always a slower rate, so every name and place lands;
+# a pause at every clause and after every line, so a listener can place each one.
 DESCRIBED: frozenset[Persona] = frozenset({"audio_description"})
-DESCRIBED_PROSODY = ("-10%", "+0%")  # (rate, pitch)
+DESCRIBED_PROSODY = ("-15%", "+0%")  # (rate, pitch)
+DESCRIBED_BREAKS = ("300ms", "600ms")  # (at each clause, after the line)
+# A pause after the persona's opener ("Coaching point.", "Lovely from him."), so it stands alone.
+OPENER_BREAK = "400ms"
 # What each persona must not hear lives with the other persona rules; re-exported for callers.
 ANALYST_NUMBERS = persona_rules.ANALYST_NUMBERS
 withheld = persona_rules.withheld
@@ -279,9 +293,15 @@ def line_role(
 def _delivery(role: Role, tier: Tier, persona: Persona | None) -> _Prosody:
     if persona in DESCRIBED:
         return (_AD_STYLES, None, *DESCRIBED_PROSODY)
-    if role == "peak":
-        return _PEAK[tier]
-    return {"open": _OPEN, "build": _BUILD, "why": _WHY}[role]
+    if persona == "analyst":
+        return _ANALYST
+    if persona == "coach":
+        return _COACH
+    booth = _PEAK[tier] if role == "peak" else {"open": _OPEN, "build": _BUILD, "why": _WHY}[role]
+    if persona == "player_fan":
+        styles, degree, rate, pitch = booth
+        return (_FAN_STYLES, degree, rate, f"{int(pitch.rstrip('%')) + _FAN_PITCH:+d}%")
+    return booth
 
 
 def pick_style(
@@ -317,18 +337,40 @@ def _break_at(text: str) -> int | None:
     return min(found) if found else None
 
 
+def _clauses(text: str) -> list[int]:
+    """Indices just after every clause mark inside the line (`, ; :` and their Chinese forms)."""
+    return [m.end() for m in re.finditer(r"[,;:](?= )|[，；：、]", text) if m.end() < len(text)]
+
+
+def _opener_end(text: str, persona: Persona | None, language: Language) -> int | None:
+    """Index just after the persona's opener when the line starts with it."""
+    for phrase in persona_rules.OPENERS.get(persona or "", {}).get(language, {}).values():
+        if text.startswith(phrase) and len(text) > len(phrase):
+            return len(phrase)
+    return None
+
+
 def _segments(
-    text: str, speaker: Speaker, rate: str, pitch: str, *, emphasize: bool, counterfactual: bool
+    text: str,
+    speaker: Speaker,
+    rate: str,
+    pitch: str,
+    *,
+    emphasize: bool,
+    counterfactual: bool,
+    pauses: dict[int, str] | None = None,
 ) -> str:
-    """Prosody spans in order. Emphasis replaces the line's prosody on its span; no nesting."""
+    """Prosody spans in order. Emphasis replaces the line's prosody on its span; no nesting.
+    `pauses`: more breaks, by the index they follow."""
     spans = _emphasis_spans(text) if emphasize else []
     break_at = _break_at(text) if counterfactual else None
-    points = {0, len(text)}
+    breaks = dict(pauses or {})
+    if break_at is not None:
+        breaks.setdefault(break_at, _BREAK)
+    points = {0, len(text)} | set(breaks)
     for start, end in spans:
         points.add(start)
         points.add(end)
-    if break_at is not None:
-        points.add(break_at)
     ordered = sorted(points)
     parts: list[str] = []
     for index in range(len(ordered) - 1):
@@ -341,8 +383,8 @@ def _segments(
             parts.append(f'<prosody rate="{er}" pitch="{ep}" volume="{ev}">{chunk}</prosody>')
         else:
             parts.append(f'<prosody rate="{rate}" pitch="{pitch}">{chunk}</prosody>')
-        if end == break_at:
-            parts.append(f'<break time="{_BREAK}"/>')
+        if end in breaks:
+            parts.append(f'<break time="{breaks[end]}"/>')
     return "".join(parts)
 
 
@@ -372,9 +414,15 @@ def ssml_for_line(
     chosen = next((style for style in preferred if style in set(styles)), None)
     if described or not chosen:
         degree = None
+    pauses: dict[int, str] = {}
+    if described:
+        pauses = dict.fromkeys(_clauses(line.text), DESCRIBED_BREAKS[0])
+        pauses[len(line.text)] = DESCRIBED_BREAKS[1]
+    elif (end := _opener_end(line.text, persona, language)) is not None:
+        pauses[end] = OPENER_BREAK
     segments = _segments(
         line.text, line.speaker, rate, pitch,
-        emphasize=not described, counterfactual=counterfactual and not described,
+        emphasize=not described, counterfactual=counterfactual and not described, pauses=pauses,
     )  # fmt: skip
     if chosen:
         extra = f' styledegree="{degree}"' if degree else ""

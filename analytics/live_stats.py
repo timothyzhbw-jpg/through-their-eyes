@@ -40,9 +40,11 @@ from analytics.stats import (
     V_MAX,
     cumulative_distance,
     difficulty_band,
+    display,
     lane_risk,
     milestones,
     pass_difficulty,
+    pass_length,
     release_speed,
     runs_above,
     segment_starts,
@@ -209,11 +211,12 @@ class MatchStats(BaseModel):
 
 
 def _r1(value: float) -> float:
-    return round(float(value), 1)
+    return display(value, 1)
 
 
 def _kmh(mps: float) -> float:
-    return _r1(float(mps) * 3.6)
+    """km/h as shown, to 0.1 (`display`): a claim about the same speed reads the same."""
+    return display(float(mps) * 3.6, 1)
 
 
 def _ints(row: np.ndarray) -> list[int]:
@@ -462,7 +465,7 @@ def _one_pass(
             pos[k1], vel[k1], team, ball[k1], -1, pressed_team=int(team[r])
         ).column(r)
         receiver_p = float(aggregate(column))
-    dist = float(np.linalg.norm(ball[k1] - ball[k0]))
+    dist = pass_length(ball, k0, k1)
     value, parts = pass_difficulty(lane, passer_p, receiver_p, dist)
     difficulty = round(value, 2)
     return PassCue(
@@ -474,7 +477,7 @@ def _one_pass(
         player=passer,
         receiver=receiver,
         outcome=outcome,  # type: ignore[arg-type]
-        distance_m=_r1(dist),
+        distance_m=display(dist, 0),  # whole metres, as every view shows a pass's length
         ball_kmh=_kmh(release_speed(ball, k0, k1, dt)),
         difficulty=difficulty,
         band=difficulty_band(difficulty),
@@ -496,12 +499,10 @@ def _shot_cues(
     for event in events:
         if event["type"] != "shot":
             continue
-        found = _shot_window(int(event["frame"]), events, breaks, frames)
+        found = shot_release(ball, int(event["frame"]), events, breaks, frames, dt)
         if found is None:
             continue
-        rel, cue_frame = found
-        speed = float(np.linalg.norm(ball[rel] - ball[int(event["frame"])]))
-        speed /= (rel - int(event["frame"])) * dt
+        speed, cue_frame = found
         k0 = int(event["frame"])
         cues.append(
             ShotCue(
@@ -515,6 +516,24 @@ def _shot_cues(
             )
         )
     return cues
+
+
+def shot_release(
+    ball: np.ndarray,
+    k0: int,
+    events: list[dict[str, Any]],
+    breaks: Sequence[int],
+    frames: int,
+    dt: float,
+) -> tuple[float, int] | None:
+    """(release speed in m/s, cue frame) of the shot struck at `k0`, once final, else None: the
+    ball's mean speed over its release window (`_shot_window`). The one definition of shot speed:
+    the SHOT chip, the shot log and the claim measure it so. `ball`: (F, 2), `feed_track`."""
+    found = _shot_window(k0, events, breaks, frames)
+    if found is None:
+        return None
+    rel, cue_frame = found
+    return float(np.linalg.norm(ball[rel] - ball[k0])) / ((rel - k0) * dt), cue_frame
 
 
 def _shot_window(

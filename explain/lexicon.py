@@ -146,6 +146,18 @@ CONNECTIVES = frozenset(
         # zh
         "然后", "但是", "所以", "现在", "看这里", "注意看", "再看看", "回放", "倒回去看看",
         "暂停", "为什么", "他看到了什么", "她看到了什么", "就是这个瞬间", "关键在这里",
+        # Persona openers and the coach's teaching cues (agents/persona_rules.py): fixed words
+        # with no number, no player and no lexicon term.
+        "watch his head", "coaching point", "lovely from him", "what a player",
+        "now the numbers", "teach it: check your shoulder before the ball arrives",
+        "teach it: look at the goal before the ball arrives",
+        "teach it: find your man before the ball is played",
+        "teach it: move the ball before the press arrives",
+        "注意看他回头", "注意看他看哪儿", "这里有个细节要讲", "这一下漂亮", "这才是好球员",
+        "看数据",
+        "要教的就是这一点：球到之前，先回头看", "要教的就是这一点：球到之前，先抬头看球门",
+        "要教的就是这一点：球传出之前，先找到你盯的人",
+        "要教的就是这一点：对手逼上来之前，先把球传出去",
     }
 )  # fmt: skip
 _EDGE = re.compile(r"^[\s.,!?;:…—–\-\"'“”‘’，。！？；：、]+|[\s.,!?;:…—–\-\"'“”‘’，。！？；：、]+$")
