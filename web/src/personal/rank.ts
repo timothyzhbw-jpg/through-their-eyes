@@ -44,6 +44,24 @@ export function tierOf(follow: Following, who: Involvement, wholeMatch = false):
   return 2;
 }
 
+/** The index in `ids` of the followed player, or -1 (none, or not in this export). */
+export const followedIndex = (player: string | null, ids: readonly string[]): number =>
+  player === null ? -1 : ids.indexOf(player);
+
+/**
+ * The tier of a moment link. The full-match link (scenario null) is lifted only when the page
+ * holds a match: on a single hero page the viewer cannot see who is in that match, so it stays put.
+ */
+export function linkTier(
+  follow: Following,
+  scenario: string | null,
+  byScenario: ReadonlyMap<string, Involvement>,
+  hasMatch: boolean,
+): Tier {
+  if (scenario === null) return tierOf(follow, NOBODY, hasMatch);
+  return tierOf(follow, byScenario.get(scenario) ?? NOBODY);
+}
+
 /** The same items, tier by tier, each tier in its given order. */
 export function rankBy<T>(items: readonly T[], tier: (item: T) => Tier): T[] {
   return items

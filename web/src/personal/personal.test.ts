@@ -17,6 +17,7 @@ import {
   type Choices,
 } from "./follow";
 import {
+  audienceFor,
   browserStorage,
   mergeChoices,
   readSaved,
@@ -26,9 +27,11 @@ import {
   writeSaved,
 } from "./persist";
 import {
+  followedIndex,
   involvedCount,
   involvementByScenario,
   involvementOf,
+  linkTier,
   momentWho,
   NOBODY,
   rankBy,
@@ -84,7 +87,7 @@ describe("what a value can name", () => {
   });
   it("lists both line-ups by shirt number, home first", () => {
     const options = playerOptions(exportJson.players);
-    expect(options).toHaveLength(22);
+    expect(options).toHaveLength(exportJson.players.length);
     expect(options[0]).toMatchObject({ team: 0, number: 1 });
     expect(options[11]).toMatchObject({ team: 1, number: 1 });
   });
@@ -111,7 +114,7 @@ describe("filtering: the followed first", () => {
     expect(order({ team: 1, player: null })).toEqual(["a", "b", "c", "d", "e"]);
     expect(order({ team: 0, player: null })).toEqual(["b", "c", "e", "a", "d"]);
   });
-  it("a player alone lifts his moments", () => {
+  it("a player alone lifts their moments", () => {
     expect(order({ team: null, player: "H2" })).toEqual(["c", "a", "b", "d", "e"]);
   });
   it("the whole match ranks with the followed club's once anything is followed", () => {
@@ -148,13 +151,24 @@ describe("involvement from the export in memory", () => {
     expect(byScenario.get("blind_side_run")!.players.has("H8")).toBe(true);
     expect(byScenario.get("press_escape")!.teams.has(0)).toBe(true);
   });
+  it("on a hero page the full-match link is not lifted: its players are not known", () => {
+    const hero = parseHero(exportJson);
+    expect(hero.match).toBeFalsy();
+    const byScenario = involvementByScenario(hero);
+    const follow = { team: 0 as const, player: "H8" };
+    expect(linkTier(follow, null, byScenario, Boolean(hero.match))).toBe(2);
+    expect(linkTier(follow, null, byScenario, true)).toBe(1);
+    const ranked = rankBy(MOMENT_LINKS, (l) =>
+      linkTier(follow, l.scenario, byScenario, Boolean(hero.match)),
+    );
+    const full = MOMENT_LINKS.findIndex((l) => l.scenario === null);
+    expect(ranked.map((l) => l.id).indexOf(MOMENT_LINKS[full]!.id)).toBeGreaterThanOrEqual(full);
+  });
   it("lifts the rail's links for a followed player and keeps the rest in place", () => {
     const hero = parseHero(matchExport());
     const byScenario = involvementByScenario(hero);
     const ranked = rankBy(MOMENT_LINKS, (l) =>
-      l.scenario === null
-        ? tierOf({ team: null, player: "H8" }, NOBODY, true)
-        : tierOf({ team: null, player: "H8" }, byScenario.get(l.scenario) ?? NOBODY),
+      linkTier({ team: null, player: "H8" }, l.scenario, byScenario, true),
     );
     const ids = ranked.map((l) => l.id);
     // H8 is the hero of the look and of the pressure; the corner and the goal are not in this
@@ -162,6 +176,40 @@ describe("involvement from the export in memory", () => {
     expect(ids.slice(0, 2)).toEqual(["look", "pressure"]);
     expect(ids).toHaveLength(MOMENT_LINKS.length);
     expect(new Set(ids).size).toBe(MOMENT_LINKS.length);
+  });
+});
+
+describe("what the page asks for", () => {
+  const link: Choices = { ...NO_CHOICES, persona: null, language: null };
+  const saved: Choices = { ...NO_CHOICES, persona: "coach", language: "zh" };
+  it("online it is the address over what was saved", () => {
+    const merged = mergeChoices(link, saved);
+    expect(audienceFor(link, merged, false)).toEqual({ persona: "coach", language: "zh" });
+  });
+  it("offline a saved audience or language is not asked for", () => {
+    const merged = mergeChoices(link, saved);
+    expect(audienceFor(link, merged, true)).toEqual({ persona: null, language: null });
+    const withLink: Choices = { ...link, persona: "analyst" };
+    expect(audienceFor(withLink, mergeChoices(withLink, saved), true)).toEqual({
+      persona: "analyst",
+      language: null,
+    });
+  });
+});
+
+describe("the ring under the followed player", () => {
+  // PovView and TacticalView draw one mint ring where `j === useFollowedIndex(hero.ids)`, so the
+  // index is what decides it (the scenes themselves need WebGL; web smoke loads them).
+  const ids = parseHero(exportJson).ids;
+  const indexOf = (player: string | null) => followedIndex(player, ids);
+  it("is the followed player's index, once", () => {
+    const j = indexOf(ids[3]!);
+    expect(j).toBe(3);
+    expect(ids.filter((_, i) => i === j)).toHaveLength(1);
+  });
+  it("is none when nobody is followed or the id is not in this export", () => {
+    expect(indexOf(null)).toBe(-1);
+    expect(indexOf("Z99")).toBe(-1);
   });
 });
 

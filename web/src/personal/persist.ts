@@ -77,6 +77,19 @@ export function mergeChoices(link: Choices, saved: Choices): Choices {
   };
 }
 
+/**
+ * The persona and language a page asks for. Online they are the merged choices (the address over
+ * storage); offline only the bundled breakdowns exist, so only the address's own values count.
+ */
+export function audienceFor(
+  link: Choices,
+  merged: Choices,
+  offline: boolean,
+): Pick<Choices, "persona" | "language"> {
+  const from = offline ? link : merged;
+  return { persona: from.persona, language: from.language };
+}
+
 /** The query string with the four choice parameters set (or dropped when null), the rest kept. */
 export function searchWith(search: string, choices: Choices): string {
   const params = new URLSearchParams(search);

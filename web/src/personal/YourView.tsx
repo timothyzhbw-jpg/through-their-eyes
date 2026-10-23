@@ -216,7 +216,7 @@ export function YourViewMenu() {
           {off && <p className="note">Other audiences and languages need the live service.</p>}
           <p className="note">
             Saved in the address and in this browser. {personaLabel(persona)} in{" "}
-            {LANGUAGE_NAME[language]} uses the breakdown the service has already written.
+            {LANGUAGE_NAME[language]} is what the page asks the service for.
           </p>
         </div>
       )}

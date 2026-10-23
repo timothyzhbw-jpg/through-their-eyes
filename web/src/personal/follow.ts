@@ -22,7 +22,11 @@ export const NO_CHOICES: Choices = { persona: null, language: null, team: null, 
 
 /** The two modes of the switch, each on the persona it maps to; the other three sit under More. */
 export const MODES = [
-  { persona: "casual", label: "Casual fan", note: "The story in three lines, through his eyes." },
+  {
+    persona: "casual",
+    label: "Casual fan",
+    note: "The story in three lines, through the player's eyes.",
+  },
   {
     persona: "analyst",
     label: "Tactical analyst",

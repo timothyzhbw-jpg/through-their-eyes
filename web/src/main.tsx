@@ -18,7 +18,7 @@ import { LOOK_FILES } from "./takeeyes/looks";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
-import { mergeChoices, readSaved } from "./personal/persist";
+import { audienceFor, mergeChoices, readSaved } from "./personal/persist";
 import { personal, persistOnChange } from "./personal/state";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
@@ -56,6 +56,8 @@ async function main() {
     ]);
     const plan = link.invalidPlan ? INVALID_PLAN : EXAMPLE_PLAN;
     const offline = forcedOffline ? "offline=1 in the address" : loaded.offline;
+    // Offline only the bundled breakdowns exist: a saved audience or language is not asked for.
+    Object.assign(link, audienceFor(parsed, chosen, Boolean(offline)));
     const broadcast = (controls: ViewControls) => {
       if (new URLSearchParams(window.location.search).get("camera") !== "broadcast") return;
       controls.setFocus("broadcast");

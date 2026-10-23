@@ -21,7 +21,7 @@
 //                                              or from that one
 //   ?tour=quick|<step id>                      the quick tour (four steps), from its first step
 //                                              or from that one
-//   ?play=eyes                                 open "Take his eyes" (takeeyes/) on his own look;
+//   ?play=eyes                                 open "Take his eyes" (takeeyes/) on the hero's own look;
 //                                              with ?match=, on its first hero moment that has
 //                                              a bundled look grid
 //   ?play=steps                                open the scan step-through (steps/) on his first
@@ -36,7 +36,7 @@
 //   ?team=KES|COR                              follow a club (personal/): its moments first, the
 //                                              board and the summary say so
 //   ?player=<roster id, e.g. H8>               follow a player: ringed in the 3D view and on the
-//                                              board, his moments first
+//                                              board, their moments first
 // (?persona and ?lang above also fill "Your view"; the four are kept in localStorage too.)
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no moment
 // links above the live screen: the framing of the demo video's captures), ?offline=1,

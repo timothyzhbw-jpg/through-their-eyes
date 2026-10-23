@@ -114,6 +114,7 @@ describe("Your view", () => {
     act(() => container.querySelector<HTMLButtonElement>(".your-view-toggle")!.click());
     const selects = container.querySelectorAll<HTMLSelectElement>(".your-view-row select");
     const player = selects[2]!;
-    expect(player.options).toHaveLength(23); // "No player" and 22 players
+    // "No player" and every player of the loaded export
+    expect(player.options).toHaveLength(1 + parseHero(matchExport()).players.length);
   });
 });
