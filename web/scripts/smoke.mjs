@@ -1206,13 +1206,15 @@ function startApi(url, cache) {
       await exited;
     },
     async ready() {
-      for (const deadline = Date.now() + 180_000; Date.now() < deadline;) {
+      // The API loads all five matches before it opens the port (TTE_WARM): over 3 minutes on a loaded
+      // runner (three smoke runs died on it on 2026-10-22/23).
+      for (const deadline = Date.now() + 420_000; Date.now() < deadline;) {
         const up = await Promise.race([health(url), exited]);
         if (up === "exited") throw new Error(`the API exited: see ${join(opt.out, "api.log")}`);
         if (up) return up;
         await new Promise((r) => setTimeout(r, 500));
       }
-      throw new Error("the API did not answer /health within 3 minutes");
+      throw new Error("the API did not answer /health within 7 minutes");
     },
   };
 }
