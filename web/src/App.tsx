@@ -33,6 +33,7 @@ import {
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
+import { StudioPanel } from "./studio/Studio";
 import { StatsTicker } from "./ui/StatsTicker";
 import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -199,6 +200,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
             <WhatIfPanel />
             <NarrationPanel />
             <BreakdownPanel />
+            <StudioPanel />
             <MomentsPanel />
           </div>
         </main>

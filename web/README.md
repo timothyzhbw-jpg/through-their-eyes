@@ -450,6 +450,19 @@ src/
   so its readout matches the HUD. Live, the curves and key points stop at the last frame the
   stream sent, a scan appears once it has ended, and there is no overlay (the stream is one run). Every value is marked `sim`: a computed metric, not a verified
   claim. `telemetry/telemetry.ts` holds the logic and its tests.
+- **Publish this moment** (SPEC 7, `studio/`). The moment as a content package, built offline from
+  the verified breakdown on screen: no model or service call. (1) The highlight plays the
+  breakdown reel and lists its shots (in/out frames, camera, caption) read off the plan; no video
+  is encoded. (2) The explainer card lists the verified lines with their claim kinds. (3) Posts in
+  `en` and `zh` (short, carousel caption, vertical-video caption) are the narration's own lines in
+  its language, or templates filled from supported claims' values in the other; a sentence with a
+  number no supported claim carries is dropped, and the hashtags are the invented clubs'. (4) Data
+  cards (square, 9:16, 16:9) are painted on a canvas and saved as PNG; each shows at most three
+  claim values. (5) **Business value** is not a match fact: impressions, engagement, click-through
+  to an "Official watch" entry, sponsor impressions (an invented sponsor) and a recall proxy come
+  from a seeded model (`studio/audience.ts`) keyed by moment, persona and language, drawn inside
+  documented ranges. Every figure is labelled "Demo data: simulated audience, not real results";
+  nobody has watched the app. The panel links the business model in `docs/SUBMISSION.md`.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 - **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",
