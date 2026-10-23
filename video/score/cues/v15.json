@@ -1,5 +1,5 @@
 {
-  "about": "Cue sheet for cut v15, \"GET YOUR VISION\" (Bowen's restructure, 2026-10-22): one story line, the lesson, the evidence, the product, the business case. The coach's mantra cards, the board on the tablet, the scan step-through, one montage for the press and the corner, personas as a split, a business card; 107.049 s.",
+  "about": "Cue sheet for cut v15, \"GET YOUR VISION\" (Bowen's restructure, 2026-10-22): one story line, the lesson, the evidence, the product, the business case. The coach's mantra cards, the board on the tablet, the scan step-through, one montage for the press and the corner, personas as a split, a business card; 110.949 s. Re-cut after the competitor scan: perception said in the first ten seconds, the live match with its moment links, the Verifier's offline result read off the report.",
   "trailer_ref": null,
   "bpm": 140,
   "sections": [
@@ -489,6 +489,18 @@
       "type": "button",
       "at": "b47-end:+5.0",
       "note": "the button, after 'Try the replay'"
+    },
+    {
+      "type": "hit",
+      "at": "b32b1-stream",
+      "size": "small",
+      "note": "the whole match, live, with the moment links"
+    },
+    {
+      "type": "card",
+      "at": "b05b-s2-push:+0.2",
+      "snap": false,
+      "note": "WHAT HE SAW. WHAT HE BELIEVED."
     }
   ]
 }

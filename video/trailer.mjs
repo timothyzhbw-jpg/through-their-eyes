@@ -16,7 +16,7 @@ import { parseArgs } from "node:util";
 import { assetFileName, copyLocalAsset, downloadAsset, validateAssets } from "./lib/assets.mjs";
 import { digest, isCached, storeHash } from "./lib/cache.mjs";
 import { burnArgs, captionSides, captionTimeline } from "./lib/captions.mjs";
-import { claimTable, resolveTitle, resolveVo } from "./lib/claims.mjs";
+import { claimTable, reportFacts, resolveTitle, resolveVo } from "./lib/claims.mjs";
 import {
   beatCommand,
   contactSheetHtml,
@@ -1027,10 +1027,16 @@ function titlesWithFiles(ctx, table) {
 
 function loadClaims(ctx) {
   const file = path.join(ctx.finalsDir, "claims.json");
-  if (!existsSync(file)) return { table: {}, doc: null };
+  // Numbers from committed eval reports (`report_facts`), next to the live page's claims.
+  const read = (rel) => {
+    const abs = path.resolve(ctx.root, rel);
+    return abs.startsWith(ctx.root + path.sep) && existsSync(abs) ? readFileSync(abs, "utf8") : null;
+  };
+  const reports = reportFacts(read, ctx.spec.report_facts ?? {});
+  if (!existsSync(file)) return { table: reports, doc: null };
   const doc = JSON.parse(readFileSync(file, "utf8"));
   const table = doc.claims && typeof doc.claims === "object" ? doc.claims : claimTable(doc.sources ?? []);
-  return { table, doc };
+  return { table: { ...table, ...reports }, doc };
 }
 
 function titleUses(spec, id) {

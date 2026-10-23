@@ -295,6 +295,12 @@ frame (`source_time`), light the screen (`ev`, stops in linear light, ramped bac
 last `ev_ramp_frames` so the cut to the full-frame shot is seamless) and map against another
 clip's last frame (`ref_corners`, so two shots of one screen show the same picture).
 
+**Report numbers.** `report_facts` reads a number the live page cannot show (an offline eval's
+result) off a committed report: `{ id: { file, pattern, values } }`, the pattern's groups named by
+`values`, filled as `{id.value}` slots like claims (four-digit integers get thousands separators);
+no match leaves the slot unfilled, so the title takes its fallback. The report lists each one with
+the line it came from.
+
 **Numbers.** A voice-over line and a title param may not contain a digit or a number word
 (`zero` through `twelve`, the tens, `hundred`, `thousand`, `once`, `twice`, `half`, `dozen`,
 `percent`). A number arrives only as a `{claim.value}` slot, filled from `out/video/claims.json`

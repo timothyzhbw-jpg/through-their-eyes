@@ -88,6 +88,21 @@ export function validateTrailer(spec, ctx) {
     return { errors: ["trailer.json: expected an object"], warnings };
   }
   if (spec.naming != null && !["ids", "names"].includes(spec.naming)) errors.push(`naming must be "ids" or "names"`);
+  // `report_facts`: numbers read off a committed eval report (claims.mjs reportFacts).
+  for (const [id, fact] of Object.entries(spec.report_facts ?? {})) {
+    const at = `report_facts.${id}`;
+    if (!/^[a-z_]+$/.test(id)) errors.push(`${at}: id must be lower-case letters and underscores`);
+    if (typeof fact?.file !== "string" || !repoFile(ctx.root, fact.file)) errors.push(`${at}: file must be a path inside the repo`);
+    let groups = -1;
+    try {
+      groups = new RegExp(`${fact?.pattern}|`).exec("").length - 1;
+    } catch {
+      errors.push(`${at}: pattern is not a regular expression`);
+    }
+    const names = Array.isArray(fact?.values) ? fact.values : [];
+    if (!names.length || !names.every((n) => /^[a-z_]+$/.test(n))) errors.push(`${at}: values must name each group`);
+    else if (groups >= 0 && groups !== names.length) errors.push(`${at}: ${groups} groups in pattern, ${names.length} values`);
+  }
   const voIds = new Set((spec.beats ?? []).flatMap((b) => (b.vo ?? []).map((v) => v.id.replace(/n$/, ""))));
   for (const id of Object.keys(spec.named?.vo ?? {})) {
     if (!voIds.has(id)) errors.push(`named.vo.${id}: no voice line has that id`);

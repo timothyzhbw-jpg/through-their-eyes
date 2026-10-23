@@ -589,6 +589,25 @@
       ],
       "vo": "Before the ball arrives, know what's around you.",
       "notes": "The pin source for the tablet: blind-side alerts are on by default; the hero's only blind-side alert on the POV player is H9, unseen from f42 to the decision without the look."
+    },
+    {
+      "id": "23-stream-rail",
+      "spec_beat": "trailer, the studio basics",
+      "title": "The whole match streaming live on the broadcast camera, with the moment links above the live screen",
+      "status": "ready",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&intro=0",
+      "viewport": { "width": 1920, "height": 1080 },
+      "target_s": 1,
+      "crop": null,
+      "setup": [
+        { "do": "wait", "for": "assets", "views": ["pov"], "timeout_s": 40 }
+      ],
+      "actions": [
+        { "do": "wait", "for": "live", "hold": 4, "still": true },
+        { "do": "hold", "s": 6 }
+      ],
+      "vo": "A whole match, live, with every key moment a tap away.",
+      "notes": "No rail=0 here: the moment links are the point of this shot."
     }
   ]
 }

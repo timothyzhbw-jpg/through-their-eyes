@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0,
       "from": 0,
-      "until": 107.049,
+      "until": 110.949,
       "gain_db": 4,
       "fade_in": 0,
       "fade_out": 0,
@@ -1018,9 +1018,9 @@
             "after": ""
           },
           {
-            "before": "HE FOUND H9 WITH A",
-            "value": "{pass_to_runner.dist}",
-            "after": "M PASS"
+            "before": "HIS PICTURE OF H9 WAS OFF BY",
+            "value": "{belief_error.err}",
+            "after": "M"
           },
           {
             "before": "THAT LOOK WAS WORTH",
@@ -1685,6 +1685,75 @@
       "params": {
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
+    },
+    "ma8-line": {
+      "template": "slam",
+      "dur": 1.8,
+      "alpha": true,
+      "params": {
+        "kicker": "OFFLINE TEST",
+        "lines": [
+          {
+            "text": "{verifier_offline.kept} OF {verifier_offline.total} BROKEN LINES",
+            "size": 64
+          },
+          {
+            "text": "KEPT OFF THE AIR",
+            "color": "gold",
+            "size": 64
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.2,
+        "backdrop": true
+      },
+      "fallback": {
+        "kicker": "OFFLINE TEST",
+        "lines": [
+          {
+            "text": "EVERY BROKEN LINE",
+            "size": 64
+          },
+          {
+            "text": "KEPT OFF THE AIR",
+            "color": "gold",
+            "size": 64
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.2,
+        "backdrop": true
+      }
+    },
+    "tag-his-eyes": {
+      "template": "tag",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "text": "HIS EYES",
+        "sub": "WHAT HE SEES"
+      }
+    },
+    "saw-believed": {
+      "template": "slam",
+      "dur": 1.4,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "WHAT HE SAW.",
+            "size": 96
+          },
+          {
+            "text": "WHAT HE BELIEVED.",
+            "color": "gold",
+            "size": 96
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.4,
+        "backdrop": true
+      }
     }
   },
   "beats": [
@@ -1714,6 +1783,10 @@
         "glue"
       ],
       "overlays": [
+        {
+          "title": "tag-his-eyes",
+          "at": 0.05
+        },
         {
           "title": "label-dr-1p633",
           "at": 0
@@ -1868,6 +1941,10 @@
       },
       "overlays": [
         {
+          "title": "saw-believed",
+          "at": 0.2
+        },
+        {
           "title": "label-dr-1p6",
           "at": 0
         }
@@ -1894,6 +1971,10 @@
         "at": 1.5
       },
       "overlays": [
+        {
+          "title": "tag-his-eyes",
+          "at": 0.05
+        },
         {
           "title": "nc-you-app",
           "at": 1.5
@@ -1972,7 +2053,13 @@
           "text": "Before the ball arrives, know what's around you."
         }
       ],
-      "sfx": []
+      "sfx": [],
+      "overlays": [
+        {
+          "title": "saw-believed",
+          "at": 1.4
+        }
+      ]
     },
     {
       "id": "b05c-board",
@@ -2690,6 +2777,33 @@
       ]
     },
     {
+      "id": "b32b1-stream",
+      "dur": 3.4,
+      "picture": {
+        "src": "capture",
+        "shot": "23-stream-rail",
+        "in": 4.5,
+        "push": [
+          1.0,
+          1.03
+        ]
+      },
+      "vo": [
+        {
+          "id": "vo40",
+          "at": 0.2,
+          "text": "A whole match, live, with every key moment a tap away."
+        }
+      ],
+      "sfx": [],
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
+    },
+    {
       "id": "b32c-eyes-drag",
       "dur": 2.25,
       "picture": {
@@ -2914,7 +3028,7 @@
       "picture": {
         "src": "capture",
         "shot": "07-evidence",
-        "in": 4,
+        "in": 1.6,
         "crop": [
           0,
           0,
@@ -2971,7 +3085,7 @@
     },
     {
       "id": "b35-wrong",
-      "dur": 3.5,
+      "dur": 4.0,
       "picture": {
         "src": "capture",
         "shot": "09-verifier",
@@ -2991,6 +3105,10 @@
         {
           "title": "refuted",
           "at": 1.1
+        },
+        {
+          "title": "ma8-line",
+          "at": 2.2
         }
       ],
       "vo": [
@@ -3125,8 +3243,8 @@
         "right": {
           "src": "capture",
           "shot": "05-personas",
-          "in": 4,
-          "speed": 0.5,
+          "in": 4.1,
+          "speed": 0.8,
           "crop": [
             460,
             280,
@@ -3560,9 +3678,9 @@
               "after": ""
             },
             {
-              "before": "HE FOUND VARNHALL WITH A",
-              "value": "{pass_to_runner.dist}",
-              "after": "M PASS"
+              "before": "HIS PICTURE OF VARNHALL WAS OFF BY",
+              "value": "{belief_error.err}",
+              "after": "M"
             },
             {
               "before": "THAT LOOK WAS WORTH",
@@ -3647,5 +3765,14 @@
       "ev_ramp_frames": 30
     }
   ],
-  "watermark": "EDIT CUT · BLENDER CH. II/III PENDING"
+  "report_facts": {
+    "verifier_offline": {
+      "file": "eval/reports/crew_evidence.md",
+      "pattern": "Of (\\d+) perturbed lines \\([^)]*\\), (\\d+) were kept off the air with the Verifier",
+      "values": [
+        "total",
+        "kept"
+      ]
+    }
+  }
 }

@@ -9,7 +9,7 @@ early. Decide early."). The coach's tablet shows the app's board with the blind 
 film cuts into the app: the look, frozen scan by scan in the app's step-through, with and without
 it; the same vision under pressure and at a corner in one montage; the crew, the verifier, the
 drill and the personas; who would pay; and the player's callback goal before "GET YOUR VISION."
-It runs **1:47** and is rendered end to end by code from
+It runs **1:51** and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -66,13 +66,13 @@ last frame is the board full frame: the cut is exact.
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
-| 0:00.00 | 1.633 | s0-eyes (his eyes on the ball, story 0.3 → 1.933) | story (Blender, dramatisation) | Kid: Give it to me! |
+| 0:00.00 | 1.633 | s0-eyes · HIS EYES | story (Blender, dramatisation) | Kid: Give it to me! |
 | 0:01.63 | 1.1 | s1a-ots · name card YOU ARE No. 14 | story (Blender, dramatisation) |  |
 | 0:02.73 | 0.966 | s1c-steal | story (Blender, dramatisation) |  |
 | 0:03.70 | 0.867 | s1d-fall | story (Blender, dramatisation) | Coach: You watched the ball. You missed the game. |
-| 0:04.57 | 2.3 | card-watched · YOU WATCHED THE BALL. / YOU MISSED THE GAME. | card |  |
+| 0:04.57 | 2.5 | card-watched · YOU WATCHED THE BALL. / YOU MISSED THE GAME. | card |  |
 | 0:07.07 | 1.2 | s2-ots | story (Blender, dramatisation) | Coach: Before the ball arrives, know what's around you. |
-| 0:08.27 | 1.6 | s2-push | story (Blender, dramatisation) |  |
+| 0:08.27 | 1.6 | s2-push · WHAT HE SAW. / WHAT HE BELIEVED. | story (Blender, dramatisation) |  |
 | 0:09.87 | 1.2 | board | app |  |
 | 0:11.07 | 1.1 | card-vision · GET YOUR VISION. | card | Coach: Get your vision. |
 | 0:12.17 | 3 | a1-pov · SEE WHAT THEY SAW. | in-engine | Replays show where the ball went… never what the player saw. |
@@ -90,7 +90,7 @@ last frame is the board full frame: the cut is exact.
 | 0:34.17 | 1.15 | rw2 | Blender |  |
 | 0:35.32 | 2.6 | bl03 · HE PLAYS IT BACK TO H4. | Blender |  |
 | 0:37.92 | 2.4 | st-nolook · WITHOUT THE LOOK / NO SCAN. NO PICTURE. NO TIME. | app |  |
-| 0:40.32 | 2.8 | card-scan · SCAN EARLY. / DECIDE EARLY. | card | Coach: Scan early. Decide early. |
+| 0:40.32 | 2.3 | card-scan · SCAN EARLY. / DECIDE EARLY. | card | Coach: Scan early, decide early. |
 | 0:42.62 | 1.4 | same · THE SAME VISION (UNDER PRESSURE · AT A CORNER) | card |  |
 | 0:44.02 | 1.3 | press-a | in-engine (Blender candidate in the edit cut) |  |
 | 0:45.32 | 1.8 | press-b | in-engine (Blender candidate in the edit cut) | Under a high press… |
@@ -99,31 +99,32 @@ last frame is the board full frame: the cut is exact.
 | 0:51.32 | 1.5 | corner-a | app (Blender candidate in the edit cut) | At a corner, it's the marker who has to look. |
 | 0:52.82 | 0.9 | corner-look | app (Blender candidate in the edit cut) |  |
 | 0:53.72 | 1.35 | corner-app | app |  |
-| 0:55.07 | 2.25 | eyes-drag · TAKE HIS EYES | app | Take his eyes yourself. |
-| 0:57.32 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
-| 0:58.82 | 1.5 | eyes-result | app |  |
-| 1:00.32 | 3 | yc-decide | app | Your call. You only know what he knew. |
-| 1:03.32 | 3.6 | yc-truth | app | He saw the run. Would you? |
-| 1:06.92 | 1.4 | crew | card | Behind every replay, a crew of agents. |
-| 1:08.32 | 1.6 | crew-trace | app |  |
-| 1:09.92 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
-| 1:13.52 | 3.5 | wrong | app | Try a wrong number… and it never airs. |
-| 1:17.02 | 2 | redcard · TELESTRATOR DOWN | app | Take an agent down… |
-| 1:19.02 | 2.6 | bringback | app | bring it back, and it picks up where it left off. |
-| 1:21.62 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
-| 1:24.42 | 1.3 | zh · 中文 | app |  |
-| 1:25.72 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
-| 1:28.22 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
-| 1:30.22 | 1 | s4a-pov | story (Blender, dramatisation) |  |
-| 1:31.22 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
-| 1:33.25 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
-| 1:35.05 | 1 | s4d-strike | story (Blender, dramatisation) |  |
-| 1:36.05 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
-| 1:37.55 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
-| 1:38.55 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
-| 1:40.55 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
+| 0:55.07 | 3.4 | stream | app | A whole match, live, with every key moment a tap away. |
+| 0:58.47 | 2.25 | eyes-drag · TAKE HIS EYES | app | Take his eyes yourself. |
+| 1:00.72 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
+| 1:02.22 | 1.5 | eyes-result | app |  |
+| 1:03.72 | 3 | yc-decide | app | Your call. You only know what he knew. |
+| 1:06.72 | 3.6 | yc-truth | app | He saw the run. Would you? |
+| 1:10.32 | 1.4 | crew | card | Behind every replay, a crew of agents. |
+| 1:11.72 | 1.6 | crew-trace | app |  |
+| 1:13.32 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
+| 1:16.92 | 4 | wrong · {verifier_offline.kept} OF {verifier_offline.total} BROKEN LINES / KEPT OFF THE AIR | app | Try a wrong number… and it never airs. |
+| 1:20.92 | 2 | redcard · TELESTRATOR DOWN | app | Take an agent down… |
+| 1:22.92 | 2.6 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:25.52 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
+| 1:28.32 | 1.3 | zh · 中文 | app |  |
+| 1:29.62 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
+| 1:32.12 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
+| 1:34.12 | 1 | s4a-pov | story (Blender, dramatisation) |  |
+| 1:35.12 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
+| 1:37.15 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
+| 1:38.95 | 1 | s4d-strike | story (Blender, dramatisation) |  |
+| 1:39.95 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
+| 1:41.45 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
+| 1:42.45 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
+| 1:44.45 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
 
-Total 107.05 s. The score session composes to the cue sheet generated from this spec.
+Total 110.95 s. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 
@@ -172,6 +173,10 @@ The cut follows the data where a requested beat does not hold:
   the run without the look, so the tablet shows that board.
 - **No two-pane split.** The app's "split" focus is now his eyes with the board inset, so with and
   without the look use the app's own With / Without switch on the board, then the step-through.
+- **The Verifier's offline result is read, not typed.** "2,837 OF 2,837 BROKEN LINES KEPT OFF THE AIR"
+  (NUMBERS MA8) fills from `report_facts`: a pattern matched against
+  [eval/reports/crew_evidence.md](../eval/reports/crew_evidence.md); without a match the card
+  says "EVERY BROKEN LINE KEPT OFF THE AIR".
 - **Who would pay** comes from SUBMISSION.md's business model (broadcasters, clubs, the league's
   fan apps), with no prices.
 - **Chapter numbers are Roman and shirt numbers are names** ("CH. II", "No. 14"): the cards may
