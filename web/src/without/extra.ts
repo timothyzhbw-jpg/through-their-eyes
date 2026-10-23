@@ -97,8 +97,18 @@ export interface ExtraLooksState {
   error: string | null;
 }
 
+/** What his own look is compared with: the run without it, or the run with more. */
+export type Compare = "without" | "extra";
+
+const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six"];
+/** "two" for 2: the switch's label and the panel's sentence name as many looks as the bundle added. */
+export function countWord(n: number): string {
+  return NUMBER_WORDS[n] ?? String(n);
+}
+
 export interface ExtraLooksController {
   state: Store<ExtraLooksState>;
+  compare: Store<{ value: Compare }>; // lives here, so a moment change keeps the switch
   load(): Promise<void>;
 }
 
@@ -127,6 +137,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): ExtraLooks
   let loading: Promise<void> | null = null;
   return {
     state,
+    compare: createStore<{ value: Compare }>({ value: "without" }),
     load() {
       if (!file) return Promise.resolve();
       loading ??= (async () => {

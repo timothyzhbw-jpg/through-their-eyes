@@ -19,7 +19,13 @@ import { useView } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { KindTags, LineText } from "../ui/Narration";
 import type { Language } from "../whatif/whatif";
-import { extraLooksOf, type ExtraLooks, type ExtraLooksState } from "./extra";
+import {
+  countWord,
+  extraLooksOf,
+  type Compare,
+  type ExtraLooks,
+  type ExtraLooksState,
+} from "./extra";
 import { heroGatesOf, type HeroGate, type HeroGatesState } from "./gates";
 import { withoutLookOf, type WithoutLook, type WithoutLookState } from "./without";
 import "./without.css";
@@ -37,6 +43,9 @@ const NO_EXTRA: Store<ExtraLooksState> = createStore<ExtraLooksState>({
   status: "none",
   data: null,
   error: null,
+});
+const NO_COMPARE: Store<{ value: Compare }> = createStore<{ value: Compare }>({
+  value: "without",
 });
 const NO_LANGUAGE: Store<{ language: Language }> = createStore({ language: "en" as Language });
 
@@ -158,7 +167,10 @@ export function WithoutLookLines() {
   const extra = useExtraLooks();
   const { narration, line } = useNarration(w);
   const extraNarration = useNarration(extra).narration;
-  const [compare, setCompare] = useState<Compare>("without");
+  const session = useView();
+  const compareStore =
+    (session.kind === "hero" ? extraLooksOf(session).compare : null) ?? NO_COMPARE;
+  const compare = useStore(compareStore, (s) => s.value);
   const [explain, setExplain] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   const shown = narration
@@ -171,7 +183,13 @@ export function WithoutLookLines() {
   const choosing = !!extra && !!extraNarration;
   return (
     <div className="without-lines">
-      {choosing && <CompareSwitch value={compare} onChange={setCompare} />}
+      {choosing && (
+        <CompareSwitch
+          value={compare}
+          onChange={(value) => compareStore.set({ value })}
+          count={extra.added.length}
+        />
+      )}
       {choosing && compare === "extra" ? (
         <ExtraLooksLines extra={extra} narration={extraNarration} />
       ) : (
@@ -190,24 +208,23 @@ export function WithoutLookLines() {
   );
 }
 
-type Compare = "without" | "extra";
-
-const COMPARE: { value: Compare; label: string }[] = [
-  { value: "without", label: "Without the look" },
-  { value: "extra", label: "With two more looks" },
-];
-
 /** What his own look is compared with: the run without it, or the run with two more. */
 function CompareSwitch({
   value,
   onChange,
+  count,
 }: {
   value: Compare;
   onChange: (value: Compare) => void;
+  count: number;
 }) {
+  const options: { value: Compare; label: string }[] = [
+    { value: "without", label: "Without the look" },
+    { value: "extra", label: `With ${countWord(count)} more looks` },
+  ];
   return (
     <div className="compare-switch" role="group" aria-label="Compare his look with">
-      {COMPARE.map((o) => (
+      {options.map((o) => (
         <button
           key={o.value}
           type="button"
@@ -230,7 +247,7 @@ function ExtraLooksLines({ extra, narration }: { extra: ExtraLooks; narration: N
     <>
       <p className="without-basis">
         Held constant: the same match and the same seed; he keeps every look of his own and adds
-        these.{" "}
+        these {countWord(extra.added.length)}.{" "}
         {/* The held-out counts are the report's; the chip names it, as for the gates above. */}
         <SourceChip kind="sim" title={`Eval result from ${extra.report}`} spoken />
       </p>

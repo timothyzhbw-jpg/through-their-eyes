@@ -15,7 +15,7 @@ import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { fakeFetch, json, settle } from "../testing";
-import { EXTRA_FILES, extraLooksOf, parseExtraLooks } from "./extra";
+import { countWord, EXTRA_FILES, extraLooksOf, parseExtraLooks } from "./extra";
 import { withoutLookOf } from "./without";
 import { WithoutLookLines } from "./WithoutLook";
 
@@ -147,6 +147,20 @@ describe("in the verdict", () => {
     const page = mount(session, <WithoutLookLines />);
     act(() => button(page, "With two more looks").click());
     expect(text(page)).toContain(lineText("zh", "added_looks"));
+  });
+
+  it("names as many looks as the bundle added, and keeps the switch when the panel remounts", async () => {
+    const session = await loaded();
+    expect(countWord(extraBundle.added.length)).toBe("two"); // the label follows the data
+    const first = mount(session, <WithoutLookLines />);
+    act(() => button(first, "With two more looks").click());
+    mounted.splice(0).forEach(({ root, container }) => {
+      act(() => root.unmount());
+      container.remove();
+    });
+    const again = mount(session, <WithoutLookLines />);
+    expect(button(again, "With two more looks").getAttribute("aria-pressed")).toBe("true");
+    expect(text(again)).toContain(lineText("en", "added_looks"));
   });
 
   it("shows no switch when the bundle is missing", async () => {
