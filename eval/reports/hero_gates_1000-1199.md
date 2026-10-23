@@ -4,11 +4,11 @@ Each hero's held-out acceptance eval, run once more and unchanged (same design, 
 
 | Hero | Gate | Target | Original (seeds) | 95% interval | 1000–1199 | 95% interval | Verdict |
 |---|---|---|---|---|---|---|---|
-| `blind_side_run` | Decision changed without the key scan | ≥ 60% | 39/40 (98%) (100–139) | 87%–100% | 197/200 (98%) | 96%–99% | pass |
-| `blind_side_run` | `scan` lens selected | ≥ 60% | 40/40 (100%) (100–139) | 91%–100% | 197/200 (98%) | 96%–99% | pass |
-| `blind_side_run` | Intervention changes the outcome | ≥ 60% | 39/40 (98%) (100–139) | 87%–100% | 197/200 (98%) | 96%–99% | pass |
+| `blind_side_run` | Decision changed without the key scan | ≥ 60% | 33/40 (82%) (100–139) | 68%–91% | 168/200 (84%) | 78%–88% | pass |
+| `blind_side_run` | `scan` lens selected | ≥ 60% | 34/40 (85%) (100–139) | 71%–93% | 166/200 (83%) | 77%–88% | pass |
+| `blind_side_run` | Intervention changes the outcome | ≥ 60% | 33/40 (82%) (100–139) | 68%–91% | 168/200 (84%) | 78%–88% | pass |
 | `press_escape` | `pressure` lens selected | ≥ 60% | 40/40 (100%) (200–239) | 91%–100% | 199/200 (100%) | 97%–100% | pass |
-| `press_escape` | Intervention changes the outcome | ≥ 60% | 32/40 (80%) (200–239) | 65%–90% | 169/200 (84%) | 79%–89% | pass |
+| `press_escape` | Intervention changes the outcome | ≥ 60% | 32/40 (80%) (200–239) | 65%–90% | 164/200 (82%) | 76%–87% | pass |
 | `corner_blind_side` | Without the look `A9` receives unmarked | ≥ 60% | 37/40 (92%) (100–139) | 80%–97% | 193/200 (96%) | 93%–98% | pass |
 | `corner_blind_side` | Without the look, `H5`'s belief error | ≥ 90% | 37/40 (92%) (100–139) | 80%–97% | 188/200 (94%) | 90%–97% | pass (interval reaches below the target) |
 | `corner_blind_side` | Design rule: `A9` unseen | ≥ 90% | 40/40 (100%) (100–139) | 91%–100% | 200/200 (100%) | 98%–100% | pass |
@@ -21,7 +21,7 @@ Each hero's held-out acceptance eval, run once more and unchanged (same design, 
 | `far_post_finish` | `scan` lens selected | ≥ 60% | 38/40 (95%) (200–239) | 83%–99% | 198/200 (99%) | 96%–100% | pass |
 | `far_post_finish` | The scan lens's scan | ≥ 90% | 40/40 (100%) (200–239) | 91%–100% | 200/200 (100%) | 98%–100% | pass |
 | `keeper_switch` | Decision changed without the key scan | ≥ 60% | 26/40 (65%) (100–139) | 50%–78% | 151/200 (76%) | 69%–81% | pass |
-| `cutback_scan` | Decision changed without the key scan | ≥ 60% | 38/40 (95%) (100–139) | 83%–99% | 182/200 (91%) | 86%–94% | pass |
+| `cutback_scan` | Decision changed without the key scan | ≥ 60% | 38/40 (95%) (100–139) | 83%–99% | 183/200 (92%) | 87%–95% | pass |
 | `cutback_scan` | `scan` lens selected | ≥ 60% | 38/40 (95%) (100–139) | 83%–99% | 182/200 (91%) | 86%–94% | pass |
 | `screened_shot` | P_save(step) − P_save(no step) ≥ 0.4 | ≥ 60% | 28/40 (70%) (300–339) | 55%–82% | 156/200 (78%) | 72%–83% | pass |
 | `screened_shot` | P_save gap ≥ 0.4, v_dive = 2.5 | ≥ 60% | 28/40 (70%) (300–339) | 55%–82% | 155/200 (78%) | 71%–83% | pass |

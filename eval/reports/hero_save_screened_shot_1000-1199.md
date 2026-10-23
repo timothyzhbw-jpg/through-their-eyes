@@ -9,14 +9,14 @@ P_save is the shot event's `p_save`. delta_sight is P(step) minus P(step, late s
 | Without the step, first sight ≥ 0.25 s later | 191/200 (96%) | ≥ 90% |
 | P_save(step) − P_save(no step) ≥ 0.4 | 156/200 (78%) | ≥ 60% |
 | delta_sight > delta_position | 169/200 (84%) | ≥ 80% |
-| Realised save to goal when the step is removed | 85/200 (42%) | reported |
+| Realised save to goal when the step is removed | 83/200 (42%) | reported |
 | P_save gap ≥ 0.4, v_dive = 2.5 m/s | 155/200 (78%) | ≥ 60% |
 | P_save gap ≥ 0.4, v_dive = 4 m/s | 156/200 (78%) | ≥ 60% |
 | Shots blocked before the save model (no `p_save`) | 9/200 | reported |
 | … first sight ≥ 0.25 s later, shots not blocked | 191/191 | reported |
 | … delta_sight > delta_position, shots not blocked and not both 0 | 169/184 | reported |
-| … P_save gap ≥ 0.4, shots on target with the step (saved or goal) | 123/123 | reported |
-| … P_save gap ≥ 0.4, shots wide with the step | 33/156 of the gate's passes | reported |
+| … P_save gap ≥ 0.4, shots on target with the step (saved or goal) | 121/121 | reported |
+| … P_save gap ≥ 0.4, shots wide with the step | 16/156 of the gate's passes | reported |
 
 The rows marked … are reported only. A blocked shot fails every gate that needs `p_save`. A wide shot still has a `p_save`: the save model at the point where it crosses the goal line, outside the posts. So it counts in the hard gate as the keeper's reach, even though no save was needed. delta_sight and delta_position are both 0 when the shot is beyond the keeper's reach with or without the step; that tie fails the decomposition.
 
@@ -29,7 +29,7 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1002 | 0.000 | 0.600 | 0.700 | 0.000 | 0.114 | 0.586 | 0.114 | saved | goal | goal | yes | yes | yes | yes |
 | 1003 | 0.000 | 0.520 | 0.085 | 0.000 | 0.000 | 0.085 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1004 | 0.000 | 0.560 | 0.700 | 0.037 | 0.399 | 0.301 | 0.362 | saved | goal | saved | yes | yes | no | yes |
-| 1005 | 0.000 | 0.560 | 0.490 | 0.000 | 0.000 | 0.490 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1005 | 0.000 | 0.560 | 0.490 | 0.000 | 0.000 | 0.490 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1006 | 0.000 | 0.600 | 0.700 | 0.000 | 0.115 | 0.585 | 0.115 | goal | goal | goal | yes | yes | yes | no |
 | 1007 | 0.000 | 0.560 | 0.500 | 0.000 | 0.000 | 0.500 | 0.000 | wide | wide | wide | yes | yes | yes | no |
 | 1008 | 0.000 | 0.600 | 0.700 | 0.000 | 0.136 | 0.564 | 0.136 | saved | goal | goal | yes | yes | yes | yes |
@@ -46,7 +46,7 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1019 | 0.000 | 0.520 | 0.098 | 0.000 | 0.000 | 0.098 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1020 | 0.000 | 0.560 | 0.700 | 0.038 | 0.381 | 0.319 | 0.344 | saved | goal | goal | yes | yes | no | yes |
 | 1021 | 0.000 | 0.480 | 0.203 | 0.000 | 0.000 | 0.203 | 0.000 | wide | wide | wide | yes | no | yes | no |
-| 1022 | 0.000 | 0.480 | 0.599 | 0.000 | 0.000 | 0.599 | 0.000 | goal | goal | goal | yes | yes | yes | no |
+| 1022 | 0.000 | 0.480 | 0.599 | 0.000 | 0.000 | 0.599 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1023 | 0.000 | 0.520 | 0.700 | 0.000 | 0.333 | 0.367 | 0.333 | goal | goal | goal | yes | yes | yes | no |
 | 1024 | 0.000 | 0.600 | 0.700 | 0.000 | 0.360 | 0.340 | 0.360 | saved | goal | saved | yes | yes | no | yes |
 | 1025 | 0.000 | 0.440 | 0.357 | 0.000 | 0.000 | 0.357 | 0.000 | wide | wide | wide | yes | no | yes | no |
@@ -65,14 +65,14 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1038 | 0.000 | 0.520 | 0.341 | 0.000 | 0.000 | 0.341 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1039 | 0.000 | 0.520 | 0.700 | 0.000 | 0.186 | 0.514 | 0.186 | saved | goal | goal | yes | yes | yes | yes |
 | 1040 | 0.000 | 0.520 | 0.681 | 0.000 | 0.000 | 0.681 | 0.000 | goal | goal | goal | yes | yes | yes | no |
-| 1041 | 0.000 | 0.520 | 0.599 | 0.000 | 0.000 | 0.599 | 0.000 | wide | wide | wide | yes | yes | yes | no |
-| 1042 | 0.000 | 0.480 | 0.536 | 0.000 | 0.000 | 0.536 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1041 | 0.000 | 0.520 | 0.599 | 0.000 | 0.000 | 0.599 | 0.000 | post | post | post | yes | yes | yes | no |
+| 1042 | 0.000 | 0.480 | 0.536 | 0.000 | 0.000 | 0.536 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1043 | 0.000 | 0.560 | 0.700 | 0.000 | 0.139 | 0.561 | 0.139 | goal | goal | goal | yes | yes | yes | no |
 | 1044 | 0.000 | 0.400 | 0.123 | 0.000 | 0.000 | 0.123 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1045 | 0.000 | 0.480 | 0.361 | 0.000 | 0.000 | 0.361 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1046 | 0.000 | 0.520 | 0.700 | 0.000 | 0.258 | 0.442 | 0.258 | saved | goal | saved | yes | yes | yes | yes |
 | 1047 | 0.000 | 0.480 | 0.421 | 0.000 | 0.000 | 0.421 | 0.000 | wide | wide | wide | yes | yes | yes | no |
-| 1048 | 0.000 | 0.560 | 0.590 | 0.000 | 0.000 | 0.590 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1048 | 0.000 | 0.560 | 0.590 | 0.000 | 0.000 | 0.590 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1049 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
 | 1050 | 0.000 | 0.520 | 0.700 | 0.000 | 0.166 | 0.534 | 0.166 | saved | goal | goal | yes | yes | yes | yes |
 | 1051 | 0.000 | 0.640 | 0.700 | 0.156 | 0.500 | 0.200 | 0.345 | goal | goal | goal | yes | yes | no | no |
@@ -93,15 +93,15 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1066 | 0.000 | 0.560 | 0.406 | 0.000 | 0.000 | 0.406 | 0.000 | wide | wide | wide | yes | yes | yes | no |
 | 1067 | 0.000 | 0.520 | 0.700 | 0.000 | 0.182 | 0.518 | 0.182 | goal | goal | goal | yes | yes | yes | no |
 | 1068 | 0.000 | 0.560 | 0.689 | 0.000 | 0.000 | 0.689 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
-| 1069 | 0.000 | 0.560 | 0.551 | 0.000 | 0.000 | 0.551 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1069 | 0.000 | 0.560 | 0.551 | 0.000 | 0.000 | 0.551 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1070 | 0.000 | 0.600 | 0.700 | 0.000 | 0.131 | 0.569 | 0.131 | saved | goal | goal | yes | yes | yes | yes |
 | 1071 | 0.000 | 0.520 | 0.346 | 0.000 | 0.000 | 0.346 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1072 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
 | 1073 | 0.000 | 0.400 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | wide | wide | wide | yes | no | no | no |
 | 1074 | 0.000 | 0.480 | 0.648 | 0.000 | 0.000 | 0.648 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
 | 1075 | 0.000 | 0.520 | 0.700 | 0.000 | 0.195 | 0.505 | 0.195 | goal | goal | goal | yes | yes | yes | no |
-| 1076 | 0.000 | 0.560 | 0.523 | 0.000 | 0.000 | 0.523 | 0.000 | wide | wide | wide | yes | yes | yes | no |
-| 1077 | 0.000 | 0.520 | 0.647 | 0.000 | 0.000 | 0.647 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
+| 1076 | 0.000 | 0.560 | 0.523 | 0.000 | 0.000 | 0.523 | 0.000 | post | post | post | yes | yes | yes | no |
+| 1077 | 0.000 | 0.520 | 0.647 | 0.000 | 0.000 | 0.647 | 0.000 | saved | post | post | yes | yes | yes | no |
 | 1078 | 0.000 | 0.560 | 0.700 | 0.000 | 0.000 | 0.700 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
 | 1079 | 0.000 | 0.560 | 0.217 | 0.000 | 0.000 | 0.217 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1080 | 0.000 | 0.600 | 0.700 | 0.000 | 0.090 | 0.610 | 0.090 | saved | goal | goal | yes | yes | yes | yes |
@@ -111,23 +111,23 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1084 | 0.000 | 0.600 | 0.664 | 0.000 | 0.000 | 0.664 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
 | 1085 | 0.000 | 0.480 | 0.510 | 0.000 | 0.000 | 0.510 | 0.000 | wide | wide | wide | yes | yes | yes | no |
 | 1086 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
-| 1087 | 0.000 | 0.520 | 0.596 | 0.000 | 0.000 | 0.596 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1087 | 0.000 | 0.520 | 0.596 | 0.000 | 0.000 | 0.596 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1088 | 0.000 | 0.640 | 0.700 | 0.095 | 0.431 | 0.269 | 0.335 | goal | goal | goal | yes | yes | no | no |
-| 1089 | 0.000 | 0.480 | 0.524 | 0.000 | 0.000 | 0.524 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1089 | 0.000 | 0.480 | 0.524 | 0.000 | 0.000 | 0.524 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1090 | 0.000 | 0.480 | 0.700 | 0.000 | 0.124 | 0.576 | 0.124 | saved | goal | goal | yes | yes | yes | yes |
 | 1091 | 0.000 | 0.480 | 0.610 | 0.000 | 0.000 | 0.610 | 0.000 | goal | goal | goal | yes | yes | yes | no |
 | 1092 | 0.000 | 0.520 | 0.360 | 0.000 | 0.000 | 0.360 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1093 | 0.000 | 0.640 | 0.700 | 0.000 | 0.274 | 0.426 | 0.274 | saved | goal | saved | yes | yes | yes | yes |
 | 1094 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
 | 1095 | 0.000 | 0.520 | 0.700 | 0.000 | 0.075 | 0.625 | 0.075 | goal | goal | goal | yes | yes | yes | no |
-| 1096 | 0.000 | 0.440 | 0.559 | 0.000 | 0.000 | 0.559 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1096 | 0.000 | 0.440 | 0.559 | 0.000 | 0.000 | 0.559 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1097 | 0.000 | 0.480 | 0.700 | 0.000 | 0.020 | 0.680 | 0.020 | saved | goal | goal | yes | yes | yes | yes |
 | 1098 | 0.000 | 0.560 | 0.700 | 0.000 | 0.060 | 0.640 | 0.060 | saved | goal | goal | yes | yes | yes | yes |
-| 1099 | 0.000 | 0.560 | 0.623 | 0.000 | 0.000 | 0.623 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1099 | 0.000 | 0.560 | 0.623 | 0.000 | 0.000 | 0.623 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1100 | 0.000 | 0.680 | 0.700 | 0.049 | 0.414 | 0.286 | 0.365 | saved | goal | saved | yes | yes | no | yes |
 | 1101 | 0.000 | 0.400 | 0.043 | 0.000 | 0.000 | 0.043 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1102 | 0.000 | 0.520 | 0.274 | 0.000 | 0.000 | 0.274 | 0.000 | wide | wide | wide | yes | no | yes | no |
-| 1103 | 0.000 | 0.560 | 0.563 | 0.000 | 0.000 | 0.563 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1103 | 0.000 | 0.560 | 0.563 | 0.000 | 0.000 | 0.563 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1104 | 0.000 | 0.560 | 0.700 | 0.000 | 0.167 | 0.533 | 0.167 | saved | goal | goal | yes | yes | yes | yes |
 | 1105 | 0.000 | 0.480 | 0.700 | 0.000 | 0.155 | 0.545 | 0.155 | saved | goal | saved | yes | yes | yes | yes |
 | 1106 | 0.000 | 0.600 | 0.700 | 0.000 | 0.072 | 0.628 | 0.072 | saved | goal | goal | yes | yes | yes | yes |
@@ -140,8 +140,8 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1113 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
 | 1114 | 0.000 | 0.520 | 0.700 | 0.000 | 0.186 | 0.514 | 0.186 | saved | goal | goal | yes | yes | yes | yes |
 | 1115 | 0.000 | 0.560 | 0.700 | 0.000 | 0.257 | 0.443 | 0.257 | saved | goal | goal | yes | yes | yes | yes |
-| 1116 | 0.000 | 0.520 | 0.558 | 0.000 | 0.000 | 0.558 | 0.000 | wide | wide | wide | yes | yes | yes | no |
-| 1117 | 0.000 | 0.560 | 0.637 | 0.000 | 0.000 | 0.637 | 0.000 | goal | goal | goal | yes | yes | yes | no |
+| 1116 | 0.000 | 0.520 | 0.558 | 0.000 | 0.000 | 0.558 | 0.000 | post | post | post | yes | yes | yes | no |
+| 1117 | 0.000 | 0.560 | 0.637 | 0.000 | 0.000 | 0.637 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1118 | 0.000 | 0.560 | 0.700 | 0.000 | 0.062 | 0.638 | 0.062 | saved | goal | goal | yes | yes | yes | yes |
 | 1119 | 0.000 | 0.520 | 0.513 | 0.000 | 0.000 | 0.513 | 0.000 | wide | wide | wide | yes | yes | yes | no |
 | 1120 | 0.000 | 0.560 | 0.700 | 0.082 | 0.425 | 0.275 | 0.344 | goal | goal | goal | yes | yes | no | no |
@@ -179,7 +179,7 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1152 | 0.000 | 0.480 | 0.318 | 0.000 | 0.000 | 0.318 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1153 | 0.000 | 0.480 | 0.380 | 0.000 | 0.000 | 0.380 | 0.000 | wide | wide | wide | yes | no | yes | no |
 | 1154 | 0.000 | 0.520 | 0.233 | 0.000 | 0.000 | 0.233 | 0.000 | wide | wide | wide | yes | no | yes | no |
-| 1155 | 0.000 | 0.520 | 0.538 | 0.000 | 0.000 | 0.538 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1155 | 0.000 | 0.520 | 0.538 | 0.000 | 0.000 | 0.538 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1156 | 0.000 | 0.520 | 0.700 | 0.000 | 0.077 | 0.623 | 0.077 | saved | goal | goal | yes | yes | yes | yes |
 | 1157 | 0.000 | 0.520 | 0.700 | 0.000 | 0.040 | 0.660 | 0.040 | saved | goal | goal | yes | yes | yes | yes |
 | 1158 | 0.000 | 0.520 | 0.700 | 0.000 | 0.057 | 0.643 | 0.057 | saved | goal | goal | yes | yes | yes | yes |
@@ -202,7 +202,7 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1175 | 0.000 | 0.640 | 0.700 | 0.000 | 0.305 | 0.395 | 0.305 | saved | goal | saved | yes | yes | yes | yes |
 | 1176 | 0.000 | 0.520 | 0.700 | 0.000 | 0.020 | 0.680 | 0.020 | saved | goal | goal | yes | yes | yes | yes |
 | 1177 | 0.000 | 0.600 | 0.700 | 0.000 | 0.128 | 0.572 | 0.128 | goal | goal | goal | yes | yes | yes | no |
-| 1178 | 0.000 | 0.480 | 0.572 | 0.000 | 0.000 | 0.572 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1178 | 0.000 | 0.480 | 0.572 | 0.000 | 0.000 | 0.572 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1179 | 0.000 | 0.560 | 0.700 | 0.000 | 0.238 | 0.462 | 0.238 | goal | goal | goal | yes | yes | yes | no |
 | 1180 | 0.000 | 0.520 | 0.695 | 0.000 | 0.000 | 0.695 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
 | 1181 | 0.000 | 0.560 | 0.700 | 0.000 | 0.148 | 0.552 | 0.148 | goal | goal | goal | yes | yes | yes | no |
@@ -212,14 +212,14 @@ The sweep re-simulates the step and the dropped step only, then restores the def
 | 1185 | 0.000 | 0.520 | 0.433 | 0.000 | 0.000 | 0.433 | 0.000 | wide | wide | wide | yes | yes | yes | no |
 | 1186 | 0.000 | 0.480 | 0.700 | 0.000 | 0.002 | 0.698 | 0.002 | saved | goal | goal | yes | yes | yes | yes |
 | 1187 | 0.000 | 0.480 | 0.700 | 0.000 | 0.019 | 0.681 | 0.019 | goal | goal | goal | yes | yes | yes | no |
-| 1188 | 0.000 | 0.560 | 0.637 | 0.000 | 0.000 | 0.637 | 0.000 | saved | goal | goal | yes | yes | yes | yes |
-| 1189 | 0.000 | 0.600 | 0.583 | 0.000 | 0.000 | 0.583 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1188 | 0.000 | 0.560 | 0.637 | 0.000 | 0.000 | 0.637 | 0.000 | saved | post | post | yes | yes | yes | no |
+| 1189 | 0.000 | 0.600 | 0.583 | 0.000 | 0.000 | 0.583 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1190 | 0.000 | 0.600 | 0.700 | 0.000 | 0.279 | 0.421 | 0.279 | saved | goal | goal | yes | yes | yes | yes |
 | 1191 | 0.000 | 0.600 | 0.700 | 0.000 | 0.027 | 0.673 | 0.027 | saved | goal | goal | yes | yes | yes | yes |
 | 1192 | 0.000 | 0.480 | 0.253 | 0.000 | 0.000 | 0.253 | 0.000 | wide | wide | wide | yes | no | yes | no |
-| 1193 | 0.000 | 0.600 | 0.598 | 0.000 | 0.000 | 0.598 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1193 | 0.000 | 0.600 | 0.598 | 0.000 | 0.000 | 0.598 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1194 | 0.000 | 0.480 | 0.700 | 0.000 | 0.103 | 0.597 | 0.103 | saved | goal | goal | yes | yes | yes | yes |
-| 1195 | 0.000 | 0.480 | 0.502 | 0.000 | 0.000 | 0.502 | 0.000 | wide | wide | wide | yes | yes | yes | no |
+| 1195 | 0.000 | 0.480 | 0.502 | 0.000 | 0.000 | 0.502 | 0.000 | post | post | post | yes | yes | yes | no |
 | 1196 | 0.000 | 0.560 | 0.700 | 0.000 | 0.315 | 0.385 | 0.315 | saved | goal | goal | yes | yes | yes | yes |
 | 1197 | 0.000 | 0.560 | 0.700 | 0.024 | 0.359 | 0.341 | 0.335 | saved | goal | goal | yes | yes | yes | yes |
 | 1198 | never | never | — | — | — | — | — | blocked | blocked | blocked | no | no | no | no |
