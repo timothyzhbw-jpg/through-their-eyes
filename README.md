@@ -7,8 +7,15 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
 > **See what they saw.** An AI studio that explains key football moments through the player's own
-> perception — the scans before the ball arrived, what was visible, what he believed — and checks
-> every number the crew says or captions before it airs.
+> perception — where he looked before the ball arrived, what he saw, what he believed — and
+> re-simulates the moment without the look that made the play: over 40 held-out seeds,
+> <!--num:H1.k-->33<!--/num--> decide differently.
+
+**Every line the crew says is checked before it airs.** In an offline stress test, with the
+Verifier all <!--num:V1-->2,837 of 2,837<!--/num--> deliberately broken lines were kept off the air; without it,
+<!--num:V1.aired-->2,823<!--/num--> aired, <!--num:V1.false-->888<!--/num--> of them false ([crew_evidence](eval/reports/crew_evidence.md)).
+Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
+tactics cards, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
@@ -108,8 +115,10 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    its claims and the evidence frame; **Tap for sound** to hear it in Azure AI Speech.
 4. **Your own "What if…?"** [A question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
    press **Ask**. The API maps the question to one of his options, forces it, re-simulates the
-   moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
-   are rate-limited per client.
+   moment and answers with verified lines; the forced run plays as a gold ghost. It is a
+   re-simulation, not an estimate: the same simulation, the same keyed random draws and the same
+   model of what each player can see; nothing is sampled from other plays or scored by geometry.
+   Free questions are rate-limited per client.
 5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
    the evidence card opens on "That look was worth … in expected threat." with a wrong value
    filled in. Press **Check**: the API runs the real verifier on that claim with your number,

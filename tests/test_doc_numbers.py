@@ -80,6 +80,13 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| keypoints, 20 mm \(stress\) \|.*\| \*\*{NUM}\*\* \|",
         ("f1",),
     ),
+    "V1": (
+        "crew_evidence.md",
+        rf"Of {NUM} perturbed lines \([^)]*\), {NUM} were kept off the air with the Verifier "
+        rf"\({NUM} by tidy, {NUM} by the Verifier\); without it {NUM} aired, every one breaking "
+        rf"a Verifier rule: {NUM} false",
+        ("total", "kept", "tidy", "verifier", "aired", "false"),
+    ),
     "A5": (
         "corruption.md",
         rf"\| … refuted by the verifier \| \*\*{NUM}/{NUM} \({NUM}%\)\*\*",
@@ -172,5 +179,5 @@ def test_a_quoted_number_matches_its_report(doc, line, key, field, quoted):
 def test_the_markers_cover_the_headline_numbers():
     """The numbers judges see first are all marked, so none of them can drift unnoticed."""
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    for key in ("H1", "H2", "A5", "R3"):
+    for key in ("H1", "H2", "A5", "R3", "V1"):
         assert f"<!--num:{key}" in readme, f"README.md quotes {key} without a marker"

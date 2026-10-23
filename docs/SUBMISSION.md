@@ -14,9 +14,14 @@ commit you submit and update [^tests] and [^match]. -->
 ## Through Their Eyes
 
 **See what they saw.** An AI match studio that explains key football moments through the
-player's own perception: the looks over his shoulder before the ball arrived, who was in sight,
-and what he believed. It re-simulates the moment without the look that made the play, and
-checks every number in its captions and narration before it airs.
+player's own perception: where he looked before the ball arrived, who was in sight, and what he
+believed. It replays the moment through his eyes, then re-simulates it without the one look that
+made the play: over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently.[^flip] Every line the
+crew says or captions is checked by code before it airs: in an offline stress test, with the
+Verifier all <!--num:V1-->2,837 of 2,837<!--/num--> deliberately broken lines were kept off the air, and without it
+<!--num:V1.aired-->2,823<!--/num--> aired, <!--num:V1.false-->888<!--/num--> of them false.[^crew-evidence] Around it: the whole match streams live at
+1×, with a rail of its moments, the match recap, the tactics cards, five audiences, and English
+and Chinese.
 
 ## The problem
 
@@ -78,7 +83,7 @@ The brief's pipeline, end to end, on a synthetic match:
 |---|---|---|
 | **Ingest** | Our physics-based simulator generates a match: 22 fictional players at 25 Hz, with body and head direction.[^spec31] The API streams it over WebSocket at real speed, as the events happen. | `sim/`, `api/` |
 | **Interpret** | Analytics kernels read the tracking: time to intercept, pitch control, pressing, field of view, expected threat (xT), a scan detector that reads head direction only, and blind-side alerts. | `analytics/` |
-| **Explain** | The system detects moments and gives each one the lens with the biggest counterfactual impact (perception, pressure or space). It re-simulates the moment with one change and turns the results into claims, which a deterministic Verifier checks. | `explain/` |
+| **Explain** | The system detects moments and gives each one the lens with the biggest counterfactual impact (the player's perception, pressure or space). It re-simulates the moment with one change and turns the results into claims, which a deterministic Verifier checks. | `explain/` |
 | **Render** | A first-person view through the player's eyes, a broadcast camera with a camera director, and a tactical board with pass options ("he thought / it was"). Overlays show his vision cone, where he believed the others were, pitch control (a GPU shader), blind-side alerts, and the counterfactual's ghost paths. | `web/` |
 | **Personalize** | An agent crew on Microsoft Foundry writes the breakdown for five audiences (casual, analyst, player fan, coach, audio description) in English or Chinese. Azure AI Speech voices it with two commentators. Every audience gets the same verified facts. | `agents/`, `api/` |
 
