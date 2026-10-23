@@ -20,7 +20,13 @@ import { API, fakeFetch, fakeSockets, MATCH, matchExport, pressureExport } from 
 import { intro } from "../ui/intro";
 import { LiveBar } from "../ui/Live";
 import { yourCallOf } from "../yourcall/controller";
-import { currentMoment, FULL_MATCH_LIVE, IN_MATCH_MOMENTS, MOMENT_LINKS } from "./moments";
+import {
+  currentMoment,
+  DRILL_LINK,
+  FULL_MATCH_LIVE,
+  IN_MATCH_MOMENTS,
+  MOMENT_LINKS,
+} from "./moments";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <canvas /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <canvas /> }));
@@ -68,7 +74,9 @@ describe("the moment rail", () => {
       "The corner",
       "The goal",
       "Full match · live",
+      "Academy drill",
     ]);
+    expect(rail(page)!.querySelector("a.drill-link")!.getAttribute("href")).toBe("/?play=drill");
     const current = rail(page)!.querySelector('a[aria-current="page"]');
     expect(current?.textContent).toBe("The look");
     // Before the stage, outside it: trailer shots cropped to the stage do not change.
@@ -130,7 +138,8 @@ describe("the links", () => {
   });
 
   it("every one says what it opens with no number", () => {
-    for (const m of MOMENT_LINKS) expect(`${m.label} ${m.title}`, m.id).not.toMatch(/\d/);
+    for (const m of [...MOMENT_LINKS, DRILL_LINK])
+      expect(`${m.label} ${m.title}`).not.toMatch(/\d/);
   });
 
   it("the hero page's Live pill opens the full match's stream", () => {

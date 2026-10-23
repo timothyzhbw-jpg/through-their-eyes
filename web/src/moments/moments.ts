@@ -58,6 +58,14 @@ export const MOMENT_LINKS: readonly MomentLink[] = [
   },
 ];
 
+/** The academy drill (drill/, SPEC 7): not a moment of its own but a way to play the look one,
+ * so it rides at the end of the row. */
+export const DRILL_LINK = {
+  label: "Academy drill",
+  query: "?play=drill",
+  title: "Check your shoulder before the ball arrives, then make the pass with what you saw",
+} as const;
+
 /** The link's address on this site. */
 export const hrefOf = (link: Pick<MomentLink, "query">): string =>
   `${import.meta.env.BASE_URL}${link.query}`;
