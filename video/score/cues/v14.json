@@ -1,0 +1,450 @@
+{
+  "about": "Cue sheet for cut v14 (the edit after the outside review: the feature run cut to about sixteen seconds, the with / without split longer, panels zoomed, close-ups trimmed, a tagline card and an end card with a QR code; 99.199 s, the S1 shoulder charge v14, an app beat after the press and the crew trace after the lineup), otherwise as v13.",
+  "trailer_ref": null,
+  "bpm": 140,
+  "sections": [
+    {
+      "id": "skit",
+      "kind": "cold",
+      "from": "b01-s1a-ots"
+    },
+    {
+      "id": "drop",
+      "kind": "drop",
+      "from": "b06-a1-pov:+1.7"
+    },
+    {
+      "id": "ch1",
+      "kind": "look",
+      "from": "b07-ch1",
+      "title": "CH. I THE LOOK"
+    },
+    {
+      "id": "ch2",
+      "kind": "pressure",
+      "from": "b26-ch2",
+      "title": "CH. II UNDER PRESSURE"
+    },
+    {
+      "id": "ch3",
+      "kind": "corner",
+      "from": "b30-ch3",
+      "key": 2,
+      "title": "CH. III THE CORNER"
+    },
+    {
+      "id": "crew",
+      "kind": "pressure",
+      "from": "b33-crew"
+    },
+    {
+      "id": "fans",
+      "kind": "corner",
+      "from": "b38-casual",
+      "key": 2
+    },
+    {
+      "id": "s4",
+      "kind": "cold",
+      "from": "b42-s4a-pov"
+    },
+    {
+      "id": "s4-out",
+      "kind": "look",
+      "from": "b43-s4b-check:+1.7",
+      "key": 2
+    },
+    {
+      "id": "close",
+      "kind": "close",
+      "from": "b46-spec"
+    }
+  ],
+  "events": [
+    {
+      "type": "card",
+      "at": "b01-s1a-ots:+0.933",
+      "snap": false,
+      "note": "YOU ARE No. 14."
+    },
+    {
+      "type": "hit",
+      "at": "b02-s1c-steal:+0.533",
+      "size": "big",
+      "snap": false,
+      "note": "the shoulder charge: contact (frame 17)"
+    },
+    {
+      "type": "card",
+      "at": "b06-a1-pov",
+      "snap": false,
+      "note": "the match-cut into the app"
+    },
+    {
+      "type": "window",
+      "mood": "gap",
+      "from": "b06-a1-pov:+1.35",
+      "to": "b06-a1-pov:+1.7",
+      "snap": false,
+      "note": "air before the drop"
+    },
+    {
+      "type": "drop",
+      "at": "b06-a1-pov:+1.7",
+      "snap": false,
+      "note": "THROUGH THEIR EYES / SEE WHAT THEY SAW slam"
+    },
+    {
+      "type": "hit",
+      "at": "b07-ch1",
+      "size": "big",
+      "note": "CH. I THE LOOK"
+    },
+    {
+      "type": "card",
+      "at": "b08-bl01a:+0.45",
+      "note": "H8 · THE MIDFIELDER"
+    },
+    {
+      "type": "scan",
+      "from": "b09-bl01b",
+      "to": "b09-bl01b:+0.75",
+      "note": "bl01: the key scan"
+    },
+    {
+      "type": "card",
+      "at": "b09-bl01b:+2.2",
+      "note": "H9 · THE RUNNER"
+    },
+    {
+      "type": "rewind",
+      "from": "b11-rw1",
+      "to": "b12-bl02a",
+      "snap": false,
+      "note": "Here's what he saw."
+    },
+    {
+      "type": "hit",
+      "at": "b13-bl02b:+0.05",
+      "size": "small",
+      "note": "the touch, from the other angle"
+    },
+    {
+      "type": "scan",
+      "from": "b14-pov-look:+0.3",
+      "to": "b14-pov-look:+1.5",
+      "note": "POV look; slam back on the snap zoom onto H9"
+    },
+    {
+      "type": "card",
+      "at": "b15-pov-pass:+1.6",
+      "note": "freeze: OFF BY 0.3 M"
+    },
+    {
+      "type": "window",
+      "mood": "without",
+      "from": "b16-toggle:+1.1",
+      "to": "b20-split",
+      "note": "without the look (dusk)"
+    },
+    {
+      "type": "card",
+      "at": "b16-toggle:+1.1",
+      "dusk": true,
+      "note": "WITHOUT THAT LOOK..."
+    },
+    {
+      "type": "rewind",
+      "from": "b17-board-rewind",
+      "to": "b19-bl03",
+      "snap": false
+    },
+    {
+      "type": "card",
+      "at": "b19-bl03:+1.2",
+      "dusk": true,
+      "note": "HE PLAYS IT BACK TO H4."
+    },
+    {
+      "type": "hit",
+      "at": "b20-split",
+      "size": "small",
+      "note": "split screen: with / without"
+    },
+    {
+      "type": "hit",
+      "at": "b21-eyes-drag",
+      "size": "big",
+      "note": "TAKE HIS EYES"
+    },
+    {
+      "type": "card",
+      "at": "b23-eyes-result",
+      "note": "result"
+    },
+    {
+      "type": "window",
+      "mood": "decide",
+      "from": "b24-yc-decide",
+      "to": "b24-yc-decide:+1.6",
+      "note": "Your call: only the clock"
+    },
+    {
+      "type": "card",
+      "at": "b24-yc-decide:+0.2",
+      "note": "YOUR CALL"
+    },
+    {
+      "type": "window",
+      "mood": "build",
+      "from": "b24-yc-decide:+1.6",
+      "to": "b25-yc-truth"
+    },
+    {
+      "type": "riser",
+      "from": "b24-yc-decide:+1.6",
+      "to": "b25-yc-truth"
+    },
+    {
+      "type": "hit",
+      "at": "b25-yc-truth",
+      "size": "big",
+      "note": "He saw the run"
+    },
+    {
+      "type": "hit",
+      "at": "b26-ch2",
+      "size": "big",
+      "note": "CH. II UNDER PRESSURE"
+    },
+    {
+      "type": "card",
+      "at": "b27-press-a:+1.2",
+      "note": "A11 · THE PRESSER"
+    },
+    {
+      "type": "window",
+      "mood": "without",
+      "from": "b29-press-cf",
+      "to": "b29-press-cf:+2.0",
+      "note": "inside the sim: if he kept the ball"
+    },
+    {
+      "type": "card",
+      "at": "b29-press-cf:+0.05",
+      "dusk": true,
+      "note": "IF HE KEPT THE BALL"
+    },
+    {
+      "type": "hit",
+      "at": "b29-press-cf:+2.0",
+      "size": "small",
+      "note": "THE PRESS WINS IT."
+    },
+    {
+      "type": "hit",
+      "at": "b30-ch3",
+      "size": "big",
+      "note": "CH. III THE CORNER"
+    },
+    {
+      "type": "hit",
+      "at": "b33-crew",
+      "size": "small",
+      "note": "THE CREW"
+    },
+    {
+      "type": "card",
+      "at": "b33-crew:+0.08",
+      "note": "DIRECTOR"
+    },
+    {
+      "type": "card",
+      "at": "b33-crew:+0.23",
+      "note": "ANALYST"
+    },
+    {
+      "type": "card",
+      "at": "b33-crew:+0.38",
+      "note": "TELESTRATOR"
+    },
+    {
+      "type": "card",
+      "at": "b33-crew:+0.53",
+      "note": "NARRATOR"
+    },
+    {
+      "type": "card",
+      "at": "b33-crew:+0.68",
+      "note": "VERIFIER"
+    },
+    {
+      "type": "card",
+      "at": "b33-crew:+0.83",
+      "note": "VOICE"
+    },
+    {
+      "type": "hit",
+      "at": "b34-verified",
+      "size": "small",
+      "note": "EVERY LINE CHECKED"
+    },
+    {
+      "type": "stamp",
+      "at": "b34-verified:+2.22",
+      "snap": false
+    },
+    {
+      "type": "stamp",
+      "at": "b34-verified:+2.54",
+      "snap": false
+    },
+    {
+      "type": "stamp",
+      "at": "b34-verified:+2.86",
+      "snap": false
+    },
+    {
+      "type": "stamp",
+      "at": "b34-verified:+3.18",
+      "snap": false
+    },
+    {
+      "type": "card",
+      "at": "b35-wrong:+1.1",
+      "note": "WRONG NUMBER"
+    },
+    {
+      "type": "window",
+      "mood": "stop",
+      "from": "b35-wrong:+1.7",
+      "to": "b36-redcard",
+      "note": "...and it never airs"
+    },
+    {
+      "type": "window",
+      "mood": "strip",
+      "from": "b36-redcard",
+      "to": "b37-bringback",
+      "note": "an agent down"
+    },
+    {
+      "type": "card",
+      "at": "b36-redcard:+0.85",
+      "note": "TELESTRATOR DOWN"
+    },
+    {
+      "type": "hit",
+      "at": "b37-bringback",
+      "size": "small",
+      "note": "back where it left off"
+    },
+    {
+      "type": "hit",
+      "at": "b38-casual",
+      "size": "big",
+      "note": "every fan, every language"
+    },
+    {
+      "type": "card",
+      "at": "b39-analyst",
+      "note": "ANALYST"
+    },
+    {
+      "type": "card",
+      "at": "b40-zh",
+      "note": "CHINESE"
+    },
+    {
+      "type": "scan",
+      "from": "b43-s4b-check:+0.1",
+      "to": "b43-s4b-check:+1.7",
+      "note": "S4: now he checks his shoulder"
+    },
+    {
+      "type": "hit",
+      "at": "b44-s4c-drive:+0.1",
+      "size": "big",
+      "note": "the turn and the drive"
+    },
+    {
+      "type": "hit",
+      "at": "b46-spec",
+      "size": "small",
+      "note": "UNDER THE HOOD"
+    },
+    {
+      "type": "hit",
+      "at": "b47-end",
+      "size": "big",
+      "note": "THROUGH THEIR EYES"
+    },
+    {
+      "type": "window",
+      "mood": "hold",
+      "from": "b47-end",
+      "to": "b47-end:+5.0",
+      "note": "the end card holds"
+    },
+    {
+      "type": "button",
+      "at": "b47-end:+5.0",
+      "note": "the button, after 'See what they saw'"
+    },
+    {
+      "type": "hit",
+      "at": "b45-s4d-strike",
+      "size": "big",
+      "note": "the strike"
+    },
+    {
+      "type": "drop",
+      "at": "b45a-s4e-net:+0.6",
+      "note": "the net bulges: the film's peak"
+    },
+    {
+      "type": "card",
+      "at": "b45c-tagline",
+      "note": "EVERY TOUCH / STARTS WITH A LOOK."
+    },
+    {
+      "type": "window",
+      "mood": "hush",
+      "from": "b02-s1c-steal",
+      "to": "b02-s1c-steal:+0.533",
+      "note": "the charge"
+    },
+    {
+      "type": "window",
+      "mood": "gap",
+      "from": "b03-s1d-fall:+0.05",
+      "to": "b03-s1d-fall:+0.4",
+      "snap": false,
+      "note": "silence before the coach's line"
+    },
+    {
+      "type": "window",
+      "mood": "hush",
+      "from": "b03-s1d-fall:+0.4",
+      "to": "b05b-s2-push",
+      "note": "under the coach"
+    },
+    {
+      "type": "riser",
+      "from": "b05b-s2-push",
+      "to": "b06-a1-pov:+1.35",
+      "note": "the push onto the screen into the match-cut, building to the slam"
+    },
+    {
+      "type": "hit",
+      "at": "b33a-crew-trace",
+      "size": "small",
+      "note": "the crew's real run, in the app"
+    },
+    {
+      "type": "card",
+      "at": "b29a-press-app",
+      "note": "the press, in the app"
+    }
+  ]
+}

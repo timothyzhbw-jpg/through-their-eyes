@@ -98,7 +98,7 @@
     },
     "duo-split": {
       "template": "duo",
-      "dur": 1.5,
+      "dur": 2.75,
       "alpha": true,
       "params": {
         "left": "WITH THE LOOK",
@@ -141,6 +141,23 @@
         "align": "lower-left",
         "backdrop": true
       }
+    },
+    "nc-a11": {
+      "template": "namecard",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "name": "A11",
+        "role": "THE PRESSER",
+        "sub": "HERE TO TAKE IT OFF YOU.",
+        "spot": {
+          "x": 1313,
+          "y": 553,
+          "r": 150
+        },
+        "side": "left",
+        "scrim": 0.5
+      }
     }
   },
   "beats": [
@@ -149,7 +166,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_ots.mp4",
-        "in": 0.0,
+        "in": 0.6,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -157,30 +174,15 @@
         "glue"
       ],
       "freeze": {
-        "at": 1.533
+        "at": 0.933
       },
       "overlays": [
         {
           "title": "nc-you",
-          "at": 1.533
+          "at": 0.933
         }
       ],
       "label": "dramatisation"
-    },
-    {
-      "beat": "b01b-s1b-tail",
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bs1_ots.mp4",
-        "in": 1.533,
-        "fit": "pad"
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "label": "dramatisation",
-      "fit": true
     },
     {
       "beat": "b02-s1c-steal",
@@ -195,7 +197,19 @@
         "glue"
       ],
       "label": "dramatisation",
-      "fit": true
+      "fit": true,
+      "sfx": [
+        {
+          "name": "impact",
+          "at": 0.533,
+          "gain_db": -4
+        },
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -3
+        }
+      ]
     },
     {
       "beat": "b03-s1d-fall",
@@ -211,13 +225,7 @@
       ],
       "label": "dramatisation",
       "fit": true,
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 0.05,
-          "gain_db": -3
-        }
-      ]
+      "sfx": []
     },
     {
       "beat": "b05a-s2-ots",
@@ -254,7 +262,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.5,
+        "in": 1.3,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -278,7 +286,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.95,
+        "in": 1.75,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -286,12 +294,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 3.0
+        "at": 2.2
       },
       "overlays": [
         {
           "title": "nc-h9",
-          "at": 3.0
+          "at": 2.2
         }
       ],
       "sfx": [],
@@ -430,7 +438,7 @@
         "left": {
           "src": "clip",
           "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.9,
+          "in": 1.4,
           "crop": [
             800,
             0,
@@ -441,7 +449,7 @@
         "right": {
           "src": "clip",
           "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.1,
+          "in": 0.55,
           "crop": [
             780,
             0,
@@ -461,6 +469,113 @@
         }
       ],
       "sfx": [],
+      "label": "simulation"
+    },
+    {
+      "beat": "b27-press-a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl04a_press.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "freeze": {
+        "at": 1.2
+      },
+      "overlays": [
+        {
+          "title": "nc-a11",
+          "at": 1.2
+        }
+      ]
+    },
+    {
+      "beat": "b28-press-b",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl04b_escape.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -4
+        }
+      ]
+    },
+    {
+      "beat": "b29-press-cf",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl05_press_cf.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "freeze": {
+        "at": 2.0
+      },
+      "overlays": [
+        {
+          "title": "if-kept",
+          "at": 0.05
+        },
+        {
+          "title": "press-wins",
+          "at": 2.0
+        }
+      ],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 1.9,
+          "gain_db": -4
+        }
+      ]
+    },
+    {
+      "beat": "b31-corner-a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl06a_corner.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "caption": "bottom"
+    },
+    {
+      "beat": "b32a-corner-look",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl06b_look.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
       "label": "simulation"
     },
     {
@@ -558,13 +673,8 @@
         "glue"
       ],
       "label": "dramatisation",
-      "overlays": [
-        {
-          "title": "tagline",
-          "at": 0.3
-        }
-      ],
-      "fit": true
+      "overlays": [],
+      "fit": false
     }
   ]
 }

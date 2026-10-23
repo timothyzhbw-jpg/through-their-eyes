@@ -56,14 +56,14 @@ Params are plain text. A missing timing falls back as noted. Colours are names:
 | `slam.html` | alpha | One to three headlines slamming in, optional kicker, gold underline, then an exit | `lines` `[{text, color?, size?}]` (size is px, default 150), `kicker?`, `stagger` (seconds, default 0.35), `align` `center` \| `left` \| `lower-left`, `hold?`, `out?` (default `fade`), `backdrop?` (soft dark gradient behind the type) |
 | `card.html` | opaque | The same stack on black, with a slow floodlight sweep. For "SEE WHAT THEY SAW." and "Every touch starts with a look." | slam's params, plus `sub?` (Bebas line under the underline) |
 | `freeze.html` | alpha | POV stat: a big value, a label, a gold bracket that snaps shut | `items` `[{label, value, unit?, color?}]` (one or two), `title?` |
-| `verified.html` | alpha | Up to four lines, the number in gold, then a check stamp on each number (scale 2 to 1, rotate −10° to −4°, a ring burst) | `kicker`, `items` `[{before, value, after}]`, `stagger` (default 0.45) |
+| `verified.html` | alpha | Up to four lines, the number in gold, then a check stamp on each number (scale 2 to 1, rotate −10° to −4°, a ring burst) | `kicker`, `items` `[{before, value, after}]`, `stagger` (default 0.45), `note` (one plain line under them, no number) |
 | `refuted.html` | alpha | A wrong value in flare, a flare cross slamming over it, a strike-through, then a stamp | `before`, `value`, `after`, `stamp`, `kicker?` |
 | `lineup.html` | opaque | The crew as six tall angled cards, left to right. Gold edge light as each one lands. `highlight` pushes that card forward | `header`, `cards` `[{name, job, glyph}]`, `highlight?` (a name), `stagger?` (default 0.18). `glyph`: `director`, `analyst`, `telestrator`, `narrator`, `verifier`, `voice` |
 | `redcard.html` | alpha | A red card rises from the bottom right and shakes, then the line slams in | `title`, `sub` |
 | `subboard.html` | alpha | A substitution board. Dot-matrix Bebas (a radial-gradient mask) for an OFF name in flare and an ON name in gold | `off`, `on`, `caption` |
 | `tag.html` | alpha | A small lower-left tag: a gold bar wipes in, the words slam onto it | `text`, `sub?`. Both use `"Bebas Neue", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif`, so CJK in either field renders with the first of those faces the machine has |
-| `spec.html` | opaque | Architecture as a spec sheet: grid, hairlines, a scan light per row. One column up to ten rows, two beyond | `header`, `rows` `[{label, value, note?}]` (up to ten), `footer?` |
-| `end.html` | opaque | The name, a gold underline sweep, the tagline, the URL in Bebas, then credit lines | `name`, `tagline`, `url`, `lines` (strings) |
+| `spec.html` | opaque | Architecture as a spec sheet: grid, hairlines, a scan light per row. One column up to ten rows, two beyond | `header`, `rows` `[{label, value, note?}]` (up to ten), `footer?`, `backdrop` (over a picture: dark on the left where the rows are) |
+| `end.html` | opaque | The name, a gold underline sweep, the tagline, the URL in Bebas, then credit lines | `name`, `tagline`, `url`, `lines` (strings), `legal`, `cta` and `qr` (an https address, drawn as a QR code bottom right by qrcode-generator) |
 | `countdown.html` | alpha | "Your call." A ring drains over `secs` seconds with a gold pulse. No digits are drawn | `label`, `sub`, `secs` |
 | `caption.html` | alpha | A burned-in voice-over caption: Bebas in a dark box low in the frame, numbers in gold, a short rise in and a fade out at `dur`. The trailer fills these itself, one per line | `text`, `dur`, `side` `center` \| `right` (right while a title holds the lower left) |
 | `label.html` | alpha | A small steady corner note under the top letterbox bar, e.g. "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA" | `text` |
@@ -74,14 +74,14 @@ Times are seconds from `setup`, before the engine's `seek`.
 
 - **slam / card.** Line `i` starts at `(kicker ? 0.22 : 0) + i * stagger` and slams for 0.14 s. The underline starts 0.1 s after the last line. `sub` starts 0.22 s after the last line. The exit starts at `lastLineStart + 0.16 + hold`. If `hold` is omitted it defaults to 60, so a normal shot holds the settled card and the exit stays past the end of the clip. Pass `hold` when the card should clear itself.
 - **freeze.** Bracket corners lock by about 0.3 s. Values slam from 0.12 s.
-- **verified.** Lines from 0.2 s, `stagger` apart. Stamps start once the lines are in (`0.2 + n * stagger + 0.12`), then every 0.32 s.
+- **verified.** Lines from 0.2 s, `stagger` apart, then the note. Stamps start once the lines are in (`0.2 + n * stagger + 0.12`), then every 0.32 s.
 - **refuted.** Line 0.16 s, cross 0.5 s, strike 0.7 s, stamp 0.92 s.
 - **lineup.** Header at 0. Cards from 0.16 s, `stagger` apart (default 0.18), each sliding for 0.42 s.
 - **redcard.** The card lands and shakes inside 0.64 s. Title at 0.7 s, sub at 0.9 s.
 - **subboard.** OFF flips at 0.12 s, the arrow at 0.4 s, ON at 0.52 s, the caption at 0.86 s.
 - **tag.** Bar from 0. Text at 0.16 s, sub at 0.3 s.
 - **spec.** Header at 0. Rows from 0.28 s, 0.08 s apart. Footer just after the last row.
-- **end.** Name at 0, underline at 0.16 s, tagline at 0.42 s, URL at 0.62 s, credits from 0.95 s every 0.16 s.
+- **end.** Name at 0, underline at 0.16 s, tagline at 0.42 s, URL and the QR block at 0.62 s, credits from 0.95 s every 0.16 s.
 - **countdown.** The label slams at 0. The ring goes from full to empty across exactly `secs` seconds. Give the shot at least that long.
 
 ## Renderer
