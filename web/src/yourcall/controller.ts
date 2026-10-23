@@ -2,7 +2,8 @@
 // and the truth beat's move from his picture to the truth, with their own clock. One controller
 // per Session, made on first use, so the Session itself does not change. Opening it takes over
 // from the breakdown and the live stream and parks the replay at the decision; closing it leaves
-// the replay there. It opens at any decision; an option without a re-simulated run says so (assessment.ts).
+// the replay there. It opens at any decision; an option without a re-simulated run says so
+// (assessment.ts).
 
 import type { Session } from "../session";
 import { createStore, type Store } from "../store/store";

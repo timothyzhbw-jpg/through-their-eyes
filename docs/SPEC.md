@@ -2162,8 +2162,10 @@ original visual identity.
     the rest → why). Labels carry no number. Every option the decision model
     considered is offered (multi-option, [assessment.ts](../web/src/yourcall/assessment.ts)). On
     a pick the card shows what he believed about it (the weight his belief gave it, P(success),
-    xT) and what was true (the same option re-scored on the true state), read from the export and
-    marked as sim values, and labels the outcome "Re-simulated" when a re-simulated run of it is
+    xT) and what was true (the same option re-scored on the true state). These are the one
+    exception to "no number": sim values, not verified claims, each formatted from the export's
+    decision record and marked as sim values. `assessment.test.ts` checks them against fixed
+    literals of the export and that no label carries a digit. The card labels the outcome "Re-simulated" when a re-simulated run of it is
     loaded or "Not re-simulated in this demo" when not (then only the model's assessment is
     shown; no outcome is invented). A hero with no decision on the ball (`corner_blind_side`)
     has no Your call.

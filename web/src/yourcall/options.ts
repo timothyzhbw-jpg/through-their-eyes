@@ -138,7 +138,8 @@ export function poseAt(hero: Hero, option: CallOption, f: number, out: Pose): Po
   }
   // No run: the picture at the decision, in the run that happened.
   const run = hero.runs[option.run.source === "counterfactual" ? "counterfactual" : "factual"];
-  const at = option.run.source === "none" ? hero.runs.factual.decision!.frame : f;
+  const held = hero.runs.factual.decision?.frame;
+  const at = option.run.source === "none" && held !== undefined ? held : f;
   let sample = samples.get(hero);
   if (!sample) samples.set(hero, (sample = new Sample(hero.n)));
   sampleInto(sample, hero, run, at);
