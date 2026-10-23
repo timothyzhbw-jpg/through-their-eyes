@@ -17,6 +17,7 @@
 # amd64 in the last bit of a few exports (numpy's SIMD paths). The repository is mounted read-only and
 # copied inside the container; the results are copied back into this checkout at the end.
 # WORKERS (default 4) caps the evals' process pools.
+# numpy takes its AVX2 path, as in CI, even on a host with AVX-512 (tests/canonical.py).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -27,7 +28,7 @@ out=$(mktemp -d -t tte-regen.XXXXXX)
 
 status=0
 docker run --rm --platform linux/amd64 --cpus "$workers" -e GROUPS_TO_RUN="${groups[*]}" \
-  -e WORKERS="$workers" \
+  -e WORKERS="$workers" -e NPY_DISABLE_CPU_FEATURES="X86_V4 AVX512_ICL AVX512_SPR" \
   -v "$PWD":/src:ro -v "$out":/out python:3.11-slim bash -c '
 set -uo pipefail
 pip install -q uv 2>/dev/null
