@@ -325,7 +325,20 @@ const PAGES = [
     device: PHONE_375,
     check: (p) => phone(p, match),
   },
+  // The Stadium Screen Studio (SPEC 7): the lazy branch of main.tsx, flat wall and with the 3D bowl.
+  { name: "studio-wall", path: "?studio=1&wall=1", check: (p) => studio(p) },
+  { name: "studio", path: "?studio=1", check: (p) => studio(p) },
 ];
+
+/** The studio page: its heading, the timeline and the Screen wall are on screen. */
+async function studio(page) {
+  await see(
+    page.getByRole("heading", { name: "Every screen in the bowl, on one timeline" }),
+    "the studio heading",
+  );
+  await see(page.getByRole("region", { name: "Event timeline" }), "the event timeline");
+  await see(page.locator(".screen-wall"), "the Screen wall");
+}
 
 /** Wait for `locator` (its first match) to be on screen, or `attached` to the page. */
 async function see(locator, what, state = "visible") {

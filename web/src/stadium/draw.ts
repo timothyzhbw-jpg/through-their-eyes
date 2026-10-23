@@ -5,12 +5,12 @@
 // part. Flat colours, no gradients that pulse, no white fields: the screens are lit content, not
 // flashes.
 
+import { GK_KITS } from "../players/kit";
 import { COLORS } from "../views/scene";
 import type { StatCard, TacticalStill, WalkoutPlayer } from "./content";
 import type { ScreenShape } from "./formats";
 import type { Content } from "./rules";
 import { FICTIONAL_SPONSOR, type Sponsor } from "./sponsors";
-import { GK_KITS } from "../players/kit";
 
 /** The part of the 2D context the screens draw with. */
 export type Ctx = Pick<

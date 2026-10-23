@@ -15,6 +15,8 @@ import {
   transitions,
   type StudioEvent,
 } from "./rules";
+import goalWithout from "../../public/data/without_look_far_post_finish_seed11.json";
+import { numberParts } from "../ui/numbers";
 import { SPONSORS } from "./sponsors";
 import { facts } from "./testing";
 
@@ -43,9 +45,13 @@ describe("the programme", () => {
     expect(look.cards.map((c) => c.figure)).toEqual(["0.8 s", "0.8 seconds"]);
     const goal = byType("goal");
     expect(goal.players.map((p) => p.id)).toEqual(["H9"]);
-    expect(goal.cards[0].figure).toBe("0.4 s");
+    // The goal card's figure is the number of the Verifier's own removed_look line.
+    const verified = goalWithout.answers.en.lines.find((l) => l.id === "removed_look")!.text;
+    const figure = numberParts(verified).find((p) => p.num)?.text;
+    expect(figure).toBeDefined();
+    expect(goal.cards[0].figure).toBe(figure);
     expect(goal.cards[0].lines).toEqual([
-      "N. Varnhall looked over his left shoulder 0.4 s before the ball reached him.",
+      `N. Varnhall looked over his left shoulder ${figure} before the ball reached him.`,
     ]);
   });
 

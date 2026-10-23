@@ -89,8 +89,9 @@ describe("the studio page", () => {
     // The first event went up at mount: the goal waits for the gap.
     expect(labelOf(host, "main")).toMatch(/^Walk-out/);
     act(() => time.advance(MIN_GAP_MS));
+    const figure = programme(facts()).find((e) => e.type === "goal")!.cards[0].figure;
     expect(labelOf(host, "main")).toBe(
-      "Stat card, goal, N. Varnhall: N. Varnhall looked over his left shoulder 0.4 s before the ball reached him.",
+      `Stat card, goal, N. Varnhall: N. Varnhall looked over his left shoulder ${figure} before the ball reached him.`,
     );
     expect(labelOf(host, "tunnel")).toBe("Walk-out (goal): Nico Varnhall, number 9, Kestrel Bay");
   });
@@ -124,6 +125,32 @@ describe("loadStudio", () => {
       "goal",
       "half-time",
     ]);
+    show.dispose();
+  });
+
+  it("shows only digits that a claim of the committed files holds", async () => {
+    const files: Record<string, unknown> = {
+      [STUDIO_FILES.hero]: hero,
+      [STUDIO_FILES.steps]: steps,
+      [STUDIO_FILES.without]: without,
+      [STUDIO_FILES.goalWithout]: goalWithout,
+    };
+    const fetchImpl = (async (url: string) =>
+      new Response(JSON.stringify(files[url.replace("/data/", "")]))) as typeof fetch;
+    const show = await loadStudio("/data/", fetchImpl);
+    const cards = show.events.flatMap((e) => e.cards);
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      const held = new Set<string>();
+      for (const c of card.claims) {
+        for (const v of Object.values(c.values)) if (typeof v === "number") held.add(String(v));
+      }
+      for (const text of [card.figure ?? "", ...card.lines]) {
+        for (const m of text.matchAll(/\d+(?:\.\d+)?/g)) {
+          expect(held, `"${text}" on ${card.id}`).toContain(m[0]);
+        }
+      }
+    }
     show.dispose();
   });
 });

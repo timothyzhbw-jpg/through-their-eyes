@@ -246,13 +246,15 @@ function goalFacts(rawWithout: unknown): MomentFacts | null {
   const parsed = WithoutFile.safeParse(rawWithout);
   if (!parsed.success) return null;
   const { hero, scenario, seed, answers } = parsed.data;
-  const look = verifiedLines(answers.en).get("removed_look")?.claims[0];
+  const line = verifiedLines(answers.en).get("removed_look");
+  const look = line?.claims[0];
   const side = look?.values.side;
   const before = look?.values.before;
   const name = shortName(hero);
   const cards: StatCard[] = [];
-  if (look && (side === "left" || side === "right") && typeof before === "number") {
-    const figure = `${before} s`;
+  // The figure is the Verifier's own text for the claim, so it cannot drift from the without-look line.
+  const figure = line ? (numberParts(line.text).find((p) => p.num)?.text ?? null) : null;
+  if (look && figure && (side === "left" || side === "right") && typeof before === "number") {
     cards.push({
       id: `stat:goal:${hero}`,
       kicker: "GOAL",

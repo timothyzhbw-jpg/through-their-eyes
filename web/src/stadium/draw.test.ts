@@ -76,9 +76,15 @@ describe("the screens' canvases", () => {
         }
       }
     }
-    // The claims' numbers do reach the screens: the look's 0.8 s and the goal's 0.4 s.
-    expect(shown).toContain("0.8");
-    expect(shown).toContain("0.4");
+    // The claims' numbers do reach the screens: each card's figure, read off the card itself.
+    const figures = [f.look, f.goal]
+      .flatMap((m) => m?.cards ?? [])
+      .map((c) => c.figure?.match(NUMBER)?.[0]);
+    expect(figures.length).toBeGreaterThan(0);
+    for (const fig of figures) {
+      expect(fig).toBeDefined();
+      expect(shown).toContain(fig);
+    }
   });
 
   it("no text is hand-typed with a digit: sponsors, kickers and notes have none", () => {

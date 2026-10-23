@@ -57,8 +57,9 @@ The studio has no audience, reach or sales figures.
 
 ## No strobe (WCAG 2.3.1)
 
-A screen whose content changes fades slowly: it dips to 30 % brightness over 0.6 s, swaps its
-picture at the bottom of the dip, then comes back up. With `prefers-reduced-motion` it cuts. The
-screens change at most once every 1.5 s, however fast the timeline is scrubbed. One dip per
+A screen whose content changes fades slowly: it dips, swaps its
+picture at the bottom of the dip, then comes back up (`FADE` in `rules.ts` holds the dip depth and
+length). With `prefers-reduced-motion` it cuts. Screens change at most once per `MIN_GAP_MS`
+(`rules.ts`), however fast the timeline is scrubbed. One dip per
 change is under one luminance pair a second; the guideline allows three. There is no blur and
 there are no white flashes. A camera preset is a cut, not a flight.
