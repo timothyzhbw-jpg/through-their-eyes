@@ -109,22 +109,24 @@ last frame is the board full frame: the cut is exact.
 | 1:11.72 | 1.6 | crew-trace | app |  |
 | 1:13.32 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
 | 1:16.92 | 4 | wrong · {verifier_offline.kept} OF {verifier_offline.total} BROKEN LINES / KEPT OFF THE AIR | app | Try a wrong number… and it never airs. |
-| 1:20.92 | 2 | redcard · TELESTRATOR DOWN | app | Take an agent down… |
-| 1:22.92 | 2.6 | bringback | app | bring it back, and it picks up where it left off. |
-| 1:25.52 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
-| 1:28.32 | 1.3 | zh · 中文 | app |  |
-| 1:29.62 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
-| 1:32.12 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
-| 1:34.12 | 1 | s4a-pov | story (Blender, dramatisation) |  |
-| 1:35.12 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
-| 1:37.15 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
-| 1:38.95 | 1 | s4d-strike | story (Blender, dramatisation) |  |
-| 1:39.95 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
-| 1:41.45 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
-| 1:42.45 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
-| 1:44.45 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
+| 1:20.92 | 0.9 | redcard (take the Telestrator down) | app | Take an agent down… |
+| 1:21.82 | 1.6 | down · TELESTRATOR DOWN / THE BREAKDOWN STILL AIRS, VERIFIED. | app |  |
+| 1:23.42 | 0.7 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:24.12 | 2.1 | back · OFFLINE TEST / ONLY THAT STEP RE-RUNS / FAULT-FREE IN {drill_back.back} OF {drill_back.total} DRILLS | app |  |
+| 1:26.22 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
+| 1:29.02 | 1.3 | zh · 中文 | app |  |
+| 1:30.32 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
+| 1:32.82 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
+| 1:34.82 | 1 | s4a-pov | story (Blender, dramatisation) |  |
+| 1:35.82 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
+| 1:37.85 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
+| 1:39.65 | 1 | s4d-strike | story (Blender, dramatisation) |  |
+| 1:40.65 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
+| 1:42.15 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
+| 1:43.15 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
+| 1:45.15 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
 
-Total 110.95 s. The score session composes to the cue sheet generated from this spec.
+Total 111.65 s. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 

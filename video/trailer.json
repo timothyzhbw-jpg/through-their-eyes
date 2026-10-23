@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0,
       "from": 0,
-      "until": 110.949,
+      "until": 111.649,
       "gain_db": 4,
       "fade_in": 0,
       "fade_out": 0,
@@ -1102,21 +1102,11 @@
     },
     "redcard": {
       "template": "redcard",
-      "dur": 1.8,
+      "dur": 1.6,
       "alpha": true,
       "params": {
         "title": "TELESTRATOR DOWN",
-        "sub": "THE TEMPLATE AIRS. THE REPLAY PLAYS ON."
-      }
-    },
-    "subboard": {
-      "template": "subboard",
-      "dur": 2.3,
-      "alpha": true,
-      "params": {
-        "off": "TEMPLATE",
-        "on": "TELESTRATOR",
-        "caption": "BACK FROM ITS CHECKPOINT"
+        "sub": "THE BREAKDOWN STILL AIRS, VERIFIED."
       }
     },
     "tag-zh": {
@@ -1753,6 +1743,45 @@
         "align": "lower-left",
         "stagger": 0.4,
         "backdrop": true
+      }
+    },
+    "drill-back": {
+      "template": "slam",
+      "dur": 2.0,
+      "alpha": true,
+      "params": {
+        "kicker": "OFFLINE TEST",
+        "lines": [
+          {
+            "text": "ONLY THAT STEP RE-RUNS",
+            "size": 64
+          },
+          {
+            "text": "FAULT-FREE IN {drill_back.back} OF {drill_back.total} DRILLS",
+            "color": "gold",
+            "size": 64
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.25,
+        "backdrop": false
+      },
+      "fallback": {
+        "kicker": "OFFLINE TEST",
+        "lines": [
+          {
+            "text": "ONLY THAT STEP RE-RUNS",
+            "size": 64
+          },
+          {
+            "text": "BACK TO THE FAULT-FREE BREAKDOWN",
+            "color": "gold",
+            "size": 64
+          }
+        ],
+        "align": "lower-left",
+        "stagger": 0.25,
+        "backdrop": false
       }
     }
   },
@@ -3133,33 +3162,24 @@
     },
     {
       "id": "b36-redcard",
-      "dur": 2,
+      "dur": 0.9,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 0.2,
+        "in": 0.0,
         "crop": [
-          700,
-          260,
-          1000,
-          562
-        ],
-        "push": [
-          1,
-          1.04
+          640,
+          240,
+          1040,
+          585
         ]
       },
       "grade": "danger",
-      "overlays": [
-        {
-          "title": "redcard",
-          "at": 0.2
-        }
-      ],
+      "overlays": [],
       "vo": [
         {
           "id": "vo14",
-          "at": 0.25,
+          "at": 0.15,
           "text": "Take an agent down…"
         }
       ],
@@ -3175,29 +3195,48 @@
       ]
     },
     {
-      "id": "b37-bringback",
-      "dur": 2.6,
+      "id": "b36a-down",
+      "dur": 1.6,
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 3,
+        "in": 16.1,
         "crop": [
-          700,
-          260,
-          1000,
-          562
-        ],
-        "push": [
-          1.04,
-          1.08
+          640,
+          240,
+          1040,
+          585
         ]
       },
       "overlays": [
         {
-          "title": "subboard",
-          "at": 0.3
+          "title": "redcard",
+          "at": 0.0
         }
       ],
+      "sfx": [],
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
+    },
+    {
+      "id": "b37-bringback",
+      "dur": 0.7,
+      "picture": {
+        "src": "capture",
+        "shot": "10-drill",
+        "in": 18.9,
+        "crop": [
+          640,
+          240,
+          1040,
+          585
+        ]
+      },
+      "overlays": [],
       "vo": [
         {
           "id": "vo15",
@@ -3223,6 +3262,34 @@
       "fx": [
         "lift"
       ]
+    },
+    {
+      "id": "b37a-back",
+      "dur": 2.1,
+      "picture": {
+        "src": "capture",
+        "shot": "10-drill",
+        "in": 27.5,
+        "crop": [
+          640,
+          240,
+          1040,
+          585
+        ]
+      },
+      "overlays": [
+        {
+          "title": "drill-back",
+          "at": 0.05
+        }
+      ],
+      "sfx": [],
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
     },
     {
       "id": "b38-personas",
@@ -3772,6 +3839,14 @@
       "values": [
         "total",
         "kept"
+      ]
+    },
+    "drill_back": {
+      "file": "eval/reports/crew_evidence.md",
+      "pattern": "gave the fault-free breakdown in (\\d+)/(\\d+) drills",
+      "values": [
+        "back",
+        "total"
       ]
     }
   }

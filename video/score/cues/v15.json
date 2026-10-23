@@ -1,5 +1,5 @@
 {
-  "about": "Cue sheet for cut v15, \"GET YOUR VISION\" (Bowen's restructure, 2026-10-22): one story line, the lesson, the evidence, the product, the business case. The coach's mantra cards, the board on the tablet, the scan step-through, one montage for the press and the corner, personas as a split, a business card; 110.949 s. Re-cut after the competitor scan: perception said in the first ten seconds, the live match with its moment links, the Verifier's offline result read off the report.",
+  "about": "Cue sheet for cut v15, \"GET YOUR VISION\" (Bowen's restructure, 2026-10-22): one story line, the lesson, the evidence, the product, the business case. The coach's mantra cards, the board on the tablet, the scan step-through, one montage for the press and the corner, personas as a split, a business card; 111.649 s. Re-cut after the competitor scan: perception said in the first ten seconds, the live match with its moment links, the Verifier's offline result read off the report. The drill as it runs live: down, the breakdown still airs, back from its checkpoint.",
   "trailer_ref": null,
   "bpm": 140,
   "sections": [
@@ -406,18 +406,18 @@
     {
       "type": "window",
       "mood": "strip",
-      "from": "b36-redcard",
+      "from": "b36a-down",
       "to": "b37-bringback",
       "note": "an agent down"
     },
     {
       "type": "card",
-      "at": "b36-redcard:+0.85",
+      "at": "b36a-down",
       "note": "TELESTRATOR DOWN"
     },
     {
       "type": "hit",
-      "at": "b37-bringback",
+      "at": "b37a-back",
       "size": "small",
       "note": "back where it left off"
     },
