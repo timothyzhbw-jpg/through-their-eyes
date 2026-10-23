@@ -10,7 +10,9 @@ import type { ExportEvent, Vec2 } from "../data/types";
 export type Team = 0 | 1;
 
 export const HALF_LENGTH = 52.5; // m, pitch 105 x 68 with the origin at the centre spot
-const THIRD = 105 / 3;
+export const PITCH_L = 105; // m
+export const PITCH_W = 68; // m
+const THIRD = PITCH_L / 3;
 
 /** The sim's team letter and shirt number ("H8"): home is the team that attacks +x. */
 export const teamOf = (playerId: string): Team => (playerId.startsWith("H") ? 0 : 1);
@@ -23,7 +25,8 @@ const forward = (team: Team, x: number): number => x * attackSign(team);
 
 export const THIRD_START = HALF_LENGTH - THIRD; // 17.5 m: where the attacking third begins
 /** PPDA's pressing zone: the opponent's own 60% of the pitch, as it is usually drawn. */
-export const PRESS_ZONE_FROM = -HALF_LENGTH + 0.4 * 105; // -10.5 m in the attacker's frame
+export const PRESS_ZONE_SHARE = 0.6;
+export const PRESS_ZONE_FROM = -HALF_LENGTH + (1 - PRESS_ZONE_SHARE) * PITCH_L; // -10.5 m in the attacker's frame
 export const REGAIN_WINDOW_S = 10; // shots after a high regain count for this long
 export const FPS = 25;
 
@@ -72,8 +75,7 @@ export function regains(events: readonly ExportEvent[]): Regain[] {
 
 export interface PressMetrics {
   team: Team;
-  actions: number; // interceptions and tackles by this team, anywhere
-  regains: number; // the same: each one is a regain of the ball
+  regains: number; // interceptions and tackles by this team, anywhere: each is a regain
   highRegains: number; // won in the attacking third
   zoneActions: number; // PPDA's denominator
   zonePasses: number; // opponent passes kicked in the zone: PPDA's numerator
@@ -99,7 +101,6 @@ export function pressMetrics(events: readonly ExportEvent[], team: Team): PressM
   );
   return {
     team,
-    actions: mine.length,
     regains: mine.length,
     highRegains: high.length,
     zoneActions,
@@ -113,8 +114,12 @@ export function pressMetrics(events: readonly ExportEvent[], team: Team): PressM
 // ---------- shot quality ----------
 
 /** xG of an unplaced shot `d` m from the goal centre: sim/decision.py `distance_xg`. */
+export const XG_CAP = 0.6;
+export const XG_PEAK = 0.35;
+export const XG_D0 = 6; // m
+export const XG_SCALE = 7; // m
 export function distanceXg(d: number): number {
-  return Math.min(0.6, 0.35 * Math.exp(-(d - 6) / 7));
+  return Math.min(XG_CAP, XG_PEAK * Math.exp(-(d - XG_D0) / XG_SCALE));
 }
 
 export interface Shot {
@@ -179,8 +184,8 @@ export function parseXtGrid(raw: {
 export function xtAt(g: XtGrid, p: Vec2, team: Team): number {
   const s = attackSign(team);
   const clamp = (v: number, hi: number) => Math.min(hi, Math.max(0, v));
-  const fx = clamp(((s * p[0] + 52.5) / 105) * g.cols - 0.5, g.cols - 1);
-  const fy = clamp(((s * p[1] + 34) / 68) * g.rows - 0.5, g.rows - 1);
+  const fx = clamp(((s * p[0] + HALF_LENGTH) / PITCH_L) * g.cols - 0.5, g.cols - 1);
+  const fy = clamp(((s * p[1] + PITCH_W / 2) / PITCH_W) * g.rows - 0.5, g.rows - 1);
   const i = Math.min(Math.floor(fx), g.cols - 2);
   const j = Math.min(Math.floor(fy), g.rows - 2);
   const [tx, ty] = [fx - i, fy - j];

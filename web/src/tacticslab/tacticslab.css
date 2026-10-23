@@ -116,7 +116,7 @@
   width: 100%;
   max-width: 880px;
   border-radius: var(--r-board);
-  background: #14271d;
+  background: var(--night-3);
 }
 .lab-pitch {
   fill: none;
@@ -128,7 +128,7 @@
 }
 .lab-ring {
   fill: none;
-  stroke: #fff;
+  stroke: var(--chalk);
   stroke-width: 0.3;
 }
 .lab-line {
@@ -144,14 +144,14 @@
   stroke-dasharray: 1.4 1;
 }
 .lab-halo {
-  stroke: #fff;
+  stroke: var(--chalk);
   stroke-opacity: 0.4;
   stroke-width: 1.6;
   stroke-linecap: round;
 }
 .lab-cross {
   fill: none;
-  stroke: #fff;
+  stroke: var(--chalk);
   stroke-width: 0.45;
   stroke-linecap: round;
 }

@@ -12,9 +12,16 @@ import { shortName } from "../data/roster";
 import { OPEN_P, laneCounts, lanesAt } from "./lanes";
 import {
   FPS,
+  HALF_LENGTH,
+  PITCH_L,
   PRESS_ZONE_FROM,
+  PRESS_ZONE_SHARE,
   REGAIN_WINDOW_S,
   THIRD_START,
+  XG_CAP,
+  XG_D0,
+  XG_PEAK,
+  XG_SCALE,
   pressMetrics,
   progression,
   regains,
@@ -128,7 +135,7 @@ function high_press(hero: Hero, view: Context): LabCard {
       {
         label: "High regains",
         values: each((t) => String(t ? away.highRegains : home.highRegains)),
-        definition: `A regain in the winner's attacking third: beyond ${THIRD_START.toFixed(1)} m from the centre spot toward the goal it attacks (the last 35 m of 105).`,
+        definition: `A regain in the winner's attacking third: beyond ${THIRD_START.toFixed(1)} m from the centre spot toward the goal it attacks (the last ${(HALF_LENGTH - THIRD_START).toFixed(0)} m of ${PITCH_L}).`,
         source: "tracking",
         sourceNote: TRACKING("Counted"),
       },
@@ -136,8 +143,8 @@ function high_press(hero: Hero, view: Context): LabCard {
         label: "PPDA, interceptions and tackles",
         values: each((t) => ppdaText(t ? away.ppda : home.ppda)),
         definition:
-          "Opponent passes per defensive action. Passes the opponent kicks in its own 60% of " +
-          `the pitch (beyond ${PRESS_ZONE_FROM} m in the pressing team's frame), divided by the ` +
+          "Opponent passes per defensive action. Passes the opponent kicks in its own " +
+          `${Math.round(PRESS_ZONE_SHARE * 100)}% of the pitch (beyond ${PRESS_ZONE_FROM} m in the pressing team's frame), divided by the ` +
           "pressing team's interceptions and tackles in that zone. Lower means a harder press. " +
           "The usual PPDA also counts challenges and fouls, which the sim does not have; a dash " +
           "means no defensive action in the zone.",
@@ -314,7 +321,7 @@ function corners(hero: Hero, view: Context): LabCard {
     metrics,
     limits:
       "A corner's passage ends after its cutback and the stitched match cuts it before a shot " +
-      "could follow (SPEC 3.1), so shots from corners are zero by construction. Crosses and " +
+      "could follow (SPEC 3.1); the row counts what the match's events hold. Crosses and " +
       "headers are not modelled.",
     moment: link("corner"),
     here: view.scenario === "corner_blind_side",
@@ -353,7 +360,7 @@ function shot_quality(hero: Hero, view: Context): LabCard {
         values: each((t) => fixed((t ? away : home).xg)),
         definition:
           "Expected goals of an unplaced shot at d metres from the centre of the goal it " +
-          "attacks: the smaller of 0.6 and 0.35 · e^(−(d − 6) / 7), the sim's distance model " +
+          `attacks: the smaller of ${XG_CAP} and ${XG_PEAK} · e^(−(d − ${XG_D0}) / ${XG_SCALE}), the sim's distance model ` +
           "(sim/decision.py), summed over the team's shots.",
         source: "sim",
         sourceNote: MODELLED,

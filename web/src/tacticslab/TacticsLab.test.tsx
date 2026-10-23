@@ -15,7 +15,7 @@ import { parseTactics } from "../tactics/tactics";
 import tacticsFixture from "../tactics/fixture.json";
 import { API, fakeFetch, fakeSockets, matchExport, render } from "../testing";
 import { CARD_IDS, buildCards, compareHref, momentHref } from "./cards";
-import { parseXtGrid } from "./metrics";
+import { XG_CAP, XG_D0, XG_PEAK, XG_SCALE, distanceXg, parseXtGrid } from "./metrics";
 import { TacticsLabPanel } from "./TacticsLab";
 
 const xt = parseXtGrid(withoutLook.xt);
@@ -70,6 +70,12 @@ describe("the cards", () => {
     expect(by.shot_quality.empty).toMatch(/No shot/);
     expect(by.progression.watch?.frame).toBe(75); // the long pass to the runner
     expect(by.decisions.watch?.frame).toBe(parseHero(raw).runs.factual.decision!.frame);
+  });
+
+  it("print the xG model's constants from the code that computes it", () => {
+    const xg = cards.find((c) => c.id === "shot_quality")!.metrics.find((m) => m.label === "xG")!;
+    for (const k of [XG_CAP, XG_PEAK, XG_D0, XG_SCALE]) expect(xg.definition).toContain(String(k));
+    expect(distanceXg(XG_D0)).toBeCloseTo(XG_PEAK);
   });
 
   it("wait for the xT grid rather than invent progression", () => {
