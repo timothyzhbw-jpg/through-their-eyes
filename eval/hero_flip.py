@@ -81,10 +81,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scenario", default="blind_side_run", choices=sorted(SCENARIOS))
     parser.add_argument("--seeds", default="100-139")
+    parser.add_argument("--out", type=Path, help="report path (default: hero_flip_<scenario>.md)")
     args = parser.parse_args()
     report = evaluate(args.scenario, _parse_seeds(args.seeds))
     REPORTS.mkdir(exist_ok=True)
-    path = REPORTS / f"hero_flip_{args.scenario}.md"
+    path = args.out or REPORTS / f"hero_flip_{args.scenario}.md"
     path.write_text(report)
     print(report.split("\n\n| Seed")[0])
     print(f"\nwrote {path}")
