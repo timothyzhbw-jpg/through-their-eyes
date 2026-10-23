@@ -160,6 +160,15 @@
   color: var(--chalk-2);
 }
 
+/* Up to a small laptop the hero header has no room for "Your view" beside its other pills (at
+   960 px they ran off screen; on a phone the quick tour's card lost its place under the picture):
+   its controls are the journey's Your view step. The match page, with no journey, keeps it. */
+@media (max-width: 1100px) {
+  .app:not(.match) .header-end .your-view {
+    display: none;
+  }
+}
+
 @media (max-width: 760px) {
   .journey {
     margin-top: 56px;

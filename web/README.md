@@ -486,7 +486,10 @@ src/
   The panels share one set of parts in `styles.css` ("Shared panel parts": `.tile`, `.tile-grid`,
   `.block-title`, `.data-table`, `.pick-row`, `.demo-badge`). **Full story · 90 s** on the bar
   (`?tour=story`, `tour/steps.json` `story`) walks one moment through the five steps on the tour
-  card, opening each step's panel; Start and the quick tour stay the first-run path. Smoke pages:
+  card, opening each step's panel; Start and the quick tour stay the first-run path. Up to 1100 px
+  the hero header leaves out the "Your view" pill (no room beside its other pills); its controls
+  are the Your view step. The shared `.table-wrap` is `position: relative`, so a table's
+  screen-reader-only text cannot widen the page on a phone. Smoke pages:
   `journey`, `journey-link-value`, `phone-375-journey`, `full-story`.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.

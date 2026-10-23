@@ -455,6 +455,7 @@ optgroup {
   letter-spacing: -0.01em;
 }
 .table-wrap {
+  position: relative; /* holds its cells' absolute .sr-only text: else it widens the page */
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
