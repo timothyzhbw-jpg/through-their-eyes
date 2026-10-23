@@ -109,6 +109,7 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| Generated claims verified `supported` \| {NUM}/{NUM} \({NUM}%\)",
         ("supported", "n", "pct"),
     ),
+    "A6": ("laws.md", rf"\*\*{NUM} unpunished breaches\*\*", ("unpunished",)),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",
