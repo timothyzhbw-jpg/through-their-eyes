@@ -143,6 +143,15 @@ on an LLM.
   at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 5:07 (`press_escape` seed 0), 7:58 (the
   shot hero `far_post_finish` seed 11, who scores at the far post) and 9:47 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
+  - *Who passes in open play* (`sim/scenarios/possession_play.py`, 2026-10-22). Open-play
+    passages run `possession_play`, where a passing rule picks the pass, not the decision model
+    (§3.5). The carrier keeps the ball for a keyed 0.6–1.6 s, then plays an outfield team-mate
+    8–35 m away who is onside and is not the one who just passed to him. Each is scored by his
+    space (the nearest opponent not beyond him along the pass, counted up to 8 m) times a keyed
+    draw between 0.5 and 1.5, so a team-mate in space is likelier, not certain; with nobody
+    scoring, the nearest onside team-mate gets it. Movement, pressing and marking (§3.2),
+    perception and belief (§3.4) and the ball (§3.3), interceptions included, are simulated as
+    everywhere. The decision model chooses at the hero moments (§3.6).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
@@ -1122,7 +1131,12 @@ are sim records, labelled `sim` on screen.
   events, with the stitched run's possessions, and the Verifier checks every slot before the line
   renders. Percentages and decimals are checked to half a unit of the last digit shown.
 - **Honest limits, on the card.**
-  - Open-play passing is scripted (§3.6): the rates describe the sim's script under its press.
+  - Open-play passing follows a rule (§3.1: after a moment on the ball, the carrier plays an
+    onside team-mate 8–35 m away, picked by a draw weighted toward space), while the decision
+    model chooses only at the hero moments (§3.5): the rates describe that rule under the sim's press. The card says what
+    is simulated for every pass first (movement, press, marking, perception and belief, whether
+    the ball arrives), then who decides (2026-10-22: the red team found "who passes, when and to
+    whom is scripted" read as the whole sim being scripted).
   - A corner's possession ends after its cutback, before any shot (§3.1): set-piece xG is zero
     by construction.
   - Open play rarely reaches the final third, so the peak comparison favours the corner.
@@ -1785,7 +1799,12 @@ README's Analyst · 中文 link serving a cached run with the Analyst on its tem
     every renamed claim has its own fingerprint and audit record. Other moments get observed
     claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
     the line-breaking detector's own count), scans before the reception, heavy pressure, and how
-    its shot ended (scored, saved by the keeper, blocked, wide; §3.3).
+    its shot ended (scored, saved by the keeper, blocked, wide; §3.3). A goal is told as it was
+    made (2026-10-22): the pass that found the scorer, his look before it reached him (within
+    2 s), the post it went in at and the keeper it beat, each part a checked slot and left out
+    when the run does not have it ("{assister} found {shooter}, who looked up {secs} seconds
+    before the ball reached him and scored at the far post past {keeper}."; `goal_templates`).
+    *Why:* the red team found the match's only goal told as "N. Varnhall scored."
     Payload evidence and seek frames are lifted to the match clock.
   - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
     (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken

@@ -49,9 +49,12 @@ On match-1 (measured 2026-10-22 on Linux, with the team shape, #150, and the kee
   was worth about the same as the one he took (+0.013).
 
 What it cannot say yet:
-- **Open play is scripted.** Who passes, when and to whom is fixed by possession play
-  (SPEC 3.6); only whether a pass arrives is simulated. So the rates describe the sim's script
-  under its press, not a coached team's choices.
+- **Open play passes by a rule.** Outside the hero moments, who passes, when and to whom
+  comes from possession play's passing rule (SPEC 3.1: after a moment on the ball, the carrier
+  plays an onside team-mate 8–35 m away, picked by a draw weighted toward space); the decision
+  model chooses only at the hero moments (SPEC 3.5). The movement, press, marking, perception
+  and whether each pass arrives are simulated throughout. So the rates describe that rule under
+  the sim's press, not a coached team's choices.
 - **Long balls are rare** (6 for Home in match-1), and tackles are not modelled.
 
 ### Why focus on set pieces?
@@ -83,7 +86,7 @@ without inventing anything.
 
 | Tactic | Mechanism | Data evidence | For a fan | Have | Needs | Status |
 |---|---|---|---|---|---|---|
-| **Build from the back** | Keep the ball through the press with short passes from the keeper and centre-backs, to draw the press and find space behind it | Completion of own-half passes under pressure, line-breaking passes, xT gained, short against long | "Playing out is a bet: keep it and the press is beaten, lose it and they are near your goal." | Passes, outcomes, pressing intensity, xT, the decision model's options | Decision-made open play (not scripted possession), tackles | **Built** (the card above) |
+| **Build from the back** | Keep the ball through the press with short passes from the keeper and centre-backs, to draw the press and find space behind it | Completion of own-half passes under pressure, line-breaking passes, xT gained, short against long | "Playing out is a bet: keep it and the press is beaten, lose it and they are near your goal." | Passes, outcomes, pressing intensity, xT, the decision model's options | Decision-made open play (not rule-based possession play), tackles | **Built** (the card above) |
 | **Set pieces** | Rehearsed routines put the ball near goal in seconds, against a set defence | Corners, shots and xG from corners, xG per corner, share of chances from set pieces | "A corner is a free chance to put the ball in the box." | Corners (the corner hero), receptions and xT, the distance xG model | A corner passage that plays on to a shot (shots on, no cut), crosses and headers, free kicks and throw-ins as set pieces | **Built, partly**: no shot follows a corner yet |
 | **High press** | Press high and together to win the ball near the opponent's goal | PPDA (opponent passes per defensive action), high turnovers (regains in the final third), shots and xT within 10 s of a high regain | "Win it back where the goal is close." | Pressing intensity per frame, interception locations, xT | Tackles, challenges and fouls in every scenario (PPDA's defensive actions; today only interceptions), a team-level press behaviour, open play that shoots after a regain | Roadmap |
 | **Counter-attack** | After winning the ball, attack fast before the defence is set | Time from regain to shot or box entry, speed toward goal (m/s), xT gained in the 10 s after a regain, shots from fast breaks | "Go before they are back in shape." | Regains (interceptions), positions and ball speed, xT | Open play that attacks the goal after a regain (the decision model for every carrier, shots on), possessions that carry on through a turnover instead of being cut | Roadmap |
@@ -94,7 +97,7 @@ without inventing anything.
 
 ## What would unlock most of the table
 
-1. **Open play that attacks.** Today's possession play is scripted. The `open_play` scenario
+1. **Open play that attacks.** Today's possession play passes by a rule. The `open_play` scenario
    already exists: every carrier decides with the decision model and shots are on (the xT fit
    uses it, SPEC 4.5). Putting it in the stitched match unlocks counter-attack, central
    penetration and the payoff rows of the high press and the low block.
