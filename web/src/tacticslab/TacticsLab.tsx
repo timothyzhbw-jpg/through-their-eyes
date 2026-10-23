@@ -163,6 +163,8 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           </table>
         </div>
       )}
+      {/* The best pass may be either team's, so the zones are named "their". Outside a hero or
+          match view usePersona falls back to casual: the lab then shows the plain sentence. */}
       {moves.length > 0 && <XtMoveExplain moves={moves} owner="their" />}
       <p className="note">{card.limits}</p>
       <div className="lab-links">

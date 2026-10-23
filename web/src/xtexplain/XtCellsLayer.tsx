@@ -3,16 +3,33 @@
 
 import { Line } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { HALF_LENGTH, PITCH_L, PITCH_W } from "../tacticslab/metrics";
 import { COLORS } from "../views/scene";
 import { createStore, useStore } from "../store/store";
-import type { BoardCell } from "./zones";
+import { GRID, type BoardCell } from "./zones";
 
-export const GRID = { cols: 16, rows: 12 }; // analytics/xt_grid.json "shape"
+/** The cells each open concrete explanation puts on the board, by instance; the layer draws the
+ * union. Empty unless a concrete version is open. */
+export const xtCells = createStore<{ byId: ReadonlyMap<string, readonly BoardCell[]> }>({
+  byId: new Map(),
+});
 
-/** The cells on the board now; empty unless the concrete version is open. */
-export const xtCells = createStore<{ cells: readonly BoardCell[] }>({ cells: [] });
+export function setXtCells(id: string, cells: readonly BoardCell[]) {
+  const byId = new Map(xtCells.get().byId);
+  byId.set(id, cells);
+  xtCells.set({ byId });
+}
+
+export function clearXtCells(id: string) {
+  const byId = new Map(xtCells.get().byId);
+  byId.delete(id);
+  xtCells.set({ byId });
+}
+
+/** Every cell on the board now, in instance order. */
+export const unionOf = (byId: ReadonlyMap<string, readonly BoardCell[]>): BoardCell[] =>
+  [...byId.values()].flat();
 
 const COLOR: Record<BoardCell["role"], string> = {
   from: COLORS.sight,
@@ -32,7 +49,8 @@ export function cellBox(c: BoardCell, cols = GRID.cols, rows = GRID.rows) {
 }
 
 export function XtCellsLayer({ renderOrder }: { renderOrder: number }) {
-  const cells = useStore(xtCells, (s) => s.cells);
+  const byId = useStore(xtCells, (s) => s.byId);
+  const cells = useMemo(() => unionOf(byId), [byId]);
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => invalidate(), [cells, invalidate]);
   return (
@@ -62,6 +80,9 @@ export function XtCellsLayer({ renderOrder }: { renderOrder: number }) {
               ]}
               color={COLOR[c.role]}
               lineWidth={2}
+              dashed={c.role === "from"} // a cue that is not colour: the start is dashed
+              dashSize={1.5}
+              gapSize={1}
               transparent
               depthTest={false}
               renderOrder={renderOrder + 0.1}

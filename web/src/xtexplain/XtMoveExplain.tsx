@@ -3,7 +3,7 @@
 // Casual gets one plain sentence; analyst and coach get the zones by name with their values, and
 // the from and to cells light up on the tactical board while that version is open.
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useId, useMemo } from "react";
 import type { Persona } from "../api/client";
 import type { PayloadClaim } from "../narration/payload";
 import { useView } from "../session";
@@ -11,7 +11,7 @@ import { lookWorthMove } from "./moves";
 import { createStore, useStore } from "../store/store";
 import { SourceChip } from "../provenance/SourceChip";
 import { computed } from "../provenance/source";
-import { xtCells } from "./XtCellsLayer";
+import { clearXtCells, setXtCells } from "./XtCellsLayer";
 import {
   COMPONENTS_LIMIT,
   boardCells,
@@ -50,11 +50,12 @@ export function XtMoveExplain({
   const persona = given ?? shown;
   const version = versionFor(persona);
   const cells = useMemo(() => boardCells(moves), [moves]);
+  const id = useId();
   useEffect(() => {
     if (version !== "concrete") return;
-    xtCells.set({ cells });
-    return () => xtCells.set({ cells: [] });
-  }, [version, cells]);
+    setXtCells(id, cells);
+    return () => clearXtCells(id);
+  }, [id, version, cells]);
   if (!moves.length) return null;
   if (version === "plain") {
     return (
@@ -92,7 +93,8 @@ export function XtMoveExplain({
         })}
       </ul>
       <p className="note">
-        {COMPONENTS_LIMIT} On the tactical board the start is outlined in blue and the end in gold.
+        {COMPONENTS_LIMIT} On the tactical board the start is outlined in pale cyan with a dashed
+        line, the end in gold with a solid one, and the other run's end in grey.
       </p>
     </div>
   );

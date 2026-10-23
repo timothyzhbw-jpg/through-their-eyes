@@ -213,11 +213,15 @@ function attackSign(hero: Hero): number {
 }
 
 /** The value of `slot` as the verified line shows it (three decimals), if the line holds it. */
-function shownValue(narration: Narration, line: PayloadLine, slot: string): string | null {
-  const value = narration.claims.get("pass_zones")?.values[slot];
-  if (typeof value !== "number") return null;
-  const text = value.toFixed(3);
-  return line.text.includes(text) ? text : null;
+function shownValue(
+  narration: Narration,
+  line: PayloadLine,
+  slot: string,
+): { text: string; raw: number } | null {
+  const raw = narration.claims.get("pass_zones")?.values[slot];
+  if (typeof raw !== "number") return null;
+  const text = raw.toFixed(3);
+  return line.text.includes(text) ? { text, raw } : null;
 }
 
 function XtExplainer({
@@ -260,16 +264,16 @@ function XtExplainer({
     const y = at[1] * sign;
     const i = Math.min(w.cols - 1, Math.max(0, Math.floor((x + LENGTH / 2) / cw)));
     const j = Math.min(w.rows - 1, Math.max(0, Math.floor((y + WIDTH / 2) / rh)));
-    return [{ run, x, y, i, j, value }];
+    return [{ run, x, y, i, j, value: value.text, raw: value.raw }];
   });
   const ending = (i: number, j: number) => ends.find((e) => e.i === i && e.j === j);
-  const xtValue = ends.find((e) => e.run === "factual")?.value;
-  const cfValue = ends.find((e) => e.run === "counterfactual")?.value;
+  const xtValue = ends.find((e) => e.run === "factual")?.raw;
+  const cfValue = ends.find((e) => e.run === "counterfactual")?.raw;
   const moves = useMemo(
     () =>
       passMoves(hero, w, {
-        xt: xtValue ? Number(xtValue) : null,
-        cfXt: cfValue ? Number(cfValue) : null,
+        xt: xtValue ?? null,
+        cfXt: cfValue ?? null,
       }),
     [hero, w, xtValue, cfValue],
   );

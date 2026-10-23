@@ -23,6 +23,9 @@ import {
   type XtGrid,
 } from "../tacticslab/metrics";
 
+/** The xT grid's size: analytics/xt_grid.json "shape". */
+export const GRID = { cols: 16, rows: 12 };
+
 export type Band = "own_third" | "own_half" | "opponents_half" | "final_third";
 export type Lane = "right_wing" | "right_of_centre" | "centre" | "left_of_centre" | "left_wing";
 
@@ -131,7 +134,7 @@ export interface MoveInput {
 }
 
 export function moveOf(input: MoveInput): Move {
-  const size = input.grid ?? { cols: 16, rows: 12 };
+  const size = input.grid ?? GRID;
   const value = (p: Vec2) => (input.grid ? xtAt(input.grid, p, input.team) : null);
   const from: Leg = {
     at: input.from,
@@ -203,21 +206,27 @@ const PLACE_AT: Record<Band, string> = {
 /** One plain sentence for a casual fan: no jargon, and no digit. */
 export function plainLine(m: Move): string {
   const [a, b] = [m.from.zone.band, m.to.zone.band];
-  const gain = m.delta === null ? BAND_RANK[b] - BAND_RANK[a] : m.delta;
-  const threat = gain > 0 ? "more threat" : gain < 0 ? "less threat" : "no more threat";
   const rank = BAND_RANK[b] - BAND_RANK[a];
+  // One source for the sign: the delta when known, the band rank only as a fallback.
+  const gain = m.delta === null ? rank : m.delta;
+  const threat = gain > 0 ? "more threat" : gain < 0 ? "less threat" : "no more threat";
+  // The effect clause is told only when it agrees with the threat; otherwise it is left out.
   const effect =
-    rank > 0
-      ? "so a shot from closer became possible"
-      : rank < 0
-        ? "so a shot became harder to get"
-        : "so the ball stayed about as far from goal";
+    rank === 0
+      ? "so the ball stayed about as far from goal"
+      : rank > 0 && gain > 0
+        ? "so a shot from closer became possible"
+        : rank < 0 && gain < 0
+          ? "so a shot became harder to get"
+          : null;
   if (m.mode === "runs") {
-    return `With the look the ball ended ${PLACE_AT[b]}; without it, ${PLACE_AT[a]}. ${capital(effect)}, and that is ${threat}.`;
+    const tail = effect ? `${capital(effect)}, and that is ${threat}.` : `That is ${threat}.`;
+    return `With the look the ball ended ${PLACE_AT[b]}; without it, ${PLACE_AT[a]}. ${tail}`;
   }
+  const then = effect ? `${effect}, and that is ${threat}.` : `and that is ${threat}.`;
   return rank === 0
-    ? `The ball moved sideways ${PLACE_AT[b]}, ${effect}, and that is ${threat}.`
-    : `The ball moved from ${PLACE_TO[a]} to ${PLACE_TO[b]}, ${effect}, and that is ${threat}.`;
+    ? `The ball moved sideways ${PLACE_AT[b]}, ${then}`
+    : `The ball moved from ${PLACE_TO[a]} to ${PLACE_TO[b]}, ${then}`;
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

@@ -412,20 +412,21 @@ function progression_card(hero: Hero, view: Context): LabCard {
   const events = hero.runs.factual.events;
   const xt = view.xt;
   const [home, away] = xt ? TEAM_IDS.map((t) => progression(events, t, xt)) : [null, null];
-  const best = [home?.best, away?.best]
-    .filter((b): b is NonNullable<typeof b> => !!b)
-    .sort((a, b) => b.xt - a.xt)[0];
-  const bestTeam = best && home?.best === best ? 0 : 1;
+  // The team rides on the progression the best pass came from, so it is never guessed.
+  const leader = [home, away]
+    .filter((p): p is NonNullable<typeof p> => !!p?.best)
+    .sort((a, b) => b.best!.xt - a.best!.xt)[0];
+  const best = leader?.best;
   const xtMove =
-    best && xt
+    leader && best && xt
       ? moveOf({
           mode: "pass",
-          team: bestTeam,
+          team: leader.team,
           from: best.from,
           to: best.to,
           grid: xt,
           delta: best.xt,
-          label: `Best pass (${TEAMS[bestTeam]})`,
+          label: `Best pass (${TEAMS[leader.team]})`,
         })
       : null;
   const stat = (f: (p: NonNullable<typeof home>) => string) =>

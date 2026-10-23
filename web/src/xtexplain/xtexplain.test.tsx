@@ -5,7 +5,7 @@
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import bundle from "../../public/data/without_look_seed3.json";
@@ -14,13 +14,14 @@ import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { fakeFetch, json } from "../testing";
+import { TacticsLabPanel } from "../tacticslab/TacticsLab";
 import { buildCards } from "../tacticslab/cards";
 import { NO_SCOPE } from "../tacticslab/scope";
 import { parseXtGrid } from "../tacticslab/metrics";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines } from "../without/WithoutLook";
 import { lookWorthMove, passMoves } from "./moves";
-import { cellBox, xtCells } from "./XtCellsLayer";
+import { cellBox, unionOf, xtCells } from "./XtCellsLayer";
 import { XtClaimNote, XtMoveExplain } from "./XtMoveExplain";
 import {
   COMPONENTS_LIMIT,
@@ -46,8 +47,11 @@ afterEach(() => {
     act(() => root.unmount());
     container.remove();
   }
-  xtCells.set({ cells: [] });
+  xtCells.set({ byId: new Map() });
+  vi.unstubAllGlobals();
 });
+
+const cellsNow = () => unionOf(xtCells.get().byId);
 
 function mount(session: Session, node: ReactNode): HTMLElement {
   const container = document.createElement("div");
@@ -158,6 +162,18 @@ describe("the version per persona", () => {
     );
   });
 
+  it("never contradicts itself: the threat and the effect come from one sign", () => {
+    // Into a lower band, but the value rose: the effect clause is left out, the sign is the delta's.
+    const odd = moveOf({ mode: "pass", team: 0, from: [40, 0], to: [-30, 0], delta: 0.05 });
+    expect(plainLine(odd)).toBe(
+      "The ball moved from near the goal to deep in its own end, and that is more threat.",
+    );
+    const odd2 = moveOf({ mode: "runs", team: 0, from: [-30, 0], to: [40, 0], delta: -0.05 });
+    expect(plainLine(odd2)).toBe(
+      "With the look the ball ended near the goal; without it, deep in its own end. That is less threat.",
+    );
+  });
+
   it("describes a pass that lost ground in the plain words, too", () => {
     expect(plainLine(home([40, 0], [-30, 0]))).toBe(
       "The ball moved from near the goal to deep in its own end, so a shot became harder to get, and that is less threat.",
@@ -204,10 +220,10 @@ describe("the tactical board's cells", () => {
   it("light up for the concrete version only, and clear when it closes", () => {
     const m = home([-10, 0], [40, -10]);
     const plain = mount(session(), <XtMoveExplain moves={[m]} owner="his" persona="casual" />);
-    expect(xtCells.get().cells).toEqual([]);
+    expect(cellsNow()).toEqual([]);
     const s = session();
     const page = mount(s, <XtMoveExplain moves={[m]} owner="his" persona="analyst" />);
-    const { cells } = xtCells.get();
+    const cells = cellsNow();
     expect(cells.map((c) => c.role)).toEqual(["from", "to"]);
     expect(cells[0]).toMatchObject({ col: m.from.zone.col, row: m.from.zone.row, sign: 1 });
     expect(cells[1]).toMatchObject({ col: m.to.zone.col, row: m.to.zone.row });
@@ -216,7 +232,38 @@ describe("the tactical board's cells", () => {
     const mountedNow = mounted.find((x) => x.container === page)!;
     act(() => mountedNow.root.unmount());
     mounted.splice(mounted.indexOf(mountedNow), 1);
-    expect(xtCells.get().cells).toEqual([]);
+    expect(cellsNow()).toEqual([]);
+  });
+
+  it("two open at once keep their own cells: closing one leaves the other's", () => {
+    const a = home([-10, 0], [40, -10]);
+    const b = home([-30, 0], [10, 20]);
+    const first = mount(session(), <XtMoveExplain moves={[a]} owner="his" persona="analyst" />);
+    mount(session(), <XtMoveExplain moves={[b]} owner="his" persona="coach" />);
+    expect(xtCells.get().byId.size).toBe(2);
+    expect(cellsNow()).toHaveLength(4);
+    const one = mounted.find((x) => x.container === first)!;
+    act(() => one.root.unmount());
+    mounted.splice(mounted.indexOf(one), 1);
+    expect(cellsNow().map((c) => [c.col, c.row, c.role])).toEqual([
+      [b.from.zone.col, b.from.zone.row, "from"],
+      [b.to.zone.col, b.to.zone.row, "to"],
+    ]);
+  });
+
+  it("a cell's box stays on the pitch, in the real grid, for both teams", () => {
+    const g = parseXtGrid(bundle.xt);
+    for (const sign of [1, -1] as const) {
+      for (const [col, row] of [
+        [0, 0],
+        [g.cols - 1, g.rows - 1],
+        [g.cols - 1, 0],
+      ]) {
+        const { cx, cy, w, h } = cellBox({ col, row, sign, role: "to" }, g.cols, g.rows);
+        expect(Math.abs(cx) + w / 2).toBeLessThanOrEqual(52.5 + 1e-9);
+        expect(Math.abs(cy) + h / 2).toBeLessThanOrEqual(34 + 1e-9);
+      }
+    }
   });
 
   it("a cell's box is where the grid puts it, turned for the team that attacks -x", () => {
@@ -264,7 +311,7 @@ describe("where xT is explained", () => {
         expect(text(el)).toContain("at the end 0.157");
         expect(text(el)).toContain("at the end 0.002");
         expect(text(dialog)).toMatch(/value iteration/);
-        expect(xtCells.get().cells.map((c) => c.role)).toEqual(["from", "to", "alt"]);
+        expect(cellsNow().map((c) => c.role)).toEqual(["from", "to", "alt"]);
       }
       act(() => dialog.querySelector<HTMLElement>("button")!.click());
     }
@@ -304,6 +351,33 @@ describe("where xT is explained", () => {
     const refuted = { ...cfValue(0.16), verdict: "refuted" as const };
     expect(mount(session(), <XtClaimNote claim={refuted} />).textContent).toBe("");
     expect(lookWorthMove(hero, 0.16)).toHaveLength(1);
+  });
+
+  it("the Tactics lab's Progression card carries the explanation, per persona", () => {
+    const xt = parseXtGrid(bundle.xt);
+    // The lab fetches its own copy of the grid too; answer it here so no request leaves the test.
+    vi.stubGlobal("fetch", async () => json(bundle));
+    for (const [persona, version] of [
+      ["casual", "plain"],
+      ["analyst", "concrete"],
+    ] as const) {
+      const s = session();
+      s.breakdown.set({ persona });
+      const page = mount(s, <TacticsLabPanel xt={xt} scope={NO_SCOPE} />);
+      act(() =>
+        [...page.querySelectorAll("button")].find((b) => text(b) === "Progression")!.click(),
+      );
+      const card = page.querySelector('[data-card="progression"]')!;
+      expect(card.querySelector("[data-xt-version]")!.getAttribute("data-xt-version")).toBe(
+        version,
+      );
+    }
+  });
+
+  it("the best pass is told for the team it came from", () => {
+    const card = buildCards(hero, grid, NO_SCOPE).find((c) => c.id === "progression")!;
+    expect(card.xtMove!.team).toBe(0);
+    expect(card.xtMove!.label).toBe("Best pass (Home)");
   });
 
   it("the Progression card's best pass is a move between zones the card's numbers agree with", () => {
