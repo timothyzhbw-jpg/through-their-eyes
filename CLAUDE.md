@@ -282,6 +282,9 @@ _Fill in as they come to exist._
   chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full
   Chrome's `--headless` crops it). `tests/test_architecture.py` fails when any of them is stale
   or the diagram drifts from the code
+- `.github/workflows/uptime.yml` — hourly GET-only health check of the public demo (API `/health`,
+  `/api/matches`, moments, web root, a `/data/` file) until 2026-11-11 (SPEC 8); a failure opens an
+  `uptime` issue, a green run closes it; run it by hand with `gh workflow run uptime`
 - Not yet: `uv run python -m eval.run_all`
 
 ## Decisions already made (don't relitigate without a reason)
