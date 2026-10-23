@@ -152,8 +152,10 @@ describe("in-view tags", () => {
     const tag = statTags(stats, pass.frame, -1).find((t) => t.kind === "pass")!;
     expect(tag.player).toBe(pass.receiver);
     expect(tag.label).toBe("PASS");
-    expect(tag.text).toContain(`${Math.round(pass.distance_m)} m`);
-    expect(tag.text).toContain(pass.band);
+    // One quantity, one number (SPEC 4.6): the payload carries the length in whole metres, as
+    // the claim about the same pass says it, and the chip prints it as it is.
+    expect(Number.isInteger(pass.distance_m)).toBe(true);
+    expect(tag.text).toBe(`${pass.distance_m} m · ${pass.band}`);
     expect(statTags(stats, pass.frame - 1, -1).some((t) => t.kind === "pass")).toBe(false);
     expect(statTags(stats, pass.frame + 37, -1).some((t) => t.kind === "pass")).toBe(true);
     expect(statTags(stats, pass.frame + 38, -1).some((t) => t.kind === "pass")).toBe(false);

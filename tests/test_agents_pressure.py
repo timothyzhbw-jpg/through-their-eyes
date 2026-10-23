@@ -50,13 +50,14 @@ def test_offline_breakdown_tells_the_pressure_story(ctx, offline):
         assert check_payload(script.payload) == []
         claims = {c.id: c for c in script.payload.claims}
         assert all(c.verdict == "supported" for c in claims.values())
-        assert "cf_carry_lost" in claims
+        # Every audience hears what keeping the ball would have cost but the player fan, whose
+        # script is about what he did (SPEC 6, "Persona specs").
+        assert ("cf_carry_lost" in claims) == (script.persona != "player_fan")
         assert not script.dropped and script.rewrites == 0
         assert {line.speaker for line in script.lines} == {"pbp", "color"}
     casual_en = next(s for s in r.scripts if (s.persona, s.language) == ("casual", "en"))
     assert [line.text for line in casual_en.payload.lines] == [
-        "Watch this.",
-        "K. Annersley was under heavy pressure when he released the ball.",
+        "Watch this. K. Annersley was under heavy pressure when he released the ball.",
         "R. Castellane took the pass from K. Annersley.",
         "Had K. Annersley kept the ball, A. Vintergren would have won it off him.",
     ]
@@ -93,19 +94,21 @@ def test_agent_outputs_are_used_through_verified_claims(ctx):
         "analyst": {"lens": "pressure", "headline": ["heavy_pressure", "cf_carry_lost"],
                     "supporting": ["presser_distance"], "angle": "He beat the press."},
         "telestrator": template_plan(ctx).model_dump(by_alias=True),
-        "pbp": {"lines": [{"claim": "heavy_pressure", "connective": "Watch this."}]},
-        # The analyst hears what escaping the press was worth (agents/persona_rules.py).
+        # The analyst opens on a number (agents/persona_rules.py)...
+        "pbp": {"lines": [{"claim": "pressure_at_pass", "connective": None}]},
+        # ...and hears what escaping the press was worth, and the pass's chance.
         "color": {"lines": [{"claim": "cf_carry_lost", "connective": None},
-                            {"claim": "cf_value", "connective": None}]},
+                            {"claim": "cf_value", "connective": None},
+                            {"claim": "pass_success", "connective": None}]},
     }  # fmt: skip
     r = breakdown(ctx, client=FakeChatClient(replies), personas=("analyst",), languages=("en",))
     assert r.findings.lens == "pressure" and r.plan_source == "agent"
     (script,) = r.scripts
     assert [line.text for line in script.payload.lines][:2] == [
-        "Watch this. K. Annersley was under heavy pressure when he released the ball.",
+        "Pressing intensity on K. Annersley was 95% when he released the ball.",
         "Had K. Annersley kept the ball, A. Vintergren would have won it off him.",
     ]
-    assert [line.claims for line in script.lines][2:] == [["cf_value"]]
+    assert [line.claims for line in script.lines][2:] == [["cf_value"], ["pass_success"]]
     assert script.rewrites == 0
 
 

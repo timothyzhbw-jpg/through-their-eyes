@@ -30,8 +30,10 @@ from typing import Any
 
 import numpy as np
 
+from analytics.live_stats import shot_release
 from analytics.pitch_control import pitch_control, pitch_grid
 from analytics.pressing import aggregate, frame_pressing
+from analytics.stats import feed_track, pass_length, release_speed
 from analytics.tactics import Passage, TacticsCards, tactics_from_run
 from analytics.tactics import stat as tactics_value
 from analytics.vision import VisionParams, player_visibility, visibility, wrap_angle
@@ -359,11 +361,15 @@ def scans_in_window(
 
 
 def event_attr(ctx: EvalContext, run: MatchRun, event: str, attr: str) -> Any:
-    """A recorded attribute, or a derived one: t, frame, player, team, type, duration_s."""
+    """A recorded attribute, or a derived one: t, frame, player, team, type, duration_s, and
+    measured on the tracked ball as the live stats measure it (SPEC 4.6): a pass's `length` (m)
+    and a pass's or shot's `release_kmh`."""
     e = ctx.event(run, event)
     derived = {"t": e.t, "frame": e.frame, "player": e.player, "team": e.team, "type": e.type}
     if attr in derived:
         return derived[attr]
+    if attr in ("length", "release_kmh"):
+        return _tracked(run, e, attr)
     if attr == "duration_s":
         end = e.attrs.get("end")
         if end is None:
@@ -372,6 +378,27 @@ def event_attr(ctx: EvalContext, run: MatchRun, event: str, attr: str) -> Any:
     if attr not in e.attrs:
         raise Inconclusive(f"{e.type} events have no attribute {attr!r}")
     return e.attrs[attr]
+
+
+def _tracked(run: MatchRun, e: Event, attr: str) -> float:
+    """A kick's length or release speed on the ball as the tracking feed carries it, with the
+    live stats' own functions (analytics/stats.py, analytics/live_stats.py), so a chip and a claim
+    about the same pass or shot measure the same number."""
+    ball = feed_track(run.ball_pos[:, :2])
+    if e.type == "pass":
+        end = e.attrs.get("end")
+        if end is None or int(end) >= len(ball):
+            raise Inconclusive(f"{e.id} has no end frame in the run")
+        if attr == "length":
+            return pass_length(ball, e.frame, int(end))
+        return release_speed(ball, e.frame, int(end), run.dt) * 3.6
+    if attr == "release_kmh" and e.type == "shot":
+        events = [{"type": x.type, "frame": x.frame} for x in run.events]
+        found = shot_release(ball, e.frame, events, (), len(ball), run.dt)
+        if found is None:
+            raise Inconclusive(f"{e.id} has no release window")
+        return found[0] * 3.6
+    raise Inconclusive(f"{e.type} events have no {attr!r}")
 
 
 def distance(

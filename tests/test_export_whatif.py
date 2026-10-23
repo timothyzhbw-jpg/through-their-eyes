@@ -36,7 +36,7 @@ def test_every_option_has_a_question_and_the_choice_is_marked(data, hero):
 
 def test_questions_read_naturally():
     assert what_if_question("pass:H4", "en") == "What if he passed to K. Annersley?"
-    assert what_if_question("pass:H4", "zh") == "如果他传给K. Annersley呢？"
+    assert what_if_question("pass:H4", "zh") == "如果他传给安纳斯利呢？"
     assert what_if_question("carry", "en") == "What if he carried it?"
     with pytest.raises(ValueError):
         what_if_question("dribble", "en")

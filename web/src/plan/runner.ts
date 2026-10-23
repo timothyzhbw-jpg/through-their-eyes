@@ -60,8 +60,11 @@ export class BreakdownRunner {
     return this.t;
   }
 
-  /** Start from the end of the moment, factual run, overlays off. `plan` must be validated. */
-  start(plan: TelestrationPlan): void {
+  /**
+   * Start from the end of the moment, factual run, overlays off (pass options on, as in free play,
+   * unless `overlays` says otherwise: the audience's own, SPEC 6). `plan` must be validated.
+   */
+  start(plan: TelestrationPlan, overlays?: { options: boolean; pitchControl: boolean }): void {
     this.plan = plan;
     this.t = 0;
     this.next = 0;
@@ -78,9 +81,11 @@ export class BreakdownRunner {
       beliefGhosts: false,
       ghostsAll: false,
       cfGhost: false,
-      options: true,
+      options: overlays?.options ?? true,
+      ...(overlays ? { pitchControl: overlays.pitchControl } : {}),
       focus: "split",
       camera: "pov",
+      lock: null,
       scanMarker: null,
       captionLine: null,
       evidenceLine: null,
@@ -261,11 +266,15 @@ export class BreakdownRunner {
         set({ playing: true, playUntil: this.frame(step.to), speed: step.speed });
         break;
       case "camera":
-        set(
-          step.mode === "pov" || step.mode === "broadcast"
-            ? { focus: step.mode, camera: step.mode }
-            : { focus: step.mode },
-        );
+        if (step.mode === "player_lock") {
+          set({ focus: "broadcast", camera: "broadcast", lock: this.moment.hero });
+        } else {
+          set(
+            step.mode === "pov" || step.mode === "broadcast"
+              ? { focus: step.mode, camera: step.mode, lock: null }
+              : { focus: step.mode },
+          );
+        }
         break;
       case "pov":
         set({
@@ -282,7 +291,9 @@ export class BreakdownRunner {
         set({ scanMarker: step.scan });
         break;
       case "zone":
-        set({ cone: true, povPlayer: step.player });
+        if (step.layer === "vision") set({ cone: true, povPlayer: step.player });
+        else if (step.layer === "pitch_control") set({ pitchControl: true });
+        else set({ options: true });
         break;
       case "ghost":
         set(step.kind === "belief" ? { beliefGhosts: true } : { cfGhost: true });

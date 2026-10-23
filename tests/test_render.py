@@ -159,7 +159,7 @@ def test_slot_formats_times_words_and_plurals(verifier, refs):
     assert render_claim(claim, v, "en", NAMES).text == (
         "Okafor checked his shoulder once while the ball travelled."
     )
-    assert render_claim(claim, v, "zh", NAMES_ZH).text == "球在路上时，奥卡福回头看了1次。"
+    assert render_claim(claim, v, "zh", NAMES_ZH).text == "球在路上时，奥卡福回头看了一次。"
     line = ScriptLine(id="L1", text="That was {c2.n:words|look|looks}, no more.", claims=["c2"])
     out = render_line(line, {"c2": claim}, {"c2": v}, "en", NAMES)
     assert out.ok, out.violations

@@ -589,8 +589,14 @@ async def _fixture(out: str) -> None:
         "director": {"priority": "high", "reason": "The look over the shoulder decides the pass."},
         "analyst": [Call("get_moment"), Call("run_counterfactual"), analyst],
         "telestrator": template_plan(ctx).model_dump(by_alias=True),
-        "pbp": {"lines": [{"claim": "scan_before_reception", "connective": "Watch this."}]},
-        "color": [{"lines": [{"claim": "blind_side", "connective": None}]},
+        # The analyst's script as its persona rules ask (agents/persona_rules.py): a number first,
+        # then the look's value, the belief error, the options' chances and the space he saw.
+        "pbp": {"lines": [{"claim": "scans_before_reception", "connective": None}]},
+        "color": [{"lines": [{"claim": "blind_side", "connective": None},
+                             {"claim": "cf_value", "connective": None},
+                             {"claim": "belief_error", "connective": None},
+                             {"claim": "pass_success", "connective": None},
+                             {"claim": "observed_share", "connective": None}]},
                   {"lines": [{"claim": "cf_pass", "connective": None}]}],
     }  # fmt: skip
     one = {"personas": ("analyst",), "languages": ("en",), "use_mcp": True}

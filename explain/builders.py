@@ -8,9 +8,13 @@ corruption eval (`eval/corruption.py`).
 A hero with no decision on the ball (a marker, `marker_scan` moment) has his own builders
 (`MARKER_BUILDERS`): his look, whether he stayed with his man, and the run without the look.
 
-Numbers are rounded to the precision they are shown at, and `approx` tolerates exactly half a
-display unit: "41 metres" claims 40.5–41.5 m. With the moment's card in the context, claims anchor
-on `<card>.<anchor>` (SPEC 5.1); evidence always lists plain event ids, for the viewer to seek to.
+Numbers are rounded to the precision they are shown at, by the one rule every number on screen
+follows (`analytics.stats.display`: ties away from zero, as the web's `toFixed`), and `approx`
+tolerates exactly half a display unit: "41 metres" claims 40.5–41.5 m. A quantity a chip also
+shows is measured as the chip measures it (a pass's length and speed and a shot's speed on the
+tracked ball, `event_attr`), so the two read the same (SPEC 4.6, 5.3). With the moment's card in
+the context, claims anchor on `<card>.<anchor>` (SPEC 5.1); evidence always lists plain event
+ids, for the viewer to seek to.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from analytics.stats import display
 from explain import lexicon
 from explain.cards import MomentCard
 from explain.claims import Claim, Predicate, Slot, event, fn, slot
@@ -111,7 +116,8 @@ def _approx(lhs, rhs, decimals: int, scale: float = 1.0) -> Predicate:
 
 
 def _rounded(value: float, decimals: int) -> int | float:
-    return round(value) if decimals == 0 else round(value, decimals)
+    shown = display(value, decimals)
+    return int(shown) if decimals == 0 else shown
 
 
 def _num(value: float, decimals: int) -> Slot:
@@ -185,7 +191,7 @@ def pass_to_runner(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     if r.hero_pass is None or r.hero_pass.type != "pass":
         return None
     p = r.hero_pass
-    dist = fn("event_attr", event=r.at_action, attr="distance")
+    dist = fn("event_attr", event=r.at_action, attr="length")
     return Claim(
         id="pass_to_runner",
         template="{passer} found {receiver} with a {dist}-metre pass.",
@@ -204,16 +210,14 @@ def pass_to_runner(ctx: EvalContext, r: HeroRefs) -> Claim | None:
 def pass_speed(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     if r.hero_pass is None or r.hero_pass.type != "pass":
         return None
-    speed = fn("event_attr", event=r.at_action, attr="speed")
-    kmh = ctx.value(speed) * 3.6
+    kmh = fn("event_attr", event=r.at_action, attr="release_kmh")
     return Claim(
         id="pass_speed",
         template="{passer}'s pass left his foot at {kmh} km/h.",
         templates={"zh": "{passer}这脚传球的出球时速为{kmh}公里。"},
-        slots={"passer": Slot(ref=r.hero_pass.player), "kmh": _num(kmh, 0)},
+        slots={"passer": Slot(ref=r.hero_pass.player), "kmh": _num(ctx.value(kmh), 1)},
         predicate=Predicate(op="all", args=[
-            _pass_by("passer", r),
-            _approx(speed, slot("kmh", scale=1 / 3.6), 0, scale=1 / 3.6),
+            _pass_by("passer", r), _approx(kmh, slot("kmh"), 1),
         ]),
         evidence=[r.hero_pass.id],
     )  # fmt: skip
@@ -262,7 +266,7 @@ def blind_side_run(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="blind_side",
         template="{runner}'s run was on {player}'s blind side.",
-        templates={"zh": "{runner}的跑位在{player}的盲区。"},
+        templates={"zh": "{runner}的跑位在{player}的视野盲区。"},
         slots={"runner": Slot(ref=r.runner), "player": Slot(ref=r.hero)},
         predicate=pred,
         terms=["blind side"],
@@ -329,7 +333,7 @@ def pass_success(ctx: EvalContext, r: HeroRefs) -> Claim | None:
         id="pass_success",
         template="{player} thought the pass to {receiver} had a {p_belief} chance of arriving; "
         "it was {p_true}.",
-        templates={"zh": "{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。"},
+        templates={"zh": "{player}判断传给{receiver}的成功率是{p_belief}，实际是{p_true}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=receiver),
                "p_belief": _num(ctx.value(belief, values), 2),
                "p_true": _num(ctx.value(truth, values), 2)},
@@ -354,7 +358,7 @@ def counterfactual_pass_success(
         id="cf_pass_success",
         template="Without that look, {player} thought the pass to {receiver} had a {p_belief} "
         "chance of arriving; it was {p_true}.",
-        templates={"zh": "如果没有那一眼，{player}会以为传给{receiver}的球能到的概率是{p_belief}，"
+        templates={"zh": "如果没有那一眼，{player}会以为传给{receiver}的成功率是{p_belief}，"
                          "实际是{p_true}。"},
         slots={"player": Slot(ref=r.hero), "receiver": Slot(ref=r.runner),
                "p_belief": _num(ctx.value(belief, values), 2),
@@ -399,7 +403,7 @@ def counterfactual_value(
         return Claim(
             id="cf_value",
             template="That look was worth {dxt} in expected threat.",
-            templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
+            templates={"zh": "那一眼价值{dxt}的预期威胁。"},
             slots={"dxt": _num(ctx.value(delta), 2)},
             predicate=_approx(delta, slot("dxt"), 2),
             evidence=[cf.scan_id],
@@ -407,15 +411,15 @@ def counterfactual_value(
     # A forced option (SPEC 3.7): what he did against what he was made to do instead.
     value = ctx.value(delta)
     more = value >= 0
-    instead = {"carry": ("keeping the ball", "持球")}.get(
-        cf.action, ("the other option", "另一种处理")
+    instead = {"carry": ("keeping the ball", "继续持球")}.get(
+        cf.action, ("the other option", "另一种选择")
     )  # fmt: skip
     return Claim(
         id="cf_value",
         template=f"What {{player}} did was worth {{dxt}} {'more' if more else 'less'} in "
         f"expected threat than {instead[0]}.",
-        templates={"zh": f"{{player}}的处理比{instead[1]}{'多' if more else '少'}{{dxt}}的预期"
-                         "威胁（xT）。"},
+        templates={"zh": f"{{player}}这样处理，比{instead[1]}{'多' if more else '少'}创造了"
+                         "{dxt}的预期威胁。"},
         slots={"player": Slot(ref=r.hero), "dxt": _num(abs(value), 2)},
         predicate=Predicate(op="all", args=[
             _eq(fn("event_attr", event=r.at_reception, attr="player"), slot("player")),
@@ -728,7 +732,7 @@ def keeper_seen_in_scan(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="keeper_seen_in_scan",
         template="When {player} looked up, he saw {keeper}.",
-        templates={"zh": "{player}抬头的那一眼，看到了{keeper}。"},
+        templates={"zh": "{player}抬头的那一眼，看到了门将{keeper}。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper),
                "scan": Slot(ref=r.key_scan.id)},
         predicate=Predicate(op="all", args=[
@@ -753,7 +757,7 @@ def keeper_near_side(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="keeper_near_side",
         template="When {player} looked up, {keeper} stood {m|metre|metres} toward his near post.",
-        templates={"zh": "{player}抬头时，{keeper}站在偏向近门柱{m}米的位置。"},
+        templates={"zh": "{player}抬头时，门将{keeper}的站位向近门柱一侧偏出{m}米。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper),
                "scan": Slot(ref=r.key_scan.id), "m": _num(value, 1)},
         predicate=Predicate(op="all", args=[
@@ -813,7 +817,7 @@ def shot_result(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     return Claim(
         id="shot_saved",
         template="{keeper} saved {player}'s shot.",
-        templates={"zh": "{keeper}扑出了{player}的射门。"},
+        templates={"zh": "门将{keeper}扑出了{player}的射门。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=shot.attrs["keeper"])},
         predicate=Predicate(op="all", args=[
             *is_shot, _eq(fn("event_attr", event=r.at_action, attr="keeper"), slot("keeper")),
@@ -826,15 +830,15 @@ def shot_speed(ctx: EvalContext, r: HeroRefs) -> Claim | None:
     shot = _placed_shot(r)
     if shot is None:
         return None
-    speed = fn("event_attr", event=r.at_action, attr="speed")
+    kmh = fn("event_attr", event=r.at_action, attr="release_kmh")
     return Claim(
         id="shot_speed",
         template="{player} hit it at {kmh} km/h.",
         templates={"zh": "{player}这脚射门的球速为每小时{kmh}公里。"},
-        slots={"player": Slot(ref=r.hero), "kmh": _num(ctx.value(speed) * 3.6, 0)},
+        slots={"player": Slot(ref=r.hero), "kmh": _num(ctx.value(kmh), 1)},
         predicate=Predicate(op="all", args=[
             _eq(fn("event_attr", event=r.at_action, attr="player"), slot("player")),
-            _approx(speed, slot("kmh", scale=1 / 3.6), 0, scale=1 / 3.6),
+            _approx(kmh, slot("kmh"), 1),
         ]),
         evidence=[shot.id],
     )  # fmt: skip
@@ -929,7 +933,7 @@ def counterfactual_keeper_age(
         id="cf_keeper_age",
         template="Without the look, his last sight of {keeper} is {secs|second|seconds} old when "
         "{player} shoots.",
-        templates={"zh": "如果没有那一眼，{player}射门时距上次看到{keeper}已有{secs}秒。"},
+        templates={"zh": "如果没有那一眼，{player}射门时距上次看到门将{keeper}已有{secs}秒。"},
         slots={"player": Slot(ref=r.hero), "keeper": Slot(ref=keeper), "secs": _num(value, 1)},
         predicate=_approx(age, slot("secs"), 1),
         evidence=[cf.scan_id],
@@ -1082,7 +1086,7 @@ def marker_blind_side(ctx: EvalContext, r: MarkerRefs) -> Claim | None:
     return Claim(
         id="blind_side",
         template="{runner} was on {player}'s blind side when he looked.",
-        templates={"zh": "{player}回头时，{runner}在他的盲区。"},
+        templates={"zh": "{player}回头时，{runner}在他的视野盲区。"},
         slots={"runner": Slot(ref=r.man), "player": Slot(ref=r.marker)},
         predicate=pred,
         terms=["blind side"],
@@ -1307,7 +1311,7 @@ def marker_cf_value(ctx: EvalContext, r: MarkerRefs, cf: CounterfactualResult) -
     return Claim(
         id="cf_value",
         template="That look was worth {dxt} in expected threat.",
-        templates={"zh": "那一眼带来了{dxt}的预期威胁（xT）。"},
+        templates={"zh": "那一眼价值{dxt}的预期威胁。"},
         slots={"dxt": _num(ctx.value(delta), 2)},
         predicate=_approx(delta, slot("dxt"), 2),
         evidence=[cf.scan_id],

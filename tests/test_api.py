@@ -584,7 +584,7 @@ def test_the_verified_number_is_supported_and_its_line_airs(client):
     assert out["status"] == "supported" and out["airs"] is True and out["violations"] == []
     assert out["line"] == "That look was worth 0.16 in expected threat."
     zh = _verify(client, value=true, language="zh").json()
-    assert zh["line"] == "那一眼带来了0.16的预期威胁（xT）。" and zh["airs"] is True
+    assert zh["line"] == "那一眼价值0.16的预期威胁。" and zh["airs"] is True
 
 
 def test_every_numeric_slot_of_every_claim_can_be_tampered(settings, tmp_path):
@@ -624,7 +624,7 @@ def test_only_numeric_slots_of_existing_claims_are_accepted(client):
     assert _verify(client, value="0.5").status_code == 422  # strings are not numbers
     assert _verify(client, value=True).status_code == 422
     assert _verify(client, value=0.123).status_code == 422  # the slot renders 2 decimals
-    assert _verify(client, "pass_speed", "kmh", 83.5).status_code == 422  # a whole number
+    assert _verify(client, "pass_speed", "kmh", 83.55).status_code == 422  # it renders 1 decimal
     assert _verify(client, value=1e12).status_code == 422
     assert _verify(client, language="fr").status_code == 422
 
