@@ -134,6 +134,12 @@ class RunAudit:
     off_field: float = 0.0  # furthest any player stood off the field while the ball was in play
     off_field_by: str | None = None
     off_field_frames: int = 0
+    # The goal frame (Law 1.10): the closest any player's centre came to a post's, and the frames
+    # with a player inside a goal (behind the line between the posts), the whole run.
+    post_gap: float = float("inf")
+    post_by: str | None = None
+    in_goal_frames: int = 0
+    keeper_line_frames: int = 0  # a keeper sweeping his line past his post
 
 
 # --- judging one run -----------------------------------------------------------------------------
@@ -170,6 +176,17 @@ def audit_run(run: MatchRun, label: str, group: str, restart: str | None = None)
 
     def add(kind: str, frame: int, player: str | None, detail: str, called: bool = False) -> None:
         a.findings.append(Finding(kind, label, int(frame), player, detail, called))
+
+    # The goal frame (Law 1.10): no body through a post, nobody inside a goal.
+    gaps = laws.post_distance(run.pos)
+    f, i = np.unravel_index(int(np.argmin(gaps)), gaps.shape)
+    a.post_gap, a.post_by = float(gaps[f, i]), f"{ids[i]} ({roles[i]}) at frame {f}"
+    a.in_goal_frames = int(laws.in_goal(run.pos).any(axis=1).sum())
+    keepers = [k for k, r in enumerate(roles) if r == "GK"]
+    speed = np.linalg.norm(run.vel[:, keepers], axis=-1)
+    a.keeper_line_frames = int(
+        laws.along_line_past_posts(run.pos[:, keepers], speed).any(axis=1).sum()
+    )
 
     # Law 3: the line-up.
     a.checked["3.1"] += 1
@@ -616,6 +633,7 @@ def render(audits: list[RunAudit], stitches: list[Stitch]) -> str:
     lines += _hero_tables(audits)
     lines += _stitch_tables(stitches)
     lines += _off_field_table(audits)
+    lines += _woodwork_table(audits)
     lines += ["", "## Examples", "", "Up to five per finding, in run order.", ""]
     for k in kinds:
         lines += [f"**{k}** (Law {KINDS[k][0]}, {KINDS[k][1]})", ""]
@@ -736,6 +754,40 @@ def _stitch_tables(stitches: list[Stitch]) -> list[str]:
         lines.append(
             f"| {s.match} | {s.index} | `{s.scenario}` | {s.label} | {s.expected} | "
             f"{team} | {starts} | {'yes' if s.simulated else 'no (edit)'} |"
+        )
+    return lines
+
+
+def _woodwork_table(audits: list[RunAudit]) -> list[str]:
+    near = [a for a in audits if a.post_gap < laws.POST_CLEARANCE or a.in_goal_frames]
+    lines = [
+        "",
+        "## Players and the goal frame (Law 1.10)",
+        "",
+        f"No player's body may overlap a post: his centre stays {laws.POST_CLEARANCE:.2f} m "
+        f"from the post's ({laws.BODY_RADIUS:.1f} m body, {laws.POST_RADIUS:.2f} m post), and "
+        f"nobody stands inside a goal. **{len(near)} of {_fmt(len(audits))} runs** break it. "
+        "No keeper sweeps his goal line past his post (within 1 m of the line, more than a body "
+        "outside the post, over 2 m/s): "
+        f"**{sum(a.keeper_line_frames > 0 for a in audits)} runs**. Per scenario and run set:",
+        "",
+        "| Scenario | Run set | Runs | Through a post or in a goal | Keeper along his line past "
+        "a post | Closest to a post (m) | Who |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    groups = ("design", "held-out", "intervention", *(f"match {s}" for s in MATCH_SEEDS))
+    table = defaultdict(list)
+    for a in audits:
+        table[(a.scenario, a.group)].append(a)
+    for (scenario, group), rows in sorted(
+        table.items(), key=lambda kv: (kv[0][0], groups.index(kv[0][1]))
+    ):
+        worst = min(rows, key=lambda a: a.post_gap)
+        bad = sum(a.post_gap < laws.POST_CLEARANCE or a.in_goal_frames > 0 for a in rows)
+        sweeps = sum(a.keeper_line_frames > 0 for a in rows)
+        lines.append(
+            f"| `{scenario}` | {group} | {len(rows)} | {bad} | {sweeps} | {worst.post_gap:.2f} | "
+            f"{worst.label}: {worst.post_by} |"
         )
     return lines
 

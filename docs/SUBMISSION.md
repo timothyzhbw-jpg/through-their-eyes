@@ -188,7 +188,7 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 | Forced to keep the ball, the pressure hero loses it; the possession outcome changes | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [^press] |
 | Set-piece hero: unmarked without the look, marked within 5 m with it | <!--num:H7-->37/40<!--/num--> (gate revised during design; the plan's checks, in the same report, are not met); median gap 8.5 m without vs 3.3 m with | [^marking] |
 | Scans detected from head direction alone, with sensor noise, aborted turns and drift on (held-out F1) | 0.991 | [^detector] |
-| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.915, recall 0.943 | [^blind] |
+| Blind-side alerts against the players' simulated beliefs (fresh seeds) | precision 0.914, recall 0.946 | [^blind] |
 | Perturbed claims refuted by the Verifier (a number off by one unit or by 20%, a swapped player, a wrong order) | 90 of 90 | [^corruption] |
 | First-draft narration lines naming a player or number that no claim holds: free text vs anchored | 34 of 66 vs 0 of 111; groundedness of the aired scripts 4.90 vs 5.00 (Foundry evaluator) | [^ablation] |
 | Simulator statistics against published values | <!--num:R3.inside-->11<!--/num--> inside the published range, <!--num:R3.outside-->5<!--/num--> outside, <!--num:R3.none-->10<!--/num--> with no published value | [^realism] |
@@ -278,7 +278,7 @@ Multi-Agent System (SPEC §0).
 - **Realism is partial.** Of the 16 simulator statistics we can check against a published
   value, <!--num:R3.outside-->5<!--/num--> fall outside the published range. All five compare scan rates between roles or
   pressure levels. Published players scan less when an opponent is tight on them (d = +0.57);
-  ours do too, but much less so (d = <!--num:R4.d-->0.18<!--/num-->).[^realism]
+  ours do too, but much less so (d = <!--num:R4.d-->0.15<!--/num-->).[^realism]
 - **No tackles yet.** In the stitched matches the ball changes hands by interceptions only: 0
   tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
   matches. Tackles are switched on in the pressure hero's scenario alone.[^matchstats]
@@ -305,10 +305,10 @@ Multi-Agent System (SPEC §0).
 Teammates who play proposed a tactics knowledge base: each tactic, its mechanism, the data that
 shows it and a sentence for a fan. We built the two rows our simulator truly supports.
 
-- **Why build from the back?** Under pressure, Home completed 25 of 34 short passes out from the
-  back in match-1 (74%, against 86% without). The pressure hero's recorded options show his
+- **Why build from the back?** Under pressure, Home completed 30 of 38 short passes out from the
+  back in match-1 (79%, against 86% without). The pressure hero's recorded options show his
   safest pass was back to the keeper.
-- **Why focus on set pieces?** The one corner reached 0.29 xT in 4.4 seconds, more than any of
+- **Why focus on set pieces?** The one corner reached 0.20 xT in 4.4 seconds, more than 17 of
   the 18 open-play passages. No shot followed: the stitched match cuts the corner before one
   could.
 
@@ -321,7 +321,7 @@ play that attacks the goal.
 ---
 
 [^realism]: [eval/reports/realism.md](../eval/reports/realism.md): scans in the 10 s before
-    receiving, sim 2.79 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
+    receiving, sim 2.77 vs published 3.0 ± 2.1 (Jordet et al. 2020); peak head speed 404 ± 51°/s
     vs 404.2 ± 50.7 (Kokubu et al. 2026); "11 inside, 5 outside, 0 inconclusive, 10 with no
     published reference".
 [^ablation]: [eval/reports/narration_ablation.md](../eval/reports/narration_ablation.md): free
@@ -381,7 +381,7 @@ play that attacks the goal.
 [^detector]: [eval/reports/scan_detector.md](../eval/reports/scan_detector.md): held-out F1 <!--num:A1-->0.991<!--/num-->
     with nuisance head motion on.
 [^blind]: [eval/reports/blind_side.md](../eval/reports/blind_side.md): fresh held-out precision
-    0.915, recall 0.943, and the upper-bound note.
+    0.914, recall 0.946, and the upper-bound note.
 [^corruption]: [eval/reports/corruption.md](../eval/reports/corruption.md): 90/90 false
     perturbations refuted; 468/468 generated claims supported.
 [^parity]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md) §1;

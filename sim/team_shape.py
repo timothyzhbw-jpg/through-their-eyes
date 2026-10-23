@@ -22,8 +22,8 @@ it attacks. The block is where those slots land on the pitch, per team and frame
   kept `margin` metres inside the touchlines.
 - **Roles.** In possession the full-backs push on to `fullback_push` (slot depth). Out of it the
   wide player on the side away from the ball tucks in to `far_tuck` of his lateral slot. The
-  keeper is not in the block: he stands on the line from his goal's centre to the ball, at
-  `keeper_share` of the back line's depth, inside his penalty area.
+  keeper is not in the block: he stands where `sim.keeper` puts him for the ball and the back
+  line, on the bisector of the ball's angle to his posts, inside his penalty area.
 
 Movement targets only: the engine steers to them with its usual limits and clamps them to the
 pitch, and scenario scripts (marking, pressing, a receiver's run) still override them.
@@ -35,6 +35,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from sim import keeper
 from sim.config import HALF_LENGTH, HALF_WIDTH
 
 PITCH_LENGTH = 2.0 * HALF_LENGTH
@@ -142,7 +143,6 @@ class ShapeParams:
     ball_follow_s: float = 1.0
     fullback_push: float = 0.5  # slot depth of the full-backs in possession
     far_tuck: float = 0.4  # far-side wide player's share of his lateral slot out of possession
-    keeper_share: float = 0.4  # keeper's depth as a share of the back line's
     margin: float = 2.0  # m, the block's outer slots stay this far inside the touchlines
 
 
@@ -224,16 +224,8 @@ def slot_speed(distance: np.ndarray, v_max: np.ndarray, params: ShapeParams | No
 
 
 def keeper_spot(ball: np.ndarray, back_line: float, sign: float, params: ShapeParams = SHAPE):
-    """On the line from his goal's centre to the ball, `keeper_share` of the back line's depth
-    out, inside his penalty area."""
-    goal_x = -sign * HALF_LENGTH
-    ball_depth = sign * (ball[0] - goal_x)
-    depth = float(np.clip(params.keeper_share * back_line, KEEPER_INSIDE,
-                          PENALTY_DEPTH - KEEPER_INSIDE))  # fmt: skip
-    depth = min(depth, max(ball_depth, KEEPER_INSIDE))
-    y = ball[1] * depth / max(ball_depth, depth)
-    y = float(np.clip(y, -(PENALTY_HALF_WIDTH - KEEPER_INSIDE), PENALTY_HALF_WIDTH - KEEPER_INSIDE))
-    return np.array([goal_x + sign * depth, y])
+    """The keeper's spot for the ball and his back line (`sim.keeper.keeper_spot`)."""
+    return keeper.keeper_spot(ball, back_line, sign)
 
 
 def in_penalty_area(point: np.ndarray, sign: float) -> np.ndarray:

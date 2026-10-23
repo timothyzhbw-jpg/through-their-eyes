@@ -69,9 +69,9 @@ None.
 | 19 | `blind_side` | `swap_player` | player: H8 → H10 | supported | eq(True, True) holds |
 | 3 | `scans_before_reception` | `swap_player` | player: H8 → H11 | supported | eq(1, 1) holds |
 | 2 | `seen_in_scan` | `swap_player` | runner: H9 → H4 | supported | all 4 conditions hold |
-| 16 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.076226463549844, 11.1) holds |
+| 16 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(11.076226463549839, 11.1) holds |
 | 9 | `gap_opened` | `wrong_order` | runner ↔ marker | supported | all 2 conditions hold |
-| 17 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.216022835485385, 12.2) holds |
+| 17 | `gap_to_marker` | `wrong_order` | runner ↔ marker | supported | approx(12.216022835485376, 12.2) holds |
 
 ## Excluded: not decidable from the recording
 
@@ -91,19 +91,19 @@ Player ids stand in for display names.
 | `belief_error` | When he played the pass, H8's picture of H9 was off by 0.4 metres. | 出球时，H8对H9位置的判断偏差为0.4米。 |
 | `blind_side` | H9's run was on H8's blind side. | H9的跑位在H8的盲区。 |
 | `cf_pass` | Without that look, H8 would have passed to H1. | 如果没有那一眼，H8会把球传给H1。 |
-| `cf_pass_success` | Without that look, H8 thought the pass to H9 had a 0.03 chance of arriving; it was 0.89. | 如果没有那一眼，H8会以为传给H9的球能到的概率是0.03，实际是0.89。 |
-| `cf_value` | That look was worth 0.17 in expected threat. | 那一眼带来了0.17的预期威胁（xT）。 |
+| `cf_pass_success` | Without that look, H8 thought the pass to H9 had a 0.03 chance of arriving; it was 0.87. | 如果没有那一眼，H8会以为传给H9的球能到的概率是0.03，实际是0.87。 |
+| `cf_value` | That look was worth 0.16 in expected threat. | 那一眼带来了0.16的预期威胁（xT）。 |
 | `gap_opened` | While the ball travelled to H8, H9 opened up 6.0 metres on A5. | 球传向H8的途中，H9把与A5的距离拉开了6.0米。 |
 | `gap_to_marker` | H9 was 9.9 metres clear of A5 when the pass was played. | 出球时，H9与A5相距9.9米。 |
 | `gap_to_nearest_opponent` | H9 was 9.9 metres from the nearest opponent when the pass was played. | 出球时，H9离最近的对手有9.9米。 |
 | `key_scan_duration` | H8's look over his shoulder lasted 0.76 seconds. | H8这次回头观察持续了0.76秒。 |
 | `observed_share` | In the 1 second before receiving, H8 saw 62% of the space the opponents controlled. | 接球前1秒内，H8看到了对手控制区域的62%。 |
 | `pass_speed` | H8's pass left his foot at 78 km/h. | H8这脚传球的出球时速为78公里。 |
-| `pass_success` | H8 thought the pass to H9 had a 0.74 chance of arriving; it was 0.89. | H8判断传给H9的球能到的概率是0.74，实际是0.89。 |
+| `pass_success` | H8 thought the pass to H9 had a 0.72 chance of arriving; it was 0.87. | H8判断传给H9的球能到的概率是0.72，实际是0.87。 |
 | `pass_to_runner` | H8 found H9 with a 38-metre pass. | H8一脚38米的传球找到了H9。 |
 | `presser_distance` | The nearest opponent, A11, was 11.2 metres from H8 when he released the ball. | H8出球时，离他最近的对手是A11，相距11.2米。 |
 | `pressure_at_pass` | Pressing intensity on H8 was 0% when he released the ball. | 出球时，H8承受的逼抢强度为0%。 |
-| `receiver_pressure` | When the pass reached H9, pressing intensity on him was 0%. | 球到H9脚下时，他承受的逼抢强度为0%。 |
+| `receiver_pressure` | When the pass reached H9, pressing intensity on him was 1%. | 球到H9脚下时，他承受的逼抢强度为1%。 |
 | `reception_zone` | H8 received the ball in the opponents' half, right of centre. | H8在对方半场中路偏右接球。 |
 | `runner_received` | H9 took the pass from H8. | H9接到了H8的传球。 |
 | `scan_before_reception` | H8 checked his shoulder before the ball reached him. | 球到之前，H8先回头看了一眼。 |
