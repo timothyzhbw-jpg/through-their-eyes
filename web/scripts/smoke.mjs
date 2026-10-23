@@ -155,6 +155,48 @@ const PAGES = [
       await boardClear(p);
     },
   },
+  // The skeleton's key over the broadcast camera, with the director's prompt and the stats up, and
+  // on the board at the decision, with the pass options' key up: no text on text (it sat on
+  // "Switch to …" at 1800 px, and on the board on the pass options' key).
+  ...[
+    [1440, 900],
+    [1280, 800],
+    [960, 800],
+  ].flatMap(([width, height]) => [
+    {
+      name: `desktop-${width}-skeleton`,
+      path: "?at=60&camera=broadcast",
+      device: { viewport: { width, height } },
+      check: async (p) => {
+        await hero(p, { main: "eyes" });
+        await skeletonKeyClear(p);
+      },
+    },
+    {
+      name: `desktop-${width}-skeleton-board`,
+      path: "?at=decision&view=tactical",
+      device: { viewport: { width, height } },
+      check: async (p) => {
+        await hero(p, { main: "board" });
+        await skeletonKeyClear(p, { within: ".slot.main .view.tac" });
+      },
+    },
+  ]),
+  // A phone's board: the key has its own row under the picture (on the board it hid half of it).
+  {
+    name: "phone-375-skeleton-board",
+    path: "?at=decision&view=tactical&intro=0",
+    device: PHONE_375,
+    check: (p) =>
+      phone(
+        p,
+        async (q) => {
+          await hero(q, { main: "board" });
+          await skeletonKeyClear(q, { outside: ".views" });
+        },
+        { live: false },
+      ),
+  },
   {
     name: "desktop-1280-tactical",
     path: "?at=56&view=tactical",
@@ -367,6 +409,56 @@ async function boardClear(page) {
       .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
   });
   if (over.length) throw new Error(`over the tactical board: ${over.join(", ")}`);
+}
+
+/** With the skeleton on, its key overlaps nothing else on the live screen: not the eyes picker,
+ * the director's prompt or its buttons, the stats, the run switch, the card, the caption or the
+ * pass options' key. `within`: it stays inside that element (the board); `outside`: it is clear of
+ * it (a phone's picture). */
+async function skeletonKeyClear(page, { within = null, outside = null } = {}) {
+  await page.getByRole("button", { name: "View options" }).click();
+  await page.getByRole("button", { name: "Skeleton", exact: true }).click();
+  await page.keyboard.press("Escape");
+  // the board in the picture in picture has its own key, hidden there: the one on show
+  await see(page.locator(".skeleton-key:visible"), "the skeleton's key");
+  const over = await page.evaluate(
+    ({ within, outside }) => {
+      const keys = [...document.querySelectorAll(".skeleton-key")]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0);
+      if (keys.length !== 1) return [`${keys.length} keys on show`];
+      const [key] = keys;
+      const meets = (r) =>
+        Math.min(r.right, key.right) - Math.max(r.left, key.left) > 0.5 &&
+        Math.min(r.bottom, key.bottom) - Math.max(r.top, key.top) > 0.5;
+      const found = [
+        ...document.querySelectorAll(
+          ".stage-top :is(.eyes-picker, button, .stat-chip, .director-idle), .stage-run .seg, .stage-card > *, .stage-caption .caption, .slot.main .options-legend",
+        ),
+      ]
+        .filter((el) => !el.closest(".skeleton-key"))
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 1 && r.height > 1 && meets(r);
+        })
+        .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+      const box = within && document.querySelector(within)?.getBoundingClientRect();
+      if (
+        box &&
+        (key.left < box.left ||
+          key.top < box.top ||
+          key.right > box.right ||
+          key.bottom > box.bottom)
+      ) {
+        found.push(`out of ${within}`);
+      }
+      const clear = outside && document.querySelector(outside)?.getBoundingClientRect();
+      if (clear && meets(clear)) found.push(`on ${outside}`);
+      return found;
+    },
+    { within, outside },
+  );
+  if (over.length) throw new Error(`the skeleton's key overlaps: ${over.join(", ")}`);
 }
 
 /** A stitched match: the score bug, its views, the live service and every possession's moments. */
