@@ -1,0 +1,192 @@
+/* The journey (Journey.tsx): a bar that stays at the top while the moment's story scrolls, and the
+   open step's panel under it. The panels are the shared panel parts (styles.css). Solid colours:
+   no blur behind the bar, and a step change is a cut, never a fade. */
+
+.journey {
+  margin-top: 96px;
+}
+
+.journey-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px 24px;
+  margin: 0 calc(-1 * var(--wrap));
+  padding: 12px var(--wrap);
+  background: var(--night);
+  box-shadow: 0 1px 0 var(--hairline);
+}
+.journey-kicker {
+  flex: none;
+}
+.journey-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 4px;
+  overflow-x: auto;
+}
+.journey-tab {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--chalk-2);
+  font: 500 14px/1 var(--font-body);
+  white-space: nowrap;
+}
+.journey-arrow {
+  align-self: center;
+  color: var(--chalk-3);
+}
+.journey-tab:hover {
+  color: var(--chalk);
+  background: rgba(239, 237, 229, 0.06);
+}
+.journey-tab[aria-selected="true"] {
+  color: var(--chalk);
+  background: rgba(239, 237, 229, 0.1);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+.journey-num {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font: 600 11px/1 var(--font-data);
+  color: var(--chalk-2);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+.journey-tab[aria-selected="true"] .journey-num {
+  color: var(--ink);
+  background: var(--floodlight);
+  box-shadow: none;
+}
+.journey-story {
+  flex: none;
+  margin-left: auto;
+}
+
+/* The stepper: a phone's bar. Back and Next switch on and off at once (no fade). */
+.journey-stepper {
+  display: none;
+}
+.journey-stepper .btn {
+  transition: none;
+}
+.journey-where {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+}
+.journey-where strong {
+  font: 500 16px/1.2 var(--font-body);
+}
+
+/* The panel: its chapter sits right under the bar (not the story's 160 px), and a jump to it
+   lands under the bar too. */
+.journey-panel {
+  scroll-margin-top: 72px;
+}
+.journey-panel .chapter {
+  padding-top: 48px;
+  scroll-margin-top: 72px;
+}
+.journey-panel .chapter-head {
+  scroll-margin-top: 88px;
+}
+.journey-panel .chapter-title .kicker::before {
+  content: none; /* the step's own number is in the kicker */
+}
+.journey-step .chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.journey-compare .tile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.journey-compare .tour-lines,
+.journey-compare .without-lines {
+  margin: 0;
+}
+/* Both sides' verified lines in one size. */
+.journey-compare .journey-look,
+.journey-compare .tour-line,
+.journey-compare .worth-line {
+  margin: 0;
+  font: 400 20px/1.4 var(--font-display);
+  color: var(--chalk);
+}
+.journey-story-here {
+  display: none;
+}
+.journey-panel a:not(.btn) {
+  color: var(--floodlight);
+}
+.journey-without .kicker {
+  color: var(--dusk);
+}
+.journey-stadium {
+  width: 100%;
+}
+.journey-stadium .screen-wall {
+  width: 100%;
+}
+.journey-facts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--chalk-2);
+}
+
+@media (max-width: 760px) {
+  .journey {
+    margin-top: 56px;
+  }
+  .journey-bar {
+    flex-wrap: wrap;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .journey-kicker,
+  .journey-tabs {
+    display: none;
+  }
+  .journey-story {
+    display: none;
+  }
+  .journey-story-here {
+    display: inline-flex;
+  }
+  .journey-stepper {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .journey-panel .chapter {
+    padding-top: 32px;
+  }
+}

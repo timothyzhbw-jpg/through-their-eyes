@@ -81,22 +81,17 @@ function MetricRow({ m, split }: { m: Metric; split: boolean }) {
 function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) => void }) {
   const split = card.metrics.some((m) => m.values.length > 1);
   return (
-    <article className="lab-card" data-card={card.id} aria-label={card.title}>
+    <article className="lab-card tile" data-card={card.id} aria-label={card.title}>
       <header>
         <p className="kicker">{card.kicker}</p>
-        <h3>{card.title}</h3>
+        <h3 className="block-title">{card.title}</h3>
         <p className="lab-idea">{card.idea}</p>
       </header>
       {card.empty ? (
         <p className="note lab-empty">{card.empty}</p>
       ) : (
-        <div
-          className="lab-table-wrap"
-          role="region"
-          tabIndex={0}
-          aria-label={`${card.title} numbers`}
-        >
-          <table className="lab-table">
+        <div className="table-wrap" role="region" tabIndex={0} aria-label={`${card.title} numbers`}>
+          <table className="data-table lab-table">
             <thead>
               <tr>
                 <th scope="col">
@@ -163,9 +158,9 @@ function LaneBoard({ hero }: { hero: Hero }) {
   const counts = laneCounts(lanes);
   const carrier = shortName(run.decision.player);
   return (
-    <figure className="lab-board">
+    <figure className="lab-board tile">
       <figcaption>
-        <h3>
+        <h3 className="block-title">
           Pass lanes at {carrier}&apos;s decision <SourceChip kind="sim" />
         </h3>
         <p>
@@ -202,8 +197,8 @@ function LaneBoard({ hero }: { hero: Hero }) {
           </g>
         ))}
       </svg>
-      <div className="lab-table-wrap" role="region" tabIndex={0} aria-label="Pass lanes">
-        <table className="lab-table lanes">
+      <div className="table-wrap" role="region" tabIndex={0} aria-label="Pass lanes">
+        <table className="data-table lab-table lanes">
           <thead>
             <tr>
               <th scope="col">Lane</th>
@@ -259,7 +254,14 @@ function LaneLine({ lane }: { lane: Lane }) {
 
 // ---------- the chapter ----------
 
-export function TacticsLabPanel({ xt: injected }: { xt?: XtGrid }) {
+/** `kicker`: the chapter's kicker where the lab is a step of the journey (journey/). */
+export function TacticsLabPanel({
+  xt: injected,
+  kicker = "Tactics lab",
+}: {
+  xt?: XtGrid;
+  kicker?: string;
+}) {
   const view = useView();
   const loaded = useXtGrid();
   const grid = injected ?? (loaded instanceof Error ? null : loaded);
@@ -274,12 +276,12 @@ export function TacticsLabPanel({ xt: injected }: { xt?: XtGrid }) {
     <div id="tactics-lab">
       <Chapter
         className="tactics-lab"
-        kicker="Tactics lab"
+        kicker={kicker}
         title={<Title lead="Why tactics" em="work." />}
         lede={`Five common tactics, each measured on ${view.hero.kind === "match" ? "this match" : "this moment"}'s own synthetic data. Every number says what it is and where it comes from; every card opens the hero moment that shows it.`}
         label="Tactics lab"
       >
-        <nav className="lab-tabs" aria-label="Tactic cards">
+        <nav className="pick-row" aria-label="Tactic cards">
           {cards.map((c) => (
             <button
               key={c.id}

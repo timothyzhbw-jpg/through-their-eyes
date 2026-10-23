@@ -1,10 +1,18 @@
-/* Publish this moment: the content package under the breakdown. No blur, no animation. */
+/* Publish this moment: the content package under the breakdown. The cards, tables, headings, notes
+   and the demo-data badge are the shared ones in styles.css ("Shared panel parts"); only the
+   package's own layout is here. No blur, no animation. */
 
 .studio .chapter-body {
   display: flex;
   flex-direction: column;
   gap: 28px;
   min-width: 0;
+}
+.studio .chapter-body > .seg {
+  align-self: flex-start;
+}
+.studio-business a {
+  color: var(--floodlight);
 }
 
 .studio-block {
@@ -14,39 +22,16 @@
   gap: 12px;
   min-width: 0;
 }
-.studio-block h3,
 .studio-block h4 {
   margin: 0;
 }
-.studio-note {
+.studio-block .note,
+.studio-wait {
   margin: 0;
-  color: var(--chalk-3);
-  font-size: 13px;
-}
-
-.studio-shots {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.studio-shots th,
-.studio-shots td {
-  padding: 8px 10px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--hairline);
-}
-.studio-shots thead th {
-  color: var(--chalk-2);
-  font-weight: 500;
 }
 
 .studio-explainer {
   width: 100%;
-  padding: 20px 24px;
-  border-radius: var(--r-card);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 .studio-explainer ol {
   margin: 8px 0 0;
@@ -72,30 +57,16 @@
 }
 .studio-post pre {
   margin: 6px 0 0;
-  padding: 14px 16px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-family: var(--font-body);
-  border-radius: var(--r-card);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
-.studio-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  width: 100%;
-}
 .studio-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  padding: 16px 18px;
-  border-radius: var(--r-card);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 .studio-card ul {
   margin: 0;
@@ -107,27 +78,8 @@
   color: var(--chalk);
 }
 
-.studio-demo {
-  margin: 0;
-  padding: 6px 10px;
-  border-radius: 6px;
-  color: var(--ink);
-  background: var(--floodlight);
-  font-weight: 600;
-  font-size: 13px;
-}
 .studio-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  width: 100%;
   margin: 0;
-}
-.studio-metric {
-  padding: 14px 16px;
-  border-radius: var(--r-card);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 .studio-metric dt {
   color: var(--chalk-2);
@@ -136,21 +88,16 @@
 .studio-metric dd {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 4px;
   margin: 4px 0 0;
 }
 .studio-metric strong {
   font-size: 28px;
 }
-.studio-metric small {
-  color: var(--chalk-3);
-  font-size: 12px;
-}
 .studio-assumptions ul {
   margin: 8px 0 0;
   padding-left: 20px;
-  color: var(--chalk-2);
-  font-size: 14px;
 }
 .studio-status {
   min-height: 1.4em;

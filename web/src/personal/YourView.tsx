@@ -90,9 +90,6 @@ export function YourViewLine() {
 /** The header's "Your view" menu. It stays open while the viewer picks, until Escape or a press
  * outside. */
 export function YourViewMenu() {
-  const view = useView();
-  const { audience, persona, language } = useAudience();
-  const follow = useChoices();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
@@ -100,8 +97,6 @@ export function YourViewMenu() {
   const close = useRef(() => setOpen(false)).current;
   const onKeyDown = usePopover(open, close, wrap, toggle);
   const id = useId();
-  const players = useMemo(() => playerOptions(view.hero.players), [view.hero]);
-  const off = !audience.online;
   useEffect(() => {
     if (open) panel.current?.querySelector("button")?.focus();
   }, [open]);
@@ -127,99 +122,114 @@ export function YourViewMenu() {
           role="dialog"
           aria-label="Your view"
         >
-          <p className="kicker">Mode</p>
-          <Segmented<Persona>
-            label="Mode"
-            value={isMode(persona) ? persona : null}
-            onPick={(p) => audience.set({ persona: p })}
-            options={MODES.map((m) => ({
-              value: m.persona,
-              label: m.label,
-              title: m.note,
-              disabled: off && m.persona !== persona,
-            }))}
-          />
-          <label className="your-view-row">
-            <span className="kicker">More</span>
-            <select
-              value={isMode(persona) ? "" : persona}
-              disabled={off}
-              onChange={(e) => {
-                const p = parsePersona(e.target.value);
-                if (p) audience.set({ persona: p });
-              }}
-            >
-              <option value="" disabled>
-                Other audiences…
-              </option>
-              {MORE_PERSONAS.map((p) => (
-                <option key={p} value={p}>
-                  {PERSONA_LABEL[p]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <p className="kicker follow-head">Follow</p>
-          <label className="your-view-row">
-            <span className="kicker">Team</span>
-            <select
-              value={follow.team === null ? "" : String(follow.team)}
-              onChange={(e) =>
-                personal.set({
-                  team: e.target.value === "" ? null : (Number(e.target.value) as Team),
-                })
-              }
-            >
-              <option value="">No team</option>
-              {([0, 1] as const).map((t) => (
-                <option key={t} value={t}>
-                  {CLUBS[t].name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="your-view-row">
-            <span className="kicker">Player</span>
-            <select
-              value={follow.player ?? ""}
-              onChange={(e) => personal.set({ player: parsePlayer(e.target.value) })}
-            >
-              <option value="">No player</option>
-              {([0, 1] as const).map((t) => (
-                <optgroup key={t} label={clubName(t)}>
-                  {players
-                    .filter((p) => p.team === t)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {`${p.number} · ${shortName(p.id)} · ${p.role}`}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
-          <div className="your-view-row">
-            <span className="kicker">Language</span>
-            <Segmented
-              label="Language"
-              value={language}
-              onPick={(l) => audience.set({ language: l })}
-              options={LANGUAGES.map((l) => ({
-                value: l,
-                label: LANGUAGE_NAME[l],
-                lang: l,
-                disabled: off && l !== language,
-              }))}
-            />
-          </div>
-          {off && <p className="note">Other audiences and languages need the live service.</p>}
-          <p className="note">
-            Saved in the address and in this browser. {personaLabel(persona)} in{" "}
-            {LANGUAGE_NAME[language]} is what the page asks the service for.
-          </p>
+          <YourViewControls />
         </div>
       )}
     </div>
+  );
+}
+
+/** The choices themselves: the mode, More audiences, who to follow, the language. In the header's
+ * menu, and inline in the journey's Your view step (journey/). */
+export function YourViewControls() {
+  const view = useView();
+  const { audience, persona, language } = useAudience();
+  const follow = useChoices();
+  const players = useMemo(() => playerOptions(view.hero.players), [view.hero]);
+  const off = !audience.online;
+  return (
+    <>
+      <p className="kicker">Mode</p>
+      <Segmented<Persona>
+        label="Mode"
+        value={isMode(persona) ? persona : null}
+        onPick={(p) => audience.set({ persona: p })}
+        options={MODES.map((m) => ({
+          value: m.persona,
+          label: m.label,
+          title: m.note,
+          disabled: off && m.persona !== persona,
+        }))}
+      />
+      <label className="your-view-row">
+        <span className="kicker">More</span>
+        <select
+          value={isMode(persona) ? "" : persona}
+          disabled={off}
+          onChange={(e) => {
+            const p = parsePersona(e.target.value);
+            if (p) audience.set({ persona: p });
+          }}
+        >
+          <option value="" disabled>
+            Other audiences…
+          </option>
+          {MORE_PERSONAS.map((p) => (
+            <option key={p} value={p}>
+              {PERSONA_LABEL[p]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <p className="kicker follow-head">Follow</p>
+      <label className="your-view-row">
+        <span className="kicker">Team</span>
+        <select
+          value={follow.team === null ? "" : String(follow.team)}
+          onChange={(e) =>
+            personal.set({
+              team: e.target.value === "" ? null : (Number(e.target.value) as Team),
+            })
+          }
+        >
+          <option value="">No team</option>
+          {([0, 1] as const).map((t) => (
+            <option key={t} value={t}>
+              {CLUBS[t].name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="your-view-row">
+        <span className="kicker">Player</span>
+        <select
+          value={follow.player ?? ""}
+          onChange={(e) => personal.set({ player: parsePlayer(e.target.value) })}
+        >
+          <option value="">No player</option>
+          {([0, 1] as const).map((t) => (
+            <optgroup key={t} label={clubName(t)}>
+              {players
+                .filter((p) => p.team === t)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {`${p.number} · ${shortName(p.id)} · ${p.role}`}
+                  </option>
+                ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      <div className="your-view-row">
+        <span className="kicker">Language</span>
+        <Segmented
+          label="Language"
+          value={language}
+          onPick={(l) => audience.set({ language: l })}
+          options={LANGUAGES.map((l) => ({
+            value: l,
+            label: LANGUAGE_NAME[l],
+            lang: l,
+            disabled: off && l !== language,
+          }))}
+        />
+      </div>
+      {off && <p className="note">Other audiences and languages need the live service.</p>}
+      <p className="note">
+        Saved in the address and in this browser. {personaLabel(persona)} in{" "}
+        {LANGUAGE_NAME[language]} is what the page asks the service for.
+      </p>
+    </>
   );
 }

@@ -4,14 +4,23 @@
   top: 54px;
   right: 0;
   width: 340px;
+}
+/* The same controls inline, in the journey's Your view step (journey/). */
+.your-view-panel,
+.your-view-inline {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.your-view-panel > .kicker {
+.your-view-inline {
+  max-width: 420px;
+}
+.your-view-panel > .kicker,
+.your-view-inline > .kicker {
   margin: 6px 6px 0;
 }
-.your-view-panel .follow-head {
+.your-view-panel .follow-head,
+.your-view-inline .follow-head {
   padding-top: 8px;
   border-top: 1px solid var(--hairline);
 }
@@ -40,7 +49,8 @@
 .your-view-row .seg button {
   width: 80px;
 }
-.your-view-panel .note {
+.your-view-panel .note,
+.your-view-inline .note {
   margin: 4px 6px 2px;
 }
 .your-view-line {

@@ -17,9 +17,10 @@
 //   afterwards. It is a proxy: no survey stands behind it.
 
 import type { Persona } from "../api/client";
+import { DEMO_DATA } from "../journey/DemoBadge";
 import assumptions from "./audience-assumptions.json";
 
-export const DEMO_LABEL = "Demo data: simulated audience, not real results";
+export const DEMO_LABEL = DEMO_DATA; // the one legend (journey/DemoBadge.tsx)
 
 /** The invented sponsor whose board is in frame (no real brand). */
 export const SPONSOR = "Brindlewick Water";

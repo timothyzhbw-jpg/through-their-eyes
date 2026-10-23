@@ -33,7 +33,7 @@ import {
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
-import { StudioPanel } from "./studio/Studio";
+import { Journey } from "./journey/Journey";
 import { StatsTicker } from "./ui/StatsTicker";
 import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -196,6 +196,9 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
             <YourViewLine />
             <StoryCta />
           </header>
+          {/* Event → Tactics → Your view → Content → Value: the Tactics lab and the content
+              studio are its steps' panels. */}
+          <Journey />
           <div className="below">
             <StoryPanel />
             <TelemetryPanel />
@@ -205,8 +208,6 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
             <WhatIfPanel />
             <NarrationPanel />
             <BreakdownPanel />
-            <TacticsLabPanel />
-            <StudioPanel />
             <MomentsPanel />
           </div>
         </main>

@@ -43,6 +43,28 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 [The full tour](#the-full-tour) adds your own "What if…?", taking an agent down mid-breakdown,
 and a whole stitched match.
 
+## From event to value
+Under the picture, a bar follows the moment on screen from the pitch to the business, one step
+at a time (arrow keys move along it; on a phone it is a stepper). **Full story** on the bar walks
+one moment through all five in about ninety seconds.
+
+1. [**Event**](https://ttesite1ff906.z14.web.core.windows.net/?step=event): the moment, with the
+   look and without it, each side told by its verified lines.
+2. [**Tactics**](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics): the Tactics lab,
+   five tactics measured on the moment's own synthetic data, each number with its source.
+3. [**Your view**](https://ttesite1ff906.z14.web.core.windows.net/?step=your-view): the audience,
+   the language, and a club or player to follow.
+4. [**Content**](https://ttesite1ff906.z14.web.core.windows.net/?step=content): the content
+   package (highlight, explainer, posts in English and Chinese, data cards) and what the stadium's
+   screens show for the moment.
+5. [**Value**](https://ttesite1ff906.z14.web.core.windows.net/?step=value): the business panel
+   and the stadium's sponsor slots.
+
+**Demo data.** The audience, engagement and sponsor figures in Content and Value are simulated by
+a seeded model, not measured: nobody has watched this app. Each one carries the badge "Demo data:
+simulated audience, not real results". Match facts come from the simulator and are checked by the
+Verifier. Clubs, players and sponsors are all fictional.
+
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show
 what a camera, or a cone, could see. We model what the player *knew*. Each simulated player

@@ -1,6 +1,7 @@
-/* The Tactics lab (tacticslab/TacticsLab.tsx, SPEC 7). Data in the mono face; the source chips are
-   the global `.source`. No blur, no animation: a lane's state is told by dash and cross as well
-   as colour. */
+/* The Tactics lab (tacticslab/TacticsLab.tsx, SPEC 7). The cards (.tile), the tables
+   (.data-table), the headings (.block-title) and the card picker (.pick-row) are the shared panel
+   parts in styles.css; the source chips are the global `.source`. No blur, no animation: a lane's
+   state is told by dash and cross as well as colour. */
 
 .tactics-lab .chapter-body {
   display: flex;
@@ -8,64 +9,20 @@
   gap: 24px;
   min-width: 0;
 }
-.lab-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.lab-tabs .btn[aria-pressed="true"] {
-  background: var(--chalk);
-  color: var(--ink);
-}
 
 .lab-card {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
-  padding: 20px;
-  border-radius: var(--r-card);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
-}
-.lab-card h3,
-.lab-board h3 {
-  margin: 0;
-  font: 400 24px/1.2 var(--font-display);
 }
 .lab-idea {
   margin: 6px 0 0;
   max-width: 62ch;
   color: var(--chalk-2);
 }
-.lab-table-wrap {
-  overflow-x: auto;
-}
-.lab-table {
-  width: 100%;
-  border-collapse: collapse;
-  font: 400 14px/1.4 var(--font-data);
-}
-.lab-table th,
-.lab-table td {
-  padding: 10px 12px 10px 0;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--hairline);
-}
-.lab-table thead th {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--chalk-3);
-}
 .lab-table tbody th {
-  font-weight: 500;
-  color: var(--chalk);
   min-width: 14em;
-}
-.lab-table td {
-  white-space: nowrap;
 }
 .lab-table td[data-team="0"] {
   color: var(--home);
@@ -101,10 +58,6 @@
   flex-direction: column;
   gap: 14px;
   margin: 0;
-  padding: 20px;
-  border-radius: var(--r-card);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 .lab-board figcaption p {
   margin: 6px 0 0;

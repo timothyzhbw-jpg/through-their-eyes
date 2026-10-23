@@ -10,7 +10,8 @@ import { useStore } from "../store/store";
 import { studioFacts } from "./content";
 import { SCREENS, type ScreenFormat } from "./formats";
 import { PRESET_IDS, PRESETS, type PresetId } from "./presets";
-import { describeContent, KIND_LABEL, programme, sponsorSlots } from "./rules";
+import { DEMO_DATA, DemoBadge } from "../journey/DemoBadge";
+import { describeContent, KIND_LABEL, programme, sponsorSlots, type StudioEvent } from "./rules";
 import { createShow, createSurfaces, type Show } from "./show";
 import "./studio.css";
 
@@ -18,8 +19,8 @@ const StadiumPreview = lazy(() =>
   import("./StadiumPreview").then((m) => ({ default: m.StadiumPreview })),
 );
 
-/** Shown with anything on this page that is not a match fact. */
-export const DEMO_DATA = "Demo data: simulated audience, not real results";
+/** Shown with anything on this page that is not a match fact (the one legend, journey/). */
+export { DEMO_DATA };
 
 /** Seconds between events while the programme plays. */
 const STEP_MS = 6000;
@@ -75,7 +76,7 @@ export function StudioApp({ show, wallOnly = false }: { show: Show; wallOnly?: b
   }, [playing, show, events.length]);
 
   return (
-    <div className="studio">
+    <div className="stadium-studio">
       <header className="studio-head">
         <div>
           <p className="kicker accent">Stadium Screen Studio</p>
@@ -139,7 +140,7 @@ export function StudioApp({ show, wallOnly = false }: { show: Show; wallOnly?: b
             </li>
           ))}
         </ol>
-        <p className="studio-note" aria-live="polite">
+        <p className="note studio-event-note" aria-live="polite">
           <strong>{event.label}.</strong> {event.note}.
           {selected !== shown && shown !== null && " The screens change in a moment."}
         </p>
@@ -147,7 +148,7 @@ export function StudioApp({ show, wallOnly = false }: { show: Show; wallOnly?: b
 
       <section className="studio-preview" aria-label="Virtual stadium preview">
         <div className="studio-preview-bar">
-          <div className="studio-presets" role="group" aria-label="Camera">
+          <div className="pick-row" role="group" aria-label="Camera">
             {PRESET_IDS.map((id) => (
               <button
                 key={id}
@@ -184,10 +185,28 @@ export function StudioApp({ show, wallOnly = false }: { show: Show; wallOnly?: b
 
       <ScreenWall show={show} />
 
-      <section className="studio-sponsors" aria-labelledby="sponsor-slots">
-        <h2 id="sponsor-slots">Sponsor slots in this programme</h2>
-        <p className="studio-demo">{DEMO_DATA}</p>
-        <table>
+      <SponsorSlots events={events} />
+    </div>
+  );
+}
+
+/** How many screen slots each fictional sponsor gets over the programme: not a match fact, so
+ * it carries the demo-data badge. `Heading`: h2 on the studio page, h3 inside a chapter. */
+export function SponsorSlots({
+  events,
+  Heading = "h2",
+}: {
+  events: StudioEvent[];
+  Heading?: "h2" | "h3";
+}) {
+  return (
+    <section className="studio-sponsors" aria-labelledby="sponsor-slots">
+      <Heading id="sponsor-slots" className="block-title">
+        Sponsor slots in this programme
+      </Heading>
+      <DemoBadge />
+      <div className="table-wrap">
+        <table className="data-table">
           <thead>
             <tr>
               <th scope="col">Fictional sponsor</th>
@@ -203,20 +222,22 @@ export function StudioApp({ show, wallOnly = false }: { show: Show; wallOnly?: b
             ))}
           </tbody>
         </table>
-        <p className="studio-small">
-          Counted from the rules over the programme&apos;s events, one slot per screen per event. No
-          audience, reach or sales figure is shown: the studio has none.
-        </p>
-      </section>
-    </div>
+      </div>
+      <p className="note">
+        Counted from the rules over the programme&apos;s events, one slot per screen per event. No
+        audience, reach or sales figure is shown: the studio has none.
+      </p>
+    </section>
   );
 }
 
 /** Every screen flat, at its own aspect: the same canvases the 3D preview shows. */
-export function ScreenWall({ show }: { show: Show }) {
+export function ScreenWall({ show, Heading = "h2" }: { show: Show; Heading?: "h2" | "h3" | "h4" }) {
   return (
     <section className="screen-wall" aria-labelledby="screen-wall">
-      <h2 id="screen-wall">Screen wall</h2>
+      <Heading id="screen-wall" className="block-title">
+        Screen wall
+      </Heading>
       <div className="screen-grid">
         {SCREENS.map((format) => (
           <WallScreen key={format.id} show={show} format={format} />

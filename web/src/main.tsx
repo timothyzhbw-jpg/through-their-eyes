@@ -19,6 +19,7 @@ import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
 import { LOOK_FILES } from "./takeeyes/looks";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
+import { openStep } from "./journey/state";
 import { createMatchSession } from "./match/matchSession";
 import { audienceFor, mergeChoices, readSaved } from "./personal/persist";
 import { personal, persistOnChange } from "./personal/state";
@@ -42,6 +43,7 @@ async function main() {
   const link = { ...parsed, persona: chosen.persona, language: chosen.language };
   const filming = new URLSearchParams(window.location.search).get("cine") === "1";
   intro.set({ open: link.intro });
+  if (link.step) openStep(link.step); // ?step=: the journey's panel, in view once it is drawn
   if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
   const forcedOffline = link.offline;
   root.render(<p className="loading">Loading the match…</p>);

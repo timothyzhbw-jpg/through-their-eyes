@@ -1,7 +1,9 @@
-/* Stadium Screen Studio (StudioApp.tsx): a page of its own, in the app's night palette. No blur,
-   no flashing: screens change by a slow dip (show.ts) or a cut. */
+/* Stadium Screen Studio (StudioApp.tsx): a page of its own, in the app's night palette, and its
+   Screen wall and sponsor slots inside the journey's Content and Value steps (journey/). Headings,
+   tables, notes, pickers and the demo-data badge are the shared panel parts in styles.css. No
+   blur, no flashing: screens change by a slow dip (show.ts) or a cut. */
 
-.studio {
+.stadium-studio {
   max-width: 1240px;
   margin: 0 auto;
   padding: 32px var(--gutter) 64px;
@@ -25,9 +27,9 @@
   color: var(--chalk-2, var(--chalk));
 }
 
-.studio h2 {
-  margin: 0 0 12px;
-  font: 400 24px/1.2 var(--font-display);
+.screen-wall .block-title,
+.studio-sponsors .block-title {
+  margin-bottom: 12px;
 }
 
 .studio-timeline {
@@ -86,11 +88,10 @@
 .studio-event.on-screen {
   background: rgba(246, 213, 102, 0.12);
 }
-.studio-note {
+.studio-event-note {
   margin: 0;
-  color: var(--chalk-3);
 }
-.studio-note strong {
+.studio-event-note strong {
   color: var(--chalk);
 }
 
@@ -104,14 +105,9 @@
   justify-content: space-between;
   flex-wrap: wrap;
 }
-.studio-presets {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.studio-presets .btn[aria-pressed="true"],
 .studio-preview-bar > .btn[aria-pressed="true"] {
-  box-shadow: inset 0 0 0 2px var(--floodlight);
+  background: var(--chalk);
+  color: var(--ink);
 }
 .studio-canvas {
   position: relative;
@@ -195,32 +191,20 @@
   color: var(--floodlight);
 }
 
-.studio-sponsors table {
-  border-collapse: collapse;
-  min-width: 320px;
+.studio-sponsors {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }
-.studio-sponsors th,
-.studio-sponsors td {
-  padding: 8px 16px 8px 0;
-  text-align: left;
-  border-bottom: 1px solid var(--hairline);
+.studio-sponsors .block-title {
+  margin-bottom: 0;
 }
-.studio-sponsors td:last-child {
-  font-family: var(--font-data);
+.studio-sponsors .table-wrap {
+  max-width: 560px;
 }
-.studio-demo {
-  display: inline-block;
-  margin: 0 0 12px;
-  padding: 4px 10px;
-  border-radius: var(--r-tag);
-  font: 600 12px/1.4 var(--font-data);
-  color: var(--ink);
-  background: var(--dusk);
-}
-.studio-small {
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: var(--chalk-3);
+.studio-sponsors .note {
+  margin: 0;
 }
 
 @media (max-width: 760px) {

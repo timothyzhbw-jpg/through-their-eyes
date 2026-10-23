@@ -2,7 +2,9 @@
 // look, remove it, compare the outcomes, make your own call (Start on the intro card, "Quick tour"
 // on the moment card, ?tour=quick). The full tour is an optional walk of about ninety seconds
 // through the signature features, so a judge with three minutes sees each of them without
-// exploring ("Full tour" on the intro card and the story, ?tour=1). Each step lights up one thing
+// exploring ("Full tour" on the intro card and the story, ?tour=1). The Full story walks one moment
+// through the journey's five steps in about ninety seconds, opening each step's panel ("Full
+// story" on the journey bar, ?tour=story; journey/). Each step lights up one thing
 // the app already draws (a ring, the page dimmed around it where the picture is not the point),
 // says one plain line, and sets the app up with the app's own controls (actions.ts).
 //
@@ -13,6 +15,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useView, type ViewSession } from "../session";
+import { openStep } from "../journey/state";
 import { useStore } from "../store/store";
 import { intro } from "../ui/intro";
 import { prefersReducedMotion } from "../yourcall/controller";
@@ -23,6 +26,7 @@ import {
   indexOf,
   quickTourFits,
   resolveSteps,
+  secondsOf,
   stepsOf,
   targetOf,
   wordsOf,
@@ -52,6 +56,9 @@ function arrive(session: ViewSession, step: TourStep, seq: number) {
   cancel?.();
   cancel = null;
   cancel = enterStep(step.enter, session) ?? null;
+  // The Full story's steps open the journey's panel for theirs (the tour brings its target into
+  // view itself).
+  if (step.journey && session.kind === "hero") openStep(step.journey, { reveal: false });
 }
 
 const viewport = (): Size => ({ w: window.innerWidth, h: window.innerHeight });
@@ -366,7 +373,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
         <div aria-live="polite" className="tour-say">
           <div key={seq} className="tour-words">
             <p className="kicker accent">
-              {kind === "quick" ? "Quick tour" : "Tour"} · {index + 1} of {steps.length}
+              {KICKER[kind]} · {index + 1} of {steps.length}
             </p>
             <h2 id="tour-title" className="tour-title">
               {title}
@@ -439,9 +446,14 @@ export function FirstTourButton({ className }: { className?: string }) {
 const TOUR_LABEL: Record<TourKind, string> = {
   quick: "Quick tour",
   full: "Full tour · 90 s",
+  story: `Full story · ${secondsOf("story")} s`, // its steps' holds (steps.json)
 };
 
-/** Start a tour at its first step ("Quick tour", "Full tour · 90 s"); closes the intro card. */
+/** The tour card's kicker. */
+const KICKER: Record<TourKind, string> = { quick: "Quick tour", full: "Tour", story: "Full story" };
+
+/** Start a tour at its first step ("Quick tour", "Full tour · 90 s", "Full story"); closes the
+ * intro card. */
 export function TourButton({
   className = "btn btn-quiet",
   kind = "full",

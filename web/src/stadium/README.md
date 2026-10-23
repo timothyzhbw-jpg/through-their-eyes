@@ -52,8 +52,11 @@ Every digit on a screen is a supported claim's value or a shirt number from the 
 `allowedNumbers`.
 
 The sponsor-slot table under the wall counts each sponsor's screen slots from the rules. It is
-not a match fact, so it carries the label **"Demo data: simulated audience, not real results"**.
-The studio has no audience, reach or sales figures.
+not a match fact, so it carries the label **"Demo data: simulated audience, not real results"**
+(the one badge, `journey/DemoBadge.tsx`). The studio has no audience, reach or sales figures.
+
+The Screen wall (on the moment's event) and the sponsor slots also appear in the journey's
+Content and Value steps under the moment (`journey/`), from the same show and files.
 
 ## No strobe (WCAG 2.3.1)
 
