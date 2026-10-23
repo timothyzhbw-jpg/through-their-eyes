@@ -585,7 +585,7 @@
         { "do": "hold", "s": 2 }
       ],
       "actions": [
-        { "do": "hold", "s": 4, "still": true }
+        { "do": "hold", "s": 5, "still": true }
       ],
       "vo": "Before the ball arrives, know what's around you.",
       "notes": "The pin source for the tablet: blind-side alerts are on by default; the hero's only blind-side alert on the POV player is H9, unseen from f42 to the decision without the look."

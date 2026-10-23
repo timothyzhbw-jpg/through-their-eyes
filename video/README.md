@@ -254,7 +254,10 @@ moves to the right while a title holds the lower left (a lower-left slam, a tag,
 
 ```bash
 node video/tools/moments.mjs --write        # the hero moments' live times; re-aims shot 16-corner
-cd video && node capture.mjs --only 03,04,05,06,07,09,10,12,13,14,16 && cd ..
+cd video && node capture.mjs --only 03,04,05,06,07,09,12,13,16,17,18,19,20,22,23 && cd ..
+cd video && node capture.mjs --only 10 && cd ..   # the failure drill alone: its waits are long and vary
+node video/tools/inpoints.mjs               # each capture beat's window against the new captures' action logs
+node video/tools/workflow_still.mjs         # the crew workflow (docs/crew_workflow-dark.svg) as beat b33b's clip
 node video/tools/blender_fit.mjs            # which approved finals are in, and their lengths
 node video/tools/blender_fit.mjs --apply --fit
 python3 video/tools/cuesheet.py "$(git rev-parse --short HEAD)" > /tmp/cue-sheet.md

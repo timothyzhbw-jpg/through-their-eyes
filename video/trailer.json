@@ -2104,7 +2104,7 @@
       "picture": {
         "src": "capture",
         "shot": "22-board-blind",
-        "in": 3,
+        "in": 2.8,
         "push": [
           1,
           1.1
@@ -3845,7 +3845,7 @@
       "source": {
         "capture": "22-board-blind"
       },
-      "source_time": 3,
+      "source_time": 2.8,
       "source_offset_y": 138,
       "ev": 0.5,
       "ref_corners": "out/video/blender/bs2c_screen_corners.json"
@@ -3858,7 +3858,7 @@
       "source": {
         "capture": "22-board-blind"
       },
-      "source_time": 3,
+      "source_time": 2.8,
       "source_offset_y": 138,
       "ev": 0.5,
       "ev_ramp_frames": 30
