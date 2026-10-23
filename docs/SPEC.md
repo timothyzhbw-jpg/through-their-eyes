@@ -701,6 +701,17 @@ is a step.
   added to the eval afterwards; the report regenerates with every earlier value unchanged.
 - **Not done yet:** the `sight` lens, its claims and narration (the explain PR for this moment).
 
+**Large-sample check (2026-10-21).** Bowen asked for more data behind each hero. Every hero's
+held-out acceptance eval is re-run once, unchanged (same design, thresholds and interventions), on
+200 fresh seeds, 1000–1199. The summary
+([hero_gates_1000-1199.md](../eval/reports/hero_gates_1000-1199.md), `eval/hero_gates.py`) puts
+each gate's rate and its 95% Wilson interval next to the original 40-seed result. A gate passes
+when its rate meets the target; a miss is reported as a miss, never re-tuned.
+- Seeds 1000–1199 of every hero scenario are reserved for this check: never design seeds, and no
+  other eval uses them. (Stitched matches key their open-play seeds from 1,000,000, §3.1.)
+- Heroes still in review join when they land: `uv run python -m eval.hero_gates --run` runs the
+  missing 1000–1199 evals under `nice`, `--jobs` at a time, then rewrites the summary.
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
