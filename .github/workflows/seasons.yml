@@ -2,8 +2,8 @@ name: seasons
 
 # The five-season study (SPEC 3, 5, 6): eval/season.py once per root seed, one season per runner
 # in parallel, then eval/seasons.py renders the five together with intervals across seasons.
-# About 30 CPU-hours in all; a season is about 6 on one 4-core runner. Run it by hand from the
-# Actions tab; `matches: 2` is a smoke run that takes minutes. Nothing is committed or pushed:
+# A season is long on one 4-core runner; `timeout-minutes` on the season job is the real bound.
+# Run it by hand from the Actions tab; `matches: 2` is a smoke run that takes minutes. Nothing is committed or pushed:
 # the reports come out as the `seasons-reports` artifact, and whoever freezes the numbers copies
 # them into eval/reports/ (docs/NUMBERS.md).
 #
