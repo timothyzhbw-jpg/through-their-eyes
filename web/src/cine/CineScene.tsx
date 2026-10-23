@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, halfCone, sampleInto, speedAt } from "../data/hero";
 import { kickBallOffset } from "../players/kickBall";
-import { Separation } from "../players/separate";
+import { Separation, sharedSeparation } from "../players/separate";
 import { trial } from "../players/trial";
 import { useView } from "../session";
 import { BeliefRings } from "../views/BeliefRings";
@@ -87,7 +87,7 @@ function CrowdClock() {
 function Stage() {
   const { hero, playback } = useView();
   const sample = useMemo(() => new Sample(hero.n), [hero]);
-  const separation = useMemo(() => new Separation(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   useFrame(({ scene }) => {
     const s = playback.get();
     sampleInto(sample, hero, hero.runs[s.mode], s.frame, false);

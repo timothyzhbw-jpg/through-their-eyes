@@ -13,7 +13,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
 import { kickBallOffset } from "../players/kickBall";
-import { Separation } from "../players/separate";
+import { sharedSeparation } from "../players/separate";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
@@ -120,7 +120,7 @@ function PovScene() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
-  const separation = useMemo(() => new Separation(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   const shot = useMemo<Shot>(() => ({ x: 0, y: 0, width: 0 }), []);
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const heads = useRef<(THREE.Group | null)[]>([]);

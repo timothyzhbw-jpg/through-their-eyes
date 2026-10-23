@@ -146,7 +146,7 @@ export interface Track {
 }
 
 /** Positions at fractional frame `f` (held at the ends of the run), straight between frames. */
-function positionsAt(track: Track, n: number, f: number, out: Float32Array): Float32Array {
+export function positionsAt(track: Track, n: number, f: number, out: Float32Array): Float32Array {
   const c = Math.max(0, Math.min(track.frames - 1, f));
   const i0 = Math.floor(c);
   const i1 = Math.min(track.frames - 1, i0 + 1);
@@ -171,6 +171,8 @@ export class Separation {
   private before: Float32Array;
   private now: Float32Array;
   private after: Float32Array;
+  private lastTrack: Track | null = null;
+  private lastFrame = NaN;
   constructor(private n: number) {
     this.off = new Float32Array(2 * n);
     this.carry = new Float32Array(n);
@@ -182,6 +184,9 @@ export class Separation {
 
   /** Fill for fractional frame `f` of `track`. */
   update(track: Track, f: number): this {
+    if (track === this.lastTrack && f === this.lastFrame) return this; // solved already
+    this.lastTrack = track;
+    this.lastFrame = f;
     const { n, off, carry, ball } = this;
     carrierWeights(track.owner, track.frames, f, carry);
     positionsAt(track, n, f, this.now);
@@ -237,4 +242,13 @@ export class Separation {
       }
     }
   }
+}
+
+const shared = new WeakMap<object, Separation>();
+
+/** One Separation per `key` (the hero): every view of a frame shares one solve, as update memoises it. */
+export function sharedSeparation(key: object, n: number): Separation {
+  let separation = shared.get(key);
+  if (!separation) shared.set(key, (separation = new Separation(n)));
+  return separation;
 }

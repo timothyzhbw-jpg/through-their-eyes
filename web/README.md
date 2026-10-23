@@ -433,10 +433,11 @@ src/
   (`src/players/walk.ts`, `public/models/anims_walk.glb`, Quaternius, CC0), cross-fading into the
   jog and back on one gait phase (`src/players/gait.ts`). The head stays exactly on `head_yaw`.
   `?anims=base` shows the engine's clips only, `?walk=0` the extra clips without the walk;
-  reduced motion leaves the shoulder checks out. Bodies the sim puts closer than 0.6 m are
-  drawn apart, **render only** (`src/players/separate.ts`): each mesh, its shirt number or tag,
-  its shadow, the ball in the carrier's feet and the first-person eyes move by at most 0.35 m
-  (the carrier least), eased so nothing pops. Nothing else moves: the tactical board, pitch
+  reduced motion leaves the shoulder checks out. Bodies the sim puts closer than two body
+  radii are drawn apart, **render only** (`src/players/separate.ts`, which holds the gap and the
+  cap): each mesh, its shirt number or tag, its shadow, the ball in the carrier's feet, the
+  first-person eyes and the shot anchors move by a capped distance (the carrier least), eased so
+  nothing pops. Nothing else moves: the tactical board, pitch
   control, belief rings, radar and every number stay on the sim's true positions.
 - **Perception telemetry** (SPEC 4.7, 7). Under the timeline, curves for the player in the
   first-person view ("Whose eyes"), with a cursor on the playhead: head angle to the ball with

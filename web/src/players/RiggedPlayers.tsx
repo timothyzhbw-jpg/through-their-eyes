@@ -31,7 +31,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { EXTRA_URL, type ExtraClips, extraClips } from "./extra";
 import { type KickBallOffset, clearKickBall, setKickBall } from "./kickBall";
-import { Separation } from "./separate";
+import { sharedSeparation } from "./separate";
 import { type Look, trial } from "./trial";
 import { WALK_URL, type WalkClips, walkClips } from "./walk";
 import { BOOTS, SOLE, hairColour, kitOf, kitTexture, skinTone } from "./kit";
@@ -245,7 +245,7 @@ function Rigged({
     [rigs],
   );
   const sample = useMemo(() => new Sample(hero.n), [hero]);
-  const separation = useMemo(() => new Separation(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
 
   useFrame(() => {
     const s = playback.get();

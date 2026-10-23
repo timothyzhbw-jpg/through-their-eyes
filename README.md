@@ -11,9 +11,8 @@
 > re-simulates the moment without the look that made the play: over 40 held-out seeds,
 > <!--num:H1.k-->33<!--/num--> decide differently.
 
-**Every line the crew says is checked before it airs.** In an offline stress test, with the
-Verifier all <!--num:V1-->2,837 of 2,837<!--/num--> deliberately broken lines were kept off the air; without it,
-<!--num:V1.aired-->2,823<!--/num--> aired, <!--num:V1.false-->888<!--/num--> of them false ([crew_evidence](eval/reports/crew_evidence.md)).
+**Every line the crew says is checked before it airs.** In an offline stress test: of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it,
+<!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
 Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
 tactics cards, five audiences, and English and Chinese.
 

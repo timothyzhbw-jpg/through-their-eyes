@@ -1,19 +1,21 @@
 // Render-only body separation (separate.ts): nobody closer than the gap unless a crowd and the cap
 // stop it, no offset where there is room, never past the cap, no pops between 25 Hz frames,
-// deterministic, and on real frames: the press-escape what-if runs (161 frames with bodies under
-// 0.6 m, two nearly on one spot) and the seed-3 hero moment (nobody close).
+// deterministic, and on real frames: the press-escape what-if runs (frames with bodies under
+// the gap, two nearly on one spot) and the seed-3 hero moment (nobody close).
 
 import { describe, expect, it } from "vitest";
 import heroRaw from "../../public/data/hero_seed3.json";
 import pressRaw from "../../public/data/whatif_press_escape_seed0.json";
-import { parseHero } from "../data/hero";
+import { Sample, parseHero, sampleInto } from "../data/hero";
 import {
   CARRY_WINDOW,
   MAX_OFFSET,
   MIN_GAP,
   Separation,
   carrierWeights,
+  positionsAt,
   separateInto,
+  sharedSeparation,
 } from "./separate";
 
 const TOL = 0.01; // m, the relaxation's residual
@@ -135,7 +137,6 @@ describe("separateInto", () => {
     }
     // two cap-widths would be a pop; a pass at running speed moves an offset by about its cap
     expect(worst).toBeLessThan(2 * MAX_OFFSET);
-    console.info(`worst per-frame change in a head-on pass: ${worst.toFixed(3)} m`);
   });
 });
 
@@ -212,8 +213,30 @@ describe("on real frames", () => {
       if (after > MIN_GAP - TOL) held++;
     }
     // Three or more crowded together may stay a little short; the rest are fully open.
-    console.info(`press escape: ${held} of ${tight.length} tight frames opened to the gap`);
     expect(held / tight.length).toBeGreaterThan(0.9);
+  });
+
+  it("reads the positions the pose is sampled at, at fractional frames, comfort mode or not", () => {
+    const hero = parseHero(heroRaw);
+    const run = hero.runs.factual;
+    const sample = new Sample(hero.n);
+    const out = new Float32Array(2 * hero.n);
+    for (const eased of [false, true])
+      for (const f of [0, 0.37, 12.5, run.frames - 1.25, run.frames + 3]) {
+        sampleInto(sample, hero, run, f, eased);
+        expect(Array.from(positionsAt(run, hero.n, f, out))).toEqual(Array.from(sample.pos));
+      }
+  });
+
+  it("solves a frame once for every view that asks, and again for the next", () => {
+    const hero = parseHero(heroRaw);
+    const run = hero.runs.factual;
+    const shared = sharedSeparation(hero, hero.n);
+    expect(sharedSeparation(hero, hero.n)).toBe(shared);
+    const fresh = new Separation(hero.n);
+    for (const f of [3, 3, 40.5, 3]) {
+      expect(Array.from(shared.update(run, f).off)).toEqual(Array.from(fresh.update(run, f).off));
+    }
   });
 
   it("gives no offset where nobody is close, on the press and on seed 3", () => {
@@ -248,10 +271,7 @@ describe("on real frames", () => {
         prev.set(sep.off);
       }
     }
-    console.info(
-      `press escape: worst per-frame change of an offset ${worst.toFixed(3)} m (${where})`,
-    );
-    expect(worst).toBeLessThan(BOUND);
+    expect(worst, `worst step at ${where}`).toBeLessThan(BOUND);
   });
 
   it("is the same for the same frame, whatever was played before", () => {

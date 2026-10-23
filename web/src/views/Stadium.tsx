@@ -15,7 +15,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
-import { Separation } from "../players/separate";
+import { sharedSeparation } from "../players/separate";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import {
@@ -652,7 +652,7 @@ function wedgeTexture(): THREE.CanvasTexture {
 function MastShadows() {
   const { hero, playback } = useView();
   const sample = useMemo(() => new Sample(hero.n), [hero]);
-  const separation = useMemo(() => new Separation(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   const key = useRef<THREE.InstancedMesh>(null);
   const fill = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
@@ -758,7 +758,7 @@ function ClassicShadows() {
   const { hero, playback } = useView();
 
   const sample = useMemo(() => new Sample(hero.n), [hero]);
-  const separation = useMemo(() => new Separation(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
   const core = useRef<THREE.InstancedMesh>(null); // the darker spot right under the feet
