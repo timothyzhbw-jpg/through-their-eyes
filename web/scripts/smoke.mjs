@@ -232,6 +232,21 @@ const PAGES = [
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
+  // The journey (SPEC 7, journey/): each of its five steps opened from the bar, axe on each; a
+  // deep link to one step; a phone's stepper; the Full story through all five.
+  { name: "journey", path: "?step=event", check: (p, shoot) => journeySteps(p, shoot) },
+  {
+    name: "journey-link-value",
+    path: "?step=value",
+    check: (p) => journeyPanel(p, "Value"),
+  },
+  {
+    name: "phone-375-journey",
+    path: "?step=event",
+    device: PHONE_375,
+    check: (p, shoot) => journeyStepper(p, shoot),
+  },
+  { name: "full-story", path: "?tour=story", check: (p, shoot) => fullStory(p, shoot) },
   // A phone's director suggestion: two lines, no third one half-shown in its padding.
   ...[
     ["375", PHONE_375],
@@ -325,7 +340,20 @@ const PAGES = [
     device: PHONE_375,
     check: (p) => phone(p, match),
   },
+  // The Stadium Screen Studio (SPEC 7): the lazy branch of main.tsx, flat wall and with the 3D bowl.
+  { name: "studio-wall", path: "?studio=1&wall=1", check: (p) => studio(p) },
+  { name: "studio", path: "?studio=1", check: (p) => studio(p) },
 ];
+
+/** The studio page: its heading, the timeline and the Screen wall are on screen. */
+async function studio(page) {
+  await see(
+    page.getByRole("heading", { name: "Every screen in the bowl, on one timeline" }),
+    "the studio heading",
+  );
+  await see(page.getByRole("region", { name: "Event timeline" }), "the event timeline");
+  await see(page.locator(".screen-wall"), "the Screen wall");
+}
 
 /** Wait for `locator` (its first match) to be on screen, or `attached` to the page. */
 async function see(locator, what, state = "visible") {
@@ -757,6 +785,95 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
+/** The journey's five steps, in its bar's order (journey/steps.ts), and what each panel shows. */
+const JOURNEY = [
+  ["Event", /Compare from above/],
+  ["Tactics", /Why tactics/],
+  ["Your view", /Follow/],
+  ["Content", /In the stadium/],
+  ["Value", /Sponsor slots in this programme/],
+];
+const DEMO_DATA = "Demo data: simulated audience, not real results";
+
+/** The open step's panel: its tab selected, the panel on screen with what it shows, no sideways
+ * scroll, axe clean; the Value step with the demo-data badge on its figures. */
+async function journeyPanel(page, label) {
+  const [, shows] = JOURNEY.find(([l]) => l === label);
+  const panel = page.getByRole("tabpanel", { name: new RegExp(label) });
+  await see(panel, `the journey's ${label} panel`);
+  await see(panel.getByText(shows), `the ${label} panel's content`);
+  if (label === "Value") {
+    await see(panel.getByText(DEMO_DATA, { exact: true }), "the demo-data badge");
+    await see(
+      panel.getByText(/^Match facts on this page come from the simulator/),
+      "the facts note",
+    );
+  }
+  const [w, wide] = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
+  if (wide > w) throw new Error(`expected no sideways scroll on ${label}: ${wide} px in ${w}`);
+  // Past the cards' rise and the buttons' colour change, so axe reads the colours at rest.
+  await page.waitForTimeout(600);
+  await accessible(page, `the journey's ${label} step`);
+}
+
+/** Every step from the bar: a click on the first, then the arrow keys. */
+async function journeySteps(page, shoot) {
+  const bar = page.getByRole("tablist", { name: "Journey steps" });
+  await see(bar, "the journey bar");
+  await bar.getByRole("tab", { name: /Event/ }).click();
+  for (const [k, [label]] of JOURNEY.entries()) {
+    const tab = bar.getByRole("tab", { name: new RegExp(label) });
+    if ((await tab.getAttribute("aria-selected")) !== "true") {
+      throw new Error(`expected the arrow key to select ${label}`);
+    }
+    await journeyPanel(page, label);
+    await shoot(`step-${k + 1}`);
+    if (k < JOURNEY.length - 1) await page.keyboard.press("ArrowRight");
+  }
+  if (!new URL(page.url()).search.includes("step=value")) {
+    throw new Error(`expected ?step=value in the address, got ${page.url()}`);
+  }
+}
+
+/** A phone: the bar is a stepper (no tabs on screen); Next walks the five steps. */
+async function journeyStepper(page, shoot) {
+  const stepper = page.locator(".journey-stepper");
+  await see(stepper, "the journey's stepper");
+  if (await page.getByRole("tablist", { name: "Journey steps" }).isVisible()) {
+    throw new Error("expected the journey's tabs to fold into a stepper on a phone");
+  }
+  for (const [k, [label]] of JOURNEY.entries()) {
+    await see(stepper.getByText(`Step ${k + 1} of ${JOURNEY.length}`), `step ${k + 1}`);
+    await journeyPanel(page, label);
+    await shoot(`step-${k + 1}`);
+    if (k < JOURNEY.length - 1) await stepper.getByRole("button", { name: /^Next/ }).click();
+  }
+}
+
+/** `?tour=story`: the Full story's card walks the moment through the five steps, each opening its
+ * panel, and closes on Done. */
+async function fullStory(page, shoot) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Full story · \d+ of \d+/ });
+  const opened = [];
+  for (let k = 1; ; k++) {
+    await see(card.filter({ hasText: new RegExp(`^Full story · ${k} of `) }), `story step ${k}`);
+    opened.push(await page.locator(".journey-panel").getAttribute("data-step"));
+    await shoot(`step-${k}`);
+    const done = card.getByRole("button", { name: "Done" });
+    if (await done.count()) {
+      await done.click();
+      break;
+    }
+    if (k > 8) throw new Error("expected the Full story to end within 8 steps");
+    await card.getByRole("button", { name: "Next" }).click();
+  }
+  const steps = [...new Set(opened)];
+  const want = ["event", "tactics", "your-view", "content", "value"];
+  if (steps.join() !== want.join()) {
+    throw new Error(`expected the Full story to open ${want.join(", ")}; got ${steps.join(", ")}`);
+  }
+}
+
 /** `?play=eyes`: Take his eyes (SPEC 7) in the live screen's place: the board with the dial, the
  * times and the directions to look; a look plays through his eyes, and the result airs its
  * verified lines. */
@@ -952,10 +1069,11 @@ async function coldLoad(page, shoot) {
   await shoot(`at-${took}s`);
 }
 
-/** The quick tour (SPEC 7): four steps, each card on screen with no sideways scroll; the look in
- * his eyes, the run without it, the board, then Your call, which Done leaves open. */
+/** The quick tour (SPEC 7): five steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, the Verifier refusing a wrong number, then Your call,
+ * which Done leaves open. */
 async function quickTour(page, shoot) {
-  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 4/ });
+  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 5/ });
   const expect = [
     ["Watch the look", () => mainView(page, "eyes")],
     [
@@ -991,10 +1109,18 @@ async function quickTour(page, shoot) {
         }
       },
     ],
+    [
+      "Every number is checked",
+      () =>
+        see(
+          page.locator("section.evidence .tamper-result.held"),
+          "the Verifier refusing the tour's wrong number",
+        ),
+    ],
     ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
   ];
   for (const [k, [title, shows]] of expect.entries()) {
-    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 4`) });
+    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 5`) });
     await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
     await shows();
     if (await page.locator(".moment-card").isVisible()) {

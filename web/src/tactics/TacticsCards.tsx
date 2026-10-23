@@ -387,6 +387,10 @@ export function TacticsCards({ where, language = "en" }: { where: Where; languag
       <h3 className="tactics-title">{title}</h3>
       <p className="lede">{lede(view)}</p>
       {body}
+      <p className="note">
+        <a href="#tactics-lab">Open the Tactics lab</a>: the high press, decisions under pressure,
+        corners, shot quality and progression, with each definition and its hero moment.
+      </p>
     </section>
   );
 }

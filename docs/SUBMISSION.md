@@ -17,9 +17,7 @@ commit you submit and update [^tests] and [^match]. -->
 player's own perception: where he looked before the ball arrived, who was in sight, and what he
 believed. It replays the moment through his eyes, then re-simulates it without the one look that
 made the play: over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently.[^flip] Every line the
-crew says or captions is checked by code before it airs: in an offline stress test: of
-<!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it,
-<!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence] Around it: the whole match streams live at
+crew says or captions is checked by code before it airs: in an offline stress test. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence] Around it: the whole match streams live at
 1×, with a rail of its moments, the match recap, the tactics cards, five audiences, and English
 and Chinese.
 
@@ -74,6 +72,19 @@ at Azure list prices of 2026-10-22.[^azure-prices]
   the scan detector keeps F1 <!--num:A2-->0.962<!--/num--> at 20 mm of noise[^keypoints]), the rights to that data, a
   simulator calibrated on it, and human editorial review: the Verifier catches invented numbers,
   not omissions.
+
+## Who uses it
+
+- **Broadcasters.** A "through his eyes" studio segment: the replay of a moment from the player's
+  side, with every number checked before it airs and the overlays handed over as timecoded cues.
+- **Coaches and academies.** The academy drill asks the trainee where to look before the ball
+  arrives, then shows what that look would have caught. Jordet et al. (2020) link scanning before
+  receiving to a small gain in pass completion in Premier League players; that is an association
+  in match data, and we have not tested whether the drill changes anyone's scanning.
+- **Blind and low-vision fans.** The audio description audience we ship: where he got the ball,
+  which way he looked and whom he saw, as verified lines in calm, slower speech.
+
+The offers, costs and what is still missing are in [Business model](#business-model).
 
 ## What it does
 
@@ -173,9 +184,7 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 - **Steps that fit the deployed timeout.** No crew step took longer than the API's 8 s step
   timeout; every single-agent call did, so deployed it would have aired its templates.
 - **Checked inside the workflow, rewritten by its author.** A line the Verifier rejects goes
-  back to the voice that wrote it, told why; the plan and the other lines stand. Of <!--num:V1.total-->2,837<!--/num-->
-  deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have
-  aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence]
+  back to the voice that wrote it, told why; the plan and the other lines stand. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence]
 - **Audiences in parallel.** Each audience and language is its own narration call, run at once:
   ten scripts take about as long as one (about 3.5 s), though the whole crew is not faster than
   one agent.[^crew-evidence]

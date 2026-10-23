@@ -34,6 +34,8 @@ import { Grade } from "../beat/Grade";
 import { featuresOf, quality } from "../quality/quality";
 import { LOOK } from "../quality/look";
 import { BeliefRings } from "./BeliefRings";
+import { FOLLOW_COLOR, FOLLOW_RING_3D } from "../personal/highlight";
+import { useFollowedIndex } from "../personal/hooks";
 
 // The medium and high render tiers (quality/): a separate chunk, loaded only when chosen.
 const QualityLayer = lazy(() => import("../quality/QualityPost"));
@@ -119,6 +121,7 @@ function PovScene() {
   useRedrawOn(quality);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
+  const followed = useFollowedIndex(hero.ids);
   const sample = useMemo(() => new Sample(hero.n), [hero]);
   const separation = sharedSeparation(hero, hero.n);
   const shot = useMemo<Shot>(() => ({ x: 0, y: 0, width: 0 }), []);
@@ -277,6 +280,18 @@ function PovScene() {
             material={materials.shirts[kitSlot(p)]}
             visible={!rigged}
           />
+          {j === followed && (
+            // "Your view": a steady mint ring under the followed player (personal/).
+            <mesh rotation-x={-Math.PI / 2} position-y={0.04}>
+              <ringGeometry args={[...FOLLOW_RING_3D, 48]} />
+              <meshBasicMaterial
+                color={FOLLOW_COLOR}
+                transparent
+                opacity={0.95}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
           <mesh
             ref={(m) => {
               alertRings.current[j] = m;

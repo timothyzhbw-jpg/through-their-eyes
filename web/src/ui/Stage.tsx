@@ -124,7 +124,7 @@ export function momentKicker(hero: Hero, decisionFrame: number, offset: number):
 }
 
 /** Close a popover on Escape (focus back to its button) or on a press outside it. */
-function usePopover(
+export function usePopover(
   open: boolean,
   close: () => void,
   wrap: RefObject<HTMLElement | null>,
@@ -742,6 +742,13 @@ function MomentCardBody({
         >
           {label}
         </button>
+        <a
+          className="btn"
+          href="#tactics-lab"
+          title="Why common tactics work, on this moment's data"
+        >
+          Tactics
+        </a>
       </div>
       <FirstTourButton />
     </aside>
