@@ -11,7 +11,8 @@ import type { BreakdownState } from "../breakdown/breakdown";
 import { MOMENT_LINKS } from "../moments/moments";
 import { useBreakdown, useSession } from "../session";
 
-/** The hero moments whose breakdowns are prewarmed on the deployed service. */
+/** The hero moments whose breakdowns are prewarmed on the deployed service.
+ * tests/test_prewarm.py checks each is a moment the pre-warm serves. */
 export const PREWARMED: readonly string[] = MOMENT_LINKS.flatMap((m) =>
   m.scenario ? [m.scenario] : [],
 );
@@ -31,7 +32,13 @@ export function gateOf(b: BreakdownState, online: boolean, scenario: string): Ga
   if (b.status === "failed") {
     return { kind: "offer", why: `The service did not give one${b.error ? ` (${b.error})` : ""}.` };
   }
-  if (b.origin?.kind === "api" && (!b.origin.cached || b.origin.capped || b.origin.rateLimited)) {
+  if (b.origin?.kind === "api" && !b.origin.cached) {
+    return {
+      kind: "offer",
+      why: "The service made this one fresh rather than serving a cached one, so asking again runs the agent crew again.",
+    };
+  }
+  if (b.origin?.kind === "api" && (b.origin.capped || b.origin.rateLimited)) {
     return { kind: "offer", why: "The service could not serve a cached one." };
   }
   if (!PREWARMED.includes(scenario)) {

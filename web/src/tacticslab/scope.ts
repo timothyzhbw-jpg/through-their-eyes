@@ -40,39 +40,44 @@ export function missingScenarios(current: Hero): string[] {
   return [...new Set(Object.values(CARD_SCENARIO))].filter((s) => s !== current.scenario);
 }
 
-const loads = new WeakMap<Api, Promise<Scope>>();
+const matches = new WeakMap<Api, Promise<Hero>>();
+const heroLoads = new WeakMap<Api, Map<string, Promise<Hero | null>>>();
 
 /**
  * The stitched match and, from its possessions, the hero of every scenario in `scenarios`.
  * A scenario with no possession in the match, or one the service cannot export, is left out.
- * Asked once per service.
+ * The match is asked once per service and each hero once per (service, scenario), so a later
+ * page that needs other scenarios loads only those.
  */
-export function loadScope(
+export async function loadScope(
   api: Api,
   scenarios: readonly string[],
   dataUrl: string,
   fetchImpl?: Parameters<typeof loadScenarioHero>[3],
 ): Promise<Scope> {
-  let load = loads.get(api);
-  if (!load) {
-    load = (async () => {
-      const match = parseHero(await api.withMatch(FULL_MATCH).exportJson());
-      const heroes: Record<string, Hero> = {};
-      await Promise.all(
-        scenarios.map(async (scenario) => {
-          const p = match.match?.possessions.find((q) => q.scenario === scenario);
-          if (!p) return;
-          try {
-            heroes[scenario] = await loadScenarioHero(api, p, dataUrl, fetchImpl);
-          } catch {
-            // that card says its moment could not be loaded
-          }
-        }),
-      );
-      return { heroes, match, loading: false, online: true };
-    })();
-    loads.set(api, load);
-    load.catch(() => loads.delete(api)); // a later visit may try again
+  let matchLoad = matches.get(api);
+  if (!matchLoad) {
+    matchLoad = (async () => parseHero(await api.withMatch(FULL_MATCH).exportJson()))();
+    matches.set(api, matchLoad);
+    matchLoad.catch(() => matches.delete(api)); // a later visit may try again
   }
-  return load;
+  const match = await matchLoad;
+  let cache = heroLoads.get(api);
+  if (!cache) heroLoads.set(api, (cache = new Map()));
+  const known = cache;
+  const heroes: Record<string, Hero> = {};
+  await Promise.all(
+    scenarios.map(async (scenario) => {
+      const p = match.match?.possessions.find((q) => q.scenario === scenario);
+      if (!p) return;
+      let load = known.get(scenario);
+      if (!load) {
+        load = loadScenarioHero(api, p, dataUrl, fetchImpl).catch(() => null); // that card says its moment could not be loaded
+        known.set(scenario, load);
+      }
+      const hero = await load;
+      if (hero) heroes[scenario] = hero;
+    }),
+  );
+  return { heroes, match, loading: false, online: true };
 }

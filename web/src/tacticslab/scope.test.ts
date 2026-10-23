@@ -219,6 +219,18 @@ describe("loading the moments", () => {
     expect(asks).toHaveLength(2);
   });
 
+  it("a later page on the same service loads the scenarios the first page did not ask for", async () => {
+    asks = [];
+    const service = api();
+    const first = await loadScope(service, ["corner_blind_side"], "/data/");
+    expect(Object.keys(first.heroes)).toEqual([]);
+    const second = await loadScope(service, ["press_escape"], "/data/");
+    expect(Object.keys(second.heroes)).toEqual(["press_escape"]);
+    const third = await loadScope(service, ["corner_blind_side", "press_escape"], "/data/");
+    expect(Object.keys(third.heroes)).toEqual(["press_escape"]);
+    expect(asks).toEqual(["match-1", "press_escape-0"]); // the match once, each hero once
+  });
+
   it("builds the press cards from what it loaded", async () => {
     const scope = await loadScope(api(), ["press_escape"], "/data/");
     const cards = byId(buildCards(bundled(), xt, scope));

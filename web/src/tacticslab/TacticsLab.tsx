@@ -72,6 +72,7 @@ export function useScope(): Scope {
   useEffect(() => {
     if (!api || !asks) return;
     let alive = true;
+    setLoaded(null); // the previous page's scope must not show while this one loads
     loadScope(api, missing, `${import.meta.env.BASE_URL}data/`).then(
       (s) => alive && setLoaded(s),
       () => alive && setLoaded(FAILED),

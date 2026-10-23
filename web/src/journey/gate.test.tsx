@@ -126,6 +126,10 @@ describe("gateOf", () => {
     for (const o of [{ cached: false }, { capped: true }, { rateLimited: true }]) {
       expect(gateOf(api(o), true, "blind_side_run").kind, JSON.stringify(o)).toBe("offer");
     }
+    // A fresh run says asking again is a second run, not a cache read.
+    expect(gateOf(api({ cached: false }), true, "blind_side_run")).toMatchObject({
+      why: expect.stringContaining("runs the agent crew again"),
+    });
     expect(gateOf(api({}), true, "blind_side_run").kind).toBe("load");
   });
 });
@@ -186,6 +190,33 @@ describe("a cold visit", () => {
     expect(session.breakdown.get().status).toBe("failed");
     expect(text()).toContain("Play highlight"); // the app's own fallback: the bundled fixture
     expect(button()).toBeUndefined();
+  });
+
+  it("a persona or language change asks once for its own breakdown, and re-entering the step asks for nothing", async () => {
+    const { session, asked } = await coldVisit("content");
+    expect(asked()).toHaveLength(1);
+    act(() => session.controls.setPersona("analyst"));
+    for (let k = 0; k < 20; k++) await act(settle);
+    expect(asked()).toHaveLength(2); // the app's own switch; the gate adds none
+    expect(asked()[1].body).toMatchObject({ personas: ["analyst"], languages: ["en"] });
+    act(() => session.controls.setLanguage("zh"));
+    for (let k = 0; k < 20; k++) await act(settle);
+    expect(asked()).toHaveLength(3);
+    expect(asked()[2].body).toMatchObject({ personas: ["analyst"], languages: ["zh"] });
+    // Leave the step and come back: the breakdown is on screen, so nothing is asked.
+    for (const step of ["event", "content"] as const) {
+      journey.set({ step, seq: 0 });
+      for (let k = 0; k < 20; k++) await act(settle);
+    }
+    const again = document.createElement("div");
+    document.body.append(again);
+    const root = createRoot(again);
+    act(() =>
+      root.render(<SessionContext.Provider value={session}>{<Journey />}</SessionContext.Provider>),
+    );
+    mounted.push({ root, container: again });
+    for (let k = 0; k < 20; k++) await act(settle);
+    expect(asked()).toHaveLength(3);
   });
 
   it("the Event step asks for nothing", async () => {
