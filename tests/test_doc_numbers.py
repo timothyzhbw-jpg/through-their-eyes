@@ -74,6 +74,11 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| Without the look `A9` receives unmarked[^|]*{FRACTION}",
         ("k", "n", "pct"),
     ),
+    "H8": (
+        "hero_shot_far_post_finish.md",
+        rf"\| Placement changed without the key scan {FRACTION}",
+        ("k", "n", "pct"),
+    ),
     "A1": ("scan_detector.md", rf"\| Held-out F1, nuisance on \| \*\*{NUM}\*\*", ("f1",)),
     "A2": (
         "keypoint_ingest.md",
