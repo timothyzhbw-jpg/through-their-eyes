@@ -3,9 +3,8 @@
 ## Hackathon
 - Official rules: https://aka.ms/insidethegame/rules, which redirects to
   https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md.
-  **Checked 2026-10-19:** matches the participant-hosted mirror the plan was built from
-  (https://github.com/faizalkhan24/Microsoft-Premier-League-Hackathon-Official-Rules/blob/main/OFFICIAL%20RULES.md);
-  the rules file last changed 2026-09-28. Amendments are posted on the hackathon website (§11.5).
+  **Checked 2026-10-19:** matches the participant-hosted mirror the plan was built from; the
+  rules file last changed 2026-09-28. Amendments are posted on the hackathon website (§11.5).
   Facts that shape the plan:
   - registration closes 2026-10-20 12:00 PT; submissions close 2026-10-27 23:59 PT; judging until
     2026-11-10, and the project must stay testable free of charge until then;
@@ -26,31 +25,23 @@ Checked 2026-10-19; the winners list and the official brief were not reachable. 
 code is copied (CLAUDE.md rule 1).
 - **AgentDunker** (silver): 3D tactical sketches of screens and runs, freeze at the shot with xFG,
   commentary in a pro style with an in-house voice model.
-  https://www.xiaohongshu.com/explore/6ad1e6e7000000000a027f1b
-- **GameBuddy** (silver, MIT): one evidence store; a small RL-trained model returns evidence ids
-  only; numbers copied from source records and checked programmatically (subject, metric, unit,
-  period, source); a 23.8 s play expanded to 55 s with freeze / rewind / slow motion; two-voice
-  commentary; shareable MP4. https://github.com/imhaojie/BroadcastCode-2026
-- **NBA_AWS_Broadcast12** (entry, MIT): seeded synthetic trajectories, labelled as such; key plays
-  scored on five dimensions; four-layer SVG tactics board; commentary tiers calm / excited /
-  clutch; overlay on/off comparison as the highlight.
-  https://github.com/CodeGanHaoZ/NBA_AWS_Broadcast12
+- **GameBuddy** (silver, MIT, public repository `BroadcastCode-2026`): one evidence store; a small
+  RL-trained model returns evidence ids only; numbers copied from source records and checked
+  programmatically (subject, metric, unit, period, source); a 23.8 s play expanded to 55 s with
+  freeze / rewind / slow motion; two-voice commentary; shareable MP4.
+- **NBA_AWS_Broadcast12** (entry, MIT, public repository of that name): seeded synthetic
+  trajectories, labelled as such; key plays scored on five dimensions; four-layer SVG tactics
+  board; commentary tiers calm / excited / clutch; overlay on/off comparison as the highlight.
 → What we took: belief-vs-truth probability at the action freeze (§5.1), two voices and delivery
   tiers (§6), the With / Without toggle as the video highlight (§10), clip export as a stretch (§7).
-  None of them models perception or counterfactuals (§0).
+  Perception and counterfactuals are what we add (§0).
 
 ### Competing entries (Inside the Game, public repos, checked 2026-10-19)
-14 public entry repos were created after 2026-09-29; four were read. Ideas only, no code copied.
-- **Matchday Companion** — https://github.com/ogu83/inside-the-game-hackathon — deployed on ACA,
-  video done; interruptible AI co-commentator (push to talk); a fact-checker evaluated with Foundry
-  groundedness; English and Turkish; a table of proof numbers at the top of the README.
-- **Shield** — https://github.com/digitaladaption/shield — "What he sees": every passing lane from
-  a selected player (open / contested / blocked), drawn on the true state, with no vision or
-  belief; a "without him" counterfactual estimated from other plays, not re-simulated.
-- **Tactical Intelligence Live** — https://github.com/Harvare1/tactical-intelligence-live — event
-  stream with rolling-window rules; no tracking data.
-- **StudioLens** — https://github.com/Josephjbassey/inside-the-game — narrative, tactics and
-  recaps; Azure Translator for languages.
+14 public entry repos were created after 2026-09-29; we read four. Ideas only, no code copied, and
+we name none of them here. Ideas they share: AI co-commentators, fact-checking evaluated with
+Foundry groundedness, fan and analyst modes, several languages, passing lanes drawn from a
+selected player, and event streams with rolling-window rules. So SPEC §0 leads with what we add:
+a model of what the player saw and believed, and the moment re-simulated without one look.
 
 ### Related products judges may know: FIFA AI Pro and Referee View (World Cup 2026)
 Checked 2026-10-21. Our build environment could not open these pages (the proxy refused them), so
@@ -65,9 +56,7 @@ conservatively), and no logos anywhere.
   described in FIFA's Football Language (FIFA's standard vocabulary for football data). Lenovo
   reports that it orchestrates several agents over more than 2,000 metrics. Answers come as
   text, graphs, video clips and 3D recreations with player avatars. It is for pre- and
-  post-match analysis and is not used during live play. FIFA calls its output "validated
-  insights" and Lenovo "data-validated"; in the excerpts we read, neither says how a figure is
-  checked. Lenovo reports that all 48 teams at the 2026 World Cup used it, in 16 languages, with
+  post-match analysis and is not used during live play. Lenovo reports that all 48 teams at the 2026 World Cup used it, in 16 languages, with
   thousands of queries from over 300 individual users.
 - **Referee View**: the referee's body camera as a first-person broadcast feed, its footage
   smoothed in real time by Lenovo's AI stabilisation. Lenovo reports that the feed's footage of
@@ -91,8 +80,8 @@ conservatively), and no logos anywhere.
     2026-01-07) —
     https://www.computerweekly.com/news/366636909/Lenovo-taps-AI-and-digital-twins-to-power-World-Cup-2026
 → How we differ (README, docs/SUBMISSION.md). Each point was checked against main on 2026-10-21:
-  - FIFA AI Pro answers *what happened*, from statistics, before and after a match, behind a
-    "validated" label. We answer *what he saw and what he believed*, on the live stream:
+  - FIFA AI Pro answers *what happened*, from statistics, before and after a match. We answer
+    *what he saw and what he believed*, on the live stream:
     `api/live.py` streams the synthetic match at 25 Hz with every player's head yaw and the
     blind-side alerts and announces each moment as its window closes; the web app then plays
     the moment's breakdown.
@@ -176,11 +165,10 @@ conservatively), and no logos anywhere.
   role means without printing them.
 - **Jordet et al. (2013), MIT Sloan Sports Analytics Conference** — visual exploratory frequency
   of EPL midfielders/forwards; > 0.5 scans/s is very high.
-  Summaries: https://mojo.sport/coachs-corner/what-is-scanning ,
-  https://www.skysports.com/football/news/11096/11119387/what-gave-xavi-hernandez-and-andrea-pirlo-an-edge-on-the-rest-the-secret-to-his-vision
+  Summary: https://mojo.sport/coachs-corner/what-is-scanning
   Paper: https://www.sloansportsconference.com/research-papers/the-hidden-foundation-of-field-vision-in-english-premier-league-epl-soccer-players
   — prints 0.27 (SD 0.22) and 0.33 (SD 0.25) searches/s for players without and with a major
-  award; "> 0.5 is very high" is the summaries' wording, not the paper's.
+  award; "> 0.5 is very high" is the press summary's wording, not the paper's.
 - ***Visual Perception in Elite Football*** (NIH doctoral thesis, Aksum 2021) —
   https://nih.brage.unit.no/nih-xmlui/handle/11250/2828246
   → > 90% of scans last ≤ 0.66 s and very few include a fixation → peripheral-vision model.
@@ -243,6 +231,34 @@ printed range, or a shape only. It also says how far the source was read.
   - The dive's tracking limits (4 m/s, 15 m/s²).
   - The 0.2 s render delay before a dive.
   - The bisector rule with the keeper 1.5 m off his line.
+
+### Goalkeeper positioning (`sim/keeper.py`, SPEC 3.2)
+Read on 2026-10-22. Where a keeper stands when no script moves him, in every scenario.
+- **FIFA Football Analysis and Insights Team. *Goalkeeper height and connection with the
+  defensive line.*** FIFA Training Centre, World Cup Qatar 2022 technical analysis —
+  https://fifatrainingcentre.com/en/fwc2022/technical-and-tactical-analysis/goalkeeper-height-and-connection-with-the-defensive-line.php
+  → **`GAP_TO_LINE`.** Open play only, set plays excluded; positional data, tracking system and
+  match count not named. Average keeper height off his goal line 11.8 m (2018) and 13.1 m (2022);
+  average distance from the keeper to his defensive line 21.4 m (2018) and 20.4 m (2022). By game
+  state the article gives changes, and only some absolute values. *Read:* full article.
+- **FIFA Training Centre. *Goalkeeper and defensive line distances when defending in the final
+  third.*** Club World Cup UAE 2021 —
+  https://fifatrainingcentre.com/en/game/individual-qualities/goalkeeping/goalkeeper-and-defensive-line-distances-when-defending-in-the-final-third.php
+  → **`DEPTH_FLOOR`.** One keeper (Monterrey's): average starting position 4.8 m from his goal
+  line, his team's defensive line on average 17.4 m from goal, the highest of the teams compared.
+  A single keeper, not a tournament average. *Read:* full article.
+- **The bisector.** The keeper on the bisector of the angle the ball makes with his two posts is
+  the angle-play rule of goalkeeping coaching (also used, 1.5 m off the line, for the set position
+  before a shot in `sim/shots.py`, above). Context only, not a source of numbers: the theoretical
+  arc of goalkeeper position (Geoinformatica Polonica,
+  https://ejournals.eu/czasopismo/geoinformatica-polonica/artykul/theoretical-arc-of-goalkeeper-position-in-team-sports-case-study-football).
+- **Checks, not fitted to:** keeper to the nearest defender 24.969 m per match (Errekagorri et al.
+  2024, Team shape, below); defending keeper to his nearest team-mate by ball zone 29.9 → 8.9 m
+  (Fradua et al. 2013, [SIM_PARAMETERS.md](SIM_PARAMETERS.md)).
+- **Ours, a style knob:** holding the 20.4 m gap to the line down to the 4.8 m floor. Neither
+  article prints the keeper's depth as a function of the line's or the ball's; the rule reproduces
+  both anchors (a 33.5 m line puts him 13.1 m off his line, a 17.4 m line on the floor). Also ours:
+  the 1 m margins inside his penalty area and behind the ball.
 
 ### Team shape (`sim/team_shape.py`, `analytics/team_shape.py`, eval/realism.py "Team shape")
 All read on 2026-10-21. Every value below was read in the source itself, with its table or page.
@@ -362,7 +378,7 @@ No dataset was used: the shape's parameters are fitted by hand to these printed 
 - **Ours, not cited (style knobs):** the slot depths and laterals, how far the block slides toward
   the ball's side (`shift`: no readable study prints a centroid-on-ball slope or a ball-side
   offset, as the sim-parameters dossier also found), how far the wide players tuck in
-  and the full-backs push on, the keeper's depth as a share of the back line's, the zonal marking
+  and the full-backs push on, the zonal marking
   radii and leash, the in-possession line (a set distance behind the ball; no paper prints a
   relation for it), the block's one-second lag behind the ball, the jog to a slot (3 m/s, below
   the 19.8 km/h high-speed running entry speed of Gualtieri et al. 2023), and the five seconds the

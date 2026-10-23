@@ -2,15 +2,13 @@
 
 Regenerate with the commands in web/README.md whenever sim/, analytics/ or explain/ change.
 
-Where the files are generated (macOS on Apple silicon) they must match byte for byte. Elsewhere,
-CI on x86 included, SPEC 3.7 promises no cross-platform identity, so the check is structural:
-every key, list length, string, frame number, event, alert and decision must match exactly, and
-only quantised measurements may differ in their last unit (1 mm or 1e-4 rad in the tracking
-arrays; 2e-4 in rounded floats).
+They are generated on Linux (python:3.11-slim, `scripts/regen_linux.sh exports`), where CI and
+the live API run, and must match there byte for byte. The sim is byte-identical only within one
+OS (SPEC 3.7): off Linux these checks skip (`tests/canonical.py`). `_assert_close` is the
+structural comparison the checks used off the generating platform before; its own test stays.
 """
 
 import json
-import platform
 from pathlib import Path
 
 import pytest
@@ -27,10 +25,10 @@ from sim.export import (
     what_ifs_json,
     without_look_json,
 )
+from tests import canonical
 
 SCENARIO, SEED = "blind_side_run", 3
 DATA = Path(__file__).parent.parent / "web" / "public" / "data"
-GENERATED_ON = ("Darwin", "arm64")
 # Quantised measurements: integer mm, 1e-4 rad and 1e-4 rad/s.
 TRACKING = {"pos", "ghost", "head", "body", "ball", "omega", "amplitude"}
 FLOAT_TOL = 2e-4
@@ -60,12 +58,12 @@ def _assert_close(fresh, committed, where="", tracking=False, mm=1, tol=FLOAT_TO
 
 
 def _assert_current(fresh_text: str, name: str, mm: int = 1, tol: float = FLOAT_TOL) -> None:
+    """Byte for byte on Linux, the canonical platform (`tests/canonical.py`); skipped elsewhere."""
+    if not canonical.ON_LINUX:
+        pytest.skip(canonical.message())
     committed = (DATA / name).read_text()
-    stale = f"web/public/data/{name} is stale: regenerate it (web/README.md)"
-    if (platform.system(), platform.machine()) == GENERATED_ON:
-        assert fresh_text == committed, stale
-    else:
-        _assert_close(json.loads(fresh_text), json.loads(committed), name, mm=mm, tol=tol)
+    stale = f"web/public/data/{name} is stale: {canonical.message()}"
+    assert fresh_text == committed, stale
 
 
 @pytest.fixture(scope="module")
@@ -140,16 +138,8 @@ def test_the_single_file_demo_page_is_current():
     """
     from demo.build import build
 
+    if not canonical.ON_LINUX:
+        pytest.skip(canonical.message())
     committed = (DATA.parents[2] / "demo" / "hero.html").read_text()
     fresh = build(SCENARIO, SEED)
-    stale = "demo/hero.html is stale: regenerate it with `uv run python -m demo.build --seed 3`"
-    if (platform.system(), platform.machine()) == GENERATED_ON:
-        assert fresh == committed, stale
-    else:
-        start = '<script id="data" type="application/json">'
-
-        def data(page: str):
-            body = page.split(start, 1)[1].split("</script>", 1)[0]
-            return json.loads(body.replace("<\\/", "</"))
-
-        _assert_close(data(fresh), data(committed), "demo/hero.html")
+    assert fresh == committed, f"demo/hero.html is stale: {canonical.message()}"

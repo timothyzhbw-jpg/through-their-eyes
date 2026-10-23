@@ -88,6 +88,52 @@
 .tour-act {
   margin-top: 14px;
 }
+/* A quick-tour step's verified lines (StepLines.tsx): the caption's words, in the card. */
+.tour-lines {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--chalk);
+}
+.tour-lines .without-note {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  font-size: inherit;
+}
+.tour-lines .without-line.look_cost {
+  display: block; /* the caption slot drops it on a phone; the card has the room */
+}
+.tour-lines .without-note .without-xt {
+  display: inline;
+}
+.tour-lines .without-lines {
+  margin-top: 0;
+}
+.tour-lines .worth-line {
+  margin: 0;
+  font: inherit;
+  letter-spacing: normal;
+}
+.tour-lines .without-lines .btn {
+  margin-top: 4px;
+}
+.tour-line {
+  margin: 0;
+}
+.tour-checked {
+  margin-left: 6px;
+  color: var(--floodlight);
+  vertical-align: -2px;
+}
+.tour-sample {
+  color: var(--chalk-3);
+  font-size: 12px;
+}
 .tour-note {
   margin: 0;
   font-size: 13px;
@@ -103,6 +149,14 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: 16px;
+}
+/* A card that scrolls (a small phone, under the picture) keeps its way on in sight. */
+.tour-card:not(.folded) .tour-nav {
+  position: sticky;
+  bottom: -16px;
+  margin-bottom: -16px;
+  padding-bottom: 16px;
+  background: rgb(11, 17, 14);
 }
 .tour-nav .btn-quiet {
   margin-left: -14px; /* line its text up with the card's */

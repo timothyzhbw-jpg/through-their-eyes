@@ -20,6 +20,7 @@ import pytest
 from sim import dataset
 from sim.config import DT
 from sim.match import SEED_BASE, PossessionSpec, build_match
+from tests import canonical
 
 ROOT = Path(__file__).resolve().parents[1]
 SHORT_PLAN = (
@@ -176,7 +177,11 @@ def test_metadata_describes_teams_players_and_possessions(built, matches):
     for entry in meta["matches"]:
         m = matches[entry["match_id"]]
         assert entry["frames"] == m.frames
-        assert [p["scenario"] for p in entry["possessions"]] == [s.scenario for s in SHORT_PLAN]
+        # The scenario that ran: the plan's, or its away variant when the restart before an
+        # open-play passage went to the away team (SPEC 3.1).
+        names = [p["scenario"] for p in entry["possessions"]]
+        assert names == [p.scenario for p in m.possessions]
+        assert [n.removesuffix("_away") for n in names] == [s.scenario for s in SHORT_PLAN]
         assert [p["start_frame"] for p in entry["possessions"]] == [p.start for p in m.possessions]
         assert entry["score"] == {"home": m.score[0], "away": m.score[1]}
 
@@ -361,10 +366,14 @@ def _generated_here(manifest: dict) -> bool:
 
 
 def test_the_committed_sample_regenerates_byte_for_byte(tmp_path):
-    """Only where it was made: the sim is byte-identical per platform and versions (SPEC 3.7)."""
+    """Only where it was made: the sim is byte-identical per platform and versions (SPEC 3.7).
+    It is made on Linux, the canonical platform (`tests/canonical.py`)."""
     manifest = json.loads((SAMPLE / "manifest.json").read_text())
     if not _generated_here(manifest):
-        pytest.skip(f"the sample was generated on {manifest['generated_with']}")
+        pytest.skip(
+            f"the sample was generated on {manifest['generated_with']}; "
+            + canonical.message("dataset")
+        )
     dataset.build_dataset([dataset.FIRST_SEED], tmp_path / "data")
     dataset.write_sample(
         tmp_path / "data", tmp_path / "sample", dataset.FIRST_SEED, dataset.SAMPLE_POSSESSION

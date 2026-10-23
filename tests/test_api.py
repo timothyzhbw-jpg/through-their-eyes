@@ -569,7 +569,7 @@ def test_a_wrong_number_is_refuted_and_its_line_would_not_air(client):
     assert r.status_code == 200
     out = r.json()
     assert out["claim"] == "cf_value" and out["slot"] == "dxt" and out["value"] == 0.5
-    assert out["verified_value"] == pytest.approx(0.17, abs=0.005)
+    assert out["verified_value"] == pytest.approx(0.16, abs=0.005)
     assert out["status"] == "refuted" and out["airs"] is False
     assert out["reason"].startswith("approx(") and out["reason"].endswith(", 0.5) is false")
     assert out["line"] == "That look was worth 0.50 in expected threat."  # as it would render
@@ -582,9 +582,9 @@ def test_the_verified_number_is_supported_and_its_line_airs(client):
     true = _verify(client).json()["verified_value"]
     out = _verify(client, value=true).json()
     assert out["status"] == "supported" and out["airs"] is True and out["violations"] == []
-    assert out["line"] == "That look was worth 0.17 in expected threat."
+    assert out["line"] == "That look was worth 0.16 in expected threat."
     zh = _verify(client, value=true, language="zh").json()
-    assert zh["line"] == "那一眼带来了0.17的预期威胁（xT）。" and zh["airs"] is True
+    assert zh["line"] == "那一眼带来了0.16的预期威胁（xT）。" and zh["airs"] is True
 
 
 def test_every_numeric_slot_of_every_claim_can_be_tampered(settings, tmp_path):

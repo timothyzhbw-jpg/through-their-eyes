@@ -43,7 +43,9 @@ def _named(form, team, name):
 
 def test_only_possession_play_keeps_a_team_shape():
     on = sorted(name for name, cls in SCENARIOS.items() if cls.team_shape)
-    assert on == ["possession_play"]  # heroes and open_play (the xT fit) keep their runs
+    # Heroes and open_play (the xT fit) keep their runs; the away variant is the same open play
+    # with the away team on the first ball (SPEC 3.1).
+    assert on == ["possession_play", "possession_play_away"]
     assert set(SLOTS.values()) <= set(ts.FORMATIONS["4-3-3"]) | set(ts.FORMATIONS["4-2-3-1"])
 
 
@@ -110,18 +112,26 @@ def test_no_slot_is_beyond_the_opponents_back_line_unless_the_ball_is(form):
         assert p[home, 0].max() <= max(away_line, ball_x) + ts.MIN_LENGTH + 1e-9
 
 
-def test_the_keeper_stands_between_ball_and_goal_centre_inside_his_area(form):
+def test_the_keeper_stands_on_the_bisector_of_the_balls_angle_to_his_posts_inside_his_area(form):
+    """`sim.keeper` places him (SPEC 3.2): the ray from the ball through him splits the angle
+    between his posts, unless his spot is clipped to the area's side."""
     keeper = _named(form, 0, "GK")[0]
+    posts = [np.array([-HALF_LENGTH, 3.66]), np.array([-HALF_LENGTH, -3.66])]
     for ball in (np.array([0.0, 0.0]), np.array([-30.0, 25.0]), np.array([-50.0, -30.0])):
         for possession in (0, 1):
-            x, y = ts.spots(form, ball, possession)[keeper]
-            depth = x + HALF_LENGTH
-            assert ts.KEEPER_INSIDE - 1e-9 <= depth <= ts.PENALTY_DEPTH - ts.KEEPER_INSIDE + 1e-9
+            spot = ts.spots(form, ball, possession)[keeper]
+            depth, y = spot[0] + HALF_LENGTH, spot[1]
+            assert 0.0 < depth <= ts.PENALTY_DEPTH - ts.KEEPER_INSIDE + 1e-9
             assert abs(y) <= ts.PENALTY_HALF_WIDTH - ts.KEEPER_INSIDE + 1e-9
-            # On the line from the goal's centre to the ball (unless clipped to the area's side).
-            to_ball = ball - np.array([-HALF_LENGTH, 0.0])
-            cross = to_ball[0] * y - to_ball[1] * depth
-            assert abs(cross) < 1e-6 or abs(y) == pytest.approx(ts.PENALTY_HALF_WIDTH - 1.0)
+            if abs(y) == pytest.approx(ts.PENALTY_HALF_WIDTH - ts.KEEPER_INSIDE):
+                continue
+            a0, a1 = (np.arctan2(*(p - ball)[::-1]) for p in posts)
+            a = np.arctan2(*(spot - ball)[::-1])
+
+            def wrap(d):
+                return abs((d + np.pi) % (2 * np.pi) - np.pi)
+
+            assert wrap(a - a0) == pytest.approx(wrap(a1 - a), abs=1e-9)
 
 
 # --- runs ---------------------------------------------------------------------------------

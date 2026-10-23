@@ -2,7 +2,7 @@
 
     uv run python -m eval.xt_fit
 
-Simulates `open_play` on tuning seeds 0–1999 (45 s each; every carrier decides with the decision
+Simulates `open_play` on tuning seeds 0–5999 (45 s each; every carrier decides with the decision
 model, so play reaches the box and ends in shots), turns each on-ball action into an
 `analytics.xt.Action`, and fits the 16 × 12 grid with `analytics.xt.fit_xt`, counting each
 action mirrored across the long axis as well (open play is symmetric in y). A shot scores its
@@ -50,7 +50,9 @@ from sim.engine import Simulation
 from sim.run import MatchRun
 
 SCENARIO = "open_play"
-SEEDS = range(0, 2000)
+# 6000 seeds: with keepers on their spot (SPEC 3.2) they claim most balls in the goal area, whose
+# central cells had 8 actions in seeds 0-1999; with 6000 they reach MIN_ACTIONS.
+SEEDS = range(0, 6000)
 PARAMS = replace(SimParams(), max_duration_s=45.0)
 MIN_ACTIONS = 20  # a cell with fewer actions keeps the prior's value
 MIN_SHOTS = 30  # fewer shots in all and the grid is the prior

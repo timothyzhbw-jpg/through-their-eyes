@@ -4,13 +4,16 @@ import numpy as np
 import pytest
 
 from explain.match import match_moments
-from sim.config import DT
+from sim.config import DT, SimParams
 from sim.export import export_match
 from sim.match import (
     DEFAULT_PLAN,
     MATCH_2,
+    OPEN_PLAY,
+    OPEN_PLAY_AWAY,
     SET_PIECES,
     PossessionSpec,
+    awarded_team,
     build_match,
     global_id,
     match_heroes,
@@ -22,6 +25,7 @@ from sim.match import (
 from sim.model import Event
 
 SEED = 1
+OPEN = (OPEN_PLAY, OPEN_PLAY_AWAY)
 
 
 @pytest.fixture(scope="module")
@@ -67,11 +71,11 @@ def test_time_is_continuous_across_possessions(match):
 
 
 def test_hero_possessions_keep_their_seeds_and_open_play_is_keyed_by_the_match(match):
-    heroes = {p.scenario: p.seed for p in match.possessions if p.scenario != "possession_play"}
+    heroes = {p.scenario: p.seed for p in match.possessions if p.scenario not in OPEN}
     assert heroes == {
         "blind_side_run": 3, "press_escape": 0, "far_post_finish": 11, "corner_blind_side": 0
     }  # fmt: skip
-    play = [p for p in match.possessions if p.scenario == "possession_play"]
+    play = [p for p in match.possessions if p.scenario in OPEN]
     assert len({p.seed for p in play}) == len(play)
     assert all(p.seed >= 1_000_000 for p in play)  # never a design or eval seed
     # n counts open-play passages only: a hero inserted into the plan moves no open-play seed.
@@ -236,8 +240,42 @@ def test_match_2_plays_the_same_heroes_on_other_gated_seeds_in_another_order():
     assert longest + 3 * 7.0 <= 900  # a hero possession lasts about 6 s
     m2 = build_match(2)
     assert 600 <= m2.duration_s <= 900
-    assert [p.scenario for p in m2.possessions] == [s.scenario for s in MATCH_2]
-    first = next(p for p in m2.possessions if p.scenario != "possession_play")
+    assert [p.scenario.removesuffix("_away") for p in m2.possessions] == [
+        s.scenario for s in MATCH_2
+    ]
+    first = next(p for p in m2.possessions if p.scenario not in OPEN)
     assert first.start * DT <= 30
     seeds1 = {open_play_seed(1, n) for n in range(len(DEFAULT_PLAN))}
-    assert seeds1.isdisjoint(p.seed for p in m2.possessions if p.scenario == "possession_play")
+    assert seeds1.isdisjoint(p.seed for p in m2.possessions if p.scenario in OPEN)
+
+
+@pytest.mark.parametrize("seed", [1, 2, 5001])
+def test_an_open_play_passage_restarts_with_the_team_the_laws_award(seed):
+    """After a goal the side that conceded kicks off; after the ball goes out the throw-in,
+    corner or goal kick goes to the side the Laws give it to (SPEC 3.9)."""
+    m = build_match(seed)
+    checked = 0
+    for prev, p in zip(m.possessions, m.possessions[1:], strict=False):
+        if p.scenario not in OPEN:
+            continue  # a set piece starts as its scenario scripts it
+        team = awarded_team(prev.run, p.restart)
+        if team is None:
+            continue
+        owner = int(p.run.owner[0])
+        assert p.run.players[owner].team == team, (seed, p.index, p.restart)
+        assert p.scenario == (OPEN_PLAY_AWAY if team == 1 else OPEN_PLAY)
+        checked += 1
+    if seed == 1:
+        assert checked >= 1  # the kick-off after the goal goes to the away team
+
+
+def test_an_away_passage_re_simulates_by_its_name_and_seed():
+    from sim.engine import Simulation
+
+    m = build_match(SEED)
+    away = next(p for p in m.possessions if p.scenario == OPEN_PLAY_AWAY)
+    params = SimParams(max_duration_s=next(
+        s.max_s for k, s in enumerate(DEFAULT_PLAN) if k == away.index
+    ))  # fmt: skip
+    again = Simulation.from_scenario(away.scenario, away.seed, params=params).run()
+    assert again.to_bytes() == away.run.to_bytes()

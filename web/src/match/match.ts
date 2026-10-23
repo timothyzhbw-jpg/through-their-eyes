@@ -56,6 +56,7 @@ export const scenarioMatchId = (p: Pick<Possession, "scenario" | "seed">) =>
 
 export const SCENARIO_LABEL: Record<string, string> = {
   possession_play: "Open play",
+  possession_play_away: "Open play",
   blind_side_run: "The blind-side run",
   press_escape: "Escaping the press",
   corner_blind_side: "The corner",

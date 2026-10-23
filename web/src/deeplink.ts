@@ -17,16 +17,22 @@
 //   ?play=recap                                with ?match= (a stitched match): its end-of-match
 //                                              recap, asked for at once for ?persona and ?lang,
 //                                              with the full-time card on the live screen
-//   ?tour=1|<step id>                          the judge tour (tour/), from its first step or
-//                                              from that one
+//   ?tour=1|<step id>                          the full judge tour (tour/), from its first step
+//                                              or from that one
+//   ?tour=quick|<step id>                      the quick tour (four steps), from its first step
+//                                              or from that one
 //   ?play=eyes                                 open "Take his eyes" (takeeyes/) on his own look;
 //                                              with ?match=, on its first hero moment that has
 //                                              a bundled look grid
 //   ?play=steps                                open the scan step-through (steps/) on his first
 //                                              look (a hero moment's only)
-// and the testing parameters ?autoplay=0, ?intro=0 (skip the lineup card), ?offline=1,
+//   ?match=match-1&moment=<scenario>           open that hero moment's breakdown inside the
+//                                              match (corner_blind_side, far_post_finish:
+//                                              the moment links, moments/)
+// and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no moment
+// links above the live screen: the framing of the demo video's captures), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
-// (at, run, ask, tamper, play or tour) skips the lineup card and opens paused: no live stream,
+// (at, run, ask, tamper, play or tour) skips the intro card and opens paused: no live stream,
 // and no breakdown on load unless tamper needs one. Unknown values are ignored and logged.
 // ?cine=1 is for filming the demo video only (cine/, SPEC 10), never linked from the app; main.tsx
 // reads it, this parser does not.
@@ -38,7 +44,8 @@ import type { RunName } from "./data/types";
 import type { MomentContext } from "./plan/moment";
 import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
-import { STEP_IDS } from "./tour/steps";
+import { IN_MATCH_MOMENTS } from "./moments/moments";
+import { QUICK_IDS, STEP_IDS } from "./tour/steps";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
 import { stepThroughOf } from "./steps/controller";
@@ -69,6 +76,8 @@ export interface DeepLink {
   tamper: string | null; // a claim id
   play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"; steps: his looks, step by step
   tour: string | null; // the judge tour's step to start at (tour=1: its first)
+  moment: string | null; // with a stitched match: the hero moment of this scenario, its breakdown
+  rail: boolean; // the moment links above the live screen; rail=0 hides them (filming)
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
 
@@ -86,6 +95,8 @@ export const NO_LINK: DeepLink = {
   tamper: null,
   play: null,
   tour: null,
+  moment: null,
+  rail: true,
   warnings: [],
 };
 
@@ -117,14 +128,22 @@ export function parseDeepLink(search: string): DeepLink {
   const ask = params.get("ask")?.trim().slice(0, MAX_QUESTION) || null;
   const tamper = read("tamper", (v) => (CLAIM_ID.test(v) ? v : null));
   const play = read("play", (v) => oneOf(PLAYS, v));
-  const tour = read("tour", (v) => (v === "1" ? STEP_IDS[0] : oneOf(STEP_IDS, v)));
+  const tour = read("tour", (v) =>
+    v === "1"
+      ? STEP_IDS[0]
+      : v === "quick"
+        ? QUICK_IDS[0]
+        : oneOf([...STEP_IDS, ...QUICK_IDS] as const, v),
+  );
+  const moment = read("moment", (v) => oneOf(IN_MATCH_MOMENTS, v));
   const spot =
     at !== null ||
     run !== null ||
     ask !== null ||
     tamper !== null ||
     play !== null ||
-    tour !== null;
+    tour !== null ||
+    moment !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
     intro: params.get("intro") !== "0" && !spot,
@@ -139,6 +158,8 @@ export function parseDeepLink(search: string): DeepLink {
     tamper,
     play,
     tour,
+    moment,
+    rail: params.get("rail") !== "0",
     warnings,
   };
 }

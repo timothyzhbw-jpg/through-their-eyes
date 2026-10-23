@@ -42,6 +42,9 @@ SEED_BASE = 1_000_000
 # Scenarios that open with a set piece begin with it, whatever the previous possession did
 # (`Scenario.restart`).
 SET_PIECES = {name: cls.restart for name, cls in SCENARIOS.items() if cls.restart}
+# Open play, and the same with the away team on the ball first (`PossessionPlay.start_team`): the
+# name says which, so a re-simulation by (scenario, seed) plays the same passage.
+OPEN_PLAY, OPEN_PLAY_AWAY = "possession_play", "possession_play_away"
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,7 @@ class PossessionSpec:
 
 def _open(max_s: float) -> PossessionSpec:
     """An open-play passage (`possession_play`): until the ball goes out, at most `max_s`."""
-    return PossessionSpec("possession_play", max_s=max_s)
+    return PossessionSpec(OPEN_PLAY, max_s=max_s)
 
 
 # 15 open-play passages and 4 heroes; at most 13:28 of play. Hero seeds are the demo seeds:
@@ -191,6 +194,26 @@ def restart_after(run) -> str:
     return "cut"
 
 
+def awarded_team(run, restart: str) -> int | None:
+    """The team the Laws award the restart after a possession to (SPEC 3.9): the side that
+    conceded kicks off (Law 8.1); a throw-in goes to the opponents of the last player to touch
+    the ball (Law 15), a corner to the attackers and a goal kick to the defenders (Laws 16, 17);
+    the free kick after offside to the defenders (Law 11.4). None after a cut: no law awards it."""
+    if restart == "kick_off":
+        goal = next((e for e in run.events if e.type == "goal"), None)
+        return None if goal is None else 1 - goal.team
+    if restart == "free_kick":
+        call = next(e for e in run.events if e.type == "offside")
+        return int(call.attrs["awarded_to"])
+    if restart not in ("throw_in", "goal_kick", "corner"):
+        return None
+    out = max((e for e in run.events if e.type == "out"), key=lambda e: e.frame)
+    if restart == "throw_in":
+        return 1 - out.team
+    defending = 1 if out.attrs["at"][0] > 0 else 0  # the away team defends +x
+    return defending if restart == "goal_kick" else 1 - defending
+
+
 def score_after(score: tuple[int, int], events: list[Event]) -> tuple[int, int]:
     home, away = score
     for e in events:
@@ -213,14 +236,17 @@ def build_match(seed: int, plan: tuple[PossessionSpec, ...] | None = None) -> St
         params = SimParams()
         if spec.max_s is not None:
             params = replace(params, max_duration_s=spec.max_s)
-        run = Simulation.from_scenario(spec.scenario, pseed, params=params).run()
         restart = "kick_off" if k == 0 else restart_after(possessions[-1].run)
+        team = None if k == 0 else awarded_team(possessions[-1].run, restart)
+        # An open-play passage starts with the team the Laws award the restart to (SPEC 3.9).
+        scenario = OPEN_PLAY_AWAY if spec.scenario == OPEN_PLAY and team == 1 else spec.scenario
+        run = Simulation.from_scenario(scenario, pseed, params=params).run()
         restart = SET_PIECES.get(spec.scenario, restart)
         if players is None:
             players = run.players
         elif [p.id for p in run.players] != [p.id for p in players]:
             raise ValueError(f"{spec.scenario} lists other players than the first possession")
-        possessions.append(Possession(k, spec.scenario, pseed, start, restart, score, run))
+        possessions.append(Possession(k, scenario, pseed, start, restart, score, run))
         start += len(run.owner)
         score = score_after(score, run.events)
     return StitchedMatch(seed=seed, players=players or [], possessions=possessions)
@@ -233,7 +259,7 @@ def main() -> None:
     match = build_match(args.seed)
     for p in match.possessions:
         home, away = p.score_before
-        print(f"{p.index:>2}  {p.start * DT:6.1f} s  {p.restart:<9} {p.scenario:<18} "
+        print(f"{p.index:>2}  {p.start * DT:6.1f} s  {p.restart:<9} {p.scenario:<20} "
               f"seed {p.seed:<10} {p.frames * DT:5.1f} s  {home}-{away}")  # fmt: skip
     home, away = match.score
     print(f"{len(match.possessions)} possessions, {match.duration_s:.1f} s, {home}-{away}, "
