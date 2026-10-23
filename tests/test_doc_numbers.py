@@ -27,6 +27,7 @@ DOCS = [
     ROOT / "README.md",
     *(ROOT / "docs" / name for name in ("SUBMISSION.md", "RUBRIC_MAP.md", "EVALS.md")),
     ROOT / "docs" / "DEMO_SCRIPT.md",
+    ROOT / "docs" / "VIDEO_SCRIPT.md",
 ]
 
 NUM = r"(−?-?\d+(?:\.\d+)?)"
@@ -97,11 +98,18 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| … refuted by the verifier \| \*\*{NUM}/{NUM} \({NUM}%\)\*\*",
         ("k", "n", "pct"),
     ),
+    "MA8": (
+        "crew_evidence.md",
+        rf"Of {NUM} perturbed lines \([^)]*\), {NUM} were kept off the air with the Verifier "
+        rf"\([^)]*\); without it {NUM} aired, [^:]*: {NUM} false",
+        ("total", "kept", "aired", "false"),
+    ),
     "A5b": (
         "corruption.md",
         rf"\| Generated claims verified `supported` \| {NUM}/{NUM} \({NUM}%\)",
         ("supported", "n", "pct"),
     ),
+    "A6": ("laws.md", rf"\*\*{NUM} unpunished breaches\*\*", ("unpunished",)),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",

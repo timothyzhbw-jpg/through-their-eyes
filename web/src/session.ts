@@ -726,12 +726,20 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     },
     /**
      * Ask the live service's verifier about one claim with `slot` set to `value` (SPEC 5.3, 7),
-     * in the breakdown's language. Only the latest answer is shown.
+     * in the breakdown's language. Only the latest answer is shown. `by` is who typed the value.
      */
-    async tryValue(claimId: string, slot: string, value: number) {
+    async tryValue(claimId: string, slot: string, value: number, by: "viewer" | "tour" = "viewer") {
       if (!api) return;
       const turn = ++tamperTurn;
-      tamper.set({ status: "checking", claim: claimId, slot, value, result: null, error: null });
+      tamper.set({
+        status: "checking",
+        claim: claimId,
+        slot,
+        value,
+        by,
+        result: null,
+        error: null,
+      });
       try {
         const language = breakdown.get().language;
         const result = await api.verify({
