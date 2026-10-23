@@ -176,6 +176,24 @@ const PAGES = [
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
+  // A phone's director suggestion: two lines, no third one half-shown in its padding.
+  ...[
+    ["375", PHONE_375],
+    ["320", PHONE_320],
+  ].map(([width, device]) => ({
+    name: `phone-${width}-director`,
+    path: "?at=decision&intro=0&autoplay=0",
+    device,
+    check: (p) =>
+      phone(
+        p,
+        async (q) => {
+          await hero(q);
+          await clampClean(q);
+        },
+        { live: false },
+      ),
+  })),
   {
     name: "phone-375-quick-tour",
     path: "?tour=quick",
@@ -284,6 +302,48 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   }
   await see(page.getByRole("group", { name: "Run" }), "a hero moment's run switch");
   await mainView(page, main);
+}
+
+/** The director's suggestion on a phone: every line of it that shows lies inside the chip's
+ * padding, none half-shown under it. A line clamp clips at the padding's edge, so clamping the
+ * padded chip itself left a third line showing in its padding ("…before the ball… arrives"). */
+async function clampClean(page) {
+  await see(page.locator(".stage-director .director-chip"), "the director's suggestion");
+  const peeking = await page.evaluate(() => {
+    const chip = document.querySelector(".stage-director .director-chip");
+    const box = chip.getBoundingClientRect();
+    const cs = getComputedStyle(chip);
+    const top = box.top + parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+    const bottom = box.bottom - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom);
+    const out = [];
+    const walker = document.createTreeWalker(chip, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      // What of the text shows: its lines, cut by every clipping box from it up to the chip.
+      let clipTop = -Infinity;
+      let clipBottom = Infinity;
+      for (let el = node.parentElement; el; el = el.parentElement) {
+        const s = getComputedStyle(el);
+        if (s.overflowY !== "visible") {
+          const r = el.getBoundingClientRect();
+          clipTop = Math.max(clipTop, r.top + parseFloat(s.borderTopWidth));
+          clipBottom = Math.min(clipBottom, r.bottom - parseFloat(s.borderBottomWidth));
+        }
+        if (el === chip) break;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const line of range.getClientRects()) {
+        const shownTop = Math.max(line.top, clipTop);
+        const shownBottom = Math.min(line.bottom, clipBottom);
+        if (shownBottom - shownTop > 1 && (shownBottom > bottom + 1 || shownTop < top - 1))
+          out.push(
+            `"${node.textContent.trim().slice(0, 30)}" shows ${Math.round(shownBottom - bottom)} px into the padding`,
+          );
+      }
+    }
+    return out;
+  });
+  if (peeking.length) throw new Error(`the director's suggestion: ${peeking.join("; ")}`);
 }
 
 /** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
