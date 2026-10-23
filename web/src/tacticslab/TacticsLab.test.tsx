@@ -5,21 +5,48 @@
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import withoutLook from "../../public/data/without_look_seed3.json";
+import pressWhatIf from "../../public/data/whatif_press_escape_seed0.json";
+import shotWhatIf from "../../public/data/whatif_far_post_finish_seed11.json";
 import { createApi } from "../api/client";
-import { parseHero } from "../data/hero";
+import { parseHero, type Hero } from "../data/hero";
 import { createMatchSession } from "../match/matchSession";
 import { createSession } from "../session";
 import { TacticsCards } from "../tactics/TacticsCards";
 import { tacticsStore } from "../tactics/store";
 import { parseTactics } from "../tactics/tactics";
 import tacticsFixture from "../tactics/fixture.json";
-import { API, fakeFetch, fakeSockets, matchExport, render } from "../testing";
+import { API, fakeFetch, fakeSockets, matchExport, pressureExport, render } from "../testing";
+import type { Scope } from "./scope";
 import { CARD_IDS, buildCards, compareHref, momentHref } from "./cards";
 import { XG_CAP, XG_D0, XG_PEAK, XG_SCALE, distanceXg, parseXtGrid } from "./metrics";
 import { TacticsLabPanel } from "./TacticsLab";
 
 const xt = parseXtGrid(withoutLook.xt);
 const hero = () => createSession(parseHero(raw), null, null);
+
+/** A hero whose factual run holds the events of one forced run of a bundled what-if file. */
+const heroWith = (scenario: string, file: unknown, action: string): Hero => {
+  const base = parseHero(scenario === "press_escape" ? pressureExport() : raw);
+  const option = (file as { options: { action: string; events: unknown[] }[] }).options.find(
+    (o) => o.action === action,
+  )!;
+  return {
+    ...base,
+    scenario,
+    runs: { ...base.runs, factual: { ...base.runs.factual, events: option.events as never } },
+  };
+};
+
+/** What the page loads for the cards when the journey opened on the bundled moment. */
+const scope: Scope = {
+  heroes: {
+    press_escape: heroWith("press_escape", pressWhatIf, "pass:H11"),
+    far_post_finish: heroWith("far_post_finish", shotWhatIf, "shot:near"),
+  },
+  match: null,
+  loading: false,
+  online: true,
+};
 
 function match() {
   const fetch = fakeFetch({});
@@ -32,7 +59,7 @@ function match() {
 }
 
 describe("the cards", () => {
-  const cards = buildCards(parseHero(raw), xt);
+  const cards = buildCards(parseHero(raw), xt, scope);
 
   it("are the five tactics, in order, each tied to a hero moment", () => {
     expect(cards.map((c) => c.id)).toEqual([...CARD_IDS]);
@@ -63,13 +90,18 @@ describe("the cards", () => {
     expect(press.limits).toMatch(/interceptions only/);
   });
 
-  it("measure the bundled moment: its two passes, no regains, no shots", () => {
+  it("measure each card on its own moment: the bundled passes, the press's regain, the goal's shot", () => {
     const by = Object.fromEntries(cards.map((c) => [c.id, c]));
     expect(by.progression.metrics[0].values).toEqual(["2 · 2", "0 · 0"]);
-    expect(by.high_press.metrics[0].values).toEqual(["0", "0"]);
-    expect(by.shot_quality.empty).toMatch(/No shot/);
     expect(by.progression.watch?.frame).toBe(75); // the long pass to the runner
-    expect(by.decisions.watch?.frame).toBe(parseHero(raw).runs.factual.decision!.frame);
+    // The page is on blind_side_run, which has no regains and no shots: those cards are not.
+    expect(by.high_press.metrics[0].label).toBe("Regains");
+    expect(by.high_press.metrics[0].values).not.toEqual(["0", "0"]);
+    expect(by.high_press.measured).toMatch(/Under pressure \(press_escape\)/);
+    expect(by.shot_quality.empty).toBeNull();
+    expect(by.shot_quality.metrics[0].values).toEqual(["1", "0"]);
+    expect(by.shot_quality.measured).toMatch(/The goal \(far_post_finish\)/);
+    expect(by.decisions.watch).toBeNull(); // another moment's clock
   });
 
   it("print the xG model's constants from the code that computes it", () => {
@@ -96,7 +128,7 @@ describe("the cards", () => {
 });
 
 describe("the Tactics lab panel", () => {
-  const html = render(hero(), <TacticsLabPanel xt={xt} />);
+  const html = render(hero(), <TacticsLabPanel xt={xt} scope={scope} />);
 
   it("is a chapter you can jump to", () => {
     expect(html).toContain('id="tactics-lab"');
@@ -137,7 +169,7 @@ describe("the Tactics lab panel", () => {
 
   it("says a match has no lanes of its own", () => {
     const m = render(match(), <TacticsLabPanel xt={xt} />);
-    expect(m).toContain("Measured over this match");
+    expect(m).toContain("Measured on:</strong> this match");
     expect(m).toContain("no decision of its own");
     expect(m).not.toContain("<svg");
   });

@@ -5,11 +5,18 @@
 // match), so a card says what its scope is: "this moment" or "this match".
 
 import type { Hero } from "../data/hero";
-import { MOMENT_LINKS, hrefOf, type MomentLink, type MomentLinkId } from "../moments/moments";
+import {
+  FULL_MATCH,
+  MOMENT_LINKS,
+  hrefOf,
+  type MomentLink,
+  type MomentLinkId,
+} from "../moments/moments";
 import type { SourceKind } from "../provenance/source";
 import { clock, fixed, signed } from "../tactics/tactics";
 import { shortName } from "../data/roster";
 import { OPEN_P, laneCounts, lanesAt } from "./lanes";
+import { CARD_SCENARIO, NO_SCOPE, type Scope } from "./scope";
 import {
   FPS,
   HALF_LENGTH,
@@ -48,6 +55,8 @@ export interface Metric {
   source: SourceKind;
   /** What the source chip's tooltip adds, when the kind's own words are not enough. */
   sourceNote?: string;
+  /** One line on why the value is zero or empty in the data, shown when it is. */
+  zeroWhy?: string;
 }
 
 export interface Watch {
@@ -62,6 +71,8 @@ export interface LabCard {
   /** The tactic in a sentence, and why it works, in plain words. */
   idea: string;
   scope: "this moment" | "this match";
+  /** What the numbers were measured on, in words: the moment that shows the tactic, or the match. */
+  measured: string;
   metrics: Metric[];
   /** What the sim cannot say here, said honestly. */
   limits: string;
@@ -122,9 +133,13 @@ function high_press(hero: Hero, view: Context): LabCard {
       "Press high and together, and the ball is won near the opponent's goal: one regain there " +
       "leaves the defence behind the play, so the next pass has far less to beat.",
     scope: scopeOf(hero),
+    measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
       {
         label: "Regains",
+        zeroWhy:
+          "No ball was won here: the sim's open play changes hands on interceptions only and has " +
+          "no open-play tackles (docs/NUMBERS.md M4).",
         values: each((t) => String(t ? away.regains : home.regains)),
         definition:
           "The ball won from the opponent: an interception, or a tackle (the sim has tackles in " +
@@ -134,6 +149,7 @@ function high_press(hero: Hero, view: Context): LabCard {
       },
       {
         label: "High regains",
+        zeroWhy: "No ball was won in the winner's attacking third in this view.",
         values: each((t) => String(t ? away.highRegains : home.highRegains)),
         definition: `A regain in the winner's attacking third: beyond ${THIRD_START.toFixed(1)} m from the centre spot toward the goal it attacks (the last ${(HALF_LENGTH - THIRD_START).toFixed(0)} m of ${PITCH_L}).`,
         source: "tracking",
@@ -141,6 +157,7 @@ function high_press(hero: Hero, view: Context): LabCard {
       },
       {
         label: "PPDA, interceptions and tackles",
+        zeroWhy: "No interception or tackle in the pressing zone, so PPDA has no value to give.",
         values: each((t) => ppdaText(t ? away.ppda : home.ppda)),
         definition:
           "Opponent passes per defensive action. Passes the opponent kicks in its own " +
@@ -153,6 +170,7 @@ function high_press(hero: Hero, view: Context): LabCard {
       },
       {
         label: `Shots within ${REGAIN_WINDOW_S} s of a high regain · xG`,
+        zeroWhy: "There was no high regain to follow, so no shot followed one.",
         values: each((t) => {
           const m = t ? away : home;
           return `${m.shotsAfterHighRegain} · ${fixed(m.xgAfterHighRegain)}`;
@@ -241,6 +259,7 @@ function decisions(hero: Hero, view: Context): LabCard {
       "Under pressure a player chooses on what he believes, not on what is true. The lanes " +
       "that look open on his picture may be shut on the pitch; the card puts both side by side.",
     scope: scopeOf(hero),
+    measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics,
     limits:
       "The decision model chooses at the hero moments only; elsewhere in the match a passing " +
@@ -318,6 +337,7 @@ function corners(hero: Hero, view: Context): LabCard {
       "A corner is a rehearsed passage, so one look can decide it: a marker who checks over his " +
       "shoulder before the ball is played keeps his man; one who does not loses him.",
     scope: scopeOf(hero),
+    measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics,
     limits:
       "A corner's passage ends after its cutback and the stitched match cuts it before a shot " +
@@ -347,6 +367,7 @@ function shot_quality(hero: Hero, view: Context): LabCard {
       "shots is a different attack depending on where they are struck, so teams work the ball " +
       "to a better place first.",
     scope: scopeOf(hero),
+    measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
       {
         label: "Shots",
@@ -405,6 +426,7 @@ function progression_card(hero: Hero, view: Context): LabCard {
       "dangerous one adds expected threat, and the passes that add the most are the ones that " +
       "break lines, which is why teams look for them.",
     scope: scopeOf(hero),
+    measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
       {
         label: "Passes · completed",
@@ -473,7 +495,76 @@ const BUILDERS: Record<CardId, (hero: Hero, view: Context) => LabCard> = {
   progression: progression_card,
 };
 
-export function buildCards(hero: Hero, xt: XtGrid | null): LabCard[] {
-  const view = { scenario: hero.kind === "hero" ? hero.scenario : "match", xt };
-  return CARD_IDS.map((id) => BUILDERS[id](hero, view));
+/** A value with nothing in it: zero, a dash, or only zeros ("0 · 0.00"). */
+export const isBlank = (v: string): boolean => /^[\s0.·–+−-]*$/.test(v);
+
+const ZERO_WHY = "Nothing of this in the data for this view.";
+
+/** True when no metric has a value to lead with. */
+const nothingToShow = (c: LabCard): boolean =>
+  c.metrics.every((m) => m.values.every(isBlank)) && (c.metrics.length > 0 || c.empty !== null);
+
+/**
+ * A card never leads with zeros or dashes: the metrics that have a value come first, the ones that
+ * do not follow with one line on why (their `zeroWhy`), and a card with nothing but those says
+ * so instead of printing a table of them.
+ */
+export function leadWithValues(card: LabCard): LabCard {
+  const has = (m: Metric) => m.values.some((v) => !isBlank(v));
+  const live = card.metrics.filter(has).map(({ zeroWhy: _, ...m }) => m);
+  const blank = card.metrics
+    .filter((m) => !has(m))
+    .map((m) => ({ ...m, zeroWhy: m.zeroWhy ?? ZERO_WHY }));
+  if (!live.length && card.metrics.length) {
+    return {
+      ...card,
+      metrics: blank,
+      empty: card.empty ?? `Nothing to measure on ${card.measured}. ${blank[0].zeroWhy}`,
+    };
+  }
+  return { ...card, metrics: [...live, ...blank] };
+}
+
+/** The card for `id`, measured on the moment that shows its tactic (see scope.ts). */
+function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): LabCard {
+  const want = CARD_SCENARIO[id];
+  const moment = link(CARD_MOMENT[id]);
+  const view: Context = { scenario: session.kind === "hero" ? session.scenario : "match", xt };
+  const hero = session.kind === "match" || session.scenario === want ? session : scope.heroes[want];
+  if (!hero) {
+    return {
+      ...BUILDERS[id](session, view),
+      measured: `${moment.label} (${want})`,
+      scope: "this moment",
+      metrics: [],
+      watch: null,
+      here: false,
+      empty: scope.loading
+        ? `Loading ${moment.label.toLowerCase()}, the moment that shows this tactic…`
+        : scope.online
+          ? `${moment.label} (${want}) could not be loaded from the service: open it from the link below.`
+          : `This card measures ${moment.label.toLowerCase()} (${want}), which needs the live service: only ${session.scenario} is bundled.`,
+    };
+  }
+  const on = (h: Hero, measured: string): LabCard => {
+    const card = BUILDERS[id](h, view);
+    return leadWithValues({ ...card, measured, watch: h === session ? card.watch : null });
+  };
+  const own = session.kind === "match" ? "this match" : `${moment.label} (${want})`;
+  const card = on(hero, own);
+  if (!nothingToShow(card) || !scope.match || hero === scope.match) return card;
+  // The moment holds none of what the card measures: the whole stitched match does, or says so.
+  const wide = on(
+    scope.match,
+    `the whole stitched match (${FULL_MATCH}), as ${own} holds none of it`,
+  );
+  return nothingToShow(wide) ? card : wide;
+}
+
+/**
+ * The five cards. On a hero moment each is measured on the moment that shows its tactic, whichever
+ * one the page opened on, from `scope`; a match page's cards are measured on the match.
+ */
+export function buildCards(hero: Hero, xt: XtGrid | null, scope: Scope = NO_SCOPE): LabCard[] {
+  return CARD_IDS.map((id) => scoped(id, hero, xt, scope));
 }
