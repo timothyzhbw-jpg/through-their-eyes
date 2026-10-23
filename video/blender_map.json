@@ -163,7 +163,13 @@
         "glue"
       ],
       "label": "dramatisation",
-      "sfx": []
+      "sfx": [],
+      "overlays": [
+        {
+          "title": "tag-his-eyes",
+          "at": 0.05
+        }
+      ]
     },
     {
       "beat": "b01-s1a-ots",
@@ -259,7 +265,13 @@
         "glue"
       ],
       "label": "dramatisation",
-      "fit": true
+      "fit": true,
+      "overlays": [
+        {
+          "title": "saw-believed",
+          "at": 0.2
+        }
+      ]
     },
     {
       "beat": "b08-bl01a",
