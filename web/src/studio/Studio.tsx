@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { renameIds } from "../data/roster";
 import { DemoBadge } from "../journey/DemoBadge";
+import { BreakdownWait } from "../journey/gate";
 import { KIND_LABEL, lineKinds } from "../narration/payload";
 import { useBreakdown, useSession } from "../session";
 import { Chapter } from "../ui/Chapter";
@@ -103,9 +104,10 @@ export function StudioPackage() {
 
   if (!ctx || !posts) {
     return (
-      <p className="note studio-wait" role="status">
-        The package is built from a verified breakdown: it appears when one is on screen.
-      </p>
+      <BreakdownWait
+        what="package"
+        offline="The package is built from a verified breakdown: it appears when one is on screen."
+      />
     );
   }
   return (
@@ -255,9 +257,10 @@ export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
   );
   if (!narration || !hero.heroId) {
     return numbered ? null : (
-      <p className="note studio-wait" role="status">
-        The business panel measures the package: it appears with a verified breakdown.
-      </p>
+      <BreakdownWait
+        what="business panel"
+        offline="The business panel measures the package: it appears with a verified breakdown."
+      />
     );
   }
   return (
