@@ -43,7 +43,12 @@ export function allowedNumbers(narration: Narration): Set<number> {
 
 /** True when every number in `text` is one of `allowed` (the same value, however it is written). */
 export const checked = (text: string, allowed: ReadonlySet<number>): boolean =>
-  numbersIn(text).every((n) => allowed.has(Number(n)));
+  numbersIn(text).every((n) => {
+    // A value prints rounded to the decimals the text gives it, so compare at those decimals.
+    const decimals = n.split(".")[1]?.length ?? 0;
+    for (const v of allowed) if (Number(v.toFixed(decimals)) === Number(n)) return true;
+    return false;
+  });
 
 // ----- Templates ---------------------------------------------------------------------------------
 
@@ -204,7 +209,8 @@ const COPY: Record<
   },
 };
 
-const clubOf = (id: string) => (id.startsWith("A") ? 1 : 0);
+/** The index of the club a player belongs to (the hero's club is named first). */
+export const clubOf = (id: string): 0 | 1 => (id.startsWith("A") ? 1 : 0);
 
 /** The club names as hashtags: "Kestrel Bay" -> #KestrelBay; in Chinese, #红隼湾. */
 export function hashtags(lang: PostLanguage): string[] {
@@ -256,8 +262,8 @@ export function postsOf(ctx: PostContext, lang: PostLanguage): Posts {
   const hero = shortName(ctx.hero, lang);
   const sentences = facts(ctx, lang);
   const club = (t: 0 | 1) => (lang === "zh" ? CLUBS[t].zh : CLUBS[t].name);
-  const home = clubOf(ctx.hero) === 0 ? 0 : 1;
-  const versus = copy.versus(club(home), club(home === 0 ? 1 : 0));
+  const heroClub = clubOf(ctx.hero);
+  const versus = copy.versus(club(heroClub), club(heroClub === 0 ? 1 : 0));
   const tags = hashtags(lang).join(" ");
   const joiner = lang === "zh" ? "" : " ";
   return {

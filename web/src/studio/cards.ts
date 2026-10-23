@@ -6,7 +6,7 @@
 
 import { CLUBS, shortName } from "../data/roster";
 import type { Narration } from "../narration/payload";
-import { checked, allowedNumbers, type PostLanguage } from "./posts";
+import { checked, allowedNumbers, clubOf, type PostLanguage } from "./posts";
 
 export type CardSize = "square" | "story" | "wide";
 export const CARD_SIZES: readonly CardSize[] = ["square", "story", "wide"];
@@ -166,7 +166,7 @@ export function cardSpec(
     stats.push({ value, label: t.label[lang](hero, runner) });
   }
   const copy = COPY[lang];
-  const home = heroId.startsWith("A") ? 1 : 0;
+  const heroClub = clubOf(heroId);
   const club = (t: 0 | 1) => (lang === "zh" ? CLUBS[t].zh : CLUBS[t].name);
   const { width, height } = CARD_DIMENSIONS[size];
   return {
@@ -177,7 +177,7 @@ export function cardSpec(
     title: copy.title(hero),
     stats,
     empty: stats.length ? null : copy.empty,
-    footer: copy.footer(club(home), club(home === 0 ? 1 : 0)),
+    footer: copy.footer(club(heroClub), club(heroClub === 0 ? 1 : 0)),
   };
 }
 

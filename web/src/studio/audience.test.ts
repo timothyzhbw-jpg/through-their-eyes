@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { PERSONAS } from "../api/client";
+import assumptions from "./audience-assumptions.json";
 import {
   audienceOf,
   DEMO_LABEL,
@@ -78,5 +79,17 @@ describe("audience model", () => {
     expect(withCommas(1234567)).toBe("1,234,567");
     expect(withCommas(999)).toBe("999");
     expect(percent(0.0456)).toBe("4.6%");
+  });
+});
+
+describe("audience assumptions file", () => {
+  it("says for every entry that no source backs it", () => {
+    const entries = [
+      ...Object.values(assumptions.ranges),
+      ...Object.values(assumptions.personaFactors),
+      ...Object.values(assumptions.languageReach),
+    ];
+    expect(entries.length).toBe(12);
+    for (const e of entries) expect(e.source).toBe("none, invented");
   });
 });

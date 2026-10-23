@@ -5,7 +5,7 @@
 // moment, the persona and the language: the same three always give the same figures, a different
 // one gives different figures. Everything it returns is labelled DEMO_LABEL on screen.
 //
-// Assumptions (the panel prints them from RANGES and the two tables below):
+// Assumptions (the panel prints them from audience-assumptions.json):
 // - The ranges are plausible orders of magnitude for one short clip on one fan-app channel, not
 //   benchmarks: no source backs them.
 // - A persona scales reach (how many see it) and engagement (how many do something with it): the
@@ -17,6 +17,7 @@
 //   afterwards. It is a proxy: no survey stands behind it.
 
 import type { Persona } from "../api/client";
+import assumptions from "./audience-assumptions.json";
 
 export const DEMO_LABEL = "Demo data: simulated audience, not real results";
 
@@ -28,25 +29,25 @@ export interface Range {
   max: number;
 }
 
+const range = ({ min, max }: Range): Range => ({ min, max });
+
+/** The ranges, read from audience-assumptions.json (every entry there says: no source). */
 export const RANGES = {
-  impressions: { min: 20_000, max: 500_000 },
-  engagementRate: { min: 0.02, max: 0.09 }, // engagements / impressions
-  clickThrough: { min: 0.005, max: 0.03 }, // "Official watch" clicks / impressions
-  sponsorShare: { min: 0.35, max: 0.8 }, // sponsor impressions / impressions
-  recall: { min: 0.08, max: 0.32 }, // sponsor recall proxy
-} as const satisfies Record<string, Range>;
+  impressions: range(assumptions.ranges.impressions),
+  engagementRate: range(assumptions.ranges.engagementRate), // engagements / impressions
+  clickThrough: range(assumptions.ranges.clickThrough), // "Official watch" clicks / impressions
+  sponsorShare: range(assumptions.ranges.sponsorShare), // sponsor impressions / impressions
+  recall: range(assumptions.ranges.recall), // sponsor recall proxy
+} satisfies Record<string, Range>;
 
 /** Reach multiplier and engagement multiplier per persona; 1 is the middle of the range. */
-export const PERSONA_FACTORS: Record<Persona, { reach: number; engagement: number }> = {
-  casual: { reach: 1, engagement: 0.9 },
-  player_fan: { reach: 0.8, engagement: 1.2 },
-  analyst: { reach: 0.5, engagement: 1.4 },
-  coach: { reach: 0.4, engagement: 1.3 },
-  audio_description: { reach: 0.25, engagement: 1.1 },
-};
+export const PERSONA_FACTORS: Record<Persona, { reach: number; engagement: number }> =
+  assumptions.personaFactors;
 
 /** Reach multiplier per language. */
-export const LANGUAGE_REACH: Record<string, number> = { en: 1, zh: 0.8 };
+export const LANGUAGE_REACH: Record<string, number> = Object.fromEntries(
+  Object.entries(assumptions.languageReach).map(([lang, { factor }]) => [lang, factor]),
+);
 
 export interface AudienceInput {
   moment: string;

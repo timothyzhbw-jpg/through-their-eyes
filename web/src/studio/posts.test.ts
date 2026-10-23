@@ -9,10 +9,12 @@ import { CLUBS } from "../data/roster";
 import { validatePayload, type Narration, type RenderPayload } from "../narration/payload";
 import { heroMoment } from "../plan/moment";
 import { templatePlan } from "../plan/template";
+import { audienceOf, percent, SPONSOR, withCommas } from "./audience";
 import { CARD_DIMENSIONS, CARD_SIZES, cardSpec, wrap } from "./cards";
 import {
   allowedNumbers,
   checked,
+  clubOf,
   facts,
   FACTS,
   hashtags,
@@ -249,5 +251,44 @@ describe("shot list", () => {
     expect(a).toEqual(shotList(withVoice, moment, script));
     expect(a[0].caption).toBe("Look at J. Ferriday.");
     expect(shotListText(a)).toContain("frames");
+  });
+});
+
+describe("review points", () => {
+  it("accepts a number printed rounded to the decimals the text gives it", () => {
+    const allowed = new Set([3.456]);
+    expect(checked("3.5 m", allowed)).toBe(true);
+    expect(checked("3.46 m", allowed)).toBe(true);
+    expect(checked("3.6 m", allowed)).toBe(false);
+  });
+
+  it("keeps a rounded claim value on the card", () => {
+    const base = rich("en");
+    const payload: RenderPayload = {
+      ...base,
+      claims: [
+        ...base.claims.map((c) => (c.id === "belief_error" ? { ...c, values: { err: 0.346 } } : c)),
+      ],
+    };
+    const spec = cardSpec(narrationOf(payload), hero.heroId!, hero.runnerId, CARD_SIZES[0], "en");
+    expect(spec.stats.map((s) => s.value)).toContain("0.3 m");
+  });
+
+  it("never prints a demo audience figure in a post or a card", () => {
+    const a = audienceOf({ moment: "m:x", persona: "casual", language: "en" });
+    const figures = [percent(a.recall), withCommas(a.sponsorImpressions), SPONSOR];
+    const narration = narrationOf(rich("en"));
+    for (const lang of POST_LANGUAGES) {
+      const text = JSON.stringify([
+        postsOf(context(narration), lang),
+        cardSpec(narration, hero.heroId!, hero.runnerId, CARD_SIZES[0], lang),
+      ]);
+      for (const f of figures) expect(text).not.toContain(f);
+    }
+  });
+
+  it("names the hero's club by one function", () => {
+    expect(clubOf("A5")).toBe(1);
+    expect(clubOf("H5")).toBe(0);
   });
 });
