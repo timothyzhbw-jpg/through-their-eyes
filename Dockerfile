@@ -31,9 +31,12 @@ COPY sim ./sim
 # (TTE_CACHE_DIR defaults to out/cache), so it belongs to the service user.
 RUN python -m compileall -q agents analytics api explain sim \
     && mkdir out && chown app:app out
+# numpy's AVX2 tier on any host, as in CI and the regen scripts, so the live exports match the
+# committed ones on an AVX-512 host too (tests/canonical.py).
 ENV PATH=/app/.venv/bin:$PATH \
     PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    NPY_DISABLE_CPU_FEATURES="X86_V4 AVX512_ICL AVX512_SPR"
 USER app
 EXPOSE 8000
 # --ws-max-size: uvicorn refuses a larger incoming WebSocket frame from its header (close 1009)
