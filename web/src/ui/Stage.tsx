@@ -124,7 +124,7 @@ export function momentKicker(hero: Hero, decisionFrame: number, offset: number):
 }
 
 /** Close a popover on Escape (focus back to its button) or on a press outside it. */
-function usePopover(
+export function usePopover(
   open: boolean,
   close: () => void,
   wrap: RefObject<HTMLElement | null>,

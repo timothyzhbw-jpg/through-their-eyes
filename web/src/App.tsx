@@ -52,6 +52,7 @@ import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/Your
 import { clubName } from "./data/roster";
 import { MomentRail } from "./moments/MomentRail";
 import { TacticsLabPanel } from "./tacticslab/TacticsLab";
+import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
@@ -76,6 +77,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   // stays, the full tour points at it); the quick tour's card takes its place.
   const touring = useStore(tour, (s) => (s.open ? s.kind : null));
 
+  usePersonalSync(!!onBack); // inside a match: start on the audience and language already chosen
   useEffect(() => startClock(session), [session]);
   useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
   // Closing Your call (Back, Escape, the header pill) returns focus to the live screen's pill.
@@ -157,6 +159,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
               <ScanStepsButton />
               <TakeEyesButton />
               <SoundToggle icon />
+              <YourViewMenu />
               <ViewerMenu />
             </>
           }
@@ -189,6 +192,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
               <MomentTitle hero={hero} />
             </h2>
             <p className="lede">{blurbOf(hero)}</p>
+            <YourViewLine />
             <StoryCta />
           </header>
           <div className="below">
@@ -412,6 +416,7 @@ export function MatchApp({ session, autoplay }: { session: MatchSession; autopla
 function MatchView() {
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
+  usePersonalSync(true);
   useEffect(() => startClock(session), [session]);
   useEffect(
     () => (session.kind === "match" ? bindMatchSound(session.recap.voice, soundEngine) : undefined),
@@ -428,7 +433,12 @@ function MatchView() {
             <MatchPicker />
           </>
         }
-        end={<SoundToggle icon />}
+        end={
+          <>
+            <SoundToggle icon />
+            <YourViewMenu />
+          </>
+        }
         card={
           <>
             <Scoreboard />
@@ -450,6 +460,7 @@ function MatchView() {
             timeline and below; open a hero moment's breakdown to see the decision through the
             player's eyes.
           </p>
+          <YourViewLine />
         </header>
         <div className="below">
           <StatsPanel />
