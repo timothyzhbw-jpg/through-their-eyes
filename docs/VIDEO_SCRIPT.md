@@ -9,7 +9,7 @@ early. Decide early."). The coach's tablet shows the app's board with the blind 
 film cuts into the app: the look, frozen scan by scan in the app's step-through, with and without
 it; the same vision under pressure and at a corner in one montage; the crew, the verifier, the
 drill and the personas; who would pay; and the player's callback goal before "GET YOUR VISION."
-It runs **1:54** and is rendered end to end by code from
+It runs under two minutes and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -63,6 +63,9 @@ low-pass and flood back when he acts. The coach speaks with his own voice (`spea
 board in the run without the look, H9 on his blind side with the app's blind-side alert lit
 (capture `22-board-blind`), corner-pinned frame by frame (`pins`, `video/pin.py`) so that its
 last frame is the board full frame: the cut is exact.
+
+The times below are a snapshot of the spec at the last cut and move at the next re-cut;
+`video/trailer.json` is the source.
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
@@ -127,7 +130,7 @@ last frame is the board full frame: the cut is exact.
 | 1:45.35 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
 | 1:47.35 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
 
-Total 113.85 s. The score session composes to the cue sheet generated from this spec.
+The film's length is `trailer.json`'s; `npm run trailer` reports it. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 
@@ -176,14 +179,15 @@ The cut follows the data where a requested beat does not hold:
   the run without the look, so the tablet shows that board.
 - **No two-pane split.** The app's "split" focus is now his eyes with the board inset, so with and
   without the look use the app's own With / Without switch on the board, then the step-through.
-- **The Verifier's offline result is read, not typed.** "2,837 OF 2,837 BROKEN LINES KEPT OFF THE AIR"
-  (NUMBERS MA8) fills from `report_facts`: a pattern matched against
+- **The Verifier's offline result is read, not typed.** The card's figures (NUMBERS MA8) fill from
+  `report_facts`: a pattern matched against
   [eval/reports/crew_evidence.md](../eval/reports/crew_evidence.md); without a match the card
-  says "EVERY BROKEN LINE KEPT OFF THE AIR".
+  says "EVERY BROKEN LINE KEPT OFF THE AIR". In prose: Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false.
 - **Who would pay** comes from SUBMISSION.md's business model (broadcasters, clubs, the league's
   fan apps), with no prices.
 - **Chapter numbers are Roman and shirt numbers are names** ("CH. II", "No. 14"): the cards may
-  hold no digit or number word that is not a verified claim.
+  hold no digit or number word that is not a verified claim. The one exception is the shirt
+  number on a fictional player's name card ("No. 14"): a name, not a statistic.
 
 ## Music
 

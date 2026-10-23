@@ -92,6 +92,7 @@ export function validateTrailer(spec, ctx) {
   for (const [id, fact] of Object.entries(spec.report_facts ?? {})) {
     const at = `report_facts.${id}`;
     if (!/^[a-z_]+$/.test(id)) errors.push(`${at}: id must be lower-case letters and underscores`);
+    if (ctx.claimIds?.has(id)) errors.push(`${at}: collides with a claim id and would overwrite the claim`);
     if (typeof fact?.file !== "string" || !repoFile(ctx.root, fact.file)) errors.push(`${at}: file must be a path inside the repo`);
     let groups = -1;
     try {

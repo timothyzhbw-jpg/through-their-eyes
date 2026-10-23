@@ -1036,6 +1036,8 @@ function loadClaims(ctx) {
   if (!existsSync(file)) return { table: reports, doc: null };
   const doc = JSON.parse(readFileSync(file, "utf8"));
   const table = doc.claims && typeof doc.claims === "object" ? doc.claims : claimTable(doc.sources ?? []);
+  const clash = Object.keys(reports).filter((id) => Object.hasOwn(table, id));
+  if (clash.length) throw new Error(`report_facts ids collide with claim ids: ${clash.join(", ")}`);
   return { table: { ...table, ...reports }, doc };
 }
 

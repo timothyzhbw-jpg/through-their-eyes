@@ -568,7 +568,7 @@
         { "do": "click", "role": "button", "name": "Without the look", "exact": true, "hold": 2.5, "still": true },
         { "do": "click", "role": "button", "name": "Back", "exact": true, "hold": 2.5, "still": true }
       ],
-      "vo": "Each look he took, frozen; then his decision.",
+      "vo": "The look he took, frozen; then his decision.",
       "notes": "The hero has one key scan (scan:H8:0050), so the trailer labels one scan and the decision, never more."
     },
     {

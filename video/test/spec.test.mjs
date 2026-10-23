@@ -24,6 +24,16 @@ function clone(spec = mini) {
   return structuredClone(spec);
 }
 
+test("a report_facts id that is also a claim id is rejected", () => {
+  const spec = clone(real);
+  spec.beats = storyBeats(real);
+  const ctx = { root: REPO, shotIds: new Set(shots.shots.map((s) => s.id)), assets: [], harvest: shots.harvest ?? [] };
+  const clean = validateTrailer(spec, { ...ctx, claimIds: new Set(["some_claim"]) });
+  assert.ok(!clean.errors.some((e) => e.includes("collides")));
+  const clash = validateTrailer(spec, { ...ctx, claimIds: new Set(["verifier_offline"]) });
+  assert.ok(clash.errors.some((e) => e.includes("report_facts.verifier_offline: collides")), clash.errors.join("\n"));
+});
+
 test("the mini fixture and the real trailer spec are valid", () => {
   const miniResult = check(mini);
   assert.deepEqual(miniResult.errors, [], miniResult.errors.join("\n"));
