@@ -111,8 +111,10 @@ export function filmBroadcast(
   }
 }
 
-/** Broadcast-only layers; `sample` is the frame the view sampled this redraw. */
-export function BroadcastLayers({ sample }: { sample: Sample }) {
+/** Broadcast-only layers; `sample` is the frame the view sampled this redraw, `off` the render
+ * offsets of its meshes (players/separate.ts): the name tags follow the bodies, the overlays
+ * stay on the true spots. */
+export function BroadcastLayers({ sample, off }: { sample: Sample; off: Float32Array }) {
   const { playback } = useView();
   const on = useStore(playback, (s) => s.camera === "broadcast");
   return (
@@ -120,7 +122,7 @@ export function BroadcastLayers({ sample }: { sample: Sample }) {
       <KeyPlayers sample={sample} />
       <GrassBlindSide sample={sample} />
       <GrassOptions />
-      <TagSprites sample={sample} />
+      <TagSprites sample={sample} off={off} />
       <SkeletonLayer sample={sample} variant="broadcast" />
       <RadarLayer sample={sample} variant="broadcast" />
     </group>
@@ -334,7 +336,7 @@ function tagTexture(tag: LiveTag, color: string): THREE.CanvasTexture {
   return tex;
 }
 
-function TagSprites({ sample }: { sample: Sample }) {
+function TagSprites({ sample, off }: { sample: Sample; off: Float32Array }) {
   const view = useView();
   const { hero, playback } = view;
   const statsState = statsStore(view);
@@ -373,7 +375,11 @@ function TagSprites({ sample }: { sample: Sample }) {
         material.needsUpdate = true;
       }
       const j = tag.player;
-      sprite.position.set(sample.pos[2 * j], TAG_LIFT, -sample.pos[2 * j + 1]);
+      sprite.position.set(
+        sample.pos[2 * j] + off[2 * j],
+        TAG_LIFT,
+        -(sample.pos[2 * j + 1] + off[2 * j + 1]),
+      );
       sprite.scale.set((h * TAG_W) / TAG_H, h, 1);
       sprite.center.set(0.5, -1.1 * level); // bottom-centre on the player; a second tag above
     }

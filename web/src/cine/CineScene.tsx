@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, halfCone, sampleInto, speedAt } from "../data/hero";
 import { kickBallOffset } from "../players/kickBall";
+import { Separation, sharedSeparation } from "../players/separate";
 import { trial } from "../players/trial";
 import { useView } from "../session";
 import { BeliefRings } from "../views/BeliefRings";
@@ -32,6 +33,9 @@ const FAR = 400;
 
 /** Filled at priority -1 and read by the layers later in the same advance(). */
 let stageSample: Sample | null = null;
+/** The render offsets of the same frame (players/separate.ts): where the player meshes, their
+ * labels and the ball are drawn. The rings, ghosts and cone stay on the true spots. */
+let stageOffsets: Separation | null = null;
 
 const CONE_VERTEX = /* glsl */ `
 varying vec3 vWorld;
@@ -83,10 +87,12 @@ function CrowdClock() {
 function Stage() {
   const { hero, playback } = useView();
   const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   useFrame(({ scene }) => {
     const s = playback.get();
     sampleInto(sample, hero, hero.runs[s.mode], s.frame, false);
     stageSample = sample;
+    stageOffsets = separation.update(hero.runs[s.mode], s.frame);
     const shot = cineRuntime.shot;
     if (shot && scene.fog instanceof THREE.Fog) {
       scene.fog.near = shot.fog[0];
@@ -113,7 +119,8 @@ function Tokens() {
   useEffect(() => () => materials.forEach((m) => m.dispose()), [materials]);
   useFrame(() => {
     const sample = stageSample;
-    if (!sample) return;
+    const off = stageOffsets?.off;
+    if (!sample || !off) return;
     const s = playback.get();
     const show = !trial.get().rigged;
     const hidden = s.camera === "pov" ? hero.ids.indexOf(s.povPlayer) : -1;
@@ -122,7 +129,11 @@ function Tokens() {
       const head = heads.current[j];
       if (!body || !head) continue;
       body.visible = show && j !== hidden;
-      body.position.set(sample.pos[2 * j], 0, -sample.pos[2 * j + 1]);
+      body.position.set(
+        sample.pos[2 * j] + off[2 * j],
+        0,
+        -(sample.pos[2 * j + 1] + off[2 * j + 1]),
+      );
       poseToken(body, head, sample.body[j], sample.head[j]);
     }
   });
@@ -166,7 +177,8 @@ function Labels() {
   );
   useFrame(() => {
     const sample = stageSample;
-    if (!sample) return;
+    const off = stageOffsets?.off;
+    if (!sample || !off) return;
     const s = playback.get();
     const on = !!cineRuntime.shot?.labels;
     const hidden = s.camera === "pov" ? hero.ids.indexOf(s.povPlayer) : -1;
@@ -174,7 +186,11 @@ function Labels() {
       const sprite = sprites.current[j];
       if (!sprite) continue;
       sprite.visible = on && j !== hidden;
-      sprite.position.set(sample.pos[2 * j], 2.1, -sample.pos[2 * j + 1]);
+      sprite.position.set(
+        sample.pos[2 * j] + off[2 * j],
+        2.1,
+        -(sample.pos[2 * j + 1] + off[2 * j + 1]),
+      );
     }
   });
   return (
@@ -326,10 +342,15 @@ function Ball() {
   const ref = useRef<THREE.Mesh>(null);
   useFrame(() => {
     const sample = stageSample;
-    if (!sample || !ref.current) return;
+    const carried = stageOffsets?.ball;
+    if (!sample || !carried || !ref.current) return;
     const s = playback.get();
     const kick = kickBallOffset(s.mode, s.frame); // on the kicking foot (rigged players)
-    ref.current.position.set(sample.ball[0] + kick[0], 0.11, -(sample.ball[1] + kick[1]));
+    ref.current.position.set(
+      sample.ball[0] + kick[0] + carried[0],
+      0.11,
+      -(sample.ball[1] + kick[1] + carried[1]),
+    );
   });
   return (
     <mesh ref={ref}>
