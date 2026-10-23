@@ -1079,7 +1079,9 @@ a pass at its reception, interception or out; a sprint at its first frame back b
     "J. Ferriday" as "G Faraday" and "N. Varnhall" as "嗯王安好" (live `/api/tts`, transcribed).
     The renderer picks the form by language (`explain.render.localized`), and the Verifier
     treats every written form of a player (id, short, full, surname, Chinese) outside a slot as
-    an entity. A zh line never holds the letters "xT" (the voice read "（xT）" as "Baxtee"):
+    an entity. The web mirrors the table (`web/src/data/roster.ts` `ZH_NAMES`, kept equal by
+    `tests/test_roster_web.py`): `renameIds` names an id inside a Chinese sentence in Chinese, as
+    `sim.roster.rename_ids` does for text cached with ids. The away club is 科尔文谷 (Corvane Vale). A zh line never holds the letters "xT" (the voice read "（xT）" as "Baxtee"):
     expected threat is 预期威胁 in zh captions and voice; the UI's chips may keep "xT".
   - The two clubs are named too: Kestrel Bay (home) and Corvane Vale (away), both invented. The
     recap's claims still say Home and Away (its cache key holds their templates); the API names

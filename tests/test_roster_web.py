@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from sim.roster import CLUBS, ROSTER
+from sim.roster import CLUBS, ROSTER, ZH_NAMES
 
 WEB = Path(__file__).resolve().parents[1] / "web" / "src" / "data" / "roster.ts"
 
@@ -22,3 +22,6 @@ def test_the_web_roster_is_the_sims():
         )
     }
     assert clubs == CLUBS
+    block = text[text.index("export const ZH_NAMES") :]
+    block = block[: block.index("};")]
+    assert dict(re.findall(r'^\s+(\w+): "([^"]+)",$', block, re.M)) == ZH_NAMES

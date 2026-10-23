@@ -205,7 +205,9 @@ function Question({
       onClick={() => controls.askWhatIf(option.action)}
     >
       {renameIds(option.question[lang])}
-      {option.factual && <span className="did">{lang === "zh" ? "他的选择" : "what he did"}</span>}
+      {option.factual && (
+        <span className="did">{lang === "zh" ? "他实际的选择" : "what he did"}</span>
+      )}
     </button>
   );
 }

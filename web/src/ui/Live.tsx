@@ -89,7 +89,10 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
           {/* a hero moment streams one possession: "match over" would oversell it */}
           {status === "ended" && kind === "hero" ? "stream ended" : STATUS[status]}
           {live && sprint.length > 0 && (
-            <span className="sprint"> · sprinting {sprint.map(shortName).join(", ")}</span>
+            <span className="sprint">
+              {" "}
+              · sprinting {sprint.map((id) => shortName(id)).join(", ")}
+            </span>
           )}
         </span>
       )}
