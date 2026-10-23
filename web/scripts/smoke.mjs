@@ -952,8 +952,9 @@ async function coldLoad(page, shoot) {
   await shoot(`at-${took}s`);
 }
 
-/** The quick tour (SPEC 7): four steps, each card on screen with no sideways scroll; the look in
- * his eyes, the run without it, the board, then Your call, which Done leaves open. */
+/** The quick tour (SPEC 7): five steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, the Verifier refusing a wrong number, then Your call,
+ * which Done leaves open. */
 async function quickTour(page, shoot) {
   const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 5/ });
   const expect = [

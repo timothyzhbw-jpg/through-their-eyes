@@ -321,6 +321,7 @@ describe("the quick tour", () => {
       "The tour typed this wrong value to show the check.",
     );
     expect(textOf(document.querySelector(".tamper-result.held"))).toContain("The tour set");
+    expect(textOf(document.querySelector(".tamper-reason"))).toContain("Verifier");
     const stage = container.querySelector(".stage")!;
     expect(stage.querySelector("section.evidence")).not.toBeNull();
     expect(stage.querySelector(".tour-home")).toBeNull();
