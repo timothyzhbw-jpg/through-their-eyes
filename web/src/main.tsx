@@ -8,6 +8,8 @@
 // ?match=match-1 plays another match the service serves (data/load.ts matchFromUrl).
 // ?camera=broadcast starts on the broadcast camera, focused (for filming).
 // ?cine=1 is a full-screen capture view for filming the demo (SPEC 10), never linked from the app.
+// ?studio=1 is the Stadium Screen Studio (stadium/), offline from the bundled files; &wall=1 opens
+// its flat Screen wall without the 3D stadium.
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -31,6 +33,7 @@ import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
+  if (new URLSearchParams(window.location.search).get("studio") === "1") return studio(root);
   const parsed = parseDeepLink(window.location.search);
   // "Your view" (personal/): the address over what an earlier visit saved, then kept up to date.
   const chosen = mergeChoices(parsed, readSaved());
@@ -167,6 +170,29 @@ async function main() {
     root.render(
       <p className="load-error">
         Could not load the match data: {err instanceof Error ? err.message : String(err)}
+      </p>,
+    );
+  }
+}
+
+/** The Stadium Screen Studio: its own page, from the bundled files only (no live service). */
+async function studio(root: ReturnType<typeof createRoot>) {
+  root.render(<p className="loading">Loading the studio…</p>);
+  try {
+    // The screens' canvases are drawn with the web fonts: wait for them (briefly).
+    const fonts = Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+    const [{ StudioApp, loadStudio }] = await Promise.all([import("./stadium/StudioApp"), fonts]);
+    const show = await loadStudio(`${import.meta.env.BASE_URL}data/`);
+    const wallOnly = new URLSearchParams(window.location.search).get("wall") === "1";
+    root.render(
+      <StrictMode>
+        <StudioApp show={show} wallOnly={wallOnly} />
+      </StrictMode>,
+    );
+  } catch (err) {
+    root.render(
+      <p className="load-error">
+        Could not load the studio: {err instanceof Error ? err.message : String(err)}
       </p>,
     );
   }

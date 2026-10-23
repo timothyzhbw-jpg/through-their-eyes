@@ -1,0 +1,241 @@
+/* Stadium Screen Studio (StudioApp.tsx): a page of its own, in the app's night palette. No blur,
+   no flashing: screens change by a slow dip (show.ts) or a cut. */
+
+.studio {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px var(--gutter) 64px;
+  display: grid;
+  gap: 32px;
+}
+
+.studio-head {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.studio-head h1 {
+  margin: 8px 0 12px;
+  font: 300 40px/1.1 var(--font-display);
+}
+.studio-head .lede {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--chalk-2, var(--chalk));
+}
+
+.studio h2 {
+  margin: 0 0 12px;
+  font: 400 24px/1.2 var(--font-display);
+}
+
+.studio-timeline {
+  display: grid;
+  gap: 14px;
+}
+.studio-controls {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.studio-scrub {
+  flex: 1 1 280px;
+  display: flex;
+}
+.studio-scrub input {
+  width: 100%;
+  accent-color: var(--floodlight);
+}
+.studio-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.studio-event {
+  appearance: none;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  text-align: left;
+  background: rgba(239, 237, 229, 0.05);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+.studio-event .name {
+  font: 600 15px/1.2 var(--font-body);
+}
+.studio-event .tag {
+  font: 500 11px/1.2 var(--font-data);
+  color: var(--chalk-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.studio-event[aria-current="step"] {
+  box-shadow: inset 0 0 0 2px var(--floodlight);
+}
+.studio-event.on-screen {
+  background: rgba(246, 213, 102, 0.12);
+}
+.studio-note {
+  margin: 0;
+  color: var(--chalk-3);
+}
+.studio-note strong {
+  color: var(--chalk);
+}
+
+.studio-preview {
+  display: grid;
+  gap: 12px;
+}
+.studio-preview-bar {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.studio-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.studio-presets .btn[aria-pressed="true"],
+.studio-preview-bar > .btn[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--floodlight);
+}
+.studio-canvas {
+  position: relative;
+  height: min(62vh, 620px);
+  min-height: 320px;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--night-deep);
+}
+.studio-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: var(--r-tag);
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--chalk);
+  background: rgba(5, 8, 6, 0.82);
+}
+
+/* The Screen wall: each screen at its own aspect. The main board large, the tunnel LED tall
+   beside it, the concourse pair under them, the ribbon across the bottom. */
+.screen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr minmax(90px, 0.24fr);
+  grid-template-areas:
+    "main main tunnel"
+    "ca cb tunnel"
+    "ribbon ribbon ribbon";
+  gap: 16px;
+  align-items: start;
+}
+.wall-screen {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.wall-screen[data-screen="main"] {
+  grid-area: main;
+}
+.wall-screen[data-screen="tunnel"] {
+  grid-area: tunnel;
+}
+.wall-screen[data-screen="ribbon"] {
+  grid-area: ribbon;
+}
+.wall-screen[data-screen="concourse-a"] {
+  grid-area: ca;
+}
+.wall-screen[data-screen="concourse-b"] {
+  grid-area: cb;
+}
+.wall-canvas {
+  width: 100%;
+  background: #050806;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--hairline-strong);
+}
+.wall-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.wall-screen.shape-tall .wall-canvas {
+  max-width: 220px;
+}
+.wall-screen figcaption {
+  display: grid;
+  gap: 2px;
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--chalk-3);
+}
+.wall-screen figcaption .name {
+  font: 600 14px/1.3 var(--font-body);
+  color: var(--chalk);
+}
+.wall-screen figcaption .what {
+  color: var(--floodlight);
+}
+
+.studio-sponsors table {
+  border-collapse: collapse;
+  min-width: 320px;
+}
+.studio-sponsors th,
+.studio-sponsors td {
+  padding: 8px 16px 8px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--hairline);
+}
+.studio-sponsors td:last-child {
+  font-family: var(--font-data);
+}
+.studio-demo {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 4px 10px;
+  border-radius: var(--r-tag);
+  font: 600 12px/1.4 var(--font-data);
+  color: var(--ink);
+  background: var(--dusk);
+}
+.studio-small {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--chalk-3);
+}
+
+@media (max-width: 760px) {
+  .studio-head {
+    flex-direction: column;
+  }
+  .studio-head h1 {
+    font-size: 30px;
+  }
+  .screen-grid {
+    grid-template-columns: 1fr minmax(80px, 0.3fr);
+    grid-template-areas:
+      "main tunnel"
+      "ca tunnel"
+      "cb tunnel"
+      "ribbon ribbon";
+  }
+}

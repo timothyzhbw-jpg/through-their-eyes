@@ -63,6 +63,7 @@ Deep links for the README's tour for judges, and for testing and filming
 | `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                                                    |
 | `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                                         |
 | `cine`     | `1`                                                             | filming the demo video only (`src/cine/`, SPEC 10), never linked: the 3D view full screen with no UI, driven by `window.__cine`                                                                                                                 |
+| `studio`   | `1`                                                             | the Stadium Screen Studio (`src/stadium/README.md`): the bowl's screens on an event timeline, offline from the bundled files; `wall=1` shows the flat Screen wall without the 3D stadium                                                        |
 
 A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
@@ -281,6 +282,8 @@ src/
   cine/       filming mode for the demo video (`?cine=1`, never linked): a full-screen 3D view a
               script drives frame by frame through `window.__cine` (shot spec, cameras, post)
   producer/   the Producer's failure drill: take agents down, bring them back, step sources
+  stadium/    the Stadium Screen Studio (`?studio=1`): screen formats, content, the rules engine,
+              the 3D preview and the Screen wall
   ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
               transport + timeline, caption + evidence card, the story's chapters, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
