@@ -11,9 +11,9 @@
 > re-simulates the moment without the look that made the play: over 40 held-out seeds,
 > <!--num:H1.k-->33<!--/num--> decide differently.
 
-**Every line the crew says is checked before it airs.** In an offline stress test, with the
-Verifier all <!--num:V1-->2,837 of 2,837<!--/num--> deliberately broken lines were kept off the air; without it,
-<!--num:V1.aired-->2,823<!--/num--> aired, <!--num:V1.false-->888<!--/num--> of them false ([crew_evidence](eval/reports/crew_evidence.md)).
+**Every line the crew says is checked before it airs.** Of <!--num:V1.total-->2,837<!--/num--> deliberately broken
+lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired,
+<!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
 Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
 tactics cards, five audiences, and English and Chinese.
 
@@ -87,9 +87,8 @@ rejected: [corruption](eval/reports/corruption.md)).
   overlays arrive as timecoded cues a graphics engine can render.
 - **Coaches and academies.** The [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
   asks the trainee where to look before the ball arrives, then shows what that look would have
-  caught. Jordet et al. (2020) link scanning before receiving to a small gain in pass completion
-  in Premier League players ([REFERENCES](docs/REFERENCES.md#perception-and-scanning)). That is an
-  association in match data; we have not tested whether the drill changes anyone's scanning.
+  caught. What the research does and does not show about scanning is in
+  [SUBMISSION, Who uses it](docs/SUBMISSION.md#who-uses-it).
 - **Blind and low-vision fans.** The audio description audience we ship: where he got the ball,
   which way he looked and whom he saw, as verified lines in calm, slower speech, with large-print
   captions and named controls ([ACCESSIBILITY](docs/ACCESSIBILITY.md)).
@@ -250,7 +249,6 @@ the deployed service. Nothing has been run on real tracking data.
 | The demo survives quota loss | A per-client rate limit, a daily model cap and a content-hash cache, with deterministic templates behind them: past a limit the API serves the cached result or the template, flagged | [OPERATIONS](docs/OPERATIONS.md#when-a-quota-runs-out) |
 | Laws-of-the-Game audit | Offside, the ball over a line, restarts and keeper handling are checked in every run: <!--num:A6-->0<!--/num--> unpunished breaches | [laws](eval/reports/laws.md) |
 | Held-out seeds | Every hero gate is tuned on design seeds and reported on others: the scan hero <!--num:H1-->33/40<!--/num-->, the pressure hero's lens <!--num:H3-->40/40<!--/num-->, the corner hero <!--num:H7-->37/40<!--/num--> | [Evidence](#evidence) |
-| Tests | pytest, vitest and smoke-page counts on the submitted commit: TODO(freeze) | [NUMBERS](docs/NUMBERS.md) D3 |
 
 ## Limitations
 - **Synthetic data only.** Nothing has been run on real tracking data, which the hackathon rules
@@ -313,11 +311,11 @@ live at 1×. The [diagram](docs/architecture.svg) shows how the stages meet the 
 
 | Stage | Module | One concrete thing it does |
 |---|---|---|
-| Ingest | `sim/`, `api/` | the simulator makes 22 fictional players at 25 Hz with head and body yaw; the API replays them over a WebSocket at 1× |
+| Ingest | `sim/`, `api/` | the simulator makes every fictional player's tracking, with head and body yaw; the API replays them over a WebSocket at 1× |
 | Interpret | `analytics/` | a scan detector reads head yaw alone and finds each look; blind-side alerts flag a runner he has not seen |
 | Explain | `explain/` | re-simulates a moment with one look removed and turns the result into claims a deterministic Verifier checks |
 | Render | `web/` | first-person replay through his eyes, and a GPU pitch-control overlay on the tactical board |
-| Personalize | `agents/` | a crew writes the breakdown for five audiences in English or Chinese; Azure AI Speech voices it |
+| Personalize | `agents/` | a crew writes the breakdown for each audience in English or Chinese; Azure AI Speech voices it |
 
 ## Layout
 Each package's README covers what it does, its modules and data flow, the invariants it keeps
