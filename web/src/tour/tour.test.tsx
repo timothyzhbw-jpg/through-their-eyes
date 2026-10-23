@@ -37,6 +37,8 @@ import { intro } from "../ui/intro";
 import { IntroCard } from "../ui/IntroCard";
 import { withoutLookOf } from "../without/without";
 import { yourCallOf } from "../yourcall/controller";
+import { wrongNumber } from "../tamper/tamper";
+import { tourClaim } from "./actions";
 import { resolveSteps, envOf, targetOf, QUICK_STEPS, STEPS } from "./steps";
 import { recapFixture } from "../recap/fixture";
 import { closeTour, startTour, tour } from "./tourState";
@@ -293,6 +295,43 @@ describe("the quick tour", () => {
     await quick();
     expect(tour.get().open).toBe(false);
     expect(document.querySelector(".tour")).toBeNull();
+  });
+
+  it("types a wrong number and shows the Verifier refusing it, once per arrival", async () => {
+    const { session, fetch } = online();
+    const container = mount(session);
+    await act(async () => {
+      startTour("verify", "quick");
+      await settle();
+    });
+    expect(stepId()).toBe("verify");
+    expect(document.querySelector("section.evidence")).not.toBeNull();
+    const pick = tourClaim(session.breakdown.get().narration);
+    expect(pick?.slot).toBeTruthy();
+    expect(pick?.value).not.toBeNull();
+    const verifies = () => fetch.calls.filter((c) => c.path === "/api/verify");
+    expect(verifies()).toHaveLength(1);
+    expect(verifies()[0].body).toMatchObject({
+      claim: pick!.claim,
+      slot: pick!.slot,
+      value: wrongNumber(pick!.value!),
+    });
+    expect(document.querySelector(".tamper-result.held")).not.toBeNull();
+    expect(textOf(document.querySelector(".tamper-note.by-tour"))).toBe(
+      "The tour typed this wrong value to show the check.",
+    );
+    expect(textOf(document.querySelector(".tamper-result.held"))).toContain("The tour set");
+    const stage = container.querySelector(".stage")!;
+    expect(stage.querySelector("section.evidence")).not.toBeNull();
+    expect(stage.querySelector(".tour-home")).toBeNull();
+
+    // Back closes the evidence card; Next opens it and asks again, and the refusal is back.
+    await click(buttonIn(card(), "Back"));
+    expect(document.querySelector("section.evidence")).toBeNull();
+    await next();
+    expect(stepId()).toBe("verify");
+    expect(verifies()).toHaveLength(2);
+    expect(document.querySelector(".tamper-result.held")).not.toBeNull();
   });
 });
 

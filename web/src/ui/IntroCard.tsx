@@ -146,7 +146,7 @@ function OpenIntroCard() {
             className="btn btn-primary"
             ref={primary}
             onClick={start}
-            title={quick ? "A quick tour in four steps" : undefined}
+            title={quick ? "A quick tour in five steps" : undefined}
           >
             Start
             <ArrowIcon />
