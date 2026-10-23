@@ -74,6 +74,8 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
 - Randomness is keyed per `(match_seed, entity_id, purpose)` — never one shared sequential stream
   (SPEC §3.7), so counterfactuals differ only through the intervention.
   Decisions are sampled with Gumbel-max over keyed per-option noise (SPEC §3.5).
+  Committed generated artifacts are canonical on linux/amd64 with numpy's X86_V4 tier disabled
+  (`NPY_DISABLE_CPU_FEATURES`, `tests/canonical.py`; CI, the regen script and the API image set it).
 - SI units. Pitch 105 × 68 m, origin at the centre spot. 25 Hz frames. Angles in radians
   internally, degrees only in the UI.
 - Every analytics kernel has a numpy reference + unit tests; GLSL versions must match the
