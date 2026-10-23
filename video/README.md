@@ -223,7 +223,7 @@ it as `<file>.hash`, has not changed. `--force` ignores the hashes.
 | `assets` | download each entry of `assets.json` and check its sha256 | `<out>/assets/<id>.<ext>` |
 | `capture` | record the capture shots the beats use, via `capture.mjs`, unless the WebM is already in `out/video/` | the capture kit's own files in `out/video/` |
 | `cine` | render each cine shot in one Chromium | `<out>/cine/<id>.mp4` |
-| `pin` | corner-pin a cine shot onto a screen in a rendered clip (`pins`: the coach's tablet), with `video/pin.py` (numpy): per frame the screen's corners and matte, mapped so the last frame equals the shot full frame | `<out>/pins/<id>.mp4` |
+| `pin` | corner-pin a cine shot (`source.cine`) or a capture of the app (`source.capture`) onto a screen in a rendered clip (`pins`: the coach's tablet), with `video/pin.py` (numpy): per frame the screen's corners and matte, mapped so the last frame equals that picture full frame | `<out>/pins/<id>.mp4` |
 | `titles` | fill slots, then render each title card | `<out>/titles/<id>.mov` (alpha) or `.mp4` |
 | `vo` | build SSML and synthesize the lines whose SSML changed | `<out>/vo/<id>.wav` and `.ssml` |
 | `sfx` | synthesize each effect the beats name | `<out>/sfx/<name>.wav` |

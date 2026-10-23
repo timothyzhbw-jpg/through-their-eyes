@@ -202,7 +202,8 @@ async function stepAssets(ctx) {
 
 /**
  * Corner-pin a picture onto a screen in a rendered clip (video/pin.py): the coach's tablet shows
- * a cine shot, mapped so its last frame matches that shot full frame. Output: <out>/pins/<id>.mp4.
+ * a cine shot or a capture of the app, mapped so its last frame matches that picture full frame.
+ * Output: <out>/pins/<id>.mp4.
  */
 async function stepPin(ctx) {
   const pins = ctx.spec.pins ?? [];
@@ -217,7 +218,9 @@ async function stepPin(ctx) {
     const clip = path.resolve(ctx.root, pin.clip);
     const corners = path.resolve(ctx.root, pin.corners);
     const matte = path.resolve(ctx.root, pin.matte);
-    const source = path.join(ctx.outDir, "cine", `${pin.source.cine}.mp4`);
+    const source = pin.source.capture
+      ? path.join(ctx.finalsDir, `${pin.source.capture}.webm`)
+      : path.join(ctx.outDir, "cine", `${pin.source.cine}.mp4`);
     for (const f of [clip, corners, matte, source]) {
       if (!existsSync(f)) throw new Error(`pin ${pin.id}: missing ${path.relative(ctx.root, f)}`);
     }

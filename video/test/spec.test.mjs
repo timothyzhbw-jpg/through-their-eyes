@@ -230,5 +230,17 @@ test("naming: names swaps the named lines (with their own ids) and titles; ids l
   for (const key of Object.keys(real.named.titles)) {
     if (named.titles[key]) assert.doesNotMatch(JSON.stringify(named.titles[key].params), ids, key);
   }
-  assert.equal(named.titles["nc-a11"].params.role, real.titles["nc-a11"].params.role); // merged, not replaced
+  assert.equal(named.titles["nc-h8"].params.role, real.titles["nc-h8"].params.role); // merged, not replaced
+});
+
+test("a pin takes its picture from a cine shot or a capture shot", () => {
+  const pin = { id: "tablet", clip: "out/video/blender/bs2c.mp4", corners: "c.json", matte: "m" };
+  const spec = clone();
+  spec.pins = [{ ...pin, source: { capture: "22-board-blind" } }, { ...pin, id: "tablet2", source: { capture: "99-nope" } }];
+  const { errors } = check(spec);
+  assert.ok(!errors.some((e) => e.startsWith("pins[0]")), errors.join("\n"));
+  assert.ok(
+    errors.includes("pins[1]: source must name a cine shot (source.cine) or a capture shot (source.capture)"),
+    errors.join("\n"),
+  );
 });
