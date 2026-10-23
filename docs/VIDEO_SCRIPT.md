@@ -68,62 +68,62 @@ last frame is the board full frame: the cut is exact.
 |---|---:|---|---|---|
 | 0:00.00 | 1.633 | s0-eyes (his eyes on the ball, story 0.3 → 1.933) | story (Blender, dramatisation) | Kid: Give it to me! |
 | 0:01.63 | 1.1 | s1a-ots · name card YOU ARE No. 14 | story (Blender, dramatisation) |  |
-| 0:02.40 | 0.966 | s1c-steal | story (Blender, dramatisation) |  |
-| 0:03.37 | 0.867 | s1d-fall | story (Blender, dramatisation) | Coach: You watched the ball. You missed the game. |
-| 0:04.23 | 2.3 | card-watched · YOU WATCHED THE BALL. / YOU MISSED THE GAME. | card |  |
-| 0:06.53 | 1.2 | s2-ots | story (Blender, dramatisation) | Coach: Before the ball arrives, know what's around you. |
-| 0:07.73 | 1.6 | s2-push | story (Blender, dramatisation) |  |
-| 0:09.33 | 1.2 | board | app |  |
-| 0:10.53 | 1.1 | card-vision · GET YOUR VISION. | card | Coach: Get your vision. |
-| 0:11.63 | 3 | a1-pov · SEE WHAT THEY SAW. | in-engine | Replays show where the ball went… never what the player saw. |
-| 0:14.63 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
-| 0:15.98 | 3.1 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
-| 0:19.08 | 0.3 | bl01c | Blender |  |
-| 0:19.38 | 0.45 | rw1 | Blender | Here's what he saw. |
-| 0:19.83 | 0.3 | bl02a | Blender |  |
-| 0:20.13 | 3.6 | bl02b | Blender |  |
-| 0:23.73 | 2.6 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
-| 0:26.33 | 1.8 | st-scan · SCAN · DETECT | app |  |
-| 0:28.13 | 1.9 | st-decision · DECISION · EXECUTE | app | And he knows where his man is. |
-| 0:30.03 | 3.4 | toggle · WITHOUT THAT LOOK… | app | Take that look away, and re-run the match. |
-| 0:33.43 | 0.2 | board-rewind | app |  |
-| 0:33.63 | 1.15 | rw2 | Blender |  |
-| 0:34.78 | 2.6 | bl03 · HE PLAYS IT BACK TO H4. | Blender |  |
-| 0:37.38 | 2.4 | st-nolook · WITHOUT THE LOOK / NO SCAN. NO PICTURE. NO TIME. | app |  |
-| 0:39.78 | 2.8 | card-scan · SCAN EARLY. / DECIDE EARLY. | card | Coach: Scan early. Decide early. |
-| 0:42.58 | 1.4 | same · THE SAME VISION (UNDER PRESSURE · AT A CORNER) | card |  |
-| 0:43.98 | 1.3 | press-a | in-engine (Blender candidate in the edit cut) |  |
-| 0:45.28 | 1.8 | press-b | in-engine (Blender candidate in the edit cut) | Under a high press… |
-| 0:47.08 | 3 | press-cf · IF HE KEPT THE BALL · THE PRESS WINS IT. | in-engine (Blender candidate in the edit cut) | make him keep the ball, and the press wins it. |
-| 0:50.08 | 1.2 | press-app | app |  |
-| 0:51.28 | 1.5 | corner-a | app (Blender candidate in the edit cut) | At a corner, it's the marker who has to look. |
-| 0:52.78 | 0.9 | corner-look | app (Blender candidate in the edit cut) |  |
-| 0:53.68 | 1.35 | corner-app | app |  |
-| 0:55.03 | 2.25 | eyes-drag · TAKE HIS EYES | app | Take his eyes yourself. |
-| 0:57.28 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
-| 0:58.78 | 1.5 | eyes-result | app |  |
-| 1:00.28 | 3 | yc-decide | app | Your call. You only know what he knew. |
-| 1:03.28 | 3.6 | yc-truth | app | He saw the run. Would you? |
-| 1:06.88 | 1.4 | crew | card | Behind every replay, a crew of agents. |
-| 1:08.28 | 1.6 | crew-trace | app |  |
-| 1:09.88 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
-| 1:13.48 | 3.5 | wrong | app | Try a wrong number… and it never airs. |
-| 1:16.98 | 2 | redcard · TELESTRATOR DOWN | app | Take an agent down… |
-| 1:18.98 | 2.6 | bringback | app | bring it back, and it picks up where it left off. |
-| 1:21.58 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
-| 1:24.38 | 1.3 | zh · 中文 | app |  |
-| 1:25.68 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
-| 1:28.18 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
-| 1:30.18 | 1 | s4a-pov | story (Blender, dramatisation) |  |
-| 1:31.18 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
-| 1:33.22 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
-| 1:35.02 | 1 | s4d-strike | story (Blender, dramatisation) |  |
-| 1:36.02 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
-| 1:37.52 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
-| 1:38.52 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
-| 1:40.52 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
+| 0:02.73 | 0.966 | s1c-steal | story (Blender, dramatisation) |  |
+| 0:03.70 | 0.867 | s1d-fall | story (Blender, dramatisation) | Coach: You watched the ball. You missed the game. |
+| 0:04.57 | 2.3 | card-watched · YOU WATCHED THE BALL. / YOU MISSED THE GAME. | card |  |
+| 0:07.07 | 1.2 | s2-ots | story (Blender, dramatisation) | Coach: Before the ball arrives, know what's around you. |
+| 0:08.27 | 1.6 | s2-push | story (Blender, dramatisation) |  |
+| 0:09.87 | 1.2 | board | app |  |
+| 0:11.07 | 1.1 | card-vision · GET YOUR VISION. | card | Coach: Get your vision. |
+| 0:12.17 | 3 | a1-pov · SEE WHAT THEY SAW. | in-engine | Replays show where the ball went… never what the player saw. |
+| 0:15.17 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
+| 0:16.52 | 3.1 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
+| 0:19.62 | 0.3 | bl01c | Blender |  |
+| 0:19.92 | 0.45 | rw1 | Blender | Here's what he saw. |
+| 0:20.37 | 0.3 | bl02a | Blender |  |
+| 0:20.67 | 3.6 | bl02b | Blender |  |
+| 0:24.27 | 2.6 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
+| 0:26.87 | 1.8 | st-scan · SCAN · DETECT | app |  |
+| 0:28.67 | 1.9 | st-decision · DECISION · EXECUTE | app | And he knows where his man is. |
+| 0:30.57 | 3.4 | toggle · WITHOUT THAT LOOK… | app | Take that look away, and re-run the match. |
+| 0:33.97 | 0.2 | board-rewind | app |  |
+| 0:34.17 | 1.15 | rw2 | Blender |  |
+| 0:35.32 | 2.6 | bl03 · HE PLAYS IT BACK TO H4. | Blender |  |
+| 0:37.92 | 2.4 | st-nolook · WITHOUT THE LOOK / NO SCAN. NO PICTURE. NO TIME. | app |  |
+| 0:40.32 | 2.8 | card-scan · SCAN EARLY. / DECIDE EARLY. | card | Coach: Scan early. Decide early. |
+| 0:42.62 | 1.4 | same · THE SAME VISION (UNDER PRESSURE · AT A CORNER) | card |  |
+| 0:44.02 | 1.3 | press-a | in-engine (Blender candidate in the edit cut) |  |
+| 0:45.32 | 1.8 | press-b | in-engine (Blender candidate in the edit cut) | Under a high press… |
+| 0:47.12 | 3 | press-cf · IF HE KEPT THE BALL · THE PRESS WINS IT. | in-engine (Blender candidate in the edit cut) | make him keep the ball, and the press wins it. |
+| 0:50.12 | 1.2 | press-app | app |  |
+| 0:51.32 | 1.5 | corner-a | app (Blender candidate in the edit cut) | At a corner, it's the marker who has to look. |
+| 0:52.82 | 0.9 | corner-look | app (Blender candidate in the edit cut) |  |
+| 0:53.72 | 1.35 | corner-app | app |  |
+| 0:55.07 | 2.25 | eyes-drag · TAKE HIS EYES | app | Take his eyes yourself. |
+| 0:57.32 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
+| 0:58.82 | 1.5 | eyes-result | app |  |
+| 1:00.32 | 3 | yc-decide | app | Your call. You only know what he knew. |
+| 1:03.32 | 3.6 | yc-truth | app | He saw the run. Would you? |
+| 1:06.92 | 1.4 | crew | card | Behind every replay, a crew of agents. |
+| 1:08.32 | 1.6 | crew-trace | app |  |
+| 1:09.92 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
+| 1:13.52 | 3.5 | wrong | app | Try a wrong number… and it never airs. |
+| 1:17.02 | 2 | redcard · TELESTRATOR DOWN | app | Take an agent down… |
+| 1:19.02 | 2.6 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:21.62 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
+| 1:24.42 | 1.3 | zh · 中文 | app |  |
+| 1:25.72 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
+| 1:28.22 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
+| 1:30.22 | 1 | s4a-pov | story (Blender, dramatisation) |  |
+| 1:31.22 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
+| 1:33.25 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
+| 1:35.05 | 1 | s4d-strike | story (Blender, dramatisation) |  |
+| 1:36.05 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
+| 1:37.55 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
+| 1:38.55 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
+| 1:40.55 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
 
-Total 107.02 s. The score session composes to the cue sheet generated from this spec.
+Total 107.05 s. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 
