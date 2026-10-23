@@ -2700,6 +2700,9 @@ reported to be Xsens motion capture; animation only): the players' walk
     client per 10 min and 100 a day, so a judge's tour (what-if, drill, bring-back, recap) fits,
     two judges behind one NAT too. A limited drill or bring-back replays the recording of the
     same run, labelled with its time, or runs without the model: never a dead end.
+  - Uptime (`.github/workflows/uptime.yml`): hourly until 2026-11-11, GET requests on cached or
+    static data only (`/health`, `/api/matches`, one moments list, the web root, one `/data/` file),
+    each tried 3 times 30 s apart. A failure opens or updates an `uptime` issue; a green run closes it.
   - Log Analytics has a daily ingestion cap below the free 5 GB/month. An Azure budget alert is set
     at $40 if the offer supports budgets.
 - **Cost estimate** (prices from the Azure Retail Prices API, northcentralus, 2026-10-19; 22 days
