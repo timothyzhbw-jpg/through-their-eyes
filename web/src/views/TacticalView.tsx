@@ -60,6 +60,8 @@ import { RadarLayer } from "../skeleton/RadarLayer";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 import { shortName } from "../data/roster";
+import { FOLLOW_COLOR } from "../personal/highlight";
+import { useFollowedIndex } from "../personal/hooks";
 import { BeatBoardLayer } from "../beat/BeatLayers";
 import { motion } from "../beat/beat";
 
@@ -685,6 +687,7 @@ interface TokensProps {
 }
 
 function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
+  const followed = useFollowedIndex(hero.ids); // "Your view": a steady mint ring (personal/)
   const groups = useRef<(THREE.Group | null)[]>([]);
   const halos = useRef<(THREE.Mesh | null)[]>([]);
   const ticks = useRef<(THREE.Group | null)[]>([]);
@@ -747,6 +750,12 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
                 <mesh rotation-x={lie} renderOrder={LAYER.token + 0.5}>
                   <ringGeometry args={[...GK_BAND, 32]} />
                   <meshBasicMaterial color={kitOf(p).shirt} {...flat} />
+                </mesh>
+              )}
+              {j === followed && (
+                <mesh rotation-x={lie} renderOrder={LAYER.outline}>
+                  <ringGeometry args={[TOKEN_R + 0.3, TOKEN_R + 0.62, 32]} />
+                  <meshBasicMaterial color={FOLLOW_COLOR} {...flat} />
                 </mesh>
               )}
               {outline && (

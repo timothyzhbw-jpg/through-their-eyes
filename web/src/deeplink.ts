@@ -21,7 +21,13 @@
 //                                              or from that one
 //   ?tour=quick|<step id>                      the quick tour (five steps), from its first step
 //                                              or from that one
-//   ?play=eyes                                 open "Take his eyes" (takeeyes/) on his own look;
+//   ?tour=story|<step id>                      the Full story (the journey's five steps, about
+//                                              ninety seconds), from its first step or that one
+//   ?step=event|tactics|your-view|content|value
+//                                              open that step of the journey (journey/): the
+//                                              moment, the Tactics lab, Your view, the content
+//                                              package and stadium screens, the business value
+//   ?play=eyes                                 open "Take his eyes" (takeeyes/) on the hero's own look;
 //                                              with ?match=, on its first hero moment that has
 //                                              a bundled look grid
 //   ?play=steps                                open the scan step-through (steps/) on his first
@@ -33,10 +39,15 @@
 //   ?match=match-1&moment=<scenario>           open that hero moment's breakdown inside the
 //                                              match (corner_blind_side, far_post_finish:
 //                                              the moment links, moments/)
+//   ?team=KES|COR                              follow a club (personal/): its moments first, the
+//                                              board and the summary say so
+//   ?player=<roster id, e.g. H8>               follow a player: ringed in the 3D view and on the
+//                                              board, their moments first
+// (?persona and ?lang above also fill "Your view"; the four are kept in localStorage too.)
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no moment
 // links above the live screen: the framing of the demo video's captures), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
-// (at, run, ask, tamper, play or tour) skips the intro card and opens paused: no live stream,
+// (at, run, ask, tamper, play, tour or step) skips the intro card and opens paused: no live stream,
 // and no breakdown on load unless tamper needs one. Unknown values are ignored and logged.
 // ?cine=1 is for filming the demo video only (cine/, SPEC 10), never linked from the app; main.tsx
 // reads it, this parser does not.
@@ -49,9 +60,11 @@ import type { MomentContext } from "./plan/moment";
 import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
 import { IN_MATCH_MOMENTS } from "./moments/moments";
-import { QUICK_IDS, STEP_IDS } from "./tour/steps";
+import { QUICK_IDS, STEP_IDS, STORY_IDS } from "./tour/steps";
+import { parseStep, type JourneyStep } from "./journey/steps";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
+import { parsePlayer, parseTeam, type Team } from "./personal/follow";
 import { stepThroughOf } from "./steps/controller";
 import { takeEyesOf } from "./takeeyes/controller";
 import { yourCallOf } from "./yourcall/controller";
@@ -74,6 +87,8 @@ export interface DeepLink {
   invalidPlan: boolean; // plan=invalid: load the broken plan to show the template fallback
   persona: Persona | null;
   language: Language | null;
+  team: Team | null; // the club followed (personal/); null: none in the address
+  player: string | null; // the player followed, a roster id
   run: RunName | null;
   view: View | null;
   at: At | null;
@@ -82,6 +97,7 @@ export interface DeepLink {
   play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"; steps: his looks, step by step; drill: the academy drill
   tour: string | null; // the judge tour's step to start at (tour=1: its first)
   moment: string | null; // with a stitched match: the hero moment of this scenario, its breakdown
+  step: JourneyStep | null; // the journey step whose panel opens (journey/)
   rail: boolean; // the moment links above the live screen; rail=0 hides them (filming)
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
@@ -93,6 +109,8 @@ export const NO_LINK: DeepLink = {
   invalidPlan: false,
   persona: null,
   language: null,
+  team: null,
+  player: null,
   run: null,
   view: null,
   at: null,
@@ -101,6 +119,7 @@ export const NO_LINK: DeepLink = {
   play: null,
   tour: null,
   moment: null,
+  step: null,
   rail: true,
   warnings: [],
 };
@@ -127,6 +146,8 @@ export function parseDeepLink(search: string): DeepLink {
   }
   const persona = read("persona", (v) => oneOf(PERSONAS, v));
   const language = read("lang", (v) => oneOf(LANGUAGES, v));
+  const team = read("team", parseTeam);
+  const player = read("player", parsePlayer);
   const run = read("run", (v) => oneOf(RUNS, v));
   const view = read("view", (v) => oneOf(VIEWS, v));
   const at = read("at", parseAt);
@@ -138,9 +159,12 @@ export function parseDeepLink(search: string): DeepLink {
       ? STEP_IDS[0]
       : v === "quick"
         ? QUICK_IDS[0]
-        : oneOf([...STEP_IDS, ...QUICK_IDS] as const, v),
+        : v === "story"
+          ? STORY_IDS[0]
+          : oneOf([...STEP_IDS, ...QUICK_IDS, ...STORY_IDS] as const, v),
   );
   const moment = read("moment", (v) => oneOf(IN_MATCH_MOMENTS, v));
+  const step = read("step", parseStep);
   const spot =
     at !== null ||
     run !== null ||
@@ -148,7 +172,8 @@ export function parseDeepLink(search: string): DeepLink {
     tamper !== null ||
     play !== null ||
     tour !== null ||
-    moment !== null;
+    moment !== null ||
+    step !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
     intro: params.get("intro") !== "0" && !spot,
@@ -156,6 +181,8 @@ export function parseDeepLink(search: string): DeepLink {
     invalidPlan: params.get("plan") === "invalid",
     persona,
     language,
+    team,
+    player,
     run,
     view,
     at,
@@ -164,6 +191,7 @@ export function parseDeepLink(search: string): DeepLink {
     play,
     tour,
     moment,
+    step,
     rail: params.get("rail") !== "0",
     warnings,
   };

@@ -11,7 +11,7 @@
 > re-simulates the moment without the look that made the play: over 40 held-out seeds,
 > <!--num:H1.k-->33<!--/num--> decide differently.
 
-**Every line the crew says is checked before it airs.** In an offline stress test: of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it,
+**Every line the crew says is checked before it airs.** In an offline stress test. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it,
 <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
 Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
 tactics cards, five audiences, and English and Chinese.
@@ -41,6 +41,28 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 
 [The full tour](#the-full-tour) adds your own "What if…?", taking an agent down mid-breakdown,
 and a whole stitched match.
+
+## From event to value
+Under the picture, a bar follows the moment on screen from the pitch to the business, one step
+at a time (arrow keys move along it; on a phone it is a stepper). **Full story** on the bar walks
+one moment through all five.
+
+1. [**Event**](https://ttesite1ff906.z14.web.core.windows.net/?step=event): the moment, with the
+   look and without it, each side told by its verified lines.
+2. [**Tactics**](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics): the Tactics lab,
+   the tactic cards measured on the moment's own synthetic data, each number with its source.
+3. [**Your view**](https://ttesite1ff906.z14.web.core.windows.net/?step=your-view): the audience,
+   the language, and a club or player to follow.
+4. [**Content**](https://ttesite1ff906.z14.web.core.windows.net/?step=content): the content
+   package (highlight, explainer, posts in English and Chinese, data cards) and what the stadium's
+   screens show for the moment.
+5. [**Value**](https://ttesite1ff906.z14.web.core.windows.net/?step=value): the business panel
+   and the stadium's sponsor slots.
+
+**Demo data.** The audience, engagement and sponsor figures in Content and Value are simulated by
+a seeded model, not measured: nobody has watched this app. Each one carries the badge "Demo data:
+simulated audience, not real results". Match facts come from the simulator and are checked by the
+Verifier. Clubs, players and sponsors are all fictional.
 
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show

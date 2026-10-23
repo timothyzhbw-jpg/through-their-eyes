@@ -33,6 +33,7 @@ import {
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
+import { Journey } from "./journey/Journey";
 import { StatsTicker } from "./ui/StatsTicker";
 import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -51,6 +52,8 @@ import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
 import { MomentRail } from "./moments/MomentRail";
+import { TacticsLabPanel } from "./tacticslab/TacticsLab";
+import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
@@ -76,6 +79,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   // quick tour's card takes the moment card's place.
   const touring = useStore(tour, (s) => (s.open ? s.kind : null));
 
+  usePersonalSync(!!onBack); // inside a match: start on the audience and language already chosen
   useEffect(() => startClock(session), [session]);
   useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
   // Closing Your call (Back, Escape, the header pill) returns focus to the live screen's pill.
@@ -157,6 +161,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
               <ScanStepsButton />
               <TakeEyesButton />
               <SoundToggle icon />
+              <YourViewMenu />
               <ViewerMenu />
             </>
           }
@@ -189,8 +194,12 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
               <MomentTitle hero={hero} />
             </h2>
             <p className="lede">{blurbOf(hero)}</p>
+            <YourViewLine />
             <StoryCta />
           </header>
+          {/* Event → Tactics → Your view → Content → Value: the Tactics lab and the content
+              studio are its steps' panels. */}
+          <Journey />
           <div className="below">
             <StoryPanel />
             <TelemetryPanel />
@@ -411,6 +420,7 @@ export function MatchApp({ session, autoplay }: { session: MatchSession; autopla
 function MatchView() {
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
+  usePersonalSync(true);
   useEffect(() => startClock(session), [session]);
   useEffect(
     () => (session.kind === "match" ? bindMatchSound(session.recap.voice, soundEngine) : undefined),
@@ -427,7 +437,12 @@ function MatchView() {
             <MatchPicker />
           </>
         }
-        end={<SoundToggle icon />}
+        end={
+          <>
+            <SoundToggle icon />
+            <YourViewMenu />
+          </>
+        }
         card={
           <>
             <Scoreboard />
@@ -449,10 +464,12 @@ function MatchView() {
             timeline and below; open a hero moment's breakdown to see the decision through the
             player's eyes.
           </p>
+          <YourViewLine />
         </header>
         <div className="below">
           <StatsPanel />
           <RecapPanel />
+          <TacticsLabPanel />
           <MomentsPanel />
         </div>
       </main>
