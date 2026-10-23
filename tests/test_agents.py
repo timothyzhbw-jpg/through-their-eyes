@@ -820,7 +820,7 @@ _SNAPSHOT_LINES = (
     ("casual", "zh", "如果没有那一眼，费里迪会把球传给安纳斯利。", "why", "那一眼", True),
     ("analyst", "en", "J. Ferriday scanned once in the 2 seconds before receiving.", "build", None,
      False),
-    ("analyst", "en", "That look was worth 0.17 in expected threat.", "why", "That look", True),
+    ("analyst", "en", "That look was worth 0.16 in expected threat.", "why", "That look", True),
     ("analyst", "zh", "接球前2秒内，费里迪回头观察了一次。", "build", None, False),
     ("player_fan", "en", "Lovely from him. Before the ball reached him, J. Ferriday looked over "
      "his right shoulder.", "build", "looked over his right shoulder", False),

@@ -15,7 +15,7 @@ from agent_framework import ChatMiddlewareLayer, InMemoryCheckpointStorage
 from agents import prompts
 from agents.context import MomentContext
 from agents.plan import template_plan, validate_plan
-from agents.schemas import DirectorChoice, PlanDraft, anchored_draft_model
+from agents.schemas import DirectorChoice, PlanDraft
 from agents.testing import Call, FakeChatClient, ToolCallingFakeChatClient
 from agents.workflow import breakdown, run_crew
 from eval import crew_vs_single as cvs
@@ -110,7 +110,13 @@ def test_reply_schema_is_the_crews_step_schemas(ctx):
     assert fields["director"].annotation is DirectorChoice
     assert fields["plan"].annotation is PlanDraft
     script = fields["scripts"].annotation.model_fields["casual_en"].annotation
-    crew_voice = anchored_draft_model(list(ctx.supported), "en").model_json_schema()
+    from types import SimpleNamespace
+
+    from agents.workflow import Narration
+
+    narration = Narration.__new__(Narration)
+    narration.crew = SimpleNamespace(ctx=ctx)
+    crew_voice = narration.schema("en", "casual").model_json_schema()  # the persona's own
     assert script.model_fields["pbp"].annotation.model_json_schema() == crew_voice
     assert fields["analyst"].annotation.model_json_schema()["properties"]["headline"]["items"][
         "enum"
