@@ -4,14 +4,13 @@
 // lens: the hero moments first (they open their breakdowns), then every other one folded into a
 // row per kind and lens (those a lens explains first; sprints and the like after).
 
-import { WHAT_IF_FILES } from "../data/load";
 import type { LiveFeed, LiveMoment, LiveState, LiveStatus } from "../live/feed";
-import { scenarioLabel, scenarioMatchId, type MatchMoment, type Possession } from "../match/match";
+import { scenarioLabel, type MatchMoment } from "../match/match";
 import type { MatchSession } from "../match/matchSession";
 import { RecapButton } from "../recap/RecapButton";
 import { useId, useState, type ReactElement } from "react";
 import { useSession, useView } from "../session";
-import { MISSING_RUNS } from "../yourcall/controller";
+import { NO_DECISION } from "../yourcall/controller";
 import { createStore, useStore, type Store } from "../store/store";
 import { Chapter } from "./Chapter";
 import { ChevronIcon } from "./icons";
@@ -272,7 +271,7 @@ function MatchMoments({ session }: { session: MatchSession }) {
         onReplay={() => controls.replayMoment(m)}
         onBreakdown={() => controls.openBreakdown(m)}
         onYourCall={() => controls.openBreakdown(m, "yourcall")}
-        yourCallReason={p ? yourCallReason(p) : MISSING_RUNS}
+        yourCallReason={p ? null : NO_DECISION}
         where={`Possession ${m.possession + 1}${p ? ` · ${scenarioLabel(p.scenario)}` : ""}`}
       />
     );
@@ -349,11 +348,6 @@ function MomentGroupRow({
       )}
     </li>
   );
-}
-
-/** Your call needs every option re-simulated, and those runs are bundled with the what-ifs. */
-function yourCallReason(p: Possession): string | null {
-  return WHAT_IF_FILES[scenarioMatchId(p)] ? null : MISSING_RUNS;
 }
 
 function MatchMomentRow(props: {

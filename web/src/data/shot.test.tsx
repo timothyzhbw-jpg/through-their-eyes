@@ -70,7 +70,7 @@ describe("a placed shot", () => {
   });
 
   it("offers his own shot in Your call as a shot, with the post on its marker", () => {
-    const [own] = callOptions(hero, null);
+    const own = callOptions(hero, null).find((o) => o.factual)!;
     expect(own).toMatchObject({
       action: "shot:far",
       kind: "shot",

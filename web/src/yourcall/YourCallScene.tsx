@@ -16,7 +16,7 @@ import { COLORS, LABEL, getLabelTexture, useRedrawOn } from "../views/scene";
 import { useStore } from "../store/store";
 import { TOKEN_SCALE } from "./camera";
 import type { YourCall } from "./controller";
-import { newPose, poseAt } from "./options";
+import { hasRun, newPose, poseAt } from "./options";
 
 const BODY_CENTRE = 0.755;
 const HEAD_CENTRE = 1.66;
@@ -130,7 +130,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
       if (option) {
         poseAt(hero, option, s.clip.frame, work.a);
         ballAt = [work.a.ball[0], work.a.ball[1]];
-        forced = !option.factual;
+        forced = !option.factual && hasRun(option); // no run: his picture held at the decision
         if (forced) looks.fill("ghost");
       }
     }
@@ -169,7 +169,7 @@ export function YourCallScene({ yc, pose }: { yc: YourCall; pose: THREE.Perspect
     const pick = byAction(s.pick);
     const g = ghostBall.current;
     if (g) {
-      g.visible = s.step === "compare" && !!pick && !pick.factual;
+      g.visible = s.step === "compare" && !!pick && !pick.factual && hasRun(pick);
       if (g.visible && pick) {
         poseAt(hero, pick, Number.MAX_SAFE_INTEGER, work.b);
         g.position.set(work.b.ball[0], 0, -work.b.ball[1]);

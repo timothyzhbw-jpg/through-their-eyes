@@ -353,3 +353,17 @@
     animation: none;
   }
 }
+
+/* The model's rating of the picked option (assessment.ts): one column, so it reads on a phone. */
+.yc-assess dd {
+  overflow-wrap: anywhere;
+}
+.yc-assess dd + dd {
+  margin-top: 2px;
+}
+.yc-assess strong {
+  font: 500 13px/1.4 var(--font-data);
+}
+.yc-outcome-label.none {
+  color: var(--chalk-2, var(--chalk));
+}

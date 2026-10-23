@@ -65,14 +65,19 @@ describe("Your call: his options", () => {
     expect(options[0].factual).toBe(false);
   });
 
-  it("without precomputed what-ifs offers only the runs the export holds", () => {
-    expect(callOptions(hero, null).map((o) => o.action)).toEqual(["pass:H9"]);
+  it("without precomputed what-ifs still lists every option, with a run only where the export holds one", () => {
+    const decision = hero.runs.factual.decision!;
+    const bare = callOptions(hero, null);
+    expect(bare.map((o) => o.action).sort()).toEqual(decision.options.map((o) => o.action).sort());
+    expect(bare.filter((o) => o.run.source !== "none").map((o) => o.action)).toEqual(["pass:H9"]);
     const press = parseHero(pressureExport());
     const pressOptions = callOptions(press, null);
-    expect(pressOptions.map((o) => [o.action, o.run.source]).sort()).toEqual([
-      ["carry", "counterfactual"],
-      ["pass:H9", "factual"],
-    ]);
+    const sources = Object.fromEntries(pressOptions.map((o) => [o.action, o.run.source]));
+    expect(sources["carry"]).toBe("counterfactual");
+    expect(sources["pass:H9"]).toBe("factual");
+    expect(pressOptions.map((o) => o.action).sort()).toEqual(
+      press.runs.factual.decision!.options.map((o) => o.action).sort(),
+    );
   });
 
   it("plays each call from the decision until it is resolved", () => {
