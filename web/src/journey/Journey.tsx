@@ -28,6 +28,7 @@ import { blurbOf } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines } from "../without/WithoutLook";
 import { DemoBadge, FACTS_VS_FIGURES } from "./DemoBadge";
+import { useCachedBreakdown } from "./gate";
 import { journey, openStep } from "./state";
 import { eventIndex, stadiumEventFor, useStadiumShow } from "./stadium";
 import {
@@ -286,6 +287,7 @@ function YourViewPanel() {
 // ---------- Content: the package and the stadium's screens ----------
 
 function ContentPanel() {
+  useCachedBreakdown(); // a cold visit: the moment's cached breakdown, never a new one
   return (
     <Chapter
       className="journey-step journey-content studio"
@@ -364,6 +366,7 @@ function Screens({ show }: { show: Show }) {
 // ---------- Value: the business panel and the sponsor slots ----------
 
 function ValuePanel() {
+  useCachedBreakdown();
   const show = useStadiumShow();
   return (
     <Chapter

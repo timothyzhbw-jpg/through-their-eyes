@@ -21,6 +21,15 @@
   max-width: 62ch;
   color: var(--chalk-2);
 }
+.lab-measured {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  font: 400 13px/1.45 var(--font-body);
+  color: var(--chalk-2);
+}
+.lab-zero {
+  font-style: italic;
+}
 .lab-table tbody th {
   min-width: 14em;
 }

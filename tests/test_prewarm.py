@@ -212,3 +212,26 @@ def test_refresh_degraded_keeps_the_old_flag_name():
     for flag in ("--refresh-degraded", "--regenerate-degraded"):
         a = prewarm.parser().parse_args(["--api", "http://x", flag])
         assert a.refresh_degraded is True
+
+
+def test_every_moment_the_web_gate_loads_by_itself_is_one_the_prewarm_serves(tmp_path):
+    """web/src/journey/gate.tsx asks for a breakdown with no click only for the scenarios of
+    web/src/moments/moments.ts; the pre-warm fills the hero moments of every served match, so each
+    of those scenarios must be served as a match or as a possession of one."""
+    import re
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parent.parent / "web/src/moments/moments.ts"
+    scenarios = set(re.findall(r'^\s*scenario: "(\w+)",', src.read_text(), re.M))
+    assert scenarios >= {"blind_side_run", "press_escape", "corner_blind_side", "far_post_finish"}
+    fresh = Settings(cache_dir=tmp_path, web_origin="*", analyst_mcp=False)
+    with TestClient(create_app(fresh, client=None, model_id="fake-model")) as c:
+        served: set[str] = set()
+        for m in c.get("/api/matches").json():
+            info = c.get(f"/api/matches/{m['id']}").json()
+            if info.get("kind") == "hero":
+                served.add(m["id"].rsplit("-", 1)[0])
+            else:
+                export = c.get(f"/api/matches/{m['id']}/export").json()
+                served |= {p["scenario"] for p in export["match"]["possessions"]}
+    assert scenarios <= served, scenarios - served

@@ -21,6 +21,7 @@ import {
   type Metric,
 } from "./cards";
 import { lanesAt, laneCounts, OPEN_P, type Lane } from "./lanes";
+import { CARD_SCENARIO, loadScope, missingScenarios, NO_SCOPE, type Scope } from "./scope";
 import { parseXtGrid, type XtGrid } from "./metrics";
 import { boardPlayers, laneEnds, PITCH_LINES, VIEW_BOX } from "./board";
 import { COLORS, teamColor } from "../views/scene";
@@ -56,6 +57,35 @@ export function useXtGrid(): XtGrid | Error | null {
   return grid;
 }
 
+const LOADING: Scope = { ...NO_SCOPE, online: true, loading: true };
+const FAILED: Scope = { ...NO_SCOPE, online: true };
+
+/**
+ * The moments the cards measure (scope.ts), asked of the service the page already talks to:
+ * loading while it answers, and only the bundled moment when there is no service.
+ */
+export function useScope(): Scope {
+  const { api, hero } = useView();
+  const missing = missingScenarios(hero);
+  const asks = !!api && missing.length > 0;
+  const [loaded, setLoaded] = useState<Scope | null>(null);
+  useEffect(() => {
+    if (!api || !asks) return;
+    let alive = true;
+    setLoaded(null); // the previous page's scope must not show while this one loads
+    loadScope(api, missing, `${import.meta.env.BASE_URL}data/`).then(
+      (s) => alive && setLoaded(s),
+      () => alive && setLoaded(FAILED),
+    );
+    return () => {
+      alive = false;
+    };
+    // `missing` follows `hero`: one ask per service and page
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, hero, asks]);
+  return asks ? (loaded ?? LOADING) : NO_SCOPE;
+}
+
 const sourceTitle = (m: Metric) =>
   m.sourceNote ? computed(m.sourceNote) : SOURCES[m.source].title;
 
@@ -65,6 +95,11 @@ function MetricRow({ m, split }: { m: Metric; split: boolean }) {
       <th scope="row">
         {m.label}
         <span className="lab-def">{m.definition}</span>
+        {m.zeroWhy && (
+          <span className="lab-def lab-zero" data-zero>
+            {m.zeroWhy}
+          </span>
+        )}
       </th>
       {m.values.map((v, i) => (
         <td key={i} data-team={split ? i : undefined}>
@@ -86,6 +121,9 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
         <p className="kicker">{card.kicker}</p>
         <h3 className="block-title">{card.title}</h3>
         <p className="lab-idea">{card.idea}</p>
+        <p className="lab-measured">
+          <strong>Measured on:</strong> {card.measured}
+        </p>
       </header>
       {card.empty ? (
         <p className="note lab-empty">{card.empty}</p>
@@ -257,17 +295,27 @@ function LaneLine({ lane }: { lane: Lane }) {
 /** `kicker`: the chapter's kicker where the lab is a step of the journey (journey/). */
 export function TacticsLabPanel({
   xt: injected,
+  scope: injectedScope,
   kicker = "Tactics lab",
 }: {
   xt?: XtGrid;
+  scope?: Scope; // tests
   kicker?: string;
 }) {
   const view = useView();
   const loaded = useXtGrid();
   const grid = injected ?? (loaded instanceof Error ? null : loaded);
-  const cards = useMemo(() => buildCards(view.hero, grid), [view.hero, grid]);
+  const asked = useScope();
+  const scope = injectedScope ?? asked;
+  const cards = useMemo(() => buildCards(view.hero, grid, scope), [view.hero, grid, scope]);
   const [picked, setPicked] = useState<CardId>("high_press");
   const card = cards.find((c) => c.id === picked) ?? cards[0];
+  // The board is the Decisions card's moment's: the page's own, or the one loaded for the card;
+  // with no service the bundled moment is all there is.
+  const laneHero =
+    view.hero.kind === "match" || view.hero.scenario === CARD_SCENARIO.decisions
+      ? view.hero
+      : (scope.heroes[CARD_SCENARIO.decisions] ?? (scope.online ? null : view.hero));
   const watch = (frame: number) => {
     window.scrollTo({ top: 0 }); // the replay plays at the top
     view.controls.seek(frame);
@@ -278,7 +326,7 @@ export function TacticsLabPanel({
         className="tactics-lab"
         kicker={kicker}
         title={<Title lead="Why tactics" em="work." />}
-        lede={`Five common tactics, each measured on ${view.hero.kind === "match" ? "this match" : "this moment"}'s own synthetic data. Every number says what it is and where it comes from; every card opens the hero moment that shows it.`}
+        lede={`Five common tactics, each measured on the synthetic data of ${view.hero.kind === "match" ? "this match" : "the moment that shows it"}, and every card says which. Every number says what it is and where it comes from; every card opens the hero moment that shows it.`}
         label="Tactics lab"
       >
         <nav className="pick-row" aria-label="Tactic cards">
@@ -300,7 +348,7 @@ export function TacticsLabPanel({
           </p>
         )}
         <CardView card={card} onWatch={watch} />
-        <LaneBoard hero={view.hero} />
+        {laneHero && <LaneBoard hero={laneHero} />}
         {view.hero.kind === "match" && (
           <p className="note">
             The match has no decision of its own, so there are no lanes here: open a hero moment
