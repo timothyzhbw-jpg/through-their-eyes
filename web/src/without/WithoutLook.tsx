@@ -8,7 +8,7 @@
 //   both passes' ends. The two values on the grid are the verified line's. Every count on the
 //   held-out line is read from hero_gates.json.
 
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Hero } from "../data/hero";
 import type { Narration, PayloadLine } from "../narration/payload";
@@ -19,6 +19,9 @@ import { KindTags, LineText } from "../ui/Narration";
 import type { Language } from "../whatif/whatif";
 import { heroGatesOf, type HeroGate, type HeroGatesState } from "./gates";
 import { withoutLookOf, type WithoutLook, type WithoutLookState } from "./without";
+import { passMoves } from "../xtexplain/moves";
+import { usePersona, XtMoveExplain } from "../xtexplain/XtMoveExplain";
+import { versionFor } from "../xtexplain/zones";
 import "./without.css";
 
 const NONE: Store<WithoutLookState> = createStore<WithoutLookState>({
@@ -260,6 +263,17 @@ function XtExplainer({
     return [{ run, x, y, i, j, value }];
   });
   const ending = (i: number, j: number) => ends.find((e) => e.i === i && e.j === j);
+  const xtValue = ends.find((e) => e.run === "factual")?.value;
+  const cfValue = ends.find((e) => e.run === "counterfactual")?.value;
+  const moves = useMemo(
+    () =>
+      passMoves(hero, w, {
+        xt: xtValue ? Number(xtValue) : null,
+        cfXt: cfValue ? Number(cfValue) : null,
+      }),
+    [hero, w, xtValue, cfValue],
+  );
+  const technical = versionFor(usePersona()) === "concrete";
   // Pitch metres to svg: x from the own goal line, y up (his left when attacking right).
   const sx = (x: number) => (x + LENGTH / 2) * PX;
   const sy = (y: number) => (WIDTH / 2 - y) * PX;
@@ -291,6 +305,7 @@ function XtExplainer({
         <p className="xt-line">
           <LineText text={line.text} verified /> <KindTags narration={narration} line={line} />
         </p>
+        <XtMoveExplain moves={moves} owner="his" valuesFrom="grid" />
         <svg
           className="xt-grid"
           viewBox={`-20 -20 ${LENGTH * PX + 40} ${WIDTH * PX + 40}`}
@@ -341,16 +356,18 @@ function XtExplainer({
             Expected threat (xT) is how much having the ball in a zone raises a team's chance of
             scoring within its next few actions. Brighter zones are worth more.
           </p>
-          <p>
-            Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches. A
-            zone's value is how often play there ends in a shot, times how often such a shot scores,
-            plus how often it moves on, times the value of the zones its completed passes and
-            carries reach (a lost ball is worth nothing): Singh's Markov model, solved by value
-            iteration. Between zone centres the value is read smoothly, so a pass is valued where it
-            ends, not by its zone alone. The difference between the two ends is what the look was
-            worth.
-            {!w.fitted && " This build uses the smooth prior: no fit was cached."}
-          </p>
+          {technical && (
+            <p>
+              Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches.
+              A zone's value is how often play there ends in a shot, times how often such a shot
+              scores, plus how often it moves on, times the value of the zones its completed passes
+              and carries reach (a lost ball is worth nothing): Singh's Markov model, solved by
+              value iteration. Between zone centres the value is read smoothly, so a pass is valued
+              where it ends, not by its zone alone. The difference between the two ends is what the
+              look was worth.
+              {!w.fitted && " This build uses the smooth prior: no fit was cached."}
+            </p>
+          )}
           <p>
             <a
               href="https://github.com/timothyzhbw-jpg/through-their-eyes/blob/main/docs/SPEC.md#45-expected-threat-xt"

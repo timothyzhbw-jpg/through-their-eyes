@@ -15,6 +15,7 @@ import {
 import type { SourceKind } from "../provenance/source";
 import { clock, fixed, signed } from "../tactics/tactics";
 import { shortName } from "../data/roster";
+import { moveOf, type Move } from "../xtexplain/zones";
 import { OPEN_P, laneCounts, lanesAt } from "./lanes";
 import { CARD_SCENARIO, NO_SCOPE, type Scope } from "./scope";
 import {
@@ -81,6 +82,8 @@ export interface LabCard {
   here: boolean;
   /** Where the metrics are told in the moment's own view, if the viewer is on it. */
   watch: Watch | null;
+  /** The progression card's best pass as a move between zones, told per persona (xtexplain/). */
+  xtMove?: Move | null;
   /** Nothing to show in this session: why, and what to open instead. */
   empty: string | null;
 }
@@ -412,6 +415,19 @@ function progression_card(hero: Hero, view: Context): LabCard {
   const best = [home?.best, away?.best]
     .filter((b): b is NonNullable<typeof b> => !!b)
     .sort((a, b) => b.xt - a.xt)[0];
+  const bestTeam = best && home?.best === best ? 0 : 1;
+  const xtMove =
+    best && xt
+      ? moveOf({
+          mode: "pass",
+          team: bestTeam,
+          from: best.from,
+          to: best.to,
+          grid: xt,
+          delta: best.xt,
+          label: `Best pass (${TEAMS[bestTeam]})`,
+        })
+      : null;
   const stat = (f: (p: NonNullable<typeof home>) => string) =>
     each((t) => {
       const p = t ? away : home;
@@ -471,6 +487,7 @@ function progression_card(hero: Hero, view: Context): LabCard {
     moment: link("look"),
     here: view.scenario === "blind_side_run",
     watch: best ? { label: "Watch the best pass", frame: best.frame } : null,
+    xtMove,
     empty: !xt
       ? "The xT grid is loading."
       : events.some((e) => e.type === "pass")

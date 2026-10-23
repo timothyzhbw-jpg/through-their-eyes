@@ -1,0 +1,13 @@
+.xt-explain {
+  margin: 0.6rem 0;
+}
+.xt-explain ul {
+  margin: 0 0 0.4rem;
+  padding-left: 1.1rem;
+}
+.xt-explain li + li {
+  margin-top: 0.3rem;
+}
+.xt-explain.plain {
+  font-size: 1.05em;
+}
