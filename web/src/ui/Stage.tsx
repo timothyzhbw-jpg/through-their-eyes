@@ -742,6 +742,13 @@ function MomentCardBody({
         >
           {label}
         </button>
+        <a
+          className="btn"
+          href="#tactics-lab"
+          title="Why common tactics work, on this moment's data"
+        >
+          Tactics
+        </a>
       </div>
       <FirstTourButton />
     </aside>

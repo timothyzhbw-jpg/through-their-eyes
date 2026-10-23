@@ -1,0 +1,161 @@
+/* The Tactics lab (tacticslab/TacticsLab.tsx, SPEC 7). Data in the mono face; the source chips are
+   the global `.source`. No blur, no animation: a lane's state is told by dash and cross as well
+   as colour. */
+
+.tactics-lab .chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.lab-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lab-tabs .btn[aria-pressed="true"] {
+  background: var(--chalk);
+  color: var(--ink);
+}
+
+.lab-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  border-radius: var(--r-card);
+  background: var(--night-2);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.lab-card h3,
+.lab-board h3 {
+  margin: 0;
+  font: 400 24px/1.2 var(--font-display);
+}
+.lab-idea {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  color: var(--chalk-2);
+}
+.lab-table-wrap {
+  overflow-x: auto;
+}
+.lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 14px/1.4 var(--font-data);
+}
+.lab-table th,
+.lab-table td {
+  padding: 10px 12px 10px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--hairline);
+}
+.lab-table thead th {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.lab-table tbody th {
+  font-weight: 500;
+  color: var(--chalk);
+  min-width: 14em;
+}
+.lab-table td {
+  white-space: nowrap;
+}
+.lab-table td[data-team="0"] {
+  color: var(--home);
+}
+.lab-table td[data-team="1"] {
+  color: var(--away);
+}
+.lab-def {
+  display: block;
+  max-width: 56ch;
+  margin-top: 4px;
+  font: 400 12px/1.45 var(--font-body);
+  color: var(--chalk-3);
+  white-space: normal;
+}
+.lab-source {
+  width: 1%;
+}
+.lab-empty {
+  margin: 0;
+}
+.lab-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lab-chosen {
+  color: var(--floodlight);
+}
+
+.lab-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 20px;
+  border-radius: var(--r-card);
+  background: var(--night-2);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.lab-board figcaption p {
+  margin: 6px 0 0;
+  max-width: 70ch;
+  color: var(--chalk-2);
+}
+.lab-board svg {
+  display: block;
+  width: 100%;
+  max-width: 880px;
+  border-radius: var(--r-board);
+  background: #14271d;
+}
+.lab-pitch {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.25;
+}
+.lab-player text {
+  font: 600 1.5px var(--font-data);
+}
+.lab-ring {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 0.3;
+}
+.lab-line {
+  fill: none;
+  stroke-width: 0.5;
+  stroke-linecap: round;
+}
+.lab-lane[data-state="open"] .lab-line {
+  stroke: var(--detector);
+}
+.lab-lane[data-state="blocked"] .lab-line {
+  stroke: var(--chalk-2);
+  stroke-dasharray: 1.4 1;
+}
+.lab-halo {
+  stroke: #fff;
+  stroke-opacity: 0.4;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.lab-cross {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 0.45;
+  stroke-linecap: round;
+}
+.lab-table.lanes tr[data-state="blocked"] th::before {
+  content: "× ";
+  color: var(--chalk-3);
+}

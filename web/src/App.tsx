@@ -51,6 +51,7 @@ import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
 import { MomentRail } from "./moments/MomentRail";
+import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
@@ -199,6 +200,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
             <WhatIfPanel />
             <NarrationPanel />
             <BreakdownPanel />
+            <TacticsLabPanel />
             <MomentsPanel />
           </div>
         </main>
@@ -452,6 +454,7 @@ function MatchView() {
         <div className="below">
           <StatsPanel />
           <RecapPanel />
+          <TacticsLabPanel />
           <MomentsPanel />
         </div>
       </main>
