@@ -576,6 +576,7 @@ async function burnCaptions(ctx, timeline, joined) {
         start: line.beatStart + line.at,
         duration: existsSync(wav) ? wavSeconds(wav) : 2,
         text: String(line.text ?? "").replace(/\s*\[pause \d+\]\s*/g, " ").trim(),
+        place: line.caption ?? null,
       };
     });
   const cues = captionSides(

@@ -4,7 +4,7 @@
 //
 // Each generator is a function of `dur` seconds (the default is in SFX_DEFAULT_DUR). The
 // recipes are the ones in the trailer brief: heartbeat, hum, whoosh, riser, boom, stamp,
-// slam, whistle, tick, rewind, glitch, shutter, sting, and a ball touch.
+// slam, whistle, tick, rewind, glitch, shutter, sting, a ball touch, and a shoulder impact.
 
 import { writeFileSync } from "node:fs";
 import { encodeWav24 } from "./wav.mjs";
@@ -28,6 +28,7 @@ export const SFX_DEFAULT_DUR = {
   shutter: 0.12,
   sting: 3,
   touch: 0.3,
+  impact: 0.45,
 };
 
 export const SFX_NAMES = Object.keys(SFX_DEFAULT_DUR);
@@ -448,6 +449,27 @@ const GENERATORS = {
     const clickN = Math.min(n, Math.round(0.012 * SR));
     const click = applyBiquad(white(rng, clickN), biquad("lp", 2400, 0.707));
     for (let i = 0; i < clickN; i++) buf[i] += click[i] * Math.exp(-i / (0.003 * SR)) * 0.5;
+    return stereoMono(buf);
+  },
+  // Shoulder meets shoulder: a dull body thud (a low sine falling 95 -> 48 Hz, and low-passed
+  // cloth-and-body noise), a quick scuff of boots on grass and a small breath; felt more than heard.
+  impact(n, dur, rng) {
+    const buf = zeros(n);
+    addSweep(buf, 95, 48, 0.09, 0.11, 1);
+    const body = applyBiquad(pink(rng, n), biquad("lp", 600, 0.707));
+    for (let i = 0; i < n; i++) buf[i] += body[i] * Math.exp(-i / (0.025 * SR)) * 0.9;
+    const at = (s) => Math.round(s * SR);
+    const scuff = applyBiquad(white(rng, n), biquad("bp", 3000, 0.9));
+    for (let i = at(0.03); i < Math.min(n, at(0.15)); i++) {
+      const t = (i - at(0.03)) / SR;
+      buf[i] += scuff[i] * Math.min(1, t / 0.01) * Math.exp(-t / 0.05) * 0.22;
+    }
+    const breath = applyBiquad(white(rng, n), biquad("bp", 1200, 0.8));
+    for (let i = at(0.02); i < Math.min(n, at(0.3)); i++) {
+      const t = (i - at(0.02)) / SR;
+      buf[i] += breath[i] * Math.min(1, t / 0.03) * Math.exp(-t / 0.09) * 0.12;
+    }
+    tanhSat(buf, 1.6);
     return stereoMono(buf);
   },
   sting(n, dur, rng) {

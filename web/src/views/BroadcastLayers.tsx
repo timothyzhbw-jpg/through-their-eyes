@@ -2,7 +2,8 @@
 // the shot, this puts the three.js camera there), the live tags over players (measured stats on
 // the factual run, otherwise the sim's sprint; scans and blind-side alerts), and on the grass
 // rings under the hero (white) and the runner (gold) as on the board, the blind-side lines and,
-// around the decision, the pass options as on the tactical board, and on request the skeleton
+// around the decision, the pass options as on the tactical board, the scan radar (the key scan's
+// player during his key scan; every scanning player with the skeleton) and on request the skeleton
 // (../skeleton/). Grass
 // layers are depth tested so players stand on top of them, like a broadcaster's ground graphics.
 
@@ -23,6 +24,7 @@ import {
 } from "../options/passOptions";
 import { useView } from "../session";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
+import { RadarLayer } from "../skeleton/RadarLayer";
 import { statsStore } from "../stats/store";
 import { useStore } from "../store/store";
 import { cameraPose, shotAt, type BroadcastPath, type Shot } from "./broadcast";
@@ -120,6 +122,7 @@ export function BroadcastLayers({ sample }: { sample: Sample }) {
       <GrassOptions />
       <TagSprites sample={sample} />
       <SkeletonLayer sample={sample} variant="broadcast" />
+      <RadarLayer sample={sample} variant="broadcast" />
     </group>
   );
 }

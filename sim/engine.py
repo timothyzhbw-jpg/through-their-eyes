@@ -24,7 +24,7 @@ import numpy as np
 
 from analytics.tti import time_to_intercept
 from analytics.vision import player_visibility, visibility, wrap_angle
-from sim import laws, shots, team_shape
+from sim import keeper, laws, shots, team_shape
 from sim.ball import BallParams, advance, bounce, path_distances, post_contact
 from sim.config import DT, HALF_LENGTH, HALF_WIDTH, SimParams
 from sim.decision import (
@@ -390,11 +390,22 @@ class Simulation:
     def formation_spots(self) -> np.ndarray:
         """(N, 2) formation spots (SPEC 3.2): with `Scenario.team_shape`, each slot placed in its
         team's block for the ball and the team on it (`sim.team_shape`); else the anchors shifted
-        with the ball."""
+        with the ball, and each keeper on his spot for the ball (`sim.keeper`)."""
         if self.formation is not None:
             return team_shape.spots(self.formation, self.shape_ball, self.possession_team())
         shift = (self.ball_pos[:2] - self.ball_anchor) * np.array(self.params.formation_shift)
-        return self.anchor + shift
+        spots = self.anchor + shift
+        roles = [p.role for p in self.players]
+        for k in np.flatnonzero(np.array(roles) == "GK"):
+            t = int(self.team[k])
+            line = keeper.defensive_line(self.pos, self.team, roles, t)
+            spots[k] = keeper.keeper_spot(self.ball_pos[:2], line, laws.attack_sign(t))
+        return spots
+
+    def _claims(self, k: int, path: np.ndarray, margin: np.ndarray) -> bool:
+        """Whether keeper k gets to the free ball's path first inside his own penalty area."""
+        first = np.flatnonzero(margin <= 0.0)
+        return first.size > 0 and keeper.claims_in_area(path[first[0]], int(self.team[k]))
 
     def possession_team(self) -> int:
         """The team on the ball: the carrier's, else the passer's of a ball in flight, else the
@@ -441,10 +452,13 @@ class Simulation:
             margin = time_to_intercept(self.pos, self.vel, path) - times[None, :]
             passer_team = self.team[self.pass_in_flight["passer"]]
             defenders = np.flatnonzero(self.team != passer_team)
-            if self.scenario.shots or self.formation is not None:
-                # Keepers keep their bisector position or their slot in the area rather than
-                # chasing a passing lane.
-                defenders = np.array([j for j in defenders if self.players[j].role != "GK"])
+            # A keeper keeps his spot rather than chasing a passing lane, unless he can claim the
+            # ball in his own area (`sim.keeper`); with shots on he keeps his bisector set.
+            defenders = np.array([
+                j for j in defenders
+                if self.players[j].role != "GK"
+                or not self.scenario.shots and self._claims(j, path, margin[j])
+            ], dtype=int)  # fmt: skip
             if defenders.size:
                 best = defenders[np.argmin(margin[defenders].min(axis=1))]
                 feasible = np.flatnonzero(margin[best] <= 0.0)

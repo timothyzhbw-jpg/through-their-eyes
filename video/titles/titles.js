@@ -309,6 +309,12 @@
       line.append(stampBox);
       wrap.append(line);
     });
+    // note: one plain line under the checked lines (what a unit means), no number of its own.
+    if (params.note) {
+      const note = el("div", "v-note bebas fx-fade", params.note);
+      setAt(note, lineBase + items.length * stagger);
+      wrap.append(note);
+    }
     stage.append(wrap);
   }
 
@@ -436,6 +442,12 @@
 
   function spec(params) {
     const stage = prepare("free", null);
+    // backdrop: the sheet over a picture (the crew trace), dark on the left where the rows are;
+    // the page drops its own opaque ground so the picture shows through on the right.
+    if (flag(params.backdrop)) {
+      document.documentElement.classList.replace("opaque", "alpha");
+      stage.append(el("div", "spec-backdrop fx-fade"));
+    }
     const sheet = el("div", "sheet");
     const head = el("h1", "spec-head anton fx-slam", params.header || "");
     setAt(head, 0);
@@ -489,6 +501,19 @@
       const url = el("div", "end-url bebas fx-fade", params.url);
       setAt(url, 0.62);
       wrap.append(url);
+    }
+    // qr: the demo's address as a QR code (qrcode-generator, drawn in the page), under cta.
+    if (params.qr && typeof window.qrcode === "function") {
+      const code = window.qrcode(0, "M");
+      code.addData(String(params.qr));
+      code.make();
+      const box = el("div", "end-qr fx-fade");
+      if (params.cta) box.append(el("div", "end-cta bebas", params.cta));
+      const square = el("div", "qr-square");
+      square.innerHTML = code.createSvgTag({ cellSize: 8, margin: 16, scalable: true });
+      box.append(square);
+      setAt(box, 0.62);
+      stage.append(box);
     }
     const lines = list(params.lines, 8);
     if (lines.length) {
@@ -567,7 +592,7 @@
   function caption(params) {
     const stage = prepare("free", null);
     const right = params.side === "right";
-    const box = el("div", right ? "cap cap-right" : "cap");
+    const box = el("div", right ? "cap cap-right" : params.side === "top" ? "cap cap-top" : "cap");
     const line = el("p", "cap-text bebas");
     for (const part of String(params.text || "").split(/(\d+(?:[.,]\d+)?)/)) {
       if (!part) continue;
@@ -576,8 +601,9 @@
     box.append(line);
     stage.append(box);
     const dur = num(params.dur, 2);
-    // The centred box is placed with translateX(-50%), so the rise keeps it.
-    const x = right ? "0" : "-50%";
+    // The centred box is placed with translateX(-50%), so the rise keeps it; the right and top
+    // boxes are placed by their edges.
+    const x = right || params.side === "top" ? "0" : "-50%";
     const rise = [
       { opacity: 0, transform: `translate(${x}, 10px)` },
       { opacity: 1, transform: `translate(${x}, 0)` },

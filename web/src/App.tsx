@@ -53,6 +53,7 @@ import { clubName } from "./data/roster";
 import { MomentRail } from "./moments/MomentRail";
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
+import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
@@ -367,6 +368,7 @@ function LiveScreen(props: {
             <DirectorBar />
           </div>
           <StatsTicker />
+          <StageSkeletonKey />
         </div>
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}

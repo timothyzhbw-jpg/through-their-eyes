@@ -10,7 +10,7 @@ import { SFX_NAMES } from "./sfx.mjs";
 import { estimateSpeechSeconds } from "./vo.mjs";
 
 const GRADES = new Set(["none", "night", "cool", "warm", "bleach", "mono", "danger"]);
-const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue"]);
+const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue", "lift", "warm"]);
 const FITS = new Set(["cover", "pad", "contain"]);
 const TRANSITIONS = new Set(["cut", "fade", "flash", "dip", "whip", "glitch"]);
 const CROPS = new Set(["pov", "tactical", "stage"]);
@@ -196,10 +196,11 @@ function checkTitles(titles, errors) {
     if (!title?.params || typeof title.params !== "object" || Array.isArray(title.params)) {
       errors.push(`${where}: params must be an object`);
     } else {
-      // `url` is the site's address (it may hold digits), not a number claim; `legal` holds credit
-      // lines that a licence requires verbatim (a grant number, say), not claims either.
-      const { url, legal, ...shown } = title.params;
+      // `url` and `qr` are the site's address (it may hold digits), not a number claim; `legal`
+      // holds credit lines that a licence requires verbatim (a grant number, say), not claims either.
+      const { url, qr, legal, ...shown } = title.params;
       if (url != null && typeof url !== "string") errors.push(`${where}: url must be a string`);
+      if (qr != null && !(typeof qr === "string" && /^https:\/\/[^\s]+$/.test(qr))) errors.push(`${where}: qr must be an https address`);
       if (legal != null && !(Array.isArray(legal) && legal.every((line) => typeof line === "string"))) {
         errors.push(`${where}: legal must be a list of strings`);
       }
@@ -433,6 +434,7 @@ function checkVo(beat, where, spec, ctx, voIds, beatStart, planned, errors, warn
     if (!ID.test(String(id))) errors.push(`${where}: vo id "${id}" is not a safe file name`);
     if (voIds.has(id)) errors.push(`${where}: duplicate vo id "${id}"`);
     voIds.add(id);
+    if (line?.caption != null && line.caption !== "top") errors.push(`${where}: vo "${id}" caption must be "top"`);
     if (!(line?.at >= 0)) errors.push(`${where}: vo "${id}" at must be >= 0`);
     else if (beat.dur > 0 && line.at >= beat.dur) {
       warnings.push(`${where}: vo "${id}" starts at ${trim(line.at)}s, outside the beat (${trim(beat.dur)}s)`);

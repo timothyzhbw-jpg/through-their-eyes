@@ -7,7 +7,7 @@ from sim.scenarios.cutback_scan import CutbackScan
 from sim.scenarios.far_post_finish import FarPostFinish
 from sim.scenarios.keeper_switch import KeeperSwitch
 from sim.scenarios.open_play import OpenPlay
-from sim.scenarios.possession_play import PossessionPlay
+from sim.scenarios.possession_play import PossessionPlay, PossessionPlayAway
 from sim.scenarios.press_escape import PressEscape
 from sim.scenarios.screened_shot import ScreenedShot
 
@@ -19,6 +19,7 @@ SCENARIOS: dict[str, type[Scenario]] = {
     KeeperSwitch.name: KeeperSwitch,
     OpenPlay.name: OpenPlay,
     PossessionPlay.name: PossessionPlay,
+    PossessionPlayAway.name: PossessionPlayAway,
     PressEscape.name: PressEscape,
     ScreenedShot.name: ScreenedShot,
 }

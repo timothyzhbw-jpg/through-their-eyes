@@ -45,7 +45,10 @@ export function DirectorBar() {
               onClick={take}
               title="Switch now"
             >
-              <b>{renameIds(show.title)}</b>: {renameIds(show.reason)}
+              {/* The words clamp on a phone, not the padded chip (styles.css). */}
+              <span className="director-text">
+                <b>{renameIds(show.title)}</b>: {renameIds(show.reason)}
+              </span>
             </button>
             <button
               type="button"

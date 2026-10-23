@@ -275,3 +275,12 @@ class PossessionPlay(Scenario):
             lo, hi = TIGHT_GAP if tight else LOOSE_GAP
             self.gaps[(j, start)] = lo + (hi - lo) * sim.rng.uniform_for("marking_gap", start, pid)
         return self.gaps[(j, start)]
+
+
+class PossessionPlayAway(PossessionPlay):
+    """`possession_play` with the away team on the ball first: a stitched match's passage after a
+    restart the Laws award to the away team (SPEC 3.1, 3.9). Its own name, so a re-simulation by
+    (scenario, seed) plays the same passage."""
+
+    name = "possession_play_away"
+    start_team = 1

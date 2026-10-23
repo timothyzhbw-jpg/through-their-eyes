@@ -270,7 +270,7 @@ describe("the quick tour", () => {
     expect(textOf(lines)).toContain("would have played it back to K. Annersley");
     expect(lines.querySelector(".num")?.textContent).toBe("0.8 seconds"); // verified: marked
     await next();
-    expect(textOf(card()!.querySelector(".tour-lines"))).toContain("xT 0.172");
+    expect(textOf(card()!.querySelector(".tour-lines"))).toContain("xT 0.157");
     expect(buttonIn(card(), "How xT works")).toBeDefined(); // the jargon, on demand
   });
 
