@@ -259,11 +259,18 @@ def ground_truth(kind: str, c: Claim, w: World) -> bool | None:
         scan = _events(run)[_ref(c, "scan")]
         duration = (scan.attrs["end"] - scan.frame) * dt
         return scan.player == _ref(c, "player") and _close(duration, _val(c, "dur"), 2)
-    if kind == "pass_to_runner":
-        return (hp.player == _ref(c, "passer") and hp.attrs["to"] == _ref(c, "receiver")
-                and _close(hp.attrs["distance"], _val(c, "dist"), 0))  # fmt: skip
-    if kind == "pass_speed":
-        return hp.player == _ref(c, "passer") and _close(3.6 * hp.attrs["speed"], _val(c, "kmh"), 0)
+    if kind in ("pass_to_runner", "pass_speed"):
+        # On the ball as the tracking feed carries it (to the mm), as the live stats measure it
+        # (SPEC 4.6): the length from the kick to the resolution, the speed over 0.2 s from it.
+        ball = np.rint(run.ball_pos[:, :2] * 1000) / 1000
+        end = int(hp.attrs["end"])
+        if kind == "pass_to_runner":
+            length = float(np.hypot(*(ball[end] - ball[hp.frame])))
+            return (hp.player == _ref(c, "passer") and hp.attrs["to"] == _ref(c, "receiver")
+                    and _close(length, _val(c, "dist"), 0))  # fmt: skip
+        m = max(1, min(5, end - hp.frame))
+        kmh = 3.6 * float(np.hypot(*(ball[hp.frame + m] - ball[hp.frame]))) / (m * dt)
+        return hp.player == _ref(c, "passer") and _close(kmh, _val(c, "kmh"), 1)
     if kind == "unmarked":
         return hp.player == _ref(c, "passer") and _nearest_opponent(run, _ref(c, "runner"),
                                                                     hp.frame) > 5.0  # fmt: skip

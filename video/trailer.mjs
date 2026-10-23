@@ -16,7 +16,7 @@ import { parseArgs } from "node:util";
 import { assetFileName, copyLocalAsset, downloadAsset, validateAssets } from "./lib/assets.mjs";
 import { digest, isCached, storeHash } from "./lib/cache.mjs";
 import { burnArgs, captionSides, captionTimeline } from "./lib/captions.mjs";
-import { claimTable, resolveTitle, resolveVo } from "./lib/claims.mjs";
+import { claimTable, reportFacts, resolveTitle, resolveVo } from "./lib/claims.mjs";
 import {
   beatCommand,
   contactSheetHtml,
@@ -202,7 +202,8 @@ async function stepAssets(ctx) {
 
 /**
  * Corner-pin a picture onto a screen in a rendered clip (video/pin.py): the coach's tablet shows
- * a cine shot, mapped so its last frame matches that shot full frame. Output: <out>/pins/<id>.mp4.
+ * a cine shot or a capture of the app, mapped so its last frame matches that picture full frame.
+ * Output: <out>/pins/<id>.mp4.
  */
 async function stepPin(ctx) {
   const pins = ctx.spec.pins ?? [];
@@ -217,7 +218,9 @@ async function stepPin(ctx) {
     const clip = path.resolve(ctx.root, pin.clip);
     const corners = path.resolve(ctx.root, pin.corners);
     const matte = path.resolve(ctx.root, pin.matte);
-    const source = path.join(ctx.outDir, "cine", `${pin.source.cine}.mp4`);
+    const source = pin.source.capture
+      ? path.join(ctx.finalsDir, `${pin.source.capture}.webm`)
+      : path.join(ctx.outDir, "cine", `${pin.source.cine}.mp4`);
     for (const f of [clip, corners, matte, source]) {
       if (!existsSync(f)) throw new Error(`pin ${pin.id}: missing ${path.relative(ctx.root, f)}`);
     }
@@ -576,6 +579,7 @@ async function burnCaptions(ctx, timeline, joined) {
         start: line.beatStart + line.at,
         duration: existsSync(wav) ? wavSeconds(wav) : 2,
         text: String(line.text ?? "").replace(/\s*\[pause \d+\]\s*/g, " ").trim(),
+        place: line.caption ?? null,
       };
     });
   const cues = captionSides(
@@ -1023,10 +1027,18 @@ function titlesWithFiles(ctx, table) {
 
 function loadClaims(ctx) {
   const file = path.join(ctx.finalsDir, "claims.json");
-  if (!existsSync(file)) return { table: {}, doc: null };
+  // Numbers from committed eval reports (`report_facts`), next to the live page's claims.
+  const read = (rel) => {
+    const abs = path.resolve(ctx.root, rel);
+    return abs.startsWith(ctx.root + path.sep) && existsSync(abs) ? readFileSync(abs, "utf8") : null;
+  };
+  const reports = reportFacts(read, ctx.spec.report_facts ?? {});
+  if (!existsSync(file)) return { table: reports, doc: null };
   const doc = JSON.parse(readFileSync(file, "utf8"));
   const table = doc.claims && typeof doc.claims === "object" ? doc.claims : claimTable(doc.sources ?? []);
-  return { table, doc };
+  const clash = Object.keys(reports).filter((id) => Object.hasOwn(table, id));
+  if (clash.length) throw new Error(`report_facts ids collide with claim ids: ${clash.join(", ")}`);
+  return { table: { ...table, ...reports }, doc };
 }
 
 function titleUses(spec, id) {

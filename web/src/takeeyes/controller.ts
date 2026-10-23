@@ -129,31 +129,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): TakeEyes {
   /** The derived session for one look: the hero with the look's run as "counterfactual". */
   const stageFor = (entry: LookEntry): ViewSession => {
     let stage = stages.get(entry.id);
-    if (stage) return stage;
-    const run = lookRun(hero, looks!, entry);
-    const scan = entry.look ? (run.scans.find((s) => s.start === entry.look!.start) ?? null) : null;
-    const derived: Hero = { ...hero, keyScan: scan, runs: { ...hero.runs, counterfactual: run } };
-    const ghost: WhatIfs = {
-      moment: moment.id,
-      decisionFrame: looks!.decisionFrame,
-      start: entry.after.start,
-      factualAction: looks!.factual.chosen,
-      refusal: { en: "", zh: "" },
-      options: [
-        {
-          action: entry.id,
-          factual: false,
-          question: { en: "", zh: "" },
-          id: entry.id,
-          run: entry.after,
-          answers: {},
-          errors: [],
-          tag: `${entry.look ? "your look" : "no look"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
-        },
-      ],
-    };
-    stage = { ...session, hero: derived, playback, whatIfs: ghost };
-    stages.set(entry.id, stage);
+    if (!stage) stages.set(entry.id, (stage = lookSession(session, looks!, entry, playback)));
     return stage;
   };
 
@@ -278,6 +254,46 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): TakeEyes {
       if (s.step === "looking" && was && !playback.get().playing) dispatch({ type: "done" });
     },
   };
+}
+
+/**
+ * A look on the app's own views: the session with a hero whose "counterfactual" run is the look's
+ * (looks.ts `lookRun`, his look as its key scan) and the look's after-run as the gold ghost path of
+ * the What if box, played by `playback`. Take his eyes and the academy drill (drill/) show a look
+ * this way.
+ */
+export function lookSession(
+  session: Session,
+  looks: Looks,
+  entry: LookEntry,
+  playback: PlaybackStore,
+): ViewSession {
+  const { hero, moment } = session;
+  const run = lookRun(hero, looks, entry);
+  const scan = entry.look ? (run.scans.find((s) => s.start === entry.look!.start) ?? null) : null;
+  const derived: Hero = { ...hero, keyScan: scan, runs: { ...hero.runs, counterfactual: run } };
+  // Only the stage's 3D views read these what-ifs, for the look's ghost path: no question or
+  // refusal is ever shown, in either language.
+  const ghost: WhatIfs = {
+    moment: moment.id,
+    decisionFrame: looks.decisionFrame,
+    start: entry.after.start,
+    factualAction: looks.factual.chosen,
+    refusal: { en: "", zh: "" },
+    options: [
+      {
+        action: entry.id,
+        factual: false,
+        question: { en: "", zh: "" },
+        id: entry.id,
+        run: entry.after,
+        answers: {},
+        errors: [],
+        tag: `${entry.look ? "your look" : "no look"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
+      },
+    ],
+  };
+  return { ...session, hero: derived, playback, whatIfs: ghost };
 }
 
 /** Drive the stage's playback from requestAnimationFrame while the mode is open. */

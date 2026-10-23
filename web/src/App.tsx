@@ -12,7 +12,7 @@ import { GK_KITS } from "./players/kit";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
 import { useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
-import { LineupCard } from "./ui/LineupCard";
+import { IntroCard } from "./ui/IntroCard";
 import { LiveBar, MomentsPanel } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
@@ -41,6 +41,7 @@ import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
+import { tour } from "./tour/tourState";
 import { TacticalView } from "./views/TacticalView";
 import { stepThroughOf } from "./steps/controller";
 import { ScanStepsButton, ScanStepsScreen, useStepThroughOpen } from "./steps/ScanSteps";
@@ -49,6 +50,10 @@ import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/Take
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
+import { MomentRail } from "./moments/MomentRail";
+import { drillOf } from "./drill/controller";
+import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
+import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
@@ -59,11 +64,17 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const yourCall = useYourCallOpen();
   const takeEyes = useTakeEyesOpen();
   const scanSteps = useStepThroughOpen();
+  const drill = useDrillOpen();
   const start = onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />;
   const wasYourCall = useRef(false);
   const wasTakeEyes = useRef(false);
   const wasScanSteps = useRef(false);
+  const wasDrill = useRef(false);
   const introOpen = useStore(intro, (s) => s.open);
+  // While a tour runs its card is the one panel: the moment card stands down. An open evidence
+  // card stays (the full tour points at it, and the quick tour's check does too); otherwise the
+  // quick tour's card takes the moment card's place.
+  const touring = useStore(tour, (s) => (s.open ? s.kind : null));
 
   useEffect(() => startClock(session), [session]);
   useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
@@ -93,11 +104,21 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     }
     wasScanSteps.current = scanSteps;
   }, [scanSteps]);
-  // The autoplay waits for the lineup card: the key scan comes in the stream's first seconds and
+  useEffect(() => {
+    if (wasDrill.current && !drill) {
+      const opener = document.getElementById("drill-story");
+      (opener ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({
+        preventScroll: true,
+      });
+    }
+    wasDrill.current = drill;
+  }, [drill]);
+  // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
   // must not play under it. Behind the card the picture rests on the first frame. Online: watch
   // live, then the show (the look, then the run without it) and the breakdown once the moment is
   // detected. Offline: the show and the bundled breakdown at once. Once per session: the card
-  // never opens again.
+  // never opens again. A tour started from the card drives the app itself: the autoplay would
+  // take its first step over (the step is set up before this effect runs).
   const started = useRef(false);
   useEffect(() => {
     if (!autoplay || started.current) return;
@@ -106,6 +127,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       return;
     }
     started.current = true;
+    if (tour.get().open) return;
     if (session.feed) controls.startLive();
     else controls.autoplay();
   }, [autoplay, controls, introOpen, playback, session]);
@@ -115,7 +137,11 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
       {/* Your call takes the live screen, and hides what would give his decision away until the
           viewer has made theirs: the director, the telemetry and the whole moment below. */}
-      {yourCall ? (
+      {/* Every moment in reach, above the live screen (not over Your call and the other modes). */}
+      {!yourCall && !takeEyes && !scanSteps && !drill && <MomentRail hidden={introOpen} />}
+      {drill ? (
+        <DrillScreen start={onBack ? start : null} />
+      ) : yourCall ? (
         // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
         <YourCallScreen start={onBack ? start : null} />
       ) : takeEyes ? (
@@ -135,7 +161,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
             </>
           }
           run={<RunToggle />}
-          card={evidence ? <EvidenceCard /> : <MomentCard />}
+          card={
+            evidence ? (
+              <EvidenceCard />
+            ) : touring === "quick" ? (
+              <div className="tour-home" aria-hidden="true" />
+            ) : touring ? null : (
+              <MomentCard />
+            )
+          }
           caption={
             <>
               <Caption />
@@ -145,7 +179,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
         />
       )}
 
-      {!yourCall && !takeEyes && !scanSteps && (
+      {!yourCall && !takeEyes && !scanSteps && !drill && (
         <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
           <header className="moment-head">
             <p className="kicker accent">
@@ -184,6 +218,7 @@ function StoryCta() {
   const yc = yourCallOf(session);
   const te = takeEyesOf(session);
   const steps = stepThroughOf(session);
+  const drill = drillOf(session);
   const { narration, persona, status } = useBreakdown();
   const checked = narration && !narration.fixture;
   return (
@@ -241,6 +276,20 @@ function StoryCta() {
           Take his eyes
         </button>
       )}
+      {!drill.unavailable && (
+        <button
+          id="drill-story"
+          type="button"
+          className="btn"
+          title={`${DRILL_SUB}, then make the pass`}
+          onClick={() => {
+            window.scrollTo({ top: 0 });
+            drill.open();
+          }}
+        >
+          {DRILL_NAME}
+        </button>
+      )}
       {(status === "ready" || status === "failed") && (
         <span className="written">
           {checked && <CheckIcon />}
@@ -270,12 +319,24 @@ function LiveScreen(props: {
   const focus = useStore(playback, (s) => s.focus);
   const camera = useStore(playback, (s) => s.camera);
   const introOpen = useStore(intro, (s) => s.open);
+  const touring = useStore(tour, (s) => (s.open ? s.kind : null));
   const board = focus === "tactical";
   const pip = focus === "split" || board;
   // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
   const belief = pip && !board && beliefPip(session, camera);
   return (
-    <section className={`stage focus-${focus}${pip ? " with-pip" : ""}`} aria-label="Live screen">
+    <section
+      className={[
+        "stage",
+        `focus-${focus}`,
+        pip && "with-pip",
+        touring && "touring", // the HUD row stands down: the tour card is the one panel
+        touring === "quick" && "touring-quick", // and the caption: its lines are in the card
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label="Live screen"
+    >
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
       <div className="stage-content" inert={introOpen} style={{ display: "contents" }}>
         <div className="views">
@@ -293,7 +354,7 @@ function LiveScreen(props: {
         </div>
         <header className="stage-head">
           <div className="brand">
-            {/* Focused when the lineup card closes (LineupCard), never by Tab. */}
+            {/* Focused when the intro card closes (IntroCard), never by Tab. */}
             <h1 tabIndex={-1}>Through Their Eyes</h1>
             <p className="sub">
               A synthetic match<span className="sub-more"> · every player fictional</span>
@@ -308,13 +369,15 @@ function LiveScreen(props: {
             <DirectorBar />
           </div>
           <StatsTicker />
+          <StageSkeletonKey />
         </div>
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}
         <Transport />
-        <div className="stage-card">{props.card}</div>
+        {/* The intro card takes the card's place while it is up. */}
+        <div className="stage-card">{introOpen ? null : props.card}</div>
       </div>
-      <LineupCard />
+      <IntroCard />
     </section>
   );
 }
@@ -356,6 +419,7 @@ function MatchView() {
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
+      <MomentRail hidden={introOpen} />
       <LiveScreen
         start={
           <>

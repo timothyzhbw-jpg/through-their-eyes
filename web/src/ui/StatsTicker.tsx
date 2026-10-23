@@ -5,6 +5,8 @@ import { useView } from "../session";
 import { statTags, type StatTag, type Stats } from "../stats/stats";
 import { useStats } from "../stats/store";
 import { useStore } from "../store/store";
+import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
 
 const MAX = 4;
 
@@ -51,12 +53,12 @@ export function StatsTicker() {
           aria-hidden="true"
         >
           <b>{tag.label}</b> {tag.text}{" "}
-          <span
-            className="source"
-            title="Measured from tracking and the event feed (analytics/stats.py): a metric, not a verified claim"
-          >
-            tracking
-          </span>
+          <SourceChip
+            kind="tracking"
+            title={computed(
+              "Measured from the match's tracking and event feed (analytics/stats.py)",
+            )}
+          />
         </span>
       ))}
       <span className="sr-only" aria-live="polite">

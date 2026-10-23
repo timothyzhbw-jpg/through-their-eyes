@@ -1,0 +1,27 @@
+{
+ "heroes": {
+  "blind_side_run": {
+   "changed": 33,
+   "n": 40,
+   "report": "eval/reports/hero_flip_blind_side_run.md",
+   "same": 7,
+   "seeds": [
+    100,
+    139
+   ],
+   "what": "decision"
+  },
+  "far_post_finish": {
+   "changed": 38,
+   "n": 40,
+   "report": "eval/reports/hero_shot_far_post_finish.md",
+   "same": 2,
+   "seeds": [
+    200,
+    239
+   ],
+   "what": "placement"
+  }
+ },
+ "version": 1
+}

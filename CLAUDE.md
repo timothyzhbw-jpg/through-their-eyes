@@ -74,12 +74,17 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
 - Randomness is keyed per `(match_seed, entity_id, purpose)` — never one shared sequential stream
   (SPEC §3.7), so counterfactuals differ only through the intervention.
   Decisions are sampled with Gumbel-max over keyed per-option noise (SPEC §3.5).
+  Committed generated artifacts are canonical on linux/amd64 with numpy's X86_V4 tier disabled
+  (`NPY_DISABLE_CPU_FEATURES`, `tests/canonical.py`; CI, the regen script and the API image set it).
 - SI units. Pitch 105 × 68 m, origin at the centre spot. 25 Hz frames. Angles in radians
   internally, degrees only in the UI.
 - Every analytics kernel has a numpy reference + unit tests; GLSL versions must match the
   reference within tolerance (parity tests on fixed snapshots).
 - LLM calls return schema-validated JSON. **LLMs never write digits** — numbers are slot-filled
   from verified values.
+- zh narration names players by their Chinese names (`sim.roster.ZH_NAMES`, one table) and holds
+  no Latin letters, not even "xT" (预期威胁) (`tests/test_zh_narration.py`). A zh template is written the way a Chinese
+  commentator would say it, not translated word for word.
 - Secrets only via environment variables; document every variable in `.env.example`.
 - Commits: small, imperative mood, reference the SPEC section
   (e.g. `analytics: add TTI kernel (SPEC 4.1)`).
@@ -106,7 +111,8 @@ _Fill in as they come to exist._
   (SPEC 2, 8): every hero moment × persona × language, then each stitched match's recap ×
   persona × language (SPEC 6), new ones paced to the per-client limit,
   at most `--max-new` (20) of the 40/day cap; `--tts` also speaks every voice cue once (audio is
-  cached on the replica's disk only). Run after the last deploy and after any later one: the
+  cached on the replica's disk only); `--refresh-degraded` asks again, once, for every view whose
+  cached run has a model step on its template (SPEC 6). Run after the last deploy and after any later one: the
   cache key holds the card, prompt and pipeline versions. `--dry-run` sends GET requests only
 - `uv run --env-file .env python -m infra.smoke` — M0 smoke test: Foundry model via Agent
   Framework (structured output) + Azure Speech TTS (`en`, `zh`)
@@ -160,6 +166,12 @@ _Fill in as they come to exist._
 - `uv run python -m eval.pass_difficulty` — does pass difficulty separate failed from completed
   passes (SPEC 4.6)? `possession_play` seeds 300–399, about 1 min; writes
   `eval/reports/pass_difficulty.md`
+- `uv run python -m eval.persona_distinctness` — persona distinctness (SPEC 6, "Persona specs"):
+  the four served heroes × five personas × `en`, `zh`, offline, about 10 s: claim Jaccard between
+  personas, lines, words, numbers, jargon, first lines, each persona's plan; before/after against
+  `eval/reports/persona_distinctness_before.json`; `--runs <BreakdownResult files>` scores model
+  breakdowns apart. Writes `eval/reports/persona_distinctness.md`; the gate is
+  `tests/test_persona_distinctness.py`
 - `uv run python -m eval.realism` — realism table (SPEC 3.8): sim scan rates, head turns,
   speeds and pass speeds on `possession_play` seeds 100–199 against values printed in the papers
   of `docs/REFERENCES.md`, about 40 s; writes `eval/reports/realism.md`
@@ -176,6 +188,14 @@ _Fill in as they come to exist._
   plus the failure drill and a free-text sensitivity. Every model request is cached in
   `out/crew_vs_single/` (about 200 calls the first time, none after; `--cached-only` re-scores).
   Writes `eval/reports/crew_vs_single.md`
+- `uv run python -m eval.crew_evidence` — why a crew (SPEC 6, Best Multi-Agent System), offline
+  with a scripted model through the real workflow, about 5 min: every hero moment the site serves ×
+  every persona and language with each agent down and brought back (single agent too), the API's
+  provenance as limits and an outage pile up, the Verifier on perturbed lines and on the
+  crew-vs-single Foundry drafts (`eval/fixtures/crew_vs_single_cache.json`; `--extract-cache
+  <runs dir>` rebuilds it), trace completeness with the Analyst on MCP, the two lanes timed at
+  Foundry's median latencies. Writes `eval/reports/crew_evidence.md`; generate it in
+  python:3.11-slim
 - `uv run python -m eval.scan_calibration` — fits the scan dwell and the role scan rates
   (SPEC 3.4) on tuning seeds 0–99 against printed values, about 3 min on all cores; writes
   `eval/reports/scan_calibration.md`. After a change to head motion or scan scheduling: re-run
@@ -203,6 +223,10 @@ _Fill in as they come to exist._
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
   the hero moment
+- `uv run pytest tests/test_doc_numbers.py` — the numbers the judge-facing docs quote match their
+  reports (SPEC 11): each is wrapped in `<!--num:ID-->…<!--/num-->` (ids and readers in the test,
+  every place in docs/NUMBERS.md); after a sim change regenerates the reports, it names each doc
+  line to update
 - `cd web && npm test` — includes the GPU parity test in headless Chrome (`TTE_CHROME=<path>` if
   it is not found); `npm run build && npm run fps` — fps with the pitch-control overlay and the
   skeleton view off and on (`-- --headed` on a laptop's GPU; `-- --quality high|medium` for a

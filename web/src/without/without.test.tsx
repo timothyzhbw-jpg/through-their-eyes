@@ -13,9 +13,10 @@ import bundle from "../../public/data/without_look_seed3.json";
 import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
-import { fakeFetch, json, settle } from "../testing";
+import { fakeFetch, json, settle, shotExport } from "../testing";
 import { Transport } from "../ui/Transport";
 import { Hud } from "../views/PovOverlay";
+import { heroGatesOf } from "./gates";
 import { parseWithoutLook, WITHOUT_FILES, withoutLookOf } from "./without";
 import { RemovedLookEdge, WithoutLookLines, WithoutLookNote } from "./WithoutLook";
 
@@ -101,7 +102,7 @@ describe("on the live screen", () => {
     );
     act(() => session.breakdown.set({ language: "zh" }));
     expect(text(page.querySelector("[aria-label='The run without the look']"))).toContain(
-      "去掉的是：球到之前0.8秒，J. Ferriday向右后方的那一眼。",
+      "拿掉的，是球到之前0.8秒、费里迪扭头看向右后方的那一眼。",
     );
   });
 
@@ -179,5 +180,91 @@ describe("in the verdict", () => {
     );
     await act(settle);
     expect(page.textContent).toBe("");
+  });
+});
+
+const HELD = "Held constant: the same match and the same seed; only this one look is removed.";
+
+/** Counts no screen hard-codes: the sentence has to be these, not the committed 33/40. */
+const gatesFile = {
+  version: 1,
+  heroes: {
+    blind_side_run: {
+      what: "decision",
+      changed: 31,
+      n: 40,
+      same: 9,
+      seeds: [100, 139],
+      report: "eval/reports/hero_flip_blind_side_run.md",
+    },
+    far_post_finish: {
+      what: "placement",
+      changed: 19,
+      n: 40,
+      same: 21,
+      seeds: [200, 239],
+      report: "eval/reports/hero_shot_far_post_finish.md",
+    },
+  },
+};
+
+describe("what was held constant, and the held-out seeds", () => {
+  it("reads the decision count from hero_gates.json", async () => {
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson);
+    const fetch = fakeFetch({
+      "GET /data/without_look_seed3.json": () => json(bundle),
+      "GET /data/hero_gates.json": () => json(gatesFile),
+    });
+    await withoutLookOf(session, fetch, "/data/").load();
+    await heroGatesOf(session, fetch, "/data/").load();
+    const page = mount(session, <WithoutLookLines />);
+    expect(text(page)).toContain(HELD);
+    expect(text(page)).toContain(
+      "Over 40 held-out seeds (100–139), he decides differently in 31; in 9 he doesn't.",
+    );
+    expect(page.querySelector(".source")?.getAttribute("title")).toBe(
+      "Eval result from eval/reports/hero_flip_blind_side_run.md",
+    );
+  });
+
+  it("keeps what was held constant when the gates file is missing", async () => {
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson);
+    const fetch = fakeFetch({ "GET /data/without_look_seed3.json": () => json(bundle) });
+    await withoutLookOf(session, fetch, "/data/").load();
+    await heroGatesOf(session, fetch, "/data/").load();
+    const page = mount(session, <WithoutLookLines />);
+    expect(text(page)).toContain(HELD);
+    expect(text(page)).not.toContain("held-out seeds");
+  });
+
+  it("drops the held-out line when the file fails validation", async () => {
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson);
+    const bad = structuredClone(gatesFile);
+    bad.heroes.blind_side_run.same = 1; // not n - changed
+    const fetch = fakeFetch({
+      "GET /data/without_look_seed3.json": () => json(bundle),
+      "GET /data/hero_gates.json": () => json(bad),
+    });
+    await withoutLookOf(session, fetch, "/data/").load();
+    await heroGatesOf(session, fetch, "/data/").load();
+    const page = mount(session, <WithoutLookLines />);
+    expect(text(page)).toContain(HELD);
+    expect(text(page)).not.toContain("held-out seeds");
+  });
+
+  it("far_post_finish shows the placement wording", async () => {
+    const shot = parseHero(shotExport());
+    const session = createSession(shot, null, null);
+    const fetch = fakeFetch({ "GET /data/hero_gates.json": () => json(gatesFile) });
+    await heroGatesOf(session, fetch, "/data/").load();
+    const page = mount(session, <WithoutLookLines />);
+    expect(text(page)).toContain(HELD);
+    expect(text(page)).toContain(
+      "Over 40 held-out seeds (200–239), he places the shot differently in 19; in 21 he doesn't.",
+    );
+    expect(text(page)).not.toContain("decides differently");
+    expect(page.querySelector(".source")?.getAttribute("title")).toBe(
+      "Eval result from eval/reports/hero_shot_far_post_finish.md",
+    );
   });
 });

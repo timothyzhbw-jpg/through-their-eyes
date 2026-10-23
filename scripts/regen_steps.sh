@@ -62,6 +62,7 @@ for group in "$@"; do
         run python -m "eval.$m"
       done
       run python -m eval.hero_shot --seeds 100-139
+      run python -m eval.hero_gates
       for s in blind_side_run press_escape; do run python -m eval.look_grid --scenario "$s"; done
       run python -m eval.laws --workers "$workers"
       ;;

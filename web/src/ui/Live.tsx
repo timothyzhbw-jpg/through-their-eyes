@@ -17,6 +17,7 @@ import { Chapter } from "./Chapter";
 import { ChevronIcon } from "./icons";
 import "./live.css";
 import { shortName } from "../data/roster";
+import { FULL_MATCH_LIVE } from "../moments/moments";
 
 /** "Offline data" without the live service; otherwise the Live button and the stream's state. */
 export function LiveBar() {
@@ -52,22 +53,34 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
   const error = useStore(feed.state, (s) => s.error);
   return (
     <div className="live" role="group" aria-label="Live stream">
-      <button
-        type="button"
-        className="live-chip"
-        aria-pressed={live}
-        onClick={live ? controls.leaveLive : controls.goLive}
-        title={
-          live
-            ? "Leave the stream and replay from here"
-            : status === "ended"
-              ? "Watch the match again from the live stream"
-              : "Watch the match from the live stream"
-        }
-      >
-        <i aria-hidden="true" />
-        Live
-      </button>
+      {kind === "hero" ? (
+        // A hero moment is seconds long: Live opens the full match's stream (moments/).
+        <a
+          className={live ? "live-chip on" : "live-chip"}
+          href={FULL_MATCH_LIVE}
+          title="Watch the full match, streamed live"
+        >
+          <i aria-hidden="true" />
+          Live
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="live-chip"
+          aria-pressed={live}
+          onClick={live ? controls.leaveLive : controls.goLive}
+          title={
+            live
+              ? "Leave the stream and replay from here"
+              : status === "ended"
+                ? "Watch the match again from the live stream"
+                : "Watch the match from the live stream"
+          }
+        >
+          <i aria-hidden="true" />
+          Live
+        </button>
+      )}
       {(live || status === "ended" || status === "lost") && (
         <span
           className={`live-status ${status}`}
@@ -76,7 +89,10 @@ function LiveControl({ feed }: { feed: LiveFeed }) {
           {/* a hero moment streams one possession: "match over" would oversell it */}
           {status === "ended" && kind === "hero" ? "stream ended" : STATUS[status]}
           {live && sprint.length > 0 && (
-            <span className="sprint"> · sprinting {sprint.map(shortName).join(", ")}</span>
+            <span className="sprint">
+              {" "}
+              · sprinting {sprint.map((id) => shortName(id)).join(", ")}
+            </span>
           )}
         </span>
       )}

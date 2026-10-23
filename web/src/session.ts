@@ -42,6 +42,7 @@ import {
 } from "./live/feed";
 import { claimRun, lineOf, primaryClaim, RenderPayload } from "./narration/payload";
 import { Comparison } from "./autoplay/comparison";
+import { personaViewPatch, startOverlays } from "./breakdown/personaView";
 import { heroMoment, type MomentContext } from "./plan/moment";
 import { BreakdownRunner } from "./plan/runner";
 import { IDLE_PRODUCER, toggled, type ProducerState } from "./producer/producer";
@@ -347,7 +348,7 @@ export function transportControls(d: TransportDeps) {
       playback.set({ povPlayer: id });
     },
     setFocus(focus: Focus) {
-      playback.set({ focus });
+      playback.set({ focus, lock: null }); // the viewer's own camera: no longer locked on him
     },
     /** Film the 3D view in first person or from the broadcast camera; a focused 3D view stays
      * focused. Like the overlay toggles, it does not stop a breakdown. */
@@ -355,6 +356,7 @@ export function transportControls(d: TransportDeps) {
       playback.set((st) => ({
         camera,
         focus: st.focus === "pov" || st.focus === "broadcast" ? camera : st.focus,
+        lock: null,
       }));
     },
     toggle(key: Toggle) {
@@ -439,7 +441,8 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
   const startBreakdown = () => {
     leaveLive();
     voice.stop();
-    runner.start(breakdown.get().resolved.plan);
+    const { resolved, persona } = breakdown.get();
+    runner.start(resolved.plan, startOverlays(persona));
   };
   /** After the show: the breakdown, or as soon as it arrives. */
   const breakdownNext = () => {
@@ -598,8 +601,21 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     const next = { ...current, ...patch };
     if (next.persona === current.persona && next.language === current.language) return;
     breakdown.set(patch);
-    if (next.persona !== current.persona) followAudience(next.persona);
+    if (next.persona !== current.persona) {
+      followAudience(next.persona);
+      showAudience(next.persona);
+    }
     if (current.status !== "waiting") void requestBreakdown();
+  };
+  /** The new audience's view at once (breakdown/personaView.ts), so a switch is seen before its
+   * breakdown arrives; a breakdown that was playing plays on in the new audience's cut. */
+  const showAudience = (persona: Persona) => {
+    if (runner.status.get().status === "running") {
+      runner.stop();
+      voice.stop();
+      playWhenReady = true;
+    }
+    playback.set(personaViewPatch(persona, moment.hero));
   };
   /** Audio description is heard, not watched: choosing it turns the voice on, and leaving it turns
    * the voice off again unless the viewer has set the sound since. Other audiences start silent. */
@@ -710,12 +726,20 @@ function makeControls(s: Omit<Session, "controls">, bundled: BreakdownView) {
     },
     /**
      * Ask the live service's verifier about one claim with `slot` set to `value` (SPEC 5.3, 7),
-     * in the breakdown's language. Only the latest answer is shown.
+     * in the breakdown's language. Only the latest answer is shown. `by` is who typed the value.
      */
-    async tryValue(claimId: string, slot: string, value: number) {
+    async tryValue(claimId: string, slot: string, value: number, by: "viewer" | "tour" = "viewer") {
       if (!api) return;
       const turn = ++tamperTurn;
-      tamper.set({ status: "checking", claim: claimId, slot, value, result: null, error: null });
+      tamper.set({
+        status: "checking",
+        claim: claimId,
+        slot,
+        value,
+        by,
+        result: null,
+        error: null,
+      });
       try {
         const language = breakdown.get().language;
         const result = await api.verify({

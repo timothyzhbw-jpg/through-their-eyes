@@ -1,10 +1,11 @@
-// The judge tour's step list (steps.json, SPEC 7): its schema, which steps this page can show, and
-// each step's words with their slots filled from the moment's own data. A step this page cannot
-// show (no live service, a hero with no counterfactual, a stitched match) is left out, never shown
-// broken.
+// The tours' step lists (steps.json, SPEC 7): the quick tour, a first-time visitor's five steps,
+// and the full judge tour. Their schema, which steps this page can show, and each step's words with
+// their slots filled from the moment's own data. A step this page cannot show (no live service, a
+// hero with no counterfactual, a stitched match) is left out, never shown broken.
 
 import { z } from "zod";
 import { runLabels } from "../data/hero";
+import { shortName } from "../data/roster";
 import type { ViewSession } from "../session";
 import { takeEyesOf } from "../takeeyes/controller";
 import { yourCallOf } from "../yourcall/controller";
@@ -23,22 +24,35 @@ export const CONDITIONS = [
 /** What a step does when it comes up (actions.ts). */
 export const ENTERS = [
   "none",
+  "look",
   "replay",
+  "compare",
   "counterfactual",
   "openEvidence",
   "openTamper",
+  "tamperAuto",
   "yourCall",
   "takeEyes",
   "audience",
   "producer",
   "recap",
 ] as const;
+/** The verified lines a quick-tour step's panel carries (StepLines.tsx). */
+export const SAYS = ["look", "without", "compare"] as const;
 /** The tour card's own button for a step, for anything that calls the service (TourActs.tsx). */
-export const ACTS = ["checkWrongNumber", "sound", "drill", "openMatch"] as const;
+export const ACTS = [
+  "checkWrongNumber",
+  "sound",
+  "drill",
+  "openMatch",
+  "replayLook",
+  "fullTour",
+] as const;
 
 export type Condition = (typeof CONDITIONS)[number];
 export type EnterName = (typeof ENTERS)[number];
 export type ActName = (typeof ACTS)[number];
+export type SayName = (typeof SAYS)[number];
 
 const When = z
   .string()
@@ -56,16 +70,31 @@ const Step = z.strictObject({
   focus: z.enum(["card", "app"]).optional(), // who takes the keyboard on arrival (default: card)
   enter: z.enum(ENTERS),
   act: z.enum(ACTS).optional(),
+  say: z.enum(SAYS).optional(), // the verified lines its panel carries
   needs: z.array(When),
   hold: z.number().positive(), // suggested seconds on the step
 });
 
-export const StepList = z.strictObject({ about: z.string(), steps: z.array(Step).min(1) });
+export const StepList = z.strictObject({
+  about: z.string(),
+  steps: z.array(Step).min(1), // the full judge tour
+  quick: z.array(Step).min(1), // the quick tour
+});
 
 export type TourStep = z.infer<typeof Step>;
+export type TourKind = "quick" | "full";
 
-export const STEPS: TourStep[] = StepList.parse(raw).steps;
+const LISTS = StepList.parse(raw);
+export const STEPS: TourStep[] = LISTS.steps;
 export const STEP_IDS: string[] = STEPS.map((s) => s.id);
+export const QUICK_STEPS: TourStep[] = LISTS.quick;
+export const QUICK_IDS: string[] = QUICK_STEPS.map((s) => s.id);
+
+/** A tour's steps, all of them, in order. */
+export const stepsOf = (kind: TourKind): TourStep[] => (kind === "quick" ? QUICK_STEPS : STEPS);
+
+/** The tour a step id belongs to (ids are unique across both). */
+export const kindOf = (id: string): TourKind => (QUICK_IDS.includes(id) ? "quick" : "full");
 
 /** What this page has, and the words the slots take: read from the session, never written in. */
 export interface TourEnv {
@@ -86,7 +115,11 @@ export function envOf(session: ViewSession): TourEnv {
       yourCall: session.kind === "hero" && !yourCallOf(session).unavailable,
       takeEyes: session.kind === "hero" && !takeEyesOf(session).unavailable,
     },
-    slots: { cf: labels.tag.counterfactual, cfTitle: labels.counterfactual },
+    slots: {
+      cf: labels.tag.counterfactual,
+      cfTitle: labels.counterfactual,
+      hero: hero.heroId ? shortName(hero.heroId) : "the player",
+    },
   };
 }
 
@@ -103,16 +136,23 @@ export function resolveSteps(env: TourEnv, steps: TourStep[] = STEPS): TourStep[
 
 /**
  * Where the tour is: the step asked for if this page shows it; else the next one it shows after
- * it in the full list (a link to a step this page lacks lands on the following one); else the
- * first.
+ * it in its tour's whole list (a link to a step this page lacks lands on the following one); else
+ * the first.
  */
 export function indexOf(steps: TourStep[], id: string | null): number {
   if (id === null) return 0;
   const exact = steps.findIndex((s) => s.id === id);
   if (exact >= 0) return exact;
-  const order = STEP_IDS.indexOf(id);
-  const after = steps.findIndex((s) => STEP_IDS.indexOf(s.id) > order);
+  const ids = kindOf(id) === "quick" ? QUICK_IDS : STEP_IDS;
+  const order = ids.indexOf(id);
+  const after = steps.findIndex((s) => ids.indexOf(s.id) > order);
   return order >= 0 && after >= 0 ? after : 0;
+}
+
+/** The quick tour opens only where it can show its point: the look, and the run without it. */
+export function quickTourFits(env: TourEnv): boolean {
+  const shown = new Set(resolveSteps(env, QUICK_STEPS).map((s) => s.id));
+  return shown.has("look") && shown.has("remove");
 }
 
 const fill = (text: string, env: TourEnv) =>

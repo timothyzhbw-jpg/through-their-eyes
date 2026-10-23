@@ -7,8 +7,8 @@
 ## 0. Pitch and judging alignment
 
 **One-liner:** See what they saw. An AI studio that explains key moments through the player's own
-perception — the scans before the ball arrived, what was visible, what he believed — and checks
-every number the crew says or captions before it airs.
+perception — where he looked before the ball arrived, what he saw, what he believed — and
+re-simulates the moment without the look that made the play.
 
 **Target prizes:** Grand Prize + Best Multi-Agent System (judges may reassign the category).
 
@@ -35,15 +35,16 @@ knew existed.
 
 | Persona | Gets | Tone |
 |---|---|---|
-| `casual` | First-person replay + a one-sentence story | plain language, minimal numbers |
-| `analyst` | Scan rate vs research benchmarks, time since last scan at reception, observed-space share, belief error, counterfactual delta, pitch-control / pressing overlays | dense, technical |
-| `player_fan` | Camera locked on the chosen player all match; his scans before each reception; his best decisions | personal |
-| `coach` (stretch) | "Scanned vs didn't scan" side-by-side + one coaching cue | instructional |
+| `casual` | First-person replay with the runner he looked for highlighted + the story in two or three lines | plain language, at most one number |
+| `analyst` | The tactical board with pitch control and his pass options; scans, observed-space share, belief error, the options' chances, counterfactual delta | dense, technical, opens on a number |
+| `player_fan` | His eyes, then the camera locked on him; his look, his pass or shot and its numbers | personal, praise |
+| `coach` | First person and board side by side, "scanned vs didn't scan" ghost; when he looked, the cue, the lesson, one teaching cue | instructional |
 | `audio_description` | Blind and low-vision viewers: the moment told in the order it happened — where he got the ball, who he could not see, which way he looked, whom the look showed him, what he did — sound on by default, large-print captions | calm, slower voice at any tier; no xT or probabilities |
 
 All personas render the **same verified fact set**. Persona changes presentation, never facts:
 which verified claims a script must cite and which it may not is fixed per persona in code (§6,
-"Persona rules").
+"Persona rules"), and so are its length, opener, cameras, overlays and voice (§6, "Persona
+specs").
 Languages: `en` and `zh` for the MVP; `es` is a stretch goal.
 
 ## 2. Architecture
@@ -74,8 +75,13 @@ on an LLM.
 
 **The cold load** (a judge who opens the page and only watches; web/src/App.tsx,
 [web/src/autoplay/](../web/src/autoplay/)):
-- The lineup card opens first. Behind it the picture rests on the stream's first frame. The hero
-  moment's stream starts only when the card closes, by itself after 5 s or on a click: its key
+- The intro card opens first: one line on what the moment shows ("One look over his shoulder
+  changed his pass. See why.") and one button, Start. It sits where the moment card goes (on a
+  phone, a sheet at the bottom), so the picture stays in view, resting on the stream's first
+  frame; the line-ups, whose eyes to watch and the tour are behind "Teams and more". It waits
+  for the viewer (2026-10-22, outside UX review: nobody read the old full-screen card in its
+  5 s countdown, and the countdown was there only because the card covered the match). The hero
+  moment's stream starts when the card closes (Start, Skip, Escape or a click beside it): its key
   scan comes in the first seconds and must not play under the card. A stitched match's stream
   plays behind the card; its first possession is open play.
 - When the stream detects the hero moment, the show plays at once; it does not wait for the
@@ -122,7 +128,11 @@ on an LLM.
 - Moment detection runs on the live stream. Counterfactuals are re-simulated from snapshots on
   demand, and precomputed for the demo match.
 - **Breakdown cache.** Every agent output is cached under a content hash of
-  (MomentCard, persona, language, prompt version, model deployment). The public demo serves cached
+  (MomentCard, persona, language, prompt version, model deployment, rendered-text fingerprint).
+  The fingerprint (`explain.render.render_fingerprint`) covers, per language, the claims'
+  templates and the players' names, plus the connectives, the vocabulary and `RENDER_VERSION`: a
+  wording or name fix reaches viewers instead of the text cached before it, and a zh fix re-keys
+  only zh views. What-if answers and recaps carry it too. The public demo serves cached
   breakdowns by default; live regeneration is rate-limited per IP. The demo has no login and must
   stay up until 2026-11-10, so it must survive exhausted model quota or credit.
 
@@ -138,6 +148,15 @@ on an LLM.
   at 0:30 (`blind_side_run` seed 3, hero moment at 0:33), 5:07 (`press_escape` seed 0), 7:58 (the
   shot hero `far_post_finish` seed 11, who scores at the far post) and 9:47 (the set-piece hero
   `corner_blind_side` seed 0, at 1–0).
+  - *Who passes in open play* (`sim/scenarios/possession_play.py`, 2026-10-22). Open-play
+    passages run `possession_play`, where a passing rule picks the pass, not the decision model
+    (§3.5). The carrier keeps the ball for a keyed 0.6–1.6 s, then plays an outfield team-mate
+    8–35 m away who is onside and is not the one who just passed to him. Each is scored by his
+    space (the nearest opponent not beyond him along the pass, counted up to 8 m) times a keyed
+    draw between 0.5 and 1.5, so a team-mate in space is likelier, not certain; with nobody
+    scoring, the nearest onside team-mate gets it. Movement, pressing and marking (§3.2),
+    perception and belief (§3.4) and the ball (§3.3), interceptions included, are simulated as
+    everywhere. The decision model chooses at the hero moments (§3.6).
   - *Seeds.* Hero possessions keep their demo seeds. An open-play seed is keyed by (match seed,
     n), where n counts open-play passages only, so a hero inserted later changes no open-play
     seed. Seeds start at 1,000,000 and are never design or eval seeds.
@@ -1004,6 +1023,28 @@ a pass at its reception, interception or out; a sprint at its first frame back b
 - **Ball and shot speed.** Release speed: the mean ball speed over the first 0.2 s after the kick
   (|b(k + m) − b(k)| / (m·dt), m = min(5, frames to the resolution)); shots too, once shot events
   exist (§3.3). The live ball speed is the smoothed speed above.
+- **One quantity, one number** (2026-10-22). A quantity a claim states and a chip, card or panel
+  also shows has one definition and one rounding rule, so the two read the same digit. *Why:* the
+  red team found the live chip "PASS 39 m" over the claim "a 38-metre pass" for the same pass: the
+  chip measured the ball's travel (39.38 m), the claim the distance to where it was aimed
+  (38.05 m), and the two were rounded twice in different ways.
+  - Pass length is the distance above, on the tracked ball to the mm (`analytics.stats.
+    pass_length`); pass and shot speed are the release speeds above. The claims `pass_to_runner`,
+    `pass_speed` and `shot_speed` and the moment card's `pass_distance_m` and `pass_speed_mps`
+    measure them with the same functions on the same mm track (`event_attr` `length`,
+    `release_kmh`), not from the sim's aim or its kick speed.
+  - One rounding rule, `analytics.stats.display`: the exact value to the digits shown, ties away
+    from zero (what the web's `toFixed` prints). Claim slots and the live payload are rounded
+    once by it; the web prints them as they are. A pass's length is in whole metres in both the
+    payload and the claim, speeds to 0.1 km/h.
+  - Where the web shows a number a claim also states, it shows it to the claim's precision: the
+    verdict's worth before the claim airs (2 decimals, not 3), the last sighting's age (1).
+  - *Evidence:* `tests/test_one_number.py` — for every served hero moment (and match-1's heroes
+    on the match clock) each such number equals the claim's rendered value: the PASS chip and
+    `pass_to_runner`, the pass log and `pass_speed`, the SHOT chip and `shot_speed`, the belief
+    numeral and `belief_error`, P(arrives) and `pass_success`, the verdict and `cf_value`, a
+    marker's card and `stayed_with_runner` / `cf_lost_runner`; and the recap's pass counts equal
+    the stats panel's team line. `web/src/stats/stats.test.ts` checks the chip prints the payload.
 - **Pass difficulty** ∈ [0, 1], a fixed formula from our kernels, set before any check of it and
   not fitted to our outcomes:
   `difficulty = 0.4·lane + 0.2·passer + 0.2·receiver + 0.2·min(d / 50 m, 1)`.
@@ -1031,6 +1072,17 @@ a pass at its reception, interception or out; a sprint at its first frame back b
   - Narration renders his short name ("J. Ferriday") as a slot value (agents/context.py
     `names`). The Verifier keeps names, surnames and the raw ids out of free text, with ASCII-only
     word boundaries so a name next to a Chinese character is caught too.
+  - *In Chinese* (2026-10-22, zh QA) a player goes by his surname transliterated in Xinhua style
+    (`sim.roster.ZH_NAMES`: 费里迪, 瓦恩霍尔, 安纳斯利…), in zh captions, the zh voice, what-if
+    questions and the what-if parser; the English UI and the pitch labels keep "J. Ferriday", as
+    a Chinese commentator names players over an English world feed. *Why:* the zh voices read
+    "J. Ferriday" as "G Faraday" and "N. Varnhall" as "嗯王安好" (live `/api/tts`, transcribed).
+    The renderer picks the form by language (`explain.render.localized`), and the Verifier
+    treats every written form of a player (id, short, full, surname, Chinese) outside a slot as
+    an entity. The web mirrors the table (`web/src/data/roster.ts` `ZH_NAMES`, kept equal by
+    `tests/test_roster_web.py`): `renameIds` names an id inside a Chinese sentence in Chinese, as
+    `sim.roster.rename_ids` does for text cached with ids. The away club is 科尔文谷 (Corvane Vale). A zh line never holds the letters "xT" (the voice read "（xT）" as "Baxtee"):
+    expected threat is 预期威胁 in zh captions and voice; the UI's chips may keep "xT".
   - The two clubs are named too: Kestrel Bay (home) and Corvane Vale (away), both invented. The
     recap's claims still say Home and Away (its cache key holds their templates); the API names
     the clubs when it serves a recap.
@@ -1117,7 +1169,12 @@ are sim records, labelled `sim` on screen.
   events, with the stitched run's possessions, and the Verifier checks every slot before the line
   renders. Percentages and decimals are checked to half a unit of the last digit shown.
 - **Honest limits, on the card.**
-  - Open-play passing is scripted (§3.6): the rates describe the sim's script under its press.
+  - Open-play passing follows a rule (§3.1: after a moment on the ball, the carrier plays an
+    onside team-mate 8–35 m away, picked by a draw weighted toward space), while the decision
+    model chooses only at the hero moments (§3.5): the rates describe that rule under the sim's press. The card says what
+    is simulated for every pass first (movement, press, marking, perception and belief, whether
+    the ball arrives), then who decides (2026-10-22: the red team found "who passes, when and to
+    whom is scripted" read as the whole sim being scripted).
   - A corner's possession ends after its cutback, before any shot (§3.1): set-piece xG is zero
     by construction.
   - Open play rarely reaches the final third, so the peak comparison favours the corner.
@@ -1424,30 +1481,128 @@ tools exposed by our own MCP server.
 `zh-CN-YunjianNeural`, colour `en-US-DavisNeural` and `zh-CN-YunyeNeural`. If either fails, a
 single-narrator template takes over (failure policy below).
 
+**Persona specs** (2026-10-22). Bowen, on the live site: the viewer levels did not feel
+different. Measured (`eval/persona_distinctness.py`, `eval/reports/persona_distinctness.md`, the
+four served hero moments × five personas × `en`, `zh`, offline): the casual fan and the player fan
+told the shot hero in the same six sentences (mean claim Jaccard 0.71 between them), three of the
+five personas opened on the same line ("What did he see?"), every persona played the same plan on
+the same cameras, and all but audio description heard the same voice. Each persona is now its own
+broadcast, in what is said, what is shown and how it sounds, from the first line and the first
+second of the replay. Facts stay the same verified set (§1): personas choose among them, never
+change them.
+- *Casual fan.* The story in two or three short lines, as a mate on the sofa would tell it: he
+  looked, he saw the runner (or felt the press), what came of it, and what he would have done
+  without the look. At most one number; no expected threat, probabilities, pressing percentages,
+  scan counts or belief errors. Opens with "Watch his head." (注意看他回头。; "Watch this." on a
+  pressure moment). Shown: his eyes full screen with the runner's belief ghost as the one
+  highlighted player, no cone, no board, no pass options; the outcome on the broadcast camera, then
+  the run without the look. Heard: the broadcast booth (the role table below).
+- *Analyst.* Dense: opens straight on a number (how often and when he scanned), then the space he
+  saw or the press around him, his belief error, the options' chances (what he gave his pass
+  against what it was, with and without the look) and what the look was worth in expected threat.
+  Five to seven lines, four numbers or more. Shown: the tactical board from the first second, with
+  pitch control, his pass options and his vision cone; his eyes in the board's corner. Heard: a
+  measured read, the same at every tier (newscast or documentary styles, no styledegree).
+- *Coach.* What to teach: opens with "Coaching point." (这里有个细节要讲。), then when he looked against the
+  ball (or how close the press was), the cue that called for it (the runner on his blind side), and
+  the run without the look as the lesson; ends with the moment's teaching cue ("Teach it: check
+  your shoulder before the ball arrives.", one per kind of moment, only when the claim that shows
+  he did it is supported). Three to five lines, at most three numbers. Shown: first person and the
+  board side by side, the look marked, the run without the look drawn as soon as the look has
+  played. Heard: steady and a little slower (−6%), a pause after the coaching point.
+- *Player fan.* About him: opens with praise ("Lovely from him.", 这一下漂亮！), then his own look,
+  his pass or shot and its numbers (how far, how fast), and may end "What a player." (这才是好球员。) No expected
+  threat, probabilities or what-ifs. Three or four lines, at most three numbers. Shown: his eyes,
+  then the broadcast camera locked on him (`player_lock`) instead of the ball, no ghosts. Heard:
+  the booth, warmer and higher (+3 points of pitch), a pause after the praise.
+- *Audio description.* Spatial and temporal, unchanged in substance (§1): where he got the ball,
+  who he could not see, which way he looked, where the keeper or his man stood, what he did, what
+  would have happened. Never refers to the picture. Four to six lines, at most two numbers. Shown:
+  as little as possible: the broadcast camera, no cone, ghosts or markers, the first-person clip
+  replayed on the broadcast camera. Heard: neutral styles, rate −15%, a 300 ms pause at every
+  clause and 600 ms after every line.
+
+| | casual | analyst | coach | player fan | audio description |
+|---|---|---|---|---|---|
+| opens with | "Watch his head." + what he saw | a number (scans) | "Coaching point." + when he looked | "Lovely from him." + his look | where it happened |
+| lines · numbers | 2–3 · ≤ 1 | 5–7 · ≥ 4 | 3–5 · ≤ 3 | 3–4 · ≤ 3 | 4–6 · ≤ 2 |
+| words (en) · characters (zh) | ≤ 45 · ≤ 80 | ≤ 120 · ≤ 190 | ≤ 85 · ≤ 140 | ≤ 60 · ≤ 100 | ≤ 100 · ≤ 160 |
+| jargon lines | 0 | any | ≤ 1 | 0 | 0 |
+| ends with | the run without the look | the look's xT | the teaching cue | his pass or shot | the run without the look |
+| camera during the look · after | POV · broadcast | board · board | split · split | POV · locked on him | broadcast · broadcast |
+| overlays | belief ghost, cf ghost | cone, pitch control, pass options, scan marker, ghosts | cone, pass options, scan marker, ghosts (cf early) | cone, scan marker | none |
+| voice | booth (role table) | measured, no styledegree | steady, −6%, pause after the opener | booth, pitch +3 points | neutral, −15%, pauses |
+
+*Where it lives.* The rules and the specs: `agents/persona_rules.py` (`RULES`, `SPECS`, `OPENERS`,
+`CUES`). The templates: `agents/fallbacks.py`, one sequence per persona and kind of moment, through
+the same `repair`. The plan: the Telestrator writes one plan per breakdown and `persona_plan`
+(`agents/plan.py`, code) re-cuts it per persona: camera modes and overlay steps change, times,
+the replayed match time and the plan's length do not, so a valid plan stays valid; each script
+carries its plan (`ScriptResult.plan`) and the web plays it (older cached breakdowns have none:
+the breakdown's plan plays). The plan format gains the `pitch_control` and `options` zone layers
+and the `player_lock` camera (`agents/schemas.py`, `web/src/plan/schema.ts`). The voice:
+`agents/delivery.py`. The web: choosing a persona sets its view at once, before its breakdown
+arrives (`web/src/breakdown/personaView.ts`: camera, overlays, the lock), and a breakdown that was
+playing plays on in the new persona's cut; picking a camera by hand unlocks it.
+
+*Gate* (`tests/test_persona_distinctness.py`, offline, the four served heroes × five personas ×
+`en`, `zh`). Mean pairwise claim Jaccard ≤ 0.30, and no pair of personas above 0.5 on average:
+every persona must tell the same verified core (the counterfactual, often the look), one or two
+claims of scripts three to seven claims long, so sharing only the core gives 0.1–0.35; at 0.5 half
+of what two audiences hear together is the same sentences. Every pair of personas opens on a
+different line; five different plans; every script within its persona's spec; every aired line
+verifies again; no number in text a model wrote. Measured before (main 7c424f3d + #191) and after,
+in the report: mean Jaccard 0.34 → 0.16, the closest pair 0.71 → 0.30, first lines distinct for
+70% → 100% of pairs, 1 → 5 plans. The model picks among the same palettes under the same rules
+(below); model breakdowns are scored apart with `--runs`.
+- *Before, the model:* the cached crew-vs-single runs of `gpt-4.1-mini` (casual and analyst):
+  Jaccard 0.53 between the two, none of the 24 scripts within today's specs, xT, probabilities or
+  pressing percentages in 29% of the casual fan's lines.
+- *After, the model* (2026-10-22, two crew runs on Foundry: blind_side_run-3 and
+  far_post_finish-11, five personas × `en`, `zh`): mean Jaccard 0.19, every pair of personas
+  opening differently, five plans, every line verified, no number the model wrote, and no line
+  dropped in the second run. It found three things the templates could not, fixed in code: the
+  coach and the casual fan shared "what he saw" (0.60 between them; the coach's palette is now
+  timing, direction and cues only); audio description, trimmed to its six lines, lost what he did
+  and the run without the look (both are now required); and the two voices, interleaved, put the
+  coach's cue mid-script and audio description's events out of order (`repair` now puts the cue
+  last and tells audio description in story order, no rewrite needed). Each voice is also told its
+  share of the line budget (`max_lines_this_voice`), which cut the rewrites. Through today's tidy
+  and `repair`, the sample's lines score a mean Jaccard of 0.15 and a closest pair of 0.35.
+
 **Persona rules** (`agents/persona_rules.py`). The red-team review found the cached model scripts
 of different personas were the same claims reordered (casual heard expected threat and no
-counterfactual; coach no counterfactual). Each persona now has claims it may not cite, groups of
-claims its script (both voices together) must cite one of, and a number budget:
+counterfactual; coach no counterfactual). Each persona now has a palette (the claims it may cite
+at all), claims it must never hear, groups of claims its script (both voices together) must cite
+one of, a number budget and a line budget, and how it opens (and, for the coach, ends):
 
-| Persona | Must cite (one of each group) | May not cite | Numbers |
-|---|---|---|---|
-| `casual` | the counterfactual (`cf_pass`, `cf_carry_lost`, `cf_lost_runner`, `cf_unmarked`, `cf_shot`) | xT and probabilities (`cf_value`, `cf_shot_value`, `pass_success`, `cf_pass_success`, `shot_thought_vs_was`) | ≤ 2 |
-| `analyst` | the look's value (`cf_value`, `cf_shot_value`); belief error; scan timing (scan lens) | – | – |
-| `player_fan` | his own look (scan lens); his decision (`pass_to_runner`, `runner_received`, `shot_placement`, `stayed_with_runner`) | – | – |
-| `coach` | the counterfactual; a coaching point (scan timing, `presser_distance`, `pressure_at_pass`, `keeper_near_side`) | – | – |
-| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`) | xT, probabilities, shares and pressing percentages | ≤ 2 |
+| Persona | Must cite (one of each group) | Palette · never | Numbers · lines | Opens · ends |
+|---|---|---|---|---|
+| `casual` | what he saw (`seen_in_scan`, `keeper_seen_in_scan`, `heavy_pressure`, `scan_before_reception`, `marker_scan`); the counterfactual (`cf_pass`, `cf_carry_lost`, `cf_unmarked`, `cf_lost_runner`, `cf_shot`) | story claims (`CASUAL_PALETTE`) · xT and probabilities | ≤ 1 · ≤ 3 | its opener |
+| `analyst` | the look's value (`cf_value`, `cf_shot_value`); belief error; scan timing (scan lens); the options' chances (`pass_success`, `cf_pass_success`, `shot_thought_vs_was`, `cf_shot_value`); the space and the press (`observed_share`, `gap_opened`, `gap_to_marker`, pressing, `presser_distance`, `keeper_near_side`) | every claim | – · ≤ 7 | a claim that says a number |
+| `player_fan` | his own look (scan lens: `scan_side`, `scan_before_reception`, `scan_at_goal`, `marker_scan`, `key_scan_duration`); his decision (`pass_to_runner`, `shot_placement`, `stayed_with_runner`, `shot_scored`, `runner_received`) | his own actions and their numbers (`PLAYER_FAN_PALETTE`): no counterfactuals | ≤ 3 · ≤ 4 | its opener |
+| `coach` | the coaching point (`time_since_last_scan`, `marker_scan`, `scan_at_goal`, `marker_unseen`, `presser_distance`, `heavy_pressure`); the counterfactual | timings, directions, cues and the counterfactuals (`COACH_PALETTE`): not what the look showed (the casual fan's), no xT, probabilities, shares or speeds | ≤ 3 · ≤ 5 | its opener · the teaching cue |
+| `audio_description` | a spatial claim first (`reception_zone`, `scan_side`, `blind_side`); his decision; the counterfactual | positions and events (`DESCRIBED_PALETTE`) · xT, probabilities, shares and pressing percentages | ≤ 2 · ≤ 6 | where it happened, in story order |
 
-A group is required only when the moment has a supported claim in it, and a scan group only on
-the scan lens. Numbers are counted as the numeric slots of the cited claims (`{n:times}` counts;
-vocabulary slots do not). Enforcement, in order: the forbidden ids are not in that persona's
-schema enum, so the model cannot pick them; the prompt carries the rules (`must_include`,
-`max_numbers`, `start_with`, and for the co-commentator `still_missing`); tidy drops a forbidden
-line; the Verifier checks every script and sends one that breaks a rule back to both voices,
-whole, with the problems (a rewrite round, at most two); after the last round `repair` makes it
-comply with verified template lines (drops forbidden lines, adds the first supported claim of a
-missing group in story order, brings a spatial line first, trims numeric lines that cover no
-group). The templates go through the same `repair`. A recap tells several moments and keeps only
-the forbidden ids.
+A group is required only when the moment has a supported claim in it on the persona's palette, and
+a scan group only on the scan lens. Numbers are counted as the numeric slots of the cited claims
+(`{n:times}` counts; vocabulary slots do not). Openers, the extra connectives a persona may use
+and the coach's cues are fixed phrases with no number, no player and no lexicon term, listed in
+`explain/lexicon.py` `CONNECTIVES` so the render check lets them air without a claim; an opener
+rides on the first claim line ("Watch his head. When J. Ferriday looked…"). Enforcement, in order:
+only the palette is in that persona's schema enum, and only its own connectives (audio
+description: none, the field is null), so the model cannot pick anything else; the prompt carries
+the rules (`must_include`, `max_numbers`, `max_lines` and each voice's share of it
+`max_lines_this_voice`, `start_with`, `start_with_number`, `opener`, `cue`, and for the
+co-commentator `still_missing`); tidy drops a line off the palette;
+the Verifier checks every script and sends one that breaks a rule back to both voices, whole, with
+the problems (a rewrite round, at most two); after the last round `repair` makes it comply with
+verified template lines (drops lines off the palette, adds the first supported claim of a missing
+group in story order, brings a spatial line first for audio description and a numeric one for the
+analyst, tells audio description in story order, trims numeric lines that cover no group, fits
+the line budget, puts the opener on the first line and the cue last: the two voices interleave,
+so a cue said anywhere counts). The templates go through the same `repair`. A recap tells several
+moments and keeps only the never-lists (`withheld`), not the palettes.
 The narration ablation (`eval/narration_ablation.py`) and the crew-vs-single eval
 (`eval/crew_vs_single.py`) run the Verifier with these script checks off (`LineVerifier`, line
 checks only), as when their reports were measured: with them on, the single agent's one call is
@@ -1474,15 +1629,36 @@ always wraps the words.
 
 Decisive words (the lexicon terms, "that look", the shoulder checks, 那一眼, 回头看了一眼) are
 their own louder prosody span, and a counterfactual line takes a 250 ms break after the first
-comma. Audio description ignores the role: neutral styles only (`narration-relaxed`,
-`narration-professional`, `calm`, `newscast`), rate −10%, no emphasis and no break, never
-`excited` or `cheerful`. Styles are the static table `VOICE_STYLES`;
+comma. The table is the casual fan's and, with its own styles (`excited`,
+`sports-commentary-excited`, `cheerful`, `hopeful`) and three points more pitch, the player fan's.
+The analyst ignores role and tier (`newscast`, `documentary-narration`, `serious`; rate and pitch
++0%), and so does the coach (`friendly`, `narration-relaxed`, `calm`, `serious`; rate −6%); both
+keep the emphasis and the reveal break. A line that opens with the persona's opener takes a 400 ms
+break after it. Audio description ignores the role: neutral styles only (`narration-relaxed`,
+`narration-professional`, `calm`, `newscast`), rate −15%, no emphasis and no reveal break, a
+300 ms pause at every clause and 600 ms after the line, never `excited` or `cheerful`. Styles are
+the static table `VOICE_STYLES`;
 `python -m infra.voices` checks it against Azure Speech. A cached breakdown is re-voiced on read:
 cue keys change, the breakdown key does not.
 
 **Failure policy.** Per-step timeout (≈ 8 s, *tunable*), one retry, then a template fallback for
 that step. Refuted claim → rewrite by the agent that wrote the line (max 2) → drop the line. Every handoff is traced to
 Application Insights.
+
+**A degraded run is never served as final** (2026-10-22). A model run in which any step fell back
+to its template (a step traced `template`, or a plan or reel that aired as the template) is cached
+as degraded, and every answer lists those steps (`degraded`). *Why:* a red-team read found the
+README's Analyst · 中文 link serving a cached run with the Analyst on its template after a
+`ChatClientException`, to every judge who followed it.
+- While the model is available, the API runs a degraded key again: at most once per key per
+  `TTE_DEGRADED_RETRY_S` (600 s), so many viewers of one key cost one run; under the per-client
+  limit and the daily model cap like any regeneration. A retry that comes back more degraded
+  does not replace the cached run, and the viewer gets the better one.
+- While it is not (the client is limited, the cap is reached, or the retry is not due), the
+  degraded run is served as it is, labelled by its steps' sources on the Producer desk.
+- Recaps follow the same rule; drills never write to the cache. `infra.prewarm
+  --refresh-degraded` asks for every degraded view again with `regenerate`, once per run.
+- *Evidence:* `tests/test_api_degraded.py`, `tests/test_prewarm.py`.
 
 *Implemented (M3, `agents/`):*
 - One Agent Framework workflow; each executor handles one typed message, and the Verifier has two
@@ -1633,7 +1809,7 @@ Application Insights.
     Breakdowns cached before traces were recorded answer `recorded: false` and the web says
     "trace not recorded for this cached run". The cache keys did not move (`PIPELINE_VERSION`
     unchanged); `infra.prewarm` reports such views as "no crew trace", and
-    `--regenerate-degraded` runs them again.
+    `--refresh-degraded` runs them again.
   - *Public, like the breakdown.* Ids, counts, verified templates with their placeholders,
     reason codes and error classes; model text only where the breakdown already shows it (the
     Director's reason, the Analyst's angle) and in tool-call arguments, labelled as the model's.
@@ -1646,6 +1822,29 @@ Application Insights.
   - *Evidence:* `tests/test_crew_trace.py`, `tests/test_api_trace.py`,
     `web/src/crewtrace/crewtrace.test.tsx` (on a fixture the backend recorded:
     `uv run python -m agents.crewtrace`).
+- **Why a crew, measured** (2026-10-22, Best Multi-Agent System; `eval/crew_evidence.py`,
+  [`eval/reports/crew_evidence.md`](../eval/reports/crew_evidence.md)). crew_vs_single found no
+  narration-quality win of the crew over one agent, so the case rests on what the architecture
+  provides, measured offline with a scripted model that answers every agent with its template's
+  choices through Agent Framework, on every hero moment the site serves × every persona and
+  language:
+  - *Fault tolerance and recovery.* With any one agent down, every script airs, verified, with
+    the other three roles from the model (the single agent keeps none); bringing the agent back
+    re-runs only the steps that read its output and gives the fault-free breakdown.
+  - *Verification by construction.* No free-text field accepts a number, every number aired is a
+    verified slot's value, and perturbed lines (a number or player the model writes, an unbacked
+    term, a broken placeholder, an unknown or forbidden claim, a tampered claim) never air with
+    the Verifier; without it they all do. The Foundry drafts cached by crew_vs_single
+    (`eval/fixtures/crew_vs_single_cache.json`) are re-checked by today's Verifier.
+  - *Auditability.* Every aired line traces to verified claims with an audit record, the voice
+    call that chose it, the Verifier round that passed it and its voice cue. Found: the trace
+    keeps 4,000 characters of a tool result (`MAX_RESULT`), which cuts the Analyst's
+    `list_claims` result on the larger moments.
+  - *Limits, measured.* The lanes run at once and more audiences cost requests, not time, but the
+    crew is not faster than one agent's call; its short steps are what fit the 8 s step timeout.
+    Found: in a model outage the API caches the all-template run under the model's key and labels
+    it `live`, then `cached`.
+  - *Tests:* `tests/test_crew_evidence.py`.
 - The Analyst's tools come from our MCP server (`agents/mcp_server.py`, stdio): `get_moment`,
   `list_claims`, `get_vision`, `get_pitch_control`, `get_xt`, `get_pressing`,
   `run_counterfactual`, and for what-if questions `list_options` and `what_if`.
@@ -1742,7 +1941,12 @@ Application Insights.
     every renamed claim has its own fingerprint and audit record. Other moments get observed
     claims on their possession's run: the pass, the opponents it bypassed (`opponents_bypassed`,
     the line-breaking detector's own count), scans before the reception, heavy pressure, and how
-    its shot ended (scored, saved by the keeper, blocked, wide; §3.3).
+    its shot ended (scored, saved by the keeper, blocked, wide; §3.3). A goal is told as it was
+    made (2026-10-22): the pass that found the scorer, his look before it reached him (within
+    2 s), the post it went in at and the keeper it beat, each part a checked slot and left out
+    when the run does not have it ("{assister} found {shooter}, who looked up {secs} seconds
+    before the ball reached him and scored at the far post past {keeper}."; `goal_templates`).
+    *Why:* the red team found the match's only goal told as "N. Varnhall scored."
     Payload evidence and seek frames are lifted to the match clock.
   - *Overlay cue sheet* (`GET /api/recaps/<key>/cues?persona=&language=`): `score_bug`, `clip`
     (match frames in and out, speed, opening camera, hold), `moment_title`, `caption` (each spoken
@@ -1903,6 +2107,15 @@ original visual identity.
 - **UI:** persona switch, language switch, favourite-player picker, producer console (claims with
   verdicts, audit trail, latency).
   - The persona and language menu stays open across picks until Escape or a press outside.
+  - *Plain words first, jargon on demand* (2026-10-22, outside UX review). A chapter's lede says
+    what happens in plain words; the mechanism and its terms (softmax and Gumbel-max sampling,
+    the TelestrationPlan and its checks, the failure drill's retry and workflow checkpoint) are
+    folded under "How it works". "Take his eyes" carries its subtitle, "Choose when and where he
+    looks". A number computed in code says what it is first ("Computed directly by the
+    simulation", "Measured from the match's tracking and event feed"): its chip's title adds that
+    it is not AI narration and that the Verifier checks what the AI crew writes (the ✓ lines),
+    and the notes under such numbers open "How is this checked?" to say the same. The Verifier's
+    semantics are unchanged: only a claim it checked carries the ✓.
   - A stitched match's Moments panel pins its hero moments (Breakdown, Your call) at the top. Every
     other moment folds into one row per kind and lens, lensed groups first, and groups of up to
     five start open. match-1's 149 sprints are one row.
@@ -1936,6 +2149,14 @@ original visual identity.
     option in `whatif_*.json`) plays with a gold ball: it never happened. (2) The truth: everyone
     moves from where he pictured them to where they were. (3) What he did and why. (4) The two
     calls compared. One tap tries another option or goes back to the replay.
+  - *Why it went this way* (2026-10-22, outside UX review: the result needed explaining;
+    [why.ts](../web/src/yourcall/why.ts)). Right after the pick, the first beat says what he had
+    just seen (his teammates fresh in his picture, and those he had not seen lately, from the
+    belief ages of the scans), whether the call's receiver was fresh in his picture, and how his
+    picture rated the call against his own (the decision record's chances, in words: "the pass to
+    N. Varnhall looked more promising than your call"), then what it led to in the sim (the
+    verified lines). The first two are read from the sim export and marked so; they carry no
+    number, since no claim stands behind a count or a time.
   - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
     against his), and the breakdown's narration sorted by claim (state at the decision → truth;
     the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
@@ -1983,6 +2204,48 @@ original visual identity.
     95–100%. On `press_escape` seed 0, 10 of 20 change it (the side decides, not the time), but on
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
+- **Academy drill** (2026-10-22, Bowen: a light, game-like scan trainer with no sim change;
+  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment, the moment rail and the intro
+  card; deep link `?play=drill`, with `?match=press_escape-0` for the harder moment, or in a
+  stitched match its first hero moment with a look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
+  pass reaches him, check your shoulder, then make the pass with only what your look showed. It
+  wraps Take his eyes' grid and Your call's picture: every look was re-simulated ahead of time, so
+  no live re-simulation and no model call.
+  - *The look.* After Start a countdown runs from the pass to him to the reception in the moment's
+    own time ("Ball arrives in 1.6 s"; half speed by default, match speed on request: the
+    countdown always counts the moment's time). A sideways drag on his eyes (a touch on a phone) or
+    a held ← / → turns his head live, at most 150° from the ball either way and no faster than a
+    scan turns (404°/s of match time, §3.4); his eyes are the first-person view of the run with no
+    look, his head written in, so the view shows what that head would see (before his decision a
+    look changes only his head and his picture, §3.7). Letting go ends the look, and so does the
+    ball's arrival. One look: a turn that never reaches 35° (half the shortest scan) is no look and
+    may be retried before the ball arrives.
+  - *The snap* ([snap.ts](../web/src/drill/snap.ts)). The look's time is the frame his head began to
+    turn, its direction the widest angle it reached, clamped into the scan range (70–150°): the
+    nearest grid time (a tie goes earlier) and the nearest grid direction on that side (a tie, 120°,
+    goes over the shoulder, as the grid's labels say). A cell where no look can start gives way to
+    the nearest time that can. Said in the grid's values: "Your look: 1.2 s before the ball, 150°
+    over his right shoulder".
+  - *The call.* At his decision, Your call's view (§7) of his picture with that look: everyone where
+    he believed them in the look's run, those he had not seen for 1.5 s grey, a marker per option of
+    the look's decision record, listed across the pitch. No option is marked as his.
+  - *The result* ([result.ts](../web/src/drill/result.ts)). Checks in words: whether he looked
+    before the ball arrived, whether the runner was fresh in the picture (a hero with a runner),
+    whether the pass is the one he played. Then the look, whom it brought into his sight (its
+    verified line), the viewer's call rated on that picture in words from the decision record (no
+    number), the look's verified lines (his picture of the player who mattered, the sim's call with
+    that look, what came of it, its value), and three calls side by side: with your look, what he
+    did (and where his own looks went), with no look. The board plays what he did with the look's
+    run as the gold ghost path. Every number on screen is the grid's: its times, its directions, its
+    verified lines.
+  - *Levels* are the moments with a bundled look grid (`LOOK_FILES`): Blind side
+    (`blind_side_run` seed 3, easier) and Under pressure (`press_escape` seed 0, harder). There is
+    no free control of the reception distance or time: each would need new sim runs and their
+    gates after the sim freeze (2026-10-24). A grid bundled later joins the list.
+  - Keyboard: his head is a slider (its value his head from the ball); Start focuses it; the
+    markers as in Your call. "No clock?" opens Take his eyes, which chooses the time and the
+    direction without one. No blur, no flashes: the countdown changes in place and the card is
+    opaque. Reduced motion: the result's board cuts to its end.
 - **His looks, step by step** (2026-10-21, a teammate's request: the scans go by too fast;
   [web/src/steps/](../web/src/steps/); "His looks" in the header, "Step through his looks" on the
   moment; deep link `?play=steps`, a hero moment's only): each look the hero takes before the ball
@@ -2022,10 +2285,42 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
-- **Judge tour** ([web/src/tour/](../web/src/tour/); "Take the 90-second tour" on the lineup card,
-  the moment card and the story, and the link `?tour=1`, or `?tour=<step id>`): an optional walk
-  of about ninety seconds, so a judge with three minutes sees every signature feature without
-  exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
+- **Every moment in reach** (2026-10-22, Bowen: "why does the site now have only one moment?";
+  [web/src/moments/](../web/src/moments/)): a rail of links above the live screen (and the same
+  row on the intro card, beside Start) names every moment the site plays, as the trailer's
+  chapters do: The look (`blind_side_run` seed 3), Under pressure (`press_escape` seed 0), The
+  corner and The goal (`corner_blind_side`, `far_post_finish`: hero moments inside match-1, opened
+  as their breakdowns there with `?match=match-1&moment=<scenario>`, where they are cached), and
+  Full match · live (match-1's stream), then, set apart, the Academy drill (`?play=drill`). The
+  page on screen is marked; a phone scrolls the row sideways. While the intro card is up the rail keeps its place, hidden; it stays off Your call,
+  Take his eyes and the step-through, which have their own way back; `rail=0` leaves it out (the
+  demo video's framing). On a hero page the Live pill opens the full match's stream.
+- **Quick tour** (2026-10-22, outside UX review: a first-time visitor met too many concepts and
+  buttons at once; [web/src/tour/](../web/src/tour/), the `quick` list of
+  [steps.json](../web/src/tour/steps.json); Start on the intro card, "Quick tour" on the moment
+  card, the link `?tour=quick`): one path in five steps, under a minute, on the app's own
+  features: watch the look (his eyes, slowed around it, paused a little after his decision; "Watch
+  it again"), remove it (the run without the look), compare the outcomes (the board from above
+  once both passes have arrived, the run without the look as the gold ghost path), every number is
+  checked (the evidence card on the tour's claim in the Analyst's commentary, a wrong number typed
+  by the tour and marked as such, the Verifier's refusal with its reason; online only, deterministic,
+  no model call, from cached breakdowns), make your call (Your call). Its words carry no number. It
+  opens only on a hero moment with a key scan and the run without it; elsewhere Start starts
+  watching. Its last step offers the full tour.
+  - *One panel per step.* While a tour runs its card is the one panel: the moment card and the
+    HUD row (whose eyes, the director's suggestions, the stats ticker) stand down; the evidence
+    card stays when a step opens it (the full tour, and the quick tour's check). In the quick tour
+    the caption stands down too, and the card carries the step's verified lines instead (the
+    breakdown's line for the look; the bundled "without the look" lines, else the breakdown's, for
+    the run without it and the comparison, with "How xT works" on demand). It sits in the moment
+    card's place on a wide screen and, on a step that keeps the picture in view, under the picture
+    on a phone, so the player and the pass stay in view; a step that dims the page is placed clear
+    of the card it points at. On a phone the Your call step starts as a bar, since Your call's own
+    card tells it.
+- **Judge tour**, the full tour ([web/src/tour/](../web/src/tour/); "Full tour · 90 s" behind
+  "Teams and more" on the intro card, in the story and at the end of the quick tour, and the link
+  `?tour=1`, or `?tour=<step id>`): an optional walk of about ninety seconds, so a judge with
+  three minutes sees every signature feature without exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
   at (CSS selectors), one plain line, the app control it runs on arrival, an optional button in
   the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
   - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
@@ -2122,14 +2417,18 @@ original visual identity.
   - the position; the torso line from `body` (the shoulders, across the torso's facing); a head
     ray from the head yaw; and a fan from torso to head that fills in as the head–torso angle
     grows. The key reads out that angle for the player whose eyes the first-person view uses.
-  - The head ray lights up while the scan detector (§4.7) marks a scan.
+  - While the scan detector (§4.7) marks a scan, a **radar** lies on the grass at the player's
+    feet: a 60° sector on his head yaw, turning with it, with a thin edge on the side his head
+    turned to, in Floodlight. It shows on exactly the frames flagged, easing in and out over about
+    150 ms of match time; the head ray stays the same white line. Without the skeleton, the key
+    scan's player gets the radar during his key scan, on the broadcast camera and the board.
   - A switch picks the head yaw: **true**, or **as tracked**, with the §3.4 sensor noise (the
     series the detector runs on). The export carries the tracked yaw only as the detector's
     angular velocity, so the web app integrates that and pins the constant to the circular mean of
     true minus integrated yaw. On blind_side_run seed 3 that is within 0.38° of the sim's
     `head_yaw_observed`, every player and both runs (the noise itself reaches 7.5°).
-  - A stitched match's export has no detector run: there the head yaw is the true one and the ray
-    lights up during the sim's own scans, and the key says so.
+  - A stitched match's export has no detector run: there the head yaw is the true one and the
+    radar shows during the sim's own scans, and the key says so.
   - Limbs are not sim data and are not drawn. On the broadcast camera the torso line sits at
     shoulder height and the ray at eye height; heights and the shoulder width are a drawing
     choice, not data.
@@ -2190,11 +2489,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       tries another option or closes; the reveal shows no number outside a verified line, each line
       once; the camera frames every option on desktop and phone; markers are focusable named
       buttons (arrow keys, Enter, Escape) and a swipe picks the option it points at; reduced
-      motion cuts to the end; it works on both heroes with a decision and inside `?match=`.
+      motion cuts to the end; it works on both heroes with a decision and inside `?match=`; after
+      the pick it says what he had seen and how his picture rated the call, with no digit.
       — [web/src/yourcall/flow.test.ts](../web/src/yourcall/flow.test.ts),
       [reveal.test.ts](../web/src/yourcall/reveal.test.ts),
       [camera.test.ts](../web/src/yourcall/camera.test.ts),
-      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx)
+      [why.test.ts](../web/src/yourcall/why.test.ts),
+      [yourcall.test.tsx](../web/src/yourcall/yourcall.test.tsx); `npm run smoke`, pages
+      `link-yourcall` and `phone-375-yourcall` (axe on the reveal)
 - [x] Judge tour: every step finds what it points at on the hero moment, offline and with the
       live service, and on the match page its recap; it runs only the app's own controls; Next, Back, Skip, Done and Escape work,
       and closing it at any step leaves the app usable; keyboard, reduced motion and the phone
@@ -2203,6 +2505,18 @@ reported to be Xsens motion capture; animation only): the players' walk
       [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
       `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
       no sideways scroll
+- [x] Quick tour: Start on the intro card opens it on the hero moment; five steps (the look in
+      his eyes, the run without it, the board with both passes arrived and the other run's ghost
+      path, every number is checked — the evidence card on the tour's claim in the Analyst's
+      commentary, a wrong number typed by the tour and marked as such, the Verifier's refusal with
+      its reason; online only, deterministic, no model call, from cached breakdowns — and Your
+      call), each on the app's own controls; it takes under a minute of holds, its words carry no
+      number, and it does not open on a page without a key scan and the run without it.
+      — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
+      [tour.test.tsx](../web/src/tour/tour.test.tsx) ("the quick tour"),
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx); `npm run smoke`, pages
+      `quick-tour`, `phone-375-quick-tour` (the moment card stood down at every step, the card
+      clear of the board) and `cold-load-without-the-look`
 - [x] Take his eyes: every look of the grid airs only lines that pass the checks, in en and zh;
       a look's run is the factual run with only his head, sight, belief and own events spliced in
       before his decision; times and directions are named radio groups with arrow keys and Enter,
@@ -2214,6 +2528,17 @@ reported to be Xsens motion capture; animation only): the players' walk
       [takeeyes.test.tsx](../web/src/takeeyes/takeeyes.test.tsx);
       [tests/test_look.py](../tests/test_look.py) (every line verified, a wrong number refuted);
       [tests/test_committed_exports.py](../tests/test_committed_exports.py) (the grids current)
+- [x] Academy drill: any turn maps to the nearest cell of the grid (its start to the nearest
+      time, its widest angle, clamped to 70–150°, to the nearest direction on its side), on both
+      bundled grids; the live head never passes 150° nor turns faster than a scan; the countdown is
+      the moment's time to the reception at either pace and reaches 0 there; the look locks on
+      letting go or at the ball's arrival; the call's picture is the look's belief; the result's
+      calls and lines equal the grid's for every look and every option; the drill opens from its
+      deep link and from the moment, and Escape returns focus. — [web/src/drill/snap.test.ts](../web/src/drill/snap.test.ts),
+      [result.test.ts](../web/src/drill/result.test.ts),
+      [controller.test.ts](../web/src/drill/controller.test.ts),
+      [drill.test.tsx](../web/src/drill/drill.test.tsx); `npm run smoke`, pages `link-drill`,
+      `link-drill-press-escape`, `phone-375-drill` (a drill completed on each)
 - [x] His looks, step by step: one step per scan of the hero before his reception, from the run's
       scan events (a file whose looks are not the run's is refused), the dropped look missing in
       the run without it; the freeze frame inside the dwell; movement arrows from the sim's
@@ -2294,7 +2619,7 @@ reported to be Xsens motion capture; animation only): the players' walk
       (1.6 Mbps, 150 ms) with a 4x CPU slowdown, procedural → baked: first contentful paint
       3.41 → 3.34 s, first 3D frame 5.84 → 5.56 s, players' model 7.23 → 7.20 s; the stadium
       (0.76 MB) is fetched from 6.6 s and swapped in at 12.2 s, with one 100–155 ms long task.
-      LCP is text in both (the lineup card's heading at about 6.1 s; when it first paints in
+      LCP is text in both (the lineup card's heading at about 6.1 s, before the intro card; when it first paints in
       the fallback font, a caption at about 13 s becomes the LCP, in either mode: a font swap,
       eval/reports/web_load.md). `npm run fps` 60
       capped in every row with either; uncapped (vsync off) 245–316 → 285–308 fps first-person,
@@ -2326,17 +2651,20 @@ reported to be Xsens motion capture; animation only): the players' walk
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
-- [x] Cold load: nothing of the hero moment plays under the lineup card; with no click, the run
-      without the look and its verified line are on screen within 20 s of opening the page, and
-      any viewer action ends the show.
+- [x] Cold load: nothing of the hero moment plays under the intro card, which waits for the
+      viewer; after Start, the run without the look and its verified line are on screen within
+      20 s, and any viewer action ends the show.
       — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
-      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("the run without the look is on
-      screen and said within 20 s"); `npm run smoke`, page `cold-load-without-the-look` (16 s,
-      2026-10-21)
+      [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("after Start, the run without
+      the look is on screen and said within 20 s"),
+      [web/src/ui/introCard.test.tsx](../web/src/ui/introCard.test.tsx); `npm run smoke`, page
+      `cold-load-without-the-look` (16 s after the page opened, 2026-10-21, with the old card)
 - [x] Names: players and clubs go by their fictional names in narration, voice, chips and labels;
       no player id appears in a caption, a chip or a label; a name, a surname or an id outside a
       slot is a render violation, in en and zh; values cached with ids are renamed when read, with
-      new voice keys.
+      new voice keys. In zh, players go by their Chinese names and no Latin letter is left in a
+      line, not even "xT" (captions, voice, bundles, tactics cards)
+      ([tests/test_zh_narration.py](../tests/test_zh_narration.py)).
       — [tests/test_names.py](../tests/test_names.py),
       [tests/test_roster_web.py](../tests/test_roster_web.py),
       [web/src/ui/names.test.tsx](../web/src/ui/names.test.tsx), `tests/test_whatif.py` (names in

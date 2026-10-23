@@ -195,7 +195,7 @@ describe("whose eyes", () => {
     const page = mount(offline(), <StageHud />);
     const source = page.querySelector(".hud .source")!;
     expect(text(source)).toBe("sim");
-    expect(source.getAttribute("title")).toContain("not a verified claim");
+    expect(source.getAttribute("title")).toContain("not AI narration");
     expect(text(source.parentElement)).toMatch(/head \d+° from the ball.*\d+ players in sight/);
     expect(page.querySelectorAll(".hud .source")).toHaveLength(1);
     expect(page.querySelector(".hud .verified")).toBeNull();
@@ -207,7 +207,7 @@ describe("sim numbers in the story and decision", () => {
     const page = mount(offline(), <StoryPanel />);
     const source = page.querySelector(".story .chapter-head .source")!;
     expect(text(source)).toBe("sim");
-    expect(source.getAttribute("title")).toContain("not a verified claim");
+    expect(source.getAttribute("title")).toContain("not AI narration");
     expect(text(source.parentElement)).toContain("Timings, distances and probabilities");
     expect(text(page.querySelector(".beats"))).toContain("probability");
     expect(page.querySelector(".verified")).toBeNull();
@@ -217,9 +217,7 @@ describe("sim numbers in the story and decision", () => {
     const page = mount(offline(), <DecisionPanel />);
     const figure = page.querySelector(".options-figure")!;
     expect(text(figure.querySelector(".kicker .source"))).toBe("sim");
-    expect(figure.querySelector(".source")!.getAttribute("title")).toContain(
-      "not a verified claim",
-    );
+    expect(figure.querySelector(".source")!.getAttribute("title")).toContain("not AI narration");
     expect(figure.querySelectorAll(".opt").length).toBeGreaterThan(0);
     expect(text(figure.querySelector(".facts"))).toContain("Last saw");
     expect(figure.querySelector(".verified")).toBeNull();
@@ -390,7 +388,7 @@ describe("who is watching", () => {
     expect(text(open)).toContain("Watching as Casual fan · English");
     click(open);
     const dialog = page.querySelector("[role=dialog][aria-label='Who is watching']")!;
-    const analyst = button(dialog, "Analyst The mechanism, with the numbers.");
+    const analyst = button(dialog, "Analyst The board, pitch control and every number.");
     expect(pressed(analyst)).toBe("false");
     click(analyst);
     await act(settle);
@@ -419,13 +417,13 @@ describe("who is watching", () => {
     const dialog = () => page.querySelector("[role=dialog][aria-label='Who is watching']");
     click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    const coach = button(dialog()!, "Coach Shapes, distances, decisions.");
+    const coach = button(dialog()!, "Coach When he looked, and what to teach.");
     act(() => coach.focus()); // as a press or Enter on it would
     click(coach);
     await act(settle);
     expect(dialog()).not.toBeNull();
     // The keyboard stays where it was: on the audience just picked, now pressed.
-    const picked = button(dialog()!, "Coach Shapes, distances, decisions.");
+    const picked = button(dialog()!, "Coach When he looked, and what to teach.");
     expect(pressed(picked)).toBe("true");
     expect(document.activeElement).toBe(picked);
     // Escape closes it and hands the keyboard back to the toggle.
@@ -505,7 +503,8 @@ describe("the counterfactual verdict", () => {
 
   function expectSim(page: HTMLElement) {
     const worth = page.querySelector(".worth")!;
-    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt!.toFixed(3)}`);
+    // At the claim's precision, so the number holds when the verified claim replaces it.
+    expect(text(worth.querySelector(".numeral"))).toBe(`+${hero.deltaXt!.toFixed(2)}`);
     expect(text(worth)).not.toContain("9.87");
     expect(worth.classList.contains("verified")).toBe(false);
     expect(worth.querySelector(".checked")).toBeNull();

@@ -10,7 +10,7 @@ import { SFX_NAMES } from "./sfx.mjs";
 import { estimateSpeechSeconds } from "./vo.mjs";
 
 const GRADES = new Set(["none", "night", "cool", "warm", "bleach", "mono", "danger"]);
-const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue"]);
+const FX = new Set(["grain", "vignette", "chroma", "rewind", "shake", "flash-in", "glue", "lift", "warm"]);
 const FITS = new Set(["cover", "pad", "contain"]);
 const TRANSITIONS = new Set(["cut", "fade", "flash", "dip", "whip", "glitch"]);
 const CROPS = new Set(["pov", "tactical", "stage"]);
@@ -71,20 +71,39 @@ export function namedSpec(spec, naming) {
 
 export function validateTrailer(spec, ctx) {
   const errors = [];
-  // `pins`: a cine shot corner-pinned onto a screen in a rendered clip (video/pin.py).
+  // `pins`: a cine shot or a capture corner-pinned onto a screen in a rendered clip (video/pin.py).
   for (const [k, pin] of (Array.isArray(spec?.pins) ? spec.pins : []).entries()) {
     const at = `pins[${k}]`;
     if (!pin || typeof pin.id !== "string" || !/^[A-Za-z0-9_-]+$/.test(pin.id)) errors.push(`${at}: id is not a safe file name`);
     for (const key of ["clip", "corners", "matte"]) {
       if (typeof pin?.[key] !== "string" || !pin[key]) errors.push(`${at}: ${key} is required`);
     }
-    if (!spec.cine?.[pin?.source?.cine]) errors.push(`${at}: source.cine must name a cine shot`);
+    const src = pin?.source ?? {};
+    if (src.capture != null ? !ctx.shotIds?.has(src.capture) : !spec.cine?.[src.cine]) {
+      errors.push(`${at}: source must name a cine shot (source.cine) or a capture shot (source.capture)`);
+    }
   }
   const warnings = [];
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
     return { errors: ["trailer.json: expected an object"], warnings };
   }
   if (spec.naming != null && !["ids", "names"].includes(spec.naming)) errors.push(`naming must be "ids" or "names"`);
+  // `report_facts`: numbers read off a committed eval report (claims.mjs reportFacts).
+  for (const [id, fact] of Object.entries(spec.report_facts ?? {})) {
+    const at = `report_facts.${id}`;
+    if (!/^[a-z_]+$/.test(id)) errors.push(`${at}: id must be lower-case letters and underscores`);
+    if (ctx.claimIds?.has(id)) errors.push(`${at}: collides with a claim id and would overwrite the claim`);
+    if (typeof fact?.file !== "string" || !repoFile(ctx.root, fact.file)) errors.push(`${at}: file must be a path inside the repo`);
+    let groups = -1;
+    try {
+      groups = new RegExp(`${fact?.pattern}|`).exec("").length - 1;
+    } catch {
+      errors.push(`${at}: pattern is not a regular expression`);
+    }
+    const names = Array.isArray(fact?.values) ? fact.values : [];
+    if (!names.length || !names.every((n) => /^[a-z_]+$/.test(n))) errors.push(`${at}: values must name each group`);
+    else if (groups >= 0 && groups !== names.length) errors.push(`${at}: ${groups} groups in pattern, ${names.length} values`);
+  }
   const voIds = new Set((spec.beats ?? []).flatMap((b) => (b.vo ?? []).map((v) => v.id.replace(/n$/, ""))));
   for (const id of Object.keys(spec.named?.vo ?? {})) {
     if (!voIds.has(id)) errors.push(`named.vo.${id}: no voice line has that id`);
@@ -196,10 +215,11 @@ function checkTitles(titles, errors) {
     if (!title?.params || typeof title.params !== "object" || Array.isArray(title.params)) {
       errors.push(`${where}: params must be an object`);
     } else {
-      // `url` is the site's address (it may hold digits), not a number claim; `legal` holds credit
-      // lines that a licence requires verbatim (a grant number, say), not claims either.
-      const { url, legal, ...shown } = title.params;
+      // `url` and `qr` are the site's address (it may hold digits), not a number claim; `legal`
+      // holds credit lines that a licence requires verbatim (a grant number, say), not claims either.
+      const { url, qr, legal, ...shown } = title.params;
       if (url != null && typeof url !== "string") errors.push(`${where}: url must be a string`);
+      if (qr != null && !(typeof qr === "string" && /^https:\/\/[^\s]+$/.test(qr))) errors.push(`${where}: qr must be an https address`);
       if (legal != null && !(Array.isArray(legal) && legal.every((line) => typeof line === "string"))) {
         errors.push(`${where}: legal must be a list of strings`);
       }
@@ -433,6 +453,7 @@ function checkVo(beat, where, spec, ctx, voIds, beatStart, planned, errors, warn
     if (!ID.test(String(id))) errors.push(`${where}: vo id "${id}" is not a safe file name`);
     if (voIds.has(id)) errors.push(`${where}: duplicate vo id "${id}"`);
     voIds.add(id);
+    if (line?.caption != null && line.caption !== "top") errors.push(`${where}: vo "${id}" caption must be "top"`);
     if (!(line?.at >= 0)) errors.push(`${where}: vo "${id}" at must be >= 0`);
     else if (beat.dur > 0 && line.at >= beat.dur) {
       warnings.push(`${where}: vo "${id}" starts at ${trim(line.at)}s, outside the beat (${trim(beat.dur)}s)`);

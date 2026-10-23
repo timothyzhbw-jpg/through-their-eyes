@@ -45,7 +45,10 @@ export function DirectorBar() {
               onClick={take}
               title="Switch now"
             >
-              <b>{renameIds(show.title)}</b>: {renameIds(show.reason)}
+              {/* The words clamp on a phone, not the padded chip (styles.css). */}
+              <span className="director-text">
+                <b>{renameIds(show.title)}</b>: {renameIds(show.reason)}
+              </span>
             </button>
             <button
               type="button"
@@ -63,7 +66,8 @@ export function DirectorBar() {
               ? "The breakdown is choosing the cameras."
               : auto
                 ? "Auto director on: it cuts when play gives a reason."
-                : "Pick any camera. A suggestion shows here when play gives a reason to switch."}
+                : // Says nothing of where the cameras are: on a phone they sit in View options.
+                  "When play gives a reason to switch cameras, a suggestion shows here."}
           </span>
         )}
       </div>

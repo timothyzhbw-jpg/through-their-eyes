@@ -38,6 +38,7 @@ jobs:
         env:
           GROUPS_TO_RUN: ${{ inputs.groups }}
           WORKERS: "4"
+          NPY_DISABLE_CPU_FEATURES: X86_V4 AVX512_ICL AVX512_SPR
         run: |
           for g in $GROUPS_TO_RUN; do
             case "$g" in exports|xt|evals|season|dataset) ;; *) echo "unknown group: $g"; exit 1;; esac

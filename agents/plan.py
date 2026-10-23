@@ -161,6 +161,97 @@ def template_plan(ctx: MomentContext) -> TelestrationPlan:
     return TelestrationPlan(moment=ctx.card.id, duration_s=r(play_end + 3.0), steps=steps)
 
 
+@dataclass(frozen=True)
+class View:
+    """What one audience sees during the replay (SPEC 6, "Persona specs"; SPEC 7)."""
+
+    main: str  # the camera every non-POV camera step becomes
+    pov_camera: str = "pov"  # what a POV camera step becomes: the POV full, or beside the board
+    pov: bool = True  # the first-person clip; False plays the same match time on `main`
+    zones: tuple[str, ...] = ()  # overlay layers turned on where the plan turns on its first
+    belief: bool = True  # the belief ghost (by default the runner's: the one highlighted player)
+    counterfactual: bool = True  # the ghost of the run without the look
+    counterfactual_early: bool = False  # shown as the POV ends, beside the outcome
+    scan_marker: bool = True
+
+
+# casual: his eyes, the runner highlighted, the outcome on the broadcast camera; analyst: the
+# tactical board from the first second, with pitch control and his pass options, his eyes in the
+# corner; coach: POV and board side by side, the look marked, the run without the look shown as
+# soon as the look is; player fan: his eyes, then the camera locked on him; audio description: as
+# little as possible, on the broadcast camera.
+VIEWS: dict[str, View] = {
+    "casual": View("broadcast", scan_marker=False),
+    "analyst": View("tactical", "tactical", zones=("vision", "pitch_control", "options")),
+    "coach": View("split", "split", zones=("vision", "options"), counterfactual_early=True),
+    "player_fan": View("player_lock", zones=("vision",), belief=False, counterfactual=False),
+    "audio_description": View("broadcast", pov=False, belief=False, counterfactual=False,
+                              scan_marker=False),
+}  # fmt: skip
+
+
+def persona_plan(plan: TelestrationPlan, persona: str, ctx: MomentContext) -> TelestrationPlan:
+    """The plan re-cut for one audience, in code: camera modes and overlay steps change; times,
+    the replayed match time and the plan's length do not, so a valid plan stays valid. A persona
+    without a view plays the plan as it is."""
+    view = VIEWS.get(persona)
+    if view is None:
+        return plan
+    steps: list = []
+    zoned = False
+
+    def zones(t: float) -> list[Zone]:
+        return [Zone(t=t, do="zone", layer=layer, player=ctx.hero) for layer in view.zones
+                if layer != "vision"]  # fmt: skip
+
+    for step in plan.steps:
+        if isinstance(step, Camera):
+            mode = view.pov_camera if step.mode == "pov" and view.pov else view.main
+            last = next((s for s in reversed(steps) if isinstance(s, Camera)), None)
+            if last is None or last.mode != mode:  # the same camera again is no cut
+                steps.append(step.model_copy(update={"mode": mode}))
+        elif isinstance(step, Pov) and not view.pov:
+            steps += [Rewind(t=step.t, do="rewind", to=step.from_),
+                      Play(t=step.t, do="play", to=step.to, speed=step.speed)]  # fmt: skip
+        elif isinstance(step, Zone):
+            if step.layer == "vision" and "vision" in view.zones:
+                steps.append(step)
+            if not zoned:
+                steps += zones(step.t)
+                zoned = True
+        elif isinstance(step, Ghost):
+            if view.belief if step.kind == "belief" else view.counterfactual:
+                steps.append(step)
+        elif isinstance(step, ScanMarker):
+            if view.scan_marker:
+                steps.append(step)
+        else:
+            steps.append(step)
+    if not zoned and view.zones:
+        at = next((i for i, s in enumerate(steps) if isinstance(s, Rewind)), 0)
+        steps[at + 1 : at + 1] = zones(steps[at].t if steps else 0.0)
+        if "vision" in view.zones:
+            t = steps[at].t if steps else 0.0
+            steps.insert(at + 1, Zone(t=t, do="zone", layer="vision", player=ctx.hero))
+    if view.counterfactual and view.counterfactual_early:
+        ghost = next((s for s in steps if isinstance(s, Ghost) and s.kind == "counterfactual"),
+                     None)  # fmt: skip
+        pov_end = _pov_end(plan)
+        if ghost is not None and pov_end is not None and pov_end < ghost.t:
+            steps.remove(ghost)
+            steps.append(ghost.model_copy(update={"t": pov_end}))
+    steps.sort(key=lambda s: s.t)  # stable: at equal times the order above stays
+    return plan.model_copy(update={"steps": steps})
+
+
+def _pov_end(plan: TelestrationPlan) -> float | None:
+    """When the plan's first POV clip ends on the plan clock, rounded as the template rounds."""
+    pov = next((s for s in plan.steps if isinstance(s, Pov)), None)
+    if pov is None:
+        return None
+    return round(pov.t + (pov.to - pov.from_) / pov.speed, 2)
+
+
 def voice_times(plan: TelestrationPlan, n: int) -> list[float]:
     """Spread n lines over the plan: after the freeze, before the last second."""
     if n == 0:

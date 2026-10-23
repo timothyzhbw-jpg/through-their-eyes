@@ -45,6 +45,11 @@ ran for this request), `cached` (a crew run from `ran_at`), or `template` (no mo
 client is rate-limited, today's cap is reached, or the service has no model). The web shows it as
 given and never works it out from the other fields.
 
+A model run in which a step fell back to its template is cached as degraded, and every answer
+lists those steps (`degraded`). While the model is available it is run again, at most once per
+key per `TTE_DEGRADED_RETRY_S`, under the per-client limit and the daily cap; until then it is
+served as it is. A retry that comes back more degraded never replaces it (SPEC 6).
+
 Every crew run checkpoints to files under the cache directory (`checkpoints/`), so a normal
 breakdown interrupted mid-workflow, by a restart too, resumes from its last completed step. Its
 checkpoints are deleted once it is cached. A drill keeps its record and checkpoints on this
@@ -87,7 +92,7 @@ from agents.prompts import PROMPT_VERSION
 from agents.recap import RECAP_PROMPT_VERSION, run_recap_crew
 from agents.schemas import AgentStep, Language, Persona
 from agents.telemetry import configure_tracing
-from agents.workflow import PIPELINE_VERSION, NotWaiting, run_crew
+from agents.workflow import PIPELINE_VERSION, STEPS, NotWaiting, run_crew
 from api import guard, tts
 from api.egress import MB, Egress, EgressLimit
 from api.live import Slots, stream
@@ -101,10 +106,12 @@ from api.store import (
     Match,
     MatchStore,
     RateLimiter,
+    Retries,
     content_key,
     open_storage,
 )
 from api.tamper import TamperError, tamper
+from explain.render import render_fingerprint
 
 VERSION = "0.5.0"
 DRILLS_KEPT = 50  # failure drills kept on disk for a bring-back
@@ -205,15 +212,30 @@ def _provenance(value: dict[str, Any], cached: bool, limits: dict[str, bool]) ->
     return {"kind": "cached" if cached else "live", "ran_at": _ran_at(value), "reason": None}
 
 
+def _degraded(value: dict[str, Any]) -> list[str]:
+    """The model steps of a stored crew run that fell back to their templates, in the graph's
+    order: each step traced `template`, and the Telestrator when its plan (a recap's reel) aired
+    as the template. Empty for a clean model run, and for an offline run, which is a template by
+    design and says so in its provenance (SPEC 2, 6)."""
+    if value.get("source") != "model":
+        return []
+    result = value.get("result") or {}
+    fell = {s.get("step") for s in result.get("trace") or () if s.get("source") == "template"}
+    if result.get("plan_source", result.get("reel_source")) == "template":
+        fell.add("telestrator")
+    return [step for step in STEPS if step in fell]
+
+
 def _answer(
     key: str, value: dict[str, Any], cached: bool, limits: dict[str, bool] = NO_LIMITS
 ) -> dict[str, Any]:
     """A stored crew result as a POST answers it: its key, whether it was cached and why a
-    regeneration did not run, where it came from, and whether it has a crew trace (not the trace,
-    which has its own endpoint)."""
+    regeneration did not run, where it came from, the model steps that fell back to their
+    templates (`degraded`), and whether it has a crew trace (not the trace, which has its own
+    endpoint)."""
     public = {k: v for k, v in value.items() if k not in ("trace", "ran_at")}
     return {"key": key, "cached": cached, **NO_LIMITS, **limits, **public,
-            "traced": value.get("trace") is not None,
+            "degraded": _degraded(value), "traced": value.get("trace") is not None,
             "provenance": _provenance(value, cached, limits)}  # fmt: skip
 
 
@@ -265,6 +287,7 @@ def create_app(
     answers = Renamed(storage.answers)
     recaps = cues.recording(Renamed(storage.recaps, clubs=True))  # its lines may be spoken too
     limiter = RateLimiter(*settings.rate_limit)
+    retries = Retries(settings.degraded_retry_s)  # degraded cached runs, by key
     verify_limiter = RateLimiter(*settings.verify_rate_limit)
     cap = DailyCap(settings.daily_model_cap)
     drill_cap = DailyCap(DAILY_OFFLINE_DRILLS)  # offline drills; with a model, `cap` applies
@@ -323,6 +346,16 @@ def create_app(
             return "rate_limited"
         cap.take()
         return "model"
+
+    def retry_due(k: str, value: dict[str, Any]) -> bool:
+        """Whether a cached run under `k` should be run again before it is served: a model step
+        fell back to its template, a model is configured, and its retry is due (at most once per
+        `TTE_DEGRADED_RETRY_S`). It then runs only if `regeneration` allows it."""
+        return client is not None and bool(_degraded(value)) and retries.due(k)
+
+    def kept(previous: dict[str, Any] | None, value: dict[str, Any]) -> bool:
+        """A retry that came back more degraded than the run it retried does not replace it."""
+        return previous is not None and len(_degraded(value)) > len(_degraded(previous))
 
     def crew_slot(llm: Any) -> AbstractAsyncContextManager[Any]:
         """A slot for a crew run with a model (`crew_slots`); a run without one needs none."""
@@ -490,6 +523,7 @@ def create_app(
             return content_key(card=ctx.card.content_hash(), personas=sorted(body.personas),
                                languages=sorted(body.languages), prompts=PROMPT_VERSION,
                                pipeline=PIPELINE_VERSION, model=model_name,
+                               render=render_fingerprint(body.languages, ctx.claims, ctx.names),
                                **extra)  # fmt: skip
 
         if body.fail:  # a fresh run under its own key: never a cache hit, never cached for others
@@ -507,14 +541,19 @@ def create_app(
         offline_key = key("offline")
         candidates = ([model_key] if client is not None else []) + [offline_key]
         # With a model, only a model result is a cache hit up front: a template served while a
-        # client was limited must not stand in for the model on later requests.
-        if not body.regenerate and (hit := breakdowns.get(candidates[0])) is not None:
+        # client was limited must not stand in for the model on later requests. A degraded one
+        # (a model step fell back to its template) is run again when its retry is due; while the
+        # model is not available, it is served as it is, labelled (SPEC 2, 6).
+        hit = breakdowns.get(candidates[0])
+        if hit is not None and not body.regenerate and not retry_due(candidates[0], hit):
             return {**_answer(candidates[0], hit, cached=True), "drill": None, **where}
         limits = dict(NO_LIMITS)
         if client is not None:
             verdict = regeneration(request)
             if verdict == "model":
-                return {**await _compute(ctx, body, client, "model", model_key), **where}
+                retries.start(model_key)  # before any await: one retry per key, not per viewer
+                return {**await _compute(ctx, body, client, "model", model_key, previous=hit),
+                        **where}  # fmt: skip
             limits[verdict] = True
             for k in candidates:
                 if (hit := breakdowns.get(k)) is not None:
@@ -528,9 +567,12 @@ def create_app(
         source: str,
         k: str,
         limits: dict[str, bool] = NO_LIMITS,
+        previous: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Run the crew and cache the result. A run of this key that was interrupted resumes from
-        its checkpoint; once the result is cached, the checkpoints go."""
+        """Run the crew and cache the result, marked with the steps that fell back to their
+        templates (`degraded`). A run of this key that was interrupted resumes from its
+        checkpoint; once the result is cached, the checkpoints go. `previous`: the cached run this
+        one retries, kept and served if this one came back more degraded."""
         async with locks.hold(k), crew_slot(llm):
             run = await run_crew(ctx, client=llm, personas=tuple(body.personas),
                                  languages=tuple(body.languages), use_mcp=settings.analyst_mcp,
@@ -538,11 +580,15 @@ def create_app(
             value = {"source": source, "result": run.result.model_dump(mode="json", by_alias=True),
                      "trace": run.trace.model_dump(mode="json"),
                      "ran_at": run.trace.runs[-1].started}  # fmt: skip
-            breakdowns.put(k, value)
+            value["degraded"] = _degraded(value)
+            if not kept(previous, value):
+                breakdowns.put(k, value)
             shutil.rmtree(runs_dir / k, ignore_errors=True)
             for empty in (runs_dir, checkpoint_dir):  # a finished run leaves nothing on disk
                 with suppress(OSError):
                     empty.rmdir()
+        if previous is not None and kept(previous, value):
+            return {**_answer(k, previous, cached=True, limits=limits), "drill": None}
         return {**_answer(k, value, cached=False, limits=limits), "drill": None}
 
     def _drill_response(
@@ -678,18 +724,22 @@ def create_app(
             return content_key(kind="recap", match=rc.content_hash(),
                                personas=sorted(body.personas), languages=sorted(body.languages),
                                prompts=RECAP_PROMPT_VERSION, pipeline=PIPELINE_VERSION,
-                               model=model_name, **extra)  # fmt: skip
+                               model=model_name,
+                               render=render_fingerprint(body.languages, names=rc.names),
+                               **extra)  # fmt: skip
 
         model_key = key(model, analyst_tools="mcp") if settings.analyst_mcp else key(model)
         offline_key = key("offline")
         candidates = ([model_key] if client is not None else []) + [offline_key]
-        if not body.regenerate and (hit := recaps.get(candidates[0])) is not None:
+        hit = recaps.get(candidates[0])  # degraded: run again when due, as a breakdown
+        if hit is not None and not body.regenerate and not retry_due(candidates[0], hit):
             return _answer(candidates[0], hit, cached=True)
         limits = dict(NO_LIMITS)
         if client is not None:
             verdict = regeneration(request)
             if verdict == "model":
-                return await _compute_recap(rc, body, client, "model", model_key)
+                retries.start(model_key)
+                return await _compute_recap(rc, body, client, "model", model_key, previous=hit)
             limits[verdict] = True
             for k in candidates:
                 if (hit := recaps.get(k)) is not None:
@@ -697,10 +747,19 @@ def create_app(
         return await _compute_recap(rc, body, None, "offline", offline_key, limits)
 
     async def _compute_recap(
-        rc, body: RecapBody, llm, source: str, k: str, limits: dict[str, bool] = NO_LIMITS
+        rc,
+        body: RecapBody,
+        llm,
+        source: str,
+        k: str,
+        limits: dict[str, bool] = NO_LIMITS,
+        previous: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Run the recap crew and cache the result, as `_compute` does a breakdown's."""
         async with locks.hold(k):
-            if (hit := recaps.get(k)) is not None and not body.regenerate:  # made while waiting
+            hit = recaps.get(k)  # made while waiting, unless it is the degraded run this retries
+            retrying = llm is not None and hit is not None and _degraded(hit)
+            if hit is not None and not body.regenerate and not retrying:
                 return _answer(k, hit, cached=True, limits=limits)
             if llm is not None and settings.analyst_mcp:  # the MCP server reads the evidence
                 folder = Path(settings.cache_dir) / "recap_evidence"
@@ -717,6 +776,9 @@ def create_app(
             value = rename({"source": source, "result": run.result.model_dump(mode="json"),
                             "trace": run.trace.model_dump(mode="json"),
                             "ran_at": run.trace.runs[-1].started}, clubs=True)  # fmt: skip
+            value["degraded"] = _degraded(value)
+            if kept(previous, value):
+                return _answer(k, previous, cached=True, limits=limits)
             recaps.put(k, value)
         return _answer(k, value, cached=False, limits=limits)
 
@@ -755,7 +817,9 @@ def create_app(
             # A match with one hero keeps its cache keys; with several, the moment is part of it.
             moment = {"moment": ctx.card.id} if len(m.contexts) > 1 else {}
             k = content_key(match=m.id, action=action, language=body.language,
-                            persona=body.persona, version=WHATIF_VERSION, **moment)  # fmt: skip
+                            persona=body.persona, version=WHATIF_VERSION,
+                            render=render_fingerprint([body.language], names=ctx.names),
+                            **moment)  # fmt: skip
             if (hit := answers.get(k)) is not None:
                 return {"key": k, "cached": True, "capped": capped,
                         "answer": {**hit, "question": body.question}}  # fmt: skip
@@ -828,6 +892,7 @@ def create_app(
 
     app.state.settings = settings
     app.state.store = store
+    app.state.storage = storage
     app.state.locks = locks
     app.state.cues = cues
     return app

@@ -12,6 +12,7 @@ import { Sample, sampleInto } from "../data/hero";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { trial } from "../players/trial";
+import { kickBallOffset } from "../players/kickBall";
 import { RiggedFallback, RiggedPlayers } from "../players/RiggedPlayers";
 import { ALL_KITS, kitSlot } from "../players/kit";
 import { FIELD } from "./fieldMarkings";
@@ -20,12 +21,11 @@ import { PovOverlay } from "./PovOverlay";
 import { InstantFrame } from "./InstantFrame";
 import { poseToken, VISOR_COLOR } from "./tokens";
 import { ALERT_COLOR, alertsAt, pulse } from "../alerts/blindSide";
-import { pathFor, type Shot } from "./broadcast";
+import { lockPathFor, pathFor, type Shot } from "./broadcast";
 import { beatFraming, BroadcastLayers, filmBroadcast } from "./BroadcastLayers";
 import { declutter, labelBox, labelHeight } from "./declutter";
 import { MotionBlur } from "./PovMotionBlur";
 import { Grass, NIGHT, PlayerShadows, Stadium } from "./Stadium";
-import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { pushedBy } from "../beat/beat";
 import { BeatLayer3D } from "../beat/BeatLayers";
 import { cuts, viewKey } from "../beat/cut";
@@ -89,7 +89,6 @@ export function PovView() {
         </Canvas>
         <Grade />
         <PovOverlay />
-        {broadcast && <SkeletonLegend />}
       </div>
     </figure>
   );
@@ -167,7 +166,8 @@ function PovScene() {
         poseToken(body, head, sample.body[j], sample.head[j]);
       }
     }
-    ball.current?.position.set(sample.ball[0], 0.11, -sample.ball[1]);
+    const kick = kickBallOffset(s.mode, s.frame); // on the kicking foot (rigged players)
+    ball.current?.position.set(sample.ball[0] + kick[0], 0.11, -(sample.ball[1] + kick[1]));
     const aspect = size.width / size.height;
     const fog = scene.fog as THREE.Fog;
     // A switch of camera or view is a clean cut: the camera is on its new pose at once, and the
@@ -184,9 +184,11 @@ function PovScene() {
       // (beat/beat.ts). In first person his field of view stays as it is: the beat slows time
       // and the vignette closes in instead (beat/Grade.tsx).
       const look = pushedBy(hero, run, s.frame);
+      // Locked on a player (the player fan's camera, SPEC 6), the operator follows him.
+      const locked = s.lock === null ? -1 : hero.ids.indexOf(s.lock);
       filmBroadcast(
         camera,
-        pathFor(run, hero.dt),
+        locked >= 0 ? lockPathFor(run, hero.dt, locked, hero.ids.length) : pathFor(run, hero.dt),
         s.frame,
         aspect,
         shot,

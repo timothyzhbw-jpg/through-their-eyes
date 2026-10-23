@@ -26,6 +26,8 @@ result.
 | [`pitch_control_parity.py`](pitch_control_parity.py) | The numpy half of the shader parity test: 10 snapshots and the kernel's values | blind_side_run seed 3 | `web/src/pitchControl/snapshots.json` | |
 | [`laws.py`](laws.py) | Does the sim break a Law of the Game the referee does not call (SPEC 3.9)? Every scenario, each hero's intervention, both matches | design 0–99, held out 100–139 and 200–239 | `laws.md` | ~7 min at 4 workers |
 | [`narration_ablation.py`](narration_ablation.py) | Free-text vs anchored narration on Foundry, scored by the Verifier and `GroundednessEvaluator` | `--seeds 3,100-103` | `narration_ablation.md` | ~30 model calls per seed |
+| [`crew_vs_single.py`](crew_vs_single.py) | Crew vs one agent doing its four jobs, each with and without the Verifier, on Foundry (Best Multi-Agent System) | six hero moments | `crew_vs_single.md` | ~200 model calls, cached |
+| [`crew_evidence.py`](crew_evidence.py) | What the crew's architecture buys, offline with a scripted model: fault tolerance and recovery, the Verifier's gate, trace completeness, parallel lanes; and what it does not (crew_vs_single, quoted) | every hero moment the site serves × every persona and language | `crew_evidence.md` | ~5 min |
 
 [`free_text.py`](free_text.py) is the pre-anchoring narration, recovered from git for the
 ablation only; `run_breakdown` and the API never use it.
@@ -47,6 +49,7 @@ uv run python -m eval.realism
 uv run python -m eval.scan_calibration
 uv run python -m eval.pitch_control_parity
 uv run --group eval --env-file .env python -m eval.narration_ablation --seeds 3,100-103   # Foundry
+uv run python -m eval.crew_evidence
 ```
 
 Run with `APPLICATIONINSIGHTS_CONNECTION_STRING=` (empty) so nothing sends spans to production.
@@ -82,7 +85,7 @@ its report:
 ```bash
 uv run pytest tests/test_verifier_corruption.py tests/test_blind_side_eval.py tests/test_realism.py \
   tests/test_scan_calibration.py tests/test_hero_lens_seeds.py tests/test_keypoint_ingest_eval.py \
-  tests/test_narration_ablation.py tests/test_pitch_control_parity.py
+  tests/test_narration_ablation.py tests/test_pitch_control_parity.py tests/test_crew_evidence.py
 ```
 
 CI does not re-run the full evals; the reports are generated locally and committed.

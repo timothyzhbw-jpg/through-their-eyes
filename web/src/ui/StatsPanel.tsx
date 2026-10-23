@@ -24,10 +24,12 @@ import { TacticsCards } from "../tactics/TacticsCards";
 import { Segmented } from "./Segmented";
 import "./stats.css";
 import { clubName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
+import { computed } from "../provenance/source";
+import { HowChecked } from "../provenance/HowChecked";
 
 const DASH = "–";
-const SOURCE =
-  "Measured from tracking and the event feed (analytics/stats.py): a metric, not a verified claim";
+const SOURCE = computed("Measured from the match's tracking and event feed (analytics/stats.py)");
 const PARTS = ["lane", "passer", "receiver", "distance"] as const;
 
 type PassCue = Extract<Cue, { kind: "pass" }>;
@@ -40,11 +42,7 @@ function personaStore(view: ViewSession): Store<{ persona: Persona }> {
 }
 
 function Source() {
-  return (
-    <span className="source" title={SOURCE}>
-      tracking
-    </span>
-  );
+  return <SourceChip kind="tracking" title={SOURCE} />;
 }
 
 function pct(accuracy: number | null): string {
@@ -141,7 +139,7 @@ function PassLog({ stats, frame }: { stats: Stats; frame: number }) {
                 {passer} → {to}
               </span>
               <span className="meta">
-                {Math.round(cue.distance_m)} m · {cue.ball_kmh.toFixed(1)} km/h ·{" "}
+                {cue.distance_m.toFixed(0)} m · {cue.ball_kmh.toFixed(1)} km/h ·{" "}
                 {cue.difficulty.toFixed(2)} {cue.band}
               </span>
               <span className="parts">
@@ -319,7 +317,7 @@ function PlayerCard({ stats, frame, id }: { stats: Stats; frame: number; id: str
       {pass && (
         <p className="stats-last">
           Last pass {stats.players.get(pass.player)?.short ?? pass.player} → {to} ·{" "}
-          {Math.round(pass.distance_m)} m · {pass.difficulty.toFixed(2)} {pass.band}
+          {pass.distance_m.toFixed(0)} m · {pass.difficulty.toFixed(2)} {pass.band}
         </p>
       )}
     </div>
@@ -355,12 +353,13 @@ export function StatsPanel() {
             plays, synced to the playhead.
           </p>
           <p className="note">
-            Measured from tracking and the event feed, not verified claims. Sprint: above 25.2 km/h
-            for 0.4 s; high-speed running: above 19.8 km/h (Gualtieri et al., 2023). Pass difficulty
-            0–1: 40% interception risk along the lane, 20% each pressure on the passer, pressure on
-            the receiver and distance. Tackles are not modelled yet (only the pressure hero has
-            them): the ball changes hands by interceptions and balls out of play.
+            Measured from the match's tracking and event feed. Sprint: above 25.2 km/h for 0.4 s;
+            high-speed running: above 19.8 km/h (Gualtieri et al., 2023). Pass difficulty 0–1: 40%
+            interception risk along the lane, 20% each pressure on the passer, pressure on the
+            receiver and distance. Tackles are not modelled yet (only the pressure hero has them):
+            the ball changes hands by interceptions and balls out of play.
           </p>
+          <HowChecked kinds={["tracking"]} />
           {view.kind === "match" && (
             <Segmented
               label="Stats for"

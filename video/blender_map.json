@@ -1,6 +1,22 @@
 {
   "about": "How each Blender beat is filled once its approved final lands in out/video/blender/ (video/tools/blender_fit.mjs). picture/freeze/overlays as in the beat; `label` adds the corner label for the beat's length: dramatisation (the story) or simulation (the hero shots). Only clips listed in `approved` are used: the rejected renders share file names with the finals, so a clip goes in this list when Bowen has approved it.",
-  "approved": [],
+  "approved": [
+    "bl01_look.mp4",
+    "bl02_reveal.mp4",
+    "bl03_without.mp4",
+    "bs1_eyes.mp4",
+    "bs1_fall.mp4",
+    "bs1_ots.mp4",
+    "bs1_steal.mp4",
+    "bs2_ots.mp4",
+    "bs2c.mp4",
+    "bs4_celebrate.mp4",
+    "bs4_check.mp4",
+    "bs4_drive.mp4",
+    "bs4_net.mp4",
+    "bs4_pov_a.mp4",
+    "bs4_strike.mp4"
+  ],
   "pins": [
     {
       "id": "bs2_ots",
@@ -8,11 +24,11 @@
       "corners": "out/video/blender/bs2_ots_screen_corners.json",
       "matte": "out/video/blender/bs2_ots_screen_matte",
       "source": {
-        "cine": "pov-match"
+        "capture": "22-board-blind"
       },
-      "source_time": 2.0,
+      "source_time": 2.8,
       "source_offset_y": 138,
-      "ev": 2.0,
+      "ev": 0.5,
       "ref_corners": "out/video/blender/bs2c_screen_corners.json"
     },
     {
@@ -21,11 +37,11 @@
       "corners": "out/video/blender/bs2c_screen_corners.json",
       "matte": "out/video/blender/bs2c_screen_matte",
       "source": {
-        "cine": "pov-match"
+        "capture": "22-board-blind"
       },
-      "source_time": 2.0,
+      "source_time": 2.8,
       "source_offset_y": 138,
-      "ev": 2.0,
+      "ev": 0.5,
       "ev_ramp_frames": 30
     }
   ],
@@ -83,7 +99,7 @@
     },
     "duo-split": {
       "template": "duo",
-      "dur": 1.5,
+      "dur": 2.75,
       "alpha": true,
       "params": {
         "left": "WITH THE LOOK",
@@ -130,10 +146,10 @@
   },
   "beats": [
     {
-      "beat": "b01-s1a-ots",
+      "beat": "b00-s0-eyes",
       "picture": {
         "src": "clip",
-        "path": "out/video/blender/bs1_ots.mp4",
+        "path": "out/video/blender/bs1_eyes.mp4",
         "in": 0.0,
         "fit": "pad"
       },
@@ -141,31 +157,31 @@
       "fx": [
         "glue"
       ],
-      "freeze": {
-        "at": 1.533
-      },
-      "overlays": [
-        {
-          "title": "nc-you",
-          "at": 1.533
-        }
-      ],
-      "label": "dramatisation"
+      "label": "dramatisation",
+      "sfx": []
     },
     {
-      "beat": "b01b-s1b-tail",
+      "beat": "b01-s1a-ots",
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs1_ots.mp4",
-        "in": 1.533,
+        "in": 1.333,
         "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
         "glue"
       ],
-      "label": "dramatisation",
-      "fit": true
+      "freeze": {
+        "at": 0.2
+      },
+      "overlays": [
+        {
+          "title": "nc-you",
+          "at": 0.2
+        }
+      ],
+      "label": "dramatisation"
     },
     {
       "beat": "b02-s1c-steal",
@@ -180,7 +196,19 @@
         "glue"
       ],
       "label": "dramatisation",
-      "fit": true
+      "fit": true,
+      "sfx": [
+        {
+          "name": "impact",
+          "at": 0.533,
+          "gain_db": -4
+        },
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -3
+        }
+      ]
     },
     {
       "beat": "b03-s1d-fall",
@@ -196,13 +224,7 @@
       ],
       "label": "dramatisation",
       "fit": true,
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 0.05,
-          "gain_db": -3
-        }
-      ]
+      "sfx": []
     },
     {
       "beat": "b05a-s2-ots",
@@ -239,7 +261,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.5,
+        "in": 1.3,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -263,7 +285,7 @@
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.95,
+        "in": 1.75,
         "fit": "pad"
       },
       "letterbox": 2.39,
@@ -271,12 +293,12 @@
         "glue"
       ],
       "freeze": {
-        "at": 3.0
+        "at": 2.2
       },
       "overlays": [
         {
           "title": "nc-h9",
-          "at": 3.0
+          "at": 2.2
         }
       ],
       "sfx": [],
@@ -409,43 +431,101 @@
       "label": "simulation"
     },
     {
-      "beat": "b20-split",
+      "beat": "b27-press-a",
       "picture": {
-        "src": "split",
-        "left": {
-          "src": "clip",
-          "path": "out/video/blender/bl02_reveal.mp4",
-          "in": 1.9,
-          "crop": [
-            800,
-            0,
-            960,
-            804
-          ]
-        },
-        "right": {
-          "src": "clip",
-          "path": "out/video/blender/bl03_without.mp4",
-          "in": 1.1,
-          "crop": [
-            780,
-            0,
-            960,
-            804
-          ]
-        }
+        "src": "clip",
+        "path": "out/video/blender/bl04a_press.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "letterbox": 2.39,
       "fx": [
         "glue"
       ],
+      "label": "simulation"
+    },
+    {
+      "beat": "b28-press-b",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl04b_escape.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -4
+        }
+      ]
+    },
+    {
+      "beat": "b29-press-cf",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl05_press_cf.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "freeze": {
+        "at": 2.0
+      },
       "overlays": [
         {
-          "title": "duo-split",
-          "at": 0.0
+          "title": "if-kept",
+          "at": 0.05
+        },
+        {
+          "title": "press-wins",
+          "at": 2.0
         }
       ],
-      "sfx": [],
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 1.9,
+          "gain_db": -4
+        }
+      ]
+    },
+    {
+      "beat": "b31-corner-a",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl06a_corner.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "simulation",
+      "caption": "bottom"
+    },
+    {
+      "beat": "b32a-corner-look",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl06b_look.mp4",
+        "in": 0.5,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
       "label": "simulation"
     },
     {
@@ -543,13 +623,8 @@
         "glue"
       ],
       "label": "dramatisation",
-      "overlays": [
-        {
-          "title": "tagline",
-          "at": 0.3
-        }
-      ],
-      "fit": true
+      "overlays": [],
+      "fit": false
     }
   ]
 }

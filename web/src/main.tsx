@@ -20,7 +20,9 @@ import { scenarioMatchId } from "./match/match";
 import { createMatchSession } from "./match/matchSession";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
+import { kindOf } from "./tour/steps";
 import { startTour } from "./tour/tourState";
+import { heroGatesOf } from "./without/gates";
 import { withoutLookOf } from "./without/without";
 import { intro } from "./ui/intro";
 import "./styles.css";
@@ -82,16 +84,27 @@ async function main() {
         return !!p && !!WHAT_IF_FILES[scenarioMatchId(p)];
       });
       if (link.play === "yourcall" && hero) session.controls.openBreakdown(hero, "yourcall");
-      if (link.tour) startTour(link.tour); // the judge tour's match steps: the recap
+      if (link.tour) startTour(link.tour, kindOf(link.tour)); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
-      // play=eyes: the first hero moment whose possession has a bundled look grid.
+      // play=eyes, play=drill: the first hero moment whose possession has a bundled look grid.
       const eyes = session.match.moments.find((m) => {
         if (!m.hero) return false;
         const p = session.match.possessions.find((x) => x.index === m.possession);
         return !!p && !!LOOK_FILES[scenarioMatchId(p)];
       });
       if (link.play === "eyes" && eyes) session.controls.openBreakdown(eyes, "eyes");
+      if (link.play === "drill" && eyes) session.controls.openBreakdown(eyes, "drill");
+      // moment=<scenario>: that hero moment's breakdown, as its Breakdown button opens it.
+      const named = link.moment
+        ? session.match.moments.find(
+            (m) =>
+              m.hero &&
+              session.match.possessions.find((p) => p.index === m.possession)?.scenario ===
+                link.moment,
+          )
+        : undefined;
+      if (named) session.controls.openBreakdown(named);
       broadcast(session.controls);
       if (filming) {
         await showCine(session);
@@ -117,13 +130,14 @@ async function main() {
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
     void withoutLookOf(session, undefined, dataUrl).load(); // "Without the look", told: a few KB
+    void heroGatesOf(session, undefined, dataUrl).load(); // how often the held-out seeds change
     applyDeepLink(session, link);
     broadcast(session.controls);
     if (filming) {
       await showCine(session);
       return;
     }
-    if (link.tour) startTour(link.tour); // the judge tour: its steps are a hero moment's
+    if (link.tour) startTour(link.tour, kindOf(link.tour)); // a tour: its steps are a hero moment's
     root.render(
       <StrictMode>
         <SessionContext.Provider value={session}>

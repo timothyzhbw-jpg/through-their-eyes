@@ -50,8 +50,8 @@ const { defaultBrowserType: _, ...PHONE } = devices["iPhone 17"];
 const { defaultBrowserType: _se, ...PHONE_320 } = devices["iPhone SE"]; // 320 px
 const { defaultBrowserType: _mini, ...PHONE_375 } = devices["iPhone 13 Mini"]; // 375 px
 
-/** The README's tour for judges, and the pages around it. `intro=0` skips the lineup card, which
- * the two lineup pages open and close as a visitor does. */
+/** The README's tour for judges, and the pages around it. `intro=0` skips the intro card, which
+ * the two intro pages open and close as a visitor does. */
 const PAGES = [
   { name: "hero", path: "?autoplay=0&intro=0", check: (p) => hero(p) },
   {
@@ -63,14 +63,15 @@ const PAGES = [
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
-  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Skip", hero) },
+  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Just watch", hero) },
   { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
     path: "?match=match-1",
-    check: (p, shoot) => lineup(p, shoot, "Start watching", match),
+    check: (p, shoot) => lineup(p, shoot, "Start", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  { name: "audiences", path: "?autoplay=0&intro=0", check: audiences },
   { name: "link-eyes", path: "?play=eyes", check: takeEyes },
   { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
   {
@@ -86,6 +87,33 @@ const PAGES = [
     path: "?play=eyes",
     device: PHONE_320,
     check: (p) => phone(p, takeEyes, { live: false }),
+  },
+  { name: "link-yourcall", path: "?play=yourcall", check: (p, shoot) => yourCall(p, shoot) },
+  // The academy drill (SPEC 7), on both moments with a look grid, and on a phone.
+  { name: "link-drill", path: "?play=drill", check: (p) => drill(p, "Blind side") },
+  {
+    name: "link-drill-press-escape",
+    path: "?match=press_escape-0&play=drill",
+    check: (p) => drill(p, "Under pressure"),
+  },
+  {
+    name: "phone-375-drill",
+    path: "?play=drill",
+    device: PHONE_375,
+    check: (p) => phone(p, (q) => drill(q, "Blind side"), { live: false }),
+  },
+  { name: "moment-links", path: "?intro=0", check: (p, shoot) => momentLinks(p, shoot) },
+  {
+    name: "phone-375-moment-links",
+    path: "?intro=0",
+    device: PHONE_375,
+    check: (p, shoot) => momentLinks(p, shoot),
+  },
+  {
+    name: "phone-375-yourcall",
+    path: "?play=yourcall",
+    device: PHONE_375,
+    check: (p, shoot) => phone(p, (q) => yourCall(q, shoot), { live: false }),
   },
   { name: "link-steps", path: "?play=steps", check: scanSteps },
   { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
@@ -141,6 +169,48 @@ const PAGES = [
       await boardClear(p);
     },
   },
+  // The skeleton's key over the broadcast camera, with the director's prompt and the stats up, and
+  // on the board at the decision, with the pass options' key up: no text on text (it sat on
+  // "Switch to …" at 1800 px, and on the board on the pass options' key).
+  ...[
+    [1440, 900],
+    [1280, 800],
+    [960, 800],
+  ].flatMap(([width, height]) => [
+    {
+      name: `desktop-${width}-skeleton`,
+      path: "?at=60&camera=broadcast",
+      device: { viewport: { width, height } },
+      check: async (p) => {
+        await hero(p, { main: "eyes" });
+        await skeletonKeyClear(p);
+      },
+    },
+    {
+      name: `desktop-${width}-skeleton-board`,
+      path: "?at=decision&view=tactical",
+      device: { viewport: { width, height } },
+      check: async (p) => {
+        await hero(p, { main: "board" });
+        await skeletonKeyClear(p, { within: ".slot.main .view.tac" });
+      },
+    },
+  ]),
+  // A phone's board: the key has its own row under the picture (on the board it hid half of it).
+  {
+    name: "phone-375-skeleton-board",
+    path: "?at=decision&view=tactical&intro=0",
+    device: PHONE_375,
+    check: (p) =>
+      phone(
+        p,
+        async (q) => {
+          await hero(q, { main: "board" });
+          await skeletonKeyClear(q, { outside: ".views" });
+        },
+        { live: false },
+      ),
+  },
   {
     name: "desktop-1280-tactical",
     path: "?at=56&view=tactical",
@@ -161,6 +231,31 @@ const PAGES = [
     },
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
+  { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
+  // A phone's director suggestion: two lines, no third one half-shown in its padding.
+  ...[
+    ["375", PHONE_375],
+    ["320", PHONE_320],
+  ].map(([width, device]) => ({
+    name: `phone-${width}-director`,
+    path: "?at=decision&intro=0&autoplay=0",
+    device,
+    check: (p) =>
+      phone(
+        p,
+        async (q) => {
+          await hero(q);
+          await clampClean(q);
+        },
+        { live: false },
+      ),
+  })),
+  {
+    name: "phone-375-quick-tour",
+    path: "?tour=quick",
+    device: PHONE_375,
+    check: (p, shoot) => quickTour(p, shoot),
+  },
   {
     name: "tour-recap",
     path: "?match=match-1&play=recap&tour=recap",
@@ -253,6 +348,30 @@ async function mainView(page, main) {
   await see(view.locator("canvas"), "its WebGL canvas");
 }
 
+/** Each audience sees its own view (SPEC 6, "Persona specs"): picking one sets its camera and
+ * overlays at once, before its breakdown arrives. A screenshot of each. */
+async function audiences(page, shoot) {
+  await hero(page);
+  const pick = async (label, main, also) => {
+    const toggle = page.getByRole("button", { name: /^Watching as / });
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+    const menu = page.getByRole("dialog", { name: "Who is watching" });
+    await menu.getByRole("button", { name: new RegExp(`^${label} `) }).click();
+    await page.keyboard.press("Escape");
+    await see(page.getByRole("button", { name: `Watching as ${label} · English` }), label);
+    await mainView(page, main);
+    if (also) await see(also, `${label}'s view`);
+    await shoot(label.toLowerCase().replaceAll(" ", "-"));
+  };
+  const figure = (name) => page.getByRole("figure", { name });
+  await pick("Analyst", "board");
+  await pick("Player fan", "eyes", figure("Broadcast view"));
+  // Split: his eyes, and in the corner his picture of the pitch (views/BeliefMap.tsx).
+  await pick("Coach", "eyes", page.getByRole("img", { name: /'s picture of the pitch/ }));
+  await pick("Casual fan", "eyes", figure("First-person view"));
+  await pick("Audio description", "eyes", figure("Broadcast view"));
+}
+
 /** A hero moment: its views and its run switch; at the top level, the live service's control
  * (not the "Offline data" badge); inside a match, the way back. */
 async function hero(page, { main = "eyes", inMatch = false } = {}) {
@@ -263,6 +382,48 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   }
   await see(page.getByRole("group", { name: "Run" }), "a hero moment's run switch");
   await mainView(page, main);
+}
+
+/** The director's suggestion on a phone: every line of it that shows lies inside the chip's
+ * padding, none half-shown under it. A line clamp clips at the padding's edge, so clamping the
+ * padded chip itself left a third line showing in its padding ("…before the ball… arrives"). */
+async function clampClean(page) {
+  await see(page.locator(".stage-director .director-chip"), "the director's suggestion");
+  const peeking = await page.evaluate(() => {
+    const chip = document.querySelector(".stage-director .director-chip");
+    const box = chip.getBoundingClientRect();
+    const cs = getComputedStyle(chip);
+    const top = box.top + parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+    const bottom = box.bottom - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom);
+    const out = [];
+    const walker = document.createTreeWalker(chip, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      // What of the text shows: its lines, cut by every clipping box from it up to the chip.
+      let clipTop = -Infinity;
+      let clipBottom = Infinity;
+      for (let el = node.parentElement; el; el = el.parentElement) {
+        const s = getComputedStyle(el);
+        if (s.overflowY !== "visible") {
+          const r = el.getBoundingClientRect();
+          clipTop = Math.max(clipTop, r.top + parseFloat(s.borderTopWidth));
+          clipBottom = Math.min(clipBottom, r.bottom - parseFloat(s.borderBottomWidth));
+        }
+        if (el === chip) break;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const line of range.getClientRects()) {
+        const shownTop = Math.max(line.top, clipTop);
+        const shownBottom = Math.min(line.bottom, clipBottom);
+        if (shownBottom - shownTop > 1 && (shownBottom > bottom + 1 || shownTop < top - 1))
+          out.push(
+            `"${node.textContent.trim().slice(0, 30)}" shows ${Math.round(shownBottom - bottom)} px into the padding`,
+          );
+      }
+    }
+    return out;
+  });
+  if (peeking.length) throw new Error(`the director's suggestion: ${peeking.join("; ")}`);
 }
 
 /** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
@@ -286,6 +447,56 @@ async function boardClear(page) {
       .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
   });
   if (over.length) throw new Error(`over the tactical board: ${over.join(", ")}`);
+}
+
+/** With the skeleton on, its key overlaps nothing else on the live screen: not the eyes picker,
+ * the director's prompt or its buttons, the stats, the run switch, the card, the caption or the
+ * pass options' key. `within`: it stays inside that element (the board); `outside`: it is clear of
+ * it (a phone's picture). */
+async function skeletonKeyClear(page, { within = null, outside = null } = {}) {
+  await page.getByRole("button", { name: "View options" }).click();
+  await page.getByRole("button", { name: "Skeleton", exact: true }).click();
+  await page.keyboard.press("Escape");
+  // the board in the picture in picture has its own key, hidden there: the one on show
+  await see(page.locator(".skeleton-key:visible"), "the skeleton's key");
+  const over = await page.evaluate(
+    ({ within, outside }) => {
+      const keys = [...document.querySelectorAll(".skeleton-key")]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0);
+      if (keys.length !== 1) return [`${keys.length} keys on show`];
+      const [key] = keys;
+      const meets = (r) =>
+        Math.min(r.right, key.right) - Math.max(r.left, key.left) > 0.5 &&
+        Math.min(r.bottom, key.bottom) - Math.max(r.top, key.top) > 0.5;
+      const found = [
+        ...document.querySelectorAll(
+          ".stage-top :is(.eyes-picker, button, .stat-chip, .director-idle), .stage-run .seg, .stage-card > *, .stage-caption .caption, .slot.main .options-legend",
+        ),
+      ]
+        .filter((el) => !el.closest(".skeleton-key"))
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 1 && r.height > 1 && meets(r);
+        })
+        .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+      const box = within && document.querySelector(within)?.getBoundingClientRect();
+      if (
+        box &&
+        (key.left < box.left ||
+          key.top < box.top ||
+          key.right > box.right ||
+          key.bottom > box.bottom)
+      ) {
+        found.push(`out of ${within}`);
+      }
+      const clear = outside && document.querySelector(outside)?.getBoundingClientRect();
+      if (clear && meets(clear)) found.push(`on ${outside}`);
+      return found;
+    },
+    { within, outside },
+  );
+  if (over.length) throw new Error(`the skeleton's key overlaps: ${over.join(", ")}`);
 }
 
 /** A stitched match: the score bug, its views, the live service and every possession's moments. */
@@ -564,6 +775,111 @@ async function takeEyes(page) {
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
 }
 
+/** `?play=drill`: the academy drill (SPEC 7) on `level`, completed: start, look over his shoulder
+ * with the arrow keys (his head is a slider), let go, make the pass from his picture when the ball
+ * has arrived, then the result's verified lines and the comparison. */
+async function drill(page, level) {
+  await see(page.getByRole("region", { name: "Academy drill" }), "the academy drill");
+  await see(page.locator(".dr-kicker", { hasText: level }), `the drill on ${level}`);
+  await mainView(page, "eyes");
+  await accessible(page, "the drill, ready"); // the page's own check runs on the result
+  await page.getByRole("button", { name: "Start" }).click(); // half speed, the default
+  const head = page.getByRole("slider", { name: /'s head$/ });
+  await see(head, "his head as a slider");
+  // Held until his head is well round to his right (a software renderer's frames are slow, and
+  // the head turns with the clock), then let go: the look.
+  await head.focus();
+  await page.keyboard.down("ArrowRight");
+  try {
+    await page.waitForFunction(
+      () => Number(document.querySelector('[role="slider"]')?.getAttribute("aria-valuenow")) >= 100,
+      null,
+      { timeout: 15_000 },
+    );
+  } catch {
+    throw new Error("expected the arrow key to turn his head");
+  } finally {
+    await page.keyboard.up("ArrowRight");
+  }
+  await see(
+    page.locator(".dr-locked", { hasText: /^Your look: / }),
+    "the look snapped to the grid",
+  );
+  await see(page.getByRole("heading", { name: "Your call" }), "the call at his decision");
+  const options = page.getByRole("group", { name: /^Options of / }).getByRole("button");
+  await see(options, "a marker per option");
+  await accessible(page, "the drill's call");
+  await options.first().click();
+  await see(page.getByRole("list", { name: "Your drill" }), "the drill's checks");
+  await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+  await see(page.locator(".dr-versus"), "his real look and no look beside yours");
+}
+
+/** axe's WCAG 2.2 A/AA rules on a state a page passes through: a serious or critical violation
+ * fails it, as at the page's end. */
+async function accessible(page, what) {
+  const { violations } = await axe(page, { tags: WCAG });
+  const blocking = violations.filter((v) => BLOCKING.has(v.impact));
+  if (blocking.length) throw new Error(`${what}: ${describe(blocking).join("; ")}`);
+}
+
+/** The moment links (SPEC 7, moments/): from the hero page, each chip of the rail above the live
+ * screen loads its moment, told by its own lede, with its chip marked current and no sideways
+ * scroll; the corner and the goal open inside the full match, with the way back. The page's
+ * console errors fail it, as on every page. */
+const MOMENT_PAGES = [
+  ["The look", /the midfielder saw/],
+  ["Under pressure", /centre-back saw with an opponent closing in/],
+  ["The corner", /A short corner/, { inMatch: true }],
+  ["The goal", /the striker saw of the keeper/, { inMatch: true }],
+  ["Full match · live", /A whole match of \d+ possessions/],
+];
+
+async function momentLinks(page, shoot) {
+  for (const [label, lede, { inMatch = false } = {}] of MOMENT_PAGES) {
+    const chip = page.locator(".moment-rail a", { hasText: label });
+    await see(chip, `the "${label}" link on the rail`);
+    await Promise.all([page.waitForEvent("load"), chip.click()]);
+    await see(
+      page.locator(".moment-head .lede").filter({ hasText: lede }),
+      `"${label}": its moment`,
+    );
+    if (inMatch) {
+      await see(page.getByRole("button", { name: /Back to the match/ }), "Back to the match");
+    }
+    await see(
+      page.locator('.moment-rail a[aria-current="page"]', { hasText: label }),
+      `"${label}" marked current`,
+    );
+    const [wide, width] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    if (wide > width) throw new Error(`"${label}": the page scrolls sideways (${wide} > ${width})`);
+    await shoot(label.toLowerCase().replace(/[^a-z]+/g, "-"));
+  }
+}
+
+/** `?play=yourcall`: Your call (SPEC 7). A pick, then the reveal: why it went this way (what he
+ * had seen, how his picture rated the call), what it led to, then each beat to the comparison. */
+async function yourCall(page, shoot = async () => {}) {
+  await see(page.getByRole("region", { name: "Your call" }), "Your call");
+  const markers = page.getByRole("group", { name: /^Options of / }).getByRole("button");
+  await see(markers.first(), "Your call's markers");
+  await page
+    .getByRole("button", { name: /^Pass to / })
+    .first()
+    .click();
+  await see(page.getByRole("list", { name: "Reveal" }), "the reveal's steps");
+  await see(page.locator('dl[aria-label="Why it went this way"]'), "why it went this way");
+  await see(page.getByText("What it led to in the sim"), "what it led to");
+  await shoot("why");
+  for (const name of ["See the truth", "What he did", "Compare"]) {
+    await page.getByRole("button", { name, exact: true }).click();
+  }
+  await see(page.getByRole("button", { name: "Try another call" }), "the comparison");
+}
+
 /** `?play=steps`: the scan step-through (SPEC 7) in the live screen's place: his first look
  * frozen with its verified lines, the potential passes, then his decision with everything but two
  * players dimmed. */
@@ -593,56 +909,149 @@ async function recap(page, shoot) {
   await page.waitForTimeout(SETTLE);
 }
 
-/** A cold load with no click (SPEC 2, 7): the lineup card closes by itself, the stream plays, and
- * within about 20 s of opening the page the run without the look is on screen with its line.
- * The 20 s is for a viewer's machine. The app's clock steps at most 0.1 s a frame (session.ts
- * `startClock`), so where WebGL is drawn in software, as on a CI runner (SwiftShader, about 0.5 s
- * a frame), the show plays slower than the wall clock: there the check is only that a cold load
- * gets there, and the time it took is printed. */
+/** A cold load (SPEC 2, 7): the intro card waits for the viewer, with nothing playing under it;
+ * Start opens the quick tour on the look, and its next step, within about 20 s of Start, puts the
+ * run without the look on screen with its line. The 20 s is for a viewer's machine. The app's
+ * clock steps at most 0.1 s a frame (session.ts `startClock`), so where WebGL is drawn in software,
+ * as on a CI runner (SwiftShader, about 0.5 s a frame), the look plays slower than the wall clock:
+ * there the check is only that it gets there, and the time it took is printed. */
 const COLD_LOAD_S = process.env.CI ? 120 : 22;
+const CARD_WAITS_MS = 7000; // longer than the old card's 5 s countdown
+const LOOK_S = 8; // a viewer watches the look before pressing Next
 
 async function coldLoad(page, shoot) {
-  const opened = Date.now();
+  const card = page.getByRole("dialog");
+  await see(card, "the intro card");
+  await page.waitForTimeout(CARD_WAITS_MS);
+  if (!(await card.isVisible())) throw new Error("expected the intro card to wait for the viewer");
+  const clock = (await page.locator(".transport .clock").first().textContent()) ?? "";
+  if (!/frame 0\b/.test(clock)) {
+    throw new Error(`expected the picture to rest on the first frame under the card: "${clock}"`);
+  }
+  await card.getByRole("button", { name: "Start", exact: true }).click();
+  const started = Date.now();
+  const tourCard = page.getByRole("dialog").filter({ hasText: /^Quick tour · 1 of / });
+  await see(tourCard, "the quick tour's first step");
+  await page.waitForTimeout(LOOK_S * 1000);
+  await tourCard.getByRole("button", { name: "Next" }).click();
   const without = page
     .getByRole("group", { name: "Run" })
     .getByRole("button", { name: "Without the look", pressed: true });
   try {
     await without.waitFor({ timeout: COLD_LOAD_S * 1000 });
   } catch {
-    throw new Error(
-      `expected the run without the look on screen within ${COLD_LOAD_S} s of a cold load`,
-    );
+    throw new Error(`expected the run without the look on screen within ${COLD_LOAD_S} s of Start`);
   }
-  const took = Math.round((Date.now() - opened) / 1000);
-  console.log(`     the run without the look after ${took} s (deadline ${COLD_LOAD_S} s)`);
+  const took = Math.round((Date.now() - started) / 1000);
+  console.log(`     the run without the look ${took} s after Start (deadline ${COLD_LOAD_S} s)`);
+  // The quick tour's card carries the step's verified lines (the caption stands down).
   await see(
-    page.locator(".stage-caption").filter({ hasText: /without that look/i }),
-    'the "Without that look" line',
+    page.locator(".tour-card .tour-lines").filter({ hasText: /without that look/i }),
+    'the "Without that look" line in the tour card',
   );
   await shoot(`at-${took}s`);
 }
 
-/** The pre-match lineup card (SPEC 7, 10) opens over the whole page on a link that is not to a
- * spot: shown, closed with `button` ("Start watching" or "Skip"), then the page's main view. */
+/** The quick tour (SPEC 7): five steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, the Verifier refusing a wrong number, then Your call,
+ * which Done leaves open. */
+async function quickTour(page, shoot) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 5/ });
+  const expect = [
+    ["Watch the look", () => mainView(page, "eyes")],
+    [
+      "Now remove it",
+      () =>
+        see(
+          page.getByRole("group", { name: "Run" }).getByRole("button", {
+            name: "Without the look",
+            pressed: true,
+          }),
+          "the run without the look",
+        ),
+    ],
+    [
+      "Compare the outcomes",
+      async () => {
+        await mainView(page, "board");
+        // One panel, clear of what it explains: the card leaves the board's pitch uncovered.
+        const board = page.getByRole("figure", { name: "Tactical view from above" });
+        const [a, b] = await Promise.all([
+          board.locator("canvas").boundingBox(),
+          card.boundingBox(),
+        ]);
+        const cover =
+          a && b
+            ? Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+              Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+            : 0;
+        if (a && cover > 0.25 * a.width * a.height) {
+          throw new Error(
+            `expected the tour card clear of the board: it covers ${Math.round(cover)} px²`,
+          );
+        }
+      },
+    ],
+    [
+      "Every number is checked",
+      () =>
+        see(
+          page.locator("section.evidence .tamper-result.held"),
+          "the Verifier refusing the tour's wrong number",
+        ),
+    ],
+    ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
+  ];
+  for (const [k, [title, shows]] of expect.entries()) {
+    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 5`) });
+    await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
+    await shows();
+    if (await page.locator(".moment-card").isVisible()) {
+      throw new Error("expected the moment card to stand down while the quick tour runs");
+    }
+    await cardOnScreen(page, step, k + 1);
+    await shoot(`step-${k + 1}`);
+    if (k < expect.length - 1) await step.getByRole("button", { name: "Next" }).click();
+  }
+  await card.getByRole("button", { name: "Done" }).click();
+  try {
+    await card.waitFor({ state: "detached" });
+  } catch {
+    throw new Error('expected "Done" to close the quick tour');
+  }
+  await see(page.getByRole("region", { name: "Your call" }), "Your call, left open");
+}
+
+/** A tour card inside the screen, and no sideways scroll. */
+async function cardOnScreen(page, card, k) {
+  const [box, [w, h, wide]] = await Promise.all([
+    card.boundingBox(),
+    page.evaluate(() => [innerWidth, innerHeight, document.documentElement.scrollWidth]),
+  ]);
+  if (!box || box.x < 0 || box.y < 0 || box.x + box.width > w || box.y + box.height > h) {
+    throw new Error(`expected the tour's step ${k} card on screen, got ${JSON.stringify(box)}`);
+  }
+  if (wide > w) throw new Error(`expected no sideways scroll at step ${k}: ${wide} px in ${w}`);
+}
+
+/** The intro card (SPEC 7): one line and Start, clear of the picture; the line-ups behind "Teams
+ * and more". Shown, opened, closed with `button` ("Start" or "Skip"), then the page's main view. */
 async function lineup(page, shoot, button, then) {
   const card = page.getByRole("dialog");
-  await see(card, "the lineup card");
+  await see(card, "the intro card");
+  await see(card.getByRole("button", { name: "Start", exact: true }), "Start on the card");
+  await shoot("card");
+  await card.getByRole("button", { name: "Teams and more" }).click();
   await see(
     card.getByRole("list", { name: "Kestrel Bay line-up" }),
-    "the home line-up on the card",
+    "the home line-up behind Teams and more",
   );
-  await shoot("card");
-  // The card also closes by itself after a few seconds (INTRO_MS), and a slow runner can reach
-  // the button after that: a card that is already gone has closed, which is what this checks.
-  try {
-    await card.getByRole("button", { name: button }).click({ timeout: 2000 });
-  } catch {
-    /* closed by itself, or the click is retried by the wait below */
-  }
+  await shoot("teams");
+  await card.getByRole("button", { name: button, exact: true }).click();
   try {
     await card.first().waitFor({ state: "detached", timeout: 15_000 });
   } catch {
-    throw new Error(`expected "${button}" or the timer to close the lineup card`);
+    throw new Error(`expected "${button}" to close the intro card`);
   }
   await then(page);
 }
@@ -806,13 +1215,15 @@ function startApi(url, cache) {
       await exited;
     },
     async ready() {
-      for (const deadline = Date.now() + 180_000; Date.now() < deadline;) {
+      // The API loads all five matches before it opens the port (TTE_WARM): over 3 minutes on a loaded
+      // runner (three smoke runs died on it on 2026-10-22/23).
+      for (const deadline = Date.now() + 420_000; Date.now() < deadline;) {
         const up = await Promise.race([health(url), exited]);
         if (up === "exited") throw new Error(`the API exited: see ${join(opt.out, "api.log")}`);
         if (up) return up;
         await new Promise((r) => setTimeout(r, 500));
       }
-      throw new Error("the API did not answer /health within 3 minutes");
+      throw new Error("the API did not answer /health within 7 minutes");
     },
   };
 }

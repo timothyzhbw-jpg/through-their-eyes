@@ -1,5 +1,6 @@
-// The judge tour's step list (SPEC 7): it parses, it reads in plain words with no number of its
-// own, it lasts about ninety seconds, and each page gets the steps it can show.
+// The tours' step lists (SPEC 7): they parse, they read in plain words with no number of their
+// own, the full tour lasts about ninety seconds and the quick one under a minute, and each page
+// gets the steps it can show.
 
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
@@ -17,6 +18,10 @@ import stepsJson from "./steps.json";
 import {
   envOf,
   indexOf,
+  kindOf,
+  QUICK_IDS,
+  QUICK_STEPS,
+  quickTourFits,
   resolveSteps,
   STEP_IDS,
   StepList,
@@ -32,9 +37,12 @@ const online = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, 
 const ids = (env: TourEnv) => resolveSteps(env).map((s) => s.id);
 
 describe("the step list", () => {
-  it("parses, with unique ids", () => {
+  it("parses, with unique ids across both tours", () => {
     expect(() => StepList.parse(stepsJson)).not.toThrow();
-    expect(new Set(STEP_IDS).size).toBe(STEP_IDS.length);
+    const all = [...STEP_IDS, ...QUICK_IDS];
+    expect(new Set(all).size).toBe(all.length);
+    expect(QUICK_IDS.map(kindOf)).toEqual(["quick", "quick", "quick", "quick", "quick"]);
+    expect(STEP_IDS.map(kindOf).every((k) => k === "full")).toBe(true);
   });
 
   it("covers the signature features in order and ends on a closing card", () => {
@@ -61,7 +69,7 @@ describe("the step list", () => {
   });
 
   it("says one plain line per step: no digits, no player ids, no markup", () => {
-    for (const s of STEPS) {
+    for (const s of [...STEPS, ...QUICK_STEPS]) {
       for (const text of [s.title, s.caption, ...(s.variants ?? []).map((v) => v.caption)]) {
         expect(text, s.id).not.toMatch(/\d/);
         expect(text, s.id).not.toMatch(/[<>\n]/);
@@ -73,7 +81,7 @@ describe("the step list", () => {
   it("fills its slots from the moment, and still has no number once filled", () => {
     for (const session of [offline(), createSession(parseHero(pressureExport()), null, null)]) {
       const env = envOf(session);
-      for (const s of resolveSteps(env)) {
+      for (const s of [...resolveSteps(env), ...resolveSteps(env, QUICK_STEPS)]) {
         const { title, caption } = wordsOf(s, env);
         expect(`${title} ${caption}`, s.id).not.toMatch(/[{}\d]/);
       }
@@ -81,6 +89,65 @@ describe("the step list", () => {
     const env = envOf(offline());
     expect(wordsOf(STEPS[1], env).title).toBe("Without the look");
     expect(wordsOf(STEPS[1], env).caption).toContain("one change, without the look.");
+  });
+});
+
+describe("the quick tour", () => {
+  it("is one path in five steps: the look, without it, the outcomes compared, every number checked, your call", () => {
+    expect(QUICK_IDS).toEqual(["look", "remove", "compare", "verify", "call"]);
+    const env = envOf(offline());
+    expect(QUICK_STEPS.map((s) => wordsOf(s, env).title)).toEqual([
+      "Watch the look",
+      "Now remove it",
+      "Compare the outcomes",
+      "Every number is checked",
+      "Now make your call",
+    ]);
+    expect(wordsOf(QUICK_STEPS[0], env).caption).toContain("J. Ferriday's view");
+    expect(wordsOf(QUICK_STEPS[1], env).caption).toContain("re-simulated without the look.");
+  });
+
+  it("takes under a minute", () => {
+    expect(QUICK_STEPS.reduce((t, s) => t + s.hold, 0)).toBeLessThanOrEqual(60);
+  });
+
+  it("fits a hero moment with a key scan and the run without it, and nothing else", () => {
+    // The check needs the live service, so offline the path is the other four.
+    expect(resolveSteps(envOf(offline()), QUICK_STEPS).map((s) => s.id)).toEqual([
+      "look",
+      "remove",
+      "compare",
+      "call",
+    ]);
+    expect(resolveSteps(envOf(online()), QUICK_STEPS).map((s) => s.id)).toEqual(QUICK_IDS);
+    expect(quickTourFits(envOf(offline()))).toBe(true);
+    // No bundled what-ifs: no Your call, the rest still tells the look.
+    const plain = envOf(createSession(hero, EXAMPLE_PLAN, payloadJson));
+    expect(resolveSteps(plain, QUICK_STEPS).map((s) => s.id)).toEqual([
+      "look",
+      "remove",
+      "compare",
+    ]);
+    expect(quickTourFits(plain)).toBe(true);
+    const press = envOf(
+      createSession(parseHero(pressureExport()), null, null, null, { api: api() }),
+    );
+    expect(quickTourFits(press)).toBe(false);
+    const match = createMatchSession(parseHero(matchExport()), {
+      api: createApi(API, MATCH, fakeFetch({})),
+      dataUrl: "/data/",
+    });
+    expect(resolveSteps(envOf(match), QUICK_STEPS)).toEqual([]);
+    expect(quickTourFits(envOf(match))).toBe(false);
+  });
+
+  it("lands on the asked step of its own list", () => {
+    const steps = resolveSteps(envOf(createSession(hero, EXAMPLE_PLAN, payloadJson)), QUICK_STEPS);
+    expect(steps[indexOf(steps, "compare")].id).toBe("compare");
+    expect(steps[indexOf(steps, "call")].id).toBe("look"); // no Your call here: from the start
+    // No service: verify is left out, and the next step this page shows is Your call.
+    const shown = resolveSteps(envOf(offline()), QUICK_STEPS);
+    expect(shown[indexOf(shown, "verify")].id).toBe("call");
   });
 });
 
@@ -152,12 +219,21 @@ describe("the steps a page can show", () => {
 });
 
 describe("the tour link", () => {
-  it("?tour=1 starts at the first step, with no lineup card and no autoplay", () => {
+  it("?tour=1 starts the full tour at its first step, with no intro card and no autoplay", () => {
     const link = parseDeepLink("?tour=1");
     expect(link.tour).toBe("pov");
     expect(link.intro).toBe(false);
     expect(link.autoplay).toBe(false);
     expect(link.warnings).toEqual([]);
+  });
+
+  it("?tour=quick starts the quick tour at its first step, with no intro card", () => {
+    const link = parseDeepLink("?tour=quick");
+    expect(link.tour).toBe("look");
+    expect(kindOf(link.tour!)).toBe("quick");
+    expect(link.intro).toBe(false);
+    expect(link.autoplay).toBe(false);
+    expect(parseDeepLink("?tour=compare").tour).toBe("compare");
   });
 
   it("?tour=<step> starts there; anything else is ignored and logged", () => {

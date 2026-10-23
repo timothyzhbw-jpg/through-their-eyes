@@ -36,11 +36,12 @@ class Clock:
 
 @pytest.fixture(scope="module")
 def replies():
-    """Every role answers; a connective is checked against the script's language, so none."""
+    """Every role answers, every voice as its persona's rules ask in the script's language
+    (tests/test_agents.py `_good_replies`: the persona's opener, a number first for the analyst,
+    where it happened first for audio description)."""
     from agents.context import MomentContext
 
-    good = _good_replies(MomentContext.load("blind_side_run", 3))
-    return {**good, "pbp": {"lines": [{"claim": "scan_before_reception", "connective": None}]}}
+    return _good_replies(MomentContext.load("blind_side_run", 3))
 
 
 @pytest.fixture
@@ -178,3 +179,36 @@ def test_a_stitched_match_adds_its_recap_for_every_persona_and_language():
     assert prewarm.problems({**clean, "result": {"reel_source": "template", "trace": []}}) == [
         "plan from template"
     ]
+
+
+class ChatClientException(RuntimeError):
+    """Like Agent Framework's: the model service failed the call."""
+
+
+def test_refresh_degraded_runs_every_degraded_entry_again(tmp_path, replies, clock):
+    """A view whose run fell back to a template (DEGRADED, SPEC 2, 6) is asked again with
+    `regenerate`, paced like a new one, once per run; it ends clean once the model answers."""
+    # The Analyst fails its first four calls: the first two views come out degraded.
+    flaky = {**replies, "analyst": [ChatClientException("503")] * 4 + [replies["analyst"]]}
+    app, fake = _app(tmp_path, flaky, rate_limit=(100, 600.0), daily_model_cap=100,
+                     degraded_retry_s=3600.0)  # fmt: skip
+    with TestClient(app) as c:
+        plain = _run(c, clock)
+        assert plain.code == 1
+        assert sum(r.problems == ["analyst from template"] for r in plain.rows) == 2
+        made = fake.calls["director"]
+        # Within the API's retry interval a plain run serves them as they are...
+        again = _run(c, clock)
+        assert fake.calls["director"] == made and again.code == 1
+        # ...and --refresh-degraded asks for them again, once each.
+        refreshed = _run(c, clock, refresh_degraded=True)
+    assert fake.calls["director"] == made + 2
+    assert refreshed.code == 0 and all(not r.problems for r in refreshed.rows)
+    assert [r.status for r in refreshed.rows].count("new") == 2
+
+
+def test_refresh_degraded_keeps_the_old_flag_name():
+    """The PR desk's runbook says --regenerate-degraded; both names set the same gate."""
+    for flag in ("--refresh-degraded", "--regenerate-degraded"):
+        a = prewarm.parser().parse_args(["--api", "http://x", flag])
+        assert a.refresh_degraded is True

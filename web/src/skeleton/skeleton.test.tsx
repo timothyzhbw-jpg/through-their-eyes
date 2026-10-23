@@ -1,8 +1,8 @@
 // Skeleton data view (SPEC 7, optional): per player only what the sim records, drawn the way
 // limb-tracking data is shown: the position, the torso line from the body yaw, the head ray from
-// the head yaw (true, or as a tracking system reports it), the head-torso angle as a fan, and the
-// head ray lit while the scan detector marks a scan. Off by default; one toggle for the broadcast
-// camera and the tactical board; a hero moment and a stitched match both draw it.
+// the head yaw (true, or as a tracking system reports it) and the head-torso angle as a fan; a
+// scanning player gets the scan radar (radar.test.ts). Off by default; one toggle for the
+// broadcast camera and the tactical board; a hero moment and a stitched match both draw it.
 
 import { describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
@@ -16,17 +16,11 @@ import { createPlayback } from "../store/playback";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport, render } from "../testing";
 import { PovOptions, TacticalOptions } from "../ui/Stage";
 import { SkeletonLayer } from "./SkeletonLayer";
-import { SkeletonLegend } from "./SkeletonLegend";
-import {
-  fanEdges,
-  litBy,
-  litMask,
-  Pose,
-  poseInto,
-  shoulders,
-  SkeletonGeometry,
-  trackedHead,
-} from "./skeleton";
+import { shortName } from "../data/roster";
+import { keyCorner, SkeletonLegend, StageSkeletonKey } from "./SkeletonLegend";
+import { fanEdges, Pose, poseInto, shoulders, SkeletonGeometry, trackedHead } from "./skeleton";
+import { radarTrack } from "./radar";
+import { COLORS } from "../views/scene";
 
 // useFrame needs a Canvas; the geometry is tested through SkeletonGeometry instead.
 vi.mock("@react-three/fiber", async (original) => ({
@@ -39,7 +33,6 @@ vi.mock("@react-three/fiber", async (original) => ({
 const DEG = 180 / Math.PI;
 const hero = parseHero(raw);
 const H8 = hero.ids.indexOf("H8");
-const KEY = { start: 50, end: 69 }; // the scan detector's scan of H8 in the factual run (the key scan)
 
 const heroSession = (): Session => createSession(hero, EXAMPLE_PLAN, payloadJson);
 function matchSession(): MatchSession {
@@ -176,51 +169,6 @@ describe("the tracked head yaw (as tracked)", () => {
   });
 });
 
-// ---------- what lights the head ray ----------
-
-describe("the head ray lights up", () => {
-  it("while the scan detector marks a scan, on the tracked head yaw", () => {
-    const run = hero.runs.factual;
-    expect(litBy(run)).toBe("detector");
-    const lit = litMask(hero, run);
-    const at = (f: number, j: number) => lit[f * hero.n + j] === 1;
-    expect(at(KEY.start - 1, H8)).toBe(false);
-    for (let f = KEY.start; f <= KEY.end; f++) expect(at(f, H8)).toBe(true);
-    expect(at(KEY.end + 1, H8)).toBe(false);
-    for (let j = 0; j < hero.n; j++) {
-      for (let f = 0; f < run.frames; f++) {
-        const marked = run.detector!.scans[j].some((s) => f >= s.start && f <= s.end);
-        expect(at(f, j)).toBe(marked);
-      }
-    }
-  });
-
-  it("not for H8 without the look: the dropped scan is nowhere in that run", () => {
-    const run = hero.runs.counterfactual;
-    const lit = litMask(hero, run);
-    for (let f = KEY.start; f <= KEY.end; f++) expect(lit[f * hero.n + H8]).toBe(0);
-  });
-
-  it("in a stitched match, with no detector run, during the sim's own scans", () => {
-    const match = matchSession().hero;
-    const run = match.runs.factual;
-    expect(litBy(run)).toBe("sim");
-    const lit = litMask(match, run);
-    expect(run.scans.length).toBeGreaterThan(0);
-    for (const s of run.scans) {
-      const j = match.ids.indexOf(s.player);
-      for (let f = s.start; f <= s.end; f++) expect(lit[f * match.n + j]).toBe(1);
-    }
-    const total = lit.reduce((a, b) => a + b, 0);
-    const expected = new Set(
-      run.scans.flatMap((s) =>
-        Array.from({ length: s.end - s.start + 1 }, (_, k) => `${s.start + k}:${s.player}`),
-      ),
-    );
-    expect(total).toBe(expected.size);
-  });
-});
-
 // ---------- the pose ----------
 
 describe("the pose", () => {
@@ -239,7 +187,7 @@ describe("the pose", () => {
     }
     // In the key scan H8's head is turned far off his torso.
     expect(Math.abs(pose.twist[H8]) * DEG).toBeGreaterThan(45);
-    expect(pose.lit[H8]).toBe(1);
+    expect(pose.scanBy).toBe("detector"); // the radar's scans: the detector's
   });
 
   it("as tracked: the tracked yaw, interpolated between frames", () => {
@@ -291,31 +239,38 @@ describe("the geometry", () => {
     return { g, pose, sample };
   }
 
-  it("one torso line and one head ray per player, lit rays apart; nothing else per player", () => {
-    const lit = litMask(hero, hero.runs.factual);
+  it("one torso line and one head ray per player; nothing else per player", () => {
     for (const variant of ["board", "broadcast"] as const) {
       for (const frame of [20, 60]) {
         const { g } = drawn(variant, frame);
-        const marked = hero.ids.filter((_, j) => lit[frame * hero.n + j]).length;
         expect(g.torso.count).toBe(hero.n);
-        expect(g.lit.count).toBe(marked);
-        expect(g.rays.count).toBe(hero.n - marked);
+        expect(g.rays.count).toBe(hero.n);
         expect(g.spine.count).toBe(variant === "broadcast" ? hero.n : 0);
       }
     }
-    expect(lit[60 * hero.n + H8]).toBe(1); // H8 in the key scan
   });
 
-  it("a lit ray starts at the player and points along his head yaw", () => {
+  it("a head ray starts at the player and points along his head yaw", () => {
     const { g, pose, sample } = drawn("board", 60);
-    const lit = litMask(hero, hero.runs.factual);
-    const litPlayers = hero.ids.map((_, j) => j).filter((j) => lit[60 * hero.n + j]);
-    const k = litPlayers.indexOf(H8); // lit rays are drawn in player order
-    const [ax, , az, bx, , bz] = g.lit.segment(k);
+    const [ax, , az, bx, , bz] = g.rays.segment(H8); // rays are drawn in player order
     // The board lies in three.js XZ: pitch (x, y) -> (x, 0, -y).
     const [px, py] = [sample.pos[2 * H8], sample.pos[2 * H8 + 1]];
     expect(Math.hypot(ax - px, -az - py)).toBeLessThan(1.5); // from the token's edge
     expect(Math.atan2(-(bz - az), bx - ax)).toBeCloseTo(pose.yaw[H8], 4);
+  });
+
+  it("a scanning player's head ray is the same white line as anyone's: the radar marks the scan", () => {
+    // In the key scan at frame 60 H8 scans; a lit ray drawn longer and green read as an arrow.
+    const scanning = radarTrack(hero, hero.runs.factual, "every");
+    expect(scanning.on[60 * hero.n + H8]).toBe(1);
+    const other = hero.ids.findIndex((_, j) => !scanning.on[60 * hero.n + j]);
+    for (const variant of ["board", "broadcast"] as const) {
+      const { g } = drawn(variant, 60);
+      const length = (seg: number[]) => Math.hypot(seg[3] - seg[0], seg[5] - seg[2]);
+      expect(length(g.rays.segment(H8))).toBeCloseTo(length(g.rays.segment(other)), 4); // Float32
+      expect(`#${g.rays.material.color.getHexString()}`).toBe(COLORS.fg);
+      expect(Object.keys(g)).not.toContain("lit");
+    }
   });
 
   it("the fan's opacity grows with the head-torso angle", () => {
@@ -348,7 +303,7 @@ describe("the legend", () => {
     expect(button(html, "True")?.pressed).toBe("true");
     expect(button(html, "As tracked")).toMatchObject({ pressed: "false", disabled: false });
     const text = plain(html);
-    expect(text).toContain("lit: scan detector");
+    expect(text).toContain("radar: scanning now (his head turned away from the ball)");
     expect(text).toMatch(/limbs/i);
     expect(text).toContain("not data");
     s.controls.setSkeletonSource("tracked");
@@ -365,10 +320,12 @@ describe("the legend", () => {
     const sample = sampleInto(new Sample(hero.n), hero, run, 60);
     const pose = poseInto(new Pose(hero.n), hero, run, sample, 60, "true");
     const deg = Math.round(Math.abs(pose.twist[H8]) * DEG);
-    expect(plain(render(s, <SkeletonLegend />))).toContain(`H8: head ${deg}° off the torso`);
+    expect(plain(render(s, <SkeletonLegend />))).toContain(
+      `${shortName("H8")}: head ${deg}° off the torso`,
+    );
   });
 
-  it("in a stitched match: true yaw only, lit by the sim's scans", () => {
+  it("in a stitched match: true yaw only, the radar from the sim's own scans", () => {
     const s = matchSession();
     s.controls.toggle("skeleton");
     s.controls.setSkeletonSource("tracked"); // asked for, not available: the true yaw is drawn
@@ -376,7 +333,60 @@ describe("the legend", () => {
     expect(button(html, "True")?.pressed).toBe("true");
     expect(button(html, "As tracked")).toMatchObject({ pressed: "false", disabled: true });
     expect(button(html, "As tracked")?.title).toContain("hero moment");
-    expect(plain(html)).toContain("lit: sim's own scans");
+    expect(plain(html)).toContain("radar: scanning now (his head turned away from the ball)");
+    expect(html).toContain("sim&#x27;s own scans");
+  });
+});
+
+describe("where the key sits", () => {
+  it("in the live screen's top-left column with the skeleton on the broadcast camera or the board", () => {
+    const s = heroSession();
+    expect(render(s, <StageSkeletonKey />)).toBe("");
+    s.controls.toggle("skeleton");
+    expect(render(s, <StageSkeletonKey />)).toBe(""); // his eyes: no skeleton drawn there
+    s.controls.setCamera("broadcast");
+    s.controls.setFocus("broadcast");
+    expect(plain(render(s, <StageSkeletonKey />))).toContain("Skeleton");
+    // the board as the main view: a phone's row under the picture (wider, the board's own key)
+    s.controls.setCamera("pov");
+    s.controls.setFocus("tactical");
+    expect(plain(render(s, <StageSkeletonKey />))).toContain("Skeleton");
+  });
+
+  it("on the board, in the top corner the clip leaves emptiest: one place for the whole clip", () => {
+    const s = heroSession();
+    s.controls.toggle("skeleton");
+    // the run and the pass go to the top right of the board: the key takes the top left
+    expect(keyCorner(hero)).toBe("left");
+    expect(render(s, <SkeletonLegend />)).toContain('class="skeleton-key at-left"');
+    s.controls.seek(140);
+    expect(render(s, <SkeletonLegend />)).toContain('class="skeleton-key at-left"');
+  });
+
+  it("the clip mirrored left to right takes the other corner; nobody in the top half: the left", () => {
+    const mirror = (h: Hero): Hero => {
+      const runs = Object.fromEntries(
+        Object.entries(h.runs).map(([name, run]) => {
+          const pos = run.pos.slice();
+          const ball = run.ball.slice();
+          for (let k = 0; k < pos.length; k += 2) pos[k] = -pos[k];
+          for (let k = 0; k < ball.length; k += 2) ball[k] = -ball[k];
+          return [name, { ...run, pos, ball }];
+        }),
+      ) as Hero["runs"];
+      return { ...h, runs };
+    };
+    expect(keyCorner(mirror(hero))).toBe("right");
+    const low = Object.fromEntries(
+      Object.entries(hero.runs).map(([name, run]) => {
+        const pos = run.pos.slice();
+        const ball = run.ball.slice();
+        for (let k = 1; k < pos.length; k += 2) pos[k] = -Math.abs(pos[k]);
+        for (let k = 1; k < ball.length; k += 2) ball[k] = -Math.abs(ball[k]);
+        return [name, { ...run, pos, ball }];
+      }),
+    ) as Hero["runs"];
+    expect(keyCorner({ ...hero, runs: low })).toBe("left");
   });
 });
 

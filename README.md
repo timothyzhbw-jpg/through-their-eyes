@@ -7,8 +7,14 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
 > **See what they saw.** An AI studio that explains key football moments through the player's own
-> perception — the scans before the ball arrived, what was visible, what he believed — and checks
-> every number the crew says or captions before it airs.
+> perception — where he looked before the ball arrived, what he saw, what he believed — and
+> re-simulates the moment without the look that made the play: over 40 held-out seeds,
+> <!--num:H1.k-->33<!--/num--> decide differently.
+
+**Every line the crew says is checked before it airs.** In an offline stress test: of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it,
+<!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
+Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
+tactics cards, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
@@ -20,15 +26,16 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 
 ## Judge it in 3 minutes
 1. **See what he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0):
-   press **Play**. Playback slows through the look (the KEY SCAN tag), and the runner H9 comes
-   into view.
+   press **Play**. Playback slows through the look (the KEY SCAN tag), and the runner N. Varnhall
+   (No. 9) comes into view.
 2. **Take the look away.** [Without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
-   the same moment re-simulated with that one scan removed. He no longer knows where H9 is, and
-   plays it back to H4; **With the look** switches back to the pass to H9. Without the look, 39 of
-   40 held-out seeds decide differently ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
+   the same moment re-simulated with that one scan removed. He no longer knows where Varnhall is,
+   and plays it back to K. Annersley (No. 4); **With the look** switches back to the pass to
+   Varnhall. Without the look, <!--num:H1-->33 of 40<!--/num--> held-out seeds decide differently
+   ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams in, and once the moment is detected the agent crew's breakdown plays
-   (Microsoft Foundry; **Sound on** for Azure AI Speech). Click a caption to open its claims and
+   (Microsoft Foundry; **Tap for sound** for Azure AI Speech). Click a caption to open its claims and
    the evidence frame. Then [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value)
    and press **Check**: the verifier refutes it, and the line would not air.
 
@@ -47,7 +54,8 @@ the run is the same up to that scan and differs only through what he no longer s
 ([test](tests/test_export.py#L37)), so what he would have done without it is re-simulated, not
 guessed. Under all of it runs the backbone a broadcast needs: a crew of agents writes the
 breakdown for each audience and language, and code checks every number the crew says or
-captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/reports/corruption.md)).
+captions before it airs (all <!--num:A5.k-->90<!--/num--> falsified claims refuted, and <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> true claims wrongly
+rejected: [corruption](eval/reports/corruption.md)).
 
 ## Path to production
 - **Who it is for.** A broadcaster's studio analyst explaining a replay on air, and a club's
@@ -55,7 +63,7 @@ captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/re
 - **What it needs as input.** Player tracking at 25 Hz with head direction, the kind stadium
   limb tracking or broadcast pose models report. [analytics/keypoints.py](analytics/keypoints.py)
   turns COCO-style head, shoulder and hip keypoints into position and head yaw; on synthetic
-  keypoints the scan detector keeps a held-out F1 of 0.965 with 20 mm of noise per keypoint axis
+  keypoints the scan detector keeps a held-out F1 of <!--num:A2-->0.962<!--/num--> with 20 mm of noise per keypoint axis
   ([keypoint_ingest](eval/reports/keypoint_ingest.md)). The belief and the counterfactual need a
   simulator of the match around the moment; ours is that piece.
 - **What it hands a graphics engine.** Per moment, a `TelestrationPlan` (timed camera cuts,
@@ -65,10 +73,26 @@ captions before it airs (90 of 90 perturbed claims refuted: [corruption](eval/re
 - **Controls.** Code checks every number the crew says or captions before it airs; every verdict
   goes to an audit log (Cosmos DB, `GET /api/matches/<id>/audit`); model calls are rate-limited
   per client and capped per day, with deterministic templates and a cache behind them.
-- **Validated, and not.** The perception parameters are calibrated to published values: 10 of 16
+- **Validated, and not.** The perception parameters are calibrated to published values: <!--num:R3.inside-->11<!--/num--> of 16
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
   only; see [Limitations](#limitations).
+- **Business model.** Who would pay and for what, what one explained moment costs us to serve
+  (about a cent of model calls), and what is still missing: [SUBMISSION](docs/SUBMISSION.md#business-model).
+
+## Who uses it
+- **Broadcasters.** A "through his eyes" studio segment: the analyst plays the replay of a moment
+  and the audience sees what the player saw, with every number checked before it airs. The
+  overlays arrive as timecoded cues a graphics engine can render.
+- **Coaches and academies.** The [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
+  asks the trainee where to look before the ball arrives, then shows what that look would have
+  caught. What the research does and does not show about scanning is in
+  [SUBMISSION, Who uses it](docs/SUBMISSION.md#who-uses-it).
+- **Blind and low-vision fans.** The audio description audience we ship: where he got the ball,
+  which way he looked and whom he saw, as verified lines in calm, slower speech, with large-print
+  captions and named controls ([ACCESSIBILITY](docs/ACCESSIBILITY.md)).
+
+Who would pay, and what a moment costs to serve: [Business model](docs/SUBMISSION.md#business-model).
 
 ## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
@@ -76,14 +100,13 @@ Status: **live on Azure**, redeployed from `main` by GitHub Actions: the sim, an
 layer (moments, lenses, verified claims), the agent crew and the web replay run end to end; see
 [docs/SPEC.md](docs/SPEC.md) §8–9.
 
-**How this differs from FIFA AI Pro.** FIFA AI Pro, the assistant Lenovo built with FIFA for the
-2026 World Cup teams, answers *what happened*, from statistics, before and after a match, and
-labels its answers "validated". We answer *what he saw and what he believed*, while the synthetic
-match streams live. Every number in the captions and narration is a verified claim that a viewer
-can open and challenge with **Try a wrong number**, and every "What if…?" is re-simulated in the
-sim, not estimated. Lenovo's figures for its Referee View, an AI-stabilised referee body camera,
-show that fans want first person; it shows what a camera captured, we show what the player
-perceived. Sources: [docs/REFERENCES.md](docs/REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026).
+**How this relates to FIFA AI Pro.** FIFA AI Pro, the assistant Lenovo built with FIFA for the
+2026 World Cup teams, answers analysts' questions about *what happened*, from official match data,
+before and after a match. We work on a different question: *what he saw and what he believed*,
+while the synthetic match streams live. Every number in the captions and narration is a verified
+claim that a viewer can open and challenge with **Try a wrong number**, and every "What if…?" is
+re-simulated in the sim. Lenovo's Referee View, an AI-stabilised referee body camera, brings fans
+a first-person view of what a camera captured; we show what the player perceived. Sources: [docs/REFERENCES.md](docs/REFERENCES.md#related-products-judges-may-know-fifa-ai-pro-and-referee-view-world-cup-2026).
 
 <a name="for-judges-try-it-in-3-minutes"></a>
 
@@ -92,22 +115,24 @@ A simulated match with fictional players; no login. Each link opens the live sit
 players take a few seconds to load). URL parameters: [web/README.md](web/README.md#url-parameters).
 
 1. **What he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan):
-   H8, the midfielder, looks over his shoulder, away from the ball, just before he receives it
-   (the KEY SCAN badge). That look is the only time before his pass that the runner H9 is in
-   his sight. Press **Play**: playback slows through the look.
+   J. Ferriday (No. 8), the midfielder, looks over his shoulder, away from the ball, just before
+   he receives it (the KEY SCAN badge). That look is the only time before his pass that the
+   runner N. Varnhall (No. 9) is in his sight. Press **Play**: playback slows through the look.
 2. **With and without that look.** [Without the look, at his decision](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
-   the same moment re-simulated with that one scan removed. His picture of H9 is now 12 m off,
-   and his pass options point backwards; he plays it back to H4. Click **With the look**: one
-   thick line to H9. Over 40 held-out seeds, 39 decide differently without the look
-   ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
+   the same moment re-simulated with that one scan removed. His picture of Varnhall is now 12 m
+   off, and his pass options point backwards; he plays it back to K. Annersley (No. 4). Click
+   **With the look**: one thick line to Varnhall. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently
+   without the look ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz; once the moment is detected, the agent crew's
    breakdown plays (Microsoft Foundry, cached after the first request). Click a caption to open
-   its claims and the evidence frame; **Sound on** speaks it with Azure AI Speech.
+   its claims and the evidence frame; **Tap for sound** to hear it in Azure AI Speech.
 4. **Your own "What if…?"** [A question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
    press **Ask**. The API maps the question to one of his options, forces it, re-simulates the
-   moment and answers with verified lines; the forced run plays as a gold ghost. Free questions
-   are rate-limited per client.
+   moment and answers with verified lines; the forced run plays as a gold ghost. It is a
+   re-simulation, not an estimate: the same simulation, the same keyed random draws and the same
+   model of what each player can see; nothing is sampled from other plays or scored by geometry.
+   Free questions are rate-limited per client.
 5. **The verifier blocking a number.** [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value):
    the evidence card opens on "That look was worth … in expected threat." with a wrong value
    filled in. Press **Check**: the API runs the real verifier on that claim with your number,
@@ -119,7 +144,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    number no claim holds, for example "H8's picture of A5 was off by 1.2 metres" where the claim
    holds H9 and 0.5, and none of them passed the Verifier
    ([narration ablation](eval/reports/narration_ablation.md#free-text-failures-verbatim)). It also
-   refuted 90 of 90 perturbed claims: a number off by one unit or by 20%, a swapped player, a
+   refuted <!--num:A5-->90 of 90<!--/num--> perturbed claims, and wrongly rejected <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> true ones: a number off by one unit or by 20%, a swapped player, a
    wrong order ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
 6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0):
@@ -137,7 +162,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
    why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
    has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
-   to keep the ball (**If he carried it**). He loses it in 40 of 40 fresh seeds
+   to keep the ball (**If he carried it**). He loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds
    ([pressure](eval/reports/hero_lens_press_escape.md)). **View options** → **Skeleton** on the
    broadcast camera or the board draws each player's torso and head direction, the way
    limb-tracking data is shown.
@@ -197,18 +222,32 @@ the deployed service. Nothing has been run on real tracking data.
 
 | Claim | Number | Report |
 |---|---|---|
-| Without one look, the hero decides differently | 33/40 seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
-| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | 40/40; 40/40 | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
-| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | 40/40 lost; 32/40 changed | [pressure](eval/reports/hero_lens_press_escape.md) |
-| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → 30/40 changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
-| Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | 37/40 | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
-| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | 0.991 | [scan_detector](eval/reports/scan_detector.md) |
+| Without one look, the hero decides differently | <!--num:H1-->33/40<!--/num--> seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
+| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | <!--num:H2-->34/40<!--/num-->; <!--num:H3-->40/40<!--/num--> | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
+| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [pressure](eval/reports/hero_lens_press_escape.md) |
+| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → <!--num:H6-->30/40<!--/num--> changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
+| Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | <!--num:H7-->37/40<!--/num--> | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
+| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | <!--num:A1-->0.991<!--/num--> | [scan_detector](eval/reports/scan_detector.md) |
 | Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
-| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded) | 90/90 | [corruption](eval/reports/corruption.md) |
+| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded); true claims it wrongly rejected | <!--num:A5-->90/90<!--/num-->; <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> | [corruption](eval/reports/corruption.md) |
 | Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
 | Free-text vs anchored narration, same moment and seeds: first-draft lines naming a player or number that no claim holds (none passed the verifier); groundedness of the scripts that aired (1–5, Foundry evaluator) | 34 of 66 vs 0 of 111; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
+| The crew against one agent doing its four model roles in one call, same moments, tools and schemas (single vs crew): wrong facts aired; model roles kept with the Analyst or the Telestrator down; agent runs over the deployed 8 s step timeout; cost per breakdown | 0 vs 0; 0 of 4 vs 3 of 4; 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 | [crew_vs_single](eval/reports/crew_vs_single.md) |
 | One uncached model breakdown on the deployed API (one audience, one language, the Analyst on MCP): on a warm replica; the first request after a deploy; from the cache | 12.9 s; 23.8–25.9 s; 0.15 s | [SPEC §8](docs/SPEC.md#8-platform-and-deploy), [live trace](docs/RUBRIC_MAP.md#the-live-trace) |
 | Audio description for blind and low-vision viewers: where he got the ball, which way he looked, whom he saw, each a verified claim; calm, slower SSML at any tier; in the web app sound on, large-print captions, narration and playback controls named and focusable | 6/6 template lines verified, 0 dropped (seed 3, en + zh) | [test_agents](tests/test_agents.py), [access.test](web/src/ui/access.test.tsx) |
+
+## Engineering
+| Practice | What it is | Where |
+|---|---|---|
+| Deterministic sim | The same seed gives byte-identical output. Randomness is keyed per `(match_seed, entity, purpose)`, so a counterfactual differs from the factual run only through its intervention | [sim/rng.py](sim/rng.py), [tests/test_sim_m1.py](tests/test_sim_m1.py) |
+| One canonical platform | Committed artifacts (exports, reports, the xT grid) are generated on linux/amd64 in `python:3.11-slim`, with numpy's X86_V4 tier off: where CI and the live API run. macOS and Linux differ in the last bits of libm | [scripts/regen_linux.sh](scripts/regen_linux.sh), [tests/canonical.py](tests/canonical.py) |
+| CI gates | ruff and pytest; web typecheck, prettier and vitest, which includes the GPU shader parity test in headless Chrome; the end-to-end smoke test of every page with axe-core's WCAG 2.2 rules. Deploy runs only after the full CI is green on `main` | [ci.yml](.github/workflows/ci.yml), [deploy.yml](.github/workflows/deploy.yml) |
+| Infrastructure as scripts | The Azure resources come from two scripts, each refusing a non-personal subscription; the web upload reads every file back before `index.html` switches | [infra/m0_provision.sh](infra/m0_provision.sh), [infra/deploy.sh](infra/deploy.sh) |
+| OIDC deploy | GitHub Actions signs in to Azure with a federated identity: no Azure secret is stored | [deploy.yml](.github/workflows/deploy.yml) |
+| Traces | OpenTelemetry spans per agent step in Application Insights, each with its source (model or template) and timing | [agents/telemetry.py](agents/telemetry.py), [live trace](docs/RUBRIC_MAP.md#the-live-trace) |
+| The demo survives quota loss | A per-client rate limit, a daily model cap and a content-hash cache, with deterministic templates behind them: past a limit the API serves the cached result or the template, flagged | [OPERATIONS](docs/OPERATIONS.md#when-a-quota-runs-out) |
+| Laws-of-the-Game audit | Offside, the ball over a line, restarts and keeper handling are checked in every run: <!--num:A6-->0<!--/num--> unpunished breaches | [laws](eval/reports/laws.md) |
+| Held-out seeds | Every hero gate is tuned on design seeds and reported on others: the scan hero <!--num:H1-->33/40<!--/num-->, the pressure hero's lens <!--num:H3-->40/40<!--/num-->, the corner hero <!--num:H7-->37/40<!--/num--> | [Evidence](#evidence) |
 
 ## Limitations
 - **Synthetic data only.** Nothing has been run on real tracking data, which the hackathon rules
@@ -217,12 +256,14 @@ the deployed service. Nothing has been run on real tracking data.
   is a re-simulation with our models of movement, perception and decisions; on real data it
   could only be an association.
 - **Pressure and scanning.** In the published data players scan less when an opponent is tight
-  on them (d = +0.57 between 10+ m and 0–1 m). Our simulator shows the opposite sign
-  (d = −0.12, 90% interval over seeds −0.30 to 0.04): one of the 6 statistics outside the
-  published range ([realism](eval/reports/realism.md)).
-- **No tackles yet.** Possession changes hands by interceptions and balls out of play only:
-  0 tackles per 90 minutes over 20 stitched matches ([match_stats](eval/reports/match_stats.md));
-  tackles are switched on in the pressure hero's scenario alone.
+  on them (d = +0.57 between 10+ m and 0–1 m). Our simulator has the same sign but a much
+  smaller effect (d = <!--num:R4.d-->0.15<!--/num-->, 90% interval over seeds <!--num:R4.lo-->−0.06<!--/num--> to <!--num:R4.hi-->0.36<!--/num-->): one of the <!--num:R3.outside-->5<!--/num--> statistics
+  outside the published range; the other four compare scan rates between roles
+  ([realism](eval/reports/realism.md)).
+- **No tackles yet.** In the stitched matches possession changes hands by interceptions only:
+  0 tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
+  matches ([match_stats](eval/reports/match_stats.md)); tackles are switched on in the pressure
+  hero's scenario alone.
 - **xT is our own grid**, fitted on synthetic open play, so a gain like "that look was worth … in
   expected threat" is a value inside the simulation.
 
@@ -262,6 +303,18 @@ reads the files.
 uv run python -m sim.dataset --matches 10 --out out/dataset/
 uv run python examples/dataset_quickstart.py --data out/dataset
 ```
+
+## The challenge's pipeline
+The brief asks for Ingest → Interpret → Explain → Render → Personalize. The whole match streams
+live at 1×. The [diagram](docs/architecture.svg) shows how the stages meet the Azure services.
+
+| Stage | Module | One concrete thing it does |
+|---|---|---|
+| Ingest | `sim/`, `api/` | the simulator makes every fictional player's tracking, with head and body yaw; the API replays them over a WebSocket at 1× |
+| Interpret | `analytics/` | a scan detector reads head yaw alone and finds each look; blind-side alerts flag a runner he has not seen |
+| Explain | `explain/` | re-simulates a moment with one look removed and turns the result into claims a deterministic Verifier checks |
+| Render | `web/` | first-person replay through his eyes, and a GPU pitch-control overlay on the tactical board |
+| Personalize | `agents/` | a crew writes the breakdown for each audience in English or Chinese; Azure AI Speech voices it |
 
 ## Layout
 Each package's README covers what it does, its modules and data flow, the invariants it keeps

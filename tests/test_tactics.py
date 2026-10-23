@@ -325,8 +325,8 @@ def test_each_sentence_is_supported_and_renders_in_both_languages(short_match):
         assert all(c.verdict == "supported" for c in payload.claims)
         assert check_payload(payload) == []
     en = {line.id: line.text for line in view.lines["en"].lines}
-    assert en["build_up"].startswith("Building short under pressure, Home kept the ball on ")
-    assert "A9 got the ball" in en["set_pieces"] and "no shot followed" in en["set_pieces"]
+    assert en["build_up"].startswith("Building short under pressure, Kestrel Bay kept the ball on ")
+    assert "M. Quillan got the ball" in en["set_pieces"] and "no shot followed" in en["set_pieces"]
 
 
 def test_a_wrong_number_in_a_sentence_is_refuted(short_match):

@@ -1,0 +1,2931 @@
+{
+ "model": "gpt-4.1-mini",
+ "date": "2026-10-21",
+ "source": "eval/crew_vs_single.py run records (out/crew_vs_single/runs/): Microsoft Foundry, the fault-free runs of eval/reports/crew_vs_single.md",
+ "latency_ms": {
+  "analyst": 1858,
+  "analyst_tool": 1697,
+  "color": 1396,
+  "director": 1638,
+  "pbp": 1845,
+  "solo": 6718,
+  "solo_tool": 2244,
+  "telestrator": 3358
+ },
+ "latency_n": {
+  "analyst": 6,
+  "analyst_tool": 6,
+  "color": 24,
+  "director": 6,
+  "pbp": 24,
+  "solo": 6,
+  "solo_tool": 5,
+  "telestrator": 6
+ },
+ "runs": [
+  {
+   "scenario": "blind_side_run",
+   "seed": 100,
+   "structure": "crew",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The player's perception of the field before receiving the ball significantly influenced his choice to make a line-breaking pass, greatly increasing the team's chance to create a threat.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "cf_pass",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "key_scan_duration",
+     "seen_in_scan",
+     "belief_error",
+     "pass_success"
+    ],
+    "angle": "The player looked over his shoulder before receiving the ball, spotted an unmarked teammate making a blind side run, and made a line-breaking pass that significantly increased the team's threat."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 0,
+    "director": 0,
+    "pbp": 0,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Without that look, {player} would have passed to {cf_receiver}.",
+      "claims": [
+       "cf_pass"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "关键在这里。如果没有那一眼，{player}会把球传给{cf_receiver}。",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{passer}出球时，{runner}无人盯防。",
+      "claims": [
+       "unmarked"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Watch this. {runner} was unmarked when {passer} released the ball.",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Here's why. {runner}'s run was on {player}'s blind side.",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "Without that look, {player} would have passed to {cf_receiver}.",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+      "claims": [
+       "pass_success"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
+      "claims": [
+       "belief_error"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。{passer}出球时，{runner}无人盯防。",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "出球时，{runner}离最近的对手有{gap}米。",
+      "claims": [
+       "gap_to_nearest_opponent"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "如果没有那一眼，{player}会把球传给{cf_receiver}。",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。",
+      "claims": [
+       "pass_success"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "blind_side_run",
+   "seed": 100,
+   "structure": "single",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The player's look over his shoulder significantly improved his passing decision, increasing the expected threat substantially.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "seen_in_scan",
+     "cf_pass",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "key_scan_duration",
+     "blind_side",
+     "pass_to_runner",
+     "pass_success",
+     "gap_opened"
+    ],
+    "angle": "The look over the shoulder revealed the unmarked runner on the blind side, enabling a line-breaking pass that greatly increased the chance of success."
+   },
+   "digits_in_replies": {
+    "solo": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "What did he see? When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "他看到了什么？球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "What did he see? When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "See it again. {player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+      "claims": [
+       "pass_success"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Here's why. {runner}'s run was on {player}'s blind side.",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "Without that look, {player} would have passed to {cf_receiver}.",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "他看到了什么？球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "再看看。{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。",
+      "claims": [
+       "pass_success"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "关键在这里。{runner}的跑位在{player}的盲区。",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "如果没有那一眼，{player}会把球传给{cf_receiver}。",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "blind_side_run",
+   "seed": 3,
+   "structure": "crew",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The scan lens revealed a significant increase in expected threat by showing what H8 saw and believed before making a line-breaking pass to H9, which changed the outcome substantially.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "seen_in_scan",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "key_scan_duration",
+     "pass_to_runner",
+     "pass_speed",
+     "unmarked"
+    ],
+    "angle": "H8 checked his right shoulder before receiving and saw H9 making a run on his blind side, which enabled him to make a highly effective long pass."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 0,
+    "director": 0,
+    "pbp": 0,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "为什么？那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{runner}的跑位在{player}的盲区。",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Now watch. {player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Here's why. When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{runner}'s run was on {player}'s blind side.",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "Look again. {runner} was unmarked when {passer} released the ball.",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "{passer}'s pass left his foot at {kmh} km/h.",
+      "claims": [
+       "pass_speed"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "再看看。{runner}的跑位在{player}的盲区。",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{passer}出球时，{runner}无人盯防。",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "注意看。{passer}这脚传球的出球时速为{kmh}公里。",
+      "claims": [
+       "pass_speed"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "球到脚下时，{player}距上次回头观察已过去{secs}秒。",
+      "claims": [
+       "time_since_last_scan"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "blind_side_run",
+   "seed": 3,
+   "structure": "crew",
+   "lines": "free_text",
+   "date": "2026-10-21",
+   "reason": "The scan lens revealed a significant increase in expected threat by showing what H8 saw and believed before making a line-breaking pass to H9, which changed the outcome substantially.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "seen_in_scan",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "key_scan_duration",
+     "pass_to_runner",
+     "pass_speed",
+     "unmarked"
+    ],
+    "angle": "H8 checked his right shoulder before receiving and saw H9 making a run on his blind side, which enabled him to make a highly effective long pass."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 11,
+    "director": 0,
+    "pbp": 7,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "H8 checked his right shoulder just before receiving the ball and saw H9 making a run on his blind side.",
+      "claims": [
+       "scan_before_reception",
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "That quick look helped H8 deliver a precise, long pass to the unmarked H9.",
+      "claims": [
+       "cf_value",
+       "pass_to_runner",
+       "unmarked"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "球到之前，H8先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "球赛场上，H8在接球前回头查看，发现了H9正在无防守的跑动。",
+      "claims": [
+       "scan_before_reception",
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "这一观察使H8能做出有效的长传，增加了进攻威胁。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "H8 checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "H8's pre-reception scan, including a half-second look, provided critical spatial information enabling him to spot H9's unmarked run on his blind side.",
+      "claims": [
+       "scan_before_reception",
+       "key_scan_duration",
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "When H8 looked over his shoulder before the ball arrived, he saw H9 making a run on his blind side.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "By identifying H9's position early, H8 adjusted his passing decision and targeted a 25-metre delivery at 60 km/h to exploit the space effectively.",
+      "claims": [
+       "seen_in_scan",
+       "pass_to_runner",
+       "pass_speed"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "H8 scanned twice in the two seconds before receiving and his look lasted half a second.",
+      "claims": [
+       "scans_before_reception",
+       "key_scan_duration"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "That look was worth 0.25 in expected threat as H8 found unmarked H9 with a 25-metre pass traveling at 60 km/h.",
+      "claims": [
+       "cf_value",
+       "pass_to_runner",
+       "pass_speed",
+       "unmarked"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "球到之前，H8先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "H8接球前回头观察了1次，持续了约0.5秒。",
+      "claims": [
+       "scans_before_reception",
+       "key_scan_duration"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "球到之前回头的那一眼，H8看到了H9。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "球到脚下时，H8距上次回头观测已经过去0.2秒。",
+      "claims": [
+       "time_since_last_scan"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "H8出球时，H9无人盯防。",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "H8一脚45米的传球找到了H9。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "因此H8能够精准选择长传，45米出球时速约为40公里，顺利找到H9。",
+      "claims": [
+       "pass_to_runner",
+       "pass_speed"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "blind_side_run",
+   "seed": 3,
+   "structure": "single",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The player's look over his shoulder significantly increased the expected threat of his pass, revealing key perception that changed the play's effectiveness.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "seen_in_scan",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "key_scan_duration",
+     "pass_to_runner",
+     "unmarked",
+     "runner_received",
+     "cf_pass"
+    ],
+    "angle": "The look over the shoulder revealed the runner, enabling a higher-value pass on the blind side."
+   },
+   "digits_in_replies": {
+    "solo": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "What did he see? {runner} took the pass from {passer}.",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "关键在这里。球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "他看到了什么？{runner}接到了{passer}的传球。",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Look again. {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "What did he see? {player}'s look over his shoulder lasted {dur|second|seconds}.",
+      "claims": [
+       "key_scan_duration"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "When {player} looked over his shoulder before the ball arrived, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "This is the moment. Without that look, {player} would have passed to {cf_receiver}.",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "Now watch. {runner} was unmarked when {passer} released the ball.",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "接球前{window_s}秒内，{player}回头观察了{n:times}。",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "再看看。球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "他看到了什么？{player}这次回头观察持续了{dur}秒。",
+      "claims": [
+       "key_scan_duration"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "球到之前回头的那一眼，{player}看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "关键在这里。如果没有那一眼，{player}会把球传给{cf_receiver}。",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "就是这个瞬间。{passer}出球时，{runner}无人盯防。",
+      "claims": [
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "blind_side_run",
+   "seed": 3,
+   "structure": "single",
+   "lines": "free_text",
+   "date": "2026-10-21",
+   "reason": "The scan changed the player's decision significantly increasing the expected threat by choosing a better pass.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "cf_pass",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "key_scan_duration",
+     "seen_in_scan",
+     "pass_to_runner",
+     "unmarked"
+    ],
+    "angle": "The player's look over his shoulder revealed an unmarked teammate on the blind side, enabling a high-value pass."
+   },
+   "digits_in_replies": {
+    "solo": 3
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "H8 looks over his shoulder and finds H9 unmarked.",
+      "claims": [
+       "scan_before_reception",
+       "seen_in_scan",
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "That quick glance showed H8 that H9 was wide open on his blind side.",
+      "claims": [
+       "scan_before_reception",
+       "seen_in_scan",
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "He makes a great long pass to H9 breaking the defense.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Thanks to the scan, H8 chose the best pass increasing the chance to score.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "H8回头看了一眼，发现H9无人盯防。",
+      "claims": [
+       "scan_before_reception",
+       "seen_in_scan",
+       "unmarked"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "这次回头观察让H8看到H9在他的盲区。",
+      "claims": [
+       "scan_before_reception",
+       "seen_in_scan",
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "他传出了一个突破防线的长传。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "多亏了这次回头，H8选了最佳传球，提升了得分机会。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "H8 scanned before receiving the ball and saw H9 making a run on the blind side.",
+      "claims": [
+       "scans_before_reception",
+       "scan_before_reception",
+       "seen_in_scan",
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "H8's scan allowed him to update his mental image, correcting the large belief error he had about H9's position.",
+      "claims": [
+       "belief_error",
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "The scan lasted almost a whole second and was critical for this high-value pass.",
+      "claims": [
+       "key_scan_duration",
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "Without the scan, H8 would have passed to H4, a much less valuable option.",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "The actual pass covered 42 metres and reached H9 unmarked and under no pressure.",
+      "claims": [
+       "pass_to_runner",
+       "unmarked",
+       "receiver_pressure"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "H8在接球前扫描了一下，看到H9在盲区跑动。",
+      "claims": [
+       "scans_before_reception",
+       "scan_before_reception",
+       "seen_in_scan",
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "回头观察让H8调整了对H9位置的错误判断。",
+      "claims": [
+       "belief_error",
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "这次回头观察持续了将近一秒，是这次高价值传球的关键。",
+      "claims": [
+       "key_scan_duration",
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "没有这次回头观察，H8会传球给价值低很多的H4。",
+      "claims": [
+       "cf_pass"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "实际传球长度42米，传给了无人盯防且无压力的H9。",
+      "claims": [
+       "pass_to_runner",
+       "unmarked",
+       "receiver_pressure"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "corner_blind_side",
+   "seed": 0,
+   "structure": "crew",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "H5's scan notably increased the potential threat by allowing a well-informed pass to A9, significantly influencing the attacking play.",
+   "priority": "normal",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "marker_scan",
+     "seen_in_scan",
+     "cf_value"
+    ],
+    "supporting": [
+     "marker_unseen",
+     "blind_side",
+     "cf_lost_runner",
+     "cf_unmarked",
+     "cf_belief_error"
+    ],
+    "angle": "H5 looked over his right shoulder just before the pass, spotting A9 on his blind side, which significantly improved his defensive positioning and reduced the chance of A9 receiving the ball unmarked."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 0,
+    "director": 0,
+    "pbp": 0,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} looked over his shoulder {secs|second|seconds} before {passer} played the ball to {runner}.",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. Without the look, {runner} receives the ball unmarked.",
+      "claims": [
+       "cf_unmarked"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "When {player} looked over his shoulder, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Without the look, {player} loses his man: he is {gap|metre|metres} from {runner} when the ball arrives.",
+      "claims": [
+       "cf_lost_runner"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？{passer}把球传给{runner}之前{secs}秒，{player}回头看了一眼。",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "就是这个瞬间。那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。{player}回头的那一眼，看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "为什么？如果没有那一眼，{runner}接球时无人盯防。",
+      "claims": [
+       "cf_unmarked"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} looked over his shoulder {secs|second|seconds} before {passer} played the ball to {runner}.",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Look again. {runner} was on {player}'s blind side when he looked.",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Here's why. When {player} looked over his shoulder, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Without the look, {player} loses his man: he is {gap|metre|metres} from {runner} when the ball arrives.",
+      "claims": [
+       "cf_lost_runner"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "Without the look, {runner} receives the ball unmarked.",
+      "claims": [
+       "cf_unmarked"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "Now watch. Without the look, {player}'s picture of {runner} is off by {err|metre|metres} when the ball is played.",
+      "claims": [
+       "cf_belief_error"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "{player} was {gap|metre|metres} from {runner} when the ball reached him.",
+      "claims": [
+       "stayed_with_runner"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？{passer}把球传给{runner}之前{secs}秒，{player}回头看了一眼。",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "注意看。{player}回头时，{runner}在他的盲区。",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。{player}回头的那一眼，看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "为什么？如果没有那一眼，{player}会跟丢{runner}：球到时他已在{gap}米开外。",
+      "claims": [
+       "cf_lost_runner"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "如果没有那一眼，出球时{player}对{runner}位置的判断会偏差{err}米。",
+      "claims": [
+       "cf_belief_error"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "如果没有那一眼，{runner}接球时无人盯防。",
+      "claims": [
+       "cf_unmarked"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "corner_blind_side",
+   "seed": 0,
+   "structure": "single",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The look over the shoulder significantly increased the expected threat by enabling the defender to maintain close marking.",
+   "priority": "normal",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "marker_scan",
+     "seen_in_scan",
+     "cf_value"
+    ],
+    "supporting": [
+     "marker_unseen",
+     "blind_side",
+     "scan_side",
+     "runner_received",
+     "reception_zone",
+     "stayed_with_runner"
+    ],
+    "angle": "H5 updated his picture of A9's position with a crucial look over his right shoulder that helped him stay close and maintain pressure."
+   },
+   "digits_in_replies": {
+    "solo": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{player} looked over his shoulder {secs|second|seconds} before {passer} played the ball to {runner}.",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "When {player} looked over his shoulder, he saw {runner}.",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "What did he see? {runner} took the pass from {passer}.",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Here's why. That look was worth {dxt} in expected threat.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{passer}把球传给{runner}之前{secs}秒，{player}回头看了一眼。",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "{player}回头的那一眼，看到了{runner}。",
+      "claims": [
+       "seen_in_scan"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "他看到了什么？{runner}接到了{passer}的传球。",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "为什么？那一眼带来了{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{player} looked over his shoulder {secs|second|seconds} before {passer} played the ball to {runner}.",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Before he looked, {player} had not seen {runner} for {secs|second|seconds}.",
+      "claims": [
+       "marker_unseen"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Watch this. {runner} took the pass from {passer}.",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Look again. {runner} was on {player}'s blind side when he looked.",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "{player} looked over his {side:vocab} shoulder.",
+      "claims": [
+       "scan_side"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "Now watch. {player} was {gap|metre|metres} from {runner} when the ball reached him.",
+      "claims": [
+       "stayed_with_runner"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{passer}把球传给{runner}之前{secs}秒，{player}回头看了一眼。",
+      "claims": [
+       "marker_scan"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "回头之前，{player}已经有{secs}秒没看到{runner}了。",
+      "claims": [
+       "marker_unseen"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "注意看。{runner}接到了{passer}的传球。",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "再看看。{player}回头时，{runner}在他的盲区。",
+      "claims": [
+       "blind_side"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "{player}扭头看向了{side:vocab}后方。",
+      "claims": [
+       "scan_side"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "就是这个瞬间。球到{runner}脚下时，{player}离他{gap}米。",
+      "claims": [
+       "stayed_with_runner"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "far_post_finish",
+   "seed": 0,
+   "structure": "crew",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The player's decision after scanning significantly increased the potential threat, leading to a notable impact on the attacking play.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "cf_shot",
+     "cf_shot_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "key_scan_duration",
+     "scan_side",
+     "keeper_seen_in_scan",
+     "shot_placement"
+    ],
+    "angle": "H9 used a quick look over his left shoulder to see the keeper's position and chose to shoot at the far post, significantly increasing his scoring chance."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 0,
+    "director": 0,
+    "pbp": 0,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Watch this. {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Now watch. The look raised his chance of scoring from {p0} to {p1}.",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Here's why. When {player} looked up, he saw {keeper}.",
+      "claims": [
+       "keeper_seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "pbp",
+      "text": "{player} went for the far post.",
+      "claims": [
+       "shot_placement"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "Without the look, {player} goes for the near post, and {keeper} saves it.",
+      "claims": [
+       "cf_shot"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "就是这个瞬间。球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "他看到了什么？{player}选择打远角。",
+      "claims": [
+       "shot_placement"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。如果没有那一眼，{player}会选择打近角，被{keeper}扑出。",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{player}抬头的那一眼，看到了{keeper}。",
+      "claims": [
+       "keeper_seen_in_scan"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Look again. {player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "What did he see? Without the look, {player} goes for the near post, and {keeper} saves it.",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Here's why. When {player} looked up, he saw {keeper}.",
+      "claims": [
+       "keeper_seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "The look raised his chance of scoring from {p0} to {p1}.",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{player} went for the far post.",
+      "claims": [
+       "shot_placement"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+      "claims": [
+       "scans_before_reception"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "再看看。接球前{window_s}秒内，{player}回头观察了{n:times}。",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。{player}抬头的那一眼，看到了{keeper}。",
+      "claims": [
+       "keeper_seen_in_scan"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "注意看。球到脚下时，{player}距上次回头观察已过去{secs}秒。",
+      "claims": [
+       "time_since_last_scan"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "那一眼把他的进球概率从{p0}提高到了{p1}。",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player}这次回头观察持续了{dur}秒。",
+      "claims": [
+       "key_scan_duration"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "如果没有那一眼，{player}会选择打近角，被{keeper}扑出。",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "{player}选择打远角。",
+      "claims": [
+       "shot_placement"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "far_post_finish",
+   "seed": 0,
+   "structure": "single",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The long look over the shoulder changed the shot decision and greatly increased the chance of scoring.",
+   "priority": "high",
+   "findings": {
+    "lens": "scan",
+    "headline": [
+     "scan_before_reception",
+     "cf_shot",
+     "cf_shot_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "key_scan_duration",
+     "scan_side",
+     "keeper_seen_in_scan",
+     "keeper_near_side"
+    ],
+    "angle": "H9's look over his shoulder significantly influenced his decision to shoot at the far post, increasing scoring chances."
+   },
+   "digits_in_replies": {
+    "solo": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "The look raised his chance of scoring from {p0} to {p1}.",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "What did he see? Without the look, {player} goes for the near post, and {keeper} saves it.",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Watch this. Before the ball reached him, {player} looked over his {side:vocab} shoulder.",
+      "claims": [
+       "scan_side"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "那一眼把他的进球概率从{p0}提高到了{p1}。",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "他看到了什么？如果没有那一眼，{player}会选择打近角，被{keeper}扑出。",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "注意看。球到之前，{player}扭头看向了{side:vocab}后方。",
+      "claims": [
+       "scan_side"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "{player} checked his shoulder before the ball reached him.",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. The look raised his chance of scoring from {p0} to {p1}.",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Look again. {player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "See it again. Without the look, {player} goes for the near post, and {keeper} saves it.",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "When {player} looked up, he saw {keeper}.",
+      "claims": [
+       "keeper_seen_in_scan"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "When {player} looked up, {keeper} stood {m|metre|metres} toward his near post.",
+      "claims": [
+       "keeper_near_side"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "球到之前，{player}先回头看了一眼。",
+      "claims": [
+       "scan_before_reception"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "关键在这里。那一眼把他的进球概率从{p0}提高到了{p1}。",
+      "claims": [
+       "cf_shot_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "再看看。接球前{window_s}秒内，{player}回头观察了{n:times}。",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "就是这个瞬间。如果没有那一眼，{player}会选择打近角，被{keeper}扑出。",
+      "claims": [
+       "cf_shot"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "{player}抬头的那一眼，看到了{keeper}。",
+      "claims": [
+       "keeper_seen_in_scan"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player}抬头时，{keeper}站在偏向近门柱{m}米的位置。",
+      "claims": [
+       "keeper_near_side"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "press_escape",
+   "seed": 0,
+   "structure": "crew",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The pressure lens reveals a significant increase in expected threat by showing how H4 escaped pressing, enabling a crucial line-breaking pass to H7.",
+   "priority": "high",
+   "findings": {
+    "lens": "pressure",
+    "headline": [
+     "pressure_at_pass",
+     "cf_value",
+     "cf_carry_lost"
+    ],
+    "supporting": [
+     "heavy_pressure",
+     "presser_distance",
+     "pass_success",
+     "pass_to_runner",
+     "runner_received"
+    ],
+    "angle": "H4 was under intense pressing but managed to escape pressure with a precise long pass to H7, significantly increasing his team's attacking threat."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 0,
+    "director": 0,
+    "pbp": 0,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Watch this. {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. Pressing intensity on {player} was {pressure}% when he released the ball.",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "What {player} did was worth {dxt} more in expected threat than keeping the ball.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "注意看。{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "关键在这里。出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{player}的处理比持球多{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "This is the moment. Pressing intensity on {player} was {pressure}% when he released the ball.",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. Had {player} kept the ball, {tackler} would have won it off him.",
+      "claims": [
+       "cf_carry_lost"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "{player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{runner} took the pass from {passer}.",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "Watch this. {passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "See it again. The nearest opponent, {presser}, was {gap|metre|metres} from {player} when he released the ball.",
+      "claims": [
+       "presser_distance"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "What {player} did was worth {dxt} more in expected threat than keeping the ball.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+      "claims": [
+       "pass_success"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "为什么？出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "关键在这里。{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "注意看。{player}出球时，离他最近的对手是{presser}，相距{gap}米。",
+      "claims": [
+       "presser_distance"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{player}的处理比持球多{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。",
+      "claims": [
+       "pass_success"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "如果{player}继续持球，{tackler}会把球抢走。",
+      "claims": [
+       "cf_carry_lost"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "{runner}接到了{passer}的传球。",
+      "claims": [
+       "runner_received"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "press_escape",
+   "seed": 0,
+   "structure": "single",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The player's ability to escape heavy pressure with a successful pass significantly increased the threat for his team.",
+   "priority": "high",
+   "findings": {
+    "lens": "pressure",
+    "headline": [
+     "heavy_pressure",
+     "pressure_at_pass",
+     "cf_value"
+    ],
+    "supporting": [
+     "pass_to_runner",
+     "runner_received",
+     "pass_speed",
+     "pass_success",
+     "presser_distance",
+     "receiver_pressure"
+    ],
+    "angle": "H4 was under intense pressure but still made a valuable pass that increased the team's expected threat."
+   },
+   "digits_in_replies": {
+    "solo": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "为什么？{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Watch this. {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "What did he see? What {player} did was worth {dxt} more in expected threat than keeping the ball.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Now watch. Pressing intensity on {player} was {pressure}% when he released the ball.",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Look again. The nearest opponent, {presser}, was {gap|metre|metres} from {player} when he released the ball.",
+      "claims": [
+       "presser_distance"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "{passer}'s pass left his foot at {kmh} km/h.",
+      "claims": [
+       "pass_speed"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+      "claims": [
+       "pass_success"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "注意看。{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "他看到了什么？{player}的处理比持球多{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "就是这个瞬间。出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "再看看。{player}出球时，离他最近的对手是{presser}，相距{gap}米。",
+      "claims": [
+       "presser_distance"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "{passer}这脚传球的出球时速为{kmh}公里。",
+      "claims": [
+       "pass_speed"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。",
+      "claims": [
+       "pass_success"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "press_escape",
+   "seed": 200,
+   "structure": "crew",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The pressure lens reveals that H4's successful escape from pressing caused a significant increase in the chance of a successful line-breaking pass.",
+   "priority": "high",
+   "findings": {
+    "lens": "pressure",
+    "headline": [
+     "pressure_at_pass",
+     "pass_success",
+     "cf_value"
+    ],
+    "supporting": [
+     "heavy_pressure",
+     "presser_distance",
+     "receiver_pressure",
+     "pass_to_runner",
+     "runner_received",
+     "cf_carry_lost"
+    ],
+    "angle": "Under heavy pressure from opponent A11, H4 successfully escaped pressing and made a precise long pass to H7, significantly increasing the team's chance of a line-breaking play."
+   },
+   "digits_in_replies": {
+    "analyst": 0,
+    "color": 0,
+    "director": 0,
+    "pbp": 0,
+    "telestrator": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Watch this. {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. What {player} did was worth {dxt} more in expected threat than keeping the ball.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+      "claims": [
+       "pass_success"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "关键在这里。{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "为什么？出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "注意看。{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。",
+      "claims": [
+       "pass_success"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "What did he see? {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Now watch. Pressing intensity on {player} was {pressure}% when he released the ball.",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Here's why. The nearest opponent, {presser}, was {gap|metre|metres} from {player} when he released the ball.",
+      "claims": [
+       "presser_distance"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+      "claims": [
+       "pass_success"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{runner} took the pass from {passer}.",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "What {player} did was worth {dxt} more in expected threat than keeping the ball.",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "Had {player} kept the ball, {tackler} would have won it off him.",
+      "claims": [
+       "cf_carry_lost"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "他看到了什么？{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "关键在这里。{player}判断传给{receiver}的球能到的概率是{p_belief}，实际是{p_true}。",
+      "claims": [
+       "pass_success"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "注意看。出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "为什么？{runner}接到了{passer}的传球。",
+      "claims": [
+       "runner_received"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "pbp",
+      "text": "{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L6",
+      "speaker": "color",
+      "text": "{player}出球时，离他最近的对手是{presser}，相距{gap}米。",
+      "claims": [
+       "presser_distance"
+      ]
+     },
+     {
+      "id": "L7",
+      "speaker": "pbp",
+      "text": "{player}的处理比持球多{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     },
+     {
+      "id": "L8",
+      "speaker": "color",
+      "text": "球到{receiver}脚下时，他承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "receiver_pressure"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "scenario": "press_escape",
+   "seed": 200,
+   "structure": "single",
+   "lines": "anchored",
+   "date": "2026-10-21",
+   "reason": "The pressure lens significantly influenced the player's decision and success by highlighting the intense pressing he faced.",
+   "priority": "high",
+   "findings": {
+    "lens": "pressure",
+    "headline": [
+     "heavy_pressure",
+     "pressure_at_pass",
+     "cf_value"
+    ],
+    "supporting": [
+     "scans_before_reception",
+     "time_since_last_scan",
+     "pass_to_runner",
+     "pass_speed",
+     "runner_received",
+     "presser_distance"
+    ],
+    "angle": "Under heavy pressure from close opponents, H4 made a high-value pass that increased expected threat significantly."
+   },
+   "digits_in_replies": {
+    "solo": 0
+   },
+   "drafts": {
+    "casual/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Now watch. {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "Here's why. Pressing intensity on {player} was {pressure}% when he released the ball.",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     }
+    ],
+    "casual/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "就是这个瞬间。{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "关键在这里。出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     }
+    ],
+    "analyst/en": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "Now watch. {player} was under heavy pressure when he released the ball.",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "What did he see? Pressing intensity on {player} was {pressure}% when he released the ball.",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "Look again. {passer} found {receiver} with a {dist}-metre pass.",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "Here's why. {player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "What {player} did was worth {dxt} more in expected threat than keeping the ball.",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ],
+    "analyst/zh": [
+     {
+      "id": "L1",
+      "speaker": "pbp",
+      "text": "就是这个瞬间。{player}是在重压之下出球的。",
+      "claims": [
+       "heavy_pressure"
+      ]
+     },
+     {
+      "id": "L2",
+      "speaker": "color",
+      "text": "他看到了什么？出球时，{player}承受的逼抢强度为{pressure}%。",
+      "claims": [
+       "pressure_at_pass"
+      ]
+     },
+     {
+      "id": "L3",
+      "speaker": "pbp",
+      "text": "再看看。{passer}一脚{dist}米的传球找到了{receiver}。",
+      "claims": [
+       "pass_to_runner"
+      ]
+     },
+     {
+      "id": "L4",
+      "speaker": "color",
+      "text": "关键在这里。接球前{window_s}秒内，{player}回头观察了{n:times}。",
+      "claims": [
+       "scans_before_reception"
+      ]
+     },
+     {
+      "id": "L5",
+      "speaker": "color",
+      "text": "{player}的处理比持球多{dxt}的预期威胁（xT）。",
+      "claims": [
+       "cf_value"
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

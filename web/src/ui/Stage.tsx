@@ -19,7 +19,7 @@ import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
 import { ProvenanceChip } from "../provenance/ProvenanceChip";
-import { TourButton } from "../tour/Tour";
+import { FirstTourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
@@ -29,6 +29,7 @@ import { PERSONA_LABEL } from "./labels";
 import { MatchPicker } from "./Match";
 import { Segmented } from "./Segmented";
 import { clubName, shortName } from "../data/roster";
+import { directorPrefs } from "../director/director";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -50,12 +51,13 @@ export const blurbOf = (hero: Hero): string =>
 
 const LANGUAGE_NAME: Record<Language, string> = { en: "English", zh: "中文" };
 
+// What each audience gets (SPEC 6, "Persona specs"): said and shown.
 const PERSONA_NOTE: Record<Persona, string> = {
-  casual: "The story, no jargon.",
-  analyst: "The mechanism, with the numbers.",
-  player_fan: "His view, his choices.",
-  coach: "Shapes, distances, decisions.",
-  audio_description: "Every line spoken, in large print.",
+  casual: "The story in three lines, through his eyes.",
+  analyst: "The board, pitch control and every number.",
+  player_fan: "His look, his pass, the camera on him.",
+  coach: "When he looked, and what to teach.",
+  audio_description: "Who is where, in order, read slowly.",
 };
 
 /** What he did, as a past-tense phrase: "passed to K. Annersley", "carried it". */
@@ -413,6 +415,29 @@ export function TacticalOptions() {
   );
 }
 
+/** On a phone the camera switch and the Auto director live here: below the picture they took two
+ * of its rows (styles.css shows this group only up to 760 px and hides the two there). */
+function PhoneCameraOptions() {
+  const auto = useStore(directorPrefs, (s) => s.auto);
+  return (
+    <section className="options-group phone-only">
+      <h3 className="kicker">Camera</h3>
+      <CameraSwitch />
+      <div className="chips">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={auto}
+          onClick={() => directorPrefs.set({ auto: !auto })}
+          title="Let the director cut the cameras: it holds each shot a moment, never cuts in the middle of a scan, and never starts a replay"
+        >
+          Auto director
+        </button>
+      </div>
+    </section>
+  );
+}
+
 /** Every overlay toggle of both views, behind one button. */
 export function ViewOptions() {
   const [open, setOpen] = useState(false);
@@ -437,6 +462,7 @@ export function ViewOptions() {
       </button>
       {open && (
         <div id={id} className="popover options-panel" role="group" aria-label="View options">
+          <PhoneCameraOptions />
           <PovOptions />
           <QualityOption />
           <TacticalOptions />
@@ -717,7 +743,7 @@ function MomentCardBody({
           {label}
         </button>
       </div>
-      <TourButton />
+      <FirstTourButton />
     </aside>
   );
 }

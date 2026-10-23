@@ -342,6 +342,11 @@ export function TamperControl({ claim }: { claim: PayloadClaim }) {
               checking={state.status === "checking"}
             />
           ))}
+          {state.by === "tour" && state.claim === claim.id && (
+            <p className="tamper-note by-tour">
+              The tour typed this wrong value to show the check.
+            </p>
+          )}
           {state.claim === claim.id && <TamperResult state={state} />}
         </>
       )}
@@ -415,9 +420,10 @@ const VERDICT_HEAD: Record<VerifyResponse["status"], string> = {
 /** The verifier's answer: verdict, the line as it would read, and the verifier's own reason. */
 function TamperResult({ state }: { state: TamperState }) {
   if (state.status === "checking") {
+    const who = state.by === "tour" ? " (typed by the tour)" : "";
     return (
       <p className="tamper-note waiting" role="status">
-        Checking {slotLabel(state.slot ?? "")} = {String(state.value)} …
+        {`Checking ${slotLabel(state.slot ?? "")} = ${String(state.value)} …${who}`}
       </p>
     );
   }
@@ -430,12 +436,12 @@ function TamperResult({ state }: { state: TamperState }) {
   }
   const r = state.result;
   if (state.status !== "done" || !r) return null;
-  return <TamperVerdict r={r} />;
+  return <TamperVerdict r={r} by={state.by} />;
 }
 
 /** The verifier's answer, brought into view when it arrives: the evidence card scrolls on its own
  * and at 1440 x 900 the verdict landed below its fold. */
-function TamperVerdict({ r }: { r: VerifyResponse }) {
+function TamperVerdict({ r, by }: { r: VerifyResponse; by: TamperState["by"] }) {
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     box.current?.scrollIntoView?.({ block: "nearest" });
@@ -457,7 +463,7 @@ function TamperVerdict({ r }: { r: VerifyResponse }) {
           ? `${label} = ${formatSlot(r.slot, r.value)}, the verified value.`
           : r.status === "supported"
             ? `This number is true as well: the claim still holds with ${label} = ${r.value}.`
-            : `You set ${label} to ${r.value}; the match data says ${formatSlot(r.slot, r.verified_value)}.`}
+            : `${by === "tour" ? "The tour set" : "You set"} ${label} to ${r.value}; the match data says ${formatSlot(r.slot, r.verified_value)}.`}
       </p>
       <p className="tamper-reason">
         Verifier: <code title={r.reason}>{plainReason(r.reason)}</code>

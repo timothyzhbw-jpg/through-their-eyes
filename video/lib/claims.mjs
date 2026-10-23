@@ -41,6 +41,38 @@ export function claimTable(sources) {
 }
 
 /**
+ * Numbers read off a committed eval report, for slots the live page cannot back (an offline
+ * test's result). `facts` is trailer.json's `report_facts`: { id: { file, pattern, values } },
+ * `pattern` a regular expression whose groups, in order, are the `values` names. A match is a
+ * usable claim of kind "report"; no match leaves the id unusable, so the title takes its fallback.
+ * Integers of four digits or more get thousands separators ("2,837").
+ * @param {(file: string) => string | null} read the report's text, by repo-relative path
+ * @param {Record<string, { file: string, pattern: string, values: string[] }>} facts
+ * @returns {Record<string, Claim>}
+ */
+export function reportFacts(read, facts = {}) {
+  const table = {};
+  for (const [id, fact] of Object.entries(facts)) {
+    const text = read(fact.file);
+    const lines = text == null ? [] : text.split("\n");
+    const k = lines.findIndex((line) => new RegExp(fact.pattern).test(line));
+    if (k < 0) {
+      table[id] = { kind: "report", verdict: "missing", values: {}, usable: false, seen: [] };
+      continue;
+    }
+    const m = lines[k].match(new RegExp(fact.pattern));
+    const values = Object.fromEntries(
+      fact.values.map((name, i) => {
+        const raw = m[i + 1];
+        return [name, /^\d{4,}$/.test(raw) ? Number(raw).toLocaleString("en-US") : raw];
+      }),
+    );
+    table[id] = { kind: "report", verdict: "supported", values, usable: true, seen: [`${fact.file} L${k + 1}: "${m[0]}"`] };
+  }
+  return table;
+}
+
+/**
  * Replace `{claim.value}` slots. Missing and unusable claims stay as the slot text and are
  * listed in `missing` — this never invents a number.
  * @param {string} text

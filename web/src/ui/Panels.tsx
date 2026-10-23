@@ -27,6 +27,8 @@ import { Chapter, Title } from "./Chapter";
 import { CheckIcon } from "./icons";
 import { LineText } from "./Narration";
 import { renameIds, shortName } from "../data/roster";
+import { SourceChip } from "../provenance/SourceChip";
+import { HowChecked } from "../provenance/HowChecked";
 
 interface Beat {
   from: number; // frame
@@ -351,10 +353,7 @@ export function StoryPanel() {
       lede="Every beat of the move on the match clock. Choose one to replay from there."
       aside={
         <p className="note">
-          <span className="source" title="Read from the sim export, not a verified claim">
-            sim
-          </span>{" "}
-          Timings, distances and probabilities read from the sim export.
+          <SourceChip kind="sim" /> Timings, distances and probabilities read from the sim export.
         </p>
       }
     >
@@ -389,7 +388,15 @@ export function DecisionPanel() {
       kicker={`What he believed · at ${at} s`}
       label={`${shortName(hero.heroId ?? "He")}'s options at ${at} s, on his belief`}
       title={<Title lead="On his" em="belief." />}
-      lede="He decides on what he believes, never on the truth. Each option is scored on his picture of the pitch; the probabilities come from the softmax of each option's expected threat."
+      lede="He decides on what he believes, never on the truth. Each option is scored on his picture of the pitch, and the bars show how likely he was to pick each one."
+      how={
+        <p>
+          Each option is valued by its expected threat (xT): how much having the ball where it ends
+          raises his side's chance of scoring soon, times his own chance of it arriving, all on his
+          picture. A softmax turns those values into the chances on the bars, and he picks with some
+          chance, as people do (Gumbel-max sampling over the same chances).
+        </p>
+      }
     >
       <div className="belief">
         {runner && error !== null && (
@@ -400,18 +407,14 @@ export function DecisionPanel() {
             </p>
             <figcaption>
               His picture of {shortName(runner)} was off by this much when he decided.{" "}
-              <span className="source" title="Read from the sim export, not a verified claim">
-                sim
-              </span>
+              <SourceChip kind="sim" />
             </figcaption>
           </figure>
         )}
         <div className="options-figure">
           <p className="kicker">
             {shortName(hero.heroId ?? "He")}'s options at {at} s, on his belief{" "}
-            <span className="source" title="Read from the sim export, not a verified claim">
-              sim
-            </span>
+            <SourceChip kind="sim" />
           </p>
           <div className="options">
             {dec.options.slice(0, 6).map((o) => (
@@ -432,7 +435,7 @@ export function DecisionPanel() {
             <div className="facts">
               <Fact
                 label={`Last saw ${shortName(runner)}`}
-                value={`${dec.belief_age[runner].toFixed(2)} s ago`}
+                value={`${dec.belief_age[runner].toFixed(1)} s ago`}
               />
               <Fact
                 label={`P(pass to ${shortName(runner)} arrives), as he sees it`}
@@ -500,7 +503,7 @@ export function VerdictPanel() {
       ? `${p0.toFixed(2)} \u2192 ${p1.toFixed(2)}`
       : hero.deltaXt === null
         ? "\u2014"
-        : signed(hero.deltaXt, 3);
+        : signed(hero.deltaXt, 2); // the claim's precision, so the number holds when it airs
   const pending = !claim && hero.deltaXt === null; // nothing measured yet
   const unit = shot || step ? "on the true positions" : "in expected threat (xT)";
   const look = !!hero.keyScan;
@@ -562,17 +565,11 @@ export function VerdictPanel() {
               </span>
             ) : pending ? null : hero.deltaSource === "lens" ? (
               <>
-                <span className="source" title="From the moment's scan lens, not a verified claim">
-                  lens
-                </span>{" "}
-                From the moment's scan lens, not a verified claim.
+                <SourceChip kind="lens" /> Computed by the moment's scan lens.
               </>
             ) : (
               <>
-                <span className="source" title="Read from the sim export, not a verified claim">
-                  sim
-                </span>{" "}
-                Read from the sim export, not a verified claim.
+                <SourceChip kind="sim" /> Computed directly by the simulation.
               </>
             )}{" "}
             {step
@@ -584,6 +581,9 @@ export function VerdictPanel() {
               " For a marker, the look's worth is the expected turnover where the pass to his man ends: how likely his side is to win the ball there, times what is at stake."}{" "}
             Causal inside the simulation; not a claim about real football.
           </p>
+          {!claim && !pending && (
+            <HowChecked kinds={[hero.deltaSource === "lens" ? "lens" : "sim"]} />
+          )}
           <WithoutLookLines />
         </div>
       </div>
