@@ -10,6 +10,7 @@
 import { actionLabel, wrapAngle, type Hero, type Run } from "../data/hero";
 import { shortName } from "../data/roster";
 import type { Vec2 } from "../data/types";
+import { HALF_LENGTH } from "../tacticslab/metrics";
 import { receptionOf, type DecisionStep, type LookStep, type Step } from "./steps";
 
 const deg = (rad: number) => (rad * 180) / Math.PI;
@@ -193,10 +194,9 @@ export function decisionStory(hero: Hero, run: Run, steps: Step[]): DecisionStor
 // ---------- scans before receiving, against the realism report ----------
 
 /** Scans in the 10 s before receiving, as the published figure (Jordet et al., 2020: 3.0 ± 2.1;
- * docs/NUMBERS.md R1, eval/reports/realism.md); the sim's mean is 2.77. */
+ * docs/NUMBERS.md R1, eval/reports/realism.md); a test reads it back from that report. */
 export const PUBLISHED_SCANS = 3;
 export const WINDOW_S = 10;
-const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 /** How many scans the hero starts in the 10 s before the ball reaches him in this run. */
 export function scansBeforeReceiving(hero: Hero, run: Run): number {
@@ -209,7 +209,7 @@ export function scansBeforeReceiving(hero: Hero, run: Run): number {
 /** The honest line when he made fewer scans than players average; null otherwise. */
 export function fewScansLine(count: number): string | null {
   if (count >= PUBLISHED_SCANS) return null;
-  return `Players average about ${WORDS[PUBLISHED_SCANS]} scans in the ${WINDOW_S} s before receiving; he made ${count}.`;
+  return `Players average about ${PUBLISHED_SCANS} scans in the ${WINDOW_S} s before receiving; he made ${count}.`;
 }
 
 // ---------- the half-turn ----------
@@ -219,7 +219,6 @@ export function fewScansLine(count: number): string | null {
 export const SIDE_ON_MIN = rad(45);
 export const SIDE_ON_MAX = rad(135);
 export const FACING_PLAY_MAX = rad(60);
-const PITCH_HALF_LENGTH = 52.5;
 export const HALF_TURN_CAPTION = "Receives side-on, on the half-turn";
 
 export interface HalfTurn {
@@ -258,10 +257,7 @@ export function halfTurn(hero: Hero, run: Run): HalfTurn | null {
   const i = (f * hero.n + hero.hero) * 2;
   const pos: Vec2 = [run.pos[i], run.pos[i + 1]];
   const body = run.body[f * hero.n + hero.hero];
-  const goal: Vec2 = [
-    hero.players[hero.hero].team === 0 ? PITCH_HALF_LENGTH : -PITCH_HALF_LENGTH,
-    0,
-  ];
+  const goal: Vec2 = [hero.players[hero.hero].team === 0 ? HALF_LENGTH : -HALF_LENGTH, 0];
   const option = d.options.find((o) => o.action === d.chosen);
   const target = d.chosen.startsWith("shot") || !option ? goal : option.target;
   const toBall = bearing(pos, origin);

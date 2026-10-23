@@ -173,7 +173,7 @@ describe("scans before receiving", () => {
 
   it("adds the honest line only when he made fewer than players average", () => {
     expect(fewScansLine(1)).toBe(
-      "Players average about three scans in the 10 s before receiving; he made 1.",
+      `Players average about ${PUBLISHED_SCANS} scans in the 10 s before receiving; he made 1.`,
     );
     expect(fewScansLine(0)).toMatch(/he made 0\.$/);
     expect(fewScansLine(PUBLISHED_SCANS)).toBeNull();
@@ -192,6 +192,7 @@ describe("scans before receiving", () => {
     const published = Number(
       /(\d+(?:\.\d+)?) ± [\d.]+\s*\|\s*[\d.]+ to [\d.]+ \(mean/.exec(row)![1],
     );
+    expect(published).toBe(3.0); // Jordet et al. (2020), as printed in the report
     expect(Math.round(published)).toBe(PUBLISHED_SCANS);
   });
 });

@@ -12,12 +12,15 @@ import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import stepsJson from "../../public/data/steps_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { parseHero } from "../data/hero";
+import { heroMoment } from "../plan/moment";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { settle } from "../testing";
 import type { Fetch } from "../takeeyes/controller";
 import { stepThroughOf } from "./controller";
 import { ScanStepsScreen } from "./ScanSteps";
+import { parseSteps, type LookStep } from "./steps";
+import { lookStory, PUBLISHED_SCANS } from "./story";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -73,11 +76,18 @@ describe("His looks: the coaching story", () => {
   it("tells the look: its direction, who came into view, his picture and his thinking", async () => {
     const { el } = await opened();
     const story = textOf(el.querySelector(".ss-story"))!;
-    expect(story).toMatch(/behind him, 124° from his body's facing/);
-    expect(story).toMatch(/#9 N\. Varnhall: 4\.8 m off before, 0\.1 m after/);
-    expect(textOf(el.querySelector(".ss-think"))).toMatch(
-      /^Checking behind me\. #9 N\. Varnhall was 4\.8 m/,
+    // the figures come from the data through the same helper the page uses, not from typed copies
+    const first = parseSteps(stepsJson, hero, heroMoment(hero)).runs.factual.steps[0] as LookStep;
+    const s = lookStory(hero, hero.runs.factual, first, 1)!;
+    const c = s.changes[0];
+    const who = `#${c.person.number} ${c.person.name}`;
+    const think = textOf(el.querySelector(".ss-think"))!;
+    expect(story).toContain(`behind him, ${s.degrees}° from his body's facing`);
+    expect(story).toContain(
+      `${who}: ${c.before.toFixed(1)} m off before, ${c.after.toFixed(1)} m after`,
     );
+    expect(think).toMatch(/^Checking behind me\./);
+    expect(think).toContain(`${who} was ${c.before.toFixed(1)} m`);
   });
 
   it("has a timeline tick per scan, labelled by direction, that jumps to its freeze", async () => {
@@ -98,8 +108,8 @@ describe("His looks: the coaching story", () => {
     const story = textOf(el.querySelector(".ss-story"))!;
     expect(story).toMatch(/He chose: Pass to #9 N\. Varnhall\./);
     expect(story).toMatch(/Look 1 brought #9 N\. Varnhall into view/);
-    expect(story).toMatch(
-      /Players average about three scans in the 10 s before receiving; he made 1\./,
+    expect(story).toContain(
+      `Players average about ${PUBLISHED_SCANS} scans in the 10 s before receiving; he made 1.`,
     );
     expect(story).not.toMatch(/half-turn|side-on/i);
     expect(el.querySelector(".ss-turn-arc")).toBeNull();
@@ -120,6 +130,8 @@ describe("His looks: the coaching story", () => {
     const css = readFileSync("src/steps/steps.css", "utf8");
     const added = css.slice(css.indexOf("the coaching story"));
     expect(added.length).toBeGreaterThan(200);
-    expect(added).not.toMatch(/animation|transition|blur\(|@keyframes/);
+    expect(added).not.toMatch(/animation|transition|blur\(|drop-shadow|filter:|@keyframes/);
+    // a box-shadow is fine when hard-edged (blur radius 0), a glow when not
+    expect(added).not.toMatch(/box-shadow:\s*(inset\s+)?-?[\d.]+(px)?\s+-?[\d.]+(px)?\s+[1-9]/);
   });
 });

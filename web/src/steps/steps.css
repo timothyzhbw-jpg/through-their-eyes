@@ -574,5 +574,8 @@
   stroke: var(--floodlight);
   stroke-width: 1.5;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.85));
+}
+.ss-turn-arc line.under {
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-width: 3.5;
 }

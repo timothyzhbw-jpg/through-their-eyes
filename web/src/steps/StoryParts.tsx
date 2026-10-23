@@ -179,7 +179,14 @@ export function HalfTurnArc({
     <g className="ss-turn-arc">
       {pairs.map(([a, b], k) => {
         const seg = segment(a, b);
-        return seg && <line key={k} x1={seg[0][0]} y1={seg[0][1]} x2={seg[1][0]} y2={seg[1][1]} />;
+        if (!seg) return null;
+        const at = { x1: seg[0][0], y1: seg[0][1], x2: seg[1][0], y2: seg[1][1] };
+        return (
+          <g key={k}>
+            <line className="under" {...at} />
+            <line {...at} />
+          </g>
+        );
       })}
     </g>
   );

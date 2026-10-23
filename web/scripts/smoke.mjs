@@ -1004,6 +1004,7 @@ async function scanSteps(page) {
   await see(page.getByRole("region", { name: "His looks, step by step" }), "the step-through");
   await see(page.getByRole("list", { name: "Steps" }), "the steps");
   await see(page.getByRole("list", { name: "Verified lines" }), "a look's verified lines");
+  await see(page.locator(".ss-tick").first(), "a tick on the scan timeline", "attached");
   await page.getByRole("button", { name: "Potential passes" }).click();
   await see(page.locator(".ss-board .ss-lane.chosen"), "his pick among the options", "attached");
   const next = page.getByRole("button", { name: "Next", exact: true });
