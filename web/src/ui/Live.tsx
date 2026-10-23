@@ -17,6 +17,8 @@ import { Chapter } from "./Chapter";
 import { ChevronIcon } from "./icons";
 import "./live.css";
 import { shortName } from "../data/roster";
+import { useMomentTier } from "../personal/hooks";
+import { rankBy } from "../personal/rank";
 import { FULL_MATCH_LIVE } from "../moments/moments";
 
 /** "Offline data" without the live service; otherwise the Live button and the stream's state. */
@@ -248,7 +250,11 @@ function MatchMoments({ session }: { session: MatchSession }) {
   const live = useStore(playback, (s) => s.live);
   const opening = useStore(screen, (s) => s.opening);
   const seen = new Set(detected.map((m) => m.id));
-  const { heroes, groups } = groupMoments(match.moments);
+  // A followed player's and club's moments first, in the key moments and in each group.
+  const tier = useMomentTier();
+  const grouped = groupMoments(match.moments);
+  const heroes = rankBy(grouped.heroes, tier);
+  const groups = grouped.groups.map((g) => ({ ...g, moments: rankBy(g.moments, tier) }));
   const possession = new Map(match.possessions.map((p) => [p.index, p]));
   const heroCount = heroes.length;
   const breakdowns =

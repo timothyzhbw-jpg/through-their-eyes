@@ -2,6 +2,7 @@
 // card, so the site never reads as a one-moment demo. The page on screen is marked current.
 
 import { useDeepLink } from "../deeplink";
+import { useRankedLinks } from "../personal/hooks";
 import { useView } from "../session";
 import { currentMoment, DRILL_LINK, hrefOf, MOMENT_LINKS } from "./moments";
 import "./moments.css";
@@ -10,10 +11,11 @@ import "./moments.css";
 export function MomentChips({ label = "Moments" }: { label?: string }) {
   const view = useView();
   const current = currentMoment(view);
+  const links = useRankedLinks(MOMENT_LINKS); // the followed player's and club's first
   return (
     <nav className="moment-chips" aria-label={label}>
       <ul>
-        {MOMENT_LINKS.map((m) => (
+        {links.map((m) => (
           <li key={m.id}>
             <a
               className={m.id === "match" ? "moment-chip match" : "moment-chip"}
