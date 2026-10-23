@@ -1,5 +1,5 @@
 {
-  "about": "The tours (SPEC 7). 'quick' is a first-time visitor's path in four steps: watch the look, remove it, compare the outcomes, make your own call; Start on the intro card opens it. 'steps' is the full judge tour, about ninety seconds through the signature features. Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
+  "about": "The tours (SPEC 7). 'quick' is a first-time visitor's path in five steps: watch the look, remove it, compare the outcomes, see every number checked, make your own call; Start on the intro card opens it. 'steps' is the full judge tour, about ninety seconds through the signature features. 'story' is the Full story, about ninety seconds walking one moment through the journey's five steps (journey: the step whose panel it opens). Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service, except the quick tour's check, which types the wrong number itself — deterministic, no model call; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
   "steps": [
     {
       "id": "pov",
@@ -166,6 +166,16 @@
       "hold": 10
     },
     {
+      "id": "verify",
+      "title": "Every number is checked",
+      "caption": "The tour types a wrong number into a commentary claim. The Verifier re-checks it against the match data and refuses it: the line would not air.",
+      "target": ["section.evidence .tamper-result", "section.evidence .tamper"],
+      "dim": true,
+      "enter": "tamperAuto",
+      "needs": ["hero", "api"],
+      "hold": 6
+    },
+    {
       "id": "call",
       "title": "Now make your call",
       "caption": "You are {hero}, with only what he knew. Pick a teammate, then see what really happened and why.",
@@ -175,6 +185,80 @@
       "enter": "yourCall",
       "act": "fullTour",
       "needs": ["hero", "yourCall"],
+      "hold": 14
+    }
+  ],
+  "story": [
+    {
+      "id": "story-event",
+      "title": "Event: the look",
+      "caption": "Every story here starts on the pitch. This is {hero}'s view: the gold mark on the timeline is the look that mattered.",
+      "variants": [
+        {
+          "when": "!keyScan",
+          "caption": "Every story here starts on the pitch. This is {hero}'s view, with every look he made marked on the timeline."
+        }
+      ],
+      "target": [".transport .mark.key", ".transport .timeline"],
+      "dim": false,
+      "enter": "look",
+      "journey": "event",
+      "needs": ["hero"],
+      "hold": 14
+    },
+    {
+      "id": "story-without",
+      "title": "Event: {cf}",
+      "caption": "The same seconds re-simulated {cf}. The Event step below keeps both runs side by side, each told by its checked lines.",
+      "target": ".stage-run",
+      "dim": false,
+      "enter": "counterfactual",
+      "journey": "event",
+      "needs": ["hero", "counterfactual"],
+      "hold": 12
+    },
+    {
+      "id": "story-tactics",
+      "title": "Tactics",
+      "caption": "Why the tactic in this moment works, measured on this match's own synthetic data. Every number says what it is and where it comes from.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "enter": "none",
+      "journey": "tactics",
+      "needs": ["hero"],
+      "hold": 18
+    },
+    {
+      "id": "story-view",
+      "title": "Your view",
+      "caption": "Choose who the commentary is for and its language, and follow a club or a player: their moments come first, on every moment you open.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "enter": "none",
+      "journey": "your-view",
+      "needs": ["hero"],
+      "hold": 14
+    },
+    {
+      "id": "story-content",
+      "title": "Content",
+      "caption": "The same moment as a package: a highlight, an explainer, posts and data cards, and what the stadium's screens show. All of it is built from the checked lines.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "enter": "none",
+      "journey": "content",
+      "needs": ["hero"],
+      "hold": 18
+    },
+    {
+      "id": "story-value",
+      "title": "Value",
+      "caption": "What the package could be worth. The audience and sponsor figures are simulated, not results, and every one of them is labelled so.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "enter": "none",
+      "journey": "value",
+      "needs": ["hero"],
       "hold": 14
     }
   ]

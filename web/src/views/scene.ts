@@ -16,6 +16,7 @@ export const COLORS = {
   sight: "#a6ecff",
   gold: "#ffd36b",
   white: "#ffffff",
+  floodlight: "#f6d566", // --floodlight in styles.css: the one accent (what he saw, the look)
 };
 
 export const teamColor = (team: number) => (team === 0 ? COLORS.home : COLORS.away);

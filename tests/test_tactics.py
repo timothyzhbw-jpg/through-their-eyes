@@ -54,6 +54,7 @@ from sim.decision import distance_xg
 from sim.engine import Simulation
 from sim.export import export_match
 from sim.match import PossessionSpec, build_match
+from tests import canonical
 
 DT = 0.04
 
@@ -360,17 +361,14 @@ def test_a_lone_hero_is_one_passage():
     )
 
 
+@canonical.linux_only()
 def test_the_web_fixture_is_current():
     """The viewer's tests (web/src/tactics/) run on this output.
 
     The short match's decisions are ties at the last digit on some seeds, so macOS and Linux (CI)
-    play it differently (10 against 11 passes in one block): the fixture is generated on Linux,
-    where CI runs, e.g. `docker run --rm -v "$PWD":/src:ro -v /tmp/out:/out python:3.11-slim
-    bash -c "pip install -q uv; cp -r /src /w; cd /w; UV_PROJECT_ENVIRONMENT=/tmp/venv uv sync -q
-    --locked; uv run python -m explain.tactics --fixture --web-fixture /out/fixture.json"`.
-    On a Mac this test fails by design; the other committed exports agree on both.
+    play it differently (10 against 11 passes in one block): like every committed artifact it is
+    generated on Linux (`tests/canonical.py`), and this check skips elsewhere.
     """
     assert WEB_FIXTURE.read_text() == web_fixture(fixture_view()), (
-        "stale: regenerate on Linux (see this test's docstring): uv run python -m "
-        "explain.tactics --fixture --web-fixture web/src/tactics/fixture.json"
+        f"web/src/tactics/fixture.json is stale: {canonical.message()}"
     )

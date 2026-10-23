@@ -1,10 +1,15 @@
 # Demo video script (≤ 2:00)
 
-The submission video is a fast, cheeky trailer told around a staged first-person story: an
-academy player who never checks his shoulder loses the ball, his coach shows him the replay on a
-tablet, and the tablet match-cuts into the real app. The app then runs as three chapters (the
-look, under pressure, the corner), the product is shown wider, and the story's callback closes
-it. It runs **1:57** and is rendered end to end by code from
+The submission video is a fast trailer with one story line, "GET YOUR VISION" (Bowen's
+restructure, 2026-10-22): the lesson, the evidence, the product, the business case. An academy
+player watches only the ball, calls for it and is shoulder-charged off it from his blind side; his
+coach's mantra runs through the film as voice and hard title cards ("You watched the ball. You
+missed the game." · "Before the ball arrives, know what's around you. Get your vision." · "Scan
+early. Decide early."). The coach's tablet shows the app's board with the blind side lit, and the
+film cuts into the app: the look, frozen scan by scan in the app's step-through, with and without
+it; the same vision under pressure and at a corner in one montage; the crew, the verifier, the
+drill and the personas; who would pay; and the player's callback goal before "GET YOUR VISION."
+It runs under two minutes and is rendered end to end by code from
 [video/trailer.json](../video/trailer.json):
 
 ```bash
@@ -21,7 +26,8 @@ How the edit is built (steps, options, caches) is in [video/README.md](../video/
   its fallback, which has no number, or is dropped; the report (`out/video/trailer_report.md`)
   lists every number and the claim it came from. The cut shows two, from the current build's
   claims (live after #161, 2026-10-22): the length of the pass that found the runner
-  (`pass_to_runner.dist`, 39 m since #200, which measures it as the live chip does; 38 m before) and the look's value (`cf_value.dxt`, 0.17 xT, at the precision
+  (`pass_to_runner.dist`, 39 m since #200, which measures it as the live chip does; 38 m before)
+  and the look's value (`cf_value.dxt`, 0.16 xT since the keeper spot, 0.17 before, at the precision
   the claim states). The app's
   own panels in the footage (scan counts, live stats, the score) show what the app shows; the app
   labels them as not claims, so the cut never says the verifier checks every number on screen,
@@ -53,61 +59,78 @@ encoded film); the rewind is colour split,
 noise and scanlines; the cine shots render without motion blur or peripheral blur. Freeze-frame
 name cards hold a sharp frame under a one-stop scrim; ramps drop frames, slow motion comes only
 from rendered frames. While a player scans, music and crowd drop about 10 dB under an 800 Hz
-low-pass and flood back when he acts. The coach speaks with his own voice (`speakers.coach`). His tablet shows the app's first-person
-replay, corner-pinned frame by frame (`pins`, `video/pin.py`) so that its last frame is the
-first frame of that replay full frame: the match-cut is exact.
+low-pass and flood back when he acts. The coach speaks with his own voice (`speakers.coach`). His tablet shows the app's tactical
+board in the run without the look, H9 on his blind side with the app's blind-side alert lit
+(capture `22-board-blind`), corner-pinned frame by frame (`pins`, `video/pin.py`) so that its
+last frame is the board full frame: the cut is exact.
+
+The times below are a snapshot of the spec at the last cut and move at the next re-cut;
+`video/trailer.json` is the source.
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
-| 0:00.00 | 2.87 | s1a-receive · name card YOU | story (Blender, dramatisation) |  |
-| 0:02.87 | 0.6 | s1c-tackle | story (Blender, dramatisation) |  |
-| 0:03.47 | 1.8 | s1d-fall | story (Blender, dramatisation) |  |
-| 0:05.27 | 1.0 | s1e-ground | story (Blender, dramatisation) |  |
-| 0:06.27 | 6.0 | s2-coach | story (Blender, dramatisation) | Coach: See this? Coach: You know why you lost the ball? |
-| 0:12.27 | 3.0 | a1-pov | in-engine | Replays show where the ball went… never what the player saw. |
-| 0:15.27 | 0.75 | ch1 | chapter card |  |
-| 0:16.02 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
-| 0:17.37 | 4.05 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
-| 0:21.42 | 0.3 | bl01c | Blender |  |
-| 0:21.72 | 0.45 | rw1 | Blender | Here's what he saw. |
-| 0:22.17 | 0.3 | bl02a | Blender |  |
-| 0:22.47 | 3.6 | bl02b | Blender |  |
-| 0:26.07 | 3.0 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
-| 0:29.07 | 3.75 | pov-pass | in-engine | And he knows where his man is. |
-| 0:32.82 | 3.6 | toggle | app | Take that look away, and re-run the match. |
-| 0:36.42 | 0.2 | board-rewind | app |  |
-| 0:36.62 | 1.15 | rw2 | Blender |  |
-| 0:37.77 | 2.6 | bl03 | Blender |  |
-| 0:40.37 | 1.5 | split | Blender split |  |
-| 0:41.87 | 2.25 | eyes-drag | app | Or take his eyes yourself. |
-| 0:44.12 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
-| 0:45.62 | 1.5 | eyes-result | app |  |
-| 0:47.12 | 3.0 | yc-decide | app | Your call. You only know what he knew. |
-| 0:50.12 | 3.0 | yc-truth | app | He saw the run. Would you? |
-| 0:53.12 | 0.75 | ch2 | chapter card |  |
-| 0:53.87 | 2.1 | press-a · name card A11 | in-engine |  |
-| 0:55.97 | 1.8 | press-b | in-engine | Under a high press… |
-| 0:57.77 | 3.0 | press-cf | in-engine | make him keep the ball, and the press wins it. |
-| 1:00.77 | 0.75 | ch3 | chapter card |  |
-| 1:01.52 | 1.5 | corner-a | app | At a corner, it's the marker who has to look. |
-| 1:03.02 | 3.0 | corner-b | app |  |
-| 1:06.02 | 6.75 | crew | card | Behind every replay, a crew of agents. Director, Analyst, Telestrator, Narrator, Verifier, Voice. |
-| 1:12.77 | 4.5 | verified | app | Every line is checked against the simulation before it airs. |
-| 1:17.27 | 3.75 | wrong | app | Try a wrong number… and it never airs. |
-| 1:21.02 | 3.0 | redcard | app | Take an agent down… |
-| 1:24.02 | 4.5 | bringback | app | bring it back, and it picks up where it left off. |
-| 1:28.52 | 1.5 | casual | app | The same moment, for every fan, in every language. |
-| 1:30.02 | 1.5 | analyst | app |  |
-| 1:31.52 | 4.5 | zh | app | (the app's own zh line) |
-| 1:36.02 | 4.5 | impact | app | Timecoded cues for broadcasters, every player's numbers for coaches. |
-| 1:40.52 | 1.0 | s4a-pov | story (Blender, dramatisation) |  |
-| 1:41.52 | 2.03 | s4b-check | story (Blender, dramatisation) |  |
-| 1:43.55 | 1.8 | s4c-escape | story (Blender, dramatisation) |  |
-| 1:45.35 | 1.2 | s4d-run | story (Blender, dramatisation) |  |
-| 1:46.55 | 5.5 | spec | card | Built on Microsoft Foundry and Agent Framework, with our own MCP tools and Azure AI Speech. |
-| 1:52.05 | 5.25 | end | card | Through Their Eyes. [pause 500] See what they saw. |
+| 0:00.00 | 1.633 | s0-eyes · HIS EYES | story (Blender, dramatisation) | Kid: Give it to me! |
+| 0:01.63 | 1.1 | s1a-ots · name card YOU ARE No. 14 | story (Blender, dramatisation) |  |
+| 0:02.73 | 0.966 | s1c-steal | story (Blender, dramatisation) |  |
+| 0:03.70 | 0.867 | s1d-fall | story (Blender, dramatisation) | Coach: You watched the ball. You missed the game. |
+| 0:04.57 | 2.5 | card-watched · YOU WATCHED THE BALL. / YOU MISSED THE GAME. | card |  |
+| 0:07.07 | 1.2 | s2-ots | story (Blender, dramatisation) | Coach: Before the ball arrives, know what's around you. |
+| 0:08.27 | 1.6 | s2-push · WHAT HE SAW. / WHAT HE BELIEVED. | story (Blender, dramatisation) |  |
+| 0:09.87 | 1.2 | board | app |  |
+| 0:11.07 | 1.1 | card-vision · GET YOUR VISION. | card | Coach: Get your vision. |
+| 0:12.17 | 3 | a1-pov · SEE WHAT THEY SAW. | in-engine | Replays show where the ball went… never what the player saw. |
+| 0:15.17 | 1.35 | bl01a · name card H8 | Blender | Meet H8. |
+| 0:16.52 | 3.1 | bl01b · name card H9 | Blender | He gets a single look. Nobody's watching H9. |
+| 0:19.62 | 0.3 | bl01c | Blender |  |
+| 0:19.92 | 0.45 | rw1 | Blender | Here's what he saw. |
+| 0:20.37 | 0.3 | bl02a | Blender |  |
+| 0:20.67 | 3.6 | bl02b | Blender |  |
+| 0:24.27 | 2.6 | pov-look | in-engine | A look over his shoulder, and he finds the runner. |
+| 0:26.87 | 1.8 | st-scan · SCAN · DETECT | app |  |
+| 0:28.67 | 1.9 | st-decision · DECISION · EXECUTE | app | And he knows where his man is. |
+| 0:30.57 | 3.4 | toggle · WITHOUT THAT LOOK… | app | Take that look away, and re-run the match. |
+| 0:33.97 | 0.2 | board-rewind | app |  |
+| 0:34.17 | 1.15 | rw2 | Blender |  |
+| 0:35.32 | 2.6 | bl03 · HE PLAYS IT BACK TO H4. | Blender |  |
+| 0:37.92 | 2.4 | st-nolook · WITHOUT THE LOOK / NO SCAN. NO PICTURE. NO TIME. | app |  |
+| 0:40.32 | 2.3 | card-scan · SCAN EARLY. / DECIDE EARLY. | card | Coach: Scan early, decide early. |
+| 0:42.62 | 1.4 | same · THE SAME VISION (UNDER PRESSURE · AT A CORNER) | card |  |
+| 0:44.02 | 1.3 | press-a | in-engine (Blender candidate in the edit cut) |  |
+| 0:45.32 | 1.8 | press-b | in-engine (Blender candidate in the edit cut) | Under a high press… |
+| 0:47.12 | 3 | press-cf · IF HE KEPT THE BALL · THE PRESS WINS IT. | in-engine (Blender candidate in the edit cut) | make him keep the ball, and the press wins it. |
+| 0:50.12 | 1.2 | press-app | app |  |
+| 0:51.32 | 1.5 | corner-a | app (Blender candidate in the edit cut) | At a corner, it's the marker who has to look. |
+| 0:52.82 | 0.9 | corner-look | app (Blender candidate in the edit cut) |  |
+| 0:53.72 | 1.35 | corner-app | app |  |
+| 0:55.07 | 3.4 | stream | app | A whole match, live, with every key moment a tap away. |
+| 0:58.47 | 2.25 | eyes-drag · TAKE HIS EYES | app | Take his eyes yourself. |
+| 1:00.72 | 1.5 | eyes-pov | app | Look the other way… he plays it safe. |
+| 1:02.22 | 1.5 | eyes-result | app |  |
+| 1:03.72 | 3 | yc-decide | app | Your call. You only know what he knew. |
+| 1:06.72 | 3.6 | yc-truth | app | He saw the run. Would you? |
+| 1:10.32 | 1.4 | crew | card | Behind every replay, a crew of agents. |
+| 1:11.72 | 1.6 | crew-trace | app |  |
+| 1:13.32 | 2.2 | workflow · the crew workflow as Agent Framework's WorkflowViz draws it (docs/crew_workflow-dark.svg, PR #211) | diagram |  |
+| 1:15.52 | 3.6 | verified · EVERY LINE CHECKED BEFORE IT AIRS | app | Every line is checked against the simulation before it airs. |
+| 1:19.12 | 4 | wrong · {verifier_offline.kept} OF {verifier_offline.total} BROKEN LINES / KEPT OFF THE AIR | app | Try a wrong number… and it never airs. |
+| 1:23.12 | 0.9 | redcard (take the Telestrator down) | app | Take an agent down… |
+| 1:24.02 | 1.6 | down · TELESTRATOR DOWN / THE BREAKDOWN STILL AIRS, VERIFIED. | app |  |
+| 1:25.62 | 0.7 | bringback | app | bring it back, and it picks up where it left off. |
+| 1:26.32 | 2.1 | back · OFFLINE TEST / ONLY THAT STEP RE-RUNS / FAULT-FREE IN {drill_back.back} OF {drill_back.total} DRILLS | app |  |
+| 1:28.42 | 2.8 | personas · CASUAL FAN | ANALYST | app split | The same moment, for every fan, in every language. |
+| 1:31.22 | 1.3 | zh · 中文 | app |  |
+| 1:32.52 | 2.5 | spec | app | Built on Microsoft Foundry and Agent Framework. |
+| 1:35.02 | 2 | business · FOR BROADCASTERS · CLUBS · FAN APPS | card |  |
+| 1:37.02 | 1 | s4a-pov | story (Blender, dramatisation) |  |
+| 1:38.02 | 2.033 | s4b-check | story (Blender, dramatisation) |  |
+| 1:40.05 | 1.8 | s4c-drive | story (Blender, dramatisation) |  |
+| 1:41.85 | 1 | s4d-strike | story (Blender, dramatisation) |  |
+| 1:42.85 | 1.5 | s4e-net | story (Blender, dramatisation) |  |
+| 1:44.35 | 1 | s4f-celebrate | story (Blender, dramatisation) |  |
+| 1:45.35 | 2 | tagline · GET YOUR VISION. | app | Coach: Get your vision. |
+| 1:47.35 | 6.5 | end · ALL DATA SYNTHETIC · FICTIONAL CLUBS AND PLAYERS / MUSIC: ORIGINAL SCORE COMPOSED FOR THIS PROJECT / FONTS: ANTON, BEBAS NEUE — SIL OPEN FONT LICENSE / VOICE: AZURE AI SPEECH | card | Through Their Eyes. Try the replay. |
 
-Total 117.30 s. The score session composes to the cue sheet generated from this spec.
+The film's length is `trailer.json`'s; `npm run trailer` reports it. The score session composes to the cue sheet generated from this spec.
 
 ## The 3D shots
 
@@ -146,8 +169,25 @@ The cut follows the data where a requested beat does not hold:
   the re-simulated carry is tackled, and by the staged story, which is labelled a dramatisation.
 - **The story is staged, not simulated**, so it carries "DRAMATISATION · RENDERED IN BLENDER";
   the jokes and the second person ("YOU ARE No. 14.") stay on fictional players.
+- **One key scan, so one label.** The step-through labels only scans the sim has: H8's single
+  look gets "SCAN · DETECT", then "DECISION · EXECUTE"; no second scan is invented. The run
+  without the look shows the app's own "No look here" step under "WITHOUT THE LOOK / NO SCAN. NO
+  PICTURE. NO TIME."
+- **The tablet's blind spot is H9.** The press counterfactual (the in-engine twin of the charge)
+  has no blind-side alert on H4: he had seen the presser (scans at frames 34 and 57). The only
+  blind-side alert on a POV player is the hero's: H9 unseen by H8 from frame 42 to the decision in
+  the run without the look, so the tablet shows that board.
+- **No two-pane split.** The app's "split" focus is now his eyes with the board inset, so with and
+  without the look use the app's own With / Without switch on the board, then the step-through.
+- **The Verifier's offline result is read, not typed.** The card's figures (NUMBERS MA8) fill from
+  `report_facts`: a pattern matched against
+  [eval/reports/crew_evidence.md](../eval/reports/crew_evidence.md); without a match the card
+  says "EVERY BROKEN LINE KEPT OFF THE AIR". In prose: Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false.
+- **Who would pay** comes from SUBMISSION.md's business model (broadcasters, clubs, the league's
+  fan apps), with no prices.
 - **Chapter numbers are Roman and shirt numbers are names** ("CH. II", "No. 14"): the cards may
-  hold no digit or number word that is not a verified claim.
+  hold no digit or number word that is not a verified claim. The one exception is the shirt
+  number on a fictional player's name card ("No. 14"): a name, not a statistic.
 
 ## Music
 

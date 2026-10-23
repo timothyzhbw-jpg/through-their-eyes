@@ -89,6 +89,19 @@ const PAGES = [
     check: (p) => phone(p, takeEyes, { live: false }),
   },
   { name: "link-yourcall", path: "?play=yourcall", check: (p, shoot) => yourCall(p, shoot) },
+  // The academy drill (SPEC 7), on both moments with a look grid, and on a phone.
+  { name: "link-drill", path: "?play=drill", check: (p) => drill(p, "Blind side") },
+  {
+    name: "link-drill-press-escape",
+    path: "?match=press_escape-0&play=drill",
+    check: (p) => drill(p, "Under pressure"),
+  },
+  {
+    name: "phone-375-drill",
+    path: "?play=drill",
+    device: PHONE_375,
+    check: (p) => phone(p, (q) => drill(q, "Blind side"), { live: false }),
+  },
   { name: "moment-links", path: "?intro=0", check: (p, shoot) => momentLinks(p, shoot) },
   {
     name: "phone-375-moment-links",
@@ -156,6 +169,48 @@ const PAGES = [
       await boardClear(p);
     },
   },
+  // The skeleton's key over the broadcast camera, with the director's prompt and the stats up, and
+  // on the board at the decision, with the pass options' key up: no text on text (it sat on
+  // "Switch to …" at 1800 px, and on the board on the pass options' key).
+  ...[
+    [1440, 900],
+    [1280, 800],
+    [960, 800],
+  ].flatMap(([width, height]) => [
+    {
+      name: `desktop-${width}-skeleton`,
+      path: "?at=60&camera=broadcast",
+      device: { viewport: { width, height } },
+      check: async (p) => {
+        await hero(p, { main: "eyes" });
+        await skeletonKeyClear(p);
+      },
+    },
+    {
+      name: `desktop-${width}-skeleton-board`,
+      path: "?at=decision&view=tactical",
+      device: { viewport: { width, height } },
+      check: async (p) => {
+        await hero(p, { main: "board" });
+        await skeletonKeyClear(p, { within: ".slot.main .view.tac" });
+      },
+    },
+  ]),
+  // A phone's board: the key has its own row under the picture (on the board it hid half of it).
+  {
+    name: "phone-375-skeleton-board",
+    path: "?at=decision&view=tactical&intro=0",
+    device: PHONE_375,
+    check: (p) =>
+      phone(
+        p,
+        async (q) => {
+          await hero(q, { main: "board" });
+          await skeletonKeyClear(q, { outside: ".views" });
+        },
+        { live: false },
+      ),
+  },
   {
     name: "desktop-1280-tactical",
     path: "?at=56&view=tactical",
@@ -177,6 +232,39 @@ const PAGES = [
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
+  // The journey (SPEC 7, journey/): each of its five steps opened from the bar, axe on each; a
+  // deep link to one step; a phone's stepper; the Full story through all five.
+  { name: "journey", path: "?step=event", check: (p, shoot) => journeySteps(p, shoot) },
+  {
+    name: "journey-link-value",
+    path: "?step=value",
+    check: (p) => journeyPanel(p, "Value"),
+  },
+  {
+    name: "phone-375-journey",
+    path: "?step=event",
+    device: PHONE_375,
+    check: (p, shoot) => journeyStepper(p, shoot),
+  },
+  { name: "full-story", path: "?tour=story", check: (p, shoot) => fullStory(p, shoot) },
+  // A phone's director suggestion: two lines, no third one half-shown in its padding.
+  ...[
+    ["375", PHONE_375],
+    ["320", PHONE_320],
+  ].map(([width, device]) => ({
+    name: `phone-${width}-director`,
+    path: "?at=decision&intro=0&autoplay=0",
+    device,
+    check: (p) =>
+      phone(
+        p,
+        async (q) => {
+          await hero(q);
+          await clampClean(q);
+        },
+        { live: false },
+      ),
+  })),
   {
     name: "phone-375-quick-tour",
     path: "?tour=quick",
@@ -252,7 +340,20 @@ const PAGES = [
     device: PHONE_375,
     check: (p) => phone(p, match),
   },
+  // The Stadium Screen Studio (SPEC 7): the lazy branch of main.tsx, flat wall and with the 3D bowl.
+  { name: "studio-wall", path: "?studio=1&wall=1", check: (p) => studio(p) },
+  { name: "studio", path: "?studio=1", check: (p) => studio(p) },
 ];
+
+/** The studio page: its heading, the timeline and the Screen wall are on screen. */
+async function studio(page) {
+  await see(
+    page.getByRole("heading", { name: "Every screen in the bowl, on one timeline" }),
+    "the studio heading",
+  );
+  await see(page.getByRole("region", { name: "Event timeline" }), "the event timeline");
+  await see(page.locator(".screen-wall"), "the Screen wall");
+}
 
 /** Wait for `locator` (its first match) to be on screen, or `attached` to the page. */
 async function see(locator, what, state = "visible") {
@@ -311,6 +412,48 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   await mainView(page, main);
 }
 
+/** The director's suggestion on a phone: every line of it that shows lies inside the chip's
+ * padding, none half-shown under it. A line clamp clips at the padding's edge, so clamping the
+ * padded chip itself left a third line showing in its padding ("…before the ball… arrives"). */
+async function clampClean(page) {
+  await see(page.locator(".stage-director .director-chip"), "the director's suggestion");
+  const peeking = await page.evaluate(() => {
+    const chip = document.querySelector(".stage-director .director-chip");
+    const box = chip.getBoundingClientRect();
+    const cs = getComputedStyle(chip);
+    const top = box.top + parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+    const bottom = box.bottom - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom);
+    const out = [];
+    const walker = document.createTreeWalker(chip, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      // What of the text shows: its lines, cut by every clipping box from it up to the chip.
+      let clipTop = -Infinity;
+      let clipBottom = Infinity;
+      for (let el = node.parentElement; el; el = el.parentElement) {
+        const s = getComputedStyle(el);
+        if (s.overflowY !== "visible") {
+          const r = el.getBoundingClientRect();
+          clipTop = Math.max(clipTop, r.top + parseFloat(s.borderTopWidth));
+          clipBottom = Math.min(clipBottom, r.bottom - parseFloat(s.borderBottomWidth));
+        }
+        if (el === chip) break;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const line of range.getClientRects()) {
+        const shownTop = Math.max(line.top, clipTop);
+        const shownBottom = Math.min(line.bottom, clipBottom);
+        if (shownBottom - shownTop > 1 && (shownBottom > bottom + 1 || shownTop < top - 1))
+          out.push(
+            `"${node.textContent.trim().slice(0, 30)}" shows ${Math.round(shownBottom - bottom)} px into the padding`,
+          );
+      }
+    }
+    return out;
+  });
+  if (peeking.length) throw new Error(`the director's suggestion: ${peeking.join("; ")}`);
+}
+
 /** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
  * buttons, the stats ticker) or the run switch over it. Floating over the board they hid the
  * players in its top-left corner, and trailer shot 04, the board cropped, filmed them. */
@@ -332,6 +475,56 @@ async function boardClear(page) {
       .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
   });
   if (over.length) throw new Error(`over the tactical board: ${over.join(", ")}`);
+}
+
+/** With the skeleton on, its key overlaps nothing else on the live screen: not the eyes picker,
+ * the director's prompt or its buttons, the stats, the run switch, the card, the caption or the
+ * pass options' key. `within`: it stays inside that element (the board); `outside`: it is clear of
+ * it (a phone's picture). */
+async function skeletonKeyClear(page, { within = null, outside = null } = {}) {
+  await page.getByRole("button", { name: "View options" }).click();
+  await page.getByRole("button", { name: "Skeleton", exact: true }).click();
+  await page.keyboard.press("Escape");
+  // the board in the picture in picture has its own key, hidden there: the one on show
+  await see(page.locator(".skeleton-key:visible"), "the skeleton's key");
+  const over = await page.evaluate(
+    ({ within, outside }) => {
+      const keys = [...document.querySelectorAll(".skeleton-key")]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0);
+      if (keys.length !== 1) return [`${keys.length} keys on show`];
+      const [key] = keys;
+      const meets = (r) =>
+        Math.min(r.right, key.right) - Math.max(r.left, key.left) > 0.5 &&
+        Math.min(r.bottom, key.bottom) - Math.max(r.top, key.top) > 0.5;
+      const found = [
+        ...document.querySelectorAll(
+          ".stage-top :is(.eyes-picker, button, .stat-chip, .director-idle), .stage-run .seg, .stage-card > *, .stage-caption .caption, .slot.main .options-legend",
+        ),
+      ]
+        .filter((el) => !el.closest(".skeleton-key"))
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 1 && r.height > 1 && meets(r);
+        })
+        .map((el) => `${el.classList[0] ?? el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+      const box = within && document.querySelector(within)?.getBoundingClientRect();
+      if (
+        box &&
+        (key.left < box.left ||
+          key.top < box.top ||
+          key.right > box.right ||
+          key.bottom > box.bottom)
+      ) {
+        found.push(`out of ${within}`);
+      }
+      const clear = outside && document.querySelector(outside)?.getBoundingClientRect();
+      if (clear && meets(clear)) found.push(`on ${outside}`);
+      return found;
+    },
+    { within, outside },
+  );
+  if (over.length) throw new Error(`the skeleton's key overlaps: ${over.join(", ")}`);
 }
 
 /** A stitched match: the score bug, its views, the live service and every possession's moments. */
@@ -592,6 +785,95 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
+/** The journey's five steps, in its bar's order (journey/steps.ts), and what each panel shows. */
+const JOURNEY = [
+  ["Event", /Compare from above/],
+  ["Tactics", /Why tactics/],
+  ["Your view", /Follow/],
+  ["Content", /In the stadium/],
+  ["Value", /Sponsor slots in this programme/],
+];
+const DEMO_DATA = "Demo data: simulated audience, not real results";
+
+/** The open step's panel: its tab selected, the panel on screen with what it shows, no sideways
+ * scroll, axe clean; the Value step with the demo-data badge on its figures. */
+async function journeyPanel(page, label) {
+  const [, shows] = JOURNEY.find(([l]) => l === label);
+  const panel = page.getByRole("tabpanel", { name: new RegExp(label) });
+  await see(panel, `the journey's ${label} panel`);
+  await see(panel.getByText(shows), `the ${label} panel's content`);
+  if (label === "Value") {
+    await see(panel.getByText(DEMO_DATA, { exact: true }), "the demo-data badge");
+    await see(
+      panel.getByText(/^Match facts on this page come from the simulator/),
+      "the facts note",
+    );
+  }
+  const [w, wide] = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
+  if (wide > w) throw new Error(`expected no sideways scroll on ${label}: ${wide} px in ${w}`);
+  // Past the cards' rise and the buttons' colour change, so axe reads the colours at rest.
+  await page.waitForTimeout(600);
+  await accessible(page, `the journey's ${label} step`);
+}
+
+/** Every step from the bar: a click on the first, then the arrow keys. */
+async function journeySteps(page, shoot) {
+  const bar = page.getByRole("tablist", { name: "Journey steps" });
+  await see(bar, "the journey bar");
+  await bar.getByRole("tab", { name: /Event/ }).click();
+  for (const [k, [label]] of JOURNEY.entries()) {
+    const tab = bar.getByRole("tab", { name: new RegExp(label) });
+    if ((await tab.getAttribute("aria-selected")) !== "true") {
+      throw new Error(`expected the arrow key to select ${label}`);
+    }
+    await journeyPanel(page, label);
+    await shoot(`step-${k + 1}`);
+    if (k < JOURNEY.length - 1) await page.keyboard.press("ArrowRight");
+  }
+  if (!new URL(page.url()).search.includes("step=value")) {
+    throw new Error(`expected ?step=value in the address, got ${page.url()}`);
+  }
+}
+
+/** A phone: the bar is a stepper (no tabs on screen); Next walks the five steps. */
+async function journeyStepper(page, shoot) {
+  const stepper = page.locator(".journey-stepper");
+  await see(stepper, "the journey's stepper");
+  if (await page.getByRole("tablist", { name: "Journey steps" }).isVisible()) {
+    throw new Error("expected the journey's tabs to fold into a stepper on a phone");
+  }
+  for (const [k, [label]] of JOURNEY.entries()) {
+    await see(stepper.getByText(`Step ${k + 1} of ${JOURNEY.length}`), `step ${k + 1}`);
+    await journeyPanel(page, label);
+    await shoot(`step-${k + 1}`);
+    if (k < JOURNEY.length - 1) await stepper.getByRole("button", { name: /^Next/ }).click();
+  }
+}
+
+/** `?tour=story`: the Full story's card walks the moment through the five steps, each opening its
+ * panel, and closes on Done. */
+async function fullStory(page, shoot) {
+  const card = page.getByRole("dialog").filter({ hasText: /^Full story · \d+ of \d+/ });
+  const opened = [];
+  for (let k = 1; ; k++) {
+    await see(card.filter({ hasText: new RegExp(`^Full story · ${k} of `) }), `story step ${k}`);
+    opened.push(await page.locator(".journey-panel").getAttribute("data-step"));
+    await shoot(`step-${k}`);
+    const done = card.getByRole("button", { name: "Done" });
+    if (await done.count()) {
+      await done.click();
+      break;
+    }
+    if (k > 8) throw new Error("expected the Full story to end within 8 steps");
+    await card.getByRole("button", { name: "Next" }).click();
+  }
+  const steps = [...new Set(opened)];
+  const want = ["event", "tactics", "your-view", "content", "value"];
+  if (steps.join() !== want.join()) {
+    throw new Error(`expected the Full story to open ${want.join(", ")}; got ${steps.join(", ")}`);
+  }
+}
+
 /** `?play=eyes`: Take his eyes (SPEC 7) in the live screen's place: the board with the dial, the
  * times and the directions to look; a look plays through his eyes, and the result airs its
  * verified lines. */
@@ -608,6 +890,54 @@ async function takeEyes(page) {
   await see(play, "the look playing through his eyes");
   await play.click();
   await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+}
+
+/** `?play=drill`: the academy drill (SPEC 7) on `level`, completed: start, look over his shoulder
+ * with the arrow keys (his head is a slider), let go, make the pass from his picture when the ball
+ * has arrived, then the result's verified lines and the comparison. */
+async function drill(page, level) {
+  await see(page.getByRole("region", { name: "Academy drill" }), "the academy drill");
+  await see(page.locator(".dr-kicker", { hasText: level }), `the drill on ${level}`);
+  await mainView(page, "eyes");
+  await accessible(page, "the drill, ready"); // the page's own check runs on the result
+  await page.getByRole("button", { name: "Start" }).click(); // half speed, the default
+  const head = page.getByRole("slider", { name: /'s head$/ });
+  await see(head, "his head as a slider");
+  // Held until his head is well round to his right (a software renderer's frames are slow, and
+  // the head turns with the clock), then let go: the look.
+  await head.focus();
+  await page.keyboard.down("ArrowRight");
+  try {
+    await page.waitForFunction(
+      () => Number(document.querySelector('[role="slider"]')?.getAttribute("aria-valuenow")) >= 100,
+      null,
+      { timeout: 15_000 },
+    );
+  } catch {
+    throw new Error("expected the arrow key to turn his head");
+  } finally {
+    await page.keyboard.up("ArrowRight");
+  }
+  await see(
+    page.locator(".dr-locked", { hasText: /^Your look: / }),
+    "the look snapped to the grid",
+  );
+  await see(page.getByRole("heading", { name: "Your call" }), "the call at his decision");
+  const options = page.getByRole("group", { name: /^Options of / }).getByRole("button");
+  await see(options, "a marker per option");
+  await accessible(page, "the drill's call");
+  await options.first().click();
+  await see(page.getByRole("list", { name: "Your drill" }), "the drill's checks");
+  await see(page.getByRole("list", { name: "Verified lines" }), "the look's verified lines");
+  await see(page.locator(".dr-versus"), "his real look and no look beside yours");
+}
+
+/** axe's WCAG 2.2 A/AA rules on a state a page passes through: a serious or critical violation
+ * fails it, as at the page's end. */
+async function accessible(page, what) {
+  const { violations } = await axe(page, { tags: WCAG });
+  const blocking = violations.filter((v) => BLOCKING.has(v.impact));
+  if (blocking.length) throw new Error(`${what}: ${describe(blocking).join("; ")}`);
 }
 
 /** The moment links (SPEC 7, moments/): from the hero page, each chip of the rail above the live
@@ -739,10 +1069,11 @@ async function coldLoad(page, shoot) {
   await shoot(`at-${took}s`);
 }
 
-/** The quick tour (SPEC 7): four steps, each card on screen with no sideways scroll; the look in
- * his eyes, the run without it, the board, then Your call, which Done leaves open. */
+/** The quick tour (SPEC 7): five steps, each card on screen with no sideways scroll; the look in
+ * his eyes, the run without it, the board, the Verifier refusing a wrong number, then Your call,
+ * which Done leaves open. */
 async function quickTour(page, shoot) {
-  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 4/ });
+  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 5/ });
   const expect = [
     ["Watch the look", () => mainView(page, "eyes")],
     [
@@ -778,10 +1109,18 @@ async function quickTour(page, shoot) {
         }
       },
     ],
+    [
+      "Every number is checked",
+      () =>
+        see(
+          page.locator("section.evidence .tamper-result.held"),
+          "the Verifier refusing the tour's wrong number",
+        ),
+    ],
     ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
   ];
   for (const [k, [title, shows]] of expect.entries()) {
-    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 4`) });
+    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 5`) });
     await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
     await shows();
     if (await page.locator(".moment-card").isVisible()) {
@@ -993,13 +1332,15 @@ function startApi(url, cache) {
       await exited;
     },
     async ready() {
-      for (const deadline = Date.now() + 180_000; Date.now() < deadline;) {
+      // The API loads all five matches before it opens the port (TTE_WARM): over 3 minutes on a loaded
+      // runner (three smoke runs died on it on 2026-10-22/23).
+      for (const deadline = Date.now() + 420_000; Date.now() < deadline;) {
         const up = await Promise.race([health(url), exited]);
         if (up === "exited") throw new Error(`the API exited: see ${join(opt.out, "api.log")}`);
         if (up) return up;
         await new Promise((r) => setTimeout(r, 500));
       }
-      throw new Error("the API did not answer /health within 3 minutes");
+      throw new Error("the API did not answer /health within 7 minutes");
     },
   };
 }

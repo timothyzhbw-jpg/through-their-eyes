@@ -1,0 +1,107 @@
+/* Publish this moment: the content package under the breakdown. The cards, tables, headings, notes
+   and the demo-data badge are the shared ones in styles.css ("Shared panel parts"); only the
+   package's own layout is here. No blur, no animation. */
+
+.studio .chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+.studio .chapter-body > .seg {
+  align-self: flex-start;
+}
+.studio-business a {
+  color: var(--floodlight);
+}
+
+.studio-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.studio-block h4 {
+  margin: 0;
+}
+.studio-block .note,
+.studio-wait {
+  margin: 0;
+}
+
+.studio-explainer {
+  width: 100%;
+}
+.studio-explainer ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.studio-kinds {
+  display: block;
+  color: var(--chalk-3);
+  font-size: 12px;
+}
+
+.studio-post {
+  width: 100%;
+}
+.studio-post-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.studio-post pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-body);
+}
+
+.studio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.studio-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--chalk-2);
+  font-size: 14px;
+}
+.studio-card strong {
+  color: var(--chalk);
+}
+
+.studio-metrics {
+  margin: 0;
+}
+.studio-metric dt {
+  color: var(--chalk-2);
+  font-size: 13px;
+}
+.studio-metric dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 4px 0 0;
+}
+.studio-metric strong {
+  font-size: 28px;
+}
+.studio-assumptions ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.studio-status {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--chalk-2);
+  font-size: 13px;
+}

@@ -8,6 +8,14 @@ on:
 permissions:
   contents: read
 
+# numpy dispatches float64 sin, cos, exp, log, tanh, arctan2, power and others to AVX-512 code on
+# the runners that have it (its X86_V4 tier) and to AVX2 code (X86_V3) on the rest. The two differ
+# in the last bit, which the sim amplifies to millimetres, so committed artifacts matched one kind
+# of runner and failed on the other. Every job takes the AVX2 path the artifacts are made on
+# (tests/canonical.py; scripts/regen_linux.sh sets the same).
+env:
+  NPY_DISABLE_CPU_FEATURES: X86_V4 AVX512_ICL AVX512_SPR
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -102,7 +110,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25  # the smoke suite passed 10 minutes on a loaded runner (29 pages, axe on each)
+    timeout-minutes: 45  # 25 cut the suite off at the journey pages; with axe on each page it takes 25+ min on a loaded runner
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0

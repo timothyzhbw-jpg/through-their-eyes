@@ -223,7 +223,7 @@ it as `<file>.hash`, has not changed. `--force` ignores the hashes.
 | `assets` | download each entry of `assets.json` and check its sha256 | `<out>/assets/<id>.<ext>` |
 | `capture` | record the capture shots the beats use, via `capture.mjs`, unless the WebM is already in `out/video/` | the capture kit's own files in `out/video/` |
 | `cine` | render each cine shot in one Chromium | `<out>/cine/<id>.mp4` |
-| `pin` | corner-pin a cine shot onto a screen in a rendered clip (`pins`: the coach's tablet), with `video/pin.py` (numpy): per frame the screen's corners and matte, mapped so the last frame equals the shot full frame | `<out>/pins/<id>.mp4` |
+| `pin` | corner-pin a cine shot (`source.cine`) or a capture of the app (`source.capture`) onto a screen in a rendered clip (`pins`: the coach's tablet), with `video/pin.py` (numpy): per frame the screen's corners and matte, mapped so the last frame equals that picture full frame | `<out>/pins/<id>.mp4` |
 | `titles` | fill slots, then render each title card | `<out>/titles/<id>.mov` (alpha) or `.mp4` |
 | `vo` | build SSML and synthesize the lines whose SSML changed | `<out>/vo/<id>.wav` and `.ssml` |
 | `sfx` | synthesize each effect the beats name | `<out>/sfx/<name>.wav` |
@@ -254,7 +254,10 @@ moves to the right while a title holds the lower left (a lower-left slam, a tag,
 
 ```bash
 node video/tools/moments.mjs --write        # the hero moments' live times; re-aims shot 16-corner
-cd video && node capture.mjs --only 03,04,05,06,07,09,10,12,13,14,16 && cd ..
+cd video && node capture.mjs --only 03,04,05,06,07,09,12,13,16,17,18,19,20,22,23 && cd ..
+cd video && node capture.mjs --only 10 && cd ..   # the failure drill alone: its waits are long and vary
+node video/tools/inpoints.mjs               # each capture beat's window against the new captures' action logs
+node video/tools/workflow_still.mjs         # the crew workflow (docs/crew_workflow-dark.svg) as beat b33b's clip
 node video/tools/blender_fit.mjs            # which approved finals are in, and their lengths
 node video/tools/blender_fit.mjs --apply --fit
 python3 video/tools/cuesheet.py "$(git rev-parse --short HEAD)" > /tmp/cue-sheet.md
@@ -295,6 +298,12 @@ frame (`source_time`), light the screen (`ev`, stops in linear light, ramped bac
 last `ev_ramp_frames` so the cut to the full-frame shot is seamless) and map against another
 clip's last frame (`ref_corners`, so two shots of one screen show the same picture).
 
+**Report numbers.** `report_facts` reads a number the live page cannot show (an offline eval's
+result) off a committed report: `{ id: { file, pattern, values } }`, the pattern's groups named by
+`values`, filled as `{id.value}` slots like claims (four-digit integers get thousands separators);
+no match leaves the slot unfilled, so the title takes its fallback. The report lists each one with
+the line it came from.
+
 **Numbers.** A voice-over line and a title param may not contain a digit or a number word
 (`zero` through `twelve`, the tens, `hundred`, `thousand`, `once`, `twice`, `half`, `dozen`,
 `percent`). A number arrives only as a `{claim.value}` slot, filled from `out/video/claims.json`
@@ -314,7 +323,8 @@ The spec is version 1: `output` (fps, size, LUFS, true peak), `site`, `voice` / 
 repo, such as the Blender shots in `out/video/blender/` (git-ignored; the edit stops with a
 message naming the file when one is missing, `--check` does not look for it); it takes `in`,
 `speed`, `reverse` and `fit: "pad"` (keep a 2.39:1 render as it is, inside the bars, instead of
-cropping it to fill the frame). `fx: ["glue"]` is the shared finish of every 3D shot. Its `out` is `cut`, `fade`, `flash`, `dip`,
+cropping it to fill the frame). `fx: ["glue"]` is the shared finish of every 3D shot; `"lift"` brightens
+the app's screens (mid-grey up about 0.4 EV, black and white pinned). Its `out` is `cut`, `fade`, `flash`, `dip`,
 `whip` or `glitch`. The validator names the beat when something does not resolve
 (`beats[3] (b04-pov): unknown cine id "pov2"`). The planned film must be under two minutes (and under `output.max_s`, 116 s, for a margin), the
 report step fails when the encoded film measures `output.fail_at_s` (117 s) or more, and

@@ -40,31 +40,33 @@ Deep links for the README's tour for judges, and for testing and filming
 (`src/deeplink.ts`, tests in `src/deeplink.test.tsx`). Parameters combine, e.g.
 `?run=counterfactual&at=decision&view=tactical`.
 
-| Parameter  | Values                                                          | Effect                                                                                                                                                                                                                                          |
-| ---------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at`, `camera` and `play` (and `persona`, `lang` with `play=recap`)                                |
-| `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page                      |
-| `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                                              |
-| `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                                      |
-| `view`     | `pov`, `tactical`, `split`                                      | the main view: `pov` the 3D view alone, `split` the 3D view with the board as a picture in picture, `tactical` the board with the 3D view small; a breakdown resets it to `split` when it starts                                                |
-| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                                                    |
-| `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                                           |
-| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                                                 |
-| `play`     | `yourcall`, `recap`                                             | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused; `recap` (with a stitched `match`): its end-of-match recap for `persona` and `lang`, offered as at full time |
-| `play`     | `eyes`                                                          | open "Take his eyes" on his own look; with `match`, on its first hero moment that has a bundled look grid; counts as a spot: opens paused                                                                                                       |
-| `tour`     | `quick`, `1`, a step id                                         | open a tour paused, with no intro card: `quick` the quick tour (four steps: the look, without it, the outcomes compared, Your call), `1` the full judge tour, a step id that step of its tour                                                   |
-| `moment`   | `corner_blind_side`, `far_post_finish`                          | with `match=match-1`: open that hero moment's breakdown inside the match (the moment links); counts as a spot                                                                                                                                   |
-| `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                                         |
-| `intro`    | `0`                                                             | skip the intro card (one line and Start; the line-ups behind Teams and more); links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                       |
-| `rail`     | `0`                                                             | leave out the moment links above the live screen (filming: the demo video's captures keep their framing)                                                                                                                                        |
-| `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                                               |
-| `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                                               |
-| `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                           |
-| `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                                                    |
-| `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                                         |
-| `cine`     | `1`                                                             | filming the demo video only (`src/cine/`, SPEC 10), never linked: the 3D view full screen with no UI, driven by `window.__cine`                                                                                                                 |
+| Parameter  | Values                                                          | Effect                                                                                                                                                                                                                                                                 |
+| ---------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `match`    | a match id the live service serves: `match-1`, `press_escape-0` | play that match instead of the bundled `blind_side_run-3` (the header's match picker sets it); a stitched match takes only `view`, a numeric `at`, `camera` and `play` (and `persona`, `lang` with `play=recap`)                                                       |
+| `persona`  | `casual`, `analyst`, `player_fan`, `coach`, `audio_description` | the audience the breakdown is asked for (live service only; offline the bundled breakdown is the only one); `audio_description` also turns the voice on, which the browser may hold back until the first click on the page                                             |
+| `lang`     | `en`, `zh`                                                      | the breakdown's language (live service only) and the What if box's answer language                                                                                                                                                                                     |
+| `run`      | `factual`, `counterfactual`                                     | with the look / without it                                                                                                                                                                                                                                             |
+| `view`     | `pov`, `tactical`, `split`                                      | the main view: `pov` the 3D view alone, `split` the 3D view with the board as a picture in picture, `tactical` the board with the 3D view small; a breakdown resets it to `split` when it starts                                                                       |
+| `at`       | a frame (25 Hz, from 0), `key-scan`, `decision`                 | open paused at that frame; `key-scan` is where the app opens by default, inside the key scan                                                                                                                                                                           |
+| `ask`      | a question                                                      | prefill the What if box's free question and scroll to it; it is sent only when the viewer presses Ask                                                                                                                                                                  |
+| `tamper`   | a claim id, e.g. `cf_value`                                     | open the evidence card on that claim with "Try a wrong number" open; online, the breakdown is asked for at once                                                                                                                                                        |
+| `play`     | `yourcall`, `recap`                                             | open "Your call" at the decision; with `match`, on its first hero moment that has bundled what-ifs; counts as a spot: opens paused; `recap` (with a stitched `match`): its end-of-match recap for `persona` and `lang`, offered as at full time                        |
+| `play`     | `eyes`                                                          | open "Take his eyes" on his own look; with `match`, on its first hero moment that has a bundled look grid; counts as a spot: opens paused                                                                                                                              |
+| `tour`     | `quick`, `1`, `story`, a step id                                | open a tour paused, with no intro card: `quick` the quick tour (five steps: the look, without it, the outcomes compared, every number checked, Your call), `1` the full judge tour, `story` the Full story (the journey's five steps), a step id that step of its tour |
+| `step`     | `event`, `tactics`, `your-view`, `content`, `value`             | open that step of the journey (`src/journey/`) and scroll to its panel; counts as a spot: opens paused. Picking a step on the bar writes it here                                                                                                                       |
+| `moment`   | `corner_blind_side`, `far_post_finish`                          | with `match=match-1`: open that hero moment's breakdown inside the match (the moment links); counts as a spot                                                                                                                                                          |
+| `autoplay` | `0`                                                             | start neither the live stream nor the breakdown on load                                                                                                                                                                                                                |
+| `intro`    | `0`                                                             | skip the intro card (one line and Start; the line-ups behind Teams and more); links to a spot (`at`, `run`, `ask`, `tamper`) also skip it                                                                                                                              |
+| `rail`     | `0`                                                             | leave out the moment links above the live screen (filming: the demo video's captures keep their framing)                                                                                                                                                               |
+| `offline`  | `1`                                                             | ignore the live service and play the bundled data                                                                                                                                                                                                                      |
+| `plan`     | `invalid`                                                       | load a deliberately broken plan to show the template fallback (bundled breakdown)                                                                                                                                                                                      |
+| `rigged`   | `0`                                                             | start with the tokens instead of the animated players                                                                                                                                                                                                                  |
+| `camera`   | `broadcast`                                                     | start on the broadcast camera, focused (for filming); a breakdown still cuts to first person                                                                                                                                                                           |
+| `director` | `auto`                                                          | start with the Auto director on: it cuts the cameras by itself (for filming); a breakdown still directs its own cameras                                                                                                                                                |
+| `cine`     | `1`                                                             | filming the demo video only (`src/cine/`, SPEC 10), never linked: the 3D view full screen with no UI, driven by `window.__cine`                                                                                                                                        |
+| `studio`   | `1`                                                             | the Stadium Screen Studio (`src/stadium/README.md`): the bowl's screens on an event timeline, offline from the bundled files; `wall=1` shows the flat Screen wall without the 3D stadium                                                                               |
 
-A link that points at a spot (`at`, `run`, `ask`, `tamper` or `play`) opens paused: no live stream, and
+A link that points at a spot (`at`, `run`, `ask`, `tamper`, `play`, `tour`, `moment` or `step`) opens paused: no live stream, and
 no breakdown on load unless `tamper` needs one. If no line of the breakdown carries the linked
 claim, the first claim with a number opens instead (`analyst` narrations carry the most).
 Without them, the app watches live and then plays the breakdown, in the linked `persona` and
@@ -228,6 +230,9 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   not move. `src/without/` checks the payloads against the replay and shows them under "Without
   the look", on the timeline, at the edge of his eyes and in the verdict; fetched when the session is made.
 
+- `hero_gates.json`: held-out evidence for the comparison panels, read from the eval reports
+  (`eval.hero_gates`, SPEC 3.6, 7; `uv run python -m eval.hero_gates`). `src/without/gates.ts`
+  loads it for "Without the look".
 - `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
   SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
   only one between the pass and his decision: his head, sight and belief over the window (the
@@ -243,10 +248,11 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
   scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
 
-Regenerate them whenever `sim/`, `analytics/` or `explain/` change;
-`tests/test_committed_exports.py` fails when a committed file is stale (byte for byte where the
-files are generated, on macOS arm64; structurally elsewhere, as SPEC 3.7 promises no
-cross-platform identity).
+Regenerate them whenever `sim/`, `analytics/` or `explain/` change, on Linux, the canonical
+platform: `scripts/regen_linux.sh exports` runs these commands in `python:3.11-slim`
+([CONTRIBUTING.md](../docs/CONTRIBUTING.md#eval-before-merge)). `tests/test_committed_exports.py`
+fails on Linux when a committed file is stale, byte for byte, and skips elsewhere: the sim is
+byte-identical only within one OS (SPEC 3.7).
 
 ## How it fits together
 
@@ -277,6 +283,13 @@ src/
   cine/       filming mode for the demo video (`?cine=1`, never linked): a full-screen 3D view a
               script drives frame by frame through `window.__cine` (shot spec, cameras, post)
   producer/   the Producer's failure drill: take agents down, bring them back, step sources
+  stadium/    the Stadium Screen Studio (`?studio=1`): screen formats, content, the rules engine,
+              the 3D preview and the Screen wall
+  journey/    the journey bar under the moment (Event → Tactics → Your view → Content → Value),
+              its panels, `?step=`, the demo-data badge; the Full story is a tour in tour/
+  tacticslab/ the Tactics lab: five tactic cards measured on the export, pass lanes on a board
+  personal/   "Your view": audience, language and who to follow, kept in the address and storage
+  studio/     "Publish this moment": highlight, explainer, posts, data cards, business value
   ui/         the live screen (Stage: camera switch, view options, player picker, moment card),
               transport + timeline, caption + evidence card, the story's chapters, console
   session.ts  one Session per moment: data + stores + plan runner + live feed + voice + controls;
@@ -376,12 +389,15 @@ src/
   options, off by default; it draws on the broadcast camera and the tactical board, one state for
   both. Per player it
   draws only sim data: the position, the torso line (shoulders, across `body`), a head ray from
-  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. The ray
-  lights up (detector green) while the scan detector marks a scan. The key's switch picks the
+  the head yaw, and a fan from torso to head whose fill grows with the head–torso angle. While
+  the scan detector marks a scan, a radar lies at the player's feet (`skeleton/radar.ts`: a 60°
+  Floodlight sector on his head yaw, eased in and out over about 150 ms of match time); the head
+  ray stays white. Without the skeleton, the key scan's player gets the radar during his key
+  scan, on the broadcast camera and the board. The key's switch picks the
   head yaw: true, or as tracked (2° sensor noise, the detector's input), rebuilt from the
   detector's exported angular velocity (`skeleton/skeleton.ts` says how; within 0.38° of the
   sim's tracked yaw on seed 3). A match export has no detector run, so there it is true yaw only
-  and the ray lights up during the sim's own scans (sight blue). No limbs: the sim has none.
+  and the radar shows during the sim's own scans. No limbs: the sim has none.
   `npm run fps` also measures it, over the broadcast camera.
 - **Verified narration you can open** (SPEC 7). Captions come from the render payload; a plan's
   voice steps name its line ids. Click a caption (or any line of the call) and the
@@ -443,6 +459,38 @@ src/
   so its readout matches the HUD. Live, the curves and key points stop at the last frame the
   stream sent, a scan appears once it has ended, and there is no overlay (the stream is one run). Every value is marked `sim`: a computed metric, not a verified
   claim. `telemetry/telemetry.ts` holds the logic and its tests.
+- **Publish this moment** (SPEC 7, `studio/`). The moment as a content package, built offline from
+  the verified breakdown on screen: no model or service call. (1) The highlight plays the
+  breakdown reel and lists its shots (in/out frames, camera, caption) read off the plan; no video
+  is encoded. (2) The explainer card lists the verified lines with their claim kinds. (3) Posts in
+  `en` and `zh` (short, carousel caption, vertical-video caption) are the narration's own lines in
+  its language, or templates filled from supported claims' values in the other; a sentence with a
+  number no supported claim carries is dropped, and the hashtags are the invented clubs'. (4) Data
+  cards (square, 9:16, 16:9) are painted on a canvas and saved as PNG; each shows at most three
+  claim values. (5) **Business value** is not a match fact: impressions, engagement, click-through
+  to an "Official watch" entry, sponsor impressions (an invented sponsor) and a recall proxy come
+  from a seeded model (`studio/audience.ts`) keyed by moment, persona and language, drawn inside
+  documented ranges. Every figure is labelled "Demo data: simulated audience, not real results";
+  nobody has watched the app. The panel links the business model in `docs/SUBMISSION.md`.
+- **From event to value: the journey** (SPEC 7, `journey/`). A bar under the moment's head, sticky
+  while the story scrolls: Event → Tactics → Your view → Content → Value, each opening its panel
+  for the moment on screen. Event: the look and the run without it, told by the bundled verified
+  lines (`without/`) and the breakdown's; Tactics: the Tactics lab; Your view: the "Your view"
+  menu's controls inline; Content: the package above (1–4) and the stadium's Screen wall on the
+  moment's matchday event (`stadium/`, its code loaded with the step); Value: the business panel
+  and the sponsor slots. The bar is an ARIA tab list (arrow keys, Home, End); under 760 px it is a
+  stepper (Back, "Step n of 5", Next). Picking a step writes `?step=` into the address. Every
+  audience or sponsor figure carries one badge, word for word "Demo data: simulated audience, not
+  real results" (`journey/DemoBadge.tsx`, used by `studio/` and `stadium/` too), and the Value
+  step says in one sentence which numbers are match facts (sim, verified) and which are simulated.
+  The panels share one set of parts in `styles.css` ("Shared panel parts": `.tile`, `.tile-grid`,
+  `.block-title`, `.data-table`, `.pick-row`, `.demo-badge`). **Full story · 90 s** on the bar
+  (`?tour=story`, `tour/steps.json` `story`) walks one moment through the five steps on the tour
+  card, opening each step's panel; Start and the quick tour stay the first-run path. Up to 1100 px
+  the hero header leaves out the "Your view" pill (no room beside its other pills); its controls
+  are the Your view step. The shared `.table-wrap` is `position: relative`, so a table's
+  screen-reader-only text cannot widen the page on a phone. Smoke pages:
+  `journey`, `journey-link-value`, `phone-375-journey`, `full-story`.
 - Belief ghosts exist for the hero only (the export records his beliefs); "who is in sight" is
   exported for every player, so the POV picker works for all 22.
 - **"What if…?"** (SPEC 6, 7). One suggested question per option ("What if he passed to H4?",

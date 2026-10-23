@@ -27,6 +27,7 @@ DOCS = [
     ROOT / "README.md",
     *(ROOT / "docs" / name for name in ("SUBMISSION.md", "RUBRIC_MAP.md", "EVALS.md")),
     ROOT / "docs" / "DEMO_SCRIPT.md",
+    ROOT / "docs" / "VIDEO_SCRIPT.md",
 ]
 
 NUM = r"(−?-?\d+(?:\.\d+)?)"
@@ -74,11 +75,23 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| Without the look `A9` receives unmarked[^|]*{FRACTION}",
         ("k", "n", "pct"),
     ),
+    "H8": (
+        "hero_shot_far_post_finish.md",
+        rf"\| Placement changed without the key scan {FRACTION}",
+        ("k", "n", "pct"),
+    ),
     "A1": ("scan_detector.md", rf"\| Held-out F1, nuisance on \| \*\*{NUM}\*\*", ("f1",)),
     "A2": (
         "keypoint_ingest.md",
         rf"\| keypoints, 20 mm \(stress\) \|.*\| \*\*{NUM}\*\* \|",
         ("f1",),
+    ),
+    "V1": (
+        "crew_evidence.md",
+        rf"Of {NUM} perturbed lines \([^)]*\), {NUM} were kept off the air with the Verifier "
+        rf"\({NUM} by tidy, {NUM} by the Verifier\); without it {NUM} aired, every one breaking "
+        rf"a Verifier rule: {NUM} false",
+        ("total", "kept", "tidy", "verifier", "aired", "false"),
     ),
     "A5": (
         "corruption.md",
@@ -95,6 +108,18 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| scripts within their persona's spec and rules \| {NUM} of {NUM} \| {NUM} of {NUM} \|",
         ("before", "n_before", "after", "n"),
     ),
+    "MA8": (
+        "crew_evidence.md",
+        rf"Of {NUM} perturbed lines \([^)]*\), {NUM} were kept off the air with the Verifier "
+        rf"\([^)]*\); without it {NUM} aired, [^:]*: {NUM} false",
+        ("total", "kept", "aired", "false"),
+    ),
+    "A5b": (
+        "corruption.md",
+        rf"\| Generated claims verified `supported` \| {NUM}/{NUM} \({NUM}%\)",
+        ("supported", "n", "pct"),
+    ),
+    "A6": ("laws.md", rf"\*\*{NUM} unpunished breaches\*\*", ("unpunished",)),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",
@@ -120,6 +145,10 @@ def numbers(text: str) -> list[float]:
     ]
 
 
+# Fields worked out from a reader's own fields: "0 of 468 true claims wrongly rejected".
+DERIVED = {"A5b": lambda v: {"rejected": v["n"] - v["supported"]}}
+
+
 def report_values(key: str) -> dict[str, float]:
     report, pattern, fields = READERS[key]
     text = (REPORTS / report).read_text(encoding="utf-8")
@@ -127,7 +156,8 @@ def report_values(key: str) -> dict[str, float]:
     assert found, (
         f"{report}: no line matches the reader for {key} (did the report's wording change?)"
     )
-    return {f: float(v.replace("−", "-")) for f, v in zip(fields, found.groups(), strict=True)}
+    values = {f: float(v.replace("−", "-")) for f, v in zip(fields, found.groups(), strict=True)}
+    return values | DERIVED.get(key, lambda _: {})(values)
 
 
 def markers() -> list[tuple[str, int, str, str | None, str]]:
@@ -182,5 +212,5 @@ def test_a_quoted_number_matches_its_report(doc, line, key, field, quoted):
 def test_the_markers_cover_the_headline_numbers():
     """The numbers judges see first are all marked, so none of them can drift unnoticed."""
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    for key in ("H1", "H2", "A5", "R3"):
+    for key in ("H1", "H2", "A5", "R3", "V1"):
         assert f"<!--num:{key}" in readme, f"README.md quotes {key} without a marker"

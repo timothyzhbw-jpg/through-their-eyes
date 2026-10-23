@@ -1,1609 +1,1438 @@
 {
- "version": 1,
- "story": "breakdown",
- "subject": "m:decision_after_scan:H8:0075",
- "runs": [
-  {
-   "index": 0,
-   "kind": "run",
-   "step": null,
-   "started": "2026-10-22T23:10:35.634063+00:00",
-   "total_ms": 1031.0,
-   "model": "ToolCallingFakeChatClient",
-   "down": [
-    "telestrator"
-   ],
-   "pending": [
-    "telestrator"
-   ],
-   "trace_id": null
-  },
-  {
-   "index": 1,
-   "kind": "bring_back",
-   "step": "telestrator",
-   "started": "2026-10-22T23:10:36.668451+00:00",
-   "total_ms": 957.4,
-   "model": "ToolCallingFakeChatClient",
-   "down": [],
-   "pending": [],
-   "trace_id": null
-  }
- ],
- "steps": [
-  {
-   "id": "r0.0",
-   "run": 0,
-   "step": "mcp",
-   "round": null,
-   "start_ms": 15.2,
-   "end_ms": 914.0,
-   "source": "code",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": null,
-   "output": [
+  "version": 1,
+  "story": "breakdown",
+  "subject": "m:decision_after_scan:H8:0075",
+  "runs": [
     {
-     "type": "MCPStdioTool",
-     "summary": "our MCP server over stdio: 10 tools",
-     "data": {
-      "tools": [
-       "get_moment",
-       "list_claims",
-       "get_vision",
-       "get_pitch_control",
-       "get_xt",
-       "get_pressing",
-       "get_live_stats",
-       "run_counterfactual",
-       "list_options",
-       "what_if"
-      ]
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [],
-   "writes": [],
-   "calls": [],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [],
-   "span_id": null
-  },
-  {
-   "id": "r0.1",
-   "run": 0,
-   "step": "director",
-   "round": null,
-   "start_ms": 919.3,
-   "end_ms": 928.1,
-   "source": "llm",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "Job",
-    "summary": "analyst × en",
-    "data": {
-     "personas": [
-      "analyst"
-     ],
-     "languages": [
-      "en"
-     ]
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "BreakdownRequest",
-     "summary": "priority high · analyst × en",
-     "data": {
-      "moment": "m:decision_after_scan:H8:0075",
-      "personas": [
-       "analyst"
-      ],
-      "languages": [
-       "en"
-      ],
-      "priority": "high",
-      "reason": "The look over the shoulder decides the pass."
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card"
-   ],
-   "writes": [
-    "request"
-   ],
-   "calls": [
-    {
-     "role": "director",
-     "persona": null,
-     "language": null,
-     "source": "llm",
-     "attempts": 1,
-     "ms": 8.4,
-     "error": null
-    }
-   ],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [],
-   "span_id": null
-  },
-  {
-   "id": "r0.2",
-   "run": 0,
-   "step": "analyst",
-   "round": null,
-   "start_ms": 929.6,
-   "end_ms": 936.6,
-   "source": "llm",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "BreakdownRequest",
-    "summary": "priority high · analyst × en",
-    "data": {
-     "moment": "m:decision_after_scan:H8:0075",
-     "personas": [
-      "analyst"
-     ],
-     "languages": [
-      "en"
-     ],
-     "priority": "high",
-     "reason": "The look over the shoulder decides the pass."
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "Findings",
-     "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
-     "data": {
-      "findings": {
-       "moment": "m:decision_after_scan:H8:0075",
-       "lens": "scan",
-       "headline": [
-        "scan_before_reception",
-        "belief_error"
-       ],
-       "supporting": [
-        "cf_pass",
-        "blind_side"
-       ],
-       "angle": "He saw the runner."
-      },
-      "rev": 0
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.run",
-    "evidence.supported"
-   ],
-   "writes": [
-    "findings"
-   ],
-   "calls": [
-    {
-     "role": "analyst",
-     "persona": null,
-     "language": null,
-     "source": "llm",
-     "attempts": 1,
-     "ms": 5.8,
-     "error": null
-    }
-   ],
-   "tools": [
-    {
-     "name": "get_moment",
-     "arguments": {},
-     "result": "{\"version\":1,\"id\":\"m:decision_after_scan:H8:0075\",\"kind\":\"decision_after_scan\",\"tags\":[\"decision_after_scan\",\"line_breaking_pass\"],\"scenario\":\"blind_side_run\",\"seed\":3,\"live_only\":false,\"frame_start\":0,\"frame_end\":161,\"anchor_frame\":75,\"t_start\":0.0,\"t_end\":6.44,\"anchor_t\":3.0,\"actor\":\"H8\",\"receiver\":\"H9\",\"players\":[\"H8\",\"H9\",\"A10\",\"A2\",\"A3\",\"A4\",\"A5\",\"A6\",\"A7\",\"A8\"],\"anchors\":{\"action\":\"pass:H8:0075\",\"completion\":\"reception:H9:0136\",\"reception\":\"reception:H8:0070\",\"last_scan\":\"scan:H8:0050\"},\"events\":[\"scan:H8:0050\",\"reception:H8:0070\",\"pass:H8:0075\",\"reception:H9:0136\"],\"metrics\":{\"opponents_bypassed\":8,\"pass_distance_m\":38.91,\"pass_progression_m\":38.89,\"pass_speed_mps\":21.77,\"pass_xt_gain\":0.1675,\"scans_in_window\":1,\"scan_window_s\":10.0,\"time_since_last_scan_at_reception_s\":0.0,\"time_to_decision_s\":0.2,\"chosen\":\"pass:H9\",\"chosen_prob\":0.9895,\"options\":11,\"belief_error_receiver_m\":0.28,\"belief_age_receiver_s\":0.44},\"candidate_lenses\":[\"scan\",\"space\",\"pressure\"],\"lenses\":[{\"lens\":\"scan\",\"available\":true,\"delta_xt\":0.166733,\"unit\":\"xT\",\"metrics\":{\"scan_id\":\"scan:H8:0050\",\"belief_update_m\":12.012,\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"decision_changed\":true,\"factual_value_xt\":0.169068,\"counterfactual_value_xt\":0.002335,\"realized_delta_xt\":0.169252,\"p_factual_action_with_scan\":0.989511,\"p_factual_action_without_scan\":0.002232,\"target\":\"H9\",\"belief_error_target_with_scan_m\":0.276,\"belief_error_target_without_scan_m\":12.288},\"rows\":[{\"scan_id\":\"scan:H8:0050\",\"start_frame\":50,\"end_frame\":70,\"belief_update_m\":12.012}],\"evidence\":[\"scan:H8:0050\"],\"note\":\"V(factual choice) - V(choice re-simulated without this scan), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"space\",\"available\":true,\"delta_xt\":0.152006,\"unit\":\"xT\",\"metrics\":{\"chosen\":\"pass:H9\",\"chosen_value_xt\":0.169068,\"chosen_pitch_control\":0.9997,\"best_alternative\":\"pass:H11\",\"best_alternative_value_xt\":0.017062},\"rows\":[{\"action\":\"pass:H1\",\"target_x\":-40.8,\"target_y\":-0.63,\"pitch_control\":1.0,\"xt\":0.0021,\"value_xt\":0.002139},{\"action\":\"pass:H2\",\"target_x\":-4.41,\"target_y\":-27.61,\"pitch_control\":0.9996,\"xt\":0.0032,\"value_xt\":0.003218},{\"action\":\"pass:H3\",\"target_x\":-1.26,\"target_y\":26.07,\"pitch_control\":0.9974,\"xt\":0.0037,\"value_xt\":0.003677},{\"action\":\"pass:H4\",\"target_x\":-17.5,\"target_y\":-9.58,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002335},{\"action\":\"pass:H5\",\"target_x\":-17.37,\"target_y\":7.94,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002295},{\"action\":\"pass:H6\",\"target_x\":-6.64,\"target_y\":1.01,\"pitch_control\":0.884,\"xt\":0.0024,\"value_xt\":0.001622},{\"action\":\"pass:H10\",\"target_x\":5.82,\"target_y\":12.52,\"pitch_control\":0.8028,\"xt\":0.0049,\"value_xt\":0.003433},{\"action\":\"pass:H7\",\"target_x\":14.74,\"target_y\":-29.27,\"pitch_control\":0.9998,\"xt\":0.0059,\"value_xt\":0.00588},{\"action\":\"pass:H11\",\"target_x\":23.64,\"target_y\":24.42,\"pitch_control\":0.991,\"xt\":0.0172,\"value_xt\":0.017062},{\"action\":\"pass:H9\",\"target_x\":39.91,\"target_y\":-10.82,\"pitch_control\":0.9997,\"xt\":0.1691,\"value_xt\":0.169068},{\"action\":\"carry\",\"target_x\":6.87,\"target_y\":-9.72,\"pitch_control\":0.9798,\"xt\":0.0058,\"value_xt\":0.005678}],\"evidence\":[],\"note\":\"V(chosen option) - V(best alternative), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"pressure\",\"available\":true,\"delta_xt\":-0.000064,\"unit\":\"xT\",\"metrics\":{\"pressure_before\":0.00088,\"stake_before_xt\":0.007244,\"cost_before_xt\":6e-6,\"main_presser\":\"A11\",\"pressure_after\":0.000415,\"stake_after_xt\":0.169075,\"cost_after_xt\":0.00007,\"after_frame\":136,\"escaped\":true,\"how\":\"pass completed\"},\"rows\":[],\"evidence\":[\"pass:H8:0075\"],\"note\":\"expected turnover cost (pressing intensity x stake) on the actor at the anchor minus after the action\"}],\"selected_lens\":\"scan\"}",
-     "error": null,
-     "truncated": false
+      "index": 0,
+      "kind": "run",
+      "step": null,
+      "started": "2026-10-22T23:10:35.634063+00:00",
+      "total_ms": 1031.0,
+      "model": "ToolCallingFakeChatClient",
+      "down": ["telestrator"],
+      "pending": ["telestrator"],
+      "trace_id": null
     },
     {
-     "name": "run_counterfactual",
-     "arguments": {},
-     "result": "{\"intervention\":\"drop_scan\",\"dropped_scan\":\"scan:H8:0050\",\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"delta_xt\":0.1693}",
-     "error": null,
-     "truncated": false
+      "index": 1,
+      "kind": "bring_back",
+      "step": "telestrator",
+      "started": "2026-10-22T23:10:36.668451+00:00",
+      "total_ms": 957.4,
+      "model": "ToolCallingFakeChatClient",
+      "down": [],
+      "pending": [],
+      "trace_id": null
     }
-   ],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [
-    "MCP tools called: get_moment, run_counterfactual"
-   ],
-   "span_id": null
-  },
-  {
-   "id": "r0.3",
-   "run": 0,
-   "step": "telestrator",
-   "round": null,
-   "start_ms": 938.7,
-   "end_ms": 941.9,
-   "source": "template",
-   "attempts": 2,
-   "error": "AgentDown: the telestrator is down",
-   "resumed": false,
-   "input": {
-    "type": "Findings",
-    "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
-    "data": {
-     "findings": {
-      "moment": "m:decision_after_scan:H8:0075",
-      "lens": "scan",
-      "headline": [
-       "scan_before_reception",
-       "belief_error"
-      ],
-      "supporting": [
-       "cf_pass",
-       "blind_side"
-      ],
-      "angle": "He saw the runner."
-     },
-     "rev": 0
-    },
-    "truncated": false
-   },
-   "output": [
+  ],
+  "steps": [
     {
-     "type": "TelestrationPlan",
-     "summary": "10 steps · from its template",
-     "data": {
-      "plan": {
-       "moment": "m:decision_after_scan:H8:0075",
-       "duration_s": 10.0,
-       "steps": [
+      "id": "r0.0",
+      "run": 0,
+      "step": "mcp",
+      "round": null,
+      "start_ms": 15.2,
+      "end_ms": 914.0,
+      "source": "code",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": null,
+      "output": [
         {
-         "t": 0.0,
-         "do": "freeze"
-        },
-        {
-         "t": 0.4,
-         "do": "rewind",
-         "to": -1.6
-        },
-        {
-         "t": 0.6,
-         "do": "zone",
-         "layer": "vision",
-         "player": "H8"
-        },
-        {
-         "t": 0.8,
-         "do": "camera",
-         "mode": "pov"
-        },
-        {
-         "t": 1.2,
-         "do": "pov",
-         "player": "H8",
-         "from": -1.6,
-         "to": 0.0,
-         "speed": 0.5
-        },
-        {
-         "t": 1.4,
-         "do": "scan_marker",
-         "scan": "scan:H8:0050"
-        },
-        {
-         "t": 1.6,
-         "do": "ghost",
-         "kind": "belief"
-        },
-        {
-         "t": 4.8,
-         "do": "camera",
-         "mode": "split"
-        },
-        {
-         "t": 5.0,
-         "do": "play",
-         "to": 2.0,
-         "speed": 1.0
-        },
-        {
-         "t": 7.4,
-         "do": "ghost",
-         "kind": "counterfactual",
-         "cf": "cf1"
+          "type": "MCPStdioTool",
+          "summary": "our MCP server over stdio: 10 tools",
+          "data": {
+            "tools": [
+              "get_moment",
+              "list_claims",
+              "get_vision",
+              "get_pitch_control",
+              "get_xt",
+              "get_pressing",
+              "get_live_stats",
+              "run_counterfactual",
+              "list_options",
+              "what_if"
+            ]
+          },
+          "truncated": false
         }
-       ]
+      ],
+      "reads": [],
+      "writes": [],
+      "calls": [],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": [],
+      "span_id": null
+    },
+    {
+      "id": "r0.1",
+      "run": 0,
+      "step": "director",
+      "round": null,
+      "start_ms": 919.3,
+      "end_ms": 928.1,
+      "source": "llm",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "Job",
+        "summary": "analyst × en",
+        "data": {
+          "personas": ["analyst"],
+          "languages": ["en"]
+        },
+        "truncated": false
       },
+      "output": [
+        {
+          "type": "BreakdownRequest",
+          "summary": "priority high · analyst × en",
+          "data": {
+            "moment": "m:decision_after_scan:H8:0075",
+            "personas": ["analyst"],
+            "languages": ["en"],
+            "priority": "high",
+            "reason": "The look over the shoulder decides the pass."
+          },
+          "truncated": false
+        }
+      ],
+      "reads": ["evidence.card"],
+      "writes": ["request"],
+      "calls": [
+        {
+          "role": "director",
+          "persona": null,
+          "language": null,
+          "source": "llm",
+          "attempts": 1,
+          "ms": 8.4,
+          "error": null
+        }
+      ],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": [],
+      "span_id": null
+    },
+    {
+      "id": "r0.2",
+      "run": 0,
+      "step": "analyst",
+      "round": null,
+      "start_ms": 929.6,
+      "end_ms": 936.6,
+      "source": "llm",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "BreakdownRequest",
+        "summary": "priority high · analyst × en",
+        "data": {
+          "moment": "m:decision_after_scan:H8:0075",
+          "personas": ["analyst"],
+          "languages": ["en"],
+          "priority": "high",
+          "reason": "The look over the shoulder decides the pass."
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "Findings",
+          "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
+          "data": {
+            "findings": {
+              "moment": "m:decision_after_scan:H8:0075",
+              "lens": "scan",
+              "headline": ["scan_before_reception", "belief_error"],
+              "supporting": ["cf_pass", "blind_side"],
+              "angle": "He saw the runner."
+            },
+            "rev": 0
+          },
+          "truncated": false
+        }
+      ],
+      "reads": ["evidence.card", "evidence.run", "evidence.supported"],
+      "writes": ["findings"],
+      "calls": [
+        {
+          "role": "analyst",
+          "persona": null,
+          "language": null,
+          "source": "llm",
+          "attempts": 1,
+          "ms": 5.8,
+          "error": null
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_moment",
+          "arguments": {},
+          "result": "{\"version\":1,\"id\":\"m:decision_after_scan:H8:0075\",\"kind\":\"decision_after_scan\",\"tags\":[\"decision_after_scan\",\"line_breaking_pass\"],\"scenario\":\"blind_side_run\",\"seed\":3,\"live_only\":false,\"frame_start\":0,\"frame_end\":161,\"anchor_frame\":75,\"t_start\":0.0,\"t_end\":6.44,\"anchor_t\":3.0,\"actor\":\"H8\",\"receiver\":\"H9\",\"players\":[\"H8\",\"H9\",\"A10\",\"A2\",\"A3\",\"A4\",\"A5\",\"A6\",\"A7\",\"A8\"],\"anchors\":{\"action\":\"pass:H8:0075\",\"completion\":\"reception:H9:0136\",\"reception\":\"reception:H8:0070\",\"last_scan\":\"scan:H8:0050\"},\"events\":[\"scan:H8:0050\",\"reception:H8:0070\",\"pass:H8:0075\",\"reception:H9:0136\"],\"metrics\":{\"opponents_bypassed\":8,\"pass_distance_m\":38.91,\"pass_progression_m\":38.89,\"pass_speed_mps\":21.77,\"pass_xt_gain\":0.1675,\"scans_in_window\":1,\"scan_window_s\":10.0,\"time_since_last_scan_at_reception_s\":0.0,\"time_to_decision_s\":0.2,\"chosen\":\"pass:H9\",\"chosen_prob\":0.9895,\"options\":11,\"belief_error_receiver_m\":0.28,\"belief_age_receiver_s\":0.44},\"candidate_lenses\":[\"scan\",\"space\",\"pressure\"],\"lenses\":[{\"lens\":\"scan\",\"available\":true,\"delta_xt\":0.166733,\"unit\":\"xT\",\"metrics\":{\"scan_id\":\"scan:H8:0050\",\"belief_update_m\":12.012,\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"decision_changed\":true,\"factual_value_xt\":0.169068,\"counterfactual_value_xt\":0.002335,\"realized_delta_xt\":0.169252,\"p_factual_action_with_scan\":0.989511,\"p_factual_action_without_scan\":0.002232,\"target\":\"H9\",\"belief_error_target_with_scan_m\":0.276,\"belief_error_target_without_scan_m\":12.288},\"rows\":[{\"scan_id\":\"scan:H8:0050\",\"start_frame\":50,\"end_frame\":70,\"belief_update_m\":12.012}],\"evidence\":[\"scan:H8:0050\"],\"note\":\"V(factual choice) - V(choice re-simulated without this scan), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"space\",\"available\":true,\"delta_xt\":0.152006,\"unit\":\"xT\",\"metrics\":{\"chosen\":\"pass:H9\",\"chosen_value_xt\":0.169068,\"chosen_pitch_control\":0.9997,\"best_alternative\":\"pass:H11\",\"best_alternative_value_xt\":0.017062},\"rows\":[{\"action\":\"pass:H1\",\"target_x\":-40.8,\"target_y\":-0.63,\"pitch_control\":1.0,\"xt\":0.0021,\"value_xt\":0.002139},{\"action\":\"pass:H2\",\"target_x\":-4.41,\"target_y\":-27.61,\"pitch_control\":0.9996,\"xt\":0.0032,\"value_xt\":0.003218},{\"action\":\"pass:H3\",\"target_x\":-1.26,\"target_y\":26.07,\"pitch_control\":0.9974,\"xt\":0.0037,\"value_xt\":0.003677},{\"action\":\"pass:H4\",\"target_x\":-17.5,\"target_y\":-9.58,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002335},{\"action\":\"pass:H5\",\"target_x\":-17.37,\"target_y\":7.94,\"pitch_control\":1.0,\"xt\":0.0023,\"value_xt\":0.002295},{\"action\":\"pass:H6\",\"target_x\":-6.64,\"target_y\":1.01,\"pitch_control\":0.884,\"xt\":0.0024,\"value_xt\":0.001622},{\"action\":\"pass:H10\",\"target_x\":5.82,\"target_y\":12.52,\"pitch_control\":0.8028,\"xt\":0.0049,\"value_xt\":0.003433},{\"action\":\"pass:H7\",\"target_x\":14.74,\"target_y\":-29.27,\"pitch_control\":0.9998,\"xt\":0.0059,\"value_xt\":0.00588},{\"action\":\"pass:H11\",\"target_x\":23.64,\"target_y\":24.42,\"pitch_control\":0.991,\"xt\":0.0172,\"value_xt\":0.017062},{\"action\":\"pass:H9\",\"target_x\":39.91,\"target_y\":-10.82,\"pitch_control\":0.9997,\"xt\":0.1691,\"value_xt\":0.169068},{\"action\":\"carry\",\"target_x\":6.87,\"target_y\":-9.72,\"pitch_control\":0.9798,\"xt\":0.0058,\"value_xt\":0.005678}],\"evidence\":[],\"note\":\"V(chosen option) - V(best alternative), V = PC*xT - (1-PC)*xT_opp at the option's target on true positions\"},{\"lens\":\"pressure\",\"available\":true,\"delta_xt\":-0.000064,\"unit\":\"xT\",\"metrics\":{\"pressure_before\":0.00088,\"stake_before_xt\":0.007244,\"cost_before_xt\":6e-6,\"main_presser\":\"A11\",\"pressure_after\":0.000415,\"stake_after_xt\":0.169075,\"cost_after_xt\":0.00007,\"after_frame\":136,\"escaped\":true,\"how\":\"pass completed\"},\"rows\":[],\"evidence\":[\"pass:H8:0075\"],\"note\":\"expected turnover cost (pressing intensity x stake) on the actor at the anchor minus after the action\"}],\"selected_lens\":\"scan\"}",
+          "error": null,
+          "truncated": false
+        },
+        {
+          "name": "run_counterfactual",
+          "arguments": {},
+          "result": "{\"intervention\":\"drop_scan\",\"dropped_scan\":\"scan:H8:0050\",\"factual_action\":\"pass:H9\",\"counterfactual_action\":\"pass:H4\",\"delta_xt\":0.1693}",
+          "error": null,
+          "truncated": false
+        }
+      ],
+      "rejected": [],
+      "rewritten": [],
+      "notes": ["MCP tools called: get_moment, run_counterfactual"],
+      "span_id": null
+    },
+    {
+      "id": "r0.3",
+      "run": 0,
+      "step": "telestrator",
+      "round": null,
+      "start_ms": 938.7,
+      "end_ms": 941.9,
       "source": "template",
-      "errors": [],
-      "rev": 0
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.counterfactual_id",
-    "evidence.frames",
-    "evidence.hero",
-    "evidence.intervention",
-    "evidence.key_scan",
-    "evidence.players",
-    "evidence.rel",
-    "evidence.supported"
-   ],
-   "writes": [
-    "plan"
-   ],
-   "calls": [
-    {
-     "role": "telestrator",
-     "persona": null,
-     "language": null,
-     "source": "template",
-     "attempts": 2,
-     "ms": 2.4,
-     "error": "AgentDown: the telestrator is down"
-    }
-   ],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [],
-   "span_id": null
-  },
-  {
-   "id": "r0.4",
-   "run": 0,
-   "step": "narration",
-   "round": 0,
-   "start_ms": 939.5,
-   "end_ms": 942.6,
-   "source": "llm",
-   "attempts": 2,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "Findings",
-    "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
-    "data": {
-     "findings": {
-      "moment": "m:decision_after_scan:H8:0075",
-      "lens": "scan",
-      "headline": [
-       "scan_before_reception",
-       "belief_error"
-      ],
-      "supporting": [
-       "cf_pass",
-       "blind_side"
-      ],
-      "angle": "He saw the runner."
-     },
-     "rev": 0
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "Drafts",
-     "summary": "round 0 · 1 script · 6 lines",
-     "data": {
-      "round": 0,
-      "scripts": {
-       "analyst/en": [
-        {
-         "id": "L1",
-         "speaker": "pbp",
-         "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
-         "claims": [
-          "scans_before_reception"
-         ]
+      "attempts": 2,
+      "error": "AgentDown: the telestrator is down",
+      "resumed": false,
+      "input": {
+        "type": "Findings",
+        "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
+        "data": {
+          "findings": {
+            "moment": "m:decision_after_scan:H8:0075",
+            "lens": "scan",
+            "headline": ["scan_before_reception", "belief_error"],
+            "supporting": ["cf_pass", "blind_side"],
+            "angle": "He saw the runner."
+          },
+          "rev": 0
         },
-        {
-         "id": "L2",
-         "speaker": "color",
-         "text": "{runner} ran on the blind side of {player} today.",
-         "claims": [
-          "blind_side"
-         ]
-        },
-        {
-         "id": "L3",
-         "speaker": "color",
-         "text": "That look was worth {dxt} in expected threat.",
-         "claims": [
-          "cf_value"
-         ]
-        },
-        {
-         "id": "L4",
-         "speaker": "color",
-         "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
-         "claims": [
-          "belief_error"
-         ]
-        },
-        {
-         "id": "L5",
-         "speaker": "color",
-         "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
-         "claims": [
-          "pass_success"
-         ]
-        },
-        {
-         "id": "L6",
-         "speaker": "color",
-         "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
-         "claims": [
-          "observed_share"
-         ]
-        }
-       ]
-      }
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.claims",
-    "evidence.run",
-    "evidence.supported"
-   ],
-   "writes": [
-    "drafts"
-   ],
-   "calls": [
-    {
-     "role": "pbp",
-     "persona": "analyst",
-     "language": "en",
-     "source": "llm",
-     "attempts": 1,
-     "ms": 0.5,
-     "error": null
-    },
-    {
-     "role": "color",
-     "persona": "analyst",
-     "language": "en",
-     "source": "llm",
-     "attempts": 1,
-     "ms": 0.7,
-     "error": null
-    }
-   ],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [],
-   "span_id": null
-  },
-  {
-   "id": "r0.5",
-   "run": 0,
-   "step": "verifier",
-   "round": 0,
-   "start_ms": 945.6,
-   "end_ms": 948.4,
-   "source": "code",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "Drafts",
-    "summary": "round 0 · 1 script · 6 lines",
-    "data": {
-     "round": 0,
-     "scripts": {
-      "analyst/en": [
-       {
-        "id": "L1",
-        "speaker": "pbp",
-        "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
-        "claims": [
-         "scans_before_reception"
-        ]
-       },
-       {
-        "id": "L2",
-        "speaker": "color",
-        "text": "{runner} ran on the blind side of {player} today.",
-        "claims": [
-         "blind_side"
-        ]
-       },
-       {
-        "id": "L3",
-        "speaker": "color",
-        "text": "That look was worth {dxt} in expected threat.",
-        "claims": [
-         "cf_value"
-        ]
-       },
-       {
-        "id": "L4",
-        "speaker": "color",
-        "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
-        "claims": [
-         "belief_error"
-        ]
-       },
-       {
-        "id": "L5",
-        "speaker": "color",
-        "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
-        "claims": [
-         "pass_success"
-        ]
-       },
-       {
-        "id": "L6",
-        "speaker": "color",
-        "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
-        "claims": [
-         "observed_share"
-        ]
-       }
-      ]
-     }
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "Rewrite",
-     "summary": "1 line sent back for a rewrite",
-     "data": {
-      "round": 0,
-      "failed": {
-       "analyst/en": [
-        {
-         "id": "L2",
-         "speaker": "color",
-         "text": "{runner} ran on the blind side of {player} today.",
-         "claims": [
-          "blind_side"
-         ],
-         "problems": [
-          "stale_claim: blind_side: changed after verification"
-         ]
-        }
-       ]
-      }
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.claims",
-    "evidence.names",
-    "evidence.supported",
-    "evidence.verdicts"
-   ],
-   "writes": [
-    "verdicts"
-   ],
-   "calls": [],
-   "tools": [],
-   "rejected": [
-    {
-     "persona": "analyst",
-     "language": "en",
-     "line": "L2",
-     "speaker": "color",
-     "text": "{runner} ran on the blind side of {player} today.",
-     "problems": [
-      "stale_claim: blind_side: changed after verification"
-     ]
-    }
-   ],
-   "rewritten": [],
-   "notes": [
-    "1 line sent back to the voices that wrote them (rewrite 1 of at most 2)"
-   ],
-   "span_id": null
-  },
-  {
-   "id": "r0.6",
-   "run": 0,
-   "step": "narration",
-   "round": 1,
-   "start_ms": 951.3,
-   "end_ms": 952.5,
-   "source": "llm",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "Rewrite",
-    "summary": "1 line sent back for a rewrite",
-    "data": {
-     "round": 0,
-     "failed": {
-      "analyst/en": [
-       {
-        "id": "L2",
-        "speaker": "color",
-        "text": "{runner} ran on the blind side of {player} today.",
-        "claims": [
-         "blind_side"
-        ],
-        "problems": [
-         "stale_claim: blind_side: changed after verification"
-        ]
-       }
-      ]
-     }
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "Drafts",
-     "summary": "round 1 · 1 script · 6 lines",
-     "data": {
-      "round": 1,
-      "scripts": {
-       "analyst/en": [
-        {
-         "id": "L1",
-         "speaker": "pbp",
-         "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
-         "claims": [
-          "scans_before_reception"
-         ]
-        },
-        {
-         "id": "L2",
-         "speaker": "color",
-         "text": "Without that look, {player} would have passed to {cf_receiver}.",
-         "claims": [
-          "cf_pass"
-         ]
-        },
-        {
-         "id": "L3",
-         "speaker": "color",
-         "text": "That look was worth {dxt} in expected threat.",
-         "claims": [
-          "cf_value"
-         ]
-        },
-        {
-         "id": "L4",
-         "speaker": "color",
-         "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
-         "claims": [
-          "belief_error"
-         ]
-        },
-        {
-         "id": "L5",
-         "speaker": "color",
-         "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
-         "claims": [
-          "pass_success"
-         ]
-        },
-        {
-         "id": "L6",
-         "speaker": "color",
-         "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
-         "claims": [
-          "observed_share"
-         ]
-        }
-       ]
-      }
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.claims",
-    "evidence.supported"
-   ],
-   "writes": [
-    "drafts"
-   ],
-   "calls": [
-    {
-     "role": "color",
-     "persona": "analyst",
-     "language": "en",
-     "source": "llm",
-     "attempts": 1,
-     "ms": 0.3,
-     "error": null
-    }
-   ],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [
-    {
-     "persona": "analyst",
-     "language": "en",
-     "line": "L2",
-     "speaker": "color",
-     "before": "{runner} ran on the blind side of {player} today.",
-     "after": "Without that look, {player} would have passed to {cf_receiver}.",
-     "claims_before": [
-      "blind_side"
-     ],
-     "claims_after": [
-      "cf_pass"
-     ]
-    }
-   ],
-   "notes": [
-    "1 of 1 voices rewrote their lines"
-   ],
-   "span_id": null
-  },
-  {
-   "id": "r0.7",
-   "run": 0,
-   "step": "verifier",
-   "round": 1,
-   "start_ms": 956.1,
-   "end_ms": 959.1,
-   "source": "code",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "Drafts",
-    "summary": "round 1 · 1 script · 6 lines",
-    "data": {
-     "round": 1,
-     "scripts": {
-      "analyst/en": [
-       {
-        "id": "L1",
-        "speaker": "pbp",
-        "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
-        "claims": [
-         "scans_before_reception"
-        ]
-       },
-       {
-        "id": "L2",
-        "speaker": "color",
-        "text": "Without that look, {player} would have passed to {cf_receiver}.",
-        "claims": [
-         "cf_pass"
-        ]
-       },
-       {
-        "id": "L3",
-        "speaker": "color",
-        "text": "That look was worth {dxt} in expected threat.",
-        "claims": [
-         "cf_value"
-        ]
-       },
-       {
-        "id": "L4",
-        "speaker": "color",
-        "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
-        "claims": [
-         "belief_error"
-        ]
-       },
-       {
-        "id": "L5",
-        "speaker": "color",
-        "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
-        "claims": [
-         "pass_success"
-        ]
-       },
-       {
-        "id": "L6",
-        "speaker": "color",
-        "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
-        "claims": [
-         "observed_share"
-        ]
-       }
-      ]
-     }
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "Approved",
-     "summary": "1 script · 6 aired · 0 dropped",
-     "data": {
-      "scripts": [
-       {
-        "persona": "analyst",
-        "language": "en",
-        "lines": [
-         "L1",
-         "L2",
-         "L3",
-         "L4",
-         "L5",
-         "L6"
-        ],
-        "rewrites": 1,
-        "dropped": []
-       }
-      ],
-      "rev": 0
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.claims",
-    "evidence.names",
-    "evidence.supported",
-    "evidence.verdicts"
-   ],
-   "writes": [
-    "scripts"
-   ],
-   "calls": [],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [],
-   "span_id": null
-  },
-  {
-   "id": "r0.8",
-   "run": 0,
-   "step": "voice",
-   "round": null,
-   "start_ms": 963.1,
-   "end_ms": 963.6,
-   "source": "code",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "Approved",
-    "summary": "1 script · 6 aired · 0 dropped",
-    "data": {
-     "scripts": [
-      {
-       "persona": "analyst",
-       "language": "en",
-       "lines": [
-        "L1",
-        "L2",
-        "L3",
-        "L4",
-        "L5",
-        "L6"
-       ],
-       "rewrites": 1,
-       "dropped": []
-      }
-     ],
-     "rev": 0
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "BreakdownResult",
-     "summary": "tier clutch · 6 voice cues",
-     "data": {
-      "tier": "clutch",
-      "scripts": [
-       {
-        "persona": "analyst",
-        "language": "en",
-        "cues": [
-         {
-          "line": "L1",
-          "speaker": "pbp",
-          "t": 0.2,
-          "voice": "en-US-GuyNeural",
-          "style": "newscast"
-         },
-         {
-          "line": "L2",
-          "speaker": "color",
-          "t": 1.67,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L3",
-          "speaker": "color",
-          "t": 3.13,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L4",
-          "speaker": "color",
-          "t": 4.6,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L5",
-          "speaker": "color",
-          "t": 6.07,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L6",
-          "speaker": "color",
-          "t": 7.53,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         }
-        ]
-       }
-      ]
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.hero"
-   ],
-   "writes": [
-    "voice"
-   ],
-   "calls": [],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [
-    "tier clutch",
-    "joined with the plan it already held (rev 0)"
-   ],
-   "span_id": null
-  },
-  {
-   "id": "r1.0",
-   "run": 1,
-   "step": "mcp",
-   "round": null,
-   "start_ms": 0.1,
-   "end_ms": 850.4,
-   "source": "code",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": null,
-   "output": [
-    {
-     "type": "MCPStdioTool",
-     "summary": "our MCP server over stdio: 10 tools",
-     "data": {
-      "tools": [
-       "get_moment",
-       "list_claims",
-       "get_vision",
-       "get_pitch_control",
-       "get_xt",
-       "get_pressing",
-       "get_live_stats",
-       "run_counterfactual",
-       "list_options",
-       "what_if"
-      ]
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [],
-   "writes": [],
-   "calls": [],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [],
-   "span_id": null
-  },
-  {
-   "id": "r1.1",
-   "run": 1,
-   "step": "telestrator",
-   "round": null,
-   "start_ms": 859.6,
-   "end_ms": 860.9,
-   "source": "llm",
-   "attempts": 1,
-   "error": null,
-   "resumed": true,
-   "input": {
-    "type": "Findings",
-    "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
-    "data": {
-     "findings": {
-      "moment": "m:decision_after_scan:H8:0075",
-      "lens": "scan",
-      "headline": [
-       "scan_before_reception",
-       "belief_error"
-      ],
-      "supporting": [
-       "cf_pass",
-       "blind_side"
-      ],
-      "angle": "He saw the runner."
-     },
-     "rev": 0
-    },
-    "truncated": false
-   },
-   "output": [
-    {
-     "type": "TelestrationPlan",
-     "summary": "10 steps · from the Telestrator agent",
-     "data": {
-      "plan": {
-       "moment": "m:decision_after_scan:H8:0075",
-       "duration_s": 10.0,
-       "steps": [
-        {
-         "t": 0.0,
-         "do": "freeze"
-        },
-        {
-         "t": 0.4,
-         "do": "rewind",
-         "to": -1.6
-        },
-        {
-         "t": 0.6,
-         "do": "zone",
-         "layer": "vision",
-         "player": "H8"
-        },
-        {
-         "t": 0.8,
-         "do": "camera",
-         "mode": "pov"
-        },
-        {
-         "t": 1.2,
-         "do": "pov",
-         "player": "H8",
-         "from": -1.6,
-         "to": 0.0,
-         "speed": 0.5
-        },
-        {
-         "t": 1.4,
-         "do": "scan_marker",
-         "scan": "scan:H8:0050"
-        },
-        {
-         "t": 1.6,
-         "do": "ghost",
-         "kind": "belief"
-        },
-        {
-         "t": 4.8,
-         "do": "camera",
-         "mode": "split"
-        },
-        {
-         "t": 5.0,
-         "do": "play",
-         "to": 2.0,
-         "speed": 1.0
-        },
-        {
-         "t": 7.4,
-         "do": "ghost",
-         "kind": "counterfactual",
-         "cf": "cf1"
-        }
-       ]
+        "truncated": false
       },
-      "source": "agent",
-      "errors": [],
-      "rev": 0
-     },
-     "truncated": false
-    }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.counterfactual_id",
-    "evidence.frames",
-    "evidence.hero",
-    "evidence.intervention",
-    "evidence.key_scan",
-    "evidence.players",
-    "evidence.rel",
-    "evidence.scans",
-    "evidence.supported"
-   ],
-   "writes": [
-    "plan"
-   ],
-   "calls": [
-    {
-     "role": "telestrator",
-     "persona": null,
-     "language": null,
-     "source": "llm",
-     "attempts": 1,
-     "ms": 0.7,
-     "error": null
-    }
-   ],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [
-    "re-run from the checkpoint: the agent is back"
-   ],
-   "span_id": null
-  },
-  {
-   "id": "r1.2",
-   "run": 1,
-   "step": "voice",
-   "round": null,
-   "start_ms": 868.1,
-   "end_ms": 868.8,
-   "source": "code",
-   "attempts": 1,
-   "error": null,
-   "resumed": false,
-   "input": {
-    "type": "TelestrationPlan",
-    "summary": "10 steps · from the Telestrator agent",
-    "data": {
-     "plan": {
-      "moment": "m:decision_after_scan:H8:0075",
-      "duration_s": 10.0,
-      "steps": [
-       {
-        "t": 0.0,
-        "do": "freeze"
-       },
-       {
-        "t": 0.4,
-        "do": "rewind",
-        "to": -1.6
-       },
-       {
-        "t": 0.6,
-        "do": "zone",
-        "layer": "vision",
-        "player": "H8"
-       },
-       {
-        "t": 0.8,
-        "do": "camera",
-        "mode": "pov"
-       },
-       {
-        "t": 1.2,
-        "do": "pov",
-        "player": "H8",
-        "from": -1.6,
-        "to": 0.0,
-        "speed": 0.5
-       },
-       {
-        "t": 1.4,
-        "do": "scan_marker",
-        "scan": "scan:H8:0050"
-       },
-       {
-        "t": 1.6,
-        "do": "ghost",
-        "kind": "belief"
-       },
-       {
-        "t": 4.8,
-        "do": "camera",
-        "mode": "split"
-       },
-       {
-        "t": 5.0,
-        "do": "play",
-        "to": 2.0,
-        "speed": 1.0
-       },
-       {
-        "t": 7.4,
-        "do": "ghost",
-        "kind": "counterfactual",
-        "cf": "cf1"
-       }
-      ]
-     },
-     "source": "agent",
-     "errors": [],
-     "rev": 0
+      "output": [
+        {
+          "type": "TelestrationPlan",
+          "summary": "10 steps · from its template",
+          "data": {
+            "plan": {
+              "moment": "m:decision_after_scan:H8:0075",
+              "duration_s": 10.0,
+              "steps": [
+                {
+                  "t": 0.0,
+                  "do": "freeze"
+                },
+                {
+                  "t": 0.4,
+                  "do": "rewind",
+                  "to": -1.6
+                },
+                {
+                  "t": 0.6,
+                  "do": "zone",
+                  "layer": "vision",
+                  "player": "H8"
+                },
+                {
+                  "t": 0.8,
+                  "do": "camera",
+                  "mode": "pov"
+                },
+                {
+                  "t": 1.2,
+                  "do": "pov",
+                  "player": "H8",
+                  "from": -1.6,
+                  "to": 0.0,
+                  "speed": 0.5
+                },
+                {
+                  "t": 1.4,
+                  "do": "scan_marker",
+                  "scan": "scan:H8:0050"
+                },
+                {
+                  "t": 1.6,
+                  "do": "ghost",
+                  "kind": "belief"
+                },
+                {
+                  "t": 4.8,
+                  "do": "camera",
+                  "mode": "split"
+                },
+                {
+                  "t": 5.0,
+                  "do": "play",
+                  "to": 2.0,
+                  "speed": 1.0
+                },
+                {
+                  "t": 7.4,
+                  "do": "ghost",
+                  "kind": "counterfactual",
+                  "cf": "cf1"
+                }
+              ]
+            },
+            "source": "template",
+            "errors": [],
+            "rev": 0
+          },
+          "truncated": false
+        }
+      ],
+      "reads": [
+        "evidence.card",
+        "evidence.counterfactual_id",
+        "evidence.frames",
+        "evidence.hero",
+        "evidence.intervention",
+        "evidence.key_scan",
+        "evidence.players",
+        "evidence.rel",
+        "evidence.supported"
+      ],
+      "writes": ["plan"],
+      "calls": [
+        {
+          "role": "telestrator",
+          "persona": null,
+          "language": null,
+          "source": "template",
+          "attempts": 2,
+          "ms": 2.4,
+          "error": "AgentDown: the telestrator is down"
+        }
+      ],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": [],
+      "span_id": null
     },
-    "truncated": false
-   },
-   "output": [
     {
-     "type": "BreakdownResult",
-     "summary": "tier clutch · 6 voice cues",
-     "data": {
-      "tier": "clutch",
-      "scripts": [
-       {
-        "persona": "analyst",
-        "language": "en",
-        "cues": [
-         {
-          "line": "L1",
-          "speaker": "pbp",
-          "t": 0.2,
-          "voice": "en-US-GuyNeural",
-          "style": "newscast"
-         },
-         {
+      "id": "r0.4",
+      "run": 0,
+      "step": "narration",
+      "round": 0,
+      "start_ms": 939.5,
+      "end_ms": 942.6,
+      "source": "llm",
+      "attempts": 2,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "Findings",
+        "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
+        "data": {
+          "findings": {
+            "moment": "m:decision_after_scan:H8:0075",
+            "lens": "scan",
+            "headline": ["scan_before_reception", "belief_error"],
+            "supporting": ["cf_pass", "blind_side"],
+            "angle": "He saw the runner."
+          },
+          "rev": 0
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "Drafts",
+          "summary": "round 0 · 1 script · 6 lines",
+          "data": {
+            "round": 0,
+            "scripts": {
+              "analyst/en": [
+                {
+                  "id": "L1",
+                  "speaker": "pbp",
+                  "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+                  "claims": ["scans_before_reception"]
+                },
+                {
+                  "id": "L2",
+                  "speaker": "color",
+                  "text": "{runner} ran on the blind side of {player} today.",
+                  "claims": ["blind_side"]
+                },
+                {
+                  "id": "L3",
+                  "speaker": "color",
+                  "text": "That look was worth {dxt} in expected threat.",
+                  "claims": ["cf_value"]
+                },
+                {
+                  "id": "L4",
+                  "speaker": "color",
+                  "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
+                  "claims": ["belief_error"]
+                },
+                {
+                  "id": "L5",
+                  "speaker": "color",
+                  "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+                  "claims": ["pass_success"]
+                },
+                {
+                  "id": "L6",
+                  "speaker": "color",
+                  "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
+                  "claims": ["observed_share"]
+                }
+              ]
+            }
+          },
+          "truncated": false
+        }
+      ],
+      "reads": ["evidence.card", "evidence.claims", "evidence.run", "evidence.supported"],
+      "writes": ["drafts"],
+      "calls": [
+        {
+          "role": "pbp",
+          "persona": "analyst",
+          "language": "en",
+          "source": "llm",
+          "attempts": 1,
+          "ms": 0.5,
+          "error": null
+        },
+        {
+          "role": "color",
+          "persona": "analyst",
+          "language": "en",
+          "source": "llm",
+          "attempts": 1,
+          "ms": 0.7,
+          "error": null
+        }
+      ],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": [],
+      "span_id": null
+    },
+    {
+      "id": "r0.5",
+      "run": 0,
+      "step": "verifier",
+      "round": 0,
+      "start_ms": 945.6,
+      "end_ms": 948.4,
+      "source": "code",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "Drafts",
+        "summary": "round 0 · 1 script · 6 lines",
+        "data": {
+          "round": 0,
+          "scripts": {
+            "analyst/en": [
+              {
+                "id": "L1",
+                "speaker": "pbp",
+                "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+                "claims": ["scans_before_reception"]
+              },
+              {
+                "id": "L2",
+                "speaker": "color",
+                "text": "{runner} ran on the blind side of {player} today.",
+                "claims": ["blind_side"]
+              },
+              {
+                "id": "L3",
+                "speaker": "color",
+                "text": "That look was worth {dxt} in expected threat.",
+                "claims": ["cf_value"]
+              },
+              {
+                "id": "L4",
+                "speaker": "color",
+                "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
+                "claims": ["belief_error"]
+              },
+              {
+                "id": "L5",
+                "speaker": "color",
+                "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+                "claims": ["pass_success"]
+              },
+              {
+                "id": "L6",
+                "speaker": "color",
+                "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
+                "claims": ["observed_share"]
+              }
+            ]
+          }
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "Rewrite",
+          "summary": "1 line sent back for a rewrite",
+          "data": {
+            "round": 0,
+            "failed": {
+              "analyst/en": [
+                {
+                  "id": "L2",
+                  "speaker": "color",
+                  "text": "{runner} ran on the blind side of {player} today.",
+                  "claims": ["blind_side"],
+                  "problems": ["stale_claim: blind_side: changed after verification"]
+                }
+              ]
+            }
+          },
+          "truncated": false
+        }
+      ],
+      "reads": [
+        "evidence.card",
+        "evidence.claims",
+        "evidence.names",
+        "evidence.supported",
+        "evidence.verdicts"
+      ],
+      "writes": ["verdicts"],
+      "calls": [],
+      "tools": [],
+      "rejected": [
+        {
+          "persona": "analyst",
+          "language": "en",
           "line": "L2",
           "speaker": "color",
-          "t": 1.67,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L3",
+          "text": "{runner} ran on the blind side of {player} today.",
+          "problems": ["stale_claim: blind_side: changed after verification"]
+        }
+      ],
+      "rewritten": [],
+      "notes": ["1 line sent back to the voices that wrote them (rewrite 1 of at most 2)"],
+      "span_id": null
+    },
+    {
+      "id": "r0.6",
+      "run": 0,
+      "step": "narration",
+      "round": 1,
+      "start_ms": 951.3,
+      "end_ms": 952.5,
+      "source": "llm",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "Rewrite",
+        "summary": "1 line sent back for a rewrite",
+        "data": {
+          "round": 0,
+          "failed": {
+            "analyst/en": [
+              {
+                "id": "L2",
+                "speaker": "color",
+                "text": "{runner} ran on the blind side of {player} today.",
+                "claims": ["blind_side"],
+                "problems": ["stale_claim: blind_side: changed after verification"]
+              }
+            ]
+          }
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "Drafts",
+          "summary": "round 1 · 1 script · 6 lines",
+          "data": {
+            "round": 1,
+            "scripts": {
+              "analyst/en": [
+                {
+                  "id": "L1",
+                  "speaker": "pbp",
+                  "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+                  "claims": ["scans_before_reception"]
+                },
+                {
+                  "id": "L2",
+                  "speaker": "color",
+                  "text": "Without that look, {player} would have passed to {cf_receiver}.",
+                  "claims": ["cf_pass"]
+                },
+                {
+                  "id": "L3",
+                  "speaker": "color",
+                  "text": "That look was worth {dxt} in expected threat.",
+                  "claims": ["cf_value"]
+                },
+                {
+                  "id": "L4",
+                  "speaker": "color",
+                  "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
+                  "claims": ["belief_error"]
+                },
+                {
+                  "id": "L5",
+                  "speaker": "color",
+                  "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+                  "claims": ["pass_success"]
+                },
+                {
+                  "id": "L6",
+                  "speaker": "color",
+                  "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
+                  "claims": ["observed_share"]
+                }
+              ]
+            }
+          },
+          "truncated": false
+        }
+      ],
+      "reads": ["evidence.card", "evidence.claims", "evidence.supported"],
+      "writes": ["drafts"],
+      "calls": [
+        {
+          "role": "color",
+          "persona": "analyst",
+          "language": "en",
+          "source": "llm",
+          "attempts": 1,
+          "ms": 0.3,
+          "error": null
+        }
+      ],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [
+        {
+          "persona": "analyst",
+          "language": "en",
+          "line": "L2",
           "speaker": "color",
-          "t": 3.13,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L4",
-          "speaker": "color",
-          "t": 4.6,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L5",
-          "speaker": "color",
-          "t": 6.07,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         },
-         {
-          "line": "L6",
-          "speaker": "color",
-          "t": 7.53,
-          "voice": "en-US-DavisNeural",
-          "style": null
-         }
-        ]
-       }
-      ]
-     },
-     "truncated": false
+          "before": "{runner} ran on the blind side of {player} today.",
+          "after": "Without that look, {player} would have passed to {cf_receiver}.",
+          "claims_before": ["blind_side"],
+          "claims_after": ["cf_pass"]
+        }
+      ],
+      "notes": ["1 of 1 voices rewrote their lines"],
+      "span_id": null
+    },
+    {
+      "id": "r0.7",
+      "run": 0,
+      "step": "verifier",
+      "round": 1,
+      "start_ms": 956.1,
+      "end_ms": 959.1,
+      "source": "code",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "Drafts",
+        "summary": "round 1 · 1 script · 6 lines",
+        "data": {
+          "round": 1,
+          "scripts": {
+            "analyst/en": [
+              {
+                "id": "L1",
+                "speaker": "pbp",
+                "text": "{player} scanned {n:times} in the {window_s|second|seconds} before receiving.",
+                "claims": ["scans_before_reception"]
+              },
+              {
+                "id": "L2",
+                "speaker": "color",
+                "text": "Without that look, {player} would have passed to {cf_receiver}.",
+                "claims": ["cf_pass"]
+              },
+              {
+                "id": "L3",
+                "speaker": "color",
+                "text": "That look was worth {dxt} in expected threat.",
+                "claims": ["cf_value"]
+              },
+              {
+                "id": "L4",
+                "speaker": "color",
+                "text": "When he played the pass, {player}'s picture of {runner} was off by {err|metre|metres}.",
+                "claims": ["belief_error"]
+              },
+              {
+                "id": "L5",
+                "speaker": "color",
+                "text": "{player} thought the pass to {receiver} had a {p_belief} chance of arriving; it was {p_true}.",
+                "claims": ["pass_success"]
+              },
+              {
+                "id": "L6",
+                "speaker": "color",
+                "text": "In the {window_s|second|seconds} before receiving, {player} saw {share}% of the space the opponents controlled.",
+                "claims": ["observed_share"]
+              }
+            ]
+          }
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "Approved",
+          "summary": "1 script · 6 aired · 0 dropped",
+          "data": {
+            "scripts": [
+              {
+                "persona": "analyst",
+                "language": "en",
+                "lines": ["L1", "L2", "L3", "L4", "L5", "L6"],
+                "rewrites": 1,
+                "dropped": []
+              }
+            ],
+            "rev": 0
+          },
+          "truncated": false
+        }
+      ],
+      "reads": [
+        "evidence.card",
+        "evidence.claims",
+        "evidence.names",
+        "evidence.supported",
+        "evidence.verdicts"
+      ],
+      "writes": ["scripts"],
+      "calls": [],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": [],
+      "span_id": null
+    },
+    {
+      "id": "r0.8",
+      "run": 0,
+      "step": "voice",
+      "round": null,
+      "start_ms": 963.1,
+      "end_ms": 963.6,
+      "source": "code",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "Approved",
+        "summary": "1 script · 6 aired · 0 dropped",
+        "data": {
+          "scripts": [
+            {
+              "persona": "analyst",
+              "language": "en",
+              "lines": ["L1", "L2", "L3", "L4", "L5", "L6"],
+              "rewrites": 1,
+              "dropped": []
+            }
+          ],
+          "rev": 0
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "BreakdownResult",
+          "summary": "tier clutch · 6 voice cues",
+          "data": {
+            "tier": "clutch",
+            "scripts": [
+              {
+                "persona": "analyst",
+                "language": "en",
+                "cues": [
+                  {
+                    "line": "L1",
+                    "speaker": "pbp",
+                    "t": 0.2,
+                    "voice": "en-US-GuyNeural",
+                    "style": "newscast"
+                  },
+                  {
+                    "line": "L2",
+                    "speaker": "color",
+                    "t": 1.67,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L3",
+                    "speaker": "color",
+                    "t": 3.13,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L4",
+                    "speaker": "color",
+                    "t": 4.6,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L5",
+                    "speaker": "color",
+                    "t": 6.07,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L6",
+                    "speaker": "color",
+                    "t": 7.53,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  }
+                ]
+              }
+            ]
+          },
+          "truncated": false
+        }
+      ],
+      "reads": ["evidence.card", "evidence.hero"],
+      "writes": ["voice"],
+      "calls": [],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": ["tier clutch", "joined with the plan it already held (rev 0)"],
+      "span_id": null
+    },
+    {
+      "id": "r1.0",
+      "run": 1,
+      "step": "mcp",
+      "round": null,
+      "start_ms": 0.1,
+      "end_ms": 850.4,
+      "source": "code",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": null,
+      "output": [
+        {
+          "type": "MCPStdioTool",
+          "summary": "our MCP server over stdio: 10 tools",
+          "data": {
+            "tools": [
+              "get_moment",
+              "list_claims",
+              "get_vision",
+              "get_pitch_control",
+              "get_xt",
+              "get_pressing",
+              "get_live_stats",
+              "run_counterfactual",
+              "list_options",
+              "what_if"
+            ]
+          },
+          "truncated": false
+        }
+      ],
+      "reads": [],
+      "writes": [],
+      "calls": [],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": [],
+      "span_id": null
+    },
+    {
+      "id": "r1.1",
+      "run": 1,
+      "step": "telestrator",
+      "round": null,
+      "start_ms": 859.6,
+      "end_ms": 860.9,
+      "source": "llm",
+      "attempts": 1,
+      "error": null,
+      "resumed": true,
+      "input": {
+        "type": "Findings",
+        "summary": "lens scan · headline scan_before_reception, belief_error · rev 0",
+        "data": {
+          "findings": {
+            "moment": "m:decision_after_scan:H8:0075",
+            "lens": "scan",
+            "headline": ["scan_before_reception", "belief_error"],
+            "supporting": ["cf_pass", "blind_side"],
+            "angle": "He saw the runner."
+          },
+          "rev": 0
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "TelestrationPlan",
+          "summary": "10 steps · from the Telestrator agent",
+          "data": {
+            "plan": {
+              "moment": "m:decision_after_scan:H8:0075",
+              "duration_s": 10.0,
+              "steps": [
+                {
+                  "t": 0.0,
+                  "do": "freeze"
+                },
+                {
+                  "t": 0.4,
+                  "do": "rewind",
+                  "to": -1.6
+                },
+                {
+                  "t": 0.6,
+                  "do": "zone",
+                  "layer": "vision",
+                  "player": "H8"
+                },
+                {
+                  "t": 0.8,
+                  "do": "camera",
+                  "mode": "pov"
+                },
+                {
+                  "t": 1.2,
+                  "do": "pov",
+                  "player": "H8",
+                  "from": -1.6,
+                  "to": 0.0,
+                  "speed": 0.5
+                },
+                {
+                  "t": 1.4,
+                  "do": "scan_marker",
+                  "scan": "scan:H8:0050"
+                },
+                {
+                  "t": 1.6,
+                  "do": "ghost",
+                  "kind": "belief"
+                },
+                {
+                  "t": 4.8,
+                  "do": "camera",
+                  "mode": "split"
+                },
+                {
+                  "t": 5.0,
+                  "do": "play",
+                  "to": 2.0,
+                  "speed": 1.0
+                },
+                {
+                  "t": 7.4,
+                  "do": "ghost",
+                  "kind": "counterfactual",
+                  "cf": "cf1"
+                }
+              ]
+            },
+            "source": "agent",
+            "errors": [],
+            "rev": 0
+          },
+          "truncated": false
+        }
+      ],
+      "reads": [
+        "evidence.card",
+        "evidence.counterfactual_id",
+        "evidence.frames",
+        "evidence.hero",
+        "evidence.intervention",
+        "evidence.key_scan",
+        "evidence.players",
+        "evidence.rel",
+        "evidence.scans",
+        "evidence.supported"
+      ],
+      "writes": ["plan"],
+      "calls": [
+        {
+          "role": "telestrator",
+          "persona": null,
+          "language": null,
+          "source": "llm",
+          "attempts": 1,
+          "ms": 0.7,
+          "error": null
+        }
+      ],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": ["re-run from the checkpoint: the agent is back"],
+      "span_id": null
+    },
+    {
+      "id": "r1.2",
+      "run": 1,
+      "step": "voice",
+      "round": null,
+      "start_ms": 868.1,
+      "end_ms": 868.8,
+      "source": "code",
+      "attempts": 1,
+      "error": null,
+      "resumed": false,
+      "input": {
+        "type": "TelestrationPlan",
+        "summary": "10 steps · from the Telestrator agent",
+        "data": {
+          "plan": {
+            "moment": "m:decision_after_scan:H8:0075",
+            "duration_s": 10.0,
+            "steps": [
+              {
+                "t": 0.0,
+                "do": "freeze"
+              },
+              {
+                "t": 0.4,
+                "do": "rewind",
+                "to": -1.6
+              },
+              {
+                "t": 0.6,
+                "do": "zone",
+                "layer": "vision",
+                "player": "H8"
+              },
+              {
+                "t": 0.8,
+                "do": "camera",
+                "mode": "pov"
+              },
+              {
+                "t": 1.2,
+                "do": "pov",
+                "player": "H8",
+                "from": -1.6,
+                "to": 0.0,
+                "speed": 0.5
+              },
+              {
+                "t": 1.4,
+                "do": "scan_marker",
+                "scan": "scan:H8:0050"
+              },
+              {
+                "t": 1.6,
+                "do": "ghost",
+                "kind": "belief"
+              },
+              {
+                "t": 4.8,
+                "do": "camera",
+                "mode": "split"
+              },
+              {
+                "t": 5.0,
+                "do": "play",
+                "to": 2.0,
+                "speed": 1.0
+              },
+              {
+                "t": 7.4,
+                "do": "ghost",
+                "kind": "counterfactual",
+                "cf": "cf1"
+              }
+            ]
+          },
+          "source": "agent",
+          "errors": [],
+          "rev": 0
+        },
+        "truncated": false
+      },
+      "output": [
+        {
+          "type": "BreakdownResult",
+          "summary": "tier clutch · 6 voice cues",
+          "data": {
+            "tier": "clutch",
+            "scripts": [
+              {
+                "persona": "analyst",
+                "language": "en",
+                "cues": [
+                  {
+                    "line": "L1",
+                    "speaker": "pbp",
+                    "t": 0.2,
+                    "voice": "en-US-GuyNeural",
+                    "style": "newscast"
+                  },
+                  {
+                    "line": "L2",
+                    "speaker": "color",
+                    "t": 1.67,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L3",
+                    "speaker": "color",
+                    "t": 3.13,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L4",
+                    "speaker": "color",
+                    "t": 4.6,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L5",
+                    "speaker": "color",
+                    "t": 6.07,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  },
+                  {
+                    "line": "L6",
+                    "speaker": "color",
+                    "t": 7.53,
+                    "voice": "en-US-DavisNeural",
+                    "style": null
+                  }
+                ]
+              }
+            ]
+          },
+          "truncated": false
+        }
+      ],
+      "reads": ["evidence.card", "evidence.hero"],
+      "writes": ["voice"],
+      "calls": [],
+      "tools": [],
+      "rejected": [],
+      "rewritten": [],
+      "notes": ["tier clutch", "joined with the approved scripts it already held (rev 0)"],
+      "span_id": null
     }
-   ],
-   "reads": [
-    "evidence.card",
-    "evidence.hero"
-   ],
-   "writes": [
-    "voice"
-   ],
-   "calls": [],
-   "tools": [],
-   "rejected": [],
-   "rewritten": [],
-   "notes": [
-    "tier clutch",
-    "joined with the approved scripts it already held (rev 0)"
-   ],
-   "span_id": null
-  }
- ],
- "events": [
-  {
-   "run": 0,
-   "t_ms": 0.0,
-   "kind": "down",
-   "step": "telestrator",
-   "detail": "taken down for this run: its model calls fail as in an outage, so no model is called for it",
-   "checkpoint": null,
-   "superstep": null,
-   "keys": []
-  },
-  {
-   "run": 0,
-   "t_ms": 918.2,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 0",
-   "checkpoint": "581877dc-727d-479a-bea5-22df5a316d2f",
-   "superstep": 0,
-   "keys": [
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 928.6,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 1",
-   "checkpoint": "b9778549-05c6-449c-aa95-42e64df5356f",
-   "superstep": 1,
-   "keys": [
-    "request",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 937.2,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 2",
-   "checkpoint": "f59d019c-8aa7-4ecf-80fd-4911fc32a1f2",
-   "superstep": 2,
-   "keys": [
-    "findings",
-    "request",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 941.8,
-   "kind": "fallback",
-   "step": "telestrator",
-   "detail": "ran on its template after 2 attempts: AgentDown",
-   "checkpoint": null,
-   "superstep": null,
-   "keys": []
-  },
-  {
-   "run": 0,
-   "t_ms": 941.9,
-   "kind": "waiting",
-   "step": "telestrator",
-   "detail": "asks to be brought back (workflow request down:telestrator)",
-   "checkpoint": null,
-   "superstep": null,
-   "keys": []
-  },
-  {
-   "run": 0,
-   "t_ms": 943.6,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 3; waiting: down:telestrator",
-   "checkpoint": "e187ea2a-5125-45cd-856f-774bdbbcf37b",
-   "superstep": 3,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 949.6,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 4; waiting: down:telestrator",
-   "checkpoint": "fb455ca9-69c4-447b-8f30-f345e17e9563",
-   "superstep": 4,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "verdicts",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 954.2,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 5; waiting: down:telestrator",
-   "checkpoint": "0cca1d74-1899-454c-a670-5635a98a53b1",
-   "superstep": 5,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "verdicts",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 960.7,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 6; waiting: down:telestrator",
-   "checkpoint": "098e9037-0c9f-4958-85c6-d571d4eb463b",
-   "superstep": 6,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "scripts",
-    "verdicts",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 0,
-   "t_ms": 965.5,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 7; waiting: down:telestrator",
-   "checkpoint": "90ca762f-6a82-4762-9a36-dd95913c2f24",
-   "superstep": 7,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "scripts",
-    "verdicts",
-    "voice",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 1,
-   "t_ms": 0.0,
-   "kind": "back",
-   "step": "telestrator",
-   "detail": "is back: the workflow resumes from checkpoint 90ca762f (superstep 7) and re-runs it",
-   "checkpoint": "90ca762f-6a82-4762-9a36-dd95913c2f24",
-   "superstep": 7,
-   "keys": []
-  },
-  {
-   "run": 1,
-   "t_ms": 856.6,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 7",
-   "checkpoint": "c1528ae8-eb4d-49c1-a75f-ce47fb4dacb8",
-   "superstep": 7,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "scripts",
-    "verdicts",
-    "voice",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 1,
-   "t_ms": 864.9,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 8",
-   "checkpoint": "02a9cf9f-e06c-4487-b83a-e54be61b94e6",
-   "superstep": 8,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "scripts",
-    "verdicts",
-    "voice",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  },
-  {
-   "run": 1,
-   "t_ms": 873.3,
-   "kind": "checkpoint",
-   "step": null,
-   "detail": "saved after superstep 9",
-   "checkpoint": "db08de1b-56d4-49f4-96c6-7d28ef2a745e",
-   "superstep": 9,
-   "keys": [
-    "drafts",
-    "findings",
-    "plan",
-    "request",
-    "scripts",
-    "verdicts",
-    "voice",
-    "executor.analyst",
-    "executor.director",
-    "executor.narration",
-    "executor.telestrator",
-    "executor.verifier",
-    "executor.voice"
-   ]
-  }
- ]
+  ],
+  "events": [
+    {
+      "run": 0,
+      "t_ms": 0.0,
+      "kind": "down",
+      "step": "telestrator",
+      "detail": "taken down for this run: its model calls fail as in an outage, so no model is called for it",
+      "checkpoint": null,
+      "superstep": null,
+      "keys": []
+    },
+    {
+      "run": 0,
+      "t_ms": 918.2,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 0",
+      "checkpoint": "581877dc-727d-479a-bea5-22df5a316d2f",
+      "superstep": 0,
+      "keys": [
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 928.6,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 1",
+      "checkpoint": "b9778549-05c6-449c-aa95-42e64df5356f",
+      "superstep": 1,
+      "keys": [
+        "request",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 937.2,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 2",
+      "checkpoint": "f59d019c-8aa7-4ecf-80fd-4911fc32a1f2",
+      "superstep": 2,
+      "keys": [
+        "findings",
+        "request",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 941.8,
+      "kind": "fallback",
+      "step": "telestrator",
+      "detail": "ran on its template after 2 attempts: AgentDown",
+      "checkpoint": null,
+      "superstep": null,
+      "keys": []
+    },
+    {
+      "run": 0,
+      "t_ms": 941.9,
+      "kind": "waiting",
+      "step": "telestrator",
+      "detail": "asks to be brought back (workflow request down:telestrator)",
+      "checkpoint": null,
+      "superstep": null,
+      "keys": []
+    },
+    {
+      "run": 0,
+      "t_ms": 943.6,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 3; waiting: down:telestrator",
+      "checkpoint": "e187ea2a-5125-45cd-856f-774bdbbcf37b",
+      "superstep": 3,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 949.6,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 4; waiting: down:telestrator",
+      "checkpoint": "fb455ca9-69c4-447b-8f30-f345e17e9563",
+      "superstep": 4,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "verdicts",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 954.2,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 5; waiting: down:telestrator",
+      "checkpoint": "0cca1d74-1899-454c-a670-5635a98a53b1",
+      "superstep": 5,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "verdicts",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 960.7,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 6; waiting: down:telestrator",
+      "checkpoint": "098e9037-0c9f-4958-85c6-d571d4eb463b",
+      "superstep": 6,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "scripts",
+        "verdicts",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 0,
+      "t_ms": 965.5,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 7; waiting: down:telestrator",
+      "checkpoint": "90ca762f-6a82-4762-9a36-dd95913c2f24",
+      "superstep": 7,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "scripts",
+        "verdicts",
+        "voice",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 1,
+      "t_ms": 0.0,
+      "kind": "back",
+      "step": "telestrator",
+      "detail": "is back: the workflow resumes from checkpoint 90ca762f (superstep 7) and re-runs it",
+      "checkpoint": "90ca762f-6a82-4762-9a36-dd95913c2f24",
+      "superstep": 7,
+      "keys": []
+    },
+    {
+      "run": 1,
+      "t_ms": 856.6,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 7",
+      "checkpoint": "c1528ae8-eb4d-49c1-a75f-ce47fb4dacb8",
+      "superstep": 7,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "scripts",
+        "verdicts",
+        "voice",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 1,
+      "t_ms": 864.9,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 8",
+      "checkpoint": "02a9cf9f-e06c-4487-b83a-e54be61b94e6",
+      "superstep": 8,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "scripts",
+        "verdicts",
+        "voice",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    },
+    {
+      "run": 1,
+      "t_ms": 873.3,
+      "kind": "checkpoint",
+      "step": null,
+      "detail": "saved after superstep 9",
+      "checkpoint": "db08de1b-56d4-49f4-96c6-7d28ef2a745e",
+      "superstep": 9,
+      "keys": [
+        "drafts",
+        "findings",
+        "plan",
+        "request",
+        "scripts",
+        "verdicts",
+        "voice",
+        "executor.analyst",
+        "executor.director",
+        "executor.narration",
+        "executor.telestrator",
+        "executor.verifier",
+        "executor.voice"
+      ]
+    }
+  ]
 }

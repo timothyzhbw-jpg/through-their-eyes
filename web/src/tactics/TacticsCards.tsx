@@ -223,8 +223,12 @@ function BuildUp({
         to a teammate {d.long_pass_m} m or more away at the kick. Line-breaking: completed past{" "}
         {d.min_bypassed} or more outfield opponents. xT: expected threat (Singh, 2019), fitted on
         the sim&apos;s open play; a lost pass counts minus the opponent&apos;s xT where they won it.
-        In open play who passes, when and to whom is scripted (possession play, SPEC 3.6); whether
-        the ball arrives is not. Tackles are not modelled yet.
+        Simulated for every pass: the players&apos; movement, the press and the marking, what each
+        player has seen and believes, and whether the ball arrives. Who passes, when and to whom: at
+        the hero moments the decision model chooses on what the player believed (SPEC 3.5); in the
+        rest of open play a passing rule does (SPEC 3.1: after a moment on the ball, the carrier
+        plays an onside team-mate 8–35 m away, picked by a draw weighted toward space). Tackles are
+        not modelled yet in open play: the ball changes hands on interceptions.
       </p>
     </article>
   );
@@ -310,8 +314,8 @@ function SetPieceCard({
         {sp.open_play > 0 && (
           <>
             {" "}
-            Open play is mostly scripted possession play that rarely reaches the final third (SPEC
-            3.6), so the comparison favours the corner.
+            Open play follows a passing rule that rarely reaches the final third (SPEC 3.1), so the
+            comparison favours the corner.
           </>
         )}
       </p>
@@ -383,6 +387,10 @@ export function TacticsCards({ where, language = "en" }: { where: Where; languag
       <h3 className="tactics-title">{title}</h3>
       <p className="lede">{lede(view)}</p>
       {body}
+      <p className="note">
+        <a href="#tactics-lab">Open the Tactics lab</a>: the high press, decisions under pressure,
+        corners, shot quality and progression, with each definition and its hero moment.
+      </p>
     </section>
   );
 }

@@ -102,7 +102,7 @@ def name_forms(pid: str) -> set[str]:
 # no real club goes by either (checked 2026-10-21).
 CLUBS: dict[int, tuple[str, str, str]] = {
     0: ("Kestrel Bay", "KES", "红隼湾"),
-    1: ("Corvane Vale", "COR", "科尔瓦恩谷"),
+    1: ("Corvane Vale", "COR", "科尔文谷"),
 }
 
 
@@ -122,11 +122,16 @@ def club_code(team: int) -> str:
 _ID = re.compile(r"(?<![A-Za-z0-9_:])[HA](?:1[01]|[1-9])(?![A-Za-z0-9_:])")
 
 
+_HAN = re.compile(r"[\u4e00-\u9fff]")
+
+
 def rename_ids(text: str) -> str:
     """Every player id in `text` as his short name: 'H8 passed to H4' -> 'J. Ferriday passed to
-    K. Annersley'. For text rendered before names were (cached breakdowns): the Verifier lets an id
-    into a line only as a slot value, so each id in it names a player."""
-    return _ID.sub(lambda m: short_name(m.group(0)), text)
+    K. Annersley'; a Chinese sentence names him in Chinese ('H8会传给H4' -> '费里迪会传给安纳斯利').
+    For text rendered before names were (cached breakdowns): the Verifier lets an id into a line
+    only as a slot value, so each id in it names a player."""
+    lang = "zh" if _HAN.search(text) else "en"
+    return _ID.sub(lambda m: short_name(m.group(0), lang), text)
 
 
 # How text rendered before the clubs had names speaks of them (explain/recap.py templates).

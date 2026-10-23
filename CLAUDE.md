@@ -74,6 +74,8 @@ docs/       SPEC.md, REFERENCES.md, architecture diagram
 - Randomness is keyed per `(match_seed, entity_id, purpose)` — never one shared sequential stream
   (SPEC §3.7), so counterfactuals differ only through the intervention.
   Decisions are sampled with Gumbel-max over keyed per-option noise (SPEC §3.5).
+  Committed generated artifacts are canonical on linux/amd64 with numpy's X86_V4 tier disabled
+  (`NPY_DISABLE_CPU_FEATURES`, `tests/canonical.py`; CI, the regen script and the API image set it).
 - SI units. Pitch 105 × 68 m, origin at the centre spot. 25 Hz frames. Angles in radians
   internally, degrees only in the UI.
 - Every analytics kernel has a numpy reference + unit tests; GLSL versions must match the
@@ -237,7 +239,7 @@ _Fill in as they come to exist._
   `npm run contrast -- --url <site>`: the contrast of the text over the 3D views, by pixels (axe
   cannot judge it), on 72 renders
 - `uv run python -m eval.xt_fit` — fits the 16 × 12 xT grid (SPEC 4.5) on `open_play` tuning
-  seeds 0–1999, about 30 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
+  seeds 0–5999, about 25 min on 4 cores; writes `analytics/xt_grid.json`, `eval/reports/xt_fit.md`
   and the sanity plot `eval/reports/xt_fit.svg`. `tests/test_xt.py` fails when the sim no longer
   behaves as it did for the fit: re-run it, then regenerate the exports (web/README.md)
 - `uv run python -m agents.run --seed 3 --offline` — the agent crew on the hero moment (SPEC 6);

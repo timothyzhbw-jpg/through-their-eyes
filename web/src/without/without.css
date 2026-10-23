@@ -73,13 +73,20 @@
   text-transform: uppercase;
 }
 
-/* in the verdict */
+/* in the verdict: what was held constant, then the held-out count, then the verified lines */
 .without-lines {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
   margin-top: 12px;
+}
+.without-basis {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--chalk-3);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* the explainer */

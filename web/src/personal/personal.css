@@ -1,0 +1,65 @@
+/* "Your view" (YourView.tsx): the header menu and the summary line. No blur, no animation of
+   its own: the panel rises like the viewer menu's. */
+.your-view-panel {
+  top: 54px;
+  right: 0;
+  width: 340px;
+}
+/* The same controls inline, in the journey's Your view step (journey/). */
+.your-view-panel,
+.your-view-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.your-view-inline {
+  max-width: 420px;
+}
+.your-view-panel > .kicker,
+.your-view-inline > .kicker {
+  margin: 6px 6px 0;
+}
+.your-view-panel .follow-head,
+.your-view-inline .follow-head {
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+.your-view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 6px;
+}
+.your-view-row .kicker {
+  margin: 0;
+  color: var(--chalk-3);
+}
+.your-view-row select {
+  min-width: 0;
+  max-width: 210px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--chalk);
+  font: inherit;
+  font-size: 13px;
+}
+.your-view-row .seg button {
+  width: 80px;
+}
+.your-view-panel .note,
+.your-view-inline .note {
+  margin: 4px 6px 2px;
+}
+.your-view-line {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--chalk-2);
+}
+@media (max-width: 640px) {
+  .your-view-panel {
+    width: min(340px, calc(100vw - 24px));
+  }
+}

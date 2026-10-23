@@ -146,7 +146,7 @@ function OpenIntroCard() {
             className="btn btn-primary"
             ref={primary}
             onClick={start}
-            title={quick ? "A quick tour in four steps" : undefined}
+            title={quick ? "A quick tour" : undefined}
           >
             Start
             <ArrowIcon />
@@ -223,8 +223,8 @@ function Lineup() {
       </h3>
       <p className="lineup-pitch">
         <em>See what they saw.</em> An AI studio that explains key moments through the player's own
-        perception — the scans before the ball arrived, what was visible, what he believed — and
-        checks every number the crew says or captions before it airs.
+        perception — where he looked before the ball arrived, what he saw, what he believed — and
+        re-simulates the moment without the look that made the play.
       </p>
       <div className="lineup-teams">
         {(["home", "away"] as const).map((team) => {

@@ -572,6 +572,38 @@ describe("on a phone the camera switch and the Auto director live in View option
     expect(shown(page.querySelector(".options-panel .phone-only"))).toBe(false);
   });
 
+  it("clamps the suggestion's words to two lines on a phone, not the padded chip", () => {
+    // Clamped with its padding, the chip showed a third line in the padding under the two.
+    withFloodlitStyles(390);
+    const session = offline();
+    const page = mount(
+      session,
+      <div className="stage-director">
+        <DirectorBar />
+      </div>,
+    );
+    onBroadcast(session);
+    at(session, 52);
+    const c = chip(page)!;
+    const words = c.querySelector(".director-text")!;
+    expect(text(words)).toBe(text(c));
+    expect(text(words)).toMatch(/^Switch to J\. Ferriday's eyes: /);
+    // The words clip, not the chip (happy-dom computes overflow but not the clamp: that is read
+    // from the stylesheet, on the words' rule and not the chip's).
+    expect(getComputedStyle(words).overflow).toBe("hidden");
+    expect(getComputedStyle(c).overflow).not.toBe("hidden");
+    const rule = (selector: string) =>
+      [
+        ...floodlitStyles.matchAll(
+          new RegExp(`${selector.replace(/\./g, "\\.")} \\{([^}]*)\\}`, "g"),
+        ),
+      ]
+        .map((m) => m[1])
+        .join(";");
+    expect(rule(".stage-director .director-chip .director-text")).toMatch(/-webkit-line-clamp: 2;/);
+    expect(rule(".stage-director .director-chip")).not.toMatch(/line-clamp/);
+  });
+
   it("takes the Auto director off the director's row on a phone only", () => {
     // As on the live screen (App.tsx): the bar sits in .stage-director.
     const bar = () => (

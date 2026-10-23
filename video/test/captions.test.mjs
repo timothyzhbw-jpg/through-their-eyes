@@ -64,3 +64,12 @@ test("a watermark still is looped over the whole film, on top of the captions", 
   assert.match(joined, /-loop 1 -t 115\.4 -i wm\.png/);
   assert.match(joined, /\[v0\]\[wm\]overlay=0:0:shortest=1/);
 });
+
+test("a line marked caption top sits at the top, whatever holds the lower left", () => {
+  const cues = captionTimeline([
+    { id: "a", start: 0, duration: 1.5, text: "One", place: "top" },
+    { id: "b", start: 3, duration: 1.5, text: "Two" },
+  ]);
+  const sides = captionSides(cues, [{ start: 0, end: 10 }]);
+  assert.deepEqual(sides.map((c) => c.side), ["top", "right"]);
+});

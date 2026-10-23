@@ -20,6 +20,7 @@ import pytest
 from sim import dataset
 from sim.config import DT
 from sim.match import SEED_BASE, PossessionSpec, build_match
+from tests import canonical
 
 ROOT = Path(__file__).resolve().parents[1]
 SHORT_PLAN = (
@@ -176,7 +177,11 @@ def test_metadata_describes_teams_players_and_possessions(built, matches):
     for entry in meta["matches"]:
         m = matches[entry["match_id"]]
         assert entry["frames"] == m.frames
-        assert [p["scenario"] for p in entry["possessions"]] == [s.scenario for s in SHORT_PLAN]
+        # The scenario that ran: the plan's, or its away variant when the restart before an
+        # open-play passage went to the away team (SPEC 3.1).
+        names = [p["scenario"] for p in entry["possessions"]]
+        assert names == [p.scenario for p in m.possessions]
+        assert [n.removesuffix("_away") for n in names] == [s.scenario for s in SHORT_PLAN]
         assert [p["start_frame"] for p in entry["possessions"]] == [p.start for p in m.possessions]
         assert entry["score"] == {"home": m.score[0], "away": m.score[1]}
 
@@ -360,19 +365,121 @@ def _generated_here(manifest: dict) -> bool:
     }
 
 
+# Some GitHub x86_64 runners rebuild the sample with other last bits even on numpy's pinned tier
+# (main's CI on 2026-10-23, after #172 and #207: the same bytes as linux/arm64). Measured there:
+# tracking positions up to 6 mm, tracking velocities up to 0.145 m/s, every other float by at
+# most one stored quantum (sim.dataset rounds metres and m/s to 1e-3, radians to 1e-4, seconds
+# to 1e-2). Every non-float column, row count and schema stays exact.
+TRACKING_BOUND = {"x": 0.010, "y": 0.010, "vx": 0.25, "vy": 0.25}
+QUANTUM = {"m": 1e-3, "m/s": 1e-3, "rad": 1e-4, "s": 1e-2}
+
+
+def _float_bound(table: str, column: dataset.Column) -> float:
+    if table == "tracking" and column.name in TRACKING_BOUND:
+        return TRACKING_BOUND[column.name]
+    return QUANTUM.get(column.unit, 1e-4)
+
+
+def _assert_floats_near(fresh, committed, bound: float, where: str) -> None:
+    x, y = (
+        np.array([np.nan if v is None else v for v in c], dtype=float) for c in (fresh, committed)
+    )
+    assert np.array_equal(np.isnan(x), np.isnan(y)), f"{where}: nulls"
+    worst = float(np.nanmax(np.abs(x - y), initial=0.0))
+    assert worst <= bound + 1e-6, f"{where}: {worst} > {bound}"  # 1e-6: float32 storage
+
+
+def _assert_table_near(fresh: pa.Table, committed: pa.Table, table: str) -> None:
+    assert fresh.schema.equals(committed.schema) and fresh.num_rows == committed.num_rows, table
+    for column in dataset.TABLES[table]:
+        a, b = (t.column(column.name).to_pylist() for t in (fresh, committed))
+        if pa.types.is_floating(column.type):
+            _assert_floats_near(a, b, _float_bound(table, column), f"{table}.{column.name}")
+        else:
+            assert a == b, f"{table}.{column.name}"
+
+
+def _assert_csv_near(fresh: Path, committed: Path, table: str) -> None:
+    rows = [list(csv.reader(p.read_text().splitlines())) for p in (fresh, committed)]
+    assert rows[0][0] == rows[1][0] and len(rows[0]) == len(rows[1]), table
+    columns = {c.name: c for c in dataset.TABLES[table]}
+    for i, name in enumerate(rows[1][0]):
+        a, b = ([r[i] for r in rs[1:]] for rs in rows)
+        column = columns[name]
+        if pa.types.is_floating(column.type):
+            a, b = ([float(v) if v else None for v in c] for c in (a, b))
+            _assert_floats_near(a, b, _float_bound(table, column), f"{table}.csv {name}")
+        else:
+            assert a == b, f"{table}.csv {name}"
+
+
+def _without_hashes(manifest: dict) -> dict:
+    files = {k: {f: v for f, v in e.items() if f not in ("sha256", "bytes")}
+             for k, e in manifest["files"].items()}  # fmt: skip
+    return {**manifest, "files": files}
+
+
 def test_the_committed_sample_regenerates_byte_for_byte(tmp_path):
-    """Only where it was made: the sim is byte-identical per platform and versions (SPEC 3.7)."""
+    """Only where it was made: the sim is byte-identical per platform and versions (SPEC 3.7).
+    It is made on Linux, the canonical platform (`tests/canonical.py`). Byte for byte, or failing
+    that the structure exactly and the floats within the bounds measured above."""
     manifest = json.loads((SAMPLE / "manifest.json").read_text())
     if not _generated_here(manifest):
-        pytest.skip(f"the sample was generated on {manifest['generated_with']}")
+        pytest.skip(
+            f"the sample was generated on {manifest['generated_with']}; "
+            + canonical.message("dataset")
+        )
     dataset.build_dataset([dataset.FIRST_SEED], tmp_path / "data")
     dataset.write_sample(
         tmp_path / "data", tmp_path / "sample", dataset.FIRST_SEED, dataset.SAMPLE_POSSESSION
     )
-    names = sorted(p.name for p in SAMPLE.iterdir())
-    assert names == sorted(p.name for p in (tmp_path / "sample").iterdir())
+    _assert_sample_near(tmp_path / "sample", SAMPLE)
+
+
+def _assert_sample_near(sample: Path, committed_sample: Path) -> None:
+    names = sorted(p.name for p in committed_sample.iterdir())
+    assert names == sorted(p.name for p in sample.iterdir())
+    manifest = json.loads((committed_sample / "manifest.json").read_text())
     for name in names:
-        assert (tmp_path / "sample" / name).read_bytes() == (SAMPLE / name).read_bytes(), name
+        fresh, committed = sample / name, committed_sample / name
+        if fresh.read_bytes() == committed.read_bytes():
+            continue
+        stem, suffix = name.rsplit(".", 1)
+        if suffix == "parquet":
+            _assert_table_near(pq.read_table(fresh), pq.read_table(committed), stem)
+        elif suffix == "csv":
+            _assert_csv_near(fresh, committed, stem)
+        elif name == "manifest.json":
+            assert _without_hashes(json.loads(fresh.read_text())) == _without_hashes(manifest)
+        else:
+            raise AssertionError(name)
+
+
+def test_the_sample_check_allows_the_measured_drift_and_no_more():
+    """`_assert_table_near` on the committed tracking table against itself, moved."""
+    tracking = pq.read_table(SAMPLE / "tracking.parquet")
+
+    def moved(column: str, by: float) -> pa.Table:
+        values = np.asarray(tracking.column(column).to_numpy(), dtype=float)
+        values[0] += by
+        i = tracking.schema.get_field_index(column)
+        return tracking.set_column(
+            i, tracking.schema.field(i), pa.array(values, tracking.schema.field(i).type)
+        )
+
+    _assert_table_near(moved("x", 0.009), tracking, "tracking")
+    _assert_table_near(moved("vx", 0.2), tracking, "tracking")
+    _assert_table_near(moved("body_yaw", 1e-4), tracking, "tracking")
+    for column, by in (("x", 0.012), ("vx", 0.3), ("body_yaw", 3e-4)):
+        with pytest.raises(AssertionError):
+            _assert_table_near(moved(column, by), tracking, "tracking")
+    frames = tracking.column("frame").to_pylist()
+    shifted = tracking.set_column(
+        tracking.schema.get_field_index("frame"), "frame",
+        pa.array([frames[0] + 1, *frames[1:]], tracking.schema.field("frame").type),
+    )  # fmt: skip
+    with pytest.raises(AssertionError):
+        _assert_table_near(shifted, tracking, "tracking")
 
 
 def test_the_datasheet_documents_every_column():

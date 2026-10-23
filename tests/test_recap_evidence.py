@@ -15,6 +15,7 @@ from explain.render import ScriptLine as RenderLine
 from explain.render import build_payload, check_payload, render_claim
 from explain.verifier import Verifier
 from sim.match import PossessionSpec, build_match, global_id
+from sim.roster import ZH_NAMES
 
 
 @pytest.fixture(scope="module")
@@ -236,19 +237,61 @@ def test_a_goal_is_in_the_score_and_its_moment_leads_the_candidates(scoring):
     assert "goal" in first.tags and first.hero
     cid = f"{first.prefix}.goal"
     assert cid in first.claims
+    # The goal told as it was made: the assist, the look before the ball arrived, the finish
+    # (far_post_finish seed 4: H7's pass, H9's look 0.6 s before it reached him, the far post
+    # past A1). Every name and number is a verified slot.
+    h7, a1 = rc.names["H7"], rc.names["A1"]
     out = render_claim(rc.all_claims[cid], rc.verdicts[cid], "en", rc.names)
-    assert out.text == "N. Varnhall scored."
+    assert out.text == (f"{h7} found N. Varnhall, who looked up 0.6 seconds before the ball "
+                        f"reached him and scored at the far post past {a1}.")  # fmt: skip
     zh = render_claim(rc.all_claims[cid], rc.verdicts[cid], "zh", rc.names)
-    assert zh.text == "瓦恩霍尔进球了。"
+    # zh names players by their Chinese names (sim.roster.ZH_NAMES, #191).
+    assert zh.text == (f"{ZH_NAMES['H7']}传球找到{ZH_NAMES['H9']}，球到之前0.6秒他抬头看了一眼，"
+                       f"随后打远角破门，攻破了{ZH_NAMES['A1']}把守的球门。")  # fmt: skip
+    for language in ("en", "zh"):
+        line = RenderLine(id="L1", text=rc.all_claims[cid].template_for(language), claims=[cid])
+        built = build_payload("recap", "casual", language, [line], rc.all_claims, rc.verdicts,
+                              rc.names)  # fmt: skip
+        assert not built.rejected and check_payload(built.payload, rc.names) == []
 
 
-def test_a_goal_claim_with_another_scorer_is_refuted(scoring):
+@pytest.mark.parametrize(
+    "slot, value",
+    [("shooter", Slot(ref="H8")), ("assister", Slot(ref="H8")), ("keeper", Slot(ref="A2")),
+     ("secs", Slot(value=0.8, decimals=1))],
+)  # fmt: skip
+def test_a_goal_claim_with_any_slot_changed_is_refuted(scoring, slot, value):
     match, rc = scoring
     cid = f"{rc.candidates[0].prefix}.goal"
     claim = rc.all_claims[cid]
-    wrong = claim.model_copy(update={"slots": {**claim.slots, "shooter": Slot(ref="H8")}})
+    wrong = claim.model_copy(update={"slots": {**claim.slots, slot: value}})
     p = next(p for p in match.possessions if p.run.hero)
     assert Verifier(EvalContext(p.run, resimulate=False)).verify(wrong).status == "refuted"
+
+
+@pytest.mark.parametrize(
+    "parts, en, zh",
+    [
+        ((True, True, "far", True),
+         "{assister} found {shooter}, who looked up {secs|second|seconds} before the ball reached "
+         "him and scored at the far post past {keeper}.",
+         "{assister}传球找到{shooter}，球到之前{secs}秒他抬头看了一眼，随后打远角破门，"
+         "攻破了{keeper}把守的球门。"),
+        ((True, False, None, True), "{assister} found {shooter}, who scored past {keeper}.",
+         "{assister}传球找到{shooter}，随后破门，攻破了{keeper}把守的球门。"),
+        ((False, True, "near", False),
+         "{shooter} looked up {secs|second|seconds} before the ball reached him and scored at "
+         "the near post.",
+         "球到之前{secs}秒{shooter}抬头看了一眼，随后打近角破门。"),
+        ((False, False, None, False), "{shooter} scored.", "{shooter}破门得分。"),
+    ],
+)  # fmt: skip
+def test_a_goal_line_says_what_was_verified_and_nothing_else(parts, en, zh):
+    """A goal without an assist (a loose ball), a look in the window, a placement or a keeper
+    leaves that part out rather than guess it."""
+    from explain.recap import goal_templates
+
+    assert goal_templates(*parts) == (en, zh)
 
 
 def test_a_saved_or_wide_shot_is_told_as_it_ended():
@@ -266,7 +309,9 @@ def test_a_saved_or_wide_shot_is_told_as_it_ended():
             verdict = Verifier(ctx).verify(claim)
             assert claim is not None and verdict.status == "supported"
             seen[shot.attrs["outcome"]] = render_claim(claim, verdict, "en", names).text
-    assert seen["goal"] == "H9 scored." and seen["wide"] == "H9's shot went wide."
+    assert seen["goal"] == ("H7 found H9, who looked up 0.6 seconds before the ball reached him "
+                            "and scored at the far post past A1.")  # fmt: skip
+    assert seen["wide"] == "H9's shot went wide."
     assert seen["saved"].endswith(" saved H9's shot.") and seen["saved"].startswith("A")
 
 

@@ -12,6 +12,7 @@ export interface TamperState {
   claim: string | null; // what was last sent
   slot: string | null;
   value: number | null;
+  by: "viewer" | "tour"; // who typed the value
   result: VerifyResponse | null;
   error: string | null;
 }
@@ -22,6 +23,7 @@ export const IDLE_TAMPER: TamperState = {
   claim: null,
   slot: null,
   value: null,
+  by: "viewer",
   result: null,
   error: null,
 };

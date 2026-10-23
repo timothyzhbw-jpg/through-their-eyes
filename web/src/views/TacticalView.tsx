@@ -56,9 +56,12 @@ import {
 import { PitchControlLayer } from "../pitchControl/PitchControlLayer";
 import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
+import { RadarLayer } from "../skeleton/RadarLayer";
 import { SkeletonLegend } from "../skeleton/SkeletonLegend";
 import { aimYaw, VISOR_COLOR } from "./tokens";
 import { shortName } from "../data/roster";
+import { FOLLOW_COLOR } from "../personal/highlight";
+import { useFollowedIndex } from "../personal/hooks";
 import { BeatBoardLayer } from "../beat/BeatLayers";
 import { motion } from "../beat/beat";
 
@@ -185,6 +188,7 @@ function TacticalScene() {
       <PassOptionsLayer hero={hero} mode={mode} shared={shared} scale={scale} />
       <BeliefGhosts hero={hero} shared={shared} scale={scale} px={px} />
       <SkeletonLayer sample={shared.current.sample} variant="board" scale={scale} />
+      <RadarLayer sample={shared.current.sample} variant="board" scale={scale} px={px} />
       <Tokens hero={hero} shared={shared} scale={scale} px={px} pov={hero.ids.indexOf(povPlayer)} />
       <ScanMarker hero={hero} shared={shared} scale={scale} px={px} />
       <Ball shared={shared} scale={Math.max(1, 3.5 / (0.45 * zoom))} />
@@ -683,6 +687,7 @@ interface TokensProps {
 }
 
 function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
+  const followed = useFollowedIndex(hero.ids); // "Your view": a steady mint ring (personal/)
   const groups = useRef<(THREE.Group | null)[]>([]);
   const halos = useRef<(THREE.Mesh | null)[]>([]);
   const ticks = useRef<(THREE.Group | null)[]>([]);
@@ -745,6 +750,12 @@ function Tokens({ hero, shared, scale, px, pov }: TokensProps) {
                 <mesh rotation-x={lie} renderOrder={LAYER.token + 0.5}>
                   <ringGeometry args={[...GK_BAND, 32]} />
                   <meshBasicMaterial color={kitOf(p).shirt} {...flat} />
+                </mesh>
+              )}
+              {j === followed && (
+                <mesh rotation-x={lie} renderOrder={LAYER.outline}>
+                  <ringGeometry args={[TOKEN_R + 0.3, TOKEN_R + 0.62, 32]} />
+                  <meshBasicMaterial color={FOLLOW_COLOR} {...flat} />
                 </mesh>
               )}
               {outline && (

@@ -1,8 +1,9 @@
 // What each tour step does when it comes up: only the app's own controls, the ones a viewer's
 // clicks call. Each one sets its step up from whatever the viewer left on screen (Back, a jump,
-// their own clicks), so running it twice changes nothing more. Nothing here calls a model or
-// costs a request beyond what the step shows; the wrong-number check and the failure drill wait
-// for the tour card's own button (TourActs.tsx).
+// their own clicks), so running it twice changes nothing more. Nothing here calls a model. The
+// full tour's wrong-number check and the failure drill wait for the tour card's own button
+// (TourActs.tsx). The quick tour's tamperAuto is the one place the tour asks for a check itself
+// (deterministic, no model call).
 
 import type { Agent, Persona } from "../api/client";
 import { comparisonWindow } from "../autoplay/comparison";
@@ -10,7 +11,7 @@ import type { Narration } from "../narration/payload";
 import type { MatchSession } from "../match/matchSession";
 import type { Session, ViewSession } from "../session";
 import { takeEyesOf } from "../takeeyes/controller";
-import { numericValues } from "../tamper/tamper";
+import { numericValues, wrongNumber } from "../tamper/tamper";
 import type { Language } from "../whatif/whatif";
 import { yourCallOf } from "../yourcall/controller";
 import type { EnterName } from "./steps";
@@ -214,6 +215,24 @@ const ENTER: Record<Exclude<EnterName, "recap">, Enter> = {
     return whenBreakdown(s, () => {
       const pick = openTourLine(s);
       if (pick?.slot && s.tamper.get().open !== pick.claim) s.controls.openTamper(pick.claim);
+    });
+  },
+
+  /** The quick tour's check: the same evidence, then the tour types the claim's wrong number and
+   * the Verifier answers (POST /api/verify, deterministic, no model call, within the per-client
+   * check limit). Once per arrival: not again while that check is in flight or on screen. */
+  tamperAuto(s) {
+    clear(s, { evidence: true });
+    withNumbers(s);
+    return whenBreakdown(s, () => {
+      const pick = openTourLine(s);
+      if (pick?.slot && s.tamper.get().open !== pick.claim) s.controls.openTamper(pick.claim);
+      const tamper = s.tamper.get();
+      const asked =
+        (tamper.status === "checking" || tamper.status === "done") && tamper.claim === pick?.claim;
+      if (pick?.slot && pick.value !== null && !asked) {
+        void s.controls.tryValue(pick.claim, pick.slot, wrongNumber(pick.value), "tour");
+      }
     });
   },
 

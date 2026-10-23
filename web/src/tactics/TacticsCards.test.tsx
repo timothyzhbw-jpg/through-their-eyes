@@ -73,6 +73,14 @@ describe("the tactics cards", () => {
     expect(html).toContain("Tackles are not modelled yet");
   });
 
+  it("says what is simulated and who decides, without calling the passes scripted", () => {
+    const html = render(match(), <TacticsCards where="stats" />);
+    expect(html).toContain("whether the ball arrives");
+    expect(html).toContain("the decision model chooses on what the player believed");
+    expect(html).toContain("a passing rule does");
+    expect(html).not.toContain("scripted");
+  });
+
   it("speaks the recap's language", () => {
     const html = render(match(), <TacticsCards where="recap" language="zh" />);
     expect(html).toContain('lang="zh"');

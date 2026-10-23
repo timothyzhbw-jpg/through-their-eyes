@@ -8,6 +8,8 @@
 // ?match=match-1 plays another match the service serves (data/load.ts matchFromUrl).
 // ?camera=broadcast starts on the broadcast camera, focused (for filming).
 // ?cine=1 is a full-screen capture view for filming the demo (SPEC 10), never linked from the app.
+// ?studio=1 is the Stadium Screen Studio (stadium/), offline from the bundled files; &wall=1 opens
+// its flat Screen wall without the 3D stadium.
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -17,20 +19,31 @@ import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
 import { LOOK_FILES } from "./takeeyes/looks";
 import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
 import { scenarioMatchId } from "./match/match";
+import { openStep } from "./journey/state";
 import { createMatchSession } from "./match/matchSession";
+import { audienceFor, mergeChoices, readSaved } from "./personal/persist";
+import { personal, persistOnChange } from "./personal/state";
 import { EXAMPLE_PLAN, INVALID_PLAN } from "./plan/example";
 import { SessionContext, createSession, type ViewControls, type ViewSession } from "./session";
 import { kindOf } from "./tour/steps";
 import { startTour } from "./tour/tourState";
+import { heroGatesOf } from "./without/gates";
 import { withoutLookOf } from "./without/without";
 import { intro } from "./ui/intro";
 import "./styles.css";
 
 async function main() {
   const root = createRoot(document.getElementById("root")!);
-  const link = parseDeepLink(window.location.search);
+  if (new URLSearchParams(window.location.search).get("studio") === "1") return studio(root);
+  const parsed = parseDeepLink(window.location.search);
+  // "Your view" (personal/): the address over what an earlier visit saved, then kept up to date.
+  const chosen = mergeChoices(parsed, readSaved());
+  personal.set(chosen);
+  persistOnChange(personal);
+  const link = { ...parsed, persona: chosen.persona, language: chosen.language };
   const filming = new URLSearchParams(window.location.search).get("cine") === "1";
   intro.set({ open: link.intro });
+  if (link.step) openStep(link.step); // ?step=: the journey's panel, in view once it is drawn
   if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
   const forcedOffline = link.offline;
   root.render(<p className="loading">Loading the match…</p>);
@@ -48,6 +61,8 @@ async function main() {
     ]);
     const plan = link.invalidPlan ? INVALID_PLAN : EXAMPLE_PLAN;
     const offline = forcedOffline ? "offline=1 in the address" : loaded.offline;
+    // Offline only the bundled breakdowns exist: a saved audience or language is not asked for.
+    Object.assign(link, audienceFor(parsed, chosen, Boolean(offline)));
     const broadcast = (controls: ViewControls) => {
       if (new URLSearchParams(window.location.search).get("camera") !== "broadcast") return;
       controls.setFocus("broadcast");
@@ -74,6 +89,13 @@ async function main() {
         whatIfs: loaded.whatIfs,
       });
       // A match has no audience, run or named frames of its own: its view and a frame apply.
+      if (link.persona || link.language) {
+        // Only what the recap will ask for; nothing is requested until the viewer asks.
+        session.recap.state.set({
+          ...(link.persona && { persona: link.persona }),
+          ...(link.language && { language: link.language }),
+        });
+      }
       if (link.view) session.controls.setFocus(link.view);
       if (typeof link.at === "number") session.controls.seek(link.at);
       // play=yourcall: the first hero moment whose possession has bundled what-ifs, in Your call.
@@ -86,13 +108,14 @@ async function main() {
       if (link.tour) startTour(link.tour, kindOf(link.tour)); // the judge tour's match steps: the recap
       // play=recap: the end-of-match recap for the link's audience, offered as at full time.
       if (link.play === "recap") session.recap.openAtFullTime(link.persona, link.language);
-      // play=eyes: the first hero moment whose possession has a bundled look grid.
+      // play=eyes, play=drill: the first hero moment whose possession has a bundled look grid.
       const eyes = session.match.moments.find((m) => {
         if (!m.hero) return false;
         const p = session.match.possessions.find((x) => x.index === m.possession);
         return !!p && !!LOOK_FILES[scenarioMatchId(p)];
       });
       if (link.play === "eyes" && eyes) session.controls.openBreakdown(eyes, "eyes");
+      if (link.play === "drill" && eyes) session.controls.openBreakdown(eyes, "drill");
       // moment=<scenario>: that hero moment's breakdown, as its Breakdown button opens it.
       const named = link.moment
         ? session.match.moments.find(
@@ -128,6 +151,7 @@ async function main() {
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
     void withoutLookOf(session, undefined, dataUrl).load(); // "Without the look", told: a few KB
+    void heroGatesOf(session, undefined, dataUrl).load(); // how often the held-out seeds change
     applyDeepLink(session, link);
     broadcast(session.controls);
     if (filming) {
@@ -148,6 +172,29 @@ async function main() {
     root.render(
       <p className="load-error">
         Could not load the match data: {err instanceof Error ? err.message : String(err)}
+      </p>,
+    );
+  }
+}
+
+/** The Stadium Screen Studio: its own page, from the bundled files only (no live service). */
+async function studio(root: ReturnType<typeof createRoot>) {
+  root.render(<p className="loading">Loading the studio…</p>);
+  try {
+    // The screens' canvases are drawn with the web fonts: wait for them (briefly).
+    const fonts = Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+    const [{ StudioApp, loadStudio }] = await Promise.all([import("./stadium/StudioApp"), fonts]);
+    const show = await loadStudio(`${import.meta.env.BASE_URL}data/`);
+    const wallOnly = new URLSearchParams(window.location.search).get("wall") === "1";
+    root.render(
+      <StrictMode>
+        <StudioApp show={show} wallOnly={wallOnly} />
+      </StrictMode>,
+    );
+  } catch (err) {
+    root.render(
+      <p className="load-error">
+        Could not load the studio: {err instanceof Error ? err.message : String(err)}
       </p>,
     );
   }

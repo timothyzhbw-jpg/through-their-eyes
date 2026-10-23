@@ -154,7 +154,17 @@ type Buttons = RefObject<(HTMLButtonElement | null)[]>;
 
 // ---------- the view: his picture, the markers, the dotted path, the swipe ----------
 
-function CallView({ yc, scene, buttons }: { yc: YourCall; scene: boolean; buttons: Buttons }) {
+/** His picture from behind him with a marker per option; the academy drill (drill/) calls from it
+ * with a look of the grid. */
+export function CallView({
+  yc,
+  scene,
+  buttons,
+}: {
+  yc: YourCall;
+  scene: boolean;
+  buttons: Buttons;
+}) {
   const { options, picture } = yc;
   const step = useStore(yc.state, (s) => s.step);
   const aim = useStore(yc.state, (s) => s.aim);
@@ -494,8 +504,8 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
             </h2>
             {reveal.truth.moved.length > 0 ? (
               <p className="yc-lead">
-                Not where he pictured them: {reveal.truth.moved.map(shortName).join(", ")}.{" "}
-                <SimTag />
+                Not where he pictured them:{" "}
+                {reveal.truth.moved.map((id) => shortName(id)).join(", ")}. <SimTag />
               </p>
             ) : (
               <p className="yc-lead">
@@ -569,7 +579,7 @@ const labelOf = (options: CallOption[]) => (action: string) =>
 /** What he could see and how his picture rated the call (why.ts): read from the sim export, so
  * no number, and marked so. */
 function WhyBlock({ why }: { why: Why }) {
-  const names = (ids: string[]) => ids.map(shortName).join(", ");
+  const names = (ids: string[]) => ids.map((id) => shortName(id)).join(", ");
   const receiver = why.receiver
     ? why.receiver.seen
       ? `${shortName(why.receiver.id)} was fresh in his picture. `

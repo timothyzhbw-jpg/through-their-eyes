@@ -19,22 +19,28 @@ export function captionTimeline(lines, { tail = 0.25, min = 1.0, gap = 0.05, tot
     const want = Math.max(min, line.duration + tail);
     const dur = Math.max(0, Math.min(want, end - line.start));
     if (dur < 0.3) continue; // too short to read: the next line has the screen
-    out.push({ id: line.id, start: round3(line.start), dur: round3(dur), text: line.text });
+    out.push({ id: line.id, start: round3(line.start), dur: round3(dur), text: line.text, ...(line.place ? { place: line.place } : {}) });
   }
   return out;
 }
 
 /**
  * Where each caption sits: centred low in the frame, or on the right when a title holds the
- * lower left (a lower-left slam, a tag, the spec sheet) at any moment the caption is up.
- * @param {Array<{ start: number, dur: number }>} cues
+ * lower left (a lower-left slam, a tag, the spec sheet) at any moment the caption is up; a line
+ * marked `caption: "top"` sits at the top instead (over the app's own captions at the bottom).
+ * @param {Array<{ start: number, dur: number, place?: string }>} cues
  * @param {Array<{ start: number, end: number }>} busy when the lower left is taken, s
- * @returns {Array<{ start: number, dur: number, side: "center" | "right" }>}
+ * @returns {Array<{ start: number, dur: number, side: "center" | "right" | "top" }>}
  */
 export function captionSides(cues, busy) {
   return cues.map((cue) => ({
     ...cue,
-    side: busy.some((b) => b.start < cue.start + cue.dur && cue.start < b.end) ? "right" : "center",
+    side:
+      cue.place === "top"
+        ? "top"
+        : busy.some((b) => b.start < cue.start + cue.dur && cue.start < b.end)
+          ? "right"
+          : "center",
   }));
 }
 
