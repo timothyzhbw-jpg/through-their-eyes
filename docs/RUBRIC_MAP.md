@@ -114,7 +114,7 @@ as effectively". The last point is the one we measured against a single agent
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="crew_workflow-dark.svg">
-  <img src="crew_workflow.svg" alt="The crew's workflow as Microsoft Agent Framework draws it: Director → Analyst, which calls the MCP tool server and its ten tools → Telestrator ∥ narration ⇄ Verifier (a refuted line goes back for a rewrite at most twice, then is dropped) → Voice. Dashed edges from the Director, Analyst, Telestrator and narration to the failure drill and back: taken down, the agent runs on its template and waits; brought back, it runs again from the latest checkpoint.">
+  <img src="crew_workflow.svg" alt="The crew's workflow as Microsoft Agent Framework draws it: Director → Analyst, which calls the MCP tool server and its tools → Telestrator ∥ narration ⇄ Verifier (a refuted line goes back for a rewrite, then is dropped) → Voice. Dashed edges from the Director, Analyst, Telestrator and narration to the failure drill and back: taken down, the agent runs on its template and waits; brought back, it runs again from the latest checkpoint.">
 </picture>
 
 Agent Framework's own `WorkflowViz` draws this graph from the workflow the API runs
@@ -125,10 +125,9 @@ for four things; each has a measured number ([docs/NUMBERS.md](../docs/NUMBERS.m
 
 #### "Distinct roles"
 
-Four model agents (Director, Analyst, Telestrator, and narration with its two voices) and two code steps
+The crew has model agents (Director, Analyst, Telestrator, and narration with its two voices) and code steps
 (Verifier, Voice), each with its own schema, timeout and template. The Verifier is a separate gate
-that can veto: of 2,837 broken lines it kept 2,837 off the air; without it 2,823 aired, 888 of
-them false ([crew_evidence](../eval/reports/crew_evidence.md), MA8).
+that can veto. Of <!--num:MA8.n-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false ([crew_evidence](../eval/reports/crew_evidence.md), MA8).
 
 #### "Coordinate through shared state and effective handoffs"
 
@@ -139,20 +138,20 @@ call that chose them, the Verifier round that passed them and their voice cue
 
 #### "Recover from failures"
 
-With any one agent taken down, 280/280 scripts still aired, with 3 of 4 roles still from the
-model; one agent doing all four roles kept 0 of 4. Bringing the agent back from the Agent
-Framework checkpoint restored the fault-free breakdown in 70/70 drills ([crew_evidence](../eval/reports/crew_evidence.md),
-MA7). Try it on the live site: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer).
+With any one agent taken down, every script still aired and most roles still came from the
+model; one agent doing all the roles kept none. Bringing the agent back from the Agent
+Framework checkpoint restored the fault-free breakdown in every drill ([crew_evidence](../eval/reports/crew_evidence.md),
+MA1, MA7). Try it on the live site: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer).
 
 #### "An end-to-end outcome a single agent could not achieve as effectively"
 
 What the crew buys is a breakdown that finishes inside the step budget, survives a fault and
-recovers cheaply. Under the deployed 8 s step timeout, 0 of 66 crew agent runs would have timed
-out, against 6 of 6 for one agent doing the four roles in one call (MA3). Bringing the Telestrator
-back cost 1.0 model request (about 2.1k tokens) against the single agent's re-run, 1.7 requests
-(about 11.7k tokens) (MA2); the Analyst costs more, 11.0 requests, because every step after it
-runs again (MA2b). What it does not buy is better lines: both structures aired 0 wrong facts and
-scored 5.00 for groundedness ([crew_vs_single](../eval/reports/crew_vs_single.md), MA5).
+recovers cheaply. Under the deployed step timeout, no crew agent run would have timed
+out, while every run of one agent doing all the roles in one call would have (MA3). Bringing the
+Telestrator back costs the crew less than the single agent's re-run (MA2); the Analyst costs more,
+because every step after it runs again (MA2b). What it does not buy is better lines: both
+structures aired no wrong facts and scored the same on groundedness
+([crew_vs_single](../eval/reports/crew_vs_single.md), MA5).
 
 <!-- TODO(freeze): a screenshot of one live breakdown's trace in Application Insights (the agent
 spans and their handoffs), taken after the 10/24 prewarm; save it as
@@ -191,9 +190,9 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
   templates after about 16 s (crew_evidence).
 - **A Verifier per step, and a rewrite sent to the line's author.** A rejected line goes back to
   the voice that wrote it, told why; the other lines and the plan stand
-  ([agents/workflow.py](../agents/workflow.py)). Of 2,837 deliberately broken lines (a number or
+  ([agents/workflow.py](../agents/workflow.py)). The broken lines are a number or
   player the model wrote, an unbacked term, a broken placeholder, an unknown, forbidden or
-  tampered claim), none aired with the Verifier; without it 2,823 aired, 888 of them false. On
+  tampered claim. Of <!--num:MA8.n-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false. On
   the Foundry drafts it rejected 0 of 234 anchored lines: the schema already prevents those
   errors (crew_evidence).
 - **Audiences in parallel.** Narration drafts every persona × language script at once, and

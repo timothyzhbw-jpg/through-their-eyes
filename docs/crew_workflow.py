@@ -10,7 +10,8 @@ rounds), and the failure drill with checkpoint bring-back. Templates are left of
 stays readable. The SVGs are Graphviz renderings of the DOT, light and a dark variant held only
 in memory. Without `dot` on PATH the text files are still written and the process exits 2,
 printing the Docker command that renders them. tests/test_crew_workflow_diagram.py fails when the
-committed files drift.
+committed files drift. It checks each SVG's stamped hash of the DOT source, not the rendering, so
+a hand-edited SVG body that keeps its stamp passes: only re-render them, never edit them.
 """
 
 from __future__ import annotations

@@ -85,6 +85,11 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| … refuted by the verifier \| \*\*{NUM}/{NUM} \({NUM}%\)\*\*",
         ("k", "n", "pct"),
     ),
+    "MA8": (
+        "crew_evidence.md",
+        rf"Of {NUM} perturbed lines .*? without it {NUM} aired, .*?: {NUM} false",
+        ("n", "aired", "false"),
+    ),
     "R3": (
         "realism.md",
         rf"\*\*{NUM} inside, {NUM} outside, {NUM} inconclusive, {NUM} with no published reference",
