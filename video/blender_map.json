@@ -4,6 +4,7 @@
     "bl01_look.mp4",
     "bl02_reveal.mp4",
     "bl03_without.mp4",
+    "bs1_eyes.mp4",
     "bs1_fall.mp4",
     "bs1_ots.mp4",
     "bs1_steal.mp4",
@@ -144,6 +145,21 @@
     }
   },
   "beats": [
+    {
+      "beat": "b00-s0-eyes",
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bs1_eyes.mp4",
+        "in": 0.0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "label": "dramatisation",
+      "sfx": []
+    },
     {
       "beat": "b01-s1a-ots",
       "picture": {

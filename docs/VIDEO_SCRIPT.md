@@ -66,8 +66,8 @@ last frame is the board full frame: the cut is exact.
 
 | Time | Len | Beat | Picture | Voice-over |
 |---|---:|---|---|---|
-| 0:00.00 | 1.3 | s0-eyes · HIS EYES ON THE BALL. | story (Blender first-person insert; a placeholder card until it lands) | Kid: Give it to me! |
-| 0:01.30 | 1.1 | s1a-ots · name card YOU ARE No. 14 | story (Blender, dramatisation) |  |
+| 0:00.00 | 1.633 | s0-eyes (his eyes on the ball, story 0.3 → 1.933) | story (Blender, dramatisation) | Kid: Give it to me! |
+| 0:01.63 | 1.1 | s1a-ots · name card YOU ARE No. 14 | story (Blender, dramatisation) |  |
 | 0:02.40 | 0.966 | s1c-steal | story (Blender, dramatisation) |  |
 | 0:03.37 | 0.867 | s1d-fall | story (Blender, dramatisation) | Coach: You watched the ball. You missed the game. |
 | 0:04.23 | 2.3 | card-watched · YOU WATCHED THE BALL. / YOU MISSED THE GAME. | card |  |
