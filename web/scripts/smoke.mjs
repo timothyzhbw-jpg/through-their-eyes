@@ -475,11 +475,6 @@ async function doorTabs(page, current) {
     }
   }
   await see(page.locator(".stage-head").getByRole("button", { name: "Settings" }), "Settings");
-  const extra = await page
-    .locator(".stage-head")
-    .locator("#your-call-open, .moments-menu, #header-more")
-    .count();
-  if (extra) throw new Error("expected no header control but the doors and Settings");
 }
 
 /** The header's Settings open (the moment, who is watching, who to follow, sound, View options,

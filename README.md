@@ -163,7 +163,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    the match streams from the API at 25 Hz onto the tactical board with pitch control, the
    analyst's view; once the moment is detected, the agent crew's breakdown plays (Microsoft
    Foundry, cached after the first request). Click a caption to open its claims and the evidence
-   frame; **⋯ → Sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
+   frame; **⋯ Settings → Sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
    switch it in the header's ⋯ (**Watching as**) and the casual fan watches through his eyes, the
    coach gets his eyes with the board beside them, audio description a plain broadcast camera,
    each with its own lines and voice ([persona_distinctness](eval/reports/persona_distinctness.md)).
