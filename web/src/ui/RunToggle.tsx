@@ -1,6 +1,7 @@
 // The run toggle in the header: what happened, and the counterfactual re-simulation, named by
 // its intervention (the dropped look, or the forced action). The other match is always Dusk, never
 // Floodlight. A stitched match has no second run.
+// One line under it puts the two decisions side by side (ui/outcomeLine.ts).
 // Before the stream detects the moment the switch is locked, so a click never leaves the live
 // stream.
 
@@ -10,6 +11,7 @@ import type { RunName } from "../data/types";
 import type { LiveMoment, LiveState } from "../live/feed";
 import { runLocked, useView } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
+import { outcomeLine } from "./outcomeLine";
 import { Segmented } from "./Segmented";
 
 const NO_FEED: Store<Pick<LiveState, "moments">> = createStore({ moments: [] as LiveMoment[] });
@@ -33,6 +35,7 @@ export function RunToggle() {
   }, [nudge]);
   if (!hero.counterfactual) return null;
   const labels = runLabels(hero);
+  const line = outcomeLine(hero);
   const described = locked ? { locked: true, describedBy: hintId } : {};
   return (
     <>
@@ -53,6 +56,19 @@ export function RunToggle() {
           },
         ]}
       />
+      {line && !locked && (
+        <p className="run-outcome" data-testid="run-outcome">
+          <span className="with">
+            <b>With the look</b> → {line.withLook}
+          </span>
+          <span className="sep" aria-hidden="true">
+            {" · "}
+          </span>
+          <span className="without">
+            <b>Without</b> → {line.without}
+          </span>
+        </p>
+      )}
       {locked && (
         <span className="run-hint" id={hintId} data-nudge={nudge || undefined}>
           Available once the moment arrives
