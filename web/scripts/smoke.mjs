@@ -749,30 +749,43 @@ async function instantCuts(page) {
  * selector switches players on its own too. */
 async function followEyes(page) {
   await hero(page);
+  // The picker is in View options, in the header's ⋯: open both to read or use it, close them
+  // again before the next click on the main screen.
   const eyes = page.getByRole("combobox", { name: "Whose eyes" });
+  await viewOptions(page);
   const hostId = await eyes.inputValue();
   const ids = await eyes.locator("option").evaluateAll((os) => os.map((o) => o.value));
   const other = ids.find((id) => id !== hostId);
   await eyes.selectOption(other);
   if ((await eyes.inputValue()) !== other) throw new Error("expected the EYES selector to switch");
   await eyes.selectOption(hostId);
+  await closeMenus(page);
 
-  await page.getByRole("button", { name: "Your view" }).click();
+  // Your view is the journey's third step, its controls inline (no menu to open).
+  await page
+    .getByRole("tablist", { name: "Journey steps" })
+    .getByRole("tab", { name: /Your view/ })
+    .click();
   const follow = page
-    .locator(".your-view-panel select")
+    .locator(".your-view-inline select")
     .filter({ has: page.locator("option", { hasText: "No player" }) });
   const options = await follow.locator("option").evaluateAll((os) => os.map((o) => o.value));
   const pick = options.find((v) => v && v !== hostId);
   await follow.selectOption(pick);
   const note = page.getByTestId("follow-eyes");
   await see(note, "the note on the followed player's looks");
-  if ((await eyes.inputValue()) !== pick) {
+  const eyesNow = async () => {
+    await viewOptions(page);
+    const value = await eyes.inputValue();
+    await closeMenus(page);
+    return value;
+  };
+  if ((await eyesNow()) !== pick) {
     await see(note.getByText(/has no recorded looks in this moment/), "the no-look-data note");
     await note.getByRole("button", { name: /^Watch through #\d+'s eyes$/ }).click();
   }
-  if ((await eyes.inputValue()) !== pick) {
-    throw new Error(`expected the EYES selector on ${pick}, got ${await eyes.inputValue()}`);
-  }
+  const got = await eyesNow();
+  if (got !== pick) throw new Error(`expected the EYES selector on ${pick}, got ${got}`);
 }
 
 /** A count typed into "Try a wrong number" (the scans claim's number of looks): 0, 3 and 7, typed
