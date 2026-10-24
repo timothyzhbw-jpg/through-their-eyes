@@ -478,9 +478,8 @@ class _Builder:
         if beat.happened:
             line = Claim(
                 id="drop_back",
-                template="As the ball comes, {player} drops {d} m back toward it, to receive "
-                         "with more space.",
-                templates={"zh": "球来的时候，{player}向球的方向回撤了{d}米，为接球拉开空间。"},
+                template="As the ball comes, {player} drops {d} m back toward it.",
+                templates={"zh": "球来的时候，{player}向球的方向回撤了{d}米。"},
                 slots={"player": Slot(ref=self.hero), "d": Slot(value=display(dropped, 1),
                                                                 decimals=1)},
                 predicate=Predicate(op="approx", lhs=delta, rhs=slot("d", scale=-1.0),

@@ -65,6 +65,24 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| Decision changed with two more looks \| {NUM}/{NUM} \({NUM}%",
         ("k", "n", "pct"),
     ),
+    # The teaching scenario, held-out block first in its report: three looks, then one look.
+    "H12": (
+        "pro_scan.md",
+        rf"\| Separation at reception larger with three looks \| {NUM}/{NUM} \({NUM}%",
+        ("k", "n", "pct"),
+    ),
+    "H13": (
+        "pro_scan.md",
+        rf"\| Receives side-on \(body ≥ 45° from square\) \| {NUM}/{NUM} \({NUM}%[^|]*"
+        rf"\| {NUM}/{NUM} \({NUM}%",
+        ("three", "n", "pct", "one", "n_one", "pct_one"),
+    ),
+    "H14": (
+        "pro_scan.md",
+        rf"\| Decision: forward to the striker `H9` \| {NUM}/{NUM} \({NUM}%[^|]*"
+        rf"\| {NUM}/{NUM} \({NUM}%",
+        ("three", "n", "pct", "one", "n_one", "pct_one"),
+    ),
     "H5": (
         "hero_lens_press_escape.md",
         rf"\| Intervention changes the outcome {FRACTION}",

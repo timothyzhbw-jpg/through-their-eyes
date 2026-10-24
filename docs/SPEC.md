@@ -715,6 +715,48 @@ is a step.
   added to the eval afterwards; the report regenerates with every earlier value unchanged.
 - **Not done yet:** the `sight` lens, its claims and narration (the explain PR for this moment).
 
+**Teaching scenario (`pro_scan`, 2026-10-24): back to goal, three looks, then the half-turn.** A
+coach's example the product owner asked for, not a hero moment: **the look times are scripted for
+teaching; what he sees, believes and does follows the sim.**
+- **The play.** The centre-back H4 plays into the central midfielder H8, back to goal at about
+  (12, −4). Before the ball arrives he looks over his left shoulder, over his right, behind him
+  toward goal and, as the ball comes, forward up the pitch toward the striker H9 (directions from
+  where his body faces, as `force_scans` makes a look, §3.7; times 5.15, 3.9, 2.7 and 1.25 s before
+  the planned reception). The central defender A5 stands in the lane between them and steps out to
+  press H8 after the look behind; only the forward look shows it. His own scans are off until he
+  plays, so the scripted looks are all he takes, and the forward look is the key scan (the app's
+  intervention is the usual `drop_scan`).
+- **Two rules, on his belief, scoped to the scenario** (`sim/scenarios/pro_scan.py`; two engine
+  hooks, `Scenario.receiver_targets` and `Scenario.body_targets`, empty for every other scenario,
+  so every other run is unchanged byte for byte):
+  1. *Where he receives.* After each look his receiving spot moves to the point within 3 m of the
+     planned spot furthest from the opponents he believes will be within 7 m of him when the ball
+     arrives (his belief carried forward at most the 1 s belief horizon, §3.4), at 4 m/s; once the
+     ball is on its way, only back along its line, so he still meets it: the drop-back.
+  2. *The half-turn.* From 0.4 s before the ball reaches him until he plays it, if he believes an
+     opponent is within 6 m his body turns side-on, 70° from facing the ball, away from that
+     opponent; otherwise he stays square.
+  The sim has no first touch or reception mechanics: the half-turn changes his body angle and his
+  next action's options (where the ball sits, 0.3 m along his body; where his eyes rest while he
+  has it; what an opponent can win ball-first, with tackles on), not the touch. His pass is the
+  decision model's on his belief (§3.5).
+- **Eval** (`eval/pro_scan.py`; design seeds 0–99, held-out 100–139, Wilson intervals): three looks
+  and the forward look against one look (behind only), both runs sharing every draw. On held-out
+  seeds ([pro_scan.md](../eval/reports/pro_scan.md), macOS before the Linux regeneration): he
+  receives 1.32 m further from the nearest opponent on average (further in 39/40) and side-on in
+  35/40 against 0/40, and his forward passes complete in 31/31 against 27/30. **The decision
+  barely changes:** forward to the striker in 31/40 against 30/40, the striker being his
+  highest-valued option on either picture (39/40 and 40/40). Without the forward look alone he
+  receives as with one look in 40/40: that look is the one the rules act on. The first look finds
+  little new (everyone is known at the run's first frame). The forward look fails to start on one
+  held-out seed (104), behind the look behind's refractory.
+- **In the app.** `web/public/data/steps_pro_scan_seed126.json` (held-out seed 126, typical of the
+  eval) is the scan story's bundle with each look's label and two frozen beats, the drop-back and
+  the half-turn, in verified lines (§7). The API serves `pro_scan-126` without listing it; the scan
+  story and the Academy drill link to it.
+- Not in the Laws audit's report (`eval/laws.py` sweeps the other scenarios, so `laws.md` is
+  unchanged); `tests/test_laws.py` checks it.
+
 ### 3.7 Determinism and counterfactuals
 - One match seed. **Randomness is keyed, not sequential:** every draw comes from a generator keyed
   by `(match_seed, entity_id, purpose)` that draws a fixed number of values per frame whatever
@@ -2298,6 +2340,16 @@ original visual identity.
     picture steps on a phone; the steps are buttons; the run switch keeps the same look. Reduced
     motion: the dimming appears without fading in.
   - A hero with no decision on the ball (`corner_blind_side`, `screened_shot`) has no steps.
+  - *The coach's example* (2026-10-24, the teaching scenario `pro_scan`, §3.6; deep link
+    `?play=steps&match=pro_scan-126`; a small "Coach's example: three looks, then the half-turn"
+    link on the scan story's card and in the Academy drill's intro, with the live service only).
+    Its bundle labels each look with its scripted direction (L, R, B, F: with his back to goal every
+    look up the pitch is behind his body, so the label comes from the bundle, not from his head
+    against his body) and adds two frozen beats at his reception: the drop-back (his path from the
+    pass to the reception on the board) and the half-turn (the arc from facing the ball to his body,
+    through his eyes), each told whether or not it happened, in verified lines. The card says "The
+    look times are scripted for teaching; what he sees, believes and does follows the sim", and at
+    the half-turn that the sim has no first touch. The other run is the one without the forward look.
 - **Evidence for viewers, not only the producer console.** Every narration line can be opened: it
   shows its claims with their kind label (observed / computed / counterfactual), verdict and
   evidence events, and seeks the replay to the evidence frame. *Implemented:* each claim with a

@@ -230,6 +230,14 @@ _Fill in as they come to exist._
   web/public/data/steps_seed3.json` (and `press_escape` seed 0) — His looks, step by step (SPEC 7):
   the hero's looks before the reception, his decision, sim velocities and verified lines;
   `uv run python -m agents.steps --seed 3` prints them
+- `uv run python -m eval.pro_scan` — the teaching scenario `pro_scan` (SPEC 3.6, "Teaching"): back
+  to goal, three looks (left, right, behind) and the forward look against one look (behind only);
+  reception-point shift, separation at reception, side-on, decision, pass completed and xT gained on
+  design seeds 0–99 and held-out 100–139 with Wilson intervals, about 10 s on all cores; writes
+  `eval/reports/pro_scan.md`. Its look times are scripted for teaching; what he sees, believes and
+  does follows the sim. `uv run python -m sim.export --scenario pro_scan --seed 126 --steps
+  web/public/data/steps_pro_scan_seed126.json` rewrites the scan story's coach's example
+  (`?play=steps&match=pro_scan-126`; the API serves it without listing it)
 - `uv run python -m eval.pitch_control_parity` — the numpy half of the pitch-control shader
   parity test (SPEC 4): 10 hero-moment snapshots and the kernel on the 1 m grid, into
   `web/src/pitchControl/snapshots.json`. Re-run after a change to the pitch-control kernel or
