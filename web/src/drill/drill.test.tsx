@@ -120,7 +120,7 @@ describe("Academy drill: ready", () => {
     const live = (await opened({ ...offline(), offline: null })).el;
     const link = live.querySelector<HTMLAnchorElement>('.dr-card a[href*="pro_scan"]')!;
     expect(textOf(link)).toBe(COACH_LABEL);
-    expect(link.getAttribute("href")).toBe("/?play=steps&match=pro_scan-126");
+    expect(link.getAttribute("href")).toBe("/?play=steps&match=pro_scan-116");
   });
 
   it("chooses the pace before the start", async () => {

@@ -1,53 +1,61 @@
-"""Teaching scenario (SPEC 3.6, "Teaching"): back to goal, three looks, then the half-turn. Do
-three looks (left, right, behind) plus the forward look give the midfielder more than one look
-(behind only)?
+"""Teaching scenario (SPEC 3.6, "Teaching"): back to goal, the coach's sequence. Does the look
+left (which drops him back) and the look right (which sets the half-turn) change how he receives
+and what he does, against facing the ball only? And what does each look do on its own?
 
     uv run python -m eval.pro_scan
 
-On `pro_scan` (sim/scenarios/pro_scan.py), H8 takes his scripted looks; the look TIMES are
-scripted for teaching, and what he sees, believes and does follows the sim. Per seed, two runs
-that share every random draw (SPEC 3.7) and differ only in his looks:
-- three looks: left, right, behind, then the forward look as the ball comes (the factual run);
-- one look: behind only (the other three dropped with `DropScan`, re-simulated from the first).
-And, because the app's own intervention is the one every scan hero has, a third run without the
-forward look only (`drop_scan` of the key look), reported beside them.
+On `pro_scan` (sim/scenarios/pro_scan.py), H8 starts facing his own half, toward the ball (his
+forward view, not a scan), then takes his scripted looks: left, then right. The look TIMES are
+scripted for teaching; what he sees, believes and does follows the sim. Per seed, four runs that
+share every random draw (SPEC 3.7) and differ only in his looks (`DropScan`, re-simulated from the
+first dropped look):
+- both looks: the forward view, the look left, the look right (the factual run);
+- no side looks: the forward view only;
+- left only, and right only: so that each look's effect can be told apart.
 
 Measured in each run:
-- the reception-point shift: metres from the spot the pass was planned for to where he received
-  it (rule 1 moves his spot on his belief; the engine moves him there);
-- his separation at reception: the nearest opponent's distance;
+- the two rules, which act on his belief at fixed times after each look's scripted start whether
+  or not he took it: did rule 1 drop him back, and did rule 2 turn him side-on;
+- the reception-point shift (metres from the spot the pass was first planned for to where he
+  received it) and his separation at reception (the nearest opponent's distance);
 - whether he receives side-on: his body at least SIDE_ON_DEG from square (facing where the pass
-  came from) at the reception (rule 2 turns him when he believes a presser is near);
-- his decision (the decision model on his belief, SPEC 3.5): forward to the striker H9, or back
-  or sideways (any other pass), or a carry;
+  came from) at the reception;
+- his decision (the decision model on his belief, SPEC 3.5): forward to the striker H9, another
+  pass, or a carry; whether the forward pass is his highest-valued option;
 - the outcome: the pass completed (possession kept), and the xT gained: the fitted grid's value
   where his action ended (`possession_value`, minus the opponents' if lost) minus its value
   where he received the ball;
-- each look's use: his belief error about the outfield opponents (mean metres, as the explain
-  layer rebuilds his belief from sightings) as the look begins and as it ends.
-Shares carry 95% Wilson intervals. Design seeds 0-99 (the scene was built on 0-15); held-out
-seeds 100-139, run once the scene was fixed. Writes eval/reports/pro_scan.md.
+- each look's news, in the run with both: who is new in his picture (`explain.belief_options`:
+  came into his sight, or believed more than 1 m from where he would have believed them without
+  the look) and which of his options it opened or closed (the decision model on his belief at the
+  look's end, with and without the look; open at a believed success of at least 50%).
+Shares carry 95% Wilson intervals. Design seeds 0-99 (the scene was built on 0-15 and checked on
+100-106 while it was tuned); held-out seeds 100-139. Writes eval/reports/pro_scan.md.
 """
 
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
 from analytics.xt import xt_for
 from eval.season import wilson
-from explain.lenses import believed_position, sightings
+from explain.belief_options import look_options, new_in_picture, option_changes
+from explain.lenses import sightings
 from sim.counterfactual import possession_result, possession_value, reception_frame
+from sim.model import Event
 from sim.scenarios.pro_scan import (
     HALF_TURN_M,
     LOOKS,
     MAX_SHIFT_M,
     NEAR_M,
     OPEN_DEG,
+    RULE_DELAY_S,
     ProScan,
     body_angle,
     look_ids,
@@ -58,12 +66,31 @@ REPORTS = Path(__file__).parent / "reports"
 DESIGN = "0-99"
 HELD_OUT = "100-139"
 SIDE_ON_DEG = 45.0  # a body this far from square is side-on (rule 2 opens it OPEN_DEG)
-RUNS = {"three": "LRBF", "one": "B", "no_forward": "LRB"}
+RUNS = {"both": "LR", "none": "", "left": "L", "right": "R"}
+TITLES = {
+    "both": "Both looks (forward view + left + right)",
+    "none": "No side looks (forward view only)",
+    "left": "Left only",
+    "right": "Right only",
+}
+WORDS = {"L": "left", "R": "right"}
+LOST = "lost before deciding"  # the pass to him intercepted, or the ball won off him first
+
+
+@dataclass
+class LookNews:
+    """One look's news, in the run with both looks."""
+
+    new: list[tuple[str, float]]  # (player, metres his belief moved), largest first
+    opened: list[str]  # options it opened (believed success crossed up through 50%)
+    closed: list[str]  # options it closed
 
 
 @dataclass
 class RunRow:
-    looks: list[str]  # the scripted looks that happened, in order ("L", "R", "B", "F")
+    looks: list[str]  # the scripted looks that happened, in order ("L", "R")
+    dropped: bool  # rule 1 moved his receiving spot back
+    turned: bool  # rule 2 chose the half-turn
     shift_m: float
     separation_m: float
     nearest: str
@@ -73,56 +100,97 @@ class RunRow:
     best: str  # his highest-valued option, on his belief
     result: str  # possession_result: kept, lost, open
     xt_gain: float
-    # label -> (mean belief error at its start, at its end, players), over the outfield
-    # opponents he saw on the look
-    look_error: dict[str, tuple[float, float, int]]
+    news: dict[str, LookNews] = field(default_factory=dict)  # the run with both looks only
 
     @property
     def forward(self) -> bool:
         return self.decision == f"pass:{ProScan.runner}"
 
     @property
-    def back_or_sideways(self) -> bool:
+    def other_pass(self) -> bool:
         return self.decision.startswith("pass:") and not self.forward
+
+
+def _lost_before_deciding(run, hero: str) -> Event | None:
+    """When he makes no decision, how the ball was lost: the pass to him intercepted, or a
+    tackle that won it off him."""
+    if run.hero_decision() is not None:
+        return None
+    return next((e for e in run.events if e.type == "interception"
+                 or e.type == "tackle" and e.attrs.get("won_from") == hero), None)  # fmt: skip
+
+
+def _received(run, hero: str) -> int:
+    """His reception for his decision; without a decision, his first reception, or the frame the
+    pass to him was intercepted."""
+    if run.hero_decision() is not None:
+        return reception_frame(run, hero)
+    got = [e.frame for e in run.events if e.type == "reception" and e.player == hero]
+    if got:
+        return min(got)
+    lost = _lost_before_deciding(run, hero)
+    if lost is None:
+        raise ValueError(f"{hero}: no decision, no reception and no interception")
+    return lost.frame
+
+
+def _news(run, sc) -> dict[str, LookNews]:
+    hero = sc.hero
+    seen = sightings(run, hero)
+    decision = run.hero_decision()
+    decided = decision.frame if decision is not None else _received(run, sc.hero)
+    started = {e.id: e for e in run.events if e.type == "scan" and e.player == hero}
+    out = {}
+    for (label, _, _), sid in zip(LOOKS, look_ids(sc), strict=True):
+        e = started.get(sid)
+        if e is None:
+            continue
+        a, b = e.frame, min(int(e.attrs["end"]), decided)
+        before, after = look_options(run, hero, a, b, seen)
+        added, removed = option_changes({o.action: o.p_success for o in before},
+                                        {o.action: o.p_success for o in after})  # fmt: skip
+        news = [(n.player, n.moved_m) for n in new_in_picture(run, hero, a, b, seen)
+                if n.moved_m > 1.0]  # fmt: skip
+        out[label] = LookNews(news, added, removed)
+    return out
 
 
 def _measure(seed: int, keep: str) -> RunRow:
     run, sc = run_with_looks(seed, keep)
     hero = sc.hero
     i = run.index(hero)
-    f = reception_frame(run, hero)
+    f = _received(run, hero)
     opp = [j for j, p in enumerate(run.players) if p.team != run.players[i].team]
     gaps = np.linalg.norm(run.pos[f, opp] - run.pos[f, i], axis=-1)
     angle = body_angle(run, sc, f)
     sign = 1 if run.players[i].team == 0 else -1
-    started = {e.id: e for e in run.events if e.type == "scan" and e.player == hero}
-    done, errors = [], {}
-    outfield = [j for j in opp if run.players[j].role != "GK"]
-    seen = sightings(run, hero)
-    for (label, _, _), sid in zip(LOOKS, look_ids(sc), strict=True):
-        e = started.get(sid)
-        if e is None:
-            continue
-        done.append(label)
-        a, b = e.frame, int(e.attrs["end"])
-        saw = [j for j in outfield if seen[a : b + 1, j].any()]
-        if saw:
-            ends = [float(np.mean([np.linalg.norm(believed_position(run, hero, run.ids[j], g,
-                                                                   seen=seen) - run.pos[g, j])
-                                   for j in saw])) for g in (a, b)]  # fmt: skip
-            errors[label] = (ends[0], ends[1], len(saw))
+    started = {e.id for e in run.events if e.type == "scan" and e.player == hero}
+    d = run.hero_decision()
+    if d is not None:
+        decision, best = d.chosen, max(d.options, key=lambda o: o.value).action
+        result, value = possession_result(run), possession_value(run)
+    else:  # the ball lost before he decided: the opponents' xT where they won it
+        lost = _lost_before_deciding(run, hero)
+        if lost is None:
+            raise ValueError(f"seed {seed} ({keep or 'no side looks'}): no decision, ball not lost")
+        decision, best, result = LOST, "—", "lost"
+        value = -float(xt_for(np.array(lost.attrs["at"]), -sign))
     return RunRow(
-        looks=done,
+        looks=[
+            label for (label, _, _), sid in zip(LOOKS, look_ids(sc), strict=True) if sid in started
+        ],  # fmt: skip
+        dropped=sc.calls["drop_back"].spot is not None,
+        turned=sc.calls["half_turn"].side != 0,
         shift_m=float(np.linalg.norm(run.pos[f, i] - sc.spot)),
         separation_m=float(gaps.min()),
         nearest=run.ids[opp[int(np.argmin(gaps))]],
         body_deg=angle,
         side_on=angle >= SIDE_ON_DEG,
-        decision=run.hero_decision().chosen,
-        best=max(run.hero_decision().options, key=lambda o: o.value).action,
-        result=possession_result(run),
-        xt_gain=possession_value(run) - float(xt_for(run.pos[f, i], sign)),
-        look_error=errors,
+        decision=decision,
+        best=best,
+        result=result,
+        xt_gain=value - float(xt_for(run.pos[f, i], sign)),
+        news=_news(run, sc) if keep == RUNS["both"] else {},
     )
 
 
@@ -137,6 +205,8 @@ def evaluate_seed(seed: int) -> Row:
 
 
 def _share(k: int, n: int) -> str:
+    if not n:
+        return "—"
     lo, hi = wilson(k, n)
     return f"{k}/{n} ({k / n:.0%}; 95% CI {lo:.0%}–{hi:.0%})"
 
@@ -145,191 +215,261 @@ def _mean(xs: list[float]) -> str:
     return f"{np.mean(xs):.2f} (median {np.median(xs):.2f})"
 
 
+def _cols(rows: list[Row]) -> dict[str, list[RunRow]]:
+    return {name: [r.runs[name] for r in rows] for name in RUNS}
+
+
+def _kept(rs: list[RunRow], forward_only: bool = False) -> str:
+    passes = [r for r in rs if (r.forward if forward_only else r.decision.startswith("pass:"))]
+    return _share(sum(r.result == "kept" for r in passes), len(passes))
+
+
 def _block(title: str, rows: list[Row]) -> list[str]:
     n = len(rows)
-    three = [r.runs["three"] for r in rows]
-    one = [r.runs["one"] for r in rows]
-    nof = [r.runs["no_forward"] for r in rows]
-    all_looks = sum(r.looks == ["L", "R", "B", "F"] for r in three)
-    one_ok = sum(r.looks == ["B"] for r in one)
-    sep_more = sum(t.separation_m > o.separation_m + 1e-6 for t, o in zip(three, one, strict=True))
-    changed = sum(t.decision != o.decision for t, o in zip(three, one, strict=True))
-    nof_changed = sum(t.decision != x.decision for t, x in zip(three, nof, strict=True))
-    d_xt = [t.xt_gain - o.xt_gain for t, o in zip(three, one, strict=True)]
-    d_sep = [t.separation_m - o.separation_m for t, o in zip(three, one, strict=True)]
+    c = _cols(rows)
     striker = f"pass:{ProScan.runner}"
+    order = list(RUNS)
 
-    def kept(rs: list[RunRow]) -> str:
-        passes = [r for r in rs if r.decision.startswith("pass:")]
-        return _share(sum(r.result == "kept" for r in passes), len(passes)) if passes else "—"
+    def row(label: str, cell) -> str:
+        return f"| {label} | " + " | ".join(cell(c[name]) for name in order) + " |"
 
-    def fwd_kept(rs: list[RunRow]) -> str:
-        fw = [r for r in rs if r.forward]
-        return _share(sum(r.result == "kept" for r in fw), len(fw)) if fw else "—"
+    def count(pred):
+        return lambda rs: _share(sum(pred(r) for r in rs), n)
 
     lines = [
         f"## {title}",
         "",
-        "| Metric | Three looks + forward look | One look (behind only) | Without the forward "
-        "look (the app's run) |",
-        "|---|---|---|---|",
-        f"| His scripted looks all happened | {_share(all_looks, n)} | {_share(one_ok, n)} "
-        f"| {_share(sum(r.looks == ['L', 'R', 'B'] for r in nof), n)} |",
-        f"| Reception-point shift, m: mean | {_mean([r.shift_m for r in three])} "
-        f"| {_mean([r.shift_m for r in one])} | {_mean([r.shift_m for r in nof])} |",
-        f"| Separation from the nearest opponent at reception, m: mean "
-        f"| {_mean([r.separation_m for r in three])} | {_mean([r.separation_m for r in one])} "
-        f"| {_mean([r.separation_m for r in nof])} |",
-        f"| Receives side-on (body ≥ {SIDE_ON_DEG:.0f}° from square) "
-        f"| {_share(sum(r.side_on for r in three), n)} | {_share(sum(r.side_on for r in one), n)} "
-        f"| {_share(sum(r.side_on for r in nof), n)} |",
-        f"| Decision: forward to the striker `{ProScan.runner}` "
-        f"| {_share(sum(r.forward for r in three), n)} | {_share(sum(r.forward for r in one), n)} "
-        f"| {_share(sum(r.forward for r in nof), n)} |",
-        f"| Decision: back or sideways (another pass) "
-        f"| {_share(sum(r.back_or_sideways for r in three), n)} "
-        f"| {_share(sum(r.back_or_sideways for r in one), n)} "
-        f"| {_share(sum(r.back_or_sideways for r in nof), n)} |",
-        f"| Forward pass is his highest-valued option "
-        f"| {_share(sum(r.best == striker for r in three), n)} "
-        f"| {_share(sum(r.best == striker for r in one), n)} "
-        f"| {_share(sum(r.best == striker for r in nof), n)} |",
-        f"| Decision: carry | {_share(sum(r.decision == 'carry' for r in three), n)} "
-        f"| {_share(sum(r.decision == 'carry' for r in one), n)} "
-        f"| {_share(sum(r.decision == 'carry' for r in nof), n)} |",
-        f"| Pass completed (of his passes) | {kept(three)} | {kept(one)} | {kept(nof)} |",
-        f"| … of his passes forward to the striker | {fwd_kept(three)} | {fwd_kept(one)} "
-        f"| {fwd_kept(nof)} |",
-        f"| Possession lost (pass intercepted or out, or tackled on a carry) "
-        f"| {_share(sum(r.result == 'lost' for r in three), n)} "
-        f"| {_share(sum(r.result == 'lost' for r in one), n)} "
-        f"| {_share(sum(r.result == 'lost' for r in nof), n)} |",
-        f"| xT gained (where his action ended − where he received), mean "
-        f"| {np.mean([r.xt_gain for r in three]):+.3f} | {np.mean([r.xt_gain for r in one]):+.3f} "
-        f"| {np.mean([r.xt_gain for r in nof]):+.3f} |",
+        "| Metric | " + " | ".join(TITLES[name] for name in order) + " |",
+        "|---|" + "---|" * len(order),
+        "| His scripted looks all happened | "
+        + " | ".join(_share(sum(r.looks == list(RUNS[name]) for r in c[name]), n) for name in order)
+        + " |",  # fmt: skip
+        row("Rule 1 dropped him back (after the left look's time)", count(lambda r: r.dropped)),
+        row("Rule 2 chose the half-turn (after the right look's time)", count(lambda r: r.turned)),
+        row("Reception-point shift, m: mean", lambda rs: _mean([r.shift_m for r in rs])),
+        row(
+            "Separation from the nearest opponent at reception, m: mean",
+            lambda rs: _mean([r.separation_m for r in rs]),
+        ),
+        row(
+            f"Receives side-on (body ≥ {SIDE_ON_DEG:.0f}° from square)", count(lambda r: r.side_on)
+        ),
+        row(f"Decision: forward to the striker `{ProScan.runner}`", count(lambda r: r.forward)),
+        row("Decision: another pass (back or sideways)", count(lambda r: r.other_pass)),
+        row("Decision: carry", count(lambda r: r.decision == "carry")),
+        row(
+            "No decision: the pass to him intercepted, or the ball won off him first",
+            count(lambda r: r.decision == LOST),
+        ),
+        row("Forward pass is his highest-valued option", count(lambda r: r.best == striker)),
+        row("Pass completed (of his passes)", _kept),
+        row("… of his passes forward to the striker", lambda rs: _kept(rs, True)),
+        row(
+            "Possession lost (his pass intercepted or out, tackled on a carry, or lost first)",
+            count(lambda r: r.result == "lost"),
+        ),
+        row(
+            "xT gained (where his action ended − where he received), mean",
+            lambda rs: f"{np.mean([r.xt_gain for r in rs]):+.3f}",
+        ),
         "",
-        "| Paired, three looks against one | Value |",
-        "|---|---|",
-        f"| Separation at reception larger with three looks | {_share(sep_more, n)} |",
-        f"| Separation gained, m: mean | {np.mean(d_sep):+.2f} |",
-        f"| Decision differs | {_share(changed, n)} |",
-        f"| xT gained, three looks − one look: mean | {np.mean(d_xt):+.3f} |",
-        f"| Decision differs without the forward look only (the app's intervention) "
-        f"| {_share(nof_changed, n)} |",
+        "Paired (same seed, same draws). Each look on its own is the run with it against the run "
+        "without any side look; each look's added effect is the run with both against the run "
+        "with the other look only.",
         "",
-        "Each look's use, in the three-look run: the outfield opponents he saw on it, and his "
-        "belief error about them (mean metres; his belief rebuilt from his sightings, as the "
-        "explain layer does) as the look begins → as it ends.",
-        "",
-        "| Look | Taken | Opponents seen, mean | Belief error about them, start → end (m) "
-        "| Error fell |",
-        "|---|---|---|---|---|",
+        "| Comparison | Separation at reception, m: mean change | Larger separation "
+        "| Side-on, runs changed | Decision differs | Forward to the striker, runs: from → to "
+        "| xT gained: mean change |",
+        "|---|---|---|---|---|---|---|",
     ]
+    for label, a, b in (
+        ("Both looks − no side looks", "both", "none"),
+        ("Left only − no side looks (the left look alone)", "left", "none"),
+        ("Right only − no side looks (the right look alone)", "right", "none"),
+        ("Both − right only (what the left look adds)", "both", "right"),
+        ("Both − left only (what the right look adds)", "both", "left"),
+    ):
+        pairs = list(zip(c[a], c[b], strict=True))
+        lines.append(
+            f"| {label} | {np.mean([x.separation_m - y.separation_m for x, y in pairs]):+.2f} "
+            f"| {_share(sum(x.separation_m > y.separation_m + 1e-6 for x, y in pairs), n)} "
+            f"| {sum(x.side_on != y.side_on for x, y in pairs)}/{n} "
+            f"| {_share(sum(x.decision != y.decision for x, y in pairs), n)} "
+            f"| {sum(y.forward for _, y in pairs)} → {sum(x.forward for x, _ in pairs)} "
+            f"| {np.mean([x.xt_gain - y.xt_gain for x, y in pairs]):+.3f} |"
+        )
+    lines += [
+        "",
+        "Each look's news, in the run with both looks: who is new in his picture (came into his "
+        "sight, or believed more than 1 m from where he would have believed them without the "
+        "look), and which options it opened (↑) or closed (↓): the decision model on his belief "
+        "at the look's end with the look against without it, an option open at a believed "
+        "success of at least 50%, scored as if the ball were at his feet.",
+        "",
+        "| Look | Taken | Players new in his picture, mean | Most often the most moved "
+        "| How far, m: mean | Opened or closed an option | Most often opened | Most often closed |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    both = c["both"]
     for label, _, _ in LOOKS:
-        taken = sum(label in r.looks for r in three)
-        took = [r.look_error[label] for r in three if label in r.look_error]
+        took = [r.news[label] for r in both if label in r.news]
         if not took:
-            lines.append(f"| {label} | {taken}/{n} | 0 | — | — |")
+            lines.append(f"| {WORDS[label]} | 0/{n} | — | — | — | — | — | — |")
             continue
-        a, b = np.mean([x[0] for x in took]), np.mean([x[1] for x in took])
-        fell = sum(x[1] < x[0] - 1e-9 for x in took)
-        lines.append(f"| {label} | {taken}/{n} | {np.mean([x[2] for x in took]):.1f} "
-                     f"| {a:.2f} → {b:.2f} | {_share(fell, len(took))} |")  # fmt: skip
+        tops = [x.new[0] for x in took if x.new]
+        top = Counter(p for p, _ in tops).most_common(1)
+        opened = Counter(o for x in took for o in x.opened).most_common(1)
+        closed = Counter(o for x in took for o in x.closed).most_common(1)
+
+        def fmt(mc, k: int) -> str:
+            return f"`{mc[0][0]}` ({mc[0][1]}/{k})" if mc else "—"
+
+        lines.append(
+            f"| {WORDS[label]} | {len(took)}/{n} | {np.mean([len(x.new) for x in took]):.1f} "
+            f"| {fmt(top, len(took))} | {np.mean([m for _, m in tops]) if tops else 0:.1f} "
+            f"| {_share(sum(bool(x.opened or x.closed) for x in took), len(took))} "
+            f"| {fmt(opened, len(took))} | {fmt(closed, len(took))} |"
+        )
     lines.append("")
     return lines
 
 
 def _reading(rows: list[Row]) -> list[str]:
-    """What the held-out counts say: each sentence is computed from them, and one that the counts
-    do not back is not written."""
+    """What the held-out counts say: each sentence is computed from them, and one the counts do
+    not back is not written."""
     n = len(rows)
-    three = [r.runs["three"] for r in rows]
-    one = [r.runs["one"] for r in rows]
-    nof = [r.runs["no_forward"] for r in rows]
-    striker = f"pass:{ProScan.runner}"
-    pairs = list(zip(three, one, strict=True))
-    sep = np.mean([t.separation_m - o.separation_m for t, o in pairs])
-    wider = sum(t.separation_m > o.separation_m + 1e-6 for t, o in pairs)
-    side3, side1 = sum(r.side_on for r in three), sum(r.side_on for r in one)
-    fwd3, fwd1 = sum(r.forward for r in three), sum(r.forward for r in one)
-    best3, best1 = sum(r.best == striker for r in three), sum(r.best == striker for r in one)
-    fk3 = sum(r.forward and r.result == "kept" for r in three)
-    fk1 = sum(r.forward and r.result == "kept" for r in one)
-    x3, x1 = np.mean([r.xt_gain for r in three]), np.mean([r.xt_gain for r in one])
-    same = sum(abs(x.shift_m - o.shift_m) < 1e-6 and x.side_on == o.side_on
-               for x, o in zip(nof, one, strict=True))  # fmt: skip
+    c = _cols(rows)
+
+    def fwd(name):
+        return sum(r.forward for r in c[name])
+
+    def side(name):
+        return sum(r.side_on for r in c[name])
+
+    def sep(a, b):
+        return float(np.mean([x.separation_m - y.separation_m
+                              for x, y in zip(c[a], c[b], strict=True)]))  # fmt: skip
+
+    def xt(name):
+        return float(np.mean([r.xt_gain for r in c[name]]))
+
     out = ["## Reading (held-out seeds)", ""]
-    if abs(sep) < 0.5 and abs(side3 - side1) < 0.1 * n and abs(fwd3 - fwd1) < 0.1 * n:
-        out.append("Three looks barely change anything here: his separation, his body at "
-                   "reception and his decision are about the same as with one look.")  # fmt: skip
-    else:
-        out.append(f"With three looks he receives {sep:+.2f} m further from the nearest opponent "
-                   f"on average (further in {wider}/{n} runs), and side-on in {side3}/{n} against "
-                   f"{side1}/{n} with one look.")  # fmt: skip
-    if abs(fwd3 - fwd1) <= 0.1 * n:
-        out.append(
-            f"His decision barely changes: he plays forward to the striker in {fwd3}/{n} runs "
-            f"with three looks and {fwd1}/{n} with one. The forward pass is his highest-valued "
-            f"option in {best3}/{n} and {best1}/{n}: on either picture it is the pass he wants, "
-            "and the decision model's softmax draw (SPEC 3.5) picks another in the rest. What the "
-            "looks change is how he receives the ball."
-        )
-    else:
-        out.append(f"He plays forward to the striker in {fwd3}/{n} runs with three looks and "
-                   f"{fwd1}/{n} with one.")  # fmt: skip
-    out.append(f"His forward passes complete in {fk3}/{fwd3} with three looks and {fk1}/{fwd1} "
-               f"with one; the mean xT gained is {x3:+.3f} against {x1:+.3f}.")  # fmt: skip
+    drops = {name: sum(r.dropped for r in c[name]) for name in RUNS}
+    turns = {name: sum(r.turned for r in c[name]) for name in RUNS}
+
+    def four(counts):
+        return (f"{counts['both']}/{n} runs with both looks, {counts['left']}/{n} with the left "
+                f"look only, {counts['right']}/{n} with the right only and {counts['none']}/{n} "
+                "with no side look")  # fmt: skip
+
     out.append(
-        f"Without the forward look alone he receives where, and as square as, with one look in "
-        f"{same}/{n} runs: the forward look, which shows the central defender stepping out toward "
-        "him, is the one the two rules act on."
+        f"Rule 1 drops him back in {four(drops)}; rule 2 turns him side-on in {four(turns)}. Each "
+        "rule acts at the same time in every run, on what he believes then: the counts are each "
+        "look's effect on his picture."
     )
-    first = [r.look_error["L"] for r in three if "L" in r.look_error]
-    if first and np.mean([x[0] for x in first]) < 0.05:
+    s = sep("both", "none")
+    if abs(s) < 0.5:
+        out.append(f"His separation at reception barely changes with both looks ({s:+.2f} m on "
+                   "average against no side looks).")  # fmt: skip
+    else:
         out.append(
-            "The first look (left) finds little new: everyone is known at the run's first frame "
-            "(SPEC 3.4), and the players it shows have barely moved since."
+            f"With both looks he receives {s:+.2f} m further from the nearest opponent on average "
+            f"than with no side looks (left alone {sep('left', 'none'):+.2f} m, right alone "
+            f"{sep('right', 'none'):+.2f} m), and side-on in {side('both')}/{n} against "
+            f"{side('none')}/{n}."
         )
+    f = {name: fwd(name) for name in RUNS}
+    if max(f.values()) - min(f.values()) <= 0.1 * n:
+        out.append(f"His decision barely changes: forward to the striker in {four(f)}.")
+    else:
+        out.append(f"He plays forward to the striker in {four(f)}.")
+        if f["left"] < f["none"]:
+            out.append(
+                "The left look alone lowers it: he drops back but, without the right look, "
+                "receives square, and from there the model favours another pass more often."
+            )
+    out.append(
+        f"The mean xT gained is {xt('both'):+.3f} with both looks, {xt('left'):+.3f} left only, "
+        f"{xt('right'):+.3f} right only and {xt('none'):+.3f} with no side look."
+    )
+    if xt("both") < xt("right"):
+        out.append(
+            "What the left look adds on top of the right is space, not value: "
+            f"{sep('both', 'right'):+.2f} m of separation at reception, and "
+            f"{xt('both') - xt('right'):+.3f} xT gained on average. It is the right look, which "
+            "shows the central defender stepping out, that opens the forward pass."
+        )
+    both = c["both"]
+    for label, _, _ in LOOKS:
+        took = [r.news[label] for r in both if label in r.news]
+        if not took:
+            continue
+        moved = sum(bool(x.opened or x.closed) for x in took)
+        nothing = sum(not x.new for x in took)
+        line = (f"The {WORDS[label]} look opens or closes at least one option in {moved}/"
+                f"{len(took)} runs")  # fmt: skip
+        out.append(line + (f"; in {nothing} it brings nothing new." if nothing else "."))
     out += [
         "",
         "Limits: the look times are scripted for teaching; what he sees, believes and does "
-        "follows the sim. The sim has no first touch or reception mechanics, so the half-turn "
-        "changes his body angle and his next action's options (where the ball sits, where his "
-        "eyes rest while he has it, what an opponent can win ball-first), not the touch.",
+        "follows the sim. The two rules are scoped to this scenario and act on his belief only. "
+        "The sim has no first touch or reception mechanics, so the half-turn changes his body "
+        "angle and the options open to him next (where the ball sits, where his eyes rest while "
+        "he has it, what an opponent can win ball-first), not the touch.",
         "",
     ]
     return out
 
 
 def render(design: list[Row], held: list[Row]) -> str:
-    looks = ", ".join(f"{label} {direction}° at {s} s" for label, direction, s in LOOKS)
+    looks = ", ".join(f"{WORDS[label]} {direction}° at {s} s" for label, direction, s in LOOKS)
     lines = [
-        "# Back to goal: three looks, then the half-turn — `pro_scan`",
+        "# Back to goal: a look left, a look right, then the half-turn — `pro_scan`",
         "",
-        "A teaching scenario (SPEC 3.6). **The look times are scripted for teaching; what he "
-        "sees, believes and does follows the sim.** His looks (direction from where his body "
-        f"faces, seconds before the planned reception): {looks}. Rule 1 moves his receiving spot "
-        f"after each look, up to {MAX_SHIFT_M:.0f} m, away from the opponents he believes will be "
-        f"within {NEAR_M:.0f} m of him when the ball arrives; rule 2 turns him {OPEN_DEG:.0f}° "
-        f"side-on at reception when he believes one is within {HALF_TURN_M:.0f} m. All three runs "
-        "share every random draw (SPEC 3.7). Generated by `uv run python -m eval.pro_scan`.",
+        "A teaching scenario (SPEC 3.6), in the coach's order. **The look times are scripted for "
+        "teaching; what he sees, believes and does follows the sim.** He starts facing his own "
+        "half, toward the ball (his forward view, not a scan). His looks (direction from where "
+        f"his body faces, seconds before the planned reception): {looks}. Rule 1, "
+        f"{RULE_DELAY_S} s after the left look's scripted start: if he believes an opponent will "
+        f"be within {NEAR_M:.0f} m of him when the ball arrives, he drops back toward the ball, up "
+        f"to {MAX_SHIFT_M:.0f} m, to receive with space. Rule 2, {RULE_DELAY_S} s after the right "
+        f"look's: if he believes one will be within {HALF_TURN_M:.0f} m, he receives on the "
+        f"half-turn, {OPEN_DEG:.0f}° side-on, away from him. All four runs share every random "
+        "draw (SPEC 3.7). Generated by `uv run python -m eval.pro_scan`.",
         "",
         *_block(f"Held-out seeds {held[0].seed}–{held[-1].seed} ({len(held)})", held),
         *_reading(held),
         *_block(f"Design seeds {design[0].seed}–{design[-1].seed} ({len(design)})", design),
         "## Per seed (held out)",
         "",
-        "| Seed | Looks | Shift 3 / 1 (m) | Separation 3 / 1 (m) | Body 3 / 1 (°) "
-        "| Decision 3 | Decision 1 | Result 3 / 1 | xT gained 3 / 1 | Without F |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "Runs: both looks / no side looks / left only / right only. Rules: D dropped back, "
+        "T half-turn, - neither.",
+        "",
+        "| Seed | Rules | Separation (m) | Body (°) | Decision | Result | xT gained | Left look: "
+        "new · ↑ · ↓ | Right look: new · ↑ · ↓ |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
+
+    def rules(r: RunRow) -> str:
+        return ("D" if r.dropped else "") + ("T" if r.turned else "") or "-"
+
+    def look(r: RunRow, label: str) -> str:
+        x = r.news.get(label)
+        if x is None:
+            return "not taken"
+        new = ", ".join(f"{p} {m:.1f}" for p, m in x.new[:2]) or "nothing new"
+        return f"{new} · {', '.join(x.opened) or '—'} · {', '.join(x.closed) or '—'}"
+
     for r in held:
-        t, o, x = r.runs["three"], r.runs["one"], r.runs["no_forward"]
+        rs = [r.runs[name] for name in RUNS]
         lines.append(
-            f"| {r.seed} | {''.join(t.looks)} | {t.shift_m:.2f} / {o.shift_m:.2f} "
-            f"| {t.separation_m:.2f} / {o.separation_m:.2f} | {t.body_deg:.0f} / {o.body_deg:.0f} "
-            f"| `{t.decision}` | `{o.decision}` | {t.result} / {o.result} "
-            f"| {t.xt_gain:+.3f} / {o.xt_gain:+.3f} | `{x.decision}` |"
+            f"| {r.seed} | {' / '.join(rules(x) for x in rs)} "
+            f"| {' / '.join(f'{x.separation_m:.2f}' for x in rs)} "
+            f"| {' / '.join(f'{x.body_deg:.0f}' for x in rs)} "
+            f"| {' / '.join(f'`{x.decision}`' for x in rs)} "
+            f"| {' / '.join(x.result for x in rs)} "
+            f"| {' / '.join(f'{x.xt_gain:+.3f}' for x in rs)} "
+            f"| {look(rs[0], 'L')} | {look(rs[0], 'R')} |"
         )
     return "\n".join(lines) + "\n"
 

@@ -13,6 +13,7 @@ import {
   halfTurn,
   halfTurnArc,
   lookStory,
+  pictureView,
   scansBeforeReceiving,
   tagOf,
   tickLabel,
@@ -114,23 +115,65 @@ export function LookStoryBlock({ st, step }: { st: StepThrough; step: Step }) {
           <li className="none">Nobody new</li>
         )}
       </ul>
-      <p className="ss-label">His picture</p>
-      <p className="ss-fact">
-        {story.changes.length
-          ? story.changes
-              .map(
-                (c) =>
-                  `${tagOf(c.person)}: ${c.before.toFixed(1)} m off before, ${c.after.toFixed(1)} m after`,
-              )
-              .join("; ")
-          : "Nothing he saw moved his picture."}
-      </p>
-      <p className="ss-label">What he is thinking</p>
-      <blockquote className="ss-think">{story.thinking}</blockquote>
-      <p className="ss-source">Template filled from the sim's data; no model wrote it.</p>
     </section>
   );
 }
+
+/** What a frozen step changed and what he made of it: for a look, who is new in his picture (or
+ * that nothing is); his options now on his belief, each with its believed success before and now,
+ * ↑ opened and ↓ closed; and one line of what he is thinking that links the two. The start view
+ * lists his options before any look. Nothing for a missing look or the decision. */
+export function PictureBlock({ st, step }: { st: StepThrough; step: Step }) {
+  const s = useStore(st.state, (x) => x);
+  const hero = st.session.hero;
+  const run = hero.runs[s.mode];
+  const teaching = !!st.steps()?.teaching;
+  const view = useMemo(() => pictureView(hero, run, step, teaching), [hero, run, step, teaching]);
+  if (!view) return null;
+  return (
+    <section className="ss-story ss-picture" aria-label="What he knew and could do">
+      {view.news && (
+        <>
+          <p className="ss-label">New in his picture</p>
+          {view.news.length ? (
+            <ul className="ss-news">
+              {view.news.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ss-fact ss-nothing">Nothing new in his picture.</p>
+          )}
+        </>
+      )}
+      <p className="ss-label">{view.optionsLabel}</p>
+      <ul className="ss-options">
+        {view.options.map((o) => (
+          <li key={o.action} className={o.mark === "↑" ? "up" : o.mark === "↓" ? "down" : ""}>
+            <span className="ss-opt">{o.label}</span>
+            <span className="ss-p">
+              {o.before !== null && view.compare ? `${percent(o.before)} → ` : ""}
+              {percent(o.now)}
+            </span>
+            {o.mark && (
+              <b className="ss-mark" aria-label={o.mark === "↑" ? "opened" : "closed"}>
+                {o.mark}
+              </b>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="ss-label">What he's thinking</p>
+      <blockquote className="ss-think">{view.thinking}</blockquote>
+      <p className="ss-source">
+        Believed chance of success, from the decision model on his belief at this frame, as if the
+        ball were at his feet. Template filled from the sim's data; no model wrote it.
+      </p>
+    </section>
+  );
+}
+
+const percent = (p: number) => `${Math.round(p * 100)}%`;
 
 /** The card's story for the decision: what he chose and why (from the looks), the half-turn when
  * the data shows it, and the honest line when he made fewer scans than players average. */

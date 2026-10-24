@@ -45,8 +45,8 @@ for group in "$@"; do
       run python -m sim.export --scenario blind_side_run --seed 3 --steps web/public/data/steps_seed3.json
       run python -m sim.export --scenario press_escape --seed 0 \
         --steps web/public/data/steps_press_escape_seed0.json
-      run python -m sim.export --scenario pro_scan --seed 126 \
-        --steps web/public/data/steps_pro_scan_seed126.json
+      run python -m sim.export --scenario pro_scan --seed 116 \
+        --steps web/public/data/steps_pro_scan_seed116.json
       run python -m demo.build --seed 3
       run python -m analytics.live_stats --scenario blind_side_run --seed 3 \
         --web-fixture web/src/stats/fixture_seed3.json

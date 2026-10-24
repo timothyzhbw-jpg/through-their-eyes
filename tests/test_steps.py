@@ -13,6 +13,7 @@ import pytest
 from agents.context import MomentContext
 from agents.steps import DWELL_TOLERANCE, answer_steps, build_steps, dwell_frame, focus_pair
 from analytics.vision import wrap_angle
+from explain.belief_options import option_changes
 from sim.export import export_steps, steps_json
 from tests import canonical
 
@@ -20,7 +21,7 @@ DATA = Path(__file__).parent.parent / "web" / "public" / "data"
 FILES = {
     ("blind_side_run", 3): "steps_seed3.json",
     ("press_escape", 0): "steps_press_escape_seed0.json",
-    ("pro_scan", 126): "steps_pro_scan_seed126.json",  # the teaching scenario's held-out seed
+    ("pro_scan", 116): "steps_pro_scan_seed116.json",  # the teaching scenario's held-out seed
 }
 
 
@@ -135,41 +136,82 @@ def test_a_hero_with_no_decision_on_the_ball_has_no_steps():
 
 @pytest.fixture(scope="module")
 def coach():
-    return MomentContext.load("pro_scan", 126)
+    return MomentContext.load("pro_scan", 116)
 
 
-def test_the_teaching_steps_label_each_look_and_add_the_two_beats(coach):
-    """`pro_scan`: the scripted looks L, R, B, F, the forward one missing without it, and the
-    drop-back and half-turn told in both runs, from the run itself."""
+def test_the_teaching_steps_follow_the_coachs_sequence(coach):
+    """`pro_scan`: start view, look left, drop-back, look right, half-turn, forward pass, in time
+    order; without the key (right) look, that look is missing and he receives square."""
     runs = build_steps(coach)
     fac, cf = runs["factual"], runs["counterfactual"]
-    assert [s.direction for s in fac.steps] == ["L", "R", "B", "F"]
-    assert [(s.direction, s.missing) for s in cf.steps] == [
-        ("L", False), ("R", False), ("B", False), ("F", True)
-    ]  # fmt: skip
+    assert [s.direction for s in fac.steps] == ["L", "R"]
+    assert [(s.direction, s.missing) for s in cf.steps] == [("L", False), ("R", True)]
     assert [(b.id, b.happened) for b in fac.beats] == [("drop_back", True), ("half_turn", True)]
-    assert [(b.id, b.happened) for b in cf.beats] == [("drop_back", False), ("half_turn", False)]
+    assert [(b.id, b.happened) for b in cf.beats] == [("drop_back", True), ("half_turn", False)]
+    assert fac.decision.chosen == "pass:H9" and cf.decision.chosen != "pass:H9"
     for rs in runs.values():
-        assert all(b.frame == rs.reception.frame for b in rs.beats)
-        assert list(rs.lines)[-3:] == ["drop_back", "half_turn", "final"]
-    # Without the forward look he receives the ball, and decides, on other frames.
-    assert cf.decision.frame != fac.decision.frame
+        left, right = rs.steps
+        drop, turn = rs.beats
+        assert left.frame < drop.frame < right.frame < turn.frame <= rs.decision.frame
+        assert turn.frame == rs.reception.frame == drop.end
+        # Rule 1 acted after the left look was over, rule 2 after the right one.
+        assert int(left.scan.attrs["end"]) < rs.rules["drop_back"]["frame"] == drop.start
+        assert int(right.scan.attrs["end"]) < rs.rules["half_turn"]["frame"] < turn.frame
+        assert list(rs.lines) == ["intro", left.scan.id, "drop_back", right.scan.id,
+                                  "half_turn", "final"]  # fmt: skip
+    assert fac.rules["drop_back"]["nearest"] == "A6" and fac.rules["half_turn"]["nearest"] == "A5"
+    assert fac.rules["half_turn"]["side"] != 0 and cf.rules["half_turn"]["side"] == 0
     answer = answer_steps(coach)
     for name, rs in answer.runs.items():
         for lang in ("en", "zh"):
             payload = answer.payloads[name][lang]
             assert [line.id for line in payload.lines] == [c.id for c in rs.claims], (name, lang)
+            assert all(c.verdict == "supported" for c in payload.claims)
+
+
+def test_every_look_brings_news_that_opens_or_closes_options(coach):
+    """The product owner's rule for the coach's example: each look shows something new, and it
+    opens or closes options."""
+    fac = build_steps(coach)["factual"]
+    for s in fac.steps:
+        p = fac.pictures[s.scan.id]
+        assert [n for n in p["news"] if n["moved"] > 1.0], s.direction
+        assert p["opened"] or p["closed"], s.direction
+    left, right = (fac.pictures[s.scan.id] for s in fac.steps)
+    assert left["news"][0]["id"] == "A6" and left["news"][0]["after"] < left["news"][0]["before"]
+    assert right["news"][0]["id"] == "A5" and "pass:H9" in right["opened"]
+    assert "carry" in right["closed"]
+
+
+@pytest.mark.parametrize("key", [("blind_side_run", 3), ("pro_scan", 116)])
+def test_a_pictures_opened_and_closed_follow_its_options(key):
+    """The bundle's opened/closed lists are the diff of the options it carries, as the screen
+    recomputes it; the start view comes before every look."""
+    data = export_steps(*key)
+    for raw in data["runs"].values():
+        frozen = [s["picture"] for s in raw["steps"] if not s["missing"]]
+        frozen += [b["picture"] for b in raw.get("beats", [])]
+        assert raw["start"]["frame"] < min(s["start"] for s in raw["steps"])
+        for p in frozen:
+            was = {o["action"]: o["p"] for o in p["before"]}
+            now = {o["action"]: o["p"] for o in p["options"]}
+            assert option_changes(was, now) == (p["opened"], p["closed"])
+        for s in raw["steps"]:
+            assert (s["picture"] is None) is s["missing"]
 
 
 def test_only_the_teaching_export_carries_labels_and_beats():
-    data = export_steps("pro_scan", 126)
+    data = export_steps("pro_scan", 116)
     assert data["teaching"] is True
     for raw in data["runs"].values():
-        assert [s["direction"] for s in raw["steps"]] == ["L", "R", "B", "F"]
+        assert [s["direction"] for s in raw["steps"]] == ["L", "R"]
         assert [b["id"] for b in raw["beats"]] == ["drop_back", "half_turn"]
+        assert {b["id"]: b["rule"]["frame"] for b in raw["beats"]}["drop_back"] == \
+            raw["beats"][0]["frame"]  # fmt: skip
     for key in (("blind_side_run", 3), ("press_escape", 0)):
         text = steps_json(export_steps(*key))
         assert '"teaching"' not in text and '"beats"' not in text and '"direction"' not in text
+        assert '"picture"' in text and '"start"' in text
 
 
 @canonical.linux_only()

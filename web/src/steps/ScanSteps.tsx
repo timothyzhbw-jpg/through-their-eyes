@@ -51,6 +51,7 @@ import {
   DecisionStoryBlock,
   HalfTurnArc,
   LookStoryBlock,
+  PictureBlock,
   ScanTimeline,
   useHalfTurn,
 } from "./StoryParts";
@@ -233,17 +234,22 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
 }
 
 function viewLabel(step: Step): string {
+  if (step.kind === "start") return "Through his eyes, facing the ball";
   if (step.kind === "decision") return "His decision, on the board";
   if (step.kind === "beat")
     return step.id === "drop_back"
-      ? "Where he received the ball, on the board"
+      ? "Where he drops back to, on the board"
       : "Through his eyes, as he receives the ball";
   return step.missing ? "Through his eyes, with no look here" : "Through his eyes, frozen mid-look";
 }
 
 function viewTag(step: Step, run: string): string {
+  if (step.kind === "start") return `Facing the ball · ${run}`;
   if (step.kind === "decision") return `His decision · ${run}`;
-  if (step.kind === "beat") return `As the ball reaches him · ${run}`;
+  if (step.kind === "beat")
+    return step.id === "drop_back"
+      ? `After his look left · ${run}`
+      : `As the ball reaches him · ${run}`;
   return step.missing ? `No look · ${run}` : `Frozen mid-look · ${run}`;
 }
 
@@ -440,10 +446,10 @@ function BoardMarks(props: {
   const decided = useHalfTurn(hero, run);
   const beat = step.kind === "beat" ? step : null;
   const turn = beat ? beatTurn(hero, run, beat) : step.kind === "decision" ? decided : null;
-  // The drop-back: his path from when the pass to him was played to where he received it.
+  // The drop-back: his path from when the rule acted to where he received the ball.
   const path =
     beat?.id === "drop_back"
-      ? [beat.start, beat.frame].map((g) => {
+      ? [beat.start, beat.end].map((g) => {
           const i = (Math.max(0, Math.min(run.frames - 1, g)) * n + hero.hero) * 2;
           return toScreen([run.pos[i], run.pos[i + 1]], w, h, zoom);
         })
@@ -568,7 +574,7 @@ function Legend({ step, passes }: { step: Step; passes: boolean }) {
       {step.kind === "beat" && step.id === "drop_back" && (
         <li>
           <i className="ss-key-path" aria-hidden="true" />
-          Solid line: his path from when the pass to him was played to where he received it.
+          Solid line: his path from here to where he received the ball.
         </li>
       )}
       {step.kind === "beat" && step.id === "half_turn" && step.happened && (
@@ -591,11 +597,13 @@ function Strip({ st }: { st: StepThrough }) {
     <ol className="ss-strip" aria-label="Steps">
       {steps.map((step, k) => {
         const label =
-          step.kind === "decision"
-            ? "Decision"
-            : step.kind === "beat"
-              ? BEAT_LABELS[step.id]
-              : `Look ${(look += 1)}`;
+          step.kind === "start"
+            ? "Start"
+            : step.kind === "decision"
+              ? "Decision"
+              : step.kind === "beat"
+                ? BEAT_LABELS[step.id]
+                : `Look ${(look += 1)}`;
         const full = step.kind === "look" && step.missing ? `${label}, not taken here` : label;
         return (
           <li key={step.id}>
@@ -662,13 +670,17 @@ function Card({ st }: { st: StepThrough }) {
   const looks = list.filter((x) => x.kind === "look");
   const lookNo = step.kind === "look" ? looks.indexOf(step) + 1 : 0;
   const kicker =
-    step.kind === "decision"
-      ? "The last step"
-      : step.kind === "beat"
-        ? "As the ball reaches him"
-        : step.missing
-          ? `Look ${lookNo} · not taken in this run`
-          : `Look ${lookNo}`;
+    step.kind === "start"
+      ? "Before his looks"
+      : step.kind === "decision"
+        ? "The last step"
+        : step.kind === "beat"
+          ? step.id === "drop_back"
+            ? "After his look left"
+            : "As the ball reaches him"
+          : step.missing
+            ? `Look ${lookNo} · not taken in this run`
+            : `Look ${lookNo}`;
   // The link to the coach's example: not on it, and not offline (the live service serves it).
   const coach = isCoachExample(hero.scenario, hero.seed) || !!st.session.offline;
   const last = s.index === list.length - 1;
@@ -684,6 +696,7 @@ function Card({ st }: { st: StepThrough }) {
         <p className="ss-fact ss-note">{TOUCH_NOTE}</p>
       )}
       <LookStoryBlock st={st} step={step} />
+      <PictureBlock st={st} step={step} />
       <DecisionStoryBlock st={st} step={step} />
       {step.kind === "look" && !step.missing && step.sight.length > 0 && (
         <SightChips hero={hero} ids={step.sight} />

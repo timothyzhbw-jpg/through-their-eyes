@@ -968,8 +968,11 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
     """The scan step-through (SPEC 7) of a hero moment with a decision on the ball, per run: his
     looks before the ball reaches him (a step each, the run without the key scan showing it as
     missing) and his decision, with every player's velocity from the sim at each freeze frame
-    (mm/s) and the verified lines in en and zh. The options a step can show are the decision
-    record's, in the hero export. Refuses a line that does not verify."""
+    (mm/s) and the verified lines in en and zh. Per look, and before the first ("start"), his
+    picture: his options on his belief (the decision model, read only, `explain.belief_options`),
+    without and with the look, which it opened and closed, and who is new in his picture. The
+    decision's own options are the decision record's, in the hero export. Refuses a line that
+    does not verify."""
     from agents.context import MomentContext  # the crew's evidence; heavy, so imported here
     from agents.steps import STEPS_VERSION, answer_steps
 
@@ -1000,11 +1003,17 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
                     "sight": s.sight,
                     "lines": rs.lines[s.scan.id],
                     "vel": _mm(rs.run.vel[s.frame]),
-                    # A teaching scenario's scripted look: "L", "R", "B" or "F".
+                    # What the look added to his picture and his options (none when missing).
+                    "picture": rs.pictures.get(s.scan.id),
+                    # A teaching scenario's scripted look: "L" or "R".
                     **({"direction": s.direction} if teaching else {}),
                 }
                 for s in rs.steps
             ],
+            "start": {
+                **rs.pictures["start"],
+                "vel": _mm(rs.run.vel[rs.pictures["start"]["frame"]]),
+            },
             "final": {
                 "frame": rs.decision.frame,
                 "chosen": rs.decision.chosen,
@@ -1015,10 +1024,11 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
             },
             "answers": {lang: p.model_dump(mode="json") for lang, p in payloads.items()},
         }
-        if teaching:  # the drop-back and the half-turn, frozen after his looks
+        if teaching:  # the drop-back between his looks and the half-turn after, and the rules
             runs[name]["beats"] = [
-                {"id": b.id, "frame": b.frame, "start": b.start, "happened": b.happened,
-                 "lines": rs.lines[b.id], "vel": _mm(rs.run.vel[b.frame])}
+                {"id": b.id, "frame": b.frame, "start": b.start, "end": b.end,
+                 "happened": b.happened, "lines": rs.lines[b.id], "vel": _mm(rs.run.vel[b.frame]),
+                 "picture": rs.pictures[b.id], "rule": rs.rules[b.id]}
                 for b in rs.beats
             ]  # fmt: skip
     return {

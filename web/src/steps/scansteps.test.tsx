@@ -24,6 +24,7 @@ import { stepThroughOf } from "./controller";
 import { ScanStepsButton, ScanStepsScreen } from "./ScanSteps";
 import { NO_STEPS } from "./steps";
 import { COACH_LABEL, TEACHING_NOTE, TOUCH_NOTE } from "./coach";
+import { teachingFile } from "./teaching.fixture";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -278,42 +279,29 @@ describe("His looks in the app", () => {
 });
 
 describe("His looks: the coach's example", () => {
-  /** The scan hero's bundle with the teaching fields (coach.test.ts checks the real file). */
-  function teachingFile() {
-    const json = JSON.parse(JSON.stringify(stepsJson));
-    json.teaching = true;
-    for (const name of ["factual", "counterfactual"] as const) {
-      const run = json.runs[name];
-      for (const s of run.steps) s.direction = "F";
-      const frame = run.reception;
-      run.beats = [
-        {
-          id: "drop_back",
-          frame,
-          start: frame - 30,
-          happened: true,
-          lines: [],
-          vel: run.final.vel,
-        },
-        { id: "half_turn", frame, start: frame, happened: true, lines: [], vel: run.final.vel },
-      ];
-    }
-    return json;
-  }
-
-  it("says its look times are scripted and steps through the drop-back and the half-turn", async () => {
+  it("says its look times are scripted and steps through the coach's sequence", async () => {
     const session = offline();
-    const file = teachingFile();
+    const file = teachingFile(stepsJson);
     const st = stepThroughOf(session, async () => ({ ok: true, json: async () => file }), "/d/");
     const el = mount(session);
     act(() => st.open());
     await act(settle);
     expect(textOf(el.querySelector(".ss-teaching"))).toBe(TEACHING_NOTE);
     const strip = [...el.querySelectorAll(".ss-strip button")].map((b) => textOf(b));
-    expect(strip).toEqual(["Look 1", "Drop-back", "Half-turn", "Decision"]);
+    expect(strip).toEqual(["Start", "Look 1", "Drop-back", "Half-turn", "Decision"]);
+    // The start view: facing the ball, his options before any look, no "new in his picture".
+    expect(textOf(el.querySelector(".ss-card h2"))).toBe("Facing the ball");
+    expect(textOf(el.querySelector(".ss-picture"))).toContain("His options before any look");
+    expect(el.querySelector(".ss-news, .ss-nothing")).toBeNull();
+    expect(textOf(el.querySelector(".ss-think"))).toMatch(/^I face the ball\./);
+    click(button(el, "Next"));
+    expect(textOf(el.querySelector(".ss-kicker"))).toBe("Look 1");
+    expect(el.querySelectorAll(".ss-news li").length).toBeGreaterThan(0);
+    expect(textOf(el.querySelector(".ss-think"))).toMatch(/^Checking my left\./);
     click(button(el, "Next"));
     expect(textOf(el.querySelector(".ss-card h2"))).toBe("He drops back");
-    expect(textOf(el.querySelector(".ss-kicker"))).toBe("As the ball reaches him");
+    expect(textOf(el.querySelector(".ss-kicker"))).toBe("After his look left");
+    expect(textOf(el.querySelector(".ss-think"))).toMatch(/too tight to take it on my spot/);
     expect(st.playback.get().focus).toBe("tactical"); // on the board, with his path
     expect(el.querySelector(".ss-board .ss-path")).not.toBeNull();
     click(button(el, "Next"));
@@ -328,7 +316,7 @@ describe("His looks: the coach's example", () => {
     const live = { ...offline(), offline: null };
     const shown = (await opened(live)).el.querySelector<HTMLAnchorElement>(".ss-coach a")!;
     expect(textOf(shown)).toBe(COACH_LABEL);
-    expect(shown.getAttribute("href")).toBe("/?play=steps&match=pro_scan-126");
+    expect(shown.getAttribute("href")).toBe("/?play=steps&match=pro_scan-116");
   });
 });
 

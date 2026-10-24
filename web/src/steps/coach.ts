@@ -1,14 +1,16 @@
 // The coach's example (SPEC 3.6, "Teaching"): the teaching scenario `pro_scan`, a central
-// midfielder with his back to goal who looks over his left shoulder, his right, behind him toward
-// goal and, as the ball comes, forward to the striker; then drops back and receives on the
-// half-turn. The scan story opens it by link; the API serves it without listing it.
+// midfielder with his back to goal, in the coach's order: he faces the ball (his start view, not a
+// look), looks over his left shoulder, drops back toward the ball, looks over his right shoulder,
+// receives on the half-turn and plays forward. Each frozen step shows what is new in his picture
+// and which options that opened or closed. The scan story opens it by link; the API serves it
+// without listing it.
 
 import type { ScanDirection } from "./story";
 
-/** The served match id of the coach's example: `pro_scan` on held-out seed 126 (typical of the
+/** The served match id of the coach's example: `pro_scan` on held-out seed 116 (typical of the
  * eval, eval/reports/pro_scan.md). */
-export const COACH_MATCH = "pro_scan-126";
-export const COACH_LABEL = "Coach's example: three looks, then the half-turn";
+export const COACH_MATCH = "pro_scan-116";
+export const COACH_LABEL = "Coach's example: look left, look right, then the half-turn";
 
 /** Where the coach's example opens: the scan story on it. */
 export const coachHref = (base: string = import.meta.env.BASE_URL): string =>
@@ -27,12 +29,12 @@ export const TOUCH_NOTE =
   "The sim has no first touch or reception mechanics: the half-turn changes his body angle and " +
   "the options open to him next, not the touch.";
 
-/** The scripted looks' directions, as the coach names them. With his back to goal every look up
- * the pitch is behind his body, so these come from the bundle, not from his head against his
- * body. */
+/** The scripted looks' directions, as the coach names them (the coach's example has L and R).
+ * With his back to goal a look over the shoulder is behind his body, so these come from the
+ * bundle, not from his head against his body. */
 export const TEACHING_WORDS: Record<ScanDirection, string> = {
   L: "over his left shoulder",
   R: "over his right shoulder",
   B: "behind him, toward goal",
-  F: "forward, up the pitch to the striker",
+  F: "forward, up the pitch",
 };

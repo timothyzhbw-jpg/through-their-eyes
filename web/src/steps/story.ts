@@ -12,7 +12,17 @@ import { shortName } from "../data/roster";
 import type { Vec2 } from "../data/types";
 import { HALF_LENGTH } from "../tacticslab/metrics";
 import { TEACHING_WORDS } from "./coach";
-import { receptionOf, type BeatStep, type DecisionStep, type LookStep, type Step } from "./steps";
+import {
+  NEW_M,
+  receptionOf,
+  type BeatStep,
+  type DecisionStep,
+  type LookStep,
+  type NewsRow,
+  type OptionRow,
+  type Picture,
+  type Step,
+} from "./steps";
 
 const deg = (rad: number) => (rad * 180) / Math.PI;
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -160,6 +170,219 @@ export function lookStory(hero: Hero, run: Run, step: LookStep, number: number):
  * body at the freeze frame. */
 export const lookDirection = (hero: Hero, run: Run, step: LookStep): ScanDirection =>
   step.direction ?? scanDirection(hero, run, step.frame).code;
+
+// ---------- new information → his options (a frozen step's picture) ----------
+// Every look must visibly bring something new and show what it did to his options. The bundle
+// carries, per frozen step, who is new in his picture and his options on his belief (the decision
+// model, read only, explain/belief_options.py) before and now; the words here are templates whose
+// names, numbers and percentages are slots from that data.
+
+/** A player as the story names him, by id. */
+export type PersonOf = (id: string) => Person;
+
+export const personLookup =
+  (hero: Hero): PersonOf =>
+  (id) =>
+    personOf(hero, id);
+
+/** An option in words. `turn`: his back is to goal, so a carry forward means turning with it. */
+export function optionLabel(action: string, who: PersonOf, turn = false): string {
+  if (action.startsWith("pass:")) return `Pass to ${tagOf(who(action.slice(5)))}`;
+  if (action === "carry") return turn ? "Turn and carry" : "Carry forward";
+  return actionLabel(action);
+}
+
+export interface OptionLine {
+  action: string;
+  label: string;
+  before: number | null; // believed success before, 0-1 (null: not playable then, or no before)
+  now: number;
+  mark: "↑" | "↓" | ""; // opened, closed
+}
+
+/** How many options the card lists, best valued first; every one opened or closed is added. */
+export const OPTIONS_SHOWN = 4;
+
+/** His options now, best valued first: the top OPTIONS_SHOWN and every one this step opened or
+ * closed, each with its believed success before and now. */
+export function optionLines(
+  options: OptionRow[],
+  before: OptionRow[] | null,
+  opened: string[],
+  closed: string[],
+  who: PersonOf,
+  turn = false,
+): OptionLine[] {
+  const was = new Map((before ?? []).map((o) => [o.action, o.p]));
+  const marked = new Set([...opened, ...closed]);
+  const rows = options.filter((o, k) => k < OPTIONS_SHOWN || marked.has(o.action));
+  const gone = (before ?? []).filter(
+    (o) => closed.includes(o.action) && !options.some((x) => x.action === o.action),
+  );
+  return [
+    ...rows.map((o) => ({
+      action: o.action,
+      label: optionLabel(o.action, who, turn),
+      before: before ? (was.get(o.action) ?? null) : null,
+      now: o.p,
+      mark: opened.includes(o.action)
+        ? ("↑" as const)
+        : closed.includes(o.action)
+          ? ("↓" as const)
+          : ("" as const),
+    })),
+    ...gone.map((o) => ({
+      action: o.action,
+      label: optionLabel(o.action, who, turn),
+      before: o.p,
+      now: 0,
+      mark: "↓" as const,
+    })),
+  ];
+}
+
+/** "New in his picture", in words: everyone whose believed position the look moved more than
+ * NEW_M (largest first), then who only came into view, where he had them. Empty: nothing new. */
+export function newsLines(news: NewsRow[], who: PersonOf): string[] {
+  const moved = news.filter((n) => n.moved > NEW_M);
+  const seen = news.filter((n) => n.moved <= NEW_M && n.entered);
+  return [
+    ...moved.map(
+      (n) =>
+        `${tagOf(who(n.id))}: ${metres(n.after)} m from him, not ${metres(n.before)} m (${metres(n.moved)} m from where he had him)`,
+    ),
+    ...(seen.length
+      ? [`In view, where he had them: ${seen.map((n) => tagOf(who(n.id))).join(", ")}`]
+      : []),
+  ];
+}
+
+/** The second half of a thinking line: what the step did to his options. */
+function optionsClause(lines: OptionLine[], lead: string): string {
+  const say = (l: OptionLine) =>
+    `${l.label.charAt(0).toLowerCase()}${l.label.slice(1)} is ${l.mark === "↑" ? "on" : "off"} (${percent(l.before ?? 0)} → ${percent(l.now)})`;
+  const closed = lines.filter((l) => l.mark === "↓");
+  const opened = lines.filter((l) => l.mark === "↑");
+  const said = [...closed.slice(0, 2), ...opened.slice(0, 2)].map(say);
+  if (!said.length) return "No option opens or closes.";
+  const more = closed.length + opened.length - said.length;
+  return `${lead} ${said.join(", ")}${more > 0 ? `, and ${more} more` : ""}.`;
+}
+
+/** What he is thinking at a look: what changed in his picture, then what that did to his options.
+ * `picture.news` is the look's news. */
+export function lookThinking(
+  direction: ScanDirection,
+  picture: Picture,
+  who: PersonOf,
+  turn = false,
+): string {
+  const news = picture.news ?? [];
+  const top = news.find((n) => n.moved > NEW_M);
+  const seen = news.filter((n) => n.entered).slice(0, 2);
+  const what = top
+    ? `${tagOf(who(top.id))} is ${metres(top.after)} m from me, not ${metres(top.before)} m.`
+    : seen.length
+      ? `${seen.map((n) => tagOf(who(n.id))).join(" and ")} in view, where I had them.`
+      : "Nothing new: everyone is where I had them.";
+  const lines = optionLines(
+    picture.options,
+    picture.before,
+    picture.opened,
+    picture.closed,
+    who,
+    turn,
+  );
+  return `${THINKING_HEAD[direction]} ${what} ${optionsClause(lines, "So")}`;
+}
+
+/** What he is thinking before any look, facing the ball: who has it, and his best option. */
+export function startThinking(passer: string | null, options: OptionRow[], who: PersonOf): string {
+  const best = options[0];
+  const ball = passer ? `${tagOf(who(passer))} has the ball, and it is coming to me.` : "";
+  const option = best
+    ? `Before I look anywhere else, my best option is ${optionLabel(best.action, who, true).toLowerCase()} (${percent(best.p)}).`
+    : "";
+  return ["I face the ball.", ball, option].filter(Boolean).join(" ");
+}
+
+/** What he is thinking at a teaching beat (coach.ts): the rule's reason, from what he believed
+ * when it acted, then what the step did to his options. `deg`: his body against the incoming ball
+ * at the half-turn. */
+export function beatThinking(step: BeatStep, who: PersonOf, deg: number | null): string {
+  const r = step.rule;
+  const nearest = `${tagOf(who(r.nearest))}, ${metres(r.nearest_m)} m`;
+  let why: string;
+  if (step.id === "drop_back") {
+    why =
+      r.near.length && r.moved_m && r.after_m != null
+        ? `${tagOf(who(r.nearest))} will be ${metres(r.nearest_m)} m from me when the ball comes: too tight to take it on my spot. I drop back ${metres(r.moved_m)} m, to ${metres(r.after_m)} m from him.`
+        : `Nobody I know of will be within ${metres(r.radius_m)} m when the ball comes (nearest: ${nearest}). I stay on my spot.`;
+  } else {
+    why = r.side
+      ? `${tagOf(who(r.nearest))} will be ${metres(r.nearest_m)} m from me as the ball arrives: I open my body ${deg !== null ? `${deg}° ` : ""}away from him, toward the forward lane.`
+      : `Nobody I know of will be within ${metres(r.radius_m)} m as the ball arrives (nearest: ${nearest}). I take it square.`;
+  }
+  const p = step.picture;
+  const lines = optionLines(p.options, p.before, p.opened, p.closed, who, true);
+  return `${why} ${optionsClause(lines, "Now")}`;
+}
+
+/** A frozen step's picture block, put together for the card: a look's news lines (empty: nothing
+ * new; null for other steps), his options with before → now and ↑ / ↓, and his thinking line.
+ * Null for a missing look and for the decision (told by `decisionStory`). */
+export interface PictureView {
+  news: string[] | null;
+  optionsLabel: string;
+  options: OptionLine[];
+  compare: boolean; // show before → now
+  thinking: string;
+}
+
+export function pictureView(
+  hero: Hero,
+  run: Run,
+  step: Step,
+  teaching: boolean,
+): PictureView | null {
+  const who = personLookup(hero);
+  if (step.kind === "start")
+    return {
+      news: null,
+      optionsLabel: "His options before any look",
+      options: optionLines(step.options, null, [], [], who, true),
+      compare: false,
+      thinking: startThinking(passerOf(hero, run), step.options, who),
+    };
+  if (step.kind === "look") {
+    const p = step.picture;
+    if (step.missing || !p) return null;
+    return {
+      news: newsLines(p.news ?? [], who),
+      optionsLabel: "His options: before this look → after",
+      options: optionLines(p.options, p.before, p.opened, p.closed, who, teaching),
+      compare: true,
+      thinking: lookThinking(lookDirection(hero, run, step), p, who, teaching),
+    };
+  }
+  if (step.kind === "beat") {
+    const p = step.picture;
+    return {
+      news: null,
+      optionsLabel: "His options: last step → now",
+      options: optionLines(p.options, p.before, p.opened, p.closed, who, true),
+      compare: true,
+      thinking: beatThinking(step, who, beatTurn(hero, run, step)?.ballDeg ?? null),
+    };
+  }
+  return null;
+}
+
+/** Who plays the ball to him in this run (the first pass to him), or null. */
+export function passerOf(hero: Hero, run: Run): string | null {
+  const pass = run.events.filter((e) => e.type === "pass" && e.attrs.to === hero.heroId).at(0);
+  return pass?.player ?? null;
+}
 
 // ---------- the decision, linked to the looks ----------
 
