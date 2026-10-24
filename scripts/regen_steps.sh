@@ -37,6 +37,8 @@ for group in "$@"; do
         --without-look web/public/data/without_look_seed3.json
       run python -m sim.export --scenario far_post_finish --seed 11 \
         --without-look web/public/data/without_look_far_post_finish_seed11.json
+      run python -m sim.export --scenario blind_side_run --seed 3 \
+        --extra-looks web/public/data/extra_looks_seed3.json
       run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
       run python -m sim.export --scenario press_escape --seed 0 \
         --looks web/public/data/look_press_escape_seed0.json
@@ -63,6 +65,7 @@ for group in "$@"; do
       done
       run python -m eval.hero_shot --seeds 100-139
       run python -m eval.hero_gates
+      run python -m eval.extra_looks
       for s in blind_side_run press_escape; do run python -m eval.look_grid --scenario "$s"; done
       run python -m eval.laws --workers "$workers"
       ;;
