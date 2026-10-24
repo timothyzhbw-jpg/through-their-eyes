@@ -159,6 +159,9 @@ const ppdaText = (v: number | null) => (v === null ? dash : v.toFixed(1));
 const TRACKING = (what: string) => `${what}, computed in the browser from this match's event feed`;
 const MODELLED = "The sim's own models, read from the export";
 
+/** What a builder returns: the five original builders leave `pro` and `plain` to EXPLANATIONS. */
+type Built = Omit<LabCard, "pro" | "plain"> & Partial<Pick<LabCard, "pro" | "plain">>;
+
 const EXPLANATIONS: Partial<Record<CardId, Pick<LabCard, "pro" | "plain">>> = {
   high_press: {
     pro: `The model counts interceptions and forced turnovers, then compares opponent passes with those ball wins and shots in the ${REGAIN_WINDOW_S}-second window.`,
@@ -185,7 +188,7 @@ const EXPLANATIONS: Partial<Record<CardId, Pick<LabCard, "pro" | "plain">>> = {
   },
 };
 
-function high_press(hero: Hero, view: Context): LabCard {
+function high_press(hero: Hero, view: Context): Built {
   const events = hero.runs.factual.events;
   const [home, away] = TEAM_IDS.map((t) => pressMetrics(events, t));
   const first = regains(events)
@@ -198,8 +201,6 @@ function high_press(hero: Hero, view: Context): LabCard {
     idea:
       "Press high and together, and the ball is won near the opponent's goal: one regain there " +
       "leaves the defence behind the play, so the next pass has far less to beat.",
-    pro: "",
-    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
@@ -264,7 +265,7 @@ function high_press(hero: Hero, view: Context): LabCard {
   };
 }
 
-function decisions(hero: Hero, view: Context): LabCard {
+function decisions(hero: Hero, view: Context): Built {
   const run = hero.runs.factual;
   const lanes = lanesAt(hero, run);
   const chosen = lanes.find((l) => l.chosen) ?? null;
@@ -326,8 +327,6 @@ function decisions(hero: Hero, view: Context): LabCard {
     idea:
       "Under pressure a player chooses on what he believes, not on what is true. The lanes " +
       "that look open on his picture may be shut on the pitch; the card puts both side by side.",
-    pro: "",
-    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics,
@@ -346,7 +345,7 @@ function decisions(hero: Hero, view: Context): LabCard {
   };
 }
 
-function corners(hero: Hero, view: Context): LabCard {
+function corners(hero: Hero, view: Context): Built {
   const events = hero.runs.factual.events;
   const metrics: Metric[] = [];
   const marker = hero.marker;
@@ -406,8 +405,6 @@ function corners(hero: Hero, view: Context): LabCard {
     idea:
       "A corner is a rehearsed passage, so one look can decide it: a marker who checks over his " +
       "shoulder before the ball is played keeps his man; one who does not loses him.",
-    pro: "",
-    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics,
@@ -426,7 +423,7 @@ function corners(hero: Hero, view: Context): LabCard {
   };
 }
 
-function shot_quality(hero: Hero, view: Context): LabCard {
+function shot_quality(hero: Hero, view: Context): Built {
   const events = hero.runs.factual.events;
   const [home, away] = TEAM_IDS.map((t) => shotQuality(events, t));
   const all = [...home.list, ...away.list].sort((a, b) => b.xg - a.xg);
@@ -438,8 +435,6 @@ function shot_quality(hero: Hero, view: Context): LabCard {
       "A shot from close and central is worth far more than one from range: the same number of " +
       "shots is a different attack depending on where they are struck, so teams work the ball " +
       "to a better place first.",
-    pro: "",
-    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
@@ -479,7 +474,7 @@ function shot_quality(hero: Hero, view: Context): LabCard {
   };
 }
 
-function progression_card(hero: Hero, view: Context): LabCard {
+function progression_card(hero: Hero, view: Context): Built {
   const events = hero.runs.factual.events;
   const xt = view.xt;
   const [home, away] = xt ? TEAM_IDS.map((t) => progression(events, t, xt)) : [null, null];
@@ -513,8 +508,6 @@ function progression_card(hero: Hero, view: Context): LabCard {
       "A pass is worth what it does to the threat: moving the ball from a cold place to a " +
       "dangerous one adds expected threat, and the passes that add the most are the ones that " +
       "break lines, which is why teams look for them.",
-    pro: "",
-    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
@@ -575,7 +568,7 @@ function matchExampleHref(hero: Hero, frame: number): string {
   return hrefOf({ query: `?match=${id}&intro=0&at=${frame}` });
 }
 
-function counter_attack(hero: Hero, view: Context): LabCard {
+function counter_attack(hero: Hero, view: Context): Built {
   const result = view.xt ? counterAttack(hero, view.xt) : { best: null, list: [] };
   const best = result.best;
   const kind = best?.win.kind === "tackle" ? "forced turnover" : "interception";
@@ -651,7 +644,7 @@ function counter_attack(hero: Hero, view: Context): LabCard {
   };
 }
 
-function build_up(hero: Hero, view: Context): LabCard {
+function build_up(hero: Hero, view: Context): Built {
   const result = buildUpMetrics(hero);
   const best = result.best;
   const stat = (f: (m: (typeof result.teams)[number]) => string) => each((t) => f(result.teams[t]));
@@ -701,7 +694,7 @@ function build_up(hero: Hero, view: Context): LabCard {
   };
 }
 
-function transition(hero: Hero, view: Context): LabCard {
+function transition(hero: Hero, view: Context): Built {
   const result = view.xt ? transitionAfterLoss(hero, view.xt) : { best: null, list: [] };
   const best = result.best;
   const kind = best?.win.kind === "tackle" ? "forced turnover" : "interception";
@@ -785,7 +778,7 @@ export interface Context {
 const scopeOf = (hero: Hero): LabCard["scope"] =>
   hero.kind === "match" ? "this match" : "this moment";
 
-const BUILDERS: Record<CardId, (hero: Hero, view: Context) => LabCard> = {
+const BUILDERS: Record<CardId, (hero: Hero, view: Context) => Built> = {
   high_press,
   decisions,
   corners,
@@ -826,6 +819,12 @@ export function leadWithValues(card: LabCard): LabCard {
   return { ...card, metrics: [...live, ...blank] };
 }
 
+/** The builder's card with its explanations: its own, else the id's entry in EXPLANATIONS. */
+function explained(id: CardId, card: Built): LabCard {
+  const text = EXPLANATIONS[id];
+  return { ...card, pro: card.pro ?? text?.pro ?? "", plain: card.plain ?? text?.plain ?? "" };
+}
+
 /** The card for `id`, measured on the moment that shows its tactic (see scope.ts). */
 function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): LabCard {
   const want = CARD_SCENARIO[id];
@@ -839,8 +838,7 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
         : scope.heroes[want];
   if (!hero) {
     return {
-      ...BUILDERS[id](session, view),
-      ...EXPLANATIONS[id],
+      ...explained(id, BUILDERS[id](session, view)),
       measured: `${moment.label} (${want})`,
       scope: "this moment",
       metrics: [],
@@ -856,8 +854,7 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
   const on = (h: Hero, measured: string): LabCard => {
     const card = BUILDERS[id](h, view);
     return leadWithValues({
-      ...card,
-      ...EXPLANATIONS[id],
+      ...explained(id, card),
       measured,
       watch: h === session ? card.watch : null,
       here: h === session && card.here,

@@ -433,11 +433,18 @@ export interface CounterExample {
   to: Vec2;
 }
 
-function completedPasses(events: readonly ExportEvent[], team: Team, from: number, to: number) {
+function completedPasses(
+  events: readonly ExportEvent[],
+  team: Team,
+  possession: number | null,
+  from: number,
+  to: number,
+) {
   return events.filter((e) => {
     const end = num(e.attrs.end);
     return (
       e.type === "pass" &&
+      (e.possession ?? null) === possession &&
       teamOf(e.player) === team &&
       e.attrs.outcome === "complete" &&
       e.frame > from &&
@@ -476,9 +483,7 @@ export function counterAttack(
       if (found) break;
     }
     if (!found) continue;
-    const passes = completedPasses(events, win.team, win.frame, found.frame).filter(
-      (e) => (e.possession ?? null) === win.possession,
-    );
+    const passes = completedPasses(events, win.team, win.possession, win.frame, found.frame);
     const gains = progression(events, win.team, xt).list;
     const ids = new Set(passes.map((e) => e.id));
     list.push({
