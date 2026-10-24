@@ -735,67 +735,18 @@ function Card({ st }: { st: StepThrough }) {
   const last = s.index === list.length - 1;
   return (
     <aside className="ss-card" aria-labelledby="ss-title">
-<<<<<<< HEAD
-      <p className="ss-kicker">{kicker}</p>
-      <h2 id="ss-title" ref={heading} tabIndex={-1} aria-live="polite">
-        {stepTitle(step)}
-      </h2>
-      {steps.teaching && <p className="ss-teaching">{TEACHING_NOTE}</p>}
-      <Lines narration={narration} ids={ids} />
-      {step.kind === "beat" && step.id === "half_turn" && (
-        <p className="ss-fact ss-note">{TOUCH_NOTE}</p>
-      )}
-      <LookStoryBlock st={st} step={step} />
-      <PictureBlock st={st} step={step} />
-      <DecisionStoryBlock st={st} step={step} />
-      {step.kind === "look" && !step.missing && step.sight.length > 0 && (
-        <SightChips hero={hero} ids={step.sight} />
-      )}
-      <div className="ss-pass-group">
-        <p className="ss-label">View overlays</p>
-        <button
-          type="button"
-          className="btn ss-passes"
-          aria-pressed={s.passes}
-          onClick={st.togglePasses}
-        >
-          Potential passes
-        </button>
-      </div>
-      <Segmented<RunName>
-        label="Which run"
-        value={s.mode}
-        onPick={st.setMode}
-        options={[
-          { value: "factual", label: labels.factual },
-          { value: "counterfactual", label: labels.counterfactual },
-        ]}
-      />
-      <div className="ss-actions">
-        {/* One element each, so focus stays on them from step to step: Back is only marked
-            unavailable on the first step, and Next becomes Done on the last. */}
-        <button type="button" className="btn" aria-disabled={s.index === 0} onClick={st.back}>
-          Back
-        </button>
-        <button type="button" className="btn btn-primary" onClick={last ? st.close : st.next}>
-          {last ? "Done" : "Next"}
-        </button>
-        {!last && exit}
-      </div>
-      <p className="ss-hint">← / → step · Esc leaves · swipe on phone</p>
-      {!coach && (
-        <p className="ss-hint ss-coach">
-          <a href={coachHref()}>{COACH_LABEL}</a>
-        </p>
-      )}
-=======
       <div className="ss-card-body">
         <p className="ss-kicker">{kicker}</p>
         <h2 id="ss-title" ref={heading} tabIndex={-1} aria-live="polite">
           {stepTitle(step)}
         </h2>
+        {steps.teaching && <p className="ss-teaching">{TEACHING_NOTE}</p>}
         <Lines narration={narration} ids={ids} />
+        {step.kind === "beat" && step.id === "half_turn" && (
+          <p className="ss-fact ss-note">{TOUCH_NOTE}</p>
+        )}
         <LookStoryBlock st={st} step={step} />
+        <PictureBlock st={st} step={step} />
         <DecisionStoryBlock st={st} step={step} />
         {step.kind === "look" && !step.missing && step.sight.length > 0 && (
           <SightChips hero={hero} ids={step.sight} />
@@ -832,9 +783,13 @@ function Card({ st }: { st: StepThrough }) {
           {!last && exit}
         </div>
         <p className="ss-hint">← / → step · Esc leaves · swipe on phone</p>
+        {!coach && (
+          <p className="ss-hint ss-coach">
+            <a href={coachHref()}>{COACH_LABEL}</a>
+          </p>
+        )}
       </div>
       <div className="ss-card-fade" aria-hidden="true" />
->>>>>>> origin/main
     </aside>
   );
 }

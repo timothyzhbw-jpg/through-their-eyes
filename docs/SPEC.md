@@ -764,16 +764,15 @@ follows the sim.**
 - **Eval** (`eval/pro_scan.py`; design seeds 0–99, held-out 100–139, Wilson intervals): four runs
   sharing every draw, both looks against no side looks (forward view only), left only and right
   only, so each look's effect can be told apart. On held-out seeds
-  ([pro_scan.md](../eval/reports/pro_scan.md), macOS before the Linux regeneration): rule 1 drops
-  him back in 36/40 with the look left (1/40 without it), rule 2 turns him side-on in 40/40 with
-  the look right (0/40 without it). With both looks he plays forward to the striker in 32/40,
-  against 6/40 with no side looks, 11/40 left only and 33/40 right only; he receives 0.50 m further
-  from the nearest opponent than with no side looks (all of it from the look left). **The look
-  right is the one that opens the forward pass:** it shows A5 has left the lane and is closing on him (a
-  turn and carry closes in 38/40; on the example seed the pass to H9 opens). **The look left adds space, not value:** with both
-  looks the mean xT gained is +0.128 against +0.145 right only. Each look opens or closes at least
-  one option in 30/40 (left) and 40/40 (right) runs: on the other 10 the look left brings A6 into
-  his picture but no option crosses 50%.
+  ([pro_scan.md](../eval/reports/pro_scan.md) holds every count, interval and separation in
+  metres): rule 1 drops him back after the look left and rule 2 turns him side-on after the look
+  right, and neither fires without its look. With both looks he plays forward to the striker far
+  more often than with no side looks. **The look right is the one that opens the forward pass:** it
+  shows A5 has left the lane and is closing on him, a turn and carry closes, and on the example
+  seed the pass to H9 opens. **The look left adds space, not value:** he receives further from the
+  nearest opponent, but the mean xT gained is no higher than with the look right alone. Each look
+  opens or closes at least one option in most runs; in the rest the look left brings A6 into his
+  picture but no option crosses 50%.
 - **In the app.** `web/public/data/steps_pro_scan_seed116.json` (held-out seed 116, typical of the
   eval) is the scan story's bundle: start view → look left → drop-back → look right → half-turn →
   forward pass, each frozen, with verified lines, what each rule saw and did, and per step the
@@ -2383,8 +2382,9 @@ original visual identity.
     options before any look), the look left (L), the drop-back (on the board, his path from when
     rule 1 acted to his reception), the look right (R), the half-turn (the arc from facing the ball
     to his body, through his eyes) and his decision. Each beat's thinking line gives its rule's
-    reason from what he believed ("#6 … will be 6.8 m from me when the ball comes: too tight to take
-    it on my spot. I drop back 2.9 m, to 9.4 m from him."). Each step is told whether or not it
+    reason from what he believed ("#6 … will be this close to me when the ball comes: too tight to
+    take it on my spot. I drop back, to this far from him."; the distances are filled from the
+    bundle's verified claims). Each step is told whether or not it
     happened, in verified lines. The card says "The look times are scripted for teaching; what he
     sees, believes and does follows the sim", and at the half-turn that the sim has no first touch.
     The other run is the one without the look right: he still drops back, receives square and does
