@@ -1,6 +1,7 @@
 // The panel and its downloads (SPEC 7): the panel says its figures are demo data and links the
 // business model; a card downloads as a PNG file, the posts as a text file.
 
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
@@ -22,6 +23,7 @@ import { BUSINESS_MODEL_URL, StudioPanel } from "./Studio";
 import { validatePayload } from "../narration/payload";
 import { heroMoment } from "../plan/moment";
 
+const studioCss = readFileSync("src/studio/studio.css", "utf8");
 const hero = parseHero(raw);
 const session = () => createSession(hero, EXAMPLE_PLAN, payloadJson);
 
@@ -78,6 +80,19 @@ describe("studio panel", () => {
     );
     expect(html).toContain('aria-label="Shot list"');
     expect(html).toContain("Copy shot list");
+  });
+
+  it("switches to stacked shot cards below 600 px, leaving the desktop table intact", () => {
+    expect(html).toContain('<ol class="studio-shot-cards" aria-label="Shot list">');
+    expect(html).toContain("<h4>Shot 1</h4><dl>");
+    expect(studioCss).toMatch(
+      /@media \(max-width: 599px\)[\s\S]*?\.stats-table-wrap \{\s+display: none;/,
+    );
+    expect(studioCss).toMatch(
+      /@media \(max-width: 599px\)[\s\S]*?\.studio-shot-cards \{\s+display: grid;/,
+    );
+    expect(studioCss).toMatch(/\.studio-shot-cards \{\s+display: none;/);
+    expect(studioCss).not.toMatch(/@media \(min-width: 600px\)[\s\S]*?\.data-table/);
   });
 
   it("labels every business figure as demo data and links the business model", () => {
