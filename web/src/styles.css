@@ -1783,6 +1783,29 @@ optgroup {
 }
 
 /* ---------- the moment, told below the live screen: a story, not a dashboard ---------- */
+.reveal {
+  opacity: 1;
+  transform: none;
+}
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.reveal-visible {
+  transition:
+    opacity 400ms ease-out var(--reveal-delay, 0ms),
+    transform 400ms ease-out var(--reveal-delay, 0ms);
+}
+.reveal-now {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
 .moment {
   --wrap: clamp(20px, 5.5vw, 80px);
   max-width: 1440px;

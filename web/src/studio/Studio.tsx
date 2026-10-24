@@ -12,6 +12,7 @@ import { KIND_LABEL, lineKinds } from "../narration/payload";
 import { useBreakdown, useSession } from "../session";
 import { Chapter } from "../ui/Chapter";
 import { LANG_LABEL, PERSONA_LABEL } from "../ui/labels";
+import { useReveal } from "../ui/reveal";
 import { Segmented } from "../ui/Segmented";
 import {
   audienceOf,
@@ -31,8 +32,16 @@ import {
   downloadBlob,
   momentSlug,
   type CardSize,
+  type CardSpec,
 } from "./cards";
-import { FORMAT_LABEL, POST_FORMATS, POST_LANGUAGES, postsOf, type PostLanguage } from "./posts";
+import {
+  FORMAT_LABEL,
+  POST_FORMATS,
+  POST_LANGUAGES,
+  postsOf,
+  type PostFormat,
+  type PostLanguage,
+} from "./posts";
 import { CAMERA_LABEL, shotList, shotListText } from "./shotlist";
 import "./studio.css";
 
@@ -64,6 +73,7 @@ export function StudioPanel() {
 /** The package without its business panel: the language, the highlight, the explainer, the posts
  * and the data cards. */
 export function StudioPackage() {
+  const explainer = useReveal<HTMLElement>();
   const { hero, moment, controls, possession } = useSession();
   const { narration, resolved, script, language: spoken } = useBreakdown();
   const [lang, setLang] = useState<PostLanguage>(spoken);
@@ -169,7 +179,7 @@ export function StudioPackage() {
         <h3 id="studio-explainer" className="block-title">
           2 · Tactical explainer card
         </h3>
-        <article className="studio-explainer tile">
+        <article className="studio-explainer tile" ref={explainer}>
           <p className="kicker">Verified lines only</p>
           <ol>
             {ctx.narration.lines
@@ -192,18 +202,15 @@ export function StudioPackage() {
         <h3 id="studio-posts" className="block-title">
           3 · Social posts
         </h3>
-        {POST_FORMATS.map((f) => (
-          <div className="studio-post" key={f}>
-            <div className="studio-post-head">
-              <h4>{FORMAT_LABEL[f]}</h4>
-              <button type="button" className="btn btn-quiet" onClick={() => copy(posts[f])}>
-                Copy
-              </button>
-            </div>
-            <pre className="tile" lang={lang}>
-              {posts[f]}
-            </pre>
-          </div>
+        {POST_FORMATS.map((format, index) => (
+          <SocialPost
+            key={format}
+            format={format}
+            text={posts[format]}
+            lang={lang}
+            index={index}
+            onCopy={copy}
+          />
         ))}
         <button type="button" className="btn btn-quiet" onClick={savePosts}>
           Download posts (.txt)
@@ -215,28 +222,15 @@ export function StudioPackage() {
           4 · Data cards
         </h3>
         <div className="tile-grid">
-          {CARD_SIZES.map((size) => {
-            const spec = cardSpec(ctx.narration, ctx.hero, ctx.runner, size, lang);
-            return (
-              <div className="studio-card tile" key={size}>
-                <h4>{CARD_DIMENSIONS[size].label}</h4>
-                <p className="note">
-                  {spec.width} × {spec.height} px
-                </p>
-                <ul>
-                  {spec.stats.map((s) => (
-                    <li key={s.label}>
-                      <strong>{s.value}</strong> {s.label}
-                    </li>
-                  ))}
-                  {spec.empty && <li>{spec.empty}</li>}
-                </ul>
-                <button type="button" className="btn" onClick={() => void saveCard(size)}>
-                  Download PNG
-                </button>
-              </div>
-            );
-          })}
+          {CARD_SIZES.map((size, index) => (
+            <DataCard
+              key={size}
+              size={size}
+              spec={cardSpec(ctx.narration, ctx.hero, ctx.runner, size, lang)}
+              index={index}
+              onSave={saveCard}
+            />
+          ))}
         </div>
       </section>
 
@@ -244,6 +238,68 @@ export function StudioPackage() {
         {note}
       </p>
     </>
+  );
+}
+
+function SocialPost({
+  format,
+  text,
+  lang,
+  index,
+  onCopy,
+}: {
+  format: PostFormat;
+  text: string;
+  lang: PostLanguage;
+  index: number;
+  onCopy: (text: string) => void;
+}) {
+  const card = useReveal<HTMLPreElement>(index);
+  return (
+    <div className="studio-post">
+      <div className="studio-post-head">
+        <h4>{FORMAT_LABEL[format]}</h4>
+        <button type="button" className="btn btn-quiet" onClick={() => onCopy(text)}>
+          Copy
+        </button>
+      </div>
+      <pre className="tile" lang={lang} ref={card}>
+        {text}
+      </pre>
+    </div>
+  );
+}
+
+function DataCard({
+  size,
+  spec,
+  index,
+  onSave,
+}: {
+  size: CardSize;
+  spec: CardSpec;
+  index: number;
+  onSave: (size: CardSize) => Promise<void>;
+}) {
+  const card = useReveal<HTMLDivElement>(index);
+  return (
+    <div className="studio-card tile" ref={card}>
+      <h4>{CARD_DIMENSIONS[size].label}</h4>
+      <p className="note">
+        {spec.width} × {spec.height} px
+      </p>
+      <ul>
+        {spec.stats.map((s) => (
+          <li key={s.label}>
+            <strong>{s.value}</strong> {s.label}
+          </li>
+        ))}
+        {spec.empty && <li>{spec.empty}</li>}
+      </ul>
+      <button type="button" className="btn" onClick={() => void onSave(size)}>
+        Download PNG
+      </button>
+    </div>
   );
 }
 
@@ -273,22 +329,25 @@ export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
       </h3>
       <DemoBadge />
       <dl className="tile-grid studio-metrics">
-        <Metric name="Impressions" value={withCommas(audience.impressions)} />
+        <Metric index={0} name="Impressions" value={withCommas(audience.impressions)} />
         <Metric
+          index={1}
           name="Engagement rate"
           value={percent(audience.engagementRate)}
           detail={`${withCommas(audience.engagements)} engagements`}
         />
         <Metric
+          index={2}
           name={`Click-through to “Official watch”`}
           value={percent(audience.clickThrough)}
           detail={`${withCommas(audience.clicks)} clicks`}
         />
         <Metric
+          index={3}
           name={`Sponsor impressions (${SPONSOR})`}
           value={withCommas(audience.sponsorImpressions)}
         />
-        <Metric name="Sponsor recall proxy" value={percent(audience.recall)} />
+        <Metric index={4} name="Sponsor recall proxy" value={percent(audience.recall)} />
       </dl>
       <details className="how studio-assumptions">
         <summary>Assumptions</summary>
@@ -327,9 +386,20 @@ export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
   );
 }
 
-function Metric({ name, value, detail }: { name: string; value: string; detail?: string }) {
+function Metric({
+  name,
+  value,
+  detail,
+  index,
+}: {
+  name: string;
+  value: string;
+  detail?: string;
+  index: number;
+}) {
+  const card = useReveal<HTMLDivElement>(index);
   return (
-    <div className="studio-metric tile">
+    <div className="studio-metric tile" ref={card}>
       <dt>{name}</dt>
       <dd>
         <strong>{value}</strong>

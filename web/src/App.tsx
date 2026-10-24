@@ -62,9 +62,11 @@ import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
+import { useReveal } from "./ui/reveal";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
+  const momentReveal = useReveal<HTMLElement>();
   const session = useSession();
   const { hero, playback, controls, moment, offset } = session;
   const mode = useStore(playback, (s) => s.mode);
@@ -195,7 +197,13 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       )}
 
       {!yourCall && !takeEyes && !scanSteps && !drill && (
-        <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+        <main
+          className="moment"
+          id="moment"
+          aria-labelledby="moment-title"
+          inert={introOpen}
+          ref={momentReveal}
+        >
           <header className="moment-head">
             <p className="kicker accent">
               {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
@@ -505,6 +513,7 @@ export function MatchApp({ session, autoplay }: { session: MatchSession; autopla
 }
 
 function MatchView() {
+  const momentReveal = useReveal<HTMLElement>();
   const session = useView();
   const introOpen = useStore(intro, (s) => s.open);
   usePersonalSync(true);
@@ -545,7 +554,13 @@ function MatchView() {
         caption={<RecapCaption />}
       />
 
-      <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+      <main
+        className="moment"
+        id="moment"
+        aria-labelledby="moment-title"
+        inert={introOpen}
+        ref={momentReveal}
+      >
         <header className="moment-head">
           <p className="kicker accent">The match · {count} possessions</p>
           <h2 id="moment-title">
