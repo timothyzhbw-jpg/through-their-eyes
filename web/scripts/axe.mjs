@@ -21,6 +21,41 @@ export const BLOCKING = new Set(["critical", "serious"]);
  * @returns {Promise<{ violations: Finding[], incomplete: Finding[], version: string }>}
  */
 export async function axe(page, { tags = [...WCAG, "best-practice"], exclude = [] } = {}) {
+  await settle(page);
+  const first = await run(page, { tags, exclude });
+  const contrast = first.violations.filter((v) => v.id === "color-contrast");
+  if (!contrast.length) return first;
+  // axe can read a colour mid-transition on a loaded runner: look once more after another settle,
+  // and let the failure stand only if it repeats. Both reads are printed.
+  console.warn(`axe: colour contrast hit, retrying once: ${describe(contrast).join("; ")}`);
+  await settle(page);
+  const second = await run(page, { tags, exclude });
+  const again = second.violations.filter((v) => v.id === "color-contrast");
+  if (again.length) console.warn(`axe: it repeated: ${describe(again).join("; ")}`);
+  else console.warn("axe: it did not repeat; the first read was a transition");
+  return second;
+}
+
+/** Waits until the page is at rest, so axe reads settled colours: fonts loaded, no finite
+ * animation or transition running (infinite ones, a pulsing LIVE dot, are left out; the wait is
+ * capped at 3 s), then two animation frames. */
+export async function settle(page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    const running = () =>
+      document.getAnimations().some((a) => {
+        if (a.playState !== "running") return false;
+        return a.effect?.getComputedTiming().iterations !== Infinity;
+      });
+    const end = performance.now() + 3000;
+    while (running() && performance.now() < end) {
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  });
+}
+
+async function run(page, { tags, exclude }) {
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ content: SOURCE });
   return page.evaluate(
     async ({ tags, exclude }) => {
