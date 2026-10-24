@@ -1,6 +1,5 @@
 /* The moment links (MomentRail.tsx): a row of chips on the intro card, and the header's Moments
-   menu (its list: styles.css .moments-panel). Small chips, one line; on a phone the row scrolls
-   sideways. */
+   menu (its list: styles.css .moments-panel). Small chips; on a phone they wrap into rows. */
 .moment-chips ul {
   display: flex;
   flex-wrap: wrap;
@@ -54,26 +53,14 @@
   border-left: 1px solid var(--hairline-strong);
 }
 @media (max-width: 760px) {
-  /* One row on a phone's intro card sheet (it must stay short): more chips than the width scroll
-     sideways, the last ones fading at the edge so the row reads as such. */
-  .moment-chips {
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-  }
+  /* A phone's intro card sheet wraps the chips into rows, a little tighter than on a desktop: a
+     row that scrolled sideways clipped its last chips with nothing to say so. */
   .moment-chips ul {
-    flex-wrap: nowrap;
+    gap: 6px 4px;
   }
-  .moment-chips li:last-child {
-    padding-right: 24px; /* the last chip can scroll out of the fade */
-  }
-  /* the header's menu lists them in a column: no scroll, no fade */
-  .moments-panel .moment-chips {
-    overflow: visible;
-    mask-image: none;
-  }
-  .moments-panel .moment-chips li:last-child {
-    padding-right: 0;
+  .moment-chip {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12.5px;
   }
 }

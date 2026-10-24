@@ -400,3 +400,19 @@ describe("the layers", () => {
     }
   });
 });
+
+describe("the key's buttons", () => {
+  it("keep a 24 px target (WCAG 2.5.8) whatever the column around the key does", () => {
+    const nodeProcess = (
+      globalThis as {
+        process: { cwd(): string; getBuiltinModule(id: "node:fs"): typeof import("node:fs") };
+      }
+    ).process;
+    const css = nodeProcess
+      .getBuiltinModule("node:fs")
+      .readFileSync(`${nodeProcess.cwd()}/src/skeleton/skeleton.css`, "utf8");
+    const rule = css.match(/\.skeleton-key \.sk-source button \{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/min-height:\s*24px/);
+    expect(rule).toMatch(/min-width:\s*24px/);
+  });
+});
