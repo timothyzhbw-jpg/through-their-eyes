@@ -5,6 +5,7 @@
 
 import type { ReactNode } from "react";
 import { useReveal } from "./reveal";
+import { TextReveal } from "./TextReveal";
 
 export function Chapter(props: {
   className: string; // the panel's own class (narration, breakdown, …): scripts find it by it
@@ -27,11 +28,17 @@ export function Chapter(props: {
       <header className="chapter-head">
         <div className="chapter-title">
           <p className="kicker">{props.kicker}</p>
-          <h2>{props.title}</h2>
+          <h2>
+            <TextReveal>{props.title}</TextReveal>
+          </h2>
         </div>
         {(props.lede || props.how || props.aside) && (
           <div className="chapter-lede">
-            {props.lede && <p className="lede">{props.lede}</p>}
+            {props.lede && (
+              <p className="lede">
+                <TextReveal>{props.lede}</TextReveal>
+              </p>
+            )}
             {props.how && <HowItWorks>{props.how}</HowItWorks>}
             {props.aside}
           </div>

@@ -4,7 +4,9 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Chapter } from "./Chapter";
+import { FloodlightBackground } from "./FloodlightBackground";
 import { useReveal } from "./reveal";
+import { TextReveal } from "./TextReveal";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -176,5 +178,97 @@ describe("scroll reveal", () => {
     expect(container.querySelector(".chapter-title")!.closest(".reveal-pending")).toBe(
       container.querySelector("section"),
     );
+  });
+});
+
+describe("scroll-linked text and floodlight", () => {
+  function mountText() {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    mounted.push({ root, container });
+    act(() =>
+      root.render(
+        <h2>
+          <TextReveal>
+            Why tactics <em>work.</em>
+          </TextReveal>
+        </h2>,
+      ),
+    );
+    return container.querySelector("h2")!;
+  }
+
+  function flushScroll() {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      }),
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    act(() => window.dispatchEvent(new Event("scroll")));
+    act(() => frames.splice(0).forEach((callback) => callback(0)));
+  }
+
+  it("shows every word at once and holds the background with reduced motion", () => {
+    reduced = true;
+    const heading = mountText();
+    const words = heading.querySelectorAll<HTMLElement>(".scroll-word");
+    expect(heading.textContent).toBe("Why tactics work.");
+    for (const word of words) {
+      expect(word.style.opacity).toBe("1");
+      expect(word.style.transform).toBe("translateY(0px)");
+    }
+
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    mounted.push({ root, container });
+    act(() => root.render(<FloodlightBackground />));
+    expect(container.querySelector(".floodlight-background")!.getAttribute("data-paused")).toBe(
+      "true",
+    );
+  });
+
+  it("pauses the background while the tab is hidden", () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    mounted.push({ root, container });
+    act(() => root.render(<FloodlightBackground />));
+    const background = container.querySelector(".floodlight-background")!;
+    expect(background.getAttribute("data-paused")).toBe("false");
+    const ownHidden = Object.getOwnPropertyDescriptor(document, "hidden");
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    if (ownHidden) Object.defineProperty(document, "hidden", ownHidden);
+    else Reflect.deleteProperty(document, "hidden");
+    expect(background.getAttribute("data-paused")).toBe("true");
+  });
+
+  it("keeps the text in the DOM and finishes every word after scrolling past", () => {
+    const heading = mountText();
+    expect(heading.textContent).toBe("Why tactics work.");
+    expect(heading.querySelectorAll(".scroll-word")).toHaveLength(3);
+    vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(rect(100));
+    flushScroll();
+    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
+      expect(word.style.opacity).toBe("1");
+      expect(word.style.transform).toBe("translateY(0px)");
+    }
+  });
+
+  it("finishes the whole heading when its top reaches 60 percent of the viewport", () => {
+    const heading = mountText();
+    vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
+      rect(window.innerHeight * 0.6),
+    );
+    flushScroll();
+    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
+      expect(word.style.opacity).toBe("1");
+    }
   });
 });

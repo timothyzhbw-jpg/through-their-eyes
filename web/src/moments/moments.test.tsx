@@ -195,6 +195,15 @@ describe("the hero page's shell (SPEC 7)", () => {
     expect(card.querySelectorAll("p.card-body")).toHaveLength(1);
   });
 
+  it("keeps the floodlight background below the live picture", () => {
+    const page = mount(offline());
+    expect(page.querySelector(".moment > .floodlight-background")).not.toBeNull();
+    expect(page.querySelector(".stage .floodlight-background")).toBeNull();
+    expect(page.querySelector(".stage canvas")?.closest(".floodlight-background")).toBeNull();
+    expect(page.querySelectorAll("#moment-title .scroll-word").length).toBeGreaterThan(1);
+    expect(page.querySelector(".stage .scroll-word")).toBeNull();
+  });
+
   it("tells the story with two actions, the other ways in folded, and the match data last", () => {
     const page = mount(offline());
     const cta = page.querySelector(".moment-cta")!;

@@ -1806,8 +1806,82 @@ optgroup {
     transition: none;
   }
 }
+.scroll-word {
+  display: inline-block;
+  opacity: 1;
+  transform: translateY(0);
+}
+.floodlight-background {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.floodlight-background span {
+  position: absolute;
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(246, 213, 102, 0.055),
+    rgba(246, 213, 102, 0.025) 38%,
+    rgba(246, 213, 102, 0) 70%
+  );
+  will-change: transform;
+  animation: floodlight-drift-a 32s ease-in-out infinite alternate;
+}
+.floodlight-background span:first-child {
+  top: 2%;
+  left: -24%;
+}
+.floodlight-background span:last-child {
+  top: 38%;
+  right: -25%;
+  background: radial-gradient(
+    circle,
+    rgba(149, 167, 186, 0.045),
+    rgba(149, 167, 186, 0.02) 38%,
+    rgba(149, 167, 186, 0) 70%
+  );
+  animation-name: floodlight-drift-b;
+  animation-duration: 40s;
+}
+.floodlight-background[data-paused="true"] span {
+  animation-play-state: paused;
+}
+@keyframes floodlight-drift-a {
+  from {
+    transform: translate3d(-3%, -2%, 0);
+  }
+  to {
+    transform: translate3d(5%, 4%, 0);
+  }
+}
+@keyframes floodlight-drift-b {
+  from {
+    transform: translate3d(4%, 3%, 0);
+  }
+  to {
+    transform: translate3d(-4%, -3%, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-word {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .floodlight-background span {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+}
 .moment {
   --wrap: clamp(20px, 5.5vw, 80px);
+  position: relative;
+  isolation: isolate;
   max-width: 1440px;
   margin: 0 auto;
   padding: 160px var(--wrap) 64px;
