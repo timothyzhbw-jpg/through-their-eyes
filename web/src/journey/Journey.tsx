@@ -24,6 +24,7 @@ import { StepLines } from "../tour/StepLines";
 import { TourButton } from "../tour/Tour";
 import { Chapter, Title } from "../ui/Chapter";
 import { LineText } from "../ui/Narration";
+import { useReveal } from "../ui/reveal";
 import { blurbOf } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines } from "../without/WithoutLook";
@@ -183,6 +184,8 @@ const kickerOf = (step: JourneyStep) =>
 // ---------- Event: the moment, with the look and without it ----------
 
 function EventPanel() {
+  const factualCard = useReveal<HTMLElement>();
+  const counterfactualCard = useReveal<HTMLElement>(1);
   const session = useSession();
   const { hero } = session;
   const bundled = useStore(withoutLookOf(session).state, (s) => s.data);
@@ -228,13 +231,17 @@ function EventPanel() {
         <TourButton className="btn btn-quiet journey-story-here" kind="story" />
       </div>
       <div className="tile-grid journey-compare">
-        <article className="tile" aria-label={labels.factual}>
+        <article className="tile" aria-label={labels.factual} ref={factualCard}>
           <p className="kicker accent">{labels.factual}</p>
           <TheLook />
           <StepLines say="look" />
         </article>
         {hero.counterfactual && (
-          <article className="tile journey-without" aria-label={labels.counterfactual}>
+          <article
+            className="tile journey-without"
+            aria-label={labels.counterfactual}
+            ref={counterfactualCard}
+          >
             <p className="kicker">{labels.counterfactual}</p>
             {bundled ? <WithoutLookLines /> : <StepLines say="without" />}
           </article>
@@ -268,6 +275,7 @@ const REMOVED_LOOK = "removed_look"; // explain/look_cost.py: which look the com
 // ---------- Your view ----------
 
 function YourViewPanel() {
+  const card = useReveal<HTMLDivElement>();
   return (
     <Chapter
       className="journey-step journey-your-view"
@@ -276,7 +284,7 @@ function YourViewPanel() {
       lede="Pick who the commentary is for and its language, and follow a club or a player: their moments come first on the rail, and the player is ringed in the 3D view and on the board."
       label="Your view"
     >
-      <div className="your-view-inline tile">
+      <div className="your-view-inline tile" ref={card}>
         <YourViewControls />
       </div>
     </Chapter>

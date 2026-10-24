@@ -29,7 +29,7 @@ import {
   MenuSection,
   MomentCard,
   momentKicker,
-  MomentTitle,
+  momentTitle,
   StageHud,
   SwapViews,
   ViewerMenu,
@@ -62,11 +62,14 @@ import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
+import { FloodlightBackground } from "./ui/FloodlightBackground";
+import { TextReveal } from "./ui/TextReveal";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
   const session = useSession();
   const { hero, playback, controls, moment, offset } = session;
+  const [titleLead, titleEmphasis] = momentTitle(hero);
   const mode = useStore(playback, (s) => s.mode);
   const evidence = useStore(playback, (s) => s.evidenceLine);
   const yourCall = useYourCallOpen();
@@ -196,14 +199,19 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
 
       {!yourCall && !takeEyes && !scanSteps && !drill && (
         <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+          <FloodlightBackground />
           <header className="moment-head">
             <p className="kicker accent">
               {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
             </p>
             <h2 id="moment-title">
-              <MomentTitle hero={hero} />
+              <TextReveal>
+                {titleLead} <em>{titleEmphasis}</em>
+              </TextReveal>
             </h2>
-            <p className="lede">{blurbOf(hero)}</p>
+            <p className="lede">
+              <TextReveal>{blurbOf(hero)}</TextReveal>
+            </p>
             <YourViewLine />
             <StoryCta />
           </header>

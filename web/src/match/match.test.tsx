@@ -235,7 +235,7 @@ describe("the live match", () => {
       hero: index < count,
     }));
     const html = render(session, <MomentsPanel />);
-    expect(html).toContain(copy);
+    expect(html.replace(/<[^>]+>/g, "")).toContain(copy);
     expect(html.match(/>Breakdown</g) ?? []).toHaveLength(count);
   });
 
