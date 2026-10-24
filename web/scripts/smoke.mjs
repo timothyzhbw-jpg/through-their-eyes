@@ -17,7 +17,7 @@
 // renamed control does, and then the test is updated with it.
 
 import { spawn } from "node:child_process";
-import { createWriteStream, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -768,7 +768,7 @@ async function followEyes(page) {
   const note = page.getByTestId("follow-eyes");
   await see(note, "the note on the followed player's looks");
   if ((await eyes.inputValue()) !== pick) {
-    await see(note.getByText(/has no look data for this moment/), "the no-look-data note");
+    await see(note.getByText(/has no recorded looks in this moment/), "the no-look-data note");
     await note.getByRole("button", { name: /^Watch through #\d+'s eyes$/ }).click();
   }
   if ((await eyes.inputValue()) !== pick) {
@@ -783,7 +783,14 @@ async function tamperCount(page) {
   const form = page.locator(".tamper-form").filter({ has: page.locator("input[name='n']") });
   const input = form.locator("input");
   const verdict = page.locator(".tamper-result");
-  for (const n of ["0", "3", "7"]) {
+  const payload = JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL("../public/data/fixture_payload_seed3.json", import.meta.url)),
+      "utf8",
+    ),
+  );
+  const trueN = payload.claims.find((c) => c.id === "scans_before_reception").values.n;
+  for (const n of ["0", "3", "7"].filter((v) => Number(v) !== trueN)) {
     await input.fill("");
     await input.pressSequentially(n);
     if ((await input.inputValue()) !== n) throw new Error(`expected ${n} in the input`);

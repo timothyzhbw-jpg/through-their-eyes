@@ -25,21 +25,26 @@ afterEach(() => {
   }
 });
 
-/** What the service's verifier says of "scanned n times": true for the verified count, 1. */
+/** The verified count and window, read from the payload's scans claim. */
+const { n: TRUE_N, window_s: WINDOW_S } = (
+  payloadJson as { claims: { id: string; values: { n: number; window_s: number } }[] }
+).claims.find((c) => c.id === "scans_before_reception")!.values;
+
+/** What the service's verifier says of "scanned n times": true for the verified count. */
 function verifyCount(body: unknown) {
   const { value } = body as { value: number };
-  const supported = value === 1;
+  const supported = value === TRUE_N;
   return json({
     match: "blind_side_run-3",
     claim: "scans_before_reception",
     slot: "n",
     language: "en",
     value,
-    verified_value: 1,
+    verified_value: TRUE_N,
     status: supported ? "supported" : "refuted",
-    reason: supported ? "eq(1, 1) holds" : `eq(1, ${value}) is false`,
+    reason: supported ? `eq(${TRUE_N}, ${TRUE_N}) holds` : `eq(${TRUE_N}, ${value}) is false`,
     trace: [],
-    line: `H8 scanned ${value} times in the 2 seconds before receiving.`,
+    line: `H8 scanned ${value} times in the ${WINDOW_S} seconds before receiving.`,
     airs: supported,
     violations: [],
   });
@@ -85,35 +90,38 @@ describe("a wrong count in the evidence card", () => {
     expect(wrongNumber(0)).toBe(1);
   });
 
-  it.each([0, 1, 3, 7])("takes %i, sends it and shows the Verifier's answer", async (n) => {
-    const { fetch, container } = await mountCard();
-    const input = container.querySelector<HTMLInputElement>('input[name="n"]')!;
-    expect(input).not.toBeNull();
-    expect(input.min).toBe("");
-    expect(input.max).toBe("");
-    type(input, String(n));
-    expect(input.value).toBe(String(n));
-    const form = input.closest("form")!;
-    const check = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-    expect(check.disabled).toBe(false);
-    await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      await settle();
-    });
-    const sent = fetch.calls.filter((c) => c.path === "/api/verify").map((c) => c.body);
-    expect(sent).toEqual([
-      {
-        match: "blind_side_run-3",
-        claim: "scans_before_reception",
-        slot: "n",
-        value: n,
-        language: "en",
-      },
-    ]);
-    const text = container.textContent ?? "";
-    expect(text).toContain(
-      n === 1 ? "Supported — this line would air" : "Refuted — this line would not air",
-    );
-    expect(text).toContain(`scanned ${n} times`);
-  });
+  it.each([...new Set([0, TRUE_N, 3, 7])])(
+    "takes %i, sends it and shows the Verifier's answer",
+    async (n) => {
+      const { fetch, container } = await mountCard();
+      const input = container.querySelector<HTMLInputElement>('input[name="n"]')!;
+      expect(input).not.toBeNull();
+      expect(input.min).toBe("");
+      expect(input.max).toBe("");
+      type(input, String(n));
+      expect(input.value).toBe(String(n));
+      const form = input.closest("form")!;
+      const check = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      expect(check.disabled).toBe(false);
+      await act(async () => {
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await settle();
+      });
+      const sent = fetch.calls.filter((c) => c.path === "/api/verify").map((c) => c.body);
+      expect(sent).toEqual([
+        {
+          match: "blind_side_run-3",
+          claim: "scans_before_reception",
+          slot: "n",
+          value: n,
+          language: "en",
+        },
+      ]);
+      const text = container.textContent ?? "";
+      expect(text).toContain(
+        n === TRUE_N ? "Supported — this line would air" : "Refuted — this line would not air",
+      );
+      expect(text).toContain(`scanned ${n} times`);
+    },
+  );
 });

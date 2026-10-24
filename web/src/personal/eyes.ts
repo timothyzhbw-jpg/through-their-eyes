@@ -41,7 +41,7 @@ export function eyesStatus(hero: Hero, id: string, povPlayer: string): EyesStatu
     text:
       looks > 0
         ? `${tag} has ${looks === 1 ? "1 look" : `${looks} looks`} in this moment.`
-        : `${tag} has no look data for this moment: he does not turn his head in it. You can still watch through his eyes.`,
+        : `${tag} has no recorded looks in this moment. You can still watch through his eyes.`,
     button: `Watch through ${tag}'s eyes`,
   };
 }

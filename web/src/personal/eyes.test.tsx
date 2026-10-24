@@ -66,7 +66,10 @@ const followSelect = (c: HTMLElement) =>
 describe("look data of a player", () => {
   it("the export has players with and without looks in this moment", () => {
     expect(withLooks.length).toBeGreaterThan(0);
-    expect(without.length).toBeGreaterThan(0);
+    expect(
+      without.length,
+      "every player has looks in hero_seed3.json; this test needs one without",
+    ).toBeGreaterThan(0);
     expect(lookCount(hero, withLooks[0])).toBeGreaterThan(0);
     expect(lookCount(hero, "nobody")).toBe(0);
   });
@@ -75,7 +78,7 @@ describe("look data of a player", () => {
     const yes = eyesStatus(hero, withLooks[0], hero.heroId!);
     expect(yes.text).toMatch(/has \d+ looks? in this moment/);
     const no = eyesStatus(hero, without[0], hero.heroId!);
-    expect(no.text).toContain("has no look data for this moment");
+    expect(no.text).toContain("has no recorded looks in this moment");
     expect(no.button).toMatch(/^Watch through #\d+'s eyes$/);
     expect(eyesStatus(hero, without[0], without[0]).current).toBe(true);
   });
@@ -115,7 +118,7 @@ describe("following a player", () => {
     choose(followSelect(container), id);
     expect(session.playback.get().povPlayer).toBe(hero.heroId); // not switched on its own
     const box = container.querySelector("[data-testid='follow-eyes']")!;
-    expect(box.textContent).toContain("has no look data for this moment");
+    expect(box.textContent).toContain("has no recorded looks in this moment");
     const button = box.querySelector<HTMLButtonElement>("button")!;
     expect(button.textContent).toMatch(/^Watch through #\d+'s eyes$/);
     act(() => button.click());
