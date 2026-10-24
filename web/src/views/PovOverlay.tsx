@@ -36,7 +36,9 @@ export function PovOverlay() {
 }
 
 /** What he sees right now: head to ball, players in sight, the scan, blind-side alerts. */
-export function Hud() {
+/** `readout`: his head angle and how many he sees (the data on the pitch, ui/pitchData.ts); the
+ * scan and blind-side badges show either way. */
+export function Hud({ readout = true }: { readout?: boolean }) {
   const { hero, playback } = useView();
   const frame = useStore(playback, (s) => s.frame);
   const mode = useStore(playback, (s) => s.mode);
@@ -65,10 +67,12 @@ export function Hud() {
 
   return (
     <div className="hud" aria-live="off">
-      <span>
-        {shortName(povPlayer)} · head {offBall.toFixed(0)}° from the ball
-        {run.sight && <> · {inSight} players in sight</>} <SourceChip kind="sim" />
-      </span>
+      {readout && (
+        <span>
+          {shortName(povPlayer)} · head {offBall.toFixed(0)}° from the ball
+          {run.sight && <> · {inSight} players in sight</>} <SourceChip kind="sim" />
+        </span>
+      )}
       {scan && (
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
       )}

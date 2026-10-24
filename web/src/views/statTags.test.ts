@@ -7,7 +7,7 @@ import raw from "../../public/data/hero_seed3.json";
 import { parseHero } from "../data/hero";
 import fixture from "../stats/fixture_seed3.json";
 import { parseStats, prepare, sprintKmh } from "../stats/stats";
-import { liveTags, tagSource } from "./broadcastTags";
+import { liveTags, tagSource, withoutData } from "./broadcastTags";
 
 const hero = parseHero(raw);
 const run = hero.runs.factual;
@@ -50,5 +50,33 @@ describe("broadcast tags with live stats", () => {
     const cf = hero.runs.counterfactual;
     const tags = liveTags(hero, cf, 60, h8, true, stats);
     expect(tags.every((t) => tagSource(t.kind) === "sim")).toBe(true);
+  });
+});
+
+describe("broadcast tags with the data on the pitch off (the default)", () => {
+  const keys = new Set([hero.hero, hero.runner].filter((j) => j >= 0));
+
+  it("drops the measured tags and keeps the key players' names, his scans and the alerts", () => {
+    const all = run.frames;
+    let measured = 0;
+    for (let f = 0; f < all; f += 5) {
+      const tags = liveTags(hero, run, f, h8, true, stats);
+      const kept = withoutData(tags, keys);
+      measured += tags.length - kept.length;
+      for (const t of kept) {
+        expect(["scan", "blind", "name"]).toContain(t.kind);
+        if (t.kind === "name") expect(keys.has(t.player)).toBe(true);
+      }
+      // what stays is what was there: nothing added, nothing reordered
+      expect(tags.filter((t) => kept.includes(t))).toEqual(kept);
+    }
+    expect(measured).toBeGreaterThan(0); // the run has passes and sprints to drop
+  });
+
+  it("keeps the hero's name when he has the ball", () => {
+    const f = run.owner.findIndex((o) => o === hero.hero);
+    expect(f).toBeGreaterThanOrEqual(0);
+    const kept = withoutData(liveTags(hero, run, f, h8, true, stats), keys);
+    expect(kept.some((t) => t.kind === "name" && t.player === hero.hero)).toBe(true);
   });
 });

@@ -28,7 +28,8 @@ import { RadarLayer } from "../skeleton/RadarLayer";
 import { statsStore } from "../stats/store";
 import { useStore } from "../store/store";
 import { cameraPose, shotAt, type BroadcastPath, type Shot } from "./broadcast";
-import { liveTags, tagSource, type LiveTag } from "./broadcastTags";
+import { liveTags, tagSource, withoutData, type LiveTag } from "./broadcastTags";
+import { pitchData } from "../ui/pitchData";
 import { COLORS, teamColor } from "./scene";
 
 const NEAR = 1; // m: the camera is 40-110 m from the play; a far near plane keeps depth precise
@@ -291,10 +292,11 @@ function tagFill(tag: LiveTag, hero: { players: { team: number }[] }): string {
   }
 }
 
-/** A tag as a texture: a dark pill with the label in colour, the text, and where it was measured. */
+/** A tag as a texture: a dark pill with the label in colour, the text, and where it was measured
+ * (a name alone, with the data on the pitch off, carries no mark: it is not a measurement). */
 const tagTextures = new Map<string, THREE.CanvasTexture>();
-function tagTexture(tag: LiveTag, color: string): THREE.CanvasTexture {
-  const source = tagSource(tag.kind);
+function tagTexture(tag: LiveTag, color: string, marked = true): THREE.CanvasTexture {
+  const source = marked ? tagSource(tag.kind) : "";
   const key = `${color}|${source}|${tag.kind}|${tag.label}|${tag.text}`;
   const hit = tagTextures.get(key);
   if (hit) return hit;
@@ -312,7 +314,7 @@ function tagTexture(tag: LiveTag, color: string): THREE.CanvasTexture {
   const mark = c.measureText(source).width;
   const gap = 16;
   const pad = 22;
-  const width = Math.min(TAG_W - 4, pad + label + gap + text + gap + mark + pad);
+  const width = Math.min(TAG_W - 4, pad + label + gap + text + (mark ? gap + mark : 0) + pad);
   const x0 = (TAG_W - width) / 2;
   c.fillStyle = "rgba(8, 14, 12, 0.86)";
   c.beginPath();
@@ -342,11 +344,13 @@ function TagSprites({ sample, off }: { sample: Sample; off: Float32Array }) {
   const statsState = statsStore(view);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const sprites = useRef<(THREE.Sprite | null)[]>([]);
+  const keyPlayers = useMemo(() => new Set([hero.hero, hero.runner].filter((j) => j >= 0)), [hero]);
   useFrame(({ size }) => {
     const s = playback.get();
     const st = statsState.get();
     const run = hero.runs[s.mode];
-    const tags =
+    const data = pitchData.get().on;
+    const all =
       s.camera === "broadcast"
         ? liveTags(
             hero,
@@ -357,6 +361,7 @@ function TagSprites({ sample, off }: { sample: Sample; off: Float32Array }) {
             st.status === "ready" ? st.stats : null,
           )
         : [];
+    const tags = data ? all : withoutData(all, keyPlayers);
     // World height of TAG_PX on screen for a sprite that ignores distance (sizeAttenuation off).
     const h = (2 * TAG_PX * Math.tan(((camera.fov / 2) * Math.PI) / 180)) / size.height;
     const stacked = new Map<number, number>();
@@ -369,7 +374,7 @@ function TagSprites({ sample, off }: { sample: Sample; off: Float32Array }) {
       const level = stacked.get(tag.player) ?? 0;
       stacked.set(tag.player, level + 1);
       const material = sprite.material;
-      const map = tagTexture(tag, tagFill(tag, hero));
+      const map = tagTexture(tag, tagFill(tag, hero), data);
       if (material.map !== map) {
         material.map = map;
         material.needsUpdate = true;

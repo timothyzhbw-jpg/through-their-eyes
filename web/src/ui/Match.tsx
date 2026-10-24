@@ -1,22 +1,16 @@
-// A stitched match in the page (SPEC 3.1): the score bug with the possession on screen and how
-// play restarted, the match picker (`?match=`), and the way back from a hero moment's breakdown.
+// A stitched match in the page (SPEC 3.1): the score bug with the possession on screen, the match
+// picker (`?match=`), and the way back from a hero moment's breakdown.
 
 import { useEffect, useState } from "react";
 import { MATCH_ID, type MatchList } from "../api/client";
-import {
-  possessionAt,
-  restartLabel,
-  scenarioLabel,
-  scoreAt,
-  type MatchMoment,
-} from "../match/match";
+import { possessionAt, scenarioLabel, scoreAt, type MatchMoment } from "../match/match";
 import type { MatchSession } from "../match/matchSession";
 import { useSession, useView } from "../session";
 import { useStore } from "../store/store";
 import "./match.css";
-import { clubName } from "../data/roster";
+import { clubName, shortName } from "../data/roster";
 
-/** Score, possession (n of N, its scenario) and restart at the playhead. */
+/** Score and possession (n of N, its scenario) at the playhead. */
 export function Scoreboard() {
   const session = useView();
   return session.kind === "match" ? <ScoreBug session={session} /> : null;
@@ -45,7 +39,6 @@ function ScoreBug({ session }: { session: MatchSession }) {
           Possession {p.index + 1} of {match.possessions.length}
         </span>
         <span className="scenario">{scenarioLabel(p.scenario)}</span>
-        <span className="restart">Restart: {restartLabel(p.restart)}</span>
       </div>
       {heroCard && <HeroShortcut card={heroCard} onOpen={controls.openBreakdown} />}
     </section>
@@ -59,14 +52,16 @@ function HeroShortcut({
   card: MatchMoment;
   onOpen: MatchSession["controls"]["openBreakdown"];
 }) {
+  // His name, never the roster id ("H8" read as a bug).
+  const who = card.actor ? `${shortName(card.actor)}'s` : "the";
   return (
     <button
       type="button"
       className="btn btn-primary"
       onClick={() => onOpen(card)}
-      title={`${card.actor}'s decision, through his eyes`}
+      title={card.actor ? `${shortName(card.actor)}'s decision, through his eyes` : undefined}
     >
-      {card.actor}'s hero moment
+      Open {who} hero moment
     </button>
   );
 }
