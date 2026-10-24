@@ -11,15 +11,15 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { createApi, DESCRIBED, PERSONAS } from "../api/client";
 import { parseHero } from "../data/hero";
-import { DirectorBar } from "../director/DirectorBar";
+import { DirectorAttach } from "../director/DirectorBar";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
 import type { AudioLike } from "../voice/voice";
 import { BreakdownPanel } from "./BreakdownPanel";
-import { Caption, EvidenceCard, NarrationPanel } from "./Narration";
+import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./Narration";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
-import { ViewerMenu } from "./Stage";
+import { CameraSwitch, HeaderMore, MenuSection, ViewerMenu, ViewOptions } from "./Stage";
 import { Transport } from "./Transport";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -323,22 +323,70 @@ describe("keyboard and screen reader access", () => {
     expect(accessibleName(steps)).toBe("Telestration steps");
   });
 
-  it("names the camera director's chip, its dismiss button and the Auto director switch", () => {
+  it("describes the director's suggestion on its camera, and names the Auto director switch", () => {
     const { session } = online();
-    const page = mount(session, <DirectorBar />);
+    function Bar() {
+      return (
+        <>
+          <DirectorAttach session={session} />
+          <CameraSwitch />
+        </>
+      );
+    }
+    const page = mount(
+      session,
+      <>
+        <Bar />
+        <ViewOptions />
+      </>,
+    );
     act(() => {
       session.controls.setCamera("broadcast");
       session.playback.set({ frame: 20 });
     });
-    const chip = page.querySelector<HTMLButtonElement>("button.director-chip")!;
-    expect(accessibleName(chip)).toBe("Switch to J. Ferriday's eyes: the ball is coming to him.");
-    expect(accessibleName(page.querySelector("button.director-dismiss")!)).toBe(
-      "Dismiss the suggestion",
+    // The suggestion is a dot on its camera: the camera keeps its name, the dot is described.
+    const eyes = page.querySelector(".cam-dot")!.closest<HTMLButtonElement>("button")!;
+    expect(accessibleName(eyes)).toBe("His eyes");
+    const hint = document.getElementById(eyes.getAttribute("aria-describedby")!)!;
+    expect(textOf(hint)).toBe(
+      "Suggested: Switch to J. Ferriday's eyes: the ball is coming to him.",
     );
-    const auto = page.querySelector<HTMLButtonElement>("button.director-auto")!;
-    expect(accessibleName(auto)).toBe("Auto director");
+    // The Auto director switch is in View options (ui/Stage.tsx).
+    act(() => page.querySelector<HTMLButtonElement>('button[aria-label="View options"]')!.click());
+    const auto = [...page.querySelectorAll<HTMLButtonElement>(".options-panel button.chip")].find(
+      (b) => accessibleName(b) === "Auto director",
+    )!;
     expect(auto.getAttribute("aria-pressed")).toBe("false");
-    expect(accessibleName(page.querySelector("section.director")!)).toBe("Camera director");
+    expect(problems(page)).toEqual([]);
+  });
+
+  it("names the header's ⋯ and keeps its sections and items named while it is open", () => {
+    const { session } = online();
+    const page = mount(
+      session,
+      <HeaderMore>
+        <MenuSection label="Sound">
+          <SoundToggle />
+        </MenuSection>
+        <MenuSection label="More ways in">
+          <button type="button" className="btn">
+            His looks
+          </button>
+        </MenuSection>
+      </HeaderMore>,
+    );
+    const toggle = page.querySelector<HTMLButtonElement>("#header-more")!;
+    expect(accessibleName(toggle)).toBe("More");
+    act(() => toggle.click());
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const panel = page.querySelector(".more-panel")!;
+    expect(accessibleName(panel)).toBe("More");
+    const sections = [...panel.querySelectorAll("[role=group]")].map(accessibleName);
+    expect(sections).toEqual(["Sound", "More ways in"]);
+    // The sound switch keeps its name and its state in the menu.
+    const sound = panel.querySelector<HTMLButtonElement>("button.sound")!;
+    expect(accessibleName(sound)).toBe("Sound");
+    expect(sound.getAttribute("aria-pressed")).toBe("false");
     expect(problems(page)).toEqual([]);
   });
 

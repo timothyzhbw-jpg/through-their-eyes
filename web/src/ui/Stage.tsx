@@ -1,8 +1,8 @@
-// The live screen of the Floodlit design (SPEC 7): the picture fills the screen and the controls
+// The live screen of the Floodlit design (SPEC 7): the picture fills the screen and few controls
 // sit over it. One camera switch films his eyes, the broadcast camera or the tactical board; the
-// other view shrinks to a picture in picture. The overlay toggles live behind one "View options"
-// button, who is watching sits in the header, and the moment card on the right has one primary
-// action: read the moment.
+// other view shrinks to a picture in picture. The header's "⋯" holds the rest: sound, who is
+// watching, the other ways in and View options (whose eyes, the Auto director, the data on the
+// pitch and the overlay toggles). The moment card on the right has one action: the breakdown.
 
 import { QualityOption } from "../quality/QualityOption";
 import {
@@ -19,17 +19,18 @@ import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
 import { ProvenanceChip } from "../provenance/ProvenanceChip";
-import { FirstTourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
 import { LANGUAGES, type Language } from "../whatif/whatif";
-import { ArrowIcon, ChevronIcon, CloseIcon, ExpandIcon, SlidersIcon } from "./icons";
+import { ChevronIcon, DotsIcon, ExpandIcon, SlidersIcon } from "./icons";
 import { PERSONA_LABEL } from "./labels";
 import { MatchPicker } from "./Match";
 import { Segmented } from "./Segmented";
 import { clubName, shortName } from "../data/roster";
 import { directorPrefs } from "../director/director";
+import { directorOf, useSuggestion } from "../director/DirectorBar";
+import { pitchData, setPitchData } from "./pitchData";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -150,35 +151,57 @@ export function usePopover(
 
 type Shot = "pov" | "broadcast" | "tactical";
 
-/** His eyes, the broadcast camera or the tactical board as the main view. */
+/** His eyes, the broadcast camera or the tactical board as the main view. The director's pending
+ * suggestion is a dot on its camera: picking that camera takes it (whose eyes too). */
 export function CameraSwitch() {
-  const { playback, controls } = useView();
+  const session = useView();
+  const { playback, controls } = session;
   const focus = useStore(playback, (s) => s.focus);
   const camera = useStore(playback, (s) => s.camera);
+  const suggestion = useSuggestion(session);
+  const hint = useId();
   const value: Shot = focus === "tactical" ? "tactical" : camera;
   const pick = (shot: Shot) => {
+    if (suggestion?.camera === shot) return directorOf(session).take();
     // Every switch is a clean cut (beat/cut.ts).
     if (shot === "tactical") return controls.setFocus("tactical");
     controls.setCamera(shot);
     // The picture in picture stays as it was: off (the 3D view alone) or on (the board with it).
     controls.setFocus(focus === "pov" || focus === "broadcast" ? shot : "split");
   };
+  const option = (shot: Shot, label: string, title: string) => {
+    const suggested = suggestion?.camera === shot;
+    return {
+      value: shot,
+      label: (
+        <>
+          {label}
+          {suggested && <i className="cam-dot" aria-hidden="true" />}
+        </>
+      ),
+      title: suggested ? suggestion.text : title,
+      describedBy: suggested ? hint : undefined,
+    };
+  };
   return (
-    <Segmented<Shot>
-      label="Camera"
-      className="camera"
-      value={value}
-      onPick={pick}
-      options={[
-        { value: "pov", label: "His eyes", title: "Through the eyes of the chosen player" },
-        {
-          value: "broadcast",
-          label: "Broadcast",
-          title: "High on the near side, following the ball",
-        },
-        { value: "tactical", label: "Tactical", title: "The board from above" },
-      ]}
-    />
+    <>
+      <Segmented<Shot>
+        label="Camera"
+        className="camera"
+        value={value}
+        onPick={pick}
+        options={[
+          option("pov", "His eyes", "Through the eyes of the chosen player"),
+          option("broadcast", "Broadcast", "High on the near side, following the ball"),
+          option("tactical", "Tactical", "The board from above"),
+        ]}
+      />
+      {suggestion && (
+        <span id={hint} className="sr-only">
+          Suggested: {suggestion.text}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -242,14 +265,16 @@ export function PlayerPicker() {
   );
 }
 
-/** Top left of the picture: the player picker, and his readouts while his eyes are on screen. */
+/** Top left of the picture while his eyes are on screen (whose eyes is picked in View options):
+ * the scan and blind-side badges, and his readouts with the data on the pitch. */
 export function StageHud() {
   const { playback } = useView();
   const pov = useStore(playback, (s) => s.camera === "pov" && s.focus !== "tactical");
+  const data = useStore(pitchData, (s) => s.on);
+  if (!pov) return null;
   return (
     <div className="stage-hud">
-      <PlayerPicker />
-      {pov && <Hud />}
+      <Hud readout={data} />
     </div>
   );
 }
@@ -415,14 +440,34 @@ export function TacticalOptions() {
   );
 }
 
-/** On a phone the camera switch and the Auto director live here: below the picture they took two
- * of its rows (styles.css shows this group only up to 760 px and hides the two there). */
-function PhoneCameraOptions() {
+/** The measured tags over the players and his readouts: off by default, kept between visits. */
+function PitchDataOption() {
+  const on = useStore(pitchData, (s) => s.on);
+  return (
+    <section className="options-group">
+      <h3 className="kicker">On the pitch</h3>
+      <div className="chips">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={on}
+          onClick={() => setPitchData(!on)}
+          title="The measured tags over the players (passes, sprints, the ball carrier) and his readouts in his eyes"
+        >
+          Show data on the pitch
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** Whose eyes and the Auto director, off the picture. */
+function CameraOptions() {
   const auto = useStore(directorPrefs, (s) => s.auto);
   return (
-    <section className="options-group phone-only">
+    <section className="options-group">
       <h3 className="kicker">Camera</h3>
-      <CameraSwitch />
+      <PlayerPicker />
       <div className="chips">
         <button
           type="button"
@@ -438,7 +483,8 @@ function PhoneCameraOptions() {
   );
 }
 
-/** Every overlay toggle of both views, behind one button. */
+/** Every overlay toggle of both views, behind one button (in the header's ⋯, where it opens in
+ * place). */
 export function ViewOptions() {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -459,15 +505,88 @@ export function ViewOptions() {
       >
         <SlidersIcon />
         <span className="btn-label">View options</span>
+        <ChevronIcon />
       </button>
       {open && (
         <div id={id} className="popover options-panel" role="group" aria-label="View options">
-          <PhoneCameraOptions />
+          <PitchDataOption />
+          <CameraOptions />
           <PovOptions />
           <QualityOption />
           <TacticalOptions />
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------- more ways in ----------
+
+/** Whether the header's More menu is open: kept across the modes it opens, so closing one finds
+ * the menu as it was and focus goes back to the item that opened it (App.tsx). */
+export const headerMore = createStore<{ open: boolean }>({ open: false });
+
+/** Open the ⋯ menu when `el` sits in it closed (a tour step points at it); true when it did. */
+export function revealInMenu(el: Element): boolean {
+  const panel = el.closest<HTMLElement>(".more-panel");
+  if (!panel?.hidden) return false;
+  headerMore.set({ open: true });
+  return true;
+}
+
+/** A section of the ⋯ menu, under a quiet label. */
+export function MenuSection({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="menu-section" role="group" aria-label={label}>
+      <p className="menu-label" aria-hidden="true">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+/** The header's ⋯: everything off the first screen (sound, who is watching, the other ways into
+ * the moment, View options) behind one button. The items stay mounted while it is closed
+ * (`hidden`): their ids and pressed states are what the modes, App's focus return and the tours
+ * use (a tour step whose target is in here opens it: tour/Tour.tsx). */
+export function HeaderMore({ children }: { children: ReactNode }) {
+  const open = useStore(headerMore, (s) => s.open);
+  const wrap = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const close = useRef(() => headerMore.set({ open: false })).current;
+  const onKeyDown = usePopover(open, close, wrap, toggle);
+  return (
+    <div className="popover-wrap header-more" ref={wrap} onKeyDown={onKeyDown}>
+      <button
+        ref={toggle}
+        id="header-more"
+        type="button"
+        className="btn btn-icon"
+        aria-label="More"
+        title="Sound, audience and language, more ways in, view options"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => headerMore.set({ open: !open })}
+      >
+        <DotsIcon />
+      </button>
+      <div
+        id={id}
+        className="popover more-panel"
+        role="group"
+        aria-label="More"
+        hidden={!open}
+        // A tour or a mode takes the screen, so the menu closes behind it.
+        onClick={(e) =>
+          (e.target as Element).closest(
+            ".tour-start, #take-eyes-open, #scan-steps-open, #drill-open",
+          ) && close()
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -610,18 +729,21 @@ function closedOf(session: object): Store<{ closed: boolean }> {
   return store;
 }
 
-/** The hero moment, top right of the live screen: what it is, the crew, and what to do next.
- * Its × or Escape (from inside it) closes it to a chip that opens it again. */
+/** The hero moment, top right of the live screen: its title, one line and one action. Escape from
+ * inside it closes it to a chip that opens it again. */
 export function MomentCard() {
   const session = useSession();
   const closed = useStore(closedOf(session), (s) => s.closed);
   const chip = useRef<HTMLButtonElement>(null);
-  const close = useRef<HTMLButtonElement>(null);
+  const card = useRef<HTMLElement>(null);
   const moved = useRef(false); // the viewer opened or closed it: focus follows (not on mount)
   useEffect(() => {
     if (!moved.current) return;
     moved.current = false;
-    (closed ? chip : close).current?.focus({ preventScroll: true });
+    if (closed) return chip.current?.focus({ preventScroll: true });
+    // Back on the card's action; while the breakdown loads (disabled), on the card itself.
+    const action = card.current?.querySelector<HTMLButtonElement>(".btn-primary:not(:disabled)");
+    (action ?? card.current)?.focus({ preventScroll: true });
   }, [closed]);
   const setClosed = (value: boolean) => {
     moved.current = true;
@@ -641,25 +763,37 @@ export function MomentCard() {
       </button>
     );
   }
-  return <MomentCardBody closeRef={close} onClose={() => setClosed(true)} />;
+  return <MomentCardBody cardRef={card} onClose={() => setClosed(true)} />;
 }
 
+// The card's one line under the title: short; the story below has the full lede (BLURB).
+export const CARD_LINE: Record<string, string> = {
+  blind_side_run: "Through the midfielder's eyes, with and without one look.",
+  press_escape: "Through the centre-back's eyes, as the press closes in.",
+  screened_shot: "Through the keeper's eyes, past the players in front of him.",
+  cutback_scan: "Through the winger's eyes, with and without one look.",
+  far_post_finish: "Through the striker's eyes, as the cutback comes.",
+  corner_blind_side: "A short corner, through the eyes of the man marking.",
+};
+
+export const cardLineOf = (hero: Hero): string => CARD_LINE[hero.scenario] ?? blurbOf(hero);
+
 function MomentCardBody({
-  closeRef,
+  cardRef,
   onClose,
 }: {
-  closeRef: RefObject<HTMLButtonElement | null>;
+  cardRef: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
-  const { hero, moment, offset, runner, controls, playback, feed } = useSession();
+  const { hero, runner, controls, playback, feed } = useSession();
   const { status } = useBreakdown();
   const run = useStore(runner.status, (s) => s.status);
   const live = useStore(playback, (s) => s.live);
   const waiting = status === "waiting";
   // Waiting for the moment, the card says what is really going on: watching only while the
-  // stream is live; "left" once frames came in and the viewer left before the moment (the Live
-  // pill and the transport do). A link that opens paused never streamed: it names the moment.
-  // `latest` only matters once `live` drops, and that change re-renders the card.
+  // stream is live; "left" once frames came in and the viewer left before the moment. A link that
+  // opens paused never streamed: it names the moment. `latest` only matters once `live` drops,
+  // and that change re-renders the card.
   const watching = waiting && live;
   const left = waiting && !live && (feed?.state.get().latest ?? -1) >= 0;
   const running = run === "running";
@@ -674,83 +808,47 @@ function MomentCardBody({
           : "Replay breakdown";
   return (
     <aside
+      ref={cardRef}
       className="moment-card card"
       aria-label="The moment"
+      aria-keyshortcuts="Escape"
+      tabIndex={-1}
       onKeyDown={(e) => {
         if (e.key !== "Escape" || e.defaultPrevented) return;
         e.preventDefault();
         onClose();
       }}
     >
-      <div className="card-head">
-        <span className="kicker accent">
-          <i className="dot" aria-hidden="true" />
-          {watching
-            ? "Live · waiting for the moment"
-            : left
-              ? "Off the stream · moment not reached"
-              : momentKicker(hero, moment.decisionFrame, offset)}
-        </span>
-        <button
-          ref={closeRef}
-          type="button"
-          className="icon-btn"
-          aria-label="Dismiss the moment"
-          aria-keyshortcuts="Escape"
-          onClick={onClose}
-        >
-          <CloseIcon />
-        </button>
-      </div>
       {left ? (
         <>
           <h2>You left the stream.</h2>
-          <p className="card-body">
-            The stream stopped before it reached the moment. Press Live to pick it up again, or get
-            the breakdown now.
-          </p>
+          <p className="card-body">It stopped before the moment. Get the breakdown now.</p>
         </>
       ) : watching ? (
         <>
           <h2>Watching the stream.</h2>
-          <p className="card-body">
-            The moment appears here when the stream detects it. Nothing to read yet, and nothing
-            pretends otherwise.
-          </p>
+          <p className="card-body">The moment shows here when the stream detects it.</p>
         </>
       ) : (
         <>
           <h2>
             <MomentTitle hero={hero} />
           </h2>
-          <p className="card-body">{blurbOf(hero)}</p>
+          <p className="card-body">{cardLineOf(hero)}</p>
         </>
       )}
-      <CrewStatus />
+      {/* One action for the card's whole life: the breakdown (the rest is in the header's ⋯). */}
       <div className="card-actions">
-        {!waiting && (
-          <a className="btn btn-primary" href="#moment">
-            Read the moment
-            <ArrowIcon />
-          </a>
-        )}
         <button
           type="button"
-          className={waiting ? "btn btn-primary" : "btn"}
+          className="btn btn-primary"
           disabled={!running && status === "loading"}
           onClick={running ? controls.stopBreakdown : controls.playBreakdown}
         >
           {label}
         </button>
-        <a
-          className="btn"
-          href="#tactics-lab"
-          title="Why common tactics work, on this moment's data"
-        >
-          Tactics
-        </a>
       </div>
-      <FirstTourButton />
+      <CrewStatus />
     </aside>
   );
 }

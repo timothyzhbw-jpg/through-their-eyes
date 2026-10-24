@@ -469,7 +469,8 @@ describe("every step resolves on the hero moment", () => {
     // The run switch is locked until the stream detects the moment (it has not).
     session.controls.setMode("counterfactual");
     expect(session.playback.get().mode).toBe("factual");
-    await click(buttonIn(container.querySelector(".moment-card"), "Quick tour"));
+    await click(container.querySelector<HTMLButtonElement>("#header-more")!);
+    await click(buttonIn(container.querySelector(".more-panel"), "Quick tour"));
     expect(session.playback.get().live).toBe(false); // the tour's look leaves the stream
     await next();
     expect(stepId()).toBe("remove");
@@ -787,11 +788,16 @@ describe("starting it", () => {
     expect(stepId()).toBe("pov");
   });
 
-  it("from the moment card on the live screen: the quick tour", async () => {
+  it("from the header's More on the live screen: the quick tour, and the menu closes", async () => {
     const container = mount(offline());
-    await click(buttonIn(container.querySelector(".moment-card"), "Quick tour"));
+    expect(buttonIn(container.querySelector(".moment-card"), "Quick tour")).toBeUndefined();
+    const more = container.querySelector<HTMLButtonElement>("#header-more")!;
+    await click(more);
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+    await click(buttonIn(container.querySelector(".more-panel"), "Quick tour"));
     expect(stepId()).toBe("look");
     expect(tour.get().kind).toBe("quick");
+    expect(more.getAttribute("aria-expanded")).toBe("false"); // its card is the one panel
   });
 
   it("from the intro card, which closes", async () => {

@@ -18,6 +18,7 @@ import { useView, type ViewSession } from "../session";
 import { openStep } from "../journey/state";
 import { useStore } from "../store/store";
 import { intro } from "../ui/intro";
+import { headerMore, revealInMenu } from "../ui/Stage";
 import { prefersReducedMotion } from "../yourcall/controller";
 import { enterStep } from "./actions";
 import { GUTTER, onScreen, PHONE_MAX, placeCard, type Box, type Keep, type Size } from "./layout";
@@ -237,8 +238,12 @@ function TourOverlay({ session }: { session: ViewSession }) {
     const behavior: ScrollBehavior = reduced ? "auto" : "smooth";
     // A target more than a screen and a half away is jumped to, not scrolled to: a smooth scroll
     // that far ran the whole story past the viewer for a second and a half (the failure drill).
+    // A target in the header's ⋯ menu (who is watching) is shown by opening the menu; the step
+    // closes it again when it leaves.
+    let opened = false;
     const tick = () => {
       const el = targetOf(step);
+      if (!opened && el && revealInMenu(el)) opened = true; // once: the viewer may close it
       const raw = el?.getBoundingClientRect();
       // A new target, or this one grown (the wrong-number box opening): show it whole.
       if (el && raw && (el !== shownFor || Math.abs(raw.height - shownHeight) > 24)) {
@@ -273,7 +278,10 @@ function TourOverlay({ session }: { session: ViewSession }) {
       frame = requestAnimationFrame(tick);
     };
     tick();
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (opened) headerMore.set({ open: false });
+    };
   }, [step, seq, reduced, kind]);
 
   // While the page scrolls the ring moves with what it frames, without its glide (the glide is for

@@ -22,18 +22,24 @@ import { FULL_MATCH_LIVE } from "../moments/moments";
 
 /** "Offline data" without the live service; otherwise the Live button and the stream's state. */
 export function LiveBar() {
-  const { feed, offline } = useView();
-  if (!feed) {
-    return (
-      <span
-        className="data-badge"
-        title={`Playing the bundled synthetic match: ${offline ?? "no live service"}.`}
-      >
-        Offline data
-      </span>
-    );
-  }
+  const { feed } = useView();
+  if (!feed) return <OfflineBadge />;
   return <LiveControl feed={feed} />;
+}
+
+/** "Offline data" without the live service, nothing with it: a hero moment's header (its Live
+ * pill only linked to the full match, which the Moments menu does). */
+export function OfflineBadge() {
+  const { feed, offline } = useView();
+  if (feed) return null;
+  return (
+    <span
+      className="data-badge"
+      title={`Playing the bundled synthetic match: ${offline ?? "no live service"}.`}
+    >
+      Offline data
+    </span>
+  );
 }
 
 // Short enough to sit beside the Live pill; the tooltip says where the frames come from.

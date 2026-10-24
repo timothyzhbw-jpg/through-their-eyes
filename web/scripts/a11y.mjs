@@ -65,6 +65,7 @@ const STATES = [
     path: "?intro=0&autoplay=0",
     ready: async (p) => {
       await runSwitch(p);
+      await p.locator("#header-more").click(); // who is watching is in the header's ⋯
       await p.getByRole("button", { name: /^Watching as/ }).click();
       await see(p.getByRole("dialog", { name: "Who is watching" }), "the viewer menu");
     },
@@ -74,6 +75,7 @@ const STATES = [
     path: "?intro=0&autoplay=0",
     ready: async (p) => {
       await runSwitch(p);
+      await p.locator("#header-more").click(); // View options is in the header's ⋯
       await p.getByRole("button", { name: "View options" }).click();
       await see(p.getByRole("group", { name: "View options" }), "the view options");
     },

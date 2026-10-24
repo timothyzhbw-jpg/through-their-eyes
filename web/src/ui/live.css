@@ -156,15 +156,18 @@ a.live-chip {
 }
 /* "Sound off" / "Sound on": the button's text is "Sound", its name; the state is drawn from
    aria-pressed and left out of the accessibility tree (WCAG 2.5.3, Narration.tsx SoundToggle). */
-.choice .sound::after {
+.choice .sound::after,
+.more-panel .sound::after {
   content: " off";
   content: " off" / "";
 }
-.choice .sound[aria-pressed="true"]::after {
+.choice .sound[aria-pressed="true"]::after,
+.more-panel .sound[aria-pressed="true"]::after {
   content: " on";
   content: " on" / "";
 }
-.choice .sound[aria-pressed="true"].loading::after {
+.choice .sound[aria-pressed="true"].loading::after,
+.more-panel .sound[aria-pressed="true"].loading::after {
   content: " on …";
   content: " on …" / "";
 }

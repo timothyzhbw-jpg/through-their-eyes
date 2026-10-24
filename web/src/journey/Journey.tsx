@@ -100,7 +100,6 @@ function JourneyBar({ step }: { step: JourneyStep }) {
   const last = JOURNEY_STEPS.length - 1;
   return (
     <nav className="journey-bar" aria-label="This moment, from event to value">
-      <p className="kicker journey-kicker">From event to value</p>
       <div className="journey-tabs" role="tablist" aria-label="Journey steps" onKeyDown={onKeyDown}>
         {JOURNEY_STEPS.map((s, k) => (
           <Fragment key={s}>
@@ -338,8 +337,8 @@ function Screens({ show }: { show: Show }) {
     <>
       <p className="note">
         {own
-          ? `What the bowl's screens show for this moment (${EVENT_LABEL[own].toLowerCase()}), by the screen crew's rules; pick another event of the matchday programme.`
-          : "The matchday programme is built on the bundled key look and goal: this moment has no screens of its own, so these are the key look's."}
+          ? `What the stadium's screens show for this moment (${EVENT_LABEL[own].toLowerCase()}).`
+          : "This moment has no screens of its own: these are the key look's."}
       </p>
       <div className="pick-row" role="group" aria-label="Matchday event">
         {show.events.map((e, i) => (

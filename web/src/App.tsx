@@ -2,18 +2,20 @@
 // header, the moment card, the caption and the playback bar over it), and the moment is told
 // below it, panel by panel. A stitched match has its own layout (MatchView): the same live screen
 // with the score card, and every moment below; a hero moment's breakdown opens over it as the
-// hero layout with a way back (MatchApp).
+// hero layout with a way back (MatchApp). The first screen keeps few controls: the header's
+// Moments, Your call and ⋯ (everything else), the run switch, and the playback bar.
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { DirectorBar } from "./director/DirectorBar";
+import { DirectorAttach } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { GK_KITS } from "./players/kit";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
-import { useStore } from "./store/store";
+import { createStore, useStore, type Store } from "./store/store";
+import type { LiveStatus } from "./live/feed";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
 import { IntroCard } from "./ui/IntroCard";
-import { LiveBar, MomentsPanel } from "./ui/Live";
+import { LiveBar, MomentsPanel, OfflineBadge } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
 import { ArrowIcon, CheckIcon } from "./ui/icons";
@@ -23,12 +25,15 @@ import { DecisionPanel, StoryPanel, VerdictPanel } from "./ui/Panels";
 import { RunToggle } from "./ui/RunToggle";
 import {
   blurbOf,
+  HeaderMore,
+  MenuSection,
   MomentCard,
   momentKicker,
   MomentTitle,
   StageHud,
   SwapViews,
   ViewerMenu,
+  ViewOptions,
 } from "./ui/Stage";
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
@@ -41,7 +46,7 @@ import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { BeliefMap, beliefPip } from "./views/BeliefMap";
-import { Tour, TourButton } from "./tour/Tour";
+import { FirstTourButton, Tour, TourButton } from "./tour/Tour";
 import { tour } from "./tour/tourState";
 import { TacticalView } from "./views/TacticalView";
 import { stepThroughOf } from "./steps/controller";
@@ -51,7 +56,7 @@ import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/Take
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
-import { MomentRail } from "./moments/MomentRail";
+import { MomentsMenu } from "./moments/MomentRail";
 import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { drillOf } from "./drill/controller";
@@ -68,7 +73,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const takeEyes = useTakeEyesOpen();
   const scanSteps = useStepThroughOpen();
   const drill = useDrillOpen();
-  const start = onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />;
+  const start = onBack ? <BackToMatch onBack={onBack} /> : null; // inside a match: the way back
   const wasYourCall = useRef(false);
   const wasTakeEyes = useRef(false);
   const wasScanSteps = useRef(false);
@@ -90,31 +95,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     wasYourCall.current = yourCall;
   }, [yourCall]);
   useEffect(() => {
-    if (wasTakeEyes.current && !takeEyes) {
-      // The header pill, or on a phone (no pill there) the moment's own button.
-      const pill = document.getElementById("take-eyes-open");
-      const shown = pill && getComputedStyle(pill).display !== "none";
-      const opener = shown ? pill : document.getElementById("take-eyes-story");
-      opener?.focus({ preventScroll: true });
-    }
+    if (wasTakeEyes.current && !takeEyes) returnFocus("take-eyes-open", "take-eyes-story");
     wasTakeEyes.current = takeEyes;
   }, [takeEyes]);
   useEffect(() => {
-    if (wasScanSteps.current && !scanSteps) {
-      const pill = document.getElementById("scan-steps-open");
-      const shown = pill && getComputedStyle(pill).display !== "none";
-      const opener = shown ? pill : document.getElementById("scan-steps-story");
-      opener?.focus({ preventScroll: true });
-    }
+    if (wasScanSteps.current && !scanSteps) returnFocus("scan-steps-open", "scan-steps-story");
     wasScanSteps.current = scanSteps;
   }, [scanSteps]);
   useEffect(() => {
-    if (wasDrill.current && !drill) {
-      const opener = document.getElementById("drill-story");
-      (opener ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({
-        preventScroll: true,
-      });
-    }
+    if (wasDrill.current && !drill) returnFocus("drill-open", "drill-story");
     wasDrill.current = drill;
   }, [drill]);
   // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
@@ -138,31 +127,52 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   useEffect(() => () => session.feed?.stop(), [session]);
 
   return (
-    <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
+    <div
+      className={mode === "counterfactual" ? "app mode-cf" : "app"}
+      onClickCapture={(e) => {
+        const id = (e.target as Element).closest?.("button[id]")?.id;
+        if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
+      }}
+    >
       {/* Your call takes the live screen, and hides what would give his decision away until the
           viewer has made theirs: the director, the telemetry and the whole moment below. */}
-      {/* Every moment in reach, above the live screen (not over Your call and the other modes). */}
-      {!yourCall && !takeEyes && !scanSteps && !drill && <MomentRail hidden={introOpen} />}
       {drill ? (
-        <DrillScreen start={onBack ? start : null} />
+        <DrillScreen start={start} />
       ) : yourCall ? (
         // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
-        <YourCallScreen start={onBack ? start : null} />
+        <YourCallScreen start={start} />
       ) : takeEyes ? (
-        <TakeEyesScreen start={onBack ? start : null} />
+        <TakeEyesScreen start={start} />
       ) : scanSteps ? (
-        <ScanStepsScreen start={onBack ? start : null} />
+        <ScanStepsScreen start={start} />
       ) : (
         <LiveScreen
-          start={start}
+          // Every moment in reach in one menu; no Live pill on a hero moment (Moments has the
+          // full match, live), only the badge when the service is off.
+          start={
+            <>
+              {onBack ? start : <OfflineBadge />}
+              <MomentsMenu />
+            </>
+          }
           end={
             <>
               <YourCallButton />
-              <ScanStepsButton />
-              <TakeEyesButton />
-              <SoundToggle icon />
-              <YourViewMenu />
-              <ViewerMenu />
+              <HeaderMore>
+                <MenuSection label="Sound">
+                  <SoundToggle />
+                </MenuSection>
+                <MenuSection label="Commentary">
+                  <ViewerMenu />
+                </MenuSection>
+                <MenuSection label="More ways in">
+                  <ScanStepsButton />
+                  <TakeEyesButton />
+                  <DrillButton />
+                  <FirstTourButton className="btn" />
+                </MenuSection>
+                <ViewOptions />
+              </HeaderMore>
             </>
           }
           run={<RunToggle />}
@@ -202,14 +212,18 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           <Journey />
           <div className="below">
             <StoryPanel />
-            <TelemetryPanel />
-            <StatsPanel />
             <DecisionPanel />
             <VerdictPanel />
-            <WhatIfPanel />
             <NarrationPanel />
+            <WhatIfPanel />
             <BreakdownPanel />
-            <MomentsPanel />
+            {/* The data under the moment, one click away: no tour step points into it. */}
+            <details className="how match-data">
+              <summary>Match data for this moment</summary>
+              <TelemetryPanel />
+              <StatsPanel />
+              <MomentsPanel />
+            </details>
           </div>
         </main>
       )}
@@ -217,6 +231,63 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       <Legend />
       <Tour />
     </div>
+  );
+}
+
+/** Whether the story's "More ways in" is open: kept while a mode it opens takes the page. */
+const storyWaysIn = createStore<{ open: boolean }>({ open: false });
+
+const OPENER_IDS = [
+  "take-eyes-open",
+  "take-eyes-story",
+  "scan-steps-open",
+  "scan-steps-story",
+  "drill-open",
+  "drill-story",
+];
+
+/** The mode button last pressed (by id): what closing its mode returns focus to. */
+const lastPressed = { id: "" };
+
+/** Focus back on what opened a mode, never on the body. The button that was pressed, when it is
+ * on screen. One in the header's More (shut behind the mode) gives the More button, so the menu
+ * stays closed. One in the story's "More ways in" has that fold opened first. With no opener
+ * known (a rail link, a deep link): the header's pill if shown, else the story's button. */
+function returnFocus(pillId: string, storyId: string) {
+  const shown = (el: HTMLElement | null) =>
+    !!el && !el.closest("[hidden]") && getComputedStyle(el).display !== "none";
+  const focus = (el: Element | null) => (el as HTMLElement | null)?.focus({ preventScroll: true });
+  const pill = document.getElementById(pillId);
+  const story = document.getElementById(storyId);
+  const fromStory = lastPressed.id === storyId || (lastPressed.id !== pillId && !shown(pill));
+  if (!fromStory) {
+    focus(shown(pill) ? pill : document.getElementById("header-more"));
+  } else if (story) {
+    const fold = story.closest("details");
+    if (fold && !fold.open) {
+      fold.open = true; // laid out before focus; React's open={waysIn} follows the store
+      storyWaysIn.set({ open: true });
+    }
+    focus(story);
+  } else {
+    focus(document.getElementById("header-more") ?? document.querySelector(".stage-head h1"));
+  }
+}
+
+/** The academy drill in the header's More (the moment rail links to it too). */
+function DrillButton() {
+  const drill = drillOf(useSession());
+  if (drill.unavailable) return null;
+  return (
+    <button
+      id="drill-open"
+      type="button"
+      className="btn"
+      title={`${DRILL_SUB}, then make the pass`}
+      onClick={() => drill.open()}
+    >
+      {DRILL_NAME}
+    </button>
   );
 }
 
@@ -230,6 +301,7 @@ function StoryCta() {
   const drill = drillOf(session);
   const { narration, persona, status } = useBreakdown();
   const checked = narration && !narration.fixture;
+  const waysIn = useStore(storyWaysIn, (s) => s.open);
   return (
     <div className="moment-cta">
       <button
@@ -243,20 +315,6 @@ function StoryCta() {
         Watch it through his eyes
         <ArrowIcon />
       </button>
-      {!steps.unavailable && (
-        <button
-          id="scan-steps-story"
-          type="button"
-          className="btn"
-          title="Step through each look he took, frozen, then his decision"
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            steps.open();
-          }}
-        >
-          Step through his looks
-        </button>
-      )}
       {!yc.unavailable && (
         <button
           type="button"
@@ -270,35 +328,59 @@ function StoryCta() {
           Make his call
         </button>
       )}
-      <TourButton className="btn" />
-      {!te.unavailable && (
-        <button
-          id="take-eyes-story"
-          type="button"
-          className="btn"
-          title="Choose when and where he looks; the sim re-runs the moment"
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            te.open();
-          }}
-        >
-          Take his eyes
-        </button>
-      )}
-      {!drill.unavailable && (
-        <button
-          id="drill-story"
-          type="button"
-          className="btn"
-          title={`${DRILL_SUB}, then make the pass`}
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            drill.open();
-          }}
-        >
-          {DRILL_NAME}
-        </button>
-      )}
+      {/* The other ways in, one click away. Open or closed, it stays so across the modes it opens. */}
+      <details
+        className="how ways-in"
+        open={waysIn}
+        onToggle={(e) => storyWaysIn.set({ open: e.currentTarget.open })}
+      >
+        <summary>More ways in</summary>
+        <div className="ways-in-body">
+          {!steps.unavailable && (
+            <button
+              id="scan-steps-story"
+              type="button"
+              className="btn"
+              title="Step through each look he took, frozen, then his decision"
+              onClick={() => {
+                window.scrollTo({ top: 0 });
+                steps.open();
+              }}
+            >
+              Step through his looks
+            </button>
+          )}
+          {!te.unavailable && (
+            <button
+              id="take-eyes-story"
+              type="button"
+              className="btn"
+              title="Choose when and where he looks; the sim re-runs the moment"
+              onClick={() => {
+                window.scrollTo({ top: 0 });
+                te.open();
+              }}
+            >
+              Take his eyes
+            </button>
+          )}
+          {!drill.unavailable && (
+            <button
+              id="drill-story"
+              type="button"
+              className="btn"
+              title={`${DRILL_SUB}, then make the pass`}
+              onClick={() => {
+                window.scrollTo({ top: 0 });
+                drill.open();
+              }}
+            >
+              {DRILL_NAME}
+            </button>
+          )}
+          <TourButton className="btn" />
+        </div>
+      </details>
       {(status === "ready" || status === "failed") && (
         <span className="written">
           {checked && <CheckIcon />}
@@ -317,8 +399,8 @@ function StoryCta() {
  * playback bar sit over the picture.
  */
 function LiveScreen(props: {
-  start: ReactNode; // next to the brand: the live pill, or the way back to the match
-  end?: ReactNode; // the header's right: sound and who is watching
+  start: ReactNode; // next to the brand: Moments, the way back to the match, a match's live pill
+  end?: ReactNode; // the header's right: Your call and ⋯
   run?: ReactNode; // the run switch: centred over the picture, under the bar on a phone
   card: ReactNode;
   caption?: ReactNode;
@@ -333,6 +415,8 @@ function LiveScreen(props: {
   const pip = focus === "split" || board;
   // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
   const belief = pip && !board && beliefPip(session, camera);
+  // The stream's state, for scripts (a hero moment's header no longer shows it).
+  const stream = useStore((session.feed?.state ?? NO_FEED) as typeof NO_FEED, (s) => s.status);
   return (
     <section
       className={[
@@ -345,7 +429,9 @@ function LiveScreen(props: {
         .filter(Boolean)
         .join(" ")}
       aria-label="Live screen"
+      data-stream={stream}
     >
+      <DirectorAttach session={session} />
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
       <div className="stage-content" inert={introOpen} style={{ display: "contents" }}>
         <div className="views">
@@ -374,9 +460,6 @@ function LiveScreen(props: {
         </header>
         <div className="stage-top">
           <StageHud />
-          <div className="stage-director">
-            <DirectorBar />
-          </div>
           <StatsTicker />
           <StageSkeletonKey />
         </div>
@@ -390,6 +473,10 @@ function LiveScreen(props: {
     </section>
   );
 }
+
+const NO_FEED: Store<{ status: LiveStatus }> = createStore<{ status: LiveStatus }>({
+  status: "off",
+});
 
 /** A stitched match, or one of its hero moments' breakdowns over it. */
 export function MatchApp({ session, autoplay }: { session: MatchSession; autoplay: boolean }) {
@@ -429,19 +516,24 @@ function MatchView() {
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
-      <MomentRail hidden={introOpen} />
       <LiveScreen
         start={
           <>
             <LiveBar />
             <MatchPicker />
+            <MomentsMenu />
           </>
         }
         end={
-          <>
-            <SoundToggle icon />
-            <YourViewMenu />
-          </>
+          <HeaderMore>
+            <MenuSection label="Sound">
+              <SoundToggle />
+            </MenuSection>
+            <MenuSection label="Your view">
+              <YourViewMenu />
+            </MenuSection>
+            <ViewOptions />
+          </HeaderMore>
         }
         card={
           <>

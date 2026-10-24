@@ -23,6 +23,16 @@ export function tagSource(kind: LiveTag["kind"]): "sim" | "tracking" {
   return TRACKING.has(kind) ? "tracking" : "sim";
 }
 
+/** The tags with the data on the pitch off (ui/pitchData.ts): the measured ones go (passes,
+ * sprints, speeds, distances, shots, other players' names); the hero's and the key players' names
+ * stay, and his scans and blind-side alerts, which tell the moment. */
+export function withoutData(tags: LiveTag[], keyPlayers: ReadonlySet<number>): LiveTag[] {
+  return tags.filter(
+    (t) =>
+      t.kind === "scan" || t.kind === "blind" || (t.kind === "name" && keyPlayers.has(t.player)),
+  );
+}
+
 /** `owner[frame]`, held inside the run when the playhead sits outside it. */
 function ownerAt(owner: ArrayLike<number>, frame: number): number {
   const n = owner.length;

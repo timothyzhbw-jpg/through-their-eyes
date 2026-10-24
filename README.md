@@ -34,7 +34,7 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams in on the tactical board with pitch control, the analyst's view, and once
-   the moment is detected the agent crew's breakdown plays (Microsoft Foundry; **Tap for sound**
+   the moment is detected the agent crew's breakdown plays (Microsoft Foundry; **⋯ → Sound**
    for Azure AI Speech). Click a caption to open its claims and
    the evidence frame. Then [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value)
    and press **Check**: the verifier refutes it, and the line would not air.
@@ -169,8 +169,8 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    the match streams from the API at 25 Hz onto the tactical board with pitch control, the
    analyst's view; once the moment is detected, the agent crew's breakdown plays (Microsoft
    Foundry, cached after the first request). Click a caption to open its claims and the evidence
-   frame; **Tap for sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
-   switch it in the header (**Watching as**) and the casual fan watches through his eyes, the
+   frame; **⋯ → Sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
+   switch it in the header's ⋯ (**Watching as**) and the casual fan watches through his eyes, the
    coach gets his eyes with the board beside them, audio description a plain broadcast camera,
    each with its own lines and voice ([persona_distinctness](eval/reports/persona_distinctness.md)).
 4. **Your own "What if…?"** [A question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):

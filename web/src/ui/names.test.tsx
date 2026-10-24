@@ -25,7 +25,7 @@ import { IntroCard } from "./IntroCard";
 import { LiveBar, momentLabel, MomentsPanel } from "./Live";
 import { Scoreboard } from "./Match";
 import { DecisionPanel, StoryPanel } from "./Panels";
-import { momentTitle, StageHud } from "./Stage";
+import { momentTitle, PlayerPicker, StageHud } from "./Stage";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -104,7 +104,13 @@ describe("on screen, a player and a club go by their names", () => {
   });
 
   it("the eyes picker and the readout over his eyes", () => {
-    const page = mount(offline(), <StageHud />);
+    const page = mount(
+      offline(),
+      <>
+        <PlayerPicker />
+        <StageHud />
+      </>,
+    );
     const select = page.querySelector<HTMLSelectElement>("select")!;
     const picked = select.selectedOptions[0];
     expect(picked.value).toBe("H8"); // the value is the data

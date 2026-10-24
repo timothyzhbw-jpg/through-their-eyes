@@ -11,8 +11,12 @@ primary action), Dusk `#95A7BA` is always the other match, Flare `#EF774B` is fo
 Newsreader is the voice, Geist the instrument, Geist Mono the labels (tokens at the top of
 `src/styles.css`). The first screen is the live screen: the main view fills it (his eyes, the
 broadcast camera or the tactical board, from the camera switch in the bar) and the other view
-rides along as a picture in picture; the header, the player picker, the moment card, the caption
-and the playback bar sit over the picture, and every overlay toggle is behind **View options**.
+rides along as a picture in picture. Few controls sit over the picture: the header (the name,
+**Moments**, **Your call** and **⋯**), the run switch, the moment card with one action, the
+caption and the playback bar (play, the timeline, the camera switch). Sound, who is watching, the
+other ways in and **View options** (whose eyes, the Auto director, every overlay toggle and
+**Show data on the pitch**, off by default) are in the header's ⋯; the camera director's pending
+suggestion is a dot on its camera in the switch.
 Below it the moment is told as a story, chapter by chapter: what happened, his look (the
 telemetry), what he believed, the re-simulated match, ask the replay, the call, behind the replay
 and the moments. In a verified line every number has a dotted Floodlight underline and the line
