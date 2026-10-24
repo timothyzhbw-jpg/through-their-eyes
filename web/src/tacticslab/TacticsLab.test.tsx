@@ -61,15 +61,27 @@ function match() {
 describe("the cards", () => {
   const cards = buildCards(parseHero(raw), xt, scope);
 
-  it("are the five tactics, in order, each tied to a hero moment", () => {
+  it("keep the five tactics and add three more, each tied to an example", () => {
     expect(cards.map((c) => c.id)).toEqual([...CARD_IDS]);
-    expect(CARD_IDS).toEqual(["high_press", "decisions", "corners", "shot_quality", "progression"]);
+    expect(CARD_IDS).toEqual([
+      "high_press",
+      "decisions",
+      "corners",
+      "shot_quality",
+      "progression",
+      "counter_attack",
+      "build_up",
+      "transition",
+    ]);
     expect(cards.map((c) => c.moment.scenario)).toEqual([
       "press_escape",
       "press_escape",
       "corner_blind_side",
       "far_post_finish",
       "blind_side_run",
+      null,
+      "press_escape",
+      null,
     ]);
   });
 
@@ -152,18 +164,24 @@ describe("the Tactics lab panel", () => {
       "Corners",
       "Shot quality",
       "Progression",
+      "Counter-attack",
+      "Press-breaking build-up",
+      "After losing the ball",
     ]) {
       expect(html).toContain(t);
     }
   });
 
   it("folds each metric's definition under its name and keeps every source chip", () => {
-    expect(html).toContain("<summary>What it counts</summary>");
-    expect(html).toContain("Opponent passes per defensive action");
-    expect(html).not.toContain("Definition under each name");
-    expect(html).toContain('data-source="tracking"');
-    expect(html).toContain('data-source="sim"');
-    expect(html).toContain("Measured over this moment");
+    const session = hero();
+    session.breakdown.set({ persona: "analyst" });
+    const pro = render(session, <TacticsLabPanel xt={xt} scope={scope} />);
+    expect(pro).toContain("<summary>What it counts</summary>");
+    expect(pro).toContain("Opponent passes per defensive action");
+    expect(pro).not.toContain("Definition under each name");
+    expect(pro).toContain('data-source="tracking"');
+    expect(pro).toContain('data-source="sim"');
+    expect(pro).toContain("Measured over this moment");
   });
 
   it("puts the moment links before the card's limitations disclosure", () => {

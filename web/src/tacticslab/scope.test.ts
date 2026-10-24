@@ -67,6 +67,9 @@ describe("a card's moment", () => {
       corners: "corner_blind_side",
       shot_quality: "far_post_finish",
       progression: "blind_side_run",
+      counter_attack: "press_escape",
+      build_up: "press_escape",
+      transition: "press_escape",
     });
     expect(missingScenarios(bundled()).sort()).toEqual([
       "corner_blind_side",

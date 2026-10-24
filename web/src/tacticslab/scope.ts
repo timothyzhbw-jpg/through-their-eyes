@@ -1,10 +1,10 @@
 // Which moment a Tactics card measures (SPEC 4.8, 7). A card is told on the hero moment that shows
 // its tactic, whichever moment the page opened on: High press and Decisions under pressure on
 // press_escape, Corners on corner_blind_side, Shot quality on far_post_finish, Progression on
-// blind_side_run. Those moments' exports come from the service the page already talks to (the
-// possessions of the stitched match, the way the match page opens them): no model, no new data.
-// Offline only the bundled moment exists, and a card for another moment says so instead of
-// printing zeros.
+// blind_side_run. Counter-attack, build-up and transition prefer the stitched match itself; the
+// build-up links to press_escape. Those exports come from the service the page already talks to:
+// no model, no new data. Offline only the bundled moment exists, and a card for another moment
+// says so instead of printing zeros.
 
 import type { Api } from "../api/client";
 import { loadScenarioHero } from "../data/load";
@@ -19,6 +19,9 @@ export const CARD_SCENARIO: Record<CardId, string> = {
   corners: "corner_blind_side",
   shot_quality: "far_post_finish",
   progression: "blind_side_run",
+  counter_attack: "press_escape",
+  build_up: "press_escape",
+  transition: "press_escape",
 };
 
 /** What the page has of the cards' moments: the heroes loaded so far, by scenario, and the
@@ -34,7 +37,7 @@ export interface Scope {
 
 export const NO_SCOPE: Scope = { heroes: {}, match: null, loading: false, online: false };
 
-/** The scenarios a page on `current` still has to load for the five cards. */
+/** The scenarios a page on `current` still has to load for the cards and their match scope. */
 export function missingScenarios(current: Hero): string[] {
   if (current.kind === "match") return [];
   return [...new Set(Object.values(CARD_SCENARIO))].filter((s) => s !== current.scenario);

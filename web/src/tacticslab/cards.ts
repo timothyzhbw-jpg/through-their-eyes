@@ -1,8 +1,8 @@
 // The Tactics lab's cards (SPEC 4.8, 7): why a common tactic works, told with this match's own
 // synthetic data. Each card names what it measures, prints the definition of every number and its
 // source, and ties them to the hero moment that shows the tactic at work. The numbers are computed
-// here from the events and tracking of the session on screen (a hero moment or the stitched
-// match), so a card says what its scope is: "this moment" or "this match".
+// here from the events and tracking of the session or its loaded match scope, so a card says what
+// it measures: "this moment" or "this match". Pro and Plain tell the same evidence two ways.
 
 import type { Hero } from "../data/hero";
 import {
@@ -19,26 +19,42 @@ import { moveOf, type Move } from "../xtexplain/zones";
 import { OPEN_P, laneCounts, lanesAt } from "./lanes";
 import { CARD_SCENARIO, NO_SCOPE, type Scope } from "./scope";
 import {
+  COUNTER_WINDOW_S,
   FPS,
   HALF_LENGTH,
+  MIN_BYPASSED,
   PITCH_L,
+  PRESSED,
   PRESS_ZONE_FROM,
   PRESS_ZONE_SHARE,
   REGAIN_WINDOW_S,
   THIRD_START,
+  TRANSITION_WINDOW_S,
   XG_CAP,
   XG_D0,
   XG_PEAK,
   XG_SCALE,
+  buildUpMetrics,
+  counterAttack,
   pressMetrics,
   progression,
   regains,
   shotQuality,
+  transitionAfterLoss,
+  xtAt,
   type Team,
   type XtGrid,
 } from "./metrics";
 
-export type CardId = "high_press" | "decisions" | "corners" | "shot_quality" | "progression";
+export type CardId =
+  | "high_press"
+  | "decisions"
+  | "corners"
+  | "shot_quality"
+  | "progression"
+  | "counter_attack"
+  | "build_up"
+  | "transition";
 
 export const CARD_IDS: readonly CardId[] = [
   "high_press",
@@ -46,7 +62,19 @@ export const CARD_IDS: readonly CardId[] = [
   "corners",
   "shot_quality",
   "progression",
+  "counter_attack",
+  "build_up",
+  "transition",
 ];
+
+export const ORIGINAL_CARDS: ReadonlySet<CardId> = new Set([
+  "high_press",
+  "decisions",
+  "corners",
+  "shot_quality",
+  "progression",
+]);
+const MATCH_FIRST: ReadonlySet<CardId> = new Set(["counter_attack", "build_up", "transition"]);
 
 export interface Metric {
   label: string;
@@ -71,6 +99,10 @@ export interface LabCard {
   title: string;
   /** The tactic in a sentence, and why it works, in plain words. */
   idea: string;
+  /** What changed in the model, for analyst and coach. */
+  pro: string;
+  /** One sentence a casual fan gets. */
+  plain: string;
   scope: "this moment" | "this match";
   /** What the numbers were measured on, in words: the moment that shows the tactic, or the match. */
   measured: string;
@@ -78,11 +110,13 @@ export interface LabCard {
   /** What the sim cannot say here, said honestly. */
   limits: string;
   moment: MomentLink;
+  /** A frame-aware match link for an example without a named hero moment. */
+  href?: string;
   /** True when the session on screen is the card's own hero moment. */
   here: boolean;
   /** Where the metrics are told in the moment's own view, if the viewer is on it. */
   watch: Watch | null;
-  /** The progression card's best pass as a move between zones, told per persona (xtexplain/). */
+  /** The card's xT example as a move between zones, told per persona (xtexplain/). */
   xtMove?: Move | null;
   /** Nothing to show in this session: why, and what to open instead. */
   empty: string | null;
@@ -100,6 +134,9 @@ export const CARD_MOMENT: Record<CardId, MomentLinkId> = {
   corners: "corner",
   shot_quality: "goal",
   progression: "look",
+  counter_attack: "match",
+  build_up: "pressure",
+  transition: "match",
 };
 
 /**
@@ -122,6 +159,32 @@ const ppdaText = (v: number | null) => (v === null ? dash : v.toFixed(1));
 const TRACKING = (what: string) => `${what}, computed in the browser from this match's event feed`;
 const MODELLED = "The sim's own models, read from the export";
 
+const EXPLANATIONS: Partial<Record<CardId, Pick<LabCard, "pro" | "plain">>> = {
+  high_press: {
+    pro: `The model counts interceptions and forced turnovers, then compares opponent passes with those ball wins and shots in the ${REGAIN_WINDOW_S}-second window.`,
+    plain: "Win the ball near their goal and your next attack has far less defending to beat.",
+  },
+  decisions: {
+    pro: "The decision model scores the carrier's believed pass lanes, then scores the same choices on the true tracking state.",
+    plain:
+      "A player under pressure can only use what he has seen, which may not be what is really there.",
+  },
+  corners: {
+    pro: "The model compares the marker's separation when the cutback resolves, with his key look and without it, then counts the corner shots.",
+    plain:
+      "One quick look can keep a defender close enough to stop a rehearsed corner from becoming a chance.",
+  },
+  shot_quality: {
+    pro: "The distance-xG model turns each shot's location into a scoring value, so shot positions can be compared rather than just counted.",
+    plain:
+      "Working the ball closer to goal usually gives the shooter a better chance than shooting from far out.",
+  },
+  progression: {
+    pro: "The xT grid values where each completed pass starts and ends; the largest rise identifies the pass that changed the attack most.",
+    plain: "A pass matters when it moves the ball to a place where a shot is easier to imagine.",
+  },
+};
+
 function high_press(hero: Hero, view: Context): LabCard {
   const events = hero.runs.factual.events;
   const [home, away] = TEAM_IDS.map((t) => pressMetrics(events, t));
@@ -135,6 +198,8 @@ function high_press(hero: Hero, view: Context): LabCard {
     idea:
       "Press high and together, and the ball is won near the opponent's goal: one regain there " +
       "leaves the defence behind the play, so the next pass has far less to beat.",
+    pro: "",
+    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
@@ -261,6 +326,8 @@ function decisions(hero: Hero, view: Context): LabCard {
     idea:
       "Under pressure a player chooses on what he believes, not on what is true. The lanes " +
       "that look open on his picture may be shut on the pitch; the card puts both side by side.",
+    pro: "",
+    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics,
@@ -339,6 +406,8 @@ function corners(hero: Hero, view: Context): LabCard {
     idea:
       "A corner is a rehearsed passage, so one look can decide it: a marker who checks over his " +
       "shoulder before the ball is played keeps his man; one who does not loses him.",
+    pro: "",
+    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics,
@@ -369,6 +438,8 @@ function shot_quality(hero: Hero, view: Context): LabCard {
       "A shot from close and central is worth far more than one from range: the same number of " +
       "shots is a different attack depending on where they are struck, so teams work the ball " +
       "to a better place first.",
+    pro: "",
+    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
@@ -442,6 +513,8 @@ function progression_card(hero: Hero, view: Context): LabCard {
       "A pass is worth what it does to the threat: moving the ball from a cold place to a " +
       "dangerous one adds expected threat, and the passes that add the most are the ones that " +
       "break lines, which is why teams look for them.",
+    pro: "",
+    plain: "",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
@@ -497,6 +570,213 @@ function progression_card(hero: Hero, view: Context): LabCard {
   };
 }
 
+function matchExampleHref(hero: Hero, frame: number): string {
+  const id = hero.kind === "match" ? `${hero.scenario}-${hero.seed}` : FULL_MATCH;
+  return hrefOf({ query: `?match=${id}&intro=0&at=${frame}` });
+}
+
+function counter_attack(hero: Hero, view: Context): LabCard {
+  const result = view.xt ? counterAttack(hero, view.xt) : { best: null, list: [] };
+  const best = result.best;
+  const kind = best?.win.kind === "tackle" ? "forced turnover" : "interception";
+  const metrics: Metric[] = best
+    ? [
+        {
+          label: "Win to final third or shot",
+          values: [`${best.seconds.toFixed(1)} s`],
+          definition: `Seconds from the ball win to the winning team's first shot, or, for a win outside the final third, its first completed pass received there, within ${COUNTER_WINDOW_S} s and before another loss or the possession cut.`,
+          source: "tracking",
+          sourceNote: TRACKING("Measured"),
+        },
+        {
+          label: "Completed passes",
+          values: [String(best.passes)],
+          definition:
+            "The winning team's completed passes between the regain and the final-third reception or shot.",
+          source: "tracking",
+          sourceNote: TRACKING("Counted"),
+        },
+        {
+          label: "xT gained",
+          values: [signed(best.xtAdded)],
+          definition:
+            "Expected threat added by those completed passes: xT where received minus xT where kicked, summed.",
+          source: "tracking",
+          sourceNote: TRACKING("Computed"),
+        },
+        {
+          label: "Ball won by",
+          values: [`${TEAMS[best.team]} · ${kind}`],
+          definition:
+            "An interception, or a forced turnover recorded by the sim's tackle event in the pressure moment.",
+          source: "tracking",
+          sourceNote: TRACKING("Read"),
+        },
+      ]
+    : [];
+  return {
+    id: "counter_attack",
+    kicker: "Counter-attack · go before they are set",
+    title: "Counter-attack",
+    idea: "A fast attack after a ball win can reach the danger zone before the defence recovers.",
+    pro: best
+      ? `The model follows the ${kind} into the same possession's next final-third reception or shot; it does not call an isolated regain a counter.`
+      : "The model looks for a regain followed quickly by a final-third reception or a shot in the same possession.",
+    plain: "Win it and go before the defence can get back into shape.",
+    scope: scopeOf(hero),
+    measured: "",
+    metrics,
+    limits: `A counter here must reach the final third on a completed pass or produce a shot within ${COUNTER_WINDOW_S} s; a carry alone is not counted. Open-play ball wins are interceptions, not tackles (docs/NUMBERS.md M4).`,
+    moment: link("match"),
+    href: best ? matchExampleHref(hero, best.win.frame) : undefined,
+    here: false,
+    watch: best ? { label: "Watch the counter-attack", frame: best.win.frame } : null,
+    xtMove:
+      best && view.xt
+        ? moveOf({
+            mode: "pass",
+            team: best.team,
+            from: best.from,
+            to: best.to,
+            grid: view.xt,
+            delta: xtAt(view.xt, best.to, best.team) - xtAt(view.xt, best.from, best.team),
+            label: "Counter-attack",
+          })
+        : null,
+    empty: !view.xt
+      ? "The xT grid is loading."
+      : best
+        ? null
+        : "Not in this match's data: no ball win is followed by a fast final-third entry or shot.",
+  };
+}
+
+function build_up(hero: Hero, view: Context): LabCard {
+  const result = buildUpMetrics(hero);
+  const best = result.best;
+  const stat = (f: (m: (typeof result.teams)[number]) => string) => each((t) => f(result.teams[t]));
+  return {
+    id: "build_up",
+    kicker: "Possession play · pass through the press",
+    title: "Press-breaking build-up",
+    idea: "Playing out under pressure can take the ball past a line and into the space the press leaves.",
+    pro: best
+      ? `${shortName(best.player)}'s completed escape went past ${best.bypassed} outfield opponents at ${best.pressure.toFixed(2)} pressing intensity; the model counts only own-half passes.`
+      : `The model measures own-half passes at pressing intensity ${PRESSED} or higher and completed passes past at least ${MIN_BYPASSED} outfield opponents.`,
+    plain: "Keep calm, pass through the press, and the space behind it opens up.",
+    scope: scopeOf(hero),
+    measured: "",
+    metrics: [
+      {
+        label: "Own-half passes under pressure · completed",
+        values: stat((m) => `${m.pressured} · ${m.completedPressured}`),
+        definition: `Passes kicked in the passer's own half with pressing intensity at least ${PRESSED}, and how many a team-mate received.`,
+        source: "tracking",
+        sourceNote: TRACKING("Computed"),
+        zeroWhy: "No own-half pass was kicked under heavy pressure in this view.",
+      },
+      {
+        label: "Line-breaking passes under pressure",
+        values: stat((m) => String(m.lineBreakingPressured)),
+        definition: `Completed pressured own-half passes that went past at least ${MIN_BYPASSED} opponents who were goal-side of the ball at the kick and behind it at reception; keepers do not count.`,
+        source: "tracking",
+        sourceNote: TRACKING("Counted"),
+        zeroWhy: "No pressured own-half pass broke a line in this view.",
+      },
+      {
+        label: "All line-breaking build-up passes",
+        values: stat((m) => String(m.lineBreaking)),
+        definition: `All completed own-half passes past at least ${MIN_BYPASSED} outfield opponents, with or without heavy pressure.`,
+        source: "tracking",
+        sourceNote: TRACKING("Counted"),
+        zeroWhy: "No completed own-half pass broke a line in this view.",
+      },
+    ],
+    limits:
+      "Open-play pass choices come from the sim's passing rule; only hero decisions use the decision model. Pressure, marking, movement and whether the pass arrives are simulated throughout.",
+    moment: link("pressure"),
+    here: view.scenario === "press_escape",
+    watch: best ? { label: "Watch the press escape", frame: best.frame } : null,
+    empty: result.list.length ? null : "Not in this match's data: no resolved own-half pass.",
+  };
+}
+
+function transition(hero: Hero, view: Context): LabCard {
+  const result = view.xt ? transitionAfterLoss(hero, view.xt) : { best: null, list: [] };
+  const best = result.best;
+  const kind = best?.win.kind === "tackle" ? "forced turnover" : "interception";
+  const metrics: Metric[] = best
+    ? [
+        {
+          label: "Back line toward its own goal",
+          values: [`${best.lineTowardGoal.toFixed(1)} m`],
+          definition: `Movement of the losing team's deepest outfield player toward its own goal, from the loss to the end of the measured window; negative means it moved upfield.`,
+          source: "tracking",
+          sourceNote: TRACKING("Measured"),
+        },
+        {
+          label: "Space behind the line · at loss → window end",
+          values: [`${best.spaceAtLoss.toFixed(1)} m → ${best.spaceAtEnd.toFixed(1)} m`],
+          definition: `Distance from that back line to its own goal line at the loss and after ${best.seconds.toFixed(1)} s; the window stops at the next loss, ${TRANSITION_WINDOW_S} s, or the possession cut.`,
+          source: "tracking",
+          sourceNote: TRACKING("Measured"),
+        },
+        {
+          label: "Attackers' xT · at loss → window peak",
+          values: [`${best.xtStart.toFixed(3)} → ${best.xtPeak.toFixed(3)}`],
+          definition:
+            "The ball-winning team's xT where it won the ball and the highest xT the ball reached in the measured window.",
+          source: "tracking",
+          sourceNote: TRACKING("Computed"),
+        },
+        {
+          label: "Possession lost to",
+          values: [`${TEAMS[best.team]} · ${kind}`],
+          definition: "The interception or forced turnover that began this transition.",
+          source: "tracking",
+          sourceNote: TRACKING("Read"),
+        },
+      ]
+    : [];
+  return {
+    id: "transition",
+    kicker: "Transition · the seconds after a loss",
+    title: "After losing the ball",
+    idea: "A loss can leave the back line moving toward its own goal with space behind it for the new attackers.",
+    pro: best
+      ? `The model freezes the loss and follows the ball and the losing back line for ${best.seconds.toFixed(1)} s, stopping at the next loss or the possession cut.`
+      : "The model looks for tracking after a loss; a regain at the possession cut is not a transition example.",
+    plain:
+      "Lose it with your defenders upfield and the other side can attack the open space behind them.",
+    scope: scopeOf(hero),
+    measured: "",
+    metrics,
+    limits:
+      "The back line is the deepest outfield player, not a detected tactical formation. Space is its distance to the goal line, and the window can be shorter than the definition when the stitched match cuts away.",
+    moment: link("match"),
+    href: best ? matchExampleHref(hero, best.win.frame) : undefined,
+    here: false,
+    watch: best ? { label: "Watch the transition", frame: best.win.frame } : null,
+    xtMove:
+      best && view.xt
+        ? moveOf({
+            mode: "pass",
+            team: best.team,
+            from: best.win.at,
+            to: best.peakAt,
+            grid: view.xt,
+            delta: best.xtPeak - best.xtStart,
+            label: "After the loss",
+          })
+        : null,
+    empty: !view.xt
+      ? "The xT grid is loading."
+      : best
+        ? null
+        : "Not in this match's data: no loss has tracking afterwards in the same possession.",
+  };
+}
+
 export interface Context {
   scenario: string;
   xt: XtGrid | null;
@@ -511,6 +791,9 @@ const BUILDERS: Record<CardId, (hero: Hero, view: Context) => LabCard> = {
   corners,
   shot_quality,
   progression: progression_card,
+  counter_attack,
+  build_up,
+  transition,
 };
 
 /** A value with nothing in it: zero, a dash, or only zeros ("0 · 0.00"). */
@@ -548,10 +831,16 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
   const want = CARD_SCENARIO[id];
   const moment = link(CARD_MOMENT[id]);
   const view: Context = { scenario: session.kind === "hero" ? session.scenario : "match", xt };
-  const hero = session.kind === "match" || session.scenario === want ? session : scope.heroes[want];
+  const hero =
+    MATCH_FIRST.has(id) && scope.match
+      ? scope.match
+      : session.kind === "match" || session.scenario === want
+        ? session
+        : scope.heroes[want];
   if (!hero) {
     return {
       ...BUILDERS[id](session, view),
+      ...EXPLANATIONS[id],
       measured: `${moment.label} (${want})`,
       scope: "this moment",
       metrics: [],
@@ -566,9 +855,22 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
   }
   const on = (h: Hero, measured: string): LabCard => {
     const card = BUILDERS[id](h, view);
-    return leadWithValues({ ...card, measured, watch: h === session ? card.watch : null });
+    return leadWithValues({
+      ...card,
+      ...EXPLANATIONS[id],
+      measured,
+      watch: h === session ? card.watch : null,
+      here: h === session && card.here,
+    });
   };
-  const own = session.kind === "match" ? "this match" : `${moment.label} (${want})`;
+  const own =
+    MATCH_FIRST.has(id) && hero.kind === "match"
+      ? session.kind === "match"
+        ? "this match"
+        : `the whole stitched match (${hero.scenario}-${hero.seed})`
+      : session.kind === "match"
+        ? "this match"
+        : `${moment.label} (${want})`;
   const card = on(hero, own);
   if (!nothingToShow(card) || !scope.match || hero === scope.match) return card;
   // The moment holds none of what the card measures: the whole stitched match does, or says so.
@@ -577,8 +879,8 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
 }
 
 /**
- * The five cards. On a hero moment each is measured on the moment that shows its tactic, whichever
- * one the page opened on, from `scope`; a match page's cards are measured on the match.
+ * The cards. On a hero moment each original card is measured on the moment that shows its tactic;
+ * the three match-level cards prefer the stitched match from `scope`. A match page uses its match.
  */
 export function buildCards(hero: Hero, xt: XtGrid | null, scope: Scope = NO_SCOPE): LabCard[] {
   return CARD_IDS.map((id) => scoped(id, hero, xt, scope));
