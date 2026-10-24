@@ -1206,8 +1206,8 @@ async function recap(page, shoot) {
 }
 
 /** A cold load (SPEC 2, 7): the intro card waits for the viewer, with nothing playing under it;
- * Watch the look opens door 1's story on the look, and its next step, within about 20 s, puts the
- * run without the look on screen with its line. The 20 s is for a viewer's machine. The app's
+ * Watch the look opens door 1's story on the look, and its next step, within `COLD_LOAD_S`, puts the
+ * run without the look on screen with its line. The local `COLD_LOAD_S` is for a viewer's machine. The app's
  * clock steps at most 0.1 s a frame (session.ts `startClock`), so where WebGL is drawn in software,
  * as on a CI runner (SwiftShader, about 0.5 s a frame), the look plays slower than the wall clock:
  * there the check is only that it gets there, and the time it took is printed. */

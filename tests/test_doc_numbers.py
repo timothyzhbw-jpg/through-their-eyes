@@ -122,6 +122,7 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
     ),
     "MA6": (
         "crew_vs_single.md",
+        rf"(?s)## The four arms, on the shipped schema.*?"
         rf"\| cost per breakdown, USD \| [^|]+ \| [^|]+ \| [^|]+ \| {NUM} ",
         ("crew",),  # arm D, the crew as deployed (with the Verifier)
     ),
