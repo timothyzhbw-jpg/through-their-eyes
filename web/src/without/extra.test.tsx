@@ -128,17 +128,17 @@ describe("in the verdict", () => {
     ]);
     // Without the look stays the default.
     expect(button(group, "Without the look").getAttribute("aria-pressed")).toBe("true");
-    expect(text(page)).toContain("only this one look is removed");
+    expect(text(page)).toContain("Only this look changes");
     act(() => button(group, "With two more looks").click());
     expect(button(group, "With two more looks").getAttribute("aria-pressed")).toBe("true");
     for (const id of ["added_looks", "extra_result", "extra_zones"])
       expect(text(page)).toContain(lineText("en", id));
-    expect(text(page)).not.toContain("only this one look is removed");
+    expect(text(page)).not.toContain("Only this look changes");
     expect(page.querySelector(".source")?.getAttribute("title")).toBe(
       "Eval result from eval/reports/extra_looks_blind_side_run.md",
     );
     act(() => button(group, "Without the look").click());
-    expect(text(page)).toContain("only this one look is removed");
+    expect(text(page)).toContain("Only this look changes");
   });
 
   it("speaks the breakdown's language", async () => {
@@ -171,6 +171,6 @@ describe("in the verdict", () => {
     const page = mount(session, <WithoutLookLines />);
     await act(settle);
     expect(page.querySelector(".compare-switch")).toBeNull();
-    expect(text(page)).toContain("only this one look is removed");
+    expect(text(page)).toContain("Only this look changes");
   });
 });

@@ -572,10 +572,7 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
   const card = on(hero, own);
   if (!nothingToShow(card) || !scope.match || hero === scope.match) return card;
   // The moment holds none of what the card measures: the whole stitched match does, or says so.
-  const wide = on(
-    scope.match,
-    `the whole stitched match (${FULL_MATCH}), as ${own} holds none of it`,
-  );
+  const wide = on(scope.match, `the whole stitched match (${FULL_MATCH}) for ${own}`);
   return nothingToShow(wide) ? card : wide;
 }
 

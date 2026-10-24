@@ -21,6 +21,7 @@ import type { Fetch } from "../takeeyes/controller";
 import { settle } from "../testing";
 import { drillOf, type Drill } from "./controller";
 import { DrillStage } from "./Drill";
+import { SCAN_MAX_DEG, SCAN_MIN_DEG } from "./snap";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -102,6 +103,14 @@ describe("Academy drill: ready", () => {
     expect(textOf(el.querySelector(".dr-levels .dr-hint"))).toBe(
       "That moment needs the live service.",
     );
+  });
+
+  it("folds the technical briefing behind How the drill works", async () => {
+    const { el } = await opened();
+    const how = el.querySelector<HTMLDetailsElement>("details#dr-how")!;
+    expect(how.open).toBe(false);
+    expect(textOf(how.querySelector("summary"))).toBe("How the drill works");
+    expect(textOf(how)).toContain(`${SCAN_MIN_DEG}–${SCAN_MAX_DEG}°`);
   });
 
   it("chooses the pace before the start", async () => {

@@ -373,11 +373,14 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
           You are {name}. The pass is on its way to you. Before it arrives, take one look: drag the
           picture sideways, or hold ← or →, and let go. Then make the pass with only what you saw.
         </p>
-        <p className="dr-hint" id="dr-how">
-          A look turns his head {SCAN_MIN_DEG}–{SCAN_MAX_DEG}° from the ball, either side, at a
-          scan&apos;s speed. The sim re-ran a look every {spacing} s in four directions ahead of
-          time; yours becomes the nearest one.
-        </p>
+        <details className="how dr-how" id="dr-how">
+          <summary>How the drill works</summary>
+          <p className="dr-hint">
+            A look turns his head {SCAN_MIN_DEG}–{SCAN_MAX_DEG}° from the ball, either side, at a
+            scan&apos;s speed. The sim re-ran a look every {spacing} s in four directions ahead of
+            time; yours becomes the nearest one.
+          </p>
+        </details>
         <Segmented<"0.5" | "1">
           label="Pace"
           value={String(s.pace) as "0.5" | "1"}

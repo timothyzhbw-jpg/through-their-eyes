@@ -90,9 +90,7 @@ function heldOutText(gate: HeroGate): string {
 function ComparisonBasis({ gate }: { gate: HeroGate | null }) {
   return (
     <>
-      <p className="without-basis">
-        Held constant: the same match and the same seed; only this one look is removed.
-      </p>
+      <p className="without-basis">Only this look changes; the match and seed stay the same.</p>
       {gate && (
         <p className="without-basis">
           {heldOutText(gate)}{" "}

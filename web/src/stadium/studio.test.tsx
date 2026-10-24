@@ -9,7 +9,7 @@ import hero from "../../public/data/hero_seed3.json";
 import steps from "../../public/data/steps_seed3.json";
 import without from "../../public/data/without_look_seed3.json";
 import goalWithout from "../../public/data/without_look_far_post_finish_seed11.json";
-import { SCREEN_IDS } from "./formats";
+import { SCREENS, SCREEN_IDS } from "./formats";
 import { MIN_GAP_MS, programme } from "./rules";
 import { createShow, createSurfaces, type ShowDeps } from "./show";
 import { DEMO_DATA, loadStudio, STUDIO_FILES, StudioApp } from "./StudioApp";
@@ -70,6 +70,12 @@ describe("the studio page", () => {
     expect(host.querySelectorAll("canvas")).toHaveLength(SCREEN_IDS.length);
     expect(labelOf(host, "main")).toBe(
       "Walk-out (walking out): Joss Ferriday, number 8, Kestrel Bay",
+    );
+    const main = host.querySelector('[data-screen="main"]')!;
+    const format = SCREENS.find((s) => s.id === "main")!;
+    expect(main.querySelector(".format")).toBeNull();
+    expect(main.querySelector(".name")!.getAttribute("title")).toBe(
+      `${format.aspect[0]}:${format.aspect[1]} · ${format.where}`,
     );
   });
 
