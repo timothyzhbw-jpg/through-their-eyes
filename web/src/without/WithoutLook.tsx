@@ -10,7 +10,7 @@
 // - in the verdict too, when the hero has one, the opposite run: "With two more looks" (extra.ts),
 //   its verified lines and a source chip naming the eval report with its held-out numbers.
 
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Hero } from "../data/hero";
 import type { Narration, PayloadLine } from "../narration/payload";
@@ -28,6 +28,9 @@ import {
 } from "./extra";
 import { heroGatesOf, type HeroGate, type HeroGatesState } from "./gates";
 import { withoutLookOf, type WithoutLook, type WithoutLookState } from "./without";
+import { passMoves } from "../xtexplain/moves";
+import { usePersona, XtMoveExplain } from "../xtexplain/XtMoveExplain";
+import { versionFor } from "../xtexplain/zones";
 import "./without.css";
 
 const NONE: Store<WithoutLookState> = createStore<WithoutLookState>({
@@ -343,11 +346,15 @@ function attackSign(hero: Hero): number {
 }
 
 /** The value of `slot` as the verified line shows it (three decimals), if the line holds it. */
-function shownValue(narration: Narration, line: PayloadLine, slot: string): string | null {
-  const value = narration.claims.get("pass_zones")?.values[slot];
-  if (typeof value !== "number") return null;
-  const text = value.toFixed(3);
-  return line.text.includes(text) ? text : null;
+function shownValue(
+  narration: Narration,
+  line: PayloadLine,
+  slot: string,
+): { text: string; raw: number } | null {
+  const raw = narration.claims.get("pass_zones")?.values[slot];
+  if (typeof raw !== "number") return null;
+  const text = raw.toFixed(3);
+  return line.text.includes(text) ? { text, raw } : null;
 }
 
 function XtExplainer({
@@ -390,9 +397,20 @@ function XtExplainer({
     const y = at[1] * sign;
     const i = Math.min(w.cols - 1, Math.max(0, Math.floor((x + LENGTH / 2) / cw)));
     const j = Math.min(w.rows - 1, Math.max(0, Math.floor((y + WIDTH / 2) / rh)));
-    return [{ run, x, y, i, j, value }];
+    return [{ run, x, y, i, j, value: value.text, raw: value.raw }];
   });
   const ending = (i: number, j: number) => ends.find((e) => e.i === i && e.j === j);
+  const xtValue = ends.find((e) => e.run === "factual")?.raw;
+  const cfValue = ends.find((e) => e.run === "counterfactual")?.raw;
+  const moves = useMemo(
+    () =>
+      passMoves(hero, w, {
+        xt: xtValue ?? null,
+        cfXt: cfValue ?? null,
+      }),
+    [hero, w, xtValue, cfValue],
+  );
+  const technical = versionFor(usePersona()) === "concrete";
   // Pitch metres to svg: x from the own goal line, y up (his left when attacking right).
   const sx = (x: number) => (x + LENGTH / 2) * PX;
   const sy = (y: number) => (WIDTH / 2 - y) * PX;
@@ -424,6 +442,7 @@ function XtExplainer({
         <p className="xt-line">
           <LineText text={line.text} verified /> <KindTags narration={narration} line={line} />
         </p>
+        <XtMoveExplain moves={moves} owner="his" valuesFrom="grid" />
         <svg
           className="xt-grid"
           viewBox={`-20 -20 ${LENGTH * PX + 40} ${WIDTH * PX + 40}`}
@@ -474,16 +493,18 @@ function XtExplainer({
             Expected threat (xT) is how much having the ball in a zone raises a team's chance of
             scoring within its next few actions. Brighter zones are worth more.
           </p>
-          <p>
-            Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches. A
-            zone's value is how often play there ends in a shot, times how often such a shot scores,
-            plus how often it moves on, times the value of the zones its completed passes and
-            carries reach (a lost ball is worth nothing): Singh's Markov model, solved by value
-            iteration. Between zone centres the value is read smoothly, so a pass is valued where it
-            ends, not by its zone alone. The difference between the two ends is what the look was
-            worth.
-            {!w.fitted && " This build uses the smooth prior: no fit was cached."}
-          </p>
+          {technical && (
+            <p>
+              Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches.
+              A zone's value is how often play there ends in a shot, times how often such a shot
+              scores, plus how often it moves on, times the value of the zones its completed passes
+              and carries reach (a lost ball is worth nothing): Singh's Markov model, solved by
+              value iteration. Between zone centres the value is read smoothly, so a pass is valued
+              where it ends, not by its zone alone. The difference between the two ends is what the
+              look was worth.
+              {!w.fitted && " This build uses the smooth prior: no fit was cached."}
+            </p>
+          )}
           <p>
             <a
               href="https://github.com/timothyzhbw-jpg/through-their-eyes/blob/main/docs/SPEC.md#45-expected-threat-xt"
