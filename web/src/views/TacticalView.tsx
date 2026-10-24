@@ -54,6 +54,7 @@ import {
   useRedrawOn,
 } from "./scene";
 import { PitchControlLayer } from "../pitchControl/PitchControlLayer";
+import { XtCellsLayer } from "../xtexplain/XtCellsLayer";
 import { OptionsOverlay } from "../ui/OptionsOverlay";
 import { SkeletonLayer } from "../skeleton/SkeletonLayer";
 import { RadarLayer } from "../skeleton/RadarLayer";
@@ -174,6 +175,7 @@ function TacticalScene() {
       <color attach="background" args={["#14271d"]} />
       <Field />
       <PitchControlLayer hero={hero} renderOrder={LAYER.pitch + 0.5} />
+      <XtCellsLayer renderOrder={LAYER.pitch + 0.6} />
       {hero.vision && <VisionCone hero={hero} vision={hero.vision} shared={shared} />}
       <BeatBoardLayer
         sample={shared.current.sample}

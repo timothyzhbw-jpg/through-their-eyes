@@ -25,6 +25,7 @@ import { CARD_SCENARIO, loadScope, missingScenarios, NO_SCOPE, type Scope } from
 import { parseXtGrid, type XtGrid } from "./metrics";
 import { boardPlayers, laneEnds, PITCH_LINES, VIEW_BOX } from "./board";
 import { COLORS, teamColor } from "../views/scene";
+import { XtMoveExplain } from "../xtexplain/XtMoveExplain";
 import "./tacticslab.css";
 
 /** The xT grid ships inside the "without the look" file (units 1e-4); the lab reads it from there. */
@@ -118,6 +119,7 @@ function MetricRow({ m, split }: { m: Metric; split: boolean }) {
 
 function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) => void }) {
   const split = card.metrics.some((m) => m.values.length > 1);
+  const moves = useMemo(() => (card.xtMove ? [card.xtMove] : []), [card.xtMove]);
   return (
     <article className="lab-card tile" data-card={card.id} aria-label={card.title}>
       <header>
@@ -161,6 +163,9 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           </table>
         </div>
       )}
+      {/* The best pass may be either team's, so the zones are named "their". Outside a hero or
+          match view usePersona falls back to casual: the lab then shows the plain sentence. */}
+      {moves.length > 0 && <XtMoveExplain moves={moves} owner="their" />}
       <div className="lab-links">
         <a className="btn" href={momentHref(card.id)} data-link="moment">
           {card.here ? "This is the moment: reload it" : `Open the moment · ${card.moment.label}`}

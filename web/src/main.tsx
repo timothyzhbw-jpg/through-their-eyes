@@ -28,6 +28,7 @@ import { SessionContext, createSession, type ViewControls, type ViewSession } fr
 import { kindOf } from "./tour/steps";
 import { startTour } from "./tour/tourState";
 import { heroGatesOf } from "./without/gates";
+import { extraLooksOf } from "./without/extra";
 import { withoutLookOf } from "./without/without";
 import { intro } from "./ui/intro";
 import "./styles.css";
@@ -151,6 +152,7 @@ async function main() {
       { api: loaded.api, offline, momentId: loaded.momentId },
     );
     void withoutLookOf(session, undefined, dataUrl).load(); // "Without the look", told: a few KB
+    void extraLooksOf(session, undefined, dataUrl).load(); // and "With two more looks"
     void heroGatesOf(session, undefined, dataUrl).load(); // how often the held-out seeds change
     applyDeepLink(session, link);
     broadcast(session.controls);
