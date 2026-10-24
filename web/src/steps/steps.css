@@ -126,7 +126,8 @@
 }
 .ss-seen text,
 .ss-lane text,
-.ss-focus-ring text {
+.ss-focus-ring text,
+.ss-decision-maker {
   fill: var(--chalk);
   font: 600 12px/1 var(--font-data);
   text-anchor: middle;
@@ -137,13 +138,30 @@
 .ss-seen text {
   fill: var(--floodlight);
 }
+.ss-decision-maker {
+  text-anchor: start;
+}
 .ss-seen-dot {
   fill: none;
   stroke: var(--floodlight);
   stroke-width: 2;
 }
 
-/* potential passes: the decision record's options */
+/* potential passes: essential names stay; the rest appear on hover or keyboard focus */
+.ss-lane {
+  pointer-events: auto;
+  cursor: help;
+}
+.ss-lane text {
+  opacity: 0;
+  pointer-events: none;
+}
+.ss-lane.chosen text,
+.ss-lane.seen text,
+.ss-lane:hover text,
+.ss-lane:focus text {
+  opacity: 1;
+}
 .ss-lane line {
   stroke: rgba(79, 184, 208, 0.55);
   stroke-linecap: round;
@@ -278,24 +296,42 @@
 
 /* the card: opaque, with no blur or entry motion */
 .ss-card {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 14px;
   align-self: start;
   max-height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  box-sizing: border-box;
-  padding: 22px 22px 22px 24px;
+  overflow: hidden;
   border-radius: var(--r-card);
   background: var(--night-2);
   box-shadow:
     inset 0 0 0 1px var(--hairline),
     0 40px 80px -40px rgba(0, 0, 0, 0.9);
   color: var(--chalk);
+}
+.ss-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  padding: 22px 22px 38px 24px;
+}
+.ss-card-fade {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  height: 34px;
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  background: linear-gradient(transparent, var(--night-2) 85%);
+  pointer-events: none;
 }
 .ss-kicker {
   margin: 0;
@@ -421,12 +457,18 @@
   }
   .ss-card {
     max-height: none;
+  }
+  .ss-card-body {
     overflow: visible;
+    padding-bottom: 22px;
+  }
+  .ss-card-fade {
+    display: none;
   }
 }
 
 /* the coaching story: the scan timeline, the card's story blocks and the half-turn arc.
-   Hard holds: nothing here fades, slides or blurs. */
+   Hard holds: nothing here slides or blurs. */
 .ss-timeline {
   position: relative;
   flex: 1 1 100%;

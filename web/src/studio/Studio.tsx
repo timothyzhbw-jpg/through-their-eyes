@@ -159,6 +159,31 @@ export function StudioPackage() {
               </tbody>
             </table>
           </div>
+          <ol className="studio-shot-cards" aria-label="Shot list">
+            {shots.map((s) => (
+              <li key={s.n}>
+                <h4>Shot {s.n}</h4>
+                <dl>
+                  <div>
+                    <dt>Camera</dt>
+                    <dd>
+                      {CAMERA_LABEL[s.camera]}
+                      {s.player ? ` · ${renameIds(s.player)}` : ""}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>In</dt>
+                    <dd>{s.inFrame}</dd>
+                  </div>
+                  <div>
+                    <dt>Out</dt>
+                    <dd>{s.outFrame}</dd>
+                  </div>
+                </dl>
+                <p className="prose">{s.caption ?? "—"}</p>
+              </li>
+            ))}
+          </ol>
         </details>
         <button type="button" className="btn btn-quiet" onClick={() => copy(shotListText(shots))}>
           Copy shot list

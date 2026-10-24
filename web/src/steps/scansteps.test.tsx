@@ -5,13 +5,13 @@
 // the decision record, and the decision dimming everything but two players (never blurring).
 // The 3D view and the board are left out (no WebGL here); the marks, steps and card are DOM.
 
+import { readFileSync } from "node:fs";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import stepsJson from "../../public/data/steps_seed3.json";
-import stepsCss from "./steps.css?raw";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
 import { applyDeepLink, parseDeepLink } from "../deeplink";
@@ -23,6 +23,8 @@ import type { Fetch } from "../takeeyes/controller";
 import { stepThroughOf } from "./controller";
 import { ScanStepsButton, ScanStepsScreen } from "./ScanSteps";
 import { NO_STEPS } from "./steps";
+
+const stepsCss = readFileSync("src/steps/steps.css", "utf8");
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -241,6 +243,28 @@ describe("His looks: the marks", () => {
     expect(el.querySelectorAll(".ss-board .ss-lane.chosen")).toHaveLength(1);
     expect(textOf(el.querySelector(".ss-board .ss-lane.chosen text"))).toBe("N. Varnhall");
     expect(textOf(el.querySelector(".ss-legend"))).toMatch(/along the ground/);
+  });
+
+  it("keeps essential names visible and reveals other pass labels on hover or focus", async () => {
+    const { el } = await opened();
+    expect(el.querySelectorAll(".ss-pov .ss-seen text")).toHaveLength(10);
+    expect(textOf(el.querySelector(".ss-pov .ss-decision-maker"))).toBe(
+      "J. Ferriday · decision-maker",
+    );
+    click(button(el, "Potential passes"));
+    const other = el.querySelector(".ss-board .ss-lane:not(.chosen):not(.seen)")!;
+    expect(other.getAttribute("tabindex")).toBe("0");
+    expect(other.querySelector("text")).not.toBeNull();
+    expect(stepsCss).toMatch(/\.ss-lane text \{\s+opacity: 0;/);
+    expect(stepsCss).toMatch(/\.ss-lane:hover text,\s+\.ss-lane:focus text \{\s+opacity: 1;/);
+  });
+
+  it("scrolls the evidence inside its card behind a bottom fade", async () => {
+    const { el } = await opened();
+    expect(el.querySelector(".ss-card > .ss-card-body > .ss-lines")).not.toBeNull();
+    expect(el.querySelector(".ss-card > .ss-card-fade")).not.toBeNull();
+    expect(stepsCss).toMatch(/\.ss-card-body \{[\s\S]*?overflow-y: auto;/);
+    expect(stepsCss).toMatch(/\.ss-card-fade \{[\s\S]*?linear-gradient/);
   });
 
   it("dims the board at his decision but round exactly two players, with no blur", async () => {
