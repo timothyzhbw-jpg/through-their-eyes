@@ -71,15 +71,15 @@ if (opt.cine) {
     const pov = await page.locator(".pov canvas").evaluate((c) => [c.width, c.height]);
     let board = [0, 0];
 
-    /** An overlay on or off: the toggles are in View options, in the header's ⋯. */
+    /** An overlay on or off: the toggles are in View options, in the header's Settings. */
     const NAMES = { "pitch control": "Pitch control", skeleton: "Skeleton" };
     const set = async (overlay, on) => {
-      await page.locator("#header-more").click();
+      await page.locator("#settings").click();
       await button("View options").click();
       const chip = button(NAMES[overlay]);
       if ((await chip.getAttribute("aria-pressed")) !== String(on)) await chip.click();
       await page.keyboard.press("Escape"); // View options
-      await page.keyboard.press("Escape"); // the ⋯
+      await page.keyboard.press("Escape"); // Settings
     };
 
     /** Play from the key scan and time `seconds` of animation frames. */

@@ -1,12 +1,12 @@
-// The tours (SPEC 7). The quick tour is a first-time visitor's one path, five steps: watch the
-// look, remove it, compare the outcomes, see every number checked, make your own call (Start on
-// the intro card, "Quick tour" on the moment card, ?tour=quick). The full tour is an optional walk
-// of about ninety seconds through the signature features, so a judge with three minutes sees each
-// of them without exploring ("Full tour" on the intro card and the story, ?tour=1). The Full story
-// walks one moment through the journey's five steps in about ninety seconds, opening each step's
-// panel ("Full story" on the journey bar, ?tour=story; journey/). Each step lights up one thing
-// the app already draws (a ring, the page dimmed around it where the picture is not the point),
-// says one plain line, and sets the app up with the app's own controls (actions.ts).
+// The tours (SPEC 7). The quick tour is door 1's story (doors/), a first-time visitor's one path
+// of about a minute: watch the look, remove it, compare the outcomes, see every number checked,
+// then an end card whose only choices are Your turn, For studios and Watch again ("Watch the look"
+// on the intro card and under the picture, ?tour=quick). The full tour walks the three doors in
+// order in about ninety seconds, so a judge with three minutes sees each signature feature
+// without exploring (Settings' "Full tour", ?tour=1). The studios' walk opens each step of door 3
+// (?tour=story; journey/). Each step opens its door, lights up one thing the app already draws (a
+// ring, the page dimmed around it where the picture is not the point), says one plain line, and
+// sets the app up with the app's own controls (actions.ts).
 //
 // It never takes the app over: the overlay lets every click through, the card is a non-modal
 // dialog, and closing it at any step (Skip tour, Done, Escape) leaves the app as that step left it.
@@ -15,17 +15,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useView, type ViewSession } from "../session";
+import { openDoor } from "../doors/state";
 import { openStep } from "../journey/state";
 import { useStore } from "../store/store";
 import { intro } from "../ui/intro";
-import { headerMore, revealInMenu } from "../ui/Stage";
+import { revealInMenu, settingsMenu } from "../ui/Stage";
 import { prefersReducedMotion } from "../yourcall/controller";
 import { enterStep } from "./actions";
 import { GUTTER, onScreen, PHONE_MAX, placeCard, type Box, type Keep, type Size } from "./layout";
 import {
   envOf,
   indexOf,
-  quickTourFits,
   resolveSteps,
   secondsOf,
   stepsOf,
@@ -56,9 +56,11 @@ function arrive(session: ViewSession, step: TourStep, seq: number) {
   arrived = { seq, session };
   cancel?.();
   cancel = null;
+  // The step's door first, so what it sets up is on the page it shows (a match has no doors).
+  if (step.door && session.kind === "hero") openDoor(step.door);
   cancel = enterStep(step.enter, session) ?? null;
-  // The Full story's steps open the journey's panel for theirs (the tour brings its target into
-  // view itself).
+  // The studios' steps open the journey's panel for theirs (the tour brings its target into view
+  // itself).
   if (step.journey && session.kind === "hero") openStep(step.journey, { reveal: false });
 }
 
@@ -183,6 +185,8 @@ function TourOverlay({ session }: { session: ViewSession }) {
   const { title, caption } = wordsOf(step, env);
   const last = index === steps.length - 1;
   const Act = step.act && session.kind === "hero" ? ACT_VIEW[step.act] : null;
+  const ending = !!Act && step.act === "doors"; // the end card: its three choices are its buttons
+  const focusId = useStore(tour, (s) => s.focus);
   const reduced = useMemo(prefersReducedMotion, []);
 
   const card = useRef<HTMLElement>(null);
@@ -198,13 +202,20 @@ function TourOverlay({ session }: { session: ViewSession }) {
 
   // Set the step up once per arrival, then hand the keyboard to the card: after the app's own
   // focus moves (closing Your call gives its pill the focus back), unless the step's own control
-  // takes the keyboard (Your call's options).
+  // takes the keyboard (Your call's options). Back from a mode the card links to, on that link;
+  // on the end card, its first choice.
   useEffect(() => arrive(session, step, seq), [session, step, seq]);
   useEffect(() => {
     if (step.focus === "app") return;
-    const id = setTimeout(() => next.current?.focus({ preventScroll: true }), 0);
+    const id = setTimeout(() => {
+      const el =
+        (focusId && document.getElementById(focusId)) ||
+        (ending ? card.current?.querySelector<HTMLElement>(".tour-doors .btn") : null) ||
+        next.current;
+      el?.focus({ preventScroll: true });
+    }, 0);
     return () => clearTimeout(id);
-  }, [seq, step]);
+  }, [seq, step, focusId, ending]);
 
   useEffect(() => {
     const resize = () => setView(viewport());
@@ -280,7 +291,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
     tick();
     return () => {
       cancelAnimationFrame(frame);
-      if (opened) headerMore.set({ open: false });
+      if (opened) settingsMenu.set({ open: false });
     };
   }, [step, seq, reduced, kind]);
 
@@ -398,71 +409,68 @@ function TourOverlay({ session }: { session: ViewSession }) {
             <Act />
           </div>
         )}
-        <div className="tour-nav">
-          {folded ? (
-            <button
-              type="button"
-              className="btn btn-quiet"
-              aria-expanded={false}
-              aria-controls="tour-caption"
-              onClick={() => setFolded(false)}
-            >
-              Show
-            </button>
-          ) : last ? (
-            <button type="button" className="btn btn-quiet" onClick={() => go(0)}>
-              Start again
-            </button>
-          ) : (
-            <button type="button" className="btn btn-quiet" onClick={closeTour}>
-              Skip tour
-            </button>
-          )}
-          <span className="tour-moves">
-            {!folded && (
+        {/* The end card's choices are its only buttons (folded on a phone: Show, to see them). */}
+        {(!ending || folded) && (
+          <div className="tour-nav">
+            {folded ? (
               <button
                 type="button"
-                className="btn"
-                disabled={index === 0}
-                onClick={() => go(index - 1)}
+                className="btn btn-quiet"
+                aria-expanded={false}
+                aria-controls="tour-caption"
+                onClick={() => setFolded(false)}
               >
-                Back
+                Show
+              </button>
+            ) : last ? (
+              <button type="button" className="btn btn-quiet" onClick={() => go(0)}>
+                Start again
+              </button>
+            ) : (
+              <button type="button" className="btn btn-quiet" onClick={() => closeTour()}>
+                Skip tour
               </button>
             )}
-            <button
-              ref={next}
-              type="button"
-              className="btn btn-primary"
-              onClick={last ? closeTour : () => go(index + 1)}
-            >
-              {last ? "Done" : "Next"}
-            </button>
-          </span>
-        </div>
+            {!ending && (
+              <span className="tour-moves">
+                {!folded && (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={index === 0}
+                    onClick={() => go(index - 1)}
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  ref={next}
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={last ? () => closeTour() : () => go(index + 1)}
+                >
+                  {last ? "Done" : "Next"}
+                </button>
+              </span>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-/** The quick tour where it fits this page (a hero moment with a key scan and the run without it),
- * else the full one: the first tour a newcomer should take. */
-export function FirstTourButton({ className }: { className?: string }) {
-  const session = useView();
-  const quick = useMemo(() => quickTourFits(envOf(session)), [session]);
-  return <TourButton className={className} kind={quick ? "quick" : "full"} />;
-}
-
 const TOUR_LABEL: Record<TourKind, string> = {
-  quick: "Quick tour",
+  quick: "Watch the look",
   full: "Full tour · 90 s",
-  story: `Full story · ${secondsOf("story")} s`, // its steps' holds (steps.json)
+  story: `For studios · ${secondsOf("story")} s`, // its steps' holds (steps.json)
 };
 
 /** The tour card's kicker. */
-const KICKER: Record<TourKind, string> = { quick: "Quick tour", full: "Tour", story: "Full story" };
+const KICKER: Record<TourKind, string> = { quick: "The look", full: "Tour", story: "For studios" };
 
-/** Start a tour at its first step ("Quick tour", "Full tour · 90 s", "Full story"); closes the
- * intro card. */
+/** Start a tour at its first step ("Watch the look", "Full tour · 90 s", the studios' walk);
+ * closes the intro card. */
 export function TourButton({
   className = "btn btn-quiet",
   kind = "full",

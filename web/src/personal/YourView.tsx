@@ -1,9 +1,9 @@
-// Personalized viewing (SPEC 7): a "Your view" menu in the header (the mode switch, other
-// audiences, who to follow, the language) and the one-line summary under the moment's title.
+// Personalized viewing (SPEC 7): a "Your view" menu in the header's Settings (the mode switch,
+// other audiences, who to follow, the language) and the one-line summary under the moment's title.
 // Only cached breakdowns are asked for: the audience and language go through the same switches
 // as the viewer menu's (the breakdown's, or the recap's inside a match).
 
-import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react";
 import { type Persona } from "../api/client";
 import { clubName, CLUBS, shortName } from "../data/roster";
 import { useView } from "../session";
@@ -21,7 +21,7 @@ import {
   playerOptions,
   type Team,
 } from "./follow";
-import { useStore } from "../store/store";
+import { createStore, useStore } from "../store/store";
 import { eyesPatch, eyesStatus, hasLookData } from "./eyes";
 import { useChoices, useMomentsInReach } from "./hooks";
 import { involvedCount } from "./rank";
@@ -89,14 +89,19 @@ export function YourViewLine() {
   );
 }
 
-/** The header's "Your view" menu. It stays open while the viewer picks, until Escape or a press
- * outside. */
+/** Whether the "Your view" menu (in Settings) is open: page-wide, so the old ?step=your-view opens
+ * it. */
+export const yourViewMenu = createStore<{ open: boolean }>({ open: false });
+
+/** The "Your view" menu, in the header's Settings. It stays open while the viewer picks, until
+ * Escape or a press outside. */
 export function YourViewMenu() {
-  const [open, setOpen] = useState(false);
+  const open = useStore(yourViewMenu, (s) => s.open);
+  const setOpen = (value: boolean) => yourViewMenu.set({ open: value });
   const wrap = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
-  const close = useRef(() => setOpen(false)).current;
+  const close = useRef(() => yourViewMenu.set({ open: false })).current;
   const onKeyDown = usePopover(open, close, wrap, toggle);
   const id = useId();
   useEffect(() => {

@@ -68,7 +68,7 @@ const PAGES = [
   {
     name: "lineup-match-1",
     path: "?match=match-1",
-    check: (p, shoot) => lineup(p, shoot, "Start", match),
+    check: (p, shoot) => lineup(p, shoot, "Watch the match", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
   {
@@ -250,9 +250,17 @@ const PAGES = [
   },
   { name: "tour", path: "?tour=1", check: (p, shoot) => tour(p, shoot) },
   { name: "quick-tour", path: "?tour=quick", check: (p, shoot) => quickTour(p, shoot) },
-  // The journey (SPEC 7, journey/): each of its five steps opened from the bar, axe on each; a
-  // deep link to one step; a phone's stepper; the Full story through all five.
-  { name: "journey", path: "?step=event", check: (p, shoot) => journeySteps(p, shoot) },
+  // The three doors (SPEC 7, doors/). Door 2: Your turn's hub, a card's mode and back to it.
+  { name: "door-turn", path: "?door=turn", check: (p) => yourTurn(p, { open: true }) },
+  {
+    name: "phone-375-door-turn",
+    path: "?door=turn",
+    device: PHONE_375,
+    check: (p) => phone(p, yourTurn, { live: false }),
+  },
+  // Door 3, For studios (journey/): each of its four steps opened from the bar, axe on each, and
+  // each step's Next; a deep link to one step; a phone's stepper; the studios' walk through all.
+  { name: "journey", path: "?door=studios", check: (p, shoot) => journeySteps(p, shoot) },
   {
     name: "journey-link-value",
     path: "?step=value",
@@ -260,11 +268,28 @@ const PAGES = [
   },
   {
     name: "phone-375-journey",
-    path: "?step=event",
+    path: "?door=studios",
     device: PHONE_375,
     check: (p, shoot) => journeyStepper(p, shoot),
   },
   { name: "full-story", path: "?tour=story", check: (p, shoot) => fullStory(p, shoot) },
+  // The old journey's addresses: Event is door 1's compare, Your view is in Settings.
+  {
+    name: "link-step-event",
+    path: "?step=event",
+    check: async (p) => {
+      await hero(p);
+      await see(p.getByRole("region", { name: "The look, compared" }), "door 1's compare");
+    },
+  },
+  {
+    name: "link-step-your-view",
+    path: "?step=your-view",
+    check: async (p) => {
+      await hero(p);
+      await see(p.getByRole("dialog", { name: "Your view" }), "Your view open in Settings");
+    },
+  },
   // A phone: no director's suggestion under the picture; Auto director in View options.
   ...[
     ["375", PHONE_375],
@@ -419,24 +444,48 @@ async function audiences(page, shoot) {
   await pick("Audio description", "eyes", figure("Broadcast view"));
 }
 
-/** A hero moment: its views and its run switch; at the top level, the header's Moments menu and no
- * Live pill (the stream runs, its state on the stage's data-stream); inside a match, the way back. */
+/** A hero moment: its views and its run switch, and the header's three doors (The look marked) and
+ * Settings; at the top level no Live pill (the stream runs, its state on the stage's
+ * data-stream); inside a match, the way back. */
 async function hero(page, { main = "eyes", inMatch = false } = {}) {
   if (inMatch) {
     await see(page.getByRole("button", { name: /Back to the match/ }), "Back to the match");
-  } else {
-    await see(page.getByRole("button", { name: "Moments", exact: true }), "the Moments menu");
-    if (await page.locator(".stage-head .live-chip").count()) {
-      throw new Error("expected no Live pill on a hero moment");
-    }
+  } else if (await page.locator(".stage-head .live-chip").count()) {
+    throw new Error("expected no Live pill on a hero moment");
   }
+  await doorTabs(page, "The look");
   await see(page.getByRole("group", { name: "Run" }), "a hero moment's run switch");
   await mainView(page, main);
 }
 
-/** The header's ⋯ open (sound, who is watching, the other ways in, View options). */
+/** The header's three doors, `current` marked, and its one menu, Settings; no other control. */
+async function doorTabs(page, current) {
+  const nav = page.locator(".stage-head").getByRole("navigation", { name: "Doors" });
+  await see(nav, "the header's three doors");
+  const names = (await nav.locator("button, a").allTextContents()).map((t) => t.trim());
+  if (names.join("|") !== "The look|Your turn|For studios") {
+    throw new Error(`expected the doors The look, Your turn, For studios; got ${names.join(", ")}`);
+  }
+  if (current) {
+    const marked = (await nav.locator("[aria-current=page]").allTextContents()).map((t) =>
+      t.trim(),
+    );
+    if (marked.join("|") !== current) {
+      throw new Error(`expected ${current} marked as the door on screen; got ${marked.join(", ")}`);
+    }
+  }
+  await see(page.locator(".stage-head").getByRole("button", { name: "Settings" }), "Settings");
+  const extra = await page
+    .locator(".stage-head")
+    .locator("#your-call-open, .moments-menu, #header-more")
+    .count();
+  if (extra) throw new Error("expected no header control but the doors and Settings");
+}
+
+/** The header's Settings open (the moment, who is watching, who to follow, sound, View options,
+ * the full tour). */
 async function openMore(page) {
-  const more = page.locator("#header-more");
+  const more = page.locator("#settings");
   if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
 }
 
@@ -761,8 +810,8 @@ async function instantCuts(page) {
  * selector switches players on its own too. */
 async function followEyes(page) {
   await hero(page);
-  // The picker is in View options, in the header's ⋯: open both to read or use it, close them
-  // again before the next click on the main screen.
+  // The picker is in View options, in the header's Settings: open both to read or use it, close
+  // them again before the next click on the main screen.
   const eyes = page.getByRole("combobox", { name: "Whose eyes" });
   await viewOptions(page);
   const hostId = await eyes.inputValue();
@@ -773,13 +822,19 @@ async function followEyes(page) {
   await eyes.selectOption(hostId);
   await closeMenus(page);
 
-  // Your view is the journey's third step, its controls inline (no menu to open).
-  await page
-    .getByRole("tablist", { name: "Journey steps" })
-    .getByRole("tab", { name: /Your view/ })
-    .click();
+  // Your view (who to follow) is in Settings too, under its own button.
+  const yourViewToggle = page
+    .locator("#settings ~ .more-panel")
+    .getByRole("button", { name: "Your view" });
+  const yourView = async () => {
+    await openMore(page);
+    if ((await yourViewToggle.getAttribute("aria-expanded")) !== "true") {
+      await yourViewToggle.click();
+    }
+  };
+  await yourView();
   const follow = page
-    .locator(".your-view-inline select")
+    .locator(".your-view-panel select")
     .filter({ has: page.locator("option", { hasText: "No player" }) });
   const options = await follow.locator("option").evaluateAll((os) => os.map((o) => o.value));
   const pick = options.find((v) => v && v !== hostId);
@@ -787,14 +842,21 @@ async function followEyes(page) {
   const note = page.getByTestId("follow-eyes");
   await see(note, "the note on the followed player's looks");
   const eyesNow = async () => {
+    // Your view folds first, by its own button: folding on a press outside it would move View
+    // options from under the pointer.
+    if ((await page.locator(".your-view-panel").count()) && (await yourViewToggle.isVisible())) {
+      await yourViewToggle.click();
+    }
     await viewOptions(page);
     const value = await eyes.inputValue();
     await closeMenus(page);
     return value;
   };
   if ((await eyesNow()) !== pick) {
+    await yourView();
     await see(note.getByText(/has no recorded looks in this moment/), "the no-look-data note");
     await note.getByRole("button", { name: /^Watch through #\d+'s eyes$/ }).click();
+    await closeMenus(page);
   }
   const got = await eyesNow();
   if (got !== pick) throw new Error(`expected the EYES selector on ${pick}, got ${got}`);
@@ -872,13 +934,12 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
-/** The journey's five steps, in its bar's order (journey/steps.ts), and what each panel shows. */
+/** For studios' four steps, in its bar's order (journey/steps.ts), and what each panel shows. */
 const JOURNEY = [
-  ["Event", /Compare from above/],
   ["Tactics", /Why tactics/],
-  ["Your view", /Follow/],
   ["Content", /In the stadium/],
   ["Value", /Sponsor slots in this programme/],
+  ["Behind the scenes", /The crew writes/],
 ];
 const DEMO_DATA = "Demo data: simulated audience, not real results";
 
@@ -886,6 +947,7 @@ const DEMO_DATA = "Demo data: simulated audience, not real results";
  * scroll, axe clean; the Value step with the demo-data badge on its figures. */
 async function journeyPanel(page, label) {
   const [, shows] = JOURNEY.find(([l]) => l === label);
+  await doorTabs(page, "For studios");
   const panel = page.getByRole("tabpanel", { name: new RegExp(label) });
   await see(panel, `the journey's ${label} panel`);
   await see(panel.getByText(shows), `the ${label} panel's content`);
@@ -903,11 +965,12 @@ async function journeyPanel(page, label) {
   await accessible(page, `the journey's ${label} step`);
 }
 
-/** Every step from the bar: a click on the first, then the arrow keys. */
+/** Every step from the bar: a click on the first, then the arrow keys; then each step's own Next
+ * under its panel, from the first. */
 async function journeySteps(page, shoot) {
-  const bar = page.getByRole("tablist", { name: "Journey steps" });
-  await see(bar, "the journey bar");
-  await bar.getByRole("tab", { name: /Event/ }).click();
+  const bar = page.getByRole("tablist", { name: "Studio steps" });
+  await see(bar, "the studios' bar");
+  await bar.getByRole("tab", { name: /Tactics/ }).click();
   for (const [k, [label]] of JOURNEY.entries()) {
     const tab = bar.getByRole("tab", { name: new RegExp(label) });
     if ((await tab.getAttribute("aria-selected")) !== "true") {
@@ -917,16 +980,23 @@ async function journeySteps(page, shoot) {
     await shoot(`step-${k + 1}`);
     if (k < JOURNEY.length - 1) await page.keyboard.press("ArrowRight");
   }
-  if (!new URL(page.url()).search.includes("step=value")) {
-    throw new Error(`expected ?step=value in the address, got ${page.url()}`);
+  if (!new URL(page.url()).search.includes("step=crew")) {
+    throw new Error(`expected ?step=crew in the address, got ${page.url()}`);
+  }
+  // The last step ends the door; each other step's one action is the next step.
+  await see(page.getByText(/^That's the studio side/), "the end of the studios' steps");
+  await bar.getByRole("tab", { name: /Tactics/ }).click();
+  for (const [label] of JOURNEY.slice(1)) {
+    await page.getByRole("button", { name: `Next: ${label}` }).click();
+    await see(page.getByRole("tabpanel", { name: new RegExp(label) }), `${label} from Next`);
   }
 }
 
-/** A phone: the bar is a stepper (no tabs on screen); Next walks the five steps. */
+/** A phone: the bar is a stepper (no tabs on screen); Next walks the four steps. */
 async function journeyStepper(page, shoot) {
   const stepper = page.locator(".journey-stepper");
   await see(stepper, "the journey's stepper");
-  if (await page.getByRole("tablist", { name: "Journey steps" }).isVisible()) {
+  if (await page.getByRole("tablist", { name: "Studio steps" }).isVisible()) {
     throw new Error("expected the journey's tabs to fold into a stepper on a phone");
   }
   for (const [k, [label]] of JOURNEY.entries()) {
@@ -937,13 +1007,13 @@ async function journeyStepper(page, shoot) {
   }
 }
 
-/** `?tour=story`: the Full story's card walks the moment through the five steps, each opening its
- * panel, and closes on Done. */
+/** `?tour=story`: the studios' walk, its card opening each of For studios' four steps' panels,
+ * and closes on Done. */
 async function fullStory(page, shoot) {
-  const card = page.getByRole("dialog").filter({ hasText: /^Full story · \d+ of \d+/ });
+  const card = page.getByRole("dialog").filter({ hasText: /^For studios · \d+ of \d+/ });
   const opened = [];
   for (let k = 1; ; k++) {
-    await see(card.filter({ hasText: new RegExp(`^Full story · ${k} of `) }), `story step ${k}`);
+    await see(card.filter({ hasText: new RegExp(`^For studios · ${k} of `) }), `studio step ${k}`);
     opened.push(await page.locator(".journey-panel").getAttribute("data-step"));
     await shoot(`step-${k}`);
     const done = card.getByRole("button", { name: "Done" });
@@ -951,13 +1021,15 @@ async function fullStory(page, shoot) {
       await done.click();
       break;
     }
-    if (k > 8) throw new Error("expected the Full story to end within 8 steps");
+    if (k > 8) throw new Error("expected the studios' walk to end within 8 steps");
     await card.getByRole("button", { name: "Next" }).click();
   }
   const steps = [...new Set(opened)];
-  const want = ["event", "tactics", "your-view", "content", "value"];
+  const want = ["tactics", "content", "value", "crew"];
   if (steps.join() !== want.join()) {
-    throw new Error(`expected the Full story to open ${want.join(", ")}; got ${steps.join(", ")}`);
+    throw new Error(
+      `expected the studios' walk to open ${want.join(", ")}; got ${steps.join(", ")}`,
+    );
   }
 }
 
@@ -1027,10 +1099,10 @@ async function accessible(page, what) {
   if (blocking.length) throw new Error(`${what}: ${describe(blocking).join("; ")}`);
 }
 
-/** The moment links (SPEC 7, moments/): from the hero page, each chip of the rail above the live
- * screen loads its moment, told by its own lede, with its chip marked current and no sideways
- * scroll; the corner and the goal open inside the full match, with the way back. The page's
- * console errors fail it, as on every page. */
+/** The moment links (SPEC 7, moments/): from the hero page, each link of Settings' moment picker
+ * loads its moment, told by its own lede, with its link marked current and no sideways scroll; the
+ * corner and the goal open inside the full match, with the way back. The page's console errors
+ * fail it, as on every page. */
 const MOMENT_PAGES = [
   ["The look", /the midfielder saw/],
   ["Under pressure", /centre-back saw with an opponent closing in/],
@@ -1040,15 +1112,12 @@ const MOMENT_PAGES = [
 ];
 
 async function momentLinks(page, shoot) {
-  const menu = page.locator(".stage-head .moments-menu");
-  const open = async () => {
-    const toggle = menu.getByRole("button", { name: "Moments", exact: true });
-    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  };
+  const menu = page.locator(".stage-head .more-panel").getByRole("navigation", { name: "Moments" });
+  const open = () => openMore(page);
   for (const [label, lede, { inMatch = false } = {}] of MOMENT_PAGES) {
     await open();
     const chip = menu.locator("a", { hasText: label });
-    await see(chip, `the "${label}" link in the Moments menu`);
+    await see(chip, `the "${label}" link in Settings' moment picker`);
     await Promise.all([page.waitForEvent("load"), chip.click()]);
     await see(
       page.locator(".moment-head .lede").filter({ hasText: lede }),
@@ -1123,7 +1192,7 @@ async function recap(page, shoot) {
 }
 
 /** A cold load (SPEC 2, 7): the intro card waits for the viewer, with nothing playing under it;
- * Start opens the quick tour on the look, and its next step, within about 20 s of Start, puts the
+ * Watch the look opens door 1's story on the look, and its next step, within about 20 s, puts the
  * run without the look on screen with its line. The 20 s is for a viewer's machine. The app's
  * clock steps at most 0.1 s a frame (session.ts `startClock`), so where WebGL is drawn in software,
  * as on a CI runner (SwiftShader, about 0.5 s a frame), the look plays slower than the wall clock:
@@ -1141,9 +1210,9 @@ async function coldLoad(page, shoot) {
   if (!/frame 0\b/.test(clock)) {
     throw new Error(`expected the picture to rest on the first frame under the card: "${clock}"`);
   }
-  await card.getByRole("button", { name: "Start", exact: true }).click();
+  await card.getByRole("button", { name: "Watch the look", exact: true }).click();
   const started = Date.now();
-  const tourCard = page.getByRole("dialog").filter({ hasText: /^Quick tour · 1 of / });
+  const tourCard = page.getByRole("dialog").filter({ hasText: /^The look · 1 of / });
   await see(tourCard, "the quick tour's first step");
   await page.waitForTimeout(LOOK_S * 1000);
   await tourCard.getByRole("button", { name: "Next" }).click();
@@ -1165,11 +1234,12 @@ async function coldLoad(page, shoot) {
   await shoot(`at-${took}s`);
 }
 
-/** The quick tour (SPEC 7): five steps, each card on screen with no sideways scroll; the look in
- * his eyes, the run without it, the board, the Verifier refusing a wrong number, then Your call,
- * which Done leaves open. */
+/** Door 1's story, the quick tour (SPEC 7): five steps, each card on screen with no sideways
+ * scroll; the look in his eyes, the run without it, the board (with the scan story one link away),
+ * the Verifier refusing a wrong number, then the end card: exactly three choices, of which Your
+ * turn opens door 2's hub with the keyboard on its heading. */
 async function quickTour(page, shoot) {
-  const card = page.getByRole("dialog").filter({ hasText: /^Quick tour · \d+ of 5/ });
+  const card = page.getByRole("dialog").filter({ hasText: /^The look · \d+ of 5/ });
   const expect = [
     ["Watch the look", () => mainView(page, "eyes")],
     [
@@ -1203,6 +1273,10 @@ async function quickTour(page, shoot) {
             `expected the tour card clear of the board: it covers ${Math.round(cover)} px²`,
           );
         }
+        await see(
+          card.getByRole("button", { name: "Step through his looks" }),
+          "the scan story, one link away from the compare",
+        );
       },
     ],
     [
@@ -1213,10 +1287,18 @@ async function quickTour(page, shoot) {
           "the Verifier refusing the tour's wrong number",
         ),
     ],
-    ["Now make your call", () => see(page.getByRole("region", { name: "Your call" }), "Your call")],
+    [
+      "That's the look",
+      async () => {
+        const names = (await card.getByRole("button").allTextContents()).map((t) => t.trim());
+        if (names.join("|") !== "Your turn|For studios|Watch again") {
+          throw new Error(`expected the end card's three choices; got ${names.join(", ")}`);
+        }
+      },
+    ],
   ];
   for (const [k, [title, shows]] of expect.entries()) {
-    const step = card.filter({ hasText: new RegExp(`^Quick tour · ${k + 1} of 5`) });
+    const step = card.filter({ hasText: new RegExp(`^The look · ${k + 1} of 5`) });
     await see(step.getByRole("heading", { name: title }), `the quick tour's step ${k + 1}`);
     await shows();
     if (await page.locator(".moment-card").isVisible()) {
@@ -1226,13 +1308,37 @@ async function quickTour(page, shoot) {
     await shoot(`step-${k + 1}`);
     if (k < expect.length - 1) await step.getByRole("button", { name: "Next" }).click();
   }
-  await card.getByRole("button", { name: "Done" }).click();
+  await card.getByRole("button", { name: "Your turn" }).click();
   try {
     await card.waitFor({ state: "detached" });
   } catch {
-    throw new Error('expected "Done" to close the quick tour');
+    throw new Error('expected "Your turn" to close the story');
   }
-  await see(page.getByRole("region", { name: "Your call" }), "Your call, left open");
+  await yourTurn(page);
+  const focused = await page.evaluate(() => document.activeElement?.id);
+  if (focused !== "turn-title")
+    throw new Error(`expected the keyboard on Your turn, on ${focused}`);
+}
+
+/** Door 2, Your turn: its hub of three cards, the door marked; a card opens its mode as it is, and
+ * closing the mode comes back to the hub with the keyboard on that card. */
+async function yourTurn(page, { open = false } = {}) {
+  await doorTabs(page, "Your turn");
+  const hub = page.getByRole("region", { name: "Your turn." });
+  await see(hub, "Your turn's hub");
+  await see(hub.getByText("You are the player; see what he could see."), "its one line");
+  const cards = hub.locator(".turn-card .turn-card-title");
+  const titles = (await cards.allTextContents()).map((t) => t.trim());
+  if (titles.join("|") !== "Make his call|See through his eyes|Train your scanning") {
+    throw new Error(`expected the three cards; got ${titles.join(", ")}`);
+  }
+  if (!open) return;
+  await page.locator("#turn-call").click();
+  await see(page.getByRole("region", { name: "Your call" }), "Your call from its card");
+  await page.getByRole("button", { name: "Back to the replay" }).click();
+  await see(hub, "the hub again");
+  const focused = await page.evaluate(() => document.activeElement?.id);
+  if (focused !== "turn-call") throw new Error(`expected the keyboard on its card, on ${focused}`);
 }
 
 /** A tour card inside the screen, and no sideways scroll. */
@@ -1247,12 +1353,19 @@ async function cardOnScreen(page, card, k) {
   if (wide > w) throw new Error(`expected no sideways scroll at step ${k}: ${wide} px in ${w}`);
 }
 
-/** The intro card (SPEC 7): one line and Start, clear of the picture; the line-ups behind "Teams
- * and more". Shown, opened, closed with `button` ("Start" or "Skip"), then the page's main view. */
+/** The intro card (SPEC 7): one line and one primary button ("Watch the look", or "Watch the
+ * match"), clear of the picture; the line-ups behind "Teams and more". Shown, opened, closed with
+ * `button`, then the page's main view. */
 async function lineup(page, shoot, button, then) {
   const card = page.getByRole("dialog");
   await see(card, "the intro card");
-  await see(card.getByRole("button", { name: "Start", exact: true }), "Start on the card");
+  await see(
+    card.getByRole("button", { name: /^Watch the (look|match)$/ }),
+    "the card's one primary button",
+  );
+  if ((await card.locator(".btn-primary").count()) !== 1) {
+    throw new Error("expected one primary button on the intro card");
+  }
   await shoot("card");
   await card.getByRole("button", { name: "Teams and more" }).click();
   await see(
@@ -1297,7 +1410,7 @@ async function phone(page, check, { live = true } = {}) {
     const width = root.clientWidth;
     const found = [
       ...document.querySelectorAll(
-        ".stage-head :is(.brand, .live-chip, .live-status, button, select), .stage-run .seg",
+        ".stage-head :is(.brand, .live-chip, .live-status, button, select, a.door-tab), .stage-run .seg",
       ),
     ].filter((el) => {
       if (el.closest(".popover")) return false;

@@ -65,9 +65,18 @@ const STATES = [
     path: "?intro=0&autoplay=0",
     ready: async (p) => {
       await runSwitch(p);
-      await p.locator("#header-more").click(); // who is watching is in the header's ⋯
+      await p.locator("#settings").click(); // who is watching is in the header's Settings
       await p.getByRole("button", { name: /^Watching as/ }).click();
       await see(p.getByRole("dialog", { name: "Who is watching" }), "the viewer menu");
+    },
+  },
+  {
+    name: "hero-settings",
+    path: "?intro=0&autoplay=0",
+    ready: async (p) => {
+      await runSwitch(p);
+      await p.locator("#settings").click(); // the moment, follow, sound, view options, the tour
+      await see(p.getByRole("group", { name: "Settings" }), "the Settings menu");
     },
   },
   {
@@ -75,10 +84,31 @@ const STATES = [
     path: "?intro=0&autoplay=0",
     ready: async (p) => {
       await runSwitch(p);
-      await p.locator("#header-more").click(); // View options is in the header's ⋯
+      await p.locator("#settings").click(); // View options is in the header's Settings
       await p.getByRole("button", { name: "View options" }).click();
       await see(p.getByRole("group", { name: "View options" }), "the view options");
     },
+  },
+  {
+    name: "story-end",
+    path: "?tour=next",
+    ready: (p) =>
+      see(p.getByRole("button", { name: "For studios" }).last(), "the end card's choices"),
+  },
+  {
+    name: "door-turn",
+    path: "?door=turn",
+    ready: (p) => see(p.getByRole("region", { name: "Your turn." }), "Your turn's hub"),
+  },
+  {
+    name: "door-studios",
+    path: "?door=studios",
+    ready: (p) => see(p.getByRole("tablist", { name: "Studio steps" }), "For studios' steps"),
+  },
+  {
+    name: "door-studios-crew",
+    path: "?step=crew",
+    ready: (p) => see(p.getByRole("tabpanel", { name: /Behind the scenes/ }), "Behind the scenes"),
   },
   {
     name: "hero-playing",

@@ -43,7 +43,7 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
-  journey.set({ step: "event", seq: 0 });
+  journey.set({ step: "tactics", seq: 0 });
   window.history.replaceState(null, "", "/");
 });
 afterEach(() => {
@@ -204,7 +204,7 @@ describe("a cold visit", () => {
     expect(asked()).toHaveLength(3);
     expect(asked()[2].body).toMatchObject({ personas: ["analyst"], languages: ["zh"] });
     // Leave the step and come back: the breakdown is on screen, so nothing is asked.
-    for (const step of ["event", "content"] as const) {
+    for (const step of ["tactics", "content"] as const) {
       journey.set({ step, seq: 0 });
       for (let k = 0; k < 20; k++) await act(settle);
     }
@@ -219,8 +219,8 @@ describe("a cold visit", () => {
     expect(asked()).toHaveLength(3);
   });
 
-  it("the Event step asks for nothing", async () => {
-    const { asked } = await coldVisit("event");
+  it("the Tactics step asks for nothing", async () => {
+    const { asked } = await coldVisit("tactics");
     expect(asked()).toHaveLength(0);
   });
 });

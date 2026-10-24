@@ -48,8 +48,8 @@ the [failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=produce
   through his eyes, the coach gets his eyes with the board beside them and a teaching cue at the
   end, audio description a plain broadcast camera with the story told in order. Same verified
   claims, different lines, cameras and voice.
-- [The journey](https://ttesite1ff906.z14.web.core.windows.net/?tour=story): Event → Tactics →
-  Your view → Content → Value, or jump with `?step=content` (highlight, posts, data cards, the
+- [For studios](https://ttesite1ff906.z14.web.core.windows.net/?door=studios): Tactics → Content →
+  Value → Behind the scenes, or jump with `?step=content` (highlight, posts, data cards, the
   stadium's screens) and `?step=value`. Say at Value: "The audience and sponsor figures are
   simulated and labelled; nobody has watched this."
 - [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps): every

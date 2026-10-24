@@ -13,12 +13,15 @@ import { SessionContext } from "../session";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport } from "../testing";
 import { NO_CHOICES } from "./follow";
 import { personal } from "./state";
-import { usePersonalSync, YourViewLine, YourViewMenu } from "./YourView";
+import { usePersonalSync, YourViewLine, YourViewMenu, yourViewMenu } from "./YourView";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const mounted: { root: Root; container: HTMLElement }[] = [];
-beforeEach(() => personal.set(NO_CHOICES));
+beforeEach(() => {
+  personal.set(NO_CHOICES);
+  yourViewMenu.set({ open: false }); // page-wide (the old ?step=your-view opens it)
+});
 afterEach(() => {
   for (const { root, container } of mounted.splice(0)) {
     act(() => root.unmount());

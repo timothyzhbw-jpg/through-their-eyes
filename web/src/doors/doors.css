@@ -1,0 +1,222 @@
+/* The three doors (DoorPages.tsx): the header's tabs, Settings' button, door 2's hub and the pages
+   of doors 2 and 3. Quiet glass over the picture, as the header's other controls; the door on
+   screen is marked by a hairline and brighter text, the accent stays on the look. A door change is
+   a cut, never a fade. */
+
+.door-tabs ul {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.45);
+}
+.door-tab {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--chalk-2);
+  font: 500 14px/1 var(--font-body);
+  text-decoration: none;
+  white-space: nowrap;
+  text-shadow: var(--halo);
+}
+.door-tab:hover {
+  color: var(--chalk);
+  background: rgba(239, 237, 229, 0.08);
+}
+.door-tab[aria-current="page"] {
+  color: var(--chalk);
+  background: rgba(239, 237, 229, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.38);
+  text-shadow: none;
+}
+.header-start:empty {
+  display: none;
+}
+
+/* ⋯ Settings: the header's one menu */
+.settings-toggle {
+  gap: 8px;
+  background: rgba(8, 14, 11, 0.45);
+  box-shadow: none;
+}
+.settings-toggle:hover,
+.settings-toggle[aria-expanded="true"] {
+  background: rgba(239, 237, 229, 0.12);
+}
+/* the moment picker: the links as a list */
+.more-panel .moment-chips ul {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.more-panel .moment-chip {
+  display: flex;
+  width: 100%;
+  height: 38px;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 14px;
+}
+.more-panel .moment-chip:hover {
+  background: rgba(239, 237, 229, 0.08);
+  box-shadow: none;
+}
+.more-panel .match-picker {
+  margin: 4px 14px 2px;
+}
+
+/* Doors 2 and 3: the header in the page's flow, then the door's page */
+.door-screen {
+  min-height: 100svh;
+}
+.door-screen > .stage-head {
+  position: relative;
+}
+.door-main {
+  padding-top: 72px;
+}
+.door-head {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 820px;
+}
+.door-head h2 {
+  margin: 0;
+  font: 300 clamp(44px, 5vw, 84px) / 0.95 var(--font-display);
+  letter-spacing: -0.04em;
+}
+.door-head h2:focus {
+  outline: none; /* focused from code when a door is opened from the end card, never by Tab */
+}
+.door-head .lede {
+  margin: 0;
+  font: 400 clamp(19px, 1.7vw, 24px) / 1.42 var(--font-display);
+  color: #d9d7cf;
+  text-wrap: pretty;
+}
+#moment-title:focus {
+  outline: none;
+}
+
+/* Door 2's hub: three cards, each one button */
+.turn-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 56px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.turn-card {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  padding: 28px;
+  border-radius: var(--r-media);
+  background: rgba(239, 237, 229, 0.04);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  color: var(--chalk);
+  text-align: left;
+}
+.turn-card:hover:not(:disabled) {
+  background: rgba(239, 237, 229, 0.08);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+.turn-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.turn-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font: 400 clamp(24px, 2.2vw, 30px) / 1.1 var(--font-display);
+}
+.turn-card-title svg {
+  color: var(--floodlight);
+}
+.turn-card-line {
+  font: 400 16px/1.45 var(--font-body);
+  color: var(--chalk-2);
+}
+
+/* Door 3: the studios' steps, each ending on its one action */
+.door-studios .journey {
+  margin-top: 56px;
+}
+.journey-next {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 56px;
+}
+.journey-end {
+  margin: 56px 0 0;
+}
+
+/* the quick tour's end card: its three choices are its only buttons */
+.tour-doors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .door-main {
+    padding-top: 32px;
+  }
+  .turn-cards {
+    margin-top: 32px;
+  }
+  .turn-card {
+    min-height: 0;
+    padding: 22px;
+  }
+  .journey-next {
+    justify-content: stretch;
+  }
+  .journey-next .btn {
+    width: 100%;
+  }
+}
+
+/* A phone: the brand on its own line, the doors and Settings under it; Settings shows its dots
+   alone (its name stays its accessible name). */
+@media (max-width: 480px) {
+  .door-tabs {
+    min-width: 0;
+  }
+  .door-tab {
+    padding: 0 11px;
+    font-size: 13px;
+  }
+  .settings-toggle {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .settings-toggle .btn-label {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .door-tab {
+    padding: 0 8px;
+  }
+}

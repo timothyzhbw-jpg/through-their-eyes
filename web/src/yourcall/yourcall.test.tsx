@@ -19,6 +19,7 @@ import { applyDeepLink, parseDeepLink } from "../deeplink";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
+import { doors } from "../doors/state";
 import {
   API,
   breakdownResponse,
@@ -63,6 +64,7 @@ afterEach(() => {
     act(() => root.unmount());
     container.remove();
   }
+  doors.set({ door: "look", seq: 0 });
   vi.restoreAllMocks();
 });
 
@@ -135,48 +137,49 @@ describe("Your call: opening", () => {
     ]);
   });
 
-  it("returns focus to the header pill on close, and Escape on that pill closes it", () => {
+  it("opens from Your turn's card and gives the focus back to it on close, however it closes", () => {
+    act(() => doors.set({ door: "turn", seq: 0 }));
     const session = offline();
     const page = mount(session, <App autoplay={false} />);
+    const card = () => page.querySelector<HTMLButtonElement>("#turn-call");
     const pill = () => page.querySelector<HTMLButtonElement>("#your-call-open");
-    click(button(page, "Make his call"));
+    click(card()!);
     key(page.querySelector(".yc-card")!, "Escape");
     expect(yourCallOf(session).state.get().step).toBe("closed");
-    expect(document.activeElement).toBe(pill());
+    expect(document.activeElement).toBe(card());
 
-    click(pill()!);
+    click(card()!);
     click(button(page, "Back to the replay"));
-    expect(document.activeElement).toBe(pill());
+    expect(document.activeElement).toBe(card());
 
-    click(pill()!);
+    click(card()!);
     click(pill()!); // the pressed pill in the Your call header
     expect(yourCallOf(session).state.get().step).toBe("closed");
-    expect(document.activeElement).toBe(pill());
+    expect(document.activeElement).toBe(card());
 
-    click(pill()!);
+    click(card()!);
     const openPill = pill()!;
     act(() => openPill.focus());
     expect(document.activeElement).toBe(openPill);
     key(openPill, "Escape");
     expect(yourCallOf(session).state.get().step).toBe("closed");
-    expect(document.activeElement).toBe(pill());
+    expect(document.activeElement).toBe(card());
   });
 
-  it("in App it takes the live screen's place and hides the moment below until closed", () => {
+  it("in App it takes the page's place and hides the moment until closed, back on Your turn", () => {
+    act(() => doors.set({ door: "turn", seq: 0 }));
     const session = offline();
     const page = mount(session, <App autoplay={false} />);
-    const live = () => page.querySelector('section.stage[aria-label="Live screen"]');
+    const hub = () => page.querySelector("section.door-turn");
     const screen = () => page.querySelector('section.yc-screen[aria-label="Your call"]');
-    expect(live()).not.toBeNull();
+    expect(hub()).not.toBeNull();
     expect(screen()).toBeNull();
-    expect(page.querySelector("main.moment")).not.toBeNull();
-    // The moment head's second action opens it, as does the header button.
-    click(button(page, "Make his call"));
+    click(page.querySelector<HTMLButtonElement>("#turn-call")!);
     expect(yourCallOf(session).state.get().step).toBe("deciding");
-    expect(live()).toBeNull();
+    expect(hub()).toBeNull();
     expect(page.querySelector("main.moment")).toBeNull();
     expect(page.querySelector(".stage-director, .stage-caption, .transport")).toBeNull();
-    // The same header as the live screen, with the pressed Your call button on the right.
+    // The brand, with the pressed Your call button on the right.
     const head = screen()!.querySelector("header.stage-head")!;
     expect(textOf(head.querySelector(".brand h1"))).toBe("Through Their Eyes");
     // No live pill: the stream would play unseen under Your call (in a match: the way back).
@@ -185,11 +188,8 @@ describe("Your call: opening", () => {
     expect([textOf(pressed), pressed.getAttribute("aria-pressed")]).toEqual(["Your call", "true"]);
     expect(screen()!.querySelector(".yc-card")).not.toBeNull();
     click(button(page, "Back to the replay"));
-    expect(live()).not.toBeNull();
-    expect(page.querySelector("main.moment")).not.toBeNull();
-    expect(live()!.querySelector(".header-end .yc-open")!.getAttribute("aria-pressed")).toBe(
-      "false",
-    );
+    expect(hub()).not.toBeNull();
+    expect(page.querySelector("#your-call-open")).toBeNull(); // no Your call in the header
   });
 });
 

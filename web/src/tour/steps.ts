@@ -1,11 +1,12 @@
-// The tours' step lists (steps.json, SPEC 7): the quick tour, a first-time visitor's five steps,
-// the full judge tour, and the Full story (one moment through the journey's five steps, journey/).
-// Their schema, which steps this page can show, and each step's words with
-// their slots filled from the moment's own data. A step this page cannot show (no live service, a
-// hero with no counterfactual, a stitched match) is left out, never shown broken.
+// The tours' step lists (steps.json, SPEC 7): the quick tour (door 1's story, The look, ending on
+// a card with the other two doors), the full judge tour (the three doors in order), and the studios'
+// walk (door 3's steps, journey/). Their schema, which steps this page can show, and each step's
+// words with their slots filled from the moment's own data. A step this page cannot show (no live
+// service, a hero with no counterfactual, a stitched match) is left out, never shown broken.
 
 import { z } from "zod";
 import { runLabels } from "../data/hero";
+import { DOORS } from "../doors/doors";
 import { JOURNEY_STEPS } from "../journey/steps";
 import { shortName } from "../data/roster";
 import type { ViewSession } from "../session";
@@ -41,14 +42,17 @@ export const ENTERS = [
 ] as const;
 /** The verified lines a quick-tour step's panel carries (StepLines.tsx). */
 export const SAYS = ["look", "without", "compare"] as const;
-/** The tour card's own button for a step, for anything that calls the service (TourActs.tsx). */
+/** The tour card's own buttons for a step (TourActs.tsx): anything that calls the service; the
+ * quick tour's look again and its link to the scan story; and its end card's three choices
+ * (`doors`: the card's only buttons). */
 export const ACTS = [
   "checkWrongNumber",
   "sound",
   "drill",
   "openMatch",
   "replayLook",
-  "fullTour",
+  "scanSteps",
+  "doors",
 ] as const;
 
 export type Condition = (typeof CONDITIONS)[number];
@@ -70,6 +74,7 @@ const Step = z.strictObject({
   target: z.union([z.string().min(1), z.array(z.string().min(1)).min(1), z.null()]),
   dim: z.boolean(), // darken the page around the target; off where the picture is the point
   focus: z.enum(["card", "app"]).optional(), // who takes the keyboard on arrival (default: card)
+  door: z.enum(DOORS).optional(), // the door it opens on arrival (doors/); none: the page stays
   enter: z.enum(ENTERS),
   act: z.enum(ACTS).optional(),
   say: z.enum(SAYS).optional(), // the verified lines its panel carries
@@ -80,9 +85,9 @@ const Step = z.strictObject({
 
 export const StepList = z.strictObject({
   about: z.string(),
-  steps: z.array(Step).min(1), // the full judge tour
-  quick: z.array(Step).min(1), // the quick tour
-  story: z.array(Step).min(1), // the Full story: one moment through the journey's five steps
+  steps: z.array(Step).min(1), // the full judge tour: the three doors in order
+  quick: z.array(Step).min(1), // the quick tour: door 1's story
+  story: z.array(Step).min(1), // the studios' walk: door 3's steps
 });
 
 export type TourStep = z.infer<typeof Step>;
@@ -95,6 +100,16 @@ export const QUICK_STEPS: TourStep[] = LISTS.quick;
 export const QUICK_IDS: string[] = QUICK_STEPS.map((s) => s.id);
 export const STORY_STEPS: TourStep[] = LISTS.story;
 export const STORY_IDS: string[] = STORY_STEPS.map((s) => s.id);
+
+/** Step ids from before the doors, and the step each lands on now: the old Full story's Event
+ * steps are door 1's story, its Your view (now in Settings) gives way to the studios' first step,
+ * and the quick tour's Your call step is the full tour's. */
+export const LEGACY_STEP_IDS: Record<string, string> = {
+  "story-event": "look",
+  "story-without": "remove",
+  "story-view": "story-tactics",
+  call: "yourcall",
+};
 
 /** A tour's steps, all of them, in order. */
 export const stepsOf = (kind: TourKind): TourStep[] =>

@@ -19,6 +19,7 @@ import {
   envOf,
   indexOf,
   kindOf,
+  LEGACY_STEP_IDS,
   QUICK_IDS,
   QUICK_STEPS,
   quickTourFits,
@@ -26,6 +27,8 @@ import {
   STEP_IDS,
   StepList,
   STEPS,
+  STORY_IDS,
+  STORY_STEPS,
   wordsOf,
   type TourEnv,
 } from "./steps";
@@ -37,28 +40,37 @@ const online = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, 
 const ids = (env: TourEnv) => resolveSteps(env).map((s) => s.id);
 
 describe("the step list", () => {
-  it("parses, with unique ids across both tours", () => {
+  it("parses, with unique ids across the tours, none an old id that now lands elsewhere", () => {
     expect(() => StepList.parse(stepsJson)).not.toThrow();
-    const all = [...STEP_IDS, ...QUICK_IDS];
+    const all = [...STEP_IDS, ...QUICK_IDS, ...STORY_IDS];
     expect(new Set(all).size).toBe(all.length);
     expect(QUICK_IDS.map(kindOf)).toEqual(["quick", "quick", "quick", "quick", "quick"]);
     expect(STEP_IDS.map(kindOf).every((k) => k === "full")).toBe(true);
+    expect(STORY_IDS.map(kindOf).every((k) => k === "story")).toBe(true);
+    for (const [old, now] of Object.entries(LEGACY_STEP_IDS)) {
+      expect(all, old).not.toContain(old);
+      expect(all, old).toContain(now);
+    }
   });
 
-  it("covers the signature features in order and ends on a closing card", () => {
+  it("walks the three doors in order, then the match, and ends on a closing card", () => {
     expect(STEP_IDS).toEqual([
       "pov",
       "without",
       "evidence",
       "tamper",
+      "language",
       "yourcall",
       "eyes",
-      "language",
+      "studios",
       "producer",
       "match",
       "recap",
       "end",
     ]);
+    const doors = STEPS.map((s) => s.door).filter(Boolean);
+    expect([...new Set(doors)]).toEqual(["look", "turn", "studios"]);
+    expect(STEPS.find((s) => s.id === "producer")!.journey).toBe("crew");
     expect(STEPS.at(-1)!.target).toBeNull();
   });
 
@@ -69,7 +81,7 @@ describe("the step list", () => {
   });
 
   it("says one plain line per step: no digits, no player ids, no markup", () => {
-    for (const s of [...STEPS, ...QUICK_STEPS]) {
+    for (const s of [...STEPS, ...QUICK_STEPS, ...STORY_STEPS]) {
       for (const text of [s.title, s.caption, ...(s.variants ?? []).map((v) => v.caption)]) {
         expect(text, s.id).not.toMatch(/\d/);
         expect(text, s.id).not.toMatch(/[<>\n]/);
@@ -92,22 +104,26 @@ describe("the step list", () => {
   });
 });
 
-describe("the quick tour", () => {
-  it("is one path in five steps: the look, without it, the outcomes compared, every number checked, your call", () => {
-    expect(QUICK_IDS).toEqual(["look", "remove", "compare", "verify", "call"]);
+describe("the quick tour: door 1's story", () => {
+  it("is one path: the look, without it, the outcomes compared, every number checked, the doors", () => {
+    expect(QUICK_IDS).toEqual(["look", "remove", "compare", "verify", "next"]);
     const env = envOf(offline());
     expect(QUICK_STEPS.map((s) => wordsOf(s, env).title)).toEqual([
       "Watch the look",
       "Now remove it",
       "Compare the outcomes",
       "Every number is checked",
-      "Now make your call",
+      "That's the look",
     ]);
     expect(wordsOf(QUICK_STEPS[0], env).caption).toContain("J. Ferriday's view");
     expect(wordsOf(QUICK_STEPS[1], env).caption).toContain("re-simulated without the look.");
+    expect(QUICK_STEPS.every((s) => s.door === "look")).toBe(true);
+    // The compare step links to the scan story; the last step is the end card with the doors.
+    expect(QUICK_STEPS.find((s) => s.id === "compare")!.act).toBe("scanSteps");
+    expect(QUICK_STEPS.at(-1)!.act).toBe("doors");
   });
 
-  it("takes under a minute", () => {
+  it("takes about a minute", () => {
     expect(QUICK_STEPS.reduce((t, s) => t + s.hold, 0)).toBeLessThanOrEqual(60);
   });
 
@@ -117,17 +133,16 @@ describe("the quick tour", () => {
       "look",
       "remove",
       "compare",
-      "call",
+      "next",
     ]);
     expect(resolveSteps(envOf(online()), QUICK_STEPS).map((s) => s.id)).toEqual(QUICK_IDS);
     expect(quickTourFits(envOf(offline()))).toBe(true);
-    // No bundled what-ifs: Your call still opens (its options say they were not re-simulated).
     const plain = envOf(createSession(hero, EXAMPLE_PLAN, payloadJson));
     expect(resolveSteps(plain, QUICK_STEPS).map((s) => s.id)).toEqual([
       "look",
       "remove",
       "compare",
-      "call",
+      "next",
     ]);
     expect(quickTourFits(plain)).toBe(true);
     const press = envOf(
@@ -145,10 +160,18 @@ describe("the quick tour", () => {
   it("lands on the asked step of its own list", () => {
     const steps = resolveSteps(envOf(createSession(hero, EXAMPLE_PLAN, payloadJson)), QUICK_STEPS);
     expect(steps[indexOf(steps, "compare")].id).toBe("compare");
-    expect(steps[indexOf(steps, "call")].id).toBe("call");
-    // No service: verify is left out, and the next step this page shows is Your call.
+    expect(steps[indexOf(steps, "next")].id).toBe("next");
+    // No service: verify is left out, and the next step this page shows is the end card.
     const shown = resolveSteps(envOf(offline()), QUICK_STEPS);
-    expect(shown[indexOf(shown, "verify")].id).toBe("call");
+    expect(shown[indexOf(shown, "verify")].id).toBe("next");
+  });
+});
+
+describe("the studios' walk", () => {
+  it("opens door 3's four steps in order", () => {
+    expect(STORY_IDS).toEqual(["story-tactics", "story-content", "story-value", "story-crew"]);
+    expect(STORY_STEPS.map((s) => s.journey)).toEqual(["tactics", "content", "value", "crew"]);
+    expect(STORY_STEPS.every((s) => s.door === "studios")).toBe(true);
   });
 });
 
@@ -160,6 +183,7 @@ describe("the steps a page can show", () => {
       "evidence",
       "yourcall",
       "eyes",
+      "studios",
       "end",
     ]);
   });
@@ -180,9 +204,10 @@ describe("the steps a page can show", () => {
       "without",
       "evidence",
       "tamper",
+      "language",
       "yourcall",
       "eyes",
-      "language",
+      "studios",
       "producer",
       "match",
       "end",
@@ -212,7 +237,7 @@ describe("the steps a page can show", () => {
     const steps = resolveSteps(envOf(offline())); // no tamper, language or producer
     expect(steps[indexOf(steps, "evidence")].id).toBe("evidence");
     expect(steps[indexOf(steps, "tamper")].id).toBe("yourcall");
-    expect(steps[indexOf(steps, "language")].id).toBe("end");
+    expect(steps[indexOf(steps, "language")].id).toBe("yourcall");
     expect(steps[indexOf(steps, "producer")].id).toBe("end");
     expect(steps[indexOf(steps, "eyes")].id).toBe("eyes");
     expect(indexOf(steps, null)).toBe(0);
@@ -236,6 +261,15 @@ describe("the tour link", () => {
     expect(link.intro).toBe(false);
     expect(link.autoplay).toBe(false);
     expect(parseDeepLink("?tour=compare").tour).toBe("compare");
+  });
+
+  it("?tour=story walks door 3; a step id from before the doors lands where it went", () => {
+    expect(parseDeepLink("?tour=story").tour).toBe("story-tactics");
+    expect(parseDeepLink("?tour=story-event").tour).toBe("look");
+    expect(parseDeepLink("?tour=story-without").tour).toBe("remove");
+    expect(parseDeepLink("?tour=story-view").tour).toBe("story-tactics");
+    expect(parseDeepLink("?tour=call").tour).toBe("yourcall");
+    expect(parseDeepLink("?tour=story-event").warnings).toEqual([]);
   });
 
   it("?tour=<step> starts there; anything else is ignored and logged", () => {

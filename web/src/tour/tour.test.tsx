@@ -42,6 +42,8 @@ import { tourClaim } from "./actions";
 import { resolveSteps, envOf, targetOf, QUICK_STEPS, STEPS } from "./steps";
 import { recapFixture } from "../recap/fixture";
 import { closeTour, startTour, tour } from "./tourState";
+import { doors } from "../doors/state";
+import { stepThroughOf } from "../steps/controller";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -72,6 +74,7 @@ afterEach(() => {
     container.remove();
   }
   intro.set({ open: false });
+  doors.set({ door: "look", seq: 0 });
   vi.restoreAllMocks();
 });
 
@@ -173,13 +176,13 @@ describe("the quick tour", () => {
       await settle();
     });
 
-  it("walks four steps, each on the app's own controls, every target found", async () => {
+  it("walks door 1's story on the app's own controls, every target found, to the end card", async () => {
     const session = offline();
     mount(session);
     await quick();
     expect(stepId()).toBe("look");
     expect(document.querySelector(".tour")?.getAttribute("data-kind")).toBe("quick");
-    expect(textOf(card())).toMatch(/^Quick tour · 1 of 4\s*Watch the look/);
+    expect(textOf(card())).toMatch(/^The look · 1 of 4\s*Watch the look/);
     // The look in his eyes, slowed around the scan, pausing a little after his decision.
     const look = session.playback.get();
     expect(look).toMatchObject({
@@ -213,18 +216,72 @@ describe("the quick tour", () => {
     expect(compare.frame).toBeGreaterThanOrEqual(
       Math.min(factual.action!.end!, counterfactual.action!.end!),
     );
+    // The scan story, one secondary link away (not in the header).
+    const link = buttonIn(card(), "Step through his looks")!;
+    expect(link.classList.contains("btn-quiet")).toBe(true);
 
-    await next(); // your call
-    expect(stepId()).toBe("call");
-    expect(yourCallOf(session).state.get().step).toBe("deciding");
-    expect(document.querySelector(".yc-view")).not.toBeNull();
-    expect(textOf(card())).toContain("Quick tour · 4 of 4");
-    expect(buttonIn(card(), "Done")).toBeDefined();
+    await next(); // the end card (offline there is no check to run)
+    expect(stepId()).toBe("next");
+    expect(textOf(card())).toContain("The look · 4 of 4");
+    expect(yourCallOf(session).state.get().step).toBe("closed");
+    // Exactly three choices: the other two doors and the look again; nothing else to press.
+    const shown = [...card()!.querySelectorAll<HTMLButtonElement>("button")].filter(
+      (b) => !b.closest("[hidden]"),
+    );
+    expect(shown.map(textOf)).toEqual(["Your turn", "For studios", "Watch again"]);
+    expect(card()!.querySelectorAll(".btn-primary")).toHaveLength(1);
+    expect(document.activeElement).toBe(shown[0]);
 
-    // On to the full tour from its last step.
-    await click(buttonIn(card(), "Full tour · 90 s"));
-    expect(tour.get()).toMatchObject({ open: true, kind: "full" });
-    expect(stepId()).toBe("pov");
+    // Watch again: the story from its first step.
+    await click(buttonIn(card(), "Watch again"));
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
+    expect(stepId()).toBe("look");
+  });
+
+  it("ends on the doors: Your turn and For studios open theirs, the keyboard on its heading", async () => {
+    for (const [name, door, title] of [
+      ["Your turn", "turn", "turn-title"],
+      ["For studios", "studios", "studios-title"],
+    ] as const) {
+      const session = offline();
+      const container = mount(session);
+      await act(async () => {
+        startTour("next", "quick");
+        await settle();
+      });
+      await click(buttonIn(card(), name));
+      await act(async () => {
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+      });
+      expect(tour.get().open, name).toBe(false);
+      expect(doors.get().door, name).toBe(door);
+      expect(new URLSearchParams(window.location.search).get("door"), name).toBe(door);
+      expect(container.querySelector(`#${title}`), name).not.toBeNull();
+      expect(document.activeElement?.id, name).toBe(title);
+      expect(container.querySelector(".door-tabs [aria-current=page]")?.textContent).toBe(name);
+      act(() => mounted.pop()!.root.unmount());
+      container.remove();
+      act(() => doors.set({ door: "look", seq: 0 }));
+    }
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("leaves for the scan story from the compare step and comes back to it, on the link", async () => {
+    const session = offline();
+    const container = mount(session);
+    await act(async () => {
+      startTour("compare", "quick");
+      await settle();
+    });
+    await click(buttonIn(card(), "Step through his looks"));
+    expect(tour.get().open).toBe(false);
+    expect(stepThroughOf(session).state.get().open).toBe(true);
+    expect(container.querySelector(".ss-screen")).not.toBeNull();
+    await click(buttonIn(container, "Back to the replay"));
+    await act(settle);
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
+    expect(stepId()).toBe("compare");
+    expect(document.activeElement?.id).toBe("tour-scan-steps");
   });
 
   it("is the one panel: the moment card, the HUD row and the caption stand down", async () => {
@@ -351,7 +408,20 @@ describe("every step resolves on the hero moment", () => {
       if (id === "end") break;
       await next();
     }
-    expect(seen).toEqual(["pov", "without", "evidence", "yourcall", "eyes", "end"]);
+    expect(seen).toEqual(["pov", "without", "evidence", "yourcall", "eyes", "studios", "end"]);
+  });
+
+  it("walks the three doors in order: each step opens its own", async () => {
+    const session = offline();
+    mount(session);
+    await start();
+    const seen: string[] = [];
+    while (stepId() !== "end") {
+      const door = doors.get().door;
+      if (seen.at(-1) !== door) seen.push(door);
+      await next();
+    }
+    expect(seen).toEqual(["look", "turn", "studios"]);
   });
 
   it("each step does what it says with the app's own controls", async () => {
@@ -385,10 +455,17 @@ describe("every step resolves on the hero moment", () => {
     expect(eyesOf(session)).toBe("looking");
     expect(stepId()).toBe("eyes");
 
-    await next(); // the end: Take his eyes is closed again, the live screen is back
+    await next(); // For studios: Take his eyes is closed again, the studios' first step open
+    expect(stepId()).toBe("studios");
     expect(eyesOf(session)).toBe("closed");
     expect(yourCallOf(session).state.get().step).toBe("closed");
-    expect(document.querySelector(".stage-run")).not.toBeNull();
+    expect(doors.get().door).toBe("studios");
+    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("tactics");
+    expect(targetOf(STEPS.find((s) => s.id === "studios")!)).not.toBeNull();
+
+    await next(); // the end
+    expect(stepId()).toBe("end");
+    expect(document.querySelector(".door-tabs")).not.toBeNull(); // the way back to any door
   });
 
   it("online: the wrong number, the language and the failure drill go to the service", async () => {
@@ -411,25 +488,33 @@ describe("every step resolves on the hero moment", () => {
     expect(verify.body).toMatchObject({ claim: "cf_value", slot: "dxt", value: 0.17 });
     expect(textOf(document.querySelector(".tamper-result"))).toContain("Refuted");
 
+    await next(); // another audience in another language: a casual fan, in Chinese, at once
+    expect(stepId()).toBe("language");
+    expect(session.breakdown.get()).toMatchObject({ persona: "casual", language: "zh" });
+    const asked = fetch.calls.filter((c) => c.path === "/api/breakdowns").at(-1)!;
+    expect(asked.body).toMatchObject({ personas: ["casual"], languages: ["zh"] });
+    // In Settings, which the step opens to point at it.
+    const viewer = document.querySelector(".viewer-toggle")!;
+    expect(viewer.closest(".more-panel")).not.toBeNull();
+    expect(textOf(viewer)).toContain("Casual fan · 中文");
+    await click(buttonIn(card(), "Turn the sound on"));
+    expect(session.voice.state.get().on).toBe(true);
+    expect(buttonIn(card(), "Turn the sound off")).toBeDefined();
+
     await next(); // Your call
+    expect(doors.get().door).toBe("turn");
     const sent = fetch.calls.length;
     await next(); // Take his eyes: its looks are a static file, nothing goes to the service
     expect(stepId()).toBe("eyes");
     expect(eyesOf(session)).toBe("choosing");
     expect(fetch.calls).toHaveLength(sent);
-    await next(); // another audience in another language: a casual fan, in Chinese, at once
-    expect(stepId()).toBe("language");
-    expect(eyesOf(session)).toBe("closed");
-    expect(session.breakdown.get()).toMatchObject({ persona: "casual", language: "zh" });
-    const asked = fetch.calls.filter((c) => c.path === "/api/breakdowns").at(-1)!;
-    expect(asked.body).toMatchObject({ personas: ["casual"], languages: ["zh"] });
-    expect(textOf(document.querySelector(".viewer-toggle"))).toContain("Casual fan · 中文");
-    await click(buttonIn(card(), "Turn the sound on"));
-    expect(session.voice.state.get().on).toBe(true);
-    expect(buttonIn(card(), "Turn the sound off")).toBeDefined();
 
-    await next(); // the Producer: the Telestrator is picked, nothing runs until asked
+    await next(); // For studios
+    expect(stepId()).toBe("studios");
+    expect(eyesOf(session)).toBe("closed");
+    await next(); // Behind the scenes: the Telestrator is picked, nothing runs until asked
     expect(stepId()).toBe("producer");
+    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("crew");
     expect(session.producer.get().down).toEqual(["telestrator"]);
     expect(fetch.calls.some((c) => (c.body as { fail?: unknown })?.fail)).toBe(false);
     await click(buttonIn(card(), "Run the drill"));
@@ -469,8 +554,7 @@ describe("every step resolves on the hero moment", () => {
     // The run switch is locked until the stream detects the moment (it has not).
     session.controls.setMode("counterfactual");
     expect(session.playback.get().mode).toBe("factual");
-    await click(container.querySelector<HTMLButtonElement>("#header-more")!);
-    await click(buttonIn(container.querySelector(".more-panel"), "Quick tour"));
+    await click(buttonIn(container.querySelector(".moment-cta"), "Watch the look"));
     expect(session.playback.get().live).toBe(false); // the tour's look leaves the stream
     await next();
     expect(stepId()).toBe("remove");
@@ -518,7 +602,7 @@ describe("moving and leaving", () => {
   it("Back to Take his eyes opens it again; Back from it closes it for Your call", async () => {
     const session = offline();
     mount(session);
-    await start("end");
+    await start("studios");
     expect(eyesOf(session)).toBe("closed");
     await click(buttonIn(card(), "Back"));
     expect(stepId()).toBe("eyes");
@@ -539,7 +623,7 @@ describe("moving and leaving", () => {
 
   it("Skip and Escape close it at any step, and the app stays usable", async () => {
     for (const how of ["skip", "escape"] as const) {
-      for (const id of ["pov", "without", "evidence", "yourcall", "eyes", "end"]) {
+      for (const id of ["pov", "without", "evidence", "yourcall", "eyes", "studios", "end"]) {
         const session = offline();
         const container = mount(session);
         await start(id);
@@ -559,12 +643,15 @@ describe("moving and leaving", () => {
           await click(buttonIn(container.querySelector(".te-card"), "Back to the replay"));
           expect(eyesOf(session)).toBe("closed");
         }
+        // The door the step left is on screen; its tab takes the viewer back to the picture.
+        await click(buttonIn(container.querySelector(".door-tabs"), "The look"));
         await click(buttonIn(container.querySelector(".stage-run"), "With the look"));
         expect(session.playback.get().mode).toBe("factual");
         act(() => mounted.pop()!.root.unmount());
         container.remove();
       }
     }
+    window.history.replaceState(null, "", "/");
   });
 
   it("the end offers to start again", async () => {
@@ -674,7 +761,7 @@ describe("a stitched match", () => {
     intro.set({ open: true });
     const m = match();
     const container = mount(m, <MatchApp session={m} autoplay={false} />);
-    expect(buttonIn(container, "Start")).toBeDefined();
+    expect(buttonIn(container, "Watch the match")).toBeDefined();
     expect(buttonIn(container, "Take the 90-second tour")).toBeUndefined();
   });
 
@@ -722,8 +809,10 @@ describe("keyboard and motion", () => {
     expect(card()!.contains(document.activeElement)).toBe(false);
     expect(document.activeElement).toBe(container.querySelector("#te-title"));
     await next();
-    // Closing Take his eyes hands its pill the focus; the tour's card takes it after that.
-    expect(textOf(document.activeElement)).toBe("Done");
+    // Closing Take his eyes hands its card the focus; the tour's card takes it after that.
+    expect(stepId()).toBe("studios");
+    expect(textOf(document.activeElement)).toBe("Next");
+    expect(card()!.contains(document.activeElement)).toBe(true);
   });
 
   it("leaves the keyboard with Take his eyes on its step: its arrow keys pick, the tour stays", async () => {
@@ -782,31 +871,36 @@ describe("keyboard and motion", () => {
 });
 
 describe("starting it", () => {
-  it("from the story's button", async () => {
+  it("door 1's story from its button under the picture", async () => {
     const container = mount(offline());
-    await click(buttonIn(container.querySelector(".moment-cta"), "Full tour · 90 s"));
-    expect(stepId()).toBe("pov");
-  });
-
-  it("from the header's More on the live screen: the quick tour, and the menu closes", async () => {
-    const container = mount(offline());
-    expect(buttonIn(container.querySelector(".moment-card"), "Quick tour")).toBeUndefined();
-    const more = container.querySelector<HTMLButtonElement>("#header-more")!;
-    await click(more);
-    expect(more.getAttribute("aria-expanded")).toBe("true");
-    await click(buttonIn(container.querySelector(".more-panel"), "Quick tour"));
+    await click(buttonIn(container.querySelector(".moment-cta"), "Watch the look"));
     expect(stepId()).toBe("look");
     expect(tour.get().kind).toBe("quick");
-    expect(more.getAttribute("aria-expanded")).toBe("false"); // its card is the one panel
+  });
+
+  it("the full tour from Settings: the menu closes, and the keyboard goes back to Settings after", async () => {
+    const container = mount(offline());
+    expect(buttonIn(container.querySelector(".moment-card"), "Full tour · 90 s")).toBeUndefined();
+    const settings = container.querySelector<HTMLButtonElement>("#settings")!;
+    await click(settings);
+    expect(settings.getAttribute("aria-expanded")).toBe("true");
+    const full = buttonIn(container.querySelector(".more-panel"), "Full tour · 90 s")!;
+    act(() => full.focus());
+    await click(full);
+    expect(stepId()).toBe("pov");
+    expect(tour.get().kind).toBe("full");
+    expect(settings.getAttribute("aria-expanded")).toBe("false"); // its card is the one panel
+    press("Escape", card()!);
+    expect(tour.get().open).toBe(false);
+    expect(document.activeElement).toBe(settings);
   });
 
   it("from the intro card, which closes", async () => {
     intro.set({ open: true });
     const container = mount(offline(), <IntroCard />);
-    await click(buttonIn(container, "Teams and more"));
-    await click(buttonIn(container, "Full tour · 90 s"));
+    await click(buttonIn(container, "Watch the look"));
     expect(intro.get().open).toBe(false);
-    expect(tour.get()).toMatchObject({ open: true });
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
   });
 
   it("not at all while closed: nothing of it is on the page", () => {
