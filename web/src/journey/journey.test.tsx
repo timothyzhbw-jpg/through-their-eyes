@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
-// The studios' journey (SPEC 7, door 3): four steps in order, each ending on the next, moved by
-// arrow keys and opened by ?step=; each step opens its panel for the moment on screen; the
-// demo-data badge is one string wherever audience or sponsor figures appear, and the Value step
-// separates them from match facts; the studios' walk opens the four steps in about a minute. Door
-// 1's compare (the old Event step) tells both runs from their verified lines.
+// For studios (SPEC 7, door 3): four solutions for the league in order (tactical broadcast,
+// personalised commentary, automated highlights, the stadium), then Value; each with its value
+// line, its feature, a "Business value" line and one primary action, the next section under it;
+// moved by arrow keys and opened by ?step= (the old step ids mapped); the demo-data badge is one
+// string wherever audience or sponsor figures appear, and Value puts the league's revenue levers
+// before the demo KPIs, with one measured number, marked; the studios' walk opens the five
+// sections in about a minute. Door 1's compare (the old Event step) tells both runs from their
+// verified lines.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,16 +26,19 @@ import { settle } from "../testing";
 import { STORY_IDS, STORY_STEPS, STEP_IDS, QUICK_IDS, kindOf, secondsOf } from "../tour/steps";
 import { closeTour, startTour } from "../tour/tourState";
 import { Tour } from "../tour/Tour";
+import { settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { DEMO_DATA, FACTS_VS_FIGURES } from "./DemoBadge";
-import { ComparePanel, Journey } from "./Journey";
+import { ASK_RUN_ID, ComparePanel, Journey } from "./Journey";
+import { COST_PER_VERIFIED_BREAKDOWN } from "./measured";
 import { journey } from "./state";
 import { eventIndex, STADIUM_MOMENTS, stadiumEventFor } from "./stadium";
 import {
   JOURNEY_STEPS,
   moveStep,
   parseStep,
-  STEP_LABEL,
+  STEP_MARK,
+  STEP_TITLE,
   stepForKey,
   withStep,
   type JourneyStep,
@@ -42,31 +48,34 @@ import {
 
 const hero = parseHero(raw);
 
-describe("the steps", () => {
-  it("are Tactics, Content, Value, Behind the scenes, in that order", () => {
-    expect(JOURNEY_STEPS.map((s) => STEP_LABEL[s])).toEqual([
-      "Tactics",
-      "Content",
+describe("the sections", () => {
+  it("are the four solutions, A to D, then Value, in that order", () => {
+    expect(JOURNEY_STEPS.map((s) => STEP_TITLE[s])).toEqual([
+      "AI Tactical Broadcast",
+      "AI Personalised Commentary",
+      "AI Automated Highlights",
+      "AI Stadium Experience",
       "Value",
-      "Behind the scenes",
     ]);
+    expect(JOURNEY_STEPS.map((s) => STEP_MARK[s])).toEqual(["A", "B", "C", "D", null]);
   });
 
   it("move with the arrow keys, Home and End, held at the ends", () => {
-    expect(stepForKey("tactics", "ArrowRight")).toBe("content");
-    expect(stepForKey("content", "ArrowLeft")).toBe("tactics");
-    expect(stepForKey("tactics", "ArrowLeft")).toBe("tactics");
-    expect(stepForKey("crew", "ArrowRight")).toBe("crew");
-    expect(stepForKey("value", "Home")).toBe("tactics");
-    expect(stepForKey("tactics", "End")).toBe("crew");
-    expect(stepForKey("tactics", "Enter")).toBeNull();
-    expect(moveStep("tactics", 2)).toBe("value");
+    expect(stepForKey("broadcast", "ArrowRight")).toBe("commentary");
+    expect(stepForKey("commentary", "ArrowLeft")).toBe("broadcast");
+    expect(stepForKey("broadcast", "ArrowLeft")).toBe("broadcast");
+    expect(stepForKey("value", "ArrowRight")).toBe("value");
+    expect(stepForKey("value", "Home")).toBe("broadcast");
+    expect(stepForKey("broadcast", "End")).toBe("value");
+    expect(stepForKey("broadcast", "Enter")).toBeNull();
+    expect(moveStep("broadcast", 2)).toBe("highlights");
   });
 
   it("parse only their own ids", () => {
     for (const s of JOURNEY_STEPS) expect(parseStep(s)).toBe(s);
     expect(parseStep("Value")).toBeNull();
     expect(parseStep("event")).toBeNull();
+    expect(parseStep("tactics")).toBeNull();
     expect(parseStep(null)).toBeNull();
   });
 
@@ -74,19 +83,35 @@ describe("the steps", () => {
     expect(withStep("?match=match-1&moment=far_post_finish", "value")).toBe(
       "?match=match-1&moment=far_post_finish&door=studios&step=value",
     );
-    expect(withStep("?step=tactics&intro=0", "content")).toBe("?step=content&intro=0&door=studios");
+    expect(withStep("?step=broadcast&intro=0", "highlights")).toBe(
+      "?step=highlights&intro=0&door=studios",
+    );
   });
 });
 
 describe("deep links", () => {
-  it("?step=<id> opens that step on For studios, with no intro card and no autoplay", () => {
-    const link = parseDeepLink("?step=tactics");
-    expect(link.step).toBe("tactics");
-    expect(doorOf(link)).toEqual({ door: "studios", studio: "tactics", yourView: false });
+  it("?step=<id> opens that section on For studios, with no intro card and no autoplay", () => {
+    const link = parseDeepLink("?step=broadcast");
+    expect(link.step).toBe("broadcast");
+    expect(doorOf(link)).toEqual({ door: "studios", studio: "broadcast", yourView: false });
     expect(link.intro).toBe(false);
     expect(link.autoplay).toBe(false);
     expect(link.warnings).toEqual([]);
-    expect(doorOf(parseDeepLink("?step=crew")).studio).toBe("crew");
+    for (const s of JOURNEY_STEPS) expect(doorOf(parseDeepLink(`?step=${s}`)).studio).toBe(s);
+  });
+
+  it("maps the old studio steps onto the section that holds their panel now", () => {
+    const want = {
+      tactics: "broadcast",
+      content: "highlights",
+      crew: "commentary",
+      value: "value",
+    };
+    for (const [old, now] of Object.entries(want)) {
+      const link = parseDeepLink(`?step=${old}`);
+      expect(link.warnings, old).toEqual([]);
+      expect(doorOf(link), old).toEqual({ door: "studios", studio: now, yourView: false });
+    }
   });
 
   it("maps the old steps onto the doors: Event is the look, Your view is in Settings", () => {
@@ -116,11 +141,15 @@ describe("deep links", () => {
   it("?tour=story starts the studios' walk at its first step, or at the step named", () => {
     expect(parseDeepLink("?tour=story").tour).toBe(STORY_IDS[0]);
     expect(parseDeepLink("?tour=story-value").tour).toBe("story-value");
+    // the walk's old step ids land on the section that holds their panel now
+    expect(parseDeepLink("?tour=story-tactics").tour).toBe("story-broadcast");
+    expect(parseDeepLink("?tour=story-content").tour).toBe("story-highlights");
+    expect(parseDeepLink("?tour=story-crew").tour).toBe("story-commentary");
   });
 });
 
 describe("the studios' walk", () => {
-  it("opens the four steps in order and lasts about a minute", () => {
+  it("opens the five sections in order and lasts about a minute", () => {
     const opened = STORY_STEPS.map((s) => s.journey);
     expect([...new Set(opened)]).toEqual([...JOURNEY_STEPS]);
     const total = secondsOf("story");
@@ -182,6 +211,16 @@ describe("the demo-data legend", () => {
   });
 });
 
+describe("the one measured number", () => {
+  it("is docs/NUMBERS.md MA6, shown as its marker quotes it", () => {
+    // tests/test_doc_numbers.py checks the marker against eval/reports/crew_vs_single.md.
+    const source = readFileSync(join(process.cwd(), "src", "journey", "measured.ts"), "utf8");
+    const marked = source.match(/<!--num:MA6-->(.*?)<!--\/num-->/)?.[1];
+    expect(marked).toBe(COST_PER_VERIFIED_BREAKDOWN);
+    expect(COST_PER_VERIFIED_BREAKDOWN).toMatch(/^\$\d+\.\d+$/);
+  });
+});
+
 // ---------- on screen ----------
 
 const DATA = join(process.cwd(), "public", "data"); // vitest runs in web/
@@ -196,8 +235,9 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
-  journey.set({ step: "tactics", seq: 0 });
+  journey.set({ step: "broadcast", seq: 0 });
   window.history.replaceState(null, "", "/");
+  settingsMenu.set({ open: false });
 });
 afterEach(() => {
   act(() => closeTour());
@@ -230,31 +270,95 @@ async function shown(c: HTMLElement, selector: string) {
 }
 
 describe("the bar and its panels", () => {
-  it("shows the four steps as tabs, Tactics open, each ending on the next", () => {
+  it("shows the five sections as tabs, the tactical broadcast open, each with the next under it", () => {
     const { container } = mount();
     expect(tabs(container).map((t) => t.textContent)).toEqual([
-      "1Tactics",
-      "2Content",
-      "3Value",
-      "4Behind the scenes",
+      "ATactical broadcast",
+      "BCommentary",
+      "CHighlights",
+      "DStadium",
+      "Value",
     ]);
-    expect(selected(container)).toBe("1Tactics");
-    expect(panel(container).dataset.step).toBe("tactics");
-    expect(panel(container).getAttribute("aria-labelledby")).toBe("journey-tab-tactics");
+    expect(selected(container)).toBe("ATactical broadcast");
+    expect(panel(container).dataset.step).toBe("broadcast");
+    expect(panel(container).getAttribute("aria-labelledby")).toBe("journey-tab-broadcast");
     expect(panel(container).querySelector("#tactics-lab")).not.toBeNull();
     // Only the open tab is in the Tab order.
-    expect(tabs(container).map((t) => t.tabIndex)).toEqual([0, -1, -1, -1]);
+    expect(tabs(container).map((t) => t.tabIndex)).toEqual([0, -1, -1, -1, -1]);
     // The bar's name says where it goes; no kicker repeats it on screen.
     const bar = container.querySelector("nav.journey-bar")!;
-    expect(bar.getAttribute("aria-label")).toBe("For studios, from tactics to the crew");
-    expect(bar.textContent).not.toMatch(/from tactics to the crew/i);
-    // One action under the panel: the next step, which takes the keyboard to its tab.
-    const next = panel(container).querySelector<HTMLButtonElement>(".journey-next .btn-primary")!;
-    expect(next.textContent).toBe("Next: Content");
+    expect(bar.getAttribute("aria-label")).toBe(
+      "For studios: four solutions for the league, then the value",
+    );
+    expect(bar.textContent).not.toMatch(/four solutions/i);
+    // Under the panel, the next section, which takes the keyboard to its tab; it is not the
+    // section's primary action.
+    const next = panel(container).querySelector<HTMLButtonElement>(".journey-next .btn")!;
+    expect(next.textContent).toBe("Next: Commentary");
+    expect(next.classList.contains("btn-primary")).toBe(false);
     act(() => next.click());
-    expect(panel(container).dataset.step).toBe("content");
-    expect(document.activeElement?.id).toBe("journey-tab-content");
-    expect(window.location.search).toBe("?door=studios&step=content");
+    expect(panel(container).dataset.step).toBe("commentary");
+    expect(document.activeElement?.id).toBe("journey-tab-commentary");
+    expect(window.location.search).toBe("?door=studios&step=commentary");
+  });
+
+  it("each solution has its value line, a Business value line and one primary action", async () => {
+    const { container } = mount();
+    const primary: Record<string, string> = {
+      broadcast: "Watch the broadcast",
+      commentary: "Choose in Settings",
+      highlights: "Play highlight",
+      stadium: "Open the Stadium Screen Studio",
+    };
+    for (const [step, action] of Object.entries(primary)) {
+      openAt(container, step as JourneyStep);
+      if (step === "stadium") await shown(container, ".screen-wall");
+      const p = panel(container);
+      expect(p.querySelector(".chapter-title .kicker")?.textContent, step).toBe(
+        `${STEP_MARK[step as JourneyStep]} · ${STEP_TITLE[step as JourneyStep]}`,
+      );
+      expect(p.querySelector(".chapter-lede .lede")?.textContent, step).toBeTruthy();
+      const worth = p.querySelector(".journey-worth")!;
+      expect(worth.textContent, step).toMatch(/^Business value \S/);
+      const primaries = [...p.querySelectorAll(".btn-primary")].map((b) => b.textContent);
+      expect(primaries, step).toEqual([action]);
+    }
+    // Value sums them up: no letter, no business-value line of its own, no primary action.
+    openAt(container, "value");
+    await shown(container, ".studio-sponsors");
+    expect(panel(container).querySelector(".chapter-title .kicker")?.textContent).toBe("Value");
+    expect(panel(container).querySelector(".btn-primary")).toBeNull();
+  });
+
+  it("A asks a broadcast's questions, each opening the view that answers it", () => {
+    const { container } = mount();
+    const p = panel(container);
+    const asks = p.querySelector("[role='group'][aria-label='Ask the broadcast']")!;
+    const buttons = [...asks.querySelectorAll<HTMLButtonElement>("button")];
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "Why did this high press work?",
+      "Why did xT jump on this attack?",
+      "Whose off-ball run made the shooting space?",
+    ]);
+    // No tactic card answers what the back line exposed after losing the ball: not asked.
+    expect(p.textContent).not.toMatch(/back line/);
+    expect(p.querySelector(".lab-card")?.getAttribute("data-card")).toBe("high_press");
+    expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
+    act(() => buttons[1].click());
+    expect(p.querySelector(".lab-card")?.getAttribute("data-card")).toBe("progression");
+    expect(buttons[1].getAttribute("aria-pressed")).toBe("true");
+    expect(buttons[0].getAttribute("aria-pressed")).toBe("false");
+    // The lab's own picker follows the question, and the question follows the picker.
+    const lab = [...p.querySelectorAll<HTMLButtonElement>("nav[aria-label='Tactic cards'] button")];
+    expect(lab.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent).toBe(
+      "Progression",
+    );
+    act(() => lab.find((b) => b.textContent === "High press")!.click());
+    expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
+    // The run opens a mode: its button has an id, so closing the mode gives the keyboard back.
+    expect(buttons[2].id).toBe(ASK_RUN_ID);
+    expect(buttons[2].hasAttribute("aria-pressed")).toBe(false);
+    expect(p.querySelector(".journey-worth")?.textContent).toMatch(/sponsors/);
   });
 
   it("door 1's compare tells both sides from the bundled verified lines, with no breakdown asked for", async () => {
@@ -282,59 +386,102 @@ describe("the bar and its panels", () => {
           .dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
       });
     key("ArrowRight");
-    expect(selected(container)).toBe("2Content");
-    expect(document.activeElement?.id).toBe("journey-tab-content");
-    expect(window.location.search).toBe("?door=studios&step=content");
+    expect(selected(container)).toBe("BCommentary");
+    expect(document.activeElement?.id).toBe("journey-tab-commentary");
+    expect(window.location.search).toBe("?door=studios&step=commentary");
     key("End");
-    expect(panel(container).dataset.step).toBe("crew");
+    expect(panel(container).dataset.step).toBe("value");
     key("Home");
-    expect(panel(container).dataset.step).toBe("tactics");
+    expect(panel(container).dataset.step).toBe("broadcast");
   });
 
-  it("Behind the scenes is the crew's breakdown with its failure drill, and the evidence one click away", () => {
+  it("B lists the audiences, opens Settings, and keeps the crew's breakdown and the evidence", () => {
     const { container } = mount();
-    openAt(container, "crew");
+    openAt(container, "commentary");
     const p = panel(container);
+    const audiences = [...p.querySelectorAll(".journey-audiences dt")].map((d) => d.textContent);
+    expect(audiences).toEqual(["Casual fan", "Tactical analyst", "Player focus", "Multilingual"]);
+    expect(p.textContent).toContain("We ship English and Chinese");
+    expect(p.textContent).toContain("Now: Casual fan · English");
+    act(() => p.querySelector<HTMLButtonElement>(".btn-primary")!.click());
+    expect(settingsMenu.get().open).toBe(true);
     expect(p.querySelector("section.breakdown")).not.toBeNull();
-    expect(p.textContent).toContain("Step 4 of 4 · Behind the scenes: the AI crew");
+    expect(p.textContent).toContain("Behind the commentary: the AI crew");
     expect([...p.querySelectorAll("button")].map((b) => b.textContent)).toContain(
       "Open the evidence",
     );
-    // The last step ends the door: no next step.
-    expect(p.querySelector(".journey-next")).toBeNull();
-    expect(p.querySelector(".journey-end")?.textContent).toContain("That's the studio side");
   });
 
-  it("Content has the package and the stadium's screens for this moment", async () => {
+  it("C is the package for the league's channels, with the rights line", () => {
     const { container } = mount();
-    openAt(container, "content");
-    await shown(container, ".screen-wall");
+    openAt(container, "highlights");
     const p = panel(container);
     expect(p.textContent).toContain("Play highlight");
+    expect(p.textContent).toContain("Shot list");
     expect(p.textContent).toContain("Social posts");
-    expect(p.textContent).toContain("In the stadium");
-    // Its note is one sentence.
-    const note = p.querySelector(".journey-stadium > .note")!.textContent!;
-    expect(note).toBe("What the stadium's screens show for this moment (key look).");
-    expect(p.querySelector(".screen-wall")).not.toBeNull();
-    const pressed = p.querySelector("[aria-label='Matchday event'] [aria-pressed='true']");
-    expect(pressed?.textContent).toBe("Key look");
-    // The business figures wait for the Value step.
+    expect(p.textContent).toContain("to grow its reach: one format per platform");
+    expect(p.textContent).toContain("9:16 story");
+    expect(p.textContent).toContain("16:9");
+    expect(p.querySelector(".journey-rights")?.textContent).toBe(
+      "Publishing and distribution stay within the rights the league grants.",
+    );
+    // The business figures wait for Value.
     expect(p.textContent).not.toContain("Impressions");
   });
 
-  it("Value has the business panel and the sponsor slots, each with the badge, and the sentence", async () => {
+  it("D is the stadium's screens for this moment, the studio one click away", async () => {
+    const { container } = mount();
+    openAt(container, "stadium");
+    await shown(container, ".screen-wall");
+    const p = panel(container);
+    expect(p.textContent).toMatch(/Big-league stadiums already run/);
+    // Its note is one sentence.
+    const note = p.querySelector(".journey-stadium > .note")!.textContent!;
+    expect(note).toBe("What the stadium's screens show for this moment (key look).");
+    const pressed = p.querySelector("[aria-label='Matchday event'] [aria-pressed='true']");
+    expect(pressed?.textContent).toBe("Key look");
+    const studio = p.querySelector<HTMLAnchorElement>("a.btn-primary")!;
+    expect(studio.textContent).toBe("Open the Stadium Screen Studio");
+    expect(studio.getAttribute("href")).toMatch(/\?studio=1$/);
+    expect(p.textContent).not.toContain("Impressions");
+  });
+
+  it("Value puts the revenue levers first, then the demo KPIs, each figure badged, and ends the door", async () => {
     const { container } = mount();
     openAt(container, "value");
     await shown(container, ".studio-sponsors");
     const p = panel(container);
+    const levers = [...p.querySelectorAll(".journey-lever-list strong")].map((s) => s.textContent);
+    expect(levers).toEqual([
+      "Broadcast differentiation:",
+      "Sponsor inventory:",
+      "International and app engagement:",
+      "Social reach:",
+      "Lower production cost:",
+    ]);
+    // No revenue figure: the levers are words only.
+    expect(p.querySelector(".journey-lever-list")!.textContent).not.toMatch(/\d/);
+    const leversAt = p.querySelector(".journey-levers")!;
+    const kpis = p.querySelector(".studio-business")!;
+    expect(leversAt.compareDocumentPosition(kpis) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(kpis.querySelector("h3")?.textContent).toBe("Demo KPIs");
+    // The one measured number, the marked one, outside the demo data.
+    const measured = p.querySelector(".journey-measured")!;
+    expect(measured.textContent).toContain(
+      `Measured ${COST_PER_VERIFIED_BREAKDOWN} of model calls per verified breakdown`,
+    );
+    expect(measured.querySelector(".demo-badge")).toBeNull();
     expect(p.textContent).toContain(FACTS_VS_FIGURES);
     expect(p.textContent).toContain("Impressions");
+    expect(p.textContent).toContain("Click-through");
     expect(p.textContent).toContain("Sponsor slots in this programme");
     const badges = [...p.querySelectorAll(".demo-badge")].map((b) => b.textContent);
     // the sentence's, the business panel's, one under each of its five figures, the sponsor slots'
     expect(badges.length).toBeGreaterThanOrEqual(8);
     expect(new Set(badges)).toEqual(new Set([DEMO_DATA]));
+    // The last section ends the door: no next one.
+    expect(p.querySelector(".journey-next")).toBeNull();
+    expect(p.querySelector(".journey-end")?.textContent).toContain("That's the studio side");
   });
 
   it("no simulated figure renders without the badge beside it", async () => {
@@ -357,31 +504,31 @@ describe("the bar and its panels", () => {
     act(() => {
       next.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     });
-    expect(panel(container).dataset.step).toBe("tactics");
+    expect(panel(container).dataset.step).toBe("broadcast");
     expect(window.location.search).toBe("");
   });
 
   it("a phone's stepper says where it is and moves on", () => {
     const { container } = mount();
     const stepper = container.querySelector<HTMLElement>(".journey-stepper")!;
-    expect(stepper.textContent).toContain("Step 1 of 4");
+    expect(stepper.textContent).toContain("Step 1 of 5");
     const next = [...stepper.querySelectorAll("button")].find((b) => b.textContent === "Next")!;
-    expect(next.getAttribute("aria-label")).toBe("Next: Content");
+    expect(next.getAttribute("aria-label")).toBe("Next: Commentary");
     act(() => next.click());
-    expect(stepper.textContent).toContain("Step 2 of 4");
-    expect(panel(container).dataset.step).toBe("content");
+    expect(stepper.textContent).toContain("Step 2 of 5");
+    expect(panel(container).dataset.step).toBe("commentary");
   });
 
-  it("the studios' walk opens each step's panel as it arrives", () => {
+  it("the studios' walk opens each section's panel as it arrives", () => {
     const { container } = mount(
       <>
         <Journey />
         <Tour />
       </>,
     );
-    act(() => startTour("story-content", "story"));
-    expect(journey.get().step).toBe("content");
-    expect(panel(container).dataset.step).toBe("content");
+    act(() => startTour("story-highlights", "story"));
+    expect(journey.get().step).toBe("highlights");
+    expect(panel(container).dataset.step).toBe("highlights");
     expect(document.querySelector(".tour-card")?.textContent).toContain("For studios");
   });
 });

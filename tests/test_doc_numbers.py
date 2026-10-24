@@ -28,6 +28,7 @@ DOCS = [
     *(ROOT / "docs" / name for name in ("SUBMISSION.md", "RUBRIC_MAP.md", "EVALS.md")),
     ROOT / "docs" / "DEMO_SCRIPT.md",
     ROOT / "docs" / "VIDEO_SCRIPT.md",
+    ROOT / "web" / "src" / "journey" / "measured.ts",  # the one measured number For studios shows
 ]
 
 NUM = r"(−?-?\d+(?:\.\d+)?)"
@@ -118,6 +119,11 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"Of {NUM} perturbed lines \([^)]*\), {NUM} were kept off the air with the Verifier "
         rf"\([^)]*\); without it {NUM} aired, [^:]*: {NUM} false",
         ("total", "kept", "aired", "false"),
+    ),
+    "MA6": (
+        "crew_vs_single.md",
+        rf"\| cost per breakdown, USD \| [^|]+ \| [^|]+ \| [^|]+ \| {NUM} ",
+        ("crew",),  # arm D, the crew as deployed (with the Verifier)
     ),
     "A5b": (
         "corruption.md",

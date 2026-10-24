@@ -129,7 +129,7 @@ export function YourTurn() {
   );
 }
 
-/** Door 3: the business side as one short guided sequence (journey/). */
+/** Door 3: what it does for the league, four solutions and their value (journey/). */
 export function ForStudios() {
   return (
     <section className="door-page door-studios" aria-labelledby="studios-title">
@@ -138,8 +138,8 @@ export function ForStudios() {
           For <em>studios.</em>
         </h2>
         <p className="lede">
-          What a studio does with one moment: why its tactics work, the content it makes, what that
-          could be worth, and the AI crew that writes it.
+          What one moment does for the league: four solutions, broadcast and social first, then what
+          they are worth.
         </p>
       </header>
       <Journey />

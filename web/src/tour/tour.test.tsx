@@ -460,7 +460,7 @@ describe("every step resolves on the hero moment", () => {
     expect(eyesOf(session)).toBe("closed");
     expect(yourCallOf(session).state.get().step).toBe("closed");
     expect(doors.get().door).toBe("studios");
-    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("tactics");
+    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("broadcast");
     expect(targetOf(STEPS.find((s) => s.id === "studios")!)).not.toBeNull();
 
     await next(); // the end
@@ -512,9 +512,9 @@ describe("every step resolves on the hero moment", () => {
     await next(); // For studios
     expect(stepId()).toBe("studios");
     expect(eyesOf(session)).toBe("closed");
-    await next(); // Behind the scenes: the Telestrator is picked, nothing runs until asked
+    await next(); // Behind the commentary: the Telestrator is picked, nothing runs until asked
     expect(stepId()).toBe("producer");
-    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("crew");
+    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("commentary");
     expect(session.producer.get().down).toEqual(["telestrator"]);
     expect(fetch.calls.some((c) => (c.body as { fail?: unknown })?.fail)).toBe(false);
     await click(buttonIn(card(), "Run the drill"));

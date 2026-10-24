@@ -258,13 +258,19 @@ const PAGES = [
     device: PHONE_375,
     check: (p) => phone(p, yourTurn, { live: false }),
   },
-  // Door 3, For studios (journey/): each of its four steps opened from the bar, axe on each, and
-  // each step's Next; a deep link to one step; a phone's stepper; the studios' walk through all.
+  // Door 3, For studios (journey/): each of its five sections opened from the bar, axe on each,
+  // and each section's Next; deep links to one section, new and old; a phone's stepper; the
+  // studios' walk through all.
   { name: "journey", path: "?door=studios", check: (p, shoot) => journeySteps(p, shoot) },
   {
     name: "journey-link-value",
     path: "?step=value",
     check: (p) => journeyPanel(p, "Value"),
+  },
+  {
+    name: "journey-link-crew",
+    path: "?step=crew", // before the four solutions: the crew is B's, under the commentary
+    check: (p) => journeyPanel(p, "Commentary"),
   },
   {
     name: "phone-375-journey",
@@ -929,29 +935,42 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
-/** For studios' four steps, in its bar's order (journey/steps.ts), and what each panel shows. */
+/** For studios' five sections, in its bar's order (journey/steps.ts), what each panel shows, and
+ * its one primary action (Value has none). */
 const JOURNEY = [
-  ["Tactics", /Why tactics/],
-  ["Content", /In the stadium/],
-  ["Value", /Sponsor slots in this programme/],
-  ["Behind the scenes", /The crew writes/],
+  ["Tactical broadcast", /Why tactics/, "Watch the broadcast"],
+  ["Commentary", /The crew writes/, "Choose in Settings"],
+  // the package's own action, or the breakdown it is built from when none is on screen yet
+  ["Highlights", /^Publishing and distribution stay/, /^(Play highlight|Generate the breakdown)$/],
+  ["Stadium", /On the screens/, "Open the Stadium Screen Studio"],
+  ["Value", /Revenue levers for the league/, null],
 ];
 const DEMO_DATA = "Demo data: simulated audience, not real results";
 
-/** The open step's panel: its tab selected, the panel on screen with what it shows, no sideways
- * scroll, axe clean; the Value step with the demo-data badge on its figures. */
+/** The open section's panel: its tab selected, the panel on screen with what it shows and its one
+ * primary action, a solution's "Business value" line, no sideways scroll, axe clean; Value with
+ * the demo-data badge on its figures and the one measured number. */
 async function journeyPanel(page, label) {
-  const [, shows] = JOURNEY.find(([l]) => l === label);
+  const [, shows, action] = JOURNEY.find(([l]) => l === label);
   await doorTabs(page, "For studios");
   const panel = page.getByRole("tabpanel", { name: new RegExp(label) });
   await see(panel, `the journey's ${label} panel`);
-  await see(panel.getByText(shows), `the ${label} panel's content`);
+  await see(panel.getByText(shows).first(), `the ${label} panel's content`);
+  // A cold visit loads the breakdown first: the package's action comes with it.
+  if (action) await see(panel.locator(".btn-primary").first(), `${label}'s primary action`);
+  const primaries = (await panel.locator(".btn-primary").allTextContents()).map((t) => t.trim());
+  const one = (t) => (action instanceof RegExp ? action.test(t) : t === action);
+  if (action ? primaries.length !== 1 || !one(primaries[0]) : primaries.length) {
+    throw new Error(`expected ${label}'s primary action ${action ?? "none"}; got ${primaries}`);
+  }
+  if (action) await see(panel.locator(".journey-worth"), `${label}'s Business value line`);
   if (label === "Value") {
-    await see(panel.getByText(DEMO_DATA, { exact: true }), "the demo-data badge");
+    await see(panel.getByText(DEMO_DATA, { exact: true }).first(), "the demo-data badge");
     await see(
       panel.getByText(/^Match facts on this page come from the simulator/),
       "the facts note",
     );
+    await see(panel.getByText(/of model calls per verified breakdown/), "the measured cost");
   }
   const [w, wide] = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
   if (wide > w) throw new Error(`expected no sideways scroll on ${label}: ${wide} px in ${w}`);
@@ -965,7 +984,7 @@ async function journeyPanel(page, label) {
 async function journeySteps(page, shoot) {
   const bar = page.getByRole("tablist", { name: "Studio steps" });
   await see(bar, "the studios' bar");
-  await bar.getByRole("tab", { name: /Tactics/ }).click();
+  await bar.getByRole("tab", { name: /Tactical broadcast/ }).click();
   for (const [k, [label]] of JOURNEY.entries()) {
     const tab = bar.getByRole("tab", { name: new RegExp(label) });
     if ((await tab.getAttribute("aria-selected")) !== "true") {
@@ -975,12 +994,12 @@ async function journeySteps(page, shoot) {
     await shoot(`step-${k + 1}`);
     if (k < JOURNEY.length - 1) await page.keyboard.press("ArrowRight");
   }
-  if (!new URL(page.url()).search.includes("step=crew")) {
-    throw new Error(`expected ?step=crew in the address, got ${page.url()}`);
+  if (!new URL(page.url()).search.includes("step=value")) {
+    throw new Error(`expected ?step=value in the address, got ${page.url()}`);
   }
-  // The last step ends the door; each other step's one action is the next step.
-  await see(page.getByText(/^That's the studio side/), "the end of the studios' steps");
-  await bar.getByRole("tab", { name: /Tactics/ }).click();
+  // The last section ends the door; each other section has the next one under it.
+  await see(page.getByText(/^That's the studio side/), "the end of the studios' sections");
+  await bar.getByRole("tab", { name: /Tactical broadcast/ }).click();
   for (const [label] of JOURNEY.slice(1)) {
     await page.getByRole("button", { name: `Next: ${label}` }).click();
     await see(page.getByRole("tabpanel", { name: new RegExp(label) }), `${label} from Next`);
@@ -1020,7 +1039,7 @@ async function fullStory(page, shoot) {
     await card.getByRole("button", { name: "Next" }).click();
   }
   const steps = [...new Set(opened)];
-  const want = ["tactics", "content", "value", "crew"];
+  const want = ["broadcast", "commentary", "highlights", "stadium", "value"];
   if (steps.join() !== want.join()) {
     throw new Error(
       `expected the studios' walk to open ${want.join(", ")}; got ${steps.join(", ")}`,

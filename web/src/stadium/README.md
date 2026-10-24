@@ -55,8 +55,8 @@ The sponsor-slot table under the wall counts each sponsor's screen slots from th
 not a match fact, so it carries the label **"Demo data: simulated audience, not real results"**
 (the one badge, `journey/DemoBadge.tsx`). The studio has no audience, reach or sales figures.
 
-The Screen wall (on the moment's event) and the sponsor slots also appear in the journey's
-Content and Value steps under the moment (`journey/`), from the same show and files.
+The Screen wall (on the moment's event) and the sponsor slots also appear on For studios, in its
+D · AI Stadium Experience and Value sections (`journey/`), from the same show and files.
 
 ## No strobe (WCAG 2.3.1)
 

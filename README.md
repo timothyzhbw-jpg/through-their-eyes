@@ -51,14 +51,25 @@ hero moment's story in about a minute: his scan, the run without it, the two com
 refusing a wrong number, then an end card whose only choices are the other two doors and
 **Watch again**. [**Your turn**](https://ttesite1ff906.z14.web.core.windows.net/?door=turn)
 puts you in his boots: **Make his call**, **See through his eyes** and **Train your scanning**.
-[**For studios**](https://ttesite1ff906.z14.web.core.windows.net/?door=studios) walks what a
-studio does with one moment, one step at a time: [Tactics](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics)
-(the Tactics lab, every number with its source),
-[Content](https://ttesite1ff906.z14.web.core.windows.net/?step=content) (the package built
-offline from the verified breakdown, and the Stadium Screen Studio's screens),
-[Value](https://ttesite1ff906.z14.web.core.windows.net/?step=value) (the business panel and the
-sponsor slots, demo data) and [Behind the scenes](https://ttesite1ff906.z14.web.core.windows.net/?step=crew)
-(the AI crew's breakdown, its evidence and the failure drill).
+[**For studios**](https://ttesite1ff906.z14.web.core.windows.net/?door=studios) is what one
+moment does for the league's revenue, broadcast and social first, as four solutions:
+- **A · [AI Tactical Broadcast](https://ttesite1ff906.z14.web.core.windows.net/?step=broadcast)**:
+  a broadcast's questions ("Why did this high press work?") open the Tactics lab card or the scan
+  story that answers them, every number with its source.
+- **B · [AI Personalised Commentary](https://ttesite1ff906.z14.web.core.windows.net/?step=commentary)**:
+  casual, tactical, one player followed, English or Chinese (picked in Settings), and the AI crew
+  that writes it, with its evidence and the failure drill.
+- **C · [AI Automated Highlights](https://ttesite1ff906.z14.web.core.windows.net/?step=highlights)**:
+  the highlight, shot list, captions, posts per platform and 16:9 and 9:16 cards, built offline
+  from the verified breakdown for the league's own channels.
+- **D · [AI Stadium Experience](https://ttesite1ff906.z14.web.core.windows.net/?step=stadium)**:
+  the main board, tunnel LED and ribbon ring for the moment, and the Stadium Screen Studio's
+  virtual preview.
+
+Then [Value](https://ttesite1ff906.z14.web.core.windows.net/?step=value): the league's revenue
+levers in words (no revenue figure), the measured model cost per verified breakdown, and the demo
+KPIs, every simulated figure badged. The old `?step=tactics`, `content` and `crew` links open A, C
+and B.
 
 Also in the app, each a few clicks from the moment:
 - **Minimal first screen.** It opens on one live view and one **Watch the look**; the other view

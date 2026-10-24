@@ -26,10 +26,13 @@
 //   ?tour=story|<step id>                      the studios' walk (door 3's steps), from its first
 //                                              step or that one. Step ids from before the doors
 //                                              land where tour/steps.ts LEGACY_STEP_IDS says
-//   ?step=tactics|content|value|crew           open For studios on that step (journey/): the
-//                                              Tactics lab, the content package and stadium
-//                                              screens, the business value, the AI crew. From
-//                                              before the doors: event opens The look on its
+//   ?step=broadcast|commentary|highlights|     open For studios on that section (journey/): A
+//         stadium|value                        tactical broadcast, B personalised commentary,
+//                                              C automated highlights, D the stadium, then the
+//                                              value. The old studio steps land on the section
+//                                              that holds their panel now (tactics: broadcast,
+//                                              content: highlights, crew: commentary); from
+//                                              before the doors, event opens The look on its
 //                                              compare, your-view opens Settings on Your view
 //   ?play=eyes                                 open "Take his eyes" (takeeyes/) on the hero's own look;
 //                                              with ?match=, on its first hero moment that has
@@ -67,7 +70,7 @@ import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
 import { IN_MATCH_MOMENTS } from "./moments/moments";
 import { LEGACY_STEP_IDS, QUICK_IDS, STEP_IDS, STORY_IDS } from "./tour/steps";
-import { parseStep, type JourneyStep } from "./journey/steps";
+import { LEGACY_STUDIO_STEPS, parseStep, type JourneyStep } from "./journey/steps";
 import { doorOfPlay, doorOfStep, parseDoor, type Door } from "./doors/doors";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
@@ -83,11 +86,18 @@ const NAMED_FRAMES = ["key-scan", "decision"] as const;
 const PLAYS = ["yourcall", "recap", "eyes", "steps", "drill"] as const;
 const CLAIM_ID = /^[a-z][a-z0-9_]{0,63}$/; // explain/builders.py ids, e.g. cf_value
 
-/** The old journey's steps that are no studio step now: door 1's compare, and Your view. */
-type LegacyStepLink = "event" | "your-view";
+/** Steps that are no studio section now: the old journey's door 1 compare and Your view, and the
+ * old studio steps (LEGACY_STUDIO_STEPS: each lands on the section that holds its panel). */
+type LegacyStepLink = "event" | "your-view" | "tactics" | "content" | "crew";
+
+const LEGACY_STEP_LINKS: readonly LegacyStepLink[] = [
+  "event",
+  "your-view",
+  ...(Object.keys(LEGACY_STUDIO_STEPS) as LegacyStepLink[]),
+];
 
 const parseStepLink = (v: string): JourneyStep | LegacyStepLink | null =>
-  parseStep(v) ?? (v === "event" || v === "your-view" ? v : null);
+  parseStep(v) ?? oneOf(LEGACY_STEP_LINKS, v);
 
 export type View = (typeof VIEWS)[number];
 export type At = number | (typeof NAMED_FRAMES)[number];

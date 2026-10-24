@@ -41,7 +41,7 @@ import {
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
-import { ComparePanel } from "./journey/Journey";
+import { ASK_RUN_ID, ComparePanel } from "./journey/Journey";
 import { StatsTicker } from "./ui/StatsTicker";
 import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -267,13 +267,14 @@ function HeroSettings() {
   );
 }
 
-/** The buttons that open a mode (the hub's cards, the compare's scan story): the one last pressed
- * is what closing its mode gives the keyboard back to. */
+/** The buttons that open a mode (the hub's cards, the compare's scan story, For studios' question
+ * about the run): the one last pressed is what closing its mode gives the keyboard back to. */
 const OPENER_IDS = [
   TURN_CARD_ID.yourCall,
   TURN_CARD_ID.takeEyes,
   TURN_CARD_ID.drill,
   "scan-steps-story",
+  ASK_RUN_ID,
 ];
 
 const lastPressed = { id: "" };
