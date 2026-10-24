@@ -1652,14 +1652,6 @@
         "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
       }
     },
-    "label-ie-1p3": {
-      "template": "label",
-      "dur": 1.3,
-      "alpha": true,
-      "params": {
-        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
-      }
-    },
     "label-dr-1p633": {
       "template": "label",
       "dur": 1.633,
@@ -1747,7 +1739,7 @@
     },
     "drill-back": {
       "template": "slam",
-      "dur": 2.0,
+      "dur": 2,
       "alpha": true,
       "params": {
         "kicker": "OFFLINE TEST",
@@ -1790,6 +1782,46 @@
       "alpha": true,
       "params": {
         "text": "DRAWN BY MICROSOFT AGENT FRAMEWORK FROM OUR WORKFLOW CODE"
+      }
+    },
+    "label-bl-1p3": {
+      "template": "label",
+      "dur": 1.3,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-1p8": {
+      "template": "label",
+      "dur": 1.8,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-3": {
+      "template": "label",
+      "dur": 3,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-1p5": {
+      "template": "label",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-bl-0p9": {
+      "template": "label",
+      "dur": 0.9,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
       }
     }
   },
@@ -2018,7 +2050,7 @@
         },
         {
           "title": "label-ie-2p733",
-          "at": 0.0
+          "at": 0
         }
       ],
       "section": "open",
@@ -2633,9 +2665,10 @@
       "id": "b27-press-a",
       "dur": 1.3,
       "picture": {
-        "src": "cine",
-        "id": "press-low",
-        "in": 0
+        "src": "clip",
+        "path": "out/video/blender/bl04a_press.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "grade": "night",
       "letterbox": 2.39,
@@ -2644,20 +2677,20 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-1p3",
+          "title": "label-bl-1p3",
           "at": 0
         }
       ],
-      "vo": [],
-      "sfx": []
+      "vo": []
     },
     {
       "id": "b28-press-b",
       "dur": 1.8,
       "picture": {
-        "src": "cine",
-        "id": "press-low",
-        "in": 2.1
+        "src": "clip",
+        "path": "out/video/blender/bl04b_escape.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "grade": "night",
       "letterbox": 2.39,
@@ -2666,7 +2699,7 @@
       ],
       "overlays": [
         {
-          "title": "label-ie-1p8",
+          "title": "label-bl-1p8",
           "at": 0
         }
       ],
@@ -2677,25 +2710,30 @@
           "text": "Under a high press…"
         }
       ],
-      "sfx": []
+      "sfx": [
+        {
+          "name": "touch",
+          "at": 0.7,
+          "gain_db": -4
+        }
+      ]
     },
     {
       "id": "b29-press-cf",
       "dur": 3,
       "picture": {
-        "src": "cine",
-        "id": "press-cf",
-        "in": 0
+        "src": "clip",
+        "path": "out/video/blender/bl05_press_cf.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "grade": "danger",
       "letterbox": 2.39,
       "fx": [
-        "warm",
         "glue"
       ],
       "freeze": {
-        "at": 2,
-        "punch": 1.05
+        "at": 2
       },
       "overlays": [
         {
@@ -2707,7 +2745,7 @@
           "at": 2
         },
         {
-          "title": "label-ie-3p0",
+          "title": "label-bl-3",
           "at": 0
         }
       ],
@@ -2720,9 +2758,9 @@
       ],
       "sfx": [
         {
-          "name": "shutter",
-          "at": 2,
-          "gain_db": -6
+          "name": "touch",
+          "at": 1.9,
+          "gain_db": -4
         }
       ],
       "out": {
@@ -2754,44 +2792,48 @@
       "id": "b31-corner-a",
       "dur": 1.5,
       "picture": {
-        "src": "capture",
-        "shot": "16-corner",
-        "in": 0.2,
-        "push": [
-          1,
-          1.03
-        ]
+        "src": "clip",
+        "path": "out/video/blender/bl06a_corner.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "vo": [
         {
           "id": "vo34",
           "at": 0.2,
-          "text": "At a corner, it's the marker who has to look.",
-          "caption": "top"
+          "text": "At a corner, it's the marker who has to look."
         }
       ],
-      "sfx": [],
       "fx": [
-        "lift"
+        "glue"
+      ],
+      "letterbox": 2.39,
+      "overlays": [
+        {
+          "title": "label-bl-1p5",
+          "at": 0
+        }
       ]
     },
     {
       "id": "b32a-corner-look",
       "dur": 0.9,
       "picture": {
-        "src": "capture",
-        "shot": "16-corner",
-        "in": 3.23,
-        "push": [
-          1,
-          1.02
-        ]
+        "src": "clip",
+        "path": "out/video/blender/bl06b_look.mp4",
+        "in": 0.5,
+        "fit": "pad"
       },
       "fx": [
-        "lift"
+        "glue"
       ],
-      "overlays": [],
-      "sfx": []
+      "overlays": [
+        {
+          "title": "label-bl-0p9",
+          "at": 0
+        }
+      ],
+      "letterbox": 2.39
     },
     {
       "id": "b32b-corner-app",
@@ -2821,7 +2863,7 @@
         "shot": "23-stream-rail",
         "in": 4.5,
         "push": [
-          1.0,
+          1,
           1.03
         ]
       },
@@ -3065,17 +3107,17 @@
       "picture": {
         "src": "clip",
         "path": "out/video/stills/crew_workflow.mp4",
-        "in": 0.0,
+        "in": 0,
         "fit": "pad",
         "push": [
-          1.0,
+          1,
           1.04
         ]
       },
       "overlays": [
         {
           "title": "label-wf-2p2",
-          "at": 0.0
+          "at": 0
         }
       ],
       "sfx": [],
@@ -3146,7 +3188,7 @@
     },
     {
       "id": "b35-wrong",
-      "dur": 4.0,
+      "dur": 4,
       "picture": {
         "src": "capture",
         "shot": "09-verifier",
@@ -3198,7 +3240,7 @@
       "picture": {
         "src": "capture",
         "shot": "10-drill",
-        "in": 0.0,
+        "in": 0,
         "crop": [
           640,
           240,
@@ -3243,7 +3285,7 @@
       "overlays": [
         {
           "title": "redcard",
-          "at": 0.0
+          "at": 0
         }
       ],
       "sfx": [],

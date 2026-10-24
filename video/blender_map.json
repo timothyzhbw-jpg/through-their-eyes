@@ -4,6 +4,11 @@
     "bl01_look.mp4",
     "bl02_reveal.mp4",
     "bl03_without.mp4",
+    "bl04a_press.mp4",
+    "bl04b_escape.mp4",
+    "bl05_press_cf.mp4",
+    "bl06a_corner.mp4",
+    "bl06b_look.mp4",
     "bs1_eyes.mp4",
     "bs1_fall.mp4",
     "bs1_ots.mp4",
@@ -158,7 +163,13 @@
         "glue"
       ],
       "label": "dramatisation",
-      "sfx": []
+      "sfx": [],
+      "overlays": [
+        {
+          "title": "tag-his-eyes",
+          "at": 0.05
+        }
+      ]
     },
     {
       "beat": "b01-s1a-ots",
@@ -254,7 +265,13 @@
         "glue"
       ],
       "label": "dramatisation",
-      "fit": true
+      "fit": true,
+      "overlays": [
+        {
+          "title": "saw-believed",
+          "at": 0.2
+        }
+      ]
     },
     {
       "beat": "b08-bl01a",

@@ -68,6 +68,13 @@ All from `scripts/regen_linux.sh evals`; the single command is in the **Source**
 | A5 | Verifier on perturbed claims: false perturbations refuted · generated claims supported (A5b; true claims wrongly rejected = 468 − supported) · verdicts logged | [corruption](../eval/reports/corruption.md) ← `uv run python -m eval.corruption` | `grep -e 'Generated claims verified' -e 'refuted by the verifier' -e 'Verdicts written' eval/reports/corruption.md` | 90/90 · 468/468 · 568/568 | same | TODO(freeze) | README "What only we do", "The full tour" 5, Evidence; SUBMISSION Evidence, [^corruption]; RUBRIC_MAP §2, §3; EVALS; DEMO_SCRIPT |
 | A6 | Laws audit: unpunished breaches · runs | [laws](../eval/reports/laws.md) ← `uv run python -m eval.laws` | `grep -m2 -e 'unpunished breaches' -e 'line-ups' eval/reports/laws.md` | 0 · 2,916 | 0 · 3,096 | TODO(freeze) | README Engineering; EVALS; RUBRIC_MAP §1 (after the rubric PR) |
 
+## P. Audiences (SUBMISSION "What it does", Personalize; RUBRIC_MAP §3; README "The full tour" 3)
+
+| Id | Number | Source | Read | before #205 | #205 | Freeze | Quoted in |
+|---|---|---|---|---|---|---|---|
+| P1 | Mean claim overlap between two audiences (pairwise Jaccard; gate ≤ 0.3) | [persona_distinctness](../eval/reports/persona_distinctness.md) ← `uv run python -m eval.persona_distinctness` | `grep -m1 'mean pairwise claim Jaccard (gate' eval/reports/persona_distinctness.md` | 0.34 | 0.16 | TODO(freeze) | SUBMISSION Personalize; RUBRIC_MAP §3 |
+| P2 | Scripts within their audience's spec and rules, of 40 | same | `grep -m1 'scripts within their persona' eval/reports/persona_distinctness.md` | 8 | 40 | TODO(freeze) | SUBMISSION Personalize; RUBRIC_MAP §3 |
+
 ## R. Realism (`possession_play` held-out seeds 100–199)
 
 | Id | Number | Source | Read | main | #172 | Freeze | Quoted in |
@@ -117,7 +124,7 @@ which runs on Linux. The trailer reads them off the live page (`out/video/claims
 |---|---|---|---|---|---|
 | D1 | One uncached model breakdown, warm replica · first request after a deploy · from the cache | right after the last deploy, before `infra.prewarm`: `curl -s -o /dev/null -w '%{time_total}\n' -X POST <API>/api/breakdowns -H 'content-type: application/json' -d '{"match": "blind_side_run-3", "personas": ["coach"], "languages": ["en"]}'` (first = cold); again with another persona (warm); the first again (cached). Each uncached call counts against the daily cap | 12.9 s · 23.8–25.9 s · 0.15 s (SPEC §8, 2026-10-20, revision 0000017) | TODO(freeze) | README Evidence; SUBMISSION [^latency]; RUBRIC_MAP §4 |
 | D2 | The live trace: total, MCP start, crew; spans | the Kusto query in RUBRIC_MAP "The live trace", on the first model breakdown after the last deploy | 15.5 s · 5.1 s · 9.9 s (2026-10-20, before #123's Director budget, #126 names, #127 persona claims) | TODO(freeze) | RUBRIC_MAP "The live trace"; SUBMISSION "Observed live", [^trace] |
-| D3 | Tests in CI on the submitted commit: pytest · vitest · smoke pages | `gh run view <run id> --log \| grep -E -e 'passed in [0-9.]+s' -e 'Tests +[0-9]+ passed' -e 'pages passed'` | 1216 · 595 · 15 of 15 (run 39583678095, `44c0bb5`, 2026-10-21) | TODO(freeze) | RUBRIC_MAP header; SUBMISSION Evidence, [^tests] |
+| D3 | Tests in CI on the submitted commit: pytest · vitest · smoke pages | `gh run view <run id> --log \| grep -E -e 'passed in [0-9.]+s' -e 'Tests +[0-9]+ passed' -e 'pages passed'` | TODO(freeze): 1216 · 595 · 15 of 15 was run 39583678095, `44c0bb5`, 2026-10-21, before the journey's tests and four new smoke pages | TODO(freeze) | RUBRIC_MAP header; SUBMISSION Evidence, [^tests] |
 | D4 | Pull requests checked for Copilot, Azure MCP Server, Fabric | `gh pr list --state all --limit 500 --json number,title,body \| jq length`; `git log --all -i --grep copilot` | 30 PRs (2026-10-20) | TODO(freeze) | RUBRIC_MAP "Development tools"; SUBMISSION [^devtools] |
 | D5 | Expected Azure cost to 2026-11-10 | SPEC §8 budget; Cost Management for `rg-through-their-eyes` | ≈ $15 | TODO(freeze) | RUBRIC_MAP §3 |
 | D6 | The trailer: length, timeline | `cd video && npm run trailer` report (`out/video/trailer_report.md`) | 1:57, 117.30 s (v13) | TODO(freeze) (v14, #182) | VIDEO_SCRIPT; Innovation Studio page |
@@ -158,10 +165,16 @@ freeze (`curl -sG https://prices.azure.com/api/retail/prices --data-urlencode "\
 | B4 | Share of breakdown views served from the cache | Application Insights over the judging window: `POST /api/breakdowns` requests on the deployed API against the `breakdown` spans of crew runs (the query in RUBRIC_MAP "The live trace", grouped by operation) | not measured: only 2026-10-22's telemetry is kept, 14 requests | TODO(freeze) | SUBMISSION "Business model" |
 | B5 | Twenty moments × five audiences × two languages: model · speech | B1 × 50 breakdowns; B2 × 50 | about $0.50 · $1.40 | TODO(freeze) | SUBMISSION "Business model" |
 
+## S. Simulated, not measured
+
+| Id | What | Source | Label | Where |
+|---|---|---|---|---|
+| S1 | The audience and sponsor figures in "Publish this moment" and the journey's Value step: impressions, engagement, click-through, sponsor impressions, recall proxy | invented ranges and factors in `web/src/studio/audience-assumptions.json` (every entry `"source": "none, invented"`), drawn by a seeded model in `web/src/studio/audience.ts`; no real audience exists | every figure carries the badge "Demo data: simulated audience, not real results" (`web/src/journey/DemoBadge.tsx`) | web README "Publish this moment" and "From event to value"; SUBMISSION "Business model" |
+
 ## X. Pictures and text that hold numbers or names
 
 | Id | What | Refresh | Where |
 |---|---|---|---|
-| X1 | `docs/hero-key-scan.jpg`: the README's first picture still shows the pre-#126 caption "H8 checked his shoulder…" | after the last deploy, capture `?view=pov&at=key-scan&intro=0` at 1920×1080 (headless Chrome, `web/scripts/gpu.mjs`); rewrite its alt text and caption with the names (J. Ferriday, N. Varnhall) | README top |
+| X1 | `docs/hero-key-scan.jpg`: the README's first picture still shows the pre-#126 caption "H8 checked his shoulder…", and its alt text and caption say H8 and H9 | after the last deploy (2026-10-24), capture `?view=pov&at=key-scan&intro=0` from the live site at 1920×1080 (headless Chrome, `web/scripts/gpu.mjs`), with whatever has landed by then (the names, the radar if merged); rewrite the alt text and the caption under it with the names (J. Ferriday, N. Varnhall) | README top |
 | X2 | `docs/screenshots/` | the same pass, for any screenshot a judge page links | README, RUBRIC_MAP |
 | X3 | The Innovation Studio page | from `out/innovation-studio-page.md` (not in the repository), with the values of H1, H4, C1 and D6 | the project page |

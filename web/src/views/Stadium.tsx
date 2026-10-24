@@ -15,6 +15,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Sample, sampleInto } from "../data/hero";
+import { sharedSeparation } from "../players/separate";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import {
@@ -651,6 +652,7 @@ function wedgeTexture(): THREE.CanvasTexture {
 function MastShadows() {
   const { hero, playback } = useView();
   const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   const key = useRef<THREE.InstancedMesh>(null);
   const fill = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
@@ -687,10 +689,11 @@ function MastShadows() {
   useFrame(() => {
     const s = playback.get();
     sampleInto(sample, hero, hero.runs[s.mode], s.frame, s.comfort);
+    const { off } = separation.update(hero.runs[s.mode], s.frame); // under the drawn bodies
     const me = s.camera === "pov" ? hero.ids.indexOf(s.povPlayer) : -1;
     for (let j = 0; j < hero.n; j++) {
-      const x = sample.pos[2 * j];
-      const y = sample.pos[2 * j + 1];
+      const x = sample.pos[2 * j] + off[2 * j];
+      const y = sample.pos[2 * j + 1] + off[2 * j + 1];
       const size = j === me ? 0 : 1;
       FLOODLIGHTS.forEach((m, k) => {
         const dx = x - m.x;
@@ -755,6 +758,7 @@ function ClassicShadows() {
   const { hero, playback } = useView();
 
   const sample = useMemo(() => new Sample(hero.n), [hero]);
+  const separation = sharedSeparation(hero, hero.n);
   const star = useRef<THREE.InstancedMesh>(null);
   const contact = useRef<THREE.InstancedMesh>(null);
   const core = useRef<THREE.InstancedMesh>(null); // the darker spot right under the feet
@@ -779,10 +783,11 @@ function ClassicShadows() {
   useFrame(() => {
     const s = playback.get();
     sampleInto(sample, hero, hero.runs[s.mode], s.frame, s.comfort);
+    const { off } = separation.update(hero.runs[s.mode], s.frame); // under the drawn bodies
     const me = s.camera === "pov" ? hero.ids.indexOf(s.povPlayer) : -1;
     for (let j = 0; j < hero.n; j++) {
-      const x = sample.pos[2 * j];
-      const y = sample.pos[2 * j + 1];
+      const x = sample.pos[2 * j] + off[2 * j];
+      const y = sample.pos[2 * j + 1] + off[2 * j + 1];
       const size = j === me ? 0 : 1;
       FLOODLIGHTS.forEach((m, k) => {
         const dx = x - m.x;

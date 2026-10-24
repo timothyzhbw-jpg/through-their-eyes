@@ -1,0 +1,123 @@
+/* The Tactics lab (tacticslab/TacticsLab.tsx, SPEC 7). The cards (.tile), the tables
+   (.data-table), the headings (.block-title) and the card picker (.pick-row) are the shared panel
+   parts in styles.css; the source chips are the global `.source`. No blur, no animation: a lane's
+   state is told by dash and cross as well as colour. */
+
+.tactics-lab .chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.lab-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.lab-idea {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  color: var(--chalk-2);
+}
+.lab-measured {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  font: 400 13px/1.45 var(--font-body);
+  color: var(--chalk-2);
+}
+.lab-zero {
+  font-style: italic;
+}
+.lab-table tbody th {
+  min-width: 14em;
+}
+.lab-table td[data-team="0"] {
+  color: var(--home);
+}
+.lab-table td[data-team="1"] {
+  color: var(--away);
+}
+.lab-def {
+  display: block;
+  max-width: 56ch;
+  margin-top: 4px;
+  font: 400 12px/1.45 var(--font-body);
+  color: var(--chalk-3);
+  white-space: normal;
+}
+.lab-source {
+  width: 1%;
+}
+.lab-empty {
+  margin: 0;
+}
+.lab-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lab-chosen {
+  color: var(--floodlight);
+}
+
+.lab-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+.lab-board figcaption p {
+  margin: 6px 0 0;
+  max-width: 70ch;
+  color: var(--chalk-2);
+}
+.lab-board svg {
+  display: block;
+  width: 100%;
+  max-width: 880px;
+  border-radius: var(--r-board);
+  background: var(--night-3);
+}
+.lab-pitch {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.25;
+}
+.lab-player text {
+  font: 600 1.5px var(--font-data);
+}
+.lab-ring {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.3;
+}
+.lab-line {
+  fill: none;
+  stroke-width: 0.5;
+  stroke-linecap: round;
+}
+.lab-lane[data-state="open"] .lab-line {
+  stroke: var(--detector);
+}
+.lab-lane[data-state="blocked"] .lab-line {
+  stroke: var(--chalk-2);
+  stroke-dasharray: 1.4 1;
+}
+.lab-halo {
+  stroke: var(--chalk);
+  stroke-opacity: 0.4;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.lab-cross {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.45;
+  stroke-linecap: round;
+}
+.lab-table.lanes tr[data-state="blocked"] th::before {
+  content: "× ";
+  color: var(--chalk-3);
+}

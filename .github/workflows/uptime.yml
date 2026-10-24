@@ -1,0 +1,96 @@
+name: uptime
+
+# SPEC 8: the public demo must stay up and free to test until 2026-11-10 (rules section 5). Hourly,
+# GET requests only, and only cached or static data: no breakdown, what-if, recap or TTS, so a check
+# never causes a model or speech call. A real failure (3 tries, 30 s apart) opens an issue labelled
+# `uptime`, or comments on the open one; a green run closes it. The job exits early after 2026-11-11.
+# URLs: README.md, docs/SUBMISSION.md and video/trailer.json ("site").
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+env:
+  API: https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io
+  SITE: https://ttesite1ff906.z14.web.core.windows.net
+  LAST_DAY: "2026-11-11"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Stop after the judging window
+        id: window
+        run: |
+          today=$(date -u +%F)
+          if [[ "$today" > "$LAST_DAY" ]]; then
+            echo "$today is past $LAST_DAY: nothing to check"
+            echo "active=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the demo
+        id: probe
+        if: steps.window.outputs.active == 'true'
+        run: |
+          # check NAME URL JQ_OR_GREP_KIND PATTERN: 3 tries, 30 s apart; the last status goes to failures.txt
+          : > failures.txt
+          check() {
+            local name=$1 url=$2 kind=$3 want=$4 code="" why=""
+            for try in 1 2 3; do
+              code=$(curl -sS -m 45 -o body.tmp -w '%{http_code}' "$url" 2>err.tmp) || code="000 ($(head -c 120 err.tmp))"
+              why="HTTP $code"
+              if [[ "$code" == 200 ]]; then
+                case "$kind" in
+                  json) jq -e "$want" body.tmp >/dev/null 2>&1 && { echo "ok   $name"; return; }; why="HTTP 200, body failed: $want" ;;
+                  text) grep -q "$want" body.tmp && { echo "ok   $name"; return; }; why="HTTP 200, body lacks: $want" ;;
+                esac
+              fi
+              echo "try $try/3 $name: $why"
+              [[ $try -lt 3 ]] && sleep 30
+            done
+            echo "- \`$name\` ($url): $why" >> failures.txt
+          }
+          check "API /health" "$API/health" json '.status == "ok"'
+          check "API /api/matches" "$API/api/matches" json 'type == "array" and length > 0'
+          check "API moments" "$API/api/matches/blind_side_run-3/moments" json '. != null'
+          check "web root" "$SITE/" text '<div id="root"'
+          check "web /data file" "$SITE/data/hero_seed3.json" json 'type == "object"'
+          if [[ -s failures.txt ]]; then echo "failed=true" >> "$GITHUB_OUTPUT"; else echo "failed=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Open or update the uptime issue
+        if: steps.probe.outputs.failed == 'true'
+        run: |
+          gh label create uptime --color B60205 --description "demo health check failed" 2>/dev/null || true
+          {
+            echo "Failing at $(date -u '+%F %H:%M UTC') ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)):"
+            echo
+            cat failures.txt
+          } > body.md
+          n=$(gh issue list --label uptime --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [[ -n "$n" ]]; then
+            gh issue comment "$n" --body-file body.md
+          else
+            gh issue create --label uptime --title "Demo is down" --body-file body.md
+          fi
+
+      - name: Close the uptime issue
+        if: steps.probe.outputs.failed == 'false'
+        run: |
+          for n in $(gh issue list --label uptime --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "All checks pass again at $(date -u '+%F %H:%M UTC') ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID))."
+          done
