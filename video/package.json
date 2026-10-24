@@ -10,6 +10,7 @@
   "scripts": {
     "capture": "node capture.mjs",
     "trailer": "node trailer.mjs",
+    "captions": "node tools/captions.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {

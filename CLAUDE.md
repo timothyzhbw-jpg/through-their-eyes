@@ -277,6 +277,11 @@ _Fill in as they come to exist._
   contact sheet and a report. `-- --check` validates `video/trailer.json` (CI); `-- --base-url
   http://localhost:5173` films a local build; from a worktree `uv run --env-file <.env> node
   video/trailer.mjs`
+- `cd video && npm run captions` — YouTube captions for the trailer (SPEC 10): `out/video/trailer.srt`
+  and `.vtt` from the render's own timeline and verified-claim fill, one cue per spoken line
+  (≤ 2 lines × 42 characters); unspoken title cards get none. `-- --require-vo` is the release
+  check: it exits 1 and writes nothing when a line has no synthesized voice or `claims.json` is
+  missing, so estimated timings and fallback text never reach YouTube
 - `python3 docs/architecture.py` — regenerate the architecture diagram (SPEC 2, 10):
   `docs/architecture.svg` and `-dark.svg`, standard library only. `--png --chrome <path to
   chrome-headless-shell>` also writes the 1920×1080 video frame `docs/architecture.png` (full
