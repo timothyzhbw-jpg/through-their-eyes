@@ -24,7 +24,7 @@ import type { Narration } from "../narration/payload";
 import { toPitch, toScreen } from "../options/passOptions";
 import { SessionContext, useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
-import { isVerified, KindTags, LineText } from "../ui/Narration";
+import { isVerified, KindTags, LineText, lineClaims } from "../ui/Narration";
 import { Segmented } from "../ui/Segmented";
 import { PovView } from "../views/PovView";
 import { boardZoom } from "../views/scene";
@@ -532,7 +532,11 @@ function Lines({ narration }: { narration?: Narration }) {
         <li key={l.id}>
           <KindTags narration={narration} line={l} />
           <span className="te-line">
-            <LineText text={l.text} verified={isVerified(narration, l)} />
+            <LineText
+              text={l.text}
+              verified={isVerified(narration, l)}
+              claims={lineClaims(narration, l)}
+            />
           </span>
         </li>
       ))}

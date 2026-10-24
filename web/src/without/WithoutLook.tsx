@@ -17,7 +17,7 @@ import type { Narration, PayloadLine } from "../narration/payload";
 import { SourceChip } from "../provenance/SourceChip";
 import { useView } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
-import { KindTags, LineText } from "../ui/Narration";
+import { KindTags, LineText, lineClaims } from "../ui/Narration";
 import type { Language } from "../whatif/whatif";
 import {
   countWord,
@@ -133,7 +133,7 @@ export function WithoutLookNote() {
     <div className="without-note" role="note" aria-label="The run without the look">
       {shown.map((l) => (
         <p key={l.id} className={`without-line ${l.id}`}>
-          <LineText text={l.text} verified />
+          <LineText text={l.text} verified claims={lineClaims(narration, l)} />
         </p>
       ))}
       {zones && (
@@ -254,7 +254,8 @@ function ExtraLooksLines({ extra, narration }: { extra: ExtraLooks; narration: N
       </p>
       {lines.map((l) => (
         <p key={l.id} className={`worth-line ${l.id}`}>
-          <LineText text={l.text} verified /> <KindTags narration={narration} line={l} />
+          <LineText text={l.text} verified claims={lineClaims(narration, l)} />{" "}
+          <KindTags narration={narration} line={l} />
         </p>
       ))}
     </>
@@ -288,7 +289,8 @@ function WithoutLookBody({
       {narration &&
         shown.map((l) => (
           <p key={l.id} className={`worth-line ${l.id}`}>
-            <LineText text={l.text} verified /> <KindTags narration={narration} line={l} />
+            <LineText text={l.text} verified claims={lineClaims(narration, l)} />{" "}
+            <KindTags narration={narration} line={l} />
           </p>
         ))}
       {zones && (
@@ -438,7 +440,8 @@ function XtExplainer({
           </button>
         </div>
         <p className="xt-line">
-          <LineText text={line.text} verified /> <KindTags narration={narration} line={line} />
+          <LineText text={line.text} verified claims={lineClaims(narration, line)} />{" "}
+          <KindTags narration={narration} line={line} />
         </p>
         <XtMoveExplain moves={moves} owner="his" valuesFrom="grid" />
         <svg

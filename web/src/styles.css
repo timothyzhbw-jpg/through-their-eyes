@@ -1553,7 +1553,7 @@ optgroup {
   transition: background-color var(--t-quick);
 }
 .caption:hover,
-.caption[aria-expanded="true"] {
+.caption.open {
   background: rgba(8, 14, 11, 0.35);
 }
 .caption-meta {
@@ -1585,11 +1585,21 @@ optgroup {
 .caption-more {
   display: inline-grid;
   place-items: center;
+  min-width: 24px;
+  min-height: 24px;
   margin-left: 10px;
+  padding: 0;
+  border: 0;
   vertical-align: 0.12em;
+  background: transparent;
   font: 500 12px/1 var(--font-body);
   color: var(--chalk-2);
   text-shadow: none;
+  cursor: pointer;
+}
+.caption-evidence:focus-visible {
+  outline: 2px solid var(--floodlight);
+  outline-offset: 2px;
 }
 .caption-more.check {
   width: 30px;
@@ -1605,7 +1615,7 @@ optgroup {
   background: rgba(246, 213, 102, 0.3);
   transform: scale(1.08);
 }
-.caption[aria-expanded="true"] .caption-more.check {
+.caption.open .caption-more.check {
   background: var(--floodlight);
   color: var(--ink);
 }
@@ -2391,7 +2401,7 @@ optgroup {
   border-bottom: 1px solid var(--hairline);
 }
 .beats button,
-.lines button {
+.lines .line-row {
   all: unset;
   box-sizing: border-box;
   width: 100%;
@@ -2400,20 +2410,20 @@ optgroup {
   gap: 24px;
   padding: 20px 0;
   color: var(--chalk-3);
-  cursor: pointer;
   transition: color var(--t-base) var(--glide);
 }
 .beats button {
   font: 400 clamp(19px, 1.6vw, 23px) / 1.38 var(--font-display);
   letter-spacing: -0.01em;
+  cursor: pointer;
 }
 .beats button:hover,
-.lines button:hover,
-.lines button[aria-expanded="true"] {
+.lines .line-row:hover,
+.lines .line-row:has(.line-evidence[aria-expanded="true"]) {
   color: var(--chalk);
 }
 .beats button:focus-visible,
-.lines button:focus-visible {
+.lines .line-row:focus-within {
   outline: 2px solid var(--floodlight);
   outline-offset: 4px;
 }
@@ -2624,20 +2634,38 @@ optgroup {
 .lines li {
   border-top: 1px solid var(--hairline);
 }
-.lines button {
-  grid-template-columns: 56px minmax(0, 1fr);
+.lines .line-row {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
   padding: 22px 0;
   font: 400 clamp(21px, 1.9vw, 27px) / 1.32 var(--font-display);
   letter-spacing: -0.01em;
   color: var(--chalk-2);
 }
-.lines li.now button {
+.lines .line-copy {
+  min-width: 0;
+}
+.lines .line-evidence {
+  align-self: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 4px 0 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--chalk-3);
+  font: 500 11px/1.3 var(--font-body);
+  cursor: pointer;
+}
+.lines .line-evidence:hover,
+.lines .line-evidence[aria-expanded="true"] {
+  color: var(--floodlight);
+}
+.lines li.now .line-row {
   color: var(--chalk);
 }
 .lines li.now .t {
   color: var(--floodlight);
 }
-.lines.large button {
+.lines.large .line-row {
   font-size: clamp(26px, 2.4vw, 32px);
   line-height: 1.4;
 }
@@ -3677,11 +3705,14 @@ optgroup {
     grid-column: 1;
   }
   .beats button,
-  .lines button,
+  .lines .line-row,
   .steps li,
   .lines .withheld {
     grid-template-columns: 52px minmax(0, 1fr);
     gap: 14px;
+  }
+  .lines .line-row {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
   }
   .trow {
     grid-template-columns: minmax(0, 1fr);

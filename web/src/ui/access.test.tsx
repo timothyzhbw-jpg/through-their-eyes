@@ -222,7 +222,7 @@ describe("audio description", () => {
       </>,
     );
     act(() => session.controls.openLine("L1"));
-    const caption = () => page.querySelector<HTMLElement>("button.caption")!;
+    const caption = () => page.querySelector<HTMLElement>(".caption")!;
     const list = () => page.querySelector<HTMLElement>("ol.lines")!;
     expect(caption().classList.contains("large")).toBe(false);
     expect(list().classList.contains("large")).toBe(false);
@@ -284,7 +284,7 @@ describe("keyboard and screen reader access", () => {
     );
     act(() => session.controls.openLine("L1"));
     act(() => session.controls.closeEvidence());
-    const caption = page.querySelector<HTMLButtonElement>("button.caption")!;
+    const caption = page.querySelector<HTMLButtonElement>("button.caption-evidence")!;
     caption.focus();
     act(() => caption.click()); // opens the evidence for this line
     const card = () => page.querySelector<HTMLElement>("section.evidence");
@@ -311,6 +311,30 @@ describe("keyboard and screen reader access", () => {
       document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
     expect(card()).toBeNull();
+  });
+
+  it("closes a term popover before the evidence card and restores the term's focus", async () => {
+    const { session } = online();
+    session.controls.requestBreakdown();
+    await settle();
+    const page = mount(
+      session,
+      <>
+        <Caption />
+        <EvidenceCard />
+      </>,
+    );
+    act(() => session.controls.openLine("L2"));
+    const term = page.querySelector<HTMLButtonElement>(".evidence-line .glossary-term")!;
+    act(() => term.focus());
+    const close = page.querySelector<HTMLButtonElement>(".glossary-close")!;
+    act(() => close.focus());
+    act(() => {
+      close.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(page.querySelector(".glossary-popover")).toBeNull();
+    expect(page.querySelector("section.evidence")).not.toBeNull();
+    expect(document.activeElement).toBe(term);
   });
 
   it("lets the keyboard reach and scroll the telestration steps", async () => {

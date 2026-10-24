@@ -62,6 +62,7 @@ import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView
 import { drillOf } from "./drill/controller";
 import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
+import { SessionGlossary } from "./glossary/SessionGlossary";
 
 /** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
@@ -127,110 +128,112 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   useEffect(() => () => session.feed?.stop(), [session]);
 
   return (
-    <div
-      className={mode === "counterfactual" ? "app mode-cf" : "app"}
-      onClickCapture={(e) => {
-        const id = (e.target as Element).closest?.("button[id]")?.id;
-        if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
-      }}
-    >
-      {/* Your call takes the live screen, and hides what would give his decision away until the
+    <SessionGlossary>
+      <div
+        className={mode === "counterfactual" ? "app mode-cf" : "app"}
+        onClickCapture={(e) => {
+          const id = (e.target as Element).closest?.("button[id]")?.id;
+          if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
+        }}
+      >
+        {/* Your call takes the live screen, and hides what would give his decision away until the
           viewer has made theirs: the director, the telemetry and the whole moment below. */}
-      {drill ? (
-        <DrillScreen start={start} />
-      ) : yourCall ? (
-        // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
-        <YourCallScreen start={start} />
-      ) : takeEyes ? (
-        <TakeEyesScreen start={start} />
-      ) : scanSteps ? (
-        <ScanStepsScreen start={start} />
-      ) : (
-        <LiveScreen
-          // Every moment in reach in one menu; no Live pill on a hero moment (Moments has the
-          // full match, live), only the badge when the service is off.
-          start={
-            <>
-              {onBack ? start : <OfflineBadge />}
-              <MomentsMenu />
-            </>
-          }
-          end={
-            <>
-              <YourCallButton />
-              <HeaderMore>
-                <MenuSection label="Sound">
-                  <SoundToggle />
-                </MenuSection>
-                <MenuSection label="Commentary">
-                  <ViewerMenu />
-                </MenuSection>
-                <MenuSection label="More ways in">
-                  <ScanStepsButton />
-                  <TakeEyesButton />
-                  <DrillButton />
-                  <FirstTourButton className="btn" />
-                </MenuSection>
-                <ViewOptions />
-              </HeaderMore>
-            </>
-          }
-          run={<RunToggle />}
-          card={
-            evidence ? (
-              <EvidenceCard />
-            ) : touring === "quick" ? (
-              <div className="tour-home" aria-hidden="true" />
-            ) : touring ? null : (
-              <MomentCard />
-            )
-          }
-          caption={
-            <>
-              <Caption />
-              <WithoutLookNote />
-            </>
-          }
-        />
-      )}
+        {drill ? (
+          <DrillScreen start={start} />
+        ) : yourCall ? (
+          // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
+          <YourCallScreen start={start} />
+        ) : takeEyes ? (
+          <TakeEyesScreen start={start} />
+        ) : scanSteps ? (
+          <ScanStepsScreen start={start} />
+        ) : (
+          <LiveScreen
+            // Every moment in reach in one menu; no Live pill on a hero moment (Moments has the
+            // full match, live), only the badge when the service is off.
+            start={
+              <>
+                {onBack ? start : <OfflineBadge />}
+                <MomentsMenu />
+              </>
+            }
+            end={
+              <>
+                <YourCallButton />
+                <HeaderMore>
+                  <MenuSection label="Sound">
+                    <SoundToggle />
+                  </MenuSection>
+                  <MenuSection label="Commentary">
+                    <ViewerMenu />
+                  </MenuSection>
+                  <MenuSection label="More ways in">
+                    <ScanStepsButton />
+                    <TakeEyesButton />
+                    <DrillButton />
+                    <FirstTourButton className="btn" />
+                  </MenuSection>
+                  <ViewOptions />
+                </HeaderMore>
+              </>
+            }
+            run={<RunToggle />}
+            card={
+              evidence ? (
+                <EvidenceCard />
+              ) : touring === "quick" ? (
+                <div className="tour-home" aria-hidden="true" />
+              ) : touring ? null : (
+                <MomentCard />
+              )
+            }
+            caption={
+              <>
+                <Caption />
+                <WithoutLookNote />
+              </>
+            }
+          />
+        )}
 
-      {!yourCall && !takeEyes && !scanSteps && !drill && (
-        <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-          <header className="moment-head">
-            <p className="kicker accent">
-              {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
-            </p>
-            <h2 id="moment-title">
-              <MomentTitle hero={hero} />
-            </h2>
-            <p className="lede">{blurbOf(hero)}</p>
-            <YourViewLine />
-            <StoryCta />
-          </header>
-          {/* Event → Tactics → Your view → Content → Value: the Tactics lab and the content
+        {!yourCall && !takeEyes && !scanSteps && !drill && (
+          <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+            <header className="moment-head">
+              <p className="kicker accent">
+                {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
+              </p>
+              <h2 id="moment-title">
+                <MomentTitle hero={hero} />
+              </h2>
+              <p className="lede">{blurbOf(hero)}</p>
+              <YourViewLine />
+              <StoryCta />
+            </header>
+            {/* Event → Tactics → Your view → Content → Value: the Tactics lab and the content
               studio are its steps' panels. */}
-          <Journey />
-          <div className="below">
-            <StoryPanel />
-            <DecisionPanel />
-            <VerdictPanel />
-            <NarrationPanel />
-            <WhatIfPanel />
-            <BreakdownPanel />
-            {/* The data under the moment, one click away: no tour step points into it. */}
-            <details className="how match-data">
-              <summary>Match data for this moment</summary>
-              <TelemetryPanel />
-              <StatsPanel />
-              <MomentsPanel />
-            </details>
-          </div>
-        </main>
-      )}
+            <Journey />
+            <div className="below">
+              <StoryPanel />
+              <DecisionPanel />
+              <VerdictPanel />
+              <NarrationPanel />
+              <WhatIfPanel />
+              <BreakdownPanel />
+              {/* The data under the moment, one click away: no tour step points into it. */}
+              <details className="how match-data">
+                <summary>Match data for this moment</summary>
+                <TelemetryPanel />
+                <StatsPanel />
+                <MomentsPanel />
+              </details>
+            </div>
+          </main>
+        )}
 
-      <Legend />
-      <Tour />
-    </div>
+        <Legend />
+        <Tour />
+      </div>
+    </SessionGlossary>
   );
 }
 
@@ -515,60 +518,62 @@ function MatchView() {
   ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
-    <div className="app match">
-      <LiveScreen
-        start={
-          <>
-            <LiveBar />
-            <MatchPicker />
-            <MomentsMenu />
-          </>
-        }
-        end={
-          <HeaderMore>
-            <MenuSection label="Sound">
-              <SoundToggle />
-            </MenuSection>
-            <MenuSection label="Your view">
-              <YourViewMenu />
-            </MenuSection>
-            <ViewOptions />
-          </HeaderMore>
-        }
-        card={
-          <>
-            <Scoreboard />
-            <OpeningNotice />
-            <RecapStage />
-          </>
-        }
-        caption={<RecapCaption />}
-      />
+    <SessionGlossary>
+      <div className="app match">
+        <LiveScreen
+          start={
+            <>
+              <LiveBar />
+              <MatchPicker />
+              <MomentsMenu />
+            </>
+          }
+          end={
+            <HeaderMore>
+              <MenuSection label="Sound">
+                <SoundToggle />
+              </MenuSection>
+              <MenuSection label="Your view">
+                <YourViewMenu />
+              </MenuSection>
+              <ViewOptions />
+            </HeaderMore>
+          }
+          card={
+            <>
+              <Scoreboard />
+              <OpeningNotice />
+              <RecapStage />
+            </>
+          }
+          caption={<RecapCaption />}
+        />
 
-      <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-        <header className="moment-head">
-          <p className="kicker accent">The match · {count} possessions</p>
-          <h2 id="moment-title">
-            Every moment, <em>on one clock.</em>
-          </h2>
-          <p className="lede">
-            A whole match of {count} possessions, streamed live from the API. Every moment is on the
-            timeline and below; open a hero moment's breakdown to see the decision through the
-            player's eyes.
-          </p>
-          <YourViewLine />
-        </header>
-        <div className="below">
-          <StatsPanel />
-          <RecapPanel />
-          <TacticsLabPanel />
-          <MomentsPanel />
-        </div>
-      </main>
+        <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+          <header className="moment-head">
+            <p className="kicker accent">The match · {count} possessions</p>
+            <h2 id="moment-title">
+              Every moment, <em>on one clock.</em>
+            </h2>
+            <p className="lede">
+              A whole match of {count} possessions, streamed live from the API. Every moment is on
+              the timeline and below; open a hero moment's breakdown to see the decision through the
+              player's eyes.
+            </p>
+            <YourViewLine />
+          </header>
+          <div className="below">
+            <StatsPanel />
+            <RecapPanel />
+            <TacticsLabPanel />
+            <MomentsPanel />
+          </div>
+        </main>
 
-      <Legend />
-      <Tour />
-    </div>
+        <Legend />
+        <Tour />
+      </div>
+    </SessionGlossary>
   );
 }
 

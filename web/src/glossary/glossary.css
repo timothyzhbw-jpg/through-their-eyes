@@ -1,0 +1,112 @@
+.glossary-screen {
+  display: contents;
+}
+
+.glossary-term-wrap {
+  position: relative;
+  display: inline;
+}
+
+.glossary-term {
+  appearance: none;
+  display: inline-block;
+  box-sizing: border-box;
+  min-width: 24px;
+  min-height: 24px;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  cursor: help;
+  text-decoration: none;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.22em;
+}
+
+.glossary-term[data-glossary-first="true"],
+.glossary-term:hover,
+.glossary-term:focus-visible,
+.glossary-term[aria-expanded="true"] {
+  text-decoration: underline dotted currentColor;
+  text-decoration-thickness: 1px;
+}
+
+.glossary-term:focus-visible,
+.glossary-close:focus-visible {
+  outline: 2px solid var(--floodlight);
+  outline-offset: 2px;
+}
+
+.glossary-popover {
+  position: absolute;
+  z-index: 80;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: block;
+  box-sizing: border-box;
+  width: min(290px, 80vw);
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: #101512;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: var(--chalk);
+  font: 400 13px/1.5 var(--font-body);
+  text-align: left;
+  white-space: normal;
+  cursor: default;
+}
+
+.glossary-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.glossary-popover-head strong {
+  font-size: 14px;
+}
+
+.glossary-close {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--chalk-2);
+  font: 400 20px/1 var(--font-body);
+  cursor: pointer;
+}
+
+.glossary-definition,
+.glossary-analyst,
+.glossary-context {
+  display: block;
+}
+
+.glossary-analyst {
+  margin-top: 7px;
+  color: var(--chalk-2);
+}
+
+.glossary-context {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+  color: var(--floodlight);
+}
+
+@media (max-width: 600px) {
+  .glossary-popover {
+    width: min(260px, calc(100vw - 32px));
+  }
+}

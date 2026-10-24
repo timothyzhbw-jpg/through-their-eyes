@@ -29,6 +29,7 @@ import {
 import "./tactics.css";
 import { SourceChip } from "../provenance/SourceChip";
 import { computed } from "../provenance/source";
+import { GlossaryText } from "../glossary/GlossaryText";
 
 const MEASURED = computed(
   "Measured from the match's tracking and event feed (analytics/tactics.py)",
@@ -69,7 +70,9 @@ function Line({
   const kinds = [...new Set(said.claims.map((c) => c.kind))];
   return (
     <div className="tactics-line" data-claim={said.line.claims.join(" ")}>
-      <p lang={said.language}>{said.line.text}</p>
+      <p lang={said.language}>
+        <GlossaryText text={said.line.text} claims={said.claims} />
+      </p>
       <span className="tactics-line-meta">
         {kinds.map((k) => (
           <KindTag key={k} kind={k} />
@@ -108,9 +111,13 @@ function Row({
 }) {
   return (
     <tr>
-      <th scope="row">{label}</th>
+      <th scope="row">
+        <GlossaryText text={label} />
+      </th>
       {teams.map((t) => (
-        <td key={t.team}>{cell(t)}</td>
+        <td key={t.team}>
+          <GlossaryText text={cell(t)} />
+        </td>
       ))}
     </tr>
   );
@@ -218,17 +225,9 @@ function BuildUp({
         </div>
       )}
       <p className="note">
-        Passes kicked in the passer&apos;s own half. Under pressure: pressing intensity {d.pressed}{" "}
-        or more on the passer at the kick (Bekkers, 2025), the lexicon&apos;s heavy pressure. Long:
-        to a teammate {d.long_pass_m} m or more away at the kick. Line-breaking: completed past{" "}
-        {d.min_bypassed} or more outfield opponents. xT: expected threat (Singh, 2019), fitted on
-        the sim&apos;s open play; a lost pass counts minus the opponent&apos;s xT where they won it.
-        Simulated for every pass: the players&apos; movement, the press and the marking, what each
-        player has seen and believes, and whether the ball arrives. Who passes, when and to whom: at
-        the hero moments the decision model chooses on what the player believed (SPEC 3.5); in the
-        rest of open play a passing rule does (SPEC 3.1: after a moment on the ball, the carrier
-        plays an onside team-mate 8–35 m away, picked by a draw weighted toward space). Tackles are
-        not modelled yet in open play: the ball changes hands on interceptions.
+        <GlossaryText
+          text={`Passes kicked in the passer's own half. Under pressure: pressing intensity ${d.pressed} or more on the passer at the kick (Bekkers, 2025), the lexicon's heavy pressure. Long: to a teammate ${d.long_pass_m} m or more away at the kick. Line-breaking: completed past ${d.min_bypassed} or more outfield opponents. xT: expected threat (Singh, 2019), fitted on the sim's open play; a lost pass counts minus the opponent's xT where they won it. Simulated for every pass: the players' movement, the press and the marking, what each player has seen and believes, and whether the ball arrives. Who passes, when and to whom: at the hero moments the decision model chooses on what the player believed (SPEC 3.5); in the rest of open play a passing rule does (SPEC 3.1: after a moment on the ball, the carrier plays an onside team-mate 8–35 m away, picked by a draw weighted toward space). Tackles are not modelled yet in open play: the ball changes hands on interceptions.`}
+        />
       </p>
     </article>
   );
@@ -254,9 +253,11 @@ function SetPieceCard({
   return (
     <article className="tactics-card" data-card="set_pieces" aria-label="Why focus on set pieces?">
       <header>
-        <p className="kicker">Set pieces · corners</p>
+        <p className="kicker">
+          <GlossaryText text="Set pieces · corners" />
+        </p>
         <h3>
-          Why focus on set pieces? <Source />
+          Why focus on <GlossaryText text="set pieces" />? <Source />
         </h3>
       </header>
       <Line view={view} tactics={tactics} card="set_pieces" language={language} />
@@ -273,21 +274,25 @@ function SetPieceCard({
           <dd>{sp.shots_from_corners}</dd>
         </div>
         <div>
-          <dt>xG from corners</dt>
+          <dt>
+            <GlossaryText text="xG from corners" />
+          </dt>
           <dd>
             {fixed(sp.xg_from_corners)} · {fixed(sp.xg_per_corner)} per corner
           </dd>
         </div>
         <div>
-          <dt>Shots from set pieces</dt>
+          <dt>
+            <GlossaryText text="Shots from set pieces" />
+          </dt>
           <dd>{shotShare(sp)}</dd>
         </div>
         {best && best.peak_xt !== null && (
           <div>
             <dt>Best corner</dt>
             <dd>
-              {best.peak_player} at xT {fixed(best.peak_xt)}, {fixed(best.peak_s, 1)} s after the
-              kick ({clock(best.t)})
+              {best.peak_player} at <GlossaryText text="xT" /> {fixed(best.peak_xt)},{" "}
+              {fixed(best.peak_s, 1)} s after the kick ({clock(best.t)})
             </dd>
           </div>
         )}
@@ -295,28 +300,19 @@ function SetPieceCard({
           <div>
             <dt>Open play</dt>
             <dd>
-              {sp.open_play} passages · best xT {fixed(sp.open_play_peak_median, 3)} (median) ·{" "}
-              {sp.below_best} below the corner
+              {sp.open_play} passages · best <GlossaryText text="xT" />{" "}
+              {fixed(sp.open_play_peak_median, 3)} (median) · {sp.below_best} below the corner
             </dd>
           </div>
         )}
       </dl>
       <p className="note">
-        xG: the sim&apos;s distance model for a shot (sim/decision.py). Peak: the completed pass
-        received where it was worth the most expected threat to the receiving team.
+        <GlossaryText text="xG: the sim's distance model for a shot (sim/decision.py). Peak: the completed pass received where it was worth the most expected threat to the receiving team." />
         {sp.corners > 0 && sp.shots_from_corners === 0 && (
-          <>
-            {" "}
-            A corner&apos;s passage ends after its cutback: the stitched match cuts it before a shot
-            could follow (SPEC 3.1), so set-piece xG is zero here by construction.
-          </>
+          <GlossaryText text=" A corner's passage ends after its cutback: the stitched match cuts it before a shot could follow (SPEC 3.1), so set-piece xG is zero here by construction." />
         )}
         {sp.open_play > 0 && (
-          <>
-            {" "}
-            Open play follows a passing rule that rarely reaches the final third (SPEC 3.1), so the
-            comparison favours the corner.
-          </>
+          <GlossaryText text=" Open play follows a passing rule that rarely reaches the final third (SPEC 3.1), so the comparison favours the corner." />
         )}
       </p>
     </article>

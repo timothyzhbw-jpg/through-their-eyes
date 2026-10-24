@@ -23,7 +23,7 @@ import { enterStep } from "../tour/actions";
 import { StepLines } from "../tour/StepLines";
 import { TourButton } from "../tour/Tour";
 import { Chapter, Title } from "../ui/Chapter";
-import { LineText } from "../ui/Narration";
+import { LineText, lineClaims } from "../ui/Narration";
 import { blurbOf } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines } from "../without/WithoutLook";
@@ -258,7 +258,7 @@ function TheLook() {
   if (!line) return null;
   return (
     <p className="journey-look" lang={language}>
-      <LineText text={line.text} verified />
+      <LineText text={line.text} verified claims={lineClaims(narration!, line)} />
     </p>
   );
 }

@@ -4,6 +4,7 @@
 // magazine, separated by space and a hairline.
 
 import type { ReactNode } from "react";
+import { GlossaryText } from "../glossary/GlossaryText";
 
 export function Chapter(props: {
   className: string; // the panel's own class (narration, breakdown, …): scripts find it by it
@@ -28,7 +29,11 @@ export function Chapter(props: {
         </div>
         {(props.lede || props.how || props.aside) && (
           <div className="chapter-lede">
-            {props.lede && <p className="lede">{props.lede}</p>}
+            {props.lede && (
+              <p className="lede">
+                {typeof props.lede === "string" ? <GlossaryText text={props.lede} /> : props.lede}
+              </p>
+            )}
             {props.how && <HowItWorks>{props.how}</HowItWorks>}
             {props.aside}
           </div>

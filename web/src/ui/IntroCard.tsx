@@ -20,6 +20,7 @@ import { startTour } from "../tour/tourState";
 import { clubName, shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
 import { MomentChips } from "../moments/MomentRail";
+import { GlossaryText } from "../glossary/GlossaryText";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
 export function playLength(minutes: number): string {
@@ -270,7 +271,7 @@ function Lineup() {
         })}
       </div>
       <p className="lineup-note">
-        A scan is a quick look away from the ball to check the space around him.{" "}
+        <GlossaryText text="A scan is a quick look away from the ball to check the space around him." />{" "}
         {measured === "count" ? "Scans counted" : "Scans per minute, counted"} from the scan events
         of this run ({playLength(runMinutes(hero))}). <SourceChip kind="sim" />
       </p>
