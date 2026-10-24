@@ -60,6 +60,11 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\| … the ball is lost after the intervention \| {NUM}/{NUM}",
         ("k", "n"),
     ),
+    "H10": (
+        "extra_looks_blind_side_run.md",
+        rf"\| Decision changed with two more looks \| {NUM}/{NUM} \({NUM}%",
+        ("k", "n", "pct"),
+    ),
     "H5": (
         "hero_lens_press_escape.md",
         rf"\| Intervention changes the outcome {FRACTION}",
