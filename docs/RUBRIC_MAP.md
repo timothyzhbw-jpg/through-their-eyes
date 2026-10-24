@@ -111,6 +111,53 @@ as effectively". The last point is the one we measured against a single agent
 | Failure recovery | Each model step: a timeout, one retry, then its template. The failure drill (SPEC §6): the Producer desk takes an agent down and brings it back from the Agent Framework workflow checkpoint, which re-runs only that step and the one after it; an interrupted breakdown resumes from its last superstep, after a restart too ([tests/test_crew_recovery.py](../tests/test_crew_recovery.py), [tests/test_api_drill.py](../tests/test_api_drill.py), [web/src/producer/producer.test.tsx](../web/src/producer/producer.test.tsx)). Measured: with the Analyst or the Telestrator down, the crew aired a valid, verified breakdown 3 of 3 times with 3 of 4 model roles intact; one agent doing all four roles kept 0 of 4 ([crew_vs_single](../eval/reports/crew_vs_single.md), "Failure drill"). Offline, through the real workflow with a scripted model ([crew_evidence](../eval/reports/crew_evidence.md), PR #195): with any one of the four agents down, 280/280 scripts aired in 28 drills and the crew kept 3 of 4 roles on the model, the single agent 0 of 4; bringing the agent back restored the fault-free breakdown in 70/70 drills; with the model service down, every API request was still answered with a verified breakdown, on templates. Live: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer). Trailer: `redcard` 1:21, `bringback` 1:24 | Partial: a drill lives on the replica's disk, so every restart or redeploy drops it, and bring-back then answers 404; in a model outage the all-template run is cached under the model's key and its chip reads Live, then Cached (crew_evidence's finding; the Producer desk shows the template steps) |
 | End-to-end outcome | one `BreakdownResult` = a validated plan + verified scripts per persona and language + timed SSML cues, played by the web app; measured against a single agent on the same inputs ([crew_vs_single](../eval/reports/crew_vs_single.md)): see [Why a crew](#why-a-crew) | Partial: the crew's lines are no better than one agent's; its advantage is recovery, timing and auditability |
 
+### The crew's graph and the four asks
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="crew_workflow-dark.svg">
+  <img src="crew_workflow.svg" alt="The crew's workflow as Microsoft Agent Framework draws it: Director → Analyst, which calls the MCP tool server and its tools → Telestrator ∥ narration ⇄ Verifier (a refuted line goes back for a rewrite, then is dropped) → Voice. Dashed edges from the Director, Analyst, Telestrator and narration to the failure drill and back: taken down, the agent runs on its template and waits; brought back, it runs again from the latest checkpoint.">
+</picture>
+
+Agent Framework's own `WorkflowViz` draws this graph from the workflow the API runs
+(`build_workflow`); the MCP tool server, the Verifier's rewrite loop and the failure drill's
+bring-back are added from the code ([docs/crew_workflow.py](../docs/crew_workflow.py), checked by
+[tests/test_crew_workflow_diagram.py](../tests/test_crew_workflow_diagram.py)). The category asks
+for four things; each has a measured number ([docs/NUMBERS.md](../docs/NUMBERS.md), rows MA).
+
+#### "Distinct roles"
+
+The crew has model agents (Director, Analyst, Telestrator, and narration with its two voices) and code steps
+(Verifier, Voice), each with its own schema, timeout and template. The Verifier is a separate gate
+that can veto. Of <!--num:MA8.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:MA8.aired-->2,823<!--/num--> would have aired, <!--num:MA8.false-->888<!--/num--> of them stating something false ([crew_evidence](../eval/reports/crew_evidence.md), MA8).
+
+#### "Coordinate through shared state and effective handoffs"
+
+Typed messages on the workflow's edges, and one verified body of evidence every step reads. The
+crew trace records each handoff: 394 of 394 aired lines trace to their verified claims, the voice
+call that chose them, the Verifier round that passed them and their voice cue
+([crew_evidence](../eval/reports/crew_evidence.md), MA10).
+
+#### "Recover from failures"
+
+With any one agent taken down, every script still aired and most roles still came from the
+model; one agent doing all the roles kept none. Bringing the agent back from the Agent
+Framework checkpoint restored the fault-free breakdown in every drill ([crew_evidence](../eval/reports/crew_evidence.md),
+MA1, MA7). Try it on the live site: [the failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer).
+
+#### "An end-to-end outcome a single agent could not achieve as effectively"
+
+What the crew buys is a breakdown that finishes inside the step budget, survives a fault and
+recovers cheaply. Under the deployed step timeout, no crew agent run would have timed
+out, while every run of one agent doing all the roles in one call would have (MA3). Bringing the
+Telestrator back costs the crew less than the single agent's re-run (MA2); the Analyst costs more,
+because every step after it runs again (MA2b). What it does not buy is better lines: both
+structures aired no wrong facts and scored the same on groundedness
+([crew_vs_single](../eval/reports/crew_vs_single.md), MA5).
+
+<!-- TODO(freeze): a screenshot of one live breakdown's trace in Application Insights (the agent
+spans and their handoffs), taken after the 10/24 prewarm; save it as
+docs/screenshots/appinsights-trace.png and show it here (docs/NUMBERS.md D2). -->
+
 ### Why a crew
 
 We ran one Foundry agent doing the four model roles in one call (the crew's schemas side by
