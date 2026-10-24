@@ -8,6 +8,7 @@ import { useStats } from "../stats/store";
 import { useStore } from "../store/store";
 import { SourceChip } from "../provenance/SourceChip";
 import { computed } from "../provenance/source";
+import { pitchData } from "./pitchData";
 
 const MAX = 4;
 
@@ -42,17 +43,19 @@ export function StatsTicker() {
       .join("\n");
   });
   // The broadcast picture draws the same tags, each with its source chip (views/broadcastTags.ts):
-  // there the ticker keeps only its spoken line. His eyes and the board keep it whole.
+  // there the ticker keeps only its spoken line. His eyes and the board keep it whole, with the
+  // data on the pitch on (View options; off by default, ui/pitchData.ts).
   const broadcast = useStore(
     view.playback,
     (s) => s.camera === "broadcast" && s.focus !== "tactical",
   );
+  const data = useStore(pitchData, (s) => s.on);
   if (!stats || key === "×") return null;
   const tags = shown(stats, view.playback.get().frame, owner);
   const names = stats.players;
   return (
     <div className="stage-ticker">
-      {(broadcast ? [] : tags).map((tag) => (
+      {(broadcast || !data ? [] : tags).map((tag) => (
         <span
           key={`${tag.kind}-${tag.player}-${tag.label}`}
           className="stat-chip"

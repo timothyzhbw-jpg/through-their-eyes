@@ -1,23 +1,6 @@
-/* The moment links (MomentRail.tsx): a slim rail above the live screen and a row on the intro
-   card. Small chips, one line; on a phone the rail scrolls sideways. */
-:root {
-  --rail-h: 44px;
-}
-.moment-rail {
-  display: flex;
-  align-items: center;
-  height: var(--rail-h);
-  padding: 0 var(--gutter);
-  border-bottom: 1px solid var(--hairline);
-  background: var(--night);
-}
-.moment-rail.hidden {
-  visibility: hidden;
-}
-/* The live screen gives the rail its height, so the playback bar stays on the first screen. */
-.app:has(> .moment-rail) > .stage {
-  height: calc(100svh - var(--rail-h));
-}
+/* The moment links (MomentRail.tsx): a row of chips on the intro card, and the header's Moments
+   menu (its list: styles.css .moments-panel). Small chips, one line; on a phone the row scrolls
+   sideways. */
 .moment-chips ul {
   display: flex;
   flex-wrap: wrap;
@@ -25,14 +8,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-.moment-rail .moment-chips {
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.moment-rail .moment-chips ul {
-  flex-wrap: nowrap;
 }
 .moment-chip {
   display: inline-flex;
@@ -79,11 +54,8 @@
   border-left: 1px solid var(--hairline-strong);
 }
 @media (max-width: 760px) {
-  .moment-rail {
-    padding: 0 16px;
-  }
-  /* One row on a phone, on the rail and on the intro card's sheet (it must stay short): more chips
-     than the width scroll sideways, the last ones fading at the edge so the row reads as such. */
+  /* One row on a phone's intro card sheet (it must stay short): more chips than the width scroll
+     sideways, the last ones fading at the edge so the row reads as such. */
   .moment-chips {
     min-width: 0;
     overflow-x: auto;
@@ -96,7 +68,12 @@
   .moment-chips li:last-child {
     padding-right: 24px; /* the last chip can scroll out of the fade */
   }
-  .app:has(> .moment-rail) > .stage {
-    height: auto;
+  /* the header's menu lists them in a column: no scroll, no fade */
+  .moments-panel .moment-chips {
+    overflow: visible;
+    mask-image: none;
+  }
+  .moments-panel .moment-chips li:last-child {
+    padding-right: 0;
   }
 }

@@ -1,7 +1,11 @@
-// The moments, always in reach (SPEC 7): a row of links above the live screen and on the intro
-// card, so the site never reads as a one-moment demo. The page on screen is marked current.
+// The moments, always in reach (SPEC 7): one "Moments" menu in the header and a row of chips on
+// the intro card, so the site never reads as a one-moment demo. The page on screen is marked
+// current.
 
+import { useId, useRef, useState } from "react";
 import { useDeepLink } from "../deeplink";
+import { ChevronIcon } from "../ui/icons";
+import { usePopover } from "../ui/Stage";
 import { useRankedLinks } from "../personal/hooks";
 import { useView } from "../session";
 import { currentMoment, DRILL_LINK, hrefOf, MOMENT_LINKS } from "./moments";
@@ -39,17 +43,32 @@ export function MomentChips({ label = "Moments" }: { label?: string }) {
   );
 }
 
-/** The rail above the live screen. While the intro card is up it keeps its place, hidden (the card
- * carries the same links), so the picture does not jump when the card closes. `rail=0` in the
- * address leaves it out (the demo video's captures keep their framing). */
-export function MomentRail({ hidden }: { hidden: boolean }) {
+/** "Moments ▾" in the header: the same links in one menu (the intro card carries them as chips).
+ * `rail=0` in the address leaves it out (the demo video's captures keep their framing). */
+export function MomentsMenu() {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const close = useRef(() => setOpen(false)).current;
+  const onKeyDown = usePopover(open, close, wrap, toggle);
   if (!useDeepLink().rail) return null;
   return (
-    <div
-      className={hidden ? "moment-rail hidden" : "moment-rail"}
-      aria-hidden={hidden || undefined}
-    >
-      <MomentChips />
+    <div className="popover-wrap moments-menu" ref={wrap} onKeyDown={onKeyDown}>
+      <button
+        ref={toggle}
+        type="button"
+        className="btn btn-quiet"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        Moments
+        <ChevronIcon />
+      </button>
+      <div id={id} className="popover moments-panel" hidden={!open}>
+        <MomentChips />
+      </div>
     </div>
   );
 }

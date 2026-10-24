@@ -2213,7 +2213,7 @@ original visual identity.
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
 - **Academy drill** (2026-10-22, Bowen: a light, game-like scan trainer with no sim change;
-  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment, the moment rail and the intro
+  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment, the Moments menu and the intro
   card; deep link `?play=drill`, with `?match=press_escape-0` for the harder moment, or in a
   stitched match its first hero moment with a look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
   pass reaches him, check your shoulder, then make the pass with only what your look showed. It

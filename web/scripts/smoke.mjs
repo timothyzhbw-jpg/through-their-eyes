@@ -381,6 +381,7 @@ async function mainView(page, main) {
 async function audiences(page, shoot) {
   await hero(page);
   const pick = async (label, main, also) => {
+    await openMore(page); // who is watching is in the header's ⋯
     const toggle = page.getByRole("button", { name: /^Watching as / });
     if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
     const menu = page.getByRole("dialog", { name: "Who is watching" });
@@ -400,30 +401,56 @@ async function audiences(page, shoot) {
   await pick("Audio description", "eyes", figure("Broadcast view"));
 }
 
-/** A hero moment: its views and its run switch; at the top level, the live service's control
- * (not the "Offline data" badge); inside a match, the way back. */
+/** A hero moment: its views and its run switch; at the top level, the header's Moments menu and no
+ * Live pill (the stream runs, its state on the stage's data-stream); inside a match, the way back. */
 async function hero(page, { main = "eyes", inMatch = false } = {}) {
   if (inMatch) {
     await see(page.getByRole("button", { name: /Back to the match/ }), "Back to the match");
   } else {
-    await see(page.getByRole("group", { name: "Live stream" }), "the live stream control");
+    await see(page.getByRole("button", { name: "Moments", exact: true }), "the Moments menu");
+    if (await page.locator(".stage-head .live-chip").count()) {
+      throw new Error("expected no Live pill on a hero moment");
+    }
   }
   await see(page.getByRole("group", { name: "Run" }), "a hero moment's run switch");
   await mainView(page, main);
 }
 
-/** A phone keeps the director's suggestions off its live screen (no room: Auto director, in View
- * options, cuts for it), so the run switch and the moment card sit right under the picture. */
+/** The header's ⋯ open (sound, who is watching, the other ways in, View options). */
+async function openMore(page) {
+  const more = page.locator("#header-more");
+  if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
+}
+
+/** View options open, in the header's ⋯. */
+async function viewOptions(page) {
+  await openMore(page);
+  const toggle = page.getByRole("button", { name: "View options" });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+}
+
+/** Close View options and the ⋯ around it: Escape closes the inner one, then the outer. */
+async function closeMenus(page) {
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+}
+
+/** Nothing of the director over a phone's picture: its pending suggestion is a dot on the camera
+ * switch, which stays on the bar; Auto director is in View options. */
 async function noDirectorOnPhone(page) {
   const shown = await page.evaluate(() =>
-    [...document.querySelectorAll(".stage-director, .stage-director .director-chip")]
+    [...document.querySelectorAll(".stage-director, .director-chip")]
       .map((el) => el.getBoundingClientRect())
       .some((r) => r.width > 0 && r.height > 0),
   );
-  if (shown) throw new Error("the director's suggestion shows on a phone");
-  await page.getByRole("button", { name: "View options" }).click();
+  if (shown) throw new Error("the director's suggestion shows over a phone's picture");
+  await see(
+    page.locator(".transport").getByRole("group", { name: "Camera" }),
+    "the camera switch on the bar",
+  );
+  await viewOptions(page);
   await see(page.getByRole("button", { name: "Auto director" }), "Auto director in View options");
-  await page.keyboard.press("Escape");
+  await closeMenus(page);
 }
 
 /** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
@@ -454,9 +481,9 @@ async function boardClear(page) {
  * pass options' key. `within`: it stays inside that element (the board); `outside`: it is clear of
  * it (a phone's picture). */
 async function skeletonKeyClear(page, { within = null, outside = null } = {}) {
-  await page.getByRole("button", { name: "View options" }).click();
+  await viewOptions(page);
   await page.getByRole("button", { name: "Skeleton", exact: true }).click();
-  await page.keyboard.press("Escape");
+  await closeMenus(page);
   // the board in the picture in picture has its own key, hidden there: the one on show
   await see(page.locator(".skeleton-key:visible"), "the skeleton's key");
   const over = await page.evaluate(
@@ -578,12 +605,12 @@ async function cutNoBlur(page) {
     throw new Error(`expected no head-turn blur by default, got sigma ${byDefault.most} px`);
   }
 
-  await page.getByRole("button", { name: "View options" }).click();
+  await viewOptions(page);
   const blur = page.getByRole("button", { name: "Motion blur" });
   await blur.click();
   if ((await blur.getAttribute("aria-pressed")) !== "true")
     throw new Error("Motion blur did not turn on");
-  await page.keyboard.press("Escape");
+  await closeMenus(page);
   const after = await page.evaluate(
     async ([limit, reads]) => {
       const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
@@ -925,9 +952,15 @@ const MOMENT_PAGES = [
 ];
 
 async function momentLinks(page, shoot) {
+  const menu = page.locator(".stage-head .moments-menu");
+  const open = async () => {
+    const toggle = menu.getByRole("button", { name: "Moments", exact: true });
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  };
   for (const [label, lede, { inMatch = false } = {}] of MOMENT_PAGES) {
-    const chip = page.locator(".moment-rail a", { hasText: label });
-    await see(chip, `the "${label}" link on the rail`);
+    await open();
+    const chip = menu.locator("a", { hasText: label });
+    await see(chip, `the "${label}" link in the Moments menu`);
     await Promise.all([page.waitForEvent("load"), chip.click()]);
     await see(
       page.locator(".moment-head .lede").filter({ hasText: lede }),
@@ -936,10 +969,12 @@ async function momentLinks(page, shoot) {
     if (inMatch) {
       await see(page.getByRole("button", { name: /Back to the match/ }), "Back to the match");
     }
+    await open();
     await see(
-      page.locator('.moment-rail a[aria-current="page"]', { hasText: label }),
+      menu.locator('a[aria-current="page"]', { hasText: label }),
       `"${label}" marked current`,
     );
+    await page.keyboard.press("Escape");
     const [wide, width] = await page.evaluate(() => [
       document.documentElement.scrollWidth,
       document.documentElement.clientWidth,
@@ -1152,7 +1187,12 @@ async function lineup(page, shoot, button, then) {
 async function phone(page, check, { live = true } = {}) {
   await check(page);
   if (live) {
-    await see(page.locator(".live-status.streaming"), "the live stream running", "attached");
+    // A hero moment's header no longer shows the stream: the stage carries its state.
+    await see(
+      page.locator('.stage[data-stream="streaming"]'),
+      "the live stream running",
+      "attached",
+    );
     // Once the lineup card is gone the header still says what this is (SPEC 0): name and note.
     await see(page.locator(".stage-head .brand h1"), "the product name in the header");
     // The note shows on a phone's header (up to 480 px); a tablet and a narrow desktop hide it.

@@ -61,13 +61,21 @@ function mount(session: ViewSession, node: ReactNode = <App autoplay={false} />)
 }
 
 const offline = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson);
-const rail = (el: ParentNode) => el.querySelector<HTMLElement>(".moment-rail");
+const menu = (el: ParentNode) => el.querySelector<HTMLElement>(".stage-head .moments-menu");
 const labels = (el: ParentNode) =>
-  [...(rail(el)?.querySelectorAll("a") ?? [])].map((a) => a.textContent);
+  [...(menu(el)?.querySelectorAll("a") ?? [])].map((a) => a.textContent);
 
-describe("the moment rail", () => {
-  it("names every moment and the full match above the live screen, this one marked", () => {
+describe("the Moments menu", () => {
+  it("names every moment and the full match in the header, this one marked", () => {
     const page = mount(offline());
+    const toggle = menu(page)!.querySelector<HTMLButtonElement>(":scope > button")!;
+    expect(toggle.textContent).toBe("Moments");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    const panel = menu(page)!.querySelector<HTMLElement>(".moments-panel")!;
+    expect(panel.hidden).toBe(true);
+    act(() => toggle.click());
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(panel.hidden).toBe(false);
     expect(labels(page)).toEqual([
       "The look",
       "Under pressure",
@@ -76,20 +84,32 @@ describe("the moment rail", () => {
       "Full match · live",
       "Academy drill",
     ]);
-    expect(rail(page)!.querySelector("a.drill-link")!.getAttribute("href")).toBe("/?play=drill");
-    const current = rail(page)!.querySelector('a[aria-current="page"]');
+    expect(menu(page)!.querySelector("a.drill-link")!.getAttribute("href")).toBe("/?play=drill");
+    const current = menu(page)!.querySelector('a[aria-current="page"]');
     expect(current?.textContent).toBe("The look");
-    // Before the stage, outside it: trailer shots cropped to the stage do not change.
-    expect(rail(page)!.nextElementSibling?.classList.contains("stage")).toBe(true);
+    // No rail above the stage: the live screen is the first thing on the page.
+    expect(page.querySelector(".app")!.firstElementChild!.classList.contains("stage")).toBe(true);
   });
 
-  it("keeps its place hidden while the intro card is up", () => {
+  it("closes on Escape, focus back on its button", () => {
+    const page = mount(offline());
+    const toggle = menu(page)!.querySelector<HTMLButtonElement>(":scope > button")!;
+    act(() => toggle.click());
+    const link = menu(page)!.querySelector<HTMLAnchorElement>("a")!;
+    link.focus();
+    act(() => {
+      link.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it("waits behind the intro card, which carries the same links", () => {
     intro.set({ open: true });
     const page = mount(offline());
-    expect(rail(page)!.classList.contains("hidden")).toBe(true);
-    expect(rail(page)!.getAttribute("aria-hidden")).toBe("true");
+    expect(menu(page)!.closest("[inert]")).not.toBeNull();
     act(() => intro.set({ open: false }));
-    expect(rail(page)!.classList.contains("hidden")).toBe(false);
+    expect(menu(page)!.closest("[inert]")).toBeNull();
   });
 
   it("is left out with rail=0 (the demo video's framing)", () => {
@@ -102,14 +122,14 @@ describe("the moment rail", () => {
         <App autoplay={false} />
       </DeepLinkContext.Provider>,
     );
-    expect(rail(page)).toBeNull();
+    expect(menu(page)).toBeNull();
   });
 
   it("stays off Your call, which has its own way back", () => {
     const session = offline();
     const page = mount(session);
     act(() => yourCallOf(session).open());
-    expect(rail(page)).toBeNull();
+    expect(page.querySelector(".moments-menu")).toBeNull();
   });
 
   it("marks the match on the match page, and the moment inside it", () => {
@@ -119,7 +139,7 @@ describe("the moment rail", () => {
       socket: fakeSockets(),
     });
     const page = mount(match, <MatchApp session={match} autoplay={false} />);
-    expect(rail(page)!.querySelector('a[aria-current="page"]')?.textContent).toBe(
+    expect(menu(page)!.querySelector('a[aria-current="page"]')?.textContent).toBe(
       "Full match · live",
     );
     expect(currentMoment(createSession(parseHero(pressureExport()), null, null))).toBe("pressure");
@@ -132,23 +152,47 @@ describe("the hero page's shell (SPEC 7)", () => {
       (b) => b.getAttribute("aria-label") ?? b.textContent?.replace(/\s+/g, " ").trim(),
     );
 
-  it("keeps the header to Your call, More, sound and who is watching", () => {
+  it("keeps the header to the brand, Moments, Your call and ⋯; no Live pill on a moment", () => {
     const page = mount(offline());
-    const end = page.querySelector(".stage-head .header-end")!;
+    const head = page.querySelector(".stage-head")!;
     // The buttons on the row itself (a menu's own items are inside its panel).
-    expect(names(end, ":scope > button, :scope > .popover-wrap > button")).toEqual([
-      "Your call",
-      "More",
-      "Sound",
-      "Watching as Casual fan · English",
-    ]);
-    expect(end.querySelector(".your-view")).toBeNull(); // one audience menu: the viewer's
-    // His looks, Take his eyes and the tour wait in More, mounted and hidden.
-    const more = end.querySelector<HTMLElement>(".more-panel")!;
+    const row = ":scope > div > button, :scope > div > .popover-wrap > button, :scope > div > a";
+    expect(names(head, row)).toEqual(["Moments", "Your call", "More"]);
+    expect(head.querySelector(".live-chip, .live")).toBeNull();
+    expect(head.querySelector(".your-view")).toBeNull(); // one audience menu: the viewer's
+    // Sound, who is watching, His looks, Take his eyes, the tour and View options wait in ⋯,
+    // mounted and hidden.
+    const more = head.querySelector<HTMLElement>(".more-panel")!;
     expect(more.hidden).toBe(true);
+    const sound = more.querySelector<HTMLButtonElement>("button.sound")!;
+    expect(sound.getAttribute("aria-label")).toBe("Sound");
+    expect(sound.getAttribute("aria-pressed")).toBe("false");
+    expect(names(more)).toContain("Watching as Casual fan · English");
     expect(more.querySelector("#scan-steps-open")).not.toBeNull();
     expect(more.querySelector("#take-eyes-open")).not.toBeNull();
     expect(names(more)).toContain("Quick tour");
+    expect(names(more)).toContain("View options");
+  });
+
+  it("keeps the first screen to a few controls: one switch over the picture, one action", () => {
+    const page = mount(offline());
+    const stage = page.querySelector(".stage")!;
+    // Over the picture: only the run switch (no director's banner, no data chips by default).
+    expect(stage.querySelector(".stage-director, .director-chip, .stat-chip")).toBeNull();
+    expect(names(stage.querySelector(".stage-top"), "button, a, select")).toEqual([]);
+    expect(stage.querySelectorAll(".stage-run [role=group]")).toHaveLength(1);
+    // The bar: play, the timeline with its two marks, the camera switch; no View options.
+    const bar = stage.querySelector(".transport")!;
+    expect(names(bar, ":scope > button")).toEqual(["Play"]);
+    expect(bar.querySelector('input[aria-label="Timeline"]')).not.toBeNull();
+    expect(names(bar.querySelector(".marks"))).toEqual(["Key scan", "Decision"]);
+    expect(bar.querySelector('[role=group][aria-label="Camera"]')).not.toBeNull();
+    expect(names(bar)).not.toContain("View options");
+    // The card: its title, one line and one button.
+    const card = stage.querySelector(".moment-card")!;
+    expect(names(card)).toHaveLength(1);
+    expect(names(card)[0]).toMatch(/breakdown$/i);
+    expect(card.querySelectorAll("p.card-body")).toHaveLength(1);
   });
 
   it("tells the story with two actions, the other ways in folded, and the match data last", () => {
@@ -189,7 +233,7 @@ describe("the links", () => {
       expect(`${m.label} ${m.title}`).not.toMatch(/\d/);
   });
 
-  it("the hero page's Live pill opens the full match's stream", () => {
+  it("the Live control on a hero session opens the full match's stream", () => {
     const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null, {
       api: createApi(API, "blind_side_run-3", fakeFetch({})),
       socket: fakeSockets(),

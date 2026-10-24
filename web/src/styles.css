@@ -66,14 +66,14 @@
   --gutter: 32px;
   --bar-h: 96px;
   --head-h: 96px;
-  --card-w: 384px;
+  --card-w: 320px;
   --pip-w: clamp(200px, 20vw, 320px);
   color-scheme: dark;
 }
 @media (max-width: 1100px) {
   :root {
     --gutter: 24px;
-    --card-w: 340px;
+    --card-w: 300px;
     --bar-h: 148px;
   }
 }
@@ -1036,18 +1036,17 @@ optgroup {
 }
 .brand h1 {
   margin: 0;
-  font: italic 400 25px/1 var(--font-display);
+  font: italic 400 19px/1 var(--font-display);
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
 .brand h1:focus {
   outline: none; /* focused from code when the intro card closes, never by Tab */
 }
+/* the note under the name: quiet sentence case, not a mono label */
 .brand .sub {
   margin: 0;
-  font: 500 11px/1 var(--font-data);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: 400 12px/1 var(--font-body);
   color: var(--chalk-2); /* over the picture: Chalk 3 fell to 3.2:1 by the floodlights */
   text-shadow: var(--halo);
 }
@@ -1060,34 +1059,131 @@ optgroup {
 .header-end {
   margin-left: auto;
 }
-.header-end .sound,
-.header-more > .btn {
-  background: rgba(8, 14, 11, 0.55);
+/* the header's few controls: quiet glass over the picture, no outline */
+.header-more > .btn,
+.moments-menu > .btn,
+.header-end .yc-open[aria-pressed="false"] {
+  background: rgba(8, 14, 11, 0.45);
+  box-shadow: none;
 }
-/* More: the other ways into the moment, one menu under its button. Its items stay in the page
-   while it is closed (hidden): the modes read their pressed state and App returns focus to them. */
+.header-more > .btn:hover,
+.header-more > .btn[aria-expanded="true"],
+.moments-menu > .btn:hover,
+.moments-menu > .btn[aria-expanded="true"] {
+  background: rgba(239, 237, 229, 0.12);
+}
+/* Moments: the moment links in one menu under its button */
+.moments-panel {
+  top: 54px;
+  left: 0;
+  width: 220px;
+}
+.moments-panel[hidden] {
+  display: none;
+}
+.moments-panel .moment-chips ul {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.moments-panel .moment-chip {
+  display: flex;
+  width: 100%;
+  height: 38px;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 14px;
+}
+.moments-panel .moment-chip:hover {
+  background: rgba(239, 237, 229, 0.08);
+  box-shadow: none;
+}
+.moments-panel .moment-chips .drill-item {
+  margin-top: 4px;
+  padding: 4px 0 0;
+  border-left: 0;
+  border-top: 1px solid var(--hairline);
+}
+/* ⋯: everything off the first screen, one menu under its button, in sections. Its items stay in
+   the page while it is closed (hidden): the modes read their pressed state, App returns focus to
+   them and a tour step opens it to point inside (tour/Tour.tsx). The menus inside it (who is
+   watching, View options) open in place. */
 .more-panel {
   top: 54px;
   right: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 220px;
+  gap: 4px;
+  width: 300px;
+  max-height: calc(100svh - 96px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .more-panel[hidden] {
   display: none;
 }
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+.menu-label {
+  margin: 0;
+  padding: 8px 14px 4px;
+  font-size: 12px;
+  color: var(--chalk-3);
+}
 .more-panel .btn,
+.more-panel .sound,
 .stage-head .more-panel .ss-open[aria-pressed="false"],
 .stage-head .more-panel .te-open[aria-pressed="false"] {
   display: flex;
   justify-content: flex-start;
   width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
   background: transparent;
   box-shadow: none;
+  color: var(--chalk);
+  font: 500 14px/1 var(--font-body);
+  cursor: pointer;
 }
-.more-panel .btn:hover {
+.more-panel .btn:hover,
+.more-panel .sound:hover {
   background: rgba(239, 237, 229, 0.08);
+}
+.more-panel .sound[aria-pressed="true"] {
+  color: var(--floodlight);
+}
+.more-panel .viewer-toggle {
+  gap: 10px;
+  padding-left: 8px;
+}
+.more-panel .viewer-toggle .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+}
+.more-panel .viewer-toggle > svg,
+.more-panel .view-options .btn > svg:last-child {
+  margin-left: auto;
+}
+.more-panel .popover,
+.more-panel .view-options .options-panel,
+.more-panel .viewer .viewer-panel {
+  position: static;
+  width: auto;
+  max-height: none;
+  margin: 4px 0 6px;
+  padding: 10px;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  background: rgba(239, 237, 229, 0.03);
+  backdrop-filter: none;
+  animation: none;
 }
 /* an open mode's pill and the header's pressed Your call: neutral, the accent stays on the look */
 .stage-head .yc-open[aria-pressed="true"],
@@ -1097,45 +1193,9 @@ optgroup {
   background: rgba(239, 237, 229, 0.14);
   box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.38);
 }
-.stage-head:has(.more-panel:not([hidden])) {
-  z-index: 7; /* the open menu sits above the run switch, as the viewer menu does */
-}
-/* the camera director's suggestion (director/): only while it has one */
-.stage-director {
-  position: absolute;
-  z-index: 5;
-  top: calc(var(--head-h) + 48px);
-  left: var(--gutter);
-  right: calc(var(--card-w) + 2 * var(--gutter));
-  pointer-events: none;
-}
-.stage-director .director {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  min-height: 0;
-  gap: 8px;
-}
-.stage-director .director > *,
-.stage-director .director-slot > * {
-  pointer-events: auto;
-}
-.stage-director .director-slot {
-  flex: 0 1 auto;
-}
-.stage-director .director-chip {
-  border: 0;
-  border-radius: var(--r-control);
-  background: rgba(8, 14, 11, 0.72);
-  box-shadow: inset 0 0 0 1px var(--hairline-strong);
-  backdrop-filter: blur(12px);
-  font: 400 15px/1.3 var(--font-display);
-}
-.stage-director .director-chip b {
-  font: 500 11px/1 var(--font-data);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--chalk-2);
+.stage-head:has(.more-panel:not([hidden])),
+.stage-head:has(.moments-panel:not([hidden])) {
+  z-index: 7; /* an open menu sits above the run switch, as the viewer menu does */
 }
 /* with the look / without it: one switch, centred over the picture */
 .stage-run {
@@ -1338,12 +1398,24 @@ optgroup {
   border-radius: 50%;
   background: var(--floodlight);
 }
+/* lighter than the other cards: a thin veil, no outline, the picture shows through */
 .moment-card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 22px 22px 22px 24px;
+  gap: 12px;
+  padding: 20px 22px;
   animation: tt-rise 800ms var(--settle) both;
+}
+.moment-card.card {
+  background: rgba(8, 14, 11, 0.58);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.8);
+}
+.moment-card:focus {
+  outline: none; /* focused from code when it opens with its action disabled, never by Tab */
+}
+.moment-card .card-actions {
+  margin-top: 4px;
 }
 .card-head {
   display: flex;
@@ -1365,14 +1437,14 @@ optgroup {
 }
 .moment-card h2 {
   margin: 0;
-  font: 400 34px/1.04 var(--font-display);
+  font: 400 28px/1.06 var(--font-display);
   letter-spacing: -0.02em;
   text-wrap: balance;
   animation: tt-rise 800ms 80ms var(--settle) both;
 }
 .card-body {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--chalk-2);
   text-wrap: pretty;
@@ -1416,8 +1488,11 @@ optgroup {
   animation: tt-work 1.2s linear infinite;
 }
 .crew-note {
-  font-size: 13px;
-  color: var(--chalk-3);
+  font-size: 12px;
+  color: var(--chalk-2); /* on the moment card's light veil Chalk 3 is too faint */
+}
+.moment-card .crew-status {
+  gap: 8px;
 }
 .card-actions {
   display: flex;
@@ -1540,6 +1615,8 @@ optgroup {
 .play:hover {
   background: #fff;
 }
+/* the time and frame: only while the timeline is hovered or focused (it keeps its place, so the
+   bar does not move when it shows) */
 .clock {
   flex: none;
   font: 500 13px/1.2 var(--font-data);
@@ -1547,6 +1624,21 @@ optgroup {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-shadow: var(--halo);
+  opacity: 0;
+  transition: opacity var(--t-quick);
+}
+.transport:has(.timeline:hover, .timeline :focus-visible) .clock {
+  opacity: 1;
+}
+/* the director's pending suggestion: a dot on its camera (director/DirectorBar.tsx) */
+.cam-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--floodlight);
+  vertical-align: 2px;
 }
 .clock b {
   color: var(--chalk);
@@ -1586,9 +1678,7 @@ optgroup {
   border: 0;
   padding: 3px 0;
   background: transparent;
-  font: 500 10px/1 var(--font-data);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font: 500 12px/1 var(--font-body);
   color: var(--chalk-2); /* over the picture, as .brand .sub */
   text-shadow: var(--halo);
   white-space: nowrap;
@@ -1693,64 +1783,6 @@ optgroup {
   }
 }
 
-/* The director belongs to the live picture, with the same controls and quiet raised surface. */
-.director {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  min-height: 76px;
-  padding: 16px var(--gutter);
-  border-bottom: 1px solid var(--hairline);
-  background: var(--night-2);
-}
-.director-slot {
-  flex: 1 1 320px;
-  min-width: 0;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.chip.director-chip {
-  display: block;
-  min-width: 0;
-  height: auto;
-  min-height: 44px;
-  padding: 10px 14px;
-  border-radius: var(--r-media);
-  background: rgba(239, 237, 229, 0.04);
-  box-shadow: inset 0 0 0 1px var(--hairline-strong);
-  color: var(--chalk);
-  text-align: left;
-  font: 400 14px/1.4 var(--font-body);
-}
-.director-chip b {
-  font-weight: 600;
-}
-.chip.director-chip:hover {
-  background: var(--night-3);
-  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.38);
-}
-/* Over the picture the chip needs its glass: .chip.director-chip above overrides the live
-   screen's own rule, which left it on 4 % white (3:1 where it crosses the ad boards). */
-.stage-director .chip.director-chip:not(:hover) {
-  background: rgba(8, 14, 11, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.director-dismiss {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  font-size: 20px;
-}
-.stage-director .director-dismiss:not(:hover) {
-  background: rgba(8, 14, 11, 0.72); /* the × sits on the picture: the chip's glass */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
 /* ---------- the moment, told below the live screen: a story, not a dashboard ---------- */
 .moment {
   --wrap: clamp(20px, 5.5vw, 80px);
@@ -1784,7 +1816,7 @@ optgroup {
 .moment-head h2 {
   grid-area: title;
   margin: 0;
-  font: 300 clamp(72px, 10vw, 168px) / 0.86 var(--font-display);
+  font: 300 clamp(52px, 6.4vw, 112px) / 0.9 var(--font-display);
   letter-spacing: -0.045em;
   text-wrap: balance;
 }
@@ -1827,7 +1859,7 @@ optgroup {
 }
 .chapter h2 {
   margin: 0;
-  font: 300 clamp(48px, 6.2vw, 92px) / 0.92 var(--font-display);
+  font: 300 clamp(40px, 4.6vw, 72px) / 0.96 var(--font-display);
   letter-spacing: -0.035em;
   text-wrap: balance;
 }
@@ -3415,9 +3447,6 @@ optgroup {
   .header-end {
     gap: 6px;
   }
-  .header-end .sound:disabled {
-    display: none; /* offline there is no voice: room for the rest */
-  }
   .data-badge {
     padding: 0 10px;
     font-size: 10px;
@@ -3462,14 +3491,6 @@ optgroup {
   }
   .eyes-picker select {
     height: 32px;
-  }
-  .stage-director {
-    position: relative;
-    grid-area: director;
-    top: auto;
-    left: auto;
-    right: auto;
-    padding: 10px 16px 0;
   }
   .stage-run {
     position: relative;
@@ -3569,36 +3590,6 @@ optgroup {
   .jumps {
     order: 6;
   }
-  .view-options {
-    order: 4;
-  }
-  .view-options .btn-label {
-    display: none;
-  }
-  .view-options .btn {
-    width: 44px;
-    padding: 0;
-  }
-  .view-options .options-panel {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    width: auto;
-    max-height: 70svh;
-    overflow-y: auto;
-  }
-  .director {
-    gap: 10px 12px;
-    padding: 16px;
-  }
-  .director-slot {
-    flex-basis: 100%;
-    order: 1;
-  }
-  .director-chip {
-    flex: 1;
-  }
   .stage-card,
   .focus-tactical .stage-card {
     position: relative;
@@ -3617,7 +3608,7 @@ optgroup {
     backdrop-filter: none;
   }
   .moment-card h2 {
-    font-size: 34px;
+    font-size: 28px;
   }
   .card-actions .btn {
     flex: 1 1 100%;
@@ -3734,8 +3725,7 @@ optgroup {
   }
   .stage-head .brand .sub {
     display: block;
-    font-size: 9.5px;
-    letter-spacing: 0.06em;
+    font-size: 11px;
     white-space: nowrap;
   }
   .brand .sub-more {
@@ -3748,12 +3738,12 @@ optgroup {
   .stage-head .live-status {
     display: none;
   }
-  /* Your call and More stay on the Live pill's row: tighter, More without its chevron */
+  /* Moments, Your call and ⋯ share the row under the name: tighter, Moments without its chevron */
   .header-end .yc-open,
-  .header-more > .btn {
+  .moments-menu > .btn {
     padding: 0 14px;
   }
-  .header-more > .btn svg {
+  .moments-menu > .btn svg {
     display: none;
   }
   /* the story's big numbers shrink with the screen instead of running off it */
@@ -3778,11 +3768,6 @@ optgroup {
   }
   .stage-head .live-chip {
     padding: 0 10px;
-  }
-}
-@media (max-width: 359px) {
-  .header-end .sound {
-    display: none;
   }
 }
 
@@ -3845,34 +3830,31 @@ optgroup {
     white-space: nowrap;
   }
 }
-/* On a phone the camera switch folds into View options (an outside review, 10/22), with whose eyes
-   and the Auto director, which live there at every width: under the picture they took rows ahead
-   of the moment card. The picture's own row keeps play, the timeline and View options. The
-   director's suggestions stay off a phone (no room: Auto director cuts for it), and the sound
-   switch is its icon, its "Tap for sound" kept as the button's name. */
-.options-panel .phone-only {
-  display: none;
-}
+/* A phone keeps the desktop's rules: under the picture, play and the timeline, then the camera
+   switch across the width, then the run switch; the moment card folds to its title and its one
+   action (the story below has the rest); the clock waits for the timeline's focus. */
 @media (max-width: 760px) {
-  .options-panel .phone-only {
-    display: block;
+  .transport .seg.camera {
+    flex: 1 1 100%;
   }
-  .transport > .seg.camera,
-  .stage-director {
+  .more-panel {
+    position: fixed;
+    top: 56px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-height: calc(100svh - 72px);
+  }
+  .moment-card .card-body,
+  .moment-card .crew-status {
     display: none;
   }
-  .sound.with-hint {
-    position: relative;
-    width: 44px;
-    padding: 0;
+  .moment-card {
+    gap: 14px;
   }
-  .sound-hint {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+  .stage-card,
+  .focus-tactical .stage-card {
+    margin-top: 20px;
   }
 }
 

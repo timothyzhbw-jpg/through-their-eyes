@@ -36,8 +36,10 @@
       "crop": "pov",
       "setup": [
         { "do": "wait", "for": "assets" },
+        { "do": "click", "role": "button", "name": "More", "exact": true },
         { "do": "click", "role": "button", "name": "View options" },
         { "do": "select", "label": "Playback speed", "value": "0.5" },
+        { "do": "click", "role": "button", "name": "More", "exact": true },
         { "do": "click", "role": "button", "name": "Key scan" }
       ],
       "actions": [

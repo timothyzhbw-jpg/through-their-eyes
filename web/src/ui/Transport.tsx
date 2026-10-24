@@ -1,6 +1,7 @@
 // The bar along the bottom of the live screen: play / pause, the timeline with scan bars and the
 // decision marker (the key scan and the decision, or where the ball reaches a marker's man, are
-// labelled under it, and jump there), the clock, the view options and the camera. In a stitched
+// labelled under it, and jump there), the clock (shown while the timeline is hovered or focused)
+// and the camera. In a stitched
 // match the timeline also marks where each possession starts (hero possessions shaded) and the
 // hero moments, with jumps between possessions; the clock is the match clock, also inside a hero
 // moment's breakdown.
@@ -11,7 +12,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { PauseIcon, PlayIcon } from "./icons";
 import { intro } from "./intro";
-import { CameraSwitch, ViewOptions } from "./Stage";
+import { CameraSwitch } from "./Stage";
 
 // Possession numbers on the match timeline are drawn only this far apart (px; a 9 px two-digit
 // number and its 4 px offset): a hero possession is about 6 s, and on a phone the whole match
@@ -69,7 +70,6 @@ export function Transport() {
           <PossessionJumps />
         </div>
       )}
-      <ViewOptions />
       <CameraSwitch />
     </section>
   );

@@ -101,7 +101,7 @@
   scroll-margin-top: 72px;
 }
 .journey-panel .chapter {
-  padding-top: 48px;
+  padding-top: 64px; /* more air above each step's title */
   scroll-margin-top: 72px;
 }
 .journey-panel .chapter-head {
@@ -110,7 +110,8 @@
 /* A step's title heads its panel, not the page: at the story's size "Why tactics work." filled
    two fifths of a 1440 x 900 screen before any content. The lede one size down with it. */
 .journey-panel .chapter h2 {
-  font-size: clamp(40px, 4.4vw, 64px);
+  font-size: clamp(30px, 3vw, 44px);
+  letter-spacing: -0.02em;
 }
 .journey-panel .chapter-lede .lede {
   font-size: clamp(17px, 1.4vw, 20px);
@@ -139,7 +140,7 @@
 .journey-compare .tour-line,
 .journey-compare .worth-line {
   margin: 0;
-  font: 400 20px/1.4 var(--font-display);
+  font: 400 18px/1.45 var(--font-display);
   color: var(--chalk);
 }
 .journey-story-here {
@@ -196,6 +197,6 @@
     padding-top: 32px;
   }
   .journey-panel .chapter h2 {
-    font-size: clamp(30px, 9vw, 40px);
+    font-size: clamp(26px, 7.5vw, 32px);
   }
 }

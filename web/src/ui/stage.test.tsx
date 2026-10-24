@@ -18,11 +18,13 @@ import { trial } from "../players/trial";
 import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
 import { Caption } from "./Narration";
 import { DecisionPanel, StoryPanel, VerdictPanel } from "./Panels";
+import { PITCH_DATA_KEY, pitchData, setPitchData } from "./pitchData";
 import {
   CameraSwitch,
   HeaderMore,
   headerMore,
   MomentCard,
+  revealInMenu,
   StageHud,
   SwapViews,
   ViewerMenu,
@@ -53,6 +55,7 @@ function online(hang = false): Session {
 
 const mounted: { root: Root; container: HTMLElement }[] = [];
 afterEach(() => {
+  setPitchData(false);
   for (const { root, container } of mounted.splice(0)) {
     act(() => root.unmount());
     container.remove();
@@ -219,6 +222,32 @@ describe("the header's More", () => {
     });
     expect(panel.hidden).toBe(true);
   });
+
+  it("opens for a tour step that points inside it, and only then", () => {
+    const page = mount(
+      offline(),
+      <>
+        <HeaderMore>
+          <button type="button" id="item-a" className="btn">
+            A
+          </button>
+        </HeaderMore>
+        <button type="button" id="outside">
+          B
+        </button>
+      </>,
+    );
+    const panel = page.querySelector<HTMLElement>(".more-panel")!;
+    expect(revealInMenu(page.querySelector("#outside")!)).toBe(false);
+    expect(panel.hidden).toBe(true);
+    let opened = false;
+    act(() => {
+      opened = revealInMenu(page.querySelector("#item-a")!);
+    });
+    expect(opened).toBe(true);
+    expect(panel.hidden).toBe(false);
+    expect(revealInMenu(page.querySelector("#item-a")!)).toBe(false); // open already
+  });
 });
 
 describe("whose eyes", () => {
@@ -232,8 +261,14 @@ describe("whose eyes", () => {
       </>,
     );
     expect(page.querySelector(".stage-hud select")).toBeNull(); // not on the picture
-    expect(text(page.querySelector(".hud"))).toMatch(/J. Ferriday · head \d+° from the ball/);
+    // His readouts are data on the pitch: off by default, on from View options.
+    expect(text(page.querySelector(".hud"))).not.toMatch(/head \d+° from the ball/);
     click(button(page, "View options"));
+    const data = button(page, "Show data on the pitch");
+    expect(data.getAttribute("aria-pressed")).toBe("false");
+    click(data);
+    expect(data.getAttribute("aria-pressed")).toBe("true");
+    expect(text(page.querySelector(".hud"))).toMatch(/J. Ferriday · head \d+° from the ball/);
     const select = page.querySelector<HTMLSelectElement>("select[aria-label='Whose eyes']")!;
     expect(select.value).toBe("H8");
     act(() => {
@@ -247,6 +282,7 @@ describe("whose eyes", () => {
   });
 
   it("labels the head angle and players in sight together as sim readouts", () => {
+    setPitchData(true);
     const page = mount(offline(), <StageHud />);
     const source = page.querySelector(".hud .source")!;
     expect(text(source)).toBe("sim");
@@ -254,6 +290,17 @@ describe("whose eyes", () => {
     expect(text(source.parentElement)).toMatch(/head \d+° from the ball.*\d+ players in sight/);
     expect(page.querySelectorAll(".hud .source")).toHaveLength(1);
     expect(page.querySelector(".hud .verified")).toBeNull();
+  });
+});
+
+describe("data on the pitch", () => {
+  it("is off by default and kept between visits once the viewer turns it on", () => {
+    expect(pitchData.get().on).toBe(false);
+    expect(localStorage.getItem(PITCH_DATA_KEY)).toBeNull();
+    setPitchData(true);
+    expect(localStorage.getItem(PITCH_DATA_KEY)).toBe("1");
+    setPitchData(false);
+    expect(localStorage.getItem(PITCH_DATA_KEY)).toBeNull();
   });
 });
 
@@ -280,20 +327,18 @@ describe("sim numbers in the story and decision", () => {
 });
 
 describe("moment card", () => {
-  it("names the moment and offers one primary action, the breakdown, for its whole life", () => {
+  it("holds the title, one short line and one button, the breakdown, for its whole life", () => {
     const page = mount(offline(), <MomentCard />);
     const card = page.querySelector("aside.moment-card")!;
-    expect(text(card.querySelector(".kicker"))).toBe("Moment · 3.00 s · Perception");
+    expect(card.querySelector(".kicker")).toBeNull(); // no mono label over the title
     expect(text(card.querySelector("h2"))).toBe("One look changed his pass.");
-    const primary = card.querySelectorAll(".btn-primary");
-    expect(primary).toHaveLength(1);
-    expect(text(primary[0])).toBe("Play breakdown");
-    // Reading on is the quiet way down the page; the tactics and the tour live elsewhere.
-    const read = card.querySelector<HTMLAnchorElement>("a[href='#moment']")!;
-    expect(text(read)).toBe("Read the moment");
-    expect(read.classList.contains("btn-quiet")).toBe(true);
-    expect(card.querySelector("a[href='#tactics-lab']")).toBeNull();
-    expect(card.querySelector(".tour-start")).toBeNull();
+    expect(text(card.querySelector(".card-body"))).toBe(
+      "Through the midfielder's eyes, with and without one look.",
+    );
+    const controls = card.querySelectorAll("button, a");
+    expect(controls).toHaveLength(1);
+    expect(controls[0].classList.contains("btn-primary")).toBe(true);
+    expect(text(controls[0])).toBe("Play breakdown");
   });
 
   it("never claims the bundled example was checked by the verifier", () => {
@@ -307,7 +352,6 @@ describe("moment card", () => {
     const session = online();
     const page = mount(session, <MomentCard />);
     const card = page.querySelector("aside.moment-card")!;
-    expect(text(card.querySelector(".kicker"))).toBe("Moment · 3.00 s · Perception");
     expect(text(card.querySelector("h2"))).toBe("One look changed his pass.");
     expect(text(page)).not.toContain("Watching the stream");
     expect(text(page)).not.toContain("waiting for the moment");
@@ -321,11 +365,10 @@ describe("moment card", () => {
     // live, frames came in, then the Live pill left the stream (the run switch is locked until
     // the moment, so it can no longer do that)
     act(() => session.playback.set({ live: true }));
-    expect(text(page)).toContain("Live · waiting for the moment");
+    expect(text(page)).toContain("Watching the stream.");
     act(() => session.feed!.state.set({ latest: 40 }));
-    expect(text(page)).toContain("Live · waiting for the moment");
+    expect(text(page)).toContain("Watching the stream.");
     act(() => session.controls.leaveLive());
-    expect(text(page)).toContain("Off the stream · moment not reached");
     expect(text(page)).toContain("You left the stream.");
     expect(text(page)).not.toContain("Watching the stream");
     expect(text(page.querySelector(".btn-primary"))).toBe("Get breakdown");
@@ -394,15 +437,14 @@ describe("moment card", () => {
     expect(session.runner.status.get().status).toBe("stopped");
   });
 
-  it("plays and stops the breakdown, and can be dismissed", async () => {
+  it("plays and stops the breakdown", async () => {
     const session = offline();
     const page = mount(session, <MomentCard />);
     click(button(page, "Play breakdown"));
     expect(session.runner.status.get().status).toBe("running");
     click(button(page, "Stop"));
     expect(session.runner.status.get().status).toBe("stopped");
-    click(button(page, "Dismiss the moment"));
-    expect(page.querySelector("aside.moment-card")).toBeNull();
+    expect(page.querySelector("aside.moment-card")).not.toBeNull();
   });
 
   it("closes with Escape, stays closed when it comes back on screen, and reopens from its chip", () => {
@@ -428,7 +470,7 @@ describe("moment card", () => {
     click(button(again, "Show the moment"));
     const back = again.querySelector<HTMLElement>("aside.moment-card")!;
     expect(back).not.toBeNull();
-    expect(document.activeElement).toBe(button(back, "Dismiss the moment"));
+    expect(document.activeElement).toBe(button(back, "Play breakdown")); // its one action
 
     // Escape from elsewhere on the page does not close it: only from inside the card.
     act(() => {

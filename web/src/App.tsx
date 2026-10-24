@@ -2,18 +2,20 @@
 // header, the moment card, the caption and the playback bar over it), and the moment is told
 // below it, panel by panel. A stitched match has its own layout (MatchView): the same live screen
 // with the score card, and every moment below; a hero moment's breakdown opens over it as the
-// hero layout with a way back (MatchApp).
+// hero layout with a way back (MatchApp). The first screen keeps few controls: the header's
+// Moments, Your call and ⋯ (everything else), the run switch, and the playback bar.
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { DirectorBar } from "./director/DirectorBar";
+import { DirectorAttach } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { GK_KITS } from "./players/kit";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
-import { createStore, useStore } from "./store/store";
+import { createStore, useStore, type Store } from "./store/store";
+import type { LiveStatus } from "./live/feed";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
 import { IntroCard } from "./ui/IntroCard";
-import { LiveBar, MomentsPanel } from "./ui/Live";
+import { LiveBar, MomentsPanel, OfflineBadge } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
 import { ArrowIcon, CheckIcon } from "./ui/icons";
@@ -24,12 +26,14 @@ import { RunToggle } from "./ui/RunToggle";
 import {
   blurbOf,
   HeaderMore,
+  MenuSection,
   MomentCard,
   momentKicker,
   MomentTitle,
   StageHud,
   SwapViews,
   ViewerMenu,
+  ViewOptions,
 } from "./ui/Stage";
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
@@ -52,7 +56,7 @@ import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/Take
 import { yourCallOf } from "./yourcall/controller";
 import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
-import { MomentRail } from "./moments/MomentRail";
+import { MomentsMenu } from "./moments/MomentRail";
 import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { drillOf } from "./drill/controller";
@@ -69,7 +73,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   const takeEyes = useTakeEyesOpen();
   const scanSteps = useStepThroughOpen();
   const drill = useDrillOpen();
-  const start = onBack ? <BackToMatch onBack={onBack} /> : <LiveBar />;
+  const start = onBack ? <BackToMatch onBack={onBack} /> : null; // inside a match: the way back
   const wasYourCall = useRef(false);
   const wasTakeEyes = useRef(false);
   const wasScanSteps = useRef(false);
@@ -126,31 +130,43 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
       {/* Your call takes the live screen, and hides what would give his decision away until the
           viewer has made theirs: the director, the telemetry and the whole moment below. */}
-      {/* Every moment in reach, above the live screen (not over Your call and the other modes). */}
-      {!yourCall && !takeEyes && !scanSteps && !drill && <MomentRail hidden={introOpen} />}
       {drill ? (
-        <DrillScreen start={onBack ? start : null} />
+        <DrillScreen start={start} />
       ) : yourCall ? (
         // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
-        <YourCallScreen start={onBack ? start : null} />
+        <YourCallScreen start={start} />
       ) : takeEyes ? (
-        <TakeEyesScreen start={onBack ? start : null} />
+        <TakeEyesScreen start={start} />
       ) : scanSteps ? (
-        <ScanStepsScreen start={onBack ? start : null} />
+        <ScanStepsScreen start={start} />
       ) : (
         <LiveScreen
-          start={start}
+          // Every moment in reach in one menu; no Live pill on a hero moment (Moments has the
+          // full match, live), only the badge when the service is off.
+          start={
+            <>
+              {onBack ? start : <OfflineBadge />}
+              <MomentsMenu />
+            </>
+          }
           end={
             <>
               <YourCallButton />
               <HeaderMore>
-                <ScanStepsButton />
-                <TakeEyesButton />
-                <DrillButton />
-                <FirstTourButton className="btn" />
+                <MenuSection label="Sound">
+                  <SoundToggle />
+                </MenuSection>
+                <MenuSection label="Commentary">
+                  <ViewerMenu />
+                </MenuSection>
+                <MenuSection label="More ways in">
+                  <ScanStepsButton />
+                  <TakeEyesButton />
+                  <DrillButton />
+                  <FirstTourButton className="btn" />
+                </MenuSection>
+                <ViewOptions />
               </HeaderMore>
-              <SoundToggle icon />
-              <ViewerMenu />
             </>
           }
           run={<RunToggle />}
@@ -357,8 +373,8 @@ function StoryCta() {
  * playback bar sit over the picture.
  */
 function LiveScreen(props: {
-  start: ReactNode; // next to the brand: the live pill, or the way back to the match
-  end?: ReactNode; // the header's right: sound and who is watching
+  start: ReactNode; // next to the brand: Moments, the way back to the match, a match's live pill
+  end?: ReactNode; // the header's right: Your call and ⋯
   run?: ReactNode; // the run switch: centred over the picture, under the bar on a phone
   card: ReactNode;
   caption?: ReactNode;
@@ -373,6 +389,8 @@ function LiveScreen(props: {
   const pip = focus === "split" || board;
   // Beside his eyes the corner shows his belief map; the board otherwise (BeliefMap.tsx).
   const belief = pip && !board && beliefPip(session, camera);
+  // The stream's state, for scripts (a hero moment's header no longer shows it).
+  const stream = useStore((session.feed?.state ?? NO_FEED) as typeof NO_FEED, (s) => s.status);
   return (
     <section
       className={[
@@ -385,7 +403,9 @@ function LiveScreen(props: {
         .filter(Boolean)
         .join(" ")}
       aria-label="Live screen"
+      data-stream={stream}
     >
+      <DirectorAttach session={session} />
       {/* display: contents: it only carries inert while the card is up; layout ignores it. */}
       <div className="stage-content" inert={introOpen} style={{ display: "contents" }}>
         <div className="views">
@@ -414,9 +434,6 @@ function LiveScreen(props: {
         </header>
         <div className="stage-top">
           <StageHud />
-          <div className="stage-director">
-            <DirectorBar />
-          </div>
           <StatsTicker />
           <StageSkeletonKey />
         </div>
@@ -430,6 +447,10 @@ function LiveScreen(props: {
     </section>
   );
 }
+
+const NO_FEED: Store<{ status: LiveStatus }> = createStore<{ status: LiveStatus }>({
+  status: "off",
+});
 
 /** A stitched match, or one of its hero moments' breakdowns over it. */
 export function MatchApp({ session, autoplay }: { session: MatchSession; autoplay: boolean }) {
@@ -469,19 +490,24 @@ function MatchView() {
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
     <div className="app match">
-      <MomentRail hidden={introOpen} />
       <LiveScreen
         start={
           <>
             <LiveBar />
             <MatchPicker />
+            <MomentsMenu />
           </>
         }
         end={
-          <>
-            <SoundToggle icon />
-            <YourViewMenu />
-          </>
+          <HeaderMore>
+            <MenuSection label="Sound">
+              <SoundToggle />
+            </MenuSection>
+            <MenuSection label="Your view">
+              <YourViewMenu />
+            </MenuSection>
+            <ViewOptions />
+          </HeaderMore>
         }
         card={
           <>
