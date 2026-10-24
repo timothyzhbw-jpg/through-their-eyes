@@ -48,8 +48,15 @@ the [failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=produce
   through his eyes, the coach gets his eyes with the board beside them and a teaching cue at the
   end, audio description a plain broadcast camera with the story told in order. Same verified
   claims, different lines, cameras and voice.
+- [The journey](https://ttesite1ff906.z14.web.core.windows.net/?tour=story): Event → Tactics →
+  Your view → Content → Value, or jump with `?step=content` (highlight, posts, data cards, the
+  stadium's screens) and `?step=value`. Say at Value: "The audience and sponsor figures are
+  simulated and labelled; nobody has watched this."
+- [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps): every
+  look frozen and explained. In **Without the look**, **With two more looks** is the opposite
+  experiment: his decision changes in <!--num:H10.k-->0<!--/num--> of <!--num:H10.n-->40<!--/num--> seeds, the expected result: more looks are not the right look.
 - [Your call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall): the judge decides
-  with only what he knew, then sees what he did and why.
+  with only what he knew, every option listed and the pick rated, then sees what he did and why.
 - [Take his eyes](https://ttesite1ff906.z14.web.core.windows.net/?play=eyes): drag his look
   elsewhere and watch his decision change.
 - [A "What if…?" of your own](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
