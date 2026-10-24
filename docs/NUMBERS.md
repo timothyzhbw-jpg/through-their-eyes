@@ -23,7 +23,9 @@ instead.
    (and `xt` first if the xT grid is refitted; `season` and `dataset` for those rows). The
    heavy evals (season, five seasons, archetypes, hero gates on 1000–1199) run in the cloud as
    in the shared notes' `freeze-heavy-evals.md`. The cloud is Linux too, so their bytes are
-   canonical.
+   canonical. The five-season numbers (seasons 2027–2031, `eval/reports/seasons_intervals.md`)
+   come from the `seasons` workflow (`.github/workflows/seasons.yml`, run by hand): download its
+   `seasons-reports` artifact and copy the report into `eval/reports/`; it commits nothing.
 2. Run `uv run pytest tests/test_doc_numbers.py`. Every marked number in the docs
    (`<!--num:H1-->33/40<!--/num-->`, invisible on GitHub) is checked against its report, and
    each failure names the doc, the line and the report's value. Then, for each row: run its
