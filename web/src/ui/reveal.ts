@@ -1,5 +1,11 @@
 import { useCallback, useRef } from "react";
 
+/**
+ * Ease an element in once as it scrolls into view. Stagger is capped at 5 steps of 60 ms; with
+ * reduced motion (or no IntersectionObserver) no class is added; focus inside reveals at once; an
+ * element already in view, or not rendered, is shown without animating. Reveal a chapter, not the
+ * wrappers around it: nested reveals stack their delays.
+ */
 export function useReveal<T extends HTMLElement>(stagger = 0) {
   const cleanup = useRef<() => void>(() => {});
   const delay = Math.min(Math.max(stagger, 0), 5) * 60;
@@ -34,7 +40,7 @@ export function useReveal<T extends HTMLElement>(stagger = 0) {
       };
       const onFocus = () => show(false);
       el.classList.add("reveal");
-      if (el.getBoundingClientRect().top < window.innerHeight) {
+      if (el.getClientRects().length === 0 || el.getBoundingClientRect().top < window.innerHeight) {
         show(false);
       } else {
         el.classList.add("reveal-pending");
@@ -43,7 +49,7 @@ export function useReveal<T extends HTMLElement>(stagger = 0) {
           (entries) => {
             if (entries.some((entry) => entry.isIntersecting)) show(true);
           },
-          { threshold: 0.08 },
+          { threshold: 0, rootMargin: "0px 0px -8% 0px" },
         );
         observer.observe(el);
       }

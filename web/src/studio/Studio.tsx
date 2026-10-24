@@ -254,16 +254,16 @@ function SocialPost({
   index: number;
   onCopy: (text: string) => void;
 }) {
-  const card = useReveal<HTMLPreElement>(index);
+  const card = useReveal<HTMLDivElement>(index);
   return (
-    <div className="studio-post">
+    <div className="studio-post" ref={card}>
       <div className="studio-post-head">
         <h4>{FORMAT_LABEL[format]}</h4>
         <button type="button" className="btn btn-quiet" onClick={() => onCopy(text)}>
           Copy
         </button>
       </div>
-      <pre className="tile" lang={lang} ref={card}>
+      <pre className="tile" lang={lang}>
         {text}
       </pre>
     </div>

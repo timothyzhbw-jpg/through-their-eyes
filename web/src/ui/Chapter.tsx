@@ -18,8 +18,6 @@ export function Chapter(props: {
   children: ReactNode;
 }) {
   const chapter = useReveal<HTMLElement>();
-  const title = useReveal<HTMLDivElement>();
-  const lede = useReveal<HTMLDivElement>();
   return (
     <section
       className={`panel chapter ${props.className}${props.split ? " split" : ""}`}
@@ -27,12 +25,12 @@ export function Chapter(props: {
       ref={chapter}
     >
       <header className="chapter-head">
-        <div className="chapter-title" ref={title}>
+        <div className="chapter-title">
           <p className="kicker">{props.kicker}</p>
           <h2>{props.title}</h2>
         </div>
         {(props.lede || props.how || props.aside) && (
-          <div className="chapter-lede" ref={lede}>
+          <div className="chapter-lede">
             {props.lede && <p className="lede">{props.lede}</p>}
             {props.how && <HowItWorks>{props.how}</HowItWorks>}
             {props.aside}
