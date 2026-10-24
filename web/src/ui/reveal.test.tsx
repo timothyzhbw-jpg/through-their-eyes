@@ -1,5 +1,7 @@
 // @vitest-environment happy-dom
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -270,5 +272,35 @@ describe("scroll-linked text and floodlight", () => {
     for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
       expect(word.style.opacity).toBe("1");
     }
+  });
+
+  it("leaves the words plain until the reader scrolls", () => {
+    vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
+      rect(window.innerHeight * 0.9),
+    );
+    const heading = mountText();
+    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
+      expect(word.style.opacity).toBe("");
+    }
+    flushScroll();
+    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
+      expect(Number(word.style.opacity)).toBeLessThan(1);
+    }
+  });
+});
+
+describe("reveal styles", () => {
+  const css = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
+
+  it("transitions only opacity and transform over 400ms", () => {
+    const block = /\.reveal-visible \{([^}]*)\}/.exec(css)![1];
+    const properties = [...block.matchAll(/([a-z-]+) 400ms/g)].map((m) => m[1]);
+    expect(properties).toEqual(["opacity", "transform"]);
+  });
+
+  it("resets both the reveal and the words with reduced motion", () => {
+    const blocks = css.split("@media (prefers-reduced-motion: reduce) {").map((p) => p.trimStart());
+    expect(blocks.some((b) => b.startsWith(".reveal {"))).toBe(true);
+    expect(blocks.some((b) => b.startsWith(".scroll-word {"))).toBe(true);
   });
 });

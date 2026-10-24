@@ -1,3 +1,7 @@
+/**
+ * Scroll-reveal hooks for the story below the live picture: `useReveal` eases an element in once,
+ * `useTextReveal` fades a heading in word by word. Both show everything at once with reduced motion.
+ */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function usePrefersReducedMotion() {
@@ -49,10 +53,11 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
       let observer: IntersectionObserver | null = null;
       let frame = 0;
       let done = false;
+      let scrolled = false; // the faded state is only applied once the reader scrolls
       const stop = () => {
         observer?.disconnect();
         el.removeEventListener("focusin", finish);
-        window.removeEventListener("scroll", schedule);
+        window.removeEventListener("scroll", onScroll);
         window.removeEventListener("resize", schedule);
         if (frame) cancelAnimationFrame(frame);
         frame = 0;
@@ -73,6 +78,7 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
           finish();
           return;
         }
+        if (!scrolled) return; // anchor jumps, prints and stills see plain text
         const progress = Math.min(1, Math.max(0, (viewport * 0.95 - top) / (viewport * 0.35)));
         const count = words.length;
         words.forEach((word, index) => {
@@ -84,8 +90,12 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
       const schedule = () => {
         if (!frame && !done) frame = requestAnimationFrame(update);
       };
+      const onScroll = () => {
+        scrolled = true;
+        schedule();
+      };
       el.addEventListener("focusin", finish);
-      window.addEventListener("scroll", schedule, { passive: true });
+      window.addEventListener("scroll", onScroll, { passive: true });
       window.addEventListener("resize", schedule);
       observer = new IntersectionObserver(schedule, { rootMargin: "20% 0px", threshold: 0 });
       observer.observe(el);
