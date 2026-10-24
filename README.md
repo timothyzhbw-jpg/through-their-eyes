@@ -51,13 +51,33 @@ one moment through all five.
    look and without it, each side told by its verified lines.
 2. [**Tactics**](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics): the Tactics lab,
    the tactic cards measured on the moment's own synthetic data, each number with its source.
-3. [**Your view**](https://ttesite1ff906.z14.web.core.windows.net/?step=your-view): the audience,
-   the language, and a club or player to follow.
-4. [**Content**](https://ttesite1ff906.z14.web.core.windows.net/?step=content): the content
-   package (highlight, explainer, posts in English and Chinese, data cards) and what the stadium's
-   screens show for the moment.
+   Expected threat (xT) is explained in the words of the chosen audience: one plain sentence for
+   the casual fan; the zones by name, with their values and the from and to cells lit on the
+   board, for the analyst and the coach.
+3. [**Your view**](https://ttesite1ff906.z14.web.core.windows.net/?step=your-view): casual or
+   analyst, the language, and a club or player to follow (`?team=`, `?player=`): their moments
+   come first and a followed player is ringed in the 3D view and on the board.
+4. [**Content**](https://ttesite1ff906.z14.web.core.windows.net/?step=content): the Content
+   Studio, a package built offline from the verified breakdown: a highlight reel, an explainer
+   card, posts in English and Chinese, and data cards (PNG). Below it, the Stadium Screen Studio
+   (also [`?studio=1`](https://ttesite1ff906.z14.web.core.windows.net/?studio=1)): the main video
+   board, the tunnel LED and the ribbon board on a matchday timeline, with a virtual 3D preview
+   of the bowl.
 5. [**Value**](https://ttesite1ff906.z14.web.core.windows.net/?step=value): the business panel
-   and the stadium's sponsor slots.
+   and the stadium's sponsor slots, for fictional sponsors.
+
+Also in the app, each a few clicks from the moment:
+- **Minimal first screen.** It opens on one live view and one **Start**; the other view is a
+  small picture in picture and every overlay is behind **View options**.
+- **Scan story.** [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps):
+  every look he took before the ball arrived is frozen and explained (which way, who came into
+  view, how his picture changed), then his decision.
+- **With two more looks.** In the "Without the look" panel, the opposite experiment: add one look
+  to his left and one to his right and his decision changes in <!--num:H10.k-->0<!--/num--> of
+  <!--num:H10.n-->40<!--/num--> held-out seeds. More looks are not the right look
+  ([extra_looks](eval/reports/extra_looks_blind_side_run.md)).
+- **Your call.** [Decide with what he knew](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall):
+  every option he had is listed and your pick is rated, then the reveal shows what he did and why.
 
 **Demo data.** The audience, engagement and sponsor figures in Content and Value are simulated by
 a seeded model, not measured: nobody has watched this app. Each one carries the badge "Demo data:

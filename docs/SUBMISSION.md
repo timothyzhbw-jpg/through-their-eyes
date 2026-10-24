@@ -98,6 +98,33 @@ The brief's pipeline, end to end, on a synthetic match:
 | **Render** | A first-person view through the player's eyes, a broadcast camera with a camera director, and a tactical board with pass options ("he thought / it was"). Overlays show his vision cone, where he believed the others were, pitch control (a GPU shader), blind-side alerts, and the counterfactual's ghost paths. | `web/` |
 | **Personalize** | An agent crew on Microsoft Foundry writes the breakdown for five audiences (casual, analyst, player fan, coach, audio description) in English or Chinese. Azure AI Speech voices it with two commentators. Each audience gets its own broadcast from the same verified claims: what is said, the camera and overlays, and the voice. Across the four served hero moments, the mean overlap of the claims two audiences hear fell from <!--num:P1.before-->0.34<!--/num--> to <!--num:P1.after-->0.16<!--/num-->, and <!--num:P2.after-->40<!--/num--> of 40 scripts keep their audience's spec (<!--num:P2.before-->8<!--/num--> of 40 before).[^personas] | `agents/`, `api/` |
 
+### From the moment to the matchday
+
+A bar under the picture follows one moment through five steps, each with a `?step=` deep link:
+**Event → Tactics → Your view → Content → Value**. The app opens on one live view and one
+**Start**; the rest is behind **View options** and the bar.
+
+- **Tactics lab.** The tactic cards measured on the moment's own synthetic data, each number
+  with its source. xT is explained in the chosen audience's words: one plain sentence for the
+  casual fan; the zones by name with their values, and the from and to cells on the board, for
+  the analyst and the coach.
+- **Your view.** Casual or analyst, English or Chinese, and a club or player to follow; their
+  moments come first.
+- **Content Studio.** The moment as a package, built offline from the verified breakdown: a
+  highlight reel, an explainer card, posts in English and Chinese, and data cards. A sentence
+  with a number no supported claim carries is dropped.
+- **Stadium Screen Studio.** What the main video board, the tunnel LED and the ribbon board would
+  show on a matchday, with a virtual 3D preview of the bowl. Sponsors are fictional.
+- **Value.** The business panel and the sponsor slots. Audience, engagement and sponsor figures
+  are simulated by a seeded model and badged as such (see "Audience and sponsor figures are
+  simulated" under limits); match facts are never simulated this way.
+- **Scan story.** Every look he took before the ball arrived, frozen and explained, then his
+  decision.
+- **With two more looks.** The opposite of the run without the look: add one look to his left
+  and one to his right, and his decision changes in <!--num:H10.k-->0<!--/num--> of
+  <!--num:H10.n-->40<!--/num--> held-out seeds, the expected result: more looks are not the right look.
+- **Your call.** Decide with what he knew; every option is listed and your pick rated.
+
 ## The signature feature: through the player's eyes
 
 1. **Scans.** The simulator moves each player's head. A scan is a quick look away from the ball
@@ -286,6 +313,9 @@ Multi-Agent System (SPEC §0).
   allow anyway. The scan detector's and blind-side alerts' scores are scores on our simulator.
   The alerts share the simulator's model of what a player expects, so their score is an upper
   bound for real tracking.[^blind]
+- **Audience and sponsor figures are simulated.** The Content and Value steps show impressions,
+  engagement and sponsor slots from a seeded model, labelled "Demo data: simulated audience, not
+  real results". No audience exists yet, and the sponsors are fictional.
 - **Causal only inside the simulator.** A counterfactual is a re-simulation, so every
   counterfactual outcome depends on our models of movement, perception and decisions. On real
   data we could only claim association.
