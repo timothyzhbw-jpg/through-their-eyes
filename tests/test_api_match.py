@@ -80,7 +80,8 @@ def test_a_service_from_the_environment_loads_its_matches_before_the_first_reque
     monkeypatch.delenv("TTE_WARM", raising=False)
     assert Settings.from_env().warm and not Settings().warm
     settings = Settings(matches=[("blind_side_run", 3), ("press_escape", 0)], cache_dir=tmp_path)
-    for warm, loaded in ((True, {"blind_side_run-3", PRESS}), (False, set())):
+    # The teaching scenario is served (not listed) whatever the settings, so it is warmed too.
+    for warm, loaded in ((True, {"blind_side_run-3", PRESS, "pro_scan-126"}), (False, set())):
         settings.warm = warm
         app = create_app(settings)
         with TestClient(app):
@@ -118,6 +119,14 @@ def test_a_matchs_hero_possessions_are_served_without_being_listed(client, info)
             r = client.get(f"/api/matches/{p['scenario']}-{p['seed']}/export")
             assert r.status_code == 200 and r.json()["hero"] == p["hero"]
     assert client.get("/api/matches/blind_side_run-4/export").status_code == 404
+
+
+def test_the_teaching_scenario_is_served_without_being_listed(client):
+    # The scan story links to the coach's example (SPEC 3.6, "Teaching"): `?match=pro_scan-126`.
+    assert "pro_scan-126" not in [m["id"] for m in client.get("/api/matches").json()]
+    r = client.get("/api/matches/pro_scan-126/export")
+    assert r.status_code == 200 and r.json()["hero"] == "H8"
+    assert client.get("/api/matches/pro_scan-127/export").status_code == 404
 
 
 def test_the_match_is_listed_with_its_possessions_and_its_hero_moments(client, info):

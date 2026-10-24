@@ -14,6 +14,9 @@ DEFAULT_MATCHES = [
     ("blind_side_run", 3), ("corner_blind_side", 0), ("match", 1), ("match", 2),
     ("press_escape", 0),
 ]  # fmt: skip
+# Teaching scenarios (SPEC 3.6, "Teaching"), served whatever TTE_MATCHES says but not listed in
+# the match picker: the scan story links to one (`?play=steps&match=pro_scan-126`).
+TEACHING_MATCHES = [("pro_scan", 126)]
 
 
 JUDGING = "2026-10-27/2026-11-10"  # the hackathon's judging, UTC days (CLAUDE.md)
