@@ -24,6 +24,8 @@ import { stepThroughOf } from "./controller";
 import { ScanStepsButton, ScanStepsScreen } from "./ScanSteps";
 import { NO_STEPS } from "./steps";
 
+// (a `?raw` import of a stylesheet comes back empty under vitest, and import.meta.url is not a
+// file URL in jsdom; `npm test` runs in web/, as steps/storyui.test.tsx also relies on)
 const stepsCss = readFileSync("src/steps/steps.css", "utf8");
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
@@ -66,6 +68,9 @@ const button = (el: HTMLElement, name: string) => {
   return b;
 };
 const click = (b: HTMLElement) => act(() => b.click());
+// an SVG element has no click(): send the event
+const tap = (g: Element) =>
+  act(() => void g.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 const key = (target: Element, k: string) =>
   act(() => {
     target.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
@@ -245,18 +250,31 @@ describe("His looks: the marks", () => {
     expect(textOf(el.querySelector(".ss-legend"))).toMatch(/along the ground/);
   });
 
-  it("keeps essential names visible and reveals other pass labels on hover or focus", async () => {
+  it("keeps essential names visible; other pass labels show on focus, hover or a tap", async () => {
     const { el } = await opened();
-    expect(el.querySelectorAll(".ss-pov .ss-seen text")).toHaveLength(10);
+    // every ringed player is named (the receiver may be named on top of them)
+    const ringed = el.querySelectorAll(".ss-board .ss-seen-dot").length;
+    expect(el.querySelectorAll(".ss-pov .ss-seen text").length).toBeGreaterThanOrEqual(ringed);
     expect(textOf(el.querySelector(".ss-pov .ss-decision-maker"))).toBe(
       "J. Ferriday · decision-maker",
     );
     click(button(el, "Potential passes"));
-    const other = el.querySelector(".ss-board .ss-lane:not(.chosen):not(.seen)")!;
+    const other = el.querySelector<SVGGElement>(".ss-board .ss-lane:not(.chosen):not(.seen)")!;
     expect(other.getAttribute("tabindex")).toBe("0");
     expect(other.querySelector("text")).not.toBeNull();
+    // the labels are hidden by default and shown by hover, focus or the .active a tap sets
     expect(stepsCss).toMatch(/\.ss-lane text \{\s+opacity: 0;/);
-    expect(stepsCss).toMatch(/\.ss-lane:hover text,\s+\.ss-lane:focus text \{\s+opacity: 1;/);
+    expect(stepsCss).toMatch(
+      /\.ss-lane\.active text,\s+\.ss-lane:hover text,\s+\.ss-lane:focus text \{\s+opacity: 1;/,
+    );
+    act(() => other.focus());
+    expect(document.activeElement).toBe(other);
+    expect(other.getAttribute("aria-pressed")).toBe("false");
+    tap(other);
+    expect(other.classList.contains("active")).toBe(true);
+    expect(other.getAttribute("aria-pressed")).toBe("true");
+    tap(other);
+    expect(other.classList.contains("active")).toBe(false);
   });
 
   it("scrolls the evidence inside its card behind a bottom fade", async () => {

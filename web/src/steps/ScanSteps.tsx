@@ -380,20 +380,44 @@ function PovMarks(props: {
           )}
         </g>
       ))}
-      <text className="ss-decision-maker" x={14} y={h - 14}>
-        {shortName(hero.heroId!)} · decision-maker
-      </text>
+      {hero.heroId && (
+        <text className="ss-decision-maker" x={14} y={22}>
+          {shortName(hero.heroId)} · decision-maker
+        </text>
+      )}
     </svg>
   );
 }
 
-function LaneLine(props: { lane: Lane; a: Vec2; b: Vec2; w: number; h: number; small?: boolean }) {
+function LaneLine(props: {
+  lane: Lane;
+  a: Vec2;
+  b: Vec2;
+  w: number;
+  h: number;
+  small?: boolean; // in the corner view: thinner lines
+}) {
   const { lane, a, b, w, h, small } = props;
-  const cls = `ss-lane ${lane.chosen ? "chosen" : lane.seen ? "seen" : ""} ${lane.kind}`;
+  // A tap (or Enter / Space) names the lane on a phone, where there is no hover.
+  const [open, setOpen] = useState(false);
+  const cls = `ss-lane ${lane.chosen ? "chosen" : lane.seen ? "seen" : ""} ${lane.kind}${open ? " active" : ""}`;
   const width = (small ? 1 : 1.5) + (small ? 3 : 7) * Math.min(1, Math.max(0, lane.prob));
   const end = inView(b, w, h, -8);
   return (
-    <g className={cls} tabIndex={0} role="img" aria-label={lane.label}>
+    <g
+      className={cls}
+      tabIndex={0}
+      role="button"
+      aria-pressed={open}
+      aria-label={lane.label}
+      onClick={() => setOpen((v) => !v)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }
+      }}
+    >
       <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth={width} />
       {end && <circle cx={b[0]} cy={b[1]} r={small ? 2.5 : 4} />}
       {end && (
