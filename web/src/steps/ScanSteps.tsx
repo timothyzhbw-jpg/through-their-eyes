@@ -618,14 +618,17 @@ function Card({ st }: { st: StepThrough }) {
       {step.kind === "look" && !step.missing && step.sight.length > 0 && (
         <SightChips hero={hero} ids={step.sight} />
       )}
-      <button
-        type="button"
-        className="btn ss-passes"
-        aria-pressed={s.passes}
-        onClick={st.togglePasses}
-      >
-        Potential passes
-      </button>
+      <div className="ss-pass-group">
+        <p className="ss-label">View overlays</p>
+        <button
+          type="button"
+          className="btn ss-passes"
+          aria-pressed={s.passes}
+          onClick={st.togglePasses}
+        >
+          Potential passes
+        </button>
+      </div>
       <Segmented<RunName>
         label="Which run"
         value={s.mode}
@@ -646,7 +649,7 @@ function Card({ st }: { st: StepThrough }) {
         </button>
         {!last && exit}
       </div>
-      <p className="ss-hint">Keyboard: ← and → step, Esc leaves. On a phone, swipe the picture.</p>
+      <p className="ss-hint">← / → step · Esc leaves · swipe on phone</p>
     </aside>
   );
 }
@@ -670,8 +673,8 @@ function Lines({ narration, ids }: { narration?: Narration; ids: string[] }) {
 
 function SightChips({ hero, ids }: { hero: Hero; ids: string[] }) {
   return (
-    <div className="ss-sight">
-      <p className="ss-label">Came into his sight on this look</p>
+    <details className="how ss-sight">
+      <summary>Came into his sight on this look</summary>
       <ul>
         {ids.map((id) => {
           const p = hero.players[hero.ids.indexOf(id)];
@@ -682,7 +685,7 @@ function SightChips({ hero, ids }: { hero: Hero; ids: string[] }) {
           );
         })}
       </ul>
-    </div>
+    </details>
   );
 }
 

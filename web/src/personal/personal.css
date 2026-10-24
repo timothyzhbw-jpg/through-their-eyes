@@ -53,6 +53,10 @@
 .your-view-inline .note {
   margin: 4px 6px 2px;
 }
+.your-view-panel .your-view-saved,
+.your-view-inline .your-view-saved {
+  font-size: 12px;
+}
 .your-view-line {
   margin: 10px 0 0;
   font-size: 14px;

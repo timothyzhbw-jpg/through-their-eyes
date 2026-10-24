@@ -93,6 +93,9 @@ describe("Your view", () => {
     expect(session.recap.state.get().language).toBe("zh");
     expect(personal.get()).toMatchObject({ persona: "analyst", language: "zh" });
     const more = container.querySelector<HTMLSelectElement>(".your-view-row select")!;
+    expect(container.querySelector(".your-view-row .kicker")!.textContent).toBe("Other audiences");
+    expect(more.options[0].textContent).toBe("Other audiences");
+    expect(container.querySelector(".your-view-saved")!.classList.contains("note")).toBe(true);
     expect([...more.options].map((o) => o.value)).toEqual([
       "",
       "player_fan",

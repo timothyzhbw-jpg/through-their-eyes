@@ -72,12 +72,27 @@ describe("studio panel", () => {
     expect(html).toContain("#KestrelBay");
   });
 
+  it("folds the shot list into a scrollable disclosure", () => {
+    expect(html).toContain(
+      '<details class="how studio-shot-list"><summary>Shot list</summary><div class="stats-table-wrap"',
+    );
+    expect(html).toContain('aria-label="Shot list"');
+    expect(html).toContain("Copy shot list");
+  });
+
   it("labels every business figure as demo data and links the business model", () => {
     const labels = html.split(DEMO_LABEL).length - 1;
     // the banner and one under each of the five figures
     expect(labels).toBeGreaterThanOrEqual(6);
     expect(html).toContain(BUSINESS_MODEL_URL);
     expect(BUSINESS_MODEL_URL.endsWith("docs/SUBMISSION.md#business-model")).toBe(true);
+  });
+
+  it("moves the seeded sentence into Assumptions without removing it", () => {
+    expect(html).toContain(
+      '<summary>Assumptions</summary><p class="note">Seeded by this moment, Casual fan and EN',
+    );
+    expect(html.indexOf("Seeded by this moment")).toBeGreaterThan(html.indexOf("Assumptions"));
   });
 
   it("builds nothing without a verified breakdown", () => {

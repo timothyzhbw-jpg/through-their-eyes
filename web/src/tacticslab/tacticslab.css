@@ -47,6 +47,16 @@
   color: var(--chalk-3);
   white-space: normal;
 }
+.lab-definition {
+  margin-top: 6px;
+  font-weight: 400;
+}
+.lab-limits {
+  margin: 0;
+}
+.lab-limits .note {
+  margin: 8px 0 0;
+}
 .lab-source {
   width: 1%;
 }

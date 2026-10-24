@@ -1,4 +1,4 @@
-// Personalized viewing (SPEC 7): a "Your view" menu in the header (the mode switch, "More"
+// Personalized viewing (SPEC 7): a "Your view" menu in the header (the mode switch, other
 // audiences, who to follow, the language) and the one-line summary under the moment's title.
 // Only cached breakdowns are asked for: the audience and language go through the same switches
 // as the viewer menu's (the breakdown's, or the recap's inside a match).
@@ -131,7 +131,7 @@ export function YourViewMenu() {
   );
 }
 
-/** The choices themselves: the mode, More audiences, who to follow, the language. In the header's
+/** The choices themselves: the mode, other audiences, who to follow, the language. In the header's
  * menu, and inline in the journey's Your view step (journey/). */
 export function YourViewControls() {
   const view = useView();
@@ -168,7 +168,7 @@ export function YourViewControls() {
         }))}
       />
       <label className="your-view-row">
-        <span className="kicker">More</span>
+        <span className="kicker">Other audiences</span>
         <select
           value={isMode(persona) ? "" : persona}
           disabled={off}
@@ -178,7 +178,7 @@ export function YourViewControls() {
           }}
         >
           <option value="" disabled>
-            Other audiences…
+            Other audiences
           </option>
           {MORE_PERSONAS.map((p) => (
             <option key={p} value={p}>
@@ -252,7 +252,7 @@ export function YourViewControls() {
         />
       </div>
       {off && <p className="note">Other audiences and languages need the live service.</p>}
-      <p className="note">
+      <p className="note your-view-saved">
         Saved in the address and in this browser. {personaLabel(persona)} in{" "}
         {LANGUAGE_NAME[language]} is what the page asks the service for.
       </p>

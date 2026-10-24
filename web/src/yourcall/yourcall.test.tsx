@@ -42,6 +42,7 @@ import { frameCall, project, swipePick, toWorld } from "./camera";
 import { yourCallOf } from "./controller";
 import { YourCallButton, YourCallStage } from "./YourCall";
 import { SOURCES } from "../provenance/source";
+import yourCallCss from "./yourcall.css?raw";
 
 // Mounting App: the live screen's views and Your call's 3D view need WebGL; stub them.
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
@@ -219,6 +220,16 @@ describe("Your call: deciding", () => {
     expect(textOf(el)).not.toMatch(/\d+\.\d|%|\bm\b/);
     const card = textOf(el.querySelector(".yc-card"))!;
     expect(card.replace(/\b[HA]\d{1,2}\b/g, "")).not.toMatch(/\d/);
+  });
+
+  it("keeps the choice help concise and the card free of blur and entry flashes", () => {
+    const { session } = open();
+    const el = mount(session);
+    expect(el.querySelectorAll(".yc-card > .yc-hint")).toHaveLength(1);
+    expect(textOf(el.querySelector(".yc-card > .yc-hint"))).toBe(
+      "Tap a teammate or swipe from J. Ferriday. Keyboard: press Pick with the keyboard, then arrows and Enter.",
+    );
+    expect(yourCallCss).not.toMatch(/blur\(|animation:\s*tt-rise/);
   });
 
   it("lists the markers left to right, so Tab and the arrow keys sweep across the pitch", () => {
