@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
     from sim.engine import Simulation
 
@@ -70,6 +72,48 @@ class AddScan:
         if not 0.0 <= dwell <= sim.params.scan_dwell_max_s:
             raise ValueError(f"a scan dwells 0-{sim.params.scan_dwell_max_s} s, not {dwell}")
         sim.added_scans[(sim.index(self.player), self.frame)] = (self.offset, dwell)
+
+
+# Named directions of a forced scan, in whole degrees from where his body faces (counter-clockwise
+# positive, so + is to his left): `ForceScans`.
+SCAN_DIRECTIONS = {"left": 90, "right": -90, "behind": 180, "forward": 0}
+
+
+def scan_direction_deg(direction: str | int) -> int:
+    """A direction of `ForceScans` in whole degrees from his body: a name or degrees."""
+    if isinstance(direction, str):
+        if direction not in SCAN_DIRECTIONS:
+            raise ValueError(f"a scan looks {', '.join(SCAN_DIRECTIONS)}, not {direction!r}")
+        return SCAN_DIRECTIONS[direction]
+    return int(direction)
+
+
+@dataclass(frozen=True)
+class ForceScans:
+    """The player starts a scan at each (frame, direction), on top of his own scans.
+
+    `direction` is a name of `SCAN_DIRECTIONS` or whole degrees from where his body faces at that
+    frame. The look goes the forced scans' way, like `AddScan`, so it obeys the same limits: the
+    head turns toward that direction at the scan's keyed peak speed (`SimParams.scan_omega`) and
+    dwells the median of `SimParams.scan_dwell_s`, but no further from the ball than a scan turns
+    (`SimParams.scan_amplitude`): a direction wider than that stops at the widest turn, on its
+    side. A direction closer to the ball than the narrowest scan is not a scan (the ball stays in
+    view) and does not start; nor does one while a scan of his is under way or in its refractory
+    (`sim.perception.HeadModel`). `sim.counterfactual.extra_looks_counterfactual` refuses both.
+    """
+
+    player: str
+    scans: tuple[tuple[int, str | int], ...]  # (frame, direction)
+    dwell_s: float | None = None
+
+    def apply(self, sim: Simulation) -> None:
+        dwell = sim.params.scan_dwell_s[0] if self.dwell_s is None else self.dwell_s
+        if not 0.0 <= dwell <= sim.params.scan_dwell_max_s:
+            raise ValueError(f"a scan dwells 0-{sim.params.scan_dwell_max_s} s, not {dwell}")
+        i = sim.index(self.player)
+        for frame, direction in self.scans:
+            angle = float(np.deg2rad(scan_direction_deg(direction)))
+            sim.body_scans[(i, int(frame))] = (angle, dwell)
 
 
 @dataclass(frozen=True)

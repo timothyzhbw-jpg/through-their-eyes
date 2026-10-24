@@ -44,6 +44,7 @@ from sim.perception import (
     HeadModel,
     head_turn_id,
     scan_id,
+    scan_turn,
 )
 from sim.referee import Offence, Referee
 from sim.rng import KeyedRng
@@ -117,6 +118,10 @@ class Simulation:
         # (player, frame) -> (offset from the ball in rad, dwell in s): looks added by `AddScan`.
         self.added_scans: dict[tuple[int, int], tuple[float, float]] = {}
         self.no_scans: dict[int, tuple[int, int]] = {}  # player -> [start, end): `NoScans`
+        # (player, frame) -> (direction from his body in rad, dwell in s): `ForceScans`; and the
+        # ones handed to the head as forced scans (a direction too close to the ball is not).
+        self.body_scans: dict[tuple[int, int], tuple[float, float]] = {}
+        self.body_scans_forced: set[tuple[int, int]] = set()
         self.events: list[Event] = []
         self.decisions: list[Decision] = []
         self.pending_decision: tuple[int, int] | None = None
@@ -256,6 +261,14 @@ class Simulation:
                 for (i, at), (offset, dwell) in self.added_scans.items()
                 if at == f
             }
+        if self.body_scans:  # a `ForceScans` override (SPEC 3.7): from where his body faces now
+            for (i, at), (angle, dwell) in self.body_scans.items():
+                turn = scan_turn(self.body_yaw[i] + angle - base[i], p) if at == f else None
+                if turn is not None:
+                    forced_scans = forced_scans | {
+                        i: ForcedScan(target_yaw=float(base[i] + turn), dwell_s=dwell)
+                    }
+                    self.body_scans_forced.add((i, at))
         self.head_yaw, finished = self.head.step(
             f,
             self.head_yaw,
@@ -938,7 +951,7 @@ class Simulation:
             etype, eid, attrs["partial"] = "head_turn", head_turn_id(self.ids[i], scan.start), True
         else:
             etype, eid, attrs["key"] = "scan", scan_id(self.ids[i], scan.start), scan.key
-            if (i, scan.start) in self.added_scans:
+            if (i, scan.start) in self.added_scans or (i, scan.start) in self.body_scans_forced:
                 attrs["added"] = True
         self.events.append(
             Event(eid, etype, scan.start, scan.start * DT, self.ids[i], int(self.team[i]), attrs)

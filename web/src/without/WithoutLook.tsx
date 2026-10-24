@@ -6,9 +6,11 @@
 // - in the verdict: what was held constant, how often the held-out seeds change (gates.ts), and
 //   where each run's pass went, in expected threat, with an explainer that draws the xT grid and
 //   both passes' ends. The two values on the grid are the verified line's. Every count on the
-//   held-out line is read from hero_gates.json.
+//   held-out line is read from hero_gates.json;
+// - in the verdict too, when the hero has one, the opposite run: "With two more looks" (extra.ts),
+//   its verified lines and a source chip naming the eval report with its held-out numbers.
 
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Hero } from "../data/hero";
 import type { Narration, PayloadLine } from "../narration/payload";
@@ -17,8 +19,18 @@ import { useView } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { KindTags, LineText } from "../ui/Narration";
 import type { Language } from "../whatif/whatif";
+import {
+  countWord,
+  extraLooksOf,
+  type Compare,
+  type ExtraLooks,
+  type ExtraLooksState,
+} from "./extra";
 import { heroGatesOf, type HeroGate, type HeroGatesState } from "./gates";
 import { withoutLookOf, type WithoutLook, type WithoutLookState } from "./without";
+import { passMoves } from "../xtexplain/moves";
+import { usePersona, XtMoveExplain } from "../xtexplain/XtMoveExplain";
+import { versionFor } from "../xtexplain/zones";
 import "./without.css";
 
 const NONE: Store<WithoutLookState> = createStore<WithoutLookState>({
@@ -30,6 +42,14 @@ const NO_GATES: Store<HeroGatesState> = createStore<HeroGatesState>({
   status: "none",
   gate: null,
 });
+const NO_EXTRA: Store<ExtraLooksState> = createStore<ExtraLooksState>({
+  status: "none",
+  data: null,
+  error: null,
+});
+const NO_COMPARE: Store<{ value: Compare }> = createStore<{ value: Compare }>({
+  value: "without",
+});
 const NO_LANGUAGE: Store<{ language: Language }> = createStore({ language: "en" as Language });
 
 /** The bundled lines of the hero moment on screen, once the app has loaded them (main.tsx, or a
@@ -38,6 +58,14 @@ function useWithoutLook(): WithoutLook | null {
   const session = useView();
   const c = session.kind === "hero" ? withoutLookOf(session) : null;
   return useStore(c?.state ?? NONE, (s) => s.data);
+}
+
+/** The bundled lines of the run with two more looks (extra.ts), once loaded; null before or on
+ * a hero without them. */
+function useExtraLooks(): ExtraLooks | null {
+  const session = useView();
+  const c = session.kind === "hero" ? extraLooksOf(session) : null;
+  return useStore(c?.state ?? NO_EXTRA, (s) => s.data);
 }
 
 /** This hero's held-out count, once the session has loaded it; null when the file is missing. */
@@ -78,7 +106,7 @@ function ComparisonBasis({ gate }: { gate: HeroGate | null }) {
 }
 
 /** The narration in the breakdown's language, else English; and its lines by id. */
-function useNarration(w: WithoutLook | null): {
+function useNarration(w: { answers: Partial<Record<Language, Narration>> } | null): {
   narration: Narration | null;
   line: (id: string) => PayloadLine | undefined;
 } {
@@ -134,11 +162,18 @@ export function WithoutLookNote() {
 }
 
 /** In the verdict: what was held constant, the held-out count, what it cost and where each pass
- * went, with the xT explainer. */
+ * went, with the xT explainer. With a bundle for the run with two more looks, a switch between
+ * that and the run without the look (`ExtraLooksLines`). */
 export function WithoutLookLines() {
   const w = useWithoutLook();
   const gate = useHeroGate();
+  const extra = useExtraLooks();
   const { narration, line } = useNarration(w);
+  const extraNarration = useNarration(extra).narration;
+  const session = useView();
+  const compareStore =
+    (session.kind === "hero" ? extraLooksOf(session).compare : null) ?? NO_COMPARE;
+  const compare = useStore(compareStore, (s) => s.value);
   const [explain, setExplain] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   const shown = narration
@@ -146,10 +181,111 @@ export function WithoutLookLines() {
     : [];
   // The comparison, once this hero has bundled lines or a held-out count. The count is hidden
   // when its entry is missing; what was held constant stays.
-  if (!narration && !gate) return null;
+  if (!narration && !gate && !extraNarration) return null;
   const zones = narration ? line("pass_zones") : undefined;
+  const choosing = !!extra && !!extraNarration;
   return (
     <div className="without-lines">
+      {choosing && (
+        <CompareSwitch
+          value={compare}
+          onChange={(value) => compareStore.set({ value })}
+          count={extra.added.length}
+        />
+      )}
+      {choosing && compare === "extra" ? (
+        <ExtraLooksLines extra={extra} narration={extraNarration} />
+      ) : (
+        <WithoutLookBody
+          w={w}
+          gate={gate}
+          narration={narration}
+          shown={shown}
+          zones={zones}
+          explain={explain}
+          setExplain={setExplain}
+          opener={opener}
+        />
+      )}
+    </div>
+  );
+}
+
+/** What his own look is compared with: the run without it, or the run with two more. */
+function CompareSwitch({
+  value,
+  onChange,
+  count,
+}: {
+  value: Compare;
+  onChange: (value: Compare) => void;
+  count: number;
+}) {
+  const options: { value: Compare; label: string }[] = [
+    { value: "without", label: "Without the look" },
+    { value: "extra", label: `With ${countWord(count)} more looks` },
+  ];
+  return (
+    <div className="compare-switch" role="group" aria-label="Compare his look with">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The run with two more looks, in its verified lines, and where its held-out numbers are. */
+function ExtraLooksLines({ extra, narration }: { extra: ExtraLooks; narration: Narration }) {
+  const lines = ["added_looks", "extra_result", "extra_zones"]
+    .map((id) => narration.lines.find((l) => l.id === id))
+    .filter((l): l is PayloadLine => !!l);
+  return (
+    <>
+      <p className="without-basis">
+        Held constant: the same match and the same seed; he keeps every look of his own and adds
+        these {countWord(extra.added.length)}.{" "}
+        {/* The held-out counts are the report's; the chip names it, as for the gates above. */}
+        <SourceChip kind="sim" title={`Eval result from ${extra.report}`} spoken />
+      </p>
+      {lines.map((l) => (
+        <p key={l.id} className={`worth-line ${l.id}`}>
+          <LineText text={l.text} verified /> <KindTags narration={narration} line={l} />
+        </p>
+      ))}
+    </>
+  );
+}
+
+/** The run without the look: what was held constant, the held-out count, what it cost and
+ * where each pass went, with the xT explainer. */
+function WithoutLookBody({
+  w,
+  gate,
+  narration,
+  shown,
+  zones,
+  explain,
+  setExplain,
+  opener,
+}: {
+  w: WithoutLook | null;
+  gate: HeroGate | null;
+  narration: Narration | null;
+  shown: PayloadLine[];
+  zones: PayloadLine | undefined;
+  explain: boolean;
+  setExplain: (open: boolean) => void;
+  opener: RefObject<HTMLButtonElement | null>;
+}) {
+  return (
+    <>
       <ComparisonBasis gate={gate} />
       {narration &&
         shown.map((l) => (
@@ -171,7 +307,7 @@ export function WithoutLookLines() {
           onClose={() => setExplain(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -210,11 +346,15 @@ function attackSign(hero: Hero): number {
 }
 
 /** The value of `slot` as the verified line shows it (three decimals), if the line holds it. */
-function shownValue(narration: Narration, line: PayloadLine, slot: string): string | null {
-  const value = narration.claims.get("pass_zones")?.values[slot];
-  if (typeof value !== "number") return null;
-  const text = value.toFixed(3);
-  return line.text.includes(text) ? text : null;
+function shownValue(
+  narration: Narration,
+  line: PayloadLine,
+  slot: string,
+): { text: string; raw: number } | null {
+  const raw = narration.claims.get("pass_zones")?.values[slot];
+  if (typeof raw !== "number") return null;
+  const text = raw.toFixed(3);
+  return line.text.includes(text) ? { text, raw } : null;
 }
 
 function XtExplainer({
@@ -257,9 +397,20 @@ function XtExplainer({
     const y = at[1] * sign;
     const i = Math.min(w.cols - 1, Math.max(0, Math.floor((x + LENGTH / 2) / cw)));
     const j = Math.min(w.rows - 1, Math.max(0, Math.floor((y + WIDTH / 2) / rh)));
-    return [{ run, x, y, i, j, value }];
+    return [{ run, x, y, i, j, value: value.text, raw: value.raw }];
   });
   const ending = (i: number, j: number) => ends.find((e) => e.i === i && e.j === j);
+  const xtValue = ends.find((e) => e.run === "factual")?.raw;
+  const cfValue = ends.find((e) => e.run === "counterfactual")?.raw;
+  const moves = useMemo(
+    () =>
+      passMoves(hero, w, {
+        xt: xtValue ?? null,
+        cfXt: cfValue ?? null,
+      }),
+    [hero, w, xtValue, cfValue],
+  );
+  const technical = versionFor(usePersona()) === "concrete";
   // Pitch metres to svg: x from the own goal line, y up (his left when attacking right).
   const sx = (x: number) => (x + LENGTH / 2) * PX;
   const sy = (y: number) => (WIDTH / 2 - y) * PX;
@@ -291,6 +442,7 @@ function XtExplainer({
         <p className="xt-line">
           <LineText text={line.text} verified /> <KindTags narration={narration} line={line} />
         </p>
+        <XtMoveExplain moves={moves} owner="his" valuesFrom="grid" />
         <svg
           className="xt-grid"
           viewBox={`-20 -20 ${LENGTH * PX + 40} ${WIDTH * PX + 40}`}
@@ -341,16 +493,18 @@ function XtExplainer({
             Expected threat (xT) is how much having the ball in a zone raises a team's chance of
             scoring within its next few actions. Brighter zones are worth more.
           </p>
-          <p>
-            Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches. A
-            zone's value is how often play there ends in a shot, times how often such a shot scores,
-            plus how often it moves on, times the value of the zones its completed passes and
-            carries reach (a lost ball is worth nothing): Singh's Markov model, solved by value
-            iteration. Between zone centres the value is read smoothly, so a pass is valued where it
-            ends, not by its zone alone. The difference between the two ends is what the look was
-            worth.
-            {!w.fitted && " This build uses the smooth prior: no fit was cached."}
-          </p>
+          {technical && (
+            <p>
+              Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches.
+              A zone's value is how often play there ends in a shot, times how often such a shot
+              scores, plus how often it moves on, times the value of the zones its completed passes
+              and carries reach (a lost ball is worth nothing): Singh's Markov model, solved by
+              value iteration. Between zone centres the value is read smoothly, so a pass is valued
+              where it ends, not by its zone alone. The difference between the two ends is what the
+              look was worth.
+              {!w.fitted && " This build uses the smooth prior: no fit was cached."}
+            </p>
+          )}
           <p>
             <a
               href="https://github.com/timothyzhbw-jpg/through-their-eyes/blob/main/docs/SPEC.md#45-expected-threat-xt"

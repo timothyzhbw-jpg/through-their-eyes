@@ -201,6 +201,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 \
 uv run python -m sim.export --scenario press_escape --seed 0 --out /tmp/press_escape_seed0.json --what-if web/public/data/whatif_press_escape_seed0.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --without-look web/public/data/without_look_seed3.json
 uv run python -m sim.export --scenario far_post_finish --seed 11 --without-look web/public/data/without_look_far_post_finish_seed11.json
+uv run python -m sim.export --scenario blind_side_run --seed 3 --extra-looks web/public/data/extra_looks_seed3.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/public/data/look_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --steps web/public/data/steps_seed3.json
@@ -233,6 +234,16 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   grid (1e-4) the explainer draws. Not part of the crew's evidence, so breakdown cache keys do
   not move. `src/without/` checks the payloads against the replay and shows them under "Without
   the look", on the timeline, at the edge of his eyes and in the verdict; fetched when the session is made.
+
+- `extra_looks_seed3.json`: the opposite, the run with two more looks
+  (`sim.export.export_extra_looks`, `explain/extra_looks.py`, SPEC 3.7). The hero keeps his own
+  looks and adds one to his left and one to his right before the ball arrives
+  (`sim.counterfactual.two_more_looks`). The without-look format with `added` (the two scans'
+  ids, frames and directions from his body) in place of `removed`, and `report`, the eval report
+  with the held-out numbers (`eval/reports/extra_looks_blind_side_run.md`). Verified lines in en
+  and zh: which looks were added, whom he passed to with them, and where each pass reached its
+  receiver, with the xT there. `src/without/extra.ts` checks them against the replay and the
+  "Without the look" panel shows them under its "With two more looks" option.
 
 - `hero_gates.json`: held-out evidence for the comparison panels, read from the eval reports
   (`eval.hero_gates`, SPEC 3.6, 7; `uv run python -m eval.hero_gates`). `src/without/gates.ts`

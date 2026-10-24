@@ -219,6 +219,17 @@ class HeadModel:
         )
 
 
+def scan_turn(offset: float, params: SimParams) -> float | None:
+    """The turn from the ball (rad) a scan makes toward `offset` rad from it: up to the widest
+    `params.scan_amplitude`, on the same side; None when `offset` is narrower than the narrowest
+    scan, a look that keeps the ball in view (not a scan)."""
+    lo, hi = params.scan_amplitude
+    turn = float(wrap_angle(offset))
+    if abs(turn) < lo - 1e-9:
+        return None
+    return float(np.clip(turn, -hi, hi))
+
+
 def longest_scan_s(params: SimParams) -> float:
     """About the longest a spontaneous scan lasts: the out deadline, the longest dwell, the turn
     back across the widest amplitude at the slowest speed, and the last degrees under the gain."""

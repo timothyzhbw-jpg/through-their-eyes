@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from sim.export import (
+    export_extra_looks,
     export_hero,
     export_looks,
     export_what_ifs,
@@ -126,6 +127,10 @@ def test_without_look_lines_are_current():
     _assert_current(
         without_look_json(export_without_look(SCENARIO, SEED)), "without_look_seed3.json"
     )
+
+
+def test_extra_looks_lines_are_current():
+    _assert_current(without_look_json(export_extra_looks(SCENARIO, SEED)), "extra_looks_seed3.json")
 
 
 def test_far_post_finish_without_look_lines_are_current():

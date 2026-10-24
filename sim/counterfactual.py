@@ -13,9 +13,18 @@ from dataclasses import dataclass
 import numpy as np
 
 from analytics.xt import xt_for
+from sim.config import SimParams
 from sim.engine import Simulation
 from sim.model import Decision, Event
-from sim.overrides import AddScan, DropScan, DropStep, ForceAction, NoScans
+from sim.overrides import (
+    AddScan,
+    DropScan,
+    DropStep,
+    ForceAction,
+    ForceScans,
+    NoScans,
+    scan_direction_deg,
+)
 from sim.perception import scan_id
 from sim.run import MatchRun
 
@@ -213,8 +222,14 @@ def force_action_counterfactual(
     )
 
 
-def what_if_from_id(scenario: str, seed: int, what_if: str) -> WhatIfResult | LookResult:
-    """Re-simulate a what-if by its id: `force:…` (a decision forced) or `look:…` (a look)."""
+def what_if_from_id(
+    scenario: str, seed: int, what_if: str
+) -> WhatIfResult | LookResult | ExtraLooksResult:
+    """Re-simulate a what-if by its id: `force:…` (a decision forced), `look:…` (a look) or
+    `extra:…` (looks added on top of his own)."""
+    if what_if.startswith(EXTRA_PREFIX):
+        player, looks = parse_extra_looks_id(what_if)
+        return extra_looks_at(scenario, seed, looks, player)
     if what_if.startswith(LOOK_PREFIX):
         player, frame, offset_deg = parse_look_id(what_if)
         return look_counterfactual(scenario, seed, frame, offset_deg, player)
@@ -223,7 +238,7 @@ def what_if_from_id(scenario: str, seed: int, what_if: str) -> WhatIfResult | Lo
 
 
 def is_what_if_id(ref: object) -> bool:
-    return isinstance(ref, str) and ref.startswith((WHAT_IF_PREFIX, LOOK_PREFIX))
+    return isinstance(ref, str) and ref.startswith((WHAT_IF_PREFIX, LOOK_PREFIX, EXTRA_PREFIX))
 
 
 # --- "Take his eyes": the viewer chooses when and where he looks (SPEC 3.7, 7) -----------------
@@ -365,6 +380,183 @@ def look_counterfactual(
         counterfactual_decision=looked,
         delta_xt=possession_value(factual) - possession_value(counterfactual),
     )
+
+
+# --- "With two more looks": scans added on top of his own (SPEC 3.7) ---------------------------
+#
+# The opposite of the run without the look: he keeps every look of his own and makes more, each
+# at a time before the ball reaches him and in a direction from where his body faces
+# (`ForceScans`). His own scans are not touched, so an added look that is still under way (or in
+# its refractory) when one of his own is due would cancel it: `extra_looks_counterfactual` lists
+# his own scans that did not happen (`missing`), and a caller that wants them all kept checks it.
+
+EXTRA_PREFIX = "extra:"
+
+
+def extra_looks_id(player: str, looks: Sequence[tuple[int, int]]) -> str:
+    """ "extra:H8:0009:+090,0029:-090": looks at frames 9 and 29, to his left and to his right."""
+    parts = ",".join(f"{frame:04d}:{deg:+04d}" for frame, deg in looks)
+    return f"{EXTRA_PREFIX}{player}:{parts}"
+
+
+def parse_extra_looks_id(extra: str) -> tuple[str, list[tuple[int, int]]]:
+    if not extra.startswith(EXTRA_PREFIX):
+        raise ValueError(f"not an extra-looks id: {extra}")
+    player, _, rest = extra.removeprefix(EXTRA_PREFIX).partition(":")
+    looks = []
+    for part in rest.split(","):
+        frame, deg = part.split(":")
+        looks.append((int(frame), int(deg)))
+    return player, looks
+
+
+def reception_frame(run: MatchRun, player: str) -> int:
+    """The frame he received the ball for his first decision."""
+    decision = next((d for d in run.decisions if d.player == player), None)
+    if decision is None:
+        raise ValueError(f"{player} makes no decision")
+    frames = [
+        e.frame for e in run.events
+        if e.type == "reception" and e.player == player and e.frame <= decision.frame
+    ]  # fmt: skip
+    if not frames:
+        raise ValueError(f"{player} receives no ball before his decision")
+    return max(frames)
+
+
+@dataclass
+class ExtraLooksResult:
+    """The factual run vs the same run where the player also makes the added looks."""
+
+    id: str  # extra_looks_id(...): the intervention, also the counterfactual's id in claims
+    player: str
+    looks: list[tuple[int, int]]  # (frame, degrees from his body), as asked
+    reception: int  # the frame he received the ball (factual run)
+    added: list[str]  # the added scans' ids (counterfactual run)
+    missing: list[str]  # his own scans before his decision (factual run) that did not happen
+    factual: MatchRun
+    counterfactual: MatchRun
+    factual_decision: Decision
+    counterfactual_decision: Decision | None
+    delta_xt: float  # possession value after his action: factual minus with the added looks
+
+    @property
+    def scan_id(self) -> str:
+        """Interventions are looked up by id; for added looks that is its own id."""
+        return self.id
+
+    @property
+    def factual_action(self) -> str:
+        return self.factual_decision.chosen
+
+    @property
+    def counterfactual_action(self) -> str | None:
+        return self.counterfactual_decision.chosen if self.counterfactual_decision else None
+
+
+def extra_looks_counterfactual(
+    scenario: str,
+    seed: int,
+    looks: Sequence[tuple[float, str | int]],
+    player: str | None = None,
+    record_draws: bool = False,
+    probe: MatchRun | None = None,
+) -> ExtraLooksResult:
+    """Re-simulate a decision (default: the hero's) with looks added on top of his own: each
+    (seconds before he received the ball, direction), the direction a `SCAN_DIRECTIONS` name or
+    whole degrees from where his body faces. Refuses a look before the run's first frame or not
+    before his decision, and one that does not start (`ForceScans`). `probe`: the factual run,
+    when the caller already has it."""
+    probe = probe or Simulation.from_scenario(scenario, seed).run()
+    player = player or probe.hero
+    received = reception_frame(probe, player)
+    frames = [(received - round(t / probe.dt), scan_direction_deg(d)) for t, d in looks]
+    return extra_looks_at(scenario, seed, frames, player, record_draws, probe)
+
+
+def extra_looks_at(
+    scenario: str,
+    seed: int,
+    looks: Sequence[tuple[int, int]],
+    player: str | None = None,
+    record_draws: bool = False,
+    probe: MatchRun | None = None,
+) -> ExtraLooksResult:
+    """`extra_looks_counterfactual` with each look's frame and degrees from his body given."""
+    probe = probe or Simulation.from_scenario(scenario, seed).run()
+    player = player or probe.hero
+    decision = next((d for d in probe.decisions if d.player == player), None)
+    if decision is None:
+        raise ValueError(f"{player} makes no decision to look for")
+    received = reception_frame(probe, player)
+    frames = [(int(f), int(d)) for f, d in looks]
+    if not frames:
+        raise ValueError("no look to add")
+    for frame, _ in frames:
+        if not 0 <= frame < decision.frame:
+            raise ValueError(f"a look at frame {frame} is outside [0, {decision.frame}), from "
+                             f"the first frame to {player}'s decision")  # fmt: skip
+    start = min(f for f, _ in frames)
+    factual, counterfactual = run_counterfactual(
+        scenario, seed, start, [ForceScans(player, tuple(frames))], record_draws
+    )
+    added = []
+    for frame, _ in frames:
+        sid = scan_id(player, frame)
+        if not any(e.id == sid and e.attrs.get("added") for e in counterfactual.events):
+            raise ValueError(f"{player} cannot start a look at frame {frame}: a scan is under way, "
+                             "or the direction keeps the ball in view")  # fmt: skip
+        added.append(sid)
+    after = {e.id for e in counterfactual.events if e.type == "scan"}
+    missing = [
+        e.id for e in factual.events
+        if e.type == "scan" and e.player == player and e.frame < decision.frame
+        and e.id not in after
+    ]  # fmt: skip
+    decision = next(d for d in factual.decisions if d.player == player)
+    looked = next((d for d in counterfactual.decisions if d.player == player), None)
+    return ExtraLooksResult(
+        id=extra_looks_id(player, frames),
+        player=player,
+        looks=frames,
+        reception=received,
+        added=added,
+        missing=missing,
+        factual=factual,
+        counterfactual=counterfactual,
+        factual_decision=decision,
+        counterfactual_decision=looked,
+        delta_xt=possession_value(factual) - possession_value(counterfactual),
+    )
+
+
+# The timing rule of "With two more looks" (eval/extra_looks.py): the first look this long before
+# he receives the ball, the earliest time inside every run of the scan hero (the ball reaches H8
+# 2.6-2.9 s into the run); the second as soon as his head is free again, when the first look has
+# turned back and its refractory (`SimParams.scan_refractory_s`) is over. Back to back and as early
+# as the run allows, both are over before his key scan, 0.70-0.85 s before the ball reaches him,
+# so they add to his looks without cancelling one.
+TWO_LOOKS_FIRST_S = 2.6
+TWO_LOOKS = ("left", "right")
+
+
+def two_more_looks(
+    scenario: str,
+    seed: int,
+    directions: Sequence[str | int] = TWO_LOOKS,
+    player: str | None = None,
+    probe: MatchRun | None = None,
+) -> ExtraLooksResult:
+    """The hero's run with two looks added by the timing rule above, in `directions` order."""
+    probe = probe or Simulation.from_scenario(scenario, seed).run()
+    first, second = directions
+    one = extra_looks_counterfactual(
+        scenario, seed, [(TWO_LOOKS_FIRST_S, first)], player, probe=probe
+    )
+    end = int(one.counterfactual.event(one.added[0]).attrs["end"])
+    free = end + round(SimParams().scan_refractory_s / probe.dt)
+    looks = [(one.looks[0][0], scan_direction_deg(first)), (free, scan_direction_deg(second))]
+    return extra_looks_at(scenario, seed, looks, one.player, probe=probe)
 
 
 def drop_step_counterfactual(

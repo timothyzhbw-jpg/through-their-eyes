@@ -140,6 +140,7 @@ describe("on the live screen", () => {
 describe("in the verdict", () => {
   it("tells where the pass went, and the explainer draws both ends on the xT grid", async () => {
     const session = await loaded();
+    act(() => session.breakdown.set({ persona: "analyst" })); // the method's details are the analyst's
     const page = mount(session, <WithoutLookLines />);
     expect(text(page)).toContain(
       "J. Ferriday's pass reached N. Varnhall in the final third, right of centre: xT 0.157. Without that look it " +

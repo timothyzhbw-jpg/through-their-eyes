@@ -23,6 +23,7 @@ import {
 } from "../narration/payload";
 import { ProvenanceChip } from "../provenance/ProvenanceChip";
 import { useBreakdown, useSession } from "../session";
+import { XtClaimNote } from "../xtexplain/XtMoveExplain";
 import { useStore } from "../store/store";
 import { numericValues, wrongNumber, type TamperState } from "../tamper/tamper";
 import { LANGUAGES } from "../whatif/whatif";
@@ -232,6 +233,7 @@ export function EvidenceCard() {
                 }}
                 onEvent={(e) => controls.seekEvidence(c.id, e)}
               >
+                <XtClaimNote claim={c} />
                 <TamperControl claim={c} />
               </ClaimCard>
             );
