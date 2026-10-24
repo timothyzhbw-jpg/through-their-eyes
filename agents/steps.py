@@ -57,6 +57,21 @@ class Step:
     over: bool  # over his shoulder: at least OVER_THE_SHOULDER from the ball
     missing: bool  # dropped in this run
     sight: list[str]  # players out of his sight as the look began and in it during the look
+    # A teaching scenario's scripted look ("L", "R", "B" or "F", `sim.scenarios.pro_scan.LOOKS`);
+    # None elsewhere, and then not exported.
+    direction: str | None = None
+
+
+@dataclass(frozen=True)
+class Beat:
+    """A teaching scenario's frozen beat after his looks (`pro_scan`): "drop_back" (did he drop
+    back toward the ball as it came?) or "half_turn" (did he receive side-on?), both frozen at his
+    reception and told whether it happened or not."""
+
+    id: str
+    frame: int  # the freeze frame: his reception
+    start: int  # drop_back: the frame the pass to him was played; half_turn: as `frame`
+    happened: bool
 
 
 @dataclass
@@ -70,7 +85,9 @@ class RunSteps:
     steps: list[Step]
     focus: tuple[str, str]  # the two players the final freeze leaves lit
     claims: list[Claim] = field(default_factory=list)
-    lines: dict[str, list[str]] = field(default_factory=dict)  # "intro", scan id, "final"
+    # "intro", scan id, a beat's id (teaching scenarios), "final"
+    lines: dict[str, list[str]] = field(default_factory=dict)
+    beats: list[Beat] = field(default_factory=list)  # teaching scenarios only
 
 
 @dataclass(frozen=True)
@@ -421,6 +438,155 @@ class _Builder:
                      predicate=Predicate(op="all", args=checks),
                      evidence=self._decision_evidence())  # fmt: skip
 
+    # --- a teaching scenario's beats (`pro_scan`) -------------------------------------------------
+
+    def at_reception(self, metric: str, **args):
+        return self.fn("metric_at", metric=metric, anchor=self.rs.reception.id, at=0.0, **args)
+
+    def nearest_line(self, k: str) -> Claim:
+        """Who is nearest him as the ball reaches him, and how far."""
+        rs = self.rs
+        f = rs.reception.frame
+        opp = _nearest_opponent(rs.run, self.hero, f)
+        d = float(np.linalg.norm(rs.run.pos[f, rs.run.index(opp)] -
+                                 rs.run.pos[f, rs.run.index(self.hero)]))  # fmt: skip
+        return Claim(
+            id=f"{k}_nearest",
+            template="When the ball reaches him, {opponent} is the opponent nearest to him, "
+                     "{d} m away.",
+            templates={"zh": "球到达时，离他最近的对手是{opponent}，相距{d}米。"},
+            slots={"opponent": Slot(ref=opp), "d": Slot(value=display(d, 1), decimals=1)},
+            predicate=Predicate(op="all", args=[
+                Predicate(op="eq", lhs=self.at_reception("nearest_opponent", player=self.hero),
+                          rhs=slot("opponent")),
+                Predicate(op="approx", lhs=self.at_reception("nearest_opponent_distance",
+                                                             player=self.hero),
+                          rhs=slot("d"), abs_tol=0.05),
+            ]),
+            evidence=[rs.reception.id],
+        )  # fmt: skip
+
+    def drop_back(self, beat: Beat) -> list[Claim]:
+        """Whether he dropped back toward the ball while it came (rule 1 of `pro_scan`)."""
+        rs = self.rs
+        since = round((rs.reception.frame - beat.start) * rs.run.dt, 4)
+        delta = self.fn("metric_delta", metric="depth", anchor=rs.reception.id, from_=-since,
+                        to=0.0, player=slot("player"))  # fmt: skip
+        i = rs.run.index(self.hero)
+        sign = 1.0 if rs.run.players[i].team == 0 else -1.0
+        dropped = sign * float(rs.run.pos[beat.start, i, 0] - rs.run.pos[beat.frame, i, 0])
+        if beat.happened:
+            line = Claim(
+                id="drop_back",
+                template="As the ball comes, {player} drops {d} m back toward it, to receive "
+                         "with more space.",
+                templates={"zh": "球来的时候，{player}向球的方向回撤了{d}米，为接球拉开空间。"},
+                slots={"player": Slot(ref=self.hero), "d": Slot(value=display(dropped, 1),
+                                                                decimals=1)},
+                predicate=Predicate(op="approx", lhs=delta, rhs=slot("d", scale=-1.0),
+                                    abs_tol=0.05),
+                evidence=[rs.reception.id],
+            )  # fmt: skip
+        else:
+            line = Claim(
+                id="drop_back",
+                template="As the ball comes, {player} does not drop back.",
+                templates={"zh": "球来的时候，{player}没有回撤。"},
+                slots={"player": Slot(ref=self.hero)},
+                predicate=Predicate(op="gt", lhs=delta, rhs=-DROP_MIN_M),
+                evidence=[rs.reception.id],
+            )
+        return [line, self.nearest_line("drop_back")]
+
+    def half_turn(self, beat: Beat) -> list[Claim]:
+        """Whether he received side-on, on the half-turn (rule 2 of `pro_scan`)."""
+        rs = self.rs
+        f = rs.reception.frame
+        angle = float(self.value(self.at_reception("body_open", player=self.hero)))
+        opened = self.at_reception("body_open", player=slot("player"))
+        slots = {"player": Slot(ref=self.hero), "a": Slot(value=round(angle), decimals=0)}
+        checks = [Predicate(op="approx", lhs=opened, rhs=slot("a"), abs_tol=0.5)]
+        if beat.happened:
+            opp = _nearest_opponent(rs.run, self.hero, f)
+            away = self.at_reception("turned_away", player=self.hero, opponent=opp)
+            checks.append(Predicate(op="ge", lhs=opened, rhs=SIDE_ON_DEG))
+            if self.value(away):
+                slots["opponent"] = Slot(ref=opp)
+                checks.append(
+                    Predicate(
+                        op="eq",
+                        lhs=self.at_reception(
+                            "turned_away", player=slot("player"), opponent=slot("opponent")
+                        ),
+                        rhs=True,
+                    )
+                )
+                template = (
+                    "{player} receives side-on, on the half-turn: his body is {a}° open "
+                    "from facing the ball, turned away from {opponent}."
+                )
+                zh = "{player}侧身接球：身体从正对来球的方向打开了{a}度，背向{opponent}。"
+            else:
+                template = (
+                    "{player} receives side-on, on the half-turn: his body is {a}° open "
+                    "from facing the ball."
+                )
+                zh = "{player}侧身接球：身体从正对来球的方向打开了{a}度。"
+        else:
+            checks.append(Predicate(op="lt", lhs=opened, rhs=SIDE_ON_DEG))
+            template = "{player} receives square, facing the ball: his body is {a}° off it."
+            zh = "{player}正对来球接球：身体与来球方向只差{a}度。"
+        return [Claim(id="half_turn", template=template, templates={"zh": zh}, slots=slots,
+                      predicate=Predicate(op="all", args=checks),
+                      evidence=[rs.reception.id])]  # fmt: skip
+
+
+# A teaching beat: he dropped back when he moved at least this far toward his own goal while the
+# ball came; he received side-on when his body was at least this far from square
+# (eval/pro_scan.py's SIDE_ON_DEG).
+DROP_MIN_M = 0.5
+SIDE_ON_DEG = 45.0
+
+
+def beats_of(run: MatchRun, hero: str, reception: Event) -> list[Beat]:
+    """The two beats of a teaching run, from the run itself: did he drop back while the ball
+    came, and did he receive side-on?"""
+    i = run.index(hero)
+    f = reception.frame
+    to_him = [e for e in run.events
+              if e.type == "pass" and e.attrs.get("to") == hero and e.frame < f]  # fmt: skip
+    kick = to_him[-1].frame
+    sign = 1.0 if run.players[i].team == 0 else -1.0
+    dropped = sign * float(run.pos[kick, i, 0] - run.pos[f, i, 0])
+    rel = np.asarray(to_him[-1].attrs["start"]) - run.pos[f, i]
+    opened = abs(float(np.rad2deg(wrap_angle(run.body_yaw[f, i] - np.arctan2(rel[1], rel[0])))))
+    return [Beat("drop_back", f, kick, dropped >= DROP_MIN_M),
+            Beat("half_turn", f, f, opened >= SIDE_ON_DEG)]  # fmt: skip
+
+
+def _factual_evidence(claim: Claim, factual: MatchRun, cf: str | None) -> Claim:
+    """The Verifier resolves evidence in the factual run. A line about the other run cites its
+    events where the factual run has them too, and otherwise the intervention (the dropped look),
+    e.g. when the run without the look receives the ball on another frame (`pro_scan`)."""
+    known = {e.id for e in factual.events}
+    kept = [e for e in claim.evidence if e in known]
+    if len(kept) == len(claim.evidence) or cf is None:
+        return claim
+    return claim.model_copy(update={"evidence": kept or ([cf] if cf in known else [])})
+
+
+def _look_labels(ctx: MomentContext) -> dict[str, str]:
+    """A teaching scenario's scripted looks by scan id ("L", "R", "B", "F"); empty elsewhere."""
+    from sim.engine import Simulation
+    from sim.scenarios import SCENARIOS
+
+    if not SCENARIOS[ctx.scenario].teaching:
+        return {}
+    from sim.scenarios.pro_scan import LOOKS, look_ids
+
+    sc = Simulation.from_scenario(ctx.scenario, ctx.seed).scenario  # its look times, from setup
+    return {sid: label for sid, (label, _, _) in zip(look_ids(sc), LOOKS, strict=True)}
+
 
 def _mate(ctx: MomentContext) -> str | None:
     runner = getattr(ctx.run, "runner", None) or _scenario_runner(ctx)
@@ -465,13 +631,19 @@ def build_steps(ctx: MomentContext) -> dict[str, RunSteps]:
     cf = ctx.cf
     dropped = cf.scan_id if isinstance(cf, CounterfactualResult) else None
     forced = not isinstance(cf, CounterfactualResult)
+    labels = _look_labels(ctx)
     out: dict[str, RunSteps] = {}
     for name, run, cf_id in (("factual", factual, None),
                              ("counterfactual", cf.counterfactual, cf.scan_id)):  # fmt: skip
-        d = next(x for x in run.decisions if x.player == hero and x.frame == decision.frame)
+        # His decision at the same frame, or, when the intervention moved it (in `pro_scan` the
+        # run without the forward look receives the ball sooner), his first one in this run.
+        d = next((x for x in run.decisions if x.player == hero and x.frame == decision.frame),
+                 None) or next(x for x in run.decisions if x.player == hero)  # fmt: skip
         reception = _reception(run, hero, d.frame)
         steps = _steps(run, factual, hero, reception, d.frame,
                        dropped if name != "factual" else None)  # fmt: skip
+        if labels:
+            steps = [Step(**{**s.__dict__, "direction": labels.get(s.scan.id)}) for s in steps]
         rs = RunSteps(name=name, run=run, cf=cf_id, forced=forced and name != "factual",
                       reception=reception, decision=d, steps=steps,
                       focus=focus_pair(run, d))  # fmt: skip
@@ -487,12 +659,18 @@ def build_steps(ctx: MomentContext) -> dict[str, RunSteps]:
                 these = [c for c in (b.when(k, s), b.sight_line(k, s), b.late(k, s)) if c]
             claims += these
             rs.lines[s.scan.id] = [c.id for c in these]
+        if labels:  # a teaching scenario: the drop-back and the half-turn, after his looks
+            rs.beats = beats_of(run, hero, reception)
+            for beat in rs.beats:
+                these = b.drop_back(beat) if beat.id == "drop_back" else b.half_turn(beat)
+                claims += these
+                rs.lines[beat.id] = [c.id for c in these]
         mate = _mate(ctx)
         final = [b.saw(mate) if mate else None, b.belief(mate) if mate else None, b.choice(),
                  b.pair()]  # fmt: skip
         claims += final
         rs.lines["final"] = [c.id for c in final if c is not None]
-        rs.claims = [c for c in claims if c is not None]
+        rs.claims = [_factual_evidence(c, factual, cf_id) for c in claims if c is not None]
         out[name] = rs
     return out
 

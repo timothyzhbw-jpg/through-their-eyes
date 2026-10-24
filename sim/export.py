@@ -78,6 +78,7 @@ from sim.model import Decision, Event
 from sim.overrides import DropScan, ForceAction
 from sim.roster import short_name
 from sim.run import MatchRun, _plain
+from sim.scenarios import SCENARIOS
 
 VERSION = 5
 
@@ -974,6 +975,7 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
 
     ctx = MomentContext.load(scenario, seed)
     answer = answer_steps(ctx)
+    teaching = SCENARIOS[scenario].teaching
     runs: dict[str, Any] = {}
     for name, rs in answer.runs.items():
         payloads = answer.payloads[name]
@@ -998,6 +1000,8 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
                     "sight": s.sight,
                     "lines": rs.lines[s.scan.id],
                     "vel": _mm(rs.run.vel[s.frame]),
+                    # A teaching scenario's scripted look: "L", "R", "B" or "F".
+                    **({"direction": s.direction} if teaching else {}),
                 }
                 for s in rs.steps
             ],
@@ -1011,6 +1015,12 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
             },
             "answers": {lang: p.model_dump(mode="json") for lang, p in payloads.items()},
         }
+        if teaching:  # the drop-back and the half-turn, frozen after his looks
+            runs[name]["beats"] = [
+                {"id": b.id, "frame": b.frame, "start": b.start, "happened": b.happened,
+                 "lines": rs.lines[b.id], "vel": _mm(rs.run.vel[b.frame])}
+                for b in rs.beats
+            ]  # fmt: skip
     return {
         "version": STEPS_VERSION,
         "scenario": scenario,
@@ -1019,6 +1029,7 @@ def export_steps(scenario: str, seed: int) -> dict[str, Any]:
         "units": {"velocity": "mm/s"},
         "moment": ctx.card.id,
         "hero": ctx.run.hero_decision().player,
+        **({"teaching": True} if teaching else {}),
         "runs": runs,
     }
 

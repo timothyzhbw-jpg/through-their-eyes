@@ -20,6 +20,7 @@ DATA = Path(__file__).parent.parent / "web" / "public" / "data"
 FILES = {
     ("blind_side_run", 3): "steps_seed3.json",
     ("press_escape", 0): "steps_press_escape_seed0.json",
+    ("pro_scan", 126): "steps_pro_scan_seed126.json",  # the teaching scenario's held-out seed
 }
 
 
@@ -130,6 +131,45 @@ def test_the_export_carries_the_sims_velocities_and_the_decision_record(blind):
 def test_a_hero_with_no_decision_on_the_ball_has_no_steps():
     with pytest.raises(ValueError, match="no decision on the ball"):
         build_steps(MomentContext.load("corner_blind_side", 0))
+
+
+@pytest.fixture(scope="module")
+def coach():
+    return MomentContext.load("pro_scan", 126)
+
+
+def test_the_teaching_steps_label_each_look_and_add_the_two_beats(coach):
+    """`pro_scan`: the scripted looks L, R, B, F, the forward one missing without it, and the
+    drop-back and half-turn told in both runs, from the run itself."""
+    runs = build_steps(coach)
+    fac, cf = runs["factual"], runs["counterfactual"]
+    assert [s.direction for s in fac.steps] == ["L", "R", "B", "F"]
+    assert [(s.direction, s.missing) for s in cf.steps] == [
+        ("L", False), ("R", False), ("B", False), ("F", True)
+    ]  # fmt: skip
+    assert [(b.id, b.happened) for b in fac.beats] == [("drop_back", True), ("half_turn", True)]
+    assert [(b.id, b.happened) for b in cf.beats] == [("drop_back", False), ("half_turn", False)]
+    for rs in runs.values():
+        assert all(b.frame == rs.reception.frame for b in rs.beats)
+        assert list(rs.lines)[-3:] == ["drop_back", "half_turn", "final"]
+    # Without the forward look he receives the ball, and decides, on other frames.
+    assert cf.decision.frame != fac.decision.frame
+    answer = answer_steps(coach)
+    for name, rs in answer.runs.items():
+        for lang in ("en", "zh"):
+            payload = answer.payloads[name][lang]
+            assert [line.id for line in payload.lines] == [c.id for c in rs.claims], (name, lang)
+
+
+def test_only_the_teaching_export_carries_labels_and_beats():
+    data = export_steps("pro_scan", 126)
+    assert data["teaching"] is True
+    for raw in data["runs"].values():
+        assert [s["direction"] for s in raw["steps"]] == ["L", "R", "B", "F"]
+        assert [b["id"] for b in raw["beats"]] == ["drop_back", "half_turn"]
+    for key in (("blind_side_run", 3), ("press_escape", 0)):
+        text = steps_json(export_steps(*key))
+        assert '"teaching"' not in text and '"beats"' not in text and '"direction"' not in text
 
 
 @canonical.linux_only()
