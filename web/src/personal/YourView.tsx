@@ -21,6 +21,8 @@ import {
   playerOptions,
   type Team,
 } from "./follow";
+import { useStore } from "../store/store";
+import { eyesPatch, eyesStatus, hasLookData } from "./eyes";
 import { useChoices, useMomentsInReach } from "./hooks";
 import { involvedCount } from "./rank";
 import { audienceOf, personal } from "./state";
@@ -137,6 +139,20 @@ export function YourViewControls() {
   const follow = useChoices();
   const players = useMemo(() => playerOptions(view.hero.players), [view.hero]);
   const off = !audience.online;
+  const povPlayer = useStore(view.playback, (s) => s.povPlayer);
+  const eyes = follow.player ? eyesStatus(view.hero, follow.player, povPlayer) : null;
+  /** Make `id` the EYES (and the broadcast camera's lock): the same switch as the EYES selector. */
+  const watchThrough = (id: string) => {
+    view.controls.setPovPlayer(id);
+    const patch = eyesPatch(view.playback.get(), id);
+    if (patch.lock) view.playback.set({ lock: patch.lock });
+  };
+  /** Following a player puts his eyes on screen when the moment has his look data; otherwise the
+   * note and the button below say so and let the viewer choose. */
+  const followPlayer = (id: string | null) => {
+    personal.set({ player: id });
+    if (id && hasLookData(view.hero, id)) watchThrough(id);
+  };
   return (
     <>
       <p className="kicker">Mode</p>
@@ -195,7 +211,7 @@ export function YourViewControls() {
         <span className="kicker">Player</span>
         <select
           value={follow.player ?? ""}
-          onChange={(e) => personal.set({ player: parsePlayer(e.target.value) })}
+          onChange={(e) => followPlayer(parsePlayer(e.target.value))}
         >
           <option value="">No player</option>
           {([0, 1] as const).map((t) => (
@@ -211,6 +227,16 @@ export function YourViewControls() {
           ))}
         </select>
       </label>
+      {eyes && (
+        <div className="your-view-row eyes-follow" data-testid="follow-eyes">
+          <p className="note">{eyes.text}</p>
+          {!eyes.current && (
+            <button type="button" className="btn" onClick={() => watchThrough(eyes.id)}>
+              {eyes.button}
+            </button>
+          )}
+        </div>
+      )}
       <div className="your-view-row">
         <span className="kicker">Language</span>
         <Segmented

@@ -71,6 +71,12 @@ const PAGES = [
     check: (p, shoot) => lineup(p, shoot, "Start", match),
   },
   { name: "link-tamper", path: "?persona=analyst&tamper=cf_value", check: tamper },
+  {
+    name: "link-tamper-count",
+    path: "?persona=analyst&tamper=scans_before_reception",
+    check: tamperCount,
+  },
+  { name: "follow-player-eyes", path: "?autoplay=0&intro=0", check: followEyes },
   { name: "audiences", path: "?autoplay=0&intro=0", check: audiences },
   { name: "link-eyes", path: "?play=eyes", check: takeEyes },
   { name: "link-eyes-press-escape", path: "?match=press_escape-0&play=eyes", check: takeEyes },
@@ -737,6 +743,56 @@ async function instantCuts(page) {
   if (after !== contexts) {
     throw new Error(`camera switches made ${after - contexts} new WebGL context(s)`);
   }
+}
+
+/** Your view → Follow → Player: the EYES selector follows the chosen player when the moment has
+ * his look data; otherwise the note says so and "Watch through #N's eyes" does it. The EYES
+ * selector switches players on its own too. */
+async function followEyes(page) {
+  await hero(page);
+  const eyes = page.getByRole("combobox", { name: "Whose eyes" });
+  const hostId = await eyes.inputValue();
+  const ids = await eyes.locator("option").evaluateAll((os) => os.map((o) => o.value));
+  const other = ids.find((id) => id !== hostId);
+  await eyes.selectOption(other);
+  if ((await eyes.inputValue()) !== other) throw new Error("expected the EYES selector to switch");
+  await eyes.selectOption(hostId);
+
+  await page.getByRole("button", { name: "Your view" }).click();
+  const follow = page
+    .locator(".your-view-panel select")
+    .filter({ has: page.locator("option", { hasText: "No player" }) });
+  const options = await follow.locator("option").evaluateAll((os) => os.map((o) => o.value));
+  const pick = options.find((v) => v && v !== hostId);
+  await follow.selectOption(pick);
+  const note = page.getByTestId("follow-eyes");
+  await see(note, "the note on the followed player's looks");
+  if ((await eyes.inputValue()) !== pick) {
+    await see(note.getByText(/has no look data for this moment/), "the no-look-data note");
+    await note.getByRole("button", { name: /^Watch through #\d+'s eyes$/ }).click();
+  }
+  if ((await eyes.inputValue()) !== pick) {
+    throw new Error(`expected the EYES selector on ${pick}, got ${await eyes.inputValue()}`);
+  }
+}
+
+/** A count typed into "Try a wrong number" (the scans claim's number of looks): 0, 3 and 7, typed
+ * key by key, each reaches the Verifier, which refutes it; the true count is supported. */
+async function tamperCount(page) {
+  await tamper(page);
+  const form = page.locator(".tamper-form").filter({ has: page.locator("input[name='n']") });
+  const input = form.locator("input");
+  const verdict = page.locator(".tamper-result");
+  for (const n of ["0", "3", "7"]) {
+    await input.fill("");
+    await input.pressSequentially(n);
+    if ((await input.inputValue()) !== n) throw new Error(`expected ${n} in the input`);
+    await form.getByRole("button", { name: "Check", exact: true }).click();
+    await see(verdict.getByText(/Refuted — this line would not air/), `the Verifier on ${n}`);
+    await see(verdict.getByText(new RegExp(`You set .* to ${n};`)), `the answer names ${n}`);
+  }
+  await form.getByRole("button", { name: /^Check the true value/ }).click();
+  await see(verdict.getByText(/Supported — this line would air/), "the true count supported");
 }
 
 /** `?persona=analyst&tamper=cf_value`: the evidence card with "Try a wrong number" open. */
