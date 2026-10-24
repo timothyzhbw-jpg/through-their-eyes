@@ -34,7 +34,10 @@
   font: 600 10px/1 var(--font-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 5px 7px;
+  padding: 0 8px;
+  /* WCAG 2.5.8: a 24 px target however the column around the key is squeezed */
+  min-width: 24px;
+  min-height: 24px;
 }
 .skeleton-key .sk-source button:disabled {
   opacity: 0.45;
