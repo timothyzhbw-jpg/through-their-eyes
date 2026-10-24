@@ -109,6 +109,18 @@ const PAGES = [
     check: (p) => phone(p, (q) => drill(q, "Blind side"), { live: false }),
   },
   { name: "moment-links", path: "?intro=0", check: (p, shoot) => momentLinks(p, shoot) },
+  // The card's primary button stays above the fold of a 390 × 844 phone (styles.css, phone card).
+  {
+    name: "phone-390-primary-above-fold",
+    path: "?intro=0&autoplay=0",
+    device: { ...PHONE_375, viewport: { width: 390, height: 844 } },
+    check: async (p) => {
+      const button = p.locator(".moment-card .card-actions .btn").first();
+      await see(button, "the card's primary button");
+      const bottom = await button.evaluate((el) => el.getBoundingClientRect().bottom);
+      if (bottom > 844) throw new Error(`primary button ends at y=${bottom}, below the 844 fold`);
+    },
+  },
   {
     name: "phone-375-moment-links",
     path: "?intro=0",

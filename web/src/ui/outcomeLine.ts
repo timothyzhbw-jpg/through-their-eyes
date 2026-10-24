@@ -19,13 +19,16 @@ function player(hero: Hero, id: string): string {
 }
 
 /** One decision as a phrase: "passes to #9 N. Varnhall", "carries it", "shoots at the far post". */
-export function actionPhrase(hero: Hero, action: string): string {
-  if (action.startsWith("pass:")) return `passes to ${player(hero, action.slice(5))}`;
+export function actionPhrase(hero: Hero, action: string): string | null {
+  if (action.startsWith("pass:")) {
+    const to = action.slice(5);
+    return to ? `passes to ${player(hero, to)}` : null;
+  }
   if (action === "carry") return "carries it";
   if (action === "shot") return "shoots";
   const post = shotPost(action);
   if (post) return `shoots at the ${post} post`;
-  return action;
+  return null; // never a raw internal id on screen
 }
 
 export function outcomeLine(hero: Hero): OutcomeLine | null {
@@ -33,8 +36,7 @@ export function outcomeLine(hero: Hero): OutcomeLine | null {
   const factual = hero.runs.factual.decision?.chosen;
   const counterfactual = hero.runs.counterfactual.decision?.chosen;
   if (!factual || !counterfactual || factual === counterfactual) return null;
-  return {
-    withLook: actionPhrase(hero, factual),
-    without: actionPhrase(hero, counterfactual),
-  };
+  const withLook = actionPhrase(hero, factual);
+  const without = actionPhrase(hero, counterfactual);
+  return withLook && without ? { withLook, without } : null;
 }

@@ -68,19 +68,28 @@ describe("outcomeLine", () => {
   });
 
   it("phrases a pass, a carry and a shot", () => {
-    expect(actionPhrase(hero, "pass:H9")).toBe(`passes to #${number("H9")} N. Varnhall`);
+    const to = hero.runs.factual.decision!.chosen.slice("pass:".length);
+    expect(actionPhrase(hero, `pass:${to}`)).toBe(`passes to #${number(to)} ${shortName(to)}`);
     expect(actionPhrase(hero, "carry")).toBe("carries it");
     expect(actionPhrase(hero, "shot")).toBe("shoots");
     expect(actionPhrase(hero, "shot:far")).toBe("shoots at the far post");
   });
 
+  it("never puts an internal id on screen", () => {
+    expect(actionPhrase(hero, "pass:")).toBeNull();
+    expect(actionPhrase(hero, "mystery")).toBeNull();
+    expect(outcomeLine(withChoices(hero, "pass:", "carry"))).toBeNull();
+    expect(outcomeLine(withChoices(hero, "carry", "mystery"))).toBeNull();
+  });
+
   it("has no line without a contrast", () => {
-    expect(outcomeLine(withChoices(hero, "pass:H9", "pass:H9"))).toBeNull();
-    expect(outcomeLine(withChoices(hero, "pass:H9", null))).toBeNull();
+    const same = hero.runs.factual.decision!.chosen;
+    expect(outcomeLine(withChoices(hero, same, same))).toBeNull();
+    expect(outcomeLine(withChoices(hero, same, null))).toBeNull();
     expect(outcomeLine({ ...hero, counterfactual: null })).toBeNull();
     expect(
       outcomeLine({
-        ...withChoices(hero, "pass:H9", "carry"),
+        ...withChoices(hero, same, "carry"),
         counterfactual: { id: "cf", intervention: "force_action", action: "carry" },
       }),
     ).toBeNull();
@@ -106,7 +115,8 @@ describe("the line beside the run switch", () => {
   });
 
   it("is left out where the moment has no without-look run", () => {
-    const page = view(withChoices(hero, "pass:H9", "pass:H9"));
+    const same = hero.runs.factual.decision!.chosen;
+    const page = view(withChoices(hero, same, same));
     expect(page.querySelector(".seg.run")).not.toBeNull();
     expect(page.querySelector("[data-testid=run-outcome]")).toBeNull();
   });
