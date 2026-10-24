@@ -45,6 +45,13 @@ import {
   type Step,
   stackTags,
 } from "./steps";
+import {
+  DecisionStoryBlock,
+  HalfTurnArc,
+  LookStoryBlock,
+  ScanTimeline,
+  useHalfTurn,
+} from "./StoryParts";
 import "./steps.css";
 
 const FALLBACK_SIZE = { w: 640, h: 400 }; // before the view is measured (and in tests)
@@ -167,6 +174,7 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
   const hero = st.session.hero;
   const run = hero.runs[s.mode];
   const board = step.kind === "decision"; // the decision is told on the board
+  const turn = useHalfTurn(hero, run) !== null && step.kind === "decision";
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
     swipe.current = { x: e.clientX, y: e.clientY };
@@ -186,7 +194,9 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
         <SessionContext.Provider value={st.stage()}>
           <Slot role={board ? "pip" : "main"} kind="pov" scene={scene}>
             {(w, h) =>
-              !board && <PovMarks hero={hero} run={run} step={step} passes={s.passes} w={w} h={h} />
+              (!board || turn) && (
+                <PovMarks hero={hero} run={run} step={step} passes={s.passes} w={w} h={h} />
+              )
             }
           </Slot>
           <Slot role={board ? "main" : "pip"} kind="board" scene={scene}>
@@ -208,6 +218,7 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
         </p>
       </div>
       <div className="ss-foot">
+        <ScanTimeline st={st} />
         <Strip st={st} />
         <Legend step={step} passes={s.passes} />
       </div>
@@ -277,6 +288,17 @@ function PovMarks(props: {
   h: number;
 }) {
   const { hero, run, step, passes, w, h } = props;
+  const turn = useHalfTurn(hero, run);
+  if (step.kind === "decision") {
+    // At his decision his eyes only carry the half-turn arc, when the data shows one.
+    if (!turn) return null;
+    const pose = povPose(hero, run, hero.hero, step.frame, w / h);
+    return (
+      <svg className="ss-marks" width={w} height={h} aria-hidden="true">
+        <HalfTurnArc turn={turn} segment={(a, b) => projectSegment(pose, a, b, w, h, 0.03, 0.3)} />
+      </svg>
+    );
+  }
   if (step.kind !== "look") return null;
   const pose = povPose(hero, run, hero.hero, step.frame, w / h);
   const n = hero.n;
@@ -393,6 +415,7 @@ function BoardMarks(props: {
   const all = potentialPasses(hero, run, look && !look.missing ? look.sight : []);
   const lanes = passes ? all : step.kind === "decision" ? all.filter((l) => l.chosen) : [];
   const rings = look && !look.missing ? look.sight.map((id) => hero.ids.indexOf(id)) : [];
+  const turn = useHalfTurn(hero, run);
   return (
     <>
       {focus && main && <FocusDim hero={hero} step={step as DecisionStep} at={at} zoom={zoom} />}
@@ -418,6 +441,12 @@ function BoardMarks(props: {
             />
           );
         })}
+        {turn && step.kind === "decision" && (
+          <HalfTurnArc
+            turn={turn}
+            segment={(a, b) => [toScreen(a, w, h, zoom), toScreen(b, w, h, zoom)]}
+          />
+        )}
         {rings.map((j) => {
           const [x, y] = at(j);
           return (
@@ -584,6 +613,8 @@ function Card({ st }: { st: StepThrough }) {
         {stepTitle(step)}
       </h2>
       <Lines narration={narration} ids={ids} />
+      <LookStoryBlock st={st} step={step} />
+      <DecisionStoryBlock st={st} step={step} />
       {step.kind === "look" && !step.missing && step.sight.length > 0 && (
         <SightChips hero={hero} ids={step.sight} />
       )}
