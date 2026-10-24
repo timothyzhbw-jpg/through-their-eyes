@@ -104,7 +104,7 @@ A bar under the picture follows one moment through five steps, each with a `?ste
 **Event → Tactics → Your view → Content → Value**. The app opens on one live view and one
 **Start**; the rest is behind **View options** and the bar.
 
-- **Tactics lab.** Five tactic cards measured on the moment's own synthetic data, each number
+- **Tactics lab.** The tactic cards measured on the moment's own synthetic data, each number
   with its source. xT is explained in the chosen audience's words: one plain sentence for the
   casual fan; the zones by name with their values, and the from and to cells on the board, for
   the analyst and the coach.
@@ -116,13 +116,13 @@ A bar under the picture follows one moment through five steps, each with a `?ste
 - **Stadium Screen Studio.** What the main video board, the tunnel LED and the ribbon board would
   show on a matchday, with a virtual 3D preview of the bowl. Sponsors are fictional.
 - **Value.** The business panel and the sponsor slots. Audience, engagement and sponsor figures
-  are simulated by a seeded model and carry the badge "Demo data: simulated audience, not real
-  results"; nobody has watched the app. Match facts are never simulated this way.
+  are simulated by a seeded model and badged as such (see "Audience and sponsor figures are
+  simulated" under limits); match facts are never simulated this way.
 - **Scan story.** Every look he took before the ball arrived, frozen and explained, then his
   decision.
 - **With two more looks.** The opposite of the run without the look: add one look to his left
   and one to his right, and his decision changes in <!--num:H10.k-->0<!--/num--> of
-  <!--num:H10.n-->40<!--/num--> held-out seeds.
+  <!--num:H10.n-->40<!--/num--> held-out seeds, the expected result: more looks are not the right look.
 - **Your call.** Decide with what he knew; every option is listed and your pick rated.
 
 ## The signature feature: through the player's eyes

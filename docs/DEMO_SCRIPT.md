@@ -54,7 +54,7 @@ the [failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=produce
   simulated and labelled; nobody has watched this."
 - [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps): every
   look frozen and explained. In **Without the look**, **With two more looks** is the opposite
-  experiment: his decision changes in <!--num:H10.k-->0<!--/num--> of <!--num:H10.n-->40<!--/num--> seeds.
+  experiment: his decision changes in <!--num:H10.k-->0<!--/num--> of <!--num:H10.n-->40<!--/num--> seeds, the expected result: more looks are not the right look.
 - [Your call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall): the judge decides
   with only what he knew, every option listed and the pick rated, then sees what he did and why.
 - [Take his eyes](https://ttesite1ff906.z14.web.core.windows.net/?play=eyes): drag his look

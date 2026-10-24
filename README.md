@@ -50,7 +50,7 @@ one moment through all five.
 1. [**Event**](https://ttesite1ff906.z14.web.core.windows.net/?step=event): the moment, with the
    look and without it, each side told by its verified lines.
 2. [**Tactics**](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics): the Tactics lab,
-   five tactic cards measured on the moment's own synthetic data, each number with its source.
+   the tactic cards measured on the moment's own synthetic data, each number with its source.
    Expected threat (xT) is explained in the words of the chosen audience: one plain sentence for
    the casual fan; the zones by name, with their values and the from and to cells lit on the
    board, for the analyst and the coach.
