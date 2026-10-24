@@ -445,7 +445,7 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
         </p>
         <p className="yc-hint">
           Tap {options.some((o) => o.kind === "shot") ? "a teammate or a shot" : "a teammate"} or
-          swipe from {heroId}. Keyboard: Pick with the keyboard, arrows, Enter.
+          swipe from {heroId}. Keyboard: press Pick with the keyboard, then arrows and Enter.
         </p>
         {state.tried.length > 0 && (
           <p className="yc-hint">Tried: {state.tried.map(labelOf(options)).join(", ")}</p>

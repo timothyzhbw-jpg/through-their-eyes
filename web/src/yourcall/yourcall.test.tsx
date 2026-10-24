@@ -227,7 +227,7 @@ describe("Your call: deciding", () => {
     const el = mount(session);
     expect(el.querySelectorAll(".yc-card > .yc-hint")).toHaveLength(1);
     expect(textOf(el.querySelector(".yc-card > .yc-hint"))).toBe(
-      "Tap a teammate or swipe from J. Ferriday. Keyboard: Pick with the keyboard, arrows, Enter.",
+      "Tap a teammate or swipe from J. Ferriday. Keyboard: press Pick with the keyboard, then arrows and Enter.",
     );
     expect(yourCallCss).not.toMatch(/blur\(|animation:\s*tt-rise/);
   });

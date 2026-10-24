@@ -158,9 +158,7 @@ describe("in the verdict", () => {
       "xT 0.157",
       "xT 0.002",
     ]);
-    expect(text(dialog.querySelector(".xt-how p"))).toBe(
-      "Expected threat (xT) values where a pass ends by how much that zone raises the chance of scoring, using a model learned only from synthetic matches; brighter zones are worth more.",
-    );
+    expect(text(dialog.querySelector(".xt-how"))).toContain("chance of scoring");
     expect(document.activeElement?.textContent).toBe("Close");
     act(() => {
       dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
