@@ -123,6 +123,7 @@ const PAGES = [
   },
   { name: "link-steps", path: "?play=steps", check: scanSteps },
   { name: "link-steps-press-escape", path: "?match=press_escape-0&play=steps", check: scanSteps },
+  { name: "link-steps-coach", path: "?match=pro_scan-126&play=steps", check: coachSteps },
   {
     name: "phone-320-steps",
     path: "?play=steps",
@@ -1094,6 +1095,16 @@ async function scanSteps(page) {
   while (await next.isVisible()) await next.click();
   await see(page.getByRole("heading", { name: /His decision|The what-if/ }), "his decision");
   await see(page.locator(".ss-focus[data-focus]"), "the dimming round two players", "attached");
+}
+
+/** `?match=pro_scan-126&play=steps`: the coach's example (SPEC 3.6, "Teaching"), served but not
+ * listed: the note that its look times are scripted, the half-turn among the steps, then the scan
+ * story's own checks through to his decision. */
+async function coachSteps(page) {
+  await see(page.locator(".ss-teaching"), "the note that the look times are scripted");
+  const strip = page.getByRole("list", { name: "Steps" });
+  await see(strip.getByRole("button", { name: "Half-turn" }), "the half-turn step");
+  await scanSteps(page);
 }
 
 /** `?match=match-1&play=recap`: the end-of-match recap (SPEC 6), written offline here: the

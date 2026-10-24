@@ -9,7 +9,6 @@ import type { StepThrough } from "./controller";
 import type { Step } from "./steps";
 import {
   decisionStory,
-  DIRECTION_WORDS,
   fewScansLine,
   halfTurn,
   halfTurnArc,
@@ -101,7 +100,7 @@ export function LookStoryBlock({ st, step }: { st: StepThrough; step: Step }) {
       <p className="ss-label">Where he looked</p>
       <p className="ss-fact">
         <span className="ss-dir">{story.direction}</span>
-        {DIRECTION_WORDS[story.direction]}, {story.degrees}° from his body's facing
+        {story.words}, {story.degrees}° from his body's facing
       </p>
       <p className="ss-label">In view</p>
       <ul className="ss-people">

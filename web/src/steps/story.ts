@@ -11,7 +11,8 @@ import { actionLabel, wrapAngle, type Hero, type Run } from "../data/hero";
 import { shortName } from "../data/roster";
 import type { Vec2 } from "../data/types";
 import { HALF_LENGTH } from "../tacticslab/metrics";
-import { receptionOf, type DecisionStep, type LookStep, type Step } from "./steps";
+import { TEACHING_WORDS } from "./coach";
+import { receptionOf, type BeatStep, type DecisionStep, type LookStep, type Step } from "./steps";
 
 const deg = (rad: number) => (rad * 180) / Math.PI;
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -91,6 +92,7 @@ export interface LookStory {
   stepId: string;
   number: number; // 1 for his first look
   direction: ScanDirection;
+  words: string; // the direction in words
   degrees: number; // from his body's facing
   inView: Person[]; // who came into view
   changes: BeliefChange[]; // pictures this look corrected, the biggest first
@@ -141,16 +143,23 @@ export function lookStory(hero: Hero, run: Run, step: LookStep, number: number):
     }))
     .filter((c) => c.after <= KNOWN_M && c.before - c.after >= CORRECTION_MIN_M)
     .sort((a, b) => b.before - b.after - (a.before - a.after));
+  const direction = lookDirection(hero, run, step);
   return {
     stepId: step.id,
     number,
-    direction: d.code,
+    direction,
+    words: step.direction ? TEACHING_WORDS[direction] : DIRECTION_WORDS[direction],
     degrees: d.degrees,
     inView,
     changes,
-    thinking: thinkingCaption(d.code, inView, changes),
+    thinking: thinkingCaption(direction, inView, changes),
   };
 }
+
+/** A look's direction: a teaching file's scripted label (coach.ts), else from his head against his
+ * body at the freeze frame. */
+export const lookDirection = (hero: Hero, run: Run, step: LookStep): ScanDirection =>
+  step.direction ?? scanDirection(hero, run, step.frame).code;
 
 // ---------- the decision, linked to the looks ----------
 
@@ -245,9 +254,31 @@ const between = (a: number, b: number) => Math.abs(wrapAngle(a - b));
  * no incoming pass or no decision to measure against): the story says nothing about turning.
  */
 export function halfTurn(hero: Hero, run: Run): HalfTurn | null {
+  const at = turnAt(hero, run, receptionOf(hero, run));
+  if (!at) return null;
+  const { ball, action } = at;
+  return ball < SIDE_ON_MIN || ball > SIDE_ON_MAX || action > FACING_PLAY_MAX ? null : at.turn;
+}
+
+/**
+ * A teaching file's half-turn beat (coach.ts), for its arc: his body against the incoming ball at
+ * his reception. Its rule turns him 45–90° from square, away from the presser, so his body need not
+ * face his next action as `halfTurn` asks. Null when he received square.
+ */
+export function beatTurn(hero: Hero, run: Run, step: BeatStep): HalfTurn | null {
+  if (step.id !== "half_turn" || !step.happened) return null;
+  return turnAt(hero, run, step.frame)?.turn ?? null;
+}
+
+/** His angles at `frame` against the last pass to him and his decision (rad, and as a HalfTurn);
+ * null without them. */
+function turnAt(
+  hero: Hero,
+  run: Run,
+  frame: number,
+): { turn: HalfTurn; ball: number; action: number } | null {
   const d = run.decision;
   if (hero.kind !== "hero" || !d || !hero.heroId) return null;
-  const frame = receptionOf(hero, run);
   const pass = run.events
     .filter((e) => e.type === "pass" && e.attrs.to === hero.heroId && e.frame < frame)
     .at(-1);
@@ -265,11 +296,10 @@ export function halfTurn(hero: Hero, run: Run): HalfTurn | null {
   const ball = between(body, toBall);
   const action = between(body, toAction);
   const goalAngle = between(body, bearing(pos, goal));
-  if (ball < SIDE_ON_MIN || ball > SIDE_ON_MAX || action > FACING_PLAY_MAX) return null;
   const ballDeg = Math.round(deg(ball));
   const actionDeg = Math.round(deg(action));
   const goalDeg = Math.round(deg(goalAngle));
-  return {
+  const turn = {
     frame,
     pos,
     body,
@@ -281,6 +311,7 @@ export function halfTurn(hero: Hero, run: Run): HalfTurn | null {
     caption: HALF_TURN_CAPTION,
     detail: `His body is ${ballDeg}° round from the incoming ball, ${actionDeg}° off his next action and ${goalDeg}° off the goal.`,
   };
+  return { turn, ball, action };
 }
 
 export const ARC_RADIUS_M = 2.5;
@@ -306,6 +337,7 @@ export interface Tick {
   stepId: string;
   frac: number; // 0 to 1 along the strip
   label: ScanDirection | "–"; // "–": a look this run does not take
+  words: string; // the direction in words ("" for "–")
   missing: boolean;
 }
 
@@ -331,25 +363,17 @@ export function timeline(hero: Hero, run: Run, steps: Step[]): Timeline {
   return {
     from,
     to: end,
-    ticks: steps.flatMap((s, stepIndex) =>
-      s.kind === "look"
-        ? [
-            {
-              stepIndex,
-              stepId: s.id,
-              frac: frac(s.frame),
-              label: s.missing ? ("–" as const) : scanDirection(hero, run, s.frame).code,
-              missing: s.missing,
-            },
-          ]
-        : [],
-    ),
+    ticks: steps.flatMap((s, stepIndex) => {
+      if (s.kind !== "look") return [];
+      const label = s.missing ? ("–" as const) : lookDirection(hero, run, s);
+      const words =
+        label === "–" ? "" : s.direction ? TEACHING_WORDS[label] : DIRECTION_WORDS[label];
+      return [{ stepIndex, stepId: s.id, frac: frac(s.frame), label, words, missing: s.missing }];
+    }),
     reception: frac(receptionOf(hero, run)),
     decision: steps.findIndex((s) => s.kind === "decision"),
   };
 }
 
 export const tickLabel = (t: Tick, number: number): string =>
-  t.missing
-    ? `Look ${number}, not taken here`
-    : `Look ${number}, ${DIRECTION_WORDS[t.label as ScanDirection]}`;
+  t.missing ? `Look ${number}, not taken here` : `Look ${number}, ${t.words}`;

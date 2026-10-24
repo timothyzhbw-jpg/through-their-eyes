@@ -22,6 +22,7 @@ import { settle } from "../testing";
 import { drillOf, type Drill } from "./controller";
 import { DrillStage } from "./Drill";
 import { SCAN_MAX_DEG, SCAN_MIN_DEG } from "./snap";
+import { COACH_LABEL } from "../steps/coach";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -111,6 +112,15 @@ describe("Academy drill: ready", () => {
     expect(how.open).toBe(false);
     expect(textOf(how.querySelector("summary"))).toBe("How the drill works");
     expect(textOf(how)).toContain(`${SCAN_MIN_DEG}–${SCAN_MAX_DEG}°`);
+  });
+
+  it("links to the coach's example in its intro when the live service is there", async () => {
+    const { el } = await opened();
+    expect(el.querySelector('a[href*="pro_scan"]')).toBeNull(); // offline: it cannot play
+    const live = (await opened({ ...offline(), offline: null })).el;
+    const link = live.querySelector<HTMLAnchorElement>('.dr-card a[href*="pro_scan"]')!;
+    expect(textOf(link)).toBe(COACH_LABEL);
+    expect(link.getAttribute("href")).toBe("/?play=steps&match=pro_scan-126");
   });
 
   it("chooses the pace before the start", async () => {

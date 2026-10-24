@@ -12,6 +12,7 @@ import type { ExportDecision, RunName, Vec2 } from "../data/types";
 import { checkPayload, claimRun, type Narration } from "../narration/payload";
 import type { MomentContext } from "../plan/moment";
 import { LANGUAGES, type Language } from "../whatif/whatif";
+import type { ScanDirection } from "./story";
 
 export const STEPS_VERSION = 1;
 
@@ -19,6 +20,7 @@ export const STEPS_VERSION = 1;
 export const STEP_FILES: Record<string, string> = {
   "blind_side_run-3": "steps_seed3.json",
   "press_escape-0": "steps_press_escape_seed0.json",
+  "pro_scan-126": "steps_pro_scan_seed126.json", // the coach's example (coach.ts)
 };
 
 /** Why the step-through stays shut for a moment without a bundled file. */
@@ -42,6 +44,17 @@ interface RawStep {
   sight: string[];
   lines: string[];
   vel: number[][]; // [player][xy] mm/s
+  direction?: ScanDirection; // a teaching file's scripted look
+}
+
+/** A teaching file's frozen beat after his looks (agents/steps.py `Beat`). */
+interface RawBeat {
+  id: BeatId;
+  frame: number;
+  start: number;
+  happened: boolean;
+  lines: string[];
+  vel: number[][];
 }
 
 interface RawFinal {
@@ -58,6 +71,7 @@ interface RawRun {
   decision: number;
   intro: string[];
   steps: RawStep[];
+  beats?: RawBeat[]; // a teaching file only
   final: RawFinal;
   answers: Partial<Record<Language, unknown>>;
 }
@@ -68,6 +82,7 @@ interface RawSteps {
   seed: number;
   moment: string;
   hero: string;
+  teaching?: boolean; // the coach's example: its look times are scripted (coach.ts)
   runs: Record<RunName, RawRun>;
 }
 
@@ -84,6 +99,21 @@ export interface LookStep {
   sight: string[]; // who came into his sight on it
   lines: string[]; // its verified lines (line ids of the run's narration)
   vel: Float32Array; // every player's velocity at the freeze frame, m/s: [2 * player + xy]
+  direction?: ScanDirection; // a teaching file's scripted look; else from his head and body
+}
+
+/** A teaching file's beats: did he drop back toward the ball as it came, and did he receive
+ * side-on? Both frozen at his reception, told whether or not they happened. */
+export type BeatId = "drop_back" | "half_turn";
+
+export interface BeatStep {
+  kind: "beat";
+  id: BeatId;
+  frame: number; // the freeze frame: his reception
+  start: number; // drop_back: the frame the pass to him was played
+  happened: boolean;
+  lines: string[];
+  vel: Float32Array;
 }
 
 /** The last step: his decision. */
@@ -98,13 +128,13 @@ export interface DecisionStep {
   vel: Float32Array;
 }
 
-export type Step = LookStep | DecisionStep;
+export type Step = LookStep | BeatStep | DecisionStep;
 
 export interface RunSteps {
   reception: number;
   decision: number;
   intro: string[];
-  steps: Step[]; // his looks in time order, then his decision
+  steps: Step[]; // his looks in time order, a teaching file's beats, then his decision
   answers: Partial<Record<Language, Narration>>; // only answers that pass the checks
   errors: string[];
 }
@@ -112,6 +142,7 @@ export interface RunSteps {
 export interface Steps {
   moment: string;
   heroId: string;
+  teaching: boolean; // the coach's example: say that its look times are scripted
   runs: Record<RunName, RunSteps>;
 }
 
@@ -170,7 +201,22 @@ function runSteps(raw: RawRun, name: RunName, hero: Hero, moment: string): RunSt
     sight: s.sight,
     lines: s.lines,
     vel: velocities(s.vel, hero.n),
+    ...(s.direction ? { direction: s.direction } : {}),
   }));
+  for (const b of raw.beats ?? []) {
+    if (b.id !== "drop_back" && b.id !== "half_turn") throw new Error(`unknown beat ${b.id}`);
+    if (b.frame !== receptionOf(hero, run))
+      throw new Error(`the ${name} run's ${b.id} is not at his reception: regenerate the file`);
+    steps.push({
+      kind: "beat",
+      id: b.id,
+      frame: b.frame,
+      start: b.start,
+      happened: b.happened,
+      lines: b.lines,
+      vel: velocities(b.vel, hero.n),
+    });
+  }
   steps.push({
     kind: "decision",
     id: "decision",
@@ -217,6 +263,7 @@ export function parseSteps(json: unknown, hero: Hero, m: MomentContext): Steps {
   return {
     moment: raw.moment,
     heroId: raw.hero,
+    teaching: raw.teaching === true,
     runs: {
       factual: runSteps(raw.runs.factual, "factual", hero, raw.moment),
       counterfactual: runSteps(raw.runs.counterfactual, "counterfactual", hero, raw.moment),
@@ -240,8 +287,20 @@ export function whereLabel(step: LookStep): string {
 
 export function stepTitle(step: Step): string {
   if (step.kind === "decision") return step.forced ? "The what-if" : "His decision";
+  if (step.kind === "beat") return BEAT_TITLES[step.id][step.happened ? 0 : 1];
   return step.missing ? "No look here" : whereLabel(step);
 }
+
+/** The steps told on the board, top-down: his decision, and where he received the ball. The
+ * others are told through his eyes. */
+export const onBoard = (step: Step): boolean =>
+  step.kind === "decision" || (step.kind === "beat" && step.id === "drop_back");
+
+/** A beat's title: (it happened, it did not). */
+export const BEAT_TITLES: Record<BeatId, [string, string]> = {
+  drop_back: ["He drops back", "No drop-back"],
+  half_turn: ["On the half-turn", "Square to the ball"],
+};
 
 // ---------- movement hints: arrows from the sim's velocities ----------
 

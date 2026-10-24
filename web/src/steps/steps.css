@@ -565,3 +565,30 @@
   stroke: rgba(0, 0, 0, 0.85);
   stroke-width: 3.5;
 }
+
+/* the coach's example (coach.ts): his path as the ball came, the note, the link */
+.ss-path {
+  stroke: var(--home);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.ss-key-path {
+  border-top: 3px solid var(--home);
+}
+.ss-key-turn {
+  border-top: 2px solid var(--floodlight);
+}
+.ss-teaching {
+  margin: 0;
+  font: 400 13px/1.45 var(--font-body);
+  color: var(--chalk-2);
+  border-left: 2px solid var(--floodlight);
+  padding-left: 8px;
+}
+.ss-note {
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+.ss-coach a {
+  color: var(--chalk-2);
+}
