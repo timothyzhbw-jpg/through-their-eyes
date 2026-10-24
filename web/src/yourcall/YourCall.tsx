@@ -24,7 +24,8 @@ import { LANGUAGES, type Language } from "../whatif/whatif";
 import { declutter, frameCall, markerAt, project, swipePick, toWorld } from "./camera";
 import { startYourCallClock, yourCallOf, type YourCall } from "./controller";
 import { BEATS, isBeat, type Beat } from "./flow";
-import type { CallOption } from "./options";
+import { assessmentOf, type Assessment, type AssessmentRow } from "./assessment";
+import { hasRun, type CallOption } from "./options";
 import { revealOf, type RevealLine } from "./reveal";
 import { whyOf, type Why } from "./why";
 import { YourCallScene } from "./YourCallScene";
@@ -413,6 +414,10 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
     () => (state.pick ? whyOf(session.hero, options, state.pick) : null),
     [session, options, state.pick],
   );
+  const assessment = useMemo(() => {
+    const pick = options.find((o) => o.action === state.pick);
+    return pick ? assessmentOf(session.hero, pick) : null;
+  }, [session, options, state.pick]);
   const primary = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   // Each step moves the focus: to its main button in the reveal, to the heading while deciding.
@@ -485,11 +490,12 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
             <h2 id="yc-title" ref={heading} tabIndex={-1}>
               {reveal.outcome.title}
             </h2>
-            {!reveal.same && (
+            {!reveal.same && hasRun(reveal.pick) && (
               <p className="yc-lead">
                 The sim plays on from the decision with your call. Causal inside the sim only.
               </p>
             )}
+            {assessment && <AssessmentBlock assessment={assessment} />}
             {why && <WhyBlock why={why} />}
             {reveal.outcome.lines.length > 0 && (
               <h3 className="yc-sub">What it led to in the sim</h3>
@@ -575,6 +581,39 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
 
 const labelOf = (options: CallOption[]) => (action: string) =>
   options.find((o) => o.action === action)?.label ?? action;
+
+/** How the decision model rated the call, on his belief and on the truth (assessment.ts), and
+ * whether the sim re-ran it. The numbers are read from the sim export, and marked so. */
+function AssessmentBlock({ assessment: a }: { assessment: Assessment }) {
+  const rows = (list: AssessmentRow[]) =>
+    list.map((r) => (
+      <dd key={r.label}>
+        {r.label}: <strong>{r.value}</strong>
+      </dd>
+    ));
+  return (
+    <dl className="yc-why yc-assess" aria-label="How the model rated this option">
+      <div>
+        <dt>What he believed</dt>
+        {rows(a.believed)}
+      </div>
+      <div>
+        <dt>What was true</dt>
+        {rows(a.truth)}
+        <dd>
+          <SimTag />
+        </dd>
+      </div>
+      <div>
+        <dt>Outcome</dt>
+        <dd className={`yc-outcome-label ${a.outcome}`} data-outcome={a.outcome}>
+          {a.outcomeLabel}
+          {a.outcome === "none" && ". Only the model's assessment is shown."}
+        </dd>
+      </div>
+    </dl>
+  );
+}
 
 /** What he could see and how his picture rated the call (why.ts): read from the sim export, so
  * no number, and marked so. */

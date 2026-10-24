@@ -1,7 +1,9 @@
 // "Your call" (SPEC 7): the options the viewer may pick at the hero's decision, and the run each
-// one plays. An option is offered only if it has a re-simulated run: the forced run precomputed
-// per option (whatif_*.json, SPEC 3.7), the run that happened for his own choice, or the export's
-// own counterfactual when it forces that action (press_escape forces a carry).
+// one plays. Every option his decision model considered is offered. It plays a re-simulated run
+// when one exists: the forced run precomputed per option (whatif_*.json, SPEC 3.7), the run that
+// happened for his own choice, or the export's own counterfactual when it forces that action
+// (press_escape forces a carry). Without one the option has no run (`none`): only the model's
+// assessment of it is told (assessment.ts), never an invented outcome.
 
 import {
   actionLabel,
@@ -24,7 +26,8 @@ export const HOLD_FRAMES = 12;
 export type OptionRun =
   | { source: "factual" } // what he did: the run that happened
   | { source: "whatif"; run: WhatIfRun } // forced and re-simulated from the decision
-  | { source: "counterfactual" }; // the export's counterfactual run forces this action
+  | { source: "counterfactual" } // the export's counterfactual run forces this action
+  | { source: "none" }; // not re-simulated in this demo
 
 export interface CallOption {
   action: string; // "pass:H9", "carry", "shot", "shot:far"
@@ -38,7 +41,7 @@ export interface CallOption {
   run: OptionRun;
 }
 
-function runOf(hero: Hero, whatIfs: WhatIfs | null, action: string, chosen: string) {
+function runOf(hero: Hero, whatIfs: WhatIfs | null, action: string, chosen: string): OptionRun {
   if (action === chosen) return { source: "factual" } as const;
   const forced = optionOf(whatIfs, action)?.run;
   if (forced) return { source: "whatif", run: forced } as const;
@@ -46,14 +49,16 @@ function runOf(hero: Hero, whatIfs: WhatIfs | null, action: string, chosen: stri
   if (cf?.intervention === "force_action" && cf.action === action) {
     return { source: "counterfactual" } as const;
   }
-  return null;
+  return { source: "none" };
 }
 
+/** Whether the option plays a run (re-simulated, or the one that happened). */
+export const hasRun = (o: CallOption) => o.run.source !== "none";
+
 /**
- * Every option of the hero's decision that has a run to play, listed left to right as seen from
- * behind him facing the attack (home attacks +x, so his left is +y): an order that says nothing
- * about how likely he was to pick each one. Your call opens only when this is every option
- * (controller.ts): a shorter list would point at the one he did not pick.
+ * Every option of the hero's decision, listed left to right as seen from behind him facing the
+ * attack (home attacks +x, so his left is +y): an order that says nothing about how likely he was
+ * to pick each one. It is the whole option set, so the list never points at the one he did not pick.
  */
 export function callOptions(hero: Hero, whatIfs: WhatIfs | null): CallOption[] {
   const d = hero.runs.factual.decision;
@@ -62,7 +67,6 @@ export function callOptions(hero: Hero, whatIfs: WhatIfs | null): CallOption[] {
   const out: CallOption[] = [];
   for (const o of d.options) {
     const run = runOf(hero, whatIfs, o.action, d.chosen);
-    if (!run) continue;
     const pass = o.action.startsWith("pass:");
     const receiver = pass ? o.action.slice(5) : null;
     const receiverJ = receiver === null ? -1 : hero.ids.indexOf(receiver);
@@ -104,6 +108,7 @@ export interface Clip {
 /** The frames an option's run plays: from the decision until it is resolved. */
 export function clipOf(hero: Hero, moment: MomentContext, option: CallOption): Clip {
   const start = moment.decisionFrame;
+  if (option.run.source === "none") return { start, end: start }; // nothing to play
   if (option.run.source === "whatif") {
     const run = option.run.run;
     return { start: run.start, end: run.start + run.frames - 1 };
@@ -131,10 +136,13 @@ export function poseAt(hero: Hero, option: CallOption, f: number, out: Pose): Po
     ghostAt(option.run.run, hero.n, Math.max(f, option.run.run.start), out);
     return out;
   }
-  const run = hero.runs[option.run.source === "factual" ? "factual" : "counterfactual"];
+  // No run: the picture at the decision, in the run that happened.
+  const run = hero.runs[option.run.source === "counterfactual" ? "counterfactual" : "factual"];
+  const held = hero.runs.factual.decision?.frame;
+  const at = option.run.source === "none" && held !== undefined ? held : f;
   let sample = samples.get(hero);
   if (!sample) samples.set(hero, (sample = new Sample(hero.n)));
-  sampleInto(sample, hero, run, f);
+  sampleInto(sample, hero, run, at);
   out.pos.set(sample.pos);
   out.ball.set(sample.ball);
   return out;

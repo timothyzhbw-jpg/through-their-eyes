@@ -4,7 +4,7 @@
 // the service) becomes a hero Session in local frames, asking for its breakdown and what-ifs by
 // the moment's id in match time; its clock shows local frame + the possession's start. Back to
 // the match puts the match playhead where the breakdown left off. Your call opens the same hero
-// when every option has a re-simulated run; otherwise the match stays up and nothing plays.
+// at any decision on the ball; otherwise the match stays up and nothing plays.
 // At full time on the live stream the end-of-match recap is asked for (recap/recap.ts).
 
 import { MATCH_ID, type Api, type Fetch } from "../api/client";

@@ -121,12 +121,13 @@ describe("the quick tour", () => {
     ]);
     expect(resolveSteps(envOf(online()), QUICK_STEPS).map((s) => s.id)).toEqual(QUICK_IDS);
     expect(quickTourFits(envOf(offline()))).toBe(true);
-    // No bundled what-ifs: no Your call, the rest still tells the look.
+    // No bundled what-ifs: Your call still opens (its options say they were not re-simulated).
     const plain = envOf(createSession(hero, EXAMPLE_PLAN, payloadJson));
     expect(resolveSteps(plain, QUICK_STEPS).map((s) => s.id)).toEqual([
       "look",
       "remove",
       "compare",
+      "call",
     ]);
     expect(quickTourFits(plain)).toBe(true);
     const press = envOf(
@@ -144,7 +145,7 @@ describe("the quick tour", () => {
   it("lands on the asked step of its own list", () => {
     const steps = resolveSteps(envOf(createSession(hero, EXAMPLE_PLAN, payloadJson)), QUICK_STEPS);
     expect(steps[indexOf(steps, "compare")].id).toBe("compare");
-    expect(steps[indexOf(steps, "call")].id).toBe("look"); // no Your call here: from the start
+    expect(steps[indexOf(steps, "call")].id).toBe("call");
     // No service: verify is left out, and the next step this page shows is Your call.
     const shown = resolveSteps(envOf(offline()), QUICK_STEPS);
     expect(shown[indexOf(shown, "verify")].id).toBe("call");
@@ -173,12 +174,13 @@ describe("the steps a page can show", () => {
     expect(env.has.keyScan).toBe(false);
     expect(wordsOf(STEPS[0], env).caption).toContain("every look he made");
     expect(wordsOf(STEPS[1], env).title).toBe("If he carried it");
-    // No bundled what-ifs for this stand-in, so no Your call.
+    // No bundled what-ifs for this stand-in: Your call lists its options, most not re-simulated.
     expect(ids(env)).toEqual([
       "pov",
       "without",
       "evidence",
       "tamper",
+      "yourcall",
       "eyes",
       "language",
       "producer",

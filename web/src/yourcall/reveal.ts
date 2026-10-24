@@ -107,7 +107,7 @@ export function revealOf(input: RevealInput): Reveal | null {
     const resolving = resolvingEvents(hero);
     const ends = (id: string) => narration?.claims.get(id)?.evidence.some((e) => resolving.has(e));
     outcome = take((l) => l.claims.some((c) => ends(c)));
-  } else {
+  } else if (pick.run.source === "counterfactual") {
     outcome = take(has(CF_OUTCOME));
     compare = take(has(new Set([CF_VALUE])));
   }

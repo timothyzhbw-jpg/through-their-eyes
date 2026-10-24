@@ -16,7 +16,6 @@ import { parseHero } from "../data/hero";
 import { HERO_FILE, PAYLOAD_FILE, WHAT_IF_FILE, WHAT_IF_FILES } from "../data/load";
 import { App } from "../App";
 import { applyDeepLink, parseDeepLink } from "../deeplink";
-import { scenarioMatchId } from "../match/match";
 import { createMatchSession } from "../match/matchSession";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
@@ -40,7 +39,7 @@ import {
 } from "../testing";
 import { MomentsPanel } from "../ui/Live";
 import { frameCall, project, swipePick, toWorld } from "./camera";
-import { MISSING_RUNS, yourCallOf } from "./controller";
+import { yourCallOf } from "./controller";
 import { YourCallButton, YourCallStage } from "./YourCall";
 import { SOURCES } from "../provenance/source";
 
@@ -118,7 +117,7 @@ describe("Your call: opening", () => {
     expect(session.playback.get().playing).toBe(false);
   });
 
-  it("the header button opens it; without re-simulated options it is disabled with the reason", () => {
+  it("the header button opens it; without what-ifs it still opens, every other option unsimulated", () => {
     const session = offline();
     const el = mount(session, <YourCallButton />);
     const b = el.querySelector("button")!;
@@ -126,9 +125,13 @@ describe("Your call: opening", () => {
     click(b);
     expect(yourCallOf(session).state.get().step).toBe("deciding");
     const bare = createSession(hero, EXAMPLE_PLAN, payloadJson, null);
-    const off = mount(bare, <YourCallButton />).querySelector("button")!;
-    expect(off.disabled).toBe(true);
-    expect(off.title).toBe(MISSING_RUNS);
+    const bareButton = mount(bare, <YourCallButton />).querySelector("button")!;
+    expect(bareButton.disabled).toBe(false);
+    const { options } = yourCallOf(bare);
+    expect(options).toHaveLength(hero.runs.factual.decision!.options.length);
+    expect(options.filter((o) => o.run.source !== "none").map((o) => o.action)).toEqual([
+      "pass:H9",
+    ]);
   });
 
   it("returns focus to the header pill on close, and Escape on that pill closes it", () => {
@@ -612,20 +615,16 @@ describe("Your call: online and in the match", () => {
         .flatMap((row) => [...row.querySelectorAll("button")])
         .find((b) => b.getAttribute("aria-label")?.startsWith("Your call"));
     };
-    // A button is on only when that possession's <scenario>-<seed> has bundled what-ifs.
+    // A button is on for every hero possession: an option without a bundled run says so.
     for (const p of session.match.possessions) {
       const button = yourCallIn(p.index + 1);
       if (!p.hero) {
         expect(button).toBeUndefined();
         continue;
       }
-      const bundled = !!WHAT_IF_FILES[scenarioMatchId(p)];
       expect(button).toBeDefined();
-      expect(button!.disabled).toBe(!bundled);
-      if (!bundled) expect(button!.title).toBe(MISSING_RUNS);
+      expect(button!.disabled).toBe(false);
     }
-    // blind_side_run-3 is bundled, so its row can open. The press stand-in is press_escape-0,
-    // which is bundled for the real pressure hero: its button stays enabled.
     expect(yourCallIn(2)!.disabled).toBe(false);
     expect(WHAT_IF_FILES["press_escape-0"]).toBeTruthy();
     expect(yourCallIn(3)!.disabled).toBe(false);
@@ -636,12 +635,12 @@ describe("Your call: online and in the match", () => {
       "yourcall",
     );
     await settle();
-    // The stand-in has no run for every option (his pass, plus the export's forced carry).
-    // Playing the breakdown would post for it and start the runner: the match stays up instead.
-    expect(session.screen.get().hero).toBeNull();
-    expect(session.screen.get().error).toBe(`${MATCH_PRESS}: ${MISSING_RUNS}`);
+    // The stand-in has a run for his pass and the export's forced carry only: Your call opens,
+    // the other options unsimulated, and nothing posts for a breakdown or starts the runner.
+    const standIn = session.screen.get().hero!;
+    expect(yourCallOf(standIn).state.get().step).toBe("deciding");
+    expect(yourCallOf(standIn).options.some((o) => o.run.source === "none")).toBe(true);
     expect(calls()).toContain("GET /api/matches/press_escape-0/export");
-    expect(calls()).not.toContain("POST /api/breakdowns");
 
     session.controls.openBreakdown(
       m.moments.find((x) => x.id === MATCH_HERO)!,
@@ -652,5 +651,43 @@ describe("Your call: online and in the match", () => {
     expect(scan.state.get().step).toBe("deciding");
     expect(session.screen.get().hero!.runner.status.get().status).not.toBe("running");
     expect(scan.options).toHaveLength(hero.runs.factual.decision!.options.length);
+  });
+});
+
+describe("Your call: the model's rating of the pick", () => {
+  const pickOther = (session: Session) => {
+    const el = mount(session);
+    const yc = yourCallOf(session);
+    act(() => yc.open());
+    const other = yc.options.find((o) => !o.factual && o.kind === "pass")!;
+    click(markers(el).find((m) => m.getAttribute("aria-label")!.startsWith(other.label))!);
+    return { el, other };
+  };
+
+  it("a re-simulated option shows his belief, the truth and the 're-simulated' label", () => {
+    const { el, other } = pickOther(offline());
+    expect(other.run.source).toBe("whatif");
+    const block = el.querySelector(".yc-assess")!;
+    expect(textOf(block)).toContain("What he believed");
+    expect(textOf(block)).toContain("What was true");
+    expect(block.querySelector("[data-outcome]")!.getAttribute("data-outcome")).toBe("resimulated");
+    expect(textOf(block)).toContain("Re-simulated");
+    expect(textOf(block)).not.toContain("Not re-simulated");
+    expect(textOf(el)).toContain("Weight his picture gave it");
+  });
+
+  it("an option with no run says so, shows only the assessment and plays no outcome", () => {
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson, null);
+    const { el, other } = pickOther(session);
+    expect(other.run.source).toBe("none");
+    const block = el.querySelector(".yc-assess")!;
+    expect(block.querySelector("[data-outcome]")!.getAttribute("data-outcome")).toBe("none");
+    expect(textOf(block)).toContain("Not re-simulated in this demo");
+    expect(textOf(el)).not.toContain("The sim plays on from the decision");
+    expect(el.querySelector(".yc-lines")).toBeNull();
+    // The reveal and its framing carry on to the end.
+    click(button(el, "See the truth"));
+    click(button(el, "What he did"));
+    expect(textOf(el)).toContain("What he did");
   });
 });

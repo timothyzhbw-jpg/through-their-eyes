@@ -2159,8 +2159,16 @@ original visual identity.
     number, since no claim stands behind a count or a time.
   - *Words.* Only verified lines: the what-if answer of the call (its outcome and its value
     against his), and the breakdown's narration sorted by claim (state at the decision → truth;
-    the rest → why). Labels carry no number. An option is offered only if a re-simulated run of
-    it is loaded; a hero with no decision on the ball (`corner_blind_side`) has no Your call.
+    the rest → why). Labels carry no number. Every option the decision model
+    considered is offered (multi-option, [assessment.ts](../web/src/yourcall/assessment.ts)). On
+    a pick the card shows what he believed about it (the weight his belief gave it, P(success),
+    xT) and what was true (the same option re-scored on the true state). These are the one
+    exception to "no number": sim values, not verified claims, each formatted from the export's
+    decision record and marked as sim values. `assessment.test.ts` checks them against fixed
+    literals of the export and that no label carries a digit. The card labels the outcome "Re-simulated" when a re-simulated run of it is
+    loaded or "Not re-simulated in this demo" when not (then only the model's assessment is
+    shown; no outcome is invented). A hero with no decision on the ball (`corner_blind_side`)
+    has no Your call.
   - Reduced motion: every clip and move cuts to its end. No model call.
 - **Take his eyes** (2026-10-21, [web/src/takeeyes/](../web/src/takeeyes/); deep link
   `?play=eyes`, a hero moment's only): the viewer chooses when and where the hero looks, and the
