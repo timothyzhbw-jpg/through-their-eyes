@@ -1407,8 +1407,7 @@ optgroup {
   animation: tt-rise 800ms var(--settle) both;
 }
 .moment-card.card {
-  background: rgba(8, 14, 11, 0.58);
-  backdrop-filter: blur(14px);
+  background: rgba(8, 14, 11, 0.82);
   box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.8);
 }
 .moment-card:focus {

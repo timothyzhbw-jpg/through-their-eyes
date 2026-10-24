@@ -578,8 +578,12 @@ export function HeaderMore({ children }: { children: ReactNode }) {
         role="group"
         aria-label="More"
         hidden={!open}
-        // A tour takes the screen: its card is the one panel, so the menu closes behind it.
-        onClick={(e) => (e.target as Element).closest(".tour-start") && close()}
+        // A tour or a mode takes the screen, so the menu closes behind it.
+        onClick={(e) =>
+          (e.target as Element).closest(
+            ".tour-start, #take-eyes-open, #scan-steps-open, #drill-open",
+          ) && close()
+        }
       >
         {children}
       </div>
@@ -763,7 +767,7 @@ export function MomentCard() {
 }
 
 // The card's one line under the title: short; the story below has the full lede (BLURB).
-const CARD_LINE: Record<string, string> = {
+export const CARD_LINE: Record<string, string> = {
   blind_side_run: "Through the midfielder's eyes, with and without one look.",
   press_escape: "Through the centre-back's eyes, as the press closes in.",
   screened_shot: "Through the keeper's eyes, past the players in front of him.",

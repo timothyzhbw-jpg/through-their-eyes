@@ -241,11 +241,17 @@ function returnFocus(pillId: string, storyId: string) {
   }
   const story = document.getElementById(storyId);
   const fold = story?.closest("details");
+  const target = () =>
+    (story ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({
+      preventScroll: true,
+    });
   if (fold && !fold.open) {
-    fold.open = true;
+    // React applies open={waysIn}; focus once the fold is laid out.
     storyWaysIn.set({ open: true });
+    requestAnimationFrame(target);
+    return;
   }
-  (story ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({ preventScroll: true });
+  target();
 }
 
 /** The academy drill in the header's More (the moment rail links to it too). */

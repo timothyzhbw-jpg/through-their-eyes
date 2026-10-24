@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { createApi } from "../api/client";
+import { SCENARIO_LABEL } from "../match/match";
 import { parseHero } from "../data/hero";
 import { validatePayload, type RenderPayload } from "../narration/payload";
 import { EXAMPLE_PLAN } from "../plan/example";
@@ -21,6 +22,7 @@ import { DecisionPanel, StoryPanel, VerdictPanel } from "./Panels";
 import { PITCH_DATA_KEY, pitchData, setPitchData } from "./pitchData";
 import {
   CameraSwitch,
+  CARD_LINE,
   HeaderMore,
   headerMore,
   MomentCard,
@@ -220,6 +222,26 @@ describe("the header's More", () => {
     act(() => {
       document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     });
+    expect(panel.hidden).toBe(true);
+  });
+
+  it("closes behind a mode opened from it, so it is not left open on return", () => {
+    const page = mount(
+      offline(),
+      <HeaderMore>
+        <button type="button" id="take-eyes-open" className="btn">
+          Take his eyes
+        </button>
+        <button type="button" id="item-a" className="btn">
+          A
+        </button>
+      </HeaderMore>,
+    );
+    const panel = page.querySelector<HTMLElement>(".more-panel")!;
+    click(button(page, "More"));
+    click(page.querySelector<HTMLElement>("#item-a")!);
+    expect(panel.hidden).toBe(false);
+    click(page.querySelector<HTMLElement>("#take-eyes-open")!);
     expect(panel.hidden).toBe(true);
   });
 
@@ -654,5 +676,12 @@ describe("the counterfactual verdict", () => {
 
   it("keeps the bundled fixture in Chalk with its sim source", () => {
     expectSim(mount(offline(), <VerdictPanel />));
+  });
+});
+
+describe("the moment card line", () => {
+  it("has its own wording for every hero scenario", () => {
+    const heroes = Object.keys(SCENARIO_LABEL).filter((k) => !k.startsWith("possession_play"));
+    for (const k of heroes) expect(CARD_LINE[k], k).toBeTruthy();
   });
 });
