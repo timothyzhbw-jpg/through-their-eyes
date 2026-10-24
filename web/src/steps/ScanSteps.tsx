@@ -307,8 +307,12 @@ function PovMarks(props: {
   const arrows = movementArrows(hero, run, f, step.vel);
   const lanes = passes ? potentialPasses(hero, run, step.missing ? [] : step.sight) : [];
   const rings = step.missing ? [] : step.sight.map((id) => hero.ids.indexOf(id));
+  const receiver = run.decision?.options.find((o) => o.action === run.decision?.chosen)?.receiver;
+  const labels = [...rings];
+  if (receiver && !labels.includes(hero.ids.indexOf(receiver)))
+    labels.push(hero.ids.indexOf(receiver));
   // Ringed players, nearest first (lowest on the picture): their names stack instead of overlapping.
-  const seen = rings
+  const seen = labels
     .map((j) => {
       const feet = project(pose, at(j), w, h, 0);
       const head = project(pose, at(j), w, h, 2.0);
@@ -317,7 +321,16 @@ function PovMarks(props: {
       // A name near the picture's edge moves in rather than being cut ("H. Talvis").
       const half = (name.length * TAG_CHAR_PX + 6) / 2;
       const x = Math.min(Math.max(feet[0], half + 2), w - half - 2);
-      return { j, feet, head, tall: Math.max(18, feet[1] - head[1]), name, x, half };
+      return {
+        j,
+        feet,
+        head,
+        tall: Math.max(18, feet[1] - head[1]),
+        name,
+        x,
+        half,
+        ringed: rings.includes(j),
+      };
     })
     .filter((r) => r !== null)
     .sort((a, b) => b.feet[1] - a.feet[1]);
@@ -326,7 +339,13 @@ function PovMarks(props: {
     TAG_ROW_PX,
   );
   return (
-    <svg className="ss-marks" width={w} height={h} aria-hidden="true">
+    <svg
+      className="ss-marks"
+      width={w}
+      height={h}
+      aria-hidden={lanes.length === 0 ? true : undefined}
+      aria-label={lanes.length > 0 ? "Player and pass labels" : undefined}
+    >
       <Defs />
       {lanes.map((lane) => {
         // From a few metres out: under his feet a lane runs off the bottom of the picture.
@@ -349,9 +368,11 @@ function PovMarks(props: {
           />
         );
       })}
-      {seen.map(({ j, feet, head, tall, name, x }, k) => (
-        <g key={j} className="ss-seen">
-          <ellipse cx={feet[0]} cy={(feet[1] + head[1]) / 2} rx={tall * 0.32} ry={tall * 0.62} />
+      {seen.map(({ j, feet, head, tall, name, x, ringed }, k) => (
+        <g key={j} className={ringed ? "ss-seen" : "ss-seen ss-receiver"}>
+          {ringed && (
+            <ellipse cx={feet[0]} cy={(feet[1] + head[1]) / 2} rx={tall * 0.32} ry={tall * 0.62} />
+          )}
           {rows[k] !== null && (
             <text x={x} y={feet[1] + 16 + rows[k]! * TAG_ROW_PX}>
               {name}
@@ -359,6 +380,11 @@ function PovMarks(props: {
           )}
         </g>
       ))}
+      {hero.heroId && (
+        <text className="ss-decision-maker" x={14} y={22}>
+          {shortName(hero.heroId)} · decision-maker
+        </text>
+      )}
     </svg>
   );
 }
@@ -369,18 +395,32 @@ function LaneLine(props: {
   b: Vec2;
   w: number;
   h: number;
-  small?: boolean; // in the corner view: only his pick and the receivers this look found named
+  small?: boolean; // in the corner view: thinner lines
 }) {
   const { lane, a, b, w, h, small } = props;
-  const cls = `ss-lane ${lane.chosen ? "chosen" : lane.seen ? "seen" : ""} ${lane.kind}`;
+  // A tap (or Enter / Space) names the lane on a phone, where there is no hover.
+  const [open, setOpen] = useState(false);
+  const cls = `ss-lane ${lane.chosen ? "chosen" : lane.seen ? "seen" : ""} ${lane.kind}${open ? " active" : ""}`;
   const width = (small ? 1 : 1.5) + (small ? 3 : 7) * Math.min(1, Math.max(0, lane.prob));
-  const named = !small || lane.chosen || lane.seen;
   const end = inView(b, w, h, -8);
   return (
-    <g className={cls}>
+    <g
+      className={cls}
+      tabIndex={0}
+      role="button"
+      aria-pressed={open}
+      aria-label={lane.label}
+      onClick={() => setOpen((v) => !v)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }
+      }}
+    >
       <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth={width} />
       {end && <circle cx={b[0]} cy={b[1]} r={small ? 2.5 : 4} />}
-      {end && named && (
+      {end && (
         <text x={b[0]} y={b[1] - 8}>
           {lane.receiver ? shortName(lane.receiver) : lane.kind === "carry" ? "Carry" : "Shot"}
         </text>
@@ -419,7 +459,13 @@ function BoardMarks(props: {
   return (
     <>
       {focus && main && <FocusDim hero={hero} step={step as DecisionStep} at={at} zoom={zoom} />}
-      <svg className={main ? "ss-marks" : "ss-marks small"} width={w} height={h} aria-hidden="true">
+      <svg
+        className={main ? "ss-marks" : "ss-marks small"}
+        width={w}
+        height={h}
+        aria-hidden={lanes.length === 0 ? true : undefined}
+        aria-label={lanes.length > 0 ? "Player and pass labels" : undefined}
+      >
         <Defs />
         {lanes.map((lane) => {
           const a = toScreen(lane.from, w, h, zoom);
@@ -580,15 +626,18 @@ function Card({ st }: { st: StepThrough }) {
   if (s.status !== "ready" || !steps) {
     return (
       <aside className="ss-card" aria-labelledby="ss-title">
-        <h2 id="ss-title" ref={heading} tabIndex={-1}>
-          His looks
-        </h2>
-        <p className="ss-lead" role="status">
-          {s.status === "error"
-            ? `His looks could not be loaded: ${s.error}`
-            : "Loading his looks…"}
-        </p>
-        <div className="ss-actions">{exit}</div>
+        <div className="ss-card-body">
+          <h2 id="ss-title" ref={heading} tabIndex={-1}>
+            His looks
+          </h2>
+          <p className="ss-lead" role="status">
+            {s.status === "error"
+              ? `His looks could not be loaded: ${s.error}`
+              : "Loading his looks…"}
+          </p>
+          <div className="ss-actions">{exit}</div>
+        </div>
+        <div className="ss-card-fade" aria-hidden="true" />
       </aside>
     );
   }
@@ -608,48 +657,51 @@ function Card({ st }: { st: StepThrough }) {
   const last = s.index === list.length - 1;
   return (
     <aside className="ss-card" aria-labelledby="ss-title">
-      <p className="ss-kicker">{kicker}</p>
-      <h2 id="ss-title" ref={heading} tabIndex={-1} aria-live="polite">
-        {stepTitle(step)}
-      </h2>
-      <Lines narration={narration} ids={ids} />
-      <LookStoryBlock st={st} step={step} />
-      <DecisionStoryBlock st={st} step={step} />
-      {step.kind === "look" && !step.missing && step.sight.length > 0 && (
-        <SightChips hero={hero} ids={step.sight} />
-      )}
-      <div className="ss-pass-group">
-        <p className="ss-label">View overlays</p>
-        <button
-          type="button"
-          className="btn ss-passes"
-          aria-pressed={s.passes}
-          onClick={st.togglePasses}
-        >
-          Potential passes
-        </button>
+      <div className="ss-card-body">
+        <p className="ss-kicker">{kicker}</p>
+        <h2 id="ss-title" ref={heading} tabIndex={-1} aria-live="polite">
+          {stepTitle(step)}
+        </h2>
+        <Lines narration={narration} ids={ids} />
+        <LookStoryBlock st={st} step={step} />
+        <DecisionStoryBlock st={st} step={step} />
+        {step.kind === "look" && !step.missing && step.sight.length > 0 && (
+          <SightChips hero={hero} ids={step.sight} />
+        )}
+        <div className="ss-pass-group">
+          <p className="ss-label">View overlays</p>
+          <button
+            type="button"
+            className="btn ss-passes"
+            aria-pressed={s.passes}
+            onClick={st.togglePasses}
+          >
+            Potential passes
+          </button>
+        </div>
+        <Segmented<RunName>
+          label="Which run"
+          value={s.mode}
+          onPick={st.setMode}
+          options={[
+            { value: "factual", label: labels.factual },
+            { value: "counterfactual", label: labels.counterfactual },
+          ]}
+        />
+        <div className="ss-actions">
+          {/* One element each, so focus stays on them from step to step: Back is only marked
+              unavailable on the first step, and Next becomes Done on the last. */}
+          <button type="button" className="btn" aria-disabled={s.index === 0} onClick={st.back}>
+            Back
+          </button>
+          <button type="button" className="btn btn-primary" onClick={last ? st.close : st.next}>
+            {last ? "Done" : "Next"}
+          </button>
+          {!last && exit}
+        </div>
+        <p className="ss-hint">← / → step · Esc leaves · swipe on phone</p>
       </div>
-      <Segmented<RunName>
-        label="Which run"
-        value={s.mode}
-        onPick={st.setMode}
-        options={[
-          { value: "factual", label: labels.factual },
-          { value: "counterfactual", label: labels.counterfactual },
-        ]}
-      />
-      <div className="ss-actions">
-        {/* One element each, so focus stays on them from step to step: Back is only marked
-            unavailable on the first step, and Next becomes Done on the last. */}
-        <button type="button" className="btn" aria-disabled={s.index === 0} onClick={st.back}>
-          Back
-        </button>
-        <button type="button" className="btn btn-primary" onClick={last ? st.close : st.next}>
-          {last ? "Done" : "Next"}
-        </button>
-        {!last && exit}
-      </div>
-      <p className="ss-hint">← / → step · Esc leaves · swipe on phone</p>
+      <div className="ss-card-fade" aria-hidden="true" />
     </aside>
   );
 }

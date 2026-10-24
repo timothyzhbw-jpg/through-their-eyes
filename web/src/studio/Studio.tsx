@@ -110,6 +110,14 @@ export function StudioPackage() {
       />
     );
   }
+  // One mapping feeds the desktop table and the phone cards, so they cannot drift apart.
+  const rows = shots.map((s) => ({
+    n: s.n,
+    inFrame: s.inFrame,
+    outFrame: s.outFrame,
+    camera: `${CAMERA_LABEL[s.camera]}${s.player ? ` · ${renameIds(s.player)}` : ""}`,
+    caption: s.caption ?? "—",
+  }));
   return (
     <>
       <Segmented
@@ -144,21 +152,40 @@ export function StudioPackage() {
                 </tr>
               </thead>
               <tbody>
-                {shots.map((s) => (
-                  <tr key={s.n}>
-                    <th scope="row">{s.n}</th>
-                    <td>{s.inFrame}</td>
-                    <td>{s.outFrame}</td>
-                    <td>
-                      {CAMERA_LABEL[s.camera]}
-                      {s.player ? ` · ${renameIds(s.player)}` : ""}
-                    </td>
-                    <td className="prose">{s.caption ?? "—"}</td>
+                {rows.map((r) => (
+                  <tr key={r.n}>
+                    <th scope="row">{r.n}</th>
+                    <td>{r.inFrame}</td>
+                    <td>{r.outFrame}</td>
+                    <td>{r.camera}</td>
+                    <td className="prose">{r.caption}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <ol className="studio-shot-cards" aria-label="Shot list">
+            {rows.map((r) => (
+              <li key={r.n}>
+                <h4>Shot {r.n}</h4>
+                <dl>
+                  <div>
+                    <dt>Camera</dt>
+                    <dd>{r.camera}</dd>
+                  </div>
+                  <div>
+                    <dt>In</dt>
+                    <dd>{r.inFrame}</dd>
+                  </div>
+                  <div>
+                    <dt>Out</dt>
+                    <dd>{r.outFrame}</dd>
+                  </div>
+                </dl>
+                <p className="prose">{r.caption}</p>
+              </li>
+            ))}
+          </ol>
         </details>
         <button type="button" className="btn btn-quiet" onClick={() => copy(shotListText(shots))}>
           Copy shot list

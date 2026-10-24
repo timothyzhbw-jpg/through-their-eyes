@@ -101,6 +101,54 @@
 .studio-shot-list .stats-table-wrap {
   margin-top: 10px;
 }
+.studio-shot-cards {
+  display: none;
+}
+@media (max-width: 599px) {
+  .studio-shot-list .stats-table-wrap {
+    display: none;
+  }
+  .studio-shot-cards {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .studio-shot-cards > li {
+    padding: 14px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-control);
+    background: var(--night-2);
+  }
+  .studio-shot-cards h4 {
+    margin: 0 0 10px;
+  }
+  .studio-shot-cards dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 0;
+  }
+  .studio-shot-cards dl > div:first-child {
+    flex-basis: 100%;
+  }
+  .studio-shot-cards dt {
+    color: var(--chalk-3);
+    font: 500 10px/1.2 var(--font-data);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .studio-shot-cards dd {
+    margin: 4px 0 0;
+    font: 500 13px/1.35 var(--font-data);
+  }
+  .studio-shot-cards .prose {
+    margin: 12px 0 0;
+    overflow-wrap: anywhere;
+  }
+}
 .studio-assumptions > .note {
   margin-top: 8px;
 }
