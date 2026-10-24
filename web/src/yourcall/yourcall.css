@@ -163,7 +163,7 @@
   pointer-events: none;
 }
 
-/* the card: a glass card, like the live screen's .stage-card */
+/* the card: opaque, with no blur or entry motion */
 .yc-card {
   display: flex;
   flex-direction: column;
@@ -178,13 +178,11 @@
   box-sizing: border-box;
   padding: 22px 22px 22px 24px;
   border-radius: var(--r-card);
-  background: var(--glass);
-  backdrop-filter: blur(18px) saturate(1.15);
+  background: var(--night-2);
   box-shadow:
     inset 0 0 0 1px var(--hairline),
     0 40px 80px -40px rgba(0, 0, 0, 0.9);
   color: var(--chalk);
-  animation: tt-rise 800ms var(--settle) both;
 }
 .yc-card h2 {
   font: 400 28px/1.1 var(--font-display);
@@ -348,9 +346,6 @@
   .yc-marker,
   .yc-steps li {
     transition: none;
-  }
-  .yc-card {
-    animation: none;
   }
 }
 

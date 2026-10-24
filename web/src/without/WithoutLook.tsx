@@ -62,9 +62,7 @@ function heldOutText(gate: HeroGate): string {
 function ComparisonBasis({ gate }: { gate: HeroGate | null }) {
   return (
     <>
-      <p className="without-basis">
-        Held constant: the same match and the same seed; only this one look is removed.
-      </p>
+      <p className="without-basis">Only this look changes; the match and seed stay the same.</p>
       {gate && (
         <p className="without-basis">
           {heldOutText(gate)}{" "}
@@ -338,18 +336,9 @@ function XtExplainer({
         </p>
         <div className="xt-how">
           <p>
-            Expected threat (xT) is how much having the ball in a zone raises a team's chance of
-            scoring within its next few actions. Brighter zones are worth more.
-          </p>
-          <p>
-            Ours is a 16 × 12 grid learned from synthetic open play only, never from real matches. A
-            zone's value is how often play there ends in a shot, times how often such a shot scores,
-            plus how often it moves on, times the value of the zones its completed passes and
-            carries reach (a lost ball is worth nothing): Singh's Markov model, solved by value
-            iteration. Between zone centres the value is read smoothly, so a pass is valued where it
-            ends, not by its zone alone. The difference between the two ends is what the look was
-            worth.
-            {!w.fitted && " This build uses the smooth prior: no fit was cached."}
+            Expected threat (xT) values where a pass ends by how much that zone raises the chance of
+            scoring, using a model learned only from synthetic matches
+            {!w.fitted ? " (the smooth prior in this build)" : ""}; brighter zones are worth more.
           </p>
           <p>
             <a

@@ -104,6 +104,14 @@ describe("Academy drill: ready", () => {
     );
   });
 
+  it("folds the technical briefing behind How the drill works", async () => {
+    const { el } = await opened();
+    const how = el.querySelector<HTMLDetailsElement>("details#dr-how")!;
+    expect(how.open).toBe(false);
+    expect(textOf(how.querySelector("summary"))).toBe("How the drill works");
+    expect(textOf(how)).toContain("70–150°");
+  });
+
   it("chooses the pace before the start", async () => {
     const { d, el } = await opened();
     expect(d.state.get().pace).toBe(0.5);

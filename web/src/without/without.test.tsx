@@ -157,7 +157,9 @@ describe("in the verdict", () => {
       "xT 0.157",
       "xT 0.002",
     ]);
-    expect(text(dialog)).toMatch(/value iteration/);
+    expect(text(dialog.querySelector(".xt-how p"))).toBe(
+      "Expected threat (xT) values where a pass ends by how much that zone raises the chance of scoring, using a model learned only from synthetic matches; brighter zones are worth more.",
+    );
     expect(document.activeElement?.textContent).toBe("Close");
     act(() => {
       dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -183,7 +185,7 @@ describe("in the verdict", () => {
   });
 });
 
-const HELD = "Held constant: the same match and the same seed; only this one look is removed.";
+const HELD = "Only this look changes; the match and seed stay the same.";
 
 /** Counts no screen hard-codes: the sentence has to be these, not the committed 33/40. */
 const gatesFile = {

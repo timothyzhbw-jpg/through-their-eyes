@@ -104,6 +104,19 @@ describe("the cards", () => {
     expect(by.decisions.watch).toBeNull(); // another moment's clock
   });
 
+  it("keeps the whole-match fallback scope to one clause", () => {
+    const empty = parseHero(raw);
+    empty.runs.factual.events = [];
+    const withMatch = buildCards(parseHero(raw), xt, {
+      ...scope,
+      heroes: { ...scope.heroes, press_escape: empty },
+      match: scope.heroes.press_escape!,
+    });
+    expect(withMatch.find((c) => c.id === "high_press")!.measured).toBe(
+      "the whole stitched match (match-1) for Under pressure (press_escape)",
+    );
+  });
+
   it("print the xG model's constants from the code that computes it", () => {
     const xg = cards.find((c) => c.id === "shot_quality")!.metrics.find((m) => m.label === "xG")!;
     for (const k of [XG_CAP, XG_PEAK, XG_D0, XG_SCALE]) expect(xg.definition).toContain(String(k));
@@ -144,11 +157,20 @@ describe("the Tactics lab panel", () => {
     }
   });
 
-  it("shows each metric's definition and source chip", () => {
+  it("folds each metric's definition under its name and keeps every source chip", () => {
+    expect(html).toContain("<summary>What it counts</summary>");
     expect(html).toContain("Opponent passes per defensive action");
+    expect(html).not.toContain("Definition under each name");
     expect(html).toContain('data-source="tracking"');
     expect(html).toContain('data-source="sim"');
     expect(html).toContain("Measured over this moment");
+  });
+
+  it("puts the moment links before the card's limitations disclosure", () => {
+    expect(html).toContain("<summary>What these numbers leave out</summary>");
+    expect(html.indexOf('data-link="moment"')).toBeLessThan(
+      html.indexOf("What these numbers leave out"),
+    );
   });
 
   it("links the card to its hero moment and the With / Without comparison", () => {

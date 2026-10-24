@@ -285,9 +285,8 @@ function WallScreen({ show, format }: { show: Show; format: ScreenFormat }) {
         style={{ aspectRatio: `${format.aspect[0]} / ${format.aspect[1]}` }}
       />
       <figcaption>
-        <span className="name">{format.label}</span>
-        <span className="format">
-          {format.aspect[0]}:{format.aspect[1]} · {format.where}
+        <span className="name" title={`${format.aspect[0]}:${format.aspect[1]} · ${format.where}`}>
+          {format.label}
         </span>
         {content && <span className="what">{KIND_LABEL[content.kind]}</span>}
       </figcaption>

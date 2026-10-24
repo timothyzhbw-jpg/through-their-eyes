@@ -91,8 +91,13 @@ describe("His looks: opening", () => {
       "J. Ferriday looks over his right shoulder 0.8 s before the ball reaches him.",
       "That look brings S. Brannagh, N. Varnhall, S. Okondru, H. Talvisto, Y. Pellard, T. Mardelius, B. Coulvard, I. Fenmore, C. Brunvald and J. Kestrell into his sight.",
     ]);
-    const chips = [...el.querySelectorAll(".ss-sight li")].map((c) => textOf(c));
+    const sight = el.querySelector<HTMLDetailsElement>("details.ss-sight")!;
+    expect(sight.open).toBe(false);
+    expect(textOf(sight.querySelector("summary"))).toBe("Came into his sight on this look");
+    const chips = [...sight.querySelectorAll("li")].map((c) => textOf(c));
     expect(chips).toContain("N. Varnhall");
+    expect(textOf(el.querySelector(".ss-pass-group .ss-label"))).toBe("View overlays");
+    expect(textOf(el.querySelector(".ss-hint"))).toBe("← / → step · Esc leaves · swipe on phone");
   });
 
   it("takes over the replay: parked at the decision, not playing", async () => {
@@ -248,8 +253,8 @@ describe("His looks: the marks", () => {
     const mask = dim[0].style.maskImage || dim[0].style.getPropertyValue("-webkit-mask-image");
     expect(mask.match(/radial-gradient/g)).toHaveLength(2);
     expect(el.querySelectorAll(".ss-board .ss-focus-ring")).toHaveLength(2);
-    // Bowen finds blur uncomfortable: the focus only dims (steps.css has no blur() for it).
-    expect(stepsCss).not.toMatch(/\.ss-focus\s*\{[^}]*blur\(/);
+    // The focus only dims, and neither it nor the card blurs or flashes.
+    expect(stepsCss).not.toMatch(/blur\(|animation:\s*ss-dim/);
     // Only his pick is drawn until Potential passes adds the rest.
     expect(el.querySelectorAll(".ss-board .ss-lane")).toHaveLength(1);
   });

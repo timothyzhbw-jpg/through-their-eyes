@@ -94,12 +94,15 @@ function MetricRow({ m, split }: { m: Metric; split: boolean }) {
     <tr>
       <th scope="row">
         {m.label}
-        <span className="lab-def">{m.definition}</span>
-        {m.zeroWhy && (
-          <span className="lab-def lab-zero" data-zero>
-            {m.zeroWhy}
-          </span>
-        )}
+        <details className="how lab-definition">
+          <summary>What it counts</summary>
+          <span className="lab-def">{m.definition}</span>
+          {m.zeroWhy && (
+            <span className="lab-def lab-zero" data-zero>
+              {m.zeroWhy}
+            </span>
+          )}
+        </details>
       </th>
       {m.values.map((v, i) => (
         <td key={i} data-team={split ? i : undefined}>
@@ -132,10 +135,7 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           <table className="data-table lab-table">
             <thead>
               <tr>
-                <th scope="col">
-                  Measured over {card.scope}
-                  <span className="lab-def">Definition under each name</span>
-                </th>
+                <th scope="col">Measured over {card.scope}</th>
                 {split ? (
                   <>
                     <th scope="col" data-team="0">
@@ -161,7 +161,6 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           </table>
         </div>
       )}
-      <p className="note">{card.limits}</p>
       <div className="lab-links">
         <a className="btn" href={momentHref(card.id)} data-link="moment">
           {card.here ? "This is the moment: reload it" : `Open the moment · ${card.moment.label}`}
@@ -180,6 +179,10 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           </button>
         )}
       </div>
+      <details className="how lab-limits">
+        <summary>What these numbers leave out</summary>
+        <p className="note">{card.limits}</p>
+      </details>
     </article>
   );
 }

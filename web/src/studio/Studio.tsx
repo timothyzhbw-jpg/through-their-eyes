@@ -130,33 +130,36 @@ export function StudioPackage() {
         <button type="button" className="btn btn-primary" onClick={() => controls.playBreakdown()}>
           Play highlight
         </button>
-        <div className="table-wrap" role="region" tabIndex={0} aria-label="Shot list">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Shot</th>
-                <th scope="col">In</th>
-                <th scope="col">Out</th>
-                <th scope="col">Camera</th>
-                <th scope="col">Caption</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shots.map((s) => (
-                <tr key={s.n}>
-                  <th scope="row">{s.n}</th>
-                  <td>{s.inFrame}</td>
-                  <td>{s.outFrame}</td>
-                  <td>
-                    {CAMERA_LABEL[s.camera]}
-                    {s.player ? ` · ${renameIds(s.player)}` : ""}
-                  </td>
-                  <td className="prose">{s.caption ?? "—"}</td>
+        <details className="how studio-shot-list">
+          <summary>Shot list</summary>
+          <div className="stats-table-wrap" role="region" tabIndex={0} aria-label="Shot list">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Shot</th>
+                  <th scope="col">In</th>
+                  <th scope="col">Out</th>
+                  <th scope="col">Camera</th>
+                  <th scope="col">Caption</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {shots.map((s) => (
+                  <tr key={s.n}>
+                    <th scope="row">{s.n}</th>
+                    <td>{s.inFrame}</td>
+                    <td>{s.outFrame}</td>
+                    <td>
+                      {CAMERA_LABEL[s.camera]}
+                      {s.player ? ` · ${renameIds(s.player)}` : ""}
+                    </td>
+                    <td className="prose">{s.caption ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
         <button type="button" className="btn btn-quiet" onClick={() => copy(shotListText(shots))}>
           Copy shot list
         </button>
@@ -269,10 +272,6 @@ export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
         {numbered ? "5 · Business value" : "Business value"}
       </h3>
       <DemoBadge />
-      <p className="note">
-        Seeded by this moment, {PERSONA_LABEL[persona]} and {LANG_LABEL[spoken]}: the same three
-        always give the same figures.
-      </p>
       <dl className="tile-grid studio-metrics">
         <Metric name="Impressions" value={withCommas(audience.impressions)} />
         <Metric
@@ -293,6 +292,10 @@ export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
       </dl>
       <details className="how studio-assumptions">
         <summary>Assumptions</summary>
+        <p className="note">
+          Seeded by this moment, {PERSONA_LABEL[persona]} and {LANG_LABEL[spoken]}: the same three
+          always give the same figures.
+        </p>
         <ul>
           <li>
             Each figure is a seeded draw inside a range: impressions{" "}
