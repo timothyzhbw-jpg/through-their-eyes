@@ -1,4 +1,4 @@
-import { useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { contextLine, type ContextClaim } from "./context";
 import { detectTerms } from "./detect";
 import { GlossaryContext } from "./GlossaryProvider";
@@ -35,6 +35,7 @@ function GlossaryTermButton({
   const { persona, language } = useContext(GlossaryContext);
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
+  const popover = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const restoringFocus = useRef(false);
   const id = useId();
@@ -46,6 +47,18 @@ function GlossaryTermButton({
     button.current?.focus({ preventScroll: true });
     restoringFocus.current = false;
   };
+
+  // Keep the popover inside the viewport: measure it at left 0, then shift it back by the overflow.
+  useLayoutEffect(() => {
+    const node = popover.current;
+    if (!open || !node) return;
+    node.style.left = "0px";
+    const rect = node.getBoundingClientRect();
+    const margin = 8;
+    const overflow = rect.right - (window.innerWidth - margin);
+    const shift = overflow > 0 ? -overflow : Math.max(0, margin - rect.left);
+    if (shift !== 0) node.style.left = `${shift}px`;
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +106,7 @@ function GlossaryTermButton({
       {open && (
         <span
           id={id}
+          ref={popover}
           className="glossary-popover"
           role="dialog"
           aria-labelledby={`${id}-title`}

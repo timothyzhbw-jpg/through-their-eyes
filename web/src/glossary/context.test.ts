@@ -20,24 +20,43 @@ describe("this moment's context", () => {
     }
   });
 
-  it("uses only supplied claim values for a regain", () => {
-    const term = TERMS.find((item) => item.id === "regain")!;
-    expect(contextLine(term, "en", [claim("high_regain", { regain_distance_m: 18 })])).toBe(
-      "Here: the press won the ball 18 m from goal.",
-    );
-    expect(contextLine(term, "zh", [claim("high_regain", { regain_distance_m: 18 })])).toBe(
-      "此刻：这次逼抢在距离球门18米处夺回球权。",
-    );
-  });
-
-  it("distinguishes an xT value from an xT difference", () => {
+  it("reads xT from the claims the builders emit, at their decimals", () => {
     const term = TERMS.find((item) => item.id === "xt")!;
-    expect(contextLine(term, "en", [claim("cf_value", { dxt: 0.11 })])).toBe(
-      "Here: this moment added +0.11 in expected threat.",
-    );
     expect(contextLine(term, "en", [claim("pass_zones", { xt: 0.157 })])).toBe(
       "Here: the ball arrived with xT 0.157.",
     );
+    expect(contextLine(term, "en", [claim("pass_zones", { xt: 0.2 })])).toBe(
+      "Here: the ball arrived with xT 0.200.",
+    );
+    expect(contextLine(term, "en", [claim("cf_value", { dxt: 0.11 })])).toBe(
+      "Here: the expected-threat difference is 0.11.",
+    );
+  });
+
+  it("words a negative xT difference as a cost", () => {
+    const term = TERMS.find((item) => item.id === "xt")!;
+    expect(contextLine(term, "en", [claim("cf_value", { dxt: -0.11 })])).toBe(
+      "Here: this cost 0.11 of expected threat.",
+    );
+    expect(contextLine(term, "zh", [claim("cf_value", { dxt: -0.11 })])).toBe(
+      "此刻：这一处理损失了0.11的预期威胁。",
+    );
+  });
+
+  it("names the final third only from the reception zone claim", () => {
+    const term = TERMS.find((item) => item.id === "final-third")!;
+    expect(contextLine(term, "en", [claim("shot_placement", { band: "final_third" })])).toBeNull();
+    expect(contextLine(term, "en", [claim("reception_zone", { band: "own_half" })])).toBeNull();
+    expect(contextLine(term, "en", [claim("reception_zone", { band: "final_third" })])).toBe(
+      "Here: the pass was received in the final third.",
+    );
+  });
+
+  it("has no context line for a term no claim carries", () => {
+    for (const id of ["regain", "ppda", "xg", "line-breaking-pass", "pitch-control"]) {
+      const term = TERMS.find((item) => item.id === id)!;
+      expect(contextLine(term, "en", [claim("anything", { xg: 0.3, ppda: 8 })]), id).toBeNull();
+    }
   });
 
   it("does not borrow a similarly named value from another claim", () => {
