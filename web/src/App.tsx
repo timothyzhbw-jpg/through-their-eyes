@@ -127,7 +127,13 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   useEffect(() => () => session.feed?.stop(), [session]);
 
   return (
-    <div className={mode === "counterfactual" ? "app mode-cf" : "app"}>
+    <div
+      className={mode === "counterfactual" ? "app mode-cf" : "app"}
+      onClickCapture={(e) => {
+        const id = (e.target as Element).closest?.("button[id]")?.id;
+        if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
+      }}
+    >
       {/* Your call takes the live screen, and hides what would give his decision away until the
           viewer has made theirs: the director, the telemetry and the whole moment below. */}
       {drill ? (
@@ -231,27 +237,41 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
 /** Whether the story's "More ways in" is open: kept while a mode it opens takes the page. */
 const storyWaysIn = createStore<{ open: boolean }>({ open: false });
 
-/** Focus back on what opened a mode: its pill in the header's More while the menu is open, else
- * the story's own button, its "More ways in" opened so that button can take focus. */
+const OPENER_IDS = [
+  "take-eyes-open",
+  "take-eyes-story",
+  "scan-steps-open",
+  "scan-steps-story",
+  "drill-open",
+  "drill-story",
+];
+
+/** The mode button last pressed (by id): what closing its mode returns focus to. */
+const lastPressed = { id: "" };
+
+/** Focus back on what opened a mode, never on the body. The button that was pressed, when it is
+ * on screen. One in the header's More (shut behind the mode) gives the More button, so the menu
+ * stays closed. One in the story's "More ways in" has that fold opened first. With no opener
+ * known (a rail link, a deep link): the header's pill if shown, else the story's button. */
 function returnFocus(pillId: string, storyId: string) {
+  const shown = (el: HTMLElement | null) =>
+    !!el && !el.closest("[hidden]") && getComputedStyle(el).display !== "none";
+  const focus = (el: Element | null) => (el as HTMLElement | null)?.focus({ preventScroll: true });
   const pill = document.getElementById(pillId);
-  if (pill && !pill.closest("[hidden]") && getComputedStyle(pill).display !== "none") {
-    pill.focus({ preventScroll: true });
-    return;
-  }
   const story = document.getElementById(storyId);
-  const fold = story?.closest("details");
-  const target = () =>
-    (story ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({
-      preventScroll: true,
-    });
-  if (fold && !fold.open) {
-    // React applies open={waysIn}; focus once the fold is laid out.
-    storyWaysIn.set({ open: true });
-    requestAnimationFrame(target);
-    return;
+  const fromStory = lastPressed.id === storyId || (lastPressed.id !== pillId && !shown(pill));
+  if (!fromStory) {
+    focus(shown(pill) ? pill : document.getElementById("header-more"));
+  } else if (story) {
+    const fold = story.closest("details");
+    if (fold && !fold.open) {
+      fold.open = true; // laid out before focus; React's open={waysIn} follows the store
+      storyWaysIn.set({ open: true });
+    }
+    focus(story);
+  } else {
+    focus(document.getElementById("header-more") ?? document.querySelector(".stage-head h1"));
   }
-  target();
 }
 
 /** The academy drill in the header's More (the moment rail links to it too). */

@@ -199,17 +199,29 @@ describe("Academy drill: in the app", () => {
     const d = drillOf(session, served, "/data/");
     const page = mount(session, <App autoplay={false} />);
     const live = () => page.querySelector('section.stage[aria-label="Live screen"]');
-    click(button(page, "Academy drill"));
+    const screen = () => page.querySelector('section.dr-screen[aria-label="Academy drill"]')!;
+    // The moment's button, in its "More ways in" fold: the fold is opened and the button focused.
+    click(page.querySelector<HTMLButtonElement>("#drill-story")!);
     await act(settle);
     expect(d.state.get().step).toBe("ready");
     expect(live()).toBeNull();
     expect(page.querySelector("main.moment")).toBeNull();
     expect(page.querySelector(".moment-rail")).toBeNull();
-    const screen = page.querySelector('section.dr-screen[aria-label="Academy drill"]')!;
-    key(screen.querySelector(".dr-card")!, "keydown", "Escape");
+    key(screen().querySelector(".dr-card")!, "keydown", "Escape");
     expect(d.state.get().step).toBe("closed");
     expect(live()).not.toBeNull();
-    expect(document.activeElement).toBe(page.querySelector("#drill-story"));
+    const story = page.querySelector<HTMLButtonElement>("#drill-story")!;
+    expect(document.activeElement).toBe(story);
+    expect(story.closest("details")!.open).toBe(true);
+
+    // The header's More item: More shut behind the drill, so focus goes to the More button.
+    click(page.querySelector<HTMLButtonElement>("#header-more")!);
+    click(page.querySelector<HTMLButtonElement>("#drill-open")!);
+    await act(settle);
+    expect(live()).toBeNull();
+    key(screen().querySelector(".dr-card")!, "keydown", "Escape");
+    expect(live()).not.toBeNull();
+    expect(document.activeElement).toBe(page.querySelector("#header-more"));
   });
 
   it("opens from its deep link, which skips the intro card", () => {

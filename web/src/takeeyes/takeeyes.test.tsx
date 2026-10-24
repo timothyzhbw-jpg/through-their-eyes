@@ -317,9 +317,10 @@ describe("Take his eyes: looking and the result", () => {
     key(screen()!.querySelector(".te-card")!, "Escape");
     expect(te.state.get().step).toBe("closed");
     expect(live()).not.toBeNull();
-    // Back to the item that opened it: the menu is as it was left.
-    expect(document.activeElement).toBe(pill());
-    act(() => headerMore.set({ open: false }));
+    // The item that opened it sits in More, which closed behind the mode: focus goes to the More
+    // button, the menu stays shut.
+    expect(document.activeElement).toBe(page.querySelector("#header-more"));
+    expect(headerMore.get().open).toBe(false);
 
     // From the story's "More ways in", focus returns to the story's button, its fold open.
     click(page.querySelector<HTMLButtonElement>("#take-eyes-story")!);
