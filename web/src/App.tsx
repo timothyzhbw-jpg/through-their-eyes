@@ -10,7 +10,7 @@ import type { MatchSession } from "./match/matchSession";
 import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { GK_KITS } from "./players/kit";
 import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
-import { useStore } from "./store/store";
+import { createStore, useStore } from "./store/store";
 import { BreakdownPanel } from "./ui/BreakdownPanel";
 import { IntroCard } from "./ui/IntroCard";
 import { LiveBar, MomentsPanel } from "./ui/Live";
@@ -23,6 +23,7 @@ import { DecisionPanel, StoryPanel, VerdictPanel } from "./ui/Panels";
 import { RunToggle } from "./ui/RunToggle";
 import {
   blurbOf,
+  HeaderMore,
   MomentCard,
   momentKicker,
   MomentTitle,
@@ -41,7 +42,7 @@ import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { BeliefMap, beliefPip } from "./views/BeliefMap";
-import { Tour, TourButton } from "./tour/Tour";
+import { FirstTourButton, Tour, TourButton } from "./tour/Tour";
 import { tour } from "./tour/tourState";
 import { TacticalView } from "./views/TacticalView";
 import { stepThroughOf } from "./steps/controller";
@@ -90,31 +91,15 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     wasYourCall.current = yourCall;
   }, [yourCall]);
   useEffect(() => {
-    if (wasTakeEyes.current && !takeEyes) {
-      // The header pill, or on a phone (no pill there) the moment's own button.
-      const pill = document.getElementById("take-eyes-open");
-      const shown = pill && getComputedStyle(pill).display !== "none";
-      const opener = shown ? pill : document.getElementById("take-eyes-story");
-      opener?.focus({ preventScroll: true });
-    }
+    if (wasTakeEyes.current && !takeEyes) returnFocus("take-eyes-open", "take-eyes-story");
     wasTakeEyes.current = takeEyes;
   }, [takeEyes]);
   useEffect(() => {
-    if (wasScanSteps.current && !scanSteps) {
-      const pill = document.getElementById("scan-steps-open");
-      const shown = pill && getComputedStyle(pill).display !== "none";
-      const opener = shown ? pill : document.getElementById("scan-steps-story");
-      opener?.focus({ preventScroll: true });
-    }
+    if (wasScanSteps.current && !scanSteps) returnFocus("scan-steps-open", "scan-steps-story");
     wasScanSteps.current = scanSteps;
   }, [scanSteps]);
   useEffect(() => {
-    if (wasDrill.current && !drill) {
-      const opener = document.getElementById("drill-story");
-      (opener ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({
-        preventScroll: true,
-      });
-    }
+    if (wasDrill.current && !drill) returnFocus("drill-open", "drill-story");
     wasDrill.current = drill;
   }, [drill]);
   // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
@@ -158,10 +143,13 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           end={
             <>
               <YourCallButton />
-              <ScanStepsButton />
-              <TakeEyesButton />
+              <HeaderMore>
+                <ScanStepsButton />
+                <TakeEyesButton />
+                <DrillButton />
+                <FirstTourButton className="btn" />
+              </HeaderMore>
               <SoundToggle icon />
-              <YourViewMenu />
               <ViewerMenu />
             </>
           }
@@ -202,14 +190,18 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
           <Journey />
           <div className="below">
             <StoryPanel />
-            <TelemetryPanel />
-            <StatsPanel />
             <DecisionPanel />
             <VerdictPanel />
-            <WhatIfPanel />
             <NarrationPanel />
+            <WhatIfPanel />
             <BreakdownPanel />
-            <MomentsPanel />
+            {/* The data under the moment, one click away: no tour step points into it. */}
+            <details className="how match-data">
+              <summary>Match data for this moment</summary>
+              <TelemetryPanel />
+              <StatsPanel />
+              <MomentsPanel />
+            </details>
           </div>
         </main>
       )}
@@ -217,6 +209,43 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
       <Legend />
       <Tour />
     </div>
+  );
+}
+
+/** Whether the story's "More ways in" is open: kept while a mode it opens takes the page. */
+const storyWaysIn = createStore<{ open: boolean }>({ open: false });
+
+/** Focus back on what opened a mode: its pill in the header's More while the menu is open, else
+ * the story's own button, its "More ways in" opened so that button can take focus. */
+function returnFocus(pillId: string, storyId: string) {
+  const pill = document.getElementById(pillId);
+  if (pill && !pill.closest("[hidden]") && getComputedStyle(pill).display !== "none") {
+    pill.focus({ preventScroll: true });
+    return;
+  }
+  const story = document.getElementById(storyId);
+  const fold = story?.closest("details");
+  if (fold && !fold.open) {
+    fold.open = true;
+    storyWaysIn.set({ open: true });
+  }
+  (story ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({ preventScroll: true });
+}
+
+/** The academy drill in the header's More (the moment rail links to it too). */
+function DrillButton() {
+  const drill = drillOf(useSession());
+  if (drill.unavailable) return null;
+  return (
+    <button
+      id="drill-open"
+      type="button"
+      className="btn"
+      title={`${DRILL_SUB}, then make the pass`}
+      onClick={() => drill.open()}
+    >
+      {DRILL_NAME}
+    </button>
   );
 }
 
@@ -230,6 +259,7 @@ function StoryCta() {
   const drill = drillOf(session);
   const { narration, persona, status } = useBreakdown();
   const checked = narration && !narration.fixture;
+  const waysIn = useStore(storyWaysIn, (s) => s.open);
   return (
     <div className="moment-cta">
       <button
@@ -243,20 +273,6 @@ function StoryCta() {
         Watch it through his eyes
         <ArrowIcon />
       </button>
-      {!steps.unavailable && (
-        <button
-          id="scan-steps-story"
-          type="button"
-          className="btn"
-          title="Step through each look he took, frozen, then his decision"
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            steps.open();
-          }}
-        >
-          Step through his looks
-        </button>
-      )}
       {!yc.unavailable && (
         <button
           type="button"
@@ -270,35 +286,59 @@ function StoryCta() {
           Make his call
         </button>
       )}
-      <TourButton className="btn" />
-      {!te.unavailable && (
-        <button
-          id="take-eyes-story"
-          type="button"
-          className="btn"
-          title="Choose when and where he looks; the sim re-runs the moment"
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            te.open();
-          }}
-        >
-          Take his eyes
-        </button>
-      )}
-      {!drill.unavailable && (
-        <button
-          id="drill-story"
-          type="button"
-          className="btn"
-          title={`${DRILL_SUB}, then make the pass`}
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            drill.open();
-          }}
-        >
-          {DRILL_NAME}
-        </button>
-      )}
+      {/* The other ways in, one click away. Open or closed, it stays so across the modes it opens. */}
+      <details
+        className="how ways-in"
+        open={waysIn}
+        onToggle={(e) => storyWaysIn.set({ open: e.currentTarget.open })}
+      >
+        <summary>More ways in</summary>
+        <div className="ways-in-body">
+          {!steps.unavailable && (
+            <button
+              id="scan-steps-story"
+              type="button"
+              className="btn"
+              title="Step through each look he took, frozen, then his decision"
+              onClick={() => {
+                window.scrollTo({ top: 0 });
+                steps.open();
+              }}
+            >
+              Step through his looks
+            </button>
+          )}
+          {!te.unavailable && (
+            <button
+              id="take-eyes-story"
+              type="button"
+              className="btn"
+              title="Choose when and where he looks; the sim re-runs the moment"
+              onClick={() => {
+                window.scrollTo({ top: 0 });
+                te.open();
+              }}
+            >
+              Take his eyes
+            </button>
+          )}
+          {!drill.unavailable && (
+            <button
+              id="drill-story"
+              type="button"
+              className="btn"
+              title={`${DRILL_SUB}, then make the pass`}
+              onClick={() => {
+                window.scrollTo({ top: 0 });
+                drill.open();
+              }}
+            >
+              {DRILL_NAME}
+            </button>
+          )}
+          <TourButton className="btn" />
+        </div>
+      </details>
       {(status === "ready" || status === "failed") && (
         <span className="written">
           {checked && <CheckIcon />}

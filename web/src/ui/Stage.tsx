@@ -1,8 +1,8 @@
 // The live screen of the Floodlit design (SPEC 7): the picture fills the screen and the controls
 // sit over it. One camera switch films his eyes, the broadcast camera or the tactical board; the
-// other view shrinks to a picture in picture. The overlay toggles live behind one "View options"
-// button, who is watching sits in the header, and the moment card on the right has one primary
-// action: read the moment.
+// other view shrinks to a picture in picture. Whose eyes, the Auto director and the overlay toggles
+// live behind one "View options" button; who is watching and More (the other ways in) sit in the
+// header, and the moment card on the right has one primary action: the breakdown.
 
 import { QualityOption } from "../quality/QualityOption";
 import {
@@ -19,7 +19,6 @@ import { isShot, runLabels, shotPost, type Hero } from "../data/hero";
 import { trial } from "../players/trial";
 import { crewSteps } from "../producer/producer";
 import { ProvenanceChip } from "../provenance/ProvenanceChip";
-import { FirstTourButton } from "../tour/Tour";
 import { useBreakdown, useSession, useView, type Toggle } from "../session";
 import { createStore, useStore, type Store } from "../store/store";
 import { Hud, noBeliefs, SKELETON_TITLE } from "../views/PovOverlay";
@@ -242,14 +241,15 @@ export function PlayerPicker() {
   );
 }
 
-/** Top left of the picture: the player picker, and his readouts while his eyes are on screen. */
+/** Top left of the picture: his readouts while his eyes are on screen (whose eyes is picked in
+ * View options). */
 export function StageHud() {
   const { playback } = useView();
   const pov = useStore(playback, (s) => s.camera === "pov" && s.focus !== "tactical");
+  if (!pov) return null;
   return (
     <div className="stage-hud">
-      <PlayerPicker />
-      {pov && <Hud />}
+      <Hud />
     </div>
   );
 }
@@ -415,14 +415,17 @@ export function TacticalOptions() {
   );
 }
 
-/** On a phone the camera switch and the Auto director live here: below the picture they took two
- * of its rows (styles.css shows this group only up to 760 px and hides the two there). */
-function PhoneCameraOptions() {
+/** Whose eyes and the Auto director, off the picture; on a phone the camera switch too (under the
+ * picture it took a row: styles.css shows it here only up to 760 px and hides the bar's there). */
+function CameraOptions() {
   const auto = useStore(directorPrefs, (s) => s.auto);
   return (
-    <section className="options-group phone-only">
+    <section className="options-group">
       <h3 className="kicker">Camera</h3>
-      <CameraSwitch />
+      <div className="phone-only">
+        <CameraSwitch />
+      </div>
+      <PlayerPicker />
       <div className="chips">
         <button
           type="button"
@@ -462,12 +465,57 @@ export function ViewOptions() {
       </button>
       {open && (
         <div id={id} className="popover options-panel" role="group" aria-label="View options">
-          <PhoneCameraOptions />
+          <CameraOptions />
           <PovOptions />
           <QualityOption />
           <TacticalOptions />
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------- more ways in ----------
+
+/** Whether the header's More menu is open: kept across the modes it opens, so closing one finds
+ * the menu as it was and focus goes back to the item that opened it (App.tsx). */
+export const headerMore = createStore<{ open: boolean }>({ open: false });
+
+/** The header's other ways into the moment (His looks, Take his eyes, the drill, the tour) behind
+ * one button. The items stay mounted while it is closed (`hidden`): their ids and pressed states
+ * are what the modes and App's focus return use. */
+export function HeaderMore({ children }: { children: ReactNode }) {
+  const open = useStore(headerMore, (s) => s.open);
+  const wrap = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const close = useRef(() => headerMore.set({ open: false })).current;
+  const onKeyDown = usePopover(open, close, wrap, toggle);
+  return (
+    <div className="popover-wrap header-more" ref={wrap} onKeyDown={onKeyDown}>
+      <button
+        ref={toggle}
+        id="header-more"
+        type="button"
+        className="btn"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => headerMore.set({ open: !open })}
+      >
+        More
+        <ChevronIcon />
+      </button>
+      <div
+        id={id}
+        className="popover more-panel"
+        role="group"
+        aria-label="More ways into the moment"
+        hidden={!open}
+        // A tour takes the screen: its card is the one panel, so the menu closes behind it.
+        onClick={(e) => (e.target as Element).closest(".tour-start") && close()}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -727,30 +775,23 @@ function MomentCardBody({
         </>
       )}
       <CrewStatus />
+      {/* One primary for the card's whole life: the breakdown (the tour is in the header's More). */}
       <div className="card-actions">
-        {!waiting && (
-          <a className="btn btn-primary" href="#moment">
-            Read the moment
-            <ArrowIcon />
-          </a>
-        )}
         <button
           type="button"
-          className={waiting ? "btn btn-primary" : "btn"}
+          className="btn btn-primary"
           disabled={!running && status === "loading"}
           onClick={running ? controls.stopBreakdown : controls.playBreakdown}
         >
           {label}
         </button>
-        <a
-          className="btn"
-          href="#tactics-lab"
-          title="Why common tactics work, on this moment's data"
-        >
-          Tactics
-        </a>
+        {!waiting && (
+          <a className="btn btn-quiet" href="#moment">
+            Read the moment
+            <ArrowIcon />
+          </a>
+        )}
       </div>
-      <FirstTourButton />
     </aside>
   );
 }

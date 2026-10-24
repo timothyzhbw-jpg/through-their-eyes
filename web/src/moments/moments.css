@@ -70,20 +70,13 @@
 .moment-chip.match[aria-current="page"] i {
   background: var(--night);
 }
-/* The academy drill: a game, set apart from the moments by a hairline and the accent. */
+/* The academy drill: a game, set apart from the moments by a hairline (chalk like them: the accent
+   is the look's and the primary action's). */
 .moment-chips .drill-item {
   display: flex;
   align-items: center;
   padding-left: 6px;
   border-left: 1px solid var(--hairline-strong);
-}
-.moment-chip.drill-link {
-  color: var(--floodlight);
-  box-shadow: inset 0 0 0 1px rgba(246, 213, 102, 0.55);
-}
-.moment-chip.drill-link:hover {
-  color: var(--floodlight-hi);
-  box-shadow: inset 0 0 0 1px var(--floodlight);
 }
 @media (max-width: 760px) {
   .moment-rail {

@@ -15,6 +15,7 @@ import whatIfJson from "../../public/data/whatif_seed3.json";
 import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { App } from "../App";
+import { headerMore } from "../ui/Stage";
 import { createSession, SessionContext, type Session } from "../session";
 import { createApi } from "../api/client";
 import { createMatchSession } from "../match/matchSession";
@@ -303,8 +304,11 @@ describe("Take his eyes: looking and the result", () => {
     const screen = () => page.querySelector('section.te-screen[aria-label="Take his eyes"]');
     const pill = () => page.querySelector<HTMLButtonElement>("#take-eyes-open");
     expect(pill()!.getAttribute("aria-pressed")).toBe("false");
-    // The moment head's third action opens it, as does the header button.
-    click(button(page, "Take his eyes"));
+    // The header's pill sits in More, mounted while the menu is closed.
+    expect(pill()!.closest("[hidden]")).not.toBeNull();
+    click(page.querySelector<HTMLButtonElement>("#header-more")!);
+    expect(pill()!.closest("[hidden]")).toBeNull();
+    click(pill()!);
     await act(settle);
     expect(te.state.get().step).toBe("choosing");
     expect(live()).toBeNull();
@@ -313,7 +317,18 @@ describe("Take his eyes: looking and the result", () => {
     key(screen()!.querySelector(".te-card")!, "Escape");
     expect(te.state.get().step).toBe("closed");
     expect(live()).not.toBeNull();
+    // Back to the item that opened it: the menu is as it was left.
     expect(document.activeElement).toBe(pill());
+    act(() => headerMore.set({ open: false }));
+
+    // From the story's "More ways in", focus returns to the story's button, its fold open.
+    click(page.querySelector<HTMLButtonElement>("#take-eyes-story")!);
+    await act(settle);
+    expect(live()).toBeNull();
+    key(screen()!.querySelector(".te-card")!, "Escape");
+    const story = page.querySelector<HTMLButtonElement>("#take-eyes-story")!;
+    expect(document.activeElement).toBe(story);
+    expect(story.closest("details")!.open).toBe(true);
   });
 });
 

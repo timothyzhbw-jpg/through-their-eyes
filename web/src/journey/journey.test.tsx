@@ -228,6 +228,10 @@ describe("the bar and its panels", () => {
     expect(text).toContain("Compare from above");
     // Only the open tab is in the Tab order.
     expect(tabs(container).map((t) => t.tabIndex)).toEqual([0, -1, -1, -1, -1]);
+    // The bar's name says where it goes; no kicker repeats it on screen.
+    const bar = container.querySelector("nav.journey-bar")!;
+    expect(bar.getAttribute("aria-label")).toBe("This moment, from event to value");
+    expect(bar.textContent).not.toMatch(/from event to value/i);
   });
 
   it("Event tells both sides from the bundled verified lines, with no breakdown asked for", async () => {
@@ -275,6 +279,9 @@ describe("the bar and its panels", () => {
     expect(p.textContent).toContain("Play highlight");
     expect(p.textContent).toContain("Social posts");
     expect(p.textContent).toContain("In the stadium");
+    // Its note is one sentence.
+    const note = p.querySelector(".journey-stadium > .note")!.textContent!;
+    expect(note).toBe("What the stadium's screens show for this moment (key look).");
     expect(p.querySelector(".screen-wall")).not.toBeNull();
     const pressed = p.querySelector("[aria-label='Matchday event'] [aria-pressed='true']");
     expect(pressed?.textContent).toBe("Key look");

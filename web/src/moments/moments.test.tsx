@@ -126,6 +126,53 @@ describe("the moment rail", () => {
   });
 });
 
+describe("the hero page's shell (SPEC 7)", () => {
+  const names = (el: ParentNode | null, selector = "button, a") =>
+    [...(el?.querySelectorAll<HTMLElement>(selector) ?? [])].map(
+      (b) => b.getAttribute("aria-label") ?? b.textContent?.replace(/\s+/g, " ").trim(),
+    );
+
+  it("keeps the header to Your call, More, sound and who is watching", () => {
+    const page = mount(offline());
+    const end = page.querySelector(".stage-head .header-end")!;
+    // The buttons on the row itself (a menu's own items are inside its panel).
+    expect(names(end, ":scope > button, :scope > .popover-wrap > button")).toEqual([
+      "Your call",
+      "More",
+      "Sound",
+      "Watching as Casual fan · English",
+    ]);
+    expect(end.querySelector(".your-view")).toBeNull(); // one audience menu: the viewer's
+    // His looks, Take his eyes and the tour wait in More, mounted and hidden.
+    const more = end.querySelector<HTMLElement>(".more-panel")!;
+    expect(more.hidden).toBe(true);
+    expect(more.querySelector("#scan-steps-open")).not.toBeNull();
+    expect(more.querySelector("#take-eyes-open")).not.toBeNull();
+    expect(names(more)).toContain("Quick tour");
+  });
+
+  it("tells the story with two actions, the other ways in folded, and the match data last", () => {
+    const page = mount(offline());
+    const cta = page.querySelector(".moment-cta")!;
+    expect(names(cta, ":scope > button")).toEqual(["Watch it through his eyes", "Make his call"]);
+    expect(cta.querySelectorAll(".btn-primary")).toHaveLength(1);
+    const ways = cta.querySelector<HTMLDetailsElement>("details.ways-in")!;
+    expect(ways.open).toBe(false);
+    expect(ways.querySelector("#scan-steps-story")).not.toBeNull();
+    expect(ways.querySelector("#take-eyes-story")).not.toBeNull();
+    expect(names(ways, "button")).toContain("Full tour · 90 s");
+    // Story → Decision → Verdict → Narration → What if → Breakdown, then the data, folded.
+    const below = page.querySelector(".below")!;
+    const last = below.lastElementChild as HTMLDetailsElement;
+    expect(last.matches("details.match-data")).toBe(true);
+    expect(last.open).toBe(false);
+    expect(last.querySelector("summary")!.textContent).toBe("Match data for this moment");
+    expect(below.firstElementChild!.matches(".story")).toBe(true);
+    // The moment's own chapters stay open above it (the full tour's failure drill among them).
+    expect(last.querySelector(".story, .decision, .verdict, .breakdown")).toBeNull();
+  });
+});
+
 describe("the links", () => {
   it("open the in-match moments by their scenario, as spots", () => {
     expect(IN_MATCH_MOMENTS).toEqual(["corner_blind_side", "far_post_finish"]);

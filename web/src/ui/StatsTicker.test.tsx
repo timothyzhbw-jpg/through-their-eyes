@@ -1,5 +1,6 @@
-// The stats ticker over the live screen (SPEC 4.6, 7): the in-view tags as text, whichever
-// camera is on (the broadcast camera also draws them over the players), labelled as tracking.
+// The stats ticker over the live screen (SPEC 4.6, 7): the in-view tags as text in his eyes and on
+// the board, labelled as tracking; the broadcast camera draws them over the players itself, so
+// there the ticker keeps only its spoken line.
 
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
@@ -30,6 +31,17 @@ describe("the stats ticker", () => {
     expect(html).toContain("km/h");
     expect(html).toContain(">tracking<");
     expect(html).toContain('aria-live="polite"');
+  });
+
+  it("leaves the broadcast picture to its own tags, and still says them to a screen reader", () => {
+    const s = session(sprint);
+    s.playback.set({ camera: "broadcast", focus: "broadcast" });
+    const html = render(s, <StatsTicker />);
+    expect(html).not.toContain("stat-chip"); // views/broadcastTags.ts draws them, with `tracking`
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toMatch(/aria-live="polite">[^<]*SPRINT/);
+    s.playback.set({ focus: "tactical" }); // the board as the main view keeps the ticker
+    expect(render(s, <StatsTicker />)).toContain("stat-chip");
   });
 
   it("names the ball carrier", () => {

@@ -19,7 +19,7 @@ import type { AudioLike } from "../voice/voice";
 import { BreakdownPanel } from "./BreakdownPanel";
 import { Caption, EvidenceCard, NarrationPanel } from "./Narration";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
-import { ViewerMenu } from "./Stage";
+import { HeaderMore, ViewerMenu, ViewOptions } from "./Stage";
 import { Transport } from "./Transport";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -323,9 +323,15 @@ describe("keyboard and screen reader access", () => {
     expect(accessibleName(steps)).toBe("Telestration steps");
   });
 
-  it("names the camera director's chip, its dismiss button and the Auto director switch", () => {
+  it("names the camera director's chip and its dismiss button, and the Auto director switch", () => {
     const { session } = online();
-    const page = mount(session, <DirectorBar />);
+    const page = mount(
+      session,
+      <>
+        <DirectorBar />
+        <ViewOptions />
+      </>,
+    );
     act(() => {
       session.controls.setCamera("broadcast");
       session.playback.set({ frame: 20 });
@@ -335,10 +341,31 @@ describe("keyboard and screen reader access", () => {
     expect(accessibleName(page.querySelector("button.director-dismiss")!)).toBe(
       "Dismiss the suggestion",
     );
-    const auto = page.querySelector<HTMLButtonElement>("button.director-auto")!;
-    expect(accessibleName(auto)).toBe("Auto director");
-    expect(auto.getAttribute("aria-pressed")).toBe("false");
     expect(accessibleName(page.querySelector("section.director")!)).toBe("Camera director");
+    // The Auto director switch is in View options (ui/Stage.tsx).
+    act(() => page.querySelector<HTMLButtonElement>('button[aria-label="View options"]')!.click());
+    const auto = [...page.querySelectorAll<HTMLButtonElement>(".options-panel button.chip")].find(
+      (b) => accessibleName(b) === "Auto director",
+    )!;
+    expect(auto.getAttribute("aria-pressed")).toBe("false");
+    expect(problems(page)).toEqual([]);
+  });
+
+  it("names the header's More and keeps its items named while it is open", () => {
+    const { session } = online();
+    const page = mount(
+      session,
+      <HeaderMore>
+        <button type="button" className="btn">
+          His looks
+        </button>
+      </HeaderMore>,
+    );
+    const toggle = page.querySelector<HTMLButtonElement>("#header-more")!;
+    expect(accessibleName(toggle)).toBe("More");
+    act(() => toggle.click());
+    const panel = page.querySelector(".more-panel")!;
+    expect(accessibleName(panel)).toBe("More ways into the moment");
     expect(problems(page)).toEqual([]);
   });
 

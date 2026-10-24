@@ -1,5 +1,5 @@
 // The stitched match in the viewer (SPEC 2, 3.1, 7): `?match=match-1` loads it from the service,
-// the live view plays the whole match clock with the possession, restart and score on screen and
+// the live view plays the whole match clock with the possession and score on screen and
 // possession boundaries on the timeline, the Moments panel lists every moment with its lens, and
 // either hero moment opens its breakdown, played on the possession's own run (local frames) and
 // shown on the match clock (local frame + the possession's start).
@@ -173,13 +173,16 @@ describe("the live match", () => {
     expect(session.feed!.state.get().status).toBe("lost");
   });
 
-  it("shows the possession, its restart and the score as the playhead moves", () => {
+  it("shows the possession and the score as the playhead moves, and names the hero", () => {
     const { session } = online();
     session.playback.set({ frame: BLIND_START + 10 });
     let html = render(session, <Scoreboard />);
     expect(html).toContain("Possession 2 of 3");
-    expect(html).toContain("Throw-in");
+    expect(html).not.toContain("Restart"); // how play restarted is left to the picture
     expect(html).toContain("The blind-side run");
+    // The hero moment's button names him, never by his roster id ("H8's hero moment").
+    expect(html).toMatch(/Open [A-Z]\. [A-Za-z-]+(&#x27;|')s hero moment/);
+    expect(html).not.toMatch(/>H\d+(&#x27;|')s/);
     expect(html).toMatch(/Kestrel Bay.*0.*–.*0.*Corvane Vale/s);
     session.playback.set({ frame: PRESS_START + 5 });
     html = render(session, <Scoreboard />);

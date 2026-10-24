@@ -247,7 +247,7 @@ const PAGES = [
     check: (p, shoot) => journeyStepper(p, shoot),
   },
   { name: "full-story", path: "?tour=story", check: (p, shoot) => fullStory(p, shoot) },
-  // A phone's director suggestion: two lines, no third one half-shown in its padding.
+  // A phone: no director's suggestion under the picture; Auto director in View options.
   ...[
     ["375", PHONE_375],
     ["320", PHONE_320],
@@ -260,7 +260,7 @@ const PAGES = [
         p,
         async (q) => {
           await hero(q);
-          await clampClean(q);
+          await noDirectorOnPhone(q);
         },
         { live: false },
       ),
@@ -284,14 +284,14 @@ const PAGES = [
   },
   {
     // a narrow desktop: from 901 px the viewer button shows its full label, and the hero's header
-    // also carries Your call and Take his eyes; checked like a phone's (no overlap, on screen)
+    // also carries Your call and More; checked like a phone's (no overlap, on screen)
     name: "desktop-960-hero",
     path: "?intro=0",
     device: { viewport: { width: 960, height: 800 } },
     check: (p) => phone(p, hero),
   },
-  // A laptop: the header's pills and the run switch over the picture must not meet (they did at
-  // 1440 px once "His looks" joined the header).
+  // A laptop: the header's pills, the run switch and the column left of it must not meet (the
+  // pills and the switch did at 1440 px once "His looks" joined the header).
   {
     name: "desktop-1440-hero",
     path: "?intro=0",
@@ -412,46 +412,18 @@ async function hero(page, { main = "eyes", inMatch = false } = {}) {
   await mainView(page, main);
 }
 
-/** The director's suggestion on a phone: every line of it that shows lies inside the chip's
- * padding, none half-shown under it. A line clamp clips at the padding's edge, so clamping the
- * padded chip itself left a third line showing in its padding ("…before the ball… arrives"). */
-async function clampClean(page) {
-  await see(page.locator(".stage-director .director-chip"), "the director's suggestion");
-  const peeking = await page.evaluate(() => {
-    const chip = document.querySelector(".stage-director .director-chip");
-    const box = chip.getBoundingClientRect();
-    const cs = getComputedStyle(chip);
-    const top = box.top + parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
-    const bottom = box.bottom - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom);
-    const out = [];
-    const walker = document.createTreeWalker(chip, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      // What of the text shows: its lines, cut by every clipping box from it up to the chip.
-      let clipTop = -Infinity;
-      let clipBottom = Infinity;
-      for (let el = node.parentElement; el; el = el.parentElement) {
-        const s = getComputedStyle(el);
-        if (s.overflowY !== "visible") {
-          const r = el.getBoundingClientRect();
-          clipTop = Math.max(clipTop, r.top + parseFloat(s.borderTopWidth));
-          clipBottom = Math.min(clipBottom, r.bottom - parseFloat(s.borderBottomWidth));
-        }
-        if (el === chip) break;
-      }
-      const range = document.createRange();
-      range.selectNodeContents(node);
-      for (const line of range.getClientRects()) {
-        const shownTop = Math.max(line.top, clipTop);
-        const shownBottom = Math.min(line.bottom, clipBottom);
-        if (shownBottom - shownTop > 1 && (shownBottom > bottom + 1 || shownTop < top - 1))
-          out.push(
-            `"${node.textContent.trim().slice(0, 30)}" shows ${Math.round(shownBottom - bottom)} px into the padding`,
-          );
-      }
-    }
-    return out;
-  });
-  if (peeking.length) throw new Error(`the director's suggestion: ${peeking.join("; ")}`);
+/** A phone keeps the director's suggestions off its live screen (no room: Auto director, in View
+ * options, cuts for it), so the run switch and the moment card sit right under the picture. */
+async function noDirectorOnPhone(page) {
+  const shown = await page.evaluate(() =>
+    [...document.querySelectorAll(".stage-director, .stage-director .director-chip")]
+      .map((el) => el.getBoundingClientRect())
+      .some((r) => r.width > 0 && r.height > 0),
+  );
+  if (shown) throw new Error("the director's suggestion shows on a phone");
+  await page.getByRole("button", { name: "View options" }).click();
+  await see(page.getByRole("button", { name: "Auto director" }), "Auto director in View options");
+  await page.keyboard.press("Escape");
 }
 
 /** The board as the main view: no part of the HUD (whose eyes, the director's suggestion and its
@@ -463,7 +435,7 @@ async function boardClear(page) {
     if (!board) return ["(no board as the main view)"];
     return [
       ...document.querySelectorAll(
-        ".stage-top :is(.eyes-picker, button, .stat-chip, .hud > span), .stage-run .seg",
+        ".stage-top :is(button, .stat-chip, .hud > span), .stage-run .seg",
       ),
     ]
       .filter((el) => {
@@ -499,7 +471,7 @@ async function skeletonKeyClear(page, { within = null, outside = null } = {}) {
         Math.min(r.bottom, key.bottom) - Math.max(r.top, key.top) > 0.5;
       const found = [
         ...document.querySelectorAll(
-          ".stage-top :is(.eyes-picker, button, .stat-chip, .director-idle), .stage-run .seg, .stage-card > *, .stage-caption .caption, .slot.main .options-legend",
+          ".stage-top :is(button, .stat-chip, .hud > span), .stage-run .seg, .stage-card > *, .stage-caption .caption, .slot.main .options-legend",
         ),
       ]
         .filter((el) => !el.closest(".skeleton-key"))

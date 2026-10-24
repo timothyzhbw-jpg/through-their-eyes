@@ -195,9 +195,7 @@ describe("the chip", () => {
     act(() => chip(page)!.click());
     expect(session.playback.get()).toMatchObject({ camera: "pov", povPlayer: "H8" });
     expect(chip(page)).toBeNull(); // he is on screen now: the director holds the shot
-    expect(text(page.querySelector(".director-idle"))).toMatch(
-      /^When play gives a reason to switch cameras/,
-    );
+    expect(page.querySelector("section.director")).toBeNull(); // and says nothing meanwhile
   });
 
   it("offline, suggests the breakdown once the moment is over; the breakdown then directs", () => {
@@ -210,9 +208,7 @@ describe("the chip", () => {
     act(() => chip(page)!.click());
     expect(session.runner.status.get().status).toBe("running");
     expect(chip(page)).toBeNull();
-    expect(text(page.querySelector(".director-idle"))).toBe(
-      "The breakdown is choosing the cameras.",
-    );
+    expect(page.querySelector("section.director")).toBeNull();
   });
 
   it("does not suggest a breakdown that has already played", () => {
@@ -276,7 +272,7 @@ describe("between suggestions", () => {
     attrs: { to, end },
   });
 
-  it("the chip stays a moment after it ends, then the strip goes idle", () => {
+  it("the chip stays a moment after it ends, then the strip goes away", () => {
     const session = withEvents([pass(10, "H8", 30), pass(60, "H9", 100)]);
     const page = mount(session);
     onBroadcast(session);
@@ -286,9 +282,7 @@ describe("between suggestions", () => {
     for (let f = 11; f <= 34; f++) at(session, f);
     expect(text(chip(page))).toBe("Switch to J. Ferriday's eyes: the ball is coming to him."); // 0.16 s on
     for (let f = 35; f <= 45; f++) at(session, f);
-    expect(text(page.querySelector(".director-idle"))).toMatch(
-      /^When play gives a reason to switch cameras/,
-    );
+    expect(page.querySelector("section.director")).toBeNull();
   });
 
   it("a suggestion held on the viewer's camera does not show late when he leaves it", () => {
@@ -467,11 +461,21 @@ describe("in a stitched match", () => {
 describe("the auto director", () => {
   it("is off until the viewer turns it on; then it cuts by itself", () => {
     const session = offline();
-    const page = mount(session);
+    // Its switch is in View options (ui/Stage.tsx), at every width.
+    const page = mount(
+      session,
+      <>
+        <DirectorBar />
+        <Transport />
+      </>,
+    );
     onBroadcast(session);
     at(session, 15);
     expect(session.playback.get().camera).toBe("broadcast");
-    const toggle = page.querySelector<HTMLButtonElement>(".director-auto")!;
+    act(() => page.querySelector<HTMLButtonElement>('button[aria-label="View options"]')!.click());
+    const toggle = [...page.querySelectorAll<HTMLButtonElement>(".options-panel button.chip")].find(
+      (b) => text(b) === "Auto director",
+    )!;
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     act(() => toggle.click());
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
@@ -538,7 +542,7 @@ describe("the auto director", () => {
   });
 });
 
-describe("on a phone the camera switch and the Auto director live in View options", () => {
+describe("whose eyes and the Auto director in View options; on a phone the camera switch too", () => {
   const shown = (el: Element | null) => !!el && getComputedStyle(el).display !== "none";
   const open = (page: HTMLElement) =>
     act(() => page.querySelector<HTMLButtonElement>('button[aria-label="View options"]')!.click());
@@ -556,7 +560,7 @@ describe("on a phone the camera switch and the Auto director live in View option
     )!;
     act(() => tactical.click());
     expect(session.playback.get().focus).toBe("tactical");
-    const auto = [...group!.querySelectorAll<HTMLButtonElement>("button.chip")].find(
+    const auto = [...page.querySelectorAll<HTMLButtonElement>(".options-panel button.chip")].find(
       (b) => text(b) === "Auto director",
     )!;
     act(() => auto.click());
@@ -564,47 +568,31 @@ describe("on a phone the camera switch and the Auto director live in View option
     expect(auto.getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("keeps them where they were on a wider screen", () => {
+  it("keeps the camera switch on the bar on a wider screen; whose eyes and Auto director in options", () => {
     withFloodlitStyles(1440);
     const page = mount(offline(), <Transport />);
     expect(shown(page.querySelector(".transport > .seg.camera"))).toBe(true);
     open(page);
     expect(shown(page.querySelector(".options-panel .phone-only"))).toBe(false);
-  });
-
-  it("clamps the suggestion's words to two lines on a phone, not the padded chip", () => {
-    // Clamped with its padding, the chip showed a third line in the padding under the two.
-    withFloodlitStyles(390);
-    const session = offline();
-    const page = mount(
-      session,
-      <div className="stage-director">
-        <DirectorBar />
-      </div>,
+    const auto = [...page.querySelectorAll(".options-panel button.chip")].find(
+      (b) => text(b) === "Auto director",
     );
-    onBroadcast(session);
-    at(session, 52);
-    const c = chip(page)!;
-    const words = c.querySelector(".director-text")!;
-    expect(text(words)).toBe(text(c));
-    expect(text(words)).toMatch(/^Switch to J\. Ferriday's eyes: /);
-    // The words clip, not the chip (happy-dom computes overflow but not the clamp: that is read
-    // from the stylesheet, on the words' rule and not the chip's).
-    expect(getComputedStyle(words).overflow).toBe("hidden");
-    expect(getComputedStyle(c).overflow).not.toBe("hidden");
-    const rule = (selector: string) =>
-      [
-        ...floodlitStyles.matchAll(
-          new RegExp(`${selector.replace(/\./g, "\\.")} \\{([^}]*)\\}`, "g"),
-        ),
-      ]
-        .map((m) => m[1])
-        .join(";");
-    expect(rule(".stage-director .director-chip .director-text")).toMatch(/-webkit-line-clamp: 2;/);
-    expect(rule(".stage-director .director-chip")).not.toMatch(/line-clamp/);
+    expect(shown(auto ?? null)).toBe(true);
+    expect(shown(page.querySelector('.options-panel select[aria-label="Whose eyes"]'))).toBe(true);
   });
 
-  it("takes the Auto director off the director's row on a phone only", () => {
+  it("shows nothing over the picture while it has nothing to suggest, and no switch there", () => {
+    const session = offline();
+    const page = mount(session);
+    onBroadcast(session);
+    at(session, 0);
+    expect(page.querySelector("section.director")).toBeNull();
+    at(session, 15);
+    expect(chip(page)).not.toBeNull();
+    expect(page.querySelector(".director-auto")).toBeNull();
+  });
+
+  it("keeps the suggestions off a phone, where Auto director cuts for it", () => {
     // As on the live screen (App.tsx): the bar sits in .stage-director.
     const bar = () => (
       <div className="stage-director">
@@ -612,8 +600,8 @@ describe("on a phone the camera switch and the Auto director live in View option
       </div>
     );
     withFloodlitStyles(390);
-    expect(shown(mount(offline(), bar()).querySelector(".director-auto"))).toBe(false);
+    expect(shown(mount(offline(), bar()).querySelector(".stage-director"))).toBe(false);
     withFloodlitStyles(1440);
-    expect(shown(mount(offline(), bar()).querySelector(".director-auto"))).toBe(true);
+    expect(shown(mount(offline(), bar()).querySelector(".stage-director"))).toBe(true);
   });
 });

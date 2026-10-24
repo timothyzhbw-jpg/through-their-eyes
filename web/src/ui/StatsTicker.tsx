@@ -1,5 +1,6 @@
-// The stats ticker over the live screen (SPEC 4.6, 7): the in-view tags as text, on every camera.
-// A hero moment shows them for what happened; the other run keeps the picture clear of them.
+// The stats ticker over the live screen (SPEC 4.6, 7): the in-view tags as text, in his eyes and on
+// the board (the broadcast picture carries the tags itself; a screen reader hears them on every
+// camera). A hero moment shows them for what happened; the other run keeps the picture clear.
 
 import { useView } from "../session";
 import { statTags, type StatTag, type Stats } from "../stats/stats";
@@ -40,12 +41,18 @@ export function StatsTicker() {
       .map((t) => `${t.kind}|${t.player}|${t.label}|${t.text}`)
       .join("\n");
   });
+  // The broadcast picture draws the same tags, each with its source chip (views/broadcastTags.ts):
+  // there the ticker keeps only its spoken line. His eyes and the board keep it whole.
+  const broadcast = useStore(
+    view.playback,
+    (s) => s.camera === "broadcast" && s.focus !== "tactical",
+  );
   if (!stats || key === "×") return null;
   const tags = shown(stats, view.playback.get().frame, owner);
   const names = stats.players;
   return (
     <div className="stage-ticker">
-      {tags.map((tag) => (
+      {(broadcast ? [] : tags).map((tag) => (
         <span
           key={`${tag.kind}-${tag.player}-${tag.label}`}
           className="stat-chip"

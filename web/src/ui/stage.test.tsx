@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
-// The live screen of the Floodlit design: one camera switch for the three views, the views'
-// overlay toggles behind one "View options" button, the moment card with its single primary
-// action, who is watching in the header, the picture-in-picture swap, and verified numbers in the
-// caption (dotted underline and a check that opens the evidence).
+// The live screen of the Floodlit design: one camera switch for the three views, whose eyes and the
+// views' overlay toggles behind one "View options" button, the moment card with its single primary
+// action, who is watching and More in the header, the picture-in-picture swap, and verified numbers
+// in the caption (dotted underline and a check that opens the evidence).
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -18,7 +18,16 @@ import { trial } from "../players/trial";
 import { API, breakdownResponse, fakeFetch, json, settle } from "../testing";
 import { Caption } from "./Narration";
 import { DecisionPanel, StoryPanel, VerdictPanel } from "./Panels";
-import { CameraSwitch, MomentCard, StageHud, SwapViews, ViewerMenu, ViewOptions } from "./Stage";
+import {
+  CameraSwitch,
+  HeaderMore,
+  headerMore,
+  MomentCard,
+  StageHud,
+  SwapViews,
+  ViewerMenu,
+  ViewOptions,
+} from "./Stage";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -132,7 +141,9 @@ describe("view options", () => {
       expect(names, n).toContain(n);
     expect(names.filter((n) => n === "Belief ghosts")).toHaveLength(1); // one toggle, one state
     expect(panel.querySelector("select[aria-label='Playback speed']")).not.toBeNull();
-    expect(panel.querySelector("select[aria-label='Whose eyes']")).toBeNull(); // on the picture
+    // Whose eyes and the Auto director, off the picture (they took a row of it).
+    expect(panel.querySelector("select[aria-label='Whose eyes']")).not.toBeNull();
+    expect(names).toContain("Auto director");
 
     const pitch = button(panel, "Pitch control");
     expect(pressed(pitch)).toBe("false");
@@ -174,13 +185,57 @@ describe("view options", () => {
   });
 });
 
+describe("the header's More", () => {
+  afterEach(() => act(() => headerMore.set({ open: false })));
+
+  it("keeps its items mounted while closed; Escape and a press outside close it", () => {
+    const page = mount(
+      offline(),
+      <HeaderMore>
+        <button type="button" id="item-a" className="btn">
+          A
+        </button>
+      </HeaderMore>,
+    );
+    const toggle = button(page, "More");
+    const panel = page.querySelector<HTMLElement>(".more-panel")!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-controls")).toBe(panel.id);
+    expect(panel.hidden).toBe(true);
+    expect(page.querySelector("#item-a")).not.toBeNull(); // mounted, hidden with the panel
+
+    click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(panel.hidden).toBe(false);
+    act(() => {
+      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(panel.hidden).toBe(true);
+    expect(document.activeElement).toBe(toggle);
+
+    click(toggle);
+    act(() => {
+      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    expect(panel.hidden).toBe(true);
+  });
+});
+
 describe("whose eyes", () => {
-  it("keeps the player picker on the picture, with his readouts while his eyes are on", () => {
+  it("picks the player in View options; the picture keeps his readouts while his eyes are on", () => {
     const session = offline();
-    const page = mount(session, <StageHud />);
+    const page = mount(
+      session,
+      <>
+        <StageHud />
+        <ViewOptions />
+      </>,
+    );
+    expect(page.querySelector(".stage-hud select")).toBeNull(); // not on the picture
+    expect(text(page.querySelector(".hud"))).toMatch(/J. Ferriday · head \d+° from the ball/);
+    click(button(page, "View options"));
     const select = page.querySelector<HTMLSelectElement>("select[aria-label='Whose eyes']")!;
     expect(select.value).toBe("H8");
-    expect(text(page.querySelector(".hud"))).toMatch(/J. Ferriday · head \d+° from the ball/);
     act(() => {
       select.value = "H9";
       select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -188,7 +243,7 @@ describe("whose eyes", () => {
     expect(session.playback.get().povPlayer).toBe("H9");
     act(() => session.controls.setFocus("tactical")); // his eyes in the corner: no readouts
     expect(page.querySelector(".hud")).toBeNull();
-    expect(page.querySelector("select[aria-label='Whose eyes']")).not.toBeNull();
+    expect(page.querySelector(".stage-hud")).toBeNull();
   });
 
   it("labels the head angle and players in sight together as sim readouts", () => {
@@ -225,15 +280,20 @@ describe("sim numbers in the story and decision", () => {
 });
 
 describe("moment card", () => {
-  it("names the moment and offers one primary action: read it", () => {
+  it("names the moment and offers one primary action, the breakdown, for its whole life", () => {
     const page = mount(offline(), <MomentCard />);
     const card = page.querySelector("aside.moment-card")!;
     expect(text(card.querySelector(".kicker"))).toBe("Moment · 3.00 s · Perception");
     expect(text(card.querySelector("h2"))).toBe("One look changed his pass.");
     const primary = card.querySelectorAll(".btn-primary");
     expect(primary).toHaveLength(1);
-    expect(text(primary[0])).toBe("Read the moment");
-    expect(primary[0].getAttribute("href")).toBe("#moment");
+    expect(text(primary[0])).toBe("Play breakdown");
+    // Reading on is the quiet way down the page; the tactics and the tour live elsewhere.
+    const read = card.querySelector<HTMLAnchorElement>("a[href='#moment']")!;
+    expect(text(read)).toBe("Read the moment");
+    expect(read.classList.contains("btn-quiet")).toBe(true);
+    expect(card.querySelector("a[href='#tactics-lab']")).toBeNull();
+    expect(card.querySelector(".tour-start")).toBeNull();
   });
 
   it("never claims the bundled example was checked by the verifier", () => {
