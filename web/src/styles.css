@@ -1208,6 +1208,26 @@ optgroup {
 .stage-run .seg button {
   min-width: 132px;
 }
+/* the two decisions side by side, under the switch: the proof in one line */
+.run-outcome {
+  width: max-content;
+  max-width: min(640px, 92vw);
+  margin: 8px auto 0;
+  padding: 7px 12px;
+  border-radius: var(--r-control);
+  background: rgba(8, 14, 11, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.14);
+  font: 400 13px/1.35 var(--font-body);
+  color: var(--chalk-2);
+  text-align: center;
+}
+.run-outcome b {
+  font-weight: 600;
+  color: var(--chalk);
+}
+.run-outcome .with b {
+  color: var(--floodlight);
+}
 .seg button[aria-disabled="true"]:not([aria-pressed="true"]) {
   color: var(--chalk-3);
   cursor: not-allowed;
@@ -3506,6 +3526,16 @@ optgroup {
   .stage-run .seg button {
     min-width: 0;
   }
+  .run-outcome {
+    width: auto;
+    max-width: none;
+    margin: 8px 0 0;
+    padding: 0 4px;
+    background: none;
+    box-shadow: none;
+    font-size: 12.5px;
+    text-align: left;
+  }
   .stage-caption,
   .with-pip .stage-caption,
   .focus-tactical .stage-caption {
@@ -3848,12 +3878,20 @@ optgroup {
   .moment-card .crew-status {
     display: none;
   }
+  /* the primary action stays above the fold at 390 × 844, with the outcome line and the live
+     header's extra row above it */
   .moment-card {
-    gap: 14px;
+    gap: 10px;
+  }
+  .moment-card h2 {
+    font-size: 26px;
+  }
+  .card-actions .btn {
+    height: 48px;
   }
   .stage-card,
   .focus-tactical .stage-card {
-    margin-top: 20px;
+    margin-top: 12px;
   }
 }
 

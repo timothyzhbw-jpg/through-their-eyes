@@ -112,6 +112,7 @@ describe("the run without the look", () => {
     const without = button(page, "Without the look");
     expect(without.getAttribute("aria-disabled")).toBe("true");
     expect(described(without)).toBe("Available once the moment arrives");
+    expect(page.querySelector("[data-testid=run-outcome]")).toBeNull();
     click(without);
     expect(session.playback.get()).toMatchObject({ live: true, mode: "factual" });
     expect(ws.sent).not.toContainEqual({ type: "stop" });
