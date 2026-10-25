@@ -84,12 +84,26 @@ class Scenario:
     # The restart the scenario opens with, if it plays one (SPEC 3.1, 3.9): its first kick takes
     # it, with the Laws' distances (`sim.referee.Referee.keep_back`) and offside exemptions.
     restart: str | None = None
+    # A teaching scenario (`pro_scan`): built to show a coaching point, its look times scripted.
+    # It is not one of the hero moments the audits sweep (eval/laws.py); its tests cover it.
+    teaching: bool = False
 
     def setup(self, gen: np.random.Generator) -> Setup:
         raise NotImplementedError
 
     def scripted_targets(self, sim: Simulation, frame: int) -> dict[int, tuple[np.ndarray, float]]:
         """Player index -> (target, speed cap) for scripted players this frame."""
+        return {}
+
+    def receiver_targets(self, sim: Simulation, frame: int) -> dict[int, tuple[np.ndarray, float]]:
+        """Like `scripted_targets`, but applied after the engine sends a pass's receiver to meet
+        it, so a scenario can choose where he receives. Empty by default: every other run is
+        unchanged byte for byte."""
+        return {}
+
+    def body_targets(self, sim: Simulation, frame: int) -> dict[int, float]:
+        """Player index -> body yaw (rad) to turn toward this frame, at the usual turn rate,
+        instead of facing his run or the ball. Empty by default (unchanged runs)."""
         return {}
 
     def forced_pass(self, sim: Simulation, frame: int) -> ForcedPass | None:

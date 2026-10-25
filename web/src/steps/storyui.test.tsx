@@ -20,7 +20,14 @@ import type { Fetch } from "../takeeyes/controller";
 import { stepThroughOf } from "./controller";
 import { ScanStepsScreen } from "./ScanSteps";
 import { parseSteps, type LookStep } from "./steps";
-import { lookStory, PUBLISHED_SCANS } from "./story";
+import {
+  lookStory,
+  lookThinking,
+  newsLines,
+  optionLines,
+  personLookup,
+  PUBLISHED_SCANS,
+} from "./story";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -73,21 +80,29 @@ async function opened() {
 }
 
 describe("His looks: the coaching story", () => {
-  it("tells the look: its direction, who came into view, his picture and his thinking", async () => {
+  it("tells the look: its direction, who is new in his picture, his options and his thinking", async () => {
     const { el } = await opened();
     const story = textOf(el.querySelector(".ss-story"))!;
     // the figures come from the data through the same helper the page uses, not from typed copies
     const first = parseSteps(stepsJson, hero, heroMoment(hero)).runs.factual.steps[0] as LookStep;
     const s = lookStory(hero, hero.runs.factual, first, 1)!;
-    const c = s.changes[0];
-    const who = `#${c.person.number} ${c.person.name}`;
-    const think = textOf(el.querySelector(".ss-think"))!;
     expect(story).toContain(`behind him, ${s.degrees}° from his body's facing`);
-    expect(story).toContain(
-      `${who}: ${c.before.toFixed(1)} m off before, ${c.after.toFixed(1)} m after`,
-    );
-    expect(think).toMatch(/^Checking behind me\./);
-    expect(think).toContain(`${who} was ${c.before.toFixed(1)} m`);
+    const p = first.picture!;
+    const who = personLookup(hero);
+    const news = [...el.querySelectorAll(".ss-news li")].map((li) => textOf(li));
+    expect(news).toEqual(newsLines(p.news!, who));
+    expect(news[0]).toMatch(/^#9 .+: [\d.]+ m from him, not [\d.]+ m/); // the runner, found
+    // His options: the bundle's opened (↑) and closed (↓), as marked on the card.
+    const marked = (cls: string) =>
+      [...el.querySelectorAll(`.ss-options li.${cls} .ss-opt`)].map((x) => textOf(x));
+    const lines = optionLines(p.options, p.before, p.opened, p.closed, who);
+    expect(marked("up")).toEqual(lines.filter((l) => l.mark === "↑").map((l) => l.label));
+    expect(marked("down")).toEqual(lines.filter((l) => l.mark === "↓").map((l) => l.label));
+    expect(p.opened).toContain("pass:H9"); // seeing his run opens the pass to him
+    expect(marked("up")).toContain(`Pass to ${news[0]!.split(":")[0]}`);
+    const think = textOf(el.querySelector(".ss-think"))!;
+    expect(think).toBe(lookThinking(s.direction, p, who));
+    expect(think).toMatch(/^Checking behind me\. #9 .+ is [\d.]+ m from me, not [\d.]+ m\. So /);
   });
 
   it("has a timeline tick per scan, labelled by direction, that jumps to its freeze", async () => {

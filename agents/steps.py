@@ -20,8 +20,16 @@ describes (`cf` for the counterfactual run). No model is called. Lines, in order
   final freeze leaves lit, the rest dimmed): a pass's receiver and the opponent nearest him, a
   carrier and the opponent nearest him, a shooter and the keeper.
 
-The decision model runs only at the decision (SPEC 3.5), so the options a step can show are the
-decision record's: there is no record of options at the time of a look.
+The decision model runs only at the decision (SPEC 3.5). What he could do at a look is worked
+out after the run, read only, by the same model on his belief at that frame
+(`explain.belief_options`): per frozen step, his options (as if the ball were at his feet) and,
+for a look, his options without it and who is new in his picture (`build_pictures`). These are
+data for the screen, not lines.
+
+A teaching scenario (`pro_scan`) adds two beats, in time order with his looks: the drop-back,
+frozen when rule 1 acted (after the look left), and the half-turn, frozen at his reception
+(after the look right); and what each rule saw and did (`RunSteps.rules`), from the scenario's
+state in a re-simulation of the same run.
 """
 
 from __future__ import annotations
@@ -36,16 +44,19 @@ from agents.look import ACTION_WORDS, OVER_THE_SHOULDER, SEEN
 from agents.schemas import Language, Persona
 from analytics.stats import display
 from analytics.vision import wrap_angle
+from explain.belief_options import look_options, new_in_picture, option_changes, options_on_belief
 from explain.claims import Claim, Predicate, Slot, fn, slot
+from explain.lenses import sightings
 from explain.render import RenderPayload, build_payload
 from explain.render import ScriptLine as RenderLine
 from explain.verifier import Verifier
 from sim.config import SimParams
 from sim.counterfactual import CounterfactualResult
+from sim.decision import OptionEval
 from sim.model import Decision, Event
 from sim.run import MatchRun
 
-STEPS_VERSION = 1
+STEPS_VERSION = 2  # 2: per-step pictures (options, news); teaching beats in time order
 DWELL_TOLERANCE = SimParams().scan_out_tolerance  # rad: the sim's own "reached" test
 
 
@@ -57,6 +68,23 @@ class Step:
     over: bool  # over his shoulder: at least OVER_THE_SHOULDER from the ball
     missing: bool  # dropped in this run
     sight: list[str]  # players out of his sight as the look began and in it during the look
+    # A teaching scenario's scripted look ("L", "R", "B" or "F", `sim.scenarios.pro_scan.LOOKS`);
+    # None elsewhere, and then not exported.
+    direction: str | None = None
+
+
+@dataclass(frozen=True)
+class Beat:
+    """A teaching scenario's frozen beat (`pro_scan`), told whether it happened or not:
+    "drop_back" (after his look left, did he drop back toward the ball?), frozen when rule 1
+    acted, between his two looks; "half_turn" (did he receive side-on?), frozen at his
+    reception."""
+
+    id: str
+    frame: int  # the freeze frame
+    start: int  # drop_back: the frame rule 1 acted (his path starts); half_turn: as `frame`
+    end: int  # his reception (drop_back: where his path ends)
+    happened: bool
 
 
 @dataclass
@@ -70,7 +98,13 @@ class RunSteps:
     steps: list[Step]
     focus: tuple[str, str]  # the two players the final freeze leaves lit
     claims: list[Claim] = field(default_factory=list)
-    lines: dict[str, list[str]] = field(default_factory=dict)  # "intro", scan id, "final"
+    # "intro", scan id, a beat's id (teaching scenarios), "final"
+    lines: dict[str, list[str]] = field(default_factory=dict)
+    beats: list[Beat] = field(default_factory=list)  # teaching scenarios only
+    # What he knew and could do at each frozen step ("start", a look's scan id, a beat's id),
+    # from `explain.belief_options`: data for the screen's options and thinking line, not lines.
+    pictures: dict[str, dict] = field(default_factory=dict)
+    rules: dict[str, dict] = field(default_factory=dict)  # teaching: what each rule saw and did
 
 
 @dataclass(frozen=True)
@@ -421,6 +455,234 @@ class _Builder:
                      predicate=Predicate(op="all", args=checks),
                      evidence=self._decision_evidence())  # fmt: skip
 
+    # --- a teaching scenario's beats (`pro_scan`) -------------------------------------------------
+
+    def at_reception(self, metric: str, **args):
+        return self.fn("metric_at", metric=metric, anchor=self.rs.reception.id, at=0.0, **args)
+
+    def nearest_line(self, k: str) -> Claim:
+        """Who is nearest him as the ball reaches him, and how far."""
+        rs = self.rs
+        f = rs.reception.frame
+        opp = _nearest_opponent(rs.run, self.hero, f)
+        d = float(np.linalg.norm(rs.run.pos[f, rs.run.index(opp)] -
+                                 rs.run.pos[f, rs.run.index(self.hero)]))  # fmt: skip
+        return Claim(
+            id=f"{k}_nearest",
+            template="When the ball reaches him, {opponent} is the opponent nearest to him, "
+                     "{d} m away.",
+            templates={"zh": "球到达时，离他最近的对手是{opponent}，相距{d}米。"},
+            slots={"opponent": Slot(ref=opp), "d": Slot(value=display(d, 1), decimals=1)},
+            predicate=Predicate(op="all", args=[
+                Predicate(op="eq", lhs=self.at_reception("nearest_opponent", player=self.hero),
+                          rhs=slot("opponent")),
+                Predicate(op="approx", lhs=self.at_reception("nearest_opponent_distance",
+                                                             player=self.hero),
+                          rhs=slot("d"), abs_tol=0.05),
+            ]),
+            evidence=[rs.reception.id],
+        )  # fmt: skip
+
+    def drop_back(self, beat: Beat) -> list[Claim]:
+        """Whether, after his look left, he dropped back toward the ball by the time it reached
+        him (rule 1 of `pro_scan`): his depth from when the rule acted to his reception."""
+        rs = self.rs
+        since = round((rs.reception.frame - beat.start) * rs.run.dt, 4)
+        delta = self.fn("metric_delta", metric="depth", anchor=rs.reception.id, from_=-since,
+                        to=0.0, player=slot("player"))  # fmt: skip
+        i = rs.run.index(self.hero)
+        sign = 1.0 if rs.run.players[i].team == 0 else -1.0
+        dropped = sign * float(rs.run.pos[beat.start, i, 0] - rs.run.pos[beat.end, i, 0])
+        if beat.happened:
+            line = Claim(
+                id="drop_back",
+                template="After his look to the left, {player} drops {d} m back toward the "
+                         "ball before it reaches him.",
+                templates={"zh": "看过左侧之后，{player}朝来球方向回撤了{d}米再接球。"},
+                slots={"player": Slot(ref=self.hero), "d": Slot(value=display(dropped, 1),
+                                                                decimals=1)},
+                predicate=Predicate(op="approx", lhs=delta, rhs=slot("d", scale=-1.0),
+                                    abs_tol=0.05),
+                evidence=[rs.reception.id],
+            )  # fmt: skip
+        else:
+            line = Claim(
+                id="drop_back",
+                template="After his look to the left, {player} does not drop back.",
+                templates={"zh": "看过左侧之后，{player}没有回撤。"},
+                slots={"player": Slot(ref=self.hero)},
+                predicate=Predicate(op="gt", lhs=delta, rhs=-DROP_MIN_M),
+                evidence=[rs.reception.id],
+            )
+        return [line, self.nearest_line("drop_back")]
+
+    def half_turn(self, beat: Beat) -> list[Claim]:
+        """Whether he received side-on, on the half-turn (rule 2 of `pro_scan`)."""
+        rs = self.rs
+        f = rs.reception.frame
+        angle = float(self.value(self.at_reception("body_open", player=self.hero)))
+        opened = self.at_reception("body_open", player=slot("player"))
+        slots = {"player": Slot(ref=self.hero), "a": Slot(value=round(angle), decimals=0)}
+        checks = [Predicate(op="approx", lhs=opened, rhs=slot("a"), abs_tol=0.5)]
+        if beat.happened:
+            opp = _nearest_opponent(rs.run, self.hero, f)
+            away = self.at_reception("turned_away", player=self.hero, opponent=opp)
+            checks.append(Predicate(op="ge", lhs=opened, rhs=SIDE_ON_DEG))
+            if self.value(away):
+                slots["opponent"] = Slot(ref=opp)
+                checks.append(
+                    Predicate(
+                        op="eq",
+                        lhs=self.at_reception(
+                            "turned_away", player=slot("player"), opponent=slot("opponent")
+                        ),
+                        rhs=True,
+                    )
+                )
+                template = (
+                    "{player} receives side-on, on the half-turn: his body is {a}° open "
+                    "from facing the ball, turned away from {opponent}."
+                )
+                zh = "{player}侧身接球：身体从正对来球的方向打开了{a}度，背向{opponent}。"
+            else:
+                template = (
+                    "{player} receives side-on, on the half-turn: his body is {a}° open "
+                    "from facing the ball."
+                )
+                zh = "{player}侧身接球：身体从正对来球的方向打开了{a}度。"
+        else:
+            checks.append(Predicate(op="lt", lhs=opened, rhs=SIDE_ON_DEG))
+            template = "{player} receives square, facing the ball: his body is {a}° off it."
+            zh = "{player}正对来球接球：身体与来球方向只差{a}度。"
+        return [Claim(id="half_turn", template=template, templates={"zh": zh}, slots=slots,
+                      predicate=Predicate(op="all", args=checks),
+                      evidence=[rs.reception.id])]  # fmt: skip
+
+
+# A teaching beat: he dropped back when he moved at least this far toward his own goal while the
+# ball came; he received side-on when his body was at least this far from square
+# (eval/pro_scan.py's SIDE_ON_DEG).
+DROP_MIN_M = 0.5
+SIDE_ON_DEG = 45.0
+
+
+def beats_of(run: MatchRun, hero: str, reception: Event, drop_frame: int) -> list[Beat]:
+    """The two beats of a teaching run, from the run itself: from `drop_frame` (when rule 1
+    acted) to his reception, did he drop back toward the ball; and did he receive side-on?"""
+    i = run.index(hero)
+    f = reception.frame
+    to_him = [e for e in run.events
+              if e.type == "pass" and e.attrs.get("to") == hero and e.frame < f]  # fmt: skip
+    sign = 1.0 if run.players[i].team == 0 else -1.0
+    dropped = sign * float(run.pos[drop_frame, i, 0] - run.pos[f, i, 0])
+    rel = np.asarray(to_him[-1].attrs["start"]) - run.pos[f, i]
+    opened = abs(float(np.rad2deg(wrap_angle(run.body_yaw[f, i] - np.arctan2(rel[1], rel[0])))))
+    return [Beat("drop_back", drop_frame, drop_frame, f, dropped >= DROP_MIN_M),
+            Beat("half_turn", f, f, f, opened >= SIDE_ON_DEG)]  # fmt: skip
+
+
+def _option_rows(options: list[OptionEval]) -> list[dict]:
+    """Options for the bundle, best valued first: believed success, choice weight, value."""
+    return [{"action": o.action, "p": round(o.p_success, 3), "prob": round(o.prob, 3),
+             "value": round(o.value, 4)}
+            for o in sorted(options, key=lambda o: (-o.value, o.action))]  # fmt: skip
+
+
+def _picture(before: list[dict], after: list[dict], frame: int, news: list[dict] | None = None,
+             ) -> dict:  # fmt: skip
+    """A frozen step's picture: his options before and now, which opened and closed (on the
+    rounded believed success the bundle carries, so the screen's diff is the same), and for a
+    look who is new in his picture."""
+    opened, closed = option_changes({o["action"]: o["p"] for o in before},
+                                    {o["action"]: o["p"] for o in after})  # fmt: skip
+    out = {"frame": frame, "before": before, "options": after, "opened": opened, "closed": closed}
+    if news is not None:
+        out["news"] = news
+    return out
+
+
+def build_pictures(rs: RunSteps, hero: str) -> dict[str, dict]:
+    """What he knew and could do at each frozen step of a run, in time order: "start" (before his
+    first look: the options of his forward view), each look he took (his options at its end,
+    with it against without it, and who is new in his picture), each beat (against the step
+    before). Missing looks have none."""
+    run = rs.run
+    seen = sightings(run, hero)
+    decided = rs.decision.frame
+    first = min((s.scan.frame for s in rs.steps), default=rs.reception.frame)
+    f0 = max(first - 1, 0)
+    prev = _option_rows(options_on_belief(run, hero, f0, seen))
+    out = {"start": {"frame": f0, "options": prev}}
+    frozen = [(s.frame, 0, s) for s in rs.steps if not s.missing]
+    frozen += [(b.frame, 1, b) for b in rs.beats]
+    for _, _, x in sorted(frozen, key=lambda t: (t[0], t[1])):
+        if isinstance(x, Step):
+            a, b = x.scan.frame, min(int(x.scan.attrs["end"]), decided)
+            without, with_look = look_options(run, hero, a, b, seen)
+            news = [{"id": n.player, "entered": n.entered, "moved": round(n.moved_m, 1),
+                     "before": round(n.gap_before_m, 1), "after": round(n.gap_after_m, 1)}
+                    for n in new_in_picture(run, hero, a, b, seen)]  # fmt: skip
+            prev = _option_rows(with_look)
+            out[x.scan.id] = _picture(_option_rows(without), prev, b, news)
+        else:
+            now = _option_rows(options_on_belief(run, hero, x.frame, seen))
+            out[x.id] = _picture(prev, now, x.frame)
+            prev = now
+    return out
+
+
+def _factual_evidence(claim: Claim, factual: MatchRun, cf: str | None) -> Claim:
+    """The Verifier resolves evidence in the factual run. A line about the other run cites its
+    events where the factual run has them too, and otherwise the intervention (the dropped look),
+    e.g. when the run without the look receives the ball on another frame (`pro_scan`)."""
+    known = {e.id for e in factual.events}
+    kept = [e for e in claim.evidence if e in known]
+    if len(kept) == len(claim.evidence) or cf is None:
+        return claim
+    return claim.model_copy(update={"evidence": kept or ([cf] if cf in known else [])})
+
+
+def _teaching_rules(ctx: MomentContext, run: MatchRun, labels: dict[str, str]) -> dict[str, dict]:
+    """What each of a teaching run's rules saw and did, from its scenario's state: the run is
+    re-simulated with the same looks and must be the same run."""
+    from sim.scenarios.pro_scan import HALF_TURN_M, NEAR_M, run_with_looks
+
+    radius = {"drop_back": NEAR_M, "half_turn": HALF_TURN_M}
+    taken = {e.id for e in run.events if e.type == "scan"}
+    keep = "".join(label for sid, label in labels.items() if sid in taken)
+    again, sc = run_with_looks(ctx.seed, keep)
+    if not np.array_equal(again.pos, run.pos):
+        raise RuntimeError(f"{ctx.scenario} seed {ctx.seed}: the run with looks {keep!r} differs")
+    out = {}
+    for rule, call in sc.calls.items():
+        row = {"frame": call.frame, "nearest": call.nearest, "nearest_m": round(call.nearest_m, 1),
+               "near": [pid for pid, _ in call.near], "radius_m": radius[rule]}  # fmt: skip
+        if rule == "drop_back":
+            spot = None if call.spot is None else np.asarray(call.spot)
+            moved = 0.0 if spot is None else float(np.linalg.norm(spot - sc.spot))
+            row["moved_m"] = round(moved, 1)
+            # How far the nearest of them would be from his new spot, as he believes.
+            row["after_m"] = (round(min(float(np.linalg.norm(spot - np.asarray(p)))
+                                        for _, p in call.near), 1)
+                              if spot is not None else None)  # fmt: skip
+        else:
+            row["side"] = call.side
+        out[rule] = row
+    return out
+
+
+def _look_labels(ctx: MomentContext) -> dict[str, str]:
+    """A teaching scenario's scripted looks by scan id ("L", "R"); empty elsewhere."""
+    from sim.engine import Simulation
+    from sim.scenarios import SCENARIOS
+
+    if not SCENARIOS[ctx.scenario].teaching:
+        return {}
+    from sim.scenarios.pro_scan import LOOKS, look_ids
+
+    sc = Simulation.from_scenario(ctx.scenario, ctx.seed).scenario  # its look times, from setup
+    return {sid: label for sid, (label, _, _) in zip(look_ids(sc), LOOKS, strict=True)}
+
 
 def _mate(ctx: MomentContext) -> str | None:
     runner = getattr(ctx.run, "runner", None) or _scenario_runner(ctx)
@@ -465,13 +727,19 @@ def build_steps(ctx: MomentContext) -> dict[str, RunSteps]:
     cf = ctx.cf
     dropped = cf.scan_id if isinstance(cf, CounterfactualResult) else None
     forced = not isinstance(cf, CounterfactualResult)
+    labels = _look_labels(ctx)
     out: dict[str, RunSteps] = {}
     for name, run, cf_id in (("factual", factual, None),
                              ("counterfactual", cf.counterfactual, cf.scan_id)):  # fmt: skip
-        d = next(x for x in run.decisions if x.player == hero and x.frame == decision.frame)
+        # His decision at the same frame, or, when the intervention moved it (in `pro_scan` the
+        # run without the forward look receives the ball sooner), his first one in this run.
+        d = next((x for x in run.decisions if x.player == hero and x.frame == decision.frame),
+                 None) or next(x for x in run.decisions if x.player == hero)  # fmt: skip
         reception = _reception(run, hero, d.frame)
         steps = _steps(run, factual, hero, reception, d.frame,
                        dropped if name != "factual" else None)  # fmt: skip
+        if labels:
+            steps = [Step(**{**s.__dict__, "direction": labels.get(s.scan.id)}) for s in steps]
         rs = RunSteps(name=name, run=run, cf=cf_id, forced=forced and name != "factual",
                       reception=reception, decision=d, steps=steps,
                       focus=focus_pair(run, d))  # fmt: skip
@@ -480,19 +748,29 @@ def build_steps(ctx: MomentContext) -> dict[str, RunSteps]:
                     for s in steps]  # fmt: skip
         claims: list[Claim | None] = [b.intro()]
         rs.lines["intro"] = ["steps_count"]
-        for k, s in enumerate(rs.steps, 1):
-            if s.missing:
-                these = [b.missing(k, s)]
+        if labels:  # a teaching scenario: the drop-back between his looks, the half-turn after
+            rs.rules = _teaching_rules(ctx, run, labels)
+            rs.beats = beats_of(run, hero, reception, rs.rules["drop_back"]["frame"])
+        frozen = [(s.frame, 0, k, s) for k, s in enumerate(rs.steps, 1)]
+        frozen += [(x.frame, 1, 0, x) for x in rs.beats]
+        for _, _, k, x in sorted(frozen, key=lambda t: t[:3]):  # in time order
+            if isinstance(x, Beat):
+                these = b.drop_back(x) if x.id == "drop_back" else b.half_turn(x)
+                key = x.id
+            elif x.missing:
+                these, key = [b.missing(k, x)], x.scan.id
             else:
-                these = [c for c in (b.when(k, s), b.sight_line(k, s), b.late(k, s)) if c]
+                these = [c for c in (b.when(k, x), b.sight_line(k, x), b.late(k, x)) if c]
+                key = x.scan.id
             claims += these
-            rs.lines[s.scan.id] = [c.id for c in these]
+            rs.lines[key] = [c.id for c in these]
+        rs.pictures = build_pictures(rs, hero)
         mate = _mate(ctx)
         final = [b.saw(mate) if mate else None, b.belief(mate) if mate else None, b.choice(),
                  b.pair()]  # fmt: skip
         claims += final
         rs.lines["final"] = [c.id for c in final if c is not None]
-        rs.claims = [c for c in claims if c is not None]
+        rs.claims = [_factual_evidence(c, factual, cf_id) for c in claims if c is not None]
         out[name] = rs
     return out
 

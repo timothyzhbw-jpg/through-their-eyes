@@ -211,6 +211,7 @@ uv run python -m sim.export --scenario blind_side_run --seed 3 --looks web/publi
 uv run python -m sim.export --scenario press_escape --seed 0 --looks web/public/data/look_press_escape_seed0.json
 uv run python -m sim.export --scenario blind_side_run --seed 3 --steps web/public/data/steps_seed3.json
 uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/data/steps_press_escape_seed0.json
+uv run python -m sim.export --scenario pro_scan --seed 116 --steps web/public/data/steps_pro_scan_seed116.json
 ```
 
 - `hero_seed3.json`: the replay (schema version 5, with blind-side alerts and the scan detector's
@@ -267,6 +268,12 @@ uv run python -m sim.export --scenario press_escape --seed 0 --steps web/public/
   velocity there (mm/s), and his decision with the two players it turns on; the verified lines in
   en and zh (`agents/steps.py`). `src/steps/steps.ts` checks the looks against the replay's own
   scan events; fetched when the mode first opens. `tests/test_steps.py` keeps them current.
+- `steps_pro_scan_seed116.json`: the coach's example (`src/steps/coach.ts`, SPEC 3.6
+  "Teaching"), the same format plus `teaching: true`, each look's scripted label (`direction`:
+  L, R) and two frozen beats per run, the drop-back (between the looks, when its rule acted) and
+  the half-turn (at his reception), each with its verified lines, what its rule saw and did
+  (`rule`) and his options then (`picture`); the card opens on his start view (`start`). Its hero export comes from the API (`pro_scan-116`, served but not listed); the look
+  times are scripted for teaching, and the card says so.
 
 Regenerate them whenever `sim/`, `analytics/` or `explain/` change, on Linux, the canonical
 platform: `scripts/regen_linux.sh exports` runs these commands in `python:3.11-slim`
