@@ -105,7 +105,7 @@ export const FACTS: readonly Fact[] = [
         : null,
     zh: ({ v, hero, n }) =>
       has(v, "n", "window_s")
-        ? `接球前${n("window_s", 1)}秒内，${hero}回头观察了${n("n", 0)}次。`
+        ? `接球前${n("window_s", 0)}秒内，${hero}回头观察了${n("n", 0)}次。`
         : null,
   },
   {
