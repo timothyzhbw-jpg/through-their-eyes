@@ -28,6 +28,7 @@ DOCS = [
     *(ROOT / "docs" / name for name in ("SUBMISSION.md", "RUBRIC_MAP.md", "EVALS.md")),
     ROOT / "docs" / "DEMO_SCRIPT.md",
     ROOT / "docs" / "VIDEO_SCRIPT.md",
+    ROOT / "web" / "src" / "journey" / "measured.ts",  # the one measured number For studios shows
 ]
 
 NUM = r"(−?-?\d+(?:\.\d+)?)"
@@ -159,6 +160,12 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"\([^)]*\); without it {NUM} aired, [^:]*: {NUM} false",
         ("total", "kept", "aired", "false"),
     ),
+    "MA6": (
+        "crew_vs_single.md",
+        rf"(?s)## The four arms, on the shipped schema.*?"
+        rf"\| cost per breakdown, USD \| [^|]+ \| [^|]+ \| [^|]+ \| {NUM} ",
+        ("crew",),  # arm D, the crew as deployed (with the Verifier)
+    ),
     "A5b": (
         "corruption.md",
         rf"\| Generated claims verified `supported` \| {NUM}/{NUM} \({NUM}%\)",
@@ -259,3 +266,8 @@ def test_the_markers_cover_the_headline_numbers():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for key in ("H1", "H2", "A5", "R3", "V1"):
         assert f"<!--num:{key}" in readme, f"README.md quotes {key} without a marker"
+
+
+def test_measured_ts_has_exactly_one_number_marker():
+    measured = (ROOT / "web" / "src" / "journey" / "measured.ts").read_text(encoding="utf-8")
+    assert len(MARKER.findall(measured)) == 1

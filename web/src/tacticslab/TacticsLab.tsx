@@ -303,15 +303,20 @@ function LaneLine({ lane }: { lane: Lane }) {
 
 // ---------- the chapter ----------
 
-/** `kicker`: the chapter's kicker where the lab is a step of the journey (journey/). */
+/** `kicker`: the chapter's kicker where the lab is a section of For studios (journey/), which
+ * also picks its card (`card`, `onPick`: the broadcast's questions open a card). */
 export function TacticsLabPanel({
   xt: injected,
   scope: injectedScope,
   kicker = "Tactics lab",
+  card: chosen,
+  onPick,
 }: {
   xt?: XtGrid;
   scope?: Scope; // tests
   kicker?: string;
+  card?: CardId;
+  onPick?: (card: CardId) => void;
 }) {
   const view = useView();
   const loaded = useXtGrid();
@@ -319,7 +324,9 @@ export function TacticsLabPanel({
   const asked = useScope();
   const scope = injectedScope ?? asked;
   const cards = useMemo(() => buildCards(view.hero, grid, scope), [view.hero, grid, scope]);
-  const [picked, setPicked] = useState<CardId>("high_press");
+  const [own, setOwn] = useState<CardId>("high_press");
+  const picked = chosen ?? own;
+  const setPicked = onPick ?? setOwn;
   const card = cards.find((c) => c.id === picked) ?? cards[0];
   // The board is the Decisions card's moment's: the page's own, or the one loaded for the card;
   // with no service the bundled moment is all there is.

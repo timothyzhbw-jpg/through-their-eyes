@@ -1862,8 +1862,7 @@ optgroup {
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   grid-template-areas:
     "kicker kicker"
-    "title lede"
-    "cta cta";
+    "title lede";
   align-items: end;
   gap: 32px 64px;
 }
@@ -1948,28 +1947,6 @@ optgroup {
 .chapter-lede .seg,
 .chapter-lede .btn {
   align-self: flex-start;
-}
-.moment-cta {
-  grid-area: cta;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px 24px;
-}
-.moment-cta .btn {
-  height: 56px;
-  padding: 0 26px;
-  font-size: 16px;
-}
-.moment-cta .written {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--chalk-3);
-}
-.moment-cta .written svg {
-  color: var(--floodlight);
 }
 /* the match data under the moment's chapters, one click away */
 .below > .match-data {
@@ -3684,8 +3661,7 @@ optgroup {
     grid-template-areas:
       "kicker"
       "title"
-      "lede"
-      "cta";
+      "lede";
   }
   .moment-head .kicker {
     display: block;

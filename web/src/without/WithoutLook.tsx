@@ -68,8 +68,9 @@ function useExtraLooks(): ExtraLooks | null {
   return useStore(c?.state ?? NO_EXTRA, (s) => s.data);
 }
 
-/** This hero's held-out count, once the session has loaded it; null when the file is missing. */
-function useHeroGate(): HeroGate | null {
+/** This hero's held-out count, once the session has loaded it; null when the file is missing.
+ * The landing page's evidence strip reads it too. */
+export function useHeroGate(): HeroGate | null {
   const session = useView();
   const c = session.kind === "hero" ? heroGatesOf(session) : null;
   return useStore(c?.state ?? NO_GATES, (s) => s.gate);

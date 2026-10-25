@@ -1,4 +1,4 @@
-// The stadium's screens for the journey's Content and Value steps: the Stadium Screen Studio's own
+// The stadium's screens for For studios' Stadium and Value sections: the Stadium Screen Studio's own
 // show (stadium/), built once per page from the same bundled files the studio page reads, on the
 // programme's event for the moment on screen. Offline: no service, no model. The 3D bowl stays on
 // the studio page (?studio=1); here the screens are the flat Screen wall. The studio's code loads

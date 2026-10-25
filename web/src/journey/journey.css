@@ -1,5 +1,5 @@
-/* The studios' journey (Journey.tsx): a bar that stays at the top while door 3's page scrolls, and
-   the open step's panel under it; door 1's compare panel shares the panel parts. The panels are the
+/* For studios (Journey.tsx): a bar that stays at the top while door 3's page scrolls, and the open
+   section's panel under it; door 1's compare panel shares the panel parts. The panels are the
    shared panel parts (styles.css). Solid colours: no blur behind the bar, and a step change is a
    cut, never a fade. */
 
@@ -154,6 +154,64 @@
 }
 .journey-stadium .screen-wall {
   width: 100%;
+}
+/* A solution's head: its "Business value" line under the lede, quiet beside the value line. */
+.journey-worth,
+.journey-measured {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.journey-label {
+  font: 600 11px/1.6 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--floodlight);
+}
+.journey-measured strong:not(.journey-label) {
+  color: var(--chalk);
+}
+/* A · the tactical broadcast comes first and largest: its title at the story's size. */
+.journey-panel .journey-broadcast h2 {
+  font-size: clamp(36px, 4vw, 56px);
+}
+.journey-asks .btn {
+  white-space: normal;
+  text-align: left;
+}
+.journey-audiences {
+  margin: 0;
+}
+.journey-audiences .tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.journey-audiences dt {
+  font: 500 16px/1.3 var(--font-body);
+  color: var(--chalk);
+}
+.journey-audiences dd {
+  margin: 0;
+  color: var(--chalk-2);
+}
+.journey-lever-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.journey-lever-list strong {
+  color: var(--chalk);
+  font-weight: 500;
 }
 .journey-facts {
   display: flex;

@@ -1,5 +1,5 @@
 {
-  "about": "The tours (SPEC 7). 'quick' is door 1's story, The look, about a minute: watch the look, remove it, compare the outcomes, see every number checked, then an end card whose only choices are the other two doors and watching again; Watch the look on the intro card opens it. 'steps' is the full judge tour, about ninety seconds walking the three doors in order: the look, your turn, for studios, then the whole match. 'story' walks the studios' door, Tactics → Content → Value → Behind the scenes, opening each step's panel (journey: the step whose panel it opens). Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (door: the door it opens first; enter: on arrival; act: a button in the tour card, for anything that calls the service, except the quick tour's check, which types the wrong number itself — deterministic, no model call; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
+  "about": "The tours (SPEC 7). 'quick' is door 1's story, The look, about a minute: watch the look, remove it, compare the outcomes, see every number checked, then an end card whose only choices are the other two doors and watching again; Watch the look on the intro card opens it. 'steps' is the full judge tour, about ninety seconds walking the three doors in order: the look, your turn, for studios, then the whole match. 'story' walks the studios' door, its four solutions (tactical broadcast, personalised commentary, automated highlights, the stadium) and then their value, opening each section's panel (journey: the section whose panel it opens). Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (door: the door it opens first; enter: on arrival; act: a button in the tour card, for anything that calls the service, except the quick tour's check, which types the wrong number itself — deterministic, no model call; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
   "steps": [
     {
       "id": "pov",
@@ -91,25 +91,25 @@
     {
       "id": "studios",
       "title": "For studios",
-      "caption": "Door three is the business side: why the tactics work, the content package and the stadium's screens, what it could be worth, every figure labelled.",
+      "caption": "Door three, for the league: a tactical broadcast, commentary for every fan, highlights for its channels, the stadium's screens, then their value.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
       "door": "studios",
       "enter": "none",
-      "journey": "tactics",
+      "journey": "broadcast",
       "needs": ["hero"],
       "hold": 8
     },
     {
       "id": "producer",
       "title": "Failure drill",
-      "caption": "Behind the scenes, take an agent down as in an outage: the crew falls back to its template and still airs. Then bring it back from its checkpoint.",
+      "caption": "Behind the commentary, take an agent down as in an outage: the crew falls back to its template and still airs. Then bring it back from its checkpoint.",
       "target": "section.producer",
       "dim": true,
       "door": "studios",
       "enter": "producer",
       "act": "drill",
-      "journey": "crew",
+      "journey": "commentary",
       "needs": ["hero", "api"],
       "hold": 10
     },
@@ -217,50 +217,62 @@
   ],
   "story": [
     {
-      "id": "story-tactics",
-      "title": "Tactics",
-      "caption": "Why the tactic in this moment works, measured on this match's own synthetic data. Every number says what it is and where it comes from.",
+      "id": "story-broadcast",
+      "title": "AI Tactical Broadcast",
+      "caption": "Tactics explained on air. Ask why the press worked or why the threat jumped, and the view that answers it opens, every number with its source.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
       "door": "studios",
       "enter": "none",
-      "journey": "tactics",
+      "journey": "broadcast",
       "needs": ["hero"],
-      "hold": 18
+      "hold": 16
     },
     {
-      "id": "story-content",
-      "title": "Content",
-      "caption": "The same moment as a package: a highlight, an explainer, posts and data cards, and the stadium's screens, all built from the checked lines.",
+      "id": "story-commentary",
+      "title": "AI Personalised Commentary",
+      "caption": "One checked account told for each fan: casual or tactical, following one player, in English or Chinese. Below it, the AI crew that writes it.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
       "door": "studios",
       "enter": "none",
-      "journey": "content",
+      "journey": "commentary",
       "needs": ["hero"],
-      "hold": 18
+      "hold": 12
+    },
+    {
+      "id": "story-highlights",
+      "title": "AI Automated Highlights",
+      "caption": "The moment as a highlight with its shot list, captions, posts for each platform, and landscape and vertical cards, for the league's own channels.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "door": "studios",
+      "enter": "none",
+      "journey": "highlights",
+      "needs": ["hero"],
+      "hold": 14
+    },
+    {
+      "id": "story-stadium",
+      "title": "AI Stadium Experience",
+      "caption": "The same moment on the stadium's main board, tunnel screens and ribbon ring, with a virtual preview of the bowl.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "door": "studios",
+      "enter": "none",
+      "journey": "stadium",
+      "needs": ["hero"],
+      "hold": 10
     },
     {
       "id": "story-value",
       "title": "Value",
-      "caption": "What the package could be worth. The audience and sponsor figures are simulated, not results, and every one of them is labelled so.",
+      "caption": "What it is worth to the league, in plain words first. The audience and sponsor figures after them are simulated, not results, and labelled so.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
       "door": "studios",
       "enter": "none",
       "journey": "value",
-      "needs": ["hero"],
-      "hold": 14
-    },
-    {
-      "id": "story-crew",
-      "title": "Behind the scenes",
-      "caption": "The AI crew that wrote it: a cue list checked before it plays, the evidence behind every claim, and a failure drill that takes an agent down.",
-      "target": "#journey-panel .chapter-head",
-      "dim": true,
-      "door": "studios",
-      "enter": "none",
-      "journey": "crew",
       "needs": ["hero"],
       "hold": 12
     }
