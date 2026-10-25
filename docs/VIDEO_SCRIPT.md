@@ -20,6 +20,19 @@ npm run trailer                                          # → out/video/trailer
 How the edit is built (steps, options, caches) is in [video/README.md](../video/README.md),
 "Trailer edit". This page is the treatment: what is on screen, what is said, and why.
 
+**Current app reference (not extra video beats).** A plain visit opens a landing page with three
+doors: **The look**, **Your turn** and **For studios**. The header's brand returns to the landing
+page, and one **⋯ Settings** menu holds the moment picker, commentary audience and language,
+follow controls, sound, view options and full tour. The look tells the moment's story; Your turn
+contains **Make his call**, **See through his eyes** and **Train your scanning**. For studios
+presents **A · AI Tactical Broadcast**, **B · AI Personalised Commentary**, **C · AI Automated
+Highlights** and **D · AI Stadium Experience**, then **Value**, led by the league's revenue
+levers. Their canonical links are `?step=broadcast`, `commentary`, `highlights`, `stadium` and
+`value`. The Tactics lab has **Pro** and **Plain** explanations, tactical terms open glossary
+definitions, chapter content uses reduced-motion-aware scroll reveal, and the scan story links to
+the coach's `pro_scan` example at `?play=steps&match=pro_scan-116`. The existing deep-link captures
+below still open their intended features; the new landing page does not change the cut's timings.
+
 - **Numbers.** A number in the voice, the captions or our title cards comes only through a
   `{claim.value}` slot filled from the verified claims read off the live page
   (`out/video/claims.json`, the capture kit's harvest). Without the claim, the card or line uses
@@ -159,24 +172,25 @@ two renderers sit together.
 ## Choices made against the brief
 
 The cut follows the data where a requested beat does not hold:
-- **A single look.** H8 makes one scan before the ball arrives (the key scan, frames 50–70;
-  verified: "H8 checked his shoulder before the ball reached him"). His name card says so
-  without a number word: "A SINGLE LOOK. THAT'S ALL HE GETS."
+- **A single look.** J. Ferriday makes one scan before the ball arrives (the key scan, frames
+  50–70; verified: "J. Ferriday scanned once in the 2 seconds before receiving."). His name card
+  says so without a number word: "A SINGLE LOOK. THAT'S ALL HE GETS."
 - **"He saw 4. He missed 1." is not a claim** the service verifies, so the freeze shows a verified
-  one: his picture of H9 was off by `{err}` m when he passed.
-- **Without the look he does not lose the ball** here: he plays it safe to H4 (verified: "Without
-  that look, H8 would have passed to H4"). Losing the ball is told by the pressure chapter, where
-  the re-simulated carry is tackled, and by the staged story, which is labelled a dramatisation.
+  one: his picture of N. Varnhall was off by `{err}` m when he passed.
+- **Without the look he does not lose the ball** here: he plays it safe to K. Annersley (verified:
+  "Without that look, J. Ferriday would have passed to K. Annersley."). Losing the ball is told by
+  the pressure chapter, where the re-simulated carry is tackled, and by the staged story, which is
+  labelled a dramatisation.
 - **The story is staged, not simulated**, so it carries "DRAMATISATION · RENDERED IN BLENDER";
   the jokes and the second person ("YOU ARE No. 14.") stay on fictional players.
-- **One key scan, so one label.** The step-through labels only scans the sim has: H8's single
-  look gets "SCAN · DETECT", then "DECISION · EXECUTE"; no second scan is invented. The run
+- **One key scan, so one label.** The step-through labels only scans the sim has: J. Ferriday's
+  single look gets "SCAN · DETECT", then "DECISION · EXECUTE"; no second scan is invented. The run
   without the look shows the app's own "No look here" step under "WITHOUT THE LOOK / NO SCAN. NO
   PICTURE. NO TIME."
-- **The tablet's blind spot is H9.** The press counterfactual (the in-engine twin of the charge)
-  has no blind-side alert on H4: he had seen the presser (scans at frames 34 and 57). The only
-  blind-side alert on a POV player is the hero's: H9 unseen by H8 from frame 42 to the decision in
-  the run without the look, so the tablet shows that board.
+- **The tablet's blind spot is N. Varnhall.** The press counterfactual (the in-engine twin of the
+  charge) has no blind-side alert on K. Annersley: he had seen the presser (scans at frames 34 and
+  57). The only blind-side alert on a POV player is the hero's: N. Varnhall unseen by J. Ferriday
+  from frame 42 to the decision in the run without the look, so the tablet shows that board.
 - **No two-pane split.** The app's "split" focus is now his eyes with the board inset, so with and
   without the look use the app's own With / Without switch on the board, then the step-through.
 - **The Verifier's offline result is read, not typed.** The card's figures (NUMBERS MA8) fill from

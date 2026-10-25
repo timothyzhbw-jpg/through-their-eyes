@@ -2068,6 +2068,37 @@ The same plan format doubles as a machine-readable overlay cue list for a produc
 Vite + React + TypeScript + three.js via React Three Fiber (+ drei). Fictional teams and an
 original visual identity.
 
+- **Landing page and three doors** ([web/src/doors/](../web/src/doors/), [App.tsx](../web/src/App.tsx)):
+  a plain visit opens the landing page (`?door=home`). It carries the promise, **Watch the look
+  (60 s)**, a short introduction to each door with direct feature links, and the evidence. The
+  brand returns here. Every page has the same header: **The look**, **Your turn**, **For studios**
+  and one **⋯ Settings** menu. A deep link to a feature opens its door directly.
+  - **The look** (`?door=look`) is the hero moment's live picture and story: the look, the run
+    without it, their comparison, the scan step-through, commentary, evidence and what-ifs.
+  - **Your turn** (`?door=turn`) is a hub whose cards open **Make his call**, **See through his
+    eyes** and **Train your scanning** (`?play=yourcall`, `?play=eyes`, `?play=drill`). Each mode
+    takes the screen and returns to the hub when closed.
+  - **For studios** (`?door=studios`) presents four solutions, one section at a time:
+    **A · AI Tactical Broadcast** (`?step=broadcast`), **B · AI Personalised Commentary**
+    (`?step=commentary`), **C · AI Automated Highlights** (`?step=highlights`) and
+    **D · AI Stadium Experience** (`?step=stadium`). **Value** (`?step=value`) leads with the
+    league's revenue levers, then the measured model cost and clearly labelled demo KPIs. The old
+    `?step=tactics`, `content` and `crew` addresses still open A, C and B; the old Event and Your
+    view addresses open The look's comparison and Settings respectively.
+  - Settings holds the moment picker, audience and language under **Commentary**, club and player
+    under **Follow**, **Sound**, **View options** and the full tour. The stadium section links to
+    the full Stadium Screen Studio at `?studio=1`.
+- **Terms explained in place** ([web/src/glossary/](../web/src/glossary/)): tactical terms in
+  commentary, chapter introductions, the crew panel and the Tactics lab are keyboard-focusable
+  buttons. Focusing or activating one opens a plain definition in the selected language, with an
+  extra analyst note for that audience and, where available, the moment's own checked value as
+  context. Escape closes the explanation and restores focus.
+- **Scroll reveal** ([web/src/ui/reveal.ts](../web/src/ui/reveal.ts),
+  [TextReveal.tsx](../web/src/ui/TextReveal.tsx)): chapter cards ease in once as they enter view,
+  and headings lift word by word in response to the reader's own scrolling. Deep-link jumps leave
+  the text plainly visible. Reduced motion, keyboard focus and browsers without
+  IntersectionObserver show everything immediately.
+
 - **Players:** rigged footballers in POV and broadcast, stylised capsule/pawn tokens with team
   colour and number on the tactical board. The tokens stay as the fallback (`?rigged=0`, and
   automatically if the model fails to load).
@@ -2293,9 +2324,9 @@ original visual identity.
     held-out seeds 200–239 only 14% of looks do: it is a pressure story, and seed 0's decision is
     a close call.
 - **Academy drill** (2026-10-22, Bowen: a light, game-like scan trainer with no sim change;
-  [web/src/drill/](../web/src/drill/); "Academy drill" on the moment, the Moments menu and the intro
-  card; deep link `?play=drill`, with `?match=press_escape-0` for the harder moment, or in a
-  stitched match its first hero moment with a look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
+  [web/src/drill/](../web/src/drill/); **Your turn → Train your scanning**, also linked from the
+  landing page; deep link `?play=drill`, with `?match=press_escape-0` for the harder moment, or in
+  a stitched match its first hero moment with a look grid): the trailer's lesson as a drill. You are the hero in first person a moment before the
   pass reaches him, check your shoulder, then make the pass with only what your look showed. It
   wraps Take his eyes' grid and Your call's picture: every look was re-simulated ahead of time, so
   no live re-simulation and no model call.
@@ -2398,28 +2429,26 @@ original visual identity.
   number offers **Try a wrong number**: the viewer's value goes to `POST /api/verify`, the real
   Verifier re-checks the claim, and the card shows the verdict, its reason and the line struck
   through when it would not air (deep link `?tamper=<claim id>`).
-- **Every moment in reach** (2026-10-22, Bowen: "why does the site now have only one moment?";
-  [web/src/moments/](../web/src/moments/)): a rail of links above the live screen (and the same
-  row on the intro card, beside Start) names every moment the site plays, as the trailer's
-  chapters do: The look (`blind_side_run` seed 3), Under pressure (`press_escape` seed 0), The
-  corner and The goal (`corner_blind_side`, `far_post_finish`: hero moments inside match-1, opened
-  as their breakdowns there with `?match=match-1&moment=<scenario>`, where they are cached), and
-  Full match · live (match-1's stream), then, set apart, the Academy drill (`?play=drill`). The
-  page on screen is marked; a phone scrolls the row sideways. While the intro card is up the rail keeps its place, hidden; it stays off Your call,
-  Take his eyes and the step-through, which have their own way back; `rail=0` leaves it out (the
-  demo video's framing). On a hero page the Live pill opens the full match's stream.
-- **Quick tour** (2026-10-22, outside UX review: a first-time visitor met too many concepts and
-  buttons at once; [web/src/tour/](../web/src/tour/), the `quick` list of
-  [steps.json](../web/src/tour/steps.json); Start on the intro card, "Quick tour" on the moment
-  card, the link `?tour=quick`): one path in five steps, under a minute, on the app's own
-  features: watch the look (his eyes, slowed around it, paused a little after his decision; "Watch
-  it again"), remove it (the run without the look), compare the outcomes (the board from above
-  once both passes have arrived, the run without the look as the gold ghost path), every number is
-  checked (the evidence card on the tour's claim in the Analyst's commentary, a wrong number typed
-  by the tour and marked as such, the Verifier's refusal with its reason; online only, deterministic,
-  no model call, from cached breakdowns), make your call (Your call). Its words carry no number. It
-  opens only on a hero moment with a key scan and the run without it; elsewhere Start starts
-  watching. Its last step offers the full tour.
+- **Every moment in reach** ([web/src/moments/](../web/src/moments/)): **⋯ Settings → Moment**
+  names the moments the site plays: The look (`blind_side_run` seed 3), Under pressure
+  (`press_escape` seed 0), The corner and The goal (`corner_blind_side`, `far_post_finish`: hero
+  moments inside match-1, opened as their breakdowns there with
+  `?match=match-1&moment=<scenario>`, where they are cached), and Full match · live (match-1's
+  stream). The current page is marked, and choosing a link closes Settings. On a stitched match the
+  same section also holds the match picker. `rail=0` hides the header's three door tabs for the
+  demo video's framing; Settings and its moment picker remain.
+- **Quick tour** ([web/src/tour/](../web/src/tour/), the `quick` list of
+  [steps.json](../web/src/tour/steps.json); **Watch the look** on the landing page or a hero
+  moment's intro card, and `?tour=quick`): The look's story in five steps, about a minute, on the
+  app's own features: watch the look (his eyes, slowed around it, paused a little after his
+  decision), remove it (the run without the look), compare the outcomes (the board from above once
+  both passes have arrived, the run without the look as the gold ghost path, with a link to the
+  scan story), check a wrong number (the evidence card on the tour's claim in the Analyst's
+  commentary, a wrong number typed by the tour and marked as such, the Verifier's refusal with its
+  reason; online only, deterministic, no model call, from cached breakdowns), then an end card.
+  That card's only choices are **Your turn**, **For studios** and **Watch again**. Its words carry
+  no number. It opens only on a hero moment with a key scan and the run without it; elsewhere the
+  primary button starts watching.
   - *One panel per step.* While a tour runs its card is the one panel: the moment card and the
     HUD row (whose eyes, the director's suggestions, the stats ticker) stand down; the evidence
     card stays when a step opens it (the full tour, and the quick tour's check). In the quick tour
@@ -2428,23 +2457,24 @@ original visual identity.
     the run without it and the comparison, with "How xT works" on demand). It sits in the moment
     card's place on a wide screen and, on a step that keeps the picture in view, under the picture
     on a phone, so the player and the pass stay in view; a step that dims the page is placed clear
-    of the card it points at. On a phone the Your call step starts as a bar, since Your call's own
-    card tells it.
-- **Judge tour**, the full tour ([web/src/tour/](../web/src/tour/); "Full tour · 90 s" behind
-  "Teams and more" on the intro card, in the story and at the end of the quick tour, and the link
-  `?tour=1`, or `?tour=<step id>`): an optional walk of about ninety seconds, so a judge with
-  three minutes sees every signature feature without exploring. The steps are data ([steps.json](../web/src/tour/steps.json)): what each one points
-  at (CSS selectors), one plain line, the app control it runs on arrival, an optional button in
-  the tour card, and a suggested hold in seconds that the video kit can read as a capture script.
-  - *Steps.* The first-person replay with its key scan, in the Analyst's commentary (the one whose
-    captions carry verified numbers); the run without the look; a caption's evidence; Try a wrong
-    number; Your call; Take his eyes (opened on his own look, the dial and the times out; the
-    viewer picks and presses Look, and the app keeps the keyboard); another audience in another
-    language (a casual fan, in Chinese); the Producer's failure drill and bring-back; then the
-    whole match, whose card links to `?match=match-1&play=recap&tour=recap`, where the tour goes
-    on at the full-time recap card. A step the page cannot show (no live service, no
-    counterfactual, no Your call, no bundled look grid; a match page shows only its recap) is left
-    out, not shown broken.
+    of the card it points at.
+- **Judge tour**, the full tour ([web/src/tour/](../web/src/tour/); **⋯ Settings → Full tour ·
+  90 s**, and `?tour=1` or `?tour=<step id>`): an optional walk through the three doors and the
+  whole match, so a judge sees every signature feature without exploring. The steps are data
+  ([steps.json](../web/src/tour/steps.json)): what each one points at (CSS selectors), one plain
+  line, the app control it runs on arrival, an optional button in the tour card, and a suggested
+  hold in seconds that the video kit can read as a capture script.
+  - *Steps, in order.* The look's first-person replay with its key scan, in the Analyst's
+    commentary; the run without the look; a caption's evidence; Try a wrong number; another
+    audience in another language (a casual fan, in Chinese, chosen in Settings); Your turn's Make
+    his call; Your turn's See through his eyes (opened on his own look); For studios' Tactical
+    broadcast; the Producer's failure drill and bring-back under Personalised commentary; the
+    whole match, whose card links to `?match=match-1&play=recap&tour=recap`; the full-time recap;
+    and the end card. A step the page cannot show (no live service, no counterfactual, no Your
+    call, no bundled look grid; a match page shows only its recap) is left out, not shown broken.
+  - **Studios' walk.** `?tour=story` opens For studios' sections in order: Tactical broadcast,
+    Personalised commentary, Automated highlights, Stadium and Value. The old step ids land on
+    the section that now holds their feature.
   - *It never takes over.* It only calls the app's own controls, and never presses anything that
     spends a model call or a check (the wrong number, the drill, the bring-back): the viewer does,
     with the card's button. The overlay lets every click through, the card is a non-modal dialog,
@@ -2453,10 +2483,22 @@ original visual identity.
   - Next, Back, Skip; arrow keys and Escape in the card. Reduced motion: no animated ring, no
     smooth scrolling. On a phone the card is a sheet across the width that folds into a bar once
     the viewer touches the app, so Your call and the evidence stay usable.
-- **Tactics cards** ([web/src/tactics/](../web/src/tactics/), §4.8): "Why build from the back?"
-  and "Why focus on set pieces?" in the analyst's stats panel (a match's: folded, with a note,
-  until full time, because they are whole-match numbers and the panel otherwise shows only what
-  is known at the playhead) and in the end-of-match recap, in its language.
+- **Tactics lab** ([web/src/tacticslab/](../web/src/tacticslab/), §4.8): five tactic tabs measured
+  in the browser from the loaded match scope and bundled xT grid, with no model call. It appears
+  under **For studios → A · AI Tactical Broadcast** and below a stitched match. A broadcast
+  question selects the relevant card; every tactic also links to its moment and comparison.
+  - Each card and parameter row has **Pro** and **Plain** explanations. The audience chooses the
+    initial level, and the viewer can switch it explicitly. Every row keeps a collapsed **What it
+    counts** definition and a source chip; each card keeps **What these numbers leave out**.
+  - **GlossaryText** makes tactical terms focusable explanations in the selected language, with
+    extra analyst detail and moment-specific context where available. The pass-lane board shows
+    open and blocked options at the pressure hero's decision, with believed and true completion
+    chances from the simulation.
+- **Verified tactics cards** ([web/src/tactics/](../web/src/tactics/), §4.8), separate from the
+  lab: "Why build from the back?" and "Why focus on set pieces?" in the analyst's stats panel (a
+  match's: folded, with a note, until full time, because they are whole-match numbers and the
+  panel otherwise shows only what is known at the playhead) and in the end-of-match recap, in its
+  language.
   - Measured numbers carry the `tracking` chip, the decision model's options the `sim` chip.
   - Each card's sentence carries its claim kind, a verified stamp and Watch (seek to its
     evidence).
@@ -2494,8 +2536,9 @@ original visual identity.
     on the switch: Safari and every iOS browser start an `<audio>` element only from a tap, and a
     line starts long after it (teammates heard nothing, 2026-10-21). On an iPhone the page plays
     as media, past the silent switch. A stitched match, its recap and every breakdown opened from
-    it share one switch, on the match's live screen too; until it has been on once it reads "Tap
-    for sound", and a line that could not be spoken says "No voice" beside it.
+    it share one switch, on the match's live screen too. The switch is under **⋯ Settings →
+    Sound** and reads **Sound off** until enabled; a line that could not be spoken says "No voice"
+    beside it.
   - The look: floodlight halos and flares (additive sprites, no bloom pass), contact shadows,
     and a CSS grade and first-person vignette over the canvas.
   - `prefers-reduced-motion`: no slow motion, push-in, count-up or sting;
@@ -2618,13 +2661,14 @@ reported to be Xsens motion capture; animation only): the players' walk
       [tour.test.tsx](../web/src/tour/tour.test.tsx); `npm run smoke`, pages `tour` and
       `phone-tour` (1440 × 900 and an iPhone 17), every step's card inside the screen and
       no sideways scroll
-- [x] Quick tour: Start on the intro card opens it on the hero moment; five steps (the look in
-      his eyes, the run without it, the board with both passes arrived and the other run's ghost
-      path, every number is checked — the evidence card on the tour's claim in the Analyst's
-      commentary, a wrong number typed by the tour and marked as such, the Verifier's refusal with
-      its reason; online only, deterministic, no model call, from cached breakdowns — and Your
-      call), each on the app's own controls; it takes under a minute of holds, its words carry no
-      number, and it does not open on a page without a key scan and the run without it.
+- [x] Quick tour: **Watch the look** on the landing page or intro card opens it on the hero
+      moment; five steps (the look in his eyes, the run without it, the board with both passes
+      arrived and the other run's ghost path, every number is checked — the evidence card on the
+      tour's claim in the Analyst's commentary, a wrong number typed by the tour and marked as
+      such, the Verifier's refusal with its reason; online only, deterministic, no model call,
+      from cached breakdowns — and the end card with only Your turn, For studios and Watch again),
+      each on the app's own controls; it takes about a minute, its words carry no number, and it
+      does not open on a page without a key scan and the run without it.
       — [web/src/tour/steps.test.ts](../web/src/tour/steps.test.ts),
       [tour.test.tsx](../web/src/tour/tour.test.tsx) ("the quick tour"),
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx); `npm run smoke`, pages
@@ -2764,9 +2808,10 @@ reported to be Xsens motion capture; animation only): the players' walk
       60 fps capped with the skeleton on over the broadcast camera and the board, as with it off;
       uncapped 585 → 560 fps, and 92–100 → 89–93 fps at a 4× CPU throttle. Not measured on an
       integrated GPU.
-- [x] Cold load: nothing of the hero moment plays under the intro card, which waits for the
-      viewer; after Start, the run without the look and its verified line are on screen within
-      20 s, and any viewer action ends the show.
+- [x] Cold load: a plain visit opens the landing page, which makes no service call; a hero
+      moment's intro card waits for **Watch the look**, with nothing playing under it. After that,
+      the run without the look and its verified line are on screen within 20 s, and any viewer
+      action ends the show.
       — [web/src/autoplay/comparison.test.ts](../web/src/autoplay/comparison.test.ts),
       [web/src/ui/intro.test.tsx](../web/src/ui/intro.test.tsx) ("after Start, the run without
       the look is on screen and said within 20 s"),
