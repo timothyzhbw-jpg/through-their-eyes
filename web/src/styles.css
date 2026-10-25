@@ -570,9 +570,6 @@ optgroup {
 .intro-more-toggle[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
-.intro-moments .kicker {
-  margin: 0 0 8px;
-}
 .intro-more {
   padding-top: 16px;
   border-top: 1px solid var(--hairline-strong);
@@ -1059,55 +1056,10 @@ optgroup {
 .header-end {
   margin-left: auto;
 }
-/* the header's few controls: quiet glass over the picture, no outline */
-.header-more > .btn,
-.moments-menu > .btn,
-.header-end .yc-open[aria-pressed="false"] {
-  background: rgba(8, 14, 11, 0.45);
-  box-shadow: none;
-}
-.header-more > .btn:hover,
-.header-more > .btn[aria-expanded="true"],
-.moments-menu > .btn:hover,
-.moments-menu > .btn[aria-expanded="true"] {
-  background: rgba(239, 237, 229, 0.12);
-}
-/* Moments: the moment links in one menu under its button */
-.moments-panel {
-  top: 54px;
-  left: 0;
-  width: 220px;
-}
-.moments-panel[hidden] {
-  display: none;
-}
-.moments-panel .moment-chips ul {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  gap: 2px;
-}
-.moments-panel .moment-chip {
-  display: flex;
-  width: 100%;
-  height: 38px;
-  border-radius: 12px;
-  box-shadow: none;
-  font-size: 14px;
-}
-.moments-panel .moment-chip:hover {
-  background: rgba(239, 237, 229, 0.08);
-  box-shadow: none;
-}
-.moments-panel .moment-chips .drill-item {
-  margin-top: 4px;
-  padding: 4px 0 0;
-  border-left: 0;
-  border-top: 1px solid var(--hairline);
-}
-/* ⋯: everything off the first screen, one menu under its button, in sections. Its items stay in
-   the page while it is closed (hidden): the modes read their pressed state, App returns focus to
-   them and a tour step opens it to point inside (tour/Tour.tsx). The menus inside it (who is
-   watching, View options) open in place. */
+/* ⋯ Settings: everything off the first screen, one menu under its button, in sections (its
+   button and the door tabs: doors/doors.css). Its items stay in the page while it is closed
+   (hidden): a tour step opens it to point inside (tour/Tour.tsx). The menus inside it (who is
+   watching, who to follow, View options) open in place. */
 .more-panel {
   top: 54px;
   right: 0;
@@ -1193,8 +1145,7 @@ optgroup {
   background: rgba(239, 237, 229, 0.14);
   box-shadow: inset 0 0 0 1px rgba(239, 237, 229, 0.38);
 }
-.stage-head:has(.more-panel:not([hidden])),
-.stage-head:has(.moments-panel:not([hidden])) {
+.stage-head:has(.more-panel:not([hidden])) {
   z-index: 7; /* an open menu sits above the run switch, as the viewer menu does */
 }
 /* with the look / without it: one switch, centred over the picture */
@@ -2019,22 +1970,6 @@ optgroup {
 }
 .moment-cta .written svg {
   color: var(--floodlight);
-}
-/* the story's other ways in, folded under its two actions */
-.moment-cta .ways-in {
-  margin: 0;
-  font-size: 15px;
-}
-.ways-in-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-.moment-cta .ways-in-body .btn {
-  height: 44px;
-  padding: 0 18px;
-  font-size: 14px;
 }
 /* the match data under the moment's chapters, one click away */
 .below > .match-data {
@@ -3862,14 +3797,6 @@ optgroup {
     top: 84px;
   }
   .stage-head .live-status {
-    display: none;
-  }
-  /* Moments, Your call and ⋯ share the row under the name: tighter, Moments without its chevron */
-  .header-end .yc-open,
-  .moments-menu > .btn {
-    padding: 0 14px;
-  }
-  .moments-menu > .btn svg {
     display: none;
   }
   /* the story's big numbers shrink with the screen instead of running off it */

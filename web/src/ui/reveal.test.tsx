@@ -7,7 +7,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Chapter } from "./Chapter";
 import { FloodlightBackground } from "./FloodlightBackground";
-import { UNREVEALED_WORD_OPACITY, useReveal } from "./reveal";
+import { jumpTo, UNREVEALED_WORD_OPACITY, useReveal } from "./reveal";
 import { TextReveal } from "./TextReveal";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -201,7 +201,7 @@ describe("scroll-linked text and floodlight", () => {
     return container.querySelector("h2")!;
   }
 
-  function flushScroll() {
+  function flushScroll(reader = true) {
     const frames: FrameRequestCallback[] = [];
     vi.stubGlobal(
       "requestAnimationFrame",
@@ -211,6 +211,7 @@ describe("scroll-linked text and floodlight", () => {
       }),
     );
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    if (reader) window.dispatchEvent(new Event("wheel")); // the reader's scroll
     act(() => window.dispatchEvent(new Event("scroll")));
     act(() => frames.splice(0).forEach((callback) => callback(0)));
   }
@@ -319,6 +320,36 @@ describe("scroll-linked text and floodlight", () => {
       const dimmed = over(text, brightest, UNREVEALED_WORD_OPACITY);
       expect(contrast(dimmed, brightest)).toBeGreaterThanOrEqual(minimum);
     }
+  });
+
+  it("leaves the words plain after a scroll the page made (a door's deep link, a tour step)", () => {
+    vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
+      rect(window.innerHeight * 0.9),
+    );
+    const heading = mountText();
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(performance, "now").mockReturnValue(1e9); // long after any reader input
+    jumpTo(heading);
+    flushScroll(false);
+    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
+      expect(word.style.opacity).toBe("");
+    }
+    vi.mocked(performance.now).mockRestore();
+  });
+
+  it("reveals only on a scroll that follows the reader's wheel, touch or scrolling key", () => {
+    vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
+      rect(window.innerHeight * 0.9),
+    );
+    const heading = mountText();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown" }));
+    flushScroll(false);
+    const words = [...heading.querySelectorAll<HTMLElement>(".scroll-word")];
+    for (const word of words) {
+      expect(Number(word.style.opacity)).toBe(UNREVEALED_WORD_OPACITY);
+      expect(word.style.transform).not.toBe("");
+    }
+    expect(words.at(-1)!.style.transform).toBe("translateY(8px)");
   });
 });
 

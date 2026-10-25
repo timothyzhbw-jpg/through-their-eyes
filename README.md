@@ -34,8 +34,8 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams in on the tactical board with pitch control, the analyst's view, and once
-   the moment is detected the agent crew's breakdown plays (Microsoft Foundry; **⋯ → Sound**
-   for Azure AI Speech). Click a caption to open its claims and
+   the moment is detected the agent crew's breakdown plays (Microsoft Foundry; **⋯ Settings →
+   Sound** for Azure AI Speech). Click a caption to open its claims and
    the evidence frame. Then [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value)
    and press **Check**: the verifier refutes it, and the line would not air.
 
@@ -43,32 +43,26 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 and a whole stitched match.
 
 ## From event to value
-Under the picture, a bar follows the moment on screen from the pitch to the business, one step
-at a time (arrow keys move along it; on a phone it is a stepper). **Full story** on the bar walks
-one moment through all five.
-
-1. [**Event**](https://ttesite1ff906.z14.web.core.windows.net/?step=event): the moment, with the
-   look and without it, each side told by its verified lines.
-2. [**Tactics**](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics): the Tactics lab,
-   the tactic cards measured on the moment's own synthetic data, each number with its source.
-   Expected threat (xT) is explained in the words of the chosen audience: one plain sentence for
-   the casual fan; the zones by name, with their values and the from and to cells lit on the
-   board, for the analyst and the coach.
-3. [**Your view**](https://ttesite1ff906.z14.web.core.windows.net/?step=your-view): casual or
-   analyst, the language, and a club or player to follow (`?team=`, `?player=`): their moments
-   come first and a followed player is ringed in the 3D view and on the board.
-4. [**Content**](https://ttesite1ff906.z14.web.core.windows.net/?step=content): the Content
-   Studio, a package built offline from the verified breakdown: a highlight reel, an explainer
-   card, posts in English and Chinese, and data cards (PNG). Below it, the Stadium Screen Studio
-   (also [`?studio=1`](https://ttesite1ff906.z14.web.core.windows.net/?studio=1)): the main video
-   board, the tunnel LED and the ribbon board on a matchday timeline, with a virtual 3D preview
-   of the bowl.
-5. [**Value**](https://ttesite1ff906.z14.web.core.windows.net/?step=value): the business panel
-   and the stadium's sponsor slots, for fictional sponsors.
+The site has three doors, always in the header beside one **⋯ Settings** menu (the moment, the
+audience and language, who to follow, sound, view options and the full tour).
+[**The look**](https://ttesite1ff906.z14.web.core.windows.net/), where the site opens, is the
+hero moment's story in about a minute: his scan, the run without it, the two compared from above
+(with **Step through his looks** and **With two more looks** one link away) and the Verifier
+refusing a wrong number, then an end card whose only choices are the other two doors and
+**Watch again**. [**Your turn**](https://ttesite1ff906.z14.web.core.windows.net/?door=turn)
+puts you in his boots: **Make his call**, **See through his eyes** and **Train your scanning**.
+[**For studios**](https://ttesite1ff906.z14.web.core.windows.net/?door=studios) walks what a
+studio does with one moment, one step at a time: [Tactics](https://ttesite1ff906.z14.web.core.windows.net/?step=tactics)
+(the Tactics lab, every number with its source),
+[Content](https://ttesite1ff906.z14.web.core.windows.net/?step=content) (the package built
+offline from the verified breakdown, and the Stadium Screen Studio's screens),
+[Value](https://ttesite1ff906.z14.web.core.windows.net/?step=value) (the business panel and the
+sponsor slots, demo data) and [Behind the scenes](https://ttesite1ff906.z14.web.core.windows.net/?step=crew)
+(the AI crew's breakdown, its evidence and the failure drill).
 
 Also in the app, each a few clicks from the moment:
-- **Minimal first screen.** It opens on one live view and one **Start**; the other view is a
-  small picture in picture and every overlay is behind **View options**.
+- **Minimal first screen.** It opens on one live view and one **Watch the look**; the other view
+  is a small picture in picture and every overlay is behind **View options**.
 - **Scan story.** [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps):
   every look he took before the ball arrived is frozen and explained (which way, who came into
   view, how his picture changed), then his decision.
@@ -169,7 +163,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    the match streams from the API at 25 Hz onto the tactical board with pitch control, the
    analyst's view; once the moment is detected, the agent crew's breakdown plays (Microsoft
    Foundry, cached after the first request). Click a caption to open its claims and the evidence
-   frame; **⋯ → Sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
+   frame; **⋯ Settings → Sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
    switch it in the header's ⋯ (**Watching as**) and the casual fan watches through his eyes, the
    coach gets his eyes with the board beside them, audio description a plain broadcast camera,
    each with its own lines and voice ([persona_distinctness](eval/reports/persona_distinctness.md)).

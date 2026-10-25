@@ -22,6 +22,59 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
+// The faded state is the reader's scroll only: a scroll that follows their wheel, touch or a
+// scrolling key. A scroll the page makes (a door's deep link, a new door's top, a tour step, the
+// browser keeping its place while the 3D views mount, a test driver) leaves the headings plain
+// text, as an anchor jump does.
+const SCROLL_KEYS = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
+const READER_MS = 1500; // a scroll this soon after the reader's input is theirs (momentum too)
+let readerAt = -Infinity;
+if (typeof window !== "undefined") {
+  const input = (e: Event) => {
+    if (e instanceof KeyboardEvent && !SCROLL_KEYS.has(e.key)) return;
+    readerAt = performance.now();
+  };
+  for (const type of ["wheel", "touchmove", "keydown"])
+    window.addEventListener(type, input, { capture: true, passive: true });
+}
+const readerScrolling = () => performance.now() - readerAt < READER_MS;
+
+/** Jump `el` to the top of the view as an anchor would: the headings around it stay plain text. */
+export function jumpTo(el: Element): void {
+  el.scrollIntoView({ block: "start", behavior: "instant" });
+}
+
+let holding = 0; // the frame holding the top, while a smooth scroll from the last page runs out
+
+/** Jump to the top of the page (a new door), as an anchor would. A smooth scroll still running
+ * from the last page (a tour step's) is not cancelled by one jump in Chromium: the top is held for
+ * a few frames, until the reader scrolls or presses a key. */
+export function jumpToTop(): void {
+  const top = () => {
+    if (window.scrollY === 0 && window.scrollX === 0) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  };
+  top();
+  if (typeof requestAnimationFrame === "undefined") return;
+  cancelAnimationFrame(holding);
+  let frames = 30;
+  const stop = () => {
+    cancelAnimationFrame(holding);
+    frames = 0;
+    for (const type of READER) window.removeEventListener(type, stop, true);
+  };
+  for (const type of READER) window.addEventListener(type, stop, { capture: true, once: true });
+  const hold = () => {
+    if (frames-- <= 0) return stop();
+    top();
+    holding = requestAnimationFrame(hold);
+  };
+  holding = requestAnimationFrame(hold);
+}
+
+/** What the reader does to scroll the page themself. */
+const READER = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+
 /** Reveal each word over the scroll interval ending with the element top at 60% of the viewport. */
 export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
   const cleanup = useRef<() => void>(() => {});
@@ -94,8 +147,8 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
         if (!frame && !done) frame = requestAnimationFrame(update);
       };
       const onScroll = () => {
-        scrolled = true;
-        schedule();
+        if (readerScrolling()) scrolled = true; // a scroll the page made: plain text
+        schedule(); // passed the 60% line by any scroll: finished
       };
       el.addEventListener("focusin", finish);
       window.addEventListener("scroll", onScroll, { passive: true });

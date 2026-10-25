@@ -14,7 +14,7 @@ import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import stepsJson from "../../public/data/steps_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
-import { applyDeepLink, parseDeepLink } from "../deeplink";
+import { applyDeepLink, doorOf, parseDeepLink } from "../deeplink";
 import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
@@ -303,10 +303,11 @@ describe("His looks: the marks", () => {
 });
 
 describe("His looks in the app", () => {
-  it("opens from the moment and from the header, and gives the live screen back", async () => {
+  it("opens from door 1's compare, not the header, and gives the live screen back, focus on its link", async () => {
     const session = offline();
     const st = stepThroughOf(session, served, "/data/");
     const el = mount(session, <App autoplay={false} />);
+    expect(el.querySelector(".stage-head #scan-steps-open")).toBeNull();
     click(el.querySelector<HTMLButtonElement>("#scan-steps-story")!);
     await act(settle);
     expect(el.querySelector(".ss-screen")).not.toBeNull();
@@ -314,14 +315,16 @@ describe("His looks in the app", () => {
     expect(st.state.get().status).toBe("ready");
     click(button(el, "Back to the replay"));
     expect(el.querySelector(".ss-screen")).toBeNull();
-    expect(el.querySelector("#scan-steps-open")!.getAttribute("aria-pressed")).toBe("false");
+    expect(el.querySelector("#scan-steps-open")).toBeNull();
+    expect(document.activeElement).toBe(el.querySelector("#scan-steps-story"));
   });
 });
 
 describe("His looks by link", () => {
-  it("?play=steps opens it on his first look, with no lineup card and no autoplay", async () => {
+  it("?play=steps opens it on his first look, with no lineup card and no autoplay, over the look", async () => {
     const link = parseDeepLink("?play=steps");
     expect(link).toMatchObject({ play: "steps", intro: false, autoplay: false });
+    expect(doorOf(link).door).toBe("look");
     const session = offline();
     const st = stepThroughOf(session, served, "/data/");
     applyDeepLink(session, link);

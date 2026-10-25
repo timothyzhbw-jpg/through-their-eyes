@@ -15,7 +15,8 @@ import whatIfJson from "../../public/data/whatif_seed3.json";
 import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { App } from "../App";
-import { headerMore } from "../ui/Stage";
+import { settingsMenu } from "../ui/Stage";
+import { doors } from "../doors/state";
 import { createSession, SessionContext, type Session } from "../session";
 import { createApi } from "../api/client";
 import { createMatchSession } from "../match/matchSession";
@@ -296,40 +297,30 @@ describe("Take his eyes: looking and the result", () => {
     expect(te.playback.get()).toMatchObject({ frame: 75, playing: false });
   });
 
-  it("in App it takes the live screen's place; Escape closes it and returns focus", async () => {
+  it("in App it opens from Your turn's card and takes the page; Escape closes it and returns focus", async () => {
+    act(() => doors.set({ door: "turn", seq: 0 }));
     const session = offline();
     const te = takeEyesOf(session, served, "/data/");
     const page = mount(session, <App autoplay={false} />);
-    const live = () => page.querySelector('section.stage[aria-label="Live screen"]');
+    const hub = () => page.querySelector("section.door-turn");
     const screen = () => page.querySelector('section.te-screen[aria-label="Take his eyes"]');
-    const pill = () => page.querySelector<HTMLButtonElement>("#take-eyes-open");
-    expect(pill()!.getAttribute("aria-pressed")).toBe("false");
-    // The header's pill sits in More, mounted while the menu is closed.
-    expect(pill()!.closest("[hidden]")).not.toBeNull();
-    click(page.querySelector<HTMLButtonElement>("#header-more")!);
-    expect(pill()!.closest("[hidden]")).toBeNull();
-    click(pill()!);
+    const card = () => page.querySelector<HTMLButtonElement>("#turn-eyes");
+    expect(card()!.textContent).toContain("See through his eyes");
+    expect(page.querySelector("#take-eyes-open")).toBeNull(); // not in the header
+    click(card()!);
     await act(settle);
     expect(te.state.get().step).toBe("choosing");
-    expect(live()).toBeNull();
+    expect(hub()).toBeNull();
     expect(page.querySelector("main.moment")).toBeNull();
-    expect(pill()!.getAttribute("aria-pressed")).toBe("true");
+    // Its own header's pill, pressed: it closes the mode.
+    const pill = page.querySelector<HTMLButtonElement>("#take-eyes-open")!;
+    expect(pill.getAttribute("aria-pressed")).toBe("true");
     key(screen()!.querySelector(".te-card")!, "Escape");
     expect(te.state.get().step).toBe("closed");
-    expect(live()).not.toBeNull();
-    // The item that opened it sits in More, which closed behind the mode: focus goes to the More
-    // button, the menu stays shut.
-    expect(document.activeElement).toBe(page.querySelector("#header-more"));
-    expect(headerMore.get().open).toBe(false);
-
-    // From the story's "More ways in", focus returns to the story's button, its fold open.
-    click(page.querySelector<HTMLButtonElement>("#take-eyes-story")!);
-    await act(settle);
-    expect(live()).toBeNull();
-    key(screen()!.querySelector(".te-card")!, "Escape");
-    const story = page.querySelector<HTMLButtonElement>("#take-eyes-story")!;
-    expect(document.activeElement).toBe(story);
-    expect(story.closest("details")!.open).toBe(true);
+    expect(hub()).not.toBeNull();
+    expect(document.activeElement).toBe(card());
+    expect(settingsMenu.get().open).toBe(false);
+    act(() => doors.set({ door: "look", seq: 0 }));
   });
 });
 

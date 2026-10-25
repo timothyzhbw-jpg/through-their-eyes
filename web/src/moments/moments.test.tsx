@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
-// The moment links (SPEC 7): the rail above the live screen names every moment the site plays and
-// the full match, marks the one on screen, keeps its place hidden under the intro card, and stays
-// off Your call; `moment=` opens a match's hero moment; the hero page's Live pill opens the match.
+// The moment links (SPEC 7): the moment picker in the header's Settings names every moment the
+// site plays and the full match, marks the one on screen, waits under the intro card, and stays off
+// Your call; `moment=` opens a match's hero moment; the hero page's Live pill opens the match. The
+// hero page's shell: the brand, the three doors and Settings; door 1's one action.
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -19,6 +20,7 @@ import { createSession, SessionContext, type ViewSession } from "../session";
 import { API, fakeFetch, fakeSockets, MATCH, matchExport, pressureExport } from "../testing";
 import { intro } from "../ui/intro";
 import { LiveBar } from "../ui/Live";
+import { settingsMenu } from "../ui/Stage";
 import { yourCallOf } from "../yourcall/controller";
 import {
   currentMoment,
@@ -61,17 +63,20 @@ function mount(session: ViewSession, node: ReactNode = <App autoplay={false} />)
 }
 
 const offline = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson);
-const menu = (el: ParentNode) => el.querySelector<HTMLElement>(".stage-head .moments-menu");
+const settings = (el: ParentNode) => el.querySelector<HTMLElement>(".stage-head .settings");
+const picker = (el: ParentNode) =>
+  settings(el)?.querySelector<HTMLElement>('[role=group][aria-label="Moment"] nav') ?? null;
 const labels = (el: ParentNode) =>
-  [...(menu(el)?.querySelectorAll("a") ?? [])].map((a) => a.textContent);
+  [...(picker(el)?.querySelectorAll("a") ?? [])].map((a) => a.textContent);
 
-describe("the Moments menu", () => {
-  it("names every moment and the full match in the header, this one marked", () => {
+describe("the moment picker, in Settings", () => {
+  afterEach(() => act(() => settingsMenu.set({ open: false })));
+
+  it("names every moment and the full match, this one marked", () => {
     const page = mount(offline());
-    const toggle = menu(page)!.querySelector<HTMLButtonElement>(":scope > button")!;
-    expect(toggle.textContent).toBe("Moments");
+    const toggle = settings(page)!.querySelector<HTMLButtonElement>("#settings")!;
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    const panel = menu(page)!.querySelector<HTMLElement>(".moments-panel")!;
+    const panel = settings(page)!.querySelector<HTMLElement>(".more-panel")!;
     expect(panel.hidden).toBe(true);
     act(() => toggle.click());
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -82,20 +87,20 @@ describe("the Moments menu", () => {
       "The corner",
       "The goal",
       "Full match · live",
-      "Academy drill",
     ]);
-    expect(menu(page)!.querySelector("a.drill-link")!.getAttribute("href")).toBe("/?play=drill");
-    const current = menu(page)!.querySelector('a[aria-current="page"]');
+    // The drill is a Your turn mode, not a moment.
+    expect(page.querySelector('a[href="/?play=drill"]')).toBeNull();
+    const current = picker(page)!.querySelector('a[aria-current="page"]');
     expect(current?.textContent).toBe("The look");
     // No rail above the stage: the live screen is the first thing on the page.
     expect(page.querySelector(".app")!.firstElementChild!.classList.contains("stage")).toBe(true);
   });
 
-  it("closes on Escape, focus back on its button", () => {
+  it("closes on Escape, focus back on Settings", () => {
     const page = mount(offline());
-    const toggle = menu(page)!.querySelector<HTMLButtonElement>(":scope > button")!;
+    const toggle = settings(page)!.querySelector<HTMLButtonElement>("#settings")!;
     act(() => toggle.click());
-    const link = menu(page)!.querySelector<HTMLAnchorElement>("a")!;
+    const link = picker(page)!.querySelector<HTMLAnchorElement>("a")!;
     link.focus();
     act(() => {
       link.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -104,15 +109,15 @@ describe("the Moments menu", () => {
     expect(document.activeElement).toBe(toggle);
   });
 
-  it("waits behind the intro card, which carries the same links", () => {
+  it("waits behind the intro card", () => {
     intro.set({ open: true });
     const page = mount(offline());
-    expect(menu(page)!.closest("[inert]")).not.toBeNull();
+    expect(settings(page)!.closest("[inert]")).not.toBeNull();
     act(() => intro.set({ open: false }));
-    expect(menu(page)!.closest("[inert]")).toBeNull();
+    expect(settings(page)!.closest("[inert]")).toBeNull();
   });
 
-  it("is left out with rail=0 (the demo video's framing)", () => {
+  it("rail=0 (the demo video's framing) leaves the door tabs out, Settings stays", () => {
     const link = parseDeepLink("?intro=0&rail=0");
     expect(link.rail).toBe(false);
     expect(parseDeepLink("").rail).toBe(true);
@@ -122,14 +127,16 @@ describe("the Moments menu", () => {
         <App autoplay={false} />
       </DeepLinkContext.Provider>,
     );
-    expect(menu(page)).toBeNull();
+    expect(page.querySelector(".door-tabs")).toBeNull();
+    expect(settings(page)).not.toBeNull();
   });
 
   it("stays off Your call, which has its own way back", () => {
     const session = offline();
     const page = mount(session);
     act(() => yourCallOf(session).open());
-    expect(page.querySelector(".moments-menu")).toBeNull();
+    expect(settings(page)).toBeNull();
+    act(() => yourCallOf(session).close());
   });
 
   it("marks the match on the match page, and the moment inside it", () => {
@@ -139,8 +146,14 @@ describe("the Moments menu", () => {
       socket: fakeSockets(),
     });
     const page = mount(match, <MatchApp session={match} autoplay={false} />);
-    expect(menu(page)!.querySelector('a[aria-current="page"]')?.textContent).toBe(
+    expect(picker(page)!.querySelector('a[aria-current="page"]')?.textContent).toBe(
       "Full match · live",
+    );
+    // The match is no door: its door tabs open the hero moment's doors.
+    expect(
+      [...page.querySelectorAll<HTMLAnchorElement>(".door-tabs a")].map((a) => a.href),
+    ).toEqual(
+      ["/?door=look", "/?door=turn", "/?door=studios"].map((p) => new URL(p, location.href).href),
     );
     expect(currentMoment(createSession(parseHero(pressureExport()), null, null))).toBe("pressure");
   });
@@ -152,26 +165,33 @@ describe("the hero page's shell (SPEC 7)", () => {
       (b) => b.getAttribute("aria-label") ?? b.textContent?.replace(/\s+/g, " ").trim(),
     );
 
-  it("keeps the header to the brand, Moments, Your call and ⋯; no Live pill on a moment", () => {
+  it("keeps the header to the brand, the three doors and Settings; no Live pill on a moment", () => {
     const page = mount(offline());
     const head = page.querySelector(".stage-head")!;
-    // The buttons on the row itself (a menu's own items are inside its panel).
-    const row = ":scope > div > button, :scope > div > .popover-wrap > button, :scope > div > a";
-    expect(names(head, row)).toEqual(["Moments", "Your call", "More"]);
+    // The controls on the row itself (a menu's own items are inside its panel).
+    const row =
+      ":scope > div > button, :scope > div > .popover-wrap > button, :scope > div > a, :scope > nav button, :scope > nav a";
+    expect(names(head, row)).toEqual(["The look", "Your turn", "For studios", "Settings"]);
+    const current = head.querySelector('.door-tabs [aria-current="page"]');
+    expect(current?.textContent).toBe("The look");
     expect(head.querySelector(".live-chip, .live")).toBeNull();
-    expect(head.querySelector(".your-view")).toBeNull(); // one audience menu: the viewer's
-    // Sound, who is watching, His looks, Take his eyes, the tour and View options wait in ⋯,
-    // mounted and hidden.
+    expect(head.querySelector("#your-call-open, .moments-menu")).toBeNull();
+    // The moment, who is watching, who to follow, sound, View options and the full tour wait in
+    // Settings, mounted and hidden; no mode opens from it.
     const more = head.querySelector<HTMLElement>(".more-panel")!;
     expect(more.hidden).toBe(true);
+    const sections = [...more.querySelectorAll(":scope > [role=group]")].map((g) =>
+      g.getAttribute("aria-label"),
+    );
+    expect(sections).toEqual(["Moment", "Commentary", "Follow", "Sound", "Tour"]);
     const sound = more.querySelector<HTMLButtonElement>("button.sound")!;
     expect(sound.getAttribute("aria-label")).toBe("Sound");
     expect(sound.getAttribute("aria-pressed")).toBe("false");
     expect(names(more)).toContain("Watching as Casual fan · English");
-    expect(more.querySelector("#scan-steps-open")).not.toBeNull();
-    expect(more.querySelector("#take-eyes-open")).not.toBeNull();
-    expect(names(more)).toContain("Quick tour");
+    expect(names(more)).toContain("Your view");
+    expect(names(more)).toContain("Full tour · 90 s");
     expect(names(more)).toContain("View options");
+    expect(more.querySelector("#scan-steps-open, #take-eyes-open, #drill-open")).toBeNull();
   });
 
   it("keeps the first screen to a few controls: one switch over the picture, one action", () => {
@@ -204,25 +224,27 @@ describe("the hero page's shell (SPEC 7)", () => {
     expect(page.querySelector(".stage .scroll-word")).toBeNull();
   });
 
-  it("tells the story with two actions, the other ways in folded, and the match data last", () => {
+  it("tells the story with one action, the compare under it, and the match data last", () => {
     const page = mount(offline());
     const cta = page.querySelector(".moment-cta")!;
-    expect(names(cta, ":scope > button")).toEqual(["Watch it through his eyes", "Make his call"]);
+    expect(names(cta, ":scope > button")).toEqual(["Watch the look"]);
     expect(cta.querySelectorAll(".btn-primary")).toHaveLength(1);
-    const ways = cta.querySelector<HTMLDetailsElement>("details.ways-in")!;
-    expect(ways.open).toBe(false);
-    expect(ways.querySelector("#scan-steps-story")).not.toBeNull();
-    expect(ways.querySelector("#take-eyes-story")).not.toBeNull();
-    expect(names(ways, "button")).toContain("Full tour · 90 s");
-    // Story → Decision → Verdict → Narration → What if → Breakdown, then the data, folded.
+    expect(page.querySelector("details.ways-in")).toBeNull();
+    // Door 1 has one primary action under the picture (the moment card is the picture's own).
+    expect(page.querySelectorAll("main.moment .btn-primary")).toHaveLength(1);
+    // The compare, with the scan story one link away.
+    const compare = page.querySelector(".moment > .journey-event")!;
+    expect(compare.querySelector("#scan-steps-story")?.textContent).toBe("Step through his looks");
+    // Story → Decision → Verdict → Narration → What if, then the data, folded. The crew's
+    // breakdown (and its failure drill) is For studios' last step.
     const below = page.querySelector(".below")!;
     const last = below.lastElementChild as HTMLDetailsElement;
     expect(last.matches("details.match-data")).toBe(true);
     expect(last.open).toBe(false);
     expect(last.querySelector("summary")!.textContent).toBe("Match data for this moment");
     expect(below.firstElementChild!.matches(".story")).toBe(true);
-    // The moment's own chapters stay open above it (the full tour's failure drill among them).
-    expect(last.querySelector(".story, .decision, .verdict, .breakdown")).toBeNull();
+    expect(last.querySelector(".story, .decision, .verdict")).toBeNull();
+    expect(page.querySelector(".breakdown")).toBeNull();
   });
 });
 

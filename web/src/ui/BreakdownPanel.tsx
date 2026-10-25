@@ -4,7 +4,7 @@
 // failure drill sits below it. "Crew trace" (here and on the Producer desk) opens the timeline of
 // the crew run behind the breakdown on screen.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CrewTracePanel, TraceButton } from "../crewtrace/CrewTrace";
 import { renameIds, shortName } from "../data/roster";
 import type { PlanStep, Script } from "../plan/schema";
@@ -42,7 +42,11 @@ export function describeStep(step: PlanStep, script: Script = {}): string {
   }
 }
 
-export function BreakdownPanel() {
+/** `kicker` and `lead` (controls above the cue list): the studios' Behind the scenes step. */
+export function BreakdownPanel({
+  kicker = "Behind the replay",
+  lead,
+}: { kicker?: string; lead?: ReactNode } = {}) {
   const { runner, controls } = useSession();
   const { resolved, script, origin, status: arrival } = useBreakdown();
   const status = useStore(runner.status, (s) => s.status);
@@ -72,7 +76,7 @@ export function BreakdownPanel() {
     <Chapter
       className="breakdown"
       split
-      kicker="Behind the replay"
+      kicker={kicker}
       title={
         <>
           The crew writes. <em>Code</em> checks.
@@ -127,6 +131,7 @@ export function BreakdownPanel() {
         </div>
       }
     >
+      {lead}
       {ready && origin?.kind === "api" && origin.planErrors.length > 0 && (
         <details className="plan-errors">
           <summary>The Telestrator's plan failed the server's checks</summary>
