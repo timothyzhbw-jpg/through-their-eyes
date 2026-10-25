@@ -28,6 +28,7 @@ import { closeTour, startTour } from "../tour/tourState";
 import { Tour } from "../tour/Tour";
 import { settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
+import { optionLabel, personLookup, personOf, tagOf } from "../steps/story";
 import { DEMO_DATA, FACTS_VS_FIGURES } from "./DemoBadge";
 import { ASK_RUN_ID, ComparePanel, Journey } from "./Journey";
 import { COST_PER_VERIFIED_BREAKDOWN } from "./measured";
@@ -247,8 +248,8 @@ afterEach(() => {
   }
 });
 
-function mount(node = <Journey />) {
-  const session = createSession(hero, EXAMPLE_PLAN, payloadJson);
+function mount(node = <Journey />, moment = hero) {
+  const session = createSession(moment, EXAMPLE_PLAN, payloadJson);
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
@@ -378,6 +379,46 @@ describe("the bar and its panels", () => {
     expect(session.breakdown.get().status).not.toBe("loading");
     // One primary action per screen: door 1's is "Watch the look" above it, not here.
     expect(container.querySelector(".btn-primary")).toBeNull();
+  });
+
+  it("sums up the key look's runner and the factual decision from the app's data", async () => {
+    const { container, session } = mount(<ComparePanel />);
+    await act(() => withoutLookOf(session, undefined, "/data/").load());
+    const lines = [...container.querySelectorAll(".journey-compare-summary p")];
+    expect(lines).toHaveLength(2);
+    expect(lines[0].textContent).toContain("The look: Removed:");
+    expect(lines[0].textContent).toContain(
+      `where he saw ${tagOf(personOf(hero, hero.runnerId!))}'s run behind him`,
+    );
+    const action = optionLabel(hero.runs.factual.decision!.chosen, personLookup(hero)).replace(
+      /^./,
+      (c) => c.toLowerCase(),
+    );
+    expect(lines[1].textContent).toContain(`The result: With it, ${action}; without it,`);
+    expect(lines[1].textContent).toContain("Without that look,");
+  });
+
+  it("shows no look summary for a hero without a key scan", () => {
+    const { container } = mount(<ComparePanel />, { ...hero, keyScan: null });
+    expect(container.querySelector(".journey-compare-summary")).toBeNull();
+    expect(container.textContent).not.toContain("The look:");
+    expect(container.textContent).not.toContain("The result:");
+  });
+
+  it("introduces the simulation only when the counterfactual removes the hero's key look", () => {
+    const withLook = mount(<ComparePanel />).container.querySelector(".lede")!.textContent!;
+    expect(withLook).toContain(
+      `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate look`,
+    );
+    expect(withLook).toContain("Each side is told by its checked lines.");
+    expect(withLook).not.toContain("Watch it, then the same seconds");
+
+    const withoutKeyLook = mount(<ComparePanel />, {
+      ...hero,
+      keyScan: null,
+    }).container.querySelector(".lede")!.textContent!;
+    expect(withoutKeyLook).not.toContain("Try the simulation:");
+    expect(withoutKeyLook).toContain("Watch it, then the same seconds");
   });
 
   it("moves with the arrow keys and writes the step into the address", () => {
