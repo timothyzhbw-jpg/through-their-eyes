@@ -19,7 +19,7 @@ import {
 } from "../whatif/whatif";
 import { LANG_LABEL } from "./labels";
 import { Chapter } from "./Chapter";
-import { ClaimCard, isVerified, KindTags, LineText } from "./Narration";
+import { ClaimCard, isVerified, KindTags, LineText, lineClaims } from "./Narration";
 import { Segmented } from "./Segmented";
 import "./whatif.css";
 import { renameIds } from "../data/roster";
@@ -246,7 +246,11 @@ function Answer({
         }}
       >
         <KindTags narration={narration} line={l} />
-        <LineText text={l.text} verified={isVerified(narration, l)} />
+        <LineText
+          text={l.text}
+          verified={isVerified(narration, l)}
+          claims={lineClaims(narration, l)}
+        />
       </button>
       {open === l.id && (
         <ul className="claims">

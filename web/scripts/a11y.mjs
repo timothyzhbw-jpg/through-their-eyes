@@ -121,7 +121,7 @@ const STATES = [
     ready: async (p) => {
       await runSwitch(p);
       // The live stream (6.6 s), then the breakdown with its captions.
-      await see(p.locator("button.caption"), "a caption");
+      await see(p.locator(".caption"), "a caption");
     },
   },
   {
@@ -129,6 +129,16 @@ const STATES = [
     path: "?persona=analyst&tamper=cf_value",
     ready: (p) =>
       see(p.getByRole("region", { name: "Evidence for this line" }), "the evidence card"),
+  },
+  {
+    name: "glossary-popover",
+    path: "?persona=analyst&tamper=cf_value",
+    ready: async (p) => {
+      const term = p.locator(".evidence-line .glossary-term").first();
+      await see(term, "a glossary term");
+      await term.focus();
+      await see(p.locator(".glossary-popover"), "the term definition");
+    },
   },
   {
     name: "yourcall-deciding",

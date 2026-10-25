@@ -1,11 +1,9 @@
-// The Tactics lab (SPEC 4.8, 7): why common tactics work, told with this match's own synthetic
-// data. A chapter of the moment page and of the match page: five cards (high press, decisions under
-// pressure, corners, shot quality, progression), each with the definition and the source of every
-// number, its hero moment, the With / Without comparison, and for the decision the pass lanes on a
-// board. Everything is computed in the browser from the export on screen and the bundled xT grid:
-// no model call, no service. It is match data, so there is no "demo data" in it.
+// The Tactics lab (SPEC 4.8, 7): five tactic tabs with their parameters underneath. Each parameter
+// row has Pro and Plain explanations, a collapsed definition and a source; each tactic keeps its
+// moment links and limitations. Everything is computed in the browser from the export on screen,
+// its loaded match scope and the bundled xT grid: no model call, no new service.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { Hero } from "../data/hero";
 import { shortName } from "../data/roster";
 import { useView } from "../session";
@@ -17,8 +15,9 @@ import {
   buildCards,
   compareHref,
   momentHref,
-  type LabCard,
   type CardId,
+  type LabCard,
+  type TacticId,
   type Metric,
 } from "./cards";
 import { lanesAt, laneCounts, OPEN_P, type Lane } from "./lanes";
@@ -26,8 +25,10 @@ import { CARD_SCENARIO, loadScope, missingScenarios, NO_SCOPE, type Scope } from
 import { parseXtGrid, type XtGrid } from "./metrics";
 import { boardPlayers, laneEnds, PITCH_LINES, VIEW_BOX } from "./board";
 import { COLORS, teamColor } from "../views/scene";
-import { XtMoveExplain } from "../xtexplain/XtMoveExplain";
+import { XtMoveExplain, usePersona } from "../xtexplain/XtMoveExplain";
+import { versionFor } from "../xtexplain/zones";
 import "./tacticslab.css";
+import { GlossaryText } from "../glossary/GlossaryText";
 
 /** The xT grid ships inside the "without the look" file (units 1e-4); the lab reads it from there. */
 export const XT_FILE = "without_look_seed3.json";
@@ -35,9 +36,10 @@ export const XT_FILE = "without_look_seed3.json";
 let gridPromise: Promise<XtGrid> | null = null;
 
 /** The bundled xT grid, fetched once; `null` while loading, an Error if it cannot be read. */
-export function useXtGrid(): XtGrid | Error | null {
+export function useXtGrid(enabled = true): XtGrid | Error | null {
   const [grid, setGrid] = useState<XtGrid | Error | null>(null);
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     gridPromise ??= fetch(`${import.meta.env.BASE_URL}data/${XT_FILE}`)
       .then((res) => {
@@ -55,7 +57,7 @@ export function useXtGrid(): XtGrid | Error | null {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [enabled]);
   return grid;
 }
 
@@ -91,26 +93,37 @@ export function useScope(): Scope {
 const sourceTitle = (m: Metric) =>
   m.sourceNote ? computed(m.sourceNote) : SOURCES[m.source].title;
 
-function MetricRow({ m, split }: { m: Metric; split: boolean }) {
+type LabVersion = "pro" | "plain";
+
+function MetricRow({ m, split, version }: { m: Metric; split: boolean; version: LabVersion }) {
   return (
-    <tr>
+    <tr data-parameter={m.id}>
       <th scope="row">
-        {m.label}
+        <GlossaryText text={m.label} />
+        <p className="lab-parameter-explanation">
+          <GlossaryText text={version === "pro" ? m.pro : m.plain} />
+        </p>
         <details className="how lab-definition">
           <summary>What it counts</summary>
-          <span className="lab-def">{m.definition}</span>
+          <span className="lab-def">
+            <GlossaryText text={m.definition} />
+          </span>
           {m.zeroWhy && (
             <span className="lab-def lab-zero" data-zero>
-              {m.zeroWhy}
+              <GlossaryText text={m.zeroWhy} />
             </span>
           )}
         </details>
       </th>
-      {m.values.map((v, i) => (
-        <td key={i} data-team={split ? i : undefined}>
-          {v}
-        </td>
-      ))}
+      {split && m.values.length === 1 ? (
+        <td colSpan={2}>{m.values[0]}</td>
+      ) : (
+        m.values.map((v, i) => (
+          <td key={i} data-team={split ? i : undefined}>
+            {v}
+          </td>
+        ))
+      )}
       <td className="lab-source">
         <SourceChip kind={m.source} title={sourceTitle(m)} spoken />
       </td>
@@ -122,54 +135,101 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
   const reveal = useReveal<HTMLElement>();
   const split = card.metrics.some((m) => m.values.length > 1);
   const moves = useMemo(() => (card.xtMove ? [card.xtMove] : []), [card.xtMove]);
+  const persona = usePersona();
+  const fallback: LabVersion = versionFor(persona) === "concrete" ? "pro" : "plain";
+  const [picked, setPicked] = useState<{ persona: string; version: LabVersion } | null>(null);
+  const version = picked?.persona === persona ? picked.version : fallback;
+  const id = useId();
+  const tabId = (v: LabVersion) => `${id}-${v}`;
   return (
     <article className="lab-card tile" data-card={card.id} aria-label={card.title} ref={reveal}>
       <header>
-        <p className="kicker">{card.kicker}</p>
-        <h3 className="block-title">{card.title}</h3>
-        <p className="lab-idea">{card.idea}</p>
+        <p className="kicker">
+          <GlossaryText text={card.kicker} />
+        </p>
+        <h3 className="block-title">
+          <GlossaryText text={card.title} />
+        </h3>
         <p className="lab-measured">
           <strong>Measured on:</strong> {card.measured}
         </p>
       </header>
-      {card.empty ? (
-        <p className="note lab-empty">{card.empty}</p>
-      ) : (
-        <div className="table-wrap" role="region" tabIndex={0} aria-label={`${card.title} numbers`}>
-          <table className="data-table lab-table">
-            <thead>
-              <tr>
-                <th scope="col">Measured over {card.scope}</th>
-                {split ? (
-                  <>
-                    <th scope="col" data-team="0">
-                      <span className="dot" data-team="0" />
-                      Home
-                    </th>
-                    <th scope="col" data-team="1">
-                      <span className="dot" data-team="1" />
-                      Away
-                    </th>
-                  </>
-                ) : (
-                  <th scope="col">Value</th>
-                )}
-                <th scope="col">Source</th>
-              </tr>
-            </thead>
-            <tbody>
-              {card.metrics.map((m) => (
-                <MetricRow key={m.label} m={m} split={split} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="lab-versions" role="tablist" aria-label={`${card.title} explanation`}>
+        {(["pro", "plain"] as const).map((v) => (
+          <button
+            key={v}
+            id={tabId(v)}
+            type="button"
+            role="tab"
+            aria-selected={version === v}
+            aria-controls={`${id}-panel`}
+            onClick={() => setPicked({ persona, version: v })}
+          >
+            {v === "pro" ? "Pro" : "Plain"}
+          </button>
+        ))}
+      </div>
+      {card.empty && (
+        <p className="note lab-empty">
+          <GlossaryText text={card.empty} />
+        </p>
       )}
-      {/* The best pass may be either team's, so the zones are named "their". Outside a hero or
-          match view usePersona falls back to casual: the lab then shows the plain sentence. */}
-      {moves.length > 0 && <XtMoveExplain moves={moves} owner="their" />}
+      <div
+        id={`${id}-panel`}
+        className="lab-explanation"
+        role="tabpanel"
+        aria-labelledby={tabId(version)}
+        data-version={version}
+      >
+        <p className="lab-idea">
+          <GlossaryText text={version === "pro" ? card.pro : card.plain} />
+        </p>
+        {!card.empty && (
+          <div
+            className="table-wrap"
+            role="region"
+            tabIndex={0}
+            aria-label={`${card.title} parameters`}
+          >
+            <table className="data-table lab-table">
+              <thead>
+                <tr>
+                  <th scope="col">Measured over {card.scope} · parameter</th>
+                  {split ? (
+                    <>
+                      <th scope="col" data-team="0">
+                        <span className="dot" data-team="0" />
+                        Home
+                      </th>
+                      <th scope="col" data-team="1">
+                        <span className="dot" data-team="1" />
+                        Away
+                      </th>
+                    </>
+                  ) : (
+                    <th scope="col">Value</th>
+                  )}
+                  <th scope="col">Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {card.metrics.map((m) => (
+                  <MetricRow key={m.id} m={m} split={split} version={version} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {moves.length > 0 && !card.empty && (
+          <XtMoveExplain
+            moves={moves}
+            owner="their"
+            persona={version === "pro" ? "analyst" : "casual"}
+          />
+        )}
+      </div>
       <div className="lab-links">
-        <a className="btn" href={momentHref(card.id)} data-link="moment">
+        <a className="btn" href={card.href ?? momentHref(card.id)} data-link="moment">
           {card.here ? "This is the moment: reload it" : `Open the moment · ${card.moment.label}`}
         </a>
         <a
@@ -188,7 +248,9 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
       </div>
       <details className="how lab-limits">
         <summary>What these numbers leave out</summary>
-        <p className="note">{card.limits}</p>
+        <p className="note">
+          <GlossaryText text={card.limits} />
+        </p>
       </details>
     </article>
   );
@@ -303,6 +365,16 @@ function LaneLine({ lane }: { lane: Lane }) {
 
 // ---------- the chapter ----------
 
+/** A retired lens ID (a broadcast question or an old moment link) opens the tactic that now holds
+ * its row. */
+const RETIRED: Record<Exclude<CardId, TacticId>, TacticId> = {
+  decisions: "build_up",
+  progression: "counter_attack",
+  shot_quality: "counter_attack",
+};
+const tacticOf = (id: CardId): TacticId =>
+  id in RETIRED ? RETIRED[id as keyof typeof RETIRED] : (id as TacticId);
+
 /** `kicker`: the chapter's kicker where the lab is a section of For studios (journey/), which
  * also picks its card (`card`, `onPick`: the broadcast's questions open a card). */
 export function TacticsLabPanel({
@@ -319,21 +391,20 @@ export function TacticsLabPanel({
   onPick?: (card: CardId) => void;
 }) {
   const view = useView();
-  const loaded = useXtGrid();
+  const loaded = useXtGrid(!injected);
   const grid = injected ?? (loaded instanceof Error ? null : loaded);
   const asked = useScope();
   const scope = injectedScope ?? asked;
   const cards = useMemo(() => buildCards(view.hero, grid, scope), [view.hero, grid, scope]);
-  const [own, setOwn] = useState<CardId>("high_press");
-  const picked = chosen ?? own;
+  const [own, setOwn] = useState<TacticId>("high_press");
+  const picked = tacticOf(chosen ?? own);
   const setPicked = onPick ?? setOwn;
   const card = cards.find((c) => c.id === picked) ?? cards[0];
-  // The board is the Decisions card's moment's: the page's own, or the one loaded for the card;
-  // with no service the bundled moment is all there is.
+  // The board belongs to the press_escape decision used by the pressing and possession tactics.
   const laneHero =
-    view.hero.kind === "match" || view.hero.scenario === CARD_SCENARIO.decisions
+    view.hero.kind === "match" || view.hero.scenario === CARD_SCENARIO.high_press
       ? view.hero
-      : (scope.heroes[CARD_SCENARIO.decisions] ?? (scope.online ? null : view.hero));
+      : (scope.heroes[CARD_SCENARIO.high_press] ?? (scope.online ? null : view.hero));
   const watch = (frame: number) => {
     window.scrollTo({ top: 0 }); // the replay plays at the top
     view.controls.seek(frame);
@@ -344,17 +415,18 @@ export function TacticsLabPanel({
         className="tactics-lab"
         kicker={kicker}
         title={<Title lead="Why tactics" em="work." />}
-        lede={`Five common tactics, each measured on the synthetic data of ${view.hero.kind === "match" ? "this match" : "the moment that shows it"}, and every card says which. Every number says what it is and where it comes from; every card opens the hero moment that shows it.`}
+        lede={`${cards.length} common tactics, each measured on the synthetic data of ${view.hero.kind === "match" ? "this match" : "the moment that shows it"}. Choose a tactic, then read its parameters in Pro or Plain; every row keeps its definition and source, and every tactic opens its moment.`}
         label="Tactics lab"
       >
-        <nav className="pick-row" aria-label="Tactic cards">
+        <nav className="pick-row" aria-label="Tactics">
           {cards.map((c) => (
             <button
               key={c.id}
               type="button"
               className="btn"
+              data-tactic={c.title}
               aria-pressed={c.id === card.id}
-              onClick={() => setPicked(c.id)}
+              onClick={() => setPicked(c.id as TacticId)}
             >
               {c.title}
             </button>
@@ -365,7 +437,7 @@ export function TacticsLabPanel({
             The xT grid could not be loaded ({loaded.message}): progression is off.
           </p>
         )}
-        <CardView card={card} onWatch={watch} />
+        <CardView key={card.id} card={card} onWatch={watch} />
         {laneHero && <LaneBoard hero={laneHero} />}
         {view.hero.kind === "match" && (
           <p className="note">

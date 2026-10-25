@@ -4,6 +4,7 @@
 // magazine, separated by space and a hairline.
 
 import type { ReactNode } from "react";
+import { GlossaryText } from "../glossary/GlossaryText";
 import { useReveal } from "./reveal";
 import { TextReveal } from "./TextReveal";
 
@@ -36,7 +37,11 @@ export function Chapter(props: {
           <div className="chapter-lede">
             {props.lede && (
               <p className="lede">
-                <TextReveal>{props.lede}</TextReveal>
+                {typeof props.lede === "string" ? (
+                  <GlossaryText text={props.lede} reveal />
+                ) : (
+                  <TextReveal>{props.lede}</TextReveal>
+                )}
               </p>
             )}
             {props.how && <HowItWorks>{props.how}</HowItWorks>}

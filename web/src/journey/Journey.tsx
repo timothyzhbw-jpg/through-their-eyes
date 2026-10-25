@@ -42,7 +42,7 @@ import { BreakdownPanel } from "../ui/BreakdownPanel";
 import { Chapter, Title } from "../ui/Chapter";
 import { ArrowIcon } from "../ui/icons";
 import { PERSONA_LABEL } from "../ui/labels";
-import { LineText } from "../ui/Narration";
+import { LineText, lineClaims } from "../ui/Narration";
 import { jumpTo, useReveal } from "../ui/reveal";
 import { blurbOf, settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
@@ -373,7 +373,7 @@ function TheLook() {
   if (!line) return null;
   return (
     <p className="journey-look" lang={language}>
-      <LineText text={line.text} verified />
+      <LineText text={line.text} verified claims={lineClaims(narration!, line)} />
     </p>
   );
 }
@@ -386,11 +386,11 @@ const REMOVED_LOOK = "removed_look"; // explain/look_cost.py: which look the com
  * (App.tsx OPENER_IDS). */
 export const ASK_RUN_ID = "studios-ask-run";
 
-/** A broadcast's questions that a tactic card answers. "What did the back line expose after losing
- * the ball?" has no card (the lab has no transition card), so it is not asked. */
+/** A broadcast's questions that a tactic card answers. */
 const LAB_ASKS: readonly { card: CardId; ask: string }[] = [
   { card: "high_press", ask: "Why did this high press work?" },
-  { card: "progression", ask: "Why did xT jump on this attack?" },
+  { card: "counter_attack", ask: "Why did xT jump on this attack?" },
+  { card: "transition", ask: "What did the back line expose after losing the ball?" },
 ];
 
 function BroadcastPanel() {

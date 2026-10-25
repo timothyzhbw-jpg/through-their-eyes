@@ -594,7 +594,7 @@ describe("verified numbers in the caption", () => {
     await settle();
     const page = mount(session, <Caption />);
     act(() => session.controls.openLine("L2"));
-    const caption = page.querySelector("button.caption")!;
+    const caption = page.querySelector(".caption")!;
     expect([...caption.querySelectorAll(".num")].map((n) => text(n))).toEqual(["0.11"]);
     expect(caption.querySelector(".caption-more svg")).not.toBeNull();
     expect(text(caption)).toContain("That look was worth 0.11 in expected threat.");
@@ -604,7 +604,7 @@ describe("verified numbers in the caption", () => {
     const session = offline();
     const page = mount(session, <Caption />);
     act(() => session.controls.openLine("L3"));
-    const caption = page.querySelector("button.caption")!;
+    const caption = page.querySelector(".caption")!;
     expect(text(caption)).toContain("0.3 metres");
     expect(caption.querySelectorAll(".num")).toHaveLength(0);
   });

@@ -25,7 +25,7 @@ import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { Chapter, Title } from "./Chapter";
 import { CheckIcon } from "./icons";
-import { LineText } from "./Narration";
+import { LineText, lineClaims } from "./Narration";
 import { renameIds, shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
 import { HowChecked } from "../provenance/HowChecked";
@@ -547,7 +547,7 @@ export function VerdictPanel() {
         <div className="worth-text">
           {line ? (
             <p className="worth-line">
-              <LineText text={line.text} verified />
+              <LineText text={line.text} verified claims={lineClaims(narration!, line)} />
             </p>
           ) : pending ? (
             <p className="worth-line">

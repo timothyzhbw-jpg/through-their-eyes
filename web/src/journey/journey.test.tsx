@@ -257,7 +257,9 @@ function mount(node = <Journey />) {
   return { container, session };
 }
 
-const tabs = (c: HTMLElement) => [...c.querySelectorAll<HTMLButtonElement>("[role='tab']")];
+const tabs = (c: HTMLElement) => [
+  ...c.querySelectorAll<HTMLButtonElement>("nav.journey-bar > [role='tablist'] > [role='tab']"),
+];
 const selected = (c: HTMLElement) =>
   c.querySelector("[role='tab'][aria-selected='true']")?.textContent ?? "";
 const panel = (c: HTMLElement) => c.querySelector<HTMLElement>("[role='tabpanel']")!;
@@ -338,26 +340,27 @@ describe("the bar and its panels", () => {
     expect(buttons.map((b) => b.textContent)).toEqual([
       "Why did this high press work?",
       "Why did xT jump on this attack?",
+      "What did the back line expose after losing the ball?",
       "Whose off-ball run made the shooting space?",
     ]);
-    // No tactic card answers what the back line exposed after losing the ball: not asked.
-    expect(p.textContent).not.toMatch(/back line/);
     expect(p.querySelector(".lab-card")?.getAttribute("data-card")).toBe("high_press");
     expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
     act(() => buttons[1].click());
-    expect(p.querySelector(".lab-card")?.getAttribute("data-card")).toBe("progression");
+    expect(p.querySelector(".lab-card")?.getAttribute("data-card")).toBe("counter_attack");
     expect(buttons[1].getAttribute("aria-pressed")).toBe("true");
     expect(buttons[0].getAttribute("aria-pressed")).toBe("false");
     // The lab's own picker follows the question, and the question follows the picker.
-    const lab = [...p.querySelectorAll<HTMLButtonElement>("nav[aria-label='Tactic cards'] button")];
+    const lab = [...p.querySelectorAll<HTMLButtonElement>("nav[aria-label='Tactics'] button")];
     expect(lab.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent).toBe(
-      "Progression",
+      "Counter-attack",
     );
+    act(() => lab.find((b) => b.textContent === "Transition after losing the ball")!.click());
+    expect(buttons[2].getAttribute("aria-pressed")).toBe("true");
     act(() => lab.find((b) => b.textContent === "High press")!.click());
     expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
     // The run opens a mode: its button has an id, so closing the mode gives the keyboard back.
-    expect(buttons[2].id).toBe(ASK_RUN_ID);
-    expect(buttons[2].hasAttribute("aria-pressed")).toBe(false);
+    expect(buttons[3].id).toBe(ASK_RUN_ID);
+    expect(buttons[3].hasAttribute("aria-pressed")).toBe(false);
     expect(p.querySelector(".journey-worth")?.textContent).toMatch(/sponsors/);
   });
 

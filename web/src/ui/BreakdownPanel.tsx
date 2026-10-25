@@ -12,6 +12,7 @@ import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { Chapter } from "./Chapter";
 import { Producer } from "./Producer";
+import { GlossaryText } from "../glossary/GlossaryText";
 
 const rel = (s: number) => `${s >= 0 ? "+" : "−"}${Math.abs(s).toFixed(2)} s`;
 /** A scan event's id ("scan:H8:0060") as the viewer reads it: whose scan. */
@@ -180,7 +181,9 @@ export function BreakdownPanel({
               }
             >
               <span className="t">{step.t.toFixed(1)}</span>
-              <span>{describeStep(step, script)}</span>
+              <span>
+                <GlossaryText text={describeStep(step, script)} />
+              </span>
             </li>
           ))}
         </ol>
