@@ -1,6 +1,8 @@
 // The Tactics lab's metrics, on real exports from public/data: the blind-side hero's passes, the
 // pressure hero's forced runs (interceptions and a tackle) and the far-post hero's shot, plus the
-// bundled xT grid. Expected values are worked out here from the definitions, not read from the code.
+// bundled xT grid. fixture_match1_transitions.json is `uv run python -m sim.export --match 1`
+// run in python:3.11-slim: the sim is byte-identical only within one OS, so regenerate it on
+// linux/amd64, never on a Mac. Expected values are worked out here from the definitions, not read from the code.
 
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";

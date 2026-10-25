@@ -252,16 +252,18 @@ export function progression(events: readonly ExportEvent[], team: Team, xt: XtGr
 
 // ---------- pressing and playing out from the back ----------
 
-export const PRESSED = 0.7;
-export const MIN_BYPASSED = 2;
-export const COUNTER_WINDOW_S = 10;
-export const TRANSITION_WINDOW_S = 5;
-const PRESS_SMOOTH_FRAMES = 5;
-const PRESS_REACTION_S = 0.7;
-const PRESS_V_MAX = 5;
-const PRESS_THRESHOLD_S = 1.5;
-const PRESS_SIGMA_S = 0.45;
-const PRESS_TARGET_LEAD_S = 1;
+// Mirrors of the Python reference (analytics/); tests/test_tactics_constants.py fails when one drifts.
+export const PRESSED = 0.7; // analytics.tactics.PRESSED
+export const MIN_BYPASSED = 2; // analytics.tactics.MIN_BYPASSED
+const PRESS_REACTION_S = 0.7; // analytics.tti.REACTION_S
+const PRESS_V_MAX = 5; // analytics.tti.V_MAX
+const PRESS_THRESHOLD_S = 1.5; // analytics.pressing.TIME_THRESHOLD_S
+const PRESS_SIGMA_S = 0.45; // analytics.pressing.SIGMA_S
+const PRESS_TARGET_LEAD_S = 1; // analytics.pressing.TARGET_LEAD_S
+// Design choices of this card, not fitted and not from a paper: they pick which instance is shown.
+export const COUNTER_WINDOW_S = 10; // a counter must reach the final third or shoot within this
+export const TRANSITION_WINDOW_S = 5; // how long after a loss the transition is read
+const PRESS_SMOOTH_FRAMES = 5; // frames the defender's velocity is averaged over
 
 function segmentStart(hero: Hero, frame: number): number {
   let start = 0;

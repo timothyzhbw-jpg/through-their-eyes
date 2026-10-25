@@ -13,7 +13,8 @@ import { parseHero } from "../data/hero";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import { json } from "../testing";
-import { buildCards } from "./cards";
+import { COMPONENTS_LIMIT, zoneName, type Zone } from "../xtexplain/zones";
+import { buildCards, CARD_IDS } from "./cards";
 import matchFixture from "./fixture_match1_transitions.json";
 import { buildUpMetrics, counterAttack, parseXtGrid, transitionAfterLoss } from "./metrics";
 import type { Scope } from "./scope";
@@ -106,9 +107,11 @@ describe("Pro and Plain", () => {
     expect(tab(card(), "Pro").getAttribute("aria-selected")).toBe("true");
     expect(card().querySelector(".lab-table")).not.toBeNull();
     expect(text(row())).toContain("Expected threat added by the counter's completed passes");
-    expect(text(card())).toContain("the opponents' half");
-    expect(text(card())).toContain("attacking third");
-    expect(text(card())).toContain("does not split it into shot, goal and move parts");
+    const band = (b: Zone["band"]) =>
+      zoneName({ band: b, lane: "centre", col: 0, row: 0 }, "his").split(",")[0];
+    expect(text(card())).toContain(band("opponents_half"));
+    expect(text(card())).toContain(band("final_third").replace(/^the /, ""));
+    expect(text(card())).toContain(COMPONENTS_LIMIT);
     act(() => tab(card(), "Plain").click());
     expect(text(row())).toContain("moving the ball into more dangerous space");
     expect(text(row())).not.toContain("Expected threat added by the counter's completed passes");
@@ -146,6 +149,17 @@ describe("Pro and Plain", () => {
       `${after.xtStart.toFixed(3)} → ${after.xtPeak.toFixed(3)}`,
     ]);
     expect(transition.metrics.map((m) => m.label)).not.toContain("Recovery runs");
+  });
+});
+
+describe("every card explains itself", () => {
+  it("has non-empty pro and plain text for every card id", () => {
+    const cards = buildCards(match, xt, scope);
+    for (const id of CARD_IDS) {
+      const card = cards.find((c) => c.id === id)!;
+      expect(card.pro.trim(), `${id} pro`).not.toBe("");
+      expect(card.plain.trim(), `${id} plain`).not.toBe("");
+    }
   });
 });
 
