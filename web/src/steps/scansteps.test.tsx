@@ -336,15 +336,24 @@ describe("His looks: the coach's example", () => {
     // The start view: facing the ball, his options before any look, no "new in his picture".
     expect(textOf(el.querySelector(".ss-card h2"))).toBe("Facing the ball");
     expect(textOf(el.querySelector(".ss-picture"))).toContain("His options before any look");
+    expect(textOf(el.querySelector(".ss-picture"))).not.toContain("same frozen frame");
     expect(el.querySelector(".ss-news, .ss-nothing")).toBeNull();
     expect(textOf(el.querySelector(".ss-think"))).toMatch(/^I face the ball\./);
     click(button(el, "Next"));
     expect(textOf(el.querySelector(".ss-kicker"))).toBe("Look 1");
     expect(el.querySelectorAll(".ss-news li").length).toBeGreaterThan(0);
+    expect(textOf(el.querySelector(".ss-picture"))).toContain(
+      "His options: without this look → with it",
+    );
+    expect(textOf(el.querySelector(".ss-picture"))).toContain(
+      "Both are computed at the same frozen frame.",
+    );
     expect(textOf(el.querySelector(".ss-think"))).toMatch(/^Checking my left\./);
     click(button(el, "Next"));
     expect(textOf(el.querySelector(".ss-card h2"))).toBe("He drops back");
     expect(textOf(el.querySelector(".ss-kicker"))).toBe("After his look left");
+    expect(textOf(el.querySelector(".ss-picture"))).toContain("His options: last step → now");
+    expect(textOf(el.querySelector(".ss-picture"))).not.toContain("same frozen frame");
     expect(textOf(el.querySelector(".ss-think"))).toMatch(/too tight to take it on my spot/);
     expect(st.playback.get().focus).toBe("tactical"); // on the board, with his path
     expect(el.querySelector(".ss-board .ss-path")).not.toBeNull();

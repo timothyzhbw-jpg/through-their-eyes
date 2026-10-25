@@ -120,7 +120,7 @@ export function LookStoryBlock({ st, step }: { st: StepThrough; step: Step }) {
 }
 
 /** What a frozen step changed and what he made of it: for a look, who is new in his picture (or
- * that nothing is); his options now on his belief, each with its believed success before and now,
+ * that nothing is); his options on his belief, compared at the same frame with and without the look,
  * ↑ opened and ↓ closed; and one line of what he is thinking that links the two. The start view
  * lists his options before any look. Nothing for a missing look or the decision. */
 export function PictureBlock({ st, step }: { st: StepThrough; step: Step }) {
@@ -147,6 +147,7 @@ export function PictureBlock({ st, step }: { st: StepThrough; step: Step }) {
         </>
       )}
       <p className="ss-label">{view.optionsLabel}</p>
+      {view.optionsNote && <p className="ss-source">{view.optionsNote}</p>}
       <ul className="ss-options">
         {view.options.map((o) => (
           <li key={o.action} className={o.mark === "↑" ? "up" : o.mark === "↓" ? "down" : ""}>

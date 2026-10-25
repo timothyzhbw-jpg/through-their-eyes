@@ -26,11 +26,15 @@ Measured in each run:
   where his action ended (`possession_value`, minus the opponents' if lost) minus its value
   where he received the ball;
 - each look's news, in the run with both: who is new in his picture (`explain.belief_options`:
-  came into his sight, or believed more than 1 m from where he would have believed them without
-  the look) and which of his options it opened or closed (the decision model on his belief at the
-  look's end, with and without the look; open at a believed success of at least 50%).
-Shares carry 95% Wilson intervals. Design seeds 0-99 (the scene was built on 0-15 and checked on
-100-106 while it was tuned); held-out seeds 100-139. Writes eval/reports/pro_scan.md.
+  came into sight and would not have been seen without the scan, or believed more than 1 m
+  from where he would have believed them in the run
+  without that scan) and which of his options it opened or closed (the decision model on his
+  belief at the look's end, with and without the look; open at a believed success of at least 50%).
+  If dropping the scan changes physical play before that frame, the comparison is unavailable;
+  report the seed and reason and exclude it from the look's news and option aggregates.
+Shares carry 95% Wilson intervals. Design seeds 0-99 (the scene was built on 0-15); seeds 100-139
+are reported separately because 100-106 were checked while it was tuned. Unseen held-out seeds are
+200-239. Writes eval/reports/pro_scan.md.
 """
 
 from __future__ import annotations
@@ -45,7 +49,13 @@ import numpy as np
 
 from analytics.xt import xt_for
 from eval.season import wilson
-from explain.belief_options import look_options, new_in_picture, option_changes
+from explain.belief_options import (
+    IllDefinedLook,
+    look_options,
+    new_in_picture,
+    option_changes,
+    without_look_sightings,
+)
 from explain.lenses import sightings
 from sim.counterfactual import possession_result, possession_value, reception_frame
 from sim.model import Event
@@ -64,7 +74,8 @@ from sim.scenarios.pro_scan import (
 
 REPORTS = Path(__file__).parent / "reports"
 DESIGN = "0-99"
-HELD_OUT = "100-139"
+HELD_OUT = "200-239"
+PARTLY_SEEN = "100-139"
 SIDE_ON_DEG = 45.0  # a body this far from square is side-on (rule 2 opens it OPEN_DEG)
 RUNS = {"both": "LR", "none": "", "left": "L", "right": "R"}
 TITLES = {
@@ -84,6 +95,12 @@ class LookNews:
     new: list[tuple[str, float]]  # (player, metres his belief moved), largest first
     opened: list[str]  # options it opened (believed success crossed up through 50%)
     closed: list[str]  # options it closed
+    unavailable: str | None = None  # why the same-moment comparison cannot be scored
+
+    @property
+    def corrected(self) -> int:
+        """News players whose believed position changed by more than one metre."""
+        return sum(m > 1.0 for _, m in self.new)
 
 
 @dataclass
@@ -146,11 +163,16 @@ def _news(run, sc) -> dict[str, LookNews]:
         if e is None:
             continue
         a, b = e.frame, min(int(e.attrs["end"]), decided)
-        before, after = look_options(run, hero, a, b, seen)
+        try:
+            without_seen = without_look_sightings(run, hero, a, b, seen)
+        except IllDefinedLook as exc:
+            out[label] = LookNews([], [], [], unavailable=str(exc))
+            continue
+        before, after = look_options(run, hero, a, b, seen, without_seen)
         added, removed = option_changes({o.action: o.p_success for o in before},
                                         {o.action: o.p_success for o in after})  # fmt: skip
-        news = [(n.player, n.moved_m) for n in new_in_picture(run, hero, a, b, seen)
-                if n.moved_m > 1.0]  # fmt: skip
+        news = [(n.player, n.moved_m)
+                for n in new_in_picture(run, hero, a, b, seen, without_seen)]  # fmt: skip
         out[label] = LookNews(news, added, removed)
     return out
 
@@ -300,36 +322,53 @@ def _block(title: str, rows: list[Row]) -> list[str]:
         )
     lines += [
         "",
-        "Each look's news, in the run with both looks: who is new in his picture (came into his "
-        "sight, or believed more than 1 m from where he would have believed them without the "
-        "look), and which options it opened (↑) or closed (↓): the decision model on his belief "
-        "at the look's end with the look against without it, an option open at a believed "
-        "success of at least 50%, scored as if the ball were at his feet.",
+        "Each look's news, in the run with both looks: who is new in his picture (came into "
+        "sight and would not have been seen without the scan, or believed more than 1 m from "
+        "where he would have believed them in the run "
+        "without that scan), and which options it opened (↑) or closed (↓): the decision model on "
+        "his belief at the look's end with the look against without it, an option open at a "
+        "believed success of at least 50%, scored as if the ball were at his feet. The position "
+        "correction count is the subset whose believed position moved by more than 1 m; players "
+        "seen only because of the scan also count as news when their position moved less. "
+        "Unavailable comparisons are excluded from all news, option and correction averages "
+        "and denominators; Taken still counts every look.",
         "",
         "| Look | Taken | Players new in his picture, mean | Most often the most moved "
-        "| How far, m: mean | Opened or closed an option | Most often opened | Most often closed |",
-        "|---|---|---|---|---|---|---|---|",
+        "| How far, m: mean | Opened or closed an option | Most often opened | Most often closed "
+        "| Position corrected by more than 1 m, mean |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     both = c["both"]
     for label, _, _ in LOOKS:
         took = [r.news[label] for r in both if label in r.news]
-        if not took:
-            lines.append(f"| {WORDS[label]} | 0/{n} | — | — | — | — | — | — |")
+        scored = [x for x in took if x.unavailable is None]
+        if not scored:
+            lines.append(f"| {WORDS[label]} | {len(took)}/{n} | — | — | — | — | — | — | — |")
             continue
-        tops = [x.new[0] for x in took if x.new]
+        tops = [x.new[0] for x in scored if x.new]
         top = Counter(p for p, _ in tops).most_common(1)
-        opened = Counter(o for x in took for o in x.opened).most_common(1)
-        closed = Counter(o for x in took for o in x.closed).most_common(1)
+        opened = Counter(o for x in scored for o in x.opened).most_common(1)
+        closed = Counter(o for x in scored for o in x.closed).most_common(1)
 
         def fmt(mc, k: int) -> str:
             return f"`{mc[0][0]}` ({mc[0][1]}/{k})" if mc else "—"
 
         lines.append(
-            f"| {WORDS[label]} | {len(took)}/{n} | {np.mean([len(x.new) for x in took]):.1f} "
-            f"| {fmt(top, len(took))} | {np.mean([m for _, m in tops]) if tops else 0:.1f} "
-            f"| {_share(sum(bool(x.opened or x.closed) for x in took), len(took))} "
-            f"| {fmt(opened, len(took))} | {fmt(closed, len(took))} |"
+            f"| {WORDS[label]} | {len(took)}/{n} | {np.mean([len(x.new) for x in scored]):.1f} "
+            f"| {fmt(top, len(scored))} | {np.mean([m for _, m in tops]) if tops else 0:.1f} "
+            f"| {_share(sum(bool(x.opened or x.closed) for x in scored), len(scored))} "
+            f"| {fmt(opened, len(scored))} | {fmt(closed, len(scored))} "
+            f"| {np.mean([x.corrected for x in scored]):.1f} |"
         )
+    unavailable = [(r.seed, label, x.unavailable) for r in rows
+                   for label, x in r.runs["both"].news.items()
+                   if x.unavailable is not None]  # fmt: skip
+    taken = sum(len(r.news) for r in both)
+    lines += ["", f"Unavailable look comparisons: {len(unavailable)}/{taken} taken looks."]
+    if unavailable:
+        lines += ["", "| Seed | Look | Unavailable reason |", "|---|---|---|"]
+        lines += [f"| {seed} | {WORDS[label]} | {reason} |"
+                  for seed, label, reason in unavailable]  # fmt: skip
     lines.append("")
     return lines
 
@@ -404,10 +443,18 @@ def _reading(rows: list[Row]) -> list[str]:
         took = [r.news[label] for r in both if label in r.news]
         if not took:
             continue
-        moved = sum(bool(x.opened or x.closed) for x in took)
-        nothing = sum(not x.new for x in took)
+        scored = [x for x in took if x.unavailable is None]
+        if len(scored) < len(took):
+            out.append(
+                f"The {WORDS[label]} look comparison is unavailable in "
+                f"{len(took) - len(scored)}/{len(took)} taken runs."
+            )
+        if not scored:
+            continue
+        moved = sum(bool(x.opened or x.closed) for x in scored)
+        nothing = sum(not x.new for x in scored)
         line = (f"The {WORDS[label]} look opens or closes at least one option in {moved}/"
-                f"{len(took)} runs")  # fmt: skip
+                f"{len(scored)} available comparisons")  # fmt: skip
         out.append(line + (f"; in {nothing} it brings nothing new." if nothing else "."))
     out += [
         "",
@@ -421,7 +468,7 @@ def _reading(rows: list[Row]) -> list[str]:
     return out
 
 
-def render(design: list[Row], held: list[Row]) -> str:
+def render(design: list[Row], held: list[Row], partly_seen: list[Row]) -> str:
     looks = ", ".join(f"{WORDS[label]} {direction}° at {s} s" for label, direction, s in LOOKS)
     lines = [
         "# Back to goal: a look left, a look right, then the half-turn — `pro_scan`",
@@ -439,6 +486,11 @@ def render(design: list[Row], held: list[Row]) -> str:
         "",
         *_block(f"Held-out seeds {held[0].seed}–{held[-1].seed} ({len(held)})", held),
         *_reading(held),
+        *_block(
+            "Partly seen while tuning (100-106): seeds "
+            f"{partly_seen[0].seed}–{partly_seen[-1].seed} ({len(partly_seen)})",
+            partly_seen,
+        ),
         *_block(f"Design seeds {design[0].seed}–{design[-1].seed} ({len(design)})", design),
         "## Per seed (held out)",
         "",
@@ -457,6 +509,8 @@ def render(design: list[Row], held: list[Row]) -> str:
         x = r.news.get(label)
         if x is None:
             return "not taken"
+        if x.unavailable is not None:
+            return f"unavailable: {x.unavailable}"
         new = ", ".join(f"{p} {m:.1f}" for p, m in x.new[:2]) or "nothing new"
         return f"{new} · {', '.join(x.opened) or '—'} · {', '.join(x.closed) or '—'}"
 
@@ -488,12 +542,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--design", default=DESIGN)
     parser.add_argument("--held-out", default=HELD_OUT)
+    parser.add_argument("--partly-seen", default=PARTLY_SEEN)
     parser.add_argument("--workers", type=int, default=None)
     parser.add_argument("--out", type=Path, default=REPORTS / "pro_scan.md")
     args = parser.parse_args()
     design = collect(_parse_seeds(args.design), args.workers)
     held = collect(_parse_seeds(args.held_out), args.workers)
-    report = render(design, held)
+    partly_seen = collect(_parse_seeds(args.partly_seen), args.workers)
+    report = render(design, held, partly_seen)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(report)
     print(report.split("## Design seeds")[0])

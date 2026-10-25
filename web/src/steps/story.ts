@@ -174,8 +174,8 @@ export const lookDirection = (hero: Hero, run: Run, step: LookStep): ScanDirecti
 // ---------- new information → his options (a frozen step's picture) ----------
 // Every look must visibly bring something new and show what it did to his options. The bundle
 // carries, per frozen step, who is new in his picture and his options on his belief (the decision
-// model, read only, explain/belief_options.py) before and now; the words here are templates whose
-// names, numbers and percentages are slots from that data.
+// model, read only, explain/belief_options.py) with and without this look at the same frozen frame;
+// the words here are templates whose names, numbers and percentages are slots from that data.
 
 /** A player as the story names him, by id. */
 export type PersonOf = (id: string) => Person;
@@ -195,7 +195,7 @@ export function optionLabel(action: string, who: PersonOf, turn = false): string
 export interface OptionLine {
   action: string;
   label: string;
-  before: number | null; // believed success before, 0-1 (null: not playable then, or no before)
+  before: number | null; // baseline believed success, 0-1 (null: not playable, or no baseline)
   now: number;
   mark: "↑" | "↓" | ""; // opened, closed
 }
@@ -204,7 +204,7 @@ export interface OptionLine {
 export const OPTIONS_SHOWN = 4;
 
 /** His options now, best valued first: the top OPTIONS_SHOWN and every one this step opened or
- * closed, each with its believed success before and now. */
+ * closed, each with its baseline and current believed success. For a look, both are at its freeze. */
 export function optionLines(
   options: OptionRow[],
   before: OptionRow[] | null,
@@ -329,13 +329,14 @@ export function beatThinking(step: BeatStep, who: PersonOf, deg: number | null):
 }
 
 /** A frozen step's picture block, put together for the card: a look's news lines (empty: nothing
- * new; null for other steps), his options with before → now and ↑ / ↓, and his thinking line.
+ * new; null for other steps), his options with baseline → current and ↑ / ↓, and his thinking line.
  * Null for a missing look and for the decision (told by `decisionStory`). */
 export interface PictureView {
   news: string[] | null;
   optionsLabel: string;
+  optionsNote?: string;
   options: OptionLine[];
-  compare: boolean; // show before → now
+  compare: boolean; // show baseline → current
   thinking: string;
 }
 
@@ -359,7 +360,8 @@ export function pictureView(
     if (step.missing || !p) return null;
     return {
       news: newsLines(p.news ?? [], who),
-      optionsLabel: "His options: before this look → after",
+      optionsLabel: "His options: without this look → with it",
+      optionsNote: "Both are computed at the same frozen frame.",
       options: optionLines(p.options, p.before, p.opened, p.closed, who, teaching),
       compare: true,
       thinking: lookThinking(lookDirection(hero, run, step), p, who, teaching),

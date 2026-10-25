@@ -100,6 +100,9 @@ describe("His looks: the coaching story", () => {
     expect(marked("down")).toEqual(lines.filter((l) => l.mark === "↓").map((l) => l.label));
     expect(p.opened).toContain("pass:H9"); // seeing his run opens the pass to him
     expect(marked("up")).toContain(`Pass to ${news[0]!.split(":")[0]}`);
+    const picture = textOf(el.querySelector(".ss-picture"))!;
+    expect(picture).toContain("His options: without this look → with it");
+    expect(picture).toContain("Both are computed at the same frozen frame.");
     const think = textOf(el.querySelector(".ss-think"))!;
     expect(think).toBe(lookThinking(s.direction, p, who));
     expect(think).toMatch(/^Checking behind me\. #9 .+ is [\d.]+ m from me, not [\d.]+ m\. So /);

@@ -13,7 +13,8 @@ import pytest
 from agents.context import MomentContext
 from agents.steps import DWELL_TOLERANCE, answer_steps, build_steps, dwell_frame, focus_pair
 from analytics.vision import wrap_angle
-from explain.belief_options import option_changes
+from explain.belief_options import look_options, new_in_picture, option_changes
+from explain.lenses import sightings
 from sim.export import export_steps, steps_json
 from tests import canonical
 
@@ -21,7 +22,7 @@ DATA = Path(__file__).parent.parent / "web" / "public" / "data"
 FILES = {
     ("blind_side_run", 3): "steps_seed3.json",
     ("press_escape", 0): "steps_press_escape_seed0.json",
-    ("pro_scan", 116): "steps_pro_scan_seed116.json",  # the teaching scenario's held-out seed
+    ("pro_scan", 116): "steps_pro_scan_seed116.json",  # the coach's teaching example
 }
 
 
@@ -179,8 +180,34 @@ def test_every_look_brings_news_that_opens_or_closes_options(coach):
         assert p["opened"] or p["closed"], s.direction
     left, right = (fac.pictures[s.scan.id] for s in fac.steps)
     assert left["news"][0]["id"] == "A6" and left["news"][0]["after"] < left["news"][0]["before"]
-    assert right["news"][0]["id"] == "A5" and "pass:H9" in right["opened"]
-    assert "carry" in right["closed"]
+    assert [n["id"] for n in right["news"][:2]] == ["A8", "A5"]
+    assert "pass:H4" in right["opened"] and "pass:H4" not in right["closed"]
+
+
+def test_look_pictures_stop_at_the_frozen_frame(coach):
+    fac = build_steps(coach)["factual"]
+    seen = sightings(fac.run, "H8")
+    for step in fac.steps:
+        picture = fac.pictures[step.scan.id]
+        assert picture["frame"] == step.frame
+        without, with_look = look_options(fac.run, "H8", step.scan.frame, step.frame, seen)
+        assert {o["action"]: o["p"] for o in picture["before"]} == {
+            o.action: round(o.p_success, 3) for o in without
+        }
+        assert {o["action"]: o["p"] for o in picture["options"]} == {
+            o.action: round(o.p_success, 3) for o in with_look
+        }
+        for news in picture["news"]:
+            j = fac.run.index(news["id"])
+            assert seen[: step.frame + 1, j].any(), (step.direction, news["id"])
+    right = fac.steps[1]
+    assert right.frame == 100
+    assert np.flatnonzero(seen[:, fac.run.index("H11")])[0] == 103
+    assert "H11" not in {n["id"] for n in fac.pictures[right.scan.id]["news"]}
+    assert "H11" in {
+        n.player
+        for n in new_in_picture(fac.run, "H8", right.scan.frame, int(right.scan.attrs["end"]))
+    }
 
 
 @pytest.mark.parametrize("key", [("blind_side_run", 3), ("pro_scan", 116)])
