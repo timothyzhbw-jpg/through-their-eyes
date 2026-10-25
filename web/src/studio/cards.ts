@@ -37,7 +37,8 @@ interface StatTemplate {
   claim: string;
   key: string;
   decimals: number;
-  unit: string;
+  unit: Record<PostLanguage, string>;
+  percent?: boolean;
   label: Record<PostLanguage, (hero: string, runner: string | null) => string>;
   needsRunner?: boolean;
 }
@@ -48,53 +49,54 @@ const STATS: readonly StatTemplate[] = [
     claim: "belief_error",
     key: "err",
     decimals: 1,
-    unit: " m",
+    unit: { en: " m", zh: "米" },
     needsRunner: true,
     label: {
       en: (_h, r) => `his picture of ${r} was off by`,
-      zh: (_h, r) => `对${r}位置的判断偏差`,
+      zh: (_h, r) => `对${r}位置的预判偏差`,
     },
   },
   {
     claim: "cf_belief_error",
     key: "err",
     decimals: 1,
-    unit: " m",
+    unit: { en: " m", zh: "米" },
     needsRunner: true,
     label: {
       en: (_h, r) => `without the look, the picture of ${r} would be off by`,
-      zh: (_h, r) => `没有那一眼，对${r}的偏差会达到`,
+      zh: (_h, r) => `没有那一眼，对${r}位置的预判偏差`,
     },
   },
   {
     claim: "cf_value",
     key: "dxt",
     decimals: 2,
-    unit: " xT",
+    unit: { en: " xT", zh: "" },
     label: {
       en: () => "what the look was worth, in expected threat",
-      zh: () => "那一眼价值的预期威胁",
+      zh: () => "那一眼带来的预期威胁",
     },
   },
   {
     claim: "pass_success",
     key: "p_true",
     decimals: 2,
-    unit: "",
+    unit: { en: "", zh: "%" },
+    percent: true,
     label: { en: () => "chance the pass arrived", zh: () => "传球实际成功率" },
   },
   {
     claim: "scans_before_reception",
     key: "n",
     decimals: 0,
-    unit: "",
+    unit: { en: "", zh: "" },
     label: { en: () => "scans before receiving", zh: () => "接球前回头观察次数" },
   },
   {
     claim: "gap_to_nearest_opponent",
     key: "gap",
     decimals: 1,
-    unit: " m",
+    unit: { en: " m", zh: "米" },
     needsRunner: true,
     label: {
       en: (_h, r) => `${r} from the nearest opponent`,
@@ -105,25 +107,25 @@ const STATS: readonly StatTemplate[] = [
     claim: "gap_opened",
     key: "gain",
     decimals: 1,
-    unit: " m",
+    unit: { en: " m", zh: "米" },
     needsRunner: true,
     label: {
       en: (_h, r) => `${r} opened up on his marker`,
-      zh: (_h, r) => `${r}拉开与盯防者的距离`,
+      zh: () => "与盯防球员拉开的身位",
     },
   },
   {
     claim: "observed_share",
     key: "share",
     decimals: 0,
-    unit: "%",
-    label: { en: () => "of the opponents' space he saw", zh: () => "他看到的对手控制区域" },
+    unit: { en: "%", zh: "%" },
+    label: { en: () => "of the opponents' space he saw", zh: () => "他看到的对手控制空间占比" },
   },
   {
     claim: "pass_speed",
     key: "kmh",
     decimals: 1,
-    unit: " km/h",
+    unit: { en: " km/h", zh: "公里/小时" },
     label: { en: () => "pass speed", zh: () => "传球时速" },
   },
 ];
@@ -137,9 +139,9 @@ const COPY = {
   },
   zh: {
     kicker: "他的视角",
-    title: (hero: string) => `透过${hero}的眼睛`,
-    empty: "这一刻没有可展示的已验证数字。",
-    footer: (home: string, away: string) => `${home}对${away} · 合成比赛`,
+    title: (hero: string) => `以${hero}的视角看`,
+    empty: "这一刻没有可展示的已验证数据。",
+    footer: (home: string, away: string) => `${home}对${away}，模拟比赛`,
   },
 } satisfies Record<PostLanguage, unknown>;
 
@@ -161,8 +163,9 @@ export function cardSpec(
     const claim = narration.claims.get(t.claim);
     const raw = claim?.verdict === "supported" ? claim.values[t.key] : undefined;
     if (typeof raw !== "number" || (t.needsRunner && !runner)) continue;
-    const value = `${raw.toFixed(t.decimals)}${t.unit}`;
-    if (!checked(value, allowed)) continue;
+    const percent = t.percent && lang === "zh";
+    const value = `${(percent ? raw * 100 : raw).toFixed(percent ? 0 : t.decimals)}${t.unit[lang]}`;
+    if (!checked(value, percent ? new Set([raw * 100]) : allowed)) continue;
     stats.push({ value, label: t.label[lang](hero, runner) });
   }
   const copy = COPY[lang];
