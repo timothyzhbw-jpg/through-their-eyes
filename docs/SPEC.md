@@ -1175,6 +1175,9 @@ are sim records, labelled `sim` on screen.
   - The match's shots and xG, and the share from set pieces.
   - A passage's *peak*: the completed pass received where it was worth the most xT to the
     receiving team. The card compares the best corner's peak with the open-play passages'.
+- **Tactics lab selection windows.** These are display design parameters, not thresholds fitted
+  from a paper: a counter-attack must reach the final third or shoot within 10 s of the regain;
+  the transition card follows a loss for at most 5 s, stopping at the next loss or possession cut.
 - **Sentences.** One per card, a claim (§5.3) with `en` and `zh` templates. Its slots are filled
   from the card a viewer sees. `tactics_stat` measures the card again from the run's tracking and
   events, with the stitched run's possessions, and the Verifier checks every slot before the line

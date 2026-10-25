@@ -507,6 +507,13 @@ function counter_attack(hero: Hero, view: Context): Built {
 function build_up(hero: Hero, view: Context): Built {
   const result = buildUpMetrics(hero);
   const best = result.best;
+  const xt = view.xt;
+  const leader = xt
+    ? TEAM_IDS.map((team) => progression(hero.runs.factual.events, team, xt))
+        .filter((p) => p.best)
+        .sort((a, b) => b.best!.xt - a.best!.xt)[0]
+    : undefined;
+  const bestPass = leader?.best;
   const stat = (f: (m: (typeof result.teams)[number]) => string) => each((t) => f(result.teams[t]));
   return {
     id: "build_up",
@@ -552,6 +559,18 @@ function build_up(hero: Hero, view: Context): Built {
     moment: link("pressure"),
     here: view.scenario === "press_escape",
     watch: best ? { label: "Watch the press escape", frame: best.frame } : null,
+    xtMove:
+      leader && bestPass && xt
+        ? moveOf({
+            mode: "pass",
+            team: leader.team,
+            from: bestPass.from,
+            to: bestPass.to,
+            grid: xt,
+            delta: bestPass.xt,
+            label: `Best pass (${TEAMS[leader.team]})`,
+          })
+        : null,
     empty: result.list.length ? null : "Not in this match's data: no resolved own-half pass.",
   };
 }
