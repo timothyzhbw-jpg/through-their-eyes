@@ -66,7 +66,6 @@ export function leaveTourFor(focus: string): void {
   const { open, at, kind } = tour.get();
   if (!open) return;
   resume = { at: at ?? "", kind, focus };
-  opener = null; // the tour comes back: nothing to give the keyboard to yet
   tour.set({ open: false });
 }
 

@@ -710,8 +710,8 @@ function ValuePanel() {
         <p className="journey-measured">
           <strong className="journey-label">Measured</strong>{" "}
           <span>
-            <strong>{COST_PER_VERIFIED_BREAKDOWN}</strong> of model calls per verified breakdown:
-            the deployed AI crew on Microsoft Foundry, at list price (
+            <strong>{COST_PER_VERIFIED_BREAKDOWN}</strong> average model cost per eval breakdown
+            with four scripts: the deployed AI crew on Microsoft Foundry, at list price (
             <a href={COST_REPORT_URL} target="_blank" rel="noreferrer">
               the crew vs single report
             </a>

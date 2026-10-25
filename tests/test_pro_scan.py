@@ -9,7 +9,20 @@ import numpy as np
 import pytest
 
 from analytics.vision import wrap_angle
-from eval.pro_scan import LOST, RUNS, Row, RunRow, _reading
+from eval import pro_scan
+from eval.pro_scan import (
+    HELD_OUT,
+    LOST,
+    PARTLY_SEEN,
+    RUNS,
+    LookNews,
+    Row,
+    RunRow,
+    _measure,
+    _reading,
+    render,
+)
+from explain.belief_options import IllDefinedLook, News
 from explain.functions import EvalContext, metric_at
 from sim.config import SimParams
 from sim.counterfactual import reception_frame, run_counterfactual
@@ -265,6 +278,122 @@ def test_the_reading_says_so_when_the_looks_barely_change_anything():
 def test_a_run_where_he_loses_the_ball_before_deciding_is_neither_pass():
     row = _row(decision=LOST, result="lost", best="—")
     assert not row.forward and not row.other_pass
+
+
+def test_news_counts_sub_metre_sightings_and_reports_large_corrections_separately():
+    row = _measure(116, RUNS["both"])
+    left = row.news["L"]
+    # The dropped-scan baseline excludes H4, who remains visible facing the ball.
+    assert {player for player, _ in left.new} == {"A6", "A1", "H9", "A3", "A4", "A5"}
+    assert sum(m <= 1.0 for _, m in left.new) == 5
+    assert left.corrected == 1
+
+
+def test_news_keeps_every_entered_player_and_only_large_moves_count_as_corrections(
+    monkeypatch, runs
+):
+    news = [News(player, True, moved, 4.0, 4.0)
+            for player, moved in (("A5", 1.01), ("A6", 1.0), ("H4", 0.2), ("H9", 0.0))]  # fmt: skip
+    monkeypatch.setattr(pro_scan, "new_in_picture", lambda *args: news)
+    measured = pro_scan._news(*runs[0]["both"])["L"]
+    assert measured.new == [(n.player, n.moved_m) for n in news]
+    assert measured.corrected == 1
+    row = Row(0, {name: _row(news={"L": measured}) for name in RUNS})
+    lines = pro_scan._block("test", [row])
+    left = next(line for line in lines if line.startswith("| left |"))
+    assert left.startswith("| left | 1/1 | 4.0 |")
+    assert left.endswith("| 1.0 |")
+
+
+def test_news_marks_an_ill_defined_comparison_unavailable(monkeypatch, runs):
+    def without(*args):
+        raise IllDefinedLook("dropping the scan changes physical play")
+
+    monkeypatch.setattr(pro_scan, "without_look_sightings", without)
+    news = pro_scan._news(*runs[0]["both"])
+    assert set(news) == {"L", "R"}
+    for look in news.values():
+        assert look.unavailable == "dropping the scan changes physical play"
+        assert look.new == look.opened == look.closed == []
+
+
+def test_news_does_not_hide_unexpected_comparison_errors(monkeypatch, runs):
+    def without(*args):
+        raise ValueError("incorrect scan id")
+
+    monkeypatch.setattr(pro_scan, "without_look_sightings", without)
+    with pytest.raises(ValueError, match="incorrect scan id"):
+        pro_scan._news(*runs[0]["both"])
+
+
+def test_unavailable_comparisons_are_excluded_from_every_news_aggregate():
+    good = LookNews([("H9", 2.0)], ["pass:H9"], ["pass:H4"])
+    # Even values present on an unavailable comparison must never enter the aggregates.
+    bad = LookNews([("A5", 100.0)], ["pass:H11"], ["pass:H7"], unavailable="physical divergence")
+    rows = [Row(seed, {name: _row(news={"L": news} if name == "both" else {}) for name in RUNS})
+            for seed, news in ((0, good), (1, bad))]  # fmt: skip
+    lines = pro_scan._block("test", rows)
+    left = next(line for line in lines if line.startswith("| left |"))
+    cells = [cell.strip() for cell in left.split("|")[1:-1]]
+    assert cells[:5] == ["left", "2/2", "1.0", "`H9` (1/1)", "2.0"]
+    assert cells[5].startswith("1/1 (100%;")
+    assert cells[6:] == ["`pass:H9` (1/1)", "`pass:H4` (1/1)", "1.0"]
+    assert "Unavailable look comparisons: 1/2 taken looks." in lines
+    assert "| 1 | left | physical divergence |" in lines
+    reading = " ".join(_reading(rows))
+    assert "left look comparison is unavailable in 1/2 taken runs" in reading
+    assert "left look opens or closes at least one option in 1/1 available comparisons" in reading
+    assert "nothing new" not in reading
+
+
+def test_all_unavailable_looks_keep_taken_counts_and_render_no_false_zeroes():
+    def row(seed):
+        news = {"L": LookNews([], [], [], unavailable="physical divergence")}
+        return Row(seed, {name: _row(news=news if name == "both" else {}) for name in RUNS})
+
+    lines = pro_scan._block("test", [row(0)])
+    assert "| left | 1/1 | — | — | — | — | — | — | — |" in lines
+    assert "Unavailable look comparisons: 1/1 taken looks." in lines
+    reading = " ".join(_reading([row(0)]))
+    assert "left look comparison is unavailable in 1/1 taken runs" in reading
+    assert "left look opens or closes" not in reading
+    assert "nothing new" not in reading
+    report = render([row(0)], [row(200)], [row(100)])
+    assert "unavailable: physical divergence" in report.split("## Per seed (held out)")[1]
+    assert "nan" not in report
+
+
+def test_unseen_held_out_seeds_are_separate_from_the_partly_seen_block():
+    assert HELD_OUT == "200-239"
+    assert PARTLY_SEEN == "100-139"
+
+    def rows(seed):
+        return Row(seed, {name: _row() for name in RUNS})
+
+    text = render([rows(0)], [rows(200)], [rows(100)])
+    assert "## Held-out seeds 200–200 (1)" in text
+    assert "## Partly seen while tuning (100-106): seeds 100–100 (1)" in text
+    assert text.index("Held-out seeds") < text.index("Partly seen while tuning")
+    assert "Position corrected by more than 1 m" in text
+
+
+def test_report_command_collects_all_three_seed_blocks_by_default(monkeypatch, tmp_path, capsys):
+    calls = []
+
+    def collect(seeds, workers):
+        calls.append(seeds)
+        return [Row(seed, {name: _row() for name in RUNS}) for seed in seeds]
+
+    out = tmp_path / "pro_scan.md"
+    monkeypatch.setattr(pro_scan, "collect", collect)
+    monkeypatch.setattr("sys.argv", ["pro_scan", "--out", str(out)])
+    pro_scan.main()
+    assert calls == [list(range(100)), list(range(200, 240)), list(range(100, 140))]
+    report = out.read_text()
+    assert "## Held-out seeds 200–239 (40)" in report
+    assert "## Partly seen while tuning (100-106): seeds 100–139 (40)" in report
+    assert "## Design seeds 0–99 (100)" in report
+    assert f"wrote {out}" in capsys.readouterr().out
 
 
 def test_the_scenario_is_registered_with_its_intervention():
