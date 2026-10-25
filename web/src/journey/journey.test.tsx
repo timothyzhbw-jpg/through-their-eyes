@@ -217,7 +217,9 @@ function mount(node = <Journey />) {
   return { container, session };
 }
 
-const tabs = (c: HTMLElement) => [...c.querySelectorAll<HTMLButtonElement>("[role='tab']")];
+const tabs = (c: HTMLElement) => [
+  ...c.querySelectorAll<HTMLButtonElement>("nav.journey-bar > [role='tablist'] > [role='tab']"),
+];
 const selected = (c: HTMLElement) =>
   c.querySelector("[role='tab'][aria-selected='true']")?.textContent ?? "";
 const panel = (c: HTMLElement) => c.querySelector<HTMLElement>("[role='tabpanel']")!;
