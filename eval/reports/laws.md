@@ -144,6 +144,50 @@ Not a breach by itself: players may leave the field in the course of play, and f
 | Scenario | Run set | Runs with one | Runs | Furthest (m) | Who |
 |---|---|---|---|---|---|
 
+## Players and the goal frame (Law 1.10)
+
+No player's body may overlap a post: his centre stays 0.36 m from the post's (0.3 m body, 0.06 m post), and nobody stands inside a goal. **42 of 3,096 runs** break it. No keeper sweeps his goal line past his post (within 1 m of the line, more than a body outside the post, over 2 m/s): **13 runs**. Per scenario and run set:
+
+| Scenario | Run set | Runs | Through a post or in a goal | Keeper along his line past a post | Closest to a post (m) | Who |
+|---|---|---|---|---|---|---|
+| `blind_side_run` | design | 100 | 0 | 0 | 3.96 | blind_side_run 2: A1 (GK) at frame 112 |
+| `blind_side_run` | held-out | 80 | 0 | 0 | 4.15 | blind_side_run 221: A1 (GK) at frame 111 |
+| `blind_side_run` | intervention | 180 | 0 | 0 | 4.68 | blind_side_run 64 (drop_scan): A1 (GK) at frame 0 |
+| `blind_side_run` | match 1 | 1 | 0 | 0 | 5.16 | match 1 #1 blind_side_run 3: A1 (GK) at frame 101 |
+| `blind_side_run` | match 2 | 1 | 0 | 0 | 5.22 | match 2 #12 blind_side_run 11: A1 (GK) at frame 100 |
+| `corner_blind_side` | design | 100 | 9 | 0 | 0.12 | corner_blind_side 57: H3 (FB) at frame 0 |
+| `corner_blind_side` | held-out | 80 | 12 | 0 | 0.09 | corner_blind_side 105: H3 (FB) at frame 0 |
+| `corner_blind_side` | intervention | 180 | 21 | 0 | 0.09 | corner_blind_side 105 (drop_scan): H3 (FB) at frame 0 |
+| `corner_blind_side` | match 1 | 1 | 0 | 0 | 0.84 | match 1 #14 corner_blind_side 0: H2 (FB) at frame 0 |
+| `corner_blind_side` | match 2 | 1 | 0 | 0 | 1.04 | match 2 #6 corner_blind_side 2: H3 (FB) at frame 0 |
+| `cutback_scan` | design | 100 | 0 | 0 | 0.83 | cutback_scan 79: A1 (GK) at frame 129 |
+| `cutback_scan` | held-out | 80 | 0 | 1 | 0.83 | cutback_scan 124: A1 (GK) at frame 180 |
+| `cutback_scan` | intervention | 180 | 0 | 1 | 0.83 | cutback_scan 124 (drop_scan): A1 (GK) at frame 180 |
+| `far_post_finish` | design | 100 | 0 | 0 | 2.19 | far_post_finish 58: A1 (GK) at frame 134 |
+| `far_post_finish` | held-out | 80 | 0 | 0 | 2.17 | far_post_finish 110: A1 (GK) at frame 237 |
+| `far_post_finish` | intervention | 180 | 0 | 0 | 1.44 | far_post_finish 97 (drop_scan): A1 (GK) at frame 216 |
+| `far_post_finish` | match 1 | 1 | 0 | 0 | 2.27 | match 1 #11 far_post_finish 11: A1 (GK) at frame 141 |
+| `keeper_switch` | design | 100 | 0 | 0 | 7.85 | keeper_switch 81: H1 (GK) at frame 75 |
+| `keeper_switch` | held-out | 80 | 0 | 0 | 7.88 | keeper_switch 125: H1 (GK) at frame 131 |
+| `keeper_switch` | intervention | 180 | 0 | 0 | 7.85 | keeper_switch 81 (drop_scan): H1 (GK) at frame 75 |
+| `open_play` | design | 100 | 0 | 8 | 0.68 | open_play 63: A1 (GK) at frame 589 |
+| `open_play` | held-out | 80 | 0 | 3 | 0.45 | open_play 128: A1 (GK) at frame 463 |
+| `possession_play` | design | 100 | 0 | 0 | 1.79 | possession_play 25: H1 (GK) at frame 0 |
+| `possession_play` | held-out | 80 | 0 | 0 | 1.74 | possession_play 228: H1 (GK) at frame 0 |
+| `possession_play` | match 1 | 14 | 0 | 0 | 3.14 | match 1 #10 possession_play 1613017882: H1 (GK) at frame 0 |
+| `possession_play` | match 2 | 14 | 0 | 0 | 2.41 | match 2 #2 possession_play 1349824647: H1 (GK) at frame 0 |
+| `possession_play_away` | design | 100 | 0 | 0 | 1.84 | possession_play_away 90: A1 (GK) at frame 0 |
+| `possession_play_away` | held-out | 80 | 0 | 0 | 1.79 | possession_play_away 119: A1 (GK) at frame 0 |
+| `possession_play_away` | match 1 | 1 | 0 | 0 | 3.80 | match 1 #12 possession_play_away 53682912: A1 (GK) at frame 0 |
+| `press_escape` | design | 100 | 0 | 0 | 4.09 | press_escape 25: H1 (GK) at frame 0 |
+| `press_escape` | held-out | 80 | 0 | 0 | 4.16 | press_escape 125: H1 (GK) at frame 0 |
+| `press_escape` | intervention | 180 | 0 | 0 | 4.09 | press_escape 25 (force:carry): H1 (GK) at frame 0 |
+| `press_escape` | match 1 | 1 | 0 | 0 | 4.74 | match 1 #7 press_escape 0: H1 (GK) at frame 137 |
+| `press_escape` | match 2 | 1 | 0 | 0 | 4.74 | match 2 #1 press_escape 1: H1 (GK) at frame 95 |
+| `screened_shot` | design | 100 | 0 | 0 | 1.44 | screened_shot 70: H1 (GK) at frame 71 |
+| `screened_shot` | held-out | 80 | 0 | 0 | 1.44 | screened_shot 124: H1 (GK) at frame 66 |
+| `screened_shot` | intervention | 180 | 0 | 0 | 1.94 | screened_shot 202 (drop_step): H1 (GK) at frame 80 |
+
 ## Examples
 
 Up to five per finding, in run order.

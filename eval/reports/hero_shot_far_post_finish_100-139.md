@@ -20,26 +20,26 @@ Design visibility uses `player_visibility` < 0.5 on every frame in each stated i
 
 | Seed | Factual action | P_goal on truth | Factual outcome | Counterfactual action | P_goal on truth | Counterfactual outcome | Placement changed | ΔP_goal | Design rule | Goal status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 100 | `shot:far` | 0.796 | goal | `shot:near` | 0.275 | saved | yes | +0.521 | yes | goal → no goal |
-| 101 | `shot:far` | 0.760 | wide | `shot:near` | 0.256 | saved | yes | +0.504 | yes | no goal → no goal |
+| 100 | `shot:far` | 0.796 | goal | `shot:near` | 0.274 | saved | yes | +0.522 | yes | goal → no goal |
+| 101 | `shot:far` | 0.760 | wide | `shot:near` | 0.256 | saved | yes | +0.505 | yes | no goal → no goal |
 | 102 | `shot:far` | 0.789 | post | `shot:near` | 0.252 | saved | yes | +0.537 | yes | no goal → no goal |
-| 103 | `shot:far` | 0.773 | goal | `shot:near` | 0.274 | saved | yes | +0.499 | yes | goal → no goal |
+| 103 | `shot:far` | 0.773 | goal | `shot:near` | 0.274 | saved | yes | +0.500 | yes | goal → no goal |
 | 104 | `shot:far` | 0.791 | goal | `shot:near` | 0.254 | saved | yes | +0.537 | yes | goal → no goal |
-| 105 | `shot:far` | 0.786 | goal | `shot:near` | 0.275 | wide | yes | +0.511 | yes | goal → no goal |
+| 105 | `shot:far` | 0.786 | goal | `shot:near` | 0.274 | wide | yes | +0.511 | yes | goal → no goal |
 | 106 | `shot:far` | 0.794 | goal | `shot:near` | 0.257 | saved | yes | +0.538 | yes | goal → no goal |
 | 107 | `shot:far` | 0.800 | goal | `shot:near` | 0.259 | saved | yes | +0.541 | yes | goal → no goal |
 | 108 | `shot:far` | 0.798 | goal | `shot:near` | 0.259 | saved | yes | +0.539 | yes | goal → no goal |
 | 109 | `shot:far` | 0.790 | goal | `shot:near` | 0.254 | saved | yes | +0.536 | yes | goal → no goal |
-| 110 | `shot:far` | 0.796 | goal | `shot:near` | 0.282 | saved | yes | +0.514 | yes | goal → no goal |
+| 110 | `shot:far` | 0.796 | goal | `shot:near` | 0.282 | saved | yes | +0.515 | yes | goal → no goal |
 | 111 | `shot:far` | 0.778 | goal | `shot:near` | 0.251 | post | yes | +0.527 | yes | goal → no goal |
 | 112 | `shot:far` | 0.785 | goal | `shot:near` | 0.255 | post | yes | +0.530 | yes | goal → no goal |
 | 113 | `shot:far` | 0.781 | post | `shot:near` | 0.254 | saved | yes | +0.527 | yes | no goal → no goal |
 | 114 | `shot:far` | 0.802 | goal | `shot:near` | 0.269 | saved | yes | +0.533 | yes | goal → no goal |
 | 115 | `shot:far` | 0.791 | goal | `shot:near` | 0.256 | saved | yes | +0.535 | yes | goal → no goal |
 | 116 | `shot:far` | 0.796 | goal | `shot:near` | 0.266 | saved | yes | +0.530 | yes | goal → no goal |
-| 117 | `shot:far` | 0.791 | goal | `shot:near` | 0.265 | saved | yes | +0.525 | yes | goal → no goal |
+| 117 | `shot:far` | 0.791 | goal | `shot:near` | 0.266 | saved | yes | +0.525 | yes | goal → no goal |
 | 118 | `shot:far` | 0.812 | goal | `shot:near` | 0.284 | saved | yes | +0.528 | yes | goal → no goal |
-| 119 | `shot:far` | 0.775 | goal | `shot:near` | 0.261 | saved | yes | +0.515 | yes | goal → no goal |
+| 119 | `shot:far` | 0.775 | goal | `shot:near` | 0.261 | saved | yes | +0.514 | yes | goal → no goal |
 | 120 | `shot:far` | 0.803 | goal | `shot:near` | 0.282 | goal | yes | +0.521 | yes | goal → goal |
 | 121 | `shot:far` | 0.787 | goal | `shot:near` | 0.253 | saved | yes | +0.534 | yes | goal → no goal |
 | 122 | `shot:far` | 0.783 | goal | `shot:near` | 0.258 | goal | yes | +0.525 | yes | goal → goal |
@@ -51,7 +51,7 @@ Design visibility uses `player_visibility` < 0.5 on every frame in each stated i
 | 128 | `shot:far` | 0.782 | goal | `shot:near` | 0.260 | saved | yes | +0.523 | yes | goal → no goal |
 | 129 | `shot:far` | 0.783 | wide | `shot:near` | 0.263 | saved | yes | +0.520 | yes | no goal → no goal |
 | 130 | `shot:far` | 0.794 | goal | `shot:near` | 0.259 | goal | yes | +0.535 | yes | goal → goal |
-| 131 | `shot:far` | 0.785 | goal | `shot:near` | 0.268 | saved | yes | +0.517 | yes | goal → no goal |
+| 131 | `shot:far` | 0.785 | goal | `shot:near` | 0.267 | saved | yes | +0.517 | yes | goal → no goal |
 | 132 | `shot:far` | 0.798 | post | `shot:near` | 0.273 | goal | yes | +0.525 | yes | no goal → goal |
 | 133 | `shot:far` | 0.791 | wide | `shot:near` | 0.270 | saved | yes | +0.521 | yes | no goal → no goal |
 | 134 | `shot:far` | 0.764 | goal | `shot:near` | 0.255 | saved | yes | +0.509 | yes | goal → no goal |
