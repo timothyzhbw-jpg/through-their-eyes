@@ -226,3 +226,8 @@ def test_the_markers_cover_the_headline_numbers():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for key in ("H1", "H2", "A5", "R3", "V1"):
         assert f"<!--num:{key}" in readme, f"README.md quotes {key} without a marker"
+
+
+def test_measured_ts_has_exactly_one_number_marker():
+    measured = (ROOT / "web" / "src" / "journey" / "measured.ts").read_text(encoding="utf-8")
+    assert len(MARKER.findall(measured)) == 1
