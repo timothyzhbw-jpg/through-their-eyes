@@ -1,8 +1,11 @@
 /**
  * Scroll-reveal hooks for the story below the live picture: `useReveal` eases an element in once,
- * `useTextReveal` fades a heading in word by word. Both show everything at once with reduced motion.
+ * `useTextReveal` lifts a heading in word by word. Both show everything at once with reduced motion.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+
+// Full opacity keeps every word AA-readable over Night and the floodlight gradients.
+export const UNREVEALED_WORD_OPACITY = 1;
 
 export function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(
@@ -106,7 +109,7 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
       let observer: IntersectionObserver | null = null;
       let frame = 0;
       let done = false;
-      let scrolled = false; // the faded state is only applied once the reader scrolls
+      let scrolled = false; // the lifted state is only applied once the reader scrolls
       const stop = () => {
         observer?.disconnect();
         el.removeEventListener("focusin", finish);
@@ -136,7 +139,7 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
         const count = words.length;
         words.forEach((word, index) => {
           const local = Math.min(1, Math.max(0, (progress * (count + 3) - index) / 4));
-          word.style.opacity = String(0.15 + local * 0.85);
+          word.style.opacity = String(UNREVEALED_WORD_OPACITY);
           word.style.transform = `translateY(${8 * (1 - local)}px)`;
         });
       };

@@ -23,6 +23,8 @@ import type { Fetch } from "../takeeyes/controller";
 import { stepThroughOf } from "./controller";
 import { ScanStepsButton, ScanStepsScreen } from "./ScanSteps";
 import { NO_STEPS } from "./steps";
+import { COACH_LABEL, TEACHING_NOTE, TOUCH_NOTE } from "./coach";
+import { teachingFile } from "./teaching.fixture";
 
 // (a `?raw` import of a stylesheet comes back empty under vitest, and import.meta.url is not a
 // file URL in jsdom; `npm test` runs in web/, as steps/storyui.test.tsx also relies on)
@@ -317,6 +319,48 @@ describe("His looks in the app", () => {
     expect(el.querySelector(".ss-screen")).toBeNull();
     expect(el.querySelector("#scan-steps-open")).toBeNull();
     expect(document.activeElement).toBe(el.querySelector("#scan-steps-story"));
+  });
+});
+
+describe("His looks: the coach's example", () => {
+  it("says its look times are scripted and steps through the coach's sequence", async () => {
+    const session = offline();
+    const file = teachingFile(stepsJson);
+    const st = stepThroughOf(session, async () => ({ ok: true, json: async () => file }), "/d/");
+    const el = mount(session);
+    act(() => st.open());
+    await act(settle);
+    expect(textOf(el.querySelector(".ss-teaching"))).toBe(TEACHING_NOTE);
+    const strip = [...el.querySelectorAll(".ss-strip button")].map((b) => textOf(b));
+    expect(strip).toEqual(["Start", "Look 1", "Drop-back", "Half-turn", "Decision"]);
+    // The start view: facing the ball, his options before any look, no "new in his picture".
+    expect(textOf(el.querySelector(".ss-card h2"))).toBe("Facing the ball");
+    expect(textOf(el.querySelector(".ss-picture"))).toContain("His options before any look");
+    expect(el.querySelector(".ss-news, .ss-nothing")).toBeNull();
+    expect(textOf(el.querySelector(".ss-think"))).toMatch(/^I face the ball\./);
+    click(button(el, "Next"));
+    expect(textOf(el.querySelector(".ss-kicker"))).toBe("Look 1");
+    expect(el.querySelectorAll(".ss-news li").length).toBeGreaterThan(0);
+    expect(textOf(el.querySelector(".ss-think"))).toMatch(/^Checking my left\./);
+    click(button(el, "Next"));
+    expect(textOf(el.querySelector(".ss-card h2"))).toBe("He drops back");
+    expect(textOf(el.querySelector(".ss-kicker"))).toBe("After his look left");
+    expect(textOf(el.querySelector(".ss-think"))).toMatch(/too tight to take it on my spot/);
+    expect(st.playback.get().focus).toBe("tactical"); // on the board, with his path
+    expect(el.querySelector(".ss-board .ss-path")).not.toBeNull();
+    click(button(el, "Next"));
+    expect(textOf(el.querySelector(".ss-card h2"))).toBe("On the half-turn");
+    expect(textOf(el.querySelector(".ss-note"))).toBe(TOUCH_NOTE);
+    expect(st.playback.get().focus).toBe("split"); // through his eyes
+  });
+
+  it("is linked from the scan story when the live service is there, not offline", async () => {
+    const { el } = await opened();
+    expect(el.querySelector(".ss-coach")).toBeNull(); // offline only the bundled moment plays
+    const live = { ...offline(), offline: null };
+    const shown = (await opened(live)).el.querySelector<HTMLAnchorElement>(".ss-coach a")!;
+    expect(textOf(shown)).toBe(COACH_LABEL);
+    expect(shown.getAttribute("href")).toBe("/?play=steps&match=pro_scan-116");
   });
 });
 

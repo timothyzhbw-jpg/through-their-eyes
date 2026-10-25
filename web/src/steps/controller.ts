@@ -9,7 +9,15 @@ import type { Session, ViewSession } from "../session";
 import { createPlayback, type PlaybackState, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { prefersReducedMotion, type Fetch } from "../takeeyes/controller";
-import { matchingStep, NO_STEPS, parseSteps, STEP_FILES, type Step, type Steps } from "./steps";
+import {
+  matchingStep,
+  NO_STEPS,
+  onBoard,
+  parseSteps,
+  STEP_FILES,
+  type Step,
+  type Steps,
+} from "./steps";
 
 export interface StepsState {
   open: boolean;
@@ -106,7 +114,7 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): StepThroug
       playing: false,
       playUntil: null,
       povPlayer: hero.heroId ?? playback.get().povPlayer,
-      focus: step.kind === "decision" ? "tactical" : "split",
+      focus: onBoard(step) ? "tactical" : "split",
       camera: "pov",
     };
     playback.set(patch);

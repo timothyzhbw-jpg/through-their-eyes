@@ -33,6 +33,13 @@ DOCS = [
 
 NUM = r"(−?-?\d+(?:\.\d+)?)"
 FRACTION = rf"\| {NUM}/{NUM} \({NUM}%\)"
+# A row of four shares: `pro_scan`'s four runs.
+FOUR = "".join(rf"\| {NUM}/{NUM} \({NUM}%[^|]*" for _ in range(4))
+FOUR_FIELDS = tuple(
+    f"{prefix}{name}"
+    for run in ("both", "none", "left", "right")
+    for prefix, name in (("", run), ("n", run), ("pct", run))
+)
 
 # id → (report, pattern whose groups are the values in order, the groups' field names).
 READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
@@ -65,6 +72,39 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         "extra_looks_blind_side_run.md",
         rf"\| Decision changed with two more looks \| {NUM}/{NUM} \({NUM}%",
         ("k", "n", "pct"),
+    ),
+    # The teaching scenario, held-out block first in its report. Its four runs, in the columns'
+    # order: both looks, no side looks, left only, right only.
+    "H12": (
+        "pro_scan.md",
+        rf"\| Both looks − no side looks \| \+?{NUM} \| {NUM}/{NUM} \({NUM}%",
+        ("gain", "k", "n", "pct"),
+    ),
+    "H13": (
+        "pro_scan.md",
+        rf"\| Receives side-on \(body ≥ 45° from square\) {FOUR}",
+        FOUR_FIELDS,
+    ),
+    "H14": (
+        "pro_scan.md",
+        rf"\| Decision: forward to the striker `H9` {FOUR}",
+        FOUR_FIELDS,
+    ),
+    "H15": (
+        "pro_scan.md",
+        rf"\| Rule 1 dropped him back \(after the left look's time\) {FOUR}",
+        FOUR_FIELDS,
+    ),
+    # Each look's news in the run with both: taken, then opened or closed an option.
+    "H16": (
+        "pro_scan.md",
+        rf"\| left \| {NUM}/{NUM} \|[^|]*\|[^|]*\|[^|]*\| {NUM}/{NUM} \({NUM}%",
+        ("taken", "n", "k", "nk", "pct"),
+    ),
+    "H17": (
+        "pro_scan.md",
+        rf"\| right \| {NUM}/{NUM} \|[^|]*\|[^|]*\|[^|]*\| {NUM}/{NUM} \({NUM}%",
+        ("taken", "n", "k", "nk", "pct"),
     ),
     "H5": (
         "hero_lens_press_escape.md",

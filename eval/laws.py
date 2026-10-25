@@ -55,6 +55,9 @@ LONG = ("possession_play", "open_play")
 DEMO = {"blind_side_run": 3, "press_escape": 0, "far_post_finish": 11, "corner_blind_side": 0}
 CALLS = ("out", "goal", "offside", "foul")  # the referee's whistle: play stops
 TOUCHES = ("reception", "interception", "tackle", "save")
+# The scenarios this audit sweeps: not the teaching ones (`Scenario.teaching`, e.g. `pro_scan`),
+# which tests/test_laws.py checks on its own seeds.
+AUDITED = sorted(name for name, cls in SCENARIOS.items() if not cls.teaching)
 
 BREACH, WRONG, EARLY, UNMODELLED = "breach", "wrong call", "early call", "not modelled"
 # kind -> (law, category)
@@ -525,7 +528,7 @@ def expected_restart(run: MatchRun) -> tuple[str, int | None]:
 
 
 def collect(workers: int) -> tuple[list[RunAudit], list[Stitch]]:
-    tasks = [(name, seed) for name in sorted(SCENARIOS) for seed in [*DESIGN, *HELD_OUT]]
+    tasks = [(name, seed) for name in AUDITED for seed in [*DESIGN, *HELD_OUT]]
     audits: list[RunAudit] = []
     stitches: list[Stitch] = []
     with ProcessPoolExecutor(workers) as pool:
@@ -692,7 +695,7 @@ def _hero_tables(audits: list[RunAudit]) -> list[str]:
         "| Scenario | Run set | Runs | With an offside offence | Hero or his receiver |",
         "|---|---|---|---|---|",
     ]
-    heroes = {name: cls.hero for name, cls in SCENARIOS.items() if cls.hero}
+    heroes = {name: SCENARIOS[name].hero for name in AUDITED if SCENARIOS[name].hero}
     for name in sorted(heroes):
         for group in ("design", "held-out", "intervention"):
             rows = [a for a in audits if a.scenario == name and a.group == group]

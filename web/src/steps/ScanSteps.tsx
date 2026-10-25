@@ -32,6 +32,7 @@ import { stepThroughOf, type StepThrough } from "./controller";
 import {
   inView,
   movementArrows,
+  onBoard,
   potentialPasses,
   povPose,
   project,
@@ -39,6 +40,7 @@ import {
   focusPlayers,
   stepTitle,
   type Arrow,
+  type BeatId,
   type DecisionStep,
   type Lane,
   type LookStep,
@@ -49,9 +51,12 @@ import {
   DecisionStoryBlock,
   HalfTurnArc,
   LookStoryBlock,
+  PictureBlock,
   ScanTimeline,
   useHalfTurn,
 } from "./StoryParts";
+import { beatTurn } from "./story";
+import { COACH_LABEL, coachHref, isCoachExample, TEACHING_NOTE, TOUCH_NOTE } from "./coach";
 import "./steps.css";
 
 const FALLBACK_SIZE = { w: 640, h: 400 }; // before the view is measured (and in tests)
@@ -173,8 +178,10 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
   const s = useStore(st.state, (x) => x);
   const hero = st.session.hero;
   const run = hero.runs[s.mode];
-  const board = step.kind === "decision"; // the decision is told on the board
-  const turn = useHalfTurn(hero, run) !== null && step.kind === "decision";
+  const board = onBoard(step); // the decision and the drop-back are told on the board
+  const turn =
+    (useHalfTurn(hero, run) !== null && step.kind === "decision") ||
+    (step.kind === "beat" && step.id === "half_turn");
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
     swipe.current = { x: e.clientX, y: e.clientY };
@@ -227,12 +234,22 @@ function StepView({ st, step, scene }: { st: StepThrough; step: Step; scene: boo
 }
 
 function viewLabel(step: Step): string {
+  if (step.kind === "start") return "Through his eyes, facing the ball";
   if (step.kind === "decision") return "His decision, on the board";
+  if (step.kind === "beat")
+    return step.id === "drop_back"
+      ? "Where he drops back to, on the board"
+      : "Through his eyes, as he receives the ball";
   return step.missing ? "Through his eyes, with no look here" : "Through his eyes, frozen mid-look";
 }
 
 function viewTag(step: Step, run: string): string {
+  if (step.kind === "start") return `Facing the ball · ${run}`;
   if (step.kind === "decision") return `His decision · ${run}`;
+  if (step.kind === "beat")
+    return step.id === "drop_back"
+      ? `After his look left · ${run}`
+      : `As the ball reaches him · ${run}`;
   return step.missing ? `No look · ${run}` : `Frozen mid-look · ${run}`;
 }
 
@@ -289,6 +306,17 @@ function PovMarks(props: {
 }) {
   const { hero, run, step, passes, w, h } = props;
   const turn = useHalfTurn(hero, run);
+  if (step.kind === "beat") {
+    // The half-turn through his eyes: the arc from facing the ball round to his body.
+    const arc = beatTurn(hero, run, step);
+    if (!arc) return null;
+    const pose = povPose(hero, run, hero.hero, step.frame, w / h);
+    return (
+      <svg className="ss-marks" width={w} height={h} aria-hidden="true">
+        <HalfTurnArc turn={arc} segment={(a, b) => projectSegment(pose, a, b, w, h, 0.03, 0.3)} />
+      </svg>
+    );
+  }
   if (step.kind === "decision") {
     // At his decision his eyes only carry the half-turn arc, when the data shows one.
     if (!turn) return null;
@@ -455,7 +483,17 @@ function BoardMarks(props: {
   const all = potentialPasses(hero, run, look && !look.missing ? look.sight : []);
   const lanes = passes ? all : step.kind === "decision" ? all.filter((l) => l.chosen) : [];
   const rings = look && !look.missing ? look.sight.map((id) => hero.ids.indexOf(id)) : [];
-  const turn = useHalfTurn(hero, run);
+  const decided = useHalfTurn(hero, run);
+  const beat = step.kind === "beat" ? step : null;
+  const turn = beat ? beatTurn(hero, run, beat) : step.kind === "decision" ? decided : null;
+  // The drop-back: his path from when the rule acted to where he received the ball.
+  const path =
+    beat?.id === "drop_back"
+      ? [beat.start, beat.end].map((g) => {
+          const i = (Math.max(0, Math.min(run.frames - 1, g)) * n + hero.hero) * 2;
+          return toScreen([run.pos[i], run.pos[i + 1]], w, h, zoom);
+        })
+      : null;
   return (
     <>
       {focus && main && <FocusDim hero={hero} step={step as DecisionStep} at={at} zoom={zoom} />}
@@ -487,7 +525,17 @@ function BoardMarks(props: {
             />
           );
         })}
-        {turn && step.kind === "decision" && (
+        {path && (
+          <line
+            className="ss-path"
+            x1={path[0][0]}
+            y1={path[0][1]}
+            x2={path[1][0]}
+            y2={path[1][1]}
+            markerEnd="url(#ss-head-home)"
+          />
+        )}
+        {turn && (
           <HalfTurnArc
             turn={turn}
             segment={(a, b) => [toScreen(a, w, h, zoom), toScreen(b, w, h, zoom)]}
@@ -569,6 +617,18 @@ function Legend({ step, passes }: { step: Step; passes: boolean }) {
           Gold lane: his pick. Lit: the two players it turns on; the rest is dimmed.
         </li>
       )}
+      {step.kind === "beat" && step.id === "drop_back" && (
+        <li>
+          <i className="ss-key-path" aria-hidden="true" />
+          Solid line: his path from here to where he received the ball.
+        </li>
+      )}
+      {step.kind === "beat" && step.id === "half_turn" && step.happened && (
+        <li>
+          <i className="ss-key-turn" aria-hidden="true" />
+          Arc: from facing the ball round to where his body faces.
+        </li>
+      )}
     </ul>
   );
 }
@@ -582,7 +642,14 @@ function Strip({ st }: { st: StepThrough }) {
   return (
     <ol className="ss-strip" aria-label="Steps">
       {steps.map((step, k) => {
-        const label = step.kind === "decision" ? "Decision" : `Look ${(look += 1)}`;
+        const label =
+          step.kind === "start"
+            ? "Start"
+            : step.kind === "decision"
+              ? "Decision"
+              : step.kind === "beat"
+                ? BEAT_LABELS[step.id]
+                : `Look ${(look += 1)}`;
         const full = step.kind === "look" && step.missing ? `${label}, not taken here` : label;
         return (
           <li key={step.id}>
@@ -605,6 +672,9 @@ function Strip({ st }: { st: StepThrough }) {
     </ol>
   );
 }
+
+/** A beat's place in the strip of steps. */
+const BEAT_LABELS: Record<BeatId, string> = { drop_back: "Drop-back", half_turn: "Half-turn" };
 
 // ---------- the card ----------
 
@@ -649,11 +719,19 @@ function Card({ st }: { st: StepThrough }) {
   const looks = list.filter((x) => x.kind === "look");
   const lookNo = step.kind === "look" ? looks.indexOf(step) + 1 : 0;
   const kicker =
-    step.kind === "decision"
-      ? "The last step"
-      : step.missing
-        ? `Look ${lookNo} · not taken in this run`
-        : `Look ${lookNo}`;
+    step.kind === "start"
+      ? "Before his looks"
+      : step.kind === "decision"
+        ? "The last step"
+        : step.kind === "beat"
+          ? step.id === "drop_back"
+            ? "After his look left"
+            : "As the ball reaches him"
+          : step.missing
+            ? `Look ${lookNo} · not taken in this run`
+            : `Look ${lookNo}`;
+  // The link to the coach's example: not on it, and not offline (the live service serves it).
+  const coach = isCoachExample(hero.scenario, hero.seed) || !!st.session.offline;
   const last = s.index === list.length - 1;
   return (
     <aside className="ss-card" aria-labelledby="ss-title">
@@ -662,8 +740,13 @@ function Card({ st }: { st: StepThrough }) {
         <h2 id="ss-title" ref={heading} tabIndex={-1} aria-live="polite">
           {stepTitle(step)}
         </h2>
+        {steps.teaching && <p className="ss-teaching">{TEACHING_NOTE}</p>}
         <Lines narration={narration} ids={ids} />
+        {step.kind === "beat" && step.id === "half_turn" && (
+          <p className="ss-fact ss-note">{TOUCH_NOTE}</p>
+        )}
         <LookStoryBlock st={st} step={step} />
+        <PictureBlock st={st} step={step} />
         <DecisionStoryBlock st={st} step={step} />
         {step.kind === "look" && !step.missing && step.sight.length > 0 && (
           <SightChips hero={hero} ids={step.sight} />
@@ -700,6 +783,11 @@ function Card({ st }: { st: StepThrough }) {
           {!last && exit}
         </div>
         <p className="ss-hint">← / → step · Esc leaves · swipe on phone</p>
+        {!coach && (
+          <p className="ss-hint ss-coach">
+            <a href={coachHref()}>{COACH_LABEL}</a>
+          </p>
+        )}
       </div>
       <div className="ss-card-fade" aria-hidden="true" />
     </aside>

@@ -32,7 +32,7 @@ from pydantic_core import to_json
 from agents.context import MomentContext
 from agents.recap_context import RecapContext
 from analytics.live_stats import StatsTimeline, compute_stats
-from api.settings import Settings, match_id
+from api.settings import TEACHING_MATCHES, Settings, match_id
 from explain.audit import AuditSink, CosmosAuditSink, MemoryAuditSink
 from explain.lenses import explain_moments
 from explain.match import match_moments
@@ -173,7 +173,8 @@ class MatchStore:
     """The matches the service lists (`listed`, TTE_MATCHES) and serves (`known`).
 
     A stitched match's hero possessions are served on their own as well, listed or not: the web
-    app opens a hero moment's breakdown from its possession's export (`<scenario>-<seed>`).
+    app opens a hero moment's breakdown from its possession's export (`<scenario>-<seed>`). So are
+    the teaching scenarios (`TEACHING_MATCHES`), which the scan story links to.
     """
 
     def __init__(self, settings: Settings, audit: AuditSink | None = None) -> None:
@@ -183,6 +184,8 @@ class MatchStore:
             if scenario == "match":
                 for hero in match_heroes(seed):
                     self.known.setdefault(match_id(*hero), hero)
+        for teaching in TEACHING_MATCHES:
+            self.known.setdefault(match_id(*teaching), teaching)
         self.audit = audit  # None: each match keeps its verdicts in memory
         self._loaded: dict[str, Match] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
