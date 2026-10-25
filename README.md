@@ -12,16 +12,16 @@
 > <!--num:H1.k-->33<!--/num--> decide differently.
 
 **Every line the crew says is checked before it airs.** In an offline stress test. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
-Around it: the whole match streams live at 1×, with a rail of its moments, the match recap, the
-tactics cards, five audiences, and English and Chinese.
+Around it: the whole match streams live at 1×, with its moments in **⋯ Settings → Moment**, the
+match recap, the Tactics lab, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
-[![The live app in first person, through the eyes of H8, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner H9, marked in gold by the goal on the right, is in his sight; the caption reads "What did he see? H8 checked his shoulder before the ball reached him." with a verified tick.](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
+[![The live app in first person, through the eyes of J. Ferriday, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner N. Varnhall, marked in gold by the goal on the right, is in his sight; the verified caption reads "J. Ferriday scanned once in the 2 seconds before receiving."](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
 
-<sub>The live app through the eyes of H8, the midfielder, as he looks over his shoulder, away from
-the ball. The runner H9 (the gold 9, by the goal on the right) is in his sight during this look
-and at no other time before his pass. The caption is a verified claim (✓).</sub>
+<sub>The live app through the eyes of J. Ferriday, the midfielder, as he looks over his shoulder,
+away from the ball. The runner N. Varnhall (the gold 9, by the goal on the right) is in his sight
+during this look and at no other time before his pass. The caption is a verified claim (✓).</sub>
 
 ## Judge it in 3 minutes
 1. **See what he saw.** [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0):
@@ -77,9 +77,17 @@ and B.
 Also in the app, each a few clicks from the moment:
 - **Minimal live screen.** The look opens on one live view; the other view is a small picture in
   picture and every overlay is behind **View options**.
+- **Tactics lab and glossary.** **For studios → Tactical broadcast** measures five tactics on the
+  synthetic match. Every parameter has **Pro** and **Plain** explanations, a collapsed definition
+  and a source. Tactical terms in commentary and studio explanations open glossary definitions;
+  analysts receive extra detail where available.
 - **Scan story.** [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps):
   every look he took before the ball arrived is frozen and explained (which way, who came into
-  view, how his picture changed), then his decision.
+  view, how his picture changed), then his decision. Its [coach's example](https://ttesite1ff906.z14.web.core.windows.net/?play=steps&match=pro_scan-116)
+  walks through `pro_scan`: look left, drop back, look right, receive on the half-turn and play
+  forward, with the options each look opens or closes.
+- **Scroll reveal.** Chapter cards ease into view and headings lift word by word as the reader
+  scrolls. Deep links leave text visible, and reduced motion disables the animation.
 - **With two more looks.** In the "Without the look" panel, the opposite experiment: add one look
   to his left and one to his right and his decision changes in <!--num:H10.k-->0<!--/num--> of
   <!--num:H10.n-->40<!--/num--> held-out seeds. More looks are not the right look
@@ -87,10 +95,10 @@ Also in the app, each a few clicks from the moment:
 - **Your call.** [Decide with what he knew](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall):
   every option he had is listed and your pick is rated, then the reveal shows what he did and why.
 
-**Demo data.** The audience, engagement and sponsor figures in Content and Value are simulated by
-a seeded model, not measured: nobody has watched this app. Each one carries the badge "Demo data:
-simulated audience, not real results". Match facts come from the simulator and are checked by the
-Verifier. Clubs, players and sponsors are all fictional.
+**Demo data.** The audience, engagement and sponsor figures in Automated highlights and Value are
+simulated by a seeded model, not measured: nobody has watched this app. Each one carries the badge
+"Demo data: simulated audience, not real results". Match facts come from the simulator and are
+checked by the Verifier. Clubs, players and sponsors are all fictional.
 
 ## What only we do
 First-person replays and vision cones already exist ([related work](#related-work)); they show
@@ -178,9 +186,9 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    analyst's view; once the moment is detected, the agent crew's breakdown plays (Microsoft
    Foundry, cached after the first request). Click a caption to open its claims and the evidence
    frame; **⋯ Settings → Sound** to hear it in Azure AI Speech. Each audience is its own broadcast:
-   switch it in the header's ⋯ (**Watching as**) and the casual fan watches through his eyes, the
-   coach gets his eyes with the board beside them, audio description a plain broadcast camera,
-   each with its own lines and voice ([persona_distinctness](eval/reports/persona_distinctness.md)).
+   switch it under **⋯ Settings → Commentary → Watching as**. The casual fan watches through his
+   eyes, the coach gets his eyes with the board beside them, audio description a plain broadcast
+   camera, each with its own lines and voice ([persona_distinctness](eval/reports/persona_distinctness.md)).
 4. **Your own "What if…?"** [A question, prefilled](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
    press **Ask**. The API maps the question to one of his options, forces it, re-simulates the
    moment and answers with verified lines; the forced run plays as a gold ghost. It is a
@@ -211,15 +219,15 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    the shared state it read and wrote, the Analyst's MCP tool calls, the Verifier sending a line
    back, and the drill's down → fallback → checkpoint → bring-back.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
-7. **A whole match, both heroes, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
+7. **A whole match, four hero moments, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
    19 possessions on one clock of about 13½ minutes, opened where the scan hero's possession
    starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
-   why, one tap switches, and **Auto director** cuts by itself. In **Moments**, the pressure hero
-   has a **Breakdown** too: a centre-back under a high press, and the counterfactual forces him
-   to keep the ball (**If he carried it**). He loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds
-   ([pressure](eval/reports/hero_lens_press_escape.md)). **View options** → **Skeleton** on the
-   broadcast camera or the board draws each player's torso and head direction, the way
-   limb-tracking data is shown.
+   why, one tap switches, and **Auto director** cuts by itself. Under **⋯ Settings → Moment**, the
+   pressure hero has a **Breakdown** too: a centre-back under a high press, and the counterfactual
+   forces him to keep the ball (**If he carried it**). He loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds
+   ([pressure](eval/reports/hero_lens_press_escape.md)). The shot hero and corner also open their
+   breakdowns there. **⋯ Settings → View options → Skeleton** on the broadcast camera or the board
+   draws each player's torso and head direction, the way limb-tracking data is shown.
 
 8. **The match recap, at full time.** [Match recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap):
    the crew recaps the whole stitched match, as it does when the live stream reaches full time.
@@ -231,9 +239,9 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 
 Then the [evidence](#evidence) and [Microsoft technology](#microsoft-technologies-where-they-are-used)
 tables below; [docs/RUBRIC_MAP.md](docs/RUBRIC_MAP.md) maps each judging criterion to files,
-tests, reports and pull requests, and marks what is missing. The third hero of the stitched
+tests, reports and pull requests, and marks what is missing. The fourth hero of the stitched
 match is a short corner (possession 14): a defender marks the striker where he believes him to
-be, and its **Breakdown** is in **Moments** too.
+be, and its **Breakdown** is under **⋯ Settings → Moment** too.
 
 ## Try it
 - **Web app:** https://ttesite1ff906.z14.web.core.windows.net — the hero moment in first person and
@@ -261,7 +269,7 @@ be, and its **Breakdown** is in **Moments** too.
     ```
   No login. Model-backed regenerations are rate-limited per client and capped per day; past that
   the service serves the cache or the deterministic template.
-- **Failure drill** (tour step 6) over the API; each call counts against the rate limit:
+- **Failure drill** (tour step 9) over the API; each call counts against the rate limit:
   ```bash
   curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
     -H 'content-type: application/json' \

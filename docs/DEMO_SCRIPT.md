@@ -33,7 +33,7 @@ something is limited or down. Every link opens the live site at that spot. The p
 |---|---|---|---|
 | 0:00–0:25 | [His eyes at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0) | Press **Play**. Playback slows through the look (the KEY SCAN tag). | "A synthetic match, every player fictional. This is not a camera angle: it is the player's own perception. J. Ferriday, the midfielder, looks over his right shoulder just before the ball reaches him, and that look is the only time he sees N. Varnhall making the run. From then on he carries Varnhall where he last saw him, and he decides on that picture." |
 | 0:25–0:55 | [Without the look, at his decision](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical) | Show the board, then click **With the look** and back. | "We take that one look away and re-simulate the moment. Everything else is the same; only what he saw differs. Now he doesn't know where Varnhall is, so he plays it back to K. Annersley. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently without the look." (NUMBERS H1; TODO(freeze)) |
-| 0:55–1:35 | [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0) | It opens on the tactical board with pitch control, the analyst's view. Press **Tap for sound** (the speaker in the header). Let it stream to the moment; the breakdown starts by itself. Click a caption to open its claims and evidence frame. Read the provenance chip aloud. | "Once the moment is detected, a crew of agents on Microsoft Foundry explains it: a Director, an Analyst with our MCP tools, a Telestrator for the replay plan, two commentary voices, then a Verifier in code. Here it's for an analyst, in Chinese, voiced by Azure AI Speech: the analyst gets the board and the numbers, a casual fan gets his eyes and no jargon. Every caption opens the claim behind it. The chip says who wrote this: [read it, e.g. 'Cached: a crew run from …']." |
+| 0:55–1:35 | [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0) | It opens on the tactical board with pitch control, the analyst's view. Open **⋯ Settings → Sound** (it reads **Sound off**) to turn it on. Let it stream to the moment; the breakdown starts by itself. Click a caption to open its claims and evidence frame. Read the provenance chip aloud. | "Once the moment is detected, a crew of agents on Microsoft Foundry explains it: a Director, an Analyst with our MCP tools, a Telestrator for the replay plan, two commentary voices, then a Verifier in code. Here it's for an analyst, in Chinese, voiced by Azure AI Speech: the analyst gets the board and the numbers, a casual fan gets his eyes and no jargon. Every caption opens the claim behind it. The chip says who wrote this: [read it, e.g. 'Cached: a crew run from …']." |
 | 1:35–2:00 | [Try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value) | Press **Check**: **Refuted**. Then **Check the true value**: supported. | "The narration agents can only pick verified claims; they never write a digit. Here you can type a wrong number yourself. The real Verifier checks it against the match data, and that line would not air." |
 | 2:00–2:40 | [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0), **Behind the replay** → **Producer · failure drill** | **Take down** the Telestrator, press **Run with Telestrator down**. When it airs, press **Bring back**, then **Crew trace**. | "Take an agent down, as in an outage. Its step retries once, then airs its template, and the breakdown still plays. Bring back resumes the Agent Framework workflow from its checkpoint and re-runs only that step and what reads it. The crew trace shows each agent's lane: its input and output, its tool calls, the Verifier's verdicts." |
 | 2:40–3:00 | [The whole match](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751) | Press **Play** for a few seconds on the broadcast camera. | "And it all runs inside a whole stitched match: 19 possessions, four hero moments, a camera director, and a recap at full time with a timecoded cue sheet a graphics engine can take. Synthetic data only, on Azure, live until November 10." (NUMBERS M1) |
@@ -44,20 +44,24 @@ the [failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=produce
 
 ### If there is a fourth minute
 
-- **Another audience:** open **Watching as** in the header and pick one. The casual fan watches
-  through his eyes, the coach gets his eyes with the board beside them and a teaching cue at the
-  end, audio description a plain broadcast camera with the story told in order. Same verified
-  claims, different lines, cameras and voice.
-- [For studios](https://ttesite1ff906.z14.web.core.windows.net/?door=studios): Tactics → Content →
-  Value → Behind the scenes, or jump with `?step=content` (highlight, posts, data cards, the
-  stadium's screens) and `?step=value`. Say at Value: "The audience and sponsor figures are
-  simulated and labelled; nobody has watched this."
+- **Another audience:** open **⋯ Settings → Commentary → Watching as** and pick one. The casual
+  fan watches through his eyes, the coach gets his eyes with the board beside them and a teaching
+  cue at the end, audio description a plain broadcast camera with the story told in order. Same
+  verified claims, different lines, cameras and voice.
+- [For studios](https://ttesite1ff906.z14.web.core.windows.net/?door=studios): **A · Tactical
+  broadcast → B · Personalised commentary → C · Automated highlights → D · Stadium → Value**. Jump
+  with `?step=broadcast`, `commentary`, `highlights`, `stadium` or `value`. In A, choose a Tactics
+  lab card and switch **Pro / Plain**; focus a tactical term for its glossary definition. Value
+  leads with the league's revenue levers, then the measured cost and demo KPIs. Say: "The audience
+  and sponsor figures are simulated and labelled; nobody has watched this."
 - [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps): every
-  look frozen and explained. In **Without the look**, **With two more looks** is the opposite
-  experiment: his decision changes in <!--num:H10.k-->0<!--/num--> of <!--num:H10.n-->40<!--/num--> seeds, the expected result: more looks are not the right look.
-- [Your call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall): the judge decides
-  with only what he knew, every option listed and the pick rated, then sees what he did and why.
-- [Take his eyes](https://ttesite1ff906.z14.web.core.windows.net/?play=eyes): drag his look
+  look frozen and explained. Follow **Coach's example: look left, look right, then the half-turn**
+  for the `pro_scan` teaching sequence. In **Without the look**, **With two more looks** is the
+  opposite experiment: his decision changes in <!--num:H10.k-->0<!--/num--> of <!--num:H10.n-->40<!--/num--> seeds, the expected result: more looks are not the right look.
+- [Make his call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall): the judge
+  decides with only what he knew, every option listed and the pick rated, then sees what he did
+  and why.
+- [See through his eyes](https://ttesite1ff906.z14.web.core.windows.net/?play=eyes): drag his look
   elsewhere and watch his decision change.
 - [A "What if…?" of your own](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F):
   press **Ask**. The question maps to one of his options, the sim forces it and re-simulates,
@@ -79,7 +83,7 @@ The chip and the badges say where an answer came from, with one known gap: a mod
 | **Bring back** answers 404 | an error under the drill | The API restarted or redeployed since the drill ran (drills live on the replica's disk). Press **Take down** and run it again. |
 | Foundry throttles or is down | the breakdown still airs, every line verified, but on templates. **Known gap:** the chip may still read **Live**, then **Cached**, because that run is stored under the model's cache key (PR #195's finding); the Producer desk and Crew trace show **Template** on every step | "Each agent retried once and fell back to its template; the crew still aired, and the Verifier checked every line." Read the steps from the Producer desk, not the chip. After the outage, tell the team to re-run the prewarm with `--regenerate-degraded` so the cached run is replaced. |
 | Speech quota or throttling | captions play without voice | Say the line yourself, or keep going: the captions carry it. |
-| The API is down or the address is over its data budget (HTTP 429) | the app plays its bundled hero with an **Offline data** badge; `match-1` will not load | Switch to the offline tab above. The hero, the run without the look, Your call (Your turn), Take his eyes (For studios) and the bundled breakdown (For studios) all play offline; the live stream, new breakdowns, What if and the whole match need the API. |
+| The API is down or the address is over its data budget (HTTP 429) | the app plays its bundled hero with an **Offline data** badge; `match-1` will not load | Switch to the offline tab above. The hero and run without the look (The look), Make his call and See through his eyes (Your turn), and the bundled breakdown all play offline; the coach's `pro_scan` example, live stream, new breakdowns, What if and the whole match need the API. |
 | A slow first breakdown | a spinner on the breakdown | The breakdown was not in the cache, so the crew is running: the first uncached request after a deploy took 24–26 s on 2026-10-20 (NUMBERS D1). Talk over it. Running `infra.prewarm` after every deploy keeps the tour's breakdowns cached. |
 
 ## What not to say

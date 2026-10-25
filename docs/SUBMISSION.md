@@ -18,8 +18,8 @@ player's own perception: where he looked before the ball arrived, who was in sig
 believed. It replays the moment through his eyes, then re-simulates it without the one look that
 made the play: over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently.[^flip] Every line the
 crew says or captions is checked by code before it airs: in an offline stress test. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false.[^crew-evidence] Around it: the whole match streams live at
-1×, with a rail of its moments, the match recap, the tactics cards, five audiences, and English
-and Chinese.
+1×, with its moments in **⋯ Settings → Moment**, the match recap, the Tactics lab, five audiences,
+and English and Chinese.
 
 ## The problem
 
@@ -100,30 +100,45 @@ The brief's pipeline, end to end, on a synthetic match:
 
 ### From the moment to the matchday
 
-A bar under the picture follows one moment through five steps, each with a `?step=` deep link:
-**Event → Tactics → Your view → Content → Value**. The app opens on one live view and one
-**Start**; the rest is behind **View options** and the bar.
+A plain visit opens a **landing page** (`?door=home`) with the promise, **Watch the look (60 s)**,
+direct links into every feature and the evidence. The brand returns to it. Three doors sit beside
+one **⋯ Settings** menu throughout: **The look**, **Your turn** and **For studios**. Settings holds
+the moment picker, commentary audience and language, club and player to follow, sound, view options
+and the full tour.
 
-- **Tactics lab.** The tactic cards measured on the moment's own synthetic data, each number
-  with its source. xT is explained in the chosen audience's words: one plain sentence for the
-  casual fan; the zones by name with their values, and the from and to cells on the board, for
-  the analyst and the coach.
-- **Your view.** Casual or analyst, English or Chinese, and a club or player to follow; their
-  moments come first.
-- **Content Studio.** The moment as a package, built offline from the verified breakdown: a
-  highlight reel, an explainer card, posts in English and Chinese, and data cards. A sentence
-  with a number no supported claim carries is dropped.
-- **Stadium Screen Studio.** What the main video board, the tunnel LED and the ribbon board would
-  show on a matchday, with a virtual 3D preview of the bowl. Sponsors are fictional.
-- **Value.** The business panel and the sponsor slots. Audience, engagement and sponsor figures
-  are simulated by a seeded model and badged as such (see "Audience and sponsor figures are
-  simulated" under limits); match facts are never simulated this way.
-- **Scan story.** Every look he took before the ball arrived, frozen and explained, then his
-  decision.
-- **With two more looks.** The opposite of the run without the look: add one look to his left
-  and one to his right, and his decision changes in <!--num:H10.k-->0<!--/num--> of
+- **The look** (`?door=look`). The live picture and the moment's story: his scan, the same seconds
+  re-simulated without it, the two compared from above, the scan step-through, commentary,
+  evidence and what-ifs. **With two more looks** is the opposite experiment: add one look to his
+  left and one to his right, and his decision changes in <!--num:H10.k-->0<!--/num--> of
   <!--num:H10.n-->40<!--/num--> held-out seeds, the expected result: more looks are not the right look.
-- **Your call.** Decide with what he knew; every option is listed and your pick rated.
+- **Your turn** (`?door=turn`). Three cards open **Make his call**, **See through his eyes** and
+  **Train your scanning**: decide with only what he knew, choose when and where he looks, or check
+  your shoulder before the ball arrives.
+- **A · AI Tactical Broadcast** (`?step=broadcast`). A broadcast's questions open the Tactics lab
+  card or scan story that answers them. The lab measures five tactics on the synthetic match, with
+  **Pro** and **Plain** explanations, a definition and source on every parameter row, and moment
+  links. Tactical terms throughout the app open plain-language glossary definitions; analysts get
+  extra detail where available.
+- **B · AI Personalised Commentary** (`?step=commentary`). The audience and language are chosen in
+  Settings, with one player followed under Follow. Below are the AI crew, its evidence, failure
+  drill and trace.
+- **C · AI Automated Highlights** (`?step=highlights`). The moment as a package built offline from
+  the verified breakdown: a highlight reel, shot list, captions, posts per platform and landscape
+  and vertical cards for the league's channels. A sentence with a number no supported claim
+  carries is dropped.
+- **D · AI Stadium Experience** (`?step=stadium`). The main video board, tunnel LED and ribbon
+  ring for the moment, with a link to the Stadium Screen Studio's virtual 3D preview. Sponsors are
+  fictional.
+- **Value** (`?step=value`). The league's revenue levers come first: broadcast differentiation,
+  sponsor inventory, international and app engagement, social reach and lower production cost.
+  Then come the measured model cost and demo KPIs. Audience, engagement and sponsor figures are
+  simulated by a seeded model and badged as such; match facts are never simulated this way.
+- **The coach's example.** The scan story links to `pro_scan` at
+  `?play=steps&match=pro_scan-116`: look left, drop back, look right, receive on the half-turn and
+  play forward. Its frozen steps explain what each look added and which options opened or closed.
+
+Chapter cards and headings use scroll reveal; deep-link jumps keep the text visible, and reduced
+motion shows everything immediately.
 
 ## The signature feature: through the player's eyes
 
@@ -144,15 +159,17 @@ A bar under the picture follows one moment through five steps, each with a `?ste
    numbers on screen (the lineup card's scans, sprint tags, the score bug, the telemetry) are
    read straight from the simulation; they are not claims, and the Verifier does not check them.
 
-**Three hero moments.**
+**Four hero moments.**
 - **Scan hero:** a midfielder's one look over his shoulder shows him the runner. Live in the app.
 - **Pressure hero:** a centre-back under a high press. Re-simulated with him forced to keep the
   ball, he loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds.[^press] Live in the app.
+- **Shot hero:** a striker's look at the goal updates his picture of the keeper and changes where
+  he places the shot. Live in the app as the stitched match's third hero; he scores.
 - **Set-piece hero:** at a corner, a defender marks the striker where he *believes* the striker
   is. In <!--num:H7-->37 of 40<!--/num--> held-out seeds, the striker is unmarked at the cutback without the defender's
   look, and marked with it.[^marking] That headline uses a gate revised during design; the
   original plan's checks, reported in the same file, are not met. Live in the app, as the
-  stitched match's third hero.
+  stitched match's fourth hero.
 
 The live heroes play inside a stitched match: 19 possessions on one clock, about 13½ minutes.
 The shot hero scores (1–0), and the set-piece hero's corner comes at 1–0.[^match]
@@ -313,7 +330,7 @@ Multi-Agent System (SPEC §0).
   allow anyway. The scan detector's and blind-side alerts' scores are scores on our simulator.
   The alerts share the simulator's model of what a player expects, so their score is an upper
   bound for real tracking.[^blind]
-- **Audience and sponsor figures are simulated.** The Content and Value steps show impressions,
+- **Audience and sponsor figures are simulated.** Automated highlights and Value show impressions,
   engagement and sponsor slots from a seeded model, labelled "Demo data: simulated audience, not
   real results". No audience exists yet, and the sponsors are fictional.
 - **Causal only inside the simulator.** A counterfactual is a re-simulation, so every
@@ -335,11 +352,11 @@ Multi-Agent System (SPEC §0).
   facts (none in either) and scored the same groundedness; what it buys is recovery and
   auditability, at about twice the cost per breakdown.[^crew]
 - **Not yet measured:** no viewer study, and no frame-rate run on a laptop's integrated GPU.
-- **Tactics: two cards, not a knowledge base.** The analyst's stats panel and the recap answer
-  "why build from the back?" and "why focus on set pieces?" from the match's own data, each with
-  one verified sentence. The rest of a tactics table (high press, counter-attack, wide overloads,
-  central penetration, low block, counter-press) needs tackles, crosses and open play that
-  shoots; see the roadmap below.
+- **Tactics: a measured lab, not a knowledge base.** For studios' Tactics lab measures five
+  tactics, with Pro and Plain explanations, definitions, sources and honest limits. Separately,
+  the analyst's stats panel and recap answer "why build from the back?" and "why focus on set
+  pieces?" with one verified sentence each. The lab does not supply a general tactics knowledge
+  base; richer evidence still needs tackles, crosses and open play that shoots (see the roadmap).
 - **A failure drill lives on one replica's disk.** A restart or redeploy drops it, and
   **Bring back** then answers 404.
 
@@ -347,7 +364,8 @@ Multi-Agent System (SPEC §0).
 ## Roadmap: a tactics knowledge base
 
 Teammates who play proposed a tactics knowledge base: each tactic, its mechanism, the data that
-shows it and a sentence for a fan. We built the two rows our simulator truly supports.
+shows it and a sentence for a fan. The current app has the five-tactic measured Tactics lab plus
+these two verified narrative cards; a general knowledge base remains future work.
 
 - **Why build from the back?** Under pressure, Home completed 30 of 38 short passes out from the
   back in match-1 (79%, against 86% without). The pressure hero's recorded options show his
