@@ -608,3 +608,70 @@
   stroke: rgba(0, 0, 0, 0.85);
   stroke-width: 3.5;
 }
+
+/* the coach's example (coach.ts): his path as the ball came, the note, the link */
+.ss-path {
+  stroke: var(--home);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.ss-key-path {
+  border-top: 3px solid var(--home);
+}
+.ss-key-turn {
+  border-top: 2px solid var(--floodlight);
+}
+.ss-teaching {
+  margin: 0;
+  font: 400 13px/1.45 var(--font-body);
+  color: var(--chalk-2);
+  border-left: 2px solid var(--floodlight);
+  padding-left: 8px;
+}
+.ss-note {
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+.ss-coach a {
+  color: var(--chalk-2);
+}
+
+/* new information → his options (PictureBlock): who is new in his picture, his options with
+   before → now, ↑ opened and ↓ closed. The arrows carry the meaning; the colour only repeats it. */
+.ss-news {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font: 400 14px/1.4 var(--font-body);
+  color: var(--chalk-2);
+}
+.ss-nothing {
+  color: var(--chalk-3);
+}
+.ss-options {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font: 400 13px/1.4 var(--font-body);
+  color: var(--chalk-2);
+}
+.ss-options li {
+  display: grid;
+  grid-template-columns: 1fr auto 16px;
+  gap: 8px;
+  align-items: baseline;
+}
+.ss-p {
+  font: 500 12px/1.4 var(--font-data);
+  color: var(--chalk);
+}
+.ss-mark {
+  font: 700 14px/1 var(--font-data);
+}
+.ss-options li.up .ss-mark {
+  color: var(--floodlight);
+}
+.ss-options li.down .ss-mark {
+  color: var(--away);
+}

@@ -1,10 +1,11 @@
 // The first screen (SPEC 2, 7): one line on what this is and one button. The card sits where the
 // moment card goes (on a phone, a sheet at the bottom), so the picture stays in view behind it,
-// resting on the stream's first frame. It waits for the viewer: nobody reads a card in 5 s. Start
-// opens the quick tour where the page has it (a hero moment with a key scan and the run without
-// it), else starts watching. The line-ups, whose eyes to watch, Just watch and the full tour are
-// one tap away, behind "Teams and more". Its store belongs to the page, so opening a possession's
-// breakdown never brings it back. Escape, or a click on the page around it, starts watching.
+// resting on the stream's first frame. It waits for the viewer: nobody reads a card in 5 s. "Watch
+// the look" opens door 1's story, the quick tour, where the page has it (a hero moment with a key
+// scan and the run without it), else starts watching. The line-ups, whose eyes to watch and Just
+// watch are one tap away, behind "Teams and more"; the other moments and the full tour are in the
+// header's Settings. Its store belongs to the page, so opening a possession's breakdown never
+// brings it back. Escape, or a click on the page around it, starts watching.
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Hero } from "../data/hero";
@@ -14,12 +15,10 @@ import { ArrowIcon, ChevronIcon } from "./icons";
 import { intro } from "./intro";
 import { lineup, measure, runMinutes, watchOptions, type LineupRow } from "./lineup";
 import { momentTitle } from "./Stage";
-import { TourButton } from "../tour/Tour";
 import { envOf, quickTourFits } from "../tour/steps";
 import { startTour } from "../tour/tourState";
 import { clubName, shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
-import { MomentChips } from "../moments/MomentRail";
 import { GlossaryText } from "../glossary/GlossaryText";
 
 /** How long the run is: seconds under a minute (a hero moment), else minutes. */
@@ -28,6 +27,10 @@ export function playLength(minutes: number): string {
     ? `${(minutes * 60).toFixed(1)} seconds of play`
     : `${minutes.toFixed(1)} minutes of play`;
 }
+
+/** What the studio does, in one sentence (SPEC 0): the line-ups' pitch and the landing page's. */
+export const PITCH =
+  "An AI studio that explains key moments through the player's own perception — where he looked before the ball arrived, what he saw, what he believed — and re-simulates the moment without the look that made the play.";
 
 // Scenarios whose key scan is a look over the shoulder (SPEC 3.6): the hook can say so.
 const OVER_THE_SHOULDER = new Set(["blind_side_run", "cutback_scan"]);
@@ -147,9 +150,11 @@ function OpenIntroCard() {
             className="btn btn-primary"
             ref={primary}
             onClick={start}
-            title={quick ? "A quick tour" : undefined}
+            title={
+              quick ? "His look, the run without it, the two compared: about a minute" : undefined
+            }
           >
-            Start
+            {kind === "match" ? "Watch the match" : quick ? "Watch the look" : "Watch the moment"}
             <ArrowIcon />
           </button>
           <button
@@ -162,11 +167,6 @@ function OpenIntroCard() {
             Teams and more
             <ChevronIcon />
           </button>
-        </div>
-        {/* Every moment in reach from the first screen: the tour is one path, not the only one. */}
-        <div className="intro-moments">
-          <p className="kicker">Or jump to a moment</p>
-          <MomentChips label="Moments" />
         </div>
         <div className="intro-more" id={moreId} hidden={!more}>
           <Lineup />
@@ -194,14 +194,13 @@ function OpenIntroCard() {
               ))}
             </div>
           </section>
-          <div className="lineup-actions">
-            {quick && (
+          {quick && (
+            <div className="lineup-actions">
               <button type="button" className="btn" onClick={startWatching}>
                 Just watch
               </button>
-            )}
-            {kind === "hero" && <TourButton /> /* its steps are a hero moment's */}
-          </div>
+            </div>
+          )}
         </div>
       </section>
     </>
@@ -223,9 +222,7 @@ function Lineup() {
         <span className="lineup-club">{clubName(1)}</span>
       </h3>
       <p className="lineup-pitch">
-        <em>See what they saw.</em> An AI studio that explains key moments through the player's own
-        perception — where he looked before the ball arrived, what he saw, what he believed — and
-        re-simulates the moment without the look that made the play.
+        <em>See what they saw.</em> {PITCH}
       </p>
       <div className="lineup-teams">
         {(["home", "away"] as const).map((team) => {

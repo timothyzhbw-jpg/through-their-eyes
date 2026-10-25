@@ -296,6 +296,8 @@ class Simulation:
         )
         moving = np.linalg.norm(self.vel, axis=-1) > 1.0
         body_target = np.where(moving, np.arctan2(self.vel[:, 1], self.vel[:, 0]), ball_dir)
+        for i, yaw in self.scenario.body_targets(self, f).items():  # empty but in `pro_scan`
+            body_target[i] = yaw
         self.body_yaw = wrap_angle(turn_toward(self.body_yaw, body_target, p.body_turn_rate * DT))
 
         # 5. Ball, and the Laws on it (SPEC 3.9). A dead ball stays where play stopped.
@@ -481,6 +483,9 @@ class Simulation:
             target[r], cap[r] = self.pass_in_flight["meet"], self.v_max[r]
             if self.formation is not None:
                 self._chase_loose_pass(target, cap, path, margin)
+        # A receiver who picks his own spot while the ball comes (empty but in `pro_scan`).
+        for i, (t, c) in self.scenario.receiver_targets(self, f).items():
+            target[i], cap[i] = t, c
         for k, (t, start, until) in self.dives.items():
             if start <= f <= until:
                 target[k], cap[k] = t, shots.KEEPER.v_dive_max

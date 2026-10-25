@@ -28,10 +28,18 @@ DOCS = [
     *(ROOT / "docs" / name for name in ("SUBMISSION.md", "RUBRIC_MAP.md", "EVALS.md")),
     ROOT / "docs" / "DEMO_SCRIPT.md",
     ROOT / "docs" / "VIDEO_SCRIPT.md",
+    ROOT / "web" / "src" / "journey" / "measured.ts",  # the one measured number For studios shows
 ]
 
 NUM = r"(−?-?\d+(?:\.\d+)?)"
 FRACTION = rf"\| {NUM}/{NUM} \({NUM}%\)"
+# A row of four shares: `pro_scan`'s four runs.
+FOUR = "".join(rf"\| {NUM}/{NUM} \({NUM}%[^|]*" for _ in range(4))
+FOUR_FIELDS = tuple(
+    f"{prefix}{name}"
+    for run in ("both", "none", "left", "right")
+    for prefix, name in (("", run), ("n", run), ("pct", run))
+)
 
 # id → (report, pattern whose groups are the values in order, the groups' field names).
 READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
@@ -64,6 +72,39 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         "extra_looks_blind_side_run.md",
         rf"\| Decision changed with two more looks \| {NUM}/{NUM} \({NUM}%",
         ("k", "n", "pct"),
+    ),
+    # The teaching scenario, held-out block first in its report. Its four runs, in the columns'
+    # order: both looks, no side looks, left only, right only.
+    "H12": (
+        "pro_scan.md",
+        rf"\| Both looks − no side looks \| \+?{NUM} \| {NUM}/{NUM} \({NUM}%",
+        ("gain", "k", "n", "pct"),
+    ),
+    "H13": (
+        "pro_scan.md",
+        rf"\| Receives side-on \(body ≥ 45° from square\) {FOUR}",
+        FOUR_FIELDS,
+    ),
+    "H14": (
+        "pro_scan.md",
+        rf"\| Decision: forward to the striker `H9` {FOUR}",
+        FOUR_FIELDS,
+    ),
+    "H15": (
+        "pro_scan.md",
+        rf"\| Rule 1 dropped him back \(after the left look's time\) {FOUR}",
+        FOUR_FIELDS,
+    ),
+    # Each look's news in the run with both: taken, then opened or closed an option.
+    "H16": (
+        "pro_scan.md",
+        rf"\| left \| {NUM}/{NUM} \|[^|]*\|[^|]*\|[^|]*\| {NUM}/{NUM} \({NUM}%",
+        ("taken", "n", "k", "nk", "pct"),
+    ),
+    "H17": (
+        "pro_scan.md",
+        rf"\| right \| {NUM}/{NUM} \|[^|]*\|[^|]*\|[^|]*\| {NUM}/{NUM} \({NUM}%",
+        ("taken", "n", "k", "nk", "pct"),
     ),
     "H5": (
         "hero_lens_press_escape.md",
@@ -118,6 +159,12 @@ READERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         rf"Of {NUM} perturbed lines \([^)]*\), {NUM} were kept off the air with the Verifier "
         rf"\([^)]*\); without it {NUM} aired, [^:]*: {NUM} false",
         ("total", "kept", "aired", "false"),
+    ),
+    "MA6": (
+        "crew_vs_single.md",
+        rf"(?s)## The four arms, on the shipped schema.*?"
+        rf"\| cost per breakdown, USD \| [^|]+ \| [^|]+ \| [^|]+ \| {NUM} ",
+        ("crew",),  # arm D, the crew as deployed (with the Verifier)
     ),
     "A5b": (
         "corruption.md",
@@ -219,3 +266,8 @@ def test_the_markers_cover_the_headline_numbers():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for key in ("H1", "H2", "A5", "R3", "V1"):
         assert f"<!--num:{key}" in readme, f"README.md quotes {key} without a marker"
+
+
+def test_measured_ts_has_exactly_one_number_marker():
+    measured = (ROOT / "web" / "src" / "journey" / "measured.ts").read_text(encoding="utf-8")
+    assert len(MARKER.findall(measured)) == 1

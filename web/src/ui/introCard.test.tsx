@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
-// The first screen: a one-line hook and one button, Start, which opens the quick tour where the
-// page has it; the line-ups, whose eyes to watch, Just watch and the full tour behind "Teams and
-// more". It waits for the viewer (no countdown, nothing closes it by itself), closes on Start,
-// Just watch, Escape or a click on the page around it, and keeps the keyboard inside.
+// The first screen: a one-line hook and one primary button, "Watch the look", which opens door 1's
+// story (the quick tour) where the page has it; the line-ups, whose eyes to watch and Just watch
+// behind "Teams and more" (the other moments and the full tour are in the header's Settings). It
+// waits for the viewer (no countdown, nothing closes it by itself), closes on its button, Just
+// watch, Escape or a click on the page around it, and keeps the keyboard inside.
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -77,7 +78,7 @@ function twoHeroes() {
 }
 
 describe("the first screen", () => {
-  it("is one line and one button: the hook names the dialog and Start has the focus", () => {
+  it("is one line and one primary button: the hook names the dialog and Watch the look has the focus", () => {
     const page = mount(offline());
     const dialog = dialogOf(page)!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
@@ -85,7 +86,10 @@ describe("the first screen", () => {
     expect(textOf(title)).toBe("One look over his shoulder changed his pass. See why.");
     expect(title?.querySelector("em")?.textContent).toBe("See why.");
     expect(dialog.textContent).toContain("A synthetic match · every player fictional");
-    expect(document.activeElement).toBe(button(page, "Start"));
+    expect(document.activeElement).toBe(button(page, "Watch the look"));
+    expect(dialog.querySelectorAll(".btn-primary")).toHaveLength(1);
+    // No other way in on the card: the moments and the full tour are in the header's Settings.
+    expect(dialog.querySelector("a, .tour-start, .moment-chips")).toBeNull();
     // The line-ups and the other ways in are behind the toggle, not on the first screen.
     const toggle = button(page, "Teams and more");
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -117,22 +121,22 @@ describe("the first screen", () => {
     expect(page.querySelector(".lineup-countdown")).toBeNull();
   });
 
-  it("Start opens the quick tour on a hero moment that has it", () => {
+  it("Watch the look opens door 1's story on a hero moment that has it", () => {
     const page = mount(offline());
-    click(button(page, "Start"));
+    click(button(page, "Watch the look"));
     expect(intro.get().open).toBe(false);
     expect(dialogOf(page)).toBeNull();
     expect(tour.get()).toMatchObject({ open: true, kind: "quick", at: null });
   });
 
-  it("Start starts watching where there is no quick tour (a stitched match), with the chosen eyes", () => {
+  it("Watch the match starts watching where there is no story (a stitched match), with the chosen eyes", () => {
     const session = twoHeroes();
     const page = mount(session);
     click(button(page, "Teams and more"));
-    expect(page.textContent).not.toContain("Just watch"); // Start does that here
+    expect(page.textContent).not.toContain("Just watch"); // its button does that here
     click(button(page, "T. Mardelius · CB Hero of possession 3"));
     act(() => session.playback.set({ povPlayer: "H8" }));
-    click(button(page, "Start"));
+    click(button(page, "Watch the match"));
     expect(session.playback.get().povPlayer).toBe("A5");
     expect(intro.get().open).toBe(false);
     expect(tour.get().open).toBe(false);
@@ -164,7 +168,7 @@ describe("the first screen", () => {
   it("keeps Tab among what is shown, and restores page scrolling when it closes", () => {
     const overflow = document.body.style.overflow;
     const page = mount(offline());
-    const start = button(page, "Start");
+    const start = button(page, "Watch the look");
     const toggle = button(page, "Teams and more");
     const tab = (from: HTMLElement, shiftKey = false) =>
       act(() => {
@@ -173,48 +177,18 @@ describe("the first screen", () => {
           new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true }),
         );
       });
-    // Folded: the last control is the last moment link, not a hidden button behind the toggle.
-    const lastMoment = [...page.querySelectorAll<HTMLAnchorElement>(".intro-moments a")].at(-1)!;
-    expect(lastMoment.textContent).toBe("Academy drill");
-    tab(lastMoment);
+    // Folded: the last control is the toggle, not a hidden button behind it.
+    tab(toggle);
     expect(document.activeElement).toBe(start);
     tab(start, true);
-    expect(document.activeElement).toBe(lastMoment);
+    expect(document.activeElement).toBe(toggle);
     click(toggle);
-    const full = button(page, "Full tour · 90 s");
-    tab(full);
+    const watch = button(page, "Just watch");
+    tab(watch);
     expect(document.activeElement).toBe(start);
     expect(document.body.style.overflow).toBe("hidden");
     click(button(page, "Just watch"));
     expect(document.body.style.overflow).toBe(overflow);
-  });
-});
-
-describe("every moment from the first screen", () => {
-  it("links the moments, the full match live and the drill, beside the tour; this one marked", () => {
-    const page = mount(offline());
-    const nav = page.querySelector<HTMLElement>('.intro-moments nav[aria-label="Moments"]')!;
-    const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
-    expect(links.map((a) => a.textContent)).toEqual([
-      "The look",
-      "Under pressure",
-      "The corner",
-      "The goal",
-      "Full match · live",
-      "Academy drill",
-    ]);
-    expect(links.map((a) => a.getAttribute("href"))).toEqual([
-      "/?intro=0",
-      "/?match=press_escape-0&intro=0",
-      "/?match=match-1&moment=corner_blind_side",
-      "/?match=match-1&moment=far_post_finish",
-      "/?match=match-1&intro=0",
-      "/?play=drill",
-    ]);
-    // Not behind Teams and more: shown with the hook and Start.
-    expect(nav.closest("[hidden]")).toBeNull();
-    expect(links[0].getAttribute("aria-current")).toBe("page"); // the blind-side run is on screen
-    expect(links.filter((a) => a.hasAttribute("aria-current"))).toHaveLength(1);
   });
 });
 
@@ -263,12 +237,11 @@ describe("Teams and more", () => {
     expect(intro.get().open).toBe(true);
   });
 
-  it("Just watch closes with the chosen eyes and no tour; the full tour is there too", () => {
+  it("Just watch closes with the chosen eyes and no tour", () => {
     const session = offline();
     const page = mount(session);
     session.controls.setPovPlayer("A5");
     click(button(page, "Teams and more"));
-    expect(button(page, "Full tour · 90 s")).not.toBeNull();
     click(button(page, "Just watch"));
     expect(session.playback.get().povPlayer).toBe("H8");
     expect(intro.get().open).toBe(false);
@@ -277,7 +250,7 @@ describe("Teams and more", () => {
 
   it("works on a stitched match, and stays closed across session remounts on the page", () => {
     const page = mount(offline());
-    click(button(page, "Start"));
+    click(button(page, "Watch the look"));
     const session = createMatchSession(parseHero(matchExport()), { api: null, dataUrl: "/data/" });
     expect(dialogOf(mount(session))).toBeNull();
     act(() => intro.set({ open: true }));

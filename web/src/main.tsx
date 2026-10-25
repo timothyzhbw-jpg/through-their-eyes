@@ -17,7 +17,10 @@ import { App, MatchApp } from "./App";
 import { apiBase, MATCH_ID } from "./api/client";
 import { loadData, matchFromUrl, WHAT_IF_FILES } from "./data/load";
 import { LOOK_FILES } from "./takeeyes/looks";
-import { applyDeepLink, DeepLinkContext, parseDeepLink } from "./deeplink";
+import { applyDeepLink, DeepLinkContext, doorOf, parseDeepLink } from "./deeplink";
+import { doors, revealCompare } from "./doors/state";
+import { yourViewMenu } from "./personal/YourView";
+import { settingsMenu } from "./ui/Stage";
 import { scenarioMatchId } from "./match/match";
 import { openStep } from "./journey/state";
 import { createMatchSession } from "./match/matchSession";
@@ -44,7 +47,16 @@ async function main() {
   const link = { ...parsed, persona: chosen.persona, language: chosen.language };
   const filming = new URLSearchParams(window.location.search).get("cine") === "1";
   intro.set({ open: link.intro });
-  if (link.step) openStep(link.step); // ?step=: the journey's panel, in view once it is drawn
+  // The door the link opens (?door=, or the one its step or play belongs to): the studios' step
+  // in view once it is drawn; the old ?step=event, door 1's compare; ?step=your-view, Settings.
+  const opens = doorOf(link);
+  doors.set({ door: opens.door, seq: 0 });
+  if (opens.studio) openStep(opens.studio);
+  if (link.step === "event" || link.compare) revealCompare();
+  if (opens.yourView) {
+    settingsMenu.set({ open: true });
+    yourViewMenu.set({ open: true });
+  }
   if (link.warnings.length) console.warn(`Ignored URL parameters: ${link.warnings.join(", ")}`);
   const forcedOffline = link.offline;
   root.render(<p className="loading">Loading the match…</p>);
@@ -154,6 +166,12 @@ async function main() {
     void withoutLookOf(session, undefined, dataUrl).load(); // "Without the look", told: a few KB
     void extraLooksOf(session, undefined, dataUrl).load(); // and "With two more looks"
     void heroGatesOf(session, undefined, dataUrl).load(); // how often the held-out seeds change
+    // A plain visit opens the landing page (doors/Landing.tsx), which says what the intro card
+    // said and more: the card stays a stitched match's.
+    if (link.intro) {
+      doors.set({ door: "home", seq: 0 });
+      intro.set({ open: false });
+    }
     applyDeepLink(session, link);
     broadcast(session.controls);
     if (filming) {

@@ -10,6 +10,7 @@ import type { Hero } from "../data/hero";
 import { shortName } from "../data/roster";
 import { useView } from "../session";
 import { Chapter, Title } from "../ui/Chapter";
+import { useReveal } from "../ui/reveal";
 import { SourceChip } from "../provenance/SourceChip";
 import { SOURCES, computed } from "../provenance/source";
 import {
@@ -121,10 +122,11 @@ function MetricRow({ m, split }: { m: Metric; split: boolean }) {
 }
 
 function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) => void }) {
+  const reveal = useReveal<HTMLElement>();
   const split = card.metrics.some((m) => m.values.length > 1);
   const moves = useMemo(() => (card.xtMove ? [card.xtMove] : []), [card.xtMove]);
   return (
-    <article className="lab-card tile" data-card={card.id} aria-label={card.title}>
+    <article className="lab-card tile" data-card={card.id} aria-label={card.title} ref={reveal}>
       <header>
         <p className="kicker">
           <GlossaryText text={card.kicker} />
@@ -210,6 +212,7 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
 const pct = (p: number | null) => (p === null ? "not playable" : p.toFixed(2));
 
 function LaneBoard({ hero }: { hero: Hero }) {
+  const reveal = useReveal<HTMLElement>();
   const run = hero.runs.factual;
   const lanes = useMemo(() => lanesAt(hero, run), [hero, run]);
   const players = useMemo(() => boardPlayers(hero, run), [hero, run]);
@@ -217,7 +220,7 @@ function LaneBoard({ hero }: { hero: Hero }) {
   const counts = laneCounts(lanes);
   const carrier = shortName(run.decision.player);
   return (
-    <figure className="lab-board tile">
+    <figure className="lab-board tile" ref={reveal}>
       <figcaption>
         <h3 className="block-title">
           Pass lanes at {carrier}&apos;s decision <SourceChip kind="sim" />
@@ -313,15 +316,20 @@ function LaneLine({ lane }: { lane: Lane }) {
 
 // ---------- the chapter ----------
 
-/** `kicker`: the chapter's kicker where the lab is a step of the journey (journey/). */
+/** `kicker`: the chapter's kicker where the lab is a section of For studios (journey/), which
+ * also picks its card (`card`, `onPick`: the broadcast's questions open a card). */
 export function TacticsLabPanel({
   xt: injected,
   scope: injectedScope,
   kicker = "Tactics lab",
+  card: chosen,
+  onPick,
 }: {
   xt?: XtGrid;
   scope?: Scope; // tests
   kicker?: string;
+  card?: CardId;
+  onPick?: (card: CardId) => void;
 }) {
   const view = useView();
   const loaded = useXtGrid();
@@ -329,7 +337,9 @@ export function TacticsLabPanel({
   const asked = useScope();
   const scope = injectedScope ?? asked;
   const cards = useMemo(() => buildCards(view.hero, grid, scope), [view.hero, grid, scope]);
-  const [picked, setPicked] = useState<CardId>("high_press");
+  const [own, setOwn] = useState<CardId>("high_press");
+  const picked = chosen ?? own;
+  const setPicked = onPick ?? setOwn;
   const card = cards.find((c) => c.id === picked) ?? cards[0];
   // The board is the Decisions card's moment's: the page's own, or the one loaded for the card;
   // with no service the bundled moment is all there is.

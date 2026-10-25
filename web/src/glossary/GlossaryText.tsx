@@ -3,24 +3,30 @@ import { contextLine, type ContextClaim } from "./context";
 import { detectTerms } from "./detect";
 import { GlossaryContext } from "./GlossaryProvider";
 import type { GlossaryTerm } from "./terms";
+import { TextReveal } from "../ui/TextReveal";
 import "./glossary.css";
 
+/** `reveal`: the plain words ease in on scroll like any chapter text (ui/TextReveal); the term
+ * buttons are shown as they are. */
 export function GlossaryText({
   text,
   claims = [],
+  reveal = false,
 }: {
   text: string;
   claims?: readonly ContextClaim[];
+  reveal?: boolean;
 }) {
   const { language } = useContext(GlossaryContext);
   const parts = useMemo(() => detectTerms(text, language), [text, language]);
-  return parts.map((part, index) =>
+  const out = parts.map((part, index) =>
     part.term ? (
       <GlossaryTermButton key={index} text={part.text} term={part.term} claims={claims} />
     ) : (
       part.text
     ),
   );
+  return reveal ? <TextReveal>{out}</TextReveal> : out;
 }
 
 function GlossaryTermButton({

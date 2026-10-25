@@ -5,6 +5,8 @@
 
 import type { ReactNode } from "react";
 import { GlossaryText } from "../glossary/GlossaryText";
+import { useReveal } from "./reveal";
+import { TextReveal } from "./TextReveal";
 
 export function Chapter(props: {
   className: string; // the panel's own class (narration, breakdown, …): scripts find it by it
@@ -17,21 +19,29 @@ export function Chapter(props: {
   label?: string; // the section's accessible name; defaults to the kicker
   children: ReactNode;
 }) {
+  const chapter = useReveal<HTMLElement>();
   return (
     <section
       className={`panel chapter ${props.className}${props.split ? " split" : ""}`}
       aria-label={props.label ?? props.kicker}
+      ref={chapter}
     >
       <header className="chapter-head">
         <div className="chapter-title">
           <p className="kicker">{props.kicker}</p>
-          <h2>{props.title}</h2>
+          <h2>
+            <TextReveal>{props.title}</TextReveal>
+          </h2>
         </div>
         {(props.lede || props.how || props.aside) && (
           <div className="chapter-lede">
             {props.lede && (
               <p className="lede">
-                {typeof props.lede === "string" ? <GlossaryText text={props.lede} /> : props.lede}
+                {typeof props.lede === "string" ? (
+                  <GlossaryText text={props.lede} reveal />
+                ) : (
+                  <TextReveal>{props.lede}</TextReveal>
+                )}
               </p>
             )}
             {props.how && <HowItWorks>{props.how}</HowItWorks>}

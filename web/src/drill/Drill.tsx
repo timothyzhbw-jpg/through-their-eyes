@@ -31,6 +31,7 @@ import { drillOf, startDrillClock, type Drill, type Pace } from "./controller";
 import { levelHref, levelOf, LEVELS, nextLevel } from "./levels";
 import { drillResult, lookWords, pictureWords } from "./result";
 import { SCAN_MAX_DEG, SCAN_MIN_DEG } from "./snap";
+import { COACH_LABEL, coachHref } from "../steps/coach";
 import "./drill.css";
 
 /** The drill's name and what it is, wherever it is named. */
@@ -420,6 +421,13 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
           </button>{" "}
           lets you choose when and where he looks.
         </p>
+        {!d.session.offline && (
+          <p className="dr-hint">
+            <a className="dr-link" href={coachHref()}>
+              {COACH_LABEL}
+            </a>
+          </p>
+        )}
       </aside>
     );
   }

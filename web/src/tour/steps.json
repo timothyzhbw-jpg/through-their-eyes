@@ -1,18 +1,19 @@
 {
-  "about": "The tours (SPEC 7). 'quick' is a first-time visitor's path in five steps: watch the look, remove it, compare the outcomes, see every number checked, make your own call; Start on the intro card opens it. 'steps' is the full judge tour, about ninety seconds through the signature features. 'story' is the Full story, about ninety seconds walking one moment through the journey's five steps (journey: the step whose panel it opens). Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (enter: on arrival; act: a button in the tour card, for anything that calls the service, except the quick tour's check, which types the wrong number itself — deterministic, no model call; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
+  "about": "The tours (SPEC 7). 'quick' is door 1's story, The look, about a minute: watch the look, remove it, compare the outcomes, see every number checked, then an end card whose only choices are the other two doors and watching again; Watch the look on the intro card opens it. 'steps' is the full judge tour, about ninety seconds walking the three doors in order: the look, your turn, for studios, then the whole match. 'story' walks the studios' door, its four solutions (tactical broadcast, personalised commentary, automated highlights, the stadium) and then their value, opening each section's panel (journey: the section whose panel it opens). Each step points at an element the app already draws (target: CSS selectors, the first that matches), says one plain line, and runs one thing the app already does (door: the door it opens first; enter: on arrival; act: a button in the tour card, for anything that calls the service, except the quick tour's check, which types the wrong number itself — deterministic, no model call; say: the verified lines a quick-tour step's panel carries, while the caption under the picture stands down). hold is the suggested dwell in seconds; the video kit reads it as a capture script. No numbers in the text: what the app shows is the app's own verified values. Slots: {cf} the counterfactual run's name, {cfTitle} as a title, {hero} the hero's name.",
   "steps": [
     {
       "id": "pov",
       "title": "Through his eyes",
-      "caption": "A first-person replay, cut by the Telestrator agent from what he could see. The marked moment is the key scan: one look over his shoulder.",
+      "caption": "Door one, the look: a first-person replay cut by the Telestrator agent from what he could see. The mark is the key scan, a look over his shoulder.",
       "variants": [
         {
           "when": "!keyScan",
-          "caption": "A first-person replay, cut by the Telestrator agent from what he could see, with every look he made marked on the timeline."
+          "caption": "Door one, the look: a first-person replay cut by the Telestrator agent from what he could see, every look he made marked on the timeline."
         }
       ],
       "target": [".transport .mark.key", ".transport .timeline"],
       "dim": false,
+      "door": "look",
       "enter": "replay",
       "needs": ["hero"],
       "hold": 14
@@ -23,6 +24,7 @@
       "caption": "The same seconds re-simulated with one change, {cf}. Same seed, same players: the different decision comes from that change alone.",
       "target": ".stage-run",
       "dim": false,
+      "door": "look",
       "enter": "counterfactual",
       "needs": ["hero", "counterfactual"],
       "hold": 8
@@ -33,6 +35,7 @@
       "caption": "Every caption opens. Each claim behind it shows its kind, the Verifier's verdict and the match events it rests on.",
       "target": "section.evidence",
       "dim": true,
+      "door": "look",
       "enter": "openEvidence",
       "needs": ["hero"],
       "hold": 8
@@ -43,52 +46,70 @@
       "caption": "Change a number and the Verifier checks the claim again against the match data. A wrong value is refuted, and the line would not air.",
       "target": ["section.evidence .tamper-result", "section.evidence .tamper"],
       "dim": true,
+      "door": "look",
       "enter": "openTamper",
       "act": "checkWrongNumber",
       "needs": ["hero", "api"],
       "hold": 8
     },
     {
-      "id": "yourcall",
-      "title": "Your call",
-      "caption": "The replay stops at his decision. Choose with only what he knew, then see what really happened.",
-      "target": ".yc-view",
-      "dim": false,
-      "focus": "app",
-      "enter": "yourCall",
-      "needs": ["hero", "yourCall"],
-      "hold": 10
-    },
-    {
-      "id": "eyes",
-      "title": "Take his eyes",
-      "caption": "Now you choose when and where he looks: a time below, a direction round him, then Look. The sim re-runs the moment with that look as his only one.",
-      "target": ".te-view",
-      "dim": false,
-      "focus": "app",
-      "enter": "takeEyes",
-      "needs": ["hero", "takeEyes"],
-      "hold": 12
-    },
-    {
       "id": "language",
       "title": "Another audience, another language",
-      "caption": "Each audience gets its own commentary, in its own language. Here is the same moment told for a casual fan, in Chinese.",
+      "caption": "Each audience gets its own commentary, in its own language, picked in Settings. Here is the same moment told for a casual fan, in Chinese.",
       "target": ".viewer-toggle",
       "dim": false,
+      "door": "look",
       "enter": "audience",
       "act": "sound",
       "needs": ["hero", "api"],
       "hold": 8
     },
     {
+      "id": "yourcall",
+      "title": "Your turn: make his call",
+      "caption": "Door two puts you in his boots. The replay stops at his decision: choose with only what he knew, then see what really happened.",
+      "target": ".yc-view",
+      "dim": false,
+      "focus": "app",
+      "door": "turn",
+      "enter": "yourCall",
+      "needs": ["hero", "yourCall"],
+      "hold": 10
+    },
+    {
+      "id": "eyes",
+      "title": "Your turn: take his eyes",
+      "caption": "Now you choose when and where he looks: a time below, a direction round him, then Look. The sim re-runs the moment with that look as his only one.",
+      "target": ".te-view",
+      "dim": false,
+      "focus": "app",
+      "door": "turn",
+      "enter": "takeEyes",
+      "needs": ["hero", "takeEyes"],
+      "hold": 12
+    },
+    {
+      "id": "studios",
+      "title": "For studios",
+      "caption": "Door three, for the league: a tactical broadcast, commentary for every fan, highlights for its channels, the stadium's screens, then their value.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "door": "studios",
+      "enter": "none",
+      "journey": "broadcast",
+      "needs": ["hero"],
+      "hold": 8
+    },
+    {
       "id": "producer",
       "title": "Failure drill",
-      "caption": "Take an agent down as in an outage: the crew falls back to its template and still airs. Then bring it back from the workflow checkpoint.",
+      "caption": "Behind the commentary, take an agent down as in an outage: the crew falls back to its template and still airs. Then bring it back from its checkpoint.",
       "target": "section.producer",
       "dim": true,
+      "door": "studios",
       "enter": "producer",
       "act": "drill",
+      "journey": "commentary",
       "needs": ["hero", "api"],
       "hold": 10
     },
@@ -116,7 +137,7 @@
     {
       "id": "end",
       "title": "That's the tour",
-      "caption": "Everything you saw runs live. The moment's full story continues below the picture.",
+      "caption": "Everything you saw runs live, back on the look. The three doors in the header take you to any of it again.",
       "variants": [
         {
           "when": "match",
@@ -125,6 +146,7 @@
       ],
       "target": null,
       "dim": false,
+      "door": "look",
       "enter": "none",
       "needs": [],
       "hold": 4
@@ -137,11 +159,12 @@
       "caption": "This is {hero}'s view, slowed down. The gold mark on the timeline is the look that matters: one glance before the ball reaches him.",
       "target": [".transport .mark.key", ".transport .timeline"],
       "dim": false,
+      "door": "look",
       "enter": "look",
       "act": "replayLook",
       "say": "look",
       "needs": ["hero", "keyScan"],
-      "hold": 10
+      "hold": 12
     },
     {
       "id": "remove",
@@ -149,10 +172,11 @@
       "caption": "The same seconds, re-simulated {cf}. Same seed, same players: that one look is the only change.",
       "target": ".stage-run",
       "dim": false,
+      "door": "look",
       "enter": "counterfactual",
       "say": "without",
       "needs": ["hero", "keyScan", "counterfactual"],
-      "hold": 10
+      "hold": 12
     },
     {
       "id": "compare",
@@ -160,10 +184,12 @@
       "caption": "From above: where his pass went with the look, and the dashed gold path where it would have gone without it.",
       "target": null,
       "dim": false,
+      "door": "look",
       "enter": "compare",
+      "act": "scanSteps",
       "say": "compare",
       "needs": ["hero", "keyScan", "counterfactual"],
-      "hold": 10
+      "hold": 16
     },
     {
       "id": "verify",
@@ -171,95 +197,84 @@
       "caption": "The tour types a wrong number into a commentary claim. The Verifier re-checks it against the match data and refuses it: the line would not air.",
       "target": ["section.evidence .tamper-result", "section.evidence .tamper"],
       "dim": true,
+      "door": "look",
       "enter": "tamperAuto",
       "needs": ["hero", "api"],
-      "hold": 6
+      "hold": 10
     },
     {
-      "id": "call",
-      "title": "Now make your call",
-      "caption": "You are {hero}, with only what he knew. Pick a teammate, then see what really happened and why.",
-      "target": ".yc-view",
+      "id": "next",
+      "title": "That's the look",
+      "caption": "One glance changed what {hero} did, and every number you saw was checked. Now it's your turn, or see what a studio does with it.",
+      "target": null,
       "dim": false,
-      "focus": "app",
-      "enter": "yourCall",
-      "act": "fullTour",
-      "needs": ["hero", "yourCall"],
-      "hold": 14
+      "door": "look",
+      "enter": "none",
+      "act": "doors",
+      "needs": ["hero", "keyScan"],
+      "hold": 8
     }
   ],
   "story": [
     {
-      "id": "story-event",
-      "title": "Event: the look",
-      "caption": "Every story here starts on the pitch. This is {hero}'s view: the gold mark on the timeline is the look that mattered.",
-      "variants": [
-        {
-          "when": "!keyScan",
-          "caption": "Every story here starts on the pitch. This is {hero}'s view, with every look he made marked on the timeline."
-        }
-      ],
-      "target": [".transport .mark.key", ".transport .timeline"],
-      "dim": false,
-      "enter": "look",
-      "journey": "event",
+      "id": "story-broadcast",
+      "title": "AI Tactical Broadcast",
+      "caption": "Tactics explained on air. Ask why the press worked or why the threat jumped, and the view that answers it opens, every number with its source.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "door": "studios",
+      "enter": "none",
+      "journey": "broadcast",
       "needs": ["hero"],
-      "hold": 14
+      "hold": 16
     },
     {
-      "id": "story-without",
-      "title": "Event: {cf}",
-      "caption": "The same seconds re-simulated {cf}. The Event step below keeps both runs side by side, each told by its checked lines.",
-      "target": ".stage-run",
-      "dim": false,
-      "enter": "counterfactual",
-      "journey": "event",
-      "needs": ["hero", "counterfactual"],
+      "id": "story-commentary",
+      "title": "AI Personalised Commentary",
+      "caption": "One checked account told for each fan: casual or tactical, following one player, in English or Chinese. Below it, the AI crew that writes it.",
+      "target": "#journey-panel .chapter-head",
+      "dim": true,
+      "door": "studios",
+      "enter": "none",
+      "journey": "commentary",
+      "needs": ["hero"],
       "hold": 12
     },
     {
-      "id": "story-tactics",
-      "title": "Tactics",
-      "caption": "Why the tactic in this moment works, measured on this match's own synthetic data. Every number says what it is and where it comes from.",
+      "id": "story-highlights",
+      "title": "AI Automated Highlights",
+      "caption": "The moment as a highlight with its shot list, captions, posts for each platform, and landscape and vertical cards, for the league's own channels.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
+      "door": "studios",
       "enter": "none",
-      "journey": "tactics",
-      "needs": ["hero"],
-      "hold": 18
-    },
-    {
-      "id": "story-view",
-      "title": "Your view",
-      "caption": "Choose who the commentary is for and its language, and follow a club or a player: their moments come first, on every moment you open.",
-      "target": "#journey-panel .chapter-head",
-      "dim": true,
-      "enter": "none",
-      "journey": "your-view",
+      "journey": "highlights",
       "needs": ["hero"],
       "hold": 14
     },
     {
-      "id": "story-content",
-      "title": "Content",
-      "caption": "The same moment as a package: a highlight, an explainer, posts and data cards, and what the stadium's screens show. All of it is built from the checked lines.",
+      "id": "story-stadium",
+      "title": "AI Stadium Experience",
+      "caption": "The same moment on the stadium's main board, tunnel screens and ribbon ring, with a virtual preview of the bowl.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
+      "door": "studios",
       "enter": "none",
-      "journey": "content",
+      "journey": "stadium",
       "needs": ["hero"],
-      "hold": 18
+      "hold": 10
     },
     {
       "id": "story-value",
       "title": "Value",
-      "caption": "What the package could be worth. The audience and sponsor figures are simulated, not results, and every one of them is labelled so.",
+      "caption": "What it is worth to the league, in plain words first. The audience and sponsor figures after them are simulated, not results, and labelled so.",
       "target": "#journey-panel .chapter-head",
       "dim": true,
+      "door": "studios",
       "enter": "none",
       "journey": "value",
       "needs": ["hero"],
-      "hold": 14
+      "hold": 12
     }
   ]
 }

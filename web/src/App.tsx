@@ -1,35 +1,38 @@
-// Page layout (the Floodlit design): the live screen fills the first screen (the picture with the
-// header, the moment card, the caption and the playback bar over it), and the moment is told
-// below it, panel by panel. A stitched match has its own layout (MatchView): the same live screen
-// with the score card, and every moment below; a hero moment's breakdown opens over it as the
-// hero layout with a way back (MatchApp). The first screen keeps few controls: the header's
-// Moments, Your call and ⋯ (everything else), the run switch, and the playback bar.
+// Page layout (the Floodlit design), as a landing page and three doors (doors/, SPEC 7). The
+// landing page, where a plain visit opens: the promise, the story's one button, the three doors in
+// a few lines each with every feature one link away. The look: the live screen fills the first
+// screen (the picture with the header, the moment card, the caption and the playback bar over
+// it), the story of the moment is the quick tour over it, and below it the moment's compare, its
+// commentary and the what-ifs (what used to introduce them is on the landing page). Your turn: a
+// hub whose three cards open the modes where the viewer is the player; each mode takes the screen
+// as it always has. For studios: four solutions, then their value, one step at a time. The header
+// is the same on every page: the brand (back to the landing page), the three doors, and one
+// "⋯ Settings" menu. A stitched match has its own layout
+// (MatchView): the same live screen with the score card, and every moment below; a hero moment's
+// breakdown opens over it as the hero layout with a way back (MatchApp).
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { jumpToTop } from "./ui/reveal";
 import { DirectorAttach } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { GK_KITS } from "./players/kit";
-import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
+import { SessionContext, startClock, useSession, useView } from "./session";
 import { createStore, useStore, type Store } from "./store/store";
 import type { LiveStatus } from "./live/feed";
-import { BreakdownPanel } from "./ui/BreakdownPanel";
 import { IntroCard } from "./ui/IntroCard";
 import { LiveBar, MomentsPanel, OfflineBadge } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
-import { ArrowIcon, CheckIcon } from "./ui/icons";
 import { intro } from "./ui/intro";
-import { PERSONA_LABEL } from "./ui/labels";
-import { DecisionPanel, StoryPanel, VerdictPanel } from "./ui/Panels";
 import { RunToggle } from "./ui/RunToggle";
 import {
   blurbOf,
-  HeaderMore,
   MenuSection,
   MomentCard,
   momentKicker,
-  MomentTitle,
+  momentTitle,
+  SettingsMenu,
   StageHud,
   SwapViews,
   ViewerMenu,
@@ -38,7 +41,7 @@ import {
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
-import { Journey } from "./journey/Journey";
+import { ASK_RUN_ID, ComparePanel } from "./journey/Journey";
 import { StatsTicker } from "./ui/StatsTicker";
 import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -46,39 +49,39 @@ import { Transport } from "./ui/Transport";
 import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { BeliefMap, beliefPip } from "./views/BeliefMap";
-import { FirstTourButton, Tour, TourButton } from "./tour/Tour";
-import { tour } from "./tour/tourState";
+import { Tour, TourButton } from "./tour/Tour";
+import { resumeTour, tour } from "./tour/tourState";
 import { TacticalView } from "./views/TacticalView";
-import { stepThroughOf } from "./steps/controller";
-import { ScanStepsButton, ScanStepsScreen, useStepThroughOpen } from "./steps/ScanSteps";
-import { takeEyesOf } from "./takeeyes/controller";
-import { TakeEyesButton, TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
-import { yourCallOf } from "./yourcall/controller";
-import { YourCallButton, YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
+import { ScanStepsScreen, useStepThroughOpen } from "./steps/ScanSteps";
+import { TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
+import { YourCallScreen, useYourCallOpen } from "./yourcall/YourCall";
 import { clubName } from "./data/roster";
-import { MomentsMenu } from "./moments/MomentRail";
+import { MomentChips } from "./moments/MomentRail";
 import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
-import { drillOf } from "./drill/controller";
-import { DRILL_NAME, DRILL_SUB, DrillScreen, useDrillOpen } from "./drill/Drill";
+import { DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
 import { SessionGlossary } from "./glossary/SessionGlossary";
+import { FloodlightBackground } from "./ui/FloodlightBackground";
+import { TextReveal } from "./ui/TextReveal";
+import { DoorTabs, ForStudios, TURN_CARD_ID, YourTurn } from "./doors/DoorPages";
+import { Landing } from "./doors/Landing";
+import { doors, openDoor } from "./doors/state";
 
-/** A hero moment: the live screen, then the moment told panel by panel. `onBack`: inside a match. */
+/** A hero moment: its door on screen, or a mode over all of them. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
   const session = useSession();
-  const { hero, playback, controls, moment, offset } = session;
+  const { hero, playback, controls, moment, offset, runner } = session;
+  const [titleLead, titleEmphasis] = momentTitle(hero);
   const mode = useStore(playback, (s) => s.mode);
   const evidence = useStore(playback, (s) => s.evidenceLine);
   const yourCall = useYourCallOpen();
   const takeEyes = useTakeEyesOpen();
   const scanSteps = useStepThroughOpen();
   const drill = useDrillOpen();
-  const start = onBack ? <BackToMatch onBack={onBack} /> : null; // inside a match: the way back
-  const wasYourCall = useRef(false);
-  const wasTakeEyes = useRef(false);
-  const wasScanSteps = useRef(false);
-  const wasDrill = useRef(false);
+  const door = useStore(doors, (s) => s.door);
+  // Next to the brand: inside a match the way back; else the badge when the service is off.
+  const start = onBack ? <BackToMatch onBack={onBack} /> : <OfflineBadge />;
   const introOpen = useStore(intro, (s) => s.open);
   // While a tour runs its card is the one panel: the moment card stands down. An open evidence
   // card stays (the full tour points at it, and the quick tour's check does too); otherwise the
@@ -88,147 +91,156 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   usePersonalSync(!!onBack); // inside a match: start on the audience and language already chosen
   useEffect(() => startClock(session), [session]);
   useEffect(() => bindSound(session, soundEngine), [session]); // crowd, whooshes, stings
-  // Closing Your call (Back, Escape, the header pill) returns focus to the live screen's pill.
+  // Closing a mode gives the keyboard back to what opened it (modeClosed).
+  useModeFocus(yourCall, TURN_CARD_ID.yourCall);
+  useModeFocus(takeEyes, TURN_CARD_ID.takeEyes);
+  useModeFocus(drill, TURN_CARD_ID.drill);
+  useModeFocus(scanSteps, "scan-steps-story", resumeTour);
+  // The picture is door 1's: what starts playing on it (a breakdown, a line's evidence) brings
+  // door 1 back; leaving door 1 stops what plays there, unseen.
   useEffect(() => {
-    if (wasYourCall.current && !yourCall) {
-      document.getElementById("your-call-open")?.focus({ preventScroll: true });
-    }
-    wasYourCall.current = yourCall;
-  }, [yourCall]);
+    let evidenceWas = playback.get().evidenceLine;
+    let runningWas = runner.status.get().status === "running";
+    const toLook = () => {
+      if (doors.get().door !== "look") openDoor("look", { address: true });
+    };
+    const offEvidence = playback.subscribe(() => {
+      const now = playback.get().evidenceLine;
+      if (now && now !== evidenceWas) toLook();
+      evidenceWas = now;
+    });
+    const offRunner = runner.status.subscribe(() => {
+      const now = runner.status.get().status === "running";
+      if (now && !runningWas) toLook();
+      runningWas = now;
+    });
+    return () => {
+      offEvidence();
+      offRunner();
+    };
+  }, [playback, runner]);
+  // A new door's page starts at its top, once it is laid out: a scroll still running from the
+  // last page (a tour step's) would land it part-way down.
+  const doorSeq = useStore(doors, (s) => s.seq);
+  useLayoutEffect(() => {
+    if (doorSeq > 0) jumpToTop();
+  }, [doorSeq]);
   useEffect(() => {
-    if (wasTakeEyes.current && !takeEyes) returnFocus("take-eyes-open", "take-eyes-story");
-    wasTakeEyes.current = takeEyes;
-  }, [takeEyes]);
-  useEffect(() => {
-    if (wasScanSteps.current && !scanSteps) returnFocus("scan-steps-open", "scan-steps-story");
-    wasScanSteps.current = scanSteps;
-  }, [scanSteps]);
-  useEffect(() => {
-    if (wasDrill.current && !drill) returnFocus("drill-open", "drill-story");
-    wasDrill.current = drill;
-  }, [drill]);
+    if (door === "look") return;
+    controls.stopBreakdown();
+    controls.leaveLive();
+    if (playback.get().playing) playback.set({ playing: false });
+  }, [door, controls, playback]);
   // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
   // must not play under it. Behind the card the picture rests on the first frame. Online: watch
   // live, then the show (the look, then the run without it) and the breakdown once the moment is
   // detected. Offline: the show and the bundled breakdown at once. Once per session: the card
   // never opens again. A tour started from the card drives the app itself: the autoplay would
-  // take its first step over (the step is set up before this effect runs).
+  // take its first step over (the step is set up before this effect runs). It waits for the
+  // landing page as for the card: it starts when the viewer opens The look, unless what opened it
+  // was a mode or a tour.
   const started = useRef(false);
+  const modeOpen = yourCall || takeEyes || scanSteps || drill;
   useEffect(() => {
     if (!autoplay || started.current) return;
     if (introOpen) {
       if (playback.get().frame !== 0) playback.set({ frame: 0 });
       return;
     }
+    if (door === "home") return;
     started.current = true;
-    if (tour.get().open) return;
+    if (tour.get().open || door !== "look" || modeOpen) return;
     if (session.feed) controls.startLive();
     else controls.autoplay();
-  }, [autoplay, controls, introOpen, playback, session]);
+  }, [autoplay, controls, introOpen, playback, session, door, modeOpen]);
   useEffect(() => () => session.feed?.stop(), [session]);
+
+  // A mode takes the screen, and hides what would give his decision away until the viewer has
+  // made theirs. Its own header keeps the way back inside a match.
+  const way = onBack ? <BackToMatch onBack={onBack} /> : null;
+  const modeScreen = drill ? (
+    <DrillScreen start={way} />
+  ) : yourCall ? (
+    <YourCallScreen start={way} />
+  ) : takeEyes ? (
+    <TakeEyesScreen start={way} />
+  ) : scanSteps ? (
+    <ScanStepsScreen start={way} />
+  ) : null;
 
   return (
     <SessionGlossary>
       <div
         className={mode === "counterfactual" ? "app mode-cf" : "app"}
+        data-door={modeScreen ? undefined : door}
         onClickCapture={(e) => {
           const id = (e.target as Element).closest?.("button[id]")?.id;
           if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
         }}
       >
-        {/* Your call takes the live screen, and hides what would give his decision away until the
-          viewer has made theirs: the director, the telemetry and the whole moment below. */}
-        {drill ? (
-          <DrillScreen start={start} />
-        ) : yourCall ? (
-          // No live pill: the stream would play unseen under it. Inside a match, the way back stays.
-          <YourCallScreen start={start} />
-        ) : takeEyes ? (
-          <TakeEyesScreen start={start} />
-        ) : scanSteps ? (
-          <ScanStepsScreen start={start} />
-        ) : (
-          <LiveScreen
-            // Every moment in reach in one menu; no Live pill on a hero moment (Moments has the
-            // full match, live), only the badge when the service is off.
-            start={
-              <>
-                {onBack ? start : <OfflineBadge />}
-                <MomentsMenu />
-              </>
-            }
-            end={
-              <>
-                <YourCallButton />
-                <HeaderMore>
-                  <MenuSection label="Sound">
-                    <SoundToggle />
-                  </MenuSection>
-                  <MenuSection label="Commentary">
-                    <ViewerMenu />
-                  </MenuSection>
-                  <MenuSection label="More ways in">
-                    <ScanStepsButton />
-                    <TakeEyesButton />
-                    <DrillButton />
-                    <FirstTourButton className="btn" />
-                  </MenuSection>
-                  <ViewOptions />
-                </HeaderMore>
-              </>
-            }
-            run={<RunToggle />}
-            card={
-              evidence ? (
-                <EvidenceCard />
-              ) : touring === "quick" ? (
-                <div className="tour-home" aria-hidden="true" />
-              ) : touring ? null : (
-                <MomentCard />
-              )
-            }
-            caption={
-              <>
-                <Caption />
-                <WithoutLookNote />
-              </>
-            }
-          />
-        )}
-
-        {!yourCall && !takeEyes && !scanSteps && !drill && (
-          <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-            <header className="moment-head">
-              <p className="kicker accent">
-                {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
-              </p>
-              <h2 id="moment-title">
-                <MomentTitle hero={hero} />
-              </h2>
-              <p className="lede">{blurbOf(hero)}</p>
-              <YourViewLine />
-              <StoryCta />
-            </header>
-            {/* Event → Tactics → Your view → Content → Value: the Tactics lab and the content
-              studio are its steps' panels. */}
-            <Journey />
-            <div className="below">
-              <StoryPanel />
-              <DecisionPanel />
-              <VerdictPanel />
-              <NarrationPanel />
-              <WhatIfPanel />
-              <BreakdownPanel />
-              {/* The data under the moment, one click away: no tour step points into it. */}
-              <details className="how match-data">
-                <summary>Match data for this moment</summary>
-                <TelemetryPanel />
-                <StatsPanel />
-                <MomentsPanel />
-              </details>
-            </div>
-          </main>
-        )}
+        {modeScreen ??
+          (door === "look" ? (
+            <>
+              <LiveScreen
+                start={start}
+                end={<HeroSettings />}
+                run={<RunToggle />}
+                card={
+                  evidence ? (
+                    <EvidenceCard />
+                  ) : touring === "quick" ? (
+                    <div className="tour-home" aria-hidden="true" />
+                  ) : touring ? null : (
+                    <MomentCard />
+                  )
+                }
+                caption={
+                  <>
+                    <Caption />
+                    <WithoutLookNote />
+                  </>
+                }
+              />
+              <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+                <FloodlightBackground />
+                <header className="moment-head">
+                  <p className="kicker accent">
+                    {momentKicker(hero, moment.decisionFrame, offset).replace(
+                      "Moment",
+                      "The moment",
+                    )}
+                  </p>
+                  <h2 id="moment-title" tabIndex={-1}>
+                    <TextReveal>
+                      {titleLead} <em>{titleEmphasis}</em>
+                    </TextReveal>
+                  </h2>
+                  <p className="lede">
+                    <TextReveal>{blurbOf(hero)}</TextReveal>
+                  </p>
+                  <YourViewLine />
+                </header>
+                {/* The look and the run without it, side by side: the story's compare, kept. The
+                  chapters that introduced the moment are the landing page's now. */}
+                <ComparePanel />
+                <div className="below">
+                  <NarrationPanel />
+                  <WhatIfPanel />
+                  {/* The data under the moment, one click away: no tour step points into it. */}
+                  <details className="how match-data">
+                    <summary>Match data for this moment</summary>
+                    <TelemetryPanel />
+                    <StatsPanel />
+                    <MomentsPanel />
+                  </details>
+                </div>
+              </main>
+            </>
+          ) : (
+            <DoorScreen start={start} end={<HeroSettings />}>
+              {door === "home" ? <Landing /> : door === "turn" ? <YourTurn /> : <ForStudios />}
+            </DoorScreen>
+          ))}
 
         <Legend />
         <Tour />
@@ -237,161 +249,117 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   );
 }
 
-/** Whether the story's "More ways in" is open: kept while a mode it opens takes the page. */
-const storyWaysIn = createStore<{ open: boolean }>({ open: false });
-
-const OPENER_IDS = [
-  "take-eyes-open",
-  "take-eyes-story",
-  "scan-steps-open",
-  "scan-steps-story",
-  "drill-open",
-  "drill-story",
-];
-
-/** The mode button last pressed (by id): what closing its mode returns focus to. */
-const lastPressed = { id: "" };
-
-/** Focus back on what opened a mode, never on the body. The button that was pressed, when it is
- * on screen. One in the header's More (shut behind the mode) gives the More button, so the menu
- * stays closed. One in the story's "More ways in" has that fold opened first. With no opener
- * known (a rail link, a deep link): the header's pill if shown, else the story's button. */
-function returnFocus(pillId: string, storyId: string) {
-  const shown = (el: HTMLElement | null) =>
-    !!el && !el.closest("[hidden]") && getComputedStyle(el).display !== "none";
-  const focus = (el: Element | null) => (el as HTMLElement | null)?.focus({ preventScroll: true });
-  const pill = document.getElementById(pillId);
-  const story = document.getElementById(storyId);
-  const fromStory = lastPressed.id === storyId || (lastPressed.id !== pillId && !shown(pill));
-  if (!fromStory) {
-    focus(shown(pill) ? pill : document.getElementById("header-more"));
-  } else if (story) {
-    const fold = story.closest("details");
-    if (fold && !fold.open) {
-      fold.open = true; // laid out before focus; React's open={waysIn} follows the store
-      storyWaysIn.set({ open: true });
-    }
-    focus(story);
-  } else {
-    focus(document.getElementById("header-more") ?? document.querySelector(".stage-head h1"));
-  }
-}
-
-/** The academy drill in the header's More (the moment rail links to it too). */
-function DrillButton() {
-  const drill = drillOf(useSession());
-  if (drill.unavailable) return null;
+/** The header's one menu on a hero moment: the moment, who is watching and in which language,
+ * who to follow, the sound, the view options and the full tour. */
+function HeroSettings() {
   return (
-    <button
-      id="drill-open"
-      type="button"
-      className="btn"
-      title={`${DRILL_SUB}, then make the pass`}
-      onClick={() => drill.open()}
-    >
-      {DRILL_NAME}
-    </button>
+    <SettingsMenu>
+      <MenuSection label="Moment">
+        <MomentChips />
+      </MenuSection>
+      <MenuSection label="Commentary">
+        <ViewerMenu />
+      </MenuSection>
+      <MenuSection label="Follow">
+        <YourViewMenu />
+      </MenuSection>
+      <MenuSection label="Sound">
+        <SoundToggle />
+      </MenuSection>
+      <ViewOptions />
+      <MenuSection label="Tour">
+        <TourButton className="btn" />
+      </MenuSection>
+    </SettingsMenu>
   );
 }
 
-/** The story's primary action: back to the picture, with the breakdown playing; or make his call. */
-function StoryCta() {
-  const session = useSession();
-  const { controls } = session;
-  const yc = yourCallOf(session);
-  const te = takeEyesOf(session);
-  const steps = stepThroughOf(session);
-  const drill = drillOf(session);
-  const { narration, persona, status } = useBreakdown();
-  const checked = narration && !narration.fixture;
-  const waysIn = useStore(storyWaysIn, (s) => s.open);
+/** The buttons that open a mode (the hub's cards, the compare's scan story, For studios' question
+ * about the run): the one last pressed is what closing its mode gives the keyboard back to. */
+const OPENER_IDS = [
+  TURN_CARD_ID.yourCall,
+  TURN_CARD_ID.takeEyes,
+  TURN_CARD_ID.drill,
+  "scan-steps-story",
+  ASK_RUN_ID,
+];
+
+const lastPressed = { id: "" };
+
+/** When a mode closes, the keyboard goes back to what opened it, never to the body: a tour left
+ * for it comes back (`resume`); else the button that was pressed, when it is on screen; else the
+ * mode's own way in on the door it opened over (`home`: the hub's card, the compare's link); else
+ * the door's heading. */
+function useModeFocus(open: boolean, home: string, resume?: () => boolean) {
+  const was = useRef(false);
+  useEffect(() => {
+    if (was.current && !open && !resume?.()) {
+      const shown = (el: HTMLElement | null): el is HTMLElement =>
+        !!el && !el.closest("[hidden]") && getComputedStyle(el).display !== "none";
+      const pressed = lastPressed.id ? document.getElementById(lastPressed.id) : null;
+      const el = [pressed, document.getElementById(home)].find(shown);
+      (el ?? document.querySelector<HTMLElement>(".stage-head h1"))?.focus({
+        preventScroll: true,
+      });
+    }
+    was.current = open;
+  }, [open, home, resume]);
+}
+
+/** The header on every page: the brand (a link back to the landing page), `start` beside it (the
+ * offline badge, the way back to the match, a match's live pill), the three doors, and `end`
+ * (Settings). */
+function SiteHeader({ start, end }: { start: ReactNode; end: ReactNode }) {
+  const view = useView();
+  const home = useStore(doors, (s) => s.door === "home");
   return (
-    <div className="moment-cta">
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={() => {
-          window.scrollTo({ top: 0 });
-          controls.playBreakdown();
-        }}
-      >
-        Watch it through his eyes
-        <ArrowIcon />
-      </button>
-      {!yc.unavailable && (
-        <button
-          type="button"
-          className="btn"
-          title="Decide with only what he knew, then see what really happened"
-          onClick={() => {
-            window.scrollTo({ top: 0 });
-            yc.open();
-          }}
-        >
-          Make his call
-        </button>
-      )}
-      {/* The other ways in, one click away. Open or closed, it stays so across the modes it opens. */}
-      <details
-        className="how ways-in"
-        open={waysIn}
-        onToggle={(e) => storyWaysIn.set({ open: e.currentTarget.open })}
-      >
-        <summary>More ways in</summary>
-        <div className="ways-in-body">
-          {!steps.unavailable && (
-            <button
-              id="scan-steps-story"
-              type="button"
-              className="btn"
-              title="Step through each look he took, frozen, then his decision"
-              onClick={() => {
-                window.scrollTo({ top: 0 });
-                steps.open();
-              }}
-            >
-              Step through his looks
-            </button>
-          )}
-          {!te.unavailable && (
-            <button
-              id="take-eyes-story"
-              type="button"
-              className="btn"
-              title="Choose when and where he looks; the sim re-runs the moment"
-              onClick={() => {
-                window.scrollTo({ top: 0 });
-                te.open();
-              }}
-            >
-              Take his eyes
-            </button>
-          )}
-          {!drill.unavailable && (
-            <button
-              id="drill-story"
-              type="button"
-              className="btn"
-              title={`${DRILL_SUB}, then make the pass`}
-              onClick={() => {
-                window.scrollTo({ top: 0 });
-                drill.open();
-              }}
-            >
-              {DRILL_NAME}
-            </button>
-          )}
-          <TourButton className="btn" />
-        </div>
-      </details>
-      {(status === "ready" || status === "failed") && (
-        <span className="written">
-          {checked && <CheckIcon />}
-          {checked
-            ? `Written for ${PERSONA_LABEL[persona]} · every number checked in code`
-            : "Bundled example · not checked by the verifier"}
-        </span>
-      )}
+    <header className="stage-head">
+      <div className="brand">
+        {/* Focused when the intro card closes (IntroCard), never by Tab. */}
+        <h1 tabIndex={-1}>
+          <a
+            className="brand-link"
+            href={`${import.meta.env.BASE_URL}?door=home`}
+            aria-current={home && view.kind === "hero" ? "page" : undefined}
+            onClick={(e) => {
+              // A stitched match is no door: the link loads the hero moment's landing page.
+              if (view.kind === "match" || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              openDoor("home", { address: true, focus: true });
+            }}
+          >
+            Through Their Eyes
+          </a>
+        </h1>
+        <p className="sub">
+          A synthetic match<span className="sub-more"> · every player fictional</span>
+        </p>
+      </div>
+      <div className="header-start">{start}</div>
+      <DoorTabs />
+      <div className="header-end">{end}</div>
+    </header>
+  );
+}
+
+/** Door 2 or 3: the header in the page's flow, then the door's page. */
+function DoorScreen({
+  start,
+  end,
+  children,
+}: {
+  start: ReactNode;
+  end: ReactNode;
+  children: ReactNode;
+}) {
+  const introOpen = useStore(intro, (s) => s.open);
+  return (
+    <div className="door-screen" inert={introOpen}>
+      <SiteHeader start={start} end={end} />
+      <main className="moment door-main" id="moment">
+        <FloodlightBackground />
+        {children}
+      </main>
     </div>
   );
 }
@@ -402,8 +370,8 @@ function StoryCta() {
  * playback bar sit over the picture.
  */
 function LiveScreen(props: {
-  start: ReactNode; // next to the brand: Moments, the way back to the match, a match's live pill
-  end?: ReactNode; // the header's right: Your call and ⋯
+  start: ReactNode; // next to the brand: the way back to the match, a match's live pill
+  end?: ReactNode; // the header's right: Settings
   run?: ReactNode; // the run switch: centred over the picture, under the bar on a phone
   card: ReactNode;
   caption?: ReactNode;
@@ -450,17 +418,7 @@ function LiveScreen(props: {
           <div className="shade bottom" aria-hidden="true" />
           {pip && <SwapViews />}
         </div>
-        <header className="stage-head">
-          <div className="brand">
-            {/* Focused when the intro card closes (IntroCard), never by Tab. */}
-            <h1 tabIndex={-1}>Through Their Eyes</h1>
-            <p className="sub">
-              A synthetic match<span className="sub-more"> · every player fictional</span>
-            </p>
-          </div>
-          <div className="header-start">{props.start}</div>
-          <div className="header-end">{props.end}</div>
-        </header>
+        <SiteHeader start={props.start} end={props.end} />
         <div className="stage-top">
           <StageHud />
           <StatsTicker />
@@ -521,23 +479,21 @@ function MatchView() {
     <SessionGlossary>
       <div className="app match">
         <LiveScreen
-          start={
-            <>
-              <LiveBar />
-              <MatchPicker />
-              <MomentsMenu />
-            </>
-          }
+          start={<LiveBar />}
           end={
-            <HeaderMore>
-              <MenuSection label="Sound">
-                <SoundToggle />
+            <SettingsMenu>
+              <MenuSection label="Moment">
+                <MomentChips />
+                <MatchPicker />
               </MenuSection>
               <MenuSection label="Your view">
                 <YourViewMenu />
               </MenuSection>
+              <MenuSection label="Sound">
+                <SoundToggle />
+              </MenuSection>
               <ViewOptions />
-            </HeaderMore>
+            </SettingsMenu>
           }
           card={
             <>

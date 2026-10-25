@@ -103,6 +103,13 @@ function openTourLine(s: Session): ReturnType<typeof tourClaim> {
   return pick;
 }
 
+/** The evidence card on the picture, on the tour's line, in the audience on screen (the studios'
+ * "Open the evidence"): the breakdown is asked for if nobody has. Returns a cancel. */
+export function showEvidence(s: Session): Cleanup {
+  clear(s, { evidence: true });
+  return whenBreakdown(s, () => void openTourLine(s));
+}
+
 /** Set a step up on whichever page shows it: the hero moment's, or the stitched match's (its
  * recap). A step meant for the other page does nothing here. */
 export function enterStep(name: EnterName, s: ViewSession): Cleanup | void {

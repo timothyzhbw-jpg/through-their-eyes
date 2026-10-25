@@ -58,16 +58,30 @@ const scoreBug = (p) =>
 
 /** Every screen, as a path and the steps from its load to the state that is checked. */
 const STATES = [
-  { name: "lineup-hero", path: "", ready: (p) => see(p.getByRole("dialog"), "the lineup card") },
+  {
+    name: "home",
+    path: "",
+    ready: (p) =>
+      see(p.getByRole("region", { name: /^One look over his shoulder/ }), "the landing page"),
+  },
   { name: "hero", path: "?intro=0&autoplay=0", ready: runSwitch },
   {
     name: "hero-viewer-menu",
     path: "?intro=0&autoplay=0",
     ready: async (p) => {
       await runSwitch(p);
-      await p.locator("#header-more").click(); // who is watching is in the header's ⋯
+      await p.locator("#settings").click(); // who is watching is in the header's Settings
       await p.getByRole("button", { name: /^Watching as/ }).click();
       await see(p.getByRole("dialog", { name: "Who is watching" }), "the viewer menu");
+    },
+  },
+  {
+    name: "hero-settings",
+    path: "?intro=0&autoplay=0",
+    ready: async (p) => {
+      await runSwitch(p);
+      await p.locator("#settings").click(); // the moment, follow, sound, view options, the tour
+      await see(p.getByRole("group", { name: "Settings" }), "the Settings menu");
     },
   },
   {
@@ -75,10 +89,31 @@ const STATES = [
     path: "?intro=0&autoplay=0",
     ready: async (p) => {
       await runSwitch(p);
-      await p.locator("#header-more").click(); // View options is in the header's ⋯
+      await p.locator("#settings").click(); // View options is in the header's Settings
       await p.getByRole("button", { name: "View options" }).click();
       await see(p.getByRole("group", { name: "View options" }), "the view options");
     },
+  },
+  {
+    name: "story-end",
+    path: "?tour=next",
+    ready: (p) =>
+      see(p.getByRole("button", { name: "For studios" }).last(), "the end card's choices"),
+  },
+  {
+    name: "door-turn",
+    path: "?door=turn",
+    ready: (p) => see(p.getByRole("region", { name: "Your turn." }), "Your turn's hub"),
+  },
+  {
+    name: "door-studios",
+    path: "?door=studios",
+    ready: (p) => see(p.getByRole("tablist", { name: "Studio steps" }), "For studios' steps"),
+  },
+  {
+    name: "door-studios-commentary",
+    path: "?step=commentary",
+    ready: (p) => see(p.getByRole("tabpanel", { name: /Commentary/ }), "Personalised commentary"),
   },
   {
     name: "hero-playing",

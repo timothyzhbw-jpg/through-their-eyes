@@ -1,8 +1,9 @@
 // The live screen of the Floodlit design (SPEC 7): the picture fills the screen and few controls
 // sit over it. One camera switch films his eyes, the broadcast camera or the tactical board; the
-// other view shrinks to a picture in picture. The header's "⋯" holds the rest: sound, who is
-// watching, the other ways in and View options (whose eyes, the Auto director, the data on the
-// pitch and the overlay toggles). The moment card on the right has one action: the breakdown.
+// other view shrinks to a picture in picture. The header's "⋯ Settings" holds the rest: the moment,
+// who is watching, who to follow, sound, View options (whose eyes, the Auto director, the data on
+// the pitch and the overlay toggles) and the full tour. The moment card on the right has one
+// action: the breakdown.
 
 import { QualityOption } from "../quality/QualityOption";
 import {
@@ -520,21 +521,21 @@ export function ViewOptions() {
   );
 }
 
-// ---------- more ways in ----------
+// ---------- settings ----------
 
-/** Whether the header's More menu is open: kept across the modes it opens, so closing one finds
- * the menu as it was and focus goes back to the item that opened it (App.tsx). */
-export const headerMore = createStore<{ open: boolean }>({ open: false });
+/** Whether the header's Settings menu is open: page-wide, so a tour step or a deep link
+ * (?step=your-view) can open it, and a door change keeps it as it was. */
+export const settingsMenu = createStore<{ open: boolean }>({ open: false });
 
-/** Open the ⋯ menu when `el` sits in it closed (a tour step points at it); true when it did. */
+/** Open Settings when `el` sits in it closed (a tour step points at it); true when it did. */
 export function revealInMenu(el: Element): boolean {
   const panel = el.closest<HTMLElement>(".more-panel");
   if (!panel?.hidden) return false;
-  headerMore.set({ open: true });
+  settingsMenu.set({ open: true });
   return true;
 }
 
-/** A section of the ⋯ menu, under a quiet label. */
+/** A section of the Settings menu, under a quiet label. */
 export function MenuSection({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="menu-section" role="group" aria-label={label}>
@@ -546,44 +547,41 @@ export function MenuSection({ label, children }: { label: string; children: Reac
   );
 }
 
-/** The header's ⋯: everything off the first screen (sound, who is watching, the other ways into
- * the moment, View options) behind one button. The items stay mounted while it is closed
- * (`hidden`): their ids and pressed states are what the modes, App's focus return and the tours
- * use (a tour step whose target is in here opens it: tour/Tour.tsx). */
-export function HeaderMore({ children }: { children: ReactNode }) {
-  const open = useStore(headerMore, (s) => s.open);
+/** The header's one menu, "⋯ Settings": the moment, the audience and language, who to follow, the
+ * sound, the view options and the full tour, behind one button. The items stay mounted while it is
+ * closed (`hidden`): a tour step whose target is in here opens it (tour/Tour.tsx). Escape closes
+ * it, or the menu inside it that is open, and the keyboard goes back to that menu's button. */
+export function SettingsMenu({ children }: { children: ReactNode }) {
+  const open = useStore(settingsMenu, (s) => s.open);
   const wrap = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const id = useId();
-  const close = useRef(() => headerMore.set({ open: false })).current;
+  const close = useRef(() => settingsMenu.set({ open: false })).current;
   const onKeyDown = usePopover(open, close, wrap, toggle);
   return (
-    <div className="popover-wrap header-more" ref={wrap} onKeyDown={onKeyDown}>
+    <div className="popover-wrap header-more settings" ref={wrap} onKeyDown={onKeyDown}>
       <button
         ref={toggle}
-        id="header-more"
+        id="settings"
         type="button"
-        className="btn btn-icon"
-        aria-label="More"
-        title="Sound, audience and language, more ways in, view options"
+        className="btn settings-toggle"
+        aria-label="Settings"
+        title="The moment, audience and language, who you follow, sound, view options, the full tour"
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => headerMore.set({ open: !open })}
+        onClick={() => settingsMenu.set({ open: !open })}
       >
         <DotsIcon />
+        <span className="btn-label">Settings</span>
       </button>
       <div
         id={id}
         className="popover more-panel"
         role="group"
-        aria-label="More"
+        aria-label="Settings"
         hidden={!open}
-        // A tour or a mode takes the screen, so the menu closes behind it.
-        onClick={(e) =>
-          (e.target as Element).closest(
-            ".tour-start, #take-eyes-open, #scan-steps-open, #drill-open",
-          ) && close()
-        }
+        // A tour takes the screen, and a moment link leaves the page: the menu closes behind them.
+        onClick={(e) => (e.target as Element).closest(".tour-start, .moment-chip") && close()}
       >
         {children}
       </div>

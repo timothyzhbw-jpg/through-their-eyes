@@ -19,7 +19,7 @@ import type { AudioLike } from "../voice/voice";
 import { BreakdownPanel } from "./BreakdownPanel";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./Narration";
 import { LANG_LABEL, PERSONA_LABEL } from "./labels";
-import { CameraSwitch, HeaderMore, MenuSection, ViewerMenu, ViewOptions } from "./Stage";
+import { CameraSwitch, MenuSection, SettingsMenu, ViewerMenu, ViewOptions } from "./Stage";
 import { Transport } from "./Transport";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -384,29 +384,32 @@ describe("keyboard and screen reader access", () => {
     expect(problems(page)).toEqual([]);
   });
 
-  it("names the header's ⋯ and keeps its sections and items named while it is open", () => {
+  it("names the header's ⋯ Settings and keeps its sections and items named while it is open", () => {
     const { session } = online();
     const page = mount(
       session,
-      <HeaderMore>
+      <SettingsMenu>
         <MenuSection label="Sound">
           <SoundToggle />
         </MenuSection>
-        <MenuSection label="More ways in">
-          <button type="button" className="btn">
-            His looks
+        <MenuSection label="Tour">
+          <button type="button" className="btn tour-start">
+            Full tour · 90 s
           </button>
         </MenuSection>
-      </HeaderMore>,
+      </SettingsMenu>,
     );
-    const toggle = page.querySelector<HTMLButtonElement>("#header-more")!;
-    expect(accessibleName(toggle)).toBe("More");
+    const toggle = page.querySelector<HTMLButtonElement>("#settings")!;
+    expect(accessibleName(toggle)).toBe("Settings");
+    // A phone shows the dots alone: the name stays (WCAG 2.5.3, the label in the name).
+    toggle.querySelector<HTMLElement>(".btn-label")!.style.display = "none";
+    expect(accessibleName(toggle)).toBe("Settings");
     act(() => toggle.click());
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     const panel = page.querySelector(".more-panel")!;
-    expect(accessibleName(panel)).toBe("More");
+    expect(accessibleName(panel)).toBe("Settings");
     const sections = [...panel.querySelectorAll("[role=group]")].map(accessibleName);
-    expect(sections).toEqual(["Sound", "More ways in"]);
+    expect(sections).toEqual(["Sound", "Tour"]);
     // The sound switch keeps its name and its state in the menu.
     const sound = panel.querySelector<HTMLButtonElement>("button.sound")!;
     expect(accessibleName(sound)).toBe("Sound");
