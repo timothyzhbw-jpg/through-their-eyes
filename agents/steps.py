@@ -44,7 +44,13 @@ from agents.look import ACTION_WORDS, OVER_THE_SHOULDER, SEEN
 from agents.schemas import Language, Persona
 from analytics.stats import display
 from analytics.vision import wrap_angle
-from explain.belief_options import look_options, new_in_picture, option_changes, options_on_belief
+from explain.belief_options import (
+    look_options,
+    new_in_picture,
+    option_changes,
+    options_on_belief,
+    without_look_sightings,
+)
 from explain.claims import Claim, Predicate, Slot, fn, slot
 from explain.lenses import sightings
 from explain.render import RenderPayload, build_payload
@@ -54,6 +60,7 @@ from sim.config import SimParams
 from sim.counterfactual import CounterfactualResult
 from sim.decision import OptionEval
 from sim.model import Decision, Event
+from sim.overrides import DropScan, ForceAction
 from sim.run import MatchRun
 
 STEPS_VERSION = 2  # 2: per-step pictures (options, news); teaching beats in time order
@@ -603,12 +610,13 @@ def _picture(before: list[dict], after: list[dict], frame: int, news: list[dict]
 
 def build_pictures(rs: RunSteps, hero: str) -> dict[str, dict]:
     """What he knew and could do at each frozen step of a run, in time order: "start" (before his
-    first look: the options of his forward view), each look he took (his options at its end,
-    with it against without it, and who is new in his picture), each beat (against the step
-    before). Missing looks have none."""
+    first look: the options of his forward view), each look he took (his options at its frozen
+    frame, with it against the run without that scan, and who is new in his picture by then), each
+    beat (against the step before). Missing looks have none."""
     run = rs.run
     seen = sightings(run, hero)
-    decided = rs.decision.frame
+    overrides = ([ForceAction(hero, rs.decision.frame, rs.decision.chosen)] if rs.forced
+                 else [DropScan(rs.cf)] if rs.cf is not None else [])  # fmt: skip
     first = min((s.scan.frame for s in rs.steps), default=rs.reception.frame)
     f0 = max(first - 1, 0)
     prev = _option_rows(options_on_belief(run, hero, f0, seen))
@@ -617,11 +625,12 @@ def build_pictures(rs: RunSteps, hero: str) -> dict[str, dict]:
     frozen += [(b.frame, 1, b) for b in rs.beats]
     for _, _, x in sorted(frozen, key=lambda t: (t[0], t[1])):
         if isinstance(x, Step):
-            a, b = x.scan.frame, min(int(x.scan.attrs["end"]), decided)
-            without, with_look = look_options(run, hero, a, b, seen)
+            a, b = x.scan.frame, x.frame
+            without_seen = without_look_sightings(run, hero, a, b, seen, overrides)
+            without, with_look = look_options(run, hero, a, b, seen, without_seen)
             news = [{"id": n.player, "entered": n.entered, "moved": round(n.moved_m, 1),
                      "before": round(n.gap_before_m, 1), "after": round(n.gap_after_m, 1)}
-                    for n in new_in_picture(run, hero, a, b, seen)]  # fmt: skip
+                    for n in new_in_picture(run, hero, a, b, seen, without_seen)]  # fmt: skip
             prev = _option_rows(with_look)
             out[x.scan.id] = _picture(_option_rows(without), prev, b, news)
         else:
