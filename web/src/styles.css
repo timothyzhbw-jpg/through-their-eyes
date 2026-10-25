@@ -1571,6 +1571,90 @@ optgroup {
   color: var(--ink);
 }
 
+/* The story so far: a solid, quiet column beside the picture, never a second live region. */
+@media (min-width: 1100px) {
+  .stage:has(.caption-story) {
+    --story-w: clamp(250px, 22vw, 320px);
+  }
+  .stage:has(.caption-story) .views,
+  .stage:has(.caption-story) .stage-head {
+    right: var(--story-w);
+  }
+  .stage:has(.caption-story) .stage-top {
+    right: calc(var(--story-w) + var(--card-w) + 2 * var(--gutter));
+  }
+  .stage:has(.caption-story) .stage-card {
+    right: calc(var(--story-w) + var(--gutter));
+  }
+  .stage:has(.caption-story) .stage-run {
+    left: calc((100% - var(--story-w)) / 2);
+  }
+  .stage:has(.caption-story) .stage-caption {
+    left: calc((100% - var(--story-w)) / 2);
+    width: min(880px, calc(100% - var(--story-w) - 2 * var(--gutter)));
+  }
+  .stage.with-pip:has(.caption-story) .stage-caption {
+    width: min(880px, calc(100% - var(--story-w) - 2 * (var(--pip-w) + var(--gutter) + 24px)));
+  }
+  .stage.focus-tactical:has(.caption-story) .stage-caption {
+    left: var(--gutter);
+    right: calc(var(--story-w) + var(--card-w) + 2 * var(--gutter));
+    width: auto;
+    transform: none;
+  }
+  .stage:has(.caption-story) .transport {
+    right: calc(var(--story-w) + var(--gutter));
+  }
+  .caption-story {
+    position: absolute;
+    z-index: 5;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--story-w);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px 20px;
+    border-left: 1px solid var(--hairline);
+    background: var(--night);
+    color: var(--chalk-2);
+  }
+  .caption-story h2 {
+    flex: none;
+    min-height: 24px;
+    margin: 0;
+    color: var(--chalk-3);
+    font: 500 11px/1.2 var(--font-data);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .caption-story ol {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    list-style: none;
+  }
+  .caption-story-line {
+    padding: 12px 8px 12px 12px;
+    border-left: 2px solid transparent;
+    color: var(--chalk-2);
+    font: 400 17px/1.45 var(--font-display);
+  }
+  .caption-story-line.now {
+    border-left-color: var(--floodlight);
+    border-radius: 0 12px 12px 0;
+    background: rgba(246, 213, 102, 0.09);
+    color: var(--chalk);
+  }
+  .caption-story .caption-more.check {
+    transition: none;
+  }
+}
+
 /* ---------- the playback bar ---------- */
 .transport {
   position: absolute;

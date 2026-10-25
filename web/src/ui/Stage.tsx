@@ -32,6 +32,7 @@ import { clubName, shortName } from "../data/roster";
 import { directorPrefs } from "../director/director";
 import { directorOf, useSuggestion } from "../director/DirectorBar";
 import { pitchData, setPitchData } from "./pitchData";
+import { captionStoryPrefs, setCaptionStory } from "./captionStory";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -462,6 +463,26 @@ function PitchDataOption() {
   );
 }
 
+function CaptionStoryOption() {
+  const on = useStore(captionStoryPrefs, (s) => s.on);
+  return (
+    <section className="options-group">
+      <h3 className="kicker">Captions</h3>
+      <div className="chips">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={on}
+          onClick={() => setCaptionStory(!on)}
+          title="Keep the lines already captioned beside the picture on desktop"
+        >
+          Story beside the picture
+        </button>
+      </div>
+    </section>
+  );
+}
+
 /** Whose eyes and the Auto director, off the picture. */
 function CameraOptions() {
   const auto = useStore(directorPrefs, (s) => s.auto);
@@ -511,6 +532,7 @@ export function ViewOptions() {
       {open && (
         <div id={id} className="popover options-panel" role="group" aria-label="View options">
           <PitchDataOption />
+          <CaptionStoryOption />
           <CameraOptions />
           <PovOptions />
           <QualityOption />

@@ -23,7 +23,7 @@ import type { LiveStatus } from "./live/feed";
 import { IntroCard } from "./ui/IntroCard";
 import { LiveBar, MomentsPanel, OfflineBadge } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
-import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
+import { Caption, CaptionStory, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
 import { intro } from "./ui/intro";
 import { RunToggle } from "./ui/RunToggle";
 import {
@@ -212,6 +212,7 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
                     <WithoutLookNote />
                   </>
                 }
+                story={<CaptionStory />}
               />
               <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
                 <FloodlightBackground />
@@ -379,7 +380,7 @@ function DoorScreen({
 /**
  * The live screen: the main view fills it and the other rides along as a picture in picture
  * (unless the 3D view is focused alone); the header, a card on the right, the caption and the
- * playback bar sit over the picture.
+ * playback bar sit over the picture. On desktop The look can keep its captioned story beside it.
  */
 function LiveScreen(props: {
   start: ReactNode; // next to the brand: the way back to the match, a match's live pill
@@ -387,6 +388,7 @@ function LiveScreen(props: {
   run?: ReactNode; // the run switch: centred over the picture, under the bar on a phone
   card: ReactNode;
   caption?: ReactNode;
+  story?: ReactNode;
 }) {
   const session = useView();
   const { playback } = session;
@@ -438,6 +440,7 @@ function LiveScreen(props: {
         </div>
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}
+        {props.story}
         <Transport />
         {/* The intro card takes the card's place while it is up. */}
         <div className="stage-card">{introOpen ? null : props.card}</div>

@@ -39,6 +39,7 @@ import "./whatif.css";
 import { renameIds } from "../data/roster";
 import { GlossaryText } from "../glossary/GlossaryText";
 import type { ContextClaim } from "../glossary/context";
+import { captionStoryPrefs } from "./captionStory";
 
 export { SoundToggle }; // the header's Sound switch, imported from here before it had a file
 
@@ -163,6 +164,110 @@ export function Caption() {
         </div>
       )}
     </>
+  );
+}
+
+interface CaptionedLine {
+  id: string;
+  frame: number;
+}
+
+/** The lines already captioned in this playback, beside the picture on desktop. */
+export function CaptionStory() {
+  const { playback, controls } = useSession();
+  const { narration } = useBreakdown();
+  const lineId = useStore(playback, (s) => s.captionLine);
+  const open = useStore(playback, (s) => s.evidenceLine);
+  const on = useStore(captionStoryPrefs, (s) => s.on);
+  const [desktop, setDesktop] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1100,
+  );
+  const [entries, setEntries] = useState<CaptionedLine[]>([]);
+  const list = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const update = () => setDesktop(window.innerWidth >= 1100);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    setEntries([]);
+    let previous = { ...playback.get(), captionLine: null as string | null };
+    const update = () => {
+      const next = playback.get();
+      const runChanged = next.mode !== previous.mode;
+      const soughtBack = next.frame < previous.frame;
+      const lineChanged = next.captionLine !== previous.captionLine;
+      previous = next;
+      if (runChanged) {
+        setEntries([]);
+        return;
+      }
+      if (!soughtBack && !lineChanged) return;
+      setEntries((current) => {
+        const kept = soughtBack ? current.filter((entry) => entry.frame <= next.frame) : current;
+        if (
+          next.captionLine &&
+          lineChanged &&
+          !kept.some((entry) => entry.id === next.captionLine)
+        ) {
+          return [...kept, { id: next.captionLine, frame: next.frame }];
+        }
+        return kept;
+      });
+    };
+    update();
+    return playback.subscribe(update);
+  }, [narration, playback]);
+
+  useEffect(() => {
+    if (list.current) list.current.scrollTop = list.current.scrollHeight;
+  }, [entries, lineId]);
+
+  if (!on || !desktop || !narration) return null;
+  return (
+    <aside className="caption-story" aria-label="The story so far">
+      <h2>The story so far</h2>
+      <ol ref={list}>
+        {entries.map((entry) => {
+          const line = lineOf(narration, entry.id);
+          if (!line) return null;
+          const verified = isVerified(narration, line);
+          return (
+            <li
+              key={entry.id}
+              data-line={line.id}
+              className={line.id === lineId ? "caption-story-line now" : "caption-story-line"}
+              aria-current={line.id === lineId ? "true" : undefined}
+            >
+              <span className="caption-story-text">
+                <LineText
+                  text={line.text}
+                  verified={verified}
+                  claims={lineClaims(narration, line)}
+                />
+                {line.claims.length > 0 && (
+                  <button
+                    type="button"
+                    className={
+                      verified
+                        ? "caption-more caption-evidence check"
+                        : "caption-more caption-evidence"
+                    }
+                    aria-label="Open the evidence for this line"
+                    aria-expanded={open === line.id}
+                    onClick={() => controls.openLine(line.id)}
+                  >
+                    {verified ? <CheckIcon /> : "Evidence"}
+                  </button>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </aside>
   );
 }
 
