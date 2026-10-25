@@ -45,8 +45,8 @@ describe("numbers in a line", () => {
   });
 
   it("reads Chinese narration too", () => {
-    expect(nums("接球前2秒内，H8扫视了1次。")).toEqual(["2秒", "1次"]);
-    expect(nums("那一眼带来了0.10的预期威胁（xT）。")).toEqual(["0.10"]);
+    expect(nums("接球前2秒内，H8回头观察了1次。")).toEqual(["2秒", "1次"]);
+    expect(nums("那一眼带来了0.10的预期威胁。")).toEqual(["0.10"]);
   });
 
   it("returns one plain part for a line without numbers", () => {

@@ -102,10 +102,16 @@ describe("posts", () => {
     const allowed = allowedNumbers(narration);
     expect(allowed.size).toBeGreaterThan(0);
     for (const lang of POST_LANGUAGES) {
+      const localized = new Set([
+        ...allowed,
+        ...(lang === "zh" ? [...allowed].map((value) => value * 100) : []),
+      ]);
       const posts = postsOf(context(narration), lang);
       for (const format of POST_FORMATS) {
         for (const n of numbersIn(posts[format])) {
-          expect(allowed.has(Number(n)), `${lang} ${format}: ${n} in\n${posts[format]}`).toBe(true);
+          expect(localized.has(Number(n)), `${lang} ${format}: ${n} in\n${posts[format]}`).toBe(
+            true,
+          );
         }
       }
     }
@@ -176,7 +182,7 @@ describe("posts", () => {
   it("says the match is synthetic", () => {
     const ctx = context(narrationOf(fixture));
     expect(postsOf(ctx, "en").carousel).toContain("Synthetic match");
-    expect(postsOf(ctx, "zh").carousel).toContain("合成比赛");
+    expect(postsOf(ctx, "zh").carousel).toContain("模拟比赛");
   });
 
   it("is the same every time", () => {

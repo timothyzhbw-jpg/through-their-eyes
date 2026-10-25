@@ -34,6 +34,7 @@ import { useBreakdown, useSession } from "../session";
 import { EVENT_LABEL } from "../stadium/rules";
 import type { Show } from "../stadium/show";
 import { stepThroughOf } from "../steps/controller";
+import { optionLabel, personLookup, personOf, scanDirection, tagOf } from "../steps/story";
 import { useStore } from "../store/store";
 import { BusinessValue, StudioPackage } from "../studio/Studio";
 import { enterStep, showEvidence } from "../tour/actions";
@@ -304,9 +305,12 @@ export function ComparePanel() {
       }
       lede={
         hero.counterfactual
-          ? `${blurbOf(hero)} Watch it, then the same seconds re-simulated with that one change; each side is told by its checked lines.`
+          ? hero.keyScan
+            ? `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate look, then the same seconds re-simulated without it. ${blurbOf(hero)} Each side is told by its checked lines.`
+            : `${blurbOf(hero)} Watch it, then the same seconds re-simulated with that one change; each side is told by its checked lines.`
           : blurbOf(hero)
       }
+      aside={hero.counterfactual && hero.keyScan ? <CompareSummary /> : null}
       label="The look, compared"
     >
       <div className="pick-row">
@@ -359,6 +363,50 @@ export function ComparePanel() {
         <p className="note">This moment has no re-simulated run to compare it with.</p>
       )}
     </Chapter>
+  );
+}
+
+function CompareSummary() {
+  const session = useSession();
+  const { hero } = session;
+  const data = useStore(withoutLookOf(session).state, (s) => s.data);
+  const language = useStore(session.breakdown, (b) => b.language);
+  const narration = data?.answers[language] ?? data?.answers.en ?? null;
+  const line = (id: string) => narration?.lines.find((l) => l.id === id);
+  const key = hero.keyScan!;
+  const direction = scanDirection(hero, hero.runs.factual, key.start).code;
+  const side = direction === "L" ? "left" : direction === "R" ? "right" : null;
+  const before = ((hero.reception - key.start) * hero.dt).toFixed(1);
+  const fallback = side
+    ? `Removed: ${personOf(hero, hero.heroId!).name}'s look over his ${side} shoulder, ${before} seconds before the ball reached him.`
+    : null;
+  const removed = line(REMOVED_LOOK)?.text ?? fallback;
+  const runner = hero.runnerId ? tagOf(personOf(hero, hero.runnerId)) : null;
+  const look = removed
+    ? runner
+      ? `${removed.replace(/\.$/, "")}, where he saw ${runner}'s run behind him.`
+      : removed
+    : null;
+  const decision = hero.runs.factual.decision;
+  const chosen = decision
+    ? optionLabel(decision.chosen, personLookup(hero)).replace(/^./, (c) => c.toLowerCase())
+    : null;
+  const cost = line("look_cost")?.text;
+  const result = chosen ? `With it, ${chosen}${cost ? `; without it, ${cost}` : "."}` : null;
+  if (!look && !result) return null;
+  return (
+    <div className="journey-compare-summary" lang={language}>
+      {look && (
+        <p className="note">
+          <strong>The look:</strong> {look}
+        </p>
+      )}
+      {result && (
+        <p className="note">
+          <strong>The result:</strong> {result}
+        </p>
+      )}
+    </div>
   );
 }
 
