@@ -15,6 +15,7 @@ import {
   buildCards,
   compareHref,
   momentHref,
+  type CardId,
   type LabCard,
   type TacticId,
   type Metric,
@@ -347,15 +348,30 @@ function LaneLine({ lane }: { lane: Lane }) {
 
 // ---------- the chapter ----------
 
-/** `kicker`: the chapter's kicker where the lab is a step of the journey (journey/). */
+/** A retired lens ID (a broadcast question or an old moment link) opens the tactic that now holds
+ * its row. */
+const RETIRED: Record<Exclude<CardId, TacticId>, TacticId> = {
+  decisions: "build_up",
+  progression: "counter_attack",
+  shot_quality: "counter_attack",
+};
+const tacticOf = (id: CardId): TacticId =>
+  id in RETIRED ? RETIRED[id as keyof typeof RETIRED] : (id as TacticId);
+
+/** `kicker`: the chapter's kicker where the lab is a section of For studios (journey/), which
+ * also picks its card (`card`, `onPick`: the broadcast's questions open a card). */
 export function TacticsLabPanel({
   xt: injected,
   scope: injectedScope,
   kicker = "Tactics lab",
+  card: chosen,
+  onPick,
 }: {
   xt?: XtGrid;
   scope?: Scope; // tests
   kicker?: string;
+  card?: CardId;
+  onPick?: (card: CardId) => void;
 }) {
   const view = useView();
   const loaded = useXtGrid(!injected);
@@ -363,7 +379,9 @@ export function TacticsLabPanel({
   const asked = useScope();
   const scope = injectedScope ?? asked;
   const cards = useMemo(() => buildCards(view.hero, grid, scope), [view.hero, grid, scope]);
-  const [picked, setPicked] = useState<TacticId>("high_press");
+  const [own, setOwn] = useState<TacticId>("high_press");
+  const picked = tacticOf(chosen ?? own);
+  const setPicked = onPick ?? setOwn;
   const card = cards.find((c) => c.id === picked) ?? cards[0];
   // The board belongs to the press_escape decision used by the pressing and possession tactics.
   const laneHero =

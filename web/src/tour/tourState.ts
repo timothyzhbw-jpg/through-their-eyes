@@ -48,7 +48,12 @@ export function closeTour({ restore = true }: { restore?: boolean } = {}): void 
   tour.set({ open: false });
   const back = opener;
   opener = null;
-  if (!restore || !back?.isConnected) return;
+  if (!restore || !back) return;
+  // Started from a page that is gone (the landing page's button): the header's title, never <body>.
+  if (!back.isConnected) {
+    document.querySelector<HTMLElement>(".stage-head h1")?.focus({ preventScroll: true });
+    return;
+  }
   const menu = back.closest<HTMLElement>(".more-panel");
   const target = menu?.hidden ? document.getElementById("settings") : back;
   target?.focus({ preventScroll: true });

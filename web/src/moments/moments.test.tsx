@@ -224,26 +224,24 @@ describe("the hero page's shell (SPEC 7)", () => {
     expect(page.querySelector(".stage .scroll-word")).toBeNull();
   });
 
-  it("tells the story with one action, the compare under it, and the match data last", () => {
+  it("keeps the compare and the evidence under the picture, not the introduction", () => {
     const page = mount(offline());
-    const cta = page.querySelector(".moment-cta")!;
-    expect(names(cta, ":scope > button")).toEqual(["Watch the look"]);
-    expect(cta.querySelectorAll(".btn-primary")).toHaveLength(1);
+    // The story's button and the chapters that introduced the moment are the landing page's.
+    expect(page.querySelector(".moment-cta")).toBeNull();
     expect(page.querySelector("details.ways-in")).toBeNull();
-    // Door 1 has one primary action under the picture (the moment card is the picture's own).
-    expect(page.querySelectorAll("main.moment .btn-primary")).toHaveLength(1);
+    expect(page.querySelectorAll("main.moment .btn-primary")).toHaveLength(0);
+    expect(page.querySelector(".story, .decision, .verdict")).toBeNull();
     // The compare, with the scan story one link away.
     const compare = page.querySelector(".moment > .journey-event")!;
     expect(compare.querySelector("#scan-steps-story")?.textContent).toBe("Step through his looks");
-    // Story → Decision → Verdict → Narration → What if, then the data, folded. The crew's
-    // breakdown (and its failure drill) is For studios' last step.
+    // Narration → What if, then the data, folded. The crew's breakdown (and its failure drill) is
+    // For studios' commentary.
     const below = page.querySelector(".below")!;
     const last = below.lastElementChild as HTMLDetailsElement;
     expect(last.matches("details.match-data")).toBe(true);
     expect(last.open).toBe(false);
     expect(last.querySelector("summary")!.textContent).toBe("Match data for this moment");
-    expect(below.firstElementChild!.matches(".story")).toBe(true);
-    expect(last.querySelector(".story, .decision, .verdict")).toBeNull();
+    expect(below.firstElementChild!.matches(".narration")).toBe(true);
     expect(page.querySelector(".breakdown")).toBeNull();
   });
 });

@@ -1,22 +1,36 @@
-// The studios' journey (SPEC 7, door 3 of doors/): one coherent path through a hero moment, from
-// why its tactics work to what it is worth off the pitch, then the crew behind it. A bar that stays
-// on screen while the door's page scrolls ("Tactics → Content → Value → Behind the scenes"; on a
-// phone a stepper), and under it the open step's panel, all for the moment on screen:
-// - Tactics: the Tactics lab (tacticslab/);
-// - Content: the content package (studio/) and the stadium's screens (stadium/);
-// - Value: the business panel (studio/) and the stadium's sponsor slots, both demo data;
-// - Behind the scenes: the AI crew's breakdown (its cue list, the failure drill, the trace) and its
-//   evidence, opened on the picture.
-// Each step ends on one action: the next step. Arrow keys, Home and End move along the bar;
-// ?door=studios&step=<id> opens a step (deeplink.ts). The moment itself, with the look and without
-// it, is door 1's compare (ComparePanel, below). Nothing here calls a model by itself: every panel
-// reads what the page already has, bundled files, or a cached breakdown (gate.tsx).
+// For studios (SPEC 7, door 3 of doors/): what one moment does for the league's revenue, broadcast
+// and social first. A bar that stays on screen while the door's page scrolls (on a phone a
+// stepper), and under it the open section's panel, all for the moment on screen:
+// - A · AI Tactical Broadcast: a broadcast's questions, each opening the view that answers it,
+//   over the Tactics lab (tacticslab/);
+// - B · AI Personalised Commentary: the audiences and languages (picked in Settings), and the AI
+//   crew that writes them (its cue list, the failure drill, the trace, the evidence);
+// - C · AI Automated Highlights: the content package (studio/) for the league's channels;
+// - D · AI Stadium Experience: the stadium's screens (stadium/);
+// - Value: the league's revenue levers in words, the one measured cost, then the demo KPIs (the
+//   business panel and the sponsor slots, demo data).
+// Each section has one value line, the feature that shows it, one "Business value" line and one
+// primary action; under it, the next section. Arrow keys, Home and End move along the bar;
+// ?door=studios&step=<id> opens a section (deeplink.ts). The moment itself, with the look and
+// without it, is door 1's compare (ComparePanel, below). Nothing here calls a model by itself:
+// every panel reads what the page already has, bundled files, or a cached breakdown (gate.tsx).
 
-import { Fragment, lazy, Suspense, useEffect, useRef, type KeyboardEvent } from "react";
+import {
+  Fragment,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { runLabels } from "../data/hero";
-import { openDoor } from "../doors/state";
+import { openDoor, revealCompare } from "../doors/state";
+import { LANGUAGE_NAME } from "../personal/summary";
 import { TacticsLabPanel } from "../tacticslab/TacticsLab";
-import { useSession } from "../session";
+import type { CardId } from "../tacticslab/cards";
+import { useBreakdown, useSession } from "../session";
 import { EVENT_LABEL } from "../stadium/rules";
 import type { Show } from "../stadium/show";
 import { stepThroughOf } from "../steps/controller";
@@ -27,20 +41,24 @@ import { StepLines } from "../tour/StepLines";
 import { BreakdownPanel } from "../ui/BreakdownPanel";
 import { Chapter, Title } from "../ui/Chapter";
 import { ArrowIcon } from "../ui/icons";
+import { PERSONA_LABEL } from "../ui/labels";
 import { LineText } from "../ui/Narration";
 import { jumpTo, useReveal } from "../ui/reveal";
-import { blurbOf } from "../ui/Stage";
+import { blurbOf, settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines } from "../without/WithoutLook";
 import { DemoBadge, FACTS_VS_FIGURES } from "./DemoBadge";
 import { useCachedBreakdown } from "./gate";
+import { COST_PER_VERIFIED_BREAKDOWN, COST_REPORT_URL } from "./measured";
 import { journey, openStep } from "./state";
 import { eventIndex, stadiumEventFor, useStadiumShow } from "./stadium";
 import {
   JOURNEY_STEPS,
   moveStep,
   STEP_LABEL,
+  STEP_MARK,
   STEP_NOTE,
+  STEP_TITLE,
   stepForKey,
   stepIndex,
   type JourneyStep,
@@ -103,7 +121,10 @@ function JourneyBar({ step }: { step: JourneyStep }) {
   const i = stepIndex(step);
   const last = JOURNEY_STEPS.length - 1;
   return (
-    <nav className="journey-bar" aria-label="For studios, from tactics to the crew">
+    <nav
+      className="journey-bar"
+      aria-label="For studios: four solutions for the league, then the value"
+    >
       <div className="journey-tabs" role="tablist" aria-label="Studio steps" onKeyDown={onKeyDown}>
         {JOURNEY_STEPS.map((s, k) => (
           <Fragment key={s}>
@@ -126,9 +147,11 @@ function JourneyBar({ step }: { step: JourneyStep }) {
               title={STEP_NOTE[s]}
               onClick={() => pick(s)}
             >
-              <span className="journey-num" aria-hidden="true">
-                {k + 1}
-              </span>
+              {STEP_MARK[s] && (
+                <span className="journey-num" aria-hidden="true">
+                  {STEP_MARK[s]}
+                </span>
+              )}
               {STEP_LABEL[s]}
             </button>
           </Fragment>
@@ -165,13 +188,15 @@ function JourneyBar({ step }: { step: JourneyStep }) {
   );
 }
 
-/** The step's one action, under its panel: on to the next step; after the last, the end. */
+/** Under the panel, the way on: the next section (the section's own primary action is above, in
+ * its panel); after the last, the end. */
 function NextStep({ step }: { step: JourneyStep }) {
   const i = stepIndex(step);
   if (i === JOURNEY_STEPS.length - 1) {
     return (
       <p className="journey-end note">
-        That&apos;s the studio side: every number above is checked in code or labelled as demo data.
+        That&apos;s the studio side: every figure above is measured, checked in code, or labelled as
+        demo data.
       </p>
     );
   }
@@ -180,7 +205,7 @@ function NextStep({ step }: { step: JourneyStep }) {
     <div className="journey-next">
       <button
         type="button"
-        className="btn btn-primary"
+        className="btn"
         onClick={() => {
           pick(next);
           document.getElementById(tabId(next))?.focus({ preventScroll: true });
@@ -195,19 +220,58 @@ function NextStep({ step }: { step: JourneyStep }) {
 
 function StepPanel({ step }: { step: JourneyStep }) {
   switch (step) {
-    case "tactics":
-      return <TacticsLabPanel kicker={kickerOf("tactics")} />;
-    case "content":
-      return <ContentPanel />;
+    case "broadcast":
+      return <BroadcastPanel />;
+    case "commentary":
+      return <CommentaryPanel />;
+    case "highlights":
+      return <HighlightsPanel />;
+    case "stadium":
+      return <StadiumPanel />;
     case "value":
       return <ValuePanel />;
-    case "crew":
-      return <CrewPanel />;
   }
 }
 
+/** "A · AI Tactical Broadcast"; Value has no letter. */
 const kickerOf = (step: JourneyStep) =>
-  `Step ${stepIndex(step) + 1} of ${JOURNEY_STEPS.length} · ${STEP_LABEL[step]}`;
+  STEP_MARK[step] ? `${STEP_MARK[step]} · ${STEP_TITLE[step]}` : STEP_TITLE[step];
+
+/** A solution's head: what it is (the kicker), its value in one line (the lede), and under it
+ * what it is worth to the league, in one line. Its body is the feature that shows it, with the
+ * section's one primary action. */
+function Solution({
+  step,
+  className = "",
+  title,
+  lede,
+  worth,
+  children,
+}: {
+  step: JourneyStep;
+  className?: string; // the feature's own styles (studio: the package's and the stadium's)
+  title: ReactNode;
+  lede: string;
+  worth: string;
+  children: ReactNode;
+}) {
+  return (
+    <Chapter
+      className={`journey-step journey-solution journey-${step} ${className}`.trim()}
+      kicker={kickerOf(step)}
+      title={title}
+      lede={lede}
+      aside={
+        <p className="journey-worth">
+          <strong className="journey-label">Business value</strong> <span>{worth}</span>
+        </p>
+      }
+      label={STEP_TITLE[step]}
+    >
+      {children}
+    </Chapter>
+  );
+}
 
 // ---------- door 1's compare: the moment, with the look and without it ----------
 
@@ -316,21 +380,212 @@ function TheLook() {
 
 const REMOVED_LOOK = "removed_look"; // explain/look_cost.py: which look the comparison removes
 
-// ---------- Content: the package and the stadium's screens ----------
+// ---------- A · AI Tactical Broadcast ----------
 
-function ContentPanel() {
+/** The broadcast's question that opens the scan story: what closing it gives the keyboard back to
+ * (App.tsx OPENER_IDS). */
+export const ASK_RUN_ID = "studios-ask-run";
+
+/** A broadcast's questions that a tactic card answers. */
+const LAB_ASKS: readonly { card: CardId; ask: string }[] = [
+  { card: "high_press", ask: "Why did this high press work?" },
+  { card: "counter_attack", ask: "Why did xT jump on this attack?" },
+  { card: "transition", ask: "What did the back line expose after losing the ball?" },
+];
+
+function BroadcastPanel() {
+  const session = useSession();
+  const steps = stepThroughOf(session);
+  const [card, setCard] = useState<CardId>("high_press");
+  // A question opens its card in the lab below, in view; the keyboard stays on the question.
+  const ask = (c: CardId) => {
+    setCard(c);
+    requestAnimationFrame(() => {
+      const el = document.querySelector("#tactics-lab .lab-card");
+      if (el) jumpTo(el);
+    });
+  };
+  // The run he saw: his looks step by step (a mode, closed back to this question), else door 1's
+  // compare, the moment with the look and without it.
+  const run = () => {
+    window.scrollTo({ top: 0 });
+    if (!steps.unavailable) {
+      steps.open();
+      return;
+    }
+    openDoor("look", { address: true });
+    revealCompare();
+  };
+  // The broadcast itself: the moment played through his eyes with its overlays, on door 1.
+  const watch = () => {
+    openDoor("look", { address: true, focus: true });
+    window.scrollTo({ top: 0 });
+    session.controls.playBreakdown();
+  };
+  return (
+    <>
+      <Solution
+        step="broadcast"
+        title={<Title lead="Tactics," em="explained on air." />}
+        lede="AI combines match events, player positions and tactical models into visual explanations a broadcast can air."
+        worth="Deeper viewing, a differentiated broadcast product, and tactical-data display rights to sell to sponsors."
+      >
+        <div className="pick-row journey-asks" role="group" aria-label="Ask the broadcast">
+          {LAB_ASKS.map((a) => (
+            <button
+              key={a.card}
+              type="button"
+              className="btn"
+              aria-pressed={card === a.card}
+              aria-controls="tactics-lab"
+              onClick={() => ask(a.card)}
+            >
+              {a.ask}
+            </button>
+          ))}
+          <button
+            id={ASK_RUN_ID}
+            type="button"
+            className="btn"
+            title={
+              steps.unavailable
+                ? "The moment with his look and without it, on The look"
+                : "His looks before the ball arrived, step by step: the run he saw, then his decision"
+            }
+            onClick={run}
+          >
+            Whose off-ball run made the shooting space?
+          </button>
+        </div>
+        <div className="pick-row">
+          <button type="button" className="btn btn-primary" onClick={watch}>
+            Watch the broadcast
+            <ArrowIcon />
+          </button>
+        </div>
+      </Solution>
+      <TacticsLabPanel kicker="The Tactics lab" card={card} onPick={setCard} />
+    </>
+  );
+}
+
+// ---------- B · AI Personalised Commentary ----------
+
+/** Who the commentary is told for: the audiences and languages Settings picks. */
+const AUDIENCES: readonly { name: string; line: string }[] = [
+  { name: "Casual fan", line: "The plain account: what happened, and why it mattered." },
+  { name: "Tactical analyst", line: "Shape, press, xG and space, every number checked." },
+  {
+    name: "Player focus",
+    line: "Follow one player: his moments first, ringed on the pitch and on the board.",
+  },
+  {
+    name: "Multilingual",
+    line: "Subtitles, audio and summaries in the fan's language. We ship English and Chinese, each written for its language, not translated.",
+  },
+];
+
+/** The commentary as the fan picks it, and behind it the crew that writes it: its breakdown panel
+ * (the cue list, the failure drill, the crew trace) and its evidence, opened on the picture. */
+function CommentaryPanel() {
+  const session = useSession();
+  const { persona, language } = useBreakdown();
+  useCachedBreakdown(); // a cold visit (?step=commentary): the cached breakdown the crew wrote
+  // Settings opens over the page, its toggle focused: Escape closes it back onto the toggle.
+  const choose = () => {
+    window.scrollTo({ top: 0 });
+    settingsMenu.set({ open: true });
+    document.getElementById("settings")?.focus({ preventScroll: true });
+  };
+  return (
+    <>
+      <Solution
+        step="commentary"
+        title={<Title lead="Every fan's" em="commentary." />}
+        lede="One verified account of the moment, told for each fan: how deep it goes, whom it follows, and in which language."
+        worth="A better international experience, more time in the official app, and a stronger draw for subscriptions."
+      >
+        <dl className="tile-grid journey-audiences">
+          {AUDIENCES.map((a) => (
+            <div key={a.name} className="tile">
+              <dt>{a.name}</dt>
+              <dd>{a.line}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="note">
+          Now: {PERSONA_LABEL[persona]} · <span lang={language}>{LANGUAGE_NAME[language]}</span>.
+          The audience and language are under Commentary in Settings; the player under Follow.
+        </p>
+        <div className="pick-row">
+          <button type="button" className="btn btn-primary" onClick={choose}>
+            Choose in Settings
+          </button>
+        </div>
+      </Solution>
+      <div className="journey-crew">
+        <BreakdownPanel
+          kicker="Behind the commentary: the AI crew"
+          lead={
+            <div className="pick-row">
+              <button
+                type="button"
+                className="btn"
+                title="A claim of the commentary, the Verifier's verdict and the match events it rests on"
+                onClick={() => {
+                  openDoor("look", { address: true });
+                  window.scrollTo({ top: 0 });
+                  showEvidence(session);
+                }}
+              >
+                Open the evidence
+              </button>
+            </div>
+          }
+        />
+      </div>
+    </>
+  );
+}
+
+// ---------- C · AI Automated Highlights ----------
+
+function HighlightsPanel() {
   useCachedBreakdown(); // a cold visit: the moment's cached breakdown, never a new one
   return (
-    <Chapter
-      className="journey-step journey-content studio"
-      kicker={kickerOf("content")}
-      title={<Title lead="One moment," em="every channel." />}
-      lede="A highlight, an explainer, posts and data cards, all from the lines the checker passed, and what the stadium's screens show for it. No model is called."
-      label="Content"
+    <Solution
+      step="highlights"
+      className="studio"
+      title={<Title lead="Highlights," em="ready to post." />}
+      lede="AI finds the goals, key saves, dangerous attacks and tactical turning points, stamps their times, writes the captions and lays out landscape and vertical versions."
+      worth="Lower production cost, a shorter time from match event to published post, and a more efficient social operation."
     >
-      <StudioPackage />
+      <p className="note">Built from the lines the Verifier passed: no model is called.</p>
+      <StudioPackage postsNote="For the league's own channels, to grow its reach: one format per platform (a short post, a carousel, a vertical video), in English and Chinese." />
+      <p className="note journey-rights">
+        Publishing and distribution stay within the rights the league grants.
+      </p>
+    </Solution>
+  );
+}
+
+// ---------- D · AI Stadium Experience ----------
+
+function StadiumPanel() {
+  return (
+    <Solution
+      step="stadium"
+      className="studio"
+      title={<Title lead="The stadium," em="on the same moment." />}
+      lede="The moment on the stadium's main board, tunnel LED and ribbon ring, with a virtual preview of the bowl."
+      worth="New sponsor inventory on the stadium's own screens, and one matchday story from the broadcast to the stands."
+    >
+      <p className="note">
+        Big-league stadiums already run giant main boards, tunnel LEDs and ribbon rings on matchday;
+        this fills them from the match data.
+      </p>
       <StadiumScreens />
-    </Chapter>
+    </Solution>
   );
 }
 
@@ -339,7 +594,7 @@ function StadiumScreens() {
   return (
     <section className="studio-block journey-stadium" aria-labelledby="journey-stadium">
       <h3 id="journey-stadium" className="block-title">
-        In the stadium
+        On the screens
       </h3>
       {show === null ? (
         <p className="note" role="status">
@@ -350,8 +605,13 @@ function StadiumScreens() {
       ) : (
         <Screens show={show} />
       )}
-      <a className="btn" href={`${import.meta.env.BASE_URL}?studio=1`}>
+      <a
+        className="btn btn-primary"
+        href={`${import.meta.env.BASE_URL}?studio=1`}
+        title="Every screen on the matchday programme, and the virtual 3D preview of the bowl"
+      >
         Open the Stadium Screen Studio
+        <ArrowIcon />
       </a>
     </section>
   );
@@ -395,7 +655,31 @@ function Screens({ show }: { show: Show }) {
   );
 }
 
-// ---------- Value: the business panel and the sponsor slots ----------
+// ---------- Value: the league's revenue levers, then the demo KPIs ----------
+
+/** What the four solutions do for the league's revenue, in words: no figure is put on any. */
+const LEVERS: readonly { name: string; line: string }[] = [
+  {
+    name: "Broadcast differentiation",
+    line: "a tactical layer, explained on air, that the league's broadcast partners can carry and a standard feed does not have.",
+  },
+  {
+    name: "Sponsor inventory",
+    line: "tactical-data displays on air, in the app and on the stadium's boards are new places to sell.",
+  },
+  {
+    name: "International and app engagement",
+    line: "commentary at each fan's depth and in their language keeps more of them in the official app.",
+  },
+  {
+    name: "Social reach",
+    line: "every key moment ready to post, in each platform's format and in English and Chinese, grows the league's own channels.",
+  },
+  {
+    name: "Lower production cost",
+    line: "highlights, captions and explainers come from checked data, so editors review rather than write from scratch.",
+  },
+];
 
 function ValuePanel() {
   useCachedBreakdown();
@@ -404,53 +688,46 @@ function ValuePanel() {
     <Chapter
       className="journey-step journey-value studio"
       kicker={kickerOf("value")}
-      title={<Title lead="What it could be" em="worth." />}
-      lede="The package's audience, its click-through to the official watch entry, and the sponsors' share of it, on the app and in the stadium."
-      aside={
-        <p className="journey-facts">
-          <DemoBadge /> <span>{FACTS_VS_FIGURES}</span>
-        </p>
-      }
+      title={<Title lead="What it is worth" em="to the league." />}
+      lede="The revenue levers first, in plain words; then the demo's own figures, every simulated one labelled."
       label="Value"
     >
-      <BusinessValue />
+      <section className="studio-block journey-levers" aria-labelledby="journey-levers">
+        <h3 id="journey-levers" className="block-title">
+          Revenue levers for the league
+        </h3>
+        <ul className="journey-lever-list">
+          {LEVERS.map((l) => (
+            <li key={l.name}>
+              <strong>{l.name}:</strong> {l.line}
+            </li>
+          ))}
+        </ul>
+        <p className="note">
+          Hypotheses, not sales: no league, broadcaster or sponsor has seen it, and we put no
+          revenue figure on any of them.
+        </p>
+        <p className="journey-measured">
+          <strong className="journey-label">Measured</strong>{" "}
+          <span>
+            <strong>{COST_PER_VERIFIED_BREAKDOWN}</strong> of model calls per verified breakdown:
+            the deployed AI crew on Microsoft Foundry, at list price (
+            <a href={COST_REPORT_URL} target="_blank" rel="noreferrer">
+              the crew vs single report
+            </a>
+            ).
+          </span>
+        </p>
+      </section>
+      <p className="journey-facts">
+        <DemoBadge /> <span>{FACTS_VS_FIGURES}</span>
+      </p>
+      <BusinessValue heading="Demo KPIs" />
       {show && !(show instanceof Error) && (
         <Suspense fallback={null}>
           <SponsorSlots events={show.events} Heading="h3" />
         </Suspense>
       )}
     </Chapter>
-  );
-}
-
-// ---------- Behind the scenes: the AI crew ----------
-
-/** The crew's breakdown as the existing panel tells it (its cue list, the failure drill, the crew
- * trace), and its evidence: each claim's events, opened on the picture in door 1. */
-function CrewPanel() {
-  const session = useSession();
-  useCachedBreakdown(); // a cold visit (?step=crew): the cached breakdown the crew wrote
-  return (
-    <div className="journey-crew">
-      <BreakdownPanel
-        kicker={`${kickerOf("crew")}: the AI crew`}
-        lead={
-          <div className="pick-row">
-            <button
-              type="button"
-              className="btn"
-              title="A claim of the commentary, the Verifier's verdict and the match events it rests on"
-              onClick={() => {
-                openDoor("look", { address: true });
-                window.scrollTo({ top: 0 });
-                showEvidence(session);
-              }}
-            >
-              Open the evidence
-            </button>
-          </div>
-        }
-      />
-    </div>
   );
 }

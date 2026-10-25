@@ -87,9 +87,13 @@ describe("the doors' addresses", () => {
   it("map the old ?step= and ?play= onto the doors; ?door= wins", () => {
     expect(doorOfStep("event")).toEqual({ door: "look", studio: null });
     expect(doorOfStep("your-view")).toEqual({ door: "look", studio: null });
-    for (const s of ["tactics", "content", "value", "crew"] as const) {
+    for (const s of ["broadcast", "commentary", "highlights", "stadium", "value"] as const) {
       expect(doorOfStep(s)).toEqual({ door: "studios", studio: s });
     }
+    // the studio steps before the four solutions: the section that holds their panel now
+    expect(doorOfStep("tactics")).toEqual({ door: "studios", studio: "broadcast" });
+    expect(doorOfStep("content")).toEqual({ door: "studios", studio: "highlights" });
+    expect(doorOfStep("crew")).toEqual({ door: "studios", studio: "commentary" });
     expect(["yourcall", "eyes", "drill", "steps", "recap"].map(doorOfPlay)).toEqual([
       "turn",
       "turn",

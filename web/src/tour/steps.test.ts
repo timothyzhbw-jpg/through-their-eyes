@@ -70,7 +70,7 @@ describe("the step list", () => {
     ]);
     const doors = STEPS.map((s) => s.door).filter(Boolean);
     expect([...new Set(doors)]).toEqual(["look", "turn", "studios"]);
-    expect(STEPS.find((s) => s.id === "producer")!.journey).toBe("crew");
+    expect(STEPS.find((s) => s.id === "producer")!.journey).toBe("commentary");
     expect(STEPS.at(-1)!.target).toBeNull();
   });
 
@@ -168,9 +168,21 @@ describe("the quick tour: door 1's story", () => {
 });
 
 describe("the studios' walk", () => {
-  it("opens door 3's four steps in order", () => {
-    expect(STORY_IDS).toEqual(["story-tactics", "story-content", "story-value", "story-crew"]);
-    expect(STORY_STEPS.map((s) => s.journey)).toEqual(["tactics", "content", "value", "crew"]);
+  it("opens door 3's four solutions, then Value, in order", () => {
+    expect(STORY_IDS).toEqual([
+      "story-broadcast",
+      "story-commentary",
+      "story-highlights",
+      "story-stadium",
+      "story-value",
+    ]);
+    expect(STORY_STEPS.map((s) => s.journey)).toEqual([
+      "broadcast",
+      "commentary",
+      "highlights",
+      "stadium",
+      "value",
+    ]);
     expect(STORY_STEPS.every((s) => s.door === "studios")).toBe(true);
   });
 });
@@ -263,11 +275,12 @@ describe("the tour link", () => {
     expect(parseDeepLink("?tour=compare").tour).toBe("compare");
   });
 
-  it("?tour=story walks door 3; a step id from before the doors lands where it went", () => {
-    expect(parseDeepLink("?tour=story").tour).toBe("story-tactics");
+  it("?tour=story walks door 3; a step id from before lands where it went", () => {
+    expect(parseDeepLink("?tour=story").tour).toBe("story-broadcast");
     expect(parseDeepLink("?tour=story-event").tour).toBe("look");
     expect(parseDeepLink("?tour=story-without").tour).toBe("remove");
-    expect(parseDeepLink("?tour=story-view").tour).toBe("story-tactics");
+    expect(parseDeepLink("?tour=story-view").tour).toBe("story-broadcast");
+    expect(parseDeepLink("?tour=story-crew").tour).toBe("story-commentary");
     expect(parseDeepLink("?tour=call").tour).toBe("yourcall");
     expect(parseDeepLink("?tour=story-event").warnings).toEqual([]);
   });

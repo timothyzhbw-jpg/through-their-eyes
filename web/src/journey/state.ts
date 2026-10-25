@@ -10,7 +10,7 @@ export interface JourneyState {
   seq: number; // bumps on every opening that should bring the panel into view
 }
 
-export const journey = createStore<JourneyState>({ step: "tactics", seq: 0 });
+export const journey = createStore<JourneyState>({ step: "broadcast", seq: 0 });
 
 /**
  * Open `step`'s panel. `reveal`: bring it into view (a deep link, a tour, a step picked in the

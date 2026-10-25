@@ -460,7 +460,7 @@ describe("every step resolves on the hero moment", () => {
     expect(eyesOf(session)).toBe("closed");
     expect(yourCallOf(session).state.get().step).toBe("closed");
     expect(doors.get().door).toBe("studios");
-    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("tactics");
+    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("broadcast");
     expect(targetOf(STEPS.find((s) => s.id === "studios")!)).not.toBeNull();
 
     await next(); // the end
@@ -512,9 +512,9 @@ describe("every step resolves on the hero moment", () => {
     await next(); // For studios
     expect(stepId()).toBe("studios");
     expect(eyesOf(session)).toBe("closed");
-    await next(); // Behind the scenes: the Telestrator is picked, nothing runs until asked
+    await next(); // Behind the commentary: the Telestrator is picked, nothing runs until asked
     expect(stepId()).toBe("producer");
-    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("crew");
+    expect(document.querySelector<HTMLElement>("#journey-panel")?.dataset.step).toBe("commentary");
     expect(session.producer.get().down).toEqual(["telestrator"]);
     expect(fetch.calls.some((c) => (c.body as { fail?: unknown })?.fail)).toBe(false);
     await click(buttonIn(card(), "Run the drill"));
@@ -536,7 +536,7 @@ describe("every step resolves on the hero moment", () => {
     expect(session.runner.status.get().status).toBe("running");
   });
 
-  it("started from the moment card while the stream is live, before the moment, it can still switch runs", async () => {
+  it("started while the stream is live, before the moment, it can still switch runs", async () => {
     const fetch = fakeFetch({
       "POST /api/breakdowns": (body) => {
         const b = body as { personas: string[]; languages: string[] };
@@ -548,13 +548,14 @@ describe("every step resolves on the hero moment", () => {
       api: createApi(API, "blind_side_run-3", fetch),
       socket: sockets,
     });
-    const container = mount(session);
+    mount(session);
     act(() => session.controls.startLive());
     expect(session.playback.get().live).toBe(true);
     // The run switch is locked until the stream detects the moment (it has not).
     session.controls.setMode("counterfactual");
     expect(session.playback.get().mode).toBe("factual");
-    await click(buttonIn(container.querySelector(".moment-cta"), "Watch the look"));
+    // "Watch again" on the end card starts it so, on the look, with the stream running.
+    await act(async () => startTour(null, "quick"));
     expect(session.playback.get().live).toBe(false); // the tour's look leaves the stream
     await next();
     expect(stepId()).toBe("remove");
@@ -871,11 +872,16 @@ describe("keyboard and motion", () => {
 });
 
 describe("starting it", () => {
-  it("door 1's story from its button under the picture", async () => {
+  it("door 1's story from the landing page's one primary button", async () => {
+    doors.set({ door: "home", seq: 0 });
     const container = mount(offline());
-    await click(buttonIn(container.querySelector(".moment-cta"), "Watch the look"));
+    const primary = container.querySelectorAll<HTMLButtonElement>(".door-home .btn-primary");
+    expect(primary).toHaveLength(1);
+    await click(buttonIn(container.querySelector(".door-home"), "Watch the look (60 s)"));
     expect(stepId()).toBe("look");
     expect(tour.get().kind).toBe("quick");
+    expect(doors.get().door).toBe("look");
+    expect(container.querySelector(".door-home")).toBeNull();
   });
 
   it("the full tour from Settings: the menu closes, and the keyboard goes back to Settings after", async () => {

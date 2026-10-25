@@ -1,6 +1,6 @@
 // The tours' step lists (steps.json, SPEC 7): the quick tour (door 1's story, The look, ending on
 // a card with the other two doors), the full judge tour (the three doors in order), and the studios'
-// walk (door 3's steps, journey/). Their schema, which steps this page can show, and each step's
+// walk (door 3's sections, journey/). Their schema, which steps this page can show, and each step's
 // words with their slots filled from the moment's own data. A step this page cannot show (no live
 // service, a hero with no counterfactual, a stitched match) is left out, never shown broken.
 
@@ -101,13 +101,17 @@ export const QUICK_IDS: string[] = QUICK_STEPS.map((s) => s.id);
 export const STORY_STEPS: TourStep[] = LISTS.story;
 export const STORY_IDS: string[] = STORY_STEPS.map((s) => s.id);
 
-/** Step ids from before the doors, and the step each lands on now: the old Full story's Event
- * steps are door 1's story, its Your view (now in Settings) gives way to the studios' first step,
- * and the quick tour's Your call step is the full tour's. */
+/** Step ids from before, and the step each lands on now: the old Full story's Event steps are
+ * door 1's story, its Your view (now in Settings) gives way to the studios' first section, the
+ * studios' old steps land on the section that holds their panel, and the quick tour's Your call
+ * step is the full tour's. */
 export const LEGACY_STEP_IDS: Record<string, string> = {
   "story-event": "look",
   "story-without": "remove",
-  "story-view": "story-tactics",
+  "story-view": "story-broadcast",
+  "story-tactics": "story-broadcast",
+  "story-content": "story-highlights",
+  "story-crew": "story-commentary",
   call: "yourcall",
 };
 

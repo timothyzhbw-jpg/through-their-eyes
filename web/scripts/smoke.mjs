@@ -63,7 +63,14 @@ const PAGES = [
   { name: "match-1-breakdowns", path: "?match=match-1&intro=0", check: breakdownsAndBack },
   { name: "match-2", path: "?match=match-2&autoplay=0&intro=0", check: (p) => match(p) },
   { name: "match-2-breakdowns", path: "?match=match-2&intro=0", check: breakdownsAndBack },
-  { name: "lineup-hero", path: "", check: (p, shoot) => lineup(p, shoot, "Just watch", hero) },
+  // The landing page (doors/Landing.tsx): where a plain visit opens, and ?door=home.
+  { name: "home", path: "?door=home", check: (p, shoot) => landing(p, shoot) },
+  {
+    name: "phone-375-home",
+    path: "",
+    device: PHONE_375,
+    check: (p, shoot) => landing(p, shoot, { follow: false }),
+  },
   { name: "cold-load-without-the-look", path: "", check: coldLoad },
   {
     name: "lineup-match-1",
@@ -259,13 +266,19 @@ const PAGES = [
     device: PHONE_375,
     check: (p) => phone(p, yourTurn, { live: false }),
   },
-  // Door 3, For studios (journey/): each of its four steps opened from the bar, axe on each, and
-  // each step's Next; a deep link to one step; a phone's stepper; the studios' walk through all.
+  // Door 3, For studios (journey/): each of its five sections opened from the bar, axe on each,
+  // and each section's Next; deep links to one section, new and old; a phone's stepper; the
+  // studios' walk through all.
   { name: "journey", path: "?door=studios", check: (p, shoot) => journeySteps(p, shoot) },
   {
     name: "journey-link-value",
     path: "?step=value",
     check: (p) => journeyPanel(p, "Value"),
+  },
+  {
+    name: "journey-link-crew",
+    path: "?step=crew", // before the four solutions: the crew is B's, under the commentary
+    check: (p) => journeyPanel(p, "Commentary"),
   },
   {
     name: "phone-375-journey",
@@ -930,29 +943,42 @@ async function tour(page, shoot, after = hero) {
   await after(page);
 }
 
-/** For studios' four steps, in its bar's order (journey/steps.ts), and what each panel shows. */
+/** For studios' five sections, in its bar's order (journey/steps.ts), what each panel shows, and
+ * its one primary action (Value has none). */
 const JOURNEY = [
-  ["Tactics", /Why tactics/],
-  ["Content", /In the stadium/],
-  ["Value", /Sponsor slots in this programme/],
-  ["Behind the scenes", /The crew writes/],
+  ["Tactical broadcast", /Why tactics/, "Watch the broadcast"],
+  ["Commentary", /The crew writes/, "Choose in Settings"],
+  // the package's own action, or the breakdown it is built from when none is on screen yet
+  ["Highlights", /^Publishing and distribution stay/, /^(Play highlight|Generate the breakdown)$/],
+  ["Stadium", /On the screens/, "Open the Stadium Screen Studio"],
+  ["Value", /Revenue levers for the league/, null],
 ];
 const DEMO_DATA = "Demo data: simulated audience, not real results";
 
-/** The open step's panel: its tab selected, the panel on screen with what it shows, no sideways
- * scroll, axe clean; the Value step with the demo-data badge on its figures. */
+/** The open section's panel: its tab selected, the panel on screen with what it shows and its one
+ * primary action, a solution's "Business value" line, no sideways scroll, axe clean; Value with
+ * the demo-data badge on its figures and the one measured number. */
 async function journeyPanel(page, label) {
-  const [, shows] = JOURNEY.find(([l]) => l === label);
+  const [, shows, action] = JOURNEY.find(([l]) => l === label);
   await doorTabs(page, "For studios");
   const panel = page.getByRole("tabpanel", { name: new RegExp(label) });
   await see(panel, `the journey's ${label} panel`);
-  await see(panel.getByText(shows), `the ${label} panel's content`);
+  await see(panel.getByText(shows).first(), `the ${label} panel's content`);
+  // A cold visit loads the breakdown first: the package's action comes with it.
+  if (action) await see(panel.locator(".btn-primary").first(), `${label}'s primary action`);
+  const primaries = (await panel.locator(".btn-primary").allTextContents()).map((t) => t.trim());
+  const one = (t) => (action instanceof RegExp ? action.test(t) : t === action);
+  if (action ? primaries.length !== 1 || !one(primaries[0]) : primaries.length) {
+    throw new Error(`expected ${label}'s primary action ${action ?? "none"}; got ${primaries}`);
+  }
+  if (action) await see(panel.locator(".journey-worth"), `${label}'s Business value line`);
   if (label === "Value") {
-    await see(panel.getByText(DEMO_DATA, { exact: true }), "the demo-data badge");
+    await see(panel.getByText(DEMO_DATA, { exact: true }).first(), "the demo-data badge");
     await see(
       panel.getByText(/^Match facts on this page come from the simulator/),
       "the facts note",
     );
+    await see(panel.getByText(/of model calls per verified breakdown/), "the measured cost");
   }
   const [w, wide] = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
   if (wide > w) throw new Error(`expected no sideways scroll on ${label}: ${wide} px in ${w}`);
@@ -966,7 +992,7 @@ async function journeyPanel(page, label) {
 async function journeySteps(page, shoot) {
   const bar = page.getByRole("tablist", { name: "Studio steps" });
   await see(bar, "the studios' bar");
-  await bar.getByRole("tab", { name: /Tactics/ }).click();
+  await bar.getByRole("tab", { name: /Tactical broadcast/ }).click();
   for (const [k, [label]] of JOURNEY.entries()) {
     const tab = bar.getByRole("tab", { name: new RegExp(label) });
     if ((await tab.getAttribute("aria-selected")) !== "true") {
@@ -976,12 +1002,12 @@ async function journeySteps(page, shoot) {
     await shoot(`step-${k + 1}`);
     if (k < JOURNEY.length - 1) await page.keyboard.press("ArrowRight");
   }
-  if (!new URL(page.url()).search.includes("step=crew")) {
-    throw new Error(`expected ?step=crew in the address, got ${page.url()}`);
+  if (!new URL(page.url()).search.includes("step=value")) {
+    throw new Error(`expected ?step=value in the address, got ${page.url()}`);
   }
-  // The last step ends the door; each other step's one action is the next step.
-  await see(page.getByText(/^That's the studio side/), "the end of the studios' steps");
-  await bar.getByRole("tab", { name: /Tactics/ }).click();
+  // The last section ends the door; each other section has the next one under it.
+  await see(page.getByText(/^That's the studio side/), "the end of the studios' sections");
+  await bar.getByRole("tab", { name: /Tactical broadcast/ }).click();
   for (const [label] of JOURNEY.slice(1)) {
     await page.getByRole("button", { name: `Next: ${label}` }).click();
     await see(page.getByRole("tabpanel", { name: new RegExp(label) }), `${label} from Next`);
@@ -1021,7 +1047,7 @@ async function fullStory(page, shoot) {
     await card.getByRole("button", { name: "Next" }).click();
   }
   const steps = [...new Set(opened)];
-  const want = ["tactics", "content", "value", "crew"];
+  const want = ["broadcast", "commentary", "highlights", "stadium", "value"];
   if (steps.join() !== want.join()) {
     throw new Error(
       `expected the studios' walk to open ${want.join(", ")}; got ${steps.join(", ")}`,
@@ -1200,26 +1226,100 @@ async function recap(page, shoot) {
   await page.waitForTimeout(SETTLE);
 }
 
-/** A cold load (SPEC 2, 7): the intro card waits for the viewer, with nothing playing under it;
- * Watch the look opens door 1's story on the look, and its next step, within about 20 s, puts the
- * run without the look on screen with its line. The 20 s is for a viewer's machine. The app's
+/** The landing page (SPEC 7, doors/Landing.tsx): the promise with one primary button, the three
+ * doors each with its features as links, the evidence strip with its held-out count and the
+ * Verifier, the demo-data note, no sideways scroll. `follow`: then a link opens its feature (Your
+ * call over Your turn, a studios' section), the header's brand comes back each time, and the
+ * primary button starts door 1's story. */
+const HOME_TITLE = /^One look over his shoulder changed his pass/;
+const HOME_LINKS = [
+  ["The look", ["The story", "Step through his looks", "With two more looks"]],
+  ["Your turn", ["Make his call", "See through his eyes", "Train your scanning"]],
+  [
+    "For studios",
+    [
+      "A · Tactical Broadcast",
+      "B · Personalised Commentary",
+      "C · Automated Highlights",
+      "D · Stadium Experience",
+      "Value",
+    ],
+  ],
+];
+
+async function landing(page, shoot, { follow = true } = {}) {
+  const home = page.getByRole("region", { name: HOME_TITLE });
+  await see(home, "the landing page");
+  await doorTabs(page, "");
+  if (await page.locator(".door-tabs [aria-current=page]").count()) {
+    throw new Error("expected no door marked current on the landing page");
+  }
+  const primaries = (await page.locator(".btn-primary:visible").allTextContents()).map((t) =>
+    t.trim(),
+  );
+  if (primaries.join("|") !== WATCH) {
+    throw new Error(`expected one primary button, "${WATCH}"; got ${primaries.join(", ")}`);
+  }
+  // The run with two more looks is listed once its lines have loaded.
+  await see(home.getByRole("link", { name: "With two more looks" }), "the two-more-looks link");
+  for (const [door, names] of HOME_LINKS) {
+    const section = home.getByRole("region", { name: door, exact: true });
+    await see(section, `the landing page's ${door}`);
+    const got = (await section.getByRole("link").allTextContents()).map((t) => t.trim());
+    if (got.join("|") !== names.join("|")) {
+      throw new Error(`expected ${door}'s links ${names.join(", ")}; got ${got.join(", ")}`);
+    }
+  }
+  const strip = home.locator(".home-evidence");
+  await see(strip.locator("b").filter({ hasText: /^\d+\/\d+$/ }), "the held-out count");
+  await see(strip.getByText(/checked in code by the Verifier/), "the Verifier's line");
+  await see(home.locator(".home-demo .demo-badge"), "the demo-data note");
+  const [wide, width] = await page.evaluate(() => [
+    document.documentElement.scrollWidth,
+    document.documentElement.clientWidth,
+  ]);
+  if (wide > width) throw new Error(`the landing page scrolls sideways (${wide} > ${width})`);
+  await shoot("landing");
+  if (!follow) return;
+  const brand = page.locator(".stage-head").getByRole("link", { name: "Through Their Eyes" });
+  // A feature link: Your call, over Your turn's hub.
+  await home.getByRole("link", { name: "Make his call" }).click();
+  await see(page.getByRole("region", { name: "Your call" }), "Your call from the landing page");
+  await page.getByRole("button", { name: "Back to the replay" }).click();
+  await see(page.getByRole("region", { name: "Your turn." }), "Your turn's hub under it");
+  await brand.click();
+  await see(home, "the landing page again, from the brand");
+  if (!page.url().includes("door=home")) throw new Error(`expected ?door=home, at ${page.url()}`);
+  // A studios' section.
+  await home.getByRole("link", { name: "B · Personalised Commentary" }).click();
+  await see(page.locator('#journey-panel[data-step="commentary"]'), "the commentary section");
+  await brand.click();
+  // The story.
+  await home.getByRole("button", { name: WATCH, exact: true }).click();
+  await see(page.getByRole("dialog").filter({ hasText: /^The look · 1 of / }), "the story");
+}
+
+/** A cold load (SPEC 2, 7): the landing page waits for the viewer, with no picture under it;
+ * Watch the look opens door 1's story on the look, and its next step, within `COLD_LOAD_S`, puts the
+ * run without the look on screen with its line. The local `COLD_LOAD_S` is for a viewer's machine. The app's
  * clock steps at most 0.1 s a frame (session.ts `startClock`), so where WebGL is drawn in software,
  * as on a CI runner (SwiftShader, about 0.5 s a frame), the look plays slower than the wall clock:
  * there the check is only that it gets there, and the time it took is printed. */
 const COLD_LOAD_S = process.env.CI ? 120 : 22;
-const CARD_WAITS_MS = 7000; // longer than the old card's 5 s countdown
+const HOME_WAITS_MS = 7000; // the landing page stays until the viewer picks
 const LOOK_S = 8; // a viewer watches the look before pressing Next
+const WATCH = "Watch the look (60 s)"; // the landing page's one primary button
 
 async function coldLoad(page, shoot) {
-  const card = page.getByRole("dialog");
-  await see(card, "the intro card");
-  await page.waitForTimeout(CARD_WAITS_MS);
-  if (!(await card.isVisible())) throw new Error("expected the intro card to wait for the viewer");
-  const clock = (await page.locator(".transport .clock").first().textContent()) ?? "";
-  if (!/frame 0\b/.test(clock)) {
-    throw new Error(`expected the picture to rest on the first frame under the card: "${clock}"`);
+  const home = page.getByRole("region", { name: HOME_TITLE });
+  await see(home, "the landing page");
+  await page.waitForTimeout(HOME_WAITS_MS);
+  if (!(await home.isVisible()))
+    throw new Error("expected the landing page to wait for the viewer");
+  if (await page.locator('section.stage[aria-label="Live screen"]').count()) {
+    throw new Error("expected no live screen under the landing page");
   }
-  await card.getByRole("button", { name: "Watch the look", exact: true }).click();
+  await home.getByRole("button", { name: WATCH, exact: true }).click();
   const started = Date.now();
   const tourCard = page.getByRole("dialog").filter({ hasText: /^The look · 1 of / });
   await see(tourCard, "the quick tour's first step");

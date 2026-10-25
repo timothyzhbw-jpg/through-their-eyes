@@ -3,10 +3,10 @@
 
 import { createStore } from "../store/store";
 import { jumpTo, jumpToTop } from "../ui/reveal";
-import { type Door, withDoor } from "./doors";
+import { type Page, withDoor } from "./doors";
 
 export interface DoorState {
-  door: Door;
+  door: Page; // the landing page, or a door
   seq: number; // bumps on every opening asked for, so the new door's page comes up at its top
 }
 
@@ -18,7 +18,7 @@ export const doors = createStore<DoorState>({ door: "look", seq: 0 });
  * keeps the focus on itself).
  */
 export function openDoor(
-  door: Door,
+  door: Page,
   { address = false, focus = false }: { address?: boolean; focus?: boolean } = {},
 ): void {
   const same = doors.get().door === door;
@@ -44,8 +44,9 @@ export function revealCompare(tries = 900): void {
   else if (tries > 0) requestAnimationFrame(() => revealCompare(tries - 1));
 }
 
-/** Each door's heading: where the keyboard lands when a door is opened from elsewhere. */
-export const DOOR_HEADING_ID: Record<Door, string> = {
+/** Each page's heading: where the keyboard lands when a door is opened from elsewhere. */
+export const DOOR_HEADING_ID: Record<Page, string> = {
+  home: "home-title",
   look: "moment-title",
   turn: "turn-title",
   studios: "studios-title",
