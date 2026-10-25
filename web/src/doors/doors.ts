@@ -2,7 +2,9 @@
 // when they are done. The look (the default): the hero moment's story, about a minute. Your turn:
 // the modes where the viewer is the player (Your call, Take his eyes, the academy drill). For
 // studios: what it does for the league, four solutions (tactical broadcast, personalised
-// commentary, automated highlights, the stadium) and their value. Pure: the ids,
+// commentary, automated highlights, the stadium) and their value. Before them, the landing page
+// (`home`, Landing.tsx): the promise, the doors in a few lines each, every feature one link away;
+// it is no door, so it has no tab. Pure: the ids,
 // their names, and how the addresses that predate the doors (?step=, ?play=) map onto them.
 
 import { LEGACY_STUDIO_STEPS, parseStep, type JourneyStep } from "../journey/steps";
@@ -24,8 +26,11 @@ export const DOOR_NOTE: Record<Door, string> = {
     "What it does for the league: tactical broadcast, personalised commentary, automated highlights, the stadium",
 };
 
-export const parseDoor = (v: string | null | undefined): Door | null =>
-  v != null && (DOORS as readonly string[]).includes(v) ? (v as Door) : null;
+/** A page of the site: the landing page or a door. */
+export type Page = "home" | Door;
+
+export const parseDoor = (v: string | null | undefined): Page | null =>
+  v === "home" ? v : v != null && (DOORS as readonly string[]).includes(v) ? (v as Door) : null;
 
 /** Where a `?step=` lands: a studios' section opens on For studios; an old studio step (Tactics,
  * Content, Behind the scenes) on the section that holds its panel now; the old Event step is
@@ -43,7 +48,7 @@ export function doorOfPlay(play: string): Door | null {
 }
 
 /** `search` with `?door=` set to `door`; a studio step stays only on the studios' door. */
-export function withDoor(search: string, door: Door): string {
+export function withDoor(search: string, door: Page): string {
   const params = new URLSearchParams(search);
   params.set("door", door);
   if (door !== "studios") params.delete("step");

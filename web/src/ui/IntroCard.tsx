@@ -27,6 +27,10 @@ export function playLength(minutes: number): string {
     : `${minutes.toFixed(1)} minutes of play`;
 }
 
+/** What the studio does, in one sentence (SPEC 0): the line-ups' pitch and the landing page's. */
+export const PITCH =
+  "An AI studio that explains key moments through the player's own perception — where he looked before the ball arrived, what he saw, what he believed — and re-simulates the moment without the look that made the play.";
+
 // Scenarios whose key scan is a look over the shoulder (SPEC 3.6): the hook can say so.
 const OVER_THE_SHOULDER = new Set(["blind_side_run", "cutback_scan"]);
 
@@ -217,9 +221,7 @@ function Lineup() {
         <span className="lineup-club">{clubName(1)}</span>
       </h3>
       <p className="lineup-pitch">
-        <em>See what they saw.</em> An AI studio that explains key moments through the player's own
-        perception — where he looked before the ball arrived, what he saw, what he believed — and
-        re-simulates the moment without the look that made the play.
+        <em>See what they saw.</em> {PITCH}
       </p>
       <div className="lineup-teams">
         {(["home", "away"] as const).map((team) => {

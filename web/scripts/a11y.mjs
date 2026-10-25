@@ -58,7 +58,12 @@ const scoreBug = (p) =>
 
 /** Every screen, as a path and the steps from its load to the state that is checked. */
 const STATES = [
-  { name: "lineup-hero", path: "", ready: (p) => see(p.getByRole("dialog"), "the lineup card") },
+  {
+    name: "home",
+    path: "",
+    ready: (p) =>
+      see(p.getByRole("region", { name: /^One look over his shoulder/ }), "the landing page"),
+  },
   { name: "hero", path: "?intro=0&autoplay=0", ready: runSwitch },
   {
     name: "hero-viewer-menu",

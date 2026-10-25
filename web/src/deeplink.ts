@@ -17,8 +17,11 @@
 //   ?play=recap                                with ?match= (a stitched match): its end-of-match
 //                                              recap, asked for at once for ?persona and ?lang,
 //                                              with the full-time card on the live screen
-//   ?door=look|turn|studios                    open that door (doors/): the look (the default),
-//                                              Your turn's hub, For studios' steps
+//   ?door=home|look|turn|studios               open that page (doors/): the landing page (where
+//                                              a plain visit opens), the look, Your turn's hub,
+//                                              For studios' steps
+//   ?compare=extra                             The look with its compare in view, switched to
+//                                              "With two more looks" (without/extra.ts)
 //   ?tour=1|<step id>                          the full judge tour (tour/), the three doors in
 //                                              order, from its first step or from that one
 //   ?tour=quick|<step id>                      the quick tour (door 1's story, ending on the
@@ -54,10 +57,11 @@
 // and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no door tabs
 // in the header: the framing of the demo video's captures), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
-// (at, run, ask, tamper, play, tour, step or door) skips the intro card and opens paused: no live
-// stream, and no breakdown on load unless tamper needs one. Unknown values are ignored and logged.
-// The door a link opens: ?door= if given; else the one its step, play or tamper belongs to
-// (doorOf); else the look.
+// (at, run, ask, tamper, play, tour, step, door or compare) skips the intro card and opens paused:
+// no live stream, and no breakdown on load unless tamper needs one. Unknown values are ignored and
+// logged. The door a link opens: ?door= if given; else the one its step, play or tamper belongs to
+// (doorOf); else the look. A plain visit to a hero moment (no spot, no intro=0) opens the landing
+// page instead of the intro card (main.tsx).
 // ?cine=1 is for filming the demo video only (cine/, SPEC 10), never linked from the app; main.tsx
 // reads it, this parser does not.
 
@@ -71,7 +75,7 @@ import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
 import { IN_MATCH_MOMENTS } from "./moments/moments";
 import { LEGACY_STEP_IDS, QUICK_IDS, STEP_IDS, STORY_IDS } from "./tour/steps";
 import { LEGACY_STUDIO_STEPS, parseStep, type JourneyStep } from "./journey/steps";
-import { doorOfPlay, doorOfStep, parseDoor, type Door } from "./doors/doors";
+import { doorOfPlay, doorOfStep, parseDoor, type Page } from "./doors/doors";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
 import { parsePlayer, parseTeam, type Team } from "./personal/follow";
@@ -79,6 +83,7 @@ import { stepThroughOf } from "./steps/controller";
 import { takeEyesOf } from "./takeeyes/controller";
 import { yourCallOf } from "./yourcall/controller";
 import { drillOf } from "./drill/controller";
+import { extraLooksOf } from "./without/extra";
 
 const RUNS = ["factual", "counterfactual"] as const satisfies readonly RunName[];
 const VIEWS = ["pov", "tactical", "split"] as const satisfies readonly Focus[];
@@ -122,7 +127,8 @@ export interface DeepLink {
   moment: string | null; // with a stitched match: the hero moment of this scenario, its breakdown
   step: JourneyStep | LegacyStepLink | null; // the studios' step whose panel opens (journey/),
   // or a step from before the doors (event, your-view)
-  door: Door | null; // ?door=: the door to open (doors/); null: the one the link points into
+  door: Page | null; // ?door=: the page to open (doors/); null: the one the link points into
+  compare: "extra" | null; // ?compare=extra: the compare, on the run with two more looks
   rail: boolean; // the moment links above the live screen; rail=0 hides them (filming)
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
@@ -146,6 +152,7 @@ export const NO_LINK: DeepLink = {
   moment: null,
   step: null,
   door: null,
+  compare: null,
   rail: true,
   warnings: [],
 };
@@ -192,7 +199,9 @@ export function parseDeepLink(search: string): DeepLink {
   const moment = read("moment", (v) => oneOf(IN_MATCH_MOMENTS, v));
   const step = read("step", parseStepLink);
   const door = read("door", parseDoor);
+  const compare = read("compare", (v) => (v === "extra" ? v : null));
   const spot =
+    compare !== null ||
     at !== null ||
     run !== null ||
     ask !== null ||
@@ -221,15 +230,16 @@ export function parseDeepLink(search: string): DeepLink {
     moment,
     step,
     door,
+    compare,
     rail: params.get("rail") !== "0",
     warnings,
   };
 }
 
-/** Where a link opens among the doors: the door, the studios' step to open (null: as it is), and
+/** Where a link opens among the pages: the page, the studios' step to open (null: as it is), and
  * whether Settings opens on Your view (the old ?step=your-view). */
 export function doorOf(link: DeepLink): {
-  door: Door;
+  door: Page;
   studio: JourneyStep | null;
   yourView: boolean;
 } {
@@ -268,6 +278,7 @@ export function applyDeepLink(session: Session, link: DeepLink): void {
   if (link.play === "eyes") takeEyesOf(session).open();
   if (link.play === "steps") stepThroughOf(session).open();
   if (link.play === "drill") drillOf(session).open();
+  if (link.compare) extraLooksOf(session).compare.set({ value: link.compare });
 }
 
 /** The link the page was opened with; components read prefills from it. */

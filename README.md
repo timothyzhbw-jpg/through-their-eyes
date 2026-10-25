@@ -43,9 +43,12 @@ and at no other time before his pass. The caption is a verified claim (✓).</su
 and a whole stitched match.
 
 ## From event to value
-The site has three doors, always in the header beside one **⋯ Settings** menu (the moment, the
-audience and language, who to follow, sound, view options and the full tour).
-[**The look**](https://ttesite1ff906.z14.web.core.windows.net/), where the site opens, is the
+The site opens on a [landing page](https://ttesite1ff906.z14.web.core.windows.net/?door=home):
+the promise, one **Watch the look (60 s)**, the three doors in a few lines each with every feature
+one link away, and the evidence in one line. The brand in the header comes back to it. The three
+doors are always in the header beside one **⋯ Settings** menu (the moment, the audience and
+language, who to follow, sound, view options and the full tour).
+[**The look**](https://ttesite1ff906.z14.web.core.windows.net/?door=look) is the
 hero moment's story in about a minute: his scan, the run without it, the two compared from above
 (with **Step through his looks** and **With two more looks** one link away) and the Verifier
 refusing a wrong number, then an end card whose only choices are the other two doors and
@@ -72,8 +75,8 @@ KPIs, every simulated figure badged. The old `?step=tactics`, `content` and `cre
 and B.
 
 Also in the app, each a few clicks from the moment:
-- **Minimal first screen.** It opens on one live view and one **Watch the look**; the other view
-  is a small picture in picture and every overlay is behind **View options**.
+- **Minimal live screen.** The look opens on one live view; the other view is a small picture in
+  picture and every overlay is behind **View options**.
 - **Scan story.** [His looks, step by step](https://ttesite1ff906.z14.web.core.windows.net/?play=steps):
   every look he took before the ball arrived is frozen and explained (which way, who came into
   view, how his picture changed), then his decision.
