@@ -7,7 +7,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Chapter } from "./Chapter";
 import { FloodlightBackground } from "./FloodlightBackground";
-import { jumpTo, useReveal } from "./reveal";
+import { jumpTo, UNREVEALED_WORD_OPACITY, useReveal } from "./reveal";
 import { TextReveal } from "./TextReveal";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -275,7 +275,7 @@ describe("scroll-linked text and floodlight", () => {
     }
   });
 
-  it("leaves the words plain until the reader scrolls", () => {
+  it("keeps the words fully legible and lifts them by 8px after scrolling", () => {
     vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
       rect(window.innerHeight * 0.9),
     );
@@ -284,8 +284,41 @@ describe("scroll-linked text and floodlight", () => {
       expect(word.style.opacity).toBe("");
     }
     flushScroll();
-    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
-      expect(Number(word.style.opacity)).toBeLessThan(1);
+    const words = [...heading.querySelectorAll<HTMLElement>(".scroll-word")];
+    for (const word of words) {
+      expect(Number(word.style.opacity)).toBe(UNREVEALED_WORD_OPACITY);
+    }
+    expect(words.at(-1)!.style.transform).toBe("translateY(8px)");
+  });
+
+  type Rgb = [number, number, number];
+  const hex = (value: string): Rgb =>
+    value.match(/[a-f\d]{2}/gi)!.map((channel) => parseInt(channel, 16)) as Rgb;
+  const over = (foreground: Rgb, background: Rgb, alpha: number): Rgb =>
+    foreground.map((channel, i) => channel * alpha + background[i] * (1 - alpha)) as Rgb;
+  const luminance = (rgb: Rgb) => {
+    const linear = rgb.map((channel) => {
+      const srgb = channel / 255;
+      return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+    });
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  };
+  const contrast = (a: Rgb, b: Rgb) => {
+    const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (high + 0.05) / (low + 0.05);
+  };
+
+  it("keeps unrevealed heading and lede text at AA over the brightest floodlights", () => {
+    // styles.css: Night under both radial gradients' centre stops, a conservative overlap that
+    // bounds every animation position. The large-heading floor is 3:1; body/lede text needs 4.5:1.
+    const night = hex("#080e0b");
+    const brightest = over(hex("#95a7ba"), over(hex("#f6d566"), night, 0.055), 0.045);
+    for (const [text, minimum] of [
+      [hex("#efede5"), 3],
+      [hex("#d9d7cf"), 4.5],
+    ] as const) {
+      const dimmed = over(text, brightest, UNREVEALED_WORD_OPACITY);
+      expect(contrast(dimmed, brightest)).toBeGreaterThanOrEqual(minimum);
     }
   });
 
@@ -304,16 +337,19 @@ describe("scroll-linked text and floodlight", () => {
     vi.mocked(performance.now).mockRestore();
   });
 
-  it("fades only on a scroll that follows the reader's wheel, touch or scrolling key", () => {
+  it("reveals only on a scroll that follows the reader's wheel, touch or scrolling key", () => {
     vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
       rect(window.innerHeight * 0.9),
     );
     const heading = mountText();
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown" }));
     flushScroll(false);
-    for (const word of heading.querySelectorAll<HTMLElement>(".scroll-word")) {
-      expect(Number(word.style.opacity)).toBeLessThan(1);
+    const words = [...heading.querySelectorAll<HTMLElement>(".scroll-word")];
+    for (const word of words) {
+      expect(Number(word.style.opacity)).toBe(UNREVEALED_WORD_OPACITY);
+      expect(word.style.transform).not.toBe("");
     }
+    expect(words.at(-1)!.style.transform).toBe("translateY(8px)");
   });
 });
 
