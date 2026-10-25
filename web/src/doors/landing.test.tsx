@@ -14,11 +14,13 @@ import extraJson from "../../public/data/extra_looks_seed3.json";
 import gatesJson from "../../public/data/hero_gates.json";
 import { App } from "../App";
 import { parseHero } from "../data/hero";
-import { doorOf, parseDeepLink } from "../deeplink";
+import { loadData, matchFromUrl } from "../data/load";
+import { applyDeepLink, doorOf, parseDeepLink } from "../deeplink";
 import { journey } from "../journey/state";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
-import { fakeFetch, json } from "../testing";
+import { API, fakeFetch, health, json, PRESS_MOMENT, pressureExport, settle } from "../testing";
+import { stepThroughOf } from "../steps/controller";
 import { closeTour, tour } from "../tour/tourState";
 import { extraLooksOf, parseExtraLooks } from "../without/extra";
 import { heroGatesOf } from "../without/gates";
@@ -206,6 +208,64 @@ describe("its links", () => {
     expect(yourCallOf(session).state.get().step).not.toBe("closed");
   });
 
+  it("keep the current scenario and settings for every feature, by click and copied address", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?match=press_escape-0&persona=coach&lang=zh&view=tactical&tour=quick&door=home&step=value",
+    );
+    const session = createSession(parseHero(pressureExport()), null, null, null, {
+      momentId: PRESS_MOMENT,
+    });
+    const stepsFetch = fakeFetch({});
+    const currentSteps = stepThroughOf(session, stepsFetch, "/data/");
+    const page = mount(session);
+    for (const a of page.querySelectorAll<HTMLAnchorElement>("a.home-link")) {
+      const params = new URL(a.href).searchParams;
+      expect(params.get("match"), textOf(a)).toBe("press_escape-0");
+      expect(params.get("persona"), textOf(a)).toBe("coach");
+      expect(params.get("lang"), textOf(a)).toBe("zh");
+      expect(params.get("view"), textOf(a)).toBe("tactical");
+      expect(params.get("tour"), textOf(a)).toBeNull();
+      expect(params.get("door"), textOf(a)).not.toBe("home");
+      if (params.get("door") !== "studios") expect(params.get("step"), textOf(a)).toBeNull();
+    }
+    const steps = link(page, "Step through his looks");
+    const copied = new URL(steps.href).search;
+    click(steps);
+    expect(doors.get().door).toBe("look");
+    expect(currentSteps.state.get().open).toBe(true);
+    expect(currentSteps.session.hero.scenario).toBe("press_escape");
+    expect(page.querySelector(".ss-screen")).not.toBeNull();
+    await act(settle);
+
+    // A new tab loads the copied address through the same match selector as main.tsx.
+    const fetch = fakeFetch({
+      "GET /health": health,
+      "GET /api/matches/press_escape-0/export": () => json(pressureExport()),
+      "GET /api/matches/press_escape-0": () =>
+        json({ id: "press_escape-0", hero_moment: PRESS_MOMENT, hero_moments: [PRESS_MOMENT] }),
+      "GET /data/hero_seed3.json": () => json(raw),
+    });
+    const loaded = await loadData({
+      apiBase: API,
+      match: matchFromUrl(copied),
+      dataUrl: "/data/",
+      fetch,
+    });
+    const newTab = createSession(loaded.hero, null, null, null, {
+      api: loaded.api,
+      momentId: loaded.momentId,
+    });
+    const copiedSteps = stepThroughOf(newTab, stepsFetch, "/data/");
+    applyDeepLink(newTab, parseDeepLink(copied));
+    expect(copiedSteps.state.get().open).toBe(true);
+    expect(copiedSteps.session.hero.scenario).toBe(session.hero.scenario);
+    expect(copiedSteps.session.hero.seed).toBe(session.hero.seed);
+    expect(copiedSteps.session.moment.id).toBe(session.moment.id);
+    expect(newTab.breakdown.get()).toMatchObject({ persona: "coach", language: "zh" });
+  });
+
   it("open a studios' section, the address saying so", () => {
     const page = mount(offline());
     click(link(page, "B · Personalised Commentary"));
@@ -266,13 +326,15 @@ describe("the picture behind it", () => {
     expect(autoplay).toHaveBeenCalledTimes(1);
   });
 
-  it("stays still when a link opens a mode instead", () => {
+  it("stays still when a link opens a mode instead", async () => {
     const session = offline();
+    stepThroughOf(session, fakeFetch({}), "/data/");
     const autoplay = vi.spyOn(session.controls, "autoplay").mockImplementation(() => {});
     const page = mount(session, <App autoplay />);
     click(link(page, "Step through his looks"));
     expect(doors.get().door).toBe("look");
     expect(autoplay).not.toHaveBeenCalled();
+    await act(settle);
   });
 });
 

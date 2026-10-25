@@ -468,7 +468,7 @@ describe("the bar and its panels", () => {
     // The one measured number, the marked one, outside the demo data.
     const measured = p.querySelector(".journey-measured")!;
     expect(measured.textContent).toContain(
-      `Measured ${COST_PER_VERIFIED_BREAKDOWN} of model calls per verified breakdown`,
+      `Measured ${COST_PER_VERIFIED_BREAKDOWN} average model cost per eval breakdown with four scripts`,
     );
     expect(measured.querySelector(".demo-badge")).toBeNull();
     expect(p.textContent).toContain(FACTS_VS_FIGURES);

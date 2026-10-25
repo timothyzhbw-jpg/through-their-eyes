@@ -23,7 +23,7 @@ import { extraLooksOf } from "../without/extra";
 import { useHeroGate } from "../without/WithoutLook";
 import { yourCallOf } from "../yourcall/controller";
 import { useReveal } from "../ui/reveal";
-import { DOOR_LABEL, DOORS, type Door } from "./doors";
+import { DOOR_LABEL, DOORS, withPageAction, type Door } from "./doors";
 import { openDoor, revealCompare } from "./state";
 
 /** The landing page's links, as addresses: what each opens, for a copy or a new tab. */
@@ -37,7 +37,8 @@ export const HOME_LINKS = {
   step: (step: JourneyStep) => `?door=studios&step=${step}`,
 } as const;
 
-const href = (search: string) => `${import.meta.env.BASE_URL}${search}`;
+const href = (action: string) =>
+  `${import.meta.env.BASE_URL}${withPageAction(window.location.search, action)}`;
 
 /** Door 1's story from the top: the quick tour where the moment has one, else the breakdown. */
 function useWatch(): { label: string; title?: string; watch: () => void } {

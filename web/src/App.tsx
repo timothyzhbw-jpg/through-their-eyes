@@ -70,7 +70,7 @@ import { doors, openDoor } from "./doors/state";
 /** A hero moment: its door on screen, or a mode over all of them. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
   const session = useSession();
-  const { hero, playback, controls, moment, offset, runner } = session;
+  const { hero, playback, controls, moment, offset, runner, voice } = session;
   const [titleLead, titleEmphasis] = momentTitle(hero);
   const mode = useStore(playback, (s) => s.mode);
   const evidence = useStore(playback, (s) => s.evidenceLine);
@@ -119,17 +119,29 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     };
   }, [playback, runner]);
   // A new door's page starts at its top, once it is laid out: a scroll still running from the
-  // last page (a tour step's) would land it part-way down.
+  // last page (a tour step's) would land it part-way down. If its focused tab was unmounted, the
+  // new current tab takes the keyboard instead of leaving it on the body.
   const doorSeq = useStore(doors, (s) => s.seq);
+  const previousDoor = useRef(door);
   useLayoutEffect(() => {
+    if (previousDoor.current !== door) {
+      const active = document.activeElement;
+      if (!active?.isConnected || active === document.body) {
+        document
+          .querySelector<HTMLElement>(`.door-tab[data-door="${door}"]`)
+          ?.focus({ preventScroll: true });
+      }
+      previousDoor.current = door;
+    }
     if (doorSeq > 0) jumpToTop();
-  }, [doorSeq]);
+  }, [door, doorSeq]);
   useEffect(() => {
     if (door === "look") return;
     controls.stopBreakdown();
     controls.leaveLive();
+    voice.stop();
     if (playback.get().playing) playback.set({ playing: false });
-  }, [door, controls, playback]);
+  }, [door, controls, playback, voice]);
   // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
   // must not play under it. Behind the card the picture rests on the first frame. Online: watch
   // live, then the show (the look, then the run without it) and the breakdown once the moment is

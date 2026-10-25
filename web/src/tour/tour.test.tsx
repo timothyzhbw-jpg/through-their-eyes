@@ -266,9 +266,12 @@ describe("the quick tour", () => {
     window.history.replaceState(null, "", "/");
   });
 
-  it("leaves for the scan story from the compare step and comes back to it, on the link", async () => {
+  it("leaves for the scan story, resumes on its link, then restores the opener on Escape", async () => {
     const session = offline();
     const container = mount(session);
+    const opener = document.createElement("button");
+    container.append(opener);
+    opener.focus();
     await act(async () => {
       startTour("compare", "quick");
       await settle();
@@ -282,6 +285,9 @@ describe("the quick tour", () => {
     expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
     expect(stepId()).toBe("compare");
     expect(document.activeElement?.id).toBe("tour-scan-steps");
+    press("Escape", card()!);
+    expect(tour.get().open).toBe(false);
+    expect(document.activeElement).toBe(opener);
   });
 
   it("is the one panel: the moment card, the HUD row and the caption stand down", async () => {
