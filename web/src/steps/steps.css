@@ -637,7 +637,8 @@
 }
 
 /* new information → his options (PictureBlock): who is new in his picture, his options with
-   before → now, ↑ opened and ↓ closed. The arrows carry the meaning; the colour only repeats it. */
+   before → now, ↑ opened, ↓ closed, ↗ rose and ↘ fell. The arrows carry the meaning; the colour
+   only repeats it. */
 .ss-news {
   margin: 0 0 8px;
   padding-left: 18px;

@@ -346,7 +346,7 @@ describe("His looks: the coach's example", () => {
       "His options: without this look → with it",
     );
     expect(textOf(el.querySelector(".ss-picture"))).toContain(
-      "Both are computed at the same frozen frame.",
+      "Both are computed at the same frozen frame. ↑ ↓ cross 50%; ↗ ↘ move 20 points or more.",
     );
     expect(textOf(el.querySelector(".ss-think"))).toMatch(/^Checking my left\./);
     click(button(el, "Next"));
