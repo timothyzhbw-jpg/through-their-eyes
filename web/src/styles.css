@@ -1584,11 +1584,18 @@ optgroup {
   .stage:has(.caption-story) .stage-top {
     right: calc(var(--story-w) + var(--card-w) + 2 * var(--gutter));
   }
+  /* The narrower picture brings the run switch and its line over the top-left column (the
+     skeleton's key met it at 1440 px): that column starts below them. */
+  .stage:has(.caption-story):has(.stage-run .seg) .stage-top {
+    top: calc(var(--head-h) + 92px);
+  }
   .stage:has(.caption-story) .stage-card {
     right: calc(var(--story-w) + var(--gutter));
   }
+  /* Centred in the room left of the card, so the outcome line under the switch never runs under
+     the card. */
   .stage:has(.caption-story) .stage-run {
-    left: calc((100% - var(--story-w)) / 2);
+    left: calc(var(--gutter) + (100% - var(--story-w) - var(--card-w) - 3 * var(--gutter)) / 2);
   }
   .stage:has(.caption-story) .stage-caption {
     left: calc((100% - var(--story-w)) / 2);
