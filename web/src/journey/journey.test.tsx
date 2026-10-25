@@ -28,6 +28,7 @@ import { closeTour, startTour } from "../tour/tourState";
 import { Tour } from "../tour/Tour";
 import { settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
+import { personOf, tagOf } from "../steps/story";
 import { DEMO_DATA, FACTS_VS_FIGURES } from "./DemoBadge";
 import { ASK_RUN_ID, ComparePanel, Journey } from "./Journey";
 import { COST_PER_VERIFIED_BREAKDOWN } from "./measured";
@@ -247,8 +248,8 @@ afterEach(() => {
   }
 });
 
-function mount(node = <Journey />) {
-  const session = createSession(hero, EXAMPLE_PLAN, payloadJson);
+function mount(node = <Journey />, moment = hero) {
+  const session = createSession(moment, EXAMPLE_PLAN, payloadJson);
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
@@ -378,6 +379,22 @@ describe("the bar and its panels", () => {
     expect(session.breakdown.get().status).not.toBe("loading");
     // One primary action per screen: door 1's is "Watch the look" above it, not here.
     expect(container.querySelector(".btn-primary")).toBeNull();
+  });
+
+  it("introduces the simulation only when the counterfactual removes the hero's key look", () => {
+    const withLook = mount(<ComparePanel />).container.querySelector(".lede")!.textContent!;
+    expect(withLook).toContain(
+      `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate look`,
+    );
+    expect(withLook).toContain("Each side is told by its checked lines.");
+    expect(withLook).not.toContain("Watch it, then the same seconds");
+
+    const withoutKeyLook = mount(<ComparePanel />, {
+      ...hero,
+      keyScan: null,
+    }).container.querySelector(".lede")!.textContent!;
+    expect(withoutKeyLook).not.toContain("Try the simulation:");
+    expect(withoutKeyLook).toContain("Watch it, then the same seconds");
   });
 
   it("moves with the arrow keys and writes the step into the address", () => {

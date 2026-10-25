@@ -34,6 +34,7 @@ import { useBreakdown, useSession } from "../session";
 import { EVENT_LABEL } from "../stadium/rules";
 import type { Show } from "../stadium/show";
 import { stepThroughOf } from "../steps/controller";
+import { personOf, tagOf } from "../steps/story";
 import { useStore } from "../store/store";
 import { BusinessValue, StudioPackage } from "../studio/Studio";
 import { enterStep, showEvidence } from "../tour/actions";
@@ -304,7 +305,9 @@ export function ComparePanel() {
       }
       lede={
         hero.counterfactual
-          ? `${blurbOf(hero)} Watch it, then the same seconds re-simulated with that one change; each side is told by its checked lines.`
+          ? hero.keyScan
+            ? `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate look, then the same seconds re-simulated without it. ${blurbOf(hero)} Each side is told by its checked lines.`
+            : `${blurbOf(hero)} Watch it, then the same seconds re-simulated with that one change; each side is told by its checked lines.`
           : blurbOf(hero)
       }
       label="The look, compared"
