@@ -21,7 +21,7 @@ import { SessionContext, useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { takeEyesOf } from "../takeeyes/controller";
 import { callLabel } from "../takeeyes/looks";
-import { isVerified, KindTags, LineText } from "../ui/Narration";
+import { isVerified, KindTags, LineText, lineClaims } from "../ui/Narration";
 import { Segmented } from "../ui/Segmented";
 import { PovView } from "../views/PovView";
 import { TacticalView } from "../views/TacticalView";
@@ -615,7 +615,11 @@ function Line({ narration, line }: { narration: Narration; line: PayloadLine }) 
     <>
       <KindTags narration={narration} line={line} />
       <span className="dr-line">
-        <LineText text={line.text} verified={isVerified(narration, line)} />
+        <LineText
+          text={line.text}
+          verified={isVerified(narration, line)}
+          claims={lineClaims(narration, line)}
+        />
       </span>
     </>
   );

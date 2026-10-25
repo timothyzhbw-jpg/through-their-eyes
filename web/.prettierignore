@@ -5,3 +5,4 @@ package-lock.json
 src/pitchControl/snapshots.json
 src/stats/fixture_seed3.json
 src/tactics/fixture.json
+src/tacticslab/fixture_match1_transitions.json

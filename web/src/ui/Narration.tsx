@@ -37,6 +37,8 @@ import { formatSlot, plainReason, slotLabel } from "./tamperText";
 import "./live.css";
 import "./whatif.css";
 import { renameIds } from "../data/roster";
+import { GlossaryText } from "../glossary/GlossaryText";
+import type { ContextClaim } from "../glossary/context";
 
 export { SoundToggle }; // the header's Sound switch, imported from here before it had a file
 
@@ -78,33 +80,35 @@ export function LineText({
   text: raw,
   verified,
   countId,
+  claims = [],
 }: {
   text: string;
   verified: boolean;
   countId?: string; // count each number up the first time this line comes up (CountUp.tsx)
+  claims?: readonly ContextClaim[];
 }) {
   const text = renameIds(raw);
-  if (!verified) return <>{text}</>;
-  return (
-    <>
-      {numberParts(text).map((p, k) =>
-        p.num ? (
-          <span key={k} className="num">
-            {countId ? <CountUp text={p.text} id={`${countId}#${k}`} /> : p.text}
-          </span>
-        ) : (
-          p.text
-        ),
-      )}
-    </>
+  if (!verified) return <GlossaryText text={text} claims={claims} />;
+  return numberParts(text).map((p, k) =>
+    p.num ? (
+      <span key={k} className="num">
+        {countId ? <CountUp text={p.text} id={`${countId}#${k}`} /> : p.text}
+      </span>
+    ) : (
+      <GlossaryText key={k} text={p.text} claims={claims} />
+    ),
   );
 }
+
+export const lineClaims = (narration: Narration, line: PayloadLine): PayloadClaim[] =>
+  line.claims.map((id) => narration.claims.get(id)!).filter(Boolean);
 
 const SPEAKER: Record<string, string> = { pbp: "Play-by-play", color: "Co-commentator" };
 
 /**
- * The current voice line over the first-person view. Click to open its evidence. Large print for
- * audio description (SPEC 1). A screen reader hears each line from a live region that is always
+ * The current voice line over the first-person view. Its evidence button opens the checked claims;
+ * glossary terms open separately. Large print for audio description (SPEC 1). A screen reader hears
+ * each line from a live region that is always
  * present, except while a voice clip is actually playing.
  */
 export function Caption() {
@@ -124,30 +128,39 @@ export function Caption() {
         {line ? renameIds(line.text) : null}
       </p>
       {narration && line && (
-        <button
-          type="button"
-          className={(hasCounterfactual(narration, line) ? "caption cf" : "caption") + large}
-          aria-expanded={open === line.id}
-          onClick={() => controls.openLine(line.id)}
-          title="Open the evidence for this line"
+        <div
+          className={
+            (hasCounterfactual(narration, line) ? "caption cf" : "caption") +
+            large +
+            (open === line.id ? " open" : "")
+          }
         >
           <span className="caption-meta">
             {speaker && <span className="speaker">{speaker}</span>}
             <KindTags narration={narration} line={line} />
           </span>
           <span className="caption-text">
-            <LineText text={line.text} verified={verified} countId={`${line.id}|${line.text}`} />
-            {line.claims.length > 0 &&
-              (verified ? (
-                <span className="caption-more check">
-                  <CheckIcon />
-                  <span className="sr-only">Evidence</span>
-                </span>
-              ) : (
-                <span className="caption-more">Evidence</span>
-              ))}
+            <LineText
+              text={line.text}
+              verified={verified}
+              countId={`${line.id}|${line.text}`}
+              claims={lineClaims(narration, line)}
+            />
+            {line.claims.length > 0 && (
+              <button
+                type="button"
+                className={
+                  verified ? "caption-more caption-evidence check" : "caption-more caption-evidence"
+                }
+                aria-label="Open the evidence for this line"
+                aria-expanded={open === line.id}
+                onClick={() => controls.openLine(line.id)}
+              >
+                {verified ? <CheckIcon /> : "Evidence"}
+              </button>
+            )}
           </span>
-        </button>
+        </div>
       )}
     </>
   );
@@ -206,7 +219,11 @@ export function EvidenceCard() {
         </button>
       </div>
       <p className={hasCounterfactual(narration, line) ? "evidence-line cf" : "evidence-line"}>
-        <LineText text={line.text} verified={isVerified(narration, line)} />
+        <LineText
+          text={line.text}
+          verified={isVerified(narration, line)}
+          claims={lineClaims(narration, line)}
+        />
       </p>
       {line.claims.length === 0 ? (
         <p className="note">A connective phrase: it states no fact, so there is no evidence.</p>
@@ -696,17 +713,26 @@ export function NarrationPanel() {
         <ol className={DESCRIBED.has(persona) ? "lines large" : "lines"}>
           {narration.lines.map((line) => (
             <li key={line.id} className={line.id === caption ? "now" : undefined}>
-              <button
-                type="button"
-                aria-expanded={open === line.id}
-                onClick={() => controls.openLine(line.id)}
-              >
+              <div className="line-row">
                 <span className="t">{line.id}</span>
-                <span>
+                <span className="line-copy">
                   <KindTags narration={narration} line={line} />
-                  <LineText text={line.text} verified={isVerified(narration, line)} />
+                  <LineText
+                    text={line.text}
+                    verified={isVerified(narration, line)}
+                    claims={lineClaims(narration, line)}
+                  />
                 </span>
-              </button>
+                <button
+                  type="button"
+                  className="line-evidence"
+                  aria-label={`Open evidence for line ${line.id}`}
+                  aria-expanded={open === line.id}
+                  onClick={() => controls.openLine(line.id)}
+                >
+                  Evidence
+                </button>
+              </div>
             </li>
           ))}
           {narration.withheld.map((line) => (

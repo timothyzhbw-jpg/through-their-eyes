@@ -9,7 +9,7 @@ import type { Narration, PayloadLine } from "../narration/payload";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { CheckIcon } from "../ui/icons";
-import { isVerified, LineText } from "../ui/Narration";
+import { isVerified, LineText, lineClaims } from "../ui/Narration";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines, WithoutLookNote } from "../without/WithoutLook";
 import type { SayName } from "./steps";
@@ -58,7 +58,7 @@ export function StepLines({ say }: { say: SayName }) {
   return (
     <div className="tour-lines">
       <p className="tour-line">
-        <LineText text={line.text} verified={verified} />
+        <LineText text={line.text} verified={verified} claims={lineClaims(narration!, line)} />
         {verified ? (
           <span
             className="tour-checked"
