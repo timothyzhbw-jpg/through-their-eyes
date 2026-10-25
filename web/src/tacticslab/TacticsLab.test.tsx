@@ -181,7 +181,8 @@ describe("the Tactics lab panel", () => {
       "Decisions under pressure",
       "Shots within 10 s of a high regain · xG",
     ]) {
-      expect(html).toContain(p);
+      // Terms in a row's name are glossary buttons, so read the text, not the markup.
+      expect(html.replace(/<[^>]+>/g, "")).toContain(p);
     }
     expect(html.indexOf('aria-label="Tactics"')).toBeLessThan(
       html.indexOf('data-card="high_press"'),

@@ -61,6 +61,7 @@ import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
+import { SessionGlossary } from "./glossary/SessionGlossary";
 import { FloodlightBackground } from "./ui/FloodlightBackground";
 import { TextReveal } from "./ui/TextReveal";
 import { DoorTabs, ForStudios, TURN_CARD_ID, YourTurn } from "./doors/DoorPages";
@@ -168,78 +169,83 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   ) : null;
 
   return (
-    <div
-      className={mode === "counterfactual" ? "app mode-cf" : "app"}
-      data-door={modeScreen ? undefined : door}
-      onClickCapture={(e) => {
-        const id = (e.target as Element).closest?.("button[id]")?.id;
-        if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
-      }}
-    >
-      {modeScreen ??
-        (door === "look" ? (
-          <>
-            <LiveScreen
-              start={start}
-              end={<HeroSettings />}
-              run={<RunToggle />}
-              card={
-                evidence ? (
-                  <EvidenceCard />
-                ) : touring === "quick" ? (
-                  <div className="tour-home" aria-hidden="true" />
-                ) : touring ? null : (
-                  <MomentCard />
-                )
-              }
-              caption={
-                <>
-                  <Caption />
-                  <WithoutLookNote />
-                </>
-              }
-            />
-            <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-              <FloodlightBackground />
-              <header className="moment-head">
-                <p className="kicker accent">
-                  {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
-                </p>
-                <h2 id="moment-title" tabIndex={-1}>
-                  <TextReveal>
-                    {titleLead} <em>{titleEmphasis}</em>
-                  </TextReveal>
-                </h2>
-                <p className="lede">
-                  <TextReveal>{blurbOf(hero)}</TextReveal>
-                </p>
-                <YourViewLine />
-              </header>
-              {/* The look and the run without it, side by side: the story's compare, kept. The
+    <SessionGlossary>
+      <div
+        className={mode === "counterfactual" ? "app mode-cf" : "app"}
+        data-door={modeScreen ? undefined : door}
+        onClickCapture={(e) => {
+          const id = (e.target as Element).closest?.("button[id]")?.id;
+          if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
+        }}
+      >
+        {modeScreen ??
+          (door === "look" ? (
+            <>
+              <LiveScreen
+                start={start}
+                end={<HeroSettings />}
+                run={<RunToggle />}
+                card={
+                  evidence ? (
+                    <EvidenceCard />
+                  ) : touring === "quick" ? (
+                    <div className="tour-home" aria-hidden="true" />
+                  ) : touring ? null : (
+                    <MomentCard />
+                  )
+                }
+                caption={
+                  <>
+                    <Caption />
+                    <WithoutLookNote />
+                  </>
+                }
+              />
+              <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+                <FloodlightBackground />
+                <header className="moment-head">
+                  <p className="kicker accent">
+                    {momentKicker(hero, moment.decisionFrame, offset).replace(
+                      "Moment",
+                      "The moment",
+                    )}
+                  </p>
+                  <h2 id="moment-title" tabIndex={-1}>
+                    <TextReveal>
+                      {titleLead} <em>{titleEmphasis}</em>
+                    </TextReveal>
+                  </h2>
+                  <p className="lede">
+                    <TextReveal>{blurbOf(hero)}</TextReveal>
+                  </p>
+                  <YourViewLine />
+                </header>
+                {/* The look and the run without it, side by side: the story's compare, kept. The
                   chapters that introduced the moment are the landing page's now. */}
-              <ComparePanel />
-              <div className="below">
-                <NarrationPanel />
-                <WhatIfPanel />
-                {/* The data under the moment, one click away: no tour step points into it. */}
-                <details className="how match-data">
-                  <summary>Match data for this moment</summary>
-                  <TelemetryPanel />
-                  <StatsPanel />
-                  <MomentsPanel />
-                </details>
-              </div>
-            </main>
-          </>
-        ) : (
-          <DoorScreen start={start} end={<HeroSettings />}>
-            {door === "home" ? <Landing /> : door === "turn" ? <YourTurn /> : <ForStudios />}
-          </DoorScreen>
-        ))}
+                <ComparePanel />
+                <div className="below">
+                  <NarrationPanel />
+                  <WhatIfPanel />
+                  {/* The data under the moment, one click away: no tour step points into it. */}
+                  <details className="how match-data">
+                    <summary>Match data for this moment</summary>
+                    <TelemetryPanel />
+                    <StatsPanel />
+                    <MomentsPanel />
+                  </details>
+                </div>
+              </main>
+            </>
+          ) : (
+            <DoorScreen start={start} end={<HeroSettings />}>
+              {door === "home" ? <Landing /> : door === "turn" ? <YourTurn /> : <ForStudios />}
+            </DoorScreen>
+          ))}
 
-      <Legend />
-      <Tour />
-    </div>
+        <Legend />
+        <Tour />
+      </div>
+    </SessionGlossary>
   );
 }
 
@@ -470,58 +476,60 @@ function MatchView() {
   ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
-    <div className="app match">
-      <LiveScreen
-        start={<LiveBar />}
-        end={
-          <SettingsMenu>
-            <MenuSection label="Moment">
-              <MomentChips />
-              <MatchPicker />
-            </MenuSection>
-            <MenuSection label="Your view">
-              <YourViewMenu />
-            </MenuSection>
-            <MenuSection label="Sound">
-              <SoundToggle />
-            </MenuSection>
-            <ViewOptions />
-          </SettingsMenu>
-        }
-        card={
-          <>
-            <Scoreboard />
-            <OpeningNotice />
-            <RecapStage />
-          </>
-        }
-        caption={<RecapCaption />}
-      />
+    <SessionGlossary>
+      <div className="app match">
+        <LiveScreen
+          start={<LiveBar />}
+          end={
+            <SettingsMenu>
+              <MenuSection label="Moment">
+                <MomentChips />
+                <MatchPicker />
+              </MenuSection>
+              <MenuSection label="Your view">
+                <YourViewMenu />
+              </MenuSection>
+              <MenuSection label="Sound">
+                <SoundToggle />
+              </MenuSection>
+              <ViewOptions />
+            </SettingsMenu>
+          }
+          card={
+            <>
+              <Scoreboard />
+              <OpeningNotice />
+              <RecapStage />
+            </>
+          }
+          caption={<RecapCaption />}
+        />
 
-      <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-        <header className="moment-head">
-          <p className="kicker accent">The match · {count} possessions</p>
-          <h2 id="moment-title">
-            Every moment, <em>on one clock.</em>
-          </h2>
-          <p className="lede">
-            A whole match of {count} possessions, streamed live from the API. Every moment is on the
-            timeline and below; open a hero moment's breakdown to see the decision through the
-            player's eyes.
-          </p>
-          <YourViewLine />
-        </header>
-        <div className="below">
-          <StatsPanel />
-          <RecapPanel />
-          <TacticsLabPanel />
-          <MomentsPanel />
-        </div>
-      </main>
+        <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+          <header className="moment-head">
+            <p className="kicker accent">The match · {count} possessions</p>
+            <h2 id="moment-title">
+              Every moment, <em>on one clock.</em>
+            </h2>
+            <p className="lede">
+              A whole match of {count} possessions, streamed live from the API. Every moment is on
+              the timeline and below; open a hero moment's breakdown to see the decision through the
+              player's eyes.
+            </p>
+            <YourViewLine />
+          </header>
+          <div className="below">
+            <StatsPanel />
+            <RecapPanel />
+            <TacticsLabPanel />
+            <MomentsPanel />
+          </div>
+        </main>
 
-      <Legend />
-      <Tour />
-    </div>
+        <Legend />
+        <Tour />
+      </div>
+    </SessionGlossary>
   );
 }
 

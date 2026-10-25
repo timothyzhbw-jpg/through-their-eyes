@@ -42,7 +42,7 @@ import { BreakdownPanel } from "../ui/BreakdownPanel";
 import { Chapter, Title } from "../ui/Chapter";
 import { ArrowIcon } from "../ui/icons";
 import { PERSONA_LABEL } from "../ui/labels";
-import { LineText } from "../ui/Narration";
+import { LineText, lineClaims } from "../ui/Narration";
 import { jumpTo, useReveal } from "../ui/reveal";
 import { blurbOf, settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
@@ -373,7 +373,7 @@ function TheLook() {
   if (!line) return null;
   return (
     <p className="journey-look" lang={language}>
-      <LineText text={line.text} verified />
+      <LineText text={line.text} verified claims={lineClaims(narration!, line)} />
     </p>
   );
 }

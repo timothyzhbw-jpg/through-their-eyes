@@ -28,6 +28,7 @@ import { COLORS, teamColor } from "../views/scene";
 import { XtMoveExplain, usePersona } from "../xtexplain/XtMoveExplain";
 import { versionFor } from "../xtexplain/zones";
 import "./tacticslab.css";
+import { GlossaryText } from "../glossary/GlossaryText";
 
 /** The xT grid ships inside the "without the look" file (units 1e-4); the lab reads it from there. */
 export const XT_FILE = "without_look_seed3.json";
@@ -98,14 +99,18 @@ function MetricRow({ m, split, version }: { m: Metric; split: boolean; version: 
   return (
     <tr data-parameter={m.id}>
       <th scope="row">
-        {m.label}
-        <p className="lab-parameter-explanation">{version === "pro" ? m.pro : m.plain}</p>
+        <GlossaryText text={m.label} />
+        <p className="lab-parameter-explanation">
+          <GlossaryText text={version === "pro" ? m.pro : m.plain} />
+        </p>
         <details className="how lab-definition">
           <summary>What it counts</summary>
-          <span className="lab-def">{m.definition}</span>
+          <span className="lab-def">
+            <GlossaryText text={m.definition} />
+          </span>
           {m.zeroWhy && (
             <span className="lab-def lab-zero" data-zero>
-              {m.zeroWhy}
+              <GlossaryText text={m.zeroWhy} />
             </span>
           )}
         </details>
@@ -139,8 +144,12 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
   return (
     <article className="lab-card tile" data-card={card.id} aria-label={card.title} ref={reveal}>
       <header>
-        <p className="kicker">{card.kicker}</p>
-        <h3 className="block-title">{card.title}</h3>
+        <p className="kicker">
+          <GlossaryText text={card.kicker} />
+        </p>
+        <h3 className="block-title">
+          <GlossaryText text={card.title} />
+        </h3>
         <p className="lab-measured">
           <strong>Measured on:</strong> {card.measured}
         </p>
@@ -160,7 +169,11 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           </button>
         ))}
       </div>
-      {card.empty && <p className="note lab-empty">{card.empty}</p>}
+      {card.empty && (
+        <p className="note lab-empty">
+          <GlossaryText text={card.empty} />
+        </p>
+      )}
       <div
         id={`${id}-panel`}
         className="lab-explanation"
@@ -168,7 +181,9 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
         aria-labelledby={tabId(version)}
         data-version={version}
       >
-        <p className="lab-idea">{version === "pro" ? card.pro : card.plain}</p>
+        <p className="lab-idea">
+          <GlossaryText text={version === "pro" ? card.pro : card.plain} />
+        </p>
         {!card.empty && (
           <div
             className="table-wrap"
@@ -233,7 +248,9 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
       </div>
       <details className="how lab-limits">
         <summary>What these numbers leave out</summary>
-        <p className="note">{card.limits}</p>
+        <p className="note">
+          <GlossaryText text={card.limits} />
+        </p>
       </details>
     </article>
   );
