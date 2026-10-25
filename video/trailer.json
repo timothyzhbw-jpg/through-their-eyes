@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The < 2:00 demo video (SPEC 10): a staged first-person story (Blender) opens and closes it; between, the real app in three chapters, then the product wider, the stack and the end card.",
+  "about": "The v16 < 2:00 trailer: the approved opening and every Blender final, the live scan story and coach drill, then the three doors, studios A–D, Value and verified evidence.",
   "output": {
     "fps": 30,
     "width": 1920,
@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0,
       "from": 0,
-      "until": 113.849,
+      "until": 87.066,
       "gain_db": 4,
       "fade_in": 0,
       "fade_out": 0,
@@ -1168,7 +1168,7 @@
     },
     "end": {
       "template": "end",
-      "dur": 6.5,
+      "dur": 4.5,
       "alpha": false,
       "params": {
         "name": "THROUGH THEIR EYES",
@@ -1506,6 +1506,7 @@
       "dur": 2.5,
       "alpha": false,
       "params": {
+        "kicker": "GET YOUR VISION",
         "lines": [
           {
             "text": "YOU WATCHED THE BALL."
@@ -1523,6 +1524,7 @@
       "dur": 1.1,
       "alpha": false,
       "params": {
+        "kicker": "GET YOUR VISION",
         "lines": [
           {
             "text": "GET YOUR VISION.",
@@ -1713,7 +1715,7 @@
       "alpha": true,
       "params": {
         "text": "HIS EYES",
-        "sub": "WHAT HE SEES"
+        "sub": "GET YOUR VISION"
       }
     },
     "saw-believed": {
@@ -1822,6 +1824,227 @@
       "alpha": true,
       "params": {
         "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "v16-scan": {
+      "template": "slam",
+      "dur": 2.3,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "SCAN · NEW INFORMATION · NEW OPTIONS", "color": "gold", "size": 76 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-decision": {
+      "template": "slam",
+      "dur": 1.7,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "DECISION · EXECUTE · SIDE-ON", "color": "gold", "size": 82 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-without": {
+      "template": "slam",
+      "dur": 2,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "WITHOUT THAT LOOK…", "color": "dusk", "size": 120 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-extra": {
+      "template": "slam",
+      "dur": 2.5,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "WITH MORE LOOKS", "size": 92 },
+          { "text": "{extra_result.k} OF {extra_result.n} DECISIONS CHANGE", "color": "gold", "size": 62 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.25,
+        "backdrop": true
+      },
+      "fallback": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "WITH MORE LOOKS", "size": 92 },
+          { "text": "THE RIGHT LOOK, NOT MORE LOOKS", "color": "gold", "size": 62 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.25,
+        "backdrop": true
+      }
+    },
+    "v16-drill": {
+      "template": "slam",
+      "dur": 2.5,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "LEFT LOOK → DROP BACK", "size": 78 },
+          { "text": "RIGHT LOOK → SIDE-ON", "color": "gold", "size": 78 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.25,
+        "backdrop": true
+      }
+    },
+    "v16-press": {
+      "template": "slam",
+      "dur": 1.2,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "PRESS-BREAKING", "color": "gold", "size": 100 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-transition": {
+      "template": "slam",
+      "dur": 1.1,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "TRANSITION", "color": "gold", "size": 110 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-tactics": {
+      "template": "slam",
+      "dur": 2.7,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "TACTICS · PLAIN / PRO", "size": 90 },
+          { "text": "COUNTER-ATTACK", "color": "gold", "size": 90 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.25,
+        "backdrop": true
+      }
+    },
+    "v16-doors": {
+      "template": "slam",
+      "dur": 2.5,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "THE LOOK · YOUR TURN · FOR STUDIOS", "size": 72 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-yourturn": {
+      "template": "slam",
+      "dur": 2.3,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "YOUR TURN", "color": "gold", "size": 120 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-reveal": {
+      "template": "slam",
+      "dur": 1.9,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "HE SAW THE RUN. WOULD YOU?", "color": "gold", "size": 82 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-studio-a": {
+      "template": "slam",
+      "dur": 1.3,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "A · AI TACTICAL BROADCAST", "color": "gold", "size": 82 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-studio-b": {
+      "template": "slam",
+      "dur": 1.7,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "B · PERSONALISED COMMENTARY · 中文", "size": 68 },
+          { "text": "xT / 预期威胁", "color": "gold", "size": 68 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.2,
+        "backdrop": true
+      }
+    },
+    "v16-studio-c": {
+      "template": "slam",
+      "dur": 1.3,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "C · AUTOMATED HIGHLIGHTS", "size": 76 },
+          { "text": "SOCIAL REACH", "color": "gold", "size": 76 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.2,
+        "backdrop": true
+      }
+    },
+    "v16-studio-d": {
+      "template": "slam",
+      "dur": 1.5,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "D · STADIUM SCREENS", "color": "gold", "size": 86 }],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "v16-value": {
+      "template": "slam",
+      "dur": 2.5,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          { "text": "VALUE · LEAGUE REVENUE LEVERS", "size": 68 },
+          { "text": "DEMO DATA: SIMULATED AUDIENCE, NOT REAL RESULTS", "color": "gold", "size": 46 }
+        ],
+        "align": "lower-left",
+        "stagger": 0.2,
+        "backdrop": true
+      }
+    },
+    "v16-evidence": {
+      "template": "slam",
+      "dur": 2.3,
+      "alpha": true,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [{ "text": "EVERY LINE CHECKED BEFORE IT AIRS", "color": "gold", "size": 76 }],
+        "align": "lower-left",
+        "backdrop": true
       }
     }
   },
@@ -2027,62 +2250,28 @@
       "id": "b01-app-s1-pov",
       "story": "app",
       "dur": 2.733,
-      "picture": {
-        "src": "cine",
-        "id": "press-pov-cf",
-        "in": 0
-      },
+      "picture": { "src": "cine", "id": "press-pov-cf", "in": 0 },
       "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "freeze": {
-        "at": 1.5
-      },
+      "fx": ["glue"],
+      "freeze": { "at": 1.5 },
       "overlays": [
-        {
-          "title": "tag-his-eyes",
-          "at": 0.05
-        },
-        {
-          "title": "nc-you-app",
-          "at": 1.5
-        },
-        {
-          "title": "label-ie-2p733",
-          "at": 0
-        }
+        { "title": "tag-his-eyes", "at": 0.05 },
+        { "title": "nc-you-app", "at": 1.5 },
+        { "title": "label-ie-2p733", "at": 0 }
       ],
       "section": "open",
       "vo": [
-        {
-          "id": "vk1",
-          "at": 0.15,
-          "speaker": "kid",
-          "text": "Give it to me!",
-          "style": "shouting"
-        }
+        { "id": "vk1", "at": 0.15, "speaker": "kid", "text": "Give it to me!", "style": "shouting" }
       ]
     },
     {
       "id": "b02-app-s1-tackle",
       "story": "app",
       "dur": 1.833,
-      "picture": {
-        "src": "cine",
-        "id": "press-cf",
-        "in": 1.1
-      },
+      "picture": { "src": "cine", "id": "press-cf", "in": 1.1 },
       "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-ie-1p833",
-          "at": 0
-        }
-      ],
+      "fx": ["glue"],
+      "overlays": [{ "title": "label-ie-1p833", "at": 0 }],
       "section": "open",
       "vo": [
         {
@@ -2098,10 +2287,7 @@
       "story": "app",
       "section": "open",
       "dur": 2.5,
-      "picture": {
-        "src": "title",
-        "id": "card-watched"
-      },
+      "picture": { "src": "title", "id": "card-watched" },
       "sfx": []
     },
     {
@@ -2109,11 +2295,7 @@
       "story": "app",
       "section": "open",
       "dur": 2.8,
-      "picture": {
-        "src": "capture",
-        "shot": "22-board-blind",
-        "in": 0.2
-      },
+      "picture": { "src": "capture", "shot": "22-board-blind", "in": 0.2 },
       "vo": [
         {
           "id": "vc2",
@@ -2123,12 +2305,7 @@
         }
       ],
       "sfx": [],
-      "overlays": [
-        {
-          "title": "saw-believed",
-          "at": 1.4
-        }
-      ]
+      "overlays": [{ "title": "saw-believed", "at": 1.4 }]
     },
     {
       "id": "b05c-board",
@@ -2412,95 +2589,58 @@
     },
     {
       "id": "b14a-st-scan",
+      "dur": 2.4,
+      "picture": {
+        "src": "capture",
+        "shot": "20-steps",
+        "in": 0,
+        "push": [1, 1.03]
+      },
+      "overlays": [{ "title": "v16-scan", "at": 0.05 }],
+      "vo": [
+        {
+          "id": "vo03b",
+          "at": 0.15,
+          "text": "Every look shows him something new — and new options."
+        }
+      ],
+      "sfx": [{ "name": "shutter", "at": 0.05, "gain_db": -6 }],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
+    },
+    {
+      "id": "b14b-st-decision",
       "dur": 1.8,
       "picture": {
         "src": "capture",
         "shot": "20-steps",
-        "in": 0.3,
-        "push": [
-          1,
-          1.03
-        ]
+        "in": 3.1,
+        "push": [1, 1.03]
       },
-      "overlays": [
-        {
-          "title": "st-scan",
-          "at": 0.15
-        }
-      ],
-      "sfx": [
-        {
-          "name": "shutter",
-          "at": 0.15,
-          "gain_db": -6
-        }
-      ],
-      "fx": [
-        "lift"
-      ],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b14b-st-decision",
-      "dur": 1.9,
-      "picture": {
-        "src": "capture",
-        "shot": "20-steps",
-        "in": 2.9,
-        "push": [
-          1,
-          1.03
-        ]
-      },
-      "overlays": [
-        {
-          "title": "st-decision",
-          "at": 0.15
-        }
-      ],
+      "overlays": [{ "title": "v16-decision", "at": 0.05 }],
       "vo": [
         {
           "id": "vo04",
-          "at": 0.35,
+          "at": 0.2,
           "text": "And he knows where his man is."
         }
       ],
-      "sfx": [
-        {
-          "name": "stamp",
-          "at": 0.15,
-          "gain_db": -7
-        }
-      ],
-      "fx": [
-        "lift"
-      ],
-      "out": {
-        "type": "cut"
-      }
+      "sfx": [{ "name": "stamp", "at": 0.05, "gain_db": -7 }],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
       "id": "b16-toggle",
-      "dur": 3.4,
+      "dur": 2.8,
       "picture": {
         "src": "capture",
         "shot": "04-with-without",
         "in": 0.4,
         "crop": "tactical",
-        "push": [
-          1,
-          1.05
-        ],
+        "push": [1, 1.05],
         "fit": "contain"
       },
-      "overlays": [
-        {
-          "title": "without-kicker",
-          "at": 1.1
-        }
-      ],
+      "overlays": [{ "title": "v16-without", "at": 0.7 }],
       "vo": [
         {
           "id": "vo05",
@@ -2604,62 +2744,48 @@
       }
     },
     {
-      "id": "b19a-st-nolook",
-      "dur": 2.4,
+      "id": "b20-extra-looks",
+      "dur": 2.6,
       "picture": {
         "src": "capture",
-        "shot": "20-steps",
-        "in": 8.2,
-        "push": [
-          1,
-          1.03
-        ]
+        "shot": "26-extra-looks",
+        "in": 0,
+        "push": [1, 1.03]
       },
-      "overlays": [
+      "overlays": [{ "title": "v16-extra", "at": 0.05 }],
+      "vo": [
         {
-          "title": "st-nolook",
-          "at": 0.1
-        }
-      ],
-      "sfx": [
-        {
-          "name": "stamp",
+          "id": "vo05b",
           "at": 0.1,
-          "gain_db": -7
+          "text": "With the extra looks, {extra_result.k} of {extra_result.n} decisions change.",
+          "fallback": "With the extra looks, his decision does not change. It's the right look, not more looks."
         }
       ],
-      "fx": [
-        "lift"
-      ],
-      "out": {
-        "type": "cut"
-      }
+      "sfx": [],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
-      "id": "b20a-card-scan",
-      "dur": 2.3,
+      "id": "b21-drill-coach",
+      "dur": 2.6,
       "picture": {
-        "src": "title",
-        "id": "card-scan"
+        "src": "capture",
+        "shot": "27-drill-coach",
+        "in": 0,
+        "push": [1, 1.03]
       },
+      "overlays": [{ "title": "v16-drill", "at": 0.05 }],
       "vo": [
         {
           "id": "vc4",
           "at": 0.1,
           "speaker": "coach",
-          "text": "Scan early, decide early."
+          "text": "Look left, he drops it back. Look right, he receives side-on."
         }
       ],
-      "sfx": []
-    },
-    {
-      "id": "b26-same",
-      "dur": 1.4,
-      "picture": {
-        "src": "title",
-        "id": "card-same"
-      },
-      "sfx": []
+      "sfx": [],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
       "id": "b27-press-a",
@@ -2676,12 +2802,16 @@
         "glue"
       ],
       "overlays": [
-        {
-          "title": "label-bl-1p3",
-          "at": 0
-        }
+        { "title": "v16-press", "at": 0.05 },
+        { "title": "label-bl-1p3", "at": 0 }
       ],
-      "vo": []
+      "vo": [
+        {
+          "id": "vo24",
+          "at": 0.1,
+          "text": "Under a high press…"
+        }
+      ]
     },
     {
       "id": "b28-press-b",
@@ -2703,13 +2833,7 @@
           "at": 0
         }
       ],
-      "vo": [
-        {
-          "id": "vo24",
-          "at": 0.1,
-          "text": "Under a high press…"
-        }
-      ],
+      "vo": [],
       "sfx": [
         {
           "name": "touch",
@@ -2768,29 +2892,8 @@
       }
     },
     {
-      "id": "b29a-press-app",
-      "dur": 1.2,
-      "picture": {
-        "src": "capture",
-        "shot": "18-press-app",
-        "in": 6.85,
-        "push": [
-          1,
-          1.03
-        ]
-      },
-      "fx": [
-        "lift"
-      ],
-      "overlays": [],
-      "sfx": [],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
       "id": "b31-corner-a",
-      "dur": 1.5,
+      "dur": 1.2,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bl06a_corner.mp4",
@@ -2800,19 +2903,15 @@
       "vo": [
         {
           "id": "vo34",
-          "at": 0.2,
+          "at": 0.1,
           "text": "At a corner, it's the marker who has to look."
         }
       ],
-      "fx": [
-        "glue"
-      ],
+      "fx": ["glue"],
       "letterbox": 2.39,
       "overlays": [
-        {
-          "title": "label-bl-1p5",
-          "at": 0
-        }
+        { "title": "v16-transition", "at": 0.05 },
+        { "title": "label-bl-1p5", "at": 0 }
       ]
     },
     {
@@ -2824,662 +2923,200 @@
         "in": 0.5,
         "fit": "pad"
       },
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-0p9",
-          "at": 0
-        }
-      ],
+      "fx": ["glue"],
+      "overlays": [{ "title": "label-bl-0p9", "at": 0 }],
       "letterbox": 2.39
     },
     {
-      "id": "b32b-corner-app",
-      "dur": 1.35,
+      "id": "b32c-tactics",
+      "dur": 2.8,
       "picture": {
         "src": "capture",
-        "shot": "16-corner",
-        "in": 4.13,
-        "push": [
-          1.02,
-          1.04
-        ]
+        "shot": "28-tactics",
+        "in": 0,
+        "push": [1, 1.03]
       },
-      "out": {
-        "type": "cut"
-      },
-      "sfx": [],
-      "fx": [
-        "lift"
-      ]
-    },
-    {
-      "id": "b32b1-stream",
-      "dur": 3.4,
-      "picture": {
-        "src": "capture",
-        "shot": "23-stream-rail",
-        "in": 4.5,
-        "push": [
-          1,
-          1.03
-        ]
-      },
+      "overlays": [{ "title": "v16-tactics", "at": 0.05 }],
       "vo": [
         {
-          "id": "vo40",
-          "at": 0.2,
-          "text": "A whole match, live, with every key moment a tap away."
-        }
-      ],
-      "sfx": [],
-      "fx": [
-        "lift"
-      ],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b32c-eyes-drag",
-      "dur": 2.25,
-      "picture": {
-        "src": "capture",
-        "shot": "13-take-his-eyes",
-        "in": 0.8,
-        "crop": [
-          295,
-          300,
-          1040,
-          585
-        ],
-        "push": [
-          1,
-          1.06
-        ]
-      },
-      "overlays": [
-        {
-          "title": "tag-eyes",
-          "at": 0.05
-        }
-      ],
-      "vo": [
-        {
-          "id": "vo18",
-          "at": 0.2,
-          "text": "Take his eyes yourself."
-        }
-      ],
-      "sfx": [],
-      "fx": [
-        "lift"
-      ]
-    },
-    {
-      "id": "b32d-eyes-pov",
-      "dur": 1.5,
-      "picture": {
-        "src": "capture",
-        "shot": "13-take-his-eyes",
-        "in": 4.3,
-        "crop": [
-          32,
-          96,
-          1440,
-          810
-        ],
-        "push": [
-          1,
-          1.04
-        ]
-      },
-      "sfx": [],
-      "vo": [
-        {
-          "id": "vo18b",
-          "at": 0.3,
-          "text": "Look the other way… he plays it safe."
-        }
-      ],
-      "fx": [
-        "lift"
-      ]
-    },
-    {
-      "id": "b32e-eyes-result",
-      "dur": 1.5,
-      "picture": {
-        "src": "capture",
-        "shot": "13-take-his-eyes",
-        "in": 7.6,
-        "crop": [
-          1180,
-          90,
-          720,
-          405
-        ],
-        "push": [
-          1,
-          1.03
-        ]
-      },
-      "vo": [],
-      "sfx": [
-        {
-          "name": "stamp",
+          "id": "vo35",
           "at": 0.1,
-          "gain_db": -7
+          "text": "Plain words for the fan. Pro for the coach. Counter-attack, press-breaking, transition."
         }
       ],
-      "out": {
-        "type": "cut"
+      "sfx": [],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
+    },
+    {
+      "id": "b32d-doors",
+      "dur": 2.6,
+      "picture": {
+        "src": "capture",
+        "shot": "24-doors",
+        "in": 0,
+        "push": [1, 1.02]
       },
-      "fx": [
-        "lift"
-      ]
+      "overlays": [{ "title": "v16-doors", "at": 0.05 }],
+      "vo": [{ "id": "vo36", "at": 0.15, "text": "Every door. A single studio." }],
+      "sfx": [],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
       "id": "b32f-yc-decide",
-      "dur": 3,
+      "dur": 2.4,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
         "in": 0,
-        "push": [
-          1,
-          1.04
-        ],
-        "crop": [
-          700,
-          40,
-          1220,
-          686
-        ]
+        "push": [1, 1.04],
+        "crop": [700, 40, 1220, 686]
       },
-      "overlays": [
-        {
-          "title": "countdown",
-          "at": 0.2
-        }
-      ],
+      "overlays": [{ "title": "v16-yourturn", "at": 0.05 }],
       "vo": [
-        {
-          "id": "vo20",
-          "at": 0.2,
-          "text": "Your call."
-        },
-        {
-          "id": "vo21",
-          "at": 1.2,
-          "text": "You only know what he knew."
-        }
+        { "id": "vo20", "at": 0.1, "text": "Your call." },
+        { "id": "vo21", "at": 1.0, "text": "You only know what he knew." }
       ],
       "sfx": [],
-      "fx": [
-        "lift"
-      ]
+      "fx": ["lift"]
     },
     {
       "id": "b32g-yc-truth",
-      "dur": 3.6,
+      "dur": 2,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
-        "in": 10,
-        "push": [
-          1,
-          1.04
-        ],
-        "crop": [
-          640,
-          90,
-          1260,
-          709
-        ]
+        "in": 6.6,
+        "push": [1, 1.04],
+        "crop": [640, 90, 1260, 709]
       },
-      "vo": [
-        {
-          "id": "vo23",
-          "at": 0.05,
-          "text": "He saw the run. Would you?"
-        }
-      ],
-      "out": {
-        "type": "cut"
-      },
+      "overlays": [{ "title": "v16-reveal", "at": 0.05 }],
+      "vo": [{ "id": "vo23", "at": 0.05, "text": "He saw the run. Would you?" }],
+      "out": { "type": "cut" },
       "sfx": [],
-      "fx": [
-        "lift"
-      ]
+      "fx": ["lift"]
     },
     {
-      "id": "b33-crew",
+      "id": "b33-studio-a",
       "dur": 1.4,
       "picture": {
-        "src": "title",
-        "id": "crew"
+        "src": "capture",
+        "shot": "03-breakdown",
+        "in": 0,
+        "push": [1, 1.03]
       },
+      "overlays": [{ "title": "v16-studio-a", "at": 0.05 }],
       "vo": [
         {
-          "id": "vo12",
+          "id": "vo37",
           "at": 0.05,
-          "text": "Behind every replay, a crew of agents."
+          "text": "For the league: a tactical broadcast, every line checked."
         }
       ],
       "sfx": [],
-      "out": {
-        "type": "cut"
-      }
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
-      "id": "b33a-crew-trace",
-      "dur": 1.6,
-      "picture": {
-        "src": "capture",
-        "shot": "19-crew-trace",
-        "in": 1,
-        "crop": [
-          760,
-          20,
-          1060,
-          596
-        ],
-        "push": [
-          1,
-          1.03
-        ]
-      },
-      "fx": [
-        "lift"
-      ],
-      "overlays": [],
-      "sfx": [],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b33b-workflow",
-      "dur": 2.2,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/stills/crew_workflow.mp4",
-        "in": 0,
-        "fit": "pad",
-        "push": [
-          1,
-          1.04
-        ]
-      },
-      "overlays": [
-        {
-          "title": "label-wf-2p2",
-          "at": 0
-        }
-      ],
-      "sfx": [],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b34-verified",
-      "dur": 3.6,
-      "picture": {
-        "src": "capture",
-        "shot": "07-evidence",
-        "in": 1.6,
-        "crop": [
-          0,
-          0,
-          1244,
-          700
-        ],
-        "push": [
-          1,
-          1.06
-        ]
-      },
-      "fx": [
-        "lift",
-        "vignette"
-      ],
-      "overlays": [
-        {
-          "title": "verified",
-          "at": 0.1
-        }
-      ],
-      "vo": [
-        {
-          "id": "vo09",
-          "at": 0.2,
-          "text": "Every line is checked against the simulation before it airs."
-        }
-      ],
-      "sfx": [
-        {
-          "name": "stamp",
-          "at": 2.22,
-          "gain_db": -4
-        },
-        {
-          "name": "stamp",
-          "at": 2.54,
-          "gain_db": -4
-        },
-        {
-          "name": "stamp",
-          "at": 2.86,
-          "gain_db": -4
-        },
-        {
-          "name": "stamp",
-          "at": 3.18,
-          "gain_db": -4
-        }
-      ],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b35-wrong",
-      "dur": 4,
-      "picture": {
-        "src": "capture",
-        "shot": "09-verifier",
-        "in": 0.3,
-        "crop": [
-          960,
-          330,
-          960,
-          540
-        ],
-        "push": [
-          1,
-          1.04
-        ]
-      },
-      "overlays": [
-        {
-          "title": "refuted",
-          "at": 1.1
-        },
-        {
-          "title": "ma8-line",
-          "at": 2.2
-        }
-      ],
-      "vo": [
-        {
-          "id": "vo10",
-          "at": 0.1,
-          "text": "Try a wrong number…"
-        },
-        {
-          "id": "vo11",
-          "at": 1.7,
-          "text": "and it never airs."
-        }
-      ],
-      "sfx": [],
-      "out": {
-        "type": "cut"
-      },
-      "fx": [
-        "lift"
-      ]
-    },
-    {
-      "id": "b36-redcard",
-      "dur": 0.9,
-      "picture": {
-        "src": "capture",
-        "shot": "10-drill",
-        "in": 0,
-        "crop": [
-          640,
-          240,
-          1040,
-          585
-        ]
-      },
-      "grade": "danger",
-      "overlays": [],
-      "vo": [
-        {
-          "id": "vo14",
-          "at": 0.15,
-          "text": "Take an agent down…"
-        }
-      ],
-      "sfx": [
-        {
-          "name": "whistle",
-          "at": 0.1,
-          "gain_db": -9
-        }
-      ],
-      "fx": [
-        "lift"
-      ]
-    },
-    {
-      "id": "b36a-down",
-      "dur": 1.6,
-      "picture": {
-        "src": "capture",
-        "shot": "10-drill",
-        "in": 16.1,
-        "crop": [
-          640,
-          240,
-          1040,
-          585
-        ]
-      },
-      "overlays": [
-        {
-          "title": "redcard",
-          "at": 0
-        }
-      ],
-      "sfx": [],
-      "fx": [
-        "lift"
-      ],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b37-bringback",
-      "dur": 0.7,
-      "picture": {
-        "src": "capture",
-        "shot": "10-drill",
-        "in": 18.9,
-        "crop": [
-          640,
-          240,
-          1040,
-          585
-        ]
-      },
-      "overlays": [],
-      "vo": [
-        {
-          "id": "vo15",
-          "at": 0,
-          "text": "bring it back, and it picks up where it left off."
-        }
-      ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.42,
-          "gain_db": -6
-        },
-        {
-          "name": "tick",
-          "at": 0.82,
-          "gain_db": -6
-        }
-      ],
-      "out": {
-        "type": "cut"
-      },
-      "fx": [
-        "lift"
-      ]
-    },
-    {
-      "id": "b37a-back",
-      "dur": 2.1,
-      "picture": {
-        "src": "capture",
-        "shot": "10-drill",
-        "in": 27.5,
-        "crop": [
-          640,
-          240,
-          1040,
-          585
-        ]
-      },
-      "overlays": [
-        {
-          "title": "drill-back",
-          "at": 0.05
-        }
-      ],
-      "sfx": [],
-      "fx": [
-        "lift"
-      ],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
-      "id": "b38-personas",
-      "dur": 2.8,
+      "id": "b34-studio-b",
+      "dur": 1.8,
       "picture": {
         "src": "split",
-        "left": {
-          "src": "capture",
-          "shot": "03-breakdown",
-          "in": 0.8,
-          "crop": [
-            460,
-            280,
-            1000,
-            700
-          ]
-        },
-        "right": {
-          "src": "capture",
-          "shot": "05-personas",
-          "in": 4.1,
-          "speed": 0.8,
-          "crop": [
-            460,
-            280,
-            1000,
-            700
-          ]
-        }
+        "left": { "src": "capture", "shot": "03-breakdown", "in": 1.2, "crop": [0, 0, 1920, 1080] },
+        "right": { "src": "capture", "shot": "06-language", "in": 0, "crop": [0, 0, 1920, 1080] }
       },
-      "overlays": [
-        {
-          "title": "duo-personas",
-          "at": 0
-        }
-      ],
+      "overlays": [{ "title": "v16-studio-b", "at": 0.05 }],
       "vo": [
         {
           "id": "vo16",
-          "at": 0.1,
+          "at": 0.05,
           "text": "The same moment, for every fan, in every language."
         }
       ],
       "sfx": [],
-      "fx": [
-        "lift"
-      ]
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
-      "id": "b40-zh",
-      "dur": 1.3,
+      "id": "b35-studio-c",
+      "dur": 1.4,
       "picture": {
         "src": "capture",
-        "shot": "06-language",
-        "in": 1,
-        "push": [
-          1,
-          1.04
-        ],
-        "speed": 0.68
+        "shot": "29-content",
+        "in": 0,
+        "push": [1, 1.03]
       },
-      "overlays": [
-        {
-          "title": "tag-zh",
-          "at": 0.1
-        }
-      ],
-      "out": {
-        "type": "cut"
-      },
+      "overlays": [{ "title": "v16-studio-c", "at": 0.05 }],
+      "vo": [{ "id": "vo38", "at": 0.05, "text": "A highlight package, ready to post." }],
       "sfx": [],
-      "fx": [
-        "lift"
-      ]
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
-      "id": "b41a-spec",
-      "dur": 2.5,
+      "id": "b36-studio-d",
+      "dur": 1.6,
       "picture": {
         "src": "capture",
-        "shot": "19-crew-trace",
-        "in": 2.2,
-        "push": [
-          1,
-          1.02
-        ]
+        "shot": "31-studio",
+        "in": 0,
+        "push": [1, 1.03]
       },
+      "overlays": [{ "title": "v16-studio-d", "at": 0.05 }],
       "vo": [
         {
-          "id": "vo26",
+          "id": "vo39",
           "at": 0.05,
-          "text": "Built on Microsoft Foundry and Agent Framework."
+          "text": "And the stadium screens, on a matchday clock."
         }
       ],
       "sfx": [],
-      "out": {
-        "type": "cut"
-      },
-      "fx": [
-        "lift"
-      ],
-      "overlays": [
-        {
-          "title": "spec",
-          "at": 0
-        }
-      ]
+      "fx": ["lift"],
+      "out": { "type": "cut" }
     },
     {
-      "id": "b41b-business",
-      "dur": 2,
+      "id": "b37-value",
+      "dur": 2.6,
       "picture": {
-        "src": "title",
-        "id": "card-business"
+        "src": "capture",
+        "shot": "30-value",
+        "in": 0,
+        "push": [1, 1.03]
       },
-      "sfx": []
+      "overlays": [{ "title": "v16-value", "at": 0.05 }],
+      "vo": [
+        {
+          "id": "vo40",
+          "at": 0.05,
+          "text": "Value on the league's own levers. The demo figures are labelled simulated."
+        }
+      ],
+      "sfx": [],
+      "fx": ["lift"],
+      "out": { "type": "cut" }
+    },
+
+    {
+      "id": "b38-evidence",
+      "dur": 2.4,
+      "picture": {
+        "src": "capture",
+        "shot": "07-evidence",
+        "in": 1.6,
+        "crop": [0, 0, 1244, 700],
+        "push": [1, 1.06]
+      },
+      "overlays": [{ "title": "v16-evidence", "at": 0.05 }],
+      "vo": [
+        {
+          "id": "vo09",
+          "at": 0.1,
+          "text": "Every line is checked against the simulation before it airs."
+        }
+      ],
+      "sfx": [{ "name": "stamp", "at": 2.1, "gain_db": -4 }],
+      "fx": ["lift", "vignette"],
+      "out": { "type": "cut" }
     },
     {
       "id": "b42-s4a-pov",
@@ -3627,84 +3264,40 @@
       "id": "b42-app-s4-check",
       "story": "app",
       "dur": 3.033,
-      "picture": {
-        "src": "cine",
-        "id": "press-pov-f",
-        "in": 0
-      },
+      "picture": { "src": "cine", "id": "press-pov-f", "in": 0 },
       "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-ie-3p033",
-          "at": 0
-        }
-      ],
+      "fx": ["glue"],
+      "overlays": [{ "title": "label-ie-3p033", "at": 0 }],
       "section": "close"
     },
     {
       "id": "b43-app-s4-escape",
       "story": "app",
       "dur": 1.8,
-      "picture": {
-        "src": "cine",
-        "id": "press-low",
-        "in": 1.2
-      },
+      "picture": { "src": "cine", "id": "press-low", "in": 1.2 },
       "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-ie-1p8",
-          "at": 0
-        }
-      ],
+      "fx": ["glue"],
+      "overlays": [{ "title": "label-ie-1p8", "at": 0 }],
       "section": "close"
     },
     {
       "id": "b44-app-s4-fp-look",
       "story": "app",
       "dur": 1.7,
-      "picture": {
-        "src": "cine",
-        "id": "fp-pov",
-        "in": 0
-      },
+      "picture": { "src": "cine", "id": "fp-pov", "in": 0 },
       "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-ie-1p7",
-          "at": 0
-        }
-      ],
+      "fx": ["glue"],
+      "overlays": [{ "title": "label-ie-1p7", "at": 0 }],
       "section": "close"
     },
     {
       "id": "b45-app-s4-fp-goal",
       "story": "app",
       "dur": 1.8,
-      "picture": {
-        "src": "cine",
-        "id": "fp-finish",
-        "in": 0.4
-      },
+      "picture": { "src": "cine", "id": "fp-finish", "in": 0.4 },
       "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-ie-1p8",
-          "at": 0
-        }
-      ],
+      "fx": ["glue"],
+      "overlays": [{ "title": "label-ie-1p8", "at": 0 }],
       "section": "close"
     },
     {
@@ -3749,7 +3342,7 @@
     },
     {
       "id": "b47-end",
-      "dur": 6.5,
+      "dur": 4.5,
       "picture": {
         "src": "title",
         "id": "end"

@@ -10,12 +10,22 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { claimTable, fill } from "./lib/claims.mjs";
+import {
+  CAPTION_STORY_OFF,
+  installInitStorage,
+} from "./lib/captureStorage.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -56,22 +66,27 @@ const CAPTURED = new Set(["ready", "stand-in"]);
 
 function validate(doc) {
   const problems = [];
-  if (!Array.isArray(doc.shots) || doc.shots.length === 0) problems.push("no shots");
+  if (!Array.isArray(doc.shots) || doc.shots.length === 0)
+    problems.push("no shots");
   const ids = new Set();
   for (const shot of doc.shots ?? []) {
     const where = `shot ${shot.id ?? "?"}`;
-    if (!shot.id || ids.has(shot.id)) problems.push(`${where}: missing or duplicate id`);
+    if (!shot.id || ids.has(shot.id))
+      problems.push(`${where}: missing or duplicate id`);
     ids.add(shot.id);
-    if (!STATUSES.includes(shot.status)) problems.push(`${where}: unknown status ${shot.status}`);
+    if (!STATUSES.includes(shot.status))
+      problems.push(`${where}: unknown status ${shot.status}`);
     if (!(shot.target_s > 0)) problems.push(`${where}: target_s must be > 0`);
-    if (CAPTURED.has(shot.status) && !shot.url) problems.push(`${where}: no url`);
+    if (CAPTURED.has(shot.status) && !shot.url)
+      problems.push(`${where}: no url`);
     for (const a of [...(shot.setup ?? []), ...(shot.actions ?? [])]) {
       const fields = ACTIONS[a.do];
       if (!fields) problems.push(`${where}: unknown action ${a.do}`);
       else
         for (const f of fields)
           if (a[f] === undefined) problems.push(`${where}: ${a.do} needs ${f}`);
-      if (a.do === "wait" && !WAITS[a.for]) problems.push(`${where}: unknown wait ${a.for}`);
+      if (a.do === "wait" && !WAITS[a.for])
+        problems.push(`${where}: unknown wait ${a.for}`);
       if (a.do === "click" && !a.selector && !a.role)
         problems.push(`${where}: click needs a target`);
       if (a.do === "scroll" && a.to === undefined && a.y === undefined)
@@ -85,11 +100,14 @@ function validate(doc) {
 function rebase(url, base) {
   if (!base) return url;
   const u = new URL(url);
-  return new URL(u.pathname.replace(/^\//, "") + u.search, base.endsWith("/") ? base : `${base}/`)
-    .href;
+  return new URL(
+    u.pathname.replace(/^\//, "") + u.search,
+    base.endsWith("/") ? base : `${base}/`,
+  ).href;
 }
 
-const clock = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+const clock = (s) =>
+  `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 /** Planned start of every shot on the video's timeline (targets added up). */
 function timeline(shots) {
@@ -107,7 +125,8 @@ const afterFrames = (page, n) =>
   page.evaluate(
     (n) =>
       new Promise((resolve) => {
-        const step = (k) => (k === 0 ? resolve() : requestAnimationFrame(() => step(k - 1)));
+        const step = (k) =>
+          k === 0 ? resolve() : requestAnimationFrame(() => step(k - 1));
         step(n);
       }),
     n,
@@ -124,7 +143,10 @@ const breakdownButton = (page, name) =>
 const WAITS = {
   /** The match is loaded, both views are up, fonts and the player model are in. */
   async assets(page, a, timeout) {
-    await page.locator("header .brand h1, .load-error").first().waitFor({ timeout });
+    await page
+      .locator("header .brand h1, .load-error")
+      .first()
+      .waitFor({ timeout });
     const error = page.locator(".load-error");
     if (await error.count()) throw new Error(await error.innerText());
     // A shot that opens on the lineup card (covered: true) waits for the canvases behind it.
@@ -135,10 +157,13 @@ const WAITS = {
     // default view since #137; the board may be mounted under it, hidden).
     if (!a.views || a.views.includes("tac")) {
       const shown = (covered) =>
-        [...document.querySelectorAll(".view.tac canvas, .views .belief-map")].some(
+        [
+          ...document.querySelectorAll(".view.tac canvas, .views .belief-map"),
+        ].some(
           (el) =>
             covered ||
-            (el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== "hidden"),
+            (el.getBoundingClientRect().width > 0 &&
+              getComputedStyle(el).visibility !== "hidden"),
         );
       await page.waitForFunction(shown, Boolean(a.covered), { timeout });
     }
@@ -147,7 +172,10 @@ const WAITS = {
     // Animated players unless the address asks for the tokens (players/trial.ts).
     if (new URL(page.url()).searchParams.get("rigged") !== "0") {
       await page.waitForFunction(
-        () => performance.getEntriesByType("resource").some((e) => /\.glb(\?|$)/.test(e.name)),
+        () =>
+          performance
+            .getEntriesByType("resource")
+            .some((e) => /\.glb(\?|$)/.test(e.name)),
         null,
         { timeout },
       );
@@ -155,9 +183,11 @@ const WAITS = {
     await afterFrames(page, 3);
   },
   /** The page follows the live WebSocket stream. */
-  live: (page, a, timeout) => page.locator(".live-status.streaming").waitFor({ timeout }),
+  live: (page, a, timeout) =>
+    page.locator(".live-status.streaming").waitFor({ timeout }),
   /** The stream has detected the hero moment. */
-  moment: (page, a, timeout) => page.locator(".moment-list li.hero").waitFor({ timeout }),
+  moment: (page, a, timeout) =>
+    page.locator(".moment-list li.hero").waitFor({ timeout }),
   /** The breakdown for `persona` / `language` is on screen (cached, generated or template): on
    * The look, its narration panel says whose it is and the moment card says it is in; on For
    * studios' Behind the scenes (no narration panel), the crew's panel has its plan. */
@@ -171,13 +201,19 @@ const WAITS = {
         const failed = (panel ?? crew).querySelector(".plan-errors");
         if (failed) return { failed: failed.textContent.trim() };
         if ((panel ?? crew).querySelector(".note.waiting")) return null;
-        if (!panel) return crew.querySelector(".plan-badge") ? { ok: true } : null;
-        const meta = panel.querySelector(".breakdown-head .meta")?.textContent?.trim();
+        if (!panel)
+          return crew.querySelector(".plan-badge") ? { ok: true } : null;
+        const meta = panel
+          .querySelector(".breakdown-head .meta")
+          ?.textContent?.trim();
+        const lines = panel.querySelector("ol.lines li button.line-evidence");
         // In: the card's button plays it (not "Get breakdown" or "Loading…").
-        const ready = [...document.querySelectorAll(".moment-card .card-actions .btn")].some((b) =>
+        const ready = [
+          ...document.querySelectorAll(".moment-card .card-actions .btn"),
+        ].some((b) =>
           /^((Play|Replay) breakdown|Stop)$/.test(b.textContent.trim()),
         );
-        return meta === want && ready ? { ok: true } : null;
+        return meta === want && lines && ready ? { ok: true } : null;
       },
       want,
       { timeout },
@@ -185,7 +221,8 @@ const WAITS = {
     const result = await handle.jsonValue();
     if (result.failed) throw new Error(result.failed);
   },
-  "breakdown-running": (page, a, timeout) => breakdownButton(page, "Stop").waitFor({ timeout }),
+  "breakdown-running": (page, a, timeout) =>
+    breakdownButton(page, "Stop").waitFor({ timeout }),
   "breakdown-done": (page, a, timeout) =>
     breakdownButton(page, "Replay breakdown").waitFor({ timeout }),
   /** A narration caption is over the first-person view. */
@@ -193,10 +230,14 @@ const WAITS = {
   /** A caption that has claims behind it (it shows "Evidence ›"). */
   "caption-with-evidence": (page, a, timeout) =>
     page.locator(".caption .caption-more").waitFor({ timeout }),
-  evidence: (page, a, timeout) => page.locator("section.evidence").waitFor({ timeout }),
+  evidence: (page, a, timeout) =>
+    page.locator("section.evidence").waitFor({ timeout }),
   /** Any element, by CSS selector; `state` as in Playwright ("visible" by default, or "detached"). */
   selector: (page, a, timeout) =>
-    page.locator(a.selector).first().waitFor({ state: a.state ?? "visible", timeout }),
+    page
+      .locator(a.selector)
+      .first()
+      .waitFor({ state: a.state ?? "visible", timeout }),
   /** A what-if answer (or refusal) is shown; with `question`, the answer to that question. */
   "whatif-answer": (page, a, timeout) => {
     const asked = page.locator(".panel.whatif .answer .asked");
@@ -213,10 +254,15 @@ function locate(page, a) {
   if (a.selector) return scope.locator(a.selector).first();
   // A list of names: whichever the page shows (a button before and after the players are named).
   if (a.role && Array.isArray(a.name)) {
-    const any = a.name.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-    return scope.getByRole(a.role, { name: new RegExp(a.exact === false ? any : `^(?:${any})$`) });
+    const any = a.name
+      .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    return scope.getByRole(a.role, {
+      name: new RegExp(a.exact === false ? any : `^(?:${any})$`),
+    });
   }
-  if (a.role) return scope.getByRole(a.role, { name: a.name, exact: a.exact ?? true });
+  if (a.role)
+    return scope.getByRole(a.role, { name: a.name, exact: a.exact ?? true });
   // Not exact by default: a <label> wrapping a <select> also holds the options' text.
   return scope.getByLabel(a.label, { exact: a.exact ?? false });
 }
@@ -231,18 +277,26 @@ async function act(page, a) {
       await locate(page, a).click({ timeout });
       break;
     case "select":
-      await locate(page, { label: a.label, within: a.within, exact: a.exact }).selectOption(
-        a.value,
-        {
-          timeout,
-        },
-      );
+      await locate(page, {
+        label: a.label,
+        within: a.within,
+        exact: a.exact,
+      }).selectOption(a.value, {
+        timeout,
+      });
       break;
     case "fill": {
       // Typed key by key, so the viewer sees the question being written.
-      const input = locate(page, { label: a.label, within: a.within, exact: a.exact });
+      const input = locate(page, {
+        label: a.label,
+        within: a.within,
+        exact: a.exact,
+      });
       await input.fill("", { timeout });
-      await input.pressSequentially(a.text, { delay: a.key_delay_ms ?? 30, timeout });
+      await input.pressSequentially(a.text, {
+        delay: a.key_delay_ms ?? 30,
+        timeout,
+      });
       break;
     }
     case "scroll":
@@ -255,7 +309,10 @@ async function act(page, a) {
             a.block ?? "start",
           );
       } else {
-        await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), a.y);
+        await page.evaluate(
+          (y) => window.scrollTo({ top: y, behavior: "instant" }),
+          a.y,
+        );
       }
       await afterFrames(page, 2);
       break;
@@ -286,7 +343,10 @@ async function act(page, a) {
         let dt = Math.atan2(y1 - cy, x1 - cx) - t0;
         if (a.clockwise === true && dt < 0) dt += 2 * Math.PI;
         if (a.clockwise === false && dt > 0) dt -= 2 * Math.PI;
-        path = (u) => [cx + (r0 + (r1 - r0) * u) * Math.cos(t0 + dt * u), cy + (r0 + (r1 - r0) * u) * Math.sin(t0 + dt * u)];
+        path = (u) => [
+          cx + (r0 + (r1 - r0) * u) * Math.cos(t0 + dt * u),
+          cy + (r0 + (r1 - r0) * u) * Math.sin(t0 + dt * u),
+        ];
       } else path = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u];
       const [sx, sy] = path(0);
       await page.mouse.move(sx, sy);
@@ -324,7 +384,9 @@ const describe = (a) =>
 const pageState = (page) =>
   page.evaluate(() => {
     const texts = (s) =>
-      [...document.querySelectorAll(s)].map((e) => e.textContent.trim()).filter(Boolean);
+      [...document.querySelectorAll(s)]
+        .map((e) => e.textContent.trim())
+        .filter(Boolean);
     const box = (s) => {
       const el = document.querySelector(s);
       if (!el) return null;
@@ -341,7 +403,9 @@ const pageState = (page) =>
       narration: texts(
         ".panel.narration .breakdown-head .meta, .panel.narration .breakdown-head .plan-badge",
       ),
-      fixture: !!document.querySelector(".panel.narration .plan-badge[data-fixture]"),
+      fixture: !!document.querySelector(
+        ".panel.narration .plan-badge[data-fixture]",
+      ),
       plan: texts(".panel.breakdown .breakdown-head .plan-badge"),
       live: document.querySelector(".live-status")?.textContent?.trim() ?? null,
       crop: {
@@ -355,7 +419,9 @@ const pageState = (page) =>
 function warningsOf(state) {
   const w = [];
   if (state.offline)
-    w.push("Offline data: the site did not reach the API and played its bundled files");
+    w.push(
+      "Offline data: the site did not reach the API and played its bundled files",
+    );
   if (state.fixture) w.push("narration is the unverified fixture");
   for (const b of ["Template", "Rate-limited", "Daily cap reached"])
     if (state.narration.includes(b)) w.push(`narration badge: ${b}`);
@@ -366,20 +432,38 @@ function warningsOf(state) {
 
 /** Open every narration line and read the claims its evidence card shows (SPEC 7). */
 async function readClaims(page, persona, language) {
+  const stop = breakdownButton(page, "Stop");
+  if (await stop.count()) {
+    await stop.click();
+    await breakdownButton(page, "Replay breakdown").waitFor();
+  }
   const state = await pageState(page);
   const verified = !state.offline && !state.fixture;
-  const buttons = page.locator(".panel.narration ol.lines li:not(.withheld) > button");
+  const rows = page.locator(".panel.narration ol.lines li:not(.withheld)");
   const lines = [];
-  for (let k = 0; k < (await buttons.count()); k++) {
-    const button = buttons.nth(k);
-    const id = (await button.locator(".t").innerText()).trim();
-    const label = await button.innerText();
-    await button.click();
+  for (let k = 0; k < (await rows.count()); k++) {
+    const row = rows.nth(k);
+    const id = (await row.locator(".t").innerText()).trim();
+    const label = await row.innerText();
+    const button = row.locator("button.line-evidence");
+    // The narration chapter eases in on scroll: a click while it still moves can miss.
+    await button.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(600);
+    for (
+      let tries = 0;
+      tries < 3 && (await button.getAttribute("aria-expanded")) !== "true";
+      tries++
+    ) {
+      await button.click();
+      await page.waitForTimeout(400);
+    }
     await page.waitForFunction((label) => {
       const p = document.querySelector("section.evidence .evidence-line");
       return p && label.includes(p.textContent.trim());
     }, label);
-    const text = (await page.locator("section.evidence .evidence-line").innerText()).trim();
+    const text = (
+      await page.locator("section.evidence .evidence-line").innerText()
+    ).trim();
     const claims = await page.$$eval("section.evidence li.claim", (els) =>
       els.map((el) => ({
         id: el.querySelector(".claim-head code")?.textContent?.trim(),
@@ -388,7 +472,10 @@ async function readClaims(page, persona, language) {
         values: Object.fromEntries(
           [...el.querySelectorAll("dl.values > div")].map((d) => [
             // The machine name (e.g. dxt) is the dt's title; its text is a label for viewers.
-            (d.querySelector("dt").getAttribute("title") || d.querySelector("dt").textContent).trim(),
+            (
+              d.querySelector("dt").getAttribute("title") ||
+              d.querySelector("dt").textContent
+            ).trim(),
             d.querySelector("dd").textContent.trim(),
           ]),
         ),
@@ -400,19 +487,39 @@ async function readClaims(page, persona, language) {
 }
 
 async function harvest(browser, doc, opts) {
-  const page = await newPage(browser, doc.viewport);
+  const page = await newPage(browser, doc.viewport, {
+    storage: CAPTION_STORY_OFF,
+  });
   try {
-    await page.goto(rebase(`${doc.site}/?autoplay=0&intro=0`, opts.base), { waitUntil: "load" });
+    await page.goto(
+      rebase(`${doc.site}/?door=look&autoplay=0&intro=0`, opts.base),
+      { waitUntil: "load" },
+    );
     await act(page, { do: "wait", for: "assets" });
-    await act(page, { do: "click", role: "button", name: "Ask now" });
+    await act(page, {
+      do: "click",
+      within: ".moment-card",
+      role: "button",
+      name: "Get breakdown",
+    });
     let current = { persona: "casual", language: "en" };
-    await act(page, { do: "wait", for: "breakdown", ...current, timeout_s: 90 });
+    await act(page, {
+      do: "wait",
+      for: "breakdown",
+      ...current,
+      timeout_s: 90,
+    });
     const sources = [];
     for (const want of doc.harvest) {
       if (want.persona !== current.persona)
-        await act(page, { do: "select", label: "Audience", value: want.persona });
+        await act(page, {
+          do: "select",
+          label: "Audience",
+          value: want.persona,
+        });
       if (want.language !== current.language) {
-        const name = want.language === "zh" ? "中文" : want.language.toUpperCase();
+        const name =
+          want.language === "zh" ? "中文" : want.language.toUpperCase();
         await act(page, {
           do: "click",
           within: "[aria-label='Narration language']",
@@ -434,15 +541,20 @@ async function harvest(browser, doc, opts) {
 function voiceOver(shot, claims) {
   const { text, used, missing } = fill(shot.vo, claims);
   if (!missing.length) return { text, used, missing };
-  if (shot.vo_fallback) return { text: shot.vo_fallback, used: [], missing, fallback: true };
+  if (shot.vo_fallback)
+    return { text: shot.vo_fallback, used: [], missing, fallback: true };
   return { text, used, missing };
 }
 
 /** Chromium flags for WebGL on the GPU: headless Chromium otherwise draws WebGL with SwiftShader,
  * its CPU rasteriser (about a dozen fps here). On macOS that means ANGLE on Metal. */
 function gpuArgs(software) {
-  if (software) return ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
-  return ["--ignore-gpu-blocklist", ...(process.platform === "darwin" ? ["--use-angle=metal"] : [])];
+  if (software)
+    return ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
+  return [
+    "--ignore-gpu-blocklist",
+    ...(process.platform === "darwin" ? ["--use-angle=metal"] : []),
+  ];
 }
 
 /** Recorded shots of an earlier manifest whose clip still exists, minus those re-run now. */
@@ -453,7 +565,13 @@ function previousShots(file, results) {
     const dir = path.dirname(file);
     return Object.fromEntries(
       (old.shots ?? [])
-        .filter((s) => s.ok && !(s.id in results) && s.video && existsSync(path.join(dir, s.video)))
+        .filter(
+          (s) =>
+            s.ok &&
+            !(s.id in results) &&
+            s.video &&
+            existsSync(path.join(dir, s.video)),
+        )
         .map(({ start, end, vo, ...rest }) => [rest.id, rest]),
     );
   } catch {
@@ -463,7 +581,11 @@ function previousShots(file, results) {
 
 // --- recording -----------------------------------------------------------------------------------
 
-async function newPage(browser, viewport, { reducedMotion = false } = {}) {
+async function newPage(
+  browser,
+  viewport,
+  { reducedMotion = false, storage = {} } = {},
+) {
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: 1,
@@ -473,11 +595,13 @@ async function newPage(browser, viewport, { reducedMotion = false } = {}) {
     // shot that must be sharp through a head turn sets "reduced_motion" and presses Play itself.
     reducedMotion: reducedMotion ? "reduce" : "no-preference",
   });
+  await installInitStorage(context, storage);
   // Headed Chromium draws scrollbars into the frames; hide them.
   await context.addInitScript(() => {
     addEventListener("DOMContentLoaded", () => {
       const style = document.createElement("style");
-      style.textContent = "html::-webkit-scrollbar{display:none} html{scrollbar-width:none}";
+      style.textContent =
+        "html::-webkit-scrollbar{display:none} html{scrollbar-width:none}";
       document.head.append(style);
     });
   });
@@ -510,7 +634,9 @@ class Recorder {
   }
   /** Distinct frames the browser delivered per second while recording. */
   capturedFps() {
-    const n = this.frames.filter((f) => f.t >= this.t0 && f.t <= this.t1).length;
+    const n = this.frames.filter(
+      (f) => f.t >= this.t0 && f.t <= this.t1,
+    ).length;
     return n / ((this.t1 - this.t0) / 1000);
   }
 }
@@ -520,9 +646,38 @@ class Recorder {
 async function encode(ffmpeg, rec, fps, out) {
   if (!rec.frames.length) throw new Error("the screencast delivered no frames");
   const args = [
-    ...["-hide_banner", "-loglevel", "error", "-f", "image2pipe", "-c:v", "mjpeg"],
-    ...["-framerate", String(fps), "-i", "pipe:0", "-an", "-c:v", "libvpx", "-pix_fmt", "yuv420p"],
-    ...["-b:v", "16M", "-crf", "4", "-qmin", "0", "-qmax", "30", "-auto-alt-ref", "0"],
+    ...[
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "image2pipe",
+      "-c:v",
+      "mjpeg",
+    ],
+    ...[
+      "-framerate",
+      String(fps),
+      "-i",
+      "pipe:0",
+      "-an",
+      "-c:v",
+      "libvpx",
+      "-pix_fmt",
+      "yuv420p",
+    ],
+    ...[
+      "-b:v",
+      "16M",
+      "-crf",
+      "4",
+      "-qmin",
+      "0",
+      "-qmax",
+      "30",
+      "-auto-alt-ref",
+      "0",
+    ],
     ...[
       "-deadline",
       "good",
@@ -538,9 +693,13 @@ async function encode(ffmpeg, rec, fps, out) {
   proc.stderr.on("data", (d) => (stderr += d));
   proc.stdin.on("error", () => {}); // a dead ffmpeg is reported by its exit code below
   const done = new Promise((resolve, reject) => {
-    proc.on("error", (err) => reject(new Error(`cannot run ffmpeg (${ffmpeg}): ${err.message}`)));
+    proc.on("error", (err) =>
+      reject(new Error(`cannot run ffmpeg (${ffmpeg}): ${err.message}`)),
+    );
     proc.on("close", (code) =>
-      code === 0 ? resolve() : reject(new Error(`ffmpeg exited with ${code}: ${stderr.trim()}`)),
+      code === 0
+        ? resolve()
+        : reject(new Error(`ffmpeg exited with ${code}: ${stderr.trim()}`)),
     );
   });
   const n = Math.max(1, Math.round(((rec.t1 - rec.t0) * fps) / 1000));
@@ -554,7 +713,8 @@ async function encode(ffmpeg, rec, fps, out) {
       shown = j;
       jpeg = readFileSync(rec.frames[j].file);
     }
-    if (!proc.stdin.write(jpeg)) await Promise.race([once(proc.stdin, "drain"), done]);
+    if (!proc.stdin.write(jpeg))
+      await Promise.race([once(proc.stdin, "drain"), done]);
   }
   proc.stdin.end();
   await done;
@@ -562,11 +722,22 @@ async function encode(ffmpeg, rec, fps, out) {
 }
 
 async function captureShot(browser, shot, opts, outDir) {
-  const page = await newPage(browser, shot.viewport, { reducedMotion: shot.reduced_motion === true });
+  const page = await newPage(browser, shot.viewport, {
+    reducedMotion: shot.reduced_motion === true,
+    storage: shot.storage ?? CAPTION_STORY_OFF,
+  });
   const problems = [];
   page.on("pageerror", (err) => problems.push(`page error: ${err.message}`));
-  page.on("console", (m) => m.type() === "error" && problems.push(`console: ${m.text()}`));
-  const rec = new Recorder(page, path.join(outDir, "frames", shot.id), shot.viewport, opts.quality);
+  page.on(
+    "console",
+    (m) => m.type() === "error" && problems.push(`console: ${m.text()}`),
+  );
+  const rec = new Recorder(
+    page,
+    path.join(outDir, "frames", shot.id),
+    shot.viewport,
+    opts.quality,
+  );
   const log = [];
   const result = {
     id: shot.id,
@@ -592,7 +763,10 @@ async function captureShot(browser, shot, opts, outDir) {
     still ??= { data: rec.latest, state: await pageState(page) };
     phase = "encoding";
     const stillPath = path.join(outDir, "stills", `${shot.id}.jpg`);
-    writeFileSync(stillPath, still.data ?? (await page.screenshot({ type: "jpeg", quality: 90 })));
+    writeFileSync(
+      stillPath,
+      still.data ?? (await page.screenshot({ type: "jpeg", quality: 90 })),
+    );
     const video = path.join(outDir, `${shot.id}.webm`);
     const written = await encode(opts.ffmpeg, rec, opts.fps, video);
     Object.assign(result, {
@@ -603,13 +777,19 @@ async function captureShot(browser, shot, opts, outDir) {
       fps: opts.fps,
       frames_written: written,
       captured_fps: +rec.capturedFps().toFixed(1),
-      badges: { narration: still.state.narration, plan: still.state.plan, live: still.state.live },
+      badges: {
+        narration: still.state.narration,
+        plan: still.state.plan,
+        live: still.state.live,
+      },
       crop: still.state.crop,
       warnings: warningsOf(still.state),
     });
   } catch (err) {
     const stillPath = path.join(outDir, "stills", `${shot.id}_FAILED.jpg`);
-    await page.screenshot({ path: stillPath, type: "jpeg", quality: 90 }).catch(() => {});
+    await page
+      .screenshot({ path: stillPath, type: "jpeg", quality: 90 })
+      .catch(() => {});
     Object.assign(result, {
       ok: false,
       error: `${phase}: ${err.message.split("\n")[0]}`,
@@ -665,10 +845,14 @@ function contactSheet(doc, plan, results, vo, meta) {
       : r && !r.ok
         ? esc(r.error)
         : `target ${shot.target_s} s`;
-    const badges = r?.ok ? [...r.badges.narration, ...r.badges.plan].join(" · ") : "";
+    const badges = r?.ok
+      ? [...r.badges.narration, ...r.badges.plan].join(" · ")
+      : "";
     const warn = [
       ...(r?.warnings ?? []),
-      ...(v.missing.length ? [`VO slots not on the page: ${v.missing.join(", ")}`] : []),
+      ...(v.missing.length
+        ? [`VO slots not on the page: ${v.missing.join(", ")}`]
+        : []),
       ...(shot.status === "stand-in" ? [shot.pending] : []),
     ];
     return `<figure>
@@ -723,7 +907,9 @@ function voiceOverScript(plan, vo, results, meta) {
   for (const { shot, start, end } of plan) {
     const v = vo[shot.id];
     const r = results[shot.id];
-    out.push(`## ${shot.id} · ${clock(start)}–${clock(end)} (${shot.target_s} s) · ${shot.status}`);
+    out.push(
+      `## ${shot.id} · ${clock(start)}–${clock(end)} (${shot.target_s} s) · ${shot.status}`,
+    );
     out.push("");
     out.push(`> ${v.text}`);
     out.push("");
@@ -732,7 +918,9 @@ function voiceOverScript(plan, vo, results, meta) {
         `Numbers: ${v.used.map((u) => `${u.value} from ${u.slot}, seen in ${u.seen}`).join("; ")}`,
       );
     if (v.missing.length)
-      out.push(`Not on the page: ${v.missing.join(", ")}${v.fallback ? " (fallback used)" : ""}`);
+      out.push(
+        `Not on the page: ${v.missing.join(", ")}${v.fallback ? " (fallback used)" : ""}`,
+      );
     if (r?.ok)
       out.push(
         `Clip: ${r.video}, ${r.duration_s} s; cues: ${r.log.map((l) => `${l.t} s ${l.action}`).join("; ")}`,
@@ -766,16 +954,21 @@ async function main() {
   if (args.help) return console.log(USAGE);
   const doc = JSON.parse(readFileSync(path.join(HERE, "shots.json"), "utf8"));
   const problems = validate(doc);
-  if (problems.length) throw new Error(`shots.json:\n  ${problems.join("\n  ")}`);
+  if (problems.length)
+    throw new Error(`shots.json:\n  ${problems.join("\n  ")}`);
   const plan = timeline(doc.shots);
   const fps = Number(args.fps);
   const quality = Number(args.quality);
-  if (!(fps >= 30 && fps <= 60)) throw new Error("--fps must be between 30 and 60");
-  if (!(quality >= 50 && quality <= 100)) throw new Error("--quality must be between 50 and 100");
+  if (!(fps >= 30 && fps <= 60))
+    throw new Error("--fps must be between 30 and 60");
+  if (!(quality >= 50 && quality <= 100))
+    throw new Error("--quality must be between 50 and 100");
   const base = args["base-url"] ?? null;
   const only = args.only?.split(",").map((s) => s.trim());
   const chosen = plan.filter(
-    ({ shot }) => CAPTURED.has(shot.status) && (!only || only.some((o) => shot.id.startsWith(o))),
+    ({ shot }) =>
+      CAPTURED.has(shot.status) &&
+      (!only || only.some((o) => shot.id.startsWith(o))),
   );
 
   if (args.list) {
@@ -829,8 +1022,13 @@ async function main() {
     );
   }
 
-  const vo = Object.fromEntries(doc.shots.map((s) => [s.id, voiceOver(s, claims)]));
-  writeFileSync(path.join(outDir, "voiceover.md"), voiceOverScript(plan, vo, results, meta));
+  const vo = Object.fromEntries(
+    doc.shots.map((s) => [s.id, voiceOver(s, claims)]),
+  );
+  writeFileSync(
+    path.join(outDir, "voiceover.md"),
+    voiceOverScript(plan, vo, results, meta),
+  );
   // A run with --only keeps what earlier runs recorded for the other shots (their clips stay).
   const previous = previousShots(path.join(outDir, "manifest.json"), results);
   const manifest = {
@@ -846,10 +1044,15 @@ async function main() {
       vo: vo[shot.id],
     })),
   };
-  writeFileSync(path.join(outDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(
+    path.join(outDir, "manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
   const sheet = path.join(outDir, "contact_sheet.html");
   writeFileSync(sheet, contactSheet(doc, plan, results, vo, meta));
-  const page = await browser.newPage({ viewport: { width: 1800, height: 1000 } });
+  const page = await browser.newPage({
+    viewport: { width: 1800, height: 1000 },
+  });
   await page.goto(pathToFileURL(sheet).href, { waitUntil: "load" });
   await page.screenshot({
     path: path.join(outDir, "contact_sheet.jpg"),
@@ -861,7 +1064,9 @@ async function main() {
   rmSync(path.join(outDir, "frames"), { recursive: true, force: true });
 
   const failed = Object.values(results).filter((r) => !r.ok);
-  const slow = Object.values(results).filter((r) => r.ok && r.captured_fps < 30);
+  const slow = Object.values(results).filter(
+    (r) => r.ok && r.captured_fps < 30,
+  );
   console.log(
     `\n${outDir}: contact_sheet.jpg, voiceover.md, manifest.json, ${Object.keys(results).length - failed.length} clips`,
   );
