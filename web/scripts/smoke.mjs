@@ -978,7 +978,7 @@ async function journeyPanel(page, label) {
       panel.getByText(/^Match facts on this page come from the simulator/),
       "the facts note",
     );
-    await see(panel.getByText(/of model calls per verified breakdown/), "the measured cost");
+    await see(panel.getByText(/average model cost per eval breakdown/), "the measured cost");
   }
   const [w, wide] = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
   if (wide > w) throw new Error(`expected no sideways scroll on ${label}: ${wide} px in ${w}`);

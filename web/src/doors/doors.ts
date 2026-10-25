@@ -47,10 +47,23 @@ export function doorOfPlay(play: string): Door | null {
   return null;
 }
 
-/** `search` with `?door=` set to `door`; a studio step stays only on the studios' door. */
+const ONE_SHOT_ACTIONS = ["at", "run", "ask", "tamper", "play", "tour", "compare"] as const;
+
+/** `search` with `?door=` set to `door`; actions already consumed do not run again on reload. */
 export function withDoor(search: string, door: Page): string {
   const params = new URLSearchParams(search);
+  for (const name of ONE_SHOT_ACTIONS) params.delete(name);
   params.set("door", door);
   if (door !== "studios") params.delete("step");
+  return `?${params.toString()}`;
+}
+
+/** A feature link on the current page: its action plus the current match, moment and settings. */
+export function withPageAction(search: string, action: string): string {
+  const params = new URLSearchParams(search);
+  for (const name of ONE_SHOT_ACTIONS) params.delete(name);
+  params.delete("step");
+  params.delete("door");
+  for (const [name, value] of new URLSearchParams(action)) params.set(name, value);
   return `?${params.toString()}`;
 }
